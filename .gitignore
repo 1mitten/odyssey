@@ -67,3 +67,7 @@ crashlytics-build.properties
 
 # Generated icon contact sheets for review. tools/icons/icons.py contact rebuilds them.
 /art-source/icons/contact/
+
+# Python bytecode from tools/
+__pycache__/
+*.py[cod]
