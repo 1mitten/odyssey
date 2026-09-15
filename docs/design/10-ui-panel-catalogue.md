@@ -275,13 +275,13 @@ recorded that omission as the gap the interface must close.
 |---|---|
 | Purpose | Which layer am I on, what is on the others, and how do I get there |
 | Slot | Right edge, below the bulletin stack, vertical |
-| Contents | A vertical scale of the world's layers. The current slice is highlighted. Each layer shows an **occupancy pip** whose weight reflects how much is built or occupied there, a **colonist count**, and **markers** where alerts or bulletins are pending. Ground level is marked. Click any layer to jump. Above-and-below display policy toggles live here |
+| Contents | A vertical scale of the world's layers. The current slice is highlighted. Each layer shows an **occupancy pip** whose weight reflects how much is built or occupied there, a **colonist count**, and **markers** where alerts or bulletins are pending. Ground level is marked. Click any layer to jump. The three visibility axes of ADR 0003 toggle here, as six named presets with the individual axes behind them |
 | Reads | `LayerSummary[]` — one compact row per layer: occupancy, colonist count, pending alert count |
-| Emits | `SetSliceLayer(z)`, `SetAboveBelowPolicy(policy)` |
+| Emits | `SetSliceLayer(z)`, `SetAboveBelowPolicy(mode, depthCap, below)` |
 | Cadence | 1 Hz for pips, on-event for the current slice |
 | Owner | `SliceDirector` |
 | Layer | by definition |
-| Icons | `ui.layer.up`, `ui.layer.down`, `ui.layer.ground`, `ui.layer.policy.*` (three) |
+| Icons | `ui.layer.up`, `ui.layer.down`, `ui.layer.ground`, `ui.layer.policy.*` (six, one per mode) |
 | Milestone | M1 |
 
 **Bindings**, which the reference game has no need for and are therefore specified fresh:
@@ -292,18 +292,37 @@ recorded that omission as the gap the interface must close.
 | Slice down one layer | `Page Down`, or the layer modifier with scroll down |
 | Jump to ground level | `Home` |
 | Follow selection's layer | `F` toggles |
-| Cycle above-and-below policy | `Ctrl` with the layer key |
+| Cycle visibility preset | `Ctrl` with the layer key |
 
 Scroll with the layer modifier changes the slice **regardless of what is under the cursor**,
 which is case 8 of the input router's eight enumerated tests in `09` §6.
 
-**Above-and-below policy**, the one genuinely unresolved design question. Three options:
-hide everything above; ghost structural outlines only; full x-ray. **Provisional
-recommendation: hide solid geometry above, ghost structural outlines only, and dim the layer
-below where it shows through holes.** Flagged pending Lane B, which already owns the prior-art
-question and where two comparable games take opposite positions. The mockup at
-`docs/reference/mockups/hud-v1.html` exposes all three as a live toggle so the owner can judge
-by eye rather than from prose.
+**Above-and-below visibility is settled: x-ray by default.** Decided by the owner from the
+mockup on 2026-09-15 and recorded, with its reasoning and flip conditions, in
+`docs/adr/0003-layer-visibility-policy.md`. Three independent axes ship and persist as user
+settings, because the decision is a taste call and the point of shipping the alternatives is to
+keep it revisable by play rather than by argument.
+
+| Axis | Values |
+|---|---|
+| Mode above | `hide`; `ghost` outlines; `xray-min`, one layer; **`xray`, the default, all layers with opacity falling by distance**; `roofs-off`, solid above but roofs and floors dropped; `full`, no cut-away |
+| Depth cap | 1, 2, 3, 4 or all, with the fade curve applied across whatever is shown |
+| Below the slice | `dim`, the default; `hide`; `normal`. Previously bundled into the policy above, it is an independent choice and is treated as one |
+
+Six presets name the combinations worth playing — Clear, Outline, Default, Minimal, Roofless,
+Architect — so the ordinary player meets one button rather than three sliders. The tuning values
+behind them (near-layer alpha, per-layer falloff, ghost line weight, dim strength) cannot be
+chosen from prose; `docs/reference/mockups/hud-v2.html` exposes them as live sliders and prints
+the values for copying back here.
+
+`roofs-off` is new to the candidate set and worth a note: it is what the owner's concept renders
+actually depict. It went unnoticed while those images were read for their HUD rather than for what
+they say about layering.
+
+**What remains open is the rendering mechanism, not the policy.** X-ray rules out a hard clip
+plane in favour of per-layer transparent materials, which is brief Lane D3's to benchmark and
+`docs/design/06-rendering-and-camera.md`'s to document. Lane B still owns the prior-art half and
+is now asked to challenge a decided default rather than to choose one.
 
 ## A12 Overlay menu and legend
 
@@ -639,7 +658,9 @@ so layout and density can be reviewed now and art can arrive at any time without
 
 ## Open questions this catalogue raises rather than settles
 
-1. **Above-and-below display policy** (A11). Provisional recommendation given; belongs to Lane B.
+1. ~~**Above-and-below display policy** (A11).~~ **Settled 2026-09-15**, ADR 0003: x-ray by
+   default, six modes and two further axes shipped for playtest. What remains is the rendering
+   mechanism, which is Lane D3's, and Lane B's prior-art half, which now challenges a default.
 2. **Are stockpiles per layer or volumes** (B13). Recommendation given; belongs to Lane A item 14.
 3. **Do rooms span layers** (B14). Panel designed to display either; belongs to Lane A item 5.
 4. **Does the ledger hide or grey zero rows** (A1). Ten-second owner decision.

@@ -23,10 +23,11 @@ using. Below about 800 pixels the density stops being reviewable.
 
 ## What to review, in order
 
-1. **The layer question.** Move the slice on the Depth Ruler, then cycle the **Above** control
-   through Hide, Ghost and X-ray. This is the one genuinely open design decision and the
-   concept renders could not answer it, because they are all single-layer cut-aways. Brief Lane
-   B owns the prior-art half; this is the taste half.
+1. **The layer question, now settled.** Move the slice on the Depth Ruler, then cycle the
+   **Above** control through Hide, Ghost and X-ray. This mockup is how the decision was made:
+   the owner picked **x-ray** by eye, and `docs/adr/0003-layer-visibility-policy.md` records it
+   together with the three further modes and two axes the decision added. Brief Lane B still owns
+   the prior-art half and now challenges a default rather than choosing one.
 2. **Density at a glance.** Can you read the screen without labels? The **Icons** control has
    five positions. *Icon* is the target. *+ label* is what a fallback looks like if icon-only
    proves unreadable. *Keys*, *Text only* and *Missing* are the three debug modes the game will

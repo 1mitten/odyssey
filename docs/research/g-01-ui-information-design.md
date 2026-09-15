@@ -169,6 +169,11 @@ disambiguate it. `docs/design/09-ui-and-input.md` carries a provisional recommen
 as pending that research, and the mockup at `docs/reference/mockups/hud-v1.html` exposes it as
 a live toggle so the owner can judge it by eye.
 
+*Addendum, 2026-09-15.* The owner did exactly that, and the answer is x-ray by default, with six
+modes and two further axes shipped for playtest: `docs/adr/0003-layer-visibility-policy.md`. The
+paragraph above stands unedited as what was known when this file was written. Lane B now challenges
+a decided default rather than choosing from scratch.
+
 **Question 6 — are zones, stockpiles and growing areas per layer or 3D volumes?** Touched only
 indirectly: the overlay rows in F2 assume per-layer painting with only the active slice drawn,
 because that is what the rendering budget allows. The gameplay semantics stay with Lane A.

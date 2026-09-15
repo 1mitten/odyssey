@@ -19,6 +19,14 @@ Related, outside this folder: `docs/brief.md` (the governing brief), `docs/refer
 
 **`rimworldwiki.com` and `steamcommunity.com` are blocked by the remote container's egress proxy** — refused at the network layer, not a TLS or authentication failure. `github.com` and most documentation hosts are reachable. Brief §5 names the wiki as the first-authority source for all sixteen Lane A items and Steam reviews as a source for Lane B, so either run those subagents from the dev machine or have the owner supply the pages. `unity-mcp-server.md` hit the same wall with Unity's own documentation host and recorded medium confidence as a result; expect the same on Lane D.
 
+**Lane B inherits a decided default (2026-09-15).** Layer question 9's above-and-below policy was
+settled by the owner from the mockup, not from research, and recorded in
+`docs/adr/0003-layer-visibility-policy.md`: x-ray by default, with six modes and two further axes
+shipped for playtest. Lane B is therefore asked to **challenge that default with prior-art
+evidence**, not to choose from scratch. `b-going-medieval.md` and `b-timberborn.md` are where that
+belongs, since those two games take opposite positions. The rendering mechanism the decision implies
+is Lane D3's, not Lane B's.
+
 ## Naming for Phase 2 files (so a fresh session can predict paths)
 
 - Lane A, RimWorld mechanics: `a-01-pawns.md` … `a-16-modding-architecture.md`, numbered as in brief §5.
