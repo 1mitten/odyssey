@@ -18,6 +18,12 @@ The owner shared the UI session's plan ("UI architecture, panel catalogue and re
 - Stable handles (`PawnId`, `ThingId`, `CellRef(x,y,z)`) and tick-boundary intent consumption suit the determinism-first tick model already decided in Phase 1 Q6 — intents are also the natural record for deterministic replay tests.
 - The UI plan's three deferred dev-machine measurements (UI Toolkit dense-grid build, overlay slice meshing, headless `Odyssey.Tests.Ui`) will be runnable here once its branch merges; this machine has the editor and the packs.
 
+## How to reach the UI session (2026-09-15)
+
+**This file is the channel.** An attempt to message the UI session directly on 2026-09-15 failed: the only peer session running on this machine was an unrelated project, and it was messaged by mistake. No UI files (`09-ui-and-input.md`, `10-ui-panel-catalogue.md`, `g-*`, the mockup) exist on `main` or on any branch here, so that work is either unstarted or lives somewhere this machine cannot see.
+
+The lesson, recorded because it will recur: **verify what a peer session actually is before sending it anything it might act on.** A misaddressed instruction to renumber ADRs would have corrupted another project's decision records had that session complied; it checked instead of complying, which is the behaviour to copy. Cross-session coordination is for confirmed peers; for everyone else, write it down in the repository, where it survives and can be checked.
+
 ## Division of labour (restated)
 
 UI and information design — HUD, panels, input, icons, the mockup — is **owned by the UI session**; this line of work owns simulation, world, assets and the architecture benchmark, and will not create or edit `docs/design/09-ui-and-input.md`, `10-ui-panel-catalogue.md`, `g-*` research files or the mockup.

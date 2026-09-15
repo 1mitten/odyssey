@@ -90,4 +90,12 @@ What differs from the Linux instructions above (verified on Windows 11, 2026-09-
 
   No `-quit` — the method exits the editor itself. `AssetDatabase.ImportPackage` merely queues imports under `-executeMethod` (a run can "succeed" having imported nothing), so `SyntyImport.cs` calls the editor's synchronous internal import; see the comment in that file.
 - **Keep the project path free of spaces** here too (`D:\code\odyssey` is fine) — same Unity-MCP constraint.
+
+## 9. Unity gotchas that cost real debugging time
+
+Collected rather than rediscovered. The first two land on the Burst grid job, the third lands on the material-tint strategy in `docs/design/06-rendering-and-camera.md`. (Contributed by another Claude Code session on this machine working on an unrelated Unity project; each cost it a debugging cycle.)
+
+- **`using var` on a `NativeArray` makes the local read-only**, so writing into it fails with **CS1654**. Declare it normally and dispose in a `finally`, or wrap it in a method that returns it.
+- **`Allocator.Temp` cannot be handed to a job** — it is main-thread and single-frame. A job needs `TempJob` or `Persistent`. This is easy to miss because it compiles and then misbehaves.
+- **Assigning `renderer.material` in edit mode instantiates a copy**, so setting properties on the original afterwards silently does nothing. Use `sharedMaterial` in editor scripts. This one matters a great deal to us: the committed tint strategy is *one cached material per stuff* with instanced draw buckets, and an accidental `.material` would quietly break the batching while looking almost right.
 - **Unity MCP as installed (2026-09-15, plugin v0.90.0):** `npx --yes unity-mcp-cli install-plugin .` adds the package to `Packages/manifest.json`; the first *interactive* editor open downloads the server to `Library/mcp-server/win-x64/gamedev-mcp-server.exe` (a batch run does not). The committed project-scope `.mcp.json` starts it with `port=8080 client-transport=stdio` (relative path, resolved from the repo root; Linux uses `linux-x64`). First `claude` run in the repo asks to approve the project server — approve it, keep the editor open (and not compiling), then verify with `claude mcp list`.
