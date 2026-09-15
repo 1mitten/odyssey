@@ -1,0 +1,60 @@
+# Odyssey — Unity project at the repository root.
+# Standard Unity ignores, plus the licensed-asset boundary at the bottom.
+
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+/[Tt]estResults/
+
+# Addressables / streaming build output
+/Assets/AddressableAssetsData/*/*.bin*
+/Assets/StreamingAssets/aa.meta
+/Assets/StreamingAssets/aa/*
+
+# IDE and generated solution files (Unity regenerates them)
+/.vs/
+/.vscode/
+/.idea/
+/.gradle/
+ExportedObj/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+sysinfo.txt
+
+# Build outputs and crash files
+*.apk
+*.aab
+*.app
+crashlytics-build.properties
+/Assets/[Pp]lugins/[Aa]ndroid/[Bb]uild/
+*.log
+
+# ---------------------------------------------------------------------------
+# Licensed assets stay licensed (brief §1). Synty packs live only here and are
+# never committed. Anything under Assets/ that references them must be
+# presentation-side; the simulation and its tests must not depend on them.
+/Assets/Synty/
+/Assets/Synty.meta
+*.unitypackage
