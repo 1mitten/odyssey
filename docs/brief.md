@@ -139,6 +139,24 @@ Each is a question with a measurable answer:
 
 Search this repo for prior art; skim *Ramble*'s design docs for any decision worth carrying forward. Report per item: reuse, adapt, or ignore.
 
+### Lane G — UI and information design (added 2026-09-15, out of phase order)
+
+Added at the owner's request, after Phase 1 but before Phase 2, because the interface's read
+and write contract constrains the Lane D1 architecture decision and should be an input to it
+rather than an output of it. Lane B keeps ownership of the depth-display prior art; Lane G
+cites it and does not duplicate it.
+
+1. **Reference UI taxonomy** — region by region, with a 3D-layer impact note and a ruined-city
+   impact note for each, and the density techniques that make an icon-first HUD work.
+   `g-01-ui-information-design.md`.
+2. **Unity runtime UI framework** — UI Toolkit against uGUI against immediate mode, for a dense
+   colony-sim HUD on the target laptop, with the experiments that would settle it.
+   `g-02-unity-ui-framework.md`.
+
+Note for whoever runs Lanes A and B: **`rimworldwiki.com` and `steamcommunity.com` are blocked
+by the remote container's egress proxy.** Both lanes name them as primary sources. Either run
+those subagents from the dev machine, or have the owner supply the pages.
+
 ### The twelve layer questions every research file must help answer
 
 1. Vertical movement: stairs (two cells), ladders (one), lifts later — confirm the pathing model.
@@ -169,6 +187,8 @@ Write, in this order:
 - `docs/design/06-rendering-and-camera.md` — cut-away, instanced modules, overlays (zones, temperature, beauty), depth cues, Synty tint strategy.
 - `docs/design/07-modding.md` — extension points chosen because Lane A showed modders need them.
 - `docs/design/08-milestones.md` — the roadmap in §7, definition of done per milestone, the vertical slice defined precisely.
+- `docs/design/09-ui-and-input.md` — the interface architecture: directors, the sim/UI contract, performance budget, assembly layout, input, icons, modding seams. *(Added 2026-09-15; written ahead of Phase 3 because it constrains the Lane D1 ADR.)*
+- `docs/design/10-ui-panel-catalogue.md` — every HUD region and panel specified: slot, contents, view fields read, intents emitted, cadence, owning director, layer-awareness, icon keys, milestone. *(Added 2026-09-15.)*
 - `docs/adr/` — one ADR per irreversible decision: engine and version, architecture, cell size and layer model, data format, threading model, asset licensing boundary.
 - `docs/plans/vertical-slice.md` — the first execution plan: ordered units, dependencies, size, done-criteria.
 

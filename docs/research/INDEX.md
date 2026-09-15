@@ -31,6 +31,17 @@ Every research result lives in this folder as one file per question, in the fixe
 | `e-03-other-packs.md` | Phase 2, Lane E | **done 2026-09-15** | high (enumeration) / medium (style, URP FX) | Farm: ~20 staged crop species + wheat cycle + 5 × 5 m dirt-row tiles (= 2 × 2 cells); **no animals in any pack**; no stove anywhere — cooking is WF campfire then a Sci-Fi City appliance; Particle FX covers all M4/weather events (legacy particle shaders need a URP check); exclude adobe/teepee/period Americana, keep scrap timber as on-theme salvage. |
 | `f-prior-art-here.md` | Phase 2, Lane F wave 1 | **done 2026-09-15** | high (repo) / medium (Ramble picks) | All Phase 0–1 artefacts carry into Phase 3 (verdict table in file). *Ramble* found in full at `D:\code\ramble` (active, Godot 4.7 first-person survival — not top-down); nine design-intent carry-forwards, no code ever. `CLAUDE.md`/`README.md` status sections flagged stale. |
 
+| `g-01-ui-information-design.md` | Lane G (UI) | done 2026-09-15 | medium | Reference UI taxonomy region by region, five density techniques, what to reject from an immediate-mode implementation, and the Depth Ruler as the region with no counterpart. |
+| `g-02-unity-ui-framework.md` | Lane G (UI) | done 2026-09-15 | medium-high on the choice, low on the numbers | UI Toolkit behind a Unity-free HUD assembly, with three flip conditions and twelve unrun experiments. Its dynamic-atlas assumptions were later corrected against the engine source: see `docs/adr/0007-pixel-art-icon-pipeline.md`. |
+
+**Lane G is the UI line of work** (`docs/design/ui-plan-reconciliation.md` sets the division of
+labour). Its outputs are design `09`, `10`, `11`, ADRs 0003, 0004, 0006, 0007, the mockups and the
+generated content wiki in `docs/wiki/`. Two of its findings matter outside its own lane: layer
+question 9's above-and-below policy is decided (x-ray by default, nothing above the slice
+clickable), and the icon contract in `09` §7 was wrong on the engine's atlas rules and is now
+corrected. **Lane B's Going Medieval finding was absorbed** into ADR 0006 rather than overriding it:
+the complaint there is about clickable ghosts, which is an input-routing rule, not a rendering one.
+
 Related, outside this folder: `docs/brief.md` (the governing brief), `docs/reference/screenshots/README.md` (reference-image descriptions), and — new on 2026-09-15 — the Phase 3 design set in `docs/design/` (`00-vision`, `02-world-and-layers`, `03-systems-catalogue`, `04-data-model`, `05-ai-and-jobs`, `06-rendering-and-camera`, `07-modding`, `08-milestones`), the ADRs in `docs/adr/`, and the execution plan `docs/plans/vertical-slice.md`.
 
 **Ownership note for parallel sessions:** this index is edited by the coordinating session only. Research subagents write their own file and nothing else — concurrent edits here produced duplicate rows in wave 1 and had to be reconciled by hand.
@@ -42,6 +53,7 @@ Related, outside this folder: `docs/brief.md` (the governing brief), `docs/refer
 - Lane C, reference code: `c-cataclysm-dda.md`, `c-luanti.md`, `c-goblin-camp.md`, `c-unity-colony-sims.md`, `c-utility-ai.md`.
 - Lane D, Unity spikes: `d-01-architecture.md` … `d-08-linux-ci-tooling.md`.
 - Lane E, Synty fit: `e-01-module-mapping.md`, `e-02-characters-animation.md`, `e-03-other-packs.md`, `e-04-tint-strategy.md`.
+- Lane G, UI and information design: `g-01-ui-information-design.md`, `g-02-unity-ui-framework.md`.
 - Lane F: `f-prior-art-here.md`.
 
 Owner's note (2026-09-15): a **separate agent session is researching the interface/UI in depth**. UI and information-design questions (camera/layer UI, overlays, depth cues — parts of Lane B's UI angle and the future `06-rendering-and-camera.md`) are owned there; this line of work must not duplicate them. Its plan has been shared: this project adopts its sim→UI contract as a Lane D1 constraint, and the merge-time corrections it will need (ADR renumbering to 0003/0004, cell size now fixed, project now existing, branch targets) are recorded in `docs/design/ui-plan-reconciliation.md`.

@@ -68,3 +68,15 @@ crashlytics-build.properties
 
 # Our own dotnet mirror projects (tools/dotnet) are committed; Unity-generated ones are not.
 !/tools/dotnet/**/*.csproj
+
+# Generated icon placeholders: docs/design/09-ui-and-input.md section 7 requires these to be
+# regenerated rather than committed, because otherwise every icon-key rename churns binaries.
+/Assets/Art/Ui/generated/
+/Assets/Art/Ui/generated.meta
+
+# Generated icon contact sheets for review. tools/icons/icons.py contact rebuilds them.
+/art-source/icons/contact/
+
+# Python bytecode from tools/
+__pycache__/
+*.py[cod]

@@ -1,0 +1,913 @@
+<title>Odyssey Layer HUD</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  --void:#080c11; --deep:#0d131a; --panel:#141d26; --panel-2:#1b2732;
+  --edge:#27384a; --edge-hi:#38506a;
+  --ink:#dbe7f0; --ink-dim:#8ba2b5; --ink-faint:#5b7186;
+  --signal:#3ad6cf; --signal-deep:#1a7c7a;
+  --crit:#e8544a; --warn:#eda03c; --ok:#68c05e; --info:#5aa8e8;
+  --magenta:#ff3fc8;
+  --ui:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --r:3px;
+}
+*{box-sizing:border-box}
+body{background:var(--void);color:var(--ink);font-family:var(--body);margin:0;
+  background-image:radial-gradient(1200px 600px at 50% -10%, #12202c 0%, var(--void) 70%);}
+h1,h2,h3{font-family:var(--ui);text-wrap:balance;margin:0}
+a{color:var(--signal)}
+
+/* ---------- review rail ---------- */
+.rail{position:sticky;top:env(safe-area-inset-top,0px);z-index:60;
+  background:rgba(8,12,17,.93);backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--edge);padding-block:10px;padding-inline:16px}
+.rail-in{max-width:1400px;margin:0 auto;display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center}
+.brand{font-family:var(--ui);font-weight:700;font-size:17px;letter-spacing:.06em;text-transform:uppercase;
+  display:flex;align-items:center;gap:9px}
+.brand i{width:9px;height:9px;background:var(--signal);border-radius:50%;
+  box-shadow:0 0 10px var(--signal);display:inline-block;font-style:normal}
+.brand small{font-family:var(--mono);font-size:10px;color:var(--ink-faint);letter-spacing:.02em;text-transform:none}
+.ctl{display:flex;align-items:center;gap:7px}
+.ctl>label{font-family:var(--ui);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim)}
+.seg{display:flex;border:1px solid var(--edge);border-radius:var(--r);overflow:hidden}
+.seg button{font-family:var(--ui);font-size:12.5px;letter-spacing:.04em;background:transparent;color:var(--ink-dim);
+  border:0;border-right:1px solid var(--edge);padding:5px 9px;cursor:pointer;white-space:nowrap}
+.seg button:last-child{border-right:0}
+.seg button:hover{background:var(--panel-2);color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--signal-deep);color:#eafffe}
+.seg button:focus-visible,.hud button:focus-visible{outline:2px solid var(--signal);outline-offset:1px}
+
+/* ---------- stage ---------- */
+.stage{max-width:1400px;margin:0 auto;padding-block:18px;padding-inline:16px}
+.fit{position:relative;width:100%;overflow:hidden;border:1px solid var(--edge);border-radius:6px;
+  background:var(--deep);box-shadow:0 24px 60px -30px #000}
+.screen{position:absolute;top:0;left:0;width:1280px;height:720px;transform-origin:top left;
+  font-family:var(--ui);user-select:none}
+#world{position:absolute;inset:0;width:100%;height:100%;display:block}
+.vig{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 45%, transparent 40%, rgba(4,7,10,.72) 100%)}
+
+/* ---------- hud chrome ---------- */
+.hud{position:absolute;pointer-events:auto}
+.pnl{background:linear-gradient(180deg,rgba(20,29,38,.94),rgba(13,19,26,.94));
+  border:1px solid var(--edge);border-radius:var(--r);backdrop-filter:blur(3px)}
+.hdr{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-faint);
+  padding:4px 8px;border-bottom:1px solid var(--edge)}
+.hud button{font-family:var(--ui);background:transparent;border:0;color:inherit;cursor:pointer;padding:0}
+
+/* icon chip */
+.ic{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;
+  border-radius:2px;font-family:var(--ui);font-weight:700;color:#07100f;
+  font-size:11px;letter-spacing:-.02em;line-height:1}
+.ic.s{width:16px;height:16px;font-size:8.5px}
+.ic.m{width:24px;height:24px}
+.ic.l{width:30px;height:30px;font-size:12px}
+.icw{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.icl{font-size:12.5px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ick{font-family:var(--mono);font-size:8.5px;color:var(--signal);white-space:nowrap;
+  max-width:106px;overflow:hidden;text-overflow:ellipsis}
+.keymode .tool span,.keymode .alert .txt,.keymode .bull .txt,.keymode .pawn .nm{display:none}
+.ic.miss{background:var(--magenta)!important;color:#fff;font-size:8px;font-family:var(--mono)}
+.ic.txt{background:var(--panel-2)!important;border:1px solid var(--edge);color:var(--ink);font-size:9px;width:auto;padding:0 5px;min-width:24px}
+
+/* A1 ledger */
+#a1{top:10px;left:10px;width:186px}
+#a1 .row{display:flex;align-items:center;gap:6px;padding:1px 8px}
+#a1 .q{margin-left:auto;font-variant-numeric:tabular-nums;font-size:13px;font-weight:600}
+#a1 .t{font-size:10px;width:10px;text-align:center}
+#a1 .grp{border-top:1px solid var(--edge);margin:3px 0 0}
+
+/* A15 dev overlay */
+#a15{left:206px;top:10px;width:186px;font-family:var(--mono);font-size:9.5px;line-height:1.55;color:var(--ink-dim)}
+#a15 .row{display:flex;justify-content:space-between;padding:1px 8px}
+#a15 b{color:var(--ok);font-weight:500}
+#a15 .over{color:var(--warn)}
+
+/* A2 roster */
+#a2{top:10px;left:50%;transform:translateX(-50%);display:flex;gap:4px}
+.pawn{width:52px;background:linear-gradient(180deg,rgba(20,29,38,.95),rgba(13,19,26,.95));
+  border:1px solid var(--edge);border-radius:var(--r);padding:3px 2px 2px;text-align:center;cursor:pointer;position:relative}
+.pawn:hover{border-color:var(--edge-hi)}
+.pawn.sel{border-color:var(--signal);box-shadow:0 0 0 1px var(--signal-deep)}
+.pawn .av{display:block;width:26px;height:26px;margin:0 auto;border-radius:50%;position:relative;
+  background:conic-gradient(var(--mood) calc(var(--mp)*1%), #223040 0)}
+.pawn .av i{position:absolute;inset:3px;border-radius:50%;background:var(--panel-2);
+  display:grid;place-items:center;font-style:normal;font-size:10px;font-weight:700;color:var(--sk)}
+.pawn .nm{display:block;font-size:10.5px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+.pawn .zb{position:absolute;top:1px;right:1px;font-family:var(--mono);font-size:8px;
+  background:var(--panel-2);border:1px solid var(--edge);border-radius:2px;padding:0 2px;color:var(--signal)}
+.pawn .gl{display:flex;gap:1px;justify-content:center;height:7px;margin-top:1px}
+.pawn .gl span{width:5px;height:5px;border-radius:1px}
+.pawn.off{opacity:.5}
+
+/* A3 clock + A4 speed */
+#a3{top:10px;right:10px;width:150px}
+#a3 .big{font-size:20px;font-weight:600;padding:2px 8px 0;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+#a3 .sub{font-size:11.5px;color:var(--ink-dim);padding:0 8px 4px;display:flex;justify-content:space-between}
+#a4{position:absolute;top:82px;right:10px;display:flex;gap:3px}
+#a4 button{width:30px;height:24px;border:1px solid var(--edge);border-radius:var(--r);
+  background:rgba(13,19,26,.9);display:grid;place-items:center}
+#a4 button[aria-pressed="true"]{border-color:var(--signal);background:var(--signal-deep)}
+
+/* A5 alerts / A6 bulletins */
+#a5{top:116px;right:10px;width:214px;display:flex;flex-direction:column;gap:3px}
+.alert{display:flex;align-items:center;gap:6px;padding:4px 7px;border-radius:var(--r);
+  border-left:3px solid var(--sev);background:rgba(20,29,38,.95);border-top:1px solid var(--edge);
+  border-right:1px solid var(--edge);border-bottom:1px solid var(--edge);cursor:pointer;font-size:12px}
+.alert:hover{background:var(--panel-2)}
+.alert .shape{width:9px;height:9px;flex:0 0 auto;background:var(--sev)}
+.alert .txt{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alert .z{font-family:var(--mono);font-size:9px;color:var(--ink);background:#0d1319;
+  border:1px solid var(--edge);border-radius:2px;padding:0 3px}
+#a6{right:10px;width:214px;display:flex;flex-direction:column;gap:3px}
+.bull{padding:4px 7px;font-size:12px;border:1px solid var(--edge);border-left:3px solid var(--info);
+  border-radius:var(--r);background:rgba(20,29,38,.95);cursor:pointer;display:flex;gap:6px;align-items:center}
+.bull:hover{background:var(--panel-2)}
+
+/* A11 depth ruler */
+#a11{right:10px;bottom:96px;width:214px}
+.dr{display:flex;flex-direction:column-reverse;padding:3px}
+.lay{display:grid;grid-template-columns:26px 1fr 30px 18px;align-items:center;gap:5px;
+  padding:2px 4px;border-radius:2px;cursor:pointer;font-size:11.5px}
+.lay:hover{background:var(--panel-2)}
+.lay.cur{background:var(--signal-deep);color:#eafffe}
+.lay .zl{font-family:var(--mono);font-size:10px;color:var(--ink-faint)}
+.lay.cur .zl{color:#bff7f4}
+.lay .bar{height:7px;background:#1b2732;border:1px solid var(--edge);border-radius:1px;overflow:hidden}
+.lay .bar i{display:block;height:100%;background:var(--signal-deep)}
+.lay.cur .bar i{background:#5ff0e8}
+.lay .pop{font-variant-numeric:tabular-nums;font-size:11px;text-align:right;color:var(--ink-dim)}
+.lay.cur .pop{color:#eafffe}
+.lay .mk{width:8px;height:8px;border-radius:50%;justify-self:center}
+.dr-foot{border-top:1px solid var(--edge);display:flex;gap:3px;padding:4px}
+.dr-foot button{flex:1;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;
+  border:1px solid var(--edge);border-radius:2px;padding:3px 0;color:var(--ink-dim)}
+.dr-foot button[aria-pressed="true"]{border-color:var(--signal);color:#eafffe;background:var(--signal-deep)}
+
+/* A7 architect */
+#a7{top:250px;left:10px;display:flex;gap:4px;align-items:flex-start}
+#a7 .cats{display:grid;grid-template-columns:repeat(2,30px);gap:3px;align-content:start}
+#a7 .cats button{width:30px;height:30px;border:1px solid var(--edge);border-radius:var(--r);
+  background:rgba(13,19,26,.92);display:grid;place-items:center}
+#a7 .cats button:hover{border-color:var(--edge-hi)}
+#a7 .cats button[aria-pressed="true"]{border-color:var(--signal);background:var(--signal-deep)}
+#pal{width:196px}
+#pal .tools{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:4px}
+.tool{display:flex;align-items:center;gap:5px;padding:3px 4px;border:1px solid transparent;
+  border-radius:2px;font-size:11.5px;cursor:pointer;text-align:left}
+.tool:hover{border-color:var(--edge-hi);background:var(--panel-2)}
+.tool.on{border-color:var(--signal);background:var(--signal-deep)}
+.tool.dis{opacity:.42;cursor:not-allowed}
+.tool span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* A9 inspect + A10 commands */
+#a9{bottom:52px;left:10px;width:330px}
+#a9 .top{display:flex;align-items:center;gap:7px;padding:6px 8px 4px}
+#a9 .top .nm{font-size:16px;font-weight:600}
+#a9 .top .kd{font-size:11px;color:var(--ink-faint);letter-spacing:.1em;text-transform:uppercase;margin-left:auto}
+#a9 .tabs{display:flex;gap:2px;padding:0 6px;border-bottom:1px solid var(--edge)}
+#a9 .tabs button{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);
+  padding:3px 6px;border-bottom:2px solid transparent}
+#a9 .tabs button[aria-pressed="true"]{color:var(--signal);border-bottom-color:var(--signal)}
+#a9 .body{padding:6px 8px;min-height:58px;max-height:150px;overflow:auto;font-size:12px}
+.need{display:grid;grid-template-columns:64px 1fr 34px;gap:6px;align-items:center;margin-bottom:2px}
+.need .lb{color:var(--ink-dim);font-size:11.5px;white-space:nowrap}
+.need .tr{display:block;height:6px;background:#111a22;border:1px solid var(--edge);border-radius:1px;overflow:hidden}
+.need .tr i{display:block;height:100%}
+.lay .bar{display:block}
+.need .vl{font-variant-numeric:tabular-nums;font-size:11px;text-align:right;color:var(--ink-dim)}
+#a10{display:grid;grid-template-columns:repeat(10,1fr);gap:3px;padding:5px;border-top:1px solid var(--edge)}
+#a10 button{aspect-ratio:1;border:1px solid var(--edge);border-radius:2px;display:grid;place-items:center;
+  background:rgba(27,39,50,.7)}
+#a10 button:hover{border-color:var(--edge-hi)}
+#a10 button:disabled{opacity:.34;cursor:not-allowed}
+
+/* A8 tab bar */
+#a8{bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:3px;padding:4px}
+#a8 button{width:38px;height:34px;border:1px solid var(--edge);border-radius:var(--r);
+  display:grid;place-items:center;background:rgba(20,29,38,.8)}
+#a8 button:hover{border-color:var(--edge-hi)}
+#a8 button[aria-pressed="true"]{border-color:var(--signal);background:var(--signal-deep)}
+#a8 button:disabled{opacity:.36}
+
+/* A12 overlays + A14 cancel */
+#a12{bottom:10px;right:56px;display:flex;align-items:center;gap:3px;padding:4px}
+#a12 button{width:28px;height:28px;border:1px solid var(--edge);border-radius:2px;display:grid;place-items:center}
+#a12 button[aria-pressed="true"]{border-color:var(--signal);background:var(--signal-deep)}
+#a14{bottom:10px;right:10px;width:40px;height:40px;border:1px solid #5d2320;border-radius:var(--r);
+  background:rgba(60,20,18,.9);display:grid;place-items:center;font-size:19px;color:#ff8a80;cursor:pointer}
+#a14:hover{background:#7a2b26}
+#leg{bottom:44px;right:56px;padding:4px 7px;font-size:10.5px;display:flex;align-items:center;gap:7px}
+#leg .ramp{width:92px;height:8px;border:1px solid var(--edge)}
+
+/* tooltip */
+#a13{position:absolute;z-index:40;pointer-events:none;max-width:230px;padding:5px 7px;
+  background:rgba(8,12,17,.97);border:1px solid var(--edge-hi);border-radius:var(--r);font-size:12px}
+#a13 .t{font-weight:600;display:flex;gap:6px;align-items:baseline}
+#a13 .k{font-family:var(--mono);font-size:9.5px;color:var(--signal);margin-left:auto}
+#a13 .d{color:var(--ink-dim);font-size:11.5px;margin-top:2px}
+
+/* panels */
+#panels{position:absolute;inset:0;pointer-events:none}
+.win{position:absolute;pointer-events:auto;background:rgba(13,19,26,.97);border:1px solid var(--edge-hi);
+  border-radius:4px;box-shadow:0 18px 48px -18px #000;display:flex;flex-direction:column;max-height:560px}
+.win .wh{display:flex;align-items:center;gap:7px;padding:5px 8px;border-bottom:1px solid var(--edge);
+  cursor:grab;background:linear-gradient(180deg,#1b2732,#141d26)}
+.win .wh h3{font-size:13.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.win .wh .x{margin-left:auto;font-size:15px;color:var(--ink-faint);padding:0 3px}
+.win .wh .x:hover{color:var(--crit)}
+.win .wb{padding:8px;overflow:auto;font-size:12px;font-family:var(--body)}
+.win table{border-collapse:collapse;width:100%;font-size:11.5px}
+.win th{font-family:var(--ui);font-weight:600;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-faint);text-align:left;padding:3px 5px;border-bottom:1px solid var(--edge);position:sticky;top:0;
+  background:#0d131a}
+.win td{padding:2.5px 5px;border-bottom:1px solid #182430}
+.win tbody tr:hover{background:#151f29}
+.num{font-variant-numeric:tabular-nums;text-align:right}
+.pri{width:17px;height:17px;display:grid;place-items:center;border:1px solid var(--edge);border-radius:2px;
+  font-family:var(--mono);font-size:10px;cursor:pointer}
+.pri.p1{background:#1d5a3a;border-color:#2c8a59}.pri.p2{background:#1d4a5a;border-color:#2c7a8a}
+.pri.p3{background:#4a4520;border-color:#8a7d2c}.pri.p4{background:#4a2a20;border-color:#8a532c}
+.pri.p0{color:var(--ink-faint)}
+.chip{display:inline-block;font-family:var(--ui);font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+  padding:1px 5px;border-radius:2px;border:1px solid var(--edge);color:var(--ink-dim)}
+.chip.ok{border-color:#2f6b2a;color:var(--ok)}.chip.warn{border-color:#7a5a20;color:var(--warn)}
+.chip.crit{border-color:#7a2f2a;color:var(--crit)}
+.tree{font-family:var(--mono);font-size:11px;line-height:1.75}
+.tree .d{color:var(--ink-faint)}
+.note{font-size:11px;color:var(--ink-faint);border-left:2px solid var(--edge);padding-left:7px;margin-top:8px}
+.wtabs{display:flex;gap:2px;margin-bottom:7px;border-bottom:1px solid var(--edge)}
+.wtabs button{font-family:var(--ui);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-faint);padding:3px 7px;border-bottom:2px solid transparent;background:0;border:0;cursor:pointer}
+.wtabs button[aria-pressed="true"]{color:var(--signal);border-bottom-color:var(--signal)}
+
+/* annotations — never set position here: .hud is already absolute and an
+   equal-specificity [data-ann] rule would cancel it. */
+#a10{position:relative}
+.annotate [data-ann]::after{content:attr(data-ann);position:absolute;top:-1px;left:-1px;z-index:35;
+  font-family:var(--mono);font-size:8.5px;line-height:1.35;white-space:pre;
+  background:rgba(58,214,207,.96);color:#04191a;padding:2px 4px;border-radius:0 0 3px 0;pointer-events:none;
+  max-width:260px;font-weight:500}
+.annotate .hud{outline:1px dashed rgba(58,214,207,.55);outline-offset:1px}
+
+/* ---------- notes below the stage ---------- */
+.notes{max-width:1400px;margin:0 auto;padding-block:8px 44px;padding-inline:16px;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));gap:16px}
+.card{border:1px solid var(--edge);border-radius:5px;padding:13px 15px;background:linear-gradient(180deg,#101922,#0c1219)}
+.card h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--signal);margin-bottom:7px}
+.card p{margin:0 0 8px;font-size:13px;line-height:1.55;color:var(--ink-dim)}
+.card p:last-child{margin-bottom:0}
+.card b{color:var(--ink);font-weight:600}
+.card code{font-family:var(--mono);font-size:11.5px;color:var(--signal)}
+.card ul{margin:0;padding-left:17px;font-size:13px;line-height:1.55;color:var(--ink-dim)}
+.card li{margin-bottom:5px}
+.hint{max-width:1400px;margin:0 auto;padding-inline:16px;font-size:12px;color:var(--ink-faint);font-family:var(--mono)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="rail"><div class="rail-in">
+  <div class="brand"><i></i>Odyssey<small>hud-v1 · information design review</small></div>
+  <div class="ctl"><label for="m-icon">Icons</label><div class="seg" id="m-icon">
+    <button data-v="icon" aria-pressed="true">Icon</button><button data-v="label">+ label</button>
+    <button data-v="key">Keys</button><button data-v="text">Text only</button><button data-v="missing">Missing</button>
+  </div></div>
+  <div class="ctl"><label for="m-pol">Above</label><div class="seg" id="m-pol">
+    <button data-v="hide">Hide</button><button data-v="ghost" aria-pressed="true">Ghost</button>
+    <button data-v="xray">X-ray</button>
+  </div></div>
+  <div class="ctl"><div class="seg" id="m-ann"><button data-v="1">Annotate regions</button></div></div>
+  <div class="ctl"><div class="seg" id="m-all"><button data-v="1">Open every panel</button></div></div>
+</div></div>
+
+<div class="stage"><div class="fit" id="fit"><div class="screen" id="screen">
+  <canvas id="world" width="2560" height="1440"></canvas><div class="vig"></div>
+
+  <div class="hud pnl" id="a1" data-ann="A1 ledger · ViewCache · Globals.Ledger[] · 4 Hz"></div>
+  <div class="hud pnl" id="a15" data-ann="A15 dev overlay · UiBudgetMonitor · counters · 4 Hz"></div>
+  <div class="hud" id="a2" data-ann="A2 roster bar · SelectionDirector · Roster[] · 15 Hz · layer-aware"></div>
+  <div class="hud pnl" id="a3" data-ann="A3 clock · TimeControlDirector · Globals.Clock/Weather · 1 Hz"></div>
+  <div class="hud" id="a4" data-ann="A4 speed · TimeControlDirector · SetGameSpeed · on-event"></div>
+  <div class="hud" id="a5" data-ann="A5 alerts · AlertDirector · AlertInputs · 1 Hz staggered · layer-aware"></div>
+  <div class="hud" id="a6" data-ann="A6 bulletins · BulletinDirector · event ring · on-event"></div>
+  <div class="hud pnl" id="a11" data-ann="A11 DEPTH RULER · SliceDirector · LayerSummary[] · 1 Hz&#10;no counterpart in the reference game"></div>
+  <div class="hud" id="a7" data-ann="A7 architect · ToolDirector + PlacementValidator · ToolDef[] · per frame while dragging"></div>
+  <div class="hud pnl" id="a9" data-ann="A9 inspect · InspectDirector · SelectionDetail[] · 15 Hz"></div>
+  <div class="hud pnl" id="a8" data-ann="A8 tab bar · TabDirector · TabDef[] · on-event"></div>
+  <div class="hud pnl" id="a12" data-ann="A12 overlays · OverlayDirector → OverlayRenderer · cell fields"></div>
+  <div class="hud pnl" id="leg" hidden></div>
+  <div class="hud" id="a14" data-ann="A14 cancel · InputRouter" title="Cancel — Esc">✕</div>
+  <div id="panels"></div>
+  <div id="a13" hidden data-ann="A13 tooltip · TooltipDirector · pooled providers · on hover"></div>
+</div></div>
+<p class="hint" id="hint"></p></div>
+
+<div class="notes">
+  <div class="card"><h2>What this is</h2>
+    <p>A throwaway information-design artefact for <b>Odyssey</b>, a colony sim in true 3D with discrete
+    vertical layers. It exists so the interface can be judged before it is built. It is not a prototype
+    and shares no code with the game.</p>
+    <p>Specified in <code>docs/design/09-ui-and-input.md</code> and
+    <code>docs/design/10-ui-panel-catalogue.md</code>. Every region here carries its catalogue
+    identifier; turn on <b>Annotate regions</b> to see the director, the view fields and the update
+    cadence for each.</p></div>
+
+  <div class="card"><h2>The question to answer first</h2>
+    <p>The concept renders are all single-layer cut-aways, so they never showed what sits above the
+    layer you are working on. That is the one genuinely open design decision.</p>
+    <p>Move the slice on the <b>Depth Ruler</b>, then cycle <b>Above</b> through its three positions:</p>
+    <ul><li><b>Hide</b> — maximum clarity, no sense of what is overhead.</li>
+    <li><b>Ghost</b> — structural outlines only. The provisional recommendation.</li>
+    <li><b>X-ray</b> — everything translucent. Most information, busiest picture.</li></ul>
+    <p>Two comparable games take opposite positions here, so this is a taste call, not a research
+    finding.</p></div>
+
+  <div class="card"><h2>Icons before any art exists</h2>
+    <p>No icon in the game has been drawn. Every one is referenced by a symbolic key such as
+    <code>ui.res.alloy</code>, and a generator makes a deterministic placeholder from the key — stable
+    hue, stable abbreviation — so layout and density can be reviewed now and real art drops in later
+    with no code change.</p>
+    <p>The <b>Icons</b> control cycles the four debug modes the game will ship: keys drawn over icons
+    for self-documenting screenshots, a text-only accessibility fallback, and the magenta
+    missing-icon mode that keeps the art backlog visible.</p></div>
+
+  <div class="card"><h2>Deliberately different from the concept</h2>
+    <ul>
+      <li>The duplicated colonist row at the bottom of the concept is <b>gone</b>. The top roster bar
+      survives and each card gained a layer badge.</li>
+      <li>The freed right edge carries the <b>Depth Ruler</b>: occupancy per layer, colonist counts,
+      and a marker where an alert is pending.</li>
+      <li>Every alert and bulletin carries <b>the layer it happened on</b> and jumps the slice when
+      clicked. Try the red one.</li>
+      <li>Time, date, weather and speed controls were missing from the concept entirely. Added
+      top-right.</li>
+    </ul></div>
+
+  <div class="card"><h2>Where the performance work is</h2>
+    <p>The overlays are the trap. One layer of the agreed footprint is <b>62,500 cells</b>, so an
+    interface element per cell is wrong by three orders of magnitude. Overlays are drawn as one
+    texture per layer sampled through a colour ramp, on a single quad.</p>
+    <p>Only the <b>legend</b> is interface. Toggle an overlay and watch the world tint, not the DOM
+    grow.</p>
+    <p>The dense grid in the Work panel is the other one, and it is the experiment that decides
+    whether the chosen framework survives.</p></div>
+
+  <div class="card"><h2>Known to be unfinished</h2>
+    <ul>
+      <li>The world is a placeholder renderer, not the game. No Synty content appears here and none
+      ever will — licensed assets stay out of the repository.</li>
+      <li>The Work panel shows 12 colonists by 14 work types. The real one is 50 by 25 and is
+      virtualised.</li>
+      <li>Panel positions are fixed. The real ones are draggable and remember where you left them.</li>
+      <li>Wide screens only, really. The real interface targets 1080p with a scale slider.</li>
+    </ul></div>
+</div>
+
+<script>
+"use strict";
+/* ============================ state ============================ */
+const S={ z:0, iconMode:"icon", policy:"ghost", annotate:false, tool:null, cat:"structure",
+          overlay:null, sel:0, itab:"needs", speed:2, open:new Map(), zTop:0 };
+const ZMIN=-2, ZMAX=3, GW=22, GH=22;
+
+/* ============================ icons ============================ */
+const WHEEL=[8,28,45,88,150,172,193,210,262,292,322];
+function h32(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function hueOf(k){return WHEEL[h32(k)%WHEEL.length];}
+function abbrOf(k){const p=k.split(".").pop().replace(/[^a-z0-9]/gi,"");
+  return (p.length<=3?p.slice(0,2):p[0]+p[p.length-1]).toUpperCase();}
+function icon(key,label,size,desc){
+  const s=size||"m", hue=hueOf(key), ab=abbrOf(key);
+  let chip;
+  if(S.iconMode==="missing") chip=`<span class="ic ${s} miss">${ab}</span>`;
+  else if(S.iconMode==="text") chip=`<span class="ic ${s} txt">${label?esc(label).slice(0,7):ab}</span>`;
+  else chip=`<span class="ic ${s}" style="background:hsl(${hue} 62% 58%)">${ab}</span>`;
+  let tail="";
+  if(S.iconMode==="label"&&label) tail=`<span class="icl">${esc(label)}</span>`;
+  if(S.iconMode==="key") tail=`<span class="ick">${esc(key)}</span>`;
+  return `<span class="icw" data-k="${esc(key)}" data-l="${esc(label||"")}" data-d="${esc(desc||"")}">${chip}${tail}</span>`;
+}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+/* ============================ content ============================ */
+const LEDGER=[
+ ["ui.res.alloy","Alloy",1284,1],["ui.res.composite","Composite",96,0],["ui.res.polymer","Polymer",430,-1],
+ ["ui.res.circuitry","Circuitry",58,0],["ui.res.concrete","Concrete",2210,1],["ui.res.glass","Glass",176,0],
+ ["_",""],
+ ["ui.res.rations","Rations",612,-1],["ui.res.protein","Protein paste",188,1],["ui.res.medkit","Medkits",14,0],
+ ["_",""],
+ ["ui.res.cell","Power cells",37,1],["ui.res.scrap","Scrap",4890,1]
+];
+const PAWNS=[
+ {n:"Wrenn",z:0,mood:82,sk:"BL",st:["ok","ok"],job:"Building a support pillar"},
+ {n:"Odile",z:1,mood:64,sk:"HL",st:["warn"],job:"Hauling alloy to the depot"},
+ {n:"Kester",z:-1,mood:41,sk:"MN",st:["warn","crit"],job:"Clearing rubble in the west tunnel"},
+ {n:"Sable",z:0,mood:91,sk:"CK",st:["ok"],job:"Cooking a meal"},
+ {n:"Fen",z:2,mood:70,sk:"GR",st:[],job:"Tending the roof beds"},
+ {n:"Ilma",z:0,mood:55,sk:"DR",st:["warn"],job:"Treating a laceration"},
+ {n:"Torv",z:-2,mood:33,sk:"MN",st:["crit"],job:"Idle — no reachable job"},
+ {n:"Nyx",z:1,mood:77,sk:"RS",st:["ok"],job:"Researching filtration"}
+];
+const NEEDS=[["Food",34,"#e8544a"],["Rest",61,"#eda03c"],["Recreation",78,"#68c05e"],
+             ["Comfort",52,"#eda03c"],["Beauty",44,"#eda03c"],["Outdoors",19,"#e8544a"],
+             ["Space",66,"#68c05e"],["Mood",82,"#3ad6cf"]];
+const ALERTS=[
+ {k:"ui.alert.breach",t:"Tunnel breach, west",sev:"crit",z:-1},
+ {k:"ui.alert.starvation",t:"Rations below two days",sev:"crit",z:0},
+ {k:"ui.alert.unsupported",t:"Unsupported span",sev:"warn",z:2},
+ {k:"ui.alert.cold",t:"Sub-zero in the dormitory",sev:"warn",z:1},
+ {k:"ui.alert.idle",t:"Colonist idle",sev:"info",z:-2}
+];
+const BULLS=[
+ {k:"ui.bulletin.salvage",t:"Salvage cache found",z:-2},
+ {k:"ui.bulletin.arrival",t:"Wanderer at the perimeter",z:0}
+];
+const CATS=[
+ ["structure","ui.arch.category.structure","Structure"],["zones","ui.arch.category.zones","Zones"],
+ ["orders","ui.arch.category.orders","Orders"],["power","ui.arch.category.power","Power"],
+ ["production","ui.arch.category.production","Production"],["furniture","ui.arch.category.furniture","Furniture"],
+ ["security","ui.arch.category.security","Security"],["salvage","ui.arch.category.salvage","Salvage"],
+ ["floors","ui.arch.category.floors","Floors"],["recreation","ui.arch.category.recreation","Recreation"]
+];
+const TOOLS={
+ structure:[["wall","Wall"],["door","Door"],["stair","Stair (2 cells)"],["ladder","Ladder"],
+            ["pillar","Support pillar"],["roof","Roof / floor above"],["reclaim","Reclaim shell"],["window","Window"]],
+ zones:[["stockpile","Stockpile"],["growing","Growing zone"],["allowed","Allowed area"],["dumping","Dumping"]],
+ orders:[["mine","Mine"],["deconstruct","Deconstruct"],["salvagex","Salvage"],["haul","Haul urgently"],
+         ["cancel","Cancel"],["forbid","Forbid"]],
+ power:[["conduit","Conduit"],["battery","Battery"],["genset","Generator"],["solar","Solar array"]],
+ production:[["bench","Fabricator"],["kitchen","Galley"],["smelter","Reclaimer"],["hydro","Hydroponics"]],
+ furniture:[["bed","Bunk"],["table","Table"],["chair","Chair"],["lamp","Lamp"]],
+ security:[["turret","Turret"],["trap","Trap"],["barricade","Barricade"],["door_s","Blast door"]],
+ salvage:[["strip","Strip panel"],["cut","Cut girder"],["core","Extract core"],["sift","Sift rubble"]],
+ floors:[["plate","Deck plate"],["grate","Grating"],["conc","Poured concrete"],["clear","Remove floor"]],
+ recreation:[["bench_r","Bench"],["table_r","Games table"],["screen","Viewscreen"],["planter","Planter"]]
+};
+const TABS=[["work","ui.tab.work","Work",1],["schedule","ui.tab.schedule","Schedule",1],
+ ["assign","ui.tab.assign","Assign",1],["animals","ui.tab.animals","Animals",1],
+ ["wildlife","ui.tab.wildlife","Wildlife",1],["research","ui.tab.research","Research",1],
+ ["quests","ui.tab.quests","Quests",1],["factions","ui.tab.factions","Factions",1],
+ ["world","ui.tab.world","World",1],["menu","ui.tab.menu","Menu",1]];
+const OVERLAYS=[["zones","ui.overlay.zones","Zones"],["roof","ui.overlay.roof","Roof"],
+ ["power","ui.overlay.power","Power"],["temperature","ui.overlay.temperature","Temperature"],
+ ["beauty","ui.overlay.beauty","Beauty"],["light","ui.overlay.light","Light"],
+ ["salvage","ui.overlay.salvage","Salvage density"],["designations","ui.overlay.designations","Designations"]];
+const COMMANDS=[
+ ["ui.command.draft","Draft",1],["ui.command.prioritise","Prioritise work",1],
+ ["ui.command.rest","Send to bunk",1],["ui.command.tend","Tend wounds",1],
+ ["ui.command.follow","Follow with camera",1],["ui.command.carry","Carry",0],
+ ["ui.command.strip","Strip",0],["ui.command.rescue","Rescue",0]
+];
+const RAMPS={temperature:["#2b6ec8","#4fb3a5","#e7d35a","#e8763c","#d33a2e"],
+ beauty:["#5a3a6e","#4a6ea8","#4aa88a","#8ec45a","#e0dd6a"],
+ light:["#101820","#30425a","#5b7ba0","#9ab8d8","#e8f2ff"],
+ salvage:["#20262c","#3b4450","#6a6a4a","#a08a3c","#e0b84a"],
+ zones:["#1c3a2c","#2a6b46","#3a9a60"],roof:["#2a2f3a","#4a5570"],
+ power:["#1e3a3a","#2f7a76","#46c0b8"],designations:["#3a2a1e","#8a5a2a"]};
+
+/* ============================ world ============================ */
+let rnd=(function(){let s=20260915;return()=>{s^=s<<13;s^=s>>>17;s^=s<<5;return ((s>>>0)%1e6)/1e6;};})();
+const NZ=ZMAX-ZMIN+1;
+const cells=[]; // cells[zi][y][x] = {t,h} t: 0 empty 1 floor 2 wall 3 rubble 4 salvage 5 tunnel
+for(let zi=0;zi<NZ;zi++){const p=[];for(let y=0;y<GH;y++){p.push(new Array(GW).fill(0));}cells.push(p);}
+const Z=z=>z-ZMIN;
+(function gen(){
+  const street=i=>i%7===0||i%7===1;
+  for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){
+    if(street(x)||street(y)) cells[Z(0)][y][x]=1;
+  }
+  const blocks=[];
+  for(let by=2;by<GH-2;by+=7)for(let bx=2;bx<GW-2;bx+=7){
+    const w=Math.min(5,GW-1-bx), d=Math.min(5,GH-1-by);
+    if(w<3||d<3)continue;
+    blocks.push({bx,by,w,d,ht:1+Math.floor(rnd()*3)});
+  }
+  for(const b of blocks){
+    for(let z=0;z<=b.ht;z++){
+      for(let y=b.by;y<b.by+b.d;y++)for(let x=b.bx;x<b.bx+b.w;x++){
+        const edge=(x===b.bx||x===b.bx+b.w-1||y===b.by||y===b.by+b.d-1);
+        const ruin=rnd();
+        if(z===0){cells[Z(0)][y][x]= edge?(ruin<0.16?3:2):1;}
+        else if(z<=b.ht){
+          if(ruin<0.10+0.06*z) cells[Z(z)][y][x]=0;
+          else cells[Z(z)][y][x]= edge?(ruin<0.20?3:2):1;
+        }
+      }
+    }
+    if(rnd()<0.5)cells[Z(0)][b.by+1][b.bx+1]=4;
+  }
+  for(let y=0;y<GH;y++)for(let x=0;x<GW;x++){
+    if(street(x)||street(y)){
+      if(rnd()<0.82) cells[Z(-1)][y][x]=5;
+      if(rnd()<0.42) cells[Z(-2)][y][x]=5;
+    }
+    if(rnd()<0.012) cells[Z(-1)][y][x]=4;
+    if(rnd()<0.018) cells[Z(-2)][y][x]=4;
+  }
+})();
+const occ=[],pop=[];
+for(let z=ZMIN;z<=ZMAX;z++){let c=0;for(let y=0;y<GH;y++)for(let x=0;x<GW;x++)if(cells[Z(z)][y][x])c++;
+  occ.push(c/(GW*GH)); pop.push(PAWNS.filter(p=>p.z===z).length);}
+const PPOS=PAWNS.map(()=>({x:2+Math.floor(rnd()*(GW-4)),y:2+Math.floor(rnd()*(GH-4))}));
+
+/* ============================ renderer ============================ */
+const cv=document.getElementById("world"), cx=cv.getContext("2d");
+const TW=72,TH=36,ZH=44;
+function proj(x,y,z){return [1280+(x-y)*TW/2, 200+(x+y)*TH/2-z*ZH];}
+function dia(sx,sy,f){cx.beginPath();cx.moveTo(sx,sy-TH/2);cx.lineTo(sx+TW/2,sy);cx.lineTo(sx,sy+TH/2);
+  cx.lineTo(sx-TW/2,sy);cx.closePath();if(f){cx.fillStyle=f;cx.fill();}}
+function box(sx,sy,top,l,r){
+  cx.beginPath();cx.moveTo(sx-TW/2,sy);cx.lineTo(sx,sy+TH/2);cx.lineTo(sx,sy+TH/2+ZH);
+  cx.lineTo(sx-TW/2,sy+ZH);cx.closePath();cx.fillStyle=l;cx.fill();
+  cx.beginPath();cx.moveTo(sx+TW/2,sy);cx.lineTo(sx,sy+TH/2);cx.lineTo(sx,sy+TH/2+ZH);
+  cx.lineTo(sx+TW/2,sy+ZH);cx.closePath();cx.fillStyle=r;cx.fill();
+  dia(sx,sy,top);
+}
+function colFor(t,z){
+  if(t===1)return ["#44586e","#2b3a4c","#21303f"];
+  if(t===2)return ["#63798f","#3b4d62","#2d3d4f"];
+  if(t===3)return ["#4a4a48","#31312f","#262624"];
+  if(t===4)return ["#c09a3a","#7a5f20","#5c4718"];
+  if(t===5)return ["#33424f","#212d38","#19232c"];
+  return null;
+}
+function rampCol(ch,v){const r=RAMPS[ch];if(!r)return null;const i=Math.min(r.length-1,Math.floor(v*r.length));return r[i];}
+function fieldVal(ch,x,y,z){
+  const n=(h32(ch+":"+x+":"+y+":"+z)%1000)/1000;
+  if(ch==="temperature")return Math.max(0,Math.min(1,0.5+(z*0.12)+(n-0.5)*0.35));
+  if(ch==="light")return Math.max(0,Math.min(1,(z+2)/6*0.8+n*0.3));
+  if(ch==="salvage")return z<0?Math.min(1,n*1.4):n*0.5;
+  return n;
+}
+function drawWorld(){
+  cx.setTransform(1,0,0,1,0,0);cx.clearRect(0,0,cv.width,cv.height);
+  const g=cx.createLinearGradient(0,0,0,cv.height);g.addColorStop(0,"#0c151e");g.addColorStop(1,"#070b10");
+  cx.fillStyle=g;cx.fillRect(0,0,cv.width,cv.height);
+  for(let z=ZMIN;z<=ZMAX;z++){
+    const rel=z-S.z;
+    if(rel>0&&S.policy==="hide")continue;
+    let alpha=1, mode="fill";
+    if(rel<0) alpha=Math.max(0.10,0.42+rel*0.12);
+    if(rel>0){ if(S.policy==="ghost"){mode="line";alpha=Math.max(0.10,0.34-(rel-1)*0.09);}
+               else {alpha=Math.max(0.06,0.22-(rel-1)*0.06);} }
+    cx.globalAlpha=alpha;
+    for(let s=0;s<GW+GH;s++)for(let x=0;x<GW;x++){
+      const y=s-x; if(y<0||y>=GH)continue;
+      const t=cells[Z(z)][y][x]; if(!t)continue;
+      const [sx,sy]=proj(x,y,z), c=colFor(t,z);
+      if(mode==="line"){ cx.strokeStyle="rgba(120,190,205,.85)";cx.lineWidth=1.2;dia(sx,sy,null);cx.stroke(); continue; }
+      let top=c[0];
+      if(rel===0&&S.overlay){ const rc=rampCol(S.overlay,fieldVal(S.overlay,x,y,z)); if(rc)top=rc; }
+      if(rel<0){top=c[1];}
+      if(t===2||t===3) box(sx,sy,top,c[1],c[2]); else dia(sx,sy,top);
+      if(rel===0&&t===4){cx.globalAlpha=alpha*0.9;dia(sx,sy,"rgba(240,200,90,.55)");cx.globalAlpha=alpha;}
+    }
+    if(rel===0){
+      cx.globalAlpha=1;
+      PAWNS.forEach((p,i)=>{ if(p.z!==z)return; const q=PPOS[i]; const [sx,sy]=proj(q.x,q.y,z);
+        cx.beginPath();cx.ellipse(sx,sy+2,9,5,0,0,6.29);cx.fillStyle="rgba(0,0,0,.45)";cx.fill();
+        cx.beginPath();cx.arc(sx,sy-14,7.5,0,6.29);
+        cx.fillStyle= i===S.sel?"#3ad6cf":"#cfe0ee";cx.fill();
+        cx.fillStyle="#0c1219";cx.fillRect(sx-4,sy-9,8,13);
+        if(i===S.sel){cx.strokeStyle="#3ad6cf";cx.lineWidth=2;cx.beginPath();cx.arc(sx,sy-6,20,0,6.29);cx.stroke();}
+      });
+    }
+  }
+  cx.globalAlpha=1;
+}
+
+/* ============================ HUD render ============================ */
+const $=id=>document.getElementById(id);
+function renderLedger(){
+  $("a1").innerHTML=`<div class="hdr">Stores</div>`+LEDGER.map(r=>{
+    if(r[0]==="_")return `<div class="grp"></div>`;
+    const t=r[3]>0?`<span class="t" style="color:var(--ok)">▲</span>`:r[3]<0?`<span class="t" style="color:var(--crit)">▼</span>`:`<span class="t"></span>`;
+    return `<div class="row" data-tip="${esc(r[1])}|${r[0]}|Colony-wide stock. Resources are not per layer.">
+      ${icon(r[0],r[1],"s")}
+      <span class="q">${r[2].toLocaleString("en-GB")}</span>${t}</div>`;}).join("");
+}
+function renderDev(){
+  $("a15").innerHTML=`<div class="hdr">Budget monitor</div>`+
+   [["frame","13.9 ms","ok"],["hud","1.62 ms","ok"],["overlay",S.overlay?"0.21 ms":"0.00 ms","ok"],
+    ["alloc / frame","0 B","ok"],["draw calls","7","ok"],["elements","1,104","ok"],
+    ["tick","180/s @ 3x",""],["publish","0.24 ms",""]]
+   .map(r=>`<div class="row"><span>${r[0]}</span><${r[2]?"b":"span"}>${r[1]}</${r[2]?"b":"span"}></div>`).join("");
+}
+function renderRoster(){
+  $("a2").innerHTML=PAWNS.map((p,i)=>{
+    const c=p.mood>75?"#68c05e":p.mood>50?"#eda03c":"#e8544a";
+    const gl=p.st.map(s=>`<span style="background:var(--${s==="ok"?"ok":s==="warn"?"warn":"crit"})"></span>`).join("");
+    return `<button class="pawn ${i===S.sel?"sel":""} ${p.z===S.z?"":"off"}" data-p="${i}"
+      style="--mood:${c};--mp:${p.mood};--sk:hsl(${hueOf("sk"+p.sk)} 60% 62%)"
+      data-tip="${esc(p.n)}|ui.pawn.card|${esc(p.job)}">
+      <span class="zb">z${p.z>=0?"+":""}${p.z}</span>
+      <span class="av"><i>${p.sk}</i></span><span class="nm">${p.n}</span><span class="gl">${gl}</span></button>`;
+  }).join("");
+}
+function renderClock(){
+  $("a3").innerHTML=`<div class="big">09:40</div>
+    <div class="sub"><span>Day 31 · Thaw</span><span>−4 °C</span></div>
+    <div class="sub" style="border-top:1px solid var(--edge);padding-top:3px">
+      ${icon("ui.weather.sleet","Sleet","s","Outdoor conditions. Roofed layers differ.")}
+      <span style="color:var(--ink-faint);font-size:10.5px">outdoor</span></div>`;
+  $("a4").innerHTML=[["pause","⏸"],["1","▶"],["2","▶▶"],["3","▶▶▶"]].map((b,i)=>
+    `<button data-sp="${i}" aria-pressed="${S.speed===i}" data-tip="Speed ${b[0]}|ui.speed.${b[0]}|Intents still flush while paused"
+      style="font-size:${i>1?9:11}px">${b[1]}</button>`).join("");
+}
+function renderAlerts(){
+  $("a5").innerHTML=ALERTS.map(a=>{
+    const sev=a.sev==="crit"?"var(--crit)":a.sev==="warn"?"var(--warn)":"var(--info)";
+    const shape=a.sev==="crit"?"clip-path:polygon(50% 0,100% 100%,0 100%)":a.sev==="warn"?"border-radius:50%":"";
+    return `<div class="alert" style="--sev:${sev}" data-z="${a.z}"
+      data-tip="${esc(a.t)}|${a.k}|Click to jump the camera and the slice to layer ${a.z}">
+      <span class="shape" style="${shape}"></span>${icon(a.k,"","s")}
+      <span class="txt">${esc(a.t)}</span><span class="z">z${a.z>=0?"+":""}${a.z}</span></div>`;}).join("");
+  $("a6").style.top=(116+$("a5").offsetHeight+8)+"px";
+  $("a6").innerHTML=BULLS.map(b=>`<div class="bull" data-z="${b.z}"
+     data-tip="${esc(b.t)}|${b.k}|A bulletin is an event, not a condition. Click to jump to layer ${b.z}.">
+     ${icon(b.k,"","s")}<span class="txt">${esc(b.t)}</span><span class="z">z${b.z>=0?"+":""}${b.z}</span></div>`).join("");
+}
+function renderRuler(){
+  let rows="";
+  for(let z=ZMIN;z<=ZMAX;z++){
+    const a=ALERTS.filter(x=>x.z===z), worst=a.some(x=>x.sev==="crit")?"var(--crit)":a.length?"var(--warn)":"transparent";
+    const lbl=z===0?"Ground":z>0?"Level "+z:"Sub "+(-z);
+    rows+=`<div class="lay ${z===S.z?"cur":""}" data-z="${z}"
+      data-tip="${lbl}|ui.layer.row|${pop[Z(z)]} colonist(s), ${Math.round(occ[Z(z)]*100)}% built${a.length?", "+a.length+" alert(s)":""}">
+      <span class="zl">z${z>=0?"+":""}${z}</span>
+      <span class="bar"><i style="width:${Math.round(occ[Z(z)]*100)}%"></i></span>
+      <span class="pop">${pop[Z(z)]?pop[Z(z)]+"♦":"—"}</span>
+      <span class="mk" style="background:${worst}"></span></div>`;
+  }
+  $("a11").innerHTML=`<div class="hdr">Depth ruler · z${S.z>=0?"+":""}${S.z}</div><div class="dr">${rows}</div>
+    <div class="dr-foot">`+["hide","ghost","xray"].map(p=>
+      `<button data-pol="${p}" aria-pressed="${S.policy===p}">${p==="xray"?"X-ray":p}</button>`).join("")+`</div>`;
+}
+function renderArchitect(){
+  const cats=CATS.map(c=>`<button data-cat="${c[0]}" aria-pressed="${S.cat===c[0]}"
+     data-tip="${c[2]}|${c[1]}|Architect category">${icon(c[1],"","m")}</button>`).join("");
+  const list=(TOOLS[S.cat]||[]).map(t=>{
+    const key="ui.arch.tool."+t[0], dis=t[0]==="reclaim"&&S.z<0;
+    return `<button class="tool ${S.tool===t[0]?"on":""} ${dis?"dis":""}" data-tool="${t[0]}" ${dis?"disabled":""}
+      data-tip="${esc(t[1])}|${key}|${dis?"Disabled: nothing to reclaim below ground. Reason codes come from the placement validator.":"Drag to place. Validity is checked per cell, per layer."}">
+      ${icon(key,"","s")}<span>${esc(t[1])}</span></button>`;}).join("");
+  $("a7").innerHTML=`<div class="cats">${cats}</div>
+    <div class="pnl" id="pal"><div class="hdr">${CATS.find(c=>c[0]===S.cat)[2]}</div><div class="tools">${list}</div></div>`;
+}
+function renderInspect(){
+  const p=PAWNS[S.sel];
+  const tabs=[["needs","Needs"],["thoughts","Thoughts"],["skills","Skills"],["social","Social"],
+              ["gear","Gear"],["health","Health"],["log","Log"]];
+  let body="";
+  if(S.itab==="needs") body=NEEDS.map(n=>`<div class="need"><span class="lb">${n[0]}</span>
+    <span class="tr"><i style="width:${n[1]}%;background:${n[2]}"></i></span>
+    <span class="vl">${n[1]}%</span></div>`).join("");
+  else if(S.itab==="skills") body=`<table><tbody>`+
+    [["Construction",9,"burning"],["Mining",6,"keen"],["Hauling",4,""],["Cooking",2,""],["Medicine",7,"keen"]]
+    .map(s=>`<tr><td>${s[0]}</td><td class="num">${s[1]}</td><td style="color:var(--warn)">${s[2]}</td></tr>`).join("")+`</tbody></table>`;
+  else if(S.itab==="health") body=`<div class="tree">Body<br>├ Head <span class="d">— intact</span><br>
+    ├ Torso <span class="d">— laceration, tended</span><br>│ ├ Heart <span class="d">— intact</span><br>
+    │ └ Left lung <span class="d">— scarred (−12% breathing)</span><br>
+    ├ Left arm <span class="d">— intact</span><br>└ Right leg <span class="d">— fracture, splinted</span></div>
+    <div class="note">Capacities are derived from parts, so the tree is the source and the summary is the view.</div>`;
+  else if(S.itab==="thoughts") body=`<table><tbody>
+    <tr><td>Slept on the floor</td><td class="num" style="color:var(--crit)">−6</td><td class="num">2.1 d</td></tr>
+    <tr><td>Ate a fine meal</td><td class="num" style="color:var(--ok)">+5</td><td class="num">0.4 d</td></tr>
+    <tr><td>Cramped quarters</td><td class="num" style="color:var(--crit)">−4</td><td class="num">—</td></tr>
+    <tr><td>Saw a corpse</td><td class="num" style="color:var(--crit)">−8</td><td class="num">1.2 d</td></tr></tbody></table>`;
+  else if(S.itab==="social") body=`<table><tbody>
+    <tr><td>Odile</td><td><span class="chip ok">+42 friend</span></td></tr>
+    <tr><td>Kester</td><td><span class="chip crit">−17 rival</span></td></tr>
+    <tr><td>Sable</td><td><span class="chip">+8 acquaintance</span></td></tr></tbody></table>`;
+  else if(S.itab==="gear") body=`<table><tbody>
+    <tr><td>Torso</td><td>Patched jacket</td><td class="num">61%</td></tr>
+    <tr><td>Head</td><td>Filter mask</td><td class="num">88%</td></tr>
+    <tr><td>Carried</td><td>Alloy ×34</td><td class="num">—</td></tr></tbody></table>`;
+  else body=`<div class="tree">09:31 <span class="d">picked up alloy ×34 at z+0</span><br>
+    09:22 <span class="d">finished a support pillar at z+1</span><br>
+    08:58 <span class="d">ate a simple meal</span><br>07:40 <span class="d">woke</span></div>`;
+  $("a9").innerHTML=`<div class="top">${icon("ui.pawn.portrait","","l")}
+      <span class="nm">${p.n}</span><span class="kd">colonist · z${p.z>=0?"+":""}${p.z}</span></div>
+    <div class="tabs">`+tabs.map(t=>`<button data-it="${t[0]}" aria-pressed="${S.itab===t[0]}">${t[1]}</button>`).join("")+`</div>
+    <div class="body">${body}</div>
+    <div id="a10" data-ann="A10 commands · GizmoRegistry · CommandDef[] · 4 Hz">`+
+    COMMANDS.map(c=>`<button ${c[2]?"":"disabled"} data-tip="${esc(c[1])}|${c[0]}|${c[2]?"Emits one intent, applied at the next tick boundary.":"Disabled with a reason, never hidden — that is how the game teaches itself."}">${icon(c[0],"","m")}</button>`).join("")+`</div>`;
+}
+function renderTabs(){
+  $("a8").innerHTML=TABS.map(t=>`<button data-tab="${t[0]}" aria-pressed="${S.open.has(t[0])}"
+    data-tip="${t[2]}|${t[1]}|Opens a floating panel. The world stays visible and running behind it.">${icon(t[1],"","m")}</button>`).join("");
+  $("a12").innerHTML=OVERLAYS.map(o=>`<button data-ov="${o[0]}" aria-pressed="${S.overlay===o[0]}"
+    data-tip="${o[2]}|${o[1]}|Painted as one texture per layer through a colour ramp, on a single quad. The legend is the only interface element.">${icon(o[1],"","s")}</button>`).join("");
+  const lg=$("leg");
+  if(S.overlay){ lg.hidden=false; const r=RAMPS[S.overlay];
+    lg.innerHTML=`<span style="color:var(--ink-dim)">${OVERLAYS.find(o=>o[0]===S.overlay)[2]}</span>
+      <span class="ramp" style="background:linear-gradient(90deg,${r.join(",")})"></span>
+      <span style="color:var(--ink-faint)">low → high · z${S.z>=0?"+":""}${S.z} only</span>`;
+  } else lg.hidden=true;
+}
+
+/* ============================ panels ============================ */
+const PANEL_W={work:[560,300],schedule:[560,270],assign:[520,250],animals:[430,230],wildlife:[400,210],
+ research:[520,330],quests:[420,230],factions:[420,220],world:[470,300],menu:[240,200]};
+function panelBody(k){
+  if(k==="work"){
+    const wt=["Firefight","Patient","Doctor","Rest","Warden","Handle","Cook","Hunt","Construct","Grow","Mine","Salvage","Haul","Clean"];
+    let h=`<table><thead><tr><th>Colonist</th>`+wt.map(w=>`<th style="writing-mode:vertical-rl;transform:rotate(180deg);height:62px;padding:2px">${w}</th>`).join("")+`</tr></thead><tbody>`;
+    PAWNS.concat(PAWNS.slice(0,4)).forEach((p,i)=>{h+=`<tr><td>${p.n}${i>7?" II":""}</td>`+
+      wt.map((w,j)=>{const v=(h32(p.n+w)%5);return `<td style="padding:1px"><span class="pri p${v}">${v||"—"}</span></td>`;}).join("")+`</tr>`;});
+    return h+`</tbody></table><div class="note">Shown at 12 × 14. The real grid is 50 × 25 and virtualises to
+      under 40 realised rows. This is the stress case that decides the framework flip condition.</div>`;
+  }
+  if(k==="schedule"){
+    const hrs=[...Array(24).keys()];
+    let h=`<table><thead><tr><th>Colonist</th>`+hrs.map(x=>`<th style="padding:2px 1px;font-size:9px">${x}</th>`).join("")+`</tr></thead><tbody>`;
+    PAWNS.forEach(p=>{h+=`<tr><td>${p.n}</td>`+hrs.map(x=>{
+      const m=x<6||x>21?"#1d4a5a":x<9?"#4a4520":x>18?"#1d5a3a":"#223040";
+      return `<td style="padding:0"><span style="display:block;height:13px;background:${m}"></span></td>`;}).join("")+`</tr>`;});
+    return h+`</tbody></table><div class="note">Blue sleep, amber anything, green recreation. Drag paints across
+      hours and colonists at once.</div>`;
+  }
+  if(k==="assign")return `<table><thead><tr><th>Colonist</th><th>Outfit</th><th>Food</th><th>Medical</th><th>Area</th></tr></thead><tbody>`+
+    PAWNS.map(p=>`<tr><td>${p.n}</td><td>Worker</td><td>Any</td><td>Standard</td>
+      <td><span class="chip">Home · z−1…z+2</span></td></tr>`).join("")+
+    `</tbody></table><div class="note">An allowed area on a layered map is a volume, not a shape. The area
+      control paints per layer and carries a layer selector — the one place a panel and the Depth Ruler interact.</div>`;
+  if(k==="animals")return `<table><thead><tr><th>Name</th><th>Species</th><th>Training</th><th>Bond</th></tr></thead><tbody>
+    <tr><td>Scrap</td><td>Scraphound</td><td><span class="chip ok">Obedience ✓</span> <span class="chip">Haul 2/5</span></td><td>Wrenn</td></tr>
+    <tr><td>Ash</td><td>Scraphound</td><td><span class="chip">Obedience 3/5</span></td><td>—</td></tr>
+    <tr><td>Bolt</td><td>Feral synth</td><td><span class="chip warn">Untrainable</span></td><td>—</td></tr>
+    </tbody></table><div class="note">City scavengers and feral synths rather than grazing herds, so the
+      predator and manhunter columns carry more weight than the herd columns.</div>`;
+  if(k==="wildlife")return `<table><thead><tr><th>Species</th><th>Count</th><th>State</th><th></th></tr></thead><tbody>
+    <tr><td>Scraphound</td><td class="num">6</td><td><span class="chip">calm</span></td><td><span class="chip">Hunt</span></td></tr>
+    <tr><td>Feral synth</td><td class="num">3</td><td><span class="chip crit">hostile</span></td><td>—</td></tr>
+    <tr><td>Duct rat</td><td class="num">21</td><td><span class="chip">calm</span></td><td><span class="chip">Hunt</span></td></tr></tbody></table>`;
+  if(k==="research"){
+    const nodes=[["Filtration",60,40,1],["Hydroponics",170,40,0],["Alloy working",60,110,1],
+      ["Structural bracing",170,110,0],["Deep drilling",280,110,0],["Power storage",60,180,1],
+      ["Shielding",170,180,0],["Fabrication",280,180,0],["Life support",390,110,0],["Lift systems",390,180,0]];
+    const edges=[[0,1],[0,3],[2,3],[2,4],[2,7],[5,6],[5,7],[3,8],[7,9],[4,9]];
+    let svg=`<svg viewBox="0 0 470 230" style="width:100%;height:auto">`;
+    edges.forEach(e=>{const a=nodes[e[0]],b=nodes[e[1]];
+      svg+=`<line x1="${a[1]+48}" y1="${a[2]+11}" x2="${b[1]}" y2="${b[2]+11}" stroke="#2b3c4e" stroke-width="1.5"/>`;});
+    nodes.forEach((n,i)=>{const done=n[3];
+      svg+=`<rect x="${n[1]}" y="${n[2]}" width="96" height="22" rx="2" fill="${done?"#1a4a48":i===2?"#22323f":"#161f28"}"
+        stroke="${i===1?"#3ad6cf":"#2b3c4e"}" stroke-width="${i===1?2:1}"/>
+        <text x="${n[1]+6}" y="${n[2]+15}" fill="${done?"#8fe8e2":"#b9cbd9"}" font-size="9.5"
+        font-family="IBM Plex Sans,sans-serif">${n[0]}</text>`;});
+    svg+=`</svg>`;
+    return `<div class="wtabs"><button aria-pressed="true">Survival</button><button>Industry</button>
+      <button>Structure</button><button>Medicine</button></div>${svg}
+      <div class="note">Windowed rather than full-screen, deliberately. The concept composite showed the same
+      thing and noted the graph is legible <i>because</i> it is windowed. Currently researching Hydroponics.</div>`;
+  }
+  if(k==="quests")return `<table><thead><tr><th>Quest</th><th>Expires</th><th>Reward</th><th></th></tr></thead><tbody>
+    <tr><td>Shelter a refugee for 12 days</td><td class="num">3.2 d</td><td>Plasteel ×120</td><td><span class="chip ok">Accept</span></td></tr>
+    <tr><td>Clear the substation</td><td class="num">6.0 d</td><td>Goodwill +18</td><td><span class="chip ok">Accept</span></td></tr></tbody></table>`;
+  if(k==="factions")return `<table><thead><tr><th>Faction</th><th>Kind</th><th>Goodwill</th><th>State</th></tr></thead><tbody>
+    <tr><td>Verge Collective</td><td>Settlement</td><td class="num" style="color:var(--ok)">+64 ▲</td><td><span class="chip ok">ally</span></td></tr>
+    <tr><td>Iron Thread</td><td>Traders</td><td class="num">+12</td><td><span class="chip">neutral</span></td></tr>
+    <tr><td>The Rust</td><td>Raiders</td><td class="num" style="color:var(--crit)">−88 ▼</td><td><span class="chip crit">hostile</span></td></tr></tbody></table>`;
+  if(k==="world")return `<div style="height:170px;border:1px solid var(--edge);border-radius:3px;
+    background:radial-gradient(240px 120px at 40% 45%,#1d3040,#0c131a);position:relative">
+    <span style="position:absolute;left:38%;top:42%;width:9px;height:9px;background:var(--signal);border-radius:50%;box-shadow:0 0 9px var(--signal)"></span>
+    <span style="position:absolute;left:58%;top:30%;width:6px;height:6px;background:var(--ok);border-radius:50%"></span>
+    <span style="position:absolute;left:24%;top:62%;width:6px;height:6px;background:var(--crit);border-radius:50%"></span>
+    </div><div class="note">The one view that legitimately takes the whole screen, because it replaces the local
+    map rather than overlaying it. The no-takeover rule covers panels over a live local map.</div>`;
+  if(k==="menu")return `<div style="display:flex;flex-direction:column;gap:5px">`+
+    ["Save","Load","Options","Keybindings","Quit to menu"].map(x=>`<button class="tool" style="justify-content:center">${x}</button>`).join("")+
+    `</div>`;
+  if(k==="bills")return `<table><thead><tr><th>Bill</th><th>Target</th><th>Done</th><th></th></tr></thead><tbody>
+    <tr><td>Cook simple meal</td><td>Do until 40</td><td class="num">31</td><td><span class="chip ok">active</span></td></tr>
+    <tr><td>Smelt scrap → alloy</td><td>Do ×25</td><td class="num">9</td><td><span class="chip ok">active</span></td></tr>
+    <tr><td>Make medkit</td><td>Do until 10</td><td class="num">10</td><td><span class="chip warn">suspended</span></td></tr></tbody></table>
+    <div class="note">The first serious virtualised-list stress, and the dry run for the work grid two milestones later.</div>`;
+  if(k==="zones")return `<table><tbody><tr><td>Priority</td><td><span class="chip ok">Important</span></td></tr>
+    <tr><td>Extent</td><td>84 cells, z+0</td></tr><tr><td>Accepts</td><td>Alloy, composite, polymer, circuitry</td></tr></tbody></table>
+    <div class="note">Open question: is a stockpile a per-layer area or a volume spanning layers? Recommendation is
+    per layer, because hauling cost across layers is materially different and a volume hides that from the player.</div>`;
+  if(k==="room")return `<table><tbody><tr><td>Role</td><td>Dormitory</td></tr><tr><td>Size</td><td>42 cells</td></tr>
+    <tr><td>Beauty</td><td class="num">+14</td></tr><tr><td>Cleanliness</td><td class="num">−2</td></tr>
+    <tr><td>Temperature</td><td class="num">−1 °C</td></tr><tr><td>Spans</td><td>1 layer</td></tr></tbody></table>
+    <div class="note">Open question: do rooms span layers? A two-storey atrium is one room to a player and two
+    flood-fills to an algorithm. The panel is designed to display either.</div>`;
+  if(k==="trade")return `<table><thead><tr><th>Ours</th><th class="num">Qty</th><th class="num">Value</th>
+    <th>Theirs</th><th class="num">Qty</th><th class="num">Value</th></tr></thead><tbody>
+    <tr><td>Alloy</td><td class="num">340</td><td class="num">680</td><td>Plasteel</td><td class="num">120</td><td class="num">960</td></tr>
+    <tr><td>Scrap</td><td class="num">1,200</td><td class="num">240</td><td>Medkit</td><td class="num">8</td><td class="num">320</td></tr>
+    <tr><td>Rations</td><td class="num">60</td><td class="num">180</td><td>Circuitry</td><td class="num">24</td><td class="num">480</td></tr>
+    </tbody></table><div class="note" style="display:flex;justify-content:space-between">
+    <span>Balance</span><b style="color:var(--crit)">−860</b></div>`;
+  if(k==="power")return `<table><tbody><tr><td>Generation</td><td class="num">1,240 W</td></tr>
+    <tr><td>Consumption</td><td class="num">1,410 W</td></tr><tr><td>Stored</td><td class="num">3.2 kWd</td></tr></tbody></table>
+    <div class="note">Connected devices grouped by layer, and the net overlay draws on every layer it touches —
+    the one documented exception to the active-slice-only rule, because a net you cannot see the shape of is unusable.</div>`;
+  if(k==="archive")return `<table><thead><tr><th>Day</th><th>Event</th><th>Layer</th></tr></thead><tbody>`+
+    [[31,"Salvage cache found",-2],[30,"Kester broke down briefly",-1],[28,"Raiders repelled",0],
+     [27,"Fen joined the colony",0],[24,"Tunnel collapse",-1],[21,"Trade caravan arrived",0]]
+    .map(r=>`<tr><td class="num">${r[0]}</td><td>${r[1]}</td><td class="num">z${r[2]>=0?"+":""}${r[2]}</td></tr>`).join("")+
+    `</tbody></table><div class="note">Potentially ten thousand rows, strictly virtualised. This is the assertion
+     that proves the list strategy across the whole interface.</div>`;
+  return `<p style="color:var(--ink-dim)">Catalogued, not yet specified in this mockup.</p>`;
+}
+const PTITLE={work:"Work priorities",schedule:"Schedule",assign:"Assign",animals:"Animals",wildlife:"Wildlife",
+ research:"Research",quests:"Quests",factions:"Factions",world:"World map",menu:"Menu",bills:"Bills",
+ zones:"Stockpile settings",room:"Room",trade:"Trade & caravan",power:"Power net",archive:"Archive"};
+function openPanel(k,px,py){
+  if(S.open.has(k)){closePanel(k);return;}
+  const dim=PANEL_W[k]||[430,240];
+  const n=S.open.size;
+  const el=document.createElement("div");
+  el.className="win";el.dataset.k=k;
+  el.style.width=dim[0]+"px";
+  el.style.left=(px!=null?px:(120+n*26))+"px";
+  el.style.top=(py!=null?py:(150+n*22))+"px";
+  el.style.zIndex=String(++S.zTop+10);
+  el.innerHTML=`<div class="wh">${icon("ui.tab."+k,"","s")}<h3>${PTITLE[k]||k}</h3><button class="x">✕</button></div>
+    <div class="wb" style="max-height:${dim[1]}px">${panelBody(k)}</div>`;
+  $("panels").appendChild(el);S.open.set(k,el);renderTabs();
+}
+function closePanel(k){const el=S.open.get(k);if(el)el.remove();S.open.delete(k);renderTabs();}
+
+/* ============================ interaction ============================ */
+function renderAll(){renderLedger();renderDev();renderRoster();renderClock();renderAlerts();renderRuler();
+  renderArchitect();renderInspect();renderTabs();drawWorld();}
+const screen=$("screen"), tip=$("a13");
+screen.addEventListener("click",e=>{
+  const t=e.target.closest("[data-p],[data-sp],[data-z],[data-pol],[data-cat],[data-tool],[data-it],[data-tab],[data-ov],.x,#a14");
+  if(!t)return;
+  if(t.classList.contains("x")){closePanel(t.closest(".win").dataset.k);return;}
+  if(t.id==="a14"){S.tool=null;[...S.open.keys()].forEach(closePanel);renderAll();return;}
+  if(t.dataset.p!=null){S.sel=+t.dataset.p;S.z=PAWNS[S.sel].z;renderAll();return;}
+  if(t.dataset.sp!=null){S.speed=+t.dataset.sp;renderClock();return;}
+  if(t.dataset.pol){S.policy=t.dataset.pol;syncSeg("m-pol",S.policy);renderRuler();drawWorld();return;}
+  if(t.dataset.z!=null){S.z=+t.dataset.z;renderAll();return;}
+  if(t.dataset.cat){S.cat=t.dataset.cat;S.tool=null;renderArchitect();return;}
+  if(t.dataset.tool){S.tool=S.tool===t.dataset.tool?null:t.dataset.tool;renderArchitect();return;}
+  if(t.dataset.it){S.itab=t.dataset.it;renderInspect();return;}
+  if(t.dataset.tab){openPanel(t.dataset.tab);return;}
+  if(t.dataset.ov){S.overlay=S.overlay===t.dataset.ov?null:t.dataset.ov;renderTabs();renderDev();drawWorld();return;}
+});
+screen.addEventListener("mouseover",e=>{
+  const t=e.target.closest("[data-tip],.icw");if(!t){tip.hidden=true;return;}
+  let title,key,desc;
+  if(t.dataset.tip){[title,key,desc]=t.dataset.tip.split("|");}
+  else {key=t.dataset.k;title=t.dataset.l||key.split(".").pop();desc=t.dataset.d;}
+  tip.innerHTML=`<div class="t"><span>${esc(title)}</span><span class="k">${esc(key)}</span></div>`+
+    (desc?`<div class="d">${esc(desc)}</div>`:"");
+  tip.hidden=false;
+  const r=t.getBoundingClientRect(), s=screen.getBoundingClientRect(), sc=s.width/1280;
+  let x=(r.left-s.left)/sc+10, y=(r.bottom-s.top)/sc+7;
+  if(x+240>1280)x=1280-244; if(y+80>720)y=(r.top-s.top)/sc-70;
+  tip.style.left=x+"px";tip.style.top=Math.max(4,y)+"px";
+});
+screen.addEventListener("mouseleave",()=>{tip.hidden=true;});
+/* drag panels */
+let drag=null;
+screen.addEventListener("mousedown",e=>{const h=e.target.closest(".wh");if(!h||e.target.classList.contains("x"))return;
+  const w=h.closest(".win");w.style.zIndex=String(++S.zTop+10);
+  const sc=screen.getBoundingClientRect().width/1280;
+  drag={w,dx:e.clientX/sc-parseFloat(w.style.left),dy:e.clientY/sc-parseFloat(w.style.top),sc};e.preventDefault();});
+window.addEventListener("mousemove",e=>{if(!drag)return;
+  drag.w.style.left=Math.max(0,Math.min(1280-60,e.clientX/drag.sc-drag.dx))+"px";
+  drag.w.style.top=Math.max(0,Math.min(720-30,e.clientY/drag.sc-drag.dy))+"px";});
+window.addEventListener("mouseup",()=>{drag=null;});
+/* keyboard */
+window.addEventListener("keydown",e=>{
+  if(e.target.tagName==="INPUT")return;
+  if(e.key==="PageUp"||e.key==="]"){S.z=Math.min(ZMAX,S.z+1);renderAll();e.preventDefault();}
+  if(e.key==="PageDown"||e.key==="["){S.z=Math.max(ZMIN,S.z-1);renderAll();e.preventDefault();}
+  if(e.key==="Home"){S.z=0;renderAll();}
+  if(e.key==="Escape"){ if(S.tool){S.tool=null;renderArchitect();}
+    else if(S.open.size){closePanel([...S.open.keys()].pop());} else openPanel("menu"); }
+});
+screen.addEventListener("wheel",e=>{if(!e.shiftKey)return;
+  S.z=Math.max(ZMIN,Math.min(ZMAX,S.z+(e.deltaY<0?1:-1)));renderAll();e.preventDefault();},{passive:false});
+/* rail */
+function syncSeg(id,v){[...$(id).children].forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.v===v)));}
+$("m-icon").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  S.iconMode=b.dataset.v;syncSeg("m-icon",S.iconMode);
+  screen.classList.toggle("keymode",S.iconMode==="key");renderAll();
+  [...S.open.keys()].forEach(k=>{const el=S.open.get(k);el.querySelector(".wh .icw").outerHTML=icon("ui.tab."+k,"","s");});});
+$("m-pol").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+  S.policy=b.dataset.v;syncSeg("m-pol",S.policy);renderRuler();drawWorld();});
+$("m-ann").addEventListener("click",()=>{S.annotate=!S.annotate;
+  screen.classList.toggle("annotate",S.annotate);
+  $("m-ann").firstElementChild.setAttribute("aria-pressed",String(S.annotate));});
+$("m-all").addEventListener("click",()=>{
+  const all=["work","research","trade","archive","bills","room","power","zones"];
+  if(S.open.size>=all.length){[...S.open.keys()].forEach(closePanel);}
+  else{all.forEach((k,i)=>{if(!S.open.has(k))openPanel(k,40+(i%4)*300,110+Math.floor(i/4)*290);});}
+  $("m-all").firstElementChild.setAttribute("aria-pressed",String(S.open.size>0));});
+/* scale */
+const fit=$("fit");
+function scale(){const w=fit.clientWidth,s=Math.min(1,w/1280);
+  screen.style.transform="scale("+s+")";fit.style.height=(720*s)+"px";
+  $("hint").textContent= s<0.62 ? "Scaled to "+Math.round(s*100)+"% — open on a wider screen to judge density."
+    : "Shift + scroll or [ ] changes the layer · Esc cancels · drag panel headers";}
+new ResizeObserver(scale).observe(fit);
+renderAll();openPanel("research",496,214);scale();
+</script>

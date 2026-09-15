@@ -122,3 +122,23 @@ powershell -c "& ([scriptblock]::Create((irm https://dot.net/v1/dotnet-install.p
 The script finds it at `%USERPROFILE%\.dotnet`, on `PATH`, or wherever `DOTNET` points.
 
 **Known Unity issue, and why the wrapper has a watchdog.** A `-runTests` batch run sometimes writes its results and then never exits, holding `Temp/UnityLockfile`; the next batch command then dies instantly with exit code 1 and a near-empty log. `unity.sh` now says so plainly, clears a genuinely stale lock, and treats the results file rather than the process exit code as the authority, terminating a lingering process after a grace period. `UNITY_TEST_TIMEOUT` and `UNITY_TEST_GRACE` tune it. This matters for CI, which must fail rather than hang.
+
+## 11. Interface measurements this repository owes
+
+Added with the interface design; none can run in a container without Unity. Each has a number to
+beat from `docs/design/09-ui-and-input.md` §4, and those are budgets set from first principles, not
+observations: a budget met comfortably first time was set too loosely. Full detail, with the other
+experiments, in `docs/research/g-02-unity-ui-framework.md`.
+
+| # | What to measure | Must beat | Why it matters |
+|---|---|---|---|
+| R11 | Is there a public runtime UXML parser in Unity 6.3? | — | Ten minutes. Decides whether our `UiLayoutDef` is a parallel format or a thin wrapper. Do this first |
+| R12 | Dynamic atlas eligibility: size cap, compression, mips, filter mode, readability, colour space | — | Thirty minutes. Partly answered from the engine source in `docs/adr/0007-pixel-art-icon-pipeline.md`; this confirms it against a running editor |
+| R1 | A dense HUD at 60 Hz: a 50 × 25 priority grid, a 50-card roster and a 10,000-row virtualised archive, all open | **3.5 ms** main thread, **zero** per-frame allocation after warm-up | The flip condition for `docs/adr/0003-ui-framework.md`. If it fails on framework internals rather than our code, reopen against uGUI |
+| R3 | Pointer partitioning between HUD and world, over the nine enumerated cases in `09` §6 | all nine correct | The likeliest source of shipped bugs in this genre. Case nine is ADR 0006's rule that nothing above the slice is clickable |
+| R4 | Do view-level tests with a live panel run under `-batchmode -nographics`? | pass | Decides whether any view-level test can be in CI. The lowest-confidence assumption in the design |
+| R6 | Dirty-chunk overlay upload under worst-case churn, such as fire spreading across a layer | **4 ms** full slice rebuild, **0.5 ms** incremental | The difference between an overlay costing one draw call and costing the frame |
+| R2 | Do ~382 icons at 64 px land in one atlas page, and at what draw-call count? | one page, ≤ 8 idle draw calls | Computed capacity is 878 entries; this checks the arithmetic against a real page |
+
+Gate results on the target machine, a 2022 mid-range laptop, not on the dev boxes. Where only a dev
+box is available, hold results to 1.4× stricter.
