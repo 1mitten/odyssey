@@ -45,6 +45,9 @@ namespace Odyssey.Sim
         /// <summary>World state out, published at the end of each tick.</summary>
         public WorldViewStore Views { get; } = new WorldViewStore();
 
+        /// <summary>Subsystems, frozen in phase and order at construction.</summary>
+        public WorldSystemSchedule Systems { get; private set; } = WorldSystemSchedule.Empty;
+
         /// <summary>0 paused, 1 normal, 2 fast, 3 very fast. A tick-rate multiplier, never a delta.</summary>
         public int GameSpeed { get; private set; } = 1;
 
@@ -85,13 +88,16 @@ namespace Odyssey.Sim
             // 1. Intents from the UI, in submission order.
             Intents.Drain(HandleIntent);
 
-            // 2. World systems — grid propagation, support solving, region rebuild.
+            // 2. World systems: grid propagation, support solving, region rebuild.
+            Systems.RunWorldSystems(this);
+
             // 3. Things, by tick group.
             TickGroupMembers(_byGroup[0], (int)TickGroup.Normal);
             TickGroupMembers(_byGroup[1], (int)TickGroup.Rare);
             TickGroupMembers(_byGroup[2], (int)TickGroup.Long);
 
-            // 4. Pawns. (U19 onwards.)
+            // 4. Pawns: needs, think tree, job execution, movement.
+            Systems.RunPawnSystems(this);
 
             // 5. Deferred structural events, applied at one point.
             if (_deferred.Count > 0)
@@ -180,6 +186,8 @@ namespace Odyssey.Sim
 
         internal void SetSnapshotContributors(ISnapshotContributor[] contributors) => _contributors = contributors;
 
+        internal void SetSystems(WorldSystemSchedule schedule) => Systems = schedule;
+
         /// <summary>Restore the tick counter when loading a save. Not for any other use.</summary>
         internal void RestoreTick(int tick) => CurrentTick = tick;
 
@@ -197,6 +205,7 @@ namespace Odyssey.Sim
     {
         readonly List<Func<SimWorld, ITickable>> _factories = new List<Func<SimWorld, ITickable>>();
         readonly List<ISnapshotContributor> _contributors = new List<ISnapshotContributor>();
+        readonly List<Func<SimWorld, IWorldSystem>> _systemFactories = new List<Func<SimWorld, IWorldSystem>>();
         uint _seed = 1;
         GridSize _size = GridSize.ScaleTarget;
 
@@ -228,11 +237,26 @@ namespace Odyssey.Sim
             return this;
         }
 
+        /// <summary>
+        /// Add a simulation subsystem. It declares its own phase and order, so the sequence of
+        /// these calls cannot change behaviour — which is what makes a composition root safe to
+        /// extend from several places.
+        /// </summary>
+        public SimWorldBuilder AddSystem(Func<SimWorld, IWorldSystem> factory)
+        {
+            _systemFactories.Add(factory ?? throw new ArgumentNullException(nameof(factory)));
+            return this;
+        }
+
         public SimWorld Build()
         {
             var world = new SimWorld(_seed, _size);
             foreach (var factory in _factories) world.Register(factory(world));
             world.SetSnapshotContributors(_contributors.ToArray());
+
+            var systems = new List<IWorldSystem>();
+            foreach (var factory in _systemFactories) systems.Add(factory(world));
+            world.SetSystems(new WorldSystemSchedule(systems));
             return world;
         }
     }

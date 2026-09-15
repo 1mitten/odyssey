@@ -41,6 +41,39 @@ Phase order within a tick is fixed and is part of the determinism contract:
 
 Step 5 exists because the alternative — letting a collapse mutate the grid while a work giver is scanning it — is the classic source of both crashes and non-determinism.
 
+## 3a. Subsystems, and why they are not called directors
+
+Phases 2 and 4 are open to registered **subsystems**. Each declares its own phase and its order within that phase, so the sequence of `AddSystem` calls in the composition root cannot change behaviour — a refactor that moves a registration line is guaranteed not to alter simulation results. Ordering ties break on name, never on registration accident or dictionary iteration. The schedule is sorted once at construction, because the tick has roughly 5.5 ms on the target machine and must not spend any of it deciding what to run.
+
+This exists because the alternative was what the project actually had for a while: a tick method with *comments* where the systems should be, and well-built subsystems written as libraries that nothing called. Registration makes the architecture real rather than implied.
+
+**The vocabulary is deliberate.** The simulation has **systems**; the interface layer has **directors** (`SliceDirector`, `ToolDirector`, `AlertDirector` and the rest, owned by the UI line of work). They are not the same pattern and must not share a name:
+
+| | Subsystem | Director |
+|---|---|---|
+| Lives in | `Odyssey.Sim` | `Odyssey.Ui.Core` |
+| Runs | inside a tick, in a fixed phase | per frame, or on an event |
+| May mutate the world | yes, that is its job | **never** |
+| Reads | the world directly | the published snapshot only |
+| Ordering | declared phase and order | frame order, not simulation-critical |
+
+### The subsystem catalogue
+
+| System | Phase | Order | Responsibility |
+|---|---|---|---|
+| `SupportSystem` | WorldSystems | 10 | Incremental support solve; turns collapses into deferred structural events |
+| *Navigation* (M2) | WorldSystems | 20 | Region and district rebuild for dirty chunks — after support, because a collapse changes what is walkable |
+| *Grid propagation* (M4) | WorldSystems | 30 | Fire, gas and heat over an active frontier |
+| *Needs* (M2) | Pawns | 10 | Needs decay on the 150-tick cadence |
+| *Jobs* (M2) | Pawns | 20 | Think tree, work givers, job execution |
+| *Movement* (M2) | Pawns | 30 | Path following, after jobs have decided where to go |
+
+Two rules that keep this honest. A subsystem **never applies a structural change inline**: collapses, spawns and removals are deferred to phase 5, because another system in the same phase may be part-way through scanning the grid. And the Things phase is closed to subsystems — it belongs to the tick-group dispatcher, and registering a system there throws rather than silently never running.
+
+### What stays a plain library
+
+`SupportSolver`, `WorldGenerator` and the pathfinder are **not** systems. They are pure libraries that take data and answer questions, with thin system adapters where they need to run per tick. That separation is what let the support solver be exercised by roughly 7,900 random edits in a unit test with no world, no tick and no scene in sight — and it is why that test caught a real propagation bug.
+
 ## 4. Data layout
 
 Structure-of-arrays for anything per-cell, at the index convention fixed in `02-world-and-layers.md` (`index = (y * 250 + z) * 250 + x`). Measured: ~10 MB native for the full 250 × 250 × 40 grid, which is not a bottleneck.
