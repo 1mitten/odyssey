@@ -21,6 +21,7 @@ namespace Odyssey.Sim
         readonly List<ITickable> _tickables = new List<ITickable>();
         readonly List<ITickable>[] _byGroup;
         readonly List<Action<SimWorld>> _deferred = new List<Action<SimWorld>>();
+        ISnapshotContributor[] _contributors = Array.Empty<ISnapshotContributor>();
 
         internal SimWorld(uint seed, GridSize size)
         {
@@ -37,6 +38,15 @@ namespace Odyssey.Sim
 
         public uint Seed { get; }
         public GridSize Size { get; }
+
+        /// <summary>Player commands in, consumed at the start of each tick.</summary>
+        public IntentBus Intents { get; } = new IntentBus();
+
+        /// <summary>World state out, published at the end of each tick.</summary>
+        public WorldViewStore Views { get; } = new WorldViewStore();
+
+        /// <summary>0 paused, 1 normal, 2 fast, 3 very fast. A tick-rate multiplier, never a delta.</summary>
+        public int GameSpeed { get; private set; } = 1;
 
         /// <summary>Ticks elapsed. Starts at 0 and is part of the state hash.</summary>
         public int CurrentTick { get; private set; }
@@ -72,7 +82,9 @@ namespace Odyssey.Sim
         /// <summary>Advance exactly one tick, in the fixed phase order.</summary>
         public void Tick()
         {
-            // 1. Intents from the UI. (U07 fills this; the phase exists now so its position is fixed.)
+            // 1. Intents from the UI, in submission order.
+            Intents.Drain(HandleIntent);
+
             // 2. World systems — grid propagation, support solving, region rebuild.
             // 3. Things, by tick group.
             TickGroupMembers(_byGroup[0], (int)TickGroup.Normal);
@@ -90,9 +102,36 @@ namespace Odyssey.Sim
                 foreach (var action in toRun) action(this);
             }
 
-            // 6. Publish the snapshot. (U07.)
+            // 6. Publish the snapshot, after every system has finished mutating the world.
+            Views.Publish(this, _contributors);
 
             CurrentTick++;
+        }
+
+        /// <summary>
+        /// Apply one player command, or say why not. Intents that a milestone has not implemented
+        /// yet are rejected explicitly rather than ignored, so a command never silently does
+        /// nothing.
+        /// </summary>
+        IntentRejection HandleIntent(Intent intent)
+        {
+            switch (intent.Kind)
+            {
+                case IntentKind.SetSliceLayer:
+                    if (intent.A < 0 || intent.A >= Size.SizeY) return IntentRejection.OutOfBounds;
+                    if (Views.SliceLayer == intent.A) return IntentRejection.AlreadyInThatState;
+                    Views.SliceLayer = intent.A;
+                    return IntentRejection.None;
+
+                case IntentKind.SetGameSpeed:
+                    if (intent.A < 0 || intent.A > 3) return IntentRejection.OutOfBounds;
+                    if (GameSpeed == intent.A) return IntentRejection.AlreadyInThatState;
+                    GameSpeed = intent.A;
+                    return IntentRejection.None;
+
+                default:
+                    return IntentRejection.UnknownIntent;
+            }
         }
 
         public void Tick(int count)
@@ -139,6 +178,11 @@ namespace Odyssey.Sim
             return hash;
         }
 
+        internal void SetSnapshotContributors(ISnapshotContributor[] contributors) => _contributors = contributors;
+
+        /// <summary>Restore the tick counter when loading a save. Not for any other use.</summary>
+        internal void RestoreTick(int tick) => CurrentTick = tick;
+
         /// <summary>The random stream for this tick and a named purpose.</summary>
         public DeterministicRandom RandomForTick(uint purpose) =>
             DeterministicRandom.ForTick(Seed, CurrentTick, purpose);
@@ -152,6 +196,7 @@ namespace Odyssey.Sim
     public sealed class SimWorldBuilder
     {
         readonly List<Func<SimWorld, ITickable>> _factories = new List<Func<SimWorld, ITickable>>();
+        readonly List<ISnapshotContributor> _contributors = new List<ISnapshotContributor>();
         uint _seed = 1;
         GridSize _size = GridSize.ScaleTarget;
 
@@ -173,10 +218,21 @@ namespace Odyssey.Sim
             return this;
         }
 
+        /// <summary>
+        /// Add something that writes into the published snapshot. Contributors run in the order
+        /// added, which keeps the published frame byte-identical for a given world state.
+        /// </summary>
+        public SimWorldBuilder AddSnapshotContributor(ISnapshotContributor contributor)
+        {
+            _contributors.Add(contributor ?? throw new ArgumentNullException(nameof(contributor)));
+            return this;
+        }
+
         public SimWorld Build()
         {
             var world = new SimWorld(_seed, _size);
             foreach (var factory in _factories) world.Register(factory(world));
+            world.SetSnapshotContributors(_contributors.ToArray());
             return world;
         }
     }
