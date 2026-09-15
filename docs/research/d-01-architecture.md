@@ -47,3 +47,32 @@ Spec: high. Numbers: none yet — deliberately unclaimed until the runs exist.
 ## Could not be determined
 
 Nothing yet; this file gains the results table when the runs land.
+
+---
+
+## Results (added 2026-09-15, both runs complete)
+
+Both candidates ran on the Windows dev machine (Ryzen 7 9800X3D). **The equivalence gate passed**: both produced state hash `c7d0d7f512c0feca`, with matching diagnostics (1,800 replans attempted, 742 succeeded, identical temperature sum, solid count and post-setup PRNG state). Two independent implementations in two paradigms reached bit-identical simulation state, which is what makes the timings comparable.
+
+| | plain | ecs | ratio |
+|---|---|---|---|
+| Phase 1, grid (Burst in both) | 0.283 ms | 0.442 ms | 1.6x |
+| Phase 2, things | 0.025 ms | 0.171 ms | 6.8x |
+| Phase 3, pawns and A-star | 0.929 ms (managed) | 1.622 ms (Burst) | 1.7x |
+| Phase 4, view build | 0.186 ms | 0.212 ms | 1.1x |
+| **Total tick, mean** | **1.423 ms** | **2.446 ms** | **1.72x** |
+| Native memory | 10.1 MB | 36.1 MB | 3.6x |
+| Setup | 9.4 ms | 33.8 ms | 3.6x |
+| Allocation per tick | 0 B | 0 B | equal |
+
+With Burst disabled in the ECS candidate, the same-compiler comparison against plain's managed A-star is 4.343 ms versus 0.929 ms for phase 3, and 6.857 ms versus 1.423 ms for the whole tick.
+
+**Decision: plain C# structure-of-arrays with Burst on measured hot paths.** Full reasoning, gates, fairness caveats and consequences in `docs/adr/0005-simulation-architecture.md`.
+
+Three findings that outlived the contest itself:
+
+1. **Pathfinding, not architecture, is the performance risk.** Phase 3 is 65% of the plain tick, and 1,058 of 1,800 replans exhausted the full 20,000-node budget and returned failure — futile searches for unreachable targets. This is the direct evidence for the district-id reachability design in `d-04-pathfinding.md`.
+2. **The frame budget is tight on target hardware.** Three ticks per frame at a 3x hardware discount leave 3.8 ms for rendering; at 4x there is none. See the margin table in the ADR.
+3. **The UI seam is affordable.** Publishing an immutable 62,500-cell slice plus pawn and thing views costs 0.186 ms and 69 KB against budgets of 0.8 ms and 2 MB, so snapshot-read/intent-write is not a performance compromise.
+
+The workload contract gained one clarification from the runs: the 20,000-pop budget counts only pops that expand, not lazily-discarded duplicates. Counting both is self-consistent but yields a different world (hash `589e9d8d4279a733`, 736 successful replans).

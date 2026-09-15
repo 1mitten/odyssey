@@ -2,7 +2,7 @@
 
 **Status: accepted 2026-09-15.** The criteria below were fixed before the benchmark ran; the decision applies them to the measured result.
 
-This section is written deliberately ahead of the results. Choosing how to judge after seeing the numbers is how a benchmark becomes a justification for whatever one already preferred.
+The gates, weighted criteria and tie-break below were written before either candidate had run. Choosing how to judge after seeing the numbers is how a benchmark becomes a justification for whatever one already preferred, so they are left exactly as they were written.
 
 ## Context
 
