@@ -81,6 +81,30 @@ namespace Odyssey.Presentation.Rendering
         /// wearing the pack texture, which is what this gives.
         /// </summary>
         public bool materialOnly;
+
+        /// <summary>
+        /// A material to dress the primitive box in directly, with no prefab involved.
+        ///
+        /// This is how ground gets a real texture, and the distinction from
+        /// <see cref="materialOnly"/> is the whole point rather than a detail. A pack *prop*
+        /// wears the shared colour atlas, where every material in the set is one small swatch of
+        /// one big image; stretched over a cell-sized box it samples the entire atlas across each
+        /// face, which is where the stray blades of grass and the dark patches came from. A pack
+        /// *terrain* material is an ordinary tiling texture with none of that, so it is the one
+        /// that can be worn by a box.
+        ///
+        /// Seamlessness comes free and is worth stating, because it is the reason this works at
+        /// all: each face carries one unit of UV, the texture tiles twice across it, and the
+        /// texture is authored to wrap — so the pattern runs on across a cell boundary instead of
+        /// restarting, and the ground reads as a field rather than as a grid of stamps.
+        ///
+        /// Null on a clone without the licensed packs, exactly like <see cref="prefab"/>, and the
+        /// row falls back to a flat tint.
+        /// </summary>
+        public Material? material;
+
+        [Tooltip("The material this row wants, by asset name. Used to rebuild the reference.")]
+        public string materialName = string.Empty;
     }
 
     /// <summary>
@@ -112,11 +136,16 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Replace the whole table. Used by the editor generator; not a runtime call.</summary>
         public void SetEntries(List<ModuleEntry> newEntries) => entries = newEntries;
 
-        /// <summary>How many rows have live art. The rest fall back to primitives.</summary>
+        /// <summary>
+        /// How many rows have live art, counting a resolved material as art in its own right —
+        /// a textured ground row draws from the packs just as surely as one with a prefab does.
+        /// The rest fall back to tinted primitives.
+        /// </summary>
         public int ResolvedPrefabCount()
         {
             int n = 0;
-            for (int i = 0; i < entries.Count; i++) if (entries[i].prefab != null) n++;
+            for (int i = 0; i < entries.Count; i++)
+                if (entries[i].prefab != null || entries[i].material != null) n++;
             return n;
         }
     }

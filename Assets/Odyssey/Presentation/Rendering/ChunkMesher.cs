@@ -133,14 +133,26 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Lattice period of the shade field, in cells. Small enough to read as grain.</summary>
         const int VariationPeriod = 5;
 
-        /// <summary>A buried cell is invisible. At the map edge the strata are cut away on purpose.</summary>
+        /// <summary>
+        /// A buried cell is invisible, and the world boundary counts as buried.
+        ///
+        /// The boundary used to count as open air, which meant every solid cell in the outermost
+        /// ring drew its outward face and the map gained a cross-section wall around its whole
+        /// perimeter, as many cells tall as the slice drew layers below the surface. Looking down
+        /// at a flat meadow you saw a slab of ground with sides, not a field.
+        ///
+        /// Treating the boundary as solid is the honest answer rather than a cosmetic one: there
+        /// is no outside of the map, so there is nowhere a face on that plane could be seen from.
+        /// Nothing interior changes, because a cut into the ground still exposes its neighbours in
+        /// the ordinary way — a pit dug against the map edge still shows all four of its walls.
+        /// </summary>
         bool HasExposedFace(int index, int x, int z, int y)
         {
             var size = _model.Size;
             for (int dir = 0; dir < Directions.Count; dir++)
             {
                 int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
-                if (!size.Contains(nx, nz, y)) return true;
+                if (!size.Contains(nx, nz, y)) continue;
                 if (!_model.IsSolid(size.Index(nx, nz, y))) return true;
             }
             if (y + 1 >= size.SizeY) return true;

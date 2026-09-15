@@ -247,6 +247,14 @@ namespace Odyssey.EditorTools
                 moduleId = id, shape = ModuleShape.SolidBlock, prefabName = string.Empty,
             });
 
+            // A cell-shaped box wearing a tiling terrain texture. See the note above the natural
+            // terrain rows for why this is the one kind of pack material a box may wear.
+            void Ground(string id, string material) => rows.Add(new ModuleEntry
+            {
+                moduleId = id, shape = ModuleShape.SolidBlock, prefabName = string.Empty,
+                materialName = material,
+            });
+
             // Walls, windows and doors. Several template ids share one piece for now; the point of
             // the catalogue is that giving the tower its own curtain wall is an edit here.
             Wall(ModuleIds.Wall, "SM_Bld_Base_Wall_01");
@@ -307,7 +315,7 @@ namespace Odyssey.EditorTools
             // Strata. Tinted blocks on purpose: no pack has a cubic rock module, and a cut-away of
             // bedrock is a coloured mass, not a prop.
             Block(ModuleIds.Terrain("EngineeredFill"));
-            Block(ModuleIds.Terrain("Rock"));
+            Ground(ModuleIds.Terrain("Rock"), "Mat_Rock_01");
             Block(ModuleIds.Terrain("BuriedSeam"));
             Block(ModuleIds.Terrain("Salvage"));
 
@@ -322,26 +330,34 @@ namespace Odyssey.EditorTools
             // An earlier attempt used SM_Gen_Env_Ground_Grass_01. That is an organic patch with a
             // rounded outline, authored to be strewn across a landscape, and tiling it produced
             // circles across the map. Square art for a square grid; scatter art stays scatter.
-            // Ground is a tinted cell-shaped box, and deliberately so.
             //
-            // Two attempts at using pack art for it both failed, for reasons worth recording.
-            // Pointing it at a flat ground-tile prefab drew a thin plane inside every cell that
-            // z-fought with its neighbours: flicker and stray shapes. Taking only the material
-            // failed differently and worse: Synty art is UV-mapped into a shared atlas, so that
-            // material on a primitive cube samples the whole atlas across each face rather than
-            // the grass swatch, which is why the surface came out as stray blades and dark
-            // patches.
+            // Two attempts at using pack art then failed, and the reason they failed is the
+            // reason the current approach works. Pointing a cell at a flat ground-tile prefab drew
+            // a thin plane inside every cell that z-fought with its neighbours: flicker and stray
+            // shapes. Taking only that prefab's material failed worse: Synty *props* are UV-mapped
+            // into a shared colour atlas, so the material on a cell-sized box samples the entire
+            // atlas across each face rather than the grass swatch, which is exactly where the
+            // stray blades and the dark patches came from.
             //
-            // Flat colour is not a compromise here. Synty's own look is flat-shaded colour, so a
-            // well-chosen green *is* the house style; the atlas only adds variation that a cube
-            // cannot address without custom UVs. Textured ground needs a cube whose UVs point at
-            // the grass texel, which is a later job and belongs with a proper mesher change.
-            Block(ModuleIds.Terrain("Grass"));
-            Block(ModuleIds.Terrain("BareEarth"));
-            Block(ModuleIds.Terrain("PackedGravel"));
+            // The Nature Biomes pack also ships **terrain** materials, which are a different kind
+            // of asset altogether: ordinary tiling textures with no atlas, authored for Unity
+            // terrain layers. One of those worn by the cell-shaped box is what ground should have
+            // been all along. Each face carries one unit of UV, the texture tiles twice across it,
+            // and it is authored to wrap, so the pattern continues across a cell boundary instead
+            // of restarting. The result reads as a field rather than a grid of stamps.
+            //
+            // A clone without the packs resolves these to null and gets the flat tints in
+            // StuffPalette.TerrainSolids, which is still a perfectly legible landscape.
+            Ground(ModuleIds.Terrain("Grass"), "Mat_Grass_Textures_01");
+            Ground(ModuleIds.Terrain("BareEarth"), "Mat_Dirt_01");
+            Ground(ModuleIds.Terrain("PackedGravel"), "Mat_Gravel_01");
+            Ground(ModuleIds.Terrain("Subsoil"), "Mat_Mud_01");
+            Ground(ModuleIds.Terrain("Bedrock"), "Mat_Rock_Rough_01");
+
+            // No meadow texture reads as these, and a wrong texture is worse than an honest
+            // colour: sand would come out as mud, and an ore seam has to stay findable at a
+            // glance. They keep their tints until a pack with the right ground arrives.
             Block(ModuleIds.Terrain("Sand"));
-            Block(ModuleIds.Terrain("Subsoil"));
-            Block(ModuleIds.Terrain("Bedrock"));
             Block(ModuleIds.Terrain("IronOre"));
             Block(ModuleIds.Terrain("CoalSeam"));
 
@@ -378,6 +394,18 @@ namespace Odyssey.EditorTools
                 row.prefab = prefab;
             }
 
+            var materials = new Dictionary<string, Material?>(StringComparer.Ordinal);
+            foreach (ModuleEntry row in rows)
+            {
+                if (string.IsNullOrEmpty(row.materialName)) continue;
+                if (!materials.TryGetValue(row.materialName, out Material? material))
+                {
+                    material = FindSyntyMaterial(row.materialName);
+                    materials[row.materialName] = material;
+                }
+                row.material = material;
+            }
+
             var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);
             if (catalogue == null)
             {
@@ -403,6 +431,20 @@ namespace Odyssey.EditorTools
                 .OrderBy(p => p, StringComparer.Ordinal)
                 .FirstOrDefault();
             return path == null ? null : AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        }
+
+        /// <summary>Exact-name material lookup under Assets/Synty. Absent packs give null.</summary>
+        static Material? FindSyntyMaterial(string exactName)
+        {
+            if (!Directory.Exists(Path.GetFullPath("Assets/Synty"))) return null;
+            string[] guids = AssetDatabase.FindAssets($"{exactName} t:Material", new[] { "Assets/Synty" });
+            string? path = guids
+                .Select(AssetDatabase.GUIDToAssetPath)
+                .Where(p => string.Equals(Path.GetFileNameWithoutExtension(p), exactName,
+                    StringComparison.OrdinalIgnoreCase))
+                .OrderBy(p => p, StringComparer.Ordinal)
+                .FirstOrDefault();
+            return path == null ? null : AssetDatabase.LoadAssetAtPath<Material>(path);
         }
 
         // ---------------------------------------------------------------- scene

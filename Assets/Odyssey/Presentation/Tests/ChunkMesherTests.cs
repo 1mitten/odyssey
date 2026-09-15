@@ -98,6 +98,46 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
+        public void TheWorldBoundaryIsNotAnExposedFace()
+        {
+            // Fill a whole layer and bury it under another. Every cell is enclosed on all four
+            // sides except the outermost ring, which is enclosed only by the edge of the world.
+            //
+            // That ring used to draw, which gave a flat map a cross-section wall around its entire
+            // perimeter — as many cells tall as the slice drew layers below the surface. There is
+            // no outside of the map, so there is nowhere those faces could be seen from.
+            var world = new RenderTestWorld(8, 8, 3);
+            for (int x = 0; x < 8; x++)
+            for (int z = 0; z < 8; z++)
+            {
+                world.Solid(x, z, 0);
+                world.Solid(x, z, 1);
+            }
+            world.Publish();
+
+            Assert.That(Instances(MeshLayer(world, 0).Body), Is.Zero,
+                "a fully buried layer is invisible, and the map edge does not expose it");
+        }
+
+        [Test]
+        public void GroundStillShowsItsFacesWhereSomethingIsDugOutBesideIt()
+        {
+            // The boundary rule must not make interior faces disappear too. One cell cleared out
+            // of an otherwise solid layer leaves its four neighbours each showing one face.
+            var world = new RenderTestWorld(8, 8, 3);
+            for (int x = 0; x < 8; x++)
+            for (int z = 0; z < 8; z++)
+            {
+                if (x != 3 || z != 3) world.Solid(x, z, 0);   // one cell left as air
+                world.Solid(x, z, 1);
+            }
+            world.Publish();
+
+            Assert.That(Instances(MeshLayer(world, 0).Body), Is.EqualTo(4),
+                "the four cells around a dug-out one are exposed and must still be drawn");
+        }
+
+        [Test]
         public void SlabsAndGroundGoInTheRoofListSoTheCutAwayCanDropThem()
         {
             var world = new RenderTestWorld(8, 8, 3)

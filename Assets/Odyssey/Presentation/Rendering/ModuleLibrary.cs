@@ -117,7 +117,14 @@ namespace Odyssey.Presentation.Rendering
 
             ModulePart[] parts;
             bool usesArt = false;
-            if (entry != null && entry.prefab != null && entry.materialOnly)
+            if (entry != null && entry.material != null)
+            {
+                // A material straight onto the cell-shaped box: how textured ground is drawn.
+                // Checked before the prefab paths so a row can carry both and prefer the texture.
+                parts = new[] { FallbackPart(shape, entry, entry.material!) };
+                usesArt = true;
+            }
+            else if (entry != null && entry.prefab != null && entry.materialOnly)
             {
                 // The box stays cell-shaped; only the look comes from the pack. See
                 // ModuleEntry.materialOnly for why solid ground must work this way.
