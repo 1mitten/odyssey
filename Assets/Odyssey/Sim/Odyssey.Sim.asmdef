@@ -1,0 +1,16 @@
+{
+    "name": "Odyssey.Sim",
+    "rootNamespace": "Odyssey.Sim",
+    "references": [
+        "Odyssey.Sim.Contracts"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": true
+}

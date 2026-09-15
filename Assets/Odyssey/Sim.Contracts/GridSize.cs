@@ -1,0 +1,64 @@
+#nullable enable
+using System;
+
+namespace Odyssey.Sim.Contracts
+{
+    /// <summary>
+    /// The dimensions of a layered cell grid, and the one true index convention.
+    ///
+    /// Fixed by docs/design/02-world-and-layers.md: <c>index = (y * SizeZ + z) * SizeX + x</c>,
+    /// where y is the layer. This orders memory layer by layer, then row by row, so a single
+    /// layer is a contiguous span — which is what almost every hot loop wants (room flood fill,
+    /// region build, overlay meshing, the camera slice).
+    ///
+    /// Nothing anywhere else may compute a cell index by hand. If this formula is duplicated,
+    /// it will eventually be duplicated wrongly.
+    /// </summary>
+    public readonly struct GridSize : IEquatable<GridSize>
+    {
+        public readonly int SizeX;
+        public readonly int SizeZ;
+        public readonly int SizeY;
+
+        public GridSize(int sizeX, int sizeZ, int sizeY)
+        {
+            if (sizeX <= 0) throw new ArgumentOutOfRangeException(nameof(sizeX));
+            if (sizeZ <= 0) throw new ArgumentOutOfRangeException(nameof(sizeZ));
+            if (sizeY <= 0) throw new ArgumentOutOfRangeException(nameof(sizeY));
+            SizeX = sizeX;
+            SizeZ = sizeZ;
+            SizeY = sizeY;
+        }
+
+        /// <summary>Cells in one layer. A layer is contiguous in memory.</summary>
+        public int LayerStride => SizeX * SizeZ;
+
+        public int CellCount => SizeX * SizeZ * SizeY;
+
+        public bool Contains(int x, int z, int y) =>
+            (uint)x < (uint)SizeX && (uint)z < (uint)SizeZ && (uint)y < (uint)SizeY;
+
+        public bool Contains(CellRef cell) => Contains(cell.X, cell.Z, cell.Y);
+
+        public int Index(int x, int z, int y) => (y * SizeZ + z) * SizeX + x;
+
+        public int Index(CellRef cell) => Index(cell.X, cell.Z, cell.Y);
+
+        public CellRef FromIndex(int index)
+        {
+            int x = index % SizeX;
+            int rest = index / SizeX;
+            int z = rest % SizeZ;
+            int y = rest / SizeZ;
+            return new CellRef(x, z, y);
+        }
+
+        /// <summary>The scale target from the brief: a 625 m square district, forty layers deep.</summary>
+        public static GridSize ScaleTarget => new GridSize(250, 250, 40);
+
+        public bool Equals(GridSize other) => SizeX == other.SizeX && SizeZ == other.SizeZ && SizeY == other.SizeY;
+        public override bool Equals(object? obj) => obj is GridSize other && Equals(other);
+        public override int GetHashCode() => unchecked((SizeX * 397 ^ SizeZ) * 397 ^ SizeY);
+        public override string ToString() => $"{SizeX}x{SizeZ}x{SizeY}";
+    }
+}
