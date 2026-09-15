@@ -47,6 +47,17 @@ namespace Odyssey.Presentation.Rendering
         public bool CastShadows { get; set; } = true;
 
         /// <summary>
+        /// Tufts of grass per hundred grass cells. Zero is bare ground. Changing it after chunks
+        /// have been meshed has no effect until they are meshed again, which is the same rule
+        /// every other meshing decision follows.
+        /// </summary>
+        public int ScatterDensity
+        {
+            get => _mesher.ScatterDensity;
+            set => _mesher.ScatterDensity = value;
+        }
+
+        /// <summary>
         /// Off, everything happens except the submission itself. That makes the draw-call and
         /// instance counts measurable in a headless editor run with no graphics device, which is
         /// the only way to get real numbers into a milestone report from CI.
@@ -181,7 +192,15 @@ namespace Odyssey.Presentation.Rendering
         static void ResolveColour(int tintCode, bool fallback, float shade, out Color tint, out Color emission)
         {
             int value = TintCode.Value(tintCode);
-            if (TintCode.IsTerrain(tintCode))
+            if (TintCode.IsFoliage(tintCode))
+            {
+                // Foliage is only ever drawn from real art — the mesher drops a tuft module that
+                // resolved to a primitive rather than strewing boxes over a meadow — so there is
+                // no fallback colour to choose between here.
+                tint = StuffPalette.FoliageTint(value);
+                emission = Color.black;
+            }
+            else if (TintCode.IsTerrain(tintCode))
             {
                 // Over a primitive the tint is the only colour there is. Over a texture it grades
                 // what the texture already says, which for grass means lifting a muted meadow

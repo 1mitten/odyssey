@@ -278,6 +278,35 @@ namespace Odyssey.EditorTools
             UnityEngine.Object.DestroyImmediate(target);
         }
 
+        /// <summary>The play scene's own sun and ambient, for a tool that wants to judge art by it.</summary>
+        public static void BuildSheetLighting(Transform root) => BuildLighting(root);
+
+        /// <summary>
+        /// A single three-quarter shot of whatever is already in the scene, framed on a point.
+        ///
+        /// For tools that assemble their own subject — a contact sheet of candidate props, say —
+        /// and want it photographed under the game's lighting rather than under a studio setup
+        /// that would flatter everything equally.
+        /// </summary>
+        public static void ShootAt(Vector3 focus, float span, string path)
+        {
+            var cameraObject = new GameObject("SheetCamera");
+            try
+            {
+                var camera = cameraObject.AddComponent<Camera>();
+                camera.fieldOfView = 40f;
+                camera.nearClipPlane = 0.3f;
+                camera.farClipPlane = 2000f;
+                camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.backgroundColor = new Color(0.16f, 0.19f, 0.24f);
+                Shoot(camera, focus, 38f, span * 1.6f, path);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(cameraObject);
+            }
+        }
+
         static void MeasureInternal(bool exitWhenDone)
         {
             int exitCode = 0;
@@ -468,6 +497,17 @@ namespace Odyssey.EditorTools
                 moduleId = id, shape = ModuleShape.SolidBlock, prefabName = string.Empty,
             });
 
+            // Standing decoration on the ground surface. Its base sits on the cell top, the mesher
+            // having already placed it there, and it is centred so the scatter offset is measured
+            // from the middle of the clump rather than from whichever corner the artist modelled
+            // it around.
+            void Tuft(string id, string prefab, float size) => rows.Add(new ModuleEntry
+            {
+                moduleId = id, shape = ModuleShape.Pillar, prefabName = prefab,
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(size, size, size),
+            });
+
             // A cell-shaped box wearing a tiling terrain texture. See the note above the natural
             // terrain rows for why this is the one kind of pack material a box may wear.
             void Ground(string id, string material) => rows.Add(new ModuleEntry
@@ -585,6 +625,24 @@ namespace Odyssey.EditorTools
             Block(ModuleIds.Terrain("Sand"));
             Block(ModuleIds.Terrain("IronOre"));
             Block(ModuleIds.Terrain("CoalSeam"));
+
+            // Tufts of grass strewn over the ground. Chosen on triangles per square metre of
+            // cover, because there is one of these on nearly every one of fourteen thousand
+            // cells and nothing else in the world is instanced that heavily.
+            //
+            // The Nature Biomes meadow set, and it is worth saying why it rather than the grass in
+            // the other three packs. Those are stands of thin blades — reeds, authored to edge a
+            // pond — and strewn over a field they read as a marsh. These are clumps: 1.9 m across,
+            // which is most of a 2.5 m cell, for fifty triangles, in a short, a medium and a tall
+            // built on the same footprint. Height variation from one silhouette family is exactly
+            // what a meadow wants, and all three were picked off a contact sheet rather than off
+            // their names (Odyssey > Presentation > Shoot scatter sheet).
+            //
+            // No scale correction: they are already sized for this grid, which is the other half
+            // of why they were chosen.
+            Tuft(ModuleIds.GrassTuftA, "SM_Env_Grass_Med_Clump_03", 1.0f);
+            Tuft(ModuleIds.GrassTuftB, "SM_Env_Grass_Short_Clump_03", 1.0f);
+            Tuft(ModuleIds.GrassTuftC, "SM_Env_Grass_Tall_Clump_03", 1.0f);
 
             // Trees are the pieces that actually make this look like a place. Measured widths
             // decide the casting: the pines are 1.78–2.12 m and sit inside a 2.5 m cell, while the

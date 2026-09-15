@@ -237,12 +237,18 @@ case "$cmd" in
     run_batch Logs/exec.log -nographics -executeMethod "$method" -quit "$@"
     ;;
   shot)
-    # Renders the play view to Logs/shot-*.png. Deliberately WITHOUT -nographics: this is the
-    # one command that needs a real graphics device, because its whole purpose is to produce a
+    # Renders a picture to Logs/. Deliberately WITHOUT -nographics: this is the one family of
+    # commands that needs a real graphics device, because its whole purpose is to produce a
     # picture a human (or Claude) can look at instead of reasoning about what the renderer
     # ought to be drawing.
+    #
+    # Takes an optional method, so any tool that makes an image gets the same device and the
+    # same watchdog: `unity.sh shot` for the play view, or e.g.
+    # `unity.sh shot Odyssey.EditorTools.ScatterSheet.Shoot` for a contact sheet of props.
     UNITY="$(find_unity)"
-    run_batch Logs/shot.log -executeMethod Odyssey.EditorTools.PlayScene.Screenshot -quit "$@"
+    shot_method="${1:-Odyssey.EditorTools.PlayScene.Screenshot}"
+    if [[ $# -gt 0 ]]; then shift; fi
+    run_batch Logs/shot.log -executeMethod "$shot_method" -quit "$@"
     ;;
   open)
     UNITY="$(find_unity)"

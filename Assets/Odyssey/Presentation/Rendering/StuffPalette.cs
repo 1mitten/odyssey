@@ -100,6 +100,24 @@ namespace Odyssey.Presentation.Rendering
         public static Color TerrainTint(int terrain) =>
             terrain >= 0 && terrain < TerrainTints.Length ? TerrainTints[terrain] : Color.white;
 
+        /// <summary>
+        /// What multiplies a tuft of grass or any other piece of standing foliage.
+        ///
+        /// White, and deliberately so: the Nature Biomes grass clumps are already the bright
+        /// yellow-green of the reference art, which the ground texture is not, so the one thing
+        /// foliage needs is to be left alone. This is the dial if that ever stops being true —
+        /// for a season, a biome, or a blighted map — and it is a separate dial from
+        /// <see cref="TerrainTints"/> precisely so that lifting the ground cannot drag the plants
+        /// standing on it somewhere nobody intended.
+        /// </summary>
+        static readonly Color[] FoliageTints =
+        {
+            Color.white,                               // 0 grass
+        };
+
+        public static Color FoliageTint(int variant) =>
+            variant >= 0 && variant < FoliageTints.Length ? FoliageTints[variant] : Color.white;
+
         /// <summary>The cyan trim. Black means the material has no emissive contribution.</summary>
         static readonly Color[] TerrainEmission =
         {

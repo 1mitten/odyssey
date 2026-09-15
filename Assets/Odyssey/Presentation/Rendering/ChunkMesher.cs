@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Odyssey.Presentation.World;
 using Odyssey.Sim.Worldgen;
+using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
 
 namespace Odyssey.Presentation.Rendering
@@ -53,6 +54,7 @@ namespace Odyssey.Presentation.Rendering
             {
                 int index = size.Index(x, z, y);
                 EmitTerrain(batch, index, x, z, y);
+                EmitScatter(batch, index, x, z, y);
                 EmitFloor(batch, index, x, z, y);
                 EmitEdifice(batch, index, x, z, y);
             }
@@ -109,6 +111,93 @@ namespace Odyssey.Presentation.Rendering
 
             if (!HasExposedFace(index, x, z, y)) return;
             AddBody(batch, module, tint, at);
+        }
+
+        // ------------------------------------------------------------- scatter
+
+        /// <summary>
+        /// Tufts of grass per hundred grass cells. 120 means every cell gets one and a fifth of
+        /// them get two. Zero turns scatter off entirely and is exactly the old behaviour.
+        /// </summary>
+        public int ScatterDensity { get; set; } = 120;
+
+        int[] _scatterModules = System.Array.Empty<int>();
+        bool _scatterResolved;
+
+        /// <summary>
+        /// Strew tufts over an exposed grass surface.
+        ///
+        /// They go through the ordinary bucket machinery, which is the point: a tuft is one more
+        /// instance of one more module in the chunk it stands in, so it inherits chunk culling,
+        /// the slice, the depth shade and the single instanced submission per mesh with no new
+        /// code path and no per-blade object. The alternative — a particle system, a detail
+        /// renderer, a GameObject per clump — would have been a second way of drawing the world.
+        ///
+        /// Only the top surface is dressed. A grass cell with something solid stacked on it is a
+        /// cell nobody can see the top of, and grass growing inside a floor is the sort of fault
+        /// that renders perfectly and is spotted a fortnight later.
+        /// </summary>
+        void EmitScatter(ChunkBatch batch, int index, int x, int z, int y)
+        {
+            if (ScatterDensity <= 0) return;
+
+            ushort terrain = _model.Terrain(index);
+            if (terrain != NaturalContent.TerrainGrass) return;
+            if (!_model.IsSolid(index)) return;
+
+            var size = _model.Size;
+            if (y + 1 < size.SizeY && _model.IsSolid(index + size.LayerStride)) return;
+
+            EnsureScatterModules();
+            if (_scatterModules.Length == 0) return;
+
+            int count = GroundScatter.CountFor(x, z, ScatterDensity);
+            if (count == 0) return;
+
+            // Tufts stand on top of the solid cell, not inside it.
+            Vector3 surface = CellMetrics.FloorCentre(x, z, y) + Vector3.up * CellMetrics.SizeY;
+
+            // Foliage, not terrain. Tinting a tuft the way the ground beneath it is tinted turned
+            // a meadow into dark teal reeds; TintCode.FoliageBase says why.
+            const int tint = TintCode.FoliageBase;
+
+            for (int slot = 0; slot < count; slot++)
+            {
+                GroundScatter.Placement(x, z, slot,
+                    out float offsetX, out float offsetZ, out float yaw, out float scale);
+
+                int module = _scatterModules[
+                    GroundScatter.VariantFor(x, z, slot, _scatterModules.Length)];
+
+                AddBody(batch, module, tint, Matrix4x4.TRS(
+                    surface + new Vector3(offsetX * CellMetrics.SizeXZ, 0f, offsetZ * CellMetrics.SizeXZ),
+                    Quaternion.Euler(0f, yaw, 0f),
+                    new Vector3(scale, scale, scale)));
+            }
+        }
+
+        /// <summary>
+        /// Resolve the tuft modules once, and keep only the ones that found real art.
+        ///
+        /// Dropping the rest is the important half. Every other module in the world falls back to
+        /// a tinted primitive when its art is missing, which is right for a wall — a box where a
+        /// wall should be is still a wall. A box where a tuft of grass should be is fourteen
+        /// thousand grey cubes strewn across a meadow, so a clone without the packs gets bare
+        /// ground instead, which is what it had before any of this existed.
+        /// </summary>
+        void EnsureScatterModules()
+        {
+            if (_scatterResolved) return;
+            _scatterResolved = true;
+
+            var usable = new List<int>();
+            for (int variant = 0; variant < ModuleIds.GrassTuftCount; variant++)
+            {
+                int module = _model.Library.Resolve(ModuleIds.GrassTuft(variant), ModuleShape.Pillar);
+                ResolvedModule resolved = _model.Library[module];
+                if (resolved.UsesArt && !resolved.IsEmpty) usable.Add(module);
+            }
+            _scatterModules = usable.ToArray();
         }
 
         /// <summary>

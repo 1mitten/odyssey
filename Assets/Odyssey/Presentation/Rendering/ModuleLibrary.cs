@@ -206,6 +206,26 @@ namespace Odyssey.Presentation.Rendering
 
             if (raw.Count == 0) return new ModulePart[0];
 
+            // Merge before measuring, because merging is what makes the measurement honest.
+            //
+            // A piece's bounds were previously its mesh's axis-aligned box pushed through its
+            // local transform, and the box that comes out of that is a box around a rotated box —
+            // always at least as large as the geometry and, for anything turned at an angle,
+            // noticeably larger. A merged group has its locals baked into its vertices, so its
+            // bounds are simply its bounds. The colonist is the case that shows the difference:
+            // measured loosely, it stood on a floor 0.13 m below its own feet.
+            List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)> merged = Merge(raw);
+
+            var exact = new Bounds();
+            bool hasExact = false;
+            for (int i = 0; i < merged.Count; i++)
+            {
+                Bounds b = TransformBounds(merged[i].mesh.bounds, merged[i].local);
+                if (!hasExact) { exact = b; hasExact = true; }
+                else exact.Encapsulate(b);
+            }
+            if (hasExact) bounds = exact;
+
             // Neutralise whichever pivot convention the piece uses, once per module rather than
             // once per instance: the same trick the look-check scene plays, moved off the hot path.
             var normalise = Vector3.zero;
@@ -215,10 +235,83 @@ namespace Odyssey.Presentation.Rendering
             Matrix4x4 place = Matrix4x4.TRS(entry.offset, Quaternion.Euler(0f, entry.yaw, 0f), SafeScale(entry))
                               * Matrix4x4.Translate(-normalise);
 
-            var parts = new ModulePart[raw.Count];
+            var parts = new ModulePart[merged.Count];
+            for (int i = 0; i < merged.Count; i++)
+                parts[i] = new ModulePart(merged[i].mesh, merged[i].submesh, merged[i].material,
+                    place * merged[i].local, fallback: false);
+            return parts;
+        }
+
+        /// <summary>
+        /// Collapse the pieces of a prefab that share a material into one mesh apiece.
+        ///
+        /// **Why this is worth doing at all.** A part is not a triangle count, it is a *draw*: the
+        /// renderer submits one instanced call per part per bucket, so a prefab modelled as three
+        /// separate renderers costs three times the calls and three times the matrices of the same
+        /// geometry in one mesh. It goes unnoticed on a wall, which there are hundreds of. Grass
+        /// found it, because there are tens of thousands: the meadow clumps are three cards each,
+        /// and scattering them took the slice from 41 draw calls to 266 and from 14,400 instances
+        /// to 66,441 — very nearly all of it the same fifty triangles being asked for three times.
+        ///
+        /// Merging is safe precisely because it happens here. The pieces of a module never move
+        /// relative to one another — that is what makes them one module — so their local transforms
+        /// can be baked into vertices once, at load, and every instance thereafter is one matrix.
+        /// Anything genuinely articulated would not be a module in the first place.
+        ///
+        /// Grouping is by material and by nothing else, since a material is what forces a separate
+        /// draw. Single-part modules, which is most of them, take the cheap path and are untouched.
+        /// </summary>
+        List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)> Merge(
+            List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)> raw)
+        {
+            if (raw.Count == 1) return raw;
+
+            var byMaterial = new Dictionary<Material, List<int>>();
+            var order = new List<Material>();
             for (int i = 0; i < raw.Count; i++)
-                parts[i] = new ModulePart(raw[i].mesh, raw[i].submesh, raw[i].material,
-                    place * raw[i].local, fallback: false);
+            {
+                if (!byMaterial.TryGetValue(raw[i].material, out List<int>? group))
+                {
+                    group = new List<int>();
+                    byMaterial.Add(raw[i].material, group);
+                    order.Add(raw[i].material);
+                }
+                group.Add(i);
+            }
+
+            var parts = new List<(Mesh, int, Material, Matrix4x4)>(order.Count);
+            foreach (Material material in order)
+            {
+                List<int> group = byMaterial[material];
+                if (group.Count == 1)
+                {
+                    parts.Add(raw[group[0]]);
+                    continue;
+                }
+
+                var combine = new CombineInstance[group.Count];
+                for (int i = 0; i < group.Count; i++)
+                    combine[i] = new CombineInstance
+                    {
+                        mesh = raw[group[i]].mesh,
+                        subMeshIndex = raw[group[i]].submesh,
+                        transform = raw[group[i]].local,
+                    };
+
+                var merged = new Mesh { name = raw[group[0]].mesh.name + "/merged" };
+                // 32-bit indices: a merge is bounded by the prefab, not by the world, so this
+                // will not overflow in practice — but a silently truncated mesh would be a
+                // fortnight of confusion, and the format costs nothing at these sizes.
+                merged.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+                merged.CombineMeshes(combine, mergeSubMeshes: true, useMatrices: true);
+                merged.RecalculateBounds();
+                _baked.Add(merged);
+
+                // The locals are already inside the merged vertices, so the piece needs no local
+                // of its own and its bounds are now exactly its geometry.
+                parts.Add((merged, 0, material, Matrix4x4.identity));
+            }
+
             return parts;
         }
 

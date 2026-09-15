@@ -286,6 +286,20 @@ namespace Odyssey.Presentation.Rendering
         public static string? Item(int itemDefIndex) =>
             itemDefIndex >= 0 && itemDefIndex < ItemModules.Length ? ItemModules[itemDefIndex] : null;
 
+        // Tufts of grass strewn over the ground. Decoration and nothing else: they block nothing,
+        // are not in the save, and the simulation has never heard of them. What they are for is
+        // that a field of one flat colour reads as a carpet, and a field with clumps standing up
+        // out of it reads as ground.
+        public const string GrassTuftA = Prefix + "scatter.grass.a";
+        public const string GrassTuftB = Prefix + "scatter.grass.b";
+        public const string GrassTuftC = Prefix + "scatter.grass.c";
+
+        static readonly string[] GrassTufts = { GrassTuftA, GrassTuftB, GrassTuftC };
+
+        public static int GrassTuftCount => GrassTufts.Length;
+
+        public static string GrassTuft(int variant) => GrassTufts[variant];
+
         /// <summary>Terrain is not authored per template, so its ids are derived from the def name.</summary>
         public static string Terrain(string terrainDefName) =>
             Prefix + "terrain." + terrainDefName.ToLowerInvariant();

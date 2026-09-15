@@ -57,6 +57,10 @@ namespace Odyssey.Presentation.Bootstrap
         public SliceCameraRig? cameraRig;
         public bool castShadows = true;
 
+        [Tooltip("Tufts of grass per hundred grass cells. 0 is bare ground; 120 is one each and a fifth doubled.")]
+        [Range(0, 300)]
+        public int grassScatter = 120;
+
         [Header("Tick")]
         [Tooltip("Ticks per second at speed 1. The simulation has no notion of seconds; this is it.")]
         public int ticksPerSecond = 60;
@@ -149,7 +153,12 @@ namespace Odyssey.Presentation.Bootstrap
             _world.Intents.Submit(new Intent(IntentKind.SetSliceLayer, default, outcome.StartCell.Y));
             _world.Tick();
 
-            _renderer = new ChunkRenderer(_model) { CastShadows = castShadows, GameObjectLayer = gameObject.layer };
+            _renderer = new ChunkRenderer(_model)
+            {
+                CastShadows = castShadows,
+                GameObjectLayer = gameObject.layer,
+                ScatterDensity = grassScatter,
+            };
             _actorMaterial = new Material(library.FallbackMaterial) { name = "Odyssey/Actor" };
             // High-contrast against grass, earth and stone, which tan was not.
             _actorMaterial.SetColor("_BaseColor", new Color(0.98f, 0.36f, 0.20f));

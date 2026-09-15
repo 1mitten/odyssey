@@ -1,0 +1,103 @@
+#nullable enable
+
+namespace Odyssey.Presentation.Rendering
+{
+    /// <summary>
+    /// Where the tufts of grass go: how many a cell gets, and where each one stands in it.
+    ///
+    /// **Everything here is a hash of the cell's own coordinates, and that is the whole design.**
+    /// A chunk is re-meshed whenever anything in it changes, so scatter has to come out identical
+    /// every single time or the grass would crawl about whenever a wall went up nearby. A stream
+    /// of random numbers cannot promise that — it would depend on how many cells had been visited
+    /// first, which depends on which chunk is being rebuilt and in which order. A hash depends on
+    /// nothing but the cell, so it is stable by construction, needs no state, allocates nothing,
+    /// and gives the same field on every machine and after every reload.
+    ///
+    /// It also keeps the simulation out of it. Grass is decoration: it blocks nothing, costs
+    /// nothing to walk through and is not in the save. If it drew from the simulation's own random
+    /// stream it would be a determinism hazard for no gain at all.
+    /// </summary>
+    public static class GroundScatter
+    {
+        /// <summary>The most a single cell will ever be given, however high the density goes.</summary>
+        public const int MaxPerCell = 3;
+
+        // Arbitrary and fixed. Different salts make the count, the position and the choice of
+        // tuft independent of one another, so cells with two tufts are not also the cells whose
+        // tufts are all in the same corner.
+        const uint SaltCount = 0x9E37u;
+        const uint SaltPlace = 0x85EBu;
+        const uint SaltVariant = 0xC2B2u;
+
+        /// <summary>
+        /// How many tufts a cell gets, for a density expressed in tufts per hundred cells.
+        ///
+        /// Fractional densities matter more than whole ones: at 120 a field is mostly single
+        /// tufts with a fifth of it doubled up, and that unevenness is what stops a meadow
+        /// reading as a lawn. So the whole part is given to every cell and the remainder is a
+        /// per-cell coin weighted by the fraction.
+        /// </summary>
+        public static int CountFor(int x, int z, int density)
+        {
+            if (density <= 0) return 0;
+
+            int whole = density / 100;
+            int fraction = density % 100;
+            int count = whole;
+            if (fraction > 0 && Unit(x, z, SaltCount) * 100f < fraction) count++;
+            return count < MaxPerCell ? count : MaxPerCell;
+        }
+
+        /// <summary>
+        /// Where one tuft stands, as a fraction of the cell from its centre, plus its bearing and
+        /// its size.
+        ///
+        /// The offset stops short of the cell edge so a tuft does not visibly straddle the grid —
+        /// the point of scattering is to hide the grid, and a row of tufts split down the middle
+        /// by a cell boundary advertises it instead.
+        /// </summary>
+        public static void Placement(int x, int z, int slot,
+            out float offsetX, out float offsetZ, out float yaw, out float scale)
+        {
+            uint salt = SaltPlace + (uint)slot * 7919u;
+            offsetX = (Unit(x, z, salt) - 0.5f) * 0.76f;
+            offsetZ = (Unit(x, z, salt + 1u) - 0.5f) * 0.76f;
+            yaw = Unit(x, z, salt + 2u) * 360f;
+            scale = 0.75f + Unit(x, z, salt + 3u) * 0.6f;
+        }
+
+        /// <summary>Which of the available tuft meshes this one is.</summary>
+        public static int VariantFor(int x, int z, int slot, int variants)
+        {
+            if (variants <= 1) return 0;
+            return (int)(Hash(x, z, SaltVariant + (uint)slot * 104729u) % (uint)variants);
+        }
+
+        /// <summary>A stable value in [0, 1) for a cell and a salt.</summary>
+        public static float Unit(int x, int z, uint salt) =>
+            (Hash(x, z, salt) & 0xFFFFFFu) * (1f / 0x1000000);
+
+        /// <summary>
+        /// FNV-1a over the coordinates and the salt, then avalanched.
+        ///
+        /// The avalanche is not decoration. FNV on its own leaves neighbouring inputs with
+        /// neighbouring low bits, and taking a small modulus of that gives diagonal stripes across
+        /// the map — a pattern the eye picks out instantly in a field of grass and which would
+        /// look like a worldgen bug rather than like a hash being reused past its strength.
+        /// </summary>
+        public static uint Hash(int x, int z, uint salt)
+        {
+            unchecked
+            {
+                uint h = 2166136261u;
+                h = (h ^ (uint)x) * 16777619u;
+                h = (h ^ (uint)z) * 16777619u;
+                h = (h ^ salt) * 16777619u;
+                h ^= h >> 13;
+                h *= 0x5BD1E995u;
+                h ^= h >> 15;
+                return h;
+            }
+        }
+    }
+}

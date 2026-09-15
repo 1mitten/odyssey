@@ -14,11 +14,27 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Bit 8 marks a code as terrain rather than construction stuff.</summary>
         public const int TerrainBase = 256;
 
+        /// <summary>
+        /// Bit 9 marks a code as foliage, which is neither terrain nor stuff.
+        ///
+        /// It exists because grass tufts stand on grass and are emphatically not tinted like it.
+        /// The terrain tint is calibrated against a **tiling ground texture** that needed lifting
+        /// towards the reference art — it multiplies blue by 1.55. Worn by a tuft, whose art is
+        /// already the right yellow-green, that same multiplier turned a meadow into a stand of
+        /// dark teal reeds. Two different things being tinted needs two different tints, and
+        /// sharing one code space would have made that impossible to express.
+        /// </summary>
+        public const int FoliageBase = 512;
+
         public static int Stuff(int stuff) => stuff;
 
         public static int Terrain(int terrain) => TerrainBase + terrain;
 
+        public static int Foliage(int variant) => FoliageBase + variant;
+
         public static bool IsTerrain(int code) => (code & TerrainBase) != 0;
+
+        public static bool IsFoliage(int code) => (code & FoliageBase) != 0;
 
         /// <summary>The material index, with the terrain marker stripped off.</summary>
         public static int Value(int code) => code & 0xFF;

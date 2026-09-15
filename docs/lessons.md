@@ -140,3 +140,38 @@ twelve ration stacks and eight pieces of salvage on it came out spattered with i
 blobs. Nothing in the log mentions it, because falling back is the designed behaviour for a clone
 without the licensed packs. `ModuleIdTests` now fails if an item def index exists with no module
 id, which is the only moment the mistake is cheap to catch.
+
+## Scattering things over the ground
+
+**A Synty prefab is often several renderers, and a part is a draw rather than a triangle count.**
+The Nature Biomes meadow clumps are fifty triangles each and looked free. They are three separate
+renderers sharing one material, and the renderer submits one instanced call per part per bucket, so
+every tuft cost three draws and three matrices. Scattering them took a slice from 41 draw calls to
+266 and from 14,400 instances to 66,441 — nearly all of it the same fifty triangles being asked for
+three times. Merging a module's same-material pieces into one mesh at load put it back to 116 and
+31,747. It is safe exactly because it happens at load: the pieces of a module never move relative
+to one another, which is what makes them one module.
+
+Check the `renderers` column of `docs/research/synty-inventory.csv` before scattering anything.
+
+**A loose bounding box hides a floating figure.** Bounds used to be each mesh's axis-aligned box
+pushed through its local transform, which for a piece rotated at an angle gives a box around a
+rotated box — always bigger than the geometry. Every module was placed against that inflated box,
+so the colonist had been standing 0.13 m above the floor since the day it was added, and the
+measurement that would have shown it was computed the same wrong way, so it read 0.00. Merging
+bakes the locals into the vertices, after which the bounds are simply the bounds; the number moved
+to 0.13 and then, once placement used the tight box too, back to a true 0.00.
+
+**Grass has to be a hash of the cell, not a stream of random numbers.** A chunk is re-meshed
+whenever anything in it changes, so scatter drawn from a generator would depend on how many cells
+had been visited first — and the grass would crawl about whenever a wall went up nearby. Hashing
+the coordinates is stable by construction, needs no state and allocates nothing. Avalanche the
+hash: FNV alone leaves neighbouring inputs with neighbouring low bits, and a small modulus of that
+lays the field out in diagonal stripes. `GroundScatterTests` splits the map by the parity of x + z
+and counts, which is a cheap test for exactly that failure.
+
+**Tint what a thing is, not what it stands on.** The terrain tint is calibrated against a tiling
+ground texture that needed lifting towards the reference art, and multiplies blue by 1.55. Applied
+to a grass tuft, whose art is already the right yellow-green, it turned a meadow into a stand of
+dark teal reeds. Foliage now has its own tint code and its own palette entry, which is white,
+because the right answer for art that is already correct is to leave it alone.
