@@ -52,6 +52,11 @@ crashlytics-build.properties
 /Assets/[Pp]lugins/[Aa]ndroid/[Bb]uild/
 *.log
 
+# Unity-MCP plugin dependency DLLs: auto-restored by its resolver on editor
+# load (manifest lives beside them), so they never need committing.
+/Assets/Plugins/NuGet/
+/Assets/Plugins/NuGet.meta
+
 # ---------------------------------------------------------------------------
 # Licensed assets stay licensed (brief §1). Synty packs live only here and are
 # never committed. Anything under Assets/ that references them must be
