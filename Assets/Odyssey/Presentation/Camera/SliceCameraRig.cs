@@ -195,6 +195,21 @@ namespace Odyssey.Presentation.CameraRig
                 Mathf.Max(size.SizeX, size.SizeZ) * CellMetrics.SizeXZ * 0.9f, minDistance, maxDistance);
         }
 
+        /// <summary>
+        /// Open looking at one place rather than at the whole map.
+        ///
+        /// Framing the entire map is the wrong opening shot for a colony sim: on a 60-cell map the
+        /// camera sits 135 units back, and a colonist is 0.9 m wide, so the people you are meant to
+        /// be watching are a few pixels of tan against brown ground. Reported as "I can't even see
+        /// one", and it was not a bug in the simulation — they were all there, drawn, and far too
+        /// small to notice.
+        /// </summary>
+        public void FocusOn(CellRef cell, float distance = 32f)
+        {
+            _focus = CellMetrics.FloorCentre(cell);
+            _targetDistance = Mathf.Clamp(distance, minDistance, maxDistance);
+        }
+
         // -------------------------------------------------------- selection
 
         void PickAt(Vector2 screenPosition)

@@ -78,65 +78,6 @@ namespace Odyssey.Presentation.Bootstrap
         public WorldRenderModel? Model => _model;
         public ChunkRenderer? Renderer => _renderer;
 
-        /// <summary>
-        /// Put five colonists, a food store, some beds and a stockpile near the start location,
-        /// so pressing Play produces a colony doing something rather than an empty ruin.
-        ///
-        /// This is scenario setup, not worldgen: it belongs to the composition root because it is
-        /// a choice about *this* prototype, and a different scenario would make different choices.
-        /// Deterministic all the same, since it draws from the world seed.
-        /// </summary>
-        void SpawnStartingColonists(CellRef startCell)
-        {
-            if (_world == null || _pawns == null || _grid == null) return;
-
-            var size = _grid.Size;
-            int startIndex = size.Index(startCell);
-            var rng = DeterministicRandom.ForTick(seed, 0, purpose: 0xC0101);
-
-            // Walkable cells near the start, found by spiralling outward so the colony lands
-            // together rather than scattered across the map.
-            var spots = new List<int>();
-            for (int radius = 0; radius < 24 && spots.Count < 40; radius++)
-            {
-                for (int dz = -radius; dz <= radius && spots.Count < 40; dz++)
-                for (int dx = -radius; dx <= radius && spots.Count < 40; dx++)
-                {
-                    if (Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dz)) != radius) continue;
-                    int x = startCell.X + dx, z = startCell.Z + dz;
-                    if (!size.Contains(x, z, startCell.Y)) continue;
-                    int index = size.Index(x, z, startCell.Y);
-                    if (_grid.IsWalkable(index)) spots.Add(index);
-                }
-            }
-            if (spots.Count == 0) spots.Add(startIndex);
-
-            int take = 0;
-            for (int i = 0; i < colonistCount && take < spots.Count; i++, take++)
-                _pawns.Pawns.Spawn(spots[take]);
-
-            // A food store so nobody starves before M5 grows anything, beds so sleep has a
-            // target, and a stockpile so hauling has somewhere to go.
-            for (int i = 0; i < 12 && take < spots.Count; i++, take++)
-                _pawns.Items.Spawn(ItemIndex.Meal, spots[take], stack: 4);
-
-            for (int i = 0; i < colonistCount && take < spots.Count; i++, take++)
-                _pawns.Items.AddBed(spots[take]);
-
-            var stockpileCells = new List<int>();
-            for (int i = 0; i < 9 && take < spots.Count; i++, take++) stockpileCells.Add(spots[take]);
-            if (stockpileCells.Count > 0)
-            {
-                var allow = new bool[PawnContent.Core().Items.Length];
-                for (int i = 0; i < allow.Length; i++) allow[i] = true;
-                _pawns.Items.AddStockpile(new Stockpile(priority: 2, stockpileCells.ToArray(), allow));
-            }
-
-            // Scatter a little salvage so the haul job has work from the first tick.
-            for (int i = 0; i < 8 && spots.Count > 0; i++)
-                _pawns.Items.Spawn(ItemIndex.Salvage, spots[rng.NextInt(spots.Count)]);
-        }
-
         void Start()
         {
             var size = new GridSize(sizeX, sizeZ, layers);
@@ -189,7 +130,9 @@ namespace Odyssey.Presentation.Bootstrap
                 .AddSnapshotContributor(pawns.Pawns)
                 .Build();
 
-            SpawnStartingColonists(outcome.StartCell);
+            var placement = ColonyScenario.Place(_grid, _pawns, outcome.StartCell, seed, colonistCount);
+            if (placement.Colonists == 0)
+                Debug.LogError($"[Odyssey] no colonists were placed near {outcome.StartCell}: {placement}");
 
             // One tick primes the mirror: the contributor runs in the publish phase, so until the
             // world has ticked once there is no published frame and nothing to draw.
@@ -198,14 +141,16 @@ namespace Odyssey.Presentation.Bootstrap
 
             _renderer = new ChunkRenderer(_model) { CastShadows = castShadows, GameObjectLayer = gameObject.layer };
             _actorMaterial = new Material(library.FallbackMaterial) { name = "Odyssey/Actor" };
-            _actorMaterial.SetColor("_BaseColor", new Color(0.85f, 0.72f, 0.35f));
+            // High-contrast against grass, earth and stone, which tan was not.
+            _actorMaterial.SetColor("_BaseColor", new Color(0.98f, 0.36f, 0.20f));
 
             if (cameraRig != null)
             {
                 cameraRig.Bind(_model, _renderer, _gen.groundLayer);
                 cameraRig.ActiveLayerChanged += OnActiveLayerChanged;
                 cameraRig.GameSpeedRequested += OnGameSpeedRequested;
-                cameraRig.Frame();
+                // Open on the colony, not on the whole map: see SliceCameraRig.FocusOn.
+                cameraRig.FocusOn(outcome.StartCell);
             }
 
             _catalogueNote = moduleCatalogue == null

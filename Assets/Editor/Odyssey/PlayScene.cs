@@ -298,8 +298,26 @@ namespace Odyssey.EditorTools
             // Nature Biomes pack has no cubic ground module. Its "grass planes" measure
             // 1.00 x h x 0.00 — they are standing grass cards for scattering, not tiles. The
             // colours that make these read as landscape are in StuffPalette.TerrainSolids.
-            Block(ModuleIds.Terrain("Grass"));
-            Block(ModuleIds.Terrain("BareEarth"));
+            // Grass and bare earth get real textured ground patches rather than tinted cube faces.
+            // SM_Gen_Env_Ground_Grass_01 measures 4.51 x 0.09 x 4.37, so it is scaled to a 2.5 m
+            // cell; the texture variation across neighbouring patches is what stops the surface
+            // reading as a grid of squares, which is exactly how the flat-tinted version looked.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.Terrain("Grass"), shape = ModuleShape.SolidBlock,
+                prefabName = "SM_Gen_Env_Ground_Grass_01",
+                centreXZ = true, baseAtY = false,
+                scale = new Vector3(2.5f / 4.51f, 1f, 2.5f / 4.37f),
+                offset = new Vector3(0f, CellMetrics.SizeY, 0f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.Terrain("BareEarth"), shape = ModuleShape.SolidBlock,
+                prefabName = "SM_Gen_Env_Ground_Dirt_01",
+                centreXZ = true, baseAtY = false,
+                scale = new Vector3(2.5f / 4.51f, 1f, 2.5f / 4.37f),
+                offset = new Vector3(0f, CellMetrics.SizeY, 0f),
+            });
             Block(ModuleIds.Terrain("PackedGravel"));
             Block(ModuleIds.Terrain("Sand"));
             Block(ModuleIds.Terrain("Subsoil"));

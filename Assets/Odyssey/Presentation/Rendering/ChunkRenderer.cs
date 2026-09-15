@@ -198,7 +198,15 @@ namespace Odyssey.Presentation.Rendering
             {
                 var cell = pawns[i].Cell;
                 if (cell.Y < lowest || cell.Y > activeLayer) continue;
-                DrawMarker(material, cell, new Vector3(0.9f, 1.8f, 0.9f), 0.9f);
+                // Colonists are the thing the player is watching, so they are drawn deliberately
+                // larger than life: a true-to-scale 0.9 m figure is a few pixels once the camera
+                // pulls back, which is how five colonists managed to be invisible on a 60-cell map.
+                //
+                // Body plus a beacon floating above it. The beacon is what makes a colonist
+                // findable at a glance: it sits clear of the terrain, so it reads against grass,
+                // stone or a building roof without the player hunting for a shape among cells.
+                DrawMarker(material, cell, new Vector3(1.4f, 2.6f, 1.4f), 1.3f);
+                DrawMarker(material, cell, new Vector3(0.7f, 0.7f, 0.7f), 3.6f);
             }
 
             var things = snapshot.Things;
