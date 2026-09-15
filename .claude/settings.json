@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git branch:*)",
+      "Bash(git show:*)",
+      "Bash(scripts/unity.sh:*)",
+      "Bash(./scripts/unity.sh:*)",
+      "Bash(bash scripts/unity.sh:*)"
+    ]
+  }
+}
