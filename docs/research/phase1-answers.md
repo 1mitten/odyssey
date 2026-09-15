@@ -41,3 +41,11 @@ Lane D1 narrows to a **two-way benchmark**: plain C# structs + Burst jobs versus
 ## Q7 — Primary dev machine (owner-raised). **Answered: this Windows machine**
 
 Windows 11 (`D:\code\odyssey`, Unity 6000.3.24f1, all five packs imported) is primary; the Pop!_OS instructions in `docs/setup/local-dev.md` remain as a secondary reference. `scripts/unity.sh` works on both (Git Bash on Windows).
+
+## MVP fast-track decisions (second interview, 2026-09-15)
+
+The owner set the target: **the playable MVP** — the brief §2 vertical slice (one ruined-city map, five pawns, three layers, dig/build/haul/eat/sleep, needs and mood, a stockpile; five pawns survive ten in-game days unattended, headless, no errors), i.e. milestones M0→M3.
+
+- **Q8 — Research scope: slice-critical only.** Remaining pre-code research narrows to the D1 benchmark, stockpiles/hauling (A14) and the D-lane questions the slice depends on (world storage, layer pathfinding, save/load, Defs, CI). Health, combat, storyteller, temperature and remaining B/C studies wait until the slice is playable.
+- **Q9 — Phase 3 depth: slice-scoped.** Architecture, world/layers, data model, AI/jobs and `docs/plans/vertical-slice.md` at full depth; the systems catalogue still lists every pillar (the no-drop contract) with milestone tags on non-slice rows; vision and modding docs short. The Phase 3 → Phase 4 approval stop stands.
+- **Graphics bar** (same conversation): the rendered game should sit similar or close to the two concept renders (`docs/reference/screenshots/README.md`) — recorded as a constraint in `d-03-rendering.md`.

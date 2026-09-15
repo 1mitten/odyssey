@@ -1,13 +1,9 @@
 {
   "mcpServers": {
     "ai-game-developer": {
-      "type": "stdio",
-      "command": "Library/mcp-server/win-x64/gamedev-mcp-server.exe",
-      "args": [
-        "port=8080",
-        "client-transport=stdio"
-      ],
-      "env": {}
+      "type": "http",
+      "env": {},
+      "url": "https://ai-game.dev/mcp/p/ad605905"
     }
   }
 }
