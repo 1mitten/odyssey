@@ -1,0 +1,23 @@
+D1RESULT candidate=plain
+D1RESULT unity=6000.3.24f1 packages=com.unity.burst@1.8.30,com.unity.collections@2.6.8,com.unity.mathematics@1.3.3
+D1RESULT hash_run1=c7d0d7f512c0feca hash_run2=c7d0d7f512c0feca
+D1RESULT phase1_ms_mean=0.283 phase1_ms_p95=0.481 phase1_ms_max=0.918
+D1RESULT phase2_ms_mean=0.025 phase2_ms_p95=0.027 phase2_ms_max=0.052
+D1RESULT phase3_ms_mean=0.929 phase3_ms_p95=1.671 phase3_ms_max=2.413
+D1RESULT phase4_ms_mean=0.186 phase4_ms_p95=0.211 phase4_ms_max=0.448
+D1RESULT tick_ms_mean=1.423 tick_ms_p95=2.288 tick_ms_max=3.478
+D1RESULT alloc_bytes_per_tick=0.000 gc0=0 gc1=0 gc2=0
+D1RESULT managed_bytes=326684672 native_bytes=10064012
+D1RESULT setup_ms=9.388
+# burst_enabled=True burst_synchronous=True
+# managed_bytes is GC.GetTotalMemory(true) for the whole editor process;
+# managed_delta_bytes is the rise attributable to the simulation itself.
+# managed_delta_bytes=27500544
+# replans run1 tried=1800 succeeded=742 | run2 tried=1800 succeeded=742
+# run2 (second in-process run, for reference only)
+# D1RESULT phase1_ms_mean=0.277 phase1_ms_p95=0.464 phase1_ms_max=0.693
+# D1RESULT phase2_ms_mean=0.025 phase2_ms_p95=0.026 phase2_ms_max=0.078
+# D1RESULT phase3_ms_mean=0.922 phase3_ms_p95=1.657 phase3_ms_max=2.321
+# D1RESULT phase4_ms_mean=0.185 phase4_ms_p95=0.195 phase4_ms_max=0.358
+# D1RESULT tick_ms_mean=1.409 tick_ms_p95=2.249 tick_ms_max=2.953
+# run2 alloc_bytes_per_tick=0.000 gc0=0 gc1=0 gc2=0 setup_ms=5.941
