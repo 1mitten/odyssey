@@ -93,7 +93,7 @@ Two corrections to the table above are worth stating plainly rather than hiding 
 
 ### 14. Stockpiles and inventory
 
-**Slice scope.** Stockpile zones with priority and a filter, item stacking, haul-to-best-stockpile. Bills and cooking are M5. The detailed model and the per-layer-versus-3D-volume decision come from `a-14-bills-stockpiles-inventory.md`.
+**Slice scope.** Stockpile zones with priority and a filter, item stacking, haul-to-best-stockpile. Bills and cooking are M5. Zones are **per layer** (layer question 6), with named storage groups sharing one settings record across layers. A hauler picks a destination by filter, then space, then priority, then distance; stair cost belongs in the region-link weight rather than in a special same-layer rule, so priority ordering stays intact. Model from `a-14-bills-stockpiles-inventory.md`.
 
 ### 15. Time, ticks, determinism, save/load
 
@@ -160,7 +160,7 @@ Brief §5 requires committed answers. Current state, with the answer or its owne
 | 3 | Do rooms span layers? | **No** — per-layer flood fill; heat flows between them through openings | §5 above |
 | 4 | Light to lower layers | Only through missing or glazed slabs; broken floors are light shafts | §6 above |
 | 5 | Shooting and sight in 3D | Volumetric shadowcasting with floors as occluders and a capped vertical range | §10 above |
-| 6 | Zones per layer or 3D? | Pending `a-14` | research in flight |
+| 6 | Zones per layer or 3D? | **Per layer**, with cross-layer storage groups sharing one settings record | `a-14-bills-stockpiles-inventory.md` |
 | 7 | Storyteller verticality | Tunnelling, sky drops, service-tunnel breaches | §11 above |
 | 8 | What is underground | Service / metro / fill / rock strata | `a-12-map-generation.md` |
 | 9 | Camera slice and depth UI | Ghosted, non-interactive above the slice | UI session |
