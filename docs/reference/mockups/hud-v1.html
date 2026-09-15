@@ -204,11 +204,11 @@ a{color:var(--signal)}
 #leg .ramp{width:92px;height:8px;border:1px solid var(--edge)}
 
 /* tooltip */
-#tip{position:absolute;z-index:40;pointer-events:none;max-width:230px;padding:5px 7px;
+#a13{position:absolute;z-index:40;pointer-events:none;max-width:230px;padding:5px 7px;
   background:rgba(8,12,17,.97);border:1px solid var(--edge-hi);border-radius:var(--r);font-size:12px}
-#tip .t{font-weight:600;display:flex;gap:6px;align-items:baseline}
-#tip .k{font-family:var(--mono);font-size:9.5px;color:var(--signal);margin-left:auto}
-#tip .d{color:var(--ink-dim);font-size:11.5px;margin-top:2px}
+#a13 .t{font-weight:600;display:flex;gap:6px;align-items:baseline}
+#a13 .k{font-family:var(--mono);font-size:9.5px;color:var(--signal);margin-left:auto}
+#a13 .d{color:var(--ink-dim);font-size:11.5px;margin-top:2px}
 
 /* panels */
 #panels{position:absolute;inset:0;pointer-events:none}
@@ -300,7 +300,7 @@ a{color:var(--signal)}
   <div class="hud pnl" id="leg" hidden></div>
   <div class="hud" id="a14" data-ann="A14 cancel · InputRouter" title="Cancel — Esc">✕</div>
   <div id="panels"></div>
-  <div id="tip" hidden></div>
+  <div id="a13" hidden data-ann="A13 tooltip · TooltipDirector · pooled providers · on hover"></div>
 </div></div>
 <p class="hint" id="hint"></p></div>
 
@@ -584,7 +584,8 @@ function renderLedger(){
   $("a1").innerHTML=`<div class="hdr">Stores</div>`+LEDGER.map(r=>{
     if(r[0]==="_")return `<div class="grp"></div>`;
     const t=r[3]>0?`<span class="t" style="color:var(--ok)">▲</span>`:r[3]<0?`<span class="t" style="color:var(--crit)">▼</span>`:`<span class="t"></span>`;
-    return `<div class="row">${icon(r[0],r[1],"s","Colony stock of "+r[1].toLowerCase())}
+    return `<div class="row" data-tip="${esc(r[1])}|${r[0]}|Colony-wide stock. Resources are not per layer.">
+      ${icon(r[0],r[1],"s")}
       <span class="q">${r[2].toLocaleString("en-GB")}</span>${t}</div>`;}).join("");
 }
 function renderDev(){
@@ -834,7 +835,7 @@ function closePanel(k){const el=S.open.get(k);if(el)el.remove();S.open.delete(k)
 /* ============================ interaction ============================ */
 function renderAll(){renderLedger();renderDev();renderRoster();renderClock();renderAlerts();renderRuler();
   renderArchitect();renderInspect();renderTabs();drawWorld();}
-const screen=$("screen"), tip=$("tip");
+const screen=$("screen"), tip=$("a13");
 screen.addEventListener("click",e=>{
   const t=e.target.closest("[data-p],[data-sp],[data-z],[data-pol],[data-cat],[data-tool],[data-it],[data-tab],[data-ov],.x,#a14");
   if(!t)return;

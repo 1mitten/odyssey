@@ -95,7 +95,7 @@ pinned-rows option, because a forty-row ledger of mostly zeroes defeats the dens
 | Cadence | 15 Hz |
 | Owner | `SelectionDirector` for selection state, bound from `ViewCache` for display |
 | Layer | **yes.** This is the only region that can answer "who is on which layer" at a glance |
-| Icons | `ui.status.*` (about twelve), `ui.need.*` (eight), `ui.layer.badge` |
+| Icons | `ui.status.*` (about twelve), `ui.need.*` (eight), `ui.pawn.*` (avatar layers, about six), `ui.layer.badge` |
 | Milestone | M2 |
 
 **Composed flat avatars, not live portraits.** Fifty render-textured portraits is fifty texture
@@ -634,6 +634,7 @@ so layout and density can be reviewed now and art can arrive at any time without
 | `ui.tab.*` | 10 | M1 |
 | `ui.weather.*` | ~10 | M1 |
 | `ui.need.*` | 8 | M2 |
+| `ui.pawn.*` | ~6 | M2 |
 | everything else | ~40 | various |
 
 ## Open questions this catalogue raises rather than settles
