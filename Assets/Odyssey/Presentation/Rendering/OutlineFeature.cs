@@ -29,21 +29,33 @@ namespace Odyssey.Presentation.Rendering
         public const string ShaderName = "Odyssey/Outline";
 
         [Tooltip("Line colour and, in alpha, how strongly it is laid over the picture.")]
-        public Color outlineColour = new Color(0.06f, 0.09f, 0.08f, 0.85f);
+        public Color outlineColour = new Color(0.06f, 0.09f, 0.08f, 0.95f);
 
         [Tooltip("Line width in pixels. Above about 2 it stops reading as ink and starts as smudge.")]
         [Range(0.5f, 3f)]
-        public float thickness = 1.2f;
+        public float thickness = 2.2f;
 
         [Tooltip("How large a depth step counts as an edge, as a fraction of the distance to it.")]
         [Range(0.001f, 0.1f)]
         public float depthThreshold = 0.012f;
 
-        [Tooltip("Metres at which the line starts to fade out.")]
-        public float fadeStart = 40f;
+        [Tooltip("Features narrower than twice this, in pixels, get no line. Sweep 1-6 to tune.")]
+        [Range(1f, 8f)]
+        public float sliverRadius = 3f;
+
+        [Tooltip("How far behind the centre a neighbour must be to count, as a fraction of distance.")]
+        [Range(0.002f, 0.2f)]
+        public float sliverTolerance = 0.02f;
+
+        // Pushed right out, now that the sliver test measures the thing that actually decides
+        // whether a line is legible. These are a backstop for the far corner of the board, not
+        // the mechanism — a distant building should keep its outline, and before the width test
+        // existed the fade was the only lever and had to kill that too.
+        [Tooltip("Metres at which the line starts to fade out. A long-range backstop only.")]
+        public float fadeStart = 150f;
 
         [Tooltip("Metres by which the line has gone entirely.")]
-        public float fadeEnd = 90f;
+        public float fadeEnd = 300f;
 
         [Tooltip("When the line is drawn. Before post-processing keeps it out of bloom.")]
         public RenderPassEvent stage = RenderPassEvent.BeforeRenderingPostProcessing;
@@ -56,6 +68,8 @@ namespace Odyssey.Presentation.Rendering
         static readonly int DepthThresholdId = Shader.PropertyToID("_DepthThreshold");
         static readonly int FadeStartId = Shader.PropertyToID("_FadeStart");
         static readonly int FadeEndId = Shader.PropertyToID("_FadeEnd");
+        static readonly int SliverRadiusId = Shader.PropertyToID("_SliverRadius");
+        static readonly int SliverToleranceId = Shader.PropertyToID("_SliverTolerance");
 
         public override void Create()
         {
@@ -83,6 +97,8 @@ namespace Odyssey.Presentation.Rendering
             _material.SetFloat(DepthThresholdId, depthThreshold);
             _material.SetFloat(FadeStartId, fadeStart);
             _material.SetFloat(FadeEndId, Mathf.Max(fadeEnd, fadeStart + 1f));
+            _material.SetFloat(SliverRadiusId, sliverRadius);
+            _material.SetFloat(SliverToleranceId, sliverTolerance);
             _pass.renderPassEvent = stage;
             renderer.EnqueuePass(_pass);
         }
@@ -107,22 +123,54 @@ namespace Odyssey.Presentation.Rendering
                 ConfigureInput(ScriptableRenderPassInput.Depth);
             }
 
+            /// <summary>State the render graph hands back to the render function.</summary>
+            class PassData
+            {
+                public Material Material = null!;
+                public TextureHandle Source;
+            }
+
             public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
             {
                 var resources = frameData.Get<UniversalResourceData>();
                 if (resources.isActiveTargetBackBuffer) return;
 
                 TextureHandle source = resources.activeColorTexture;
-                if (!source.IsValid()) return;
+                TextureHandle depth = resources.cameraDepthTexture;
+                if (!source.IsValid() || !depth.IsValid()) return;
 
                 TextureDesc desc = renderGraph.GetTextureDesc(source);
                 desc.name = "Odyssey outline";
                 desc.clearBuffer = false;
                 desc.depthBufferBits = DepthBits.None;
+                // The destination inherits the source's sample count, and a resolve we never asked
+                // for is a cost nobody would go looking for. The pass writes one sample per pixel.
+                desc.msaaSamples = MSAASamples.None;
                 TextureHandle destination = renderGraph.CreateTexture(desc);
 
-                var blit = new RenderGraphUtils.BlitMaterialParameters(source, destination, _material, 0);
-                renderGraph.AddBlitPass(blit, "Odyssey outline");
+                // A raster pass rather than AddBlitPass, for two reasons that cost nothing.
+                //
+                // Every *material* overload of AddBlitPass is an unsafe pass — verified in the
+                // shipped package — which opts the whole thing out of the graph's scheduling. And
+                // the depth texture this shader reads arrives as a global, which the graph cannot
+                // see: an undeclared dependency is one the compiler is free to reorder around.
+                // Declaring it with UseTexture makes the graph responsible for the ordering it was
+                // built to be responsible for. URP's own fullscreen feature does exactly this
+                // whenever a pass takes an input.
+                using (IRasterRenderGraphBuilder builder =
+                       renderGraph.AddRasterRenderPass<PassData>("Odyssey outline", out PassData data))
+                {
+                    data.Material = _material;
+                    data.Source = source;
+
+                    builder.UseTexture(source, AccessFlags.Read);
+                    builder.UseTexture(depth, AccessFlags.Read);
+                    builder.SetRenderAttachment(destination, 0, AccessFlags.Write);
+
+                    builder.SetRenderFunc((PassData pass, RasterGraphContext context) =>
+                        Blitter.BlitTexture(context.cmd, pass.Source,
+                            new Vector4(1f, 1f, 0f, 0f), pass.Material, 0));
+                }
 
                 // Hand the result on as the camera colour, which is how a fullscreen effect
                 // chains in the render graph: the next pass reads what this one wrote.

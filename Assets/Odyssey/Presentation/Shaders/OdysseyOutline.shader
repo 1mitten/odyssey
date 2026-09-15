@@ -21,6 +21,8 @@ Shader "Odyssey/Outline"
         _DepthThreshold ("Depth threshold", Float) = 0.012
         _FadeStart ("Fade start in metres", Float) = 40
         _FadeEnd ("Fade end in metres", Float) = 90
+        _SliverRadius ("Sliver test radius in pixels", Float) = 3
+        _SliverTolerance ("Sliver test tolerance", Float) = 0.02
     }
 
     SubShader
@@ -47,6 +49,8 @@ Shader "Odyssey/Outline"
             float _DepthThreshold;
             float _FadeStart;
             float _FadeEnd;
+            float _SliverRadius;
+            float _SliverTolerance;
 
             // Metres from the camera, so the comparison below is in world units rather than in the
             // depth buffer's own wildly non-linear ones.
@@ -82,16 +86,50 @@ Shader "Odyssey/Outline"
 
                 float edge = saturate((gradient - threshold) / threshold);
 
-                // Let the line go as things recede, or thin geometry turns into a solid blot.
+                // One-sided: keep the ink on the near side of the step, which is the object.
                 //
-                // A clump of grass half a metre across is a few pixels wide at board distance, and
-                // every one of those pixels sits on a depth discontinuity — so the whole clump
-                // becomes outline and the meadow reads as a field of dark smudges. This is not the
-                // threshold being too low; it is the geometry being smaller than the detector. The
-                // honest fix is to stop drawing a line nobody could read anyway, which is also
-                // what aerial perspective does in the reference art.
-                float fade = 1.0 - smoothstep(_FadeStart, _FadeEnd, centre);
-                edge *= fade;
+                // A Roberts cross fires on both sides of a depth discontinuity, so half the line
+                // around anything lands on the *background* behind it. That is why the line looked
+                // soft, and it is also what makes the width test below impossible — a test that
+                // asks "is the thing I am standing on narrow?" cannot answer for a pixel standing
+                // on the sky. If the centre is background, its furthest neighbour is no further
+                // than it is and this term is zero.
+                float furthest = max(max(d0, d1), max(d2, d3));
+                edge *= saturate((furthest - centre) / threshold);
+
+                // The sliver test: no ink on anything narrower than the line itself.
+                //
+                // This replaces guessing with the right question. A clump of grass is a few pixels
+                // wide at board distance and every one of them sits on a discontinuity, so the
+                // whole clump inks over and the meadow reads as dark smudges. Distance was the
+                // wrong thing to measure — a far-off building should keep its outline and a
+                // close-up railing should not. Width is the thing that decides whether a line is
+                // legible at all.
+                //
+                // Sample wider than the detector. If both opposite neighbours on an axis are
+                // clearly behind the centre, the centre belongs to something thinner than the
+                // sample diameter, and no readable line can be drawn on it. min() is "this axis is
+                // a sliver", max() is "either axis is". Because the ramp is signed, a neighbour
+                // *nearer* than the centre clamps to zero, so nothing is ever called a sliver
+                // merely because something stands in front of it.
+                //
+                // It fixes itself as the camera comes in: once a tuft is wider than the sample
+                // diameter its interior pixels stop having background on both sides and the line
+                // comes back. That is exactly what a distance fade could never do.
+                float2 radius = _BlitTexture_TexelSize.xy * _SliverRadius;
+                float tolerance = max(_SliverTolerance * centre, 1e-4);
+
+                float behindL = saturate((EyeDepth(uv - float2(radius.x, 0.0)) - centre) / tolerance - 1.0);
+                float behindR = saturate((EyeDepth(uv + float2(radius.x, 0.0)) - centre) / tolerance - 1.0);
+                float behindD = saturate((EyeDepth(uv - float2(0.0, radius.y)) - centre) / tolerance - 1.0);
+                float behindU = saturate((EyeDepth(uv + float2(0.0, radius.y)) - centre) / tolerance - 1.0);
+
+                float sliver = max(min(behindL, behindR), min(behindD, behindU));
+                edge *= 1.0 - sliver;
+
+                // The distance fade stays, but only as a long-range backstop now that width is
+                // being measured properly. Aerial perspective does the same thing in the reference.
+                edge *= 1.0 - smoothstep(_FadeStart, _FadeEnd, centre);
 
                 scene.rgb = lerp(scene.rgb, _OutlineColour.rgb, edge * _OutlineColour.a);
                 return scene;

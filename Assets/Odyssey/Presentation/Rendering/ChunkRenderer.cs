@@ -20,7 +20,7 @@ namespace Odyssey.Presentation.Rendering
     /// Depth shading and ghosting are chosen at draw time from the same buckets, so moving the
     /// slice up or down does no meshing work whatsoever.
     /// </summary>
-    public sealed class ChunkRenderer
+    public sealed class ChunkRenderer : System.IDisposable
     {
         /// <summary>
         /// Instances per call. <c>RenderMeshInstanced</c> takes up to 1023, but the ceiling halves
@@ -45,6 +45,16 @@ namespace Odyssey.Presentation.Rendering
         public int GameObjectLayer { get; set; }
 
         public bool CastShadows { get; set; } = true;
+
+        /// <summary>
+        /// Whether tufts of grass are drawn into the shadow map as well as into the picture.
+        ///
+        /// Off by default, and measured rather than assumed — see <c>RenderBench</c>. It is the
+        /// same argument that keeps terrain out of the shadow pass: a shadow map stretched over a
+        /// 300 m board has texels far larger than a clump of grass, so what comes back is not a
+        /// shadow but a speckle, and there are tens of thousands of them.
+        /// </summary>
+        public bool FoliageCastsShadows { get; set; }
 
         /// <summary>
         /// Tufts of grass per hundred grass cells. Zero is bare ground. Changing it after chunks
@@ -165,15 +175,22 @@ namespace Odyssey.Presentation.Rendering
                 // Nothing worth seeing is lost: a colonist, a wall or a tree still casts onto the
                 // ground, which is what actually tells the eye where something is standing. It
                 // also takes 14,400 instances per layer out of the shadow pass.
+                //
+                // Foliage is the same argument a second time, and a bigger one. A meadow is
+                // seventeen thousand clumps, each of which would be drawn again into the shadow
+                // map to cast a shadow a few centimetres long onto grass of the same colour. The
+                // reference art has no per-tuft shadows either — its ground is evenly lit and the
+                // shadows that matter are the ones people and buildings cast onto it.
                 bool terrain = TintCode.IsTerrain(bucket.Tint);
+                bool foliage = TintCode.IsFoliage(bucket.Tint);
+                bool casts = CastShadows && !ghost && !terrain && (!foliage || FoliageCastsShadows);
+
                 var rp = new RenderParams(material)
                 {
                     worldBounds = batch.Bounds,
                     layer = GameObjectLayer,
                     receiveShadows = !ghost,
-                    shadowCastingMode = ghost || !CastShadows || terrain
-                        ? ShadowCastingMode.Off
-                        : ShadowCastingMode.On,
+                    shadowCastingMode = casts ? ShadowCastingMode.On : ShadowCastingMode.Off,
                 };
 
                 int drawn = 0;

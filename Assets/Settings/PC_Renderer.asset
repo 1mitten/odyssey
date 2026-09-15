@@ -13,9 +13,13 @@ MonoBehaviour:
   m_Name: Odyssey Outline
   m_EditorClassIdentifier: Odyssey.Presentation::Odyssey.Presentation.Rendering.OutlineFeature
   m_Active: 1
-  outlineColour: {r: 0.06, g: 0.09, b: 0.08, a: 0.85}
-  thickness: 1.2
+  outlineColour: {r: 0.06, g: 0.09, b: 0.08, a: 0.95}
+  thickness: 2.2
   depthThreshold: 0.012
+  sliverRadius: 3
+  sliverTolerance: 0.02
+  fadeStart: 150
+  fadeEnd: 300
   stage: 550
 --- !u!114 &11400000
 MonoBehaviour:

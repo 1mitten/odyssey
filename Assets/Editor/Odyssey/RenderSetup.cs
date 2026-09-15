@@ -5,6 +5,7 @@ using System.Reflection;
 using Odyssey.Presentation.Rendering;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 
 namespace Odyssey.EditorTools
@@ -36,14 +37,11 @@ namespace Odyssey.EditorTools
                 if (data == null)
                     throw new InvalidOperationException($"no renderer asset at {RendererPath}");
 
-                bool changed = EnsureFeature<OutlineFeature>(data, "Odyssey Outline");
+                bool changed = EnsureFeature<OutlineFeature>(data, "Odyssey Outline", Configure);
 
-                if (changed)
-                {
-                    EditorUtility.SetDirty(data);
-                    AssetDatabase.SaveAssets();
-                    AssetDatabase.Refresh();
-                }
+                EditorUtility.SetDirty(data);
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
 
                 Debug.Log($"[RenderSetup] {RendererPath}: " +
                           $"{data.rendererFeatures.Count(f => f != null)} features " +
@@ -61,13 +59,47 @@ namespace Odyssey.EditorTools
             }
         }
 
-        static bool EnsureFeature<T>(ScriptableRendererData data, string name)
+        /// <summary>
+        /// The outline's tuning, written into the asset every run.
+        ///
+        /// **This is here, and not left to the field initialisers, because of a trap.** Once a
+        /// feature has been saved, its serialised values are what load — editing the default in
+        /// C# changes nothing for a field the asset already holds, silently, while a field the
+        /// asset has never seen *does* pick up its initialiser. So half a tuning change lands and
+        /// half of it does not, the picture moves a little, and the obvious conclusion is that the
+        /// shader maths is wrong. The command that creates the feature owns its settings.
+        ///
+        /// The numbers themselves: the line is one-sided, so it is half the width a two-sided
+        /// detector would give and the thickness is set against that. The sliver radius is the
+        /// dial to sweep if grass ever blots again — up suppresses more, down inks more. The fade
+        /// is a backstop for the far corner of a 300 m board, not the mechanism.
+        /// </summary>
+        static void Configure(OutlineFeature outline)
+        {
+            outline.outlineColour = new Color(0.06f, 0.09f, 0.08f, 0.95f);
+            outline.thickness = 2.2f;
+            outline.depthThreshold = 0.012f;
+            outline.sliverRadius = 3f;
+            outline.sliverTolerance = 0.02f;
+            outline.fadeStart = 150f;
+            outline.fadeEnd = 300f;
+            outline.stage = RenderPassEvent.BeforeRenderingPostProcessing;
+        }
+
+        static bool EnsureFeature<T>(ScriptableRendererData data, string name, Action<T> configure)
             where T : ScriptableRendererFeature
         {
-            if (data.rendererFeatures.Any(f => f is T)) return false;
+            var existing = data.rendererFeatures.OfType<T>().FirstOrDefault();
+            if (existing != null)
+            {
+                configure(existing);
+                EditorUtility.SetDirty(existing);
+                return false;
+            }
 
             var feature = ScriptableObject.CreateInstance<T>();
             feature.name = name;
+            configure(feature);
             data.rendererFeatures.Add(feature);
             AssetDatabase.AddObjectToAsset(feature, data);
             Revalidate(data);

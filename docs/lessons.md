@@ -175,3 +175,31 @@ ground texture that needed lifting towards the reference art, and multiplies blu
 to a grass tuft, whose art is already the right yellow-green, it turned a meadow into a stand of
 dark teal reeds. Foliage now has its own tint code and its own palette entry, which is white,
 because the right answer for art that is already correct is to leave it alone.
+
+## Renderer features and the look
+
+**A serialised asset value wins over the C# default, and half a tuning change lands silently.**
+Renderer features are sub-assets. Once one has been saved, editing a field's initialiser in C#
+changes nothing for a field the asset already holds — but a field the asset has *never* seen does
+pick up its initialiser. Tuning the outline moved four numbers: the two new ones took effect and
+the two old ones did not, so the picture changed a little and the obvious conclusion was that the
+shader maths was wrong. `RenderSetup.Configure` now writes the whole tuning into the asset on every
+run, which makes the command the single source of it.
+
+Related: a renderer feature appended to `ScriptableRendererData.rendererFeatures` without rebuilding
+the internal feature map serialises fine, shows up in the inspector, and never runs, with nothing
+logged.
+
+**For an outline, the question is how wide a thing is on screen, not how far away it is.** Grass
+clumps turned into solid dark blots at board distance: a tuft is a few pixels across and every one
+of them sits on a depth discontinuity, so the whole clump inks over. A distance fade was the
+obvious lever and it is the wrong measurement — it cannot keep a far-off building outlined while
+killing a near railing. Measuring width instead (sample wider than the detector; if both opposite
+neighbours are behind the centre, the feature is thinner than the sample diameter) fixes both, and
+the line comes back by itself as the camera moves in. It only works if the ink is one-sided first,
+because a Roberts cross puts half its line on the background where a width test cannot reach it.
+See `d-10-outline-pass.md`.
+
+**One-sided ink is half the width, so the thickness has to be re-tuned when you switch.** Otherwise
+the change reads as "the outlines have mostly disappeared" rather than "the outlines are now on the
+object".
