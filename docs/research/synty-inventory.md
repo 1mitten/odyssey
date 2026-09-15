@@ -1,6 +1,6 @@
 # Synty asset inventory (generated)
 
-Generated 2026-09-15 18:32 UTC by `SyntyInventory.cs` on Unity 6000.3.24f1. Do not edit by hand; re-run the script.
+Generated 2026-09-15 19:41 UTC by `SyntyInventory.cs` on Unity 6000.3.24f1. Do not edit by hand; re-run the script.
 
 ## Packs present under Assets/Synty
 
@@ -275,7 +275,9 @@ For each candidate pitch, the share of pieces whose measure is a positive intege
 | Floor/roof footprint (X and Z) | 2.50 | 2.50 | 0.26 | 7.09 | 50 |
 | Floor/roof thickness | 0.10 | 0.18 | 0.00 | 3.96 | 25 |
 
-**Implied cell (to be confirmed by a human, not a decision):** footprint pitch 0.00 m, height pitch 0.00 m → cell 0.00 × 0.00 × 0.00 m. "Best" is the largest candidate pitch that at least 80% of measures snap to; 0 means nothing reached 80%, so look at the histogram above.
+**Implied cell (to be confirmed by a human, not a decision):** footprint **2.50 m** — the modal measure, and 43% of footprint measures are an integer multiple of it. Height **3.00 m** (59%). → cell 2.50 × 2.50 × 3.00 m.
+
+This is derived from the **mode**, not from the snap-share table above, and deliberately so. Snap share always favours the smallest candidate pitch, because every measure that is a multiple of 2.5 is also a multiple of 0.5 — reading the table by "highest share wins" returns 0.5 m, which is confidently wrong. The mode is what a human reading the per-role tables picks. Treat the share as corroboration and the per-role tables as the evidence.
 
 ## Characters and rigs
 

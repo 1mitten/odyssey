@@ -376,9 +376,15 @@ namespace Odyssey.EditorTools
             Row(md, "Floor/roof thickness", floorThick);
             md.AppendLine();
 
-            float footPitch = BestPitch(floorFoot.Concat(wallWidths).ToList());
-            float heightPitch = BestPitch(wallHeights);
-            md.AppendLine($"**Implied cell (to be confirmed by a human, not a decision):** footprint pitch {F(footPitch)} m, height pitch {F(heightPitch)} m → cell {F(footPitch)} × {F(footPitch)} × {F(heightPitch)} m. \"Best\" is the largest candidate pitch that at least 80% of measures snap to; 0 means nothing reached 80%, so look at the histogram above.");
+            var footMeasures = floorFoot.Concat(wallWidths).ToList();
+            float footPitch = ModalMeasure(footMeasures);
+            float heightPitch = ModalMeasure(wallHeights);
+            float footShare = SnapShare(footMeasures, footPitch);
+            float heightShare = SnapShare(wallHeights, heightPitch);
+
+            md.AppendLine($"**Implied cell (to be confirmed by a human, not a decision):** footprint **{F(footPitch)} m** — the modal measure, and {Pct(footShare)} of footprint measures are an integer multiple of it. Height **{F(heightPitch)} m** ({Pct(heightShare)}). → cell {F(footPitch)} × {F(footPitch)} × {F(heightPitch)} m.");
+            md.AppendLine();
+            md.AppendLine("This is derived from the **mode**, not from the snap-share table above, and deliberately so. Snap share always favours the smallest candidate pitch, because every measure that is a multiple of 2.5 is also a multiple of 0.5 — reading the table by \"highest share wins\" returns 0.5 m, which is confidently wrong. The mode is what a human reading the per-role tables picks. Treat the share as corroboration and the per-role tables as the evidence.");
             md.AppendLine();
         }
 
@@ -392,12 +398,27 @@ namespace Odyssey.EditorTools
             return r >= 1f && Mathf.Abs(q - r) * pitch <= SnapTolerance;
         }
 
-        static float BestPitch(List<float> values)
+        /// <summary>
+        /// The most common measure, quantised so that near-identical values (3.00 and 3.01 in the
+        /// same wall family) fall in one bucket. Ties break toward the coarser value.
+        ///
+        /// This replaces an earlier snap-share heuristic that returned the largest pitch at least
+        /// 80% of measures snapped to. That produced 0.00 on a mixed corpus, because props,
+        /// vehicles and background buildings never snap and drag every share below the bar. The
+        /// obvious repair — take the highest-scoring pitch instead — is worse than the bug it
+        /// fixes: share is monotonically better for smaller pitches, since every multiple of 2.5
+        /// is also a multiple of 0.5, so it confidently returns 0.5 m. The mode has neither
+        /// failure and matches how a human reads the per-role tables.
+        /// </summary>
+        static float ModalMeasure(List<float> values, float quantum = 0.05f)
         {
-            float best = 0f;
-            foreach (float pitch in CandidatePitches)
-                if (SnapShare(values, pitch) >= 0.8f) best = pitch;
-            return best;
+            if (values.Count == 0) return 0f;
+            var bucket = values
+                .GroupBy(v => Mathf.RoundToInt(v / quantum))
+                .OrderByDescending(g => g.Count())
+                .ThenByDescending(g => g.Key)
+                .First();
+            return bucket.Key * quantum;
         }
 
         static void Row(StringBuilder md, string label, List<float> values)
