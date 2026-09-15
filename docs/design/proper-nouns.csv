@@ -1,0 +1,22 @@
+id,category,name,status,notes
+colonist.wrenn,Colonist given name,Wrenn,placeholder,Invented for the HUD mockups. The prototype needs a proper name list
+colonist.odile,Colonist given name,Odile,placeholder,As above
+colonist.kester,Colonist given name,Kester,placeholder,As above
+colonist.sable,Colonist given name,Sable,placeholder,As above
+colonist.fen,Colonist given name,Fen,placeholder,As above
+colonist.ilma,Colonist given name,Ilma,placeholder,As above
+colonist.torv,Colonist given name,Torv,placeholder,As above
+colonist.nyx,Colonist given name,Nyx,placeholder,As above
+calendar.larkspur,Month,Larkspur,placeholder,"Invented for the clock readout in hud-v2. One month of an unwritten calendar; the set, their number and the season they fall in are all undecided"
+world.city,The city,,needed,"The ruined city the prototype is set in has no name. It is the single most-used proper noun in the game and does not exist yet"
+world.planet,The world,,needed,The city-world itself is unnamed
+faction.player,The player's group,,needed,"What the colonists call themselves. RimWorld has none, but a salvage crew in a dead city plausibly would"
+faction.raiders,Hostile faction,,needed,"Brief §5 item 13 needs factions. Clean room: no borrowed names"
+faction.traders,Trading faction,,needed,As above
+faction.locals,Neutral faction,,needed,As above
+storyteller.a,Storyteller,,needed,"Brief §5 item 11. Three or four, each a difficulty curve with a personality. Ours, not theirs"
+creature.scavenger,City wildlife,,needed,"The brief replaces muffalo with city wildlife. No species is named"
+creature.predator,City predator,,needed,As above
+creature.synth,Feral machine,,needed,"Currently described as a feral synth, which is a description rather than a name. ui.pawn.synth points at it"
+calendar.set,The calendar,,needed,"Month names, how many, day length, and what the seasons are called"
+research.tree,Research project names,,needed,"Brief §5 item 13. None invented. They will be among the most-read text in the game"

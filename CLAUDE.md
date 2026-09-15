@@ -16,6 +16,44 @@ A prototype colony sim in the RimWorld mould, in true 3D with discrete vertical 
 - **Files outlive context.** Every phase produces files under `docs/`. Assume the next session knows nothing except what is written down.
 - British English in documentation. No multiplayer, ever. *Ramble* (Godot) is reference only, no code reuse.
 
+## The content wiki is a standing obligation
+
+`docs/wiki/` is the naming reference for the whole game: every commodity, item, building, command,
+work type, need, body part, alert and proper noun, with a stable key beside each. It exists so the
+owner can read what is in the game and correct it, and so no session has to guess what something is
+called. Hosted copies: [wiki](https://claude.ai/artifact/JsYRQk1vnza2wFWSNfpQwr) ·
+[HUD mockup](https://claude.ai/artifact/PcHWoujGDvd4rzcH1LAwFG).
+
+**The rule: any commit that changes game content updates the wiki in the same commit.** Game content
+means anything a player could see named — a new commodity, a renamed building, a reworded
+description, a new alert, a faction, a creature, a research project, a month of the calendar. Design
+and mechanics are not wiki content; they stay in `docs/design/` and `docs/adr/`, and the wiki
+cross-references them rather than duplicating them.
+
+**Never hand-edit anything under `docs/wiki/`.** It is generated and your edit will be silently
+overwritten. Edit the source, then rebuild:
+
+| Source | Holds |
+|---|---|
+| `docs/design/icon-keys.csv` | the name, namespace, milestone and description of every named thing |
+| `docs/design/icon-map.csv` | whether the owner's art can draw it |
+| `docs/design/proper-nouns.csv` | people, places, factions, creatures, the calendar |
+
+```
+python3 tools/wiki/build_wiki.py            # rebuild docs/wiki
+python3 tools/wiki/build_wiki.py --check    # exit 1 if docs/wiki is stale; run before committing
+```
+
+`--check` is the gate. It must pass before any commit that touched the three sources above, and it
+belongs in CI the moment CI exists. A content reference nobody trusts is worse than none.
+
+Two things to know before extending it. The registry is hand-authored **only until M0**: once the Def
+loader exists, `icon-keys.csv` is generated one way out of the Def set by an editor command and
+committed, so the wiki and the build-gating icon tests share one source. Do not create a second
+source of truth in the meantime. And the hosted copies are snapshots: after a rebuild, republish
+`docs/wiki/artifact.html` and `docs/reference/mockups/hud-v2.artifact.html` (regenerate the latter
+with `python3 tools/mockups/artifact_body.py docs/reference/mockups/hud-v2.html`) to the URLs above.
+
 ## Current status
 
 - **Phase 0 (ground): done remotely on 2026-09-15**, with two items blocked until run on the dev machine: the Synty import spike and the asset inventory. See `docs/research/phase0-ground.md` and `docs/research/synty-import.md`.
@@ -33,6 +71,8 @@ A prototype colony sim in the RimWorld mould, in true 3D with discrete vertical 
 - `docs/design/` design documents (`09-ui-and-input.md`, `10-ui-panel-catalogue.md`, `11-icon-library.md` exist; `00`–`08` come with Phase 3), plus the icon data `icon-keys.csv` and `icon-map.csv` · `docs/adr/` decision records (`0001` UI framework, `0002` sim/UI contract, `0003` layer visibility, `0004` pixel-art icon pipeline). Later phases add `docs/plans/`, `docs/milestones/`.
 - `art-source/` owner-owned source art, outside `Assets/` so Unity does not import it. `art-source/icons/sheets/` is where the eight icon sheets go.
 - `tools/icons/icons.py` the icon pipeline: detect, contact, export, validate, emit-web. Standard library only, so it runs here and in CI. `python3 -m unittest discover -s tools/icons -t tools/icons` runs its 30 tests and needs no art.
+- `tools/wiki/build_wiki.py` builds `docs/wiki/` from the design data. `tools/mockups/artifact_body.py` makes a mockup publishable as an Artifact. Both standard library only.
+- `docs/wiki/` the generated content wiki. Read it, do not edit it. See the section above.
 - The Unity project lives at the **repository root** (`Assets/`, `Packages/`, `ProjectSettings/`), created on the dev machine per `docs/research/synty-import.md`.
 - `Assets/Editor/Odyssey/` editor tooling (currently `SyntyInventory.cs`, uncompiled until first run). `Assets/Synty/` licensed packs, ignored by git.
 - `scripts/unity.sh` headless Unity wrapper: `inventory`, `test editmode|playmode`, `exec <Namespace.Class.Method>`, `open`, `which`.
@@ -53,6 +93,7 @@ A prototype colony sim in the RimWorld mould, in true 3D with discrete vertical 
 - Tests run headless via `scripts/unity.sh test`. Each milestone gate is: tests pass, a headless one-day simulation runs with no errors, `docs/milestones/Mx-report.md` written, stop for review.
 - Interface icons are referenced by symbolic key, never by filename, and are 64 px, point-filtered, uncompressed, no mips, displayed at 32 and 64 only. ADR 0004.
 - Commits: small, one concern each, descriptive message. Never commit `Assets/Synty/`, `Library/`, logs or test results.
+- Content changes carry their regenerated wiki. `python3 tools/wiki/build_wiki.py --check` passes before the commit.
 
 ## Starting a local session
 
