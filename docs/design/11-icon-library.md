@@ -305,7 +305,18 @@ The loop that finishes it, once the eight PNGs are in `art-source/icons/sheets/`
 Per-row status, not per-sheet, so the food sheet can ship while the anatomy sheet is still being
 argued about.
 
-## 8. What is provisional here
+## 8. One thing deliberately not done
+
+A full catalogue of all six hundred cells, one row per cell whether or not a key uses it, was
+planned and then dropped. Two reasons. Without the files on disk the coordinates would be invented,
+and a six-hundred-row file of invented coordinates is worse than no file because it looks
+authoritative. And the mechanism that replaces it is better: `icons.py contact` writes a
+`<sheet>-unmapped.csv` listing every cell that has art but no key, already in the mapping's own
+column order, so the answer pastes straight back in. The catalogue therefore gets generated from the
+art rather than guessed at, and it records the cells that matter — the unused ones — rather than all
+six hundred.
+
+## 9. What is provisional here
 
 The commodity taxonomy, until `04-data-model.md` turns it into Defs. Every row and column, until the
 contact sheets exist. The claim that the art is 32-pixel native, which `detect` settles in one run and
