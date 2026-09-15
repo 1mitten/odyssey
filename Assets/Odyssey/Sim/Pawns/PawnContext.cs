@@ -1,0 +1,65 @@
+#nullable enable
+using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pathing;
+using Odyssey.Sim.World;
+
+namespace Odyssey.Sim.Pawns
+{
+    /// <summary>
+    /// Everything the three pawn systems share, assembled once by the composition root.
+    ///
+    /// It exists so that the systems take one constructor argument instead of six, and so that a
+    /// test builds the same object graph the game does. It is not a service locator: nothing
+    /// looks anything up by name, and nothing registers itself into it.
+    /// </summary>
+    public sealed class PawnContext
+    {
+        public PawnContext(CellGrid cells, NavGraph nav, PathService paths, PawnContent content)
+        {
+            Cells = cells;
+            Nav = nav;
+            Paths = paths;
+            Content = content;
+            Items = new ColonyItems(content);
+            Reservations = new ReservationManager();
+            Pawns = new PawnRegistry(this);
+        }
+
+        public CellGrid Cells { get; }
+        public NavGraph Nav { get; }
+        public PathService Paths { get; }
+        public PawnContent Content { get; }
+        public ColonyItems Items { get; }
+        public ReservationManager Reservations { get; }
+        public PawnRegistry Pawns { get; }
+
+        public GridSize Size => Cells.Size;
+
+        /// <summary>The current tick, refreshed at the top of each pawn system.</summary>
+        public int CurrentTick { get; internal set; }
+
+        public uint Seed { get; internal set; }
+
+        internal void Sync(SimWorld world)
+        {
+            CurrentTick = world.CurrentTick;
+            Seed = world.Seed;
+        }
+
+        /// <summary>Approximate travel cost, used to order candidates before anything is pathed.</summary>
+        public int Distance(int a, int b) =>
+            ColonyItems.Distance(a, b, Size, Content.Movement.layerChangeEstimate);
+
+        /// <summary>
+        /// Can this pawn get there at all? Two array reads and an integer comparison — never a
+        /// search. A work-giver scan asks this thousands of times per tick against candidate
+        /// targets, and it is the reason the district table exists.
+        /// </summary>
+        public bool Reachable(Pawn pawn, int cell) => Reachable(pawn, cell, pawn.Mode);
+
+        public bool Reachable(Pawn pawn, int cell, TraverseMode mode) =>
+            (uint)cell < (uint)Size.CellCount &&
+            Nav.Grid.CanEnter(cell, mode) &&
+            Nav.Reachable(pawn.Cell, cell, mode);
+    }
+}

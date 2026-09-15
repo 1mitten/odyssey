@@ -1,0 +1,179 @@
+#nullable enable
+using Odyssey.Sim.Contracts;
+
+namespace Odyssey.Sim.Pawns
+{
+    /// <summary>
+    /// Needs, thoughts, mood and the one mental break, on the 150-tick cadence.
+    ///
+    /// Three properties are worth stating because each is a decision rather than an accident.
+    ///
+    /// <para><b>The cadence is 150 ticks, not every tick.</b> Four hundred updates per in-game day
+    /// is fine enough that no player will see the quantisation, and it makes the needs subsystem
+    /// cost proportional to the pawn count divided by 150. Pawns are spread across the interval by
+    /// id, so a hundred colonists cost two thirds of a pawn per tick rather than a hundred pawns
+    /// every hundred and fiftieth tick.</para>
+    ///
+    /// <para><b>Rates are per band.</b> A pawn at 20% rest does not drain at the rate of one at
+    /// 80%. Flat rates are what make the bottom of a bar feel wrong.</para>
+    ///
+    /// <para><b>Mood drifts.</b> The target is a difficulty base plus the sum of active thought
+    /// offsets, and the displayed mood approaches it at a capped rate. Snapping to the target
+    /// turns one bad moment into an instant break, which is both worse drama and worse design.
+    /// A break is then a mean-time-between-events roll below the threshold rather than a cliff
+    /// edge, so a miserable colonist breaks <em>probably soon</em>.</para>
+    /// </summary>
+    public sealed class NeedsSystem : IWorldSystem
+    {
+        readonly PawnContext _ctx;
+
+        public NeedsSystem(PawnContext ctx) { _ctx = ctx; }
+
+        public string Name => "Needs";
+
+        public TickPhase Phase => TickPhase.Pawns;
+
+        /// <summary>First in the phase: the think tree reads needs, so they settle before it runs.</summary>
+        public int Order => 10;
+
+        public int IntervalTicks => _ctx.Content.NeedsIntervalTicks;
+
+        /// <summary>Breaks rolled since the world began. A cheap sanity check for a long run.</summary>
+        public int BreaksTriggered { get; private set; }
+
+        public void Tick(SimWorld world)
+        {
+            _ctx.Sync(world);
+            int interval = IntervalTicks;
+            int tick = world.CurrentTick;
+
+            var pawns = _ctx.Pawns.All;
+            for (int i = 0; i < pawns.Count; i++)
+            {
+                var pawn = pawns[i];
+
+                // Phase spreading by id. Over any window of exactly `interval` ticks each pawn
+                // updates exactly once, which is what keeps the cadence exact and testable while
+                // the cost stays flat.
+                if ((tick + pawn.Id.Value) % interval != 0) continue;
+                UpdatePawn(pawn, tick, interval);
+            }
+        }
+
+        void UpdatePawn(Pawn pawn, int tick, int interval)
+        {
+            var content = _ctx.Content;
+
+            // ---- food: always falls, even asleep -------------------------------------------
+            Fall(pawn, NeedIndex.Food);
+
+            // ---- rest: falls awake, recovers asleep, scaled by what is under the pawn -------
+            if (pawn.Asleep)
+            {
+                var rest = content.Needs[NeedIndex.Rest];
+                int effectiveness = IsBed(pawn.Cell) ? 100 : content.Kind.groundRestEffectiveness;
+                pawn.Needs[NeedIndex.Rest] =
+                    System.Math.Min(rest.max, pawn.Needs[NeedIndex.Rest] + pawn.RestGainPerInterval(effectiveness));
+            }
+            else
+            {
+                Fall(pawn, NeedIndex.Rest);
+            }
+
+            // ---- joy: paused asleep, topped up while idle ----------------------------------
+            //
+            // The slice has no recreation buildings, so idling is the only source of joy there
+            // is. Without one, joy falls to zero on every colonist, mood sits under the break
+            // threshold permanently, and a ten-day run measures nothing but mental breaks.
+            if (!pawn.Asleep)
+            {
+                if (IsIdling(pawn))
+                {
+                    var joy = content.Needs[NeedIndex.Joy];
+                    pawn.Needs[NeedIndex.Joy] =
+                        System.Math.Min(joy.max, pawn.Needs[NeedIndex.Joy] + content.Kind.joyGainPerInterval);
+                }
+                else
+                {
+                    Fall(pawn, NeedIndex.Joy);
+                }
+            }
+
+            UpdateMood(pawn, tick);
+            RollMentalBreak(pawn, tick, interval);
+        }
+
+        void Fall(Pawn pawn, int needIndex)
+        {
+            int value = pawn.Needs[needIndex] - pawn.NeedFallPerInterval(needIndex);
+            pawn.Needs[needIndex] = value < 0 ? 0 : value;
+        }
+
+        /// <summary>
+        /// Target = base + situational band offsets + memory offsets, then drift toward it.
+        /// Situational thoughts are recomputed from the world and never stored; memories are
+        /// stored and expire.
+        /// </summary>
+        void UpdateMood(Pawn pawn, int tick)
+        {
+            var mood = _ctx.Content.Mood;
+            pawn.ExpireMemories(tick);
+
+            int target = mood.baseMood;
+            for (int n = 0; n < NeedIndex.Count; n++)
+                target += _ctx.Content.Needs[n].MoodOffset(pawn.Needs[n]);
+            target += pawn.MemoryMoodOffset(tick);
+
+            if (target < 0) target = 0;
+            if (target > mood.max) target = mood.max;
+            pawn.MoodTarget = target;
+
+            if (pawn.Mood < target)
+                pawn.Mood = System.Math.Min(target, pawn.Mood + pawn.MoodDriftPerInterval(true));
+            else if (pawn.Mood > target)
+                pawn.Mood = System.Math.Max(target, pawn.Mood - pawn.MoodDriftPerInterval(false));
+        }
+
+        /// <summary>
+        /// A mean-time-between-events draw, not a trigger. The per-check probability is
+        /// interval/MTB, expressed as an integer comparison so no float ever enters the
+        /// simulation: draw uniformly below the MTB and break if the draw lands inside one
+        /// interval's worth of it.
+        /// </summary>
+        void RollMentalBreak(Pawn pawn, int tick, int interval)
+        {
+            if (!pawn.CanMentalBreak()) return;
+
+            var mood = _ctx.Content.Mood;
+            var rng = DeterministicRandom.ForTick(
+                _ctx.Seed, tick, PawnPurpose.MentalBreak ^ (uint)pawn.Id.Value);
+            if (rng.NextInt(mood.breakMtbTicks) >= interval) return;
+
+            pawn.BreakTicksLeft = _ctx.Content.Break.durationTicks;
+            BreaksTriggered++;
+        }
+
+        bool IsBed(int cell)
+        {
+            var beds = _ctx.Items.Beds;
+            int low = 0, high = beds.Count - 1;
+            while (low <= high)
+            {
+                int mid = (low + high) >> 1;
+                int value = beds[mid];
+                if (value == cell) return true;
+                if (value < cell) low = mid + 1;
+                else high = mid - 1;
+            }
+            return false;
+        }
+
+        static bool IsIdling(Pawn pawn)
+        {
+            var job = pawn.CurrentJob;
+            if (job == null) return true;
+            int driver = pawn.Content.Jobs[job.DefIndex].driver;
+            return driver == JobIndex.Wander || driver == JobIndex.Wait;
+        }
+    }
+}

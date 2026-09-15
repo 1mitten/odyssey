@@ -1,0 +1,137 @@
+#nullable enable
+using Odyssey.Sim.Pathing;
+
+namespace Odyssey.Sim.Pawns
+{
+    /// <summary>
+    /// Serves the path queue and walks pawns along what comes back.
+    ///
+    /// It runs last in the pawn phase because the order is decide, then move: a driver asks for a
+    /// path during the job phase and the pawn takes its first step in the same tick, so a request
+    /// never costs an idle tick.
+    ///
+    /// <para>Paths are <b>recomputed, never saved</b>. A recomputed path is correct by
+    /// construction; a saved one can be stale in a world where floors collapse. Nothing about a
+    /// path folds into the state hash either, so a resume does not look like a divergence.</para>
+    ///
+    /// <para>Every step is checked against the graph before it is taken. A path that skips a layer
+    /// is a bug, not a convenience, and a connector is the only vertical edge that exists — so a
+    /// step that is no longer legal invalidates the path rather than being tolerated.</para>
+    /// </summary>
+    public sealed class MovementSystem : IWorldSystem
+    {
+        readonly PawnContext _ctx;
+
+        public MovementSystem(PawnContext ctx) { _ctx = ctx; }
+
+        public string Name => "Movement";
+
+        public TickPhase Phase => TickPhase.Pawns;
+
+        /// <summary>Last in the phase: jobs have decided where to go before anyone moves.</summary>
+        public int Order => 30;
+
+        public int StepsTaken { get; private set; }
+        public int PathsServed { get; private set; }
+        public int PathsFailed { get; private set; }
+
+        public void Tick(SimWorld world)
+        {
+            _ctx.Sync(world);
+            ApplyServedPaths();
+
+            var pawns = _ctx.Pawns.All;
+            for (int i = 0; i < pawns.Count; i++) Advance(pawns[i]);
+        }
+
+        /// <summary>
+        /// Drain the request queue under its node budget and hand each result to its agent. The
+        /// queue is FIFO with ties broken by agent id, so what gets served is a function of the
+        /// simulation rather than of who happened to ask first in wall-clock terms.
+        /// </summary>
+        void ApplyServedPaths()
+        {
+            _ctx.Paths.Serve();
+            var served = _ctx.Paths.Served;
+
+            for (int i = 0; i < served.Count; i++)
+            {
+                var entry = served[i];
+                var pawn = _ctx.Pawns.Get(new Contracts.PawnId(entry.Request.AgentId));
+                if (pawn == null || !pawn.PathPending) continue;
+
+                // A result for a walk the pawn has since abandoned is dropped, not applied.
+                if (entry.Request.Start != pawn.Cell || entry.Request.Goal != pawn.Destination)
+                {
+                    pawn.PathPending = false;
+                    continue;
+                }
+
+                if (!entry.Result.Ok || entry.Cells.Length == 0)
+                {
+                    pawn.PathPending = false;
+                    pawn.PathFailed = true;
+                    PathsFailed++;
+                    continue;
+                }
+
+                pawn.AdoptPath(entry.Cells, entry.Cells.Length);
+                PathsServed++;
+            }
+        }
+
+        void Advance(Pawn pawn)
+        {
+            if (pawn.Asleep || !pawn.HasPath) return;
+
+            pawn.MoveProgress += pawn.MovePerTick();
+
+            while (pawn.HasPath)
+            {
+                int next = pawn.Path[pawn.PathIndex];
+
+                if (!_ctx.Nav.IsLegalStep(pawn.Cell, next, pawn.Mode))
+                {
+                    // The world changed under the pawn. Drop the path; the driver will ask for a
+                    // new one, or fail the job if the target is no longer reachable at all.
+                    pawn.ClearPath();
+                    return;
+                }
+
+                int cost = StepCost(pawn.Cell, next, pawn.Mode);
+                if (pawn.MoveProgress < cost) return;
+
+                pawn.MoveProgress -= cost;
+                pawn.Cell = next;
+                pawn.PathIndex++;
+                StepsTaken++;
+            }
+
+            // Arrived. Anything left over is discarded rather than banked toward the next walk,
+            // so a pawn cannot accumulate free movement by taking short journeys.
+            pawn.ClearPath();
+        }
+
+        /// <summary>
+        /// What one step costs. A layer change charges the connector's own declared cost, which
+        /// is where stair cost belongs — put it in the graph and ordinary distance ordering
+        /// handles verticality correctly everywhere, including in cases nobody thought about.
+        /// </summary>
+        int StepCost(int from, int to, TraverseMode mode)
+        {
+            int stride = _ctx.Size.LayerStride;
+            if (from / stride != to / stride)
+            {
+                // A declared connector is the only thing that can authorise a layer change.
+                // There is no run-time search for a landing, anywhere, ever.
+                for (int edge = _ctx.Nav.FirstPortalEdge(from); edge != -1; edge = _ctx.Nav.PortalEdgeNext(edge))
+                    if (_ctx.Nav.PortalEdgeTarget(edge) == to && TraverseModes.Allows(_ctx.Nav.PortalEdgeMode(edge), mode))
+                        return _ctx.Nav.PortalEdgeCost(edge);
+
+                return MoveCost.Fall;
+            }
+
+            return _ctx.Nav.Grid.EnterCost(to, mode);
+        }
+    }
+}
