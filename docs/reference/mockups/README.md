@@ -8,15 +8,24 @@ another game, no Synty content appears in any of them, and every name is ours.
 
 ## Files
 
-| File | Supplied | What it shows |
-|---|---|---|
-| `hud-v1.html` | 2026-09-15 | The complete HUD and every panel from `docs/design/10-ui-panel-catalogue.md`, with a working layer slice, the four icon debug modes, and per-region architecture annotations |
+| File | Supplied | Status | What it shows |
+|---|---|---|---|
+| `hud-v2.html` | 2026-09-15 | **current** | The layer HUD. All six above-slice visibility modes from ADR 0003 plus the depth cap and the below-slice treatment, six named presets, live tuning sliders, and every icon slot driven by the real icon mapping with a coverage read-out |
+| `hud-v1.html` | 2026-09-15 | historical | The complete HUD and every panel from `docs/design/10-ui-panel-catalogue.md`, with a working layer slice, the four icon debug modes, and per-region architecture annotations |
+| `icon-map.js` | generated | — | Written by `tools/icons/icons.py emit-web` from `docs/design/icon-map.csv`. Do not edit |
 
-## Opening it
+**v1 is kept unchanged on purpose.** It is the artefact that produced the x-ray decision: it
+offered hide, ghost and x-ray as a live toggle, and the owner chose by looking. Rewriting it to
+match the outcome would erase the evidence. So it still opens on ghost and still calls the question
+open, and that is correct for what it is. Everything new is in v2.
 
-Open `hud-v1.html` in any browser, straight from disk. It is one self-contained file: no build
-step, no server, no network. The only external request is a web font, and it falls back
-cleanly when that is blocked.
+## Opening them
+
+Open either file in any browser, straight from disk. No build step, no server, no network.
+v2 reads `icon-map.js` from the same directory and addresses the icon sheets in
+`art-source/icons/sheets/` as CSS sprites; while those sheets are absent every slot falls back to a
+deterministic placeholder, so the mockup is readable now and shows the real art the moment they
+land, with no change to the file.
 
 It is designed at 1280 × 720 and scales down to fit the window, so a wide screen is worth
 using. Below about 800 pixels the density stops being reviewable.
@@ -59,8 +68,14 @@ using. Below about 800 pixels the density stops being reviewable.
 - **Panel positions do not persist.** The real ones remember where you left them, per type.
 - **Every number is invented.** The budget monitor's figures are the targets from
   `docs/design/09-ui-and-input.md` §4, not measurements. Nothing has been profiled.
-- **No icon is real art.** Every one is a deterministic placeholder generated from its symbolic
-  key, which is the strategy the game will use until art exists.
+- **No icon is real art yet.** Each slot is a deterministic placeholder generated from its
+  symbolic key, which is the strategy the game will use until art exists. In v2 a slot outlined in
+  **magenta** means something stronger: that key has **no art anywhere in the owner's eight sheets**
+  and is on the list in `docs/design/11-icon-library.md`. The roster bar is entirely magenta,
+  because no sheet contains a human figure.
+- **v2's tuning sliders change nothing but v2.** They exist so the x-ray falloff can be chosen by
+  eye rather than argued about in prose. Copy the numbers you settle on into
+  `docs/design/09-ui-and-input.md`; nothing reads them automatically.
 
 ## Feedback
 

@@ -13,6 +13,12 @@ Every research result lives in this folder as one file per question, in the fixe
 | `g-01-ui-information-design.md` | Lane G | done | medium | Reference UI taxonomy region by region, five density techniques, what to reject from its immediate-mode implementation, and the Depth Ruler as the region with no counterpart. |
 | `g-02-unity-ui-framework.md` | Lane G | done | medium-high on the choice, low on the numbers | UI Toolkit, behind a Unity-free HUD assembly, with three flip conditions and twelve unrun experiments. |
 
+**Where the icon work lives (2026-09-15).** It is design and tooling rather than research, so it is
+not in this folder: `docs/design/11-icon-library.md` with `icon-keys.csv` and `icon-map.csv`,
+`docs/adr/0004-pixel-art-icon-pipeline.md`, and the pipeline in `tools/icons/`. Lane E should read
+the library document before mapping Synty modules, because the same art-led principle applies and
+the gap list is the shape of what the prototype still needs.
+
 Related, outside this folder: `docs/brief.md` (the governing brief), `docs/reference/screenshots/README.md` (reference-image descriptions), `docs/reference/mockups/README.md` (the clickable HUD mockup), `docs/design/` (design documents), `docs/adr/` (decision records).
 
 ## Standing constraint on Lanes A and B (found 2026-09-15)

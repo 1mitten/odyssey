@@ -1,0 +1,679 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Odyssey HUD v2 — layer visibility and the icon library</title>
+<!--
+  Throwaway information-design artefact. Nothing here is the game.
+  v2 supersedes v1. What is new:
+    - the six above-slice visibility modes of ADR 0003, plus the depth cap and the below-slice
+      treatment, as three independent axes with six named presets and live tuning sliders
+    - every icon slot driven by docs/design/icon-map.csv through the generated icon-map.js, so the
+      real pixel art appears the moment the sheets land in art-source/icons/sheets/
+    - a coverage read-out, because a slot still on a placeholder is a gap in the icon library
+  v1 is kept unchanged as the artefact that produced the x-ray decision.
+-->
+<script src="icon-map.js"></script>
+<style>
+:root{
+  --bg:#0a0f15; --panel:#141b24e6; --panel2:#1b242fe6; --line:#2b3947; --line2:#3d4f61;
+  --ink:#dde6ee; --ink2:#93a4b5; --ink3:#63758a; --accent:#5ec8dc; --accent2:#2b7f8f;
+  --warn:#d9a23b; --bad:#d6604a; --good:#6fbf7f; --miss:#d63ad6;
+  --r:6px; --f:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#05080c;color:var(--ink);font:12px/1.45 var(--f);overflow:hidden;
+     height:100vh;display:flex;flex-direction:column}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+/* ---------------- review rail ---------------- */
+.rail{flex:none;background:#0d1319;border-bottom:1px solid var(--line);padding:6px 10px;display:flex;
+      gap:14px;align-items:center;flex-wrap:wrap}
+.brand{font-weight:700;letter-spacing:.04em;color:var(--accent);margin-right:6px}
+.brand small{display:block;font-weight:400;color:var(--ink3);letter-spacing:0}
+.ctl{display:flex;gap:6px;align-items:center}
+.ctl>label{color:var(--ink3);text-transform:uppercase;font-size:10px;letter-spacing:.08em}
+.seg{display:flex;border:1px solid var(--line2);border-radius:var(--r);overflow:hidden}
+.seg button{padding:3px 8px;color:var(--ink2);border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed=true]{background:var(--accent2);color:#fff}
+.seg button:hover{background:#243240}
+.seg button[aria-pressed=true]:hover{background:#31909f}
+
+/* ---------------- stage ---------------- */
+.stage{flex:1;position:relative;min-height:0;overflow:hidden}
+canvas{position:absolute;inset:0;width:100%;height:100%}
+.region{position:absolute;background:var(--panel);border:1px solid var(--line);
+        border-radius:var(--r);backdrop-filter:blur(3px)}
+.hdr{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink3);
+     padding:4px 7px;border-bottom:1px solid var(--line)}
+
+/* regions */
+#left{position:absolute;top:10px;left:10px;width:196px;display:flex;flex-direction:column;
+      gap:8px;max-height:calc(100% - 290px);overflow:auto;scrollbar-width:thin}
+#left::-webkit-scrollbar{width:6px}
+#left::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+#left>.region{position:static;width:100%;flex:none}
+#a2{position:absolute;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:4px;
+    padding:5px;background:var(--panel);
+    border:1px solid var(--line);border-radius:var(--r)}
+#a34{top:10px;right:10px;width:206px}
+#a5{top:116px;right:10px;width:210px;max-height:180px;overflow:auto}
+#a11{bottom:10px;right:10px;width:210px;max-height:calc(100% - 320px);
+     display:flex;flex-direction:column}
+#a11 .hdr,#a11 .drf{flex:none}
+#a11 .dr{flex:1;min-height:54px}
+#a7{bottom:10px;left:10px;width:250px}
+#a12{bottom:10px;left:270px;width:190px}
+#cov{position:absolute;top:10px;right:226px;width:190px}
+
+
+/* ledger */
+.led{display:grid;grid-template-columns:auto 1fr auto;gap:2px 6px;padding:5px 7px;align-items:center}
+.led .g{grid-column:1/-1;height:1px;background:var(--line);margin:3px 0}
+.led .q{text-align:right;color:var(--ink)}
+.led .t{color:var(--good);font-size:10px}
+.led .t.d{color:var(--bad)}
+.led .n{color:var(--ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* roster */
+.card{width:56px;padding:4px;border:1px solid var(--line);border-radius:4px;background:var(--panel2);
+      text-align:center;cursor:pointer}
+.card:hover{border-color:var(--accent2)}
+.card .nm{font-size:10px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .zb{font-size:9px;color:var(--accent)}
+.bar{height:3px;background:#22303d;border-radius:2px;margin-top:2px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--good)}
+.bar.lo i{background:var(--bad)}
+
+/* alerts */
+.al{display:flex;gap:6px;align-items:center;padding:4px 7px;border-left:3px solid var(--bad);
+    margin:4px 5px;background:#2a1a18cc;border-radius:3px;cursor:pointer}
+.al.w{border-left-color:var(--warn);background:#2a2415cc}
+.al .tx{flex:1;font-size:11px}
+.al .z{font-size:9px;color:var(--ink3)}
+
+/* depth ruler */
+.dr{padding:3px 5px;overflow:auto;scrollbar-width:thin}
+.dr .row{display:grid;grid-template-columns:26px 1fr 16px 10px;gap:4px;align-items:center;
+         padding:2px 3px;border-radius:3px;cursor:pointer}
+.dr .row:hover{background:#22303d}
+.dr .row[aria-current=true]{background:var(--accent2);color:#fff}
+.dr .zl{color:var(--ink3);font-size:10px;text-align:right}
+.dr .row[aria-current=true] .zl{color:#cdeef5}
+.dr .occ{height:6px;background:#1d2833;border-radius:2px;overflow:hidden}
+.dr .occ i{display:block;height:100%;background:var(--accent)}
+.dr .pc{font-size:10px;color:var(--ink2);text-align:right}
+.dr .mk{width:6px;height:6px;border-radius:50%;background:var(--bad);justify-self:center}
+.dr .gnd{border-top:1px dashed var(--line2)}
+.drf{border-top:1px solid var(--line);padding:5px}
+.drf .lbl{font-size:9px;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin:3px 0 2px}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.modes button{padding:3px 4px;border:1px solid var(--line2);border-radius:3px;color:var(--ink2);font-size:10px}
+.modes button[aria-pressed=true]{background:var(--accent2);color:#fff;border-color:var(--accent)}
+.pre{display:flex;flex-wrap:wrap;gap:3px}
+.pre button{padding:2px 6px;border:1px solid var(--line2);border-radius:10px;color:var(--ink2);font-size:10px}
+.pre button[aria-pressed=true]{background:#31909f;color:#fff}
+
+/* architect */
+.cats{display:flex;flex-wrap:wrap;gap:3px;padding:5px}
+.cats button{padding:3px 6px;border:1px solid var(--line2);border-radius:3px;color:var(--ink2);
+             font-size:10px;display:flex;gap:4px;align-items:center}
+.cats button[aria-pressed=true]{background:var(--accent2);color:#fff}
+.tools{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:0 5px 5px}
+.tools button{padding:4px 2px;border:1px solid var(--line);border-radius:3px;display:flex;
+              flex-direction:column;gap:2px;align-items:center;font-size:9px;color:var(--ink2)}
+.tools button:hover{border-color:var(--accent2);background:#22303d}
+
+/* overlays + tabs */
+.ovl{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:5px}
+.ovl button{padding:3px 5px;border:1px solid var(--line2);border-radius:3px;color:var(--ink2);
+            font-size:10px;display:flex;gap:4px;align-items:center}
+.ovl button[aria-pressed=true]{background:var(--accent2);color:#fff}
+#tabs{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:4px;
+      padding:5px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+
+/* tuning */
+.tn{padding:6px 7px;display:grid;gap:5px}
+.tn label{display:grid;grid-template-columns:1fr auto;font-size:10px;color:var(--ink2)}
+.tn input{width:100%}
+.tn .v{color:var(--accent);font-variant-numeric:tabular-nums}
+.tn .note{font-size:9px;color:var(--ink3);line-height:1.35}
+
+/* coverage */
+.cv{padding:6px 7px;display:grid;gap:3px;font-size:10px}
+.cv .r{display:grid;grid-template-columns:1fr auto;color:var(--ink2)}
+.cv .r b{color:var(--ink);font-weight:400}
+.cv .m{color:var(--miss)}
+
+/* ---------------- icons ---------------- */
+.ico{display:inline-block;width:16px;height:16px;flex:none;border-radius:3px;
+     image-rendering:pixelated;background-repeat:no-repeat;position:relative;
+     font-size:7px;line-height:16px;text-align:center;color:#0c1015;font-weight:700;overflow:hidden}
+.ico.s32{width:22px;height:22px;line-height:22px;font-size:9px}
+.ico.gap{outline:1px solid var(--miss)}
+body[data-icons=keys] .ico{font-size:5px;line-height:1.05;padding-top:1px;word-break:break-all;
+     background-image:none!important;background:#1b242f;color:var(--accent);border:1px solid var(--line2)}
+body[data-icons=keys] .ico.s32{font-size:6px}
+body[data-icons=text] .ico{display:none}
+body[data-icons=text] .tl{display:inline!important}
+body[data-icons=missing] .ico{background-image:none!important;background:var(--miss)!important;color:#fff}
+body[data-icons=label] .tl{display:inline!important;color:var(--ink2);font-size:10px}
+.tl{display:none;margin-left:4px}
+.tools .tl,.cats .tl,.ovl .tl{display:inline;font-size:9px}
+
+.doc{position:absolute;inset:auto 10px 10px 10px;max-width:none;display:none}
+body[data-help=1] .doc{display:block;position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);width:min(720px,90vw);max-height:80vh;overflow:auto;
+  background:#0f161d;border:1px solid var(--line2);border-radius:8px;padding:16px 18px;z-index:50}
+.doc h2{font-size:13px;color:var(--accent);margin-bottom:6px}
+.doc p,.doc li{color:var(--ink2);font-size:11px;margin-bottom:6px}
+.doc ul{margin-left:16px}
+.doc b{color:var(--ink)}
+</style>
+
+<div class="rail">
+  <div class="brand">Odyssey<small>hud-v2 · layer visibility and icons</small></div>
+  <div class="ctl"><label>Icons</label><div class="seg" id="m-icon">
+    <button data-v="icon" aria-pressed="true">Icon</button><button data-v="label">+ label</button>
+    <button data-v="keys">Keys</button><button data-v="text">Text</button>
+    <button data-v="missing">Missing</button></div></div>
+  <div class="ctl"><label>Size</label><div class="seg" id="m-size">
+    <button data-v="16" aria-pressed="true">32px</button><button data-v="32">64px</button></div></div>
+  <div class="ctl"><label>Above</label><div class="seg" id="m-mode">
+    <button data-v="hide">Hide</button><button data-v="ghost">Ghost</button>
+    <button data-v="xray-min">X-ray 1</button><button data-v="xray" aria-pressed="true">X-ray all</button>
+    <button data-v="roofs-off">Roofs off</button><button data-v="full">Solid</button></div></div>
+  <div class="ctl"><label>Below</label><div class="seg" id="m-below">
+    <button data-v="dim" aria-pressed="true">Dim</button><button data-v="hide">Hide</button>
+    <button data-v="normal">Normal</button></div></div>
+  <div class="ctl"><div class="seg" id="m-help"><button data-v="1">What to review</button></div></div>
+</div>
+
+<div class="stage">
+  <canvas id="cv"></canvas>
+
+  <div id="left">
+    <div class="region" id="a1"><div class="hdr">A1 · Resource ledger</div>
+      <div class="led" id="ledger"></div></div>
+    <div class="region" id="tune"><div class="hdr">Tuning · x-ray by eye</div>
+      <div class="tn" id="tn"></div></div>
+  </div>
+  <div class="region" id="cov"><div class="hdr">Icon coverage</div>
+    <div class="cv" id="cvb"></div></div>
+  <div id="a2"></div>
+  <div class="region" id="a34"><div class="hdr">A3 · Time &middot; A4 · Speed</div>
+    <div style="padding:6px 7px 8px" id="clock"></div></div>
+  <div class="region" id="a5"><div class="hdr">A5 · Alerts</div><div id="alerts"></div></div>
+
+  <div class="region" id="a11"><div class="hdr">A11 · Depth ruler</div>
+    <div class="dr" id="ruler"></div><div class="drf" id="rulerfoot"></div></div>
+
+  <div class="region" id="a7"><div class="hdr">A7 · Architect</div>
+    <div class="cats" id="cats"></div><div class="tools" id="tools"></div></div>
+
+  <div class="region" id="a12"><div class="hdr">A12 · Overlays</div><div class="ovl" id="ovl"></div></div>
+  <div id="tabs"></div>
+
+  <div class="doc" id="doc">
+    <h2>What to review, in order</h2>
+    <p><b>1. The visibility modes.</b> ADR 0003 settled x-ray as the default. This mockup exists to
+    let you change your mind cheaply. Move the slice on the depth ruler, then walk the
+    <b>Above</b> control through all six positions. <b>Roofs off</b> is the one that was never on
+    the original list of three, and it is what the concept renders actually depict.</p>
+    <p><b>2. The tuning numbers.</b> The x-ray falloff was tuned when x-ray was the least-favoured
+    option, so it starts too faint to be a default. Drag <b>near alpha</b> and <b>falloff</b> until a
+    forty-layer tower reads without turning to soup, then copy the printed values into
+    <code>docs/design/09-ui-and-input.md</code>. Numbers chosen by eye beat numbers chosen in prose.</p>
+    <p><b>3. Icon coverage.</b> Every slot here is driven by <code>docs/design/icon-map.csv</code>.
+    A slot outlined in magenta has <b>no art in your sheets</b>. The coverage panel counts them.
+    Switch <b>Icons</b> to <i>Keys</i> to see what each slot asks for, or <i>Text</i> to check that
+    the interface still reads with no pictures at all.</p>
+    <p><b>4. Icon size.</b> ADR 0004 moved the display sizes to 32 and 64 pixels, because pixel art
+    at a fractional scale shimmers. The <b>Size</b> control shows both. Check the ledger and the
+    roster bar: those are the densest regions and the ones the change costs most.</p>
+    <p>Once the eight sheets are in <code>art-source/icons/sheets/</code> and the row and column
+    columns of the mapping are filled in, the placeholders here become the real art with no further
+    work: the slots address the sheets directly as sprites.</p>
+    <p style="color:#63758a">Click anywhere to close.</p>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============================ state ============================ */
+const S = {z:0, mode:"xray", below:"dim", depth:99, icons:"icon", size:16, cat:"structure",
+           overlay:null, sel:0, preset:"default",
+           tune:{near:0.34, fall:0.30, ghost:0.85, dim:0.45}};
+const ZMIN = -3, ZMAX = 5, GW = 26, GH = 26;
+
+const PRESETS = {
+  clear:    {mode:"hide",      below:"dim",    depth:99, t:{}},
+  outline:  {mode:"ghost",     below:"dim",    depth:99, t:{}},
+  default:  {mode:"xray",      below:"dim",    depth:99, t:{near:0.34, fall:0.30}},
+  minimal:  {mode:"xray-min",  below:"dim",    depth:1,  t:{near:0.40}},
+  roofless: {mode:"roofs-off", below:"dim",    depth:99, t:{}},
+  architect:{mode:"full",      below:"normal", depth:99, t:{}},
+};
+
+/* ============================ the world ============================ */
+// cell types: 0 empty, 1 floor/roof, 2 wall, 3 prop, 4 designation
+const cells = [];
+const Z = z => z - ZMIN;
+for (let i = 0; i < ZMAX - ZMIN + 1; i++)
+  cells.push(Array.from({length:GH}, () => new Array(GW).fill(0)));
+
+function build() {
+  const rnd = (s => () => (s = s * 16807 % 2147483647) / 2147483647)(7);
+  // street grid at ground level
+  for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++)
+    if (x % 9 === 0 || y % 11 === 0) cells[Z(0)][y][x] = 1;
+  // three shells of differing height, plus two basement levels
+  const shells = [[2,2,9,9,4],[13,3,10,8,2],[4,14,12,9,3]];
+  for (const [ox,oy,w,h,ht] of shells) {
+    for (let z = 0; z <= ht; z++) for (let y = oy; y < oy+h; y++) for (let x = ox; x < ox+w; x++) {
+      const edge = x===ox || y===oy || x===ox+w-1 || y===oy+h-1;
+      if (z > 0 && rnd() < 0.10) continue;                 // damage: missing pieces
+      cells[Z(z)][y][x] = edge ? 2 : 1;                    // wall ring, floor within
+      if (!edge && z > 0 && rnd() < 0.07) cells[Z(z)][y][x] = 3;
+    }
+  }
+  for (let z = -2; z <= -1; z++)                            // utility tunnels beneath the streets
+    for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++)
+      if ((x % 9 === 0 && y > 2 && y < GH-2) || (y % 11 === 0 && x > 2 && x < GW-2))
+        cells[Z(z)][y][x] = rnd() < 0.86 ? 1 : 0;
+  for (let i = 0; i < 26; i++) {                            // designations, to show at the slice
+    const z = Math.floor(rnd()*4)-1, x = 1+Math.floor(rnd()*(GW-2)), y = 1+Math.floor(rnd()*(GH-2));
+    if (cells[Z(z)][y][x] === 1) cells[Z(z)][y][x] = 4;
+  }
+}
+build();
+
+const LAYERS = [];
+for (let z = ZMIN; z <= ZMAX; z++) {
+  let n = 0;
+  for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) if (cells[Z(z)][y][x]) n++;
+  LAYERS.push({z, occ: n / (GW*GH), pawns: z===0?3:(z===1?2:(z===-1?1:0)), alert: z===2||z===-2});
+}
+
+const PAWNS = [
+  {n:"Wrenn", z:0, mood:.82, job:"ui.status.building"},
+  {n:"Odile", z:1, mood:.64, job:"ui.status.hauling"},
+  {n:"Kester", z:-1, mood:.41, job:"ui.status.mining"},
+  {n:"Sable", z:0, mood:.91, job:"ui.status.tending"},
+  {n:"Fen", z:1, mood:.55, job:"ui.status.eating"},
+  {n:"Ilma", z:0, mood:.28, job:"ui.status.idle"},
+];
+const LEDGER = [
+  ["ui.res.scrap","Scrap",4890,1],["ui.res.alloy","Alloy",1284,1],["ui.res.concrete","Concrete",2210,0],
+  ["ui.res.glass","Glass",176,-1],["ui.res.composite","Composite",42,0],
+  null,
+  ["ui.res.circuitry","Circuitry",58,-1],["ui.res.wire","Wire",430,1],["ui.res.cell","Power cell",37,-1],
+  null,
+  ["ui.res.rations","Rations",612,-1],["ui.res.meal","Meal",24,1],["ui.res.water","Water",980,0],
+  ["ui.res.medkit","Medkit",14,0],
+];
+const ALERTS = [
+  ["ui.alert.unsupported","Unsupported span",2,0],["ui.alert.breach","Breach",0,0],
+  ["ui.alert.starvation","Rations low",null,1],["ui.alert.cold","Too cold",-2,1],
+  ["ui.alert.idle","Idle colonist",0,1],
+];
+const CATS = ["structure","zones","orders","power","production","furniture","security","salvage","floors","recreation"];
+const TOOLS = {
+  structure:["wall","door","stair","ladder","pillar","roof","reclaim","window","hatch","airlock"],
+  zones:["stockpile","growzone","allowed","dumping","kennel"],
+  orders:["mine","deconstruct","salvage","haulurgent","cancel","forbid","allowitem","clearrubble","extinguish","harvest"],
+  power:["conduit","battery","generator","solar","wind","geothermal","switch","reactor"],
+  production:["fabricator","galley","reclaimer","hydroponics","bench","tailorbench","smithy","butcher","researchbench","comms"],
+  furniture:["bunk","bed","table","chair","lamp","shelf","locker","brazier","cooler","heater","vent"],
+  security:["turret","trap","barricade","blastdoor","sandbag","searchlight"],
+  salvage:["salvage","clearrubble","deconstruct","reclaim"],
+  floors:["deckplate","grating","concretefloor","tile","removefloor"],
+  recreation:["recbench","gamestable","viewscreen","planter","sculpture"],
+};
+const OVERLAYS = ["temperature","light","beauty","cleanliness","roofs","zones","power","salvage","support","traffic"];
+const TABS = ["work","schedule","research","colonists","animals","wildlife","bills","trade","factions","archive","menu"];
+
+/* ============================ icons ============================ */
+const MAP = window.ICON_MAP || {}, SHEETS = window.ICON_SHEETS || {}, GAPS = new Set(window.ICON_GAPS || []);
+const SHEET_BASE = "../../../art-source/icons/sheets/";
+
+function hash(s){ let h = 2166136261; for (let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h,16777619);} return h>>>0; }
+function badge(key){
+  const tail = key.split(".").pop().replace(/[^a-z0-9]/gi,"");
+  return tail.slice(0,3).toUpperCase();
+}
+/** Build one icon element. Sprite when the cell is located, deterministic placeholder otherwise. */
+function icon(key, label){
+  const e = document.createElement("i");
+  e.className = "ico" + (S.size===32?" s32":"") + (GAPS.has(key)?" gap":"");
+  e.dataset.key = key;
+  e.title = (label||key) + "  ·  " + key + (GAPS.has(key) ? "  ·  NO ART IN THE SHEETS" : "");
+  const m = MAP[key];
+  if (S.icons === "keys") { e.textContent = key.slice(3); return e; }
+  if (m && m.r !== null && m.c !== null && SHEETS[m.s] && SHEETS[m.s].cols) {
+    const sh = SHEETS[m.s], px = S.size, cw = px, ch = px;
+    e.style.backgroundImage = `url(${SHEET_BASE}${sh.file})`;
+    e.style.backgroundSize = `${sh.cols*cw}px ${sh.rows*ch}px`;
+    e.style.backgroundPosition = `-${m.c*cw}px -${m.r*ch}px`;
+  } else {
+    const h = hash(key);
+    const hue = h % 360, sat = GAPS.has(key) ? 0 : 42 + (h>>9)%26, lig = GAPS.has(key) ? 26 : 48 + (h>>17)%14;
+    e.style.background = GAPS.has(key) ? "#2a1a2a" : `hsl(${hue} ${sat}% ${lig}%)`;
+    e.style.color = GAPS.has(key) ? "var(--miss)" : "#0c1015";
+    e.textContent = badge(key);
+  }
+  return e;
+}
+function iconRow(key, label){
+  const f = document.createDocumentFragment();
+  f.appendChild(icon(key, label));
+  const t = document.createElement("span"); t.className="tl"; t.textContent = label||key.slice(3);
+  f.appendChild(t);
+  return f;
+}
+
+/* ============================ world render ============================ */
+const cv = document.getElementById("cv"), cx = cv.getContext("2d");
+const TW = 26, TH = 13, ZH = 12;
+function resize(){ cv.width = cv.clientWidth; cv.height = cv.clientHeight; draw(); }
+function proj(x,y,z){
+  return [cv.width/2 + (x-y)*TW/2, cv.height/2 + (x+y)*TH/2 - (z-ZMIN)*ZH - 90];
+}
+function dia(sx,sy,fill){
+  cx.beginPath();
+  cx.moveTo(sx,sy-TH/2); cx.lineTo(sx+TW/2,sy); cx.lineTo(sx,sy+TH/2); cx.lineTo(sx-TW/2,sy);
+  cx.closePath();
+  if (fill){ cx.fillStyle=fill; cx.fill(); }
+}
+function box(sx,sy,top,l,r){
+  dia(sx,sy,top);
+  cx.fillStyle=l; cx.beginPath(); cx.moveTo(sx-TW/2,sy); cx.lineTo(sx,sy+TH/2);
+  cx.lineTo(sx,sy+TH/2+ZH); cx.lineTo(sx-TW/2,sy+ZH); cx.closePath(); cx.fill();
+  cx.fillStyle=r; cx.beginPath(); cx.moveTo(sx+TW/2,sy); cx.lineTo(sx,sy+TH/2);
+  cx.lineTo(sx,sy+TH/2+ZH); cx.lineTo(sx+TW/2,sy+ZH); cx.closePath(); cx.fill();
+}
+const COL = {
+  1:["#3b4b5a","#2d3a46","#243039"], 2:["#57697a","#42525f","#35434e"],
+  3:["#6a7b58","#51603f","#404c33"], 4:["#8a7a3a","#6b5e2c","#544a23"],
+};
+function draw(){
+  const g = cx.createLinearGradient(0,0,0,cv.height);
+  g.addColorStop(0,"#0c151e"); g.addColorStop(1,"#05080c");
+  cx.fillStyle=g; cx.fillRect(0,0,cv.width,cv.height);
+  const T = S.tune;
+
+  for (let z = ZMIN; z <= ZMAX; z++) {
+    const rel = z - S.z;
+    // ---- which layers are drawn at all
+    if (rel > 0) {
+      if (S.mode === "hide") continue;
+      if (S.mode === "xray-min" && rel > 1) continue;
+      if (rel > S.depth) continue;
+    }
+    if (rel < 0 && S.below === "hide") continue;
+
+    let alpha = 1, outline = false, skipRoofs = false;
+    if (rel > 0) {
+      if (S.mode === "ghost") { outline = true; alpha = Math.max(0.10, T.ghost - (rel-1)*0.22); }
+      else if (S.mode === "full") { alpha = 1; }
+      else if (S.mode === "roofs-off") { alpha = 1; skipRoofs = true; }
+      else { alpha = Math.max(0.04, T.near * Math.pow(1 - T.fall, rel - 1)); }
+    } else if (rel < 0) {
+      alpha = S.below === "normal" ? 1 : Math.max(0.06, T.dim * Math.pow(0.72, -rel - 1));
+    }
+    cx.globalAlpha = alpha;
+
+    for (let s = 0; s < GW + GH; s++) for (let x = 0; x < GW; x++) {
+      const y = s - x; if (y < 0 || y >= GH) continue;
+      const t = cells[Z(z)][y][x]; if (!t) continue;
+      if (skipRoofs && t === 1) continue;                  // roofs off: floors and roofs dropped
+      const [sx,sy] = proj(x,y,z), c = COL[t];
+      if (outline) {
+        cx.strokeStyle = "rgba(120,190,205,.9)"; cx.lineWidth = 1;
+        dia(sx,sy,null); cx.stroke(); continue;
+      }
+      let top = c[0];
+      if (rel === 0 && S.overlay) top = ramp(S.overlay, x, y, z) || top;
+      if (rel < 0) top = c[1];
+      if (t === 2 || t === 3) box(sx,sy,top,c[1],c[2]); else dia(sx,sy,top);
+    }
+    if (rel === 0) {                                       // pawn pips on the active slice only
+      cx.globalAlpha = 1;
+      PAWNS.filter(p => p.z === z).forEach((p,i) => {
+        const [sx,sy] = proj(4 + i*3, 6 + i*2, z);
+        cx.fillStyle = "#ffd98a"; cx.beginPath(); cx.arc(sx, sy-6, 3.2, 0, 7); cx.fill();
+      });
+    }
+  }
+  cx.globalAlpha = 1;
+  // slice line, so the eye knows which plane is live
+  cx.strokeStyle = "rgba(94,200,220,.5)"; cx.lineWidth = 1; cx.setLineDash([4,4]);
+  const a = proj(0,0,S.z), b = proj(GW,0,S.z), c2 = proj(GW,GH,S.z), d = proj(0,GH,S.z);
+  cx.beginPath(); cx.moveTo(a[0],a[1]); cx.lineTo(b[0],b[1]); cx.lineTo(c2[0],c2[1]);
+  cx.lineTo(d[0],d[1]); cx.closePath(); cx.stroke(); cx.setLineDash([]);
+}
+function ramp(ch, x, y, z){
+  const v = (Math.sin(x*0.4 + z) + Math.cos(y*0.3 - z) + 2) / 4;
+  const R = {temperature:[[60,120,200],[210,110,60]], light:[[20,20,40],[240,230,170]],
+             beauty:[[150,70,70],[90,180,110]], support:[[200,80,60],[90,160,200]]}[ch]
+            || [[70,70,90],[150,200,220]];
+  const m = (i) => Math.round(R[0][i] + (R[1][i]-R[0][i])*v);
+  return `rgb(${m(0)},${m(1)},${m(2)})`;
+}
+
+/* ============================ HUD build ============================ */
+function seg(id, key){
+  const host = document.getElementById(id); if (!host) return;
+  host.querySelectorAll("button").forEach(b => b.onclick = () => {
+    if (id === "m-help") { document.body.dataset.help = document.body.dataset.help === "1" ? "" : "1"; return; }
+    S[key] = isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v;
+    if (key === "mode") S.depth = S.mode === "xray-min" ? 1 : 99;
+    host.querySelectorAll("button").forEach(o => o.setAttribute("aria-pressed", o === b));
+    if (key === "icons") document.body.dataset.icons = S.icons;
+    S.preset = "";
+    render();
+  });
+}
+function renderLedger(){
+  const h = document.getElementById("ledger"); h.textContent = "";
+  for (const row of LEDGER) {
+    if (!row) { const g = document.createElement("div"); g.className="g"; h.appendChild(g); continue; }
+    const [key,label,qty,trend] = row;
+    const a = document.createElement("div"); a.appendChild(icon(key,label));
+    const b = document.createElement("div"); b.className="n"; b.textContent = label;
+    const c = document.createElement("div"); c.className="q";
+    c.innerHTML = qty + (trend ? ` <span class="t${trend<0?" d":""}">${trend>0?"▲":"▼"}</span>` : "");
+    h.append(a,b,c);
+  }
+}
+function renderRoster(){
+  const h = document.getElementById("a2"); h.textContent = "";
+  PAWNS.forEach((p,i) => {
+    const d = document.createElement("div"); d.className="card";
+    d.onclick = () => { S.sel=i; S.z=p.z; render(); };
+    const top = document.createElement("div");
+    top.style.cssText="display:flex;gap:2px;justify-content:center;align-items:center";
+    top.appendChild(icon("ui.pawn.colonist", p.n));
+    top.appendChild(icon(p.job, p.job.split(".").pop()));
+    const nm = document.createElement("div"); nm.className="nm"; nm.textContent=p.n;
+    const zb = document.createElement("div"); zb.className="zb"; zb.textContent = "z"+(p.z>0?"+":"")+p.z;
+    const bar = document.createElement("div"); bar.className="bar"+(p.mood<.45?" lo":"");
+    bar.innerHTML = `<i style="width:${Math.round(p.mood*100)}%"></i>`;
+    d.append(top,nm,zb,bar); h.appendChild(d);
+  });
+}
+function renderClock(){
+  const h = document.getElementById("clock"); h.textContent="";
+  const line = document.createElement("div");
+  line.style.cssText="display:flex;gap:5px;align-items:center;margin-bottom:5px";
+  line.appendChild(icon("ui.weather.rain","Rain"));
+  const t = document.createElement("span"); t.textContent = "12h  ·  3 Larkspur  ·  8°C";
+  t.style.color="var(--ink2)"; line.appendChild(t);
+  const sp = document.createElement("div"); sp.style.cssText="display:flex;gap:3px;flex-wrap:wrap";
+  ["pause","play","fast","ultra"].forEach((k,i) => {
+    const b = document.createElement("button");
+    b.style.cssText="border:1px solid var(--line2);border-radius:3px;padding:2px 5px";
+    if (i===2) b.style.background="var(--accent2)";
+    b.appendChild(icon("ui.speed."+k,k)); sp.appendChild(b);
+  });
+  h.append(line,sp);
+}
+function renderAlerts(){
+  const h = document.getElementById("alerts"); h.textContent="";
+  for (const [key,txt,z,warn] of ALERTS) {
+    const d = document.createElement("div"); d.className = "al" + (warn?" w":"");
+    if (z !== null) d.onclick = () => { S.z=z; render(); };
+    d.appendChild(icon(key,txt));
+    const t = document.createElement("div"); t.className="tx"; t.textContent=txt;
+    const zz = document.createElement("div"); zz.className="z";
+    zz.textContent = z===null ? "colony" : "z"+(z>0?"+":"")+z+" ›";
+    d.append(t,zz); h.appendChild(d);
+  }
+}
+function renderRuler(){
+  const h = document.getElementById("ruler"); h.textContent="";
+  for (const L of [...LAYERS].reverse()) {
+    const r = document.createElement("div");
+    r.className = "row" + (L.z===0?" gnd":"");
+    r.setAttribute("aria-current", L.z===S.z);
+    r.onclick = () => { S.z=L.z; render(); };
+    r.innerHTML = `<div class="zl">${L.z===0?"grd":(L.z>0?"+":"")+L.z}</div>`+
+                  `<div class="occ"><i style="width:${Math.round(L.occ*100)}%"></i></div>`+
+                  `<div class="pc">${L.pawns||""}</div>`+
+                  (L.alert?`<div class="mk"></div>`:`<div></div>`);
+    h.appendChild(r);
+  }
+  const f = document.getElementById("rulerfoot"); f.textContent="";
+  const mk = (lbl, items, cur, set) => {
+    const l = document.createElement("div"); l.className="lbl"; l.textContent=lbl; f.appendChild(l);
+    const g = document.createElement("div"); g.className = lbl==="Preset" ? "pre" : "modes";
+    for (const [v,txt] of items) {
+      const b = document.createElement("button"); b.textContent=txt;
+      b.setAttribute("aria-pressed", String(v)===String(cur));
+      b.onclick = () => { set(v); render(); };
+      g.appendChild(b);
+    }
+    f.appendChild(g);
+  };
+  mk("Preset", Object.keys(PRESETS).map(k=>[k,k]), S.preset, v => {
+    const p = PRESETS[v]; S.mode=p.mode; S.below=p.below; S.depth=p.depth; S.preset=v;
+    Object.assign(S.tune, PRESETS.default.t, p.t);
+    syncRail();
+  });
+  mk("Above the slice", [["hide","Hide"],["ghost","Ghost"],["xray-min","X-ray 1"],
+     ["xray","X-ray all"],["roofs-off","Roofs off"],["full","Solid"]], S.mode,
+     v => { S.mode=v; S.depth = v==="xray-min"?1:S.depth; S.preset=""; syncRail(); });
+  mk("Depth cap", [[1,"1"],[2,"2"],[3,"3"],[4,"4"],[99,"All"]], S.depth,
+     v => { S.depth=+v; S.preset=""; });
+  mk("Below the slice", [["dim","Dim"],["hide","Hide"],["normal","Normal"]], S.below,
+     v => { S.below=v; S.preset=""; syncRail(); });
+}
+function renderArch(){
+  const c = document.getElementById("cats"); c.textContent="";
+  for (const k of CATS) {
+    const b = document.createElement("button");
+    b.setAttribute("aria-pressed", k===S.cat);
+    b.onclick = () => { S.cat=k; render(); };
+    b.appendChild(icon("ui.arch.category."+k, k));
+    const t=document.createElement("span"); t.className="tl"; t.textContent=k; b.appendChild(t);
+    c.appendChild(b);
+  }
+  const t = document.getElementById("tools"); t.textContent="";
+  for (const k of (TOOLS[S.cat]||[])) {
+    const b = document.createElement("button");
+    b.appendChild(icon("ui.arch.tool."+k, k));
+    const l=document.createElement("span"); l.className="tl"; l.textContent=k; b.appendChild(l);
+    t.appendChild(b);
+  }
+}
+function renderOverlays(){
+  const h = document.getElementById("ovl"); h.textContent="";
+  for (const k of OVERLAYS) {
+    const b = document.createElement("button");
+    b.setAttribute("aria-pressed", k===S.overlay);
+    b.onclick = () => { S.overlay = S.overlay===k?null:k; render(); };
+    b.appendChild(icon("ui.overlay."+k,k));
+    const t=document.createElement("span"); t.className="tl"; t.textContent=k; b.appendChild(t);
+    h.appendChild(b);
+  }
+  const tb = document.getElementById("tabs"); tb.textContent="";
+  for (const k of TABS) {
+    const b = document.createElement("button");
+    b.style.cssText="border:1px solid var(--line2);border-radius:3px;padding:3px 5px;display:flex;gap:4px;align-items:center";
+    b.appendChild(icon("ui.tab."+k,k));
+    const t=document.createElement("span"); t.className="tl"; t.textContent=k; b.appendChild(t);
+    tb.appendChild(b);
+  }
+}
+function renderTune(){
+  const h = document.getElementById("tn"); h.textContent="";
+  const rows = [["near","Near-layer alpha",0.05,1,0.01],["fall","Falloff per layer",0,0.8,0.01],
+                ["ghost","Ghost line alpha",0.1,1,0.01],["dim","Dim below",0.05,1,0.01]];
+  for (const [k,lbl,min,max,step] of rows) {
+    const l = document.createElement("label");
+    l.innerHTML = `<span>${lbl}</span><span class="v" id="v-${k}">${S.tune[k].toFixed(2)}</span>`;
+    const i = document.createElement("input");
+    i.type="range"; i.min=min; i.max=max; i.step=step; i.value=S.tune[k];
+    i.oninput = () => { S.tune[k]=+i.value; document.getElementById("v-"+k).textContent=(+i.value).toFixed(2);
+                        S.preset=""; draw(); };
+    h.append(l,i);
+  }
+  const n = document.createElement("div"); n.className="note";
+  n.textContent = "Set these by eye, then copy them into design 09. They are the whole argument "+
+                  "about whether x-ray works as a default.";
+  h.appendChild(n);
+}
+function renderCoverage(){
+  const h = document.getElementById("cvb"); h.textContent="";
+  const shown = new Set();
+  document.querySelectorAll(".ico").forEach(e => shown.add(e.dataset.key));
+  const gapsShown = [...shown].filter(k => GAPS.has(k));
+  const located = [...shown].filter(k => MAP[k] && MAP[k].r !== null).length;
+  const rows = [
+    ["keys in this view", shown.size, ""],
+    ["with art assigned", shown.size - gapsShown.length, ""],
+    ["no art in the sheets", gapsShown.length, "m"],
+    ["cells located", located, ""],
+    ["registry total", Object.keys(MAP).length + GAPS.size, ""],
+    ["gaps, whole registry", GAPS.size, "m"],
+  ];
+  for (const [lbl,v,cls] of rows) {
+    const r = document.createElement("div"); r.className="r"+(cls?" "+cls:"");
+    r.innerHTML = `<span>${lbl}</span><b>${v}</b>`; h.appendChild(r);
+  }
+  const n = document.createElement("div"); n.className="note";
+  n.style.cssText="font-size:9px;color:var(--ink3);margin-top:3px";
+  n.textContent = located ? "Sprites are live." :
+    "No cell has a row and column yet, so every slot is a placeholder. Magenta means no art exists.";
+  h.appendChild(n);
+}
+function syncRail(){
+  const set = (id,v) => document.getElementById(id)?.querySelectorAll("button")
+    .forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v)===String(v)));
+  set("m-mode",S.mode); set("m-below",S.below); set("m-icon",S.icons); set("m-size",S.size);
+}
+function render(){
+  renderLedger(); renderRoster(); renderClock(); renderAlerts(); renderRuler();
+  renderArch(); renderOverlays(); renderTune(); renderCoverage(); syncRail(); draw();
+}
+
+/* ============================ wiring ============================ */
+["m-icon","m-size","m-mode","m-below","m-help"].forEach(id =>
+  seg(id, {"m-icon":"icons","m-size":"size","m-mode":"mode","m-below":"below","m-help":"help"}[id]));
+document.getElementById("doc").onclick = () => document.body.dataset.help = "";
+addEventListener("keydown", e => {
+  if (e.key === "PageUp" || e.key === "]") { S.z = Math.min(ZMAX, S.z+1); render(); }
+  else if (e.key === "PageDown" || e.key === "[") { S.z = Math.max(ZMIN, S.z-1); render(); }
+  else if (e.key === "Home") { S.z = 0; render(); }
+  else if (e.key === "?") { document.body.dataset.help = document.body.dataset.help==="1"?"":"1"; }
+  else if (e.key === "v") {                                  // cycle the preset, per ADR 0003
+    const ks = Object.keys(PRESETS), i = ks.indexOf(S.preset);
+    const p = PRESETS[ks[(i+1) % ks.length]]; S.preset = ks[(i+1) % ks.length];
+    S.mode=p.mode; S.below=p.below; S.depth=p.depth;
+    Object.assign(S.tune, PRESETS.default.t, p.t); render();
+  }
+});
+addEventListener("wheel", e => { if (e.shiftKey) { S.z = Math.max(ZMIN, Math.min(ZMAX, S.z + (e.deltaY<0?1:-1))); render(); } }, {passive:true});
+addEventListener("resize", resize);
+document.body.dataset.icons = S.icons;
+resize(); render();
+</script>
