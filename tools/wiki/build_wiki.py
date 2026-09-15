@@ -59,7 +59,7 @@ SECTIONS = [
      "has to think about."),
     ("world", "World and interface", ["ui.weather", "ui.overlay", "ui.layer", "ui.tab", "ui.speed"],
      "Weather, the data overlays, the layer controls and the rest of the interface furniture. The "
-     "six layer visibility modes are decided: see ADR 0003."),
+     "six layer visibility modes are decided: see ADR 0006."),
 ]
 NS_TITLES = {
     "ui.res": "Commodities", "ui.item": "Items and equipment",

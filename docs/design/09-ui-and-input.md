@@ -14,7 +14,7 @@ does not duplicate it.
 and what verticality does to it) and `docs/research/g-02-unity-ui-framework.md` (the framework
 comparison and the twelve experiments that have not been run).
 
-**Decisions recorded:** `docs/adr/0001-ui-framework.md`, `docs/adr/0002-sim-ui-contract.md`.
+**Decisions recorded:** `docs/adr/0003-ui-framework.md`, `docs/adr/0004-sim-ui-contract.md`.
 
 ---
 
@@ -339,7 +339,7 @@ times a second.
 | Opening a panel, one-off | ≤ 64 kB |
 | Gen-0 collections attributable to the HUD in a 60-second idle soak | **0** |
 | HUD steady-state managed footprint including atlases | ≤ 12 MB |
-| of which the dynamic atlas page | ≤ 8.4 MB, one 2048 × 1024 RGBA32 page at 382 keys and 64-pixel icons. ADR 0004 |
+| of which the dynamic atlas page | ≤ 8.4 MB, one 2048 × 1024 RGBA32 page at 382 keys and 64-pixel icons. ADR 0007 |
 
 ### 4.4 Draw calls and element counts
 
@@ -354,7 +354,7 @@ times a second.
 | Realised rows in any virtualised list, regardless of data size | ≤ 40 |
 | Hierarchy depth | ≤ 12 |
 | Dynamic text labels | ≤ 300, every one fed from a cached string |
-| Icon atlas | one 2048 page, **≤ 878 entries** at 64-pixel icons; 382 keys is 43 per cent of it. The second page exists only for a second filter mode and must stay unallocated, so **every** texture under `Assets/Art/Ui/` is point-filtered. Overflow is not a second page: it is one draw call per icon. ADR 0004 |
+| Icon atlas | one 2048 page, **≤ 878 entries** at 64-pixel icons; 382 keys is 43 per cent of it. The second page exists only for a second filter mode and must stay unallocated, so **every** texture under `Assets/Art/Ui/` is point-filtered. Overflow is not a second page: it is one draw call per icon. ADR 0007 |
 
 ### 4.5 Portraits are a trap
 
@@ -530,7 +530,7 @@ a deterministic texture: a rounded square whose hue comes from a stable hash of 
 into a colour-blind-safe wheel, with a two-or-three character abbreviation drawn in a built-in
 font, at **64 pixels, point-filtered, sRGB, not readable, uncompressed, no mips**, which is what the
 dynamic atlas actually requires. The 128 pixels this document used to specify were **not**
-atlas-eligible at all: the engine's default maximum sub-texture size is 64. `docs/adr/0004-pixel-art-icon-pipeline.md`
+atlas-eligible at all: the engine's default maximum sub-texture size is 64. `docs/adr/0007-pixel-art-icon-pipeline.md`
 has the arithmetic. Point filtering matters as much as size, because filter mode selects which of the
 two atlas pages a texture lands on, so one bilinear placeholder allocates the second page and spends
 the whole budget by itself.
@@ -558,7 +558,7 @@ every interactive element has a tooltip carrying name, hotkey and a one-line des
 alert severity is encoded in colour *and* shape *and* stack position, never colour alone; icons
 are authored at **64 pixels** and used at **32 and 64**, and at 128 only at a 200 per cent interface
 scale. Below 32 pixels an icon is not shrunk, it is replaced by the text badge above. The art is
-pixel art (ADR 0004), so a display size is offered only when it is an integer ratio of the source.
+pixel art (ADR 0007), so a display size is offered only when it is an integer ratio of the source.
 That is also why no second authored size is needed, and why the scale slider in §9 D4 steps icons
 rather than scaling them smoothly.
 
@@ -626,7 +626,7 @@ override chain, the placeholder generator and the four debug modes. Defs for tab
 architect categories, commands, overlays, icons, text and layout. Composed flat avatars rather
 than live portraits for the prototype. The Depth Ruler as the answer to layer question 9.
 Above-and-below visibility, decided by the owner and recorded in
-`docs/adr/0003-layer-visibility-policy.md`: x-ray by default, with six modes, a depth cap and a
+`docs/adr/0006-layer-visibility-policy.md`: x-ray by default, with six modes, a depth cap and a
 below-slice treatment all shipped and persisted so the default stays revisable by play.
 
 ### Needs a measurement
@@ -641,11 +641,11 @@ minutes and should be done first because they shape the design.
 |---|---|---|
 | D1 | Icon-only forever, or icons plus a micro-label once meaning proves unclear? | Icon-only with mandatory tooltips, and ship the text-fallback mode from M0 as both an accessibility mode and a comprehension check. Hotkey hints on hover only |
 | D2 | The concept render duplicates the colonist bar top and bottom. Which survives, and what takes the freed slot? | Keep the **top** roster bar; the top edge is otherwise dead space. Bottom-left is the inspect pane. Give the **right edge** to the Depth Ruler and the alert stack |
-| ~~D3~~ | Above-and-below policy: ghost the storey above, or hide it? | **Answered 2026-09-15: neither.** X-ray by default, with six modes, a depth cap and a below-slice treatment shipped for playtest. See `docs/adr/0003-layer-visibility-policy.md`. The row keeps its number so D4 to D9 keep theirs |
-| D4 | Reference resolution, scale policy, minimum supported resolution | 1080p reference, relative-unit scaling with a user slider from 80 to 150 per cent, minimum 1366 × 768. **Amended by ADR 0004:** text and padding scale continuously, icons step through 32, 64 and 128, because pixel art at a fractional scale either shimmers or smears |
+| ~~D3~~ | Above-and-below policy: ghost the storey above, or hide it? | **Answered 2026-09-15: neither.** X-ray by default, with six modes, a depth cap and a below-slice treatment shipped for playtest. See `docs/adr/0006-layer-visibility-policy.md`. The row keeps its number so D4 to D9 keep theirs |
+| D4 | Reference resolution, scale policy, minimum supported resolution | 1080p reference, relative-unit scaling with a user slider from 80 to 150 per cent, minimum 1366 × 768. **Amended by ADR 0007:** text and padding scale continuously, icons step through 32, 64 and 128, because pixel art at a fractional scale either shimmers or smears |
 | D5 | Colour-blind-safe alert palette from day one? | Yes. Severity encoded as colour **and** shape **and** position. Nearly free now, expensive later |
 | D6 | Is mod-supplied layout a day-one promise or an M8 one? | Day-one plumbing, because our own HUD is driven by it and therefore exercises it. M8 promise, documented and frozen |
-| D7 | Cell size | Blocking for the world, **not** for the interface. `WorldMetrics` is the only consumer, so the interface is not structurally blocked on it |
+| ~~D7~~ | Cell size | **Answered: 2.5 m x 2.5 m x 3.0 m**, measured from 2,138 Synty prefabs and confirmed by the owner (`docs/adr/0002-cell-size-and-layer-model.md`). The interface was never structurally blocked on it; `WorldMetrics` remains the only consumer. The Depth Ruler, slice control and overlay budgets can now assume 250 x 250 cells over about 40 layers, a 625 m district |
 | D8 | Gamepad, ever? | No. But action-based bindings keep the door unnailed at zero cost |
 | D9 | Minimap? | Defer past M8. The Depth Ruler plus jump-to-alert covers the "where am I" need on a 250 × 250 map, and a per-layer minimap is a real cost |
 
@@ -676,7 +676,7 @@ with the date and weather readout; the resource ledger.
 Two things must be proved here because everything after depends on them: the overlay texture
 path, and pointer partitioning (R3).
 
-M1 also owes the visibility modes of ADR 0003. Two consequences land here rather than later: a
+M1 also owes the visibility modes of ADR 0006. Two consequences land here rather than later: a
 **translucency path**, because x-ray is the default and hide-and-outline alone cannot express it;
 and world geometry grouped so that **roofs and floors are separably cullable** from walls and
 props, which `roofs-off` needs. Both are nearly free now and expensive to retrofit.

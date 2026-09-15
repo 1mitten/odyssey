@@ -67,7 +67,7 @@ and it lets the owner do visual work without touching C#, which matches the work
 the HUD. Immediate mode is permitted for exactly one thing: a developer diagnostic overlay in
 non-shipping builds.
 
-Recorded as `docs/adr/0001-ui-framework.md`.
+Recorded as `docs/adr/0003-ui-framework.md`.
 
 ### Flip conditions
 

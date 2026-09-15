@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ai-game-developer": {
+      "type": "http",
+      "env": {},
+      "url": "https://ai-game.dev/mcp/p/ad605905"
+    }
+  }
+}

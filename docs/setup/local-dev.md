@@ -1,6 +1,8 @@
-# Local development setup (Pop!_OS)
+# Local development setup (Pop!_OS and Windows)
 
 Goal: a machine where Claude Code can drive Unity end to end: create and open scenes, run tests, read the console, and run headless batch jobs. The remote Claude Code container cannot do any of this (no Unity, no dotnet SDK, no Synty), so the Unity-side work happens here.
+
+Two dev machines exist as of 2026-09-15: the Pop!_OS machine this file was written for, and a Windows 11 machine (`D:\code\odyssey`) where Phase 0 was actually run. Sections 1–7 apply to both unless marked; Windows specifics are in §8.
 
 ## 1. Prerequisites
 
@@ -71,24 +73,72 @@ There are no tests yet; the wrapper is here so that M0 has a stable command surf
 - `.claude/settings.json` pre-approves read-only git commands and `scripts/unity.sh` so the agent is not interrupted for them. Edit it if you want more or less.
 - Keep the phase discipline: the agent stops after each phase; you answer; it continues. Answers go into `docs/` so they survive `/clear`.
 
-## 8. Measurements this repository owes but cannot take here
+## 8. Windows dev machine notes
 
-Added 2026-09-15 with the interface design. None of these can run in the remote Claude Code
-container: it has no Unity and no dotnet SDK. Each has a number it must beat, taken from
-`docs/design/09-ui-and-input.md` §4, and those numbers are budgets set from first principles
-rather than observations. A budget met comfortably on the first attempt was set too loosely.
+What differs from the Linux instructions above (verified on Windows 11, 2026-09-15):
 
-Full detail, including the other nine experiments, is in `docs/research/g-02-unity-ui-framework.md`.
+- **Unity CLI instead of classic Hub.** The machine runs the Unity Hub beta with its `unity` CLI at `%LOCALAPPDATA%\Unity\bin\unity.exe`. Useful commands: `unity editors -r` (list installable versions), `unity install 6000.3.24f1 -y --non-interactive --accept-eula` (headless editor install — expect one UAC prompt for `C:\Program Files`), `unity env` (paths). Editors land in `C:\Program Files\Unity\Hub\Editor\<version>\Editor\Unity.exe`.
+- **`scripts/unity.sh` works from Git Bash** (the shell Claude Code uses on Windows). It finds editors under `C:\Program Files\Unity\Hub\Editor` automatically, preferring the version in `ProjectSettings/ProjectVersion.txt`.
+- **Headless Synty import.** With the `.unitypackage` files downloaded (never committed):
+
+  ```
+  "C:\Program Files\Unity\Hub\Editor\<ver>\Editor\Unity.exe" -batchmode -nographics -projectPath D:\code\odyssey ^
+    -executeMethod Odyssey.EditorTools.SyntyImport.ImportAll ^
+    -odysseyPackages "C:\path\pack1.unitypackage;C:\path\pack2.unitypackage" ^
+    -logFile Logs\synty-import.log
+  ```
+
+  No `-quit` — the method exits the editor itself. `AssetDatabase.ImportPackage` merely queues imports under `-executeMethod` (a run can "succeed" having imported nothing), so `SyntyImport.cs` calls the editor's synchronous internal import; see the comment in that file.
+- **Keep the project path free of spaces** here too (`D:\code\odyssey` is fine) — same Unity-MCP constraint.
+
+## 9. Unity gotchas that cost real debugging time
+
+Collected rather than rediscovered. The first two land on the Burst grid job, the third lands on the material-tint strategy in `docs/design/06-rendering-and-camera.md`. (Contributed by another Claude Code session on this machine working on an unrelated Unity project; each cost it a debugging cycle.)
+
+- **`using var` on a `NativeArray` makes the local read-only**, so writing into it fails with **CS1654**. Declare it normally and dispose in a `finally`, or wrap it in a method that returns it.
+- **`Allocator.Temp` cannot be handed to a job** — it is main-thread and single-frame. A job needs `TempJob` or `Persistent`. This is easy to miss because it compiles and then misbehaves.
+- **Assigning `renderer.material` in edit mode instantiates a copy**, so setting properties on the original afterwards silently does nothing. Use `sharedMaterial` in editor scripts. This one matters a great deal to us: the committed tint strategy is *one cached material per stuff* with instanced draw buckets, and an accidental `.material` would quietly break the batching while looking almost right.
+- **Unity MCP as installed (2026-09-15, plugin v0.90.0):** `npx --yes unity-mcp-cli install-plugin .` adds the package to `Packages/manifest.json`; the first *interactive* editor open downloads the server to `Library/mcp-server/win-x64/gamedev-mcp-server.exe` (a batch run does not). The committed project-scope `.mcp.json` starts it with `port=8080 client-transport=stdio` (relative path, resolved from the repo root; Linux uses `linux-x64`). First `claude` run in the repo asks to approve the project server — approve it, keep the editor open (and not compiling), then verify with `claude mcp list`.
+
+## 10. The two test tiers
+
+Both run headless. Use the fast one while working and the authoritative one before committing.
+
+| | Command | Cycle | What it covers |
+|---|---|---|---|
+| **Fast** | `scripts/test-fast.sh` | **~1.7 s** warm | Everything in `Odyssey.Sim` and `Odyssey.Sim.Contracts`, which is all pure C# by design |
+| **Authoritative** | `scripts/unity.sh test editmode` | minutes | The same tests, plus assembly-definition boundaries, editor tooling and anything touching Unity |
+
+The tests themselves take about 40 ms. The difference is entirely Unity booting, refreshing the asset database and reloading the script domain, so filtering which tests run saves nothing; avoiding Unity is the only thing that helps.
+
+The fast tier builds the *same source files* through mirror projects in `tools/dotnet/`. There is one source of truth. Those projects target `netstandard2.1` to match Unity's API surface, so a .NET-only API that Unity could not compile fails in the fast tier first, and they reference each other in the same direction the assembly definitions do, so a stray `UnityEngine` dependency inside the simulation breaks the fast build immediately.
+
+It needs a .NET SDK, which is *not* the runtime that ships with Unity. Install one without admin rights:
+
+```
+powershell -c "& ([scriptblock]::Create((irm https://dot.net/v1/dotnet-install.ps1))) -Channel 8.0"
+```
+
+The script finds it at `%USERPROFILE%\.dotnet`, on `PATH`, or wherever `DOTNET` points.
+
+**Known Unity issue, and why the wrapper has a watchdog.** A `-runTests` batch run sometimes writes its results and then never exits, holding `Temp/UnityLockfile`; the next batch command then dies instantly with exit code 1 and a near-empty log. `unity.sh` now says so plainly, clears a genuinely stale lock, and treats the results file rather than the process exit code as the authority, terminating a lingering process after a grace period. `UNITY_TEST_TIMEOUT` and `UNITY_TEST_GRACE` tune it. This matters for CI, which must fail rather than hang.
+
+## 11. Interface measurements this repository owes
+
+Added with the interface design; none can run in a container without Unity. Each has a number to
+beat from `docs/design/09-ui-and-input.md` §4, and those are budgets set from first principles, not
+observations: a budget met comfortably first time was set too loosely. Full detail, with the other
+experiments, in `docs/research/g-02-unity-ui-framework.md`.
 
 | # | What to measure | Must beat | Why it matters |
 |---|---|---|---|
-| R11 | Is there a public runtime UXML parser in Unity 6.3? | — | Ten minutes. Decides whether our own `UiLayoutDef` is a parallel format or a thin wrapper. Do this one first |
-| R12 | Dynamic atlas eligibility rules: size cap, compression, mips | — | Thirty minutes. Sets the icon authoring pipeline |
-| R1 | A dense HUD: a 50 × 25 priority grid, a 50-card roster bar and a 10,000-row virtualised archive, all open, driven at 60 Hz | **3.5 ms** main thread and **zero** per-frame allocation after warm-up | The flip condition for `docs/adr/0001-ui-framework.md`. If it fails on framework internals rather than our code, reopen against uGUI |
-| R3 | Pointer partitioning between the HUD and the world, over the eight enumerated cases in `09` §6 | all eight correct | The likeliest source of shipped bugs in this genre |
+| R11 | Is there a public runtime UXML parser in Unity 6.3? | — | Ten minutes. Decides whether our `UiLayoutDef` is a parallel format or a thin wrapper. Do this first |
+| R12 | Dynamic atlas eligibility: size cap, compression, mips, filter mode, readability, colour space | — | Thirty minutes. Partly answered from the engine source in `docs/adr/0007-pixel-art-icon-pipeline.md`; this confirms it against a running editor |
+| R1 | A dense HUD at 60 Hz: a 50 × 25 priority grid, a 50-card roster and a 10,000-row virtualised archive, all open | **3.5 ms** main thread, **zero** per-frame allocation after warm-up | The flip condition for `docs/adr/0003-ui-framework.md`. If it fails on framework internals rather than our code, reopen against uGUI |
+| R3 | Pointer partitioning between HUD and world, over the nine enumerated cases in `09` §6 | all nine correct | The likeliest source of shipped bugs in this genre. Case nine is ADR 0006's rule that nothing above the slice is clickable |
 | R4 | Do view-level tests with a live panel run under `-batchmode -nographics`? | pass | Decides whether any view-level test can be in CI. The lowest-confidence assumption in the design |
-| R6 | Dirty-chunk texture upload under worst-case churn, such as fire spreading across a layer | **4 ms** for a full slice rebuild, **0.5 ms** incremental | The overlay path, which is the difference between an overlay costing one draw call and costing the frame |
-| R5 | Cost of building and publishing a world view at 3× speed | **0.3 ms** per publish | The **only** one of these that becomes runnable in the remote container once it has a dotnet SDK. A small argument for installing one |
+| R6 | Dirty-chunk overlay upload under worst-case churn, such as fire spreading across a layer | **4 ms** full slice rebuild, **0.5 ms** incremental | The difference between an overlay costing one draw call and costing the frame |
+| R2 | Do ~382 icons at 64 px land in one atlas page, and at what draw-call count? | one page, ≤ 8 idle draw calls | Computed capacity is 878 entries; this checks the arithmetic against a real page |
 
-Gate every result on the target machine, a 2022 mid-range laptop, not on the RTX 5070 Ti dev
-box. Where only the dev box is available, hold results to 1.4× stricter than the figures above.
+Gate results on the target machine, a 2022 mid-range laptop, not on the dev boxes. Where only a dev
+box is available, hold results to 1.4× stricter.

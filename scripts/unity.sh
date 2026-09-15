@@ -8,7 +8,8 @@
 #   scripts/unity.sh open                       launch the editor GUI on this project
 #
 # Editor discovery: $UNITY_EDITOR if set, else the version in ProjectSettings/ProjectVersion.txt
-# under $UNITY_HUB_EDITORS (default ~/Unity/Hub/Editor), else the newest installed 6000.3.x.
+# under $UNITY_HUB_EDITORS (default ~/Unity/Hub/Editor on Linux/macOS, C:\Program Files\Unity\Hub\Editor
+# on Windows Git Bash), else the newest installed 6000.x.
 # Extra arguments after the subcommand are passed to Unity. Set UNITY_EXTRA_ARGS for standing
 # additions (e.g. UNITY_EXTRA_ARGS="-nographics" or licence flags for CI).
 
@@ -17,39 +18,142 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+editor_bin() {
+  # editor_bin <install dir>: print the editor binary inside it, if any (Unity on Linux/macOS, Unity.exe on Windows)
+  local dir="$1"
+  if [[ -x "$dir/Editor/Unity.exe" ]]; then echo "$dir/Editor/Unity.exe"; return 0; fi
+  if [[ -x "$dir/Editor/Unity" ]]; then echo "$dir/Editor/Unity"; return 0; fi
+  return 1
+}
+
 find_unity() {
   if [[ -n "${UNITY_EDITOR:-}" ]]; then
     if [[ -x "$UNITY_EDITOR" ]]; then echo "$UNITY_EDITOR"; return 0; fi
     echo "unity.sh: UNITY_EDITOR is set but not executable: $UNITY_EDITOR" >&2
     return 2
   fi
-  local hub="${UNITY_HUB_EDITORS:-$HOME/Unity/Hub/Editor}"
+  local hub="${UNITY_HUB_EDITORS:-}"
+  if [[ -z "$hub" ]]; then
+    local cand
+    for cand in "$HOME/Unity/Hub/Editor" "/c/Program Files/Unity/Hub/Editor"; do
+      if [[ -d "$cand" ]]; then hub="$cand"; break; fi
+    done
+    hub="${hub:-$HOME/Unity/Hub/Editor}"
+  fi
   local want=""
   if [[ -f ProjectSettings/ProjectVersion.txt ]]; then
     want="$(sed -n 's/^m_EditorVersion: *//p' ProjectSettings/ProjectVersion.txt | tr -d '[:space:]')"
   fi
-  if [[ -n "$want" && -x "$hub/$want/Editor/Unity" ]]; then
-    echo "$hub/$want/Editor/Unity"; return 0
-  fi
+  if [[ -n "$want" ]] && editor_bin "$hub/$want"; then return 0; fi
   local newest
-  newest="$(ls -d "$hub"/6000.3.*/Editor/Unity 2>/dev/null | sort -V | tail -n 1 || true)"
-  if [[ -n "$newest" && -x "$newest" ]]; then
-    echo "$newest"; return 0
-  fi
-  echo "unity.sh: no Unity editor found (wanted '${want:-any 6000.3.x}' under $hub)." >&2
-  echo "          Install 6000.3.x LTS via Unity Hub or set UNITY_EDITOR=/path/to/Editor/Unity." >&2
+  newest="$(ls -d "$hub"/6000.*/ 2>/dev/null | sort -V | tail -n 1 || true)"
+  if [[ -n "$newest" ]] && editor_bin "${newest%/}"; then return 0; fi
+  echo "unity.sh: no Unity editor found (wanted '${want:-any 6000.x}' under $hub)." >&2
+  echo "          Install the project's Unity version via Unity Hub or set UNITY_EDITOR=/path/to/Editor/Unity." >&2
   return 2
+}
+
+check_project_lock() {
+  # A batch run against a locked project dies instantly with exit 1 and a near-empty log, which
+  # is genuinely hard to diagnose. Say what is wrong instead, and clear the lock when it is
+  # merely stale (a previous batch run that did not exit leaves one behind).
+  [[ -f Temp/UnityLockfile ]] || return 0
+
+  local live=""
+  if command -v tasklist >/dev/null 2>&1; then
+    live="$(tasklist 2>/dev/null | grep -ci "^Unity\.exe" || true)"
+  else
+    live="$(pgrep -c -x Unity 2>/dev/null || true)"
+  fi
+
+  if [[ "${live:-0}" -gt 0 ]]; then
+    echo "unity.sh: this project is locked and a Unity process is running." >&2
+    echo "          Close the editor before running a batch command (they cannot share a project)." >&2
+    return 3
+  fi
+
+  echo "unity.sh: removing a stale Temp/UnityLockfile (no Unity process is running)." >&2
+  rm -f Temp/UnityLockfile
+  return 0
+}
+
+kill_tree() {
+  local pid="$1"
+  kill "$pid" 2>/dev/null || true
+  sleep 2
+  if kill -0 "$pid" 2>/dev/null; then
+    kill -9 "$pid" 2>/dev/null || true
+  fi
 }
 
 run_batch() {
   # run_batch <logfile> <unity args...>; prints the exit code and log path, returns the exit code
   local log="$1"; shift
+  check_project_lock || return $?
   mkdir -p Logs
   local rc=0
   # shellcheck disable=SC2086
   "$UNITY" -batchmode -projectPath "$ROOT" -logFile "$log" ${UNITY_EXTRA_ARGS:-} "$@" || rc=$?
   echo "unity.sh: exit $rc, log: $log"
   return "$rc"
+}
+
+run_tests_watchdog() {
+  # Unity is documented to exit on its own after -runTests, and -quit would cut the run short,
+  # so neither option is available. In practice it sometimes writes its results and then keeps
+  # running indefinitely (an editor package holding a background connection will do this). That
+  # hangs a terminal and would hang CI outright, so the results file is treated as the authority:
+  # once it is written, the run is over, and a lingering process is given a grace period and then
+  # terminated.
+  local log="$1" results="$2"; shift 2
+  check_project_lock || return $?
+  mkdir -p Logs TestResults
+  rm -f "$results"
+
+  local timeout="${UNITY_TEST_TIMEOUT:-1800}"
+  local grace="${UNITY_TEST_GRACE:-25}"
+
+  # shellcheck disable=SC2086
+  "$UNITY" -batchmode -projectPath "$ROOT" -logFile "$log" ${UNITY_EXTRA_ARGS:-} \
+    -runTests -testResults "$results" "$@" &
+  local pid=$!
+
+  local waited=0 settled=0
+  while kill -0 "$pid" 2>/dev/null; do
+    if [[ -s "$results" ]]; then
+      settled=$((settled + 1))
+      if [[ "$settled" -ge "$grace" ]]; then
+        echo "unity.sh: results written but Unity is still running after ${grace}s; terminating it." >&2
+        kill_tree "$pid"
+        break
+      fi
+    fi
+    if [[ "$waited" -ge "$timeout" ]]; then
+      echo "unity.sh: timed out after ${timeout}s with no results; terminating Unity." >&2
+      kill_tree "$pid"
+      echo "unity.sh: see $log" >&2
+      return 124
+    fi
+    sleep 1
+    waited=$((waited + 1))
+  done
+  wait "$pid" 2>/dev/null || true
+
+  if [[ ! -s "$results" ]]; then
+    echo "unity.sh: no test results were written. See $log" >&2
+    grep -aE "error CS" "$log" 2>/dev/null | sort -u | head -20 >&2 || true
+    return 1
+  fi
+
+  # The results file, not the process exit code, decides pass or fail.
+  local summary
+  summary="$(grep -oE 'total="[0-9]+" passed="[0-9]+" failed="[0-9]+"' "$results" | head -1 || true)"
+  echo "unity.sh: $summary  ($results)"
+  if grep -qE 'result="Failed"' "$results"; then
+    grep -oE 'name="[^"]+"[^>]*result="Failed"' "$results" | head -20 >&2
+    return 1
+  fi
+  return 0
 }
 
 cmd="${1:-help}"

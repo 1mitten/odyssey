@@ -1,7 +1,7 @@
 # 11 — The icon library
 
 - **Status:** design. Written out of phase order alongside `09` and `10`, at the owner's request.
-- **Governed by:** `docs/adr/0004-pixel-art-icon-pipeline.md` for the format and size contract.
+- **Governed by:** `docs/adr/0007-pixel-art-icon-pipeline.md` for the format and size contract.
 - **Data:** `docs/design/icon-keys.csv` (the registry, 382 keys) and `docs/design/icon-map.csv`
   (the assignments, 268 with art and 114 gaps).
 
@@ -249,7 +249,7 @@ interface, and the mood face is how the player reads the colony's state at a gla
 and four mood faces. Eight drawings that unblock about seventeen keys and the entire roster bar.
 
 After that, in order of how much they unblock: the **verticality set** (stairs, ladder, roof, and the
-six layer-visibility modes from ADR 0003, which are our own invention and cannot be borrowed from
+six layer-visibility modes from ADR 0006, which are our own invention and cannot be borrowed from
 anywhere), then the **interface abstractions** (cancel, pause, play, fast-forward, prioritise, copy
 and paste), which are conventional shapes rather than art and would take an afternoon.
 
@@ -320,5 +320,5 @@ six hundred.
 
 The commodity taxonomy, until `04-data-model.md` turns it into Defs. Every row and column, until the
 contact sheets exist. The claim that the art is 32-pixel native, which `detect` settles in one run and
-on which ADR 0004's export factor depends. And the thirty-seven low-confidence assignments, which are
+on which ADR 0007's export factor depends. And the thirty-seven low-confidence assignments, which are
 guesses in the honest sense.

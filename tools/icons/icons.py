@@ -13,7 +13,7 @@ Commands
   validate  [--strict]        check the registry and the mapping; exit non-zero on error
   emit-web                    write the mockup's key-to-cell table (needs no art, no deps)
 
-Contract, from docs/adr/0004-pixel-art-icon-pipeline.md: export at 64 px, RGBA8, nearest-neighbour
+Contract, from docs/adr/0007-pixel-art-icon-pipeline.md: export at 64 px, RGBA8, nearest-neighbour
 at an integer factor only, never downscaled. Point filtering, sRGB and non-readable are import
 settings, asserted on the Unity side.
 """

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Compiles exactly the same source files Unity compiles into the Odyssey.Sim.Contracts
+    assembly definition. There is one source of truth; this project is a second way to build
+    it, not a copy of it.
+
+    netstandard2.1 on purpose: it matches Unity's API surface, so a .NET 8 API that Unity
+    could not compile fails here immediately rather than at the next Unity run.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Odyssey.Sim.Contracts</AssemblyName>
+    <RootNamespace>Odyssey.Sim.Contracts</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../../Assets/Odyssey/Sim.Contracts/**/*.cs" />
+  </ItemGroup>
+
+</Project>

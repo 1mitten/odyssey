@@ -10,7 +10,7 @@ another game, no Synty content appears in any of them, and every name is ours.
 
 | File | Supplied | Status | What it shows |
 |---|---|---|---|
-| `hud-v2.html` | 2026-09-15 | **current** | The layer HUD. All six above-slice visibility modes from ADR 0003 plus the depth cap and the below-slice treatment, six named presets, live tuning sliders, and every icon slot driven by the real icon mapping with a coverage read-out |
+| `hud-v2.html` | 2026-09-15 | **current** | The layer HUD. All six above-slice visibility modes from ADR 0006 plus the depth cap and the below-slice treatment, six named presets, live tuning sliders, and every icon slot driven by the real icon mapping with a coverage read-out |
 | `hud-v1.html` | 2026-09-15 | historical | The complete HUD and every panel from `docs/design/10-ui-panel-catalogue.md`, with a working layer slice, the four icon debug modes, and per-region architecture annotations |
 | `icon-map.js` | generated | — | Written by `tools/icons/icons.py emit-web` from `docs/design/icon-map.csv`. Do not edit |
 
@@ -34,7 +34,7 @@ using. Below about 800 pixels the density stops being reviewable.
 
 1. **The layer question, now settled.** Move the slice on the Depth Ruler, then cycle the
    **Above** control through Hide, Ghost and X-ray. This mockup is how the decision was made:
-   the owner picked **x-ray** by eye, and `docs/adr/0003-layer-visibility-policy.md` records it
+   the owner picked **x-ray** by eye, and `docs/adr/0006-layer-visibility-policy.md` records it
    together with the three further modes and two axes the decision added. Brief Lane B still owns
    the prior-art half and now challenges a default rather than choosing one.
 2. **Density at a glance.** Can you read the screen without labels? The **Icons** control has

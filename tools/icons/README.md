@@ -33,7 +33,7 @@ and under what names they go in.
 
 ## Rules it enforces
 
-From `docs/adr/0004-pixel-art-icon-pipeline.md`:
+From `docs/adr/0007-pixel-art-icon-pipeline.md`:
 
 - Export at 32, 64 or 128 pixels only, 64 by default. Anything else is refused.
 - Nearest-neighbour at an **integer** factor, and never a downscale. Pixel art scaled fractionally

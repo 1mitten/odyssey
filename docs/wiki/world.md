@@ -1,6 +1,6 @@
 # World and interface
 
-Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0003.
+Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
 45 entries, 22 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 

@@ -275,7 +275,7 @@ recorded that omission as the gap the interface must close.
 |---|---|
 | Purpose | Which layer am I on, what is on the others, and how do I get there |
 | Slot | Right edge, below the bulletin stack, vertical |
-| Contents | A vertical scale of the world's layers. The current slice is highlighted. Each layer shows an **occupancy pip** whose weight reflects how much is built or occupied there, a **colonist count**, and **markers** where alerts or bulletins are pending. Ground level is marked. Click any layer to jump. The three visibility axes of ADR 0003 toggle here, as six named presets with the individual axes behind them |
+| Contents | A vertical scale of the world's layers. The current slice is highlighted. Each layer shows an **occupancy pip** whose weight reflects how much is built or occupied there, a **colonist count**, and **markers** where alerts or bulletins are pending. Ground level is marked. Click any layer to jump. The three visibility axes of ADR 0006 toggle here, as six named presets with the individual axes behind them |
 | Reads | `LayerSummary[]` — one compact row per layer: occupancy, colonist count, pending alert count |
 | Emits | `SetSliceLayer(z)`, `SetAboveBelowPolicy(mode, depthCap, below)` |
 | Cadence | 1 Hz for pips, on-event for the current slice |
@@ -299,7 +299,7 @@ which is case 8 of the input router's eight enumerated tests in `09` §6.
 
 **Above-and-below visibility is settled: x-ray by default.** Decided by the owner from the
 mockup on 2026-09-15 and recorded, with its reasoning and flip conditions, in
-`docs/adr/0003-layer-visibility-policy.md`. Three independent axes ship and persist as user
+`docs/adr/0006-layer-visibility-policy.md`. Three independent axes ship and persist as user
 settings, because the decision is a taste call and the point of shipping the alternatives is to
 keep it revisable by play rather than by argument.
 
@@ -321,7 +321,8 @@ they say about layering.
 
 **What remains open is the rendering mechanism, not the policy.** X-ray rules out a hard clip
 plane in favour of per-layer transparent materials, which is brief Lane D3's to benchmark and
-`docs/design/06-rendering-and-camera.md`'s to document. Lane B still owns the prior-art half and
+`docs/design/06-rendering-and-camera.md`'s to document; both now exist and have not yet absorbed
+this decision. Lane B still owns the prior-art half and
 is now asked to challenge a decided default rather than to choose one.
 
 ## A12 Overlay menu and legend
@@ -638,7 +639,7 @@ vertical slice. They are enumerated in `docs/design/icon-keys.csv`; this figure 
 until they were, while the per-namespace counts below always summed to about 380, so the headline was
 the number that was wrong. It matters: 382 keys at the 128-pixel size this document assumed would not
 fit one atlas page and would cost a draw call each, which is what
-`docs/adr/0004-pixel-art-icon-pipeline.md` is about. **268 of them now have owner-owned art assigned**
+`docs/adr/0007-pixel-art-icon-pipeline.md` is about. **268 of them now have owner-owned art assigned**
 in `docs/design/icon-map.csv`; the remaining 114 are listed as gaps in
 `docs/design/11-icon-library.md`. All are generated as deterministic placeholders per `09` §7,
 so layout and density can be reviewed now and art can arrive at any time without a code change.
@@ -664,10 +665,12 @@ so layout and density can be reviewed now and art can arrive at any time without
 
 ## Open questions this catalogue raises rather than settles
 
-1. ~~**Above-and-below display policy** (A11).~~ **Settled 2026-09-15**, ADR 0003: x-ray by
+1. ~~**Above-and-below display policy** (A11).~~ **Settled 2026-09-15**, ADR 0006: x-ray by
    default, six modes and two further axes shipped for playtest. What remains is the rendering
    mechanism, which is Lane D3's, and Lane B's prior-art half, which now challenges a default.
-2. **Are stockpiles per layer or volumes** (B13). Recommendation given; belongs to Lane A item 14.
+2. ~~**Are stockpiles per layer or volumes** (B13).~~ **Settled:** per layer, with named storage
+   groups sharing one settings record across layers. Lane A item 14 answered it
+   (`docs/research/a-14-bills-stockpiles-inventory.md`), which is also layer question 6.
 3. **Do rooms span layers** (B14). Panel designed to display either; belongs to Lane A item 5.
 4. **Does the ledger hide or grey zero rows** (A1). Ten-second owner decision.
 5. **Command intersection across heterogeneous multi-selection** (A9). Deferred to M7; the
