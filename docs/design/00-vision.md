@@ -21,7 +21,7 @@ Settled before or during the interviews; see `docs/research/phase1-answers.md` a
 | Simulation architecture | Decided by benchmark. (ADR 0005) |
 | Threading | Deterministic single-threaded tick first; Burst jobs only on benchmark-proven hot paths. Never a free-threaded simulation. |
 | Tests | Pragmatic TDD: test-first for Sim, with determinism and save-round-trip as first-class gates. |
-| Setting | A sci-fi city-world. Prototype map: ruined city, shells stamped from authored templates onto a street grid, then damaged. |
+| Setting | A sci-fi city-world. **Prototype map: empty natural wilderness** — grass, trees, stone, ore — and you build from nothing (ADR 0008). The ruined-city generator is kept as a later map type. |
 | Content scope | Core game only. No belief systems, genes, titles or horror layer. |
 | Modding | Data-driven Defs from day one with inheritance and patch operations. Scripting API and Workshop at M8. |
 | Scale target | 250 × 250 × ~40, 50 colonists, 300 animals, 60 FPS at 3× speed on a 2022 mid-range laptop. |
