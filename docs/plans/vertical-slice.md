@@ -6,6 +6,19 @@ This file is written to be executed by a session with no other context. Read `CL
 
 **Before any of this begins:** Phase 3 ends with a hard stop for the owner's approval (brief §6). No unit below is started until that approval is given.
 
+## Status, 2026-09-15
+
+| Milestone | State |
+|---|---|
+| **M0** | U01–U07 **done**. Only U08 (CI) remains, and it needs the owner to register a self-hosted runner. |
+| **M1** | U09 cell grid, U10 support solver, U11–U13 worldgen and templates **done**. U14–U16 rendering, camera and inspection **in progress**. |
+| **M2** | U17–U18 reachability and pathfinding **done, and measured**. U19–U24 pawns and characters **in progress**. |
+| **M3** | Not started. |
+
+142 tests green in the fast tier. Measured: support solve 54 ms for 2.5M cells and 0.003 ms per edit; worldgen 215 ms for a full map; pathfinding 2.4× faster than naive with budget exhaustion down 91%.
+
+Two corrections worth carrying forward. The pathfinding premise in §4 of `05-ai-and-jobs.md` was **falsified by its own experiment** and has been rewritten: the win came from hierarchical search, not from the reachability check, which is kept for a different and better reason. And the cell size briefly had a competing "provisional" value from the UI line; the measured 2.5 × 2.5 × 3.0 m stands (ADR 0002).
+
 ## How to read a unit
 
 Each unit has an id, a size (**S** ≈ a focused session, **M** ≈ a day, **L** ≈ several days), its dependencies, and **done criteria that are testable**. A unit is finished when its criteria pass in a headless run, not when the code exists.
