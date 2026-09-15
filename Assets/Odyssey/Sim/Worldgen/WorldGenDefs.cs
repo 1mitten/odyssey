@@ -1,0 +1,306 @@
+#nullable enable
+using System;
+using System.Collections.Generic;
+using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
+
+namespace Odyssey.Sim.Worldgen
+{
+    /// <summary>
+    /// Natural cell material: rock, fill, soil, pavement, rubble (docs/design/04-data-model.md #3).
+    ///
+    /// Worldgen stores the *index* of one of these in <see cref="World.CellGrid.Terrain"/>, which
+    /// is a <see cref="DefTable{T}"/> index in exactly the sense the Def system means. Until
+    /// content files exist, <see cref="CoreContent"/> builds the table in code, in a fixed order
+    /// that the eventual XML must reproduce.
+    /// </summary>
+    public class TerrainDef : Def
+    {
+        /// <summary>Solid material blocks movement and holds up whatever sits on it.</summary>
+        public bool solid;
+
+        /// <summary>Ticks of work to clear or mine one cell. Breach is cheaper than mining rock.</summary>
+        public int workToClear = 100;
+
+        /// <summary>Percent, 100 = ordinary soil. Nothing grows below 1.</summary>
+        public int fertility;
+
+        /// <summary>Relative weight for salvage scattering. 0 = never carries salvage.</summary>
+        public int salvageWeight;
+    }
+
+    /// <summary>
+    /// A building shell authored **in cells**, carrying its own vertical extent
+    /// (docs/design/04-data-model.md #17, docs/design/02-world-and-layers.md section 6 pass 3).
+    ///
+    /// The authoring format is ASCII rows, one character per cell; see <see cref="ShellTemplate"/>
+    /// for the character table. Rows are listed layer by layer from <see cref="bottomLayer"/> up
+    /// to <see cref="topLayer"/>, with <see cref="sizeZ"/> rows per layer and <see cref="sizeX"/>
+    /// characters per row. Layer numbers are relative to street level, so a basement is -1; the
+    /// generator adds the ground-layer offset when it stamps.
+    ///
+    /// Presentation modules are named by **id strings only**. Nothing here resolves a module, so a
+    /// clone without the licensed Synty packs loads every template and the simulation runs
+    /// headless exactly as it does with them.
+    /// </summary>
+    public class TemplateDef : Def
+    {
+        [DefRequired] public int sizeX;
+        [DefRequired] public int sizeZ;
+
+        /// <summary>Lowest layer, relative to street level. Zero or negative.</summary>
+        public int bottomLayer;
+
+        /// <summary>Highest occupied layer, relative to street level. Zero or positive.</summary>
+        public int topLayer;
+
+        /// <summary>Construction material for slabs and edifices. A <see cref="CoreContent"/> stuff name.</summary>
+        public string stuff = "Concrete";
+
+        /// <summary>Selection weight when several templates fit a plot.</summary>
+        public int weight = 100;
+
+        /// <summary>Lay a roof slab one layer above <see cref="topLayer"/> over the footprint.</summary>
+        public bool roof = true;
+
+        /// <summary>
+        /// How readily this shell takes damage, in per mille of the district intensity. A sturdy
+        /// civic block sits below 1000; a light commercial frontage sits above it.
+        /// </summary>
+        public int damageTolerance = 1000;
+
+        /// <summary>Presentation module ids, by cell kind. Never resolved inside the simulation.</summary>
+        public string wallModuleId = "odyssey.module.wall";
+        public string doorModuleId = "odyssey.module.door";
+        public string windowModuleId = "odyssey.module.window";
+        public string pillarModuleId = "odyssey.module.pillar";
+        public string stairModuleId = "odyssey.module.stair";
+        public string ladderModuleId = "odyssey.module.ladder";
+        public string slabModuleId = "odyssey.module.slab";
+
+        /// <summary>The cell rows, layer by layer. Length must be LayerCount * sizeZ.</summary>
+        public List<string> rows = new List<string>();
+
+        public int LayerCount => topLayer - bottomLayer + 1;
+    }
+
+    /// <summary>
+    /// The ordered pass list with per-pass parameters (docs/design/04-data-model.md #18).
+    ///
+    /// This doubles as the generator's parameter object: <see cref="WorldGenerator.Generate"/>
+    /// takes one. Everything tunable about a map lives here and nothing lives in a constant buried
+    /// in a pass, so the slice map and the scale-target map differ only by this record.
+    /// </summary>
+    public class MapGenDef : Def
+    {
+        /// <summary>
+        /// The array layer index that is street level. Storage is unsigned with a fixed offset
+        /// (docs/design/02-world-and-layers.md section 1), and this is that offset: array layer
+        /// <c>groundLayer</c> is design layer 0, and design layer -1 is array layer
+        /// <c>groundLayer - 1</c>. No pass computes it a second time.
+        /// </summary>
+        public int groundLayer = 1;
+
+        // ---- pass 1, streets -------------------------------------------------------------
+        public int minBlock = 8;
+        public int maxBlock = 15;
+        public int minStreetWidth = 1;
+        public int maxStreetWidth = 2;
+
+        // ---- pass 2, plots ---------------------------------------------------------------
+        public int minPlot = 6;
+        public int maxPlot = 14;
+        public int maxPlotSplitDepth = 3;
+
+        // ---- pass 4, damage --------------------------------------------------------------
+        /// <summary>District damage intensity band, per mille. Noise picks a value inside it.</summary>
+        public int minDamageIntensity = 120;
+        public int maxDamageIntensity = 620;
+
+        /// <summary>Extra damage per storey above street level, per mille of the district value.</summary>
+        public int damagePerStorey = 220;
+
+        /// <summary>Chance per mille that a shell is toppled above some layer.</summary>
+        public int toppleChance = 180;
+
+        /// <summary>Chance per mille that a removed wall leaves rubble behind.</summary>
+        public int rubbleFromWallChance = 520;
+
+        /// <summary>Slab holes are drawn at this fraction, per mille, of the wall-removal chance.</summary>
+        public int slabHoleFraction = 380;
+
+        // ---- pass 5, intactness ----------------------------------------------------------
+        public int intactnessPeriod = 16;
+        public int intactnessOctaves = 3;
+
+        /// <summary>Street columns are biased toward intact pavement by this much, 0..1023.</summary>
+        public int streetIntactnessBonus = 190;
+        public int pavementThreshold = 700;
+        public int crackedThreshold = 480;
+        public int rubbleThreshold = 280;
+
+        // ---- pass 6, strata --------------------------------------------------------------
+        /// <summary>Depth below street level at which engineered fill starts grading into soil.</summary>
+        public int minSoilDepth = 4;
+        public int maxSoilDepth = 6;
+
+        /// <summary>Depth below street level at which natural rock starts.</summary>
+        public int minRockDepth = 7;
+        public int maxRockDepth = 9;
+
+        /// <summary>Threshold, 0..1023, above which a service-stratum street column is a tunnel.</summary>
+        public int tunnelThreshold = 430;
+
+        /// <summary>Threshold, 0..1023, above which deep rock is a cave void.</summary>
+        public int caveThreshold = 790;
+
+        /// <summary>Threshold, 0..1023, above which deep infrastructure is buried-city seam.</summary>
+        public int seamThreshold = 540;
+
+        /// <summary>Half-width of a metro tube, so 1 gives a three-cell bore.</summary>
+        public int metroHalfWidth = 1;
+
+        // ---- pass 7, salvage -------------------------------------------------------------
+        public int salvageDepositsPer10000Columns = 90;
+        public int minSalvageBlob = 6;
+        public int maxSalvageBlob = 22;
+
+        // ---- pass 8, utility taps --------------------------------------------------------
+        public int utilityTapsPer10000Columns = 14;
+        public int minUtilityTaps = 2;
+        public int utilityTapSpacing = 10;
+
+        // ---- pass 9, vaults --------------------------------------------------------------
+        /// <summary>
+        /// a-12-map-generation.md puts the reference density at 0.1 to 0.3 per 10,000 cells per
+        /// inhabited layer; with a dozen underground layers that lands here.
+        /// </summary>
+        public int vaultsPer10000Columns = 2;
+
+        /// <summary>The starting map is guaranteed at least this many, per a-12-map-generation.md.</summary>
+        public int minVaults = 1;
+        public int vaultSize = 5;
+
+        // ---- pass 10, start --------------------------------------------------------------
+        /// <summary>
+        /// Support written into every slab worldgen stamps. Pre-existing shells begin life
+        /// "supported by construction" (docs/design/02-world-and-layers.md section 4) and are
+        /// re-validated by the ordinary rule the moment anything beneath them changes.
+        /// </summary>
+        public byte constructedSupport = 4;
+
+        /// <summary>The slice map: 60 x 60 x 5 — one service layer, street level, three storeys.</summary>
+        public static MapGenDef Slice() => new MapGenDef { defName = "MapGen_Slice", groundLayer = 1 };
+
+        /// <summary>
+        /// Parameters scaled to a grid. The ground-layer offset is the only thing that must track
+        /// the layer count: a third of the layers underground, capped at twelve, which gives the
+        /// L-1 to L-6 strata room and leaves the rest for shells.
+        /// </summary>
+        public static MapGenDef For(GridSize size)
+        {
+            var gen = new MapGenDef { defName = "MapGen_" + size };
+            gen.groundLayer = Math.Max(1, Math.Min(12, size.SizeY / 3));
+            return gen;
+        }
+
+        public void Validate(GridSize size)
+        {
+            if (groundLayer < 0 || groundLayer >= size.SizeY)
+                throw new ArgumentOutOfRangeException(nameof(groundLayer), $"groundLayer {groundLayer} outside {size}.");
+            if (minBlock < 2 || maxBlock < minBlock) throw new ArgumentOutOfRangeException(nameof(minBlock));
+            if (minStreetWidth < 1 || maxStreetWidth < minStreetWidth) throw new ArgumentOutOfRangeException(nameof(minStreetWidth));
+            if (minPlot < 2 || maxPlot < minPlot) throw new ArgumentOutOfRangeException(nameof(minPlot));
+            if (minSoilDepth < 1 || maxSoilDepth < minSoilDepth) throw new ArgumentOutOfRangeException(nameof(minSoilDepth));
+            if (minRockDepth <= maxSoilDepth || maxRockDepth < minRockDepth) throw new ArgumentOutOfRangeException(nameof(minRockDepth));
+            if (vaultSize < 3) throw new ArgumentOutOfRangeException(nameof(vaultSize));
+        }
+    }
+
+    /// <summary>
+    /// The core content set worldgen writes: terrain kinds, slab kinds, stuffs and edifice kinds.
+    ///
+    /// These are built in code rather than loaded from XML because there is no content pack yet
+    /// and the generator must run headless in a clone with no <c>Assets/</c> content at all. The
+    /// declaration order below **is** the table order, so when the XML lands it must declare the
+    /// same names in the same order.
+    ///
+    /// TODO(content): move these to Defs/Core/*.xml and resolve handles by name at world
+    /// construction, then delete the constants. Nothing else in worldgen needs to change.
+    /// </summary>
+    public static class CoreContent
+    {
+        // Terrain indices. 0 must remain "nothing", matching CellGrid's zero default.
+        public const ushort TerrainAir = 0;
+        public const ushort TerrainPavement = 1;
+        public const ushort TerrainCrackedPavement = 2;
+        public const ushort TerrainRubble = 3;
+        public const ushort TerrainSoil = 4;
+        public const ushort TerrainGravel = 5;
+        public const ushort TerrainFill = 6;
+        public const ushort TerrainRock = 7;
+        public const ushort TerrainBuriedSeam = 8;
+        public const ushort TerrainSalvage = 9;
+        public const int TerrainCount = 10;
+
+        // Slab indices. 0 = open, a hole.
+        public const ushort SlabNone = 0;
+        public const ushort SlabStructural = 1;
+        public const ushort SlabDeck = 2;
+        public const ushort SlabRoof = 3;
+
+        // Stuff indices. 0 = none.
+        public const ushort StuffNone = 0;
+        public const ushort StuffConcrete = 1;
+        public const ushort StuffSteel = 2;
+        public const ushort StuffComposite = 3;
+
+        // Edifice def indices, stored on the placement record rather than in the cell.
+        public const ushort EdificeNone = 0;
+        public const ushort EdificeWall = 1;
+        public const ushort EdificeDoor = 2;
+        public const ushort EdificeWindow = 3;
+        public const ushort EdificePillar = 4;
+        public const ushort EdificeStairLower = 5;
+        public const ushort EdificeStairUpper = 6;
+        public const ushort EdificeLadder = 7;
+        public const ushort EdificeVaultWall = 8;
+        public const ushort EdificeUtilityTap = 9;
+
+        static readonly TerrainDef[] TerrainTable = BuildTerrain();
+
+        public static IReadOnlyList<TerrainDef> Terrain => TerrainTable;
+
+        public static TerrainDef TerrainAt(ushort index) => TerrainTable[index];
+
+        public static bool IsSolid(ushort terrain) => TerrainTable[terrain].solid;
+
+        public static ushort StuffByName(string name)
+        {
+            switch (name)
+            {
+                case "Concrete": return StuffConcrete;
+                case "Steel": return StuffSteel;
+                case "Composite": return StuffComposite;
+                default: throw new DefLoadException($"Unknown stuff '{name}'.");
+            }
+        }
+
+        static TerrainDef[] BuildTerrain()
+        {
+            return new[]
+            {
+                new TerrainDef { defName = "Air", label = "open air" },
+                new TerrainDef { defName = "Pavement", label = "pavement", workToClear = 220, fertility = 0, salvageWeight = 4 },
+                new TerrainDef { defName = "CrackedPavement", label = "cracked pavement", workToClear = 140, fertility = 12, salvageWeight = 4 },
+                new TerrainDef { defName = "Rubble", label = "rubble", workToClear = 90, fertility = 20, salvageWeight = 10 },
+                new TerrainDef { defName = "Soil", label = "soil", workToClear = 60, fertility = 100, salvageWeight = 1 },
+                new TerrainDef { defName = "Gravel", label = "gravel", workToClear = 70, fertility = 55, salvageWeight = 1 },
+                new TerrainDef { defName = "EngineeredFill", label = "engineered fill", solid = true, workToClear = 420, salvageWeight = 14 },
+                new TerrainDef { defName = "Rock", label = "rock", solid = true, workToClear = 700, salvageWeight = 2 },
+                new TerrainDef { defName = "BuriedSeam", label = "buried city", solid = true, workToClear = 520, salvageWeight = 60 },
+                new TerrainDef { defName = "Salvage", label = "salvage", solid = true, workToClear = 480, salvageWeight = 0 },
+            };
+        }
+    }
+}
