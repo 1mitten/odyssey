@@ -22,10 +22,13 @@ A prototype colony sim in the RimWorld mould, in true 3D with discrete vertical 
 - **Phase 1 (interview): asked, unanswered.** Q1 additional Synty packs (assumed none). Q2 cell size (needs the inventory). Q3 ruined-city generation (assumed template stamping). Q4 Unity MCP server (recommended IvanMurzak/Unity-MCP, see `docs/research/unity-mcp-server.md`).
 - **Phase 2 (research): not started.** Lanes A–F in brief §5. Lanes E and D3 wait for the inventory; everything else can start once Phase 1 is answered.
 - **Cell size: not fixed.** Nothing is built until `docs/research/synty-inventory.md` exists and the owner confirms the size.
+- **Lane G (UI) done out of phase, 2026-09-15.** At the owner's request. The reason it did not wait: the interface's read and write contract constrains the Lane D1 architecture decision, so it is an input to that ADR rather than an output. It also eliminates one of the three Lane D1 candidates. See `docs/design/09-ui-and-input.md` §2.5 and `docs/adr/0002-sim-ui-contract.md`. Still documentation only; no code was written.
+- **Egress limits here.** `rimworldwiki.com` and `steamcommunity.com` are blocked by this container's proxy. Brief §5 names both as primary sources, so Lanes A and B need the dev machine or owner-supplied pages.
 
 ## Repository layout
 
-- `docs/brief.md` governing brief · `docs/research/` research files and `INDEX.md` · `docs/reference/screenshots/` reference images and descriptions · `docs/setup/local-dev.md` dev-machine setup. Later phases add `docs/design/`, `docs/adr/`, `docs/plans/`, `docs/milestones/`.
+- `docs/brief.md` governing brief · `docs/research/` research files and `INDEX.md` · `docs/reference/screenshots/` reference images and descriptions · `docs/reference/mockups/` clickable interface mockups · `docs/setup/local-dev.md` dev-machine setup.
+- `docs/design/` design documents (`09-ui-and-input.md`, `10-ui-panel-catalogue.md` exist; `00`–`08` come with Phase 3) · `docs/adr/` decision records (`0001` UI framework, `0002` sim/UI contract). Later phases add `docs/plans/`, `docs/milestones/`.
 - The Unity project lives at the **repository root** (`Assets/`, `Packages/`, `ProjectSettings/`), created on the dev machine per `docs/research/synty-import.md`.
 - `Assets/Editor/Odyssey/` editor tooling (currently `SyntyInventory.cs`, uncompiled until first run). `Assets/Synty/` licensed packs, ignored by git.
 - `scripts/unity.sh` headless Unity wrapper: `inventory`, `test editmode|playmode`, `exec <Namespace.Class.Method>`, `open`, `which`.
