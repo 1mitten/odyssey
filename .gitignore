@@ -64,3 +64,7 @@ crashlytics-build.properties
 /Assets/Synty/
 /Assets/Synty.meta
 *.unitypackage
+
+
+# Our own dotnet mirror projects (tools/dotnet) are committed; Unity-generated ones are not.
+!/tools/dotnet/**/*.csproj

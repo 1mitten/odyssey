@@ -1,0 +1,10 @@
+D:\code\odyssey\tools\dotnet\Odyssey.Sim.Contracts\bin\Debug\netstandard2.1\Odyssey.Sim.Contracts.deps.json
+D:\code\odyssey\tools\dotnet\Odyssey.Sim.Contracts\bin\Debug\netstandard2.1\Odyssey.Sim.Contracts.dll
+D:\code\odyssey\tools\dotnet\Odyssey.Sim.Contracts\bin\Debug\netstandard2.1\Odyssey.Sim.Contracts.pdb
+D:\code\odyssey\tools\dotnet\Odyssey.Sim.Contracts\obj\Debug\netstandard2.1\Odyssey.Sim.Contracts.GeneratedMSBuildEditorConfig.editorconfig
+D:\code\odyssey\tools\dotnet\Odyssey.Sim.Contracts\obj\Debug\netstandard2.1\Odyssey.Sim.Contracts.AssemblyInfoInputs.cache
+D:\code\odyssey\tools\dotnet\Odyssey.Sim.Contracts\obj\Debug\netstandard2.1\Odyssey.Sim.Contracts.AssemblyInfo.cs
+D:\code\odyssey\tools\dotnet\Odyssey.Sim.Contracts\obj\Debug\netstandard2.1\Odyssey.Sim.Contracts.csproj.CoreCompileInputs.cache
+D:\code\odyssey\tools\dotnet\Odyssey.Sim.Contracts\obj\Debug\netstandard2.1\Odyssey.Sim.Contracts.sourcelink.json
+D:\code\odyssey\tools\dotnet\Odyssey.Sim.Contracts\obj\Debug\netstandard2.1\Odyssey.Sim.Contracts.dll
+D:\code\odyssey\tools\dotnet\Odyssey.Sim.Contracts\obj\Debug\netstandard2.1\Odyssey.Sim.Contracts.pdb

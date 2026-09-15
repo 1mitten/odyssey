@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The simulation. Referencing only Odyssey.Sim.Contracts and the base class library keeps the
+    real dependency direction enforced here as well as in the asmdef: if anything in Sim ever
+    reaches for UnityEngine, this build breaks, which is a faster and blunter signal than the
+    reflection test.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Odyssey.Sim</AssemblyName>
+    <RootNamespace>Odyssey.Sim</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../../Assets/Odyssey/Sim/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Odyssey.Sim.Contracts/Odyssey.Sim.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

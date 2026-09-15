@@ -3,7 +3,7 @@
 A prototype colony sim in the RimWorld mould, in true 3D with discrete vertical layers, set in a ruined sci-fi city. Unity 6.3 LTS (6000.3.x), URP, C#. Art from Synty POLYGON packs (Sci-Fi City, Farm, Western Frontier, Particle FX, ANIMATION Base Locomotion — licensed; never committed to this repository).
 
 - Start here: `CLAUDE.md` (project guide) and `docs/brief.md` (the governing brief).
-- Research: `docs/research/INDEX.md`.
+- Research: `docs/research/INDEX.md`. Lessons learned the hard way: `docs/lessons.md`.
 - Dev-machine setup: `docs/setup/local-dev.md`.
 - Headless Unity: `scripts/unity.sh`.
 

@@ -247,11 +247,14 @@ namespace Odyssey.EditorTools
             Place("SM_Bld_Base_Wall_Destroyed_02", CellBase(cellX, 1, cellZ + 1.5f), 270f);
 
             // Rubble spilling inward and onto the street; fire and smoke on the broken storey.
+            // Names verified against synty-inventory.csv: the packs ship
+            // SM_Prop_Sidewalk_Rubble_01 and SM_Prop_Ute_Wreck_01, not a generic rubble family.
+            // The earlier guesses (SM_Env_Rubble / SM_Prop_Rubble) matched nothing.
             for (int i = 0; i < 5; i++)
             {
                 Vector3 at = CellBase(cellX + 0.8f * i + 0.6f, 0, cellZ - 0.6f + (i % 2) * 1.1f);
-                if (PlaceAny("SM_Env_Rubble", i, at, i * 63f) == null)
-                    PlaceAny("SM_Prop_Rubble", i, at, i * 63f);
+                if (PlaceAny("SM_Prop_Sidewalk_Rubble", i, at, i * 63f) == null)
+                    PlaceAny("SM_Prop_Ute_Wreck", i, at, i * 63f);
             }
             Vector3 fireAt = CellBase(cellX + 2.5f, 1, cellZ + 1.5f);
             PlaceAny("FX_Fire_0", 0, fireAt, 0f, snap: false);
