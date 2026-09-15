@@ -60,21 +60,30 @@ namespace Odyssey.Presentation.World
         public HashSet<int> Drawn { get; } = new HashSet<int>();
 
         readonly Transform _parent;
-        readonly GameObject? _prefab;
-        readonly LocomotionEntry[] _gaits;
-
-        /// <summary>Gait speeds as drawn, i.e. after the figure's scale. See <see cref="GroundSpeeds"/>.</summary>
-        readonly float[] _gaitSpeeds;
-
-        readonly Vector3 _scale;
         readonly int _layer;
+
+        /// <summary>One face a colonist can wear: its art, its size and the gaits it can walk in.</summary>
+        sealed class Look
+        {
+            public GameObject Prefab = null!;
+            public Vector3 Scale;
+            public LocomotionEntry[] Gaits = Array.Empty<LocomotionEntry>();
+
+            /// <summary>Gait speeds as drawn, i.e. after Scale. See <see cref="GroundSpeeds"/>.</summary>
+            public float[] Speeds = Array.Empty<float>();
+        }
+
+        readonly Look[] _looks;
 
         readonly List<Figure> _figures = new List<Figure>();
         readonly Dictionary<int, Figure> _byPawn = new Dictionary<int, Figure>();
         readonly List<int> _retired = new List<int>();
 
-        /// <summary>True when there is art and at least one gait, so figures can be made at all.</summary>
-        public bool Enabled => _prefab != null && _gaits.Length > 0;
+        /// <summary>True when there is at least one usable face, so figures can be made at all.</summary>
+        public bool Enabled => _looks.Length > 0;
+
+        /// <summary>How many different faces a colonist can be drawn with.</summary>
+        public int LookCount => _looks.Length;
 
         public int FigureCount => _byPawn.Count;
 
@@ -99,13 +108,46 @@ namespace Odyssey.Presentation.World
         {
             _parent = parent;
             _layer = layer;
-
-            ModuleEntry? row = catalogue != null ? catalogue.Find(ModuleIds.Colonist) : null;
-            _prefab = row != null ? row.prefab : null;
-            _scale = row != null ? row.scale : Vector3.one;
-            _gaits = Gaits(row);
-            _gaitSpeeds = GroundSpeeds(_gaits, _scale);
+            _looks = LooksFrom(catalogue);
         }
+
+        /// <summary>
+        /// Every colonist row in the catalogue that has both art and something to walk with.
+        ///
+        /// Rows that resolve to nothing are dropped rather than kept as holes, so a clone missing
+        /// one pack still gets every face the packs it does have can provide, and a colony on a
+        /// machine with no packs at all simply falls through to the baked instanced path.
+        /// </summary>
+        static Look[] LooksFrom(ModuleCatalogue? catalogue)
+        {
+            if (catalogue == null) return Array.Empty<Look>();
+
+            var looks = new List<Look>();
+            foreach (ModuleEntry row in catalogue.FindFamily(ModuleIds.ColonistBase))
+            {
+                if (row.prefab == null) continue;
+                LocomotionEntry[] gaits = Gaits(row);
+                if (gaits.Length == 0) continue;
+
+                looks.Add(new Look
+                {
+                    Prefab = row.prefab,
+                    Scale = row.scale,
+                    Gaits = gaits,
+                    Speeds = GroundSpeeds(gaits, row.scale),
+                });
+            }
+            return looks.ToArray();
+        }
+
+        /// <summary>
+        /// Which face a pawn wears, fixed by its id.
+        ///
+        /// By id and not by draw order, because a figure is leased and returned as a pawn crosses
+        /// the drawn layers, and a colonist who came back from a trip downstairs as somebody else
+        /// would be worse than a colony of identical twins.
+        /// </summary>
+        int LookFor(PawnId pawn) => ColonistLook.For(pawn.Value, _looks.Length);
 
         /// <summary>Gaits with a live clip, slowest first. Order is what makes the blend a blend.</summary>
         static LocomotionEntry[] Gaits(ModuleEntry? row)
@@ -222,8 +264,9 @@ namespace Odyssey.Presentation.World
         /// </summary>
         void Blend(Figure figure, float speed)
         {
-            GaitBlend blend = GaitBlend.Solve(_gaitSpeeds, speed);
-            for (int i = 0; i < _gaits.Length; i++)
+            Look look = _looks[figure.Look];
+            GaitBlend blend = GaitBlend.Solve(look.Speeds, speed);
+            for (int i = 0; i < look.Gaits.Length; i++)
             {
                 figure.Mixer.SetInputWeight(i, blend.WeightOf(i));
                 figure.Clips[i].SetSpeed(blend.Rate);
@@ -234,7 +277,11 @@ namespace Odyssey.Presentation.World
         {
             if (_byPawn.TryGetValue(pawn.Value, out Figure? existing)) return existing;
 
-            Figure figure = Free() ?? Create();
+            // The pool is keyed by face as well as by being free: a figure is a *built* prefab
+            // with a graph bound to its own rig, so handing a parked one to a pawn wearing a
+            // different face would put the wrong person on screen rather than save any work.
+            int look = LookFor(pawn);
+            Figure figure = Free(look) ?? Create(look);
             figure.Pawn = pawn.Value;
             figure.Settled = false;
             figure.Speed = 0f;
@@ -267,10 +314,10 @@ namespace Odyssey.Presentation.World
             }
         }
 
-        Figure? Free()
+        Figure? Free(int look)
         {
             for (int i = 0; i < _figures.Count; i++)
-                if (_figures[i].Pawn < 0) return _figures[i];
+                if (_figures[i].Pawn < 0 && _figures[i].Look == look) return _figures[i];
             return null;
         }
 
@@ -290,11 +337,12 @@ namespace Odyssey.Presentation.World
             }
         }
 
-        Figure Create()
+        Figure Create(int look)
         {
-            GameObject instance = UnityEngine.Object.Instantiate(_prefab!, _parent);
-            instance.name = $"Colonist figure {_figures.Count}";
-            instance.transform.localScale = _scale;
+            Look face = _looks[look];
+            GameObject instance = UnityEngine.Object.Instantiate(face.Prefab, _parent);
+            instance.name = $"Colonist figure {_figures.Count} ({face.Prefab.name})";
+            instance.transform.localScale = face.Scale;
             SetLayer(instance.transform, _layer);
 
             // The pack prefabs carry colliders for their own demo scenes. Cell picking is done by
@@ -311,12 +359,12 @@ namespace Odyssey.Presentation.World
 
             var graph = PlayableGraph.Create($"Odyssey pawn {_figures.Count}");
             graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
-            var mixer = AnimationMixerPlayable.Create(graph, _gaits.Length);
-            var clips = new AnimationClipPlayable[_gaits.Length];
+            var mixer = AnimationMixerPlayable.Create(graph, face.Gaits.Length);
+            var clips = new AnimationClipPlayable[face.Gaits.Length];
 
-            for (int i = 0; i < _gaits.Length; i++)
+            for (int i = 0; i < face.Gaits.Length; i++)
             {
-                clips[i] = AnimationClipPlayable.Create(graph, _gaits[i].clip);
+                clips[i] = AnimationClipPlayable.Create(graph, face.Gaits[i].clip);
                 graph.Connect(clips[i], 0, mixer, i);
                 mixer.SetInputWeight(i, i == 0 ? 1f : 0f);
             }
@@ -325,7 +373,7 @@ namespace Odyssey.Presentation.World
             output.SetSourcePlayable(mixer);
             graph.Play();
 
-            var figure = new Figure(instance, animator, graph, mixer, clips);
+            var figure = new Figure(instance, animator, graph, mixer, clips) { Look = look };
             _figures.Add(figure);
             return figure;
         }
@@ -374,6 +422,9 @@ namespace Odyssey.Presentation.World
 
             /// <summary>The pawn this figure is lent to, or -1 when it is parked in the pool.</summary>
             public int Pawn;
+
+            /// <summary>Which face this figure was built from. Fixed for its life; the rig is bound.</summary>
+            public int Look;
 
             /// <summary>False for the first frame after a lease, when there is no previous position.</summary>
             public bool Settled;

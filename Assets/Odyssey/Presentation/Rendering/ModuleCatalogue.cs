@@ -216,6 +216,30 @@ namespace Odyssey.Presentation.Rendering
         public void SetEntries(List<ModuleEntry> newEntries) => entries = newEntries;
 
         /// <summary>
+        /// Every row whose id is <paramref name="moduleIdPrefix"/> or starts with it and a dot, in
+        /// catalogue order.
+        ///
+        /// This is how a family of interchangeable variants is discovered — the colonist faces,
+        /// and whatever comes next — so that how many there are is a fact about the asset rather
+        /// than a constant somebody has to remember to raise. The dot matters: without it
+        /// <c>pawn.colonist</c> would also collect a hypothetical <c>pawn.colonistguard</c>.
+        /// </summary>
+        public List<ModuleEntry> FindFamily(string moduleIdPrefix)
+        {
+            var family = new List<ModuleEntry>();
+            for (int i = 0; i < entries.Count; i++)
+            {
+                string id = entries[i].moduleId;
+                if (string.Equals(id, moduleIdPrefix, StringComparison.Ordinal) ||
+                    (id.Length > moduleIdPrefix.Length &&
+                     id.StartsWith(moduleIdPrefix, StringComparison.Ordinal) &&
+                     id[moduleIdPrefix.Length] == '.'))
+                    family.Add(entries[i]);
+            }
+            return family;
+        }
+
+        /// <summary>
         /// How many rows have live art, counting a resolved material as art in its own right —
         /// a textured ground row draws from the packs just as surely as one with a prefab does.
         /// The rest fall back to tinted primitives.
@@ -255,11 +279,23 @@ namespace Odyssey.Presentation.Rendering
         public const string UtilityTap = Prefix + "utility.tap";
 
         /// <summary>
-        /// The colonist figure. Not placed in a cell by worldgen or the mesher: pawns move every
-        /// tick and are drawn from the published snapshot, so this id is resolved once and drawn
-        /// by the actor pass rather than meshed into a chunk.
+        /// The colonist figures. Not placed in a cell by worldgen or the mesher: pawns move every
+        /// tick and are drawn from the published snapshot, so these are resolved once and drawn by
+        /// the actor pass rather than meshed into a chunk.
+        ///
+        /// A **family** rather than one id, because a colony of five identical people is the
+        /// single most artificial thing on the board. Every character in the packs is built on the
+        /// same humanoid rig, so any of them can be a colonist at no cost beyond a catalogue row
+        /// and the locomotion clips retarget onto all of them without per-character work.
+        ///
+        /// How many there are is a question for the catalogue, not for this code: add a row and a
+        /// new face appears. <see cref="ModuleCatalogue.FindFamily"/> is how a caller asks.
         /// </summary>
-        public const string Colonist = Prefix + "pawn.colonist";
+        public const string ColonistBase = Prefix + "pawn.colonist";
+
+        /// <summary>The id of one colonist variant. Variant 0 keeps the unsuffixed id.</summary>
+        public static string Colonist(int variant) =>
+            variant <= 0 ? ColonistBase : ColonistBase + "." + variant.ToString();
 
         // Loose items lying in a cell: a crate of rations to be eaten, a heap of scrap to be
         // hauled. These are drawn by the actor pass for the same reason the colonist is — they

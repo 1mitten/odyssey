@@ -825,6 +825,156 @@ MonoBehaviour:
     locomotion: []
   - moduleId: odyssey.module.pawn.colonist
     shape: 4
+    prefab: {fileID: 6597860165486235920, guid: 0a84514f554d6724098bbb2bd951d28b, type: 3}
+    prefabName: SM_Gen_Chr_Business_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.1
+    shape: 4
+    prefab: {fileID: 6346790247640168239, guid: 34e0c0478273ba845ab029d21cb52a79, type: 3}
+    prefabName: SM_Gen_Chr_Business_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.2
+    shape: 4
+    prefab: {fileID: 3863946197356255772, guid: e19a6cb628a52034393bc3af10bf0a72, type: 3}
+    prefabName: SM_Gen_Chr_Jumpsuit_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.3
+    shape: 4
+    prefab: {fileID: 1237103786066752629, guid: 6b755f2212fb17d4f8d6ee004f322f2c, type: 3}
+    prefabName: SM_Gen_Chr_Jumpsuit_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.4
+    shape: 4
+    prefab: {fileID: 3898496384508839527, guid: 3c469630796c82c4387e97ea9923fb5c, type: 3}
+    prefabName: SM_Gen_Chr_Peasent_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.5
+    shape: 4
     prefab: {fileID: 3755277747141990492, guid: 89e401adace34884084d47323dfed9fc, type: 3}
     prefabName: SM_Gen_Chr_Peasent_Male_01
     centreXZ: 1
@@ -852,6 +1002,1656 @@ MonoBehaviour:
     - clipName: A_Run_F_Masc
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.6
+    shape: 4
+    prefab: {fileID: 2651856903210286764, guid: eb54016f4b8b78e49b46d6ae66b3a976, type: 3}
+    prefabName: SM_Gen_Chr_Prisoner_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.7
+    shape: 4
+    prefab: {fileID: 7229581758514280130, guid: 2d07864ce16f5e042a9bb64e7d61d8ff, type: 3}
+    prefabName: SM_Gen_Chr_Prisoner_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.8
+    shape: 4
+    prefab: {fileID: 85345772695510664, guid: f17f73fd88e335b499ab14d595ab4540, type: 3}
+    prefabName: SM_Gen_Chr_Space_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.9
+    shape: 4
+    prefab: {fileID: 3458756976290546274, guid: 7b5fb4afed2fb4d4f8a267687405b11c, type: 3}
+    prefabName: SM_Gen_Chr_Street_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.10
+    shape: 4
+    prefab: {fileID: 9064580088405009711, guid: 2d9271186b9b6394698643d253e56181, type: 3}
+    prefabName: SM_Gen_Chr_Street_Female_02
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.11
+    shape: 4
+    prefab: {fileID: 3779599460037819802, guid: 078289b95e4329c4698859519204f23e, type: 3}
+    prefabName: SM_Gen_Chr_Street_Female_03
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.12
+    shape: 4
+    prefab: {fileID: 3381359940843186067, guid: 415206fdf339ef44cbed508914a9a7e2, type: 3}
+    prefabName: SM_Gen_Chr_Street_Female_04
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.13
+    shape: 4
+    prefab: {fileID: 3989931881015276717, guid: 253e338a5c21f2d4691b62c2411dbf0d, type: 3}
+    prefabName: SM_Gen_Chr_Street_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.14
+    shape: 4
+    prefab: {fileID: 2601170466289135297, guid: 0f895ab6fa2a7e9419ef17d25c18bf9c, type: 3}
+    prefabName: SM_Gen_Chr_Street_Male_02
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.15
+    shape: 4
+    prefab: {fileID: 1315923550000629945, guid: 875a2010d705b604f8a5d36dd1a8b485, type: 3}
+    prefabName: SM_Gen_Chr_Street_Male_03
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.16
+    shape: 4
+    prefab: {fileID: 1988853622293806244, guid: 56f849b594aff0f429ad26bb10cf911f, type: 3}
+    prefabName: SM_Gen_Chr_Street_Male_04
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.17
+    shape: 4
+    prefab: {fileID: 1199693883326640, guid: 9d6944272ca1ef448a6c08e77fec10f0, type: 3}
+    prefabName: SM_Chr_Alien_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.18
+    shape: 4
+    prefab: {fileID: 1076653177335980, guid: 9724bf37757803a4997ef69d34974e3d, type: 3}
+    prefabName: SM_Chr_Alien_Male_02
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.19
+    shape: 4
+    prefab: {fileID: 1132329847709068, guid: 35b2f23f35e445a4ab2e58c5310d87bd, type: 3}
+    prefabName: SM_Chr_Android_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.20
+    shape: 4
+    prefab: {fileID: 1394440181588748, guid: a37e15f4f9ea2284097945cfeb8fe9c0, type: 3}
+    prefabName: SM_Chr_Augmented_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.21
+    shape: 4
+    prefab: {fileID: 1298641209967538, guid: 80a5aa5d3c514d842841d031ae24d8e1, type: 3}
+    prefabName: SM_Chr_Cop_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.22
+    shape: 4
+    prefab: {fileID: 1447477219941586, guid: 4493b9786df76d64fad99c1e9ac91ace, type: 3}
+    prefabName: SM_Chr_CyberPunk_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.23
+    shape: 4
+    prefab: {fileID: 1546608955749146, guid: 6b3fff6a0afe72545a41df9afbe304a2, type: 3}
+    prefabName: SM_Chr_Cyber_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.24
+    shape: 4
+    prefab: {fileID: 1550672808291654, guid: 0f9ccd71741ee50488626ad04bd719f9, type: 3}
+    prefabName: SM_Chr_Cyber_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.25
+    shape: 4
+    prefab: {fileID: 1112095941276756, guid: 9173cd04cd0fa7d478bdcc707b3aab84, type: 3}
+    prefabName: SM_Chr_CyborgNinja_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.26
+    shape: 4
+    prefab: {fileID: 1885274332863988, guid: 9d49ce5feb2bfd245a9e7f8e7a33026f, type: 3}
+    prefabName: SM_Chr_Garbage_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.27
+    shape: 4
+    prefab: {fileID: 1568468871427000, guid: aad8348bab0cb854f83377110195a3bc, type: 3}
+    prefabName: SM_Chr_Hacker_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.28
+    shape: 4
+    prefab: {fileID: 1787067274310504, guid: be6e7002526a3724f97d31ae3e596927, type: 3}
+    prefabName: SM_Chr_Junky_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.29
+    shape: 4
+    prefab: {fileID: 1295246249878948, guid: 5f7f35f5ee9d7fa4e9139ee56900d398, type: 3}
+    prefabName: SM_Chr_Junky_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.30
+    shape: 4
+    prefab: {fileID: 1967492678687660, guid: 57fc8dbaad512514aa9683fd9261d4a2, type: 3}
+    prefabName: SM_Chr_Medical_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.31
+    shape: 4
+    prefab: {fileID: 1542036819191410, guid: fc62b962a6a22f148b707e207ab06996, type: 3}
+    prefabName: SM_Chr_Monk_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.32
+    shape: 4
+    prefab: {fileID: 1870903629192928, guid: 2c12eb3809a798446836011a05b7a00b, type: 3}
+    prefabName: SM_Chr_Muscle_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.33
+    shape: 4
+    prefab: {fileID: 1102192756587244, guid: 19c80593b90872a4fa3bb5a1139b26c1, type: 3}
+    prefabName: SM_Chr_Rich_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.34
+    shape: 4
+    prefab: {fileID: 1420900672563822, guid: a136ffd5a9160a74d975cbda00d432bb, type: 3}
+    prefabName: SM_Chr_Rich_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.35
+    shape: 4
+    prefab: {fileID: 1674885529865632, guid: 5384b0579aea21545b42e1e5bd2f4cc0, type: 3}
+    prefabName: SM_Chr_FarmBoy_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.36
+    shape: 4
+    prefab: {fileID: 1660164172697688, guid: a3981b0f4b9c4bb489dce3db59ee32b5, type: 3}
+    prefabName: SM_Chr_FarmGirl_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.37
+    shape: 4
+    prefab: {fileID: 1019791486663424, guid: 827a26e9b261b7847ac6cc3df54f2677, type: 3}
+    prefabName: SM_Chr_Farmer_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.38
+    shape: 4
+    prefab: {fileID: 1160220439793846, guid: 3c3a8236be548bb4c892cf39a5abadfe, type: 3}
+    prefabName: SM_Chr_Farmer_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.39
+    shape: 4
+    prefab: {fileID: 1350103588185370, guid: 6a71738add6483c4e8a1479556240d54, type: 3}
+    prefabName: SM_Chr_Farmer_Male_Old_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.40
+    shape: 4
+    prefab: {fileID: 1344827926872286, guid: 1007a253e12b0a040ac2601c4464f7c2, type: 3}
+    prefabName: SM_Chr_Bandit_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.41
+    shape: 4
+    prefab: {fileID: 1104157133539584, guid: 61a51a0904b1ab846b8015fc4017ff05, type: 3}
+    prefabName: SM_Chr_Captain_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.42
+    shape: 4
+    prefab: {fileID: 1076165931881782, guid: 46a285bd16879d240b8c67eb1509a33a, type: 3}
+    prefabName: SM_Chr_GoldMiner_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.43
+    shape: 4
+    prefab: {fileID: 1699602026086422, guid: ce1e13ae0f9a7e04ea8ff9e83390f083, type: 3}
+    prefabName: SM_Chr_GoldMiner_Male_02
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.44
+    shape: 4
+    prefab: {fileID: 1367791153762574, guid: 61cca5f35bc07064c8b53b56641c4bc4, type: 3}
+    prefabName: SM_Chr_Hunter_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.45
+    shape: 4
+    prefab: {fileID: 1910007866545544, guid: 665550c0dd38b7f4bb813b293b9efeaa, type: 3}
+    prefabName: SM_Chr_Mexican_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.46
+    shape: 4
+    prefab: {fileID: 1847472524973406, guid: 44cca74992c7c9244beb12877a22e37d, type: 3}
+    prefabName: SM_Chr_Mexican_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.47
+    shape: 4
+    prefab: {fileID: 1433619625548648, guid: 6dd2a3233145d71498a233d919f68aba, type: 3}
+    prefabName: SM_Chr_Mexican_Male_02
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.48
+    shape: 4
+    prefab: {fileID: 1614204489042142, guid: 53bec25d8f1b3d940891e307bc7cb56f, type: 3}
+    prefabName: SM_Chr_NativeAmericanChief_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.49
+    shape: 4
+    prefab: {fileID: 1725913698063520, guid: da740ceec44642c43b7db9037aa14024, type: 3}
+    prefabName: SM_Chr_NativeAmericanElder_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.50
+    shape: 4
+    prefab: {fileID: 1859953206739270, guid: f5b6bad2280936a43aa995f321812e03, type: 3}
+    prefabName: SM_Chr_NativeAmericanWarrior_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.51
+    shape: 4
+    prefab: {fileID: 1539777346913648, guid: 05e3035009b0eaf44b0e3cb2a6e2e98e, type: 3}
+    prefabName: SM_Chr_NativeAmericanWarrior_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.52
+    shape: 4
+    prefab: {fileID: 1465311805662470, guid: 6a8f21ba83708e943944219ac28b3aca, type: 3}
+    prefabName: SM_Chr_NativeAmericanWarrior_Male_02
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.53
+    shape: 4
+    prefab: {fileID: 1717726254881766, guid: 09093ff8624662d43a05d585d0c17e3d, type: 3}
+    prefabName: SM_Chr_NativeAmericanWarrior_Male_03
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.54
+    shape: 4
+    prefab: {fileID: 1251887375674614, guid: f4a4844b0c1edce4fadad9ab0d125d6c, type: 3}
+    prefabName: SM_Chr_NativeAmerican_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.55
+    shape: 4
+    prefab: {fileID: 1152173450834818, guid: 6c049a3b6de50ad40a9313fe33d2743f, type: 3}
+    prefabName: SM_Chr_Priest_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.56
+    shape: 4
+    prefab: {fileID: 1761784186981298, guid: d7f7756c24aae434f902ccb965490a0d, type: 3}
+    prefabName: SM_Chr_Salesman_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.57
+    shape: 4
+    prefab: {fileID: 1303515429907952, guid: 9b802b1f99ad3cf47afb574a6ce9ce7d, type: 3}
+    prefabName: SM_Chr_Soldier_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.58
+    shape: 4
+    prefab: {fileID: 1611975939568586, guid: 83d6acf81ce429644af87dbde08a456a, type: 3}
+    prefabName: SM_Chr_Thug_Male_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.59
+    shape: 4
+    prefab: {fileID: 1407229853643162, guid: 304b0adaadef5f643a6e6d4f06099092, type: 3}
+    prefabName: SM_Chr_Thug_Male_02
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+    poseClipName: A_Idle_Standing_Masc
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
+  - moduleId: odyssey.module.pawn.colonist.60
+    shape: 4
+    prefab: {fileID: 1165589093028652, guid: e335486154b22ae44b3eca1992570c22, type: 3}
+    prefabName: SM_Chr_Traveller_Female_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.4, y: 1.4, z: 1.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+    poseClipName: A_Idle_Standing_Femn
+    poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Femn
+      clip: {fileID: 3215575822887921774, guid: ed8560f44bf9d4b48b00a743e934cf99, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Femn
+      clip: {fileID: 6048701035611563356, guid: 6f2f17a5242e38648b83ee303844b46c, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Femn
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Femn
+      clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
   - moduleId: odyssey.module.item.meal
     shape: 4

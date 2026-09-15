@@ -90,6 +90,17 @@ namespace Odyssey.Presentation.Rendering
             _byId[string.Empty] = 0;
         }
 
+        /// <summary>
+        /// The catalogue this library resolves against, or null when there is none.
+        ///
+        /// Exposed so a caller can ask a question the library cannot answer for it: how many
+        /// variants a *family* of rows has. Resolution is by id, and there is no way to discover
+        /// the ids of a family by resolving them one at a time — an id nobody authored resolves to
+        /// a primitive and gets logged as missing art, so probing for the end of a family would
+        /// manufacture exactly the warning it was trying to avoid.
+        /// </summary>
+        public ModuleCatalogue? Catalogue => _catalogue;
+
         public int Count => _modules.Count;
 
         public ResolvedModule this[int index] => _modules[index];

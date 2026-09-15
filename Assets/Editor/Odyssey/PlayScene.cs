@@ -375,7 +375,7 @@ namespace Odyssey.EditorTools
                 // placement is wrong the figure sinks into the ground or floats above it, which
                 // shows up as a base far from zero. Both are cheaper to read as numbers than to
                 // hunt for on screen.
-                ResolvedModule colonist = library[library.Resolve(ModuleIds.Colonist, ModuleShape.Pillar)];
+                ResolvedModule colonist = library[library.Resolve(ModuleIds.Colonist(0), ModuleShape.Pillar)];
                 report.AppendLine(
                     $"[Measure] colonist: {colonist.Parts.Length} parts, art {colonist.UsesArt}, " +
                     Describe(colonist));
@@ -473,6 +473,102 @@ namespace Odyssey.EditorTools
         /// as tinted blocks because no pack ships a cubic rock module, and a tinted block is what
         /// a cut-away of bedrock should look like anyway.
         /// </summary>
+        /// <summary>
+        /// Every character a colonist can be drawn as.
+        ///
+        /// **Why all of them.** A colony of five identical people is the most artificial thing on
+        /// the board, and every character in the four packs is built on the same ~50-bone Polygon
+        /// humanoid rig, so any of them can be a colonist for the price of a row — the locomotion
+        /// clips retarget onto all of them with no per-character work at all
+        /// (<c>e-02-characters-animation.md</c>). Sixty-odd faces out of art already paid for.
+        ///
+        /// **Why these and not literally every skinned prefab.** Four are excluded: the scarecrow,
+        /// the skeleton, the two robots and the hologram are rigged humanoids but they are not
+        /// people, and a colony with a skeleton hauling crates raises a question the game has no
+        /// answer to yet. They are listed below the cast so reinstating one is a line move rather
+        /// than a search. Everything else is in, including the aliens and the augmented, on the
+        /// grounds that this is a ruined sci-fi city and a mixed population is the premise.
+        ///
+        /// The owner's veto is meant to be exercised here: strike a name, rebuild the catalogue,
+        /// and that face stops appearing. Nothing else has to change.
+        /// </summary>
+        static readonly string[] Colonists =
+        {
+            // PolygonGeneric — the everyday population.
+            "SM_Gen_Chr_Business_Female_01",
+            "SM_Gen_Chr_Business_Male_01",
+            "SM_Gen_Chr_Jumpsuit_Female_01",
+            "SM_Gen_Chr_Jumpsuit_Male_01",
+            "SM_Gen_Chr_Peasent_Female_01",
+            "SM_Gen_Chr_Peasent_Male_01",
+            "SM_Gen_Chr_Prisoner_Female_01",
+            "SM_Gen_Chr_Prisoner_Male_01",
+            "SM_Gen_Chr_Space_Male_01",
+            "SM_Gen_Chr_Street_Female_01",
+            "SM_Gen_Chr_Street_Female_02",
+            "SM_Gen_Chr_Street_Female_03",
+            "SM_Gen_Chr_Street_Female_04",
+            "SM_Gen_Chr_Street_Male_01",
+            "SM_Gen_Chr_Street_Male_02",
+            "SM_Gen_Chr_Street_Male_03",
+            "SM_Gen_Chr_Street_Male_04",
+
+            // PolygonSciFiCity — the city this game is set in the ruins of.
+            "SM_Chr_Alien_Male_01",
+            "SM_Chr_Alien_Male_02",
+            "SM_Chr_Android_Female_01",
+            "SM_Chr_Augmented_Male_01",
+            "SM_Chr_Cop_01",
+            "SM_Chr_CyberPunk_Male_01",
+            "SM_Chr_Cyber_Female_01",
+            "SM_Chr_Cyber_Male_01",
+            "SM_Chr_CyborgNinja_01",
+            "SM_Chr_Garbage_Male_01",
+            "SM_Chr_Hacker_Female_01",
+            "SM_Chr_Junky_Female_01",
+            "SM_Chr_Junky_Male_01",
+            "SM_Chr_Medical_Male_01",
+            "SM_Chr_Monk_Male_01",
+            "SM_Chr_Muscle_Male_01",
+            "SM_Chr_Rich_Female_01",
+            "SM_Chr_Rich_Male_01",
+
+            // PolygonFarm — survivors from outside the city.
+            "SM_Chr_FarmBoy_01",
+            "SM_Chr_FarmGirl_01",
+            "SM_Chr_Farmer_Female_01",
+            "SM_Chr_Farmer_Male_01",
+            "SM_Chr_Farmer_Male_Old_01",
+
+            // PolygonWesternFrontier — the same, further out.
+            "SM_Chr_Bandit_Male_01",
+            "SM_Chr_Captain_Male_01",
+            "SM_Chr_GoldMiner_Male_01",
+            "SM_Chr_GoldMiner_Male_02",
+            "SM_Chr_Hunter_Male_01",
+            "SM_Chr_Mexican_Female_01",
+            "SM_Chr_Mexican_Male_01",
+            "SM_Chr_Mexican_Male_02",
+            "SM_Chr_NativeAmericanChief_Male_01",
+            "SM_Chr_NativeAmericanElder_Female_01",
+            "SM_Chr_NativeAmericanWarrior_Female_01",
+            "SM_Chr_NativeAmericanWarrior_Male_01",
+            "SM_Chr_NativeAmericanWarrior_Male_02",
+            "SM_Chr_NativeAmericanWarrior_Male_03",
+            "SM_Chr_NativeAmerican_Female_01",
+            "SM_Chr_Priest_Male_01",
+            "SM_Chr_Salesman_Male_01",
+            "SM_Chr_Soldier_Male_01",
+            "SM_Chr_Thug_Male_01",
+            "SM_Chr_Thug_Male_02",
+            "SM_Chr_Traveller_Female_01",
+
+            // Rigged, humanoid, and deliberately left out until the game can say what they are:
+            //   SM_Chr_Scarecrow_01, SM_Gen_Chr_Skeleton_01, SM_Gen_Chr_Charred_01,
+            //   SM_Gen_Chr_Robot_01, SM_Chr_Robot_01, SM_Chr_Hologram_Female_01,
+            //   SM_Gen_Chr_Underwear_Female_01, SM_Gen_Chr_Underwear_Male_01
+        };
+
         static List<ModuleEntry> Rows()
         {
             var rows = new List<ModuleEntry>();
@@ -670,38 +766,45 @@ namespace Odyssey.EditorTools
             // few pixels once the camera pulls back, which is how five colonists managed to be
             // invisible before. The board view wants them read at a glance, so they are drawn
             // half again as large, which brings them to 2.5 m and still leaves headroom in a cell.
-            rows.Add(new ModuleEntry
-            {
-                moduleId = ModuleIds.Colonist, shape = ModuleShape.Pillar,
-                prefabName = "SM_Gen_Chr_Peasent_Male_01",
-                poseClipName = "A_Idle_Standing_Masc",
-                centreXZ = true, baseAtY = true,
-                scale = new Vector3(1.4f, 1.4f, 1.4f),
+            for (int variant = 0; variant < Colonists.Length; variant++) Colonist(variant);
 
-                // The gaits a live figure blends through, slowest first. Idle is the same clip
-                // the bake is posed from, so a figure and its baked stand-in agree at rest.
-                //
-                // Both moving gaits are the **in-place** clips, because the simulation decides
-                // where a pawn is and a clip that also moved it would fight that. Their speeds
-                // come from the root-motion twins, measured at build time: see MeasureGaitSpeed.
-                // A walk alone was not enough — a colonist crosses a 2.5 m cell in fifty ticks at
-                // sixty ticks a second, which is three metres a second, nearer a run than a walk,
-                // and a walk clip stretched to cover it slides its feet across the ground.
-                locomotion = new List<LocomotionEntry>
+            // One row per face a colonist can wear. See Colonists for the cast and the argument.
+            void Colonist(int variant)
+            {
+                string prefab = Colonists[variant];
+
+                // The locomotion pack ships every clip masculine and feminine, and the packs name
+                // their characters, so the two can simply be matched up. It costs one string test
+                // and it is the difference between a colony of people and a colony of people half
+                // of whom walk like somebody else.
+                bool feminine = prefab.IndexOf("Female", StringComparison.OrdinalIgnoreCase) >= 0
+                                || prefab.IndexOf("Girl", StringComparison.OrdinalIgnoreCase) >= 0;
+                string suffix = feminine ? "Femn" : "Masc";
+
+                rows.Add(new ModuleEntry
                 {
-                    new LocomotionEntry { clipName = "A_Idle_Standing_Masc", metresPerSecond = 0f },
-                    new LocomotionEntry
+                    moduleId = ModuleIds.Colonist(variant), shape = ModuleShape.Pillar,
+                    prefabName = prefab,
+                    poseClipName = $"A_Idle_Standing_{suffix}",
+                    centreXZ = true, baseAtY = true,
+                    scale = new Vector3(1.4f, 1.4f, 1.4f),
+                    locomotion = new List<LocomotionEntry>
                     {
-                        clipName = "A_Walk_F_Masc",
-                        speedFromClipName = "A_Walk_F_RootMotion_Masc",
+                        new LocomotionEntry { clipName = $"A_Idle_Standing_{suffix}", metresPerSecond = 0f },
+                        new LocomotionEntry
+                        {
+                            clipName = $"A_Walk_F_{suffix}",
+                            speedFromClipName = $"A_Walk_F_RootMotion_{suffix}",
+                        },
+                        new LocomotionEntry
+                        {
+                            clipName = $"A_Run_F_{suffix}",
+                            speedFromClipName = $"A_Run_F_RootMotion_{suffix}",
+                        },
                     },
-                    new LocomotionEntry
-                    {
-                        clipName = "A_Run_F_Masc",
-                        speedFromClipName = "A_Run_F_RootMotion_Masc",
-                    },
-                },
-            });
+                });
+            }
+
 
             // Loose items on the ground. Before these rows existed every item fell through to the
             // stand-in marker, so a scenario that scatters twelve ration stacks and eight pieces

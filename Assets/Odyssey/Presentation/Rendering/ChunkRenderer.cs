@@ -258,9 +258,8 @@ namespace Odyssey.Presentation.Rendering
             if (snapshot.PawnCount == 0 && snapshot.ThingCount == 0) return;
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
 
-            ResolvedModule colonist = ColonistModule();
-            bool hasFigure = colonist.UsesArt && !colonist.IsEmpty;
-            int drawn = 0;
+            EnsureColonistModules();
+            System.Array.Clear(_colonistCounts, 0, _colonistCounts.Length);
 
             var pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length; i++)
@@ -274,7 +273,12 @@ namespace Odyssey.Presentation.Rendering
                 // and it is shared with the animated figures so the two cannot disagree.
                 Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading);
 
-                if (!hasFigure)
+                // The same face the live figures would have given this pawn, so a colonist does
+                // not change identity on crossing the figure cap.
+                int variant = ColonistLook.For(pawns[i].Id.Value, _colonistModules.Length);
+                ResolvedModule colonist = ColonistModule(variant);
+
+                if (!colonist.UsesArt || colonist.IsEmpty)
                 {
                     // No licensed art: the stand-in is a body and a beacon, both deliberately
                     // larger than life, because a true-to-scale figure is a few pixels once the
@@ -285,11 +289,10 @@ namespace Odyssey.Presentation.Rendering
                     continue;
                 }
 
-                EnsureActorCapacity(pawns.Length);
-                _actorPlacements[drawn++] = Matrix4x4.TRS(
+                AppendColonist(variant, Matrix4x4.TRS(
                     position,
                     Quaternion.Euler(0f, FacingOf(pawns[i].Id, heading), 0f),
-                    Vector3.one);
+                    Vector3.one));
 
                 // No beacon over a real figure. It was there to make a grey box findable, and
                 // against the same orange the item markers use it read as one more piece of
@@ -297,7 +300,10 @@ namespace Odyssey.Presentation.Rendering
                 // interface, not for a cube floating over their heads.
             }
 
-            if (drawn > 0) SubmitInstances(colonist, _actorPlacements, drawn, ref _actorMatrices);
+            for (int variant = 0; variant < _colonistCounts.Length; variant++)
+                if (_colonistCounts[variant] > 0)
+                    SubmitInstances(ColonistModule(variant),
+                        _colonistPlacements[variant], _colonistCounts[variant], ref _actorMatrices);
 
             RenderThings(snapshot.Things, lowest, activeLayer, material);
         }
@@ -390,24 +396,64 @@ namespace Odyssey.Presentation.Rendering
 
         // ---- colonist figures ---------------------------------------------------------------
 
-        int _colonistModule = -1;
-        Matrix4x4[] _actorPlacements = new Matrix4x4[16];
+        int[] _colonistModules = System.Array.Empty<int>();
+        Matrix4x4[][] _colonistPlacements = System.Array.Empty<Matrix4x4[]>();
+        int[] _colonistCounts = System.Array.Empty<int>();
+        bool _colonistsResolved;
         Matrix4x4[] _actorMatrices = new Matrix4x4[16];
         readonly System.Collections.Generic.Dictionary<int, float> _facing =
             new System.Collections.Generic.Dictionary<int, float>();
 
-        ResolvedModule ColonistModule()
+        /// <summary>
+        /// The baked colonist meshes, one per face the catalogue offers.
+        ///
+        /// This is the cheap far form of a colonist and the only form once the live-figure cap is
+        /// reached, so it has to offer the same cast the figures do — otherwise a colony would be
+        /// individuals up to the cap and identical twins past it.
+        /// </summary>
+        void EnsureColonistModules()
         {
-            if (_colonistModule < 0)
-                _colonistModule = _model.Library.Resolve(ModuleIds.Colonist, ModuleShape.Pillar);
-            return _model.Library[_colonistModule];
+            if (_colonistsResolved) return;
+            _colonistsResolved = true;
+
+            ModuleCatalogue? catalogue = _model.Library.Catalogue;
+            int variants = catalogue != null
+                ? catalogue.FindFamily(ModuleIds.ColonistBase).Count
+                : 1;
+            if (variants < 1) variants = 1;
+
+            _colonistModules = new int[variants];
+            _colonistCounts = new int[variants];
+            _colonistPlacements = new Matrix4x4[variants][];
+            for (int i = 0; i < variants; i++)
+            {
+                // Unresolved. Resolving a colonist means instantiating a rigged character and
+                // baking its skinned meshes, which is not something to do sixty-one times on the
+                // first frame for a colony of five — and most of those faces will never appear in
+                // a given game at all. A face costs nothing until somebody wears it.
+                _colonistModules[i] = -1;
+                _colonistPlacements[i] = new Matrix4x4[16];
+            }
         }
 
-        void EnsureActorCapacity(int count)
+        /// <summary>The baked module for one face, baking it the first time it is asked for.</summary>
+        ResolvedModule ColonistModule(int variant)
         {
-            if (_actorPlacements.Length >= count) return;
-            _actorPlacements = new Matrix4x4[count];
-            _actorMatrices = new Matrix4x4[count];
+            if (_colonistModules[variant] < 0)
+                _colonistModules[variant] =
+                    _model.Library.Resolve(ModuleIds.Colonist(variant), ModuleShape.Pillar);
+            return _model.Library[_colonistModules[variant]];
+        }
+
+        void AppendColonist(int variant, in Matrix4x4 placement)
+        {
+            Matrix4x4[] into = _colonistPlacements[variant];
+            if (_colonistCounts[variant] == into.Length)
+            {
+                System.Array.Resize(ref into, into.Length * 2);
+                _colonistPlacements[variant] = into;
+            }
+            into[_colonistCounts[variant]++] = placement;
         }
 
         /// <summary>
