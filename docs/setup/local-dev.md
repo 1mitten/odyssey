@@ -99,3 +99,26 @@ Collected rather than rediscovered. The first two land on the Burst grid job, th
 - **`Allocator.Temp` cannot be handed to a job** — it is main-thread and single-frame. A job needs `TempJob` or `Persistent`. This is easy to miss because it compiles and then misbehaves.
 - **Assigning `renderer.material` in edit mode instantiates a copy**, so setting properties on the original afterwards silently does nothing. Use `sharedMaterial` in editor scripts. This one matters a great deal to us: the committed tint strategy is *one cached material per stuff* with instanced draw buckets, and an accidental `.material` would quietly break the batching while looking almost right.
 - **Unity MCP as installed (2026-09-15, plugin v0.90.0):** `npx --yes unity-mcp-cli install-plugin .` adds the package to `Packages/manifest.json`; the first *interactive* editor open downloads the server to `Library/mcp-server/win-x64/gamedev-mcp-server.exe` (a batch run does not). The committed project-scope `.mcp.json` starts it with `port=8080 client-transport=stdio` (relative path, resolved from the repo root; Linux uses `linux-x64`). First `claude` run in the repo asks to approve the project server — approve it, keep the editor open (and not compiling), then verify with `claude mcp list`.
+
+## 10. The two test tiers
+
+Both run headless. Use the fast one while working and the authoritative one before committing.
+
+| | Command | Cycle | What it covers |
+|---|---|---|---|
+| **Fast** | `scripts/test-fast.sh` | **~1.7 s** warm | Everything in `Odyssey.Sim` and `Odyssey.Sim.Contracts`, which is all pure C# by design |
+| **Authoritative** | `scripts/unity.sh test editmode` | minutes | The same tests, plus assembly-definition boundaries, editor tooling and anything touching Unity |
+
+The tests themselves take about 40 ms. The difference is entirely Unity booting, refreshing the asset database and reloading the script domain, so filtering which tests run saves nothing; avoiding Unity is the only thing that helps.
+
+The fast tier builds the *same source files* through mirror projects in `tools/dotnet/`. There is one source of truth. Those projects target `netstandard2.1` to match Unity's API surface, so a .NET-only API that Unity could not compile fails in the fast tier first, and they reference each other in the same direction the assembly definitions do, so a stray `UnityEngine` dependency inside the simulation breaks the fast build immediately.
+
+It needs a .NET SDK, which is *not* the runtime that ships with Unity. Install one without admin rights:
+
+```
+powershell -c "& ([scriptblock]::Create((irm https://dot.net/v1/dotnet-install.ps1))) -Channel 8.0"
+```
+
+The script finds it at `%USERPROFILE%\.dotnet`, on `PATH`, or wherever `DOTNET` points.
+
+**Known Unity issue, and why the wrapper has a watchdog.** A `-runTests` batch run sometimes writes its results and then never exits, holding `Temp/UnityLockfile`; the next batch command then dies instantly with exit code 1 and a near-empty log. `unity.sh` now says so plainly, clears a genuinely stale lock, and treats the results file rather than the process exit code as the authority, terminating a lingering process after a grace period. `UNITY_TEST_TIMEOUT` and `UNITY_TEST_GRACE` tune it. This matters for CI, which must fail rather than hang.
