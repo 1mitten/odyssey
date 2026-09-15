@@ -1,0 +1,303 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7f2175f6071473248a2b56f6a4566be2, type: 3}
+  m_Name: ModuleCatalogue
+  m_EditorClassIdentifier: Odyssey.Presentation::Odyssey.Presentation.Rendering.ModuleCatalogue
+  entries:
+  - moduleId: odyssey.module.wall
+    shape: 1
+    prefab: {fileID: 1314183909916261615, guid: d6b56504304c325419b598fe3ddb95ed, type: 3}
+    prefabName: SM_Bld_Base_Wall_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.wall.panel
+    shape: 1
+    prefab: {fileID: 1314183909916261615, guid: d6b56504304c325419b598fe3ddb95ed, type: 3}
+    prefabName: SM_Bld_Base_Wall_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.wall.block
+    shape: 1
+    prefab: {fileID: 1314183909916261615, guid: d6b56504304c325419b598fe3ddb95ed, type: 3}
+    prefabName: SM_Bld_Base_Wall_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.wall.curtain
+    shape: 1
+    prefab: {fileID: 2095505155170527388, guid: c5c2a8e6bf649504c9a44506e4e45bd9, type: 3}
+    prefabName: SM_Bld_Base_Wall_Window_Double_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.window
+    shape: 1
+    prefab: {fileID: 1575485029253254693, guid: 312c2475757f3d449bc5791d854de9f8, type: 3}
+    prefabName: SM_Bld_Base_Wall_Window_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.wall.window
+    shape: 1
+    prefab: {fileID: 1575485029253254693, guid: 312c2475757f3d449bc5791d854de9f8, type: 3}
+    prefabName: SM_Bld_Base_Wall_Window_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.wall.shopfront
+    shape: 1
+    prefab: {fileID: 2095505155170527388, guid: c5c2a8e6bf649504c9a44506e4e45bd9, type: 3}
+    prefabName: SM_Bld_Base_Wall_Window_Double_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.wall.glazed
+    shape: 1
+    prefab: {fileID: 2095505155170527388, guid: c5c2a8e6bf649504c9a44506e4e45bd9, type: 3}
+    prefabName: SM_Bld_Base_Wall_Window_Double_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.wall.vault
+    shape: 1
+    prefab: {fileID: 1314183909916261615, guid: d6b56504304c325419b598fe3ddb95ed, type: 3}
+    prefabName: SM_Bld_Base_Wall_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.door
+    shape: 1
+    prefab: {fileID: 1090055365757069019, guid: b00e173b113716a458e7d028b5a22a6e, type: 3}
+    prefabName: SM_Bld_Base_Wall_Door_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.door.single
+    shape: 1
+    prefab: {fileID: 1090055365757069019, guid: b00e173b113716a458e7d028b5a22a6e, type: 3}
+    prefabName: SM_Bld_Base_Wall_Door_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.door.double
+    shape: 1
+    prefab: {fileID: 5000267000382648265, guid: 4429b90df2f00014eb1874ba70387189, type: 3}
+    prefabName: SM_Bld_Base_Wall_Door_Double_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.door.lobby
+    shape: 1
+    prefab: {fileID: 6601050566410634084, guid: 80f8de5fa3b15d8459024f191962186c, type: 3}
+    prefabName: SM_Bld_Base_Wall_Door_Double_Large_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.pillar
+    shape: 4
+    prefab: {fileID: 7567519678023432404, guid: 3c3333a360e049e459c73b3ca0afec89, type: 3}
+    prefabName: SM_Bld_Base_Pillar_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.stair
+    shape: 5
+    prefab: {fileID: 5184713431846949732, guid: d1e81d08282ca3b49b6f9b7fb3935878, type: 3}
+    prefabName: SM_Bld_Base_Stairs_01
+    centreXZ: 1
+    baseAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.stair.straight
+    shape: 5
+    prefab: {fileID: 5184713431846949732, guid: d1e81d08282ca3b49b6f9b7fb3935878, type: 3}
+    prefabName: SM_Bld_Base_Stairs_01
+    centreXZ: 1
+    baseAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.stair.core
+    shape: 5
+    prefab: {fileID: 5184713431846949732, guid: d1e81d08282ca3b49b6f9b7fb3935878, type: 3}
+    prefabName: SM_Bld_Base_Stairs_01
+    centreXZ: 1
+    baseAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.ladder
+    shape: 6
+    prefab: {fileID: 9016761526901123284, guid: 52340b3b1ff43e74bae915614541ffad, type: 3}
+    prefabName: SM_Gen_Bld_Ladder_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: -1.15}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.ladder.fixed
+    shape: 6
+    prefab: {fileID: 9016761526901123284, guid: 52340b3b1ff43e74bae915614541ffad, type: 3}
+    prefabName: SM_Gen_Bld_Ladder_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: -1.15}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.slab
+    shape: 2
+    prefab: {fileID: 218261247472390261, guid: 14c2043f70fad33459f6bbab2bef8720, type: 3}
+    prefabName: SM_Bld_Base_Floor_Combined_01
+    centreXZ: 1
+    baseAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.slab.concrete
+    shape: 2
+    prefab: {fileID: 218261247472390261, guid: 14c2043f70fad33459f6bbab2bef8720, type: 3}
+    prefabName: SM_Bld_Base_Floor_Combined_01
+    centreXZ: 1
+    baseAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.slab.deck
+    shape: 2
+    prefab: {fileID: 218261247472390261, guid: 14c2043f70fad33459f6bbab2bef8720, type: 3}
+    prefabName: SM_Bld_Base_Floor_Combined_01
+    centreXZ: 1
+    baseAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.utility.tap
+    shape: 4
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.pavement
+    shape: 2
+    prefab: {fileID: 1554687143679090, guid: 625e1518f7d51b741b259e863a096e42, type: 3}
+    prefabName: SM_Env_Ground_Tile_Half_01
+    centreXZ: 1
+    baseAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.crackedpavement
+    shape: 2
+    prefab: {fileID: 1965909188301746, guid: ac86e58f7706ca04a9df3f348cf148bd, type: 3}
+    prefabName: SM_Env_Ground_Tile_Half_02
+    centreXZ: 1
+    baseAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.rubble
+    shape: 2
+    prefab: {fileID: 1653527390631264, guid: bc32377f7b002c2408c36cbf8dcff58c, type: 3}
+    prefabName: SM_Env_Ground_Tile_Half_03
+    centreXZ: 1
+    baseAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.soil
+    shape: 2
+    prefab: {fileID: 1577172829149528, guid: f1caf2cf329e69744a5b641ea8285df6, type: 3}
+    prefabName: SM_Env_Ground_Tile_Half_04
+    centreXZ: 1
+    baseAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.gravel
+    shape: 2
+    prefab: {fileID: 1036822767203376, guid: 2d7c7ed92e45db34992dafca4ced6ea5, type: 3}
+    prefabName: SM_Env_Ground_Tile_Half_05
+    centreXZ: 1
+    baseAtY: 0
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.engineeredfill
+    shape: 3
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.rock
+    shape: 3
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.buriedseam
+    shape: 3
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.salvage
+    shape: 3
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}

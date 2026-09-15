@@ -1,18 +1,14 @@
 {
-    "name": "Odyssey.Editor",
-    "rootNamespace": "Odyssey.EditorTools",
+    "name": "Odyssey.Presentation",
+    "rootNamespace": "Odyssey.Presentation",
     "references": [
         "Odyssey.Sim",
         "Odyssey.Sim.Contracts",
-        "Odyssey.Presentation",
         "Unity.RenderPipelines.Core.Runtime",
-        "Unity.RenderPipelines.Core.Editor",
         "Unity.RenderPipelines.Universal.Runtime",
-        "Unity.RenderPipelines.Universal.Editor"
+        "Unity.InputSystem"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
