@@ -1,6 +1,6 @@
 # Phase 1 — interview answers
 
-Status: **partially answered** (updated 2026-09-15). Q1 is answered by the owner supplying the packages; Q2 has the inventory's implied size and awaits confirmation; Q3 and Q4 remain on their stated assumptions.
+Status: **complete** (interview conducted 2026-09-15, owner answering directly in-session). Q1 was answered by the supplied packages; Q2–Q4 and three process questions (Q5–Q7) were answered in the interview. Phase 2 is cleared to start.
 
 ## Q1 — Which additional Synty packs are installed? **Answered**
 
@@ -18,18 +18,26 @@ All five self-install under `Assets/Synty/…` (verified by reading the package 
 
 Owner guidance recorded from the same message: if suitable shaders/characters matching the reference screenshots cannot be found, that is acceptable — visual fidelity to the screenshots is not a blocker for getting the assets hooked up.
 
-## Q2 — Cell size. **Proposed: 2.5 × 2.5 × 3.0 m — awaiting owner confirmation**
+## Q2 — Cell size. **Confirmed: 2.5 × 2.5 × 3.0 m**
 
-The inventory (`docs/research/synty-inventory.md`, generated from the imported packs) measures the base building modules at **2.5 m wide × 3.0 m tall**: walls 2.50 × 3.01 × 0.23 m (97% base pivots), floors 2.50 × 2.50 × 0.10 m, stairs on a 2.5 m footprint, the ladder 3.0 m tall, and the larger `Section` pieces at exactly 5 m (two cells). Half-height (1.5 m) and half/quarter-width trim variants exist but the load-bearing pitch is unambiguous. Recommendation: **one cell = 2.5 m × 2.5 m footprint, 3.0 m layer height**. Nothing is built until the owner confirms.
+The inventory (`docs/research/synty-inventory.md`, generated from the imported packs) measures the base building modules at **2.5 m wide × 3.0 m tall**: walls 2.50 × 3.01 × 0.23 m (97% base pivots), floors 2.50 × 2.50 × 0.10 m, stairs on a 2.5 m footprint, the ladder 3.0 m tall, and the larger `Section` pieces at exactly 5 m (two cells). Half-height (1.5 m) and half/quarter-width trim variants exist but the load-bearing pitch is unambiguous. **Owner confirmed 2026-09-15: one cell = 2.5 m × 2.5 m footprint, 3.0 m layer height.** ADR: `docs/adr/0002-cell-size-and-layer-model.md`.
 
-## Q3 — Ruined-city generation. **Unanswered; assumption stands**
+## Q3 — Ruined-city generation. **Answered: template stamping**
 
-Assumption: pre-authored shell templates stamped onto a street grid with random damage, not procedural buildings.
+Pre-authored shell templates built from Synty modules, stamped onto a street grid by worldgen with random damage. Not procedural building generation.
 
-## Q4 — Unity MCP server. **Unanswered; recommendation stands**
+## Q4 — Unity MCP server. **Answered: IvanMurzak/Unity-MCP, installed now on the Windows machine**
 
-Recommend IvanMurzak/Unity-MCP (`docs/research/unity-mcp-server.md`). Not yet installed on either dev machine.
+Per the recommendation in `docs/research/unity-mcp-server.md`; installation per `docs/setup/local-dev.md` §5 (Windows notes in §8).
 
-## Environment note (affects docs, not decisions)
+## Q5 — Test strategy (owner-raised). **Answered: pragmatic TDD**
 
-Phase 0/1 work on 2026-09-15 ran on a **Windows 11** dev machine (`D:\code\odyssey`, Unity CLI/Hub beta, editors under `C:\Program Files\Unity\Hub\Editor`), not the Pop!_OS machine the setup docs describe. `scripts/unity.sh` was extended to find the editor on Windows Git Bash. Whether Windows replaces or complements Pop!_OS is for the owner to say; the docs treat both as dev machines.
+Test-first for every Sim system (grid, pathfinding, needs, jobs, save/load) plus a determinism harness (same seed → same world-state hash after N ticks) and golden-master one-day headless runs. Presentation and editor tooling get smoke tests (headless scene loads); throwaway spikes are exempt until kept. The Sim assembly stays pure C# (no UnityEngine dependency) so its tests can also run under a plain dotnet SDK.
+
+## Q6 — Architecture selection and threading (owner-raised). **Answered: two-way benchmark; determinism first**
+
+Lane D1 narrows to a **two-way benchmark**: plain C# structs + Burst jobs versus DOTS/ECS, ticking a 250×250×40 grid with 50 agents; MonoBehaviour-per-thing is dropped as a known non-starter at this scale. Judged on tick cost, memory, GC pressure, headless testability and mod-patchability; the ADR records the numbers. Threading stance regardless of winner: **deterministic single-threaded tick first**; Burst jobs behind clean boundaries only on proven hot paths (pathfinding, light/temperature propagation). No free-threaded simulation. Patterns generally: sim/presentation split, composition root (no scattered manager singletons), data-driven Defs from day one; the storyteller-as-director arrives at M6.
+
+## Q7 — Primary dev machine (owner-raised). **Answered: this Windows machine**
+
+Windows 11 (`D:\code\odyssey`, Unity 6000.3.24f1, all five packs imported) is primary; the Pop!_OS instructions in `docs/setup/local-dev.md` remain as a secondary reference. `scripts/unity.sh` works on both (Git Bash on Windows).

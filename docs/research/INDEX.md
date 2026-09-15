@@ -9,8 +9,12 @@ Every research result lives in this folder as one file per question, in the fixe
 | `phase0-ground.md` | Phase 0 | done | high | Empty repository; no Unity, dotnet, git-lfs, CI, MCP or Synty content in the remote container. Unity-side spikes must run on a dev machine. |
 | `synty-import.md` | Phase 0 | **done 2026-09-15** (Windows dev machine) | high | Pass with notes: Unity 6000.3.24f1 + URP 17.3.0, five packs imported headless under `Assets/Synty/` (7,222 assets), zero import errors, shaders SRP-native. Record and deviations in the file. |
 | `synty-inventory.md`, `synty-inventory.csv` | Phase 0 | **generated 2026-09-15** by `Assets/Editor/Odyssey/SyntyInventory.cs` | high | 2,138 prefabs measured. Base walls 2.5 × 3.01 × 0.23 m, floors 2.5 × 2.5 m, Sections at exact 5 m multiples → **implied cell 2.5 × 2.5 × 3.0 m**, awaiting owner confirmation. |
-| `phase1-answers.md` | Phase 1 | Q1 answered; Q2 proposed; Q3–Q4 assumptions stand | – | Owner supplied Sci-Fi City + Farm + Western Frontier + Particle FX + ANIMATION Base Locomotion on 2026-09-15. |
+| `phase1-answers.md` | Phase 1 | **complete 2026-09-15** (interview conducted) | high | Cell 2.5 × 2.5 × 3.0 m confirmed; template stamping; IvanMurzak MCP now; pragmatic TDD; two-way architecture benchmark, determinism first; Windows primary. ADRs 0001–0002 in `docs/adr/`. |
 | `unity-mcp-server.md` | Phase 1, Q4 | done | medium | Recommend IvanMurzak/Unity-MCP (Linux binaries, Unity 6000.3 named, tests, console, Roslyn C#). Runner-up CoplayDev/unity-mcp. |
+| `a-01-pawns.md` · `a-03-work-and-jobs.md` · `a-04-building-and-materials.md` · `a-12-map-generation.md` · `a-15-time-and-simulation.md` | Phase 2, Lane A wave 1 | dispatched 2026-09-15 | – | RimWorld mechanics for the vertical slice: needs/mood, jobs pipeline, building/materials, mapgen, tick model. |
+| `b-going-medieval.md` · `c-cataclysm-dda.md` | Phase 2, Lanes B/C wave 1 | dispatched 2026-09-15 | – | Closest 3D-layer analogue; best open-source z-level reference. |
+| `e-01-module-mapping.md` · `e-02-characters-animation.md` · `e-03-other-packs.md` · `e-04-tint-strategy.md` | Phase 2, Lane E wave 1 | dispatched 2026-09-15 | – | Synty fit at the confirmed 2.5 × 2.5 × 3.0 m cell, from the Phase 0 inventory. |
+| `f-prior-art-here.md` | Phase 2, Lane F wave 1 | dispatched 2026-09-15 | – | Prior art in this repo and carry-forwards from *Ramble* (reference only). |
 
 Related, outside this folder: `docs/brief.md` (the governing brief), `docs/reference/screenshots/README.md` (reference-image descriptions).
 
