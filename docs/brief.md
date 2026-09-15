@@ -63,7 +63,7 @@ Non-negotiables that follow:
 Most questions are answered above. Ask only these, each with your assumption and why it matters:
 
 - **Q1 — Which additional Synty packs are installed?** Assumption: none yet; the prototype uses primitives for terrain, plants and animals until they arrive. Why: decides whether M5 (sustenance) can be visually complete or must ship with placeholders.
-- **Q2 — Cell size.** State the size the inventory implies (e.g. 2 m × 2 m × 3 m if walls are 2 m wide and 3 m tall) and ask for confirmation. Why: everything downstream snaps to it.
+- **Q2 — Cell size.** State the size the inventory implies (e.g. 2 m × 2 m × 3 m if walls are 2 m wide and 3 m tall) and ask for confirmation. Why: everything downstream snaps to it. **Answered 2026-09-15: 2.5 × 2.5 × 3.0 m, measured (ADR 0002). The 2 m above is an illustrative example in the question, not the answer.**
 - **Q3 — Ruined-city generation.** Assumption: buildings are pre-authored shell templates (from Synty modules) stamped onto a street grid by worldgen, with random damage; not procedural buildings. Why: template stamping is a week; procedural building generation is a milestone.
 - **Q4 — Unity MCP server choice.** Assumption: the most maintained open-source Unity MCP server that supports Linux and Unity 6; name it after a quick search. Why: it is the difference between autonomous iteration and asking you to click.
 

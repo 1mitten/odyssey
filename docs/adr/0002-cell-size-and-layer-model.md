@@ -2,6 +2,8 @@
 
 Status: accepted (owner confirmed 2026-09-15; measurement basis in `docs/research/synty-inventory.md`).
 
+**Supersedes a provisional 2 × 2 × 3 m cell.** The UI line of work, running from a snapshot taken before the Synty inventory existed, proposed a provisional 2 m cell explicitly "pending the Synty inventory" so that M1 could start rather than stall. That premise is now void: the inventory has run, the measurement is in, and the owner has confirmed it. **2.5 × 2.5 × 3.0 m stands**, and it is the measured answer the brief demanded rather than a placeholder — the inventory tool derives it independently from the modal module dimensions. Nothing in code ever carried the provisional number.
+
 ## Context
 
 The brief (§2) fixes the layer model — discrete cells, one cell of height per layer, no slopes or half-heights, roofs are the floor above — and mandates that the cell size be derived from the Synty modular pieces, not chosen abstractly. The Phase 0 inventory measured 2,138 prefabs across the five owned packs: base walls 2.50 × 3.01 × 0.23 m with 97% base pivots, floors 2.50 × 2.50 × 0.10 m, stairs on a 2.5 m footprint, the ladder 3.0 m tall, and the multi-cell `Section` pieces at exactly 5 m. A 1.25 m fine grid (matching the half/quarter trim pieces) was considered and rejected: 4× the cells per layer with matching pathfinding and simulation cost, while buildings still author at the 2.5 m pitch.
