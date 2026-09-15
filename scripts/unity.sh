@@ -8,7 +8,8 @@
 #   scripts/unity.sh open                       launch the editor GUI on this project
 #
 # Editor discovery: $UNITY_EDITOR if set, else the version in ProjectSettings/ProjectVersion.txt
-# under $UNITY_HUB_EDITORS (default ~/Unity/Hub/Editor), else the newest installed 6000.3.x.
+# under $UNITY_HUB_EDITORS (default ~/Unity/Hub/Editor on Linux/macOS, C:\Program Files\Unity\Hub\Editor
+# on Windows Git Bash), else the newest installed 6000.x.
 # Extra arguments after the subcommand are passed to Unity. Set UNITY_EXTRA_ARGS for standing
 # additions (e.g. UNITY_EXTRA_ARGS="-nographics" or licence flags for CI).
 
@@ -17,27 +18,38 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
+editor_bin() {
+  # editor_bin <install dir>: print the editor binary inside it, if any (Unity on Linux/macOS, Unity.exe on Windows)
+  local dir="$1"
+  if [[ -x "$dir/Editor/Unity.exe" ]]; then echo "$dir/Editor/Unity.exe"; return 0; fi
+  if [[ -x "$dir/Editor/Unity" ]]; then echo "$dir/Editor/Unity"; return 0; fi
+  return 1
+}
+
 find_unity() {
   if [[ -n "${UNITY_EDITOR:-}" ]]; then
     if [[ -x "$UNITY_EDITOR" ]]; then echo "$UNITY_EDITOR"; return 0; fi
     echo "unity.sh: UNITY_EDITOR is set but not executable: $UNITY_EDITOR" >&2
     return 2
   fi
-  local hub="${UNITY_HUB_EDITORS:-$HOME/Unity/Hub/Editor}"
+  local hub="${UNITY_HUB_EDITORS:-}"
+  if [[ -z "$hub" ]]; then
+    local cand
+    for cand in "$HOME/Unity/Hub/Editor" "/c/Program Files/Unity/Hub/Editor"; do
+      if [[ -d "$cand" ]]; then hub="$cand"; break; fi
+    done
+    hub="${hub:-$HOME/Unity/Hub/Editor}"
+  fi
   local want=""
   if [[ -f ProjectSettings/ProjectVersion.txt ]]; then
     want="$(sed -n 's/^m_EditorVersion: *//p' ProjectSettings/ProjectVersion.txt | tr -d '[:space:]')"
   fi
-  if [[ -n "$want" && -x "$hub/$want/Editor/Unity" ]]; then
-    echo "$hub/$want/Editor/Unity"; return 0
-  fi
+  if [[ -n "$want" ]] && editor_bin "$hub/$want"; then return 0; fi
   local newest
-  newest="$(ls -d "$hub"/6000.3.*/Editor/Unity 2>/dev/null | sort -V | tail -n 1 || true)"
-  if [[ -n "$newest" && -x "$newest" ]]; then
-    echo "$newest"; return 0
-  fi
-  echo "unity.sh: no Unity editor found (wanted '${want:-any 6000.3.x}' under $hub)." >&2
-  echo "          Install 6000.3.x LTS via Unity Hub or set UNITY_EDITOR=/path/to/Editor/Unity." >&2
+  newest="$(ls -d "$hub"/6000.*/ 2>/dev/null | sort -V | tail -n 1 || true)"
+  if [[ -n "$newest" ]] && editor_bin "${newest%/}"; then return 0; fi
+  echo "unity.sh: no Unity editor found (wanted '${want:-any 6000.x}' under $hub)." >&2
+  echo "          Install the project's Unity version via Unity Hub or set UNITY_EDITOR=/path/to/Editor/Unity." >&2
   return 2
 }
 

@@ -197,9 +197,13 @@ namespace Odyssey.EditorTools
         static string ClassifyFamily(string name)
         {
             // Synty naming: SM_Bld_Wall_01, SK_Chr_Worker_01, FX_..., SM_Prop_..., SM_Veh_..., SM_Wep_..., SM_Env_..., SM_Sign_...
+            // The 2022.3-era shared-base packs insert a Gen token (SM_Gen_Bld_Ladder_01); skip it so
+            // PolygonGeneric building modules land in family Bld, not a bogus family Gen.
             string[] tokens = name.Split('_');
             if (tokens.Length >= 3 && Regex.IsMatch(tokens[0], "^(SM|SK|FX|PP|SF)$", RegexOptions.IgnoreCase))
-                return tokens[1];
+                return tokens.Length >= 4 && string.Equals(tokens[1], "Gen", StringComparison.OrdinalIgnoreCase)
+                    ? tokens[2]
+                    : tokens[1];
             return "Other";
         }
 
