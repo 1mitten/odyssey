@@ -393,7 +393,7 @@ function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","
 
 /* ============================ content ============================ */
 const LEDGER=[
- ["ui.res.alloy","Alloy",1284,1],["ui.res.plasteel","Plasteel",96,0],["ui.res.polymer","Polymer",430,-1],
+ ["ui.res.alloy","Alloy",1284,1],["ui.res.composite","Composite",96,0],["ui.res.polymer","Polymer",430,-1],
  ["ui.res.circuitry","Circuitry",58,0],["ui.res.concrete","Concrete",2210,1],["ui.res.glass","Glass",176,0],
  ["_",""],
  ["ui.res.rations","Rations",612,-1],["ui.res.protein","Protein paste",188,1],["ui.res.medkit","Medkits",14,0],
@@ -786,7 +786,7 @@ function panelBody(k){
     <tr><td>Make medkit</td><td>Do until 10</td><td class="num">10</td><td><span class="chip warn">suspended</span></td></tr></tbody></table>
     <div class="note">The first serious virtualised-list stress, and the dry run for the work grid two milestones later.</div>`;
   if(k==="zones")return `<table><tbody><tr><td>Priority</td><td><span class="chip ok">Important</span></td></tr>
-    <tr><td>Extent</td><td>84 cells, z+0</td></tr><tr><td>Accepts</td><td>Alloy, plasteel, polymer, circuitry</td></tr></tbody></table>
+    <tr><td>Extent</td><td>84 cells, z+0</td></tr><tr><td>Accepts</td><td>Alloy, composite, polymer, circuitry</td></tr></tbody></table>
     <div class="note">Open question: is a stockpile a per-layer area or a volume spanning layers? Recommendation is
     per layer, because hauling cost across layers is materially different and a volume hides that from the player.</div>`;
   if(k==="room")return `<table><tbody><tr><td>Role</td><td>Dormitory</td></tr><tr><td>Size</td><td>42 cells</td></tr>
