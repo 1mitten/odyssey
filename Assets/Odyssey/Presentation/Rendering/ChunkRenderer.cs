@@ -177,8 +177,18 @@ namespace Odyssey.Presentation.Rendering
                 emission = Color.black;
             }
 
-            tint = new Color(tint.r * shade, tint.g * shade, tint.b * shade, 1f);
-            emission = new Color(emission.r * shade, emission.g * shade, emission.b * shade, 1f);
+            // Depth shading and surface grain are both plain brightness multipliers, so they fold
+            // into one before the colour is built rather than costing a second pass over it.
+            //
+            // Only terrain carries a shade. A construction code has no variation bits, so reading
+            // one would always return shade zero and quietly darken every wall in the world by the
+            // low end of the scale — a uniform change nothing on screen would identify as a bug.
+            float grain = shade;
+            if (TintCode.IsTerrain(tintCode))
+                grain *= StuffPalette.VariationScale(TintCode.Variation(tintCode));
+
+            tint = new Color(tint.r * grain, tint.g * grain, tint.b * grain, 1f);
+            emission = new Color(emission.r * grain, emission.g * grain, emission.b * grain, 1f);
         }
 
         /// <summary>

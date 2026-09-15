@@ -73,6 +73,17 @@ namespace Odyssey.Presentation.Rendering
 
         public static readonly Color TrimEmission = new Color(0.10f, 0.62f, 0.70f);
 
+        /// <summary>
+        /// Brightness multipliers for the shades <c>TintCode.Variations</c> dithers a surface
+        /// across. Centred on one and kept tight on purpose: wide enough that a large expanse of a
+        /// single material reads as ground with grain in it, narrow enough that nobody mistakes two
+        /// shades for two different materials. Widen these and a grass field turns into camouflage.
+        /// </summary>
+        static readonly float[] VariationScales = { 0.93f, 0.98f, 1.03f, 1.08f };
+
+        public static float VariationScale(int variation) =>
+            variation >= 0 && variation < VariationScales.Length ? VariationScales[variation] : 1f;
+
         public static Color StuffTint(int stuff) =>
             stuff >= 0 && stuff < StuffTints.Length ? StuffTints[stuff] : Color.white;
 

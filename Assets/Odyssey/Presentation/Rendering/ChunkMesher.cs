@@ -96,7 +96,7 @@ namespace Odyssey.Presentation.Rendering
             int module = _model.TerrainModule(index);
             if (module == 0) return;
 
-            int tint = TintCode.Terrain(terrain);
+            int tint = TintCode.Terrain(terrain, VariationAt(x, z));
             Matrix4x4 at = Matrix4x4.Translate(CellMetrics.FloorCentre(x, z, y));
 
             if (!_model.IsSolid(index))
@@ -110,6 +110,28 @@ namespace Odyssey.Presentation.Rendering
             if (!HasExposedFace(index, x, z, y)) return;
             AddBody(batch, module, tint, at);
         }
+
+        /// <summary>
+        /// Which shade of its material the cell at this column takes.
+        ///
+        /// Smooth noise rather than a per-cell hash, and that choice is the whole point. A hash
+        /// gives every cell an independent shade, which at any distance is television static and
+        /// shimmers as the camera moves. A low-frequency field gives soft patches a few cells
+        /// across, which reads as mottled ground and stays still when the camera does.
+        ///
+        /// It depends only on the world column, so it is identical on every remesh and in every
+        /// chunk. Two cells that touch across a chunk boundary get the same answer, so no seam
+        /// appears along the grid the renderer happens to divide the map into.
+        /// </summary>
+        static int VariationAt(int x, int z)
+        {
+            int noise = ValueNoise.Value2D(0x9E3779B9u, x, z, VariationPeriod);
+            int shade = noise * TintCode.Variations / ValueNoise.Scale;
+            return shade < TintCode.Variations ? shade : TintCode.Variations - 1;
+        }
+
+        /// <summary>Lattice period of the shade field, in cells. Small enough to read as grain.</summary>
+        const int VariationPeriod = 5;
 
         /// <summary>A buried cell is invisible. At the map edge the strata are cut away on purpose.</summary>
         bool HasExposedFace(int index, int x, int z, int y)

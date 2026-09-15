@@ -26,8 +26,18 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>Job names, indexed by the job handle the snapshot carries. See PawnContent.JobIndex.</summary>
         static readonly string[] JobNames = { "hauling", "eating", "sleeping", "wandering", "waiting" };
 
+        /// <summary>
+        /// How far from the clicked cell a colonist may stand and still be the one selected.
+        ///
+        /// Two, not one, and the reason is geometric rather than a matter of taste. The picker
+        /// answers with the floor cell the ray crosses, but a colonist is drawn as a body and a
+        /// beacon standing well clear of that floor. Under a tilted camera the player aims at the
+        /// beacon, so the ray passes over the pawn and meets the ground a cell or two beyond them.
+        /// A radius of one leaves the most natural click — straight at the bright marker — landing
+        /// on empty grass, which reads as the click being ignored rather than as a near miss.
+        /// </summary>
         [Tooltip("Cells within this distance of the click count as picking that colonist.")]
-        public int pickRadius = 1;
+        public int pickRadius = 2;
 
         OdysseyBootstrap? _bootstrap;
         Odyssey.Presentation.CameraRig.SliceCameraRig? _rig;
@@ -43,24 +53,34 @@ namespace Odyssey.Presentation.Bootstrap
             _rig = _bootstrap != null ? _bootstrap.cameraRig : null;
         }
 
+        CellRef? _lastPicked;
+        bool _hasLastPicked;
+
         void Update()
         {
             var world = _bootstrap?.World;
             if (world == null || _rig == null) return;
 
-            // A click selects the nearest colonist to the picked cell, falling back to deselecting
-            // when the click lands on empty ground. The picker already refuses to return a cell
-            // above the active layer, so a colonist on an upper floor cannot be selected through
-            // the floor they are standing on.
-            if (Input.GetMouseButtonDown(0))
-            {
-                CellRef? picked = _rig.Selection;
-                if (picked.HasValue)
-                {
-                    _selected = NearestPawn(world.Views.Current, picked.Value, pickRadius);
-                    _builtForTick = -1;
-                }
-            }
+            // Deliberately no input handling here. The camera rig owns picking and already does it
+            // through the new Input System; reading the mouse again from this component meant
+            // using the legacy Input class, which does nothing at all when the project is set to
+            // the new backend — clicks appeared to be ignored. Watching the rig's selection
+            // instead removes the input dependency and the frame-ordering race with it.
+            CellRef? picked = _rig.Selection;
+            bool changed = !_hasLastPicked
+                           || picked.HasValue != _lastPicked.HasValue
+                           || (picked.HasValue && _lastPicked.HasValue && picked.Value != _lastPicked.Value);
+            if (!changed) return;
+
+            _lastPicked = picked;
+            _hasLastPicked = true;
+
+            // The picker cannot return a cell above the active layer, so a colonist upstairs can
+            // never be selected through the floor they are standing on.
+            _selected = picked.HasValue
+                ? NearestPawn(world.Views.Current, picked.Value, pickRadius)
+                : PawnId.None;
+            _builtForTick = -1;
         }
 
         static PawnId NearestPawn(WorldSnapshot snapshot, CellRef cell, int radius)
