@@ -85,11 +85,20 @@ namespace Odyssey.Presentation.Rendering
             return material;
         }
 
+        /// <summary>
+        /// How bright a tint the cache key can tell apart. Tints are not confined to 0..1: a
+        /// terrain texture can be *lifted* as well as darkened, so grass carries a multiplier above
+        /// one. Clamping the key at one would hand two different bright tints the same key, and
+        /// the first material built would then be handed out for both — one terrain drawn in
+        /// another's colour, everywhere, with nothing on screen to identify it as a fault.
+        /// </summary>
+        const float KeyRange = 4f;
+
+        static uint Quantise(float v) =>
+            (uint)Mathf.RoundToInt(Mathf.Clamp01(v / KeyRange) * 255f);
+
         static uint Pack(Color c) =>
-            ((uint)Mathf.RoundToInt(Mathf.Clamp01(c.r) * 255f) << 24) |
-            ((uint)Mathf.RoundToInt(Mathf.Clamp01(c.g) * 255f) << 16) |
-            ((uint)Mathf.RoundToInt(Mathf.Clamp01(c.b) * 255f) << 8) |
-            (uint)Mathf.RoundToInt(Mathf.Clamp01(c.a) * 255f);
+            (Quantise(c.r) << 24) | (Quantise(c.g) << 16) | (Quantise(c.b) << 8) | Quantise(c.a);
 
         /// <summary>
         /// Both shader families in play multiply a colour over the albedo: URP Lit calls it

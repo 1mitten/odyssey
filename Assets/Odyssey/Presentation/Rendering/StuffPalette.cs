@@ -62,6 +62,44 @@ namespace Odyssey.Presentation.Rendering
             new Color(0.13f, 0.13f, 0.15f),            // 17 coal seam
         };
 
+        /// <summary>
+        /// What multiplies a terrain **texture**, the counterpart to <see cref="TerrainSolids"/>
+        /// for cells that have pack art behind them. Same index space, same length.
+        ///
+        /// Mostly identity, because a texture that looks right should be left alone. Grass is the
+        /// exception and the reason this array exists. The Synty meadow texture is a muted olive
+        /// suited to a photographic landscape, whereas the look this game is aiming at is the
+        /// bright, saturated yellow-green of the reference art. Values above one are deliberate
+        /// and legal: <c>_BaseColor</c> is a plain multiply with no clamp, so it can lift a texture
+        /// as well as darken one.
+        ///
+        /// This is the single dial for how green the world reads. Turn it here, nowhere else.
+        /// </summary>
+        static readonly Color[] TerrainTints =
+        {
+            Color.white,                               // air, never drawn
+            Color.white,                               // pavement
+            Color.white,                               // cracked pavement
+            Color.white,                               // rubble
+            Color.white,                               // soil
+            Color.white,                               // gravel
+            Color.white,                               // engineered fill
+            Color.white,                               // rock
+            Color.white,                               // buried city seam
+            Color.white,                               // salvage
+            new Color(1.16f, 1.44f, 1.37f),            // 10 grass — lifted towards the reference
+            Color.white,                               // 11 bare earth
+            Color.white,                               // 12 packed gravel
+            Color.white,                               // 13 sand
+            Color.white,                               // 14 subsoil
+            Color.white,                               // 15 bedrock
+            Color.white,                               // 16 iron ore
+            Color.white,                               // 17 coal seam
+        };
+
+        public static Color TerrainTint(int terrain) =>
+            terrain >= 0 && terrain < TerrainTints.Length ? TerrainTints[terrain] : Color.white;
+
         /// <summary>The cyan trim. Black means the material has no emissive contribution.</summary>
         static readonly Color[] TerrainEmission =
         {
@@ -73,16 +111,6 @@ namespace Odyssey.Presentation.Rendering
 
         public static readonly Color TrimEmission = new Color(0.10f, 0.62f, 0.70f);
 
-        /// <summary>
-        /// Brightness multipliers for the shades <c>TintCode.Variations</c> dithers a surface
-        /// across. Centred on one and kept tight on purpose: wide enough that a large expanse of a
-        /// single material reads as ground with grain in it, narrow enough that nobody mistakes two
-        /// shades for two different materials. Widen these and a grass field turns into camouflage.
-        /// </summary>
-        static readonly float[] VariationScales = { 0.93f, 0.98f, 1.03f, 1.08f };
-
-        public static float VariationScale(int variation) =>
-            variation >= 0 && variation < VariationScales.Length ? VariationScales[variation] : 1f;
 
         public static Color StuffTint(int stuff) =>
             stuff >= 0 && stuff < StuffTints.Length ? StuffTints[stuff] : Color.white;

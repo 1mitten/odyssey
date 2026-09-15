@@ -84,7 +84,13 @@ namespace Odyssey.Presentation.Rendering
                 float alpha = ghost ? slice.AlphaAbove(steps) : 1f;
                 if (ghost && alpha < 0.012f) continue;
 
-                float shade = above ? 1f : slice.ShadeBelow(-steps);
+                // The layer immediately below the active one is the floor being stood on, not a
+                // storey beneath it, so it is lit as part of the active layer. Dimming it was
+                // costing the ground a third of its brightness before a single light was applied,
+                // and because the tint is a colour the shader reads in linear space, a 0.68
+                // multiplier landed nearer 0.42 in practice. That alone made a healthy green
+                // texture render as dark olive.
+                float shade = above ? 1f : slice.ShadeBelow(-steps - 1);
                 if (ghost) shade *= 1.15f; // translucent geometry reads darker than it is
 
                 // The active layer's ceiling is the slab of the layer above it. Dropping it is
@@ -138,12 +144,23 @@ namespace Odyssey.Presentation.Rendering
                 ResolveColour(bucket.Tint, part.IsFallback, shade, out Color tint, out Color emission);
                 Material material = _materials.Get(part.Material, tint, emission, ghost, alpha);
 
+                // Terrain receives shadows but never casts them, and that is not a saving so much
+                // as a correctness fix. Ground is a contiguous mass of cell-sized boxes; letting
+                // each box cast meant the surface shadowed itself, and with a shadow map stretched
+                // over a 300 m board the texel is far larger than a cell, so every ground tile
+                // acned against its neighbours. The result was a dark cross-hatch over the whole
+                // map that read as filth on the grass rather than as light.
+                //
+                // Nothing worth seeing is lost: a colonist, a wall or a tree still casts onto the
+                // ground, which is what actually tells the eye where something is standing. It
+                // also takes 14,400 instances per layer out of the shadow pass.
+                bool terrain = TintCode.IsTerrain(bucket.Tint);
                 var rp = new RenderParams(material)
                 {
                     worldBounds = batch.Bounds,
                     layer = GameObjectLayer,
                     receiveShadows = !ghost,
-                    shadowCastingMode = ghost || !CastShadows
+                    shadowCastingMode = ghost || !CastShadows || terrain
                         ? ShadowCastingMode.Off
                         : ShadowCastingMode.On,
                 };
@@ -166,9 +183,10 @@ namespace Odyssey.Presentation.Rendering
             int value = TintCode.Value(tintCode);
             if (TintCode.IsTerrain(tintCode))
             {
-                // Over art the atlas already carries the colour, so the tint stays at identity;
-                // over a primitive it is the only colour there is.
-                tint = fallback ? StuffPalette.TerrainSolid(value) : Color.white;
+                // Over a primitive the tint is the only colour there is. Over a texture it grades
+                // what the texture already says, which for grass means lifting a muted meadow
+                // olive to the saturated green the reference art uses.
+                tint = fallback ? StuffPalette.TerrainSolid(value) : StuffPalette.TerrainTint(value);
                 emission = StuffPalette.TerrainEmissive(value);
             }
             else
@@ -177,18 +195,8 @@ namespace Odyssey.Presentation.Rendering
                 emission = Color.black;
             }
 
-            // Depth shading and surface grain are both plain brightness multipliers, so they fold
-            // into one before the colour is built rather than costing a second pass over it.
-            //
-            // Only terrain carries a shade. A construction code has no variation bits, so reading
-            // one would always return shade zero and quietly darken every wall in the world by the
-            // low end of the scale — a uniform change nothing on screen would identify as a bug.
-            float grain = shade;
-            if (TintCode.IsTerrain(tintCode))
-                grain *= StuffPalette.VariationScale(TintCode.Variation(tintCode));
-
-            tint = new Color(tint.r * grain, tint.g * grain, tint.b * grain, 1f);
-            emission = new Color(emission.r * grain, emission.g * grain, emission.b * grain, 1f);
+            tint = new Color(tint.r * shade, tint.g * shade, tint.b * shade, 1f);
+            emission = new Color(emission.r * shade, emission.g * shade, emission.b * shade, 1f);
         }
 
         /// <summary>

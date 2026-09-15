@@ -453,8 +453,8 @@ namespace Odyssey.EditorTools
         {
             var sun = new GameObject("Sun").AddComponent<Light>();
             sun.type = LightType.Directional;
-            sun.intensity = 1.2f;
-            sun.color = new Color(1.0f, 0.95f, 0.86f);
+            sun.intensity = 1.35f;
+            sun.color = new Color(1.0f, 0.97f, 0.90f);
             sun.shadows = LightShadows.Soft;
             sun.transform.SetParent(root, false);
             sun.transform.rotation = Quaternion.Euler(50f, 35f, 0f);
@@ -462,15 +462,28 @@ namespace Odyssey.EditorTools
             // Flat-lit low-poly, as the concept renders are: a strong key, a generous cool ambient
             // so nothing goes black, and no post stylisation. Cel shading was raised and rejected
             // on 2026-09-15 (06-rendering-and-camera.md section 1).
+            //
+            // Lifted towards the reference art, which is high-key: the ground there is evenly lit
+            // and reads as a bright field, with the only real shadows cast by buildings and people
+            // onto it. Ambient does most of that work, because it is what fills the parts of a
+            // scene the key light does not reach, and a dim ambient is what made the first pass
+            // look overcast.
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.42f, 0.47f, 0.56f);
-            RenderSettings.ambientEquatorColor = new Color(0.34f, 0.36f, 0.40f);
-            RenderSettings.ambientGroundColor = new Color(0.18f, 0.18f, 0.20f);
+            RenderSettings.ambientSkyColor = new Color(0.56f, 0.61f, 0.68f);
+            RenderSettings.ambientEquatorColor = new Color(0.46f, 0.48f, 0.52f);
+            RenderSettings.ambientGroundColor = new Color(0.28f, 0.28f, 0.30f);
+            // Fog begins past the far corner of the board, not across it.
+            //
+            // A 120-cell map is 300 m on a side and 424 m corner to corner, so fog that started at
+            // 90 m covered essentially the whole playing area the moment the camera pulled back
+            // far enough to see it. That is not atmosphere, it is a blue-grey wash over the thing
+            // the player is trying to read. A colony sim is looked *at*, not walked through, and
+            // the board has to stay legible corner to corner.
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
             RenderSettings.fogColor = new Color(0.30f, 0.34f, 0.40f);
-            RenderSettings.fogStartDistance = 90f;
-            RenderSettings.fogEndDistance = 400f;
+            RenderSettings.fogStartDistance = 460f;
+            RenderSettings.fogEndDistance = 1100f;
         }
 
         static SliceCameraRig BuildCamera(Transform root)
