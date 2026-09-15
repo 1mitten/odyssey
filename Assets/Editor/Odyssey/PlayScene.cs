@@ -25,6 +25,7 @@ using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
+using Odyssey.Sim.Worldgen.Natural;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -35,6 +36,14 @@ namespace Odyssey.EditorTools
     {
         const string ScenePath = "Assets/Scenes/Play.unity";
         const string CataloguePath = "Assets/Odyssey/Presentation/ModuleCatalogue.asset";
+
+        /// <summary>
+        /// The world the play scene is built with, and the world "Measure a slice" measures. One
+        /// pair of constants so the two cannot drift apart again: a benchmark of a map the game
+        /// does not load is worse than no benchmark, because it still produces a number.
+        /// </summary>
+        const int PlaySizeXZ = 120;
+        const int PlayLayers = 16;
 
         [MenuItem("Odyssey/Presentation/Build play scene")]
         public static void BuildFromMenu() => BuildInternal(exitWhenDone: false);
@@ -66,42 +75,51 @@ namespace Odyssey.EditorTools
             try
             {
                 var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);
-                var size = new GridSize(60, 60, 5);
-                var gen = MapGenDef.For(size);
+
+                // Deliberately the world the play scene builds, not a convenient small one. A
+                // performance number for a map nobody loads answers no question worth asking, and
+                // this measurement had quietly gone on describing a 60 x 60 city long after the
+                // scene moved to a barren 120 x 120 wilderness.
+                var size = new GridSize(PlaySizeXZ, PlaySizeXZ, PlayLayers);
+                var gen = (NaturalMapGenDef)MapGenerator.DefaultDef(MapType.Natural, size);
+                gen.MakeBarren();
                 var grid = new CellGrid(size);
                 var chunks = new ChunkGrid(size);
 
                 var clock = System.Diagnostics.Stopwatch.StartNew();
-                WorldGenResult result = WorldGenerator.Generate(grid, 1u, gen);
+                MapGenOutcome result = MapGenerator.Generate(grid, 1u, gen);
                 double genMs = clock.Elapsed.TotalMilliseconds;
 
                 var library = new ModuleLibrary(catalogue);
                 var model = new Odyssey.Presentation.World.WorldRenderModel(size, chunks, library);
-                model.ApplyTemplates(result, gen);
-                model.RefreshAll(grid, result.Context.Edifices);
+                model.RefreshAll(grid, result.Natural!.Context.Edifices);
 
+                // The layer the scene actually opens on: the air cell a colonist stands in, which
+                // is one above the ground. Measuring the layer below it would quietly report the
+                // cost of a slice the player never sees.
+                int activeLayer = result.StartCell.Y;
                 var renderer = new ChunkRenderer(model) { SubmitToGpu = false };
                 var slice = new SliceSettings();
 
                 clock.Restart();
-                renderer.Render(gen.groundLayer, slice);
+                renderer.Render(activeLayer, slice);
                 double firstMs = clock.Elapsed.TotalMilliseconds;
                 int meshed = renderer.ChunksMeshedThisFrame;
 
                 clock.Restart();
-                for (int i = 0; i < 100; i++) renderer.Render(gen.groundLayer, slice);
+                for (int i = 0; i < 100; i++) renderer.Render(activeLayer, slice);
                 double steadyMs = clock.Elapsed.TotalMilliseconds / 100d;
 
                 // A full re-mesh once everything is warm: the honest cost of rebuilding every
                 // chunk of a slice, against the 4 ms budget in 06-rendering-and-camera.md section 4.
-                model.RefreshAll(grid, result.Context.Edifices);
+                model.RefreshAll(grid, result.Natural!.Context.Edifices);
                 clock.Restart();
-                renderer.Render(gen.groundLayer, slice);
+                renderer.Render(activeLayer, slice);
                 double remeshMs = clock.Elapsed.TotalMilliseconds;
                 int remeshed = renderer.ChunksMeshedThisFrame;
 
                 var report = new System.Text.StringBuilder();
-                report.AppendLine($"[Measure] {size} seed 1: worldgen {genMs:0.0} ms, {result.Report}");
+                report.AppendLine($"[Measure] {size} seed 1: worldgen {genMs:0.0} ms, {result.Natural!.Report}");
                 report.AppendLine(
                     $"[Measure] first slice: {firstMs:0.00} ms including {meshed} chunk meshes; " +
                     $"steady submit {steadyMs:0.00} ms/frame; " +
@@ -304,18 +322,22 @@ namespace Odyssey.EditorTools
             // An earlier attempt used SM_Gen_Env_Ground_Grass_01. That is an organic patch with a
             // rounded outline, authored to be strewn across a landscape, and tiling it produced
             // circles across the map. Square art for a square grid; scatter art stays scatter.
-            // Solid ground keeps its cell-shaped box and borrows the pack's material, so the
-            // surface is textured grass or earth rather than flat colour, and the box still fills
-            // the cell. Pointing these at a flat tile prefab instead drew a plane floating inside
-            // each cell that z-fought with its neighbours: visible as flicker and stray shapes.
-            void GroundLook(string id, string prefab) => rows.Add(new ModuleEntry
-            {
-                moduleId = id, shape = ModuleShape.SolidBlock, prefabName = prefab,
-                materialOnly = true,
-            });
-
-            GroundLook(ModuleIds.Terrain("Grass"), "SM_Env_Grass_Short_Plane_01");
-            GroundLook(ModuleIds.Terrain("BareEarth"), "SM_Gen_Env_Ground_Dirt_01");
+            // Ground is a tinted cell-shaped box, and deliberately so.
+            //
+            // Two attempts at using pack art for it both failed, for reasons worth recording.
+            // Pointing it at a flat ground-tile prefab drew a thin plane inside every cell that
+            // z-fought with its neighbours: flicker and stray shapes. Taking only the material
+            // failed differently and worse: Synty art is UV-mapped into a shared atlas, so that
+            // material on a primitive cube samples the whole atlas across each face rather than
+            // the grass swatch, which is why the surface came out as stray blades and dark
+            // patches.
+            //
+            // Flat colour is not a compromise here. Synty's own look is flat-shaded colour, so a
+            // well-chosen green *is* the house style; the atlas only adds variation that a cube
+            // cannot address without custom UVs. Textured ground needs a cube whose UVs point at
+            // the grass texel, which is a later job and belongs with a proper mesher change.
+            Block(ModuleIds.Terrain("Grass"));
+            Block(ModuleIds.Terrain("BareEarth"));
             Block(ModuleIds.Terrain("PackedGravel"));
             Block(ModuleIds.Terrain("Sand"));
             Block(ModuleIds.Terrain("Subsoil"));
@@ -432,9 +454,9 @@ namespace Odyssey.EditorTools
             go.transform.SetParent(root, false);
             var boot = go.AddComponent<OdysseyBootstrap>();
             go.AddComponent<SelectionReadout>();   // click a colonist to see what they are doing
-            boot.sizeX = 60;
-            boot.sizeZ = 60;
-            boot.layers = 5;
+            boot.sizeX = PlaySizeXZ;
+            boot.sizeZ = PlaySizeXZ;
+            boot.layers = PlayLayers;
             boot.seed = 1;
             boot.moduleCatalogue = catalogue;
             boot.cameraRig = rig;

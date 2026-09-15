@@ -34,13 +34,20 @@ namespace Odyssey.Presentation.Bootstrap
     public sealed class OdysseyBootstrap : MonoBehaviour
     {
         [Header("World")]
-        public int sizeX = 60;
-        public int sizeZ = 60;
-        public int layers = 5;
+        // A 60-cell board read as cramped once the camera pulled back far enough to see it all:
+        // there was nowhere to walk to. 120 gives room to spread out, and 16 layers leave depth to
+        // mine and headroom to build in. Well inside the 250-cell scale target the renderer is
+        // built for, so this costs nothing that has not already been measured.
+        public int sizeX = 120;
+        public int sizeZ = 120;
+        public int layers = 16;
         public uint seed = 1;
 
         [Tooltip("Natural wilderness is the prototype default (ADR 0008). RuinedCity is kept and still works.")]
         public MapType mapType = MapType.Natural;
+
+        [Tooltip("Flat grass everywhere, no trees, rock or ore. The plain board to build from.")]
+        public bool barrenMap = true;
 
         [Tooltip("Colonists spawned near the start location when the scene begins.")]
         public int colonistCount = 5;
@@ -89,6 +96,7 @@ namespace Odyssey.Presentation.Bootstrap
             // (ADR 0008). The ruined-city generator is still here and still tested; switch
             // mapType to reach it.
             _gen = MapGenerator.DefaultDef(mapType, size);
+            if (barrenMap && _gen is NaturalMapGenDef natural) natural.MakeBarren();
 
             var generation = Stopwatch.StartNew();
             MapGenOutcome outcome = MapGenerator.Generate(_grid, seed, _gen);
