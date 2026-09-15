@@ -179,8 +179,13 @@ namespace Odyssey.Sim.Pawns
     /// <summary>Movement tuning. One unit of cost is 1/100 of a flat orthogonal cell crossing.</summary>
     public class MovementDef : Def
     {
-        /// <summary>Cost units retired per tick. 10 gives ten ticks per flat cell.</summary>
-        public int movePerTick = 10;
+        /// <summary>
+        /// Cost units retired per tick. A flat cell costs 100, so 2 gives fifty ticks per cell:
+        /// at sixty ticks a second that is a cell every 0.83 s, about 3 m/s, which reads as a
+        /// brisk walk. The previous 10 meant ten ticks a cell, roughly 54 km/h, and colonists
+        /// visibly teleported around the map.
+        /// </summary>
+        public int movePerTick = 2;
 
         /// <summary>Estimated cost of a layer change, used to order candidates before pathing.</summary>
         public int layerChangeEstimate = 300;

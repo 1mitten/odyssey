@@ -188,7 +188,11 @@ namespace Odyssey.Presentation.Rendering
         /// place the renderer consumes <c>world.Views.Current</c> directly, and having it wired
         /// means the first pawn to exist appears without a rendering change.
         /// </summary>
-        public void RenderActors(WorldSnapshot snapshot, int activeLayer, SliceSettings slice, Material material)
+        /// <param name="tickAlpha">How far this frame sits between two ticks, 0 to 1.</param>
+        /// <param name="movePerTick">Cost units a pawn retires per tick, so a partial tick can be extrapolated.</param>
+        public void RenderActors(
+            WorldSnapshot snapshot, int activeLayer, SliceSettings slice, Material material,
+            float tickAlpha = 0f, int movePerTick = 0)
         {
             if (snapshot.PawnCount == 0 && snapshot.ThingCount == 0) return;
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
@@ -198,6 +202,20 @@ namespace Odyssey.Presentation.Rendering
             {
                 var cell = pawns[i].Cell;
                 if (cell.Y < lowest || cell.Y > activeLayer) continue;
+
+                // Glide between cells rather than snapping. The simulation is discrete and
+                // integer, which determinism requires; this is a presentation facade over it.
+                Vector3 drift = Vector3.zero;
+                if (pawns[i].MovePercent > 0)
+                {
+                    Vector3 from = CellMetrics.FloorCentre(cell);
+                    Vector3 to = CellMetrics.FloorCentre(pawns[i].NextCell);
+                    // Carry the pawn on through the part-tick this frame sits in, so the walk
+                    // stays smooth when frames outpace ticks. Clamped so it never runs past the
+                    // cell it is entering, which would look like a stumble.
+                    float percent = pawns[i].MovePercent + movePerTick * tickAlpha;
+                    drift = (to - from) * (Mathf.Clamp(percent, 0f, 100f) * 0.01f);
+                }
                 // Colonists are the thing the player is watching, so they are drawn deliberately
                 // larger than life: a true-to-scale 0.9 m figure is a few pixels once the camera
                 // pulls back, which is how five colonists managed to be invisible on a 60-cell map.
@@ -205,8 +223,8 @@ namespace Odyssey.Presentation.Rendering
                 // Body plus a beacon floating above it. The beacon is what makes a colonist
                 // findable at a glance: it sits clear of the terrain, so it reads against grass,
                 // stone or a building roof without the player hunting for a shape among cells.
-                DrawMarker(material, cell, new Vector3(1.4f, 2.6f, 1.4f), 1.3f);
-                DrawMarker(material, cell, new Vector3(0.7f, 0.7f, 0.7f), 3.6f);
+                DrawMarker(material, cell, new Vector3(1.4f, 2.6f, 1.4f), 1.3f, drift);
+                DrawMarker(material, cell, new Vector3(0.7f, 0.7f, 0.7f), 3.6f, drift);
             }
 
             var things = snapshot.Things;
@@ -218,11 +236,11 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
-        void DrawMarker(Material material, CellRef cell, Vector3 size, float height)
+        void DrawMarker(Material material, CellRef cell, Vector3 size, float height, Vector3 drift = default)
         {
             var rp = new RenderParams(material) { layer = GameObjectLayer };
             Matrix4x4 m = Matrix4x4.TRS(
-                CellMetrics.FloorCentre(cell) + Vector3.up * height,
+                CellMetrics.FloorCentre(cell) + Vector3.up * height + drift,
                 Quaternion.identity, size);
             Graphics.RenderMesh(rp, PrimitiveMeshes.UnitCube, 0, m);
             DrawCalls++;

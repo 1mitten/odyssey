@@ -71,6 +71,16 @@ namespace Odyssey.Presentation.Rendering
 
         [Tooltip("Uniform scale applied to the art. 1 unless a piece must be stretched to the cell.")]
         public Vector3 scale = Vector3.one;
+
+        /// <summary>
+        /// Take only the *material* from the prefab and keep the primitive box for the mesh.
+        ///
+        /// Solid ground needs this. A terrain cell is meshed as a body filling the cell, so
+        /// pointing it at a flat ground-tile prefab drew a thin plane floating inside each cell
+        /// and z-fought with its neighbours. What is actually wanted is the cell-shaped box
+        /// wearing the pack texture, which is what this gives.
+        /// </summary>
+        public bool materialOnly;
     }
 
     /// <summary>

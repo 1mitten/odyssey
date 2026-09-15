@@ -32,7 +32,22 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly int JobDef;
 
-        public PawnView(PawnId id, CellRef cell, int food, int rest, int mood, int jobDef = -1)
+        /// <summary>
+        /// The cell being walked into, or the current cell when standing still.
+        ///
+        /// This and <see cref="MovePercent"/> exist so presentation can draw a pawn gliding
+        /// between cells rather than snapping from one to the next. The simulation stays discrete
+        /// and integer, which determinism requires; the smoothing is a facade over it, and is
+        /// exactly how the genre's reference points do it.
+        /// </summary>
+        public readonly CellRef NextCell;
+
+        /// <summary>How far from <see cref="Cell"/> to <see cref="NextCell"/>, 0 to 100.</summary>
+        public readonly int MovePercent;
+
+        public PawnView(
+            PawnId id, CellRef cell, int food, int rest, int mood,
+            int jobDef = -1, CellRef nextCell = default, int movePercent = 0)
         {
             Id = id;
             Cell = cell;
@@ -40,6 +55,8 @@ namespace Odyssey.Sim.Contracts
             Rest = rest;
             Mood = mood;
             JobDef = jobDef;
+            NextCell = nextCell;
+            MovePercent = movePercent;
         }
     }
 

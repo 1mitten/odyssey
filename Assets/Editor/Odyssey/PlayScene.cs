@@ -304,16 +304,18 @@ namespace Odyssey.EditorTools
             // An earlier attempt used SM_Gen_Env_Ground_Grass_01. That is an organic patch with a
             // rounded outline, authored to be strewn across a landscape, and tiling it produced
             // circles across the map. Square art for a square grid; scatter art stays scatter.
-            void GroundTile(string id, string prefab) => rows.Add(new ModuleEntry
+            // Solid ground keeps its cell-shaped box and borrows the pack's material, so the
+            // surface is textured grass or earth rather than flat colour, and the box still fills
+            // the cell. Pointing these at a flat tile prefab instead drew a plane floating inside
+            // each cell that z-fought with its neighbours: visible as flicker and stray shapes.
+            void GroundLook(string id, string prefab) => rows.Add(new ModuleEntry
             {
                 moduleId = id, shape = ModuleShape.SolidBlock, prefabName = prefab,
-                centreXZ = true, baseAtY = false,
-                scale = new Vector3(CellMetrics.SizeXZ / 5f, 1f, CellMetrics.SizeXZ / 5f),
-                offset = new Vector3(0f, CellMetrics.SizeY, 0f),
+                materialOnly = true,
             });
 
-            GroundTile(ModuleIds.Terrain("Grass"), "SM_Env_Ground_Tile_01");
-            GroundTile(ModuleIds.Terrain("BareEarth"), "SM_Env_Ground_Tile_04");
+            GroundLook(ModuleIds.Terrain("Grass"), "SM_Env_Grass_Short_Plane_01");
+            GroundLook(ModuleIds.Terrain("BareEarth"), "SM_Gen_Env_Ground_Dirt_01");
             Block(ModuleIds.Terrain("PackedGravel"));
             Block(ModuleIds.Terrain("Sand"));
             Block(ModuleIds.Terrain("Subsoil"));

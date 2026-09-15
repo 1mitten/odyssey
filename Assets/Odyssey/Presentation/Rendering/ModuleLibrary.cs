@@ -117,7 +117,22 @@ namespace Odyssey.Presentation.Rendering
 
             ModulePart[] parts;
             bool usesArt = false;
-            if (entry != null && entry.prefab != null)
+            if (entry != null && entry.prefab != null && entry.materialOnly)
+            {
+                // The box stays cell-shaped; only the look comes from the pack. See
+                // ModuleEntry.materialOnly for why solid ground must work this way.
+                Material? art = MaterialOf(entry.prefab!);
+                if (art != null)
+                {
+                    parts = new[] { FallbackPart(shape, entry, art) };
+                    usesArt = true;
+                }
+                else
+                {
+                    parts = new ModulePart[0];
+                }
+            }
+            else if (entry != null && entry.prefab != null)
             {
                 parts = FlattenPrefab(entry.prefab!, entry, shape);
                 usesArt = parts.Length > 0;
@@ -205,13 +220,27 @@ namespace Odyssey.Presentation.Rendering
         // ---------------------------------------------------------- fallbacks
 
         /// <summary>The stand-in box for a shape, sized to the cell. One mesh, many matrices.</summary>
-        ModulePart FallbackPart(ModuleShape shape, ModuleEntry? entry)
+        ModulePart FallbackPart(ModuleShape shape, ModuleEntry? entry, Material? material = null)
         {
             GetFallbackBox(shape, out Vector3 size, out Vector3 centre);
             Matrix4x4 local = Matrix4x4.TRS(centre, Quaternion.identity, size);
             if (entry != null)
                 local = Matrix4x4.TRS(entry.offset, Quaternion.Euler(0f, entry.yaw, 0f), SafeScale(entry)) * local;
-            return new ModulePart(PrimitiveMeshes.UnitCube, 0, FallbackMaterial, local, fallback: true);
+            return new ModulePart(
+                PrimitiveMeshes.UnitCube, 0, material ?? FallbackMaterial, local,
+                fallback: material == null);
+        }
+
+        /// <summary>The first shared material on a prefab, used when only its look is wanted.</summary>
+        static Material? MaterialOf(GameObject prefab)
+        {
+            var renderers = prefab.GetComponentsInChildren<MeshRenderer>(includeInactive: false);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                var material = renderers[i].sharedMaterial;
+                if (material != null) return material;
+            }
+            return null;
         }
 
         /// <summary>A zero scale in a deserialised row would silently delete the module.</summary>

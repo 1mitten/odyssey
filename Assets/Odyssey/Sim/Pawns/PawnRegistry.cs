@@ -87,13 +87,30 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < _pawns.Count; i++)
             {
                 var pawn = _pawns[i];
+                // Where the pawn is stepping to, and how far along, so presentation can glide it
+                // between cells instead of snapping. A flat orthogonal crossing costs 100 units,
+                // so progress converts straight to a percentage; it is clamped because a diagonal
+                // or a connector can cost more and would otherwise overshoot.
+                var cell = size.FromIndex(pawn.Cell);
+                var nextCell = cell;
+                int movePercent = 0;
+                if (pawn.HasPath)
+                {
+                    nextCell = size.FromIndex(pawn.Path[pawn.PathIndex]);
+                    movePercent = pawn.MoveProgress;
+                    if (movePercent < 0) movePercent = 0;
+                    else if (movePercent > 100) movePercent = 100;
+                }
+
                 writer.AddPawn(new PawnView(
                     pawn.Id,
-                    size.FromIndex(pawn.Cell),
+                    cell,
                     pawn.Needs[NeedIndex.Food],
                     pawn.Needs[NeedIndex.Rest],
                     pawn.Mood,
-                    pawn.CurrentJob != null ? pawn.CurrentJob.DefIndex : -1));
+                    pawn.CurrentJob != null ? pawn.CurrentJob.DefIndex : -1,
+                    nextCell,
+                    movePercent));
             }
 
             var items = _ctx.Items.Items;

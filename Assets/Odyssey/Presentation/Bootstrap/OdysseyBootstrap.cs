@@ -68,6 +68,7 @@ namespace Odyssey.Presentation.Bootstrap
         Material? _actorMaterial;
         MapGenDef? _gen;
         double _accumulator;
+        float _tickAlpha;
         readonly Stopwatch _frameTimer = new Stopwatch();
         double _renderMs;
         double _tickMs;
@@ -206,6 +207,13 @@ namespace Odyssey.Presentation.Bootstrap
                 _tickMs = _frameTimer.Elapsed.TotalMilliseconds;
                 _speedChangePending = false;
                 if (budget <= 0) _accumulator = 0d; // give up rather than spiral
+
+                // How far this frame sits between the last tick and the next. Presentation uses
+                // it to carry a walking pawn on past the tick that last moved it, so motion stays
+                // smooth when the frame rate runs ahead of the tick rate. RimWorld tweens the
+                // same way; without it a 144 Hz display shows the same position for two frames
+                // out of three and the walk micro-stutters.
+                _tickAlpha = interval > 0d ? Mathf.Clamp01((float)(_accumulator / interval)) : 0f;
             }
             else
             {
@@ -231,7 +239,8 @@ namespace Odyssey.Presentation.Bootstrap
             _frameTimer.Restart();
             _renderer.Render(activeLayer, slice);
             if (_actorMaterial != null)
-                _renderer.RenderActors(_world.Views.Current, activeLayer, slice, _actorMaterial);
+                _renderer.RenderActors(_world.Views.Current, activeLayer, slice, _actorMaterial,
+                    _tickAlpha, PawnContent.Core().Movement.movePerTick);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
 
