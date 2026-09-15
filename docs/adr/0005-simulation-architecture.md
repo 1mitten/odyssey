@@ -86,7 +86,11 @@ Three ticks must fit one 16.6 ms frame alongside rendering.
 
 **This is the most important number in the benchmark, and it is not a comfortable one.** As measured, with no reachability culling, the plain candidate does not have reliable margin on a 2022 mid-range laptop.
 
-It is also, on inspection, the *right* discomfort rather than an architectural problem. Phase 3 is 65% of the tick, and the diagnostics show **1,058 of 1,800 replans exhausted the full 20,000-node budget and returned failure** — they were searches for targets that were never reachable. The expensive searches are the futile ones. `d-04-pathfinding.md` answers exactly this with district ids that make `Reachable()` an integer comparison, and the first experiment in M2 is to re-run this phase with that check in front of the search. If phase 3 does not collapse, the design is wrong and we find out in the cheapest possible place.
+It is also, on inspection, the *right* discomfort rather than an architectural problem. Phase 3 is 65% of the tick, and the diagnostics show **1,058 of 1,800 replans exhausted the full 20,000-node budget and returned failure**.
+
+**Update, 2026-09-15: the experiment was run and it partly falsified the explanation above.** The attributed cause — that the failures were searches for unreachable targets — is wrong: only 14% of targets are district-unreachable on this workload, and under 1% on a structured one. The real fix was the hierarchical abstract-region stage plus a better heuristic. Measured at full scale: **2,189 ms → 896 ms, a 2.4× improvement, with budget exhaustion down from 826 to 77.** Pathfinding therefore falls from roughly 65% of the tick to roughly 45%, not to nothing. Full detail and the corrected reasoning in `docs/design/05-ai-and-jobs.md` §6.
+
+Applying that 2.4× to the measured phase 3 gives an estimated tick of about **0.88 ms**, which changes the margin table above materially: three ticks cost ~2.6 ms here, ~7.9 ms at a 3× discount leaving ~8.7 ms of frame for rendering, and ~10.6 ms at 4× leaving ~6 ms. Tight is now merely tight rather than impossible. This estimate should be replaced by a re-run of the full benchmark once the pathfinder is wired into the tick.
 
 Two consequences either way: the frame budget is a **pathfinding** problem, not an architecture problem, and it must not be used to choose between the candidates unless they differ materially on phase 3 for structural reasons.
 

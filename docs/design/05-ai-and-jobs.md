@@ -105,6 +105,23 @@ Non-negotiable, since every milestone gate hashes state:
 
 Per-agent replan budgets are counted in nodes and set from measurement, not taste. The benchmark gives the pre-optimisation baseline: 0.93 ms mean for one replan per tick plus 50 pawns of movement, on a fast machine, with no reachability culling.
 
-The obvious experiment, and the first thing M2 should do: **re-run the D1 phase-3 workload with a district check in front of the search.** The 1,058 failed searches should disappear almost entirely, because they were searches for targets that were never reachable. If that number does not collapse, this design is wrong and we will know early.
+### The experiment was run, and it falsified the stated reason
+
+**Corrected 2026-09-15.** This section previously claimed the 1,058 failed searches "were searches for targets that were never reachable", and predicted that a district check in front of the search would make them disappear. The experiment was run at full scale. The measured result:
+
+| | Total | Mean replan | Succeeded | Budget exhausted |
+|---|---|---|---|---|
+| Naive cell A-star (baseline) | 2,189 ms | 1.216 ms | 830 | 826 |
+| Districts + two-stage | 896 ms | 0.498 ms | 1,473 | 77 |
+
+**2.4× faster overall, with budget exhaustion down 91%.** But **the premise was wrong**: only **250 of 1,800 targets (14%)** are district-unreachable, and on a structured rooms-and-doorways world only **6 of 1,800**. The futile searches do vanish exactly as designed and now cost two array reads, but they were a minority all along. What actually removed the 826 failures was the **abstract region stage plus a connector-density-derived heuristic**, not the reachability check.
+
+Isolating the district check alone gives **1.4×** on the random world and **1.0×** on a structured one.
+
+So pathfinding falls from roughly 65% of the old tick to roughly 45%, not to nothing.
+
+**The architecture is still right, for a better-stated reason.** Reachability must be answered before pathing because **every job-giver scan asks it thousands of times per tick** against candidate targets, and it must be free there — two array reads rather than a search. That is a larger and more certain win than the replan saving, and it is the reason to keep it. The replan speed-up comes mostly from the hierarchical search.
+
+The lesson generalises: a plausible causal story attached to a real number is still a guess until it is measured separately.
 
 Still unmeasured, and honestly so: the right chunk and region size for a stamped ruined city (unmeasurable until mapgen exists), whether the cell A-star needs Burst at all (a D1 follow-up), and HPA-style crossing-distance caching under constant editing, for which no published measurement was found.
