@@ -42,6 +42,16 @@ If both candidates pass every gate and their total tick costs are **within 1.5×
 
 If the faster candidate is more than 1.5× faster *and* the slower one has no comfortable margin against gate 5, speed wins and the modding story becomes a design problem to solve rather than a reason to choose differently.
 
+## The benchmark machine, and what its numbers do not mean
+
+Both candidates run on the Windows dev machine: **AMD Ryzen 7 9800X3D, 32 GB**. That is a 2024-generation part with 96 MB of L3 cache, and this workload is exactly the kind that flatters it — 2.5 million cells of array data with a random-access A-star on top. The performance target is a **2022 mid-range laptop**, which has both lower clocks and dramatically less cache.
+
+So the raw figures must be discounted before they are compared against the frame budget, and the discount is not a small one. A conservative factor for this workload is **3×, and possibly 4× for the cache-sensitive pathfinding phase** — larger than the usual single-thread gap, precisely because the X3D cache is doing so much work here.
+
+The budget itself: 60 FPS at 3× game speed means **three ticks inside one 16.6 ms frame**, sharing that frame with rendering and UI. A tick therefore has roughly 5.5 ms to itself on the *target* machine, before rendering takes its share.
+
+This is the number that decides whether either candidate is viable, and it will be applied to both identically.
+
 ## Decision
 
 *Pending. To be filled from the `D1RESULT` blocks of both candidates, with the raw numbers reproduced in full and the reasoning shown against the criteria above.*
