@@ -65,3 +65,21 @@ What to do: `scripts/unity.sh` treats the **results file, not the process exit c
 Guard: `.unity-version` is the committed pin and `scripts/unity.sh` checks `ProjectVersion.txt` against it before doing anything, restoring the pin and the package files if they have drifted. Without that check the wrapper would read the upgraded file and dutifully launch the wrong editor. **Open the project with the pinned entry in Unity Hub, or with `scripts/unity.sh open`, which always resolves the pin.**
 
 The general lesson: **a version pin that only a file records is not a pin, it is a preference.** If a tool can silently rewrite it, something has to check it.
+
+## Generators and their parameters
+
+**A "disable this feature" floor will quietly overrule a request for none.** The outcrop and ore passes both computed a count from a per-ten-thousand-columns rate and then did `if (count < 1) count = 1`, so that a small map still received the feature instead of rounding it away. Perfectly reasonable, and it also meant that a rate of zero produced one outcrop and one ore deposit on every map ever generated. The barren-map tests failed on it immediately. The floor now applies only when the rate is positive, so zero means zero and small maps still get their one. **A clamp that protects against rounding must not also silently override an explicit value.**
+
+**Read the comparison before reaching for a sentinel.** Making every cell grass looked like it needed a threshold the noise could never reach, so the first attempt set three thresholds to `int.MaxValue`. The pass keeps grass when `cover >= barePatchThreshold`, so the correct value was zero, and the huge one asked for the exact opposite of what was wanted. The generator validated its own parameters and rejected it on the first run. **Parameter validation earns its keep at the moment it refuses something confidently wrong.**
+
+## Rendering
+
+**A benchmark of a map the game does not load is worse than no benchmark, because it still prints a number.** The slice measurement was hardwired to a 60 x 60 x 5 ruined city and went on reporting healthy figures long after the play scene moved to a barren 120 x 120 x 16 wilderness. Nothing failed; the numbers were simply about something else. The size now comes from constants shared with the scene builder, and the measurement renders the layer the scene actually opens on rather than the ground layer beneath it.
+
+**One flat colour over a large area does not read as a surface.** A barren map is a single material in every cell, and drawn in one tint it looks like a painted plane: there is no grain, so nothing conveys that a colonist is crossing ground at all. Dithering the tint across four near-identical shades fixes it with no texture, no extra geometry and no shader work, because the tint is already part of the instanced bucket key. Cost measured rather than assumed: the ground layer goes from 50 draw calls to 100, steady submission stays at 0.04 ms per frame.
+
+Two details matter. Use **smooth low-frequency noise, not a per-cell hash** — an independent shade per cell is television static that shimmers when the camera moves, whereas soft patches a few cells across read as mottled ground and stay still. And derive it from the **world column only**, never from anything chunk-relative, or a seam appears along the grid the renderer happens to divide the map into.
+
+**Only terrain carries a shade, so only terrain may be asked for one.** Reading the variation bits from a construction code returns shade zero and darkens every wall in the world by the low end of the scale. A uniform change like that is invisible as a bug: nothing on screen looks wrong, it just looks slightly darker than intended forever.
+
+**Where a thing is drawn is not where it can be clicked.** Picking answers with the floor cell a ray crosses, but colonists are drawn as a body and a beacon standing metres clear of that floor so they can be found at a glance. Under a tilted camera the player aims at the beacon and the ray lands a cell or two beyond the pawn. With a pick radius of one, the most natural click in the game — straight at the bright marker — selected nothing, which reads as the click being ignored rather than as a near miss.
