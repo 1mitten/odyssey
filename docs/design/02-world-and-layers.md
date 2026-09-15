@@ -52,6 +52,8 @@ A **chunk is 25 × 25 cells within a single layer** — 100 chunks per layer, 4,
 
 A chunk is single-layer on purpose. A vertical chunk would couple layers that are otherwise independent, and the slice camera only ever draws a handful of layers.
 
+**The save format uses a different, compatible chunking**, and the relationship is deliberate rather than accidental: `d-06-save-load.md` groups **five layers** of a 25 × 25 column into one save chunk (800 for a full map, no padding at 250/25 and 40/5), because palette-plus-bit-packing compresses far better across a vertical run of mostly-uniform rock or air. One save chunk is therefore exactly five render chunks stacked, so a dirty render chunk maps to its save chunk by integer division with no lookup. Neither chunking constrains the other, and the flat cell array underneath is the single source of truth for both.
+
 ## 4. Structural support and collapse
 
 This is the project's largest departure from RimWorld and the thing the slice most needs to prove.
