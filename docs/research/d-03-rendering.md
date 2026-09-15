@@ -16,6 +16,10 @@ Can the Synty modules produce the game's look on the confirmed 2.5 × 2.5 × 3.0
 
 **Performance half pending** (the measurable answers brief §5 D3 asks for): `RenderMeshInstanced`/GPU Resident Drawer over module meshes, chunk-level culling, cut-away at layer N (per-layer visibility vs clip plane), draw calls and frame time at 250 × 250 × 40 scale. Constraint imported from the UI session's plan: overlays render as per-chunk procedural meshes, never per-cell UI elements. Owner note: the cut-away must leave hidden layers **non-interactive** (Going Medieval's top complaint, `b-going-medieval.md`).
 
+## Graphics target (owner directive, 2026-09-15)
+
+The rendered game should sit **similar or close to the two concept renders** described in `docs/reference/screenshots/README.md`: Synty low-poly under URP with **cyan emissive trim** carrying night readability (confirmed available — `Synty/Generic_Basic` exposes `_Emission_Map`/`_Emission_Color`/`_Enable_Emission`, per `e-04-tint-strategy.md`), roofless/cut-open interiors at the current slice, a three-quarter mid-height camera, and floating panels that never hide the world. The performance half of this spike must therefore measure with emissive materials, real-time shadows and the cut-away enabled — matching the look is part of the budget, not an afterthought. (The concept's desert-outskirts setting is the *later* map type; the prototype map stays the ruined city.)
+
 ## Layer questions touched
 
 Q9 (how the camera slices): the spike scene stages the geometry for judging slice/ghosting by eye; the display policy recommendation is ghosted-and-non-interactive above the slice.
