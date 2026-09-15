@@ -1,4 +1,4 @@
-# Lane D1 — Simulation architecture: two-way benchmark (spec written; runs pending)
+# Lane D1 — Simulation architecture: two-way benchmark (complete; decision in ADR 0005)
 
 ## Question
 
@@ -30,7 +30,7 @@ The benchmark runs in a **throwaway Unity project** (not the main repo — no UR
 
 ## Status
 
-Spec complete 2026-09-15; a bench-project skeleton was scaffolded the same day (session-local). **The runs have not happened yet** — they are the next unit of work, followed by `docs/adr/0005-simulation-architecture.md` with the numbers.
+**Complete 2026-09-15.** Both candidates implemented, run and cross-validated; see Results below. Decision recorded in `docs/adr/0005-simulation-architecture.md`. Sources for both are committed under `docs/research/d-01-bench/`.
 
 ## Layer questions touched
 
@@ -42,11 +42,11 @@ Q10 (unit of simulation for gas/fire across layers): the grid-propagation phase 
 
 ## Confidence
 
-Spec: high. Numbers: none yet — deliberately unclaimed until the runs exist.
+High. Both candidates passed the self-determinism gate and agreed with each other on a 64-bit state hash, the plain source was checked line by line against the contract, and the fairness caveats were raised by the implementers themselves. The main residual uncertainty is the hardware discount factor for the 2022-laptop target, which is an estimate rather than a measurement.
 
 ## Could not be determined
 
-Nothing yet; this file gains the results table when the runs land.
+The true hardware discount for the target laptop (estimated at 3–4x, not measured — nobody has run this on such a machine). Whether the cell A-star needs Burst, which is deliberately left as the remaining performance reserve. How much of phase 3 the district-reachability check actually removes, which M2 measures.
 
 ---
 

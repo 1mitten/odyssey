@@ -7,4 +7,4 @@ A prototype colony sim in the RimWorld mould, in true 3D with discrete vertical 
 - Dev-machine setup: `docs/setup/local-dev.md`.
 - Headless Unity: `scripts/unity.sh`.
 
-Status: Phases 0–1 complete (2026-09-15) — Unity project at the repository root, five Synty packs imported, cell fixed at 2.5 × 2.5 × 3.0 m (`docs/adr/`). Phase 2 (research) in progress; per-file status in `docs/research/INDEX.md`. `CLAUDE.md` carries the authoritative status.
+Status: Phases 0–3 complete (2026-09-15) — Unity project at the repository root, five Synty packs imported, cell fixed at 2.5 × 2.5 × 3.0 m, simulation architecture decided by benchmark, and the full design set in `docs/design/` with the execution plan in `docs/plans/vertical-slice.md`. **Awaiting owner approval before any gameplay code.** `CLAUDE.md` carries the authoritative status.
