@@ -153,7 +153,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>37</b></a></li>
 <li><a href="#world">World and interface<b>45</b></a></li>
-<li><a href="#proper-nouns">Proper nouns<b>21</b></a></li>
+<li><a href="#proper-nouns">Proper nouns<b>29</b></a></li>
 </ul></nav>
 <main>
 <div class="lede"><h1>Every named thing in the game</h1>
@@ -165,7 +165,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="stat"><b>268</b><i>with icon art</i></div>
 <div class="stat m"><b>114</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
-<div class="stat m"><b>12</b><i>proper nouns unnamed</i></div>
+<div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
 <p id="nohits" class="empty" hidden>Nothing matches that search.</p>
 <section id="commodities" data-sec="1">
@@ -2578,135 +2578,183 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="proper-nouns" data-sec="1" class="nouns">
-<h2>Proper nouns <em class="count">21 entries</em></h2>
-<p class="blurb">Names that are not interface keys: people, places, factions, creatures, the calendar. The brief requires every one of these to be ours rather than borrowed, so this table exists to make the empty rows impossible to miss. <strong>12 of 21 have no name at all</strong>, including the city the whole prototype is set in.</p>
+<h2>Proper nouns <em class="count">29 entries</em></h2>
+<p class="blurb">Names that are not interface keys: people, places, factions, creatures, the calendar. The brief requires every one of these to be ours rather than borrowed, so this table exists to make the empty rows impossible to miss. <strong>0 of 29 have no name at all</strong>, including the city the whole prototype is set in.</p>
 <div class="tbl">
 <div class="row head"><div>Category</div><div>Name</div><div>Notes</div><div class="st">Status</div></div>
-<div class="row" id="colonist.wrenn" data-hay="colonist given name wrenn invented for the hud mockups. the prototype needs a proper name list placeholder" data-gap="0">
-<div class="nm">Colonist given name<span class="k">colonist.wrenn</span></div>
-<div>Wrenn</div>
-<div class="dsc">Invented for the HUD mockups. The prototype needs a proper name list</div>
-<div class="st placeholder">placeholder</div>
-</div>
-<div class="row" id="colonist.odile" data-hay="colonist given name odile as above placeholder" data-gap="0">
-<div class="nm">Colonist given name<span class="k">colonist.odile</span></div>
-<div>Odile</div>
-<div class="dsc">As above</div>
-<div class="st placeholder">placeholder</div>
-</div>
-<div class="row" id="colonist.kester" data-hay="colonist given name kester as above placeholder" data-gap="0">
-<div class="nm">Colonist given name<span class="k">colonist.kester</span></div>
-<div>Kester</div>
-<div class="dsc">As above</div>
-<div class="st placeholder">placeholder</div>
-</div>
-<div class="row" id="colonist.sable" data-hay="colonist given name sable as above placeholder" data-gap="0">
-<div class="nm">Colonist given name<span class="k">colonist.sable</span></div>
-<div>Sable</div>
-<div class="dsc">As above</div>
-<div class="st placeholder">placeholder</div>
-</div>
-<div class="row" id="colonist.fen" data-hay="colonist given name fen as above placeholder" data-gap="0">
-<div class="nm">Colonist given name<span class="k">colonist.fen</span></div>
-<div>Fen</div>
-<div class="dsc">As above</div>
-<div class="st placeholder">placeholder</div>
-</div>
-<div class="row" id="colonist.ilma" data-hay="colonist given name ilma as above placeholder" data-gap="0">
-<div class="nm">Colonist given name<span class="k">colonist.ilma</span></div>
-<div>Ilma</div>
-<div class="dsc">As above</div>
-<div class="st placeholder">placeholder</div>
-</div>
-<div class="row" id="colonist.torv" data-hay="colonist given name torv as above placeholder" data-gap="0">
-<div class="nm">Colonist given name<span class="k">colonist.torv</span></div>
-<div>Torv</div>
-<div class="dsc">As above</div>
-<div class="st placeholder">placeholder</div>
-</div>
-<div class="row" id="colonist.nyx" data-hay="colonist given name nyx as above placeholder" data-gap="0">
-<div class="nm">Colonist given name<span class="k">colonist.nyx</span></div>
-<div>Nyx</div>
-<div class="dsc">As above</div>
-<div class="st placeholder">placeholder</div>
-</div>
-<div class="row" id="calendar.larkspur" data-hay="month larkspur invented for the clock readout in hud-v2. one month of an unwritten calendar; the set, their number and the season they fall in are all undecided placeholder" data-gap="0">
-<div class="nm">Month<span class="k">calendar.larkspur</span></div>
-<div>Larkspur</div>
-<div class="dsc">Invented for the clock readout in hud-v2. One month of an unwritten calendar; the set, their number and the season they fall in are all undecided</div>
-<div class="st placeholder">placeholder</div>
-</div>
-<div class="row gap" id="world.city" data-hay="the city  the ruined city the prototype is set in has no name. it is the single most-used proper noun in the game and does not exist yet needed" data-gap="1">
-<div class="nm">The city<span class="k">world.city</span></div>
-<div><span class="noname">not named</span></div>
-<div class="dsc">The ruined city the prototype is set in has no name. It is the single most-used proper noun in the game and does not exist yet</div>
-<div class="st needed">needed</div>
-</div>
-<div class="row gap" id="world.planet" data-hay="the world  the city-world itself is unnamed needed" data-gap="1">
+<div class="row" id="world.planet" data-hay="the world carrow a city-world: one settlement that grew until it covered the planet. short, bleak, easy to say, and it survives being said a thousand times. the register throughout is english industrial rather than classical or invented-exotic: a working future, not a mythic one proposed" data-gap="0">
 <div class="nm">The world<span class="k">world.planet</span></div>
-<div><span class="noname">not named</span></div>
-<div class="dsc">The city-world itself is unnamed</div>
-<div class="st needed">needed</div>
+<div>Carrow</div>
+<div class="dsc">A city-world: one settlement that grew until it covered the planet. Short, bleak, easy to say, and it survives being said a thousand times. The register throughout is English industrial rather than classical or invented-exotic: a working future, not a mythic one</div>
+<div class="st proposed">proposed</div>
 </div>
-<div class="row gap" id="faction.player" data-hay="the player's group  what the colonists call themselves. rimworld has none, but a salvage crew in a dead city plausibly would needed" data-gap="1">
-<div class="nm">The player's group<span class="k">faction.player</span></div>
-<div><span class="noname">not named</span></div>
-<div class="dsc">What the colonists call themselves. RimWorld has none, but a salvage crew in a dead city plausibly would</div>
-<div class="st needed">needed</div>
+<div class="row" id="world.city" data-hay="the city ashgate the district the prototype is set in. formally ashgate division, colloquially the gate. ash for what happened to it, gate because a division boundary is a gate. the official-versus-colloquial split is deliberate and reusable: old civic signage says one thing, colonists say another proposed" data-gap="0">
+<div class="nm">The city<span class="k">world.city</span></div>
+<div>Ashgate</div>
+<div class="dsc">The district the prototype is set in. Formally Ashgate Division, colloquially the Gate. Ash for what happened to it, gate because a division boundary is a gate. The official-versus-colloquial split is deliberate and reusable: old civic signage says one thing, colonists say another</div>
+<div class="st proposed">proposed</div>
 </div>
-<div class="row gap" id="faction.raiders" data-hay="hostile faction  brief §5 item 13 needs factions. clean room: no borrowed names needed" data-gap="1">
+<div class="row" id="world.colonytype" data-hay="what you build holding the noun for a player settlement. you hold a claim on a block. gives 'your holding', 'a neighbouring holding', and a default colony name of ashgate holding proposed" data-gap="0">
+<div class="nm">What you build<span class="k">world.colonytype</span></div>
+<div>Holding</div>
+<div class="dsc">The noun for a player settlement. You hold a claim on a block. Gives 'your holding', 'a neighbouring holding', and a default colony name of Ashgate Holding</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="faction.player" data-hay="your people reclaimers what your colonists call themselves. reclaiming is the whole economy: you are not miners or settlers, you take a dead city apart and live in it. a little proud, which is right for people who chose this proposed" data-gap="0">
+<div class="nm">Your people<span class="k">faction.player</span></div>
+<div>Reclaimers</div>
+<div class="dsc">What your colonists call themselves. Reclaiming is the whole economy: you are not miners or settlers, you take a dead city apart and live in it. A little proud, which is right for people who chose this</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="faction.raiders" data-hay="hostile faction the tithe raiders who consider a cut of your salvage theirs by right, and collect. the name carries the motive, so a raid needs no explanation. institutional rather than feral, which makes them scarier and gives them negotiators proposed" data-gap="0">
 <div class="nm">Hostile faction<span class="k">faction.raiders</span></div>
-<div><span class="noname">not named</span></div>
-<div class="dsc">Brief §5 item 13 needs factions. Clean room: no borrowed names</div>
-<div class="st needed">needed</div>
+<div>the Tithe</div>
+<div class="dsc">Raiders who consider a cut of your salvage theirs by right, and collect. The name carries the motive, so a raid needs no explanation. Institutional rather than feral, which makes them scarier and gives them negotiators</div>
+<div class="st proposed">proposed</div>
 </div>
-<div class="row gap" id="faction.traders" data-hay="trading faction  as above needed" data-gap="1">
+<div class="row" id="faction.traders" data-hay="trading faction the cartage a hauliers' combine that runs the routes between holdings. sounds like a guild because it is one. trade goodwill, caravan contracts and the price of fuel all sit naturally under it proposed" data-gap="0">
 <div class="nm">Trading faction<span class="k">faction.traders</span></div>
-<div><span class="noname">not named</span></div>
-<div class="dsc">As above</div>
-<div class="st needed">needed</div>
+<div>the Cartage</div>
+<div class="dsc">A hauliers' combine that runs the routes between holdings. Sounds like a guild because it is one. Trade goodwill, caravan contracts and the price of fuel all sit naturally under it</div>
+<div class="st proposed">proposed</div>
 </div>
-<div class="row gap" id="faction.locals" data-hay="neutral faction  as above needed" data-gap="1">
+<div class="row" id="faction.locals" data-hay="neutral faction the kindred other survivor holdings who recognise each other. loosely allied, individually weak, and the source of refugees, wanderers and most of the early quests proposed" data-gap="0">
 <div class="nm">Neutral faction<span class="k">faction.locals</span></div>
-<div><span class="noname">not named</span></div>
-<div class="dsc">As above</div>
-<div class="st needed">needed</div>
+<div>the Kindred</div>
+<div class="dsc">Other survivor holdings who recognise each other. Loosely allied, individually weak, and the source of refugees, wanderers and most of the early quests</div>
+<div class="st proposed">proposed</div>
 </div>
-<div class="row gap" id="storyteller.a" data-hay="storyteller  brief §5 item 11. three or four, each a difficulty curve with a personality. ours, not theirs needed" data-gap="1">
-<div class="nm">Storyteller<span class="k">storyteller.a</span></div>
-<div><span class="noname">not named</span></div>
-<div class="dsc">Brief §5 item 11. Three or four, each a difficulty curve with a personality. Ours, not theirs</div>
-<div class="st needed">needed</div>
+<div class="row" id="storyteller.vell" data-hay="storyteller registrar vell steady escalation. framed as the old civic apparatus still running: a registrar who expects your holding to follow a curve and files it accordingly. the default proposed" data-gap="0">
+<div class="nm">Storyteller<span class="k">storyteller.vell</span></div>
+<div>Registrar Vell</div>
+<div class="dsc">Steady escalation. Framed as the old civic apparatus still running: a registrar who expects your holding to follow a curve and files it accordingly. The default</div>
+<div class="st proposed">proposed</div>
 </div>
-<div class="row gap" id="creature.scavenger" data-hay="city wildlife  the brief replaces muffalo with city wildlife. no species is named needed" data-gap="1">
+<div class="row" id="storyteller.ida" data-hay="storyteller warden ida long quiet stretches, gentler peaks. for building and looking at what you built proposed" data-gap="0">
+<div class="nm">Storyteller<span class="k">storyteller.ida</span></div>
+<div>Warden Ida</div>
+<div class="dsc">Long quiet stretches, gentler peaks. For building and looking at what you built</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="storyteller.static" data-hay="storyteller the static no curve at all. a broadcast that never stopped, saying whatever it says. for players who want the story to surprise them rather than escalate proposed" data-gap="0">
+<div class="nm">Storyteller<span class="k">storyteller.static</span></div>
+<div>the Static</div>
+<div class="dsc">No curve at all. A broadcast that never stopped, saying whatever it says. For players who want the story to surprise them rather than escalate</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="storyteller.crane" data-hay="storyteller inspector crane front-loaded and harsh. arrives early, does not wait for you to be ready. the hard mode proposed" data-gap="0">
+<div class="nm">Storyteller<span class="k">storyteller.crane</span></div>
+<div>Inspector Crane</div>
+<div class="dsc">Front-loaded and harsh. Arrives early, does not wait for you to be ready. The hard mode</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="creature.scavenger" data-hay="city wildlife midden hog pig-descended, thrives on refuse heaps, tameable. the reliable meat and leather animal, and the one you meet first proposed" data-gap="0">
 <div class="nm">City wildlife<span class="k">creature.scavenger</span></div>
-<div><span class="noname">not named</span></div>
-<div class="dsc">The brief replaces muffalo with city wildlife. No species is named</div>
-<div class="st needed">needed</div>
+<div>midden hog</div>
+<div class="dsc">Pig-descended, thrives on refuse heaps, tameable. The reliable meat and leather animal, and the one you meet first</div>
+<div class="st proposed">proposed</div>
 </div>
-<div class="row gap" id="creature.predator" data-hay="city predator  as above needed" data-gap="1">
+<div class="row" id="creature.predator" data-hay="city predator girder cat a lean climbing predator that hunts along the structure of a ruin. named for the verticality on purpose: it arrives from a layer you were not watching proposed" data-gap="0">
 <div class="nm">City predator<span class="k">creature.predator</span></div>
-<div><span class="noname">not named</span></div>
-<div class="dsc">As above</div>
-<div class="st needed">needed</div>
+<div>girder cat</div>
+<div class="dsc">A lean climbing predator that hunts along the structure of a ruin. Named for the verticality on purpose: it arrives from a layer you were not watching</div>
+<div class="st proposed">proposed</div>
 </div>
-<div class="row gap" id="creature.synth" data-hay="feral machine  currently described as a feral synth, which is a description rather than a name. ui.pawn.synth points at it needed" data-gap="1">
+<div class="row" id="creature.synth" data-hay="feral machine loper a long-legged maintenance unit still walking its rounds, now hostile to anything that moves. not alive, not intelligent, not harmless. ui.pawn.synth points at this proposed" data-gap="0">
 <div class="nm">Feral machine<span class="k">creature.synth</span></div>
-<div><span class="noname">not named</span></div>
-<div class="dsc">Currently described as a feral synth, which is a description rather than a name. ui.pawn.synth points at it</div>
-<div class="st needed">needed</div>
+<div>loper</div>
+<div class="dsc">A long-legged maintenance unit still walking its rounds, now hostile to anything that moves. Not alive, not intelligent, not harmless. ui.pawn.synth points at this</div>
+<div class="st proposed">proposed</div>
 </div>
-<div class="row gap" id="calendar.set" data-hay="the calendar  month names, how many, day length, and what the seasons are called needed" data-gap="1">
-<div class="nm">The calendar<span class="k">calendar.set</span></div>
-<div><span class="noname">not named</span></div>
-<div class="dsc">Month names, how many, day length, and what the seasons are called</div>
-<div class="st needed">needed</div>
+<div class="row" id="creature.pack" data-hay="pack animal dray hog a larger bred cousin of the midden hog, for caravans. not in the original list; caravans need something to carry the load and it should not be a vehicle at prototype scale proposed" data-gap="0">
+<div class="nm">Pack animal<span class="k">creature.pack</span></div>
+<div>dray hog</div>
+<div class="dsc">A larger bred cousin of the midden hog, for caravans. Not in the original list; caravans need something to carry the load and it should not be a vehicle at prototype scale</div>
+<div class="st proposed">proposed</div>
 </div>
-<div class="row gap" id="research.tree" data-hay="research project names  brief §5 item 13. none invented. they will be among the most-read text in the game needed" data-gap="1">
-<div class="nm">Research project names<span class="k">research.tree</span></div>
-<div><span class="noname">not named</span></div>
-<div class="dsc">Brief §5 item 13. None invented. They will be among the most-read text in the game</div>
-<div class="st needed">needed</div>
+<div class="row" id="calendar.structure" data-hay="the calendar 6 months of 12 days, 72-day year three seasons of two months each. a short year means seasonal pressure arrives often, which a prototype wants: you see a full cycle in ten hours rather than thirty. days stay 24 hours for legibility proposed" data-gap="0">
+<div class="nm">The calendar<span class="k">calendar.structure</span></div>
+<div>6 months of 12 days, 72-day year</div>
+<div class="dsc">Three seasons of two months each. A short year means seasonal pressure arrives often, which a prototype wants: you see a full cycle in ten hours rather than thirty. Days stay 24 hours for legibility</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="calendar.m1" data-hay="month larkspur first month of wash. botanical month names are a civic nicety the city kept from before it was a city, which is the kind of detail that makes a dead place feel lived in. invented earlier for the clock readout and kept proposed" data-gap="0">
+<div class="nm">Month<span class="k">calendar.m1</span></div>
+<div>Larkspur</div>
+<div class="dsc">First month of Wash. Botanical month names are a civic nicety the city kept from before it was a city, which is the kind of detail that makes a dead place feel lived in. Invented earlier for the clock readout and kept</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="calendar.m2" data-hay="month tansy second month of wash proposed" data-gap="0">
+<div class="nm">Month<span class="k">calendar.m2</span></div>
+<div>Tansy</div>
+<div class="dsc">Second month of Wash</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="calendar.m3" data-hay="month bramble first month of glare proposed" data-gap="0">
+<div class="nm">Month<span class="k">calendar.m3</span></div>
+<div>Bramble</div>
+<div class="dsc">First month of Glare</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="calendar.m4" data-hay="month ember second month of glare proposed" data-gap="0">
+<div class="nm">Month<span class="k">calendar.m4</span></div>
+<div>Ember</div>
+<div class="dsc">Second month of Glare</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="calendar.m5" data-hay="month hollow first month of rime proposed" data-gap="0">
+<div class="nm">Month<span class="k">calendar.m5</span></div>
+<div>Hollow</div>
+<div class="dsc">First month of Rime</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="calendar.m6" data-hay="month candle second month of rime proposed" data-gap="0">
+<div class="nm">Month<span class="k">calendar.m6</span></div>
+<div>Candle</div>
+<div class="dsc">Second month of Rime</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="calendar.s1" data-hay="season wash the rains. growing season, and the season that puts fires out proposed" data-gap="0">
+<div class="nm">Season<span class="k">calendar.s1</span></div>
+<div>Wash</div>
+<div class="dsc">The rains. Growing season, and the season that puts fires out</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="calendar.s2" data-hay="season glare dry heat. cooling matters, crops need water, tempers go proposed" data-gap="0">
+<div class="nm">Season<span class="k">calendar.s2</span></div>
+<div>Glare</div>
+<div class="dsc">Dry heat. Cooling matters, crops need water, tempers go</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="calendar.s3" data-hay="season rime cold. the season the prototype's ten-day survival run should eventually land in, because it is the one that kills you proposed" data-gap="0">
+<div class="nm">Season<span class="k">calendar.s3</span></div>
+<div>Rime</div>
+<div class="dsc">Cold. The season the prototype's ten-day survival run should eventually land in, because it is the one that kills you</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="research.convention" data-hay="research naming plain functional names projects are named for what they unlock, not given proper names: hydroponics, powered doors, structural bracing, salvage sorting. a research list is scanned, not read, and a clever name costs the player a guess. proper nouns are reserved for people, places and factions proposed" data-gap="0">
+<div class="nm">Research naming<span class="k">research.convention</span></div>
+<div>Plain functional names</div>
+<div class="dsc">Projects are named for what they unlock, not given proper names: Hydroponics, Powered Doors, Structural Bracing, Salvage Sorting. A research list is scanned, not read, and a clever name costs the player a guess. Proper nouns are reserved for people, places and factions</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="research.early" data-hay="early projects salvage sorting, structural bracing, powered doors, hydroponics, cold storage, field medicine, conduit runs, vertical haulage, rubble clearance, shell survey, water reclamation, basic fabrication the twelve the vertical slice and m4 to m5 need. vertical haulage and shell survey are ours: lifts, and reading a ruin before you build in it. the rest of the tree arrives with m7 proposed" data-gap="0">
+<div class="nm">Early projects<span class="k">research.early</span></div>
+<div>Salvage Sorting, Structural Bracing, Powered Doors, Hydroponics, Cold Storage, Field Medicine, Conduit Runs, Vertical Haulage, Rubble Clearance, Shell Survey, Water Reclamation, Basic Fabrication</div>
+<div class="dsc">The twelve the vertical slice and M4 to M5 need. Vertical Haulage and Shell Survey are ours: lifts, and reading a ruin before you build in it. The rest of the tree arrives with M7</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="colonist.register" data-hay="colonist names given names only, no surnames a holding is small enough to be on first-name terms, and a single short name fits the roster bar, which is the densest region in the interface. short, consonant-forward, mixed origin, nothing that reads as a joke proposed" data-gap="0">
+<div class="nm">Colonist names<span class="k">colonist.register</span></div>
+<div>Given names only, no surnames</div>
+<div class="dsc">A holding is small enough to be on first-name terms, and a single short name fits the roster bar, which is the densest region in the interface. Short, consonant-forward, mixed origin, nothing that reads as a joke</div>
+<div class="st proposed">proposed</div>
+</div>
+<div class="row" id="colonist.pool" data-hay="starter name pool wrenn, odile, kester, sable, fen, ilma, torv, nyx the eight invented for the mockups, promoted. expands to about forty at m2, when pawn generation needs a pool that does not repeat in a colony of fifty proposed" data-gap="0">
+<div class="nm">Starter name pool<span class="k">colonist.pool</span></div>
+<div>Wrenn, Odile, Kester, Sable, Fen, Ilma, Torv, Nyx</div>
+<div class="dsc">The eight invented for the mockups, promoted. Expands to about forty at M2, when pawn generation needs a pool that does not repeat in a colony of fifty</div>
+<div class="st proposed">proposed</div>
 </div>
 </div>
 <p class="empty" hidden>No proper nouns match.</p>
