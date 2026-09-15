@@ -58,3 +58,12 @@ crashlytics-build.properties
 /Assets/Synty/
 /Assets/Synty.meta
 *.unitypackage
+
+# Generated icon placeholders: docs/design/09-ui-and-input.md section 7 requires these to be
+# regenerated rather than committed, because otherwise every icon-key rename churns binaries.
+# Folder and meta both, following the Synty pattern above.
+/Assets/Art/Ui/generated/
+/Assets/Art/Ui/generated.meta
+
+# Generated icon contact sheets for review. tools/icons/icons.py contact rebuilds them.
+/art-source/icons/contact/

@@ -1,0 +1,9 @@
+sheet,file,cols,rows,cell_w,cell_h,trim_mode,target_px,native_scale,source_note
+01,01-raw-materials.png,,,,,union,64,,"raw and wilderness materials: stone, logs, ore, hides, plants, fungus, bone, hand tools"
+02,02-food.png,,,,,union,64,,"prepared food: tins, soup, bread, cheese, fish, produce, milk, coffee, wine"
+03,03-camp-crafting.png,,,,,union,64,,"camp and crafting stations: campfire, anvil, cauldron, workbench, tent, well. Mostly pre-industrial"
+04,04-manufactured.png,,,,,union,64,,"manufactured materials: ingots, wire, circuit boards, glass, gears, pipe, fabric"
+05,05-tools-weapons.png,,,,,union,64,,"tools and weapons: drill, knives, axes, pickaxe, shovel, sickle, revolver, crossbow, shield"
+06,06-action-tiles.png,,,,,cell,64,,"framed action tiles: verbs rather than items. Frames are part of the art, hence trim_mode=cell"
+07,07-anatomy.png,,,,,union,64,,"anatomy and butchery: organs, bone, hide, meat, skull, brain, eye"
+08,08-salvage-gear.png,,,,,union,64,,"modern salvage and survival gear: jerrycan, battery, solar panel, generator, med kit, radiation"
