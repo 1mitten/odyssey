@@ -87,7 +87,7 @@ namespace Odyssey.Presentation.Rendering
             Color.white,                               // rock
             Color.white,                               // buried city seam
             Color.white,                               // salvage
-            new Color(1.16f, 1.44f, 1.37f),            // 10 grass — lifted towards the reference
+            new Color(1.04f, 1.30f, 1.55f),            // 10 grass — lifted towards the reference
             Color.white,                               // 11 bare earth
             Color.white,                               // 12 packed gravel
             Color.white,                               // 13 sand

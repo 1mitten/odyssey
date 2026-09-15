@@ -20,6 +20,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Odyssey.Presentation.Bootstrap;
+using Odyssey.Sim;
+using Odyssey.Sim.Pathing;
+using Odyssey.Sim.Pawns;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
@@ -29,6 +32,7 @@ using Odyssey.Sim.Worldgen.Natural;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Odyssey.EditorTools
 {
@@ -68,6 +72,181 @@ namespace Odyssey.EditorTools
         /// a number for that without a GPU would be a fiction.
         /// </summary>
         public static void Measure() => MeasureInternal(Application.isBatchMode);
+
+        /// <summary>
+        /// Render the play view to PNG files on disk, headless.
+        ///
+        /// **Why this exists.** Four rounds of visual faults were diagnosed by reading code and
+        /// reasoning about what the renderer ought to produce, and reasoning got the cause wrong
+        /// more than once: the shadow acne, the raking sun and the fog wash were all invisible in
+        /// the source and obvious in a picture. A renderer whose output nobody can look at is
+        /// debugged by guesswork.
+        ///
+        /// It needs a real graphics device, so unlike every other entry point here it must run
+        /// **without** <c>-nographics</c>: use <c>scripts/unity.sh shot</c>. The instanced draws
+        /// are submitted from the render-pipeline callback because <c>RenderMeshInstanced</c>
+        /// enqueues for the camera currently rendering, and outside a running player there is no
+        /// frame loop to enqueue them in.
+        /// </summary>
+        public static void Screenshot() => ScreenshotInternal(Application.isBatchMode);
+
+        static void ScreenshotInternal(bool exitWhenDone)
+        {
+            int exitCode = 0;
+            ChunkRenderer? renderer = null;
+            System.Action<ScriptableRenderContext, Camera>? hook = null;
+
+            try
+            {
+                var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);
+                var size = new GridSize(PlaySizeXZ, PlaySizeXZ, PlayLayers);
+                var gen = (NaturalMapGenDef)MapGenerator.DefaultDef(MapType.Natural, size);
+                gen.MakeBarren();
+                var grid = new CellGrid(size);
+                var chunks = new ChunkGrid(size);
+                MapGenOutcome result = MapGenerator.Generate(grid, 1u, gen);
+
+                var library = new ModuleLibrary(catalogue);
+                var model = new Odyssey.Presentation.World.WorldRenderModel(size, chunks, library);
+                model.RefreshAll(grid, result.Natural!.Context.Edifices);
+
+                renderer = new ChunkRenderer(model);
+                var slice = new SliceSettings();
+                int activeLayer = result.StartCell.Y;
+
+                // The scene's own lighting, so the picture matches what the player sees rather
+                // than some convenient studio setup that would hide the very faults being hunted.
+                var lighting = new GameObject("ShotRoot").transform;
+                BuildLighting(lighting);
+
+                var cameraObject = new GameObject("ShotCamera");
+                var camera = cameraObject.AddComponent<Camera>();
+                camera.fieldOfView = 40f;
+                camera.nearClipPlane = 0.3f;
+                camera.farClipPlane = 2000f;
+                camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.backgroundColor = new Color(0.16f, 0.19f, 0.24f);
+
+                // Colonists too, and through the real simulation rather than a few poses dropped
+                // on the grass. The point of this harness is that the picture is the game: if the
+                // figures are placed wrong, sunk into the ground or facing nowhere, that has to
+                // show up here rather than the first time somebody presses Play.
+                var nav = new NavGraph(grid);
+                nav.Rebuild();
+                var pawns = new PawnContext(
+                    grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core());
+                var support = new SupportSystem(grid, new SupportSolver(grid), chunks);
+                var mirror = new Odyssey.Presentation.World.GridMirrorContributor(
+                    grid, result.Natural!.Context.Edifices, model);
+
+                SimWorld world = new SimWorldBuilder()
+                    .WithSeed(1u)
+                    .WithSize(size)
+                    .AddSystem(_ => support)
+                    .AddSystem(_ => new NavigationSystem(nav, support))
+                    .AddSystem(_ => new NeedsSystem(pawns))
+                    .AddSystem(_ => new JobSystem(pawns))
+                    .AddSystem(_ => new MovementSystem(pawns))
+                    .AddTickable(_ => pawns.Pawns)
+                    .AddSnapshotContributor(mirror)
+                    .AddSnapshotContributor(pawns.Pawns)
+                    .Build();
+
+                ColonyScenario.Place(grid, pawns, result.StartCell, 1u, 5);
+                for (int i = 0; i < 120; i++) world.Tick();   // let them pick jobs and start walking
+
+                var actorMaterial = new Material(library.FallbackMaterial) { name = "Odyssey/Actor" };
+                actorMaterial.SetColor("_BaseColor", new Color(0.98f, 0.36f, 0.20f));
+
+                ChunkRenderer drawing = renderer;
+                hook = (context, rendering) =>
+                {
+                    if (rendering != camera) return;
+                    drawing.Render(activeLayer, slice);
+                    drawing.RenderActors(world.Views.Current, activeLayer, slice, actorMaterial);
+                };
+                RenderPipelineManager.beginCameraRendering += hook;
+
+                var focus = new Vector3(
+                    result.StartCell.X * CellMetrics.SizeXZ,
+                    activeLayer * CellMetrics.SizeY,
+                    result.StartCell.Z * CellMetrics.SizeXZ);
+
+                Shoot(camera, focus, 48f, 48f, "Logs/shot-play.png");
+                Shoot(camera, focus, 42f, 18f, "Logs/shot-close.png");
+                Shoot(camera, focus, 70f, 26f, "Logs/shot-down.png");
+
+                Debug.Log("[Shot] wrote Logs/shot-play.png, Logs/shot-close.png, Logs/shot-down.png");
+
+                UnityEngine.Object.DestroyImmediate(cameraObject);
+                UnityEngine.Object.DestroyImmediate(lighting.gameObject);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"[Shot] failed: {e}");
+                exitCode = 1;
+            }
+            finally
+            {
+                if (hook != null) RenderPipelineManager.beginCameraRendering -= hook;
+                renderer?.Dispose();
+                if (exitWhenDone) EditorApplication.Exit(exitCode);
+            }
+        }
+
+        /// <summary>The bounding box a resolved module actually occupies once placed, in metres.</summary>
+        static string Describe(ResolvedModule module)
+        {
+            if (module.Parts.Length == 0) return "no geometry";
+
+            var min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+            var max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+
+            foreach (ModulePart part in module.Parts)
+            {
+                Bounds b = part.Mesh.bounds;
+                for (int corner = 0; corner < 8; corner++)
+                {
+                    var point = new Vector3(
+                        (corner & 1) == 0 ? b.min.x : b.max.x,
+                        (corner & 2) == 0 ? b.min.y : b.max.y,
+                        (corner & 4) == 0 ? b.min.z : b.max.z);
+                    point = part.Local.MultiplyPoint3x4(point);
+                    min = Vector3.Min(min, point);
+                    max = Vector3.Max(max, point);
+                }
+            }
+
+            Vector3 size = max - min;
+            return $"{size.x:0.00} wide x {size.y:0.00} tall x {size.z:0.00} deep, base y {min.y:0.00}";
+        }
+
+        static void Shoot(Camera camera, Vector3 focus, float pitch, float distance, string path)
+        {
+            var rotation = Quaternion.Euler(pitch, 45f, 0f);
+            camera.transform.SetPositionAndRotation(focus - rotation * Vector3.forward * distance, rotation);
+
+            var target = new RenderTexture(1600, 900, 24, RenderTextureFormat.ARGB32)
+            {
+                antiAliasing = 2,
+            };
+            camera.targetTexture = target;
+            camera.Render();
+
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = target;
+            var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+            image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+            image.Apply();
+            RenderTexture.active = previous;
+
+            Directory.CreateDirectory(Path.GetFullPath("Logs"));
+            File.WriteAllBytes(Path.GetFullPath(path), image.EncodeToPNG());
+
+            camera.targetTexture = null;
+            UnityEngine.Object.DestroyImmediate(image);
+            UnityEngine.Object.DestroyImmediate(target);
+        }
 
         static void MeasureInternal(bool exitWhenDone)
         {
@@ -129,6 +308,18 @@ namespace Odyssey.EditorTools
                     $"[Measure] draw calls {renderer.DrawCalls}, instances {renderer.InstancesDrawn}, " +
                     $"chunks drawn {renderer.ChunksDrawn}, materials {renderer.MaterialCount}, " +
                     $"modules with art {library.ArtBackedCount()}/{library.Count - 1}");
+
+                // The colonist figure is baked from a rigged character at load, and two things
+                // about that bake can fail silently. If the pose clip does not retarget, the bake
+                // captures the bind pose and every colonist stands in a T-pose, which shows up
+                // here as a width near the 2 m arm span rather than near half a metre. If the
+                // placement is wrong the figure sinks into the ground or floats above it, which
+                // shows up as a base far from zero. Both are cheaper to read as numbers than to
+                // hunt for on screen.
+                ResolvedModule colonist = library[library.Resolve(ModuleIds.Colonist, ModuleShape.Pillar)];
+                report.AppendLine(
+                    $"[Measure] colonist: {colonist.Parts.Length} parts, art {colonist.UsesArt}, " +
+                    Describe(colonist));
 
                 for (int layer = 0; layer < size.SizeY; layer++)
                 {
@@ -380,6 +571,26 @@ namespace Odyssey.EditorTools
                 prefabName = "SM_Gen_Env_Tree_03", centreXZ = true, baseAtY = true,
             });
 
+            // Colonists. A Synty character is a rigged humanoid with no MeshFilter anywhere on it,
+            // so the ordinary prefab path finds no geometry at all and quietly falls back to a
+            // grey box; ModuleLibrary.CollectSkinned explains why baking is the way out and what
+            // it costs. The pose clip matters as much as the mesh: bake without one and every
+            // colonist stands in a T-pose.
+            //
+            // Measured, not guessed: the character is 1.79 m to the crown with its feet on the
+            // prefab origin, against a cell 2.5 m square and 3.0 m tall. At true scale that is a
+            // few pixels once the camera pulls back, which is how five colonists managed to be
+            // invisible before. The board view wants them read at a glance, so they are drawn
+            // half again as large, which brings them to 2.5 m and still leaves headroom in a cell.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.Colonist, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Chr_Peasent_Male_01",
+                poseClipName = "A_Idle_Standing_Masc",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1.4f, 1.4f, 1.4f),
+            });
+
             return rows;
         }
 
@@ -410,6 +621,18 @@ namespace Odyssey.EditorTools
                 row.material = material;
             }
 
+            var clips = new Dictionary<string, AnimationClip?>(StringComparer.Ordinal);
+            foreach (ModuleEntry row in rows)
+            {
+                if (string.IsNullOrEmpty(row.poseClipName)) continue;
+                if (!clips.TryGetValue(row.poseClipName, out AnimationClip? clip))
+                {
+                    clip = FindSyntyClip(row.poseClipName);
+                    clips[row.poseClipName] = clip;
+                }
+                row.poseClip = clip;
+            }
+
             var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);
             if (catalogue == null)
             {
@@ -435,6 +658,30 @@ namespace Odyssey.EditorTools
                 .OrderBy(p => p, StringComparer.Ordinal)
                 .FirstOrDefault();
             return path == null ? null : AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        }
+
+        /// <summary>
+        /// Exact-name clip lookup under Assets/Synty. Absent packs give null.
+        ///
+        /// A clip in this pack is a sub-asset of an FBX rather than a file of its own, so the file
+        /// is located by name and then opened to find the clip inside it. Unity's own preview
+        /// clips share that file and must be skipped, or the pose comes from a thumbnail.
+        /// </summary>
+        static AnimationClip? FindSyntyClip(string exactName)
+        {
+            if (!Directory.Exists(Path.GetFullPath("Assets/Synty"))) return null;
+            string[] guids = AssetDatabase.FindAssets($"{exactName} t:AnimationClip", new[] { "Assets/Synty" });
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (!string.Equals(Path.GetFileNameWithoutExtension(path), exactName,
+                        StringComparison.OrdinalIgnoreCase)) continue;
+
+                foreach (UnityEngine.Object asset in AssetDatabase.LoadAllAssetsAtPath(path))
+                    if (asset is AnimationClip clip && !clip.name.StartsWith("__preview__"))
+                        return clip;
+            }
+            return null;
         }
 
         /// <summary>Exact-name material lookup under Assets/Synty. Absent packs give null.</summary>

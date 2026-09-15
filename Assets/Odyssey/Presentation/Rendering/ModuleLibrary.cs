@@ -74,7 +74,14 @@ namespace Odyssey.Presentation.Rendering
         readonly List<ResolvedModule> _modules = new List<ResolvedModule>();
         readonly Dictionary<string, int> _byId = new Dictionary<string, int>();
         readonly List<string> _missing = new List<string>();
+        readonly List<Mesh> _baked = new List<Mesh>();
         Material? _fallbackMaterial;
+
+        /// <summary>
+        /// Meshes baked from rigged art, which the library created and therefore owns. Unity will
+        /// not collect them, so a caller that tears the library down destroys these.
+        /// </summary>
+        public IReadOnlyList<Mesh> BakedMeshes => _baked;
 
         public ModuleLibrary(ModuleCatalogue? catalogue)
         {
@@ -195,6 +202,8 @@ namespace Odyssey.Presentation.Rendering
                 else bounds.Encapsulate(local_b);
             }
 
+            CollectSkinned(prefab, entry, raw, ref bounds, ref hasBounds);
+
             if (raw.Count == 0) return new ModulePart[0];
 
             // Neutralise whichever pivot convention the piece uses, once per module rather than
@@ -211,6 +220,82 @@ namespace Odyssey.Presentation.Rendering
                 parts[i] = new ModulePart(raw[i].mesh, raw[i].submesh, raw[i].material,
                     place * raw[i].local, fallback: false);
             return parts;
+        }
+
+        /// <summary>
+        /// Turn a rigged character into plain meshes this renderer can actually draw.
+        ///
+        /// **Why this exists.** A Synty character carries no <see cref="MeshFilter"/> at all: its
+        /// geometry hangs off <see cref="SkinnedMeshRenderer"/>. The static path above therefore
+        /// found nothing, fell through to the primitive box and logged the id as missing art — a
+        /// grey cube where a person should be, with no error to explain it.
+        ///
+        /// **Why baking rather than instancing the rig.** <c>RenderMeshInstanced</c> takes one mesh
+        /// and many matrices; there is no per-instance bone palette, so a skinned mesh cannot go
+        /// through it. Handing over <c>sharedMesh</c> would not fail loudly either — that mesh is
+        /// the bind pose in bone space, so it would draw a splayed, unskinned figure. Baking once
+        /// at load collapses the rig into an ordinary mesh, after which a colonist costs exactly
+        /// what a wall costs and travels the same path as everything else in the renderer.
+        ///
+        /// The cost is that a baked figure does not animate; it glides. At the distance this game
+        /// is played from that is a far smaller deficit than a grey box, and it is a stepping
+        /// stone rather than a dead end: a pooled <c>GameObject</c> with an Animator can take over
+        /// for the handful of pawns actually on screen, keeping this as the cheap far-distance
+        /// form.
+        ///
+        /// The instance is temporary and is destroyed before this returns. The baked meshes are
+        /// ours and are owned by the library from here on.
+        /// </summary>
+        void CollectSkinned(GameObject prefab, ModuleEntry entry,
+            List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)> raw,
+            ref Bounds bounds, ref bool hasBounds)
+        {
+            if (prefab.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true).Length == 0)
+                return;
+
+            GameObject instance = Object.Instantiate(prefab);
+            instance.hideFlags = HideFlags.HideAndDontSave;
+            try
+            {
+                // Pose it before the snapshot is taken, or the bind pose is what gets captured.
+                if (entry.poseClip != null)
+                    entry.poseClip!.SampleAnimation(instance, entry.poseClipTime);
+
+                Matrix4x4 rootInverse = instance.transform.worldToLocalMatrix;
+                var skins = instance.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: false);
+
+                for (int i = 0; i < skins.Length; i++)
+                {
+                    SkinnedMeshRenderer skin = skins[i];
+                    if (skin.sharedMesh == null || !skin.enabled) continue;
+
+                    var baked = new Mesh { name = skin.sharedMesh.name + "/baked" };
+                    skin.BakeMesh(baked, useScale: true);
+                    _baked.Add(baked);
+
+                    // BakeMesh reports in the renderer's own space, so the renderer's place in the
+                    // hierarchy still has to be accounted for before anything is comparable.
+                    Matrix4x4 local = rootInverse * skin.transform.localToWorldMatrix;
+                    Material[] materials = skin.sharedMaterials;
+
+                    for (int sub = 0; sub < baked.subMeshCount; sub++)
+                    {
+                        Material? material = materials.Length == 0
+                            ? null
+                            : materials[Mathf.Min(sub, materials.Length - 1)];
+                        raw.Add((baked, sub, material ?? FallbackMaterial, local));
+                    }
+
+                    Bounds b = TransformBounds(baked.bounds, local);
+                    if (!hasBounds) { bounds = b; hasBounds = true; }
+                    else bounds.Encapsulate(b);
+                }
+            }
+            finally
+            {
+                if (Application.isPlaying) Object.Destroy(instance);
+                else Object.DestroyImmediate(instance);
+            }
         }
 
         static Bounds TransformBounds(Bounds b, Matrix4x4 m)

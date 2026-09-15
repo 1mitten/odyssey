@@ -127,6 +127,26 @@ namespace Odyssey.Presentation.Rendering
         /// flat and evenly lit. The art direction is flat-shaded low poly; the ground should match.
         /// </summary>
         public bool flattenNormalMap;
+
+        /// <summary>
+        /// An animation clip to pose the prefab in before its skinned mesh is baked.
+        ///
+        /// Without one the bake captures the **bind pose**, which for a humanoid is a T-pose: arms
+        /// straight out, legs together. That is not an error and nothing would report it; the game
+        /// would simply be full of people standing like scarecrows. Sampling a standing idle clip
+        /// first is what makes a baked character read as a person.
+        ///
+        /// Null on a clone without the packs, in which case the bind pose is used and the figure
+        /// looks wrong but still draws. Since a clone has no character prefab either, that case
+        /// does not arise in practice.
+        /// </summary>
+        public AnimationClip? poseClip;
+
+        [Tooltip("The clip this row wants, by asset name. Used to rebuild the reference.")]
+        public string poseClipName = string.Empty;
+
+        [Tooltip("Seconds into the pose clip to sample. Any settled frame of an idle will do.")]
+        public float poseClipTime = 0f;
     }
 
     /// <summary>
@@ -196,6 +216,13 @@ namespace Odyssey.Presentation.Rendering
         // Edifices worldgen places outside a template.
         public const string VaultWall = Prefix + "wall.vault";
         public const string UtilityTap = Prefix + "utility.tap";
+
+        /// <summary>
+        /// The colonist figure. Not placed in a cell by worldgen or the mesher: pawns move every
+        /// tick and are drawn from the published snapshot, so this id is resolved once and drawn
+        /// by the actor pass rather than meshed into a chunk.
+        /// </summary>
+        public const string Colonist = Prefix + "pawn.colonist";
 
         /// <summary>Terrain is not authored per template, so its ids are derived from the def name.</summary>
         public static string Terrain(string terrainDefName) =>

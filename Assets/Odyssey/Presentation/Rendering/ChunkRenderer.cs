@@ -215,6 +215,10 @@ namespace Odyssey.Presentation.Rendering
             if (snapshot.PawnCount == 0 && snapshot.ThingCount == 0) return;
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
 
+            ResolvedModule colonist = ColonistModule();
+            bool hasFigure = colonist.UsesArt && !colonist.IsEmpty;
+            int drawn = 0;
+
             var pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length; i++)
             {
@@ -224,26 +228,42 @@ namespace Odyssey.Presentation.Rendering
                 // Glide between cells rather than snapping. The simulation is discrete and
                 // integer, which determinism requires; this is a presentation facade over it.
                 Vector3 drift = Vector3.zero;
+                Vector3 heading = Vector3.zero;
                 if (pawns[i].MovePercent > 0)
                 {
                     Vector3 from = CellMetrics.FloorCentre(cell);
                     Vector3 to = CellMetrics.FloorCentre(pawns[i].NextCell);
+                    heading = to - from;
                     // Carry the pawn on through the part-tick this frame sits in, so the walk
                     // stays smooth when frames outpace ticks. Clamped so it never runs past the
                     // cell it is entering, which would look like a stumble.
                     float percent = pawns[i].MovePercent + movePerTick * tickAlpha;
-                    drift = (to - from) * (Mathf.Clamp(percent, 0f, 100f) * 0.01f);
+                    drift = heading * (Mathf.Clamp(percent, 0f, 100f) * 0.01f);
                 }
-                // Colonists are the thing the player is watching, so they are drawn deliberately
-                // larger than life: a true-to-scale 0.9 m figure is a few pixels once the camera
-                // pulls back, which is how five colonists managed to be invisible on a 60-cell map.
-                //
-                // Body plus a beacon floating above it. The beacon is what makes a colonist
-                // findable at a glance: it sits clear of the terrain, so it reads against grass,
-                // stone or a building roof without the player hunting for a shape among cells.
-                DrawMarker(material, cell, new Vector3(1.4f, 2.6f, 1.4f), 1.3f, drift);
-                DrawMarker(material, cell, new Vector3(0.7f, 0.7f, 0.7f), 3.6f, drift);
+
+                if (!hasFigure)
+                {
+                    // No licensed art: the stand-in is a body and a beacon, both deliberately
+                    // larger than life, because a true-to-scale figure is a few pixels once the
+                    // camera pulls back. That is how five colonists managed to be invisible.
+                    DrawMarker(material, cell, new Vector3(1.4f, 2.6f, 1.4f), 1.3f, drift);
+                    DrawMarker(material, cell, new Vector3(0.7f, 0.7f, 0.7f), 3.6f, drift);
+                    continue;
+                }
+
+                EnsureActorCapacity(pawns.Length);
+                _actorPlacements[drawn++] = Matrix4x4.TRS(
+                    CellMetrics.FloorCentre(cell) + drift,
+                    Quaternion.Euler(0f, FacingOf(pawns[i].Id, heading), 0f),
+                    Vector3.one);
+
+                // No beacon over a real figure. It was there to make a grey box findable, and
+                // against the same orange the item markers use it read as one more piece of
+                // clutter rather than as a colonist. Finding people at a glance is a job for the
+                // interface, not for a cube floating over their heads.
             }
+
+            if (drawn > 0) SubmitActors(colonist, drawn);
 
             var things = snapshot.Things;
             for (int i = 0; i < things.Length; i++)
@@ -251,6 +271,82 @@ namespace Odyssey.Presentation.Rendering
                 var cell = things[i].Cell;
                 if (cell.Y < lowest || cell.Y > activeLayer) continue;
                 DrawMarker(material, cell, new Vector3(1.2f, 0.8f, 1.2f), 0.4f);
+            }
+        }
+
+        // ---- colonist figures ---------------------------------------------------------------
+
+        int _colonistModule = -1;
+        Matrix4x4[] _actorPlacements = new Matrix4x4[16];
+        Matrix4x4[] _actorMatrices = new Matrix4x4[16];
+        readonly System.Collections.Generic.Dictionary<int, float> _facing =
+            new System.Collections.Generic.Dictionary<int, float>();
+
+        ResolvedModule ColonistModule()
+        {
+            if (_colonistModule < 0)
+                _colonistModule = _model.Library.Resolve(ModuleIds.Colonist, ModuleShape.Pillar);
+            return _model.Library[_colonistModule];
+        }
+
+        void EnsureActorCapacity(int count)
+        {
+            if (_actorPlacements.Length >= count) return;
+            _actorPlacements = new Matrix4x4[count];
+            _actorMatrices = new Matrix4x4[count];
+        }
+
+        /// <summary>
+        /// Which way a colonist is turned, in degrees.
+        ///
+        /// Remembered per pawn rather than derived per frame, because the snapshot only says where
+        /// someone is heading while they are actually moving. Deriving it fresh each frame would
+        /// snap everyone back to a default bearing the instant they stopped, so a colonist would
+        /// pivot on arrival every single time. Keeping the last real heading means they stand
+        /// facing wherever they walked in from, which is what a person does.
+        /// </summary>
+        float FacingOf(PawnId id, Vector3 heading)
+        {
+            if (heading.sqrMagnitude > 1e-4f)
+            {
+                float yaw = Mathf.Atan2(heading.x, heading.z) * Mathf.Rad2Deg;
+                _facing[id.Value] = yaw;
+                return yaw;
+            }
+            return _facing.TryGetValue(id.Value, out float last) ? last : 0f;
+        }
+
+        void SubmitActors(ResolvedModule colonist, int count)
+        {
+            var parts = colonist.Parts;
+            for (int p = 0; p < parts.Length; p++)
+            {
+                ModulePart part = parts[p];
+                for (int i = 0; i < count; i++)
+                    _actorMatrices[i] = _actorPlacements[i] * part.Local;
+
+                // Through the cache, not the pack material directly: the clone is what carries
+                // GPU instancing, and a pack material does not have it switched on.
+                Material material = _materials.Get(
+                    part.Material, Color.white, Color.black, ghost: false, alpha: 1f);
+
+                var rp = new RenderParams(material)
+                {
+                    layer = GameObjectLayer,
+                    shadowCastingMode = CastShadows ? ShadowCastingMode.On : ShadowCastingMode.Off,
+                    receiveShadows = true,
+                };
+
+                int sent = 0;
+                while (sent < count)
+                {
+                    int n = Mathf.Min(MaxInstancesPerCall, count - sent);
+                    if (SubmitToGpu)
+                        Graphics.RenderMeshInstanced(rp, part.Mesh, part.Submesh, _actorMatrices, n, sent);
+                    sent += n;
+                    DrawCalls++;
+                }
+                InstancesDrawn += count;
             }
         }
 

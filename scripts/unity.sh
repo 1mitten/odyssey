@@ -89,12 +89,23 @@ check_project_lock() {
   # merely stale (a previous batch run that did not exit leaves one behind).
   [[ -f Temp/UnityLockfile ]] || return 0
 
-  local live=""
-  if command -v tasklist >/dev/null 2>&1; then
-    live="$(tasklist 2>/dev/null | grep -ci "^Unity\.exe" || true)"
-  else
-    live="$(pgrep -c -x Unity 2>/dev/null || true)"
+  # Scoped to *this* project, not to Unity in general.
+  #
+  # The old check counted every Unity.exe on the machine. This machine runs more than one Unity
+  # project at once, so an editor open on an unrelated project made every batch command here fail
+  # with "close the editor" while the lock it was complaining about was in fact stale. Worse, it
+  # failed in the direction that looks like a real conflict, so the obvious next move would have
+  # been to kill an editor belonging to somebody else's work.
+  local live="" proj_win=""
+  proj_win="$(cygpath -w "$ROOT" 2>/dev/null || echo "$ROOT")"
+  if command -v powershell.exe >/dev/null 2>&1; then
+    live="$(ODY_PROJ="$proj_win" powershell.exe -NoProfile -Command \
+      '@(Get-CimInstance Win32_Process | Where-Object { $_.Name -eq "Unity.exe" -and ($_.CommandLine -replace "/","\") -like "*$($env:ODY_PROJ)*" }).Count' \
+      2>/dev/null | tr -d '[:space:]')"
+  elif command -v pgrep >/dev/null 2>&1; then
+    live="$(pgrep -c -f -- "-projectPath $ROOT" 2>/dev/null || true)"
   fi
+  [[ "$live" =~ ^[0-9]+$ ]] || live=0
 
   if [[ "${live:-0}" -gt 0 ]]; then
     echo "unity.sh: this project is locked and a Unity process is running." >&2
@@ -224,6 +235,14 @@ case "$cmd" in
     if [[ -z "$method" ]]; then echo "unity.sh: exec Namespace.Class.Method" >&2; exit 2; fi
     shift
     run_batch Logs/exec.log -nographics -executeMethod "$method" -quit "$@"
+    ;;
+  shot)
+    # Renders the play view to Logs/shot-*.png. Deliberately WITHOUT -nographics: this is the
+    # one command that needs a real graphics device, because its whole purpose is to produce a
+    # picture a human (or Claude) can look at instead of reasoning about what the renderer
+    # ought to be drawing.
+    UNITY="$(find_unity)"
+    run_batch Logs/shot.log -executeMethod Odyssey.EditorTools.PlayScene.Screenshot -quit "$@"
     ;;
   open)
     UNITY="$(find_unity)"
