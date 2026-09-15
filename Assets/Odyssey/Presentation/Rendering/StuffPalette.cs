@@ -1,5 +1,6 @@
 #nullable enable
 using Odyssey.Sim.Worldgen;
+using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
 
 namespace Odyssey.Presentation.Rendering
@@ -76,8 +77,8 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>The terrain def name for a terrain index, for the module id.</summary>
         public static string TerrainName(int terrain) =>
-            terrain >= 0 && terrain < CoreContent.Terrain.Count
-                ? CoreContent.Terrain[terrain].defName
+            terrain >= 0 && terrain < NaturalContent.TerrainCount
+                ? NaturalContent.TerrainAt((ushort)terrain).defName
                 : "Rock";
     }
 }

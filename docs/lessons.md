@@ -10,7 +10,11 @@ Add to it whenever something takes more than about ten minutes to diagnose.
 
 **A batch test run can finish its work and then never exit.** Confirmed reproducible on this project: every `-runTests` run writes its results file and then keeps running. On 2026-09-15 one kept going for twenty-five minutes, holding `Temp/UnityLockfile`. The next batch command died instantly with exit code 1 and a log containing nothing but the banner, which is close to undiagnosable if you do not know to look for the lock. `-quit` is not the fix, because it can cut the run short before results are written.
 
-What to do: `scripts/unity.sh` now treats the **results file, not the process exit code, as the verdict**, gives a lingering process a grace period and then terminates it, and has a hard timeout so CI fails instead of hanging. Tune with `UNITY_TEST_TIMEOUT` and `UNITY_TEST_GRACE`. The suspected cause is an editor package holding a background connection open; the Unity MCP plugin is the obvious candidate and is worth eliminating if this recurs.
+What to do: `scripts/unity.sh` treats the **results file, not the process exit code, as the verdict**, gives a lingering process a grace period and then terminates it, and has a hard timeout so CI fails instead of hanging. Tune with `UNITY_TEST_TIMEOUT` and `UNITY_TEST_GRACE`.
+
+**Cause found and confirmed, 2026-09-15: the Unity MCP plugin.** Removing `com.ivanmurzak.unity.mcp` from the manifest made Unity exit cleanly on its own for the first time, and the watchdog stopped having to intervene. The same plugin was also logging an authorisation error mid-run (`Authorization failed. Token may be missing, invalid, or revoked`), and Unity fails whichever test happens to be executing when an unexpected error is logged — so it was also producing random, unrelated test failures. The watchdog stays, because it turns any future recurrence into a clear message rather than a hang.
+
+**If MCP is wanted back**, `npx unity-mcp-cli install-plugin .` re-adds it, but it has no batchmode guard, so it will hang headless runs again. Keeping it for editor sessions and stripping it for CI needs a second manifest or a define constraint.
 
 **A batch command cannot share a project with an open editor.** Same symptom, different cause. The wrapper now distinguishes the two: a live Unity process means "close the editor", no live process means the lock is stale and it is removed automatically.
 

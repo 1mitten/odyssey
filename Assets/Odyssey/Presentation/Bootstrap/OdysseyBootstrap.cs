@@ -10,6 +10,7 @@ using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
+using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -37,6 +38,9 @@ namespace Odyssey.Presentation.Bootstrap
         public int sizeZ = 60;
         public int layers = 5;
         public uint seed = 1;
+
+        [Tooltip("Natural wilderness is the prototype default (ADR 0008). RuinedCity is kept and still works.")]
+        public MapType mapType = MapType.Natural;
 
         [Tooltip("Colonists spawned near the start location when the scene begins.")]
         public int colonistCount = 5;
@@ -82,12 +86,12 @@ namespace Odyssey.Presentation.Bootstrap
         /// a choice about *this* prototype, and a different scenario would make different choices.
         /// Deterministic all the same, since it draws from the world seed.
         /// </summary>
-        void SpawnStartingColonists(WorldGenResult result)
+        void SpawnStartingColonists(CellRef startCell)
         {
             if (_world == null || _pawns == null || _grid == null) return;
 
             var size = _grid.Size;
-            int startIndex = size.Index(result.StartCell);
+            int startIndex = size.Index(startCell);
             var rng = DeterministicRandom.ForTick(seed, 0, purpose: 0xC0101);
 
             // Walkable cells near the start, found by spiralling outward so the colony lands
@@ -99,9 +103,9 @@ namespace Odyssey.Presentation.Bootstrap
                 for (int dx = -radius; dx <= radius && spots.Count < 40; dx++)
                 {
                     if (Mathf.Max(Mathf.Abs(dx), Mathf.Abs(dz)) != radius) continue;
-                    int x = result.StartCell.X + dx, z = result.StartCell.Z + dz;
-                    if (!size.Contains(x, z, result.StartCell.Y)) continue;
-                    int index = size.Index(x, z, result.StartCell.Y);
+                    int x = startCell.X + dx, z = startCell.Z + dz;
+                    if (!size.Contains(x, z, startCell.Y)) continue;
+                    int index = size.Index(x, z, startCell.Y);
                     if (_grid.IsWalkable(index)) spots.Add(index);
                 }
             }
@@ -136,19 +140,28 @@ namespace Odyssey.Presentation.Bootstrap
         void Start()
         {
             var size = new GridSize(sizeX, sizeZ, layers);
-            _gen = MapGenDef.For(size);
             _grid = new CellGrid(size);
             var chunks = new ChunkGrid(size);
 
+            // The prototype starts on empty natural ground and the colony builds from nothing
+            // (ADR 0008). The ruined-city generator is still here and still tested; switch
+            // mapType to reach it.
+            _gen = MapGenerator.DefaultDef(mapType, size);
+
             var generation = Stopwatch.StartNew();
-            WorldGenResult result = WorldGenerator.Generate(_grid, seed, _gen);
+            MapGenOutcome outcome = MapGenerator.Generate(_grid, seed, _gen);
             generation.Stop();
 
             var library = new ModuleLibrary(moduleCatalogue);
             _model = new WorldRenderModel(size, chunks, library);
-            _model.ApplyTemplates(result, _gen);
 
-            var mirror = new GridMirrorContributor(_grid, result.Context.Edifices, _model);
+            // Shell templates only exist on a city map; natural ground has no stamped buildings.
+            if (outcome.City != null) _model.ApplyTemplates(outcome.City, _gen);
+
+            var edifices = outcome.City != null
+                ? outcome.City.Context.Edifices
+                : outcome.Natural!.Context.Edifices;
+            var mirror = new GridMirrorContributor(_grid, edifices, _model);
             var solver = new SupportSolver(_grid);
             CellGrid grid = _grid;
 
@@ -176,11 +189,11 @@ namespace Odyssey.Presentation.Bootstrap
                 .AddSnapshotContributor(pawns.Pawns)
                 .Build();
 
-            SpawnStartingColonists(result);
+            SpawnStartingColonists(outcome.StartCell);
 
             // One tick primes the mirror: the contributor runs in the publish phase, so until the
             // world has ticked once there is no published frame and nothing to draw.
-            _world.Intents.Submit(new Intent(IntentKind.SetSliceLayer, default, _gen.groundLayer));
+            _world.Intents.Submit(new Intent(IntentKind.SetSliceLayer, default, outcome.StartCell.Y));
             _world.Tick();
 
             _renderer = new ChunkRenderer(_model) { CastShadows = castShadows, GameObjectLayer = gameObject.layer };
@@ -202,7 +215,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             Debug.Log(
                 $"[Odyssey] world {size} seed {seed} generated in {generation.ElapsedMilliseconds} ms. " +
-                $"{result.Report}. {_catalogueNote}. " +
+                $"{(outcome.Natural != null ? outcome.Natural.Report.ToString() : outcome.City!.Report.ToString())}. {_catalogueNote}. " +
                 $"Modules with art: {library.ArtBackedCount()}/{library.Count - 1}" +
                 (library.MissingArt.Count == 0
                     ? "."

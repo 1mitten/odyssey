@@ -4,6 +4,7 @@ using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
+using Odyssey.Sim.Worldgen.Natural;
 
 namespace Odyssey.Presentation.World
 {
@@ -194,11 +195,15 @@ namespace Odyssey.Presentation.World
 
         static int[] ResolveTerrain(ModuleLibrary library)
         {
-            var table = new int[CoreContent.Terrain.Count];
+            // Sized for the natural table, which continues CoreContent's numbering rather than
+            // replacing it, so this one array covers both map types. Look terrain up through
+            // NaturalContent, never CoreContent directly: the city table stops short and would
+            // throw on a natural index.
+            var table = new int[NaturalContent.TerrainCount];
             for (int i = 0; i < table.Length; i++)
             {
                 if (i == CoreContent.TerrainAir) { table[i] = 0; continue; }
-                var def = CoreContent.Terrain[i];
+                var def = NaturalContent.TerrainAt((ushort)i);
                 table[i] = library.Resolve(
                     ModuleIds.Terrain(def.defName),
                     def.solid ? ModuleShape.SolidBlock : ModuleShape.FloorSlab);
