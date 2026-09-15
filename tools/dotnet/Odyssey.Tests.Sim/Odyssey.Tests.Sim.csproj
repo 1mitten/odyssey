@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The fast test tier. Same test sources Unity runs, but with no editor, no asset database and
+    no domain reload, so the cycle is seconds rather than minutes.
+
+    NUnit is pinned to 3.x to match the version Unity ships, so a test cannot pass in one tier
+    and fail in the other for framework reasons.
+
+    Unity remains the authoritative tier: it is the only one that proves the asmdef boundaries,
+    and it is the only one that can run anything touching Unity itself.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Odyssey.Tests.Sim</AssemblyName>
+    <RootNamespace>Odyssey.Tests.Sim</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../../Assets/Odyssey/Tests/Sim/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Odyssey.Sim/Odyssey.Sim.csproj" />
+    <ProjectReference Include="../Odyssey.Sim.Contracts/Odyssey.Sim.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+
+</Project>

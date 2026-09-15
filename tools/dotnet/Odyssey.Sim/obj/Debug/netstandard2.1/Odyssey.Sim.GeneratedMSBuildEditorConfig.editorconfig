@@ -1,0 +1,5 @@
+is_global = true
+build_property.RootNamespace = Odyssey.Sim
+build_property.ProjectDir = D:\code\odyssey\tools\dotnet\Odyssey.Sim\
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 
