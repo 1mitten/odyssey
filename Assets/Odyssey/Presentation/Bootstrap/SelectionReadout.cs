@@ -39,6 +39,15 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Cells within this distance of the click count as picking that colonist.")]
         public int pickRadius = 2;
 
+        /// <summary>
+        /// The colonist the last click landed on, or <see cref="PawnId.None"/>.
+        ///
+        /// Public because the cursor needs it: a selected colonist gets a bracket around the
+        /// figure rather than around the cell they happen to be standing in, and the thing that
+        /// draws that has no business repeating the pick.
+        /// </summary>
+        public PawnId SelectedPawn => _selected;
+
         OdysseyBootstrap? _bootstrap;
         Odyssey.Presentation.CameraRig.SliceCameraRig? _rig;
         readonly StringBuilder _text = new StringBuilder(256);

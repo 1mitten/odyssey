@@ -188,6 +188,33 @@ namespace Odyssey.EditorTools
                     drawing.Render(activeLayer, slice);
                     drawing.RenderActors(world.Views.Current, activeLayer, slice, actorMaterial,
                         drawnAsFigures: walking.Drawn);
+
+                    // Both cursors, so a picture can settle whether they look right: the cell
+                    // bracket on a patch of empty ground, and the colonist bracket on somebody who
+                    // is walking. Neither can be checked by reading the arithmetic.
+                    var cursor = new Color(0.30f, 0.92f, 1.00f, 1f);
+                    drawing.DrawCellHighlight(result.StartCell, cursor);
+
+                    // Whoever is nearest the start cell, because that is the middle of the frame.
+                    // A cursor photographed at the edge of the picture proves nothing.
+                    WorldSnapshot shown = world.Views.Current;
+                    int nearest = -1, best = int.MaxValue;
+                    for (int p = 0; p < shown.Pawns.Length; p++)
+                    {
+                        int dx = shown.Pawns[p].Cell.X - result.StartCell.X;
+                        int dz = shown.Pawns[p].Cell.Z - result.StartCell.Z;
+                        int d = dx * dx + dz * dz;
+                        if (d >= best) continue;
+                        best = d;
+                        nearest = p;
+                    }
+
+                    if (nearest >= 0)
+                    {
+                        Vector3 feet = PawnPose.Of(shown.Pawns[nearest], 0f, movePerTick, out _);
+                        var box = new Vector3(1.15f, 2.7f, 1.15f);
+                        drawing.DrawSelectionBracket(feet + Vector3.up * (box.y * 0.5f), box, cursor);
+                    }
                 };
                 RenderPipelineManager.beginCameraRendering += hook;
 
@@ -1060,7 +1087,12 @@ namespace Odyssey.EditorTools
             camera.backgroundColor = new Color(0.10f, 0.12f, 0.16f);
             go.AddComponent<AudioListener>();
 
-            return go.AddComponent<SliceCameraRig>();
+            var rig = go.AddComponent<SliceCameraRig>();
+            // Set here rather than left to the field initialiser, because a serialised value wins
+            // over a C# default and the scene would keep whatever the first build wrote for ever.
+            // Opaque now: the cursor is corner brackets, not a wash over the thing selected.
+            rig.selectionColour = new Color(0.30f, 0.92f, 1.00f, 1f);
+            return rig;
         }
 
         static void BuildBootstrap(Transform root, SliceCameraRig rig, ModuleCatalogue catalogue)

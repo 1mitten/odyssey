@@ -532,18 +532,90 @@ namespace Odyssey.Presentation.Rendering
             DrawCalls++;
         }
 
-        /// <summary>A translucent box over one cell, for the hovered or selected cell.</summary>
-        public void DrawCellHighlight(CellRef cell, Color colour)
-        {
-            Material material = _materials.Get(_model.Library.FallbackMaterial, colour, colour * 0.6f,
-                ghost: true, alpha: colour.a);
-            var rp = new RenderParams(material) { layer = GameObjectLayer, shadowCastingMode = ShadowCastingMode.Off };
-            Matrix4x4 m = Matrix4x4.TRS(
+        // ---- the selection cursor -------------------------------------------------------------
+
+        /// <summary>How much of each edge a corner stub covers. A fifth reads as a corner mark.</summary>
+        public const float BracketStub = 0.18f;
+
+        /// <summary>Stub thickness in metres, held constant so a small bracket is not a thin one.</summary>
+        public const float BracketThickness = 0.07f;
+
+        readonly Matrix4x4[] _bracketMatrices = new Matrix4x4[24];
+
+        /// <summary>The bracket cursor around one whole cell.</summary>
+        public void DrawCellHighlight(CellRef cell, Color colour) =>
+            DrawSelectionBracket(
                 CellMetrics.Centre(cell.X, cell.Z, cell.Y),
-                Quaternion.identity,
-                new Vector3(CellMetrics.SizeXZ, CellMetrics.SizeY, CellMetrics.SizeXZ) * 0.98f);
-            Graphics.RenderMesh(rp, PrimitiveMeshes.UnitCube, 0, m);
+                new Vector3(CellMetrics.SizeXZ, CellMetrics.SizeY, CellMetrics.SizeXZ),
+                colour);
+
+        /// <summary>
+        /// The selection cursor: a box drawn only at its corners, three short stubs meeting at
+        /// each of the eight joins.
+        ///
+        /// **Why stubs rather than a filled box.** The cursor used to be a translucent cyan cube
+        /// filling the cell, which put a wash over the very thing that had just been selected —
+        /// worst of all on a colonist, who is the thing you most want to look at after clicking
+        /// them. Corners mark the volume and leave the middle of every face open.
+        ///
+        /// **Why 24 matrices rather than a bracket mesh.** The stubs have to keep a constant
+        /// thickness whatever they enclose: a cell is 2.5 x 3.0 x 2.5 and a colonist is nearer
+        /// 1.1 x 2.7 x 1.1, and a single mesh scaled to both would come out three times thicker
+        /// in one axis than another. Giving each stub its own matrix makes thickness exact, and it
+        /// is still one instanced call because every stub is the same unit cube.
+        /// </summary>
+        public void DrawSelectionBracket(Vector3 centre, Vector3 size, Color colour)
+        {
+            // Opaque and lightly emissive rather than ghosted: a cursor that dims with the light
+            // is one you lose against dark ground, and this one has to be findable at a glance.
+            Material material = _materials.Get(_model.Library.FallbackMaterial, colour, colour * 0.9f,
+                ghost: false, alpha: 1f);
+
+            var rp = new RenderParams(material)
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+
+            Vector3 half = size * 0.5f;
+            int n = 0;
+
+            for (int corner = 0; corner < 8; corner++)
+            {
+                // The three bits of the corner index are the three signs, so this walks all eight.
+                var sign = new Vector3(
+                    (corner & 1) == 0 ? -1f : 1f,
+                    (corner & 2) == 0 ? -1f : 1f,
+                    (corner & 4) == 0 ? -1f : 1f);
+
+                var at = new Vector3(
+                    centre.x + sign.x * half.x,
+                    centre.y + sign.y * half.y,
+                    centre.z + sign.z * half.z);
+
+                for (int axis = 0; axis < 3; axis++)
+                {
+                    // Never shorter than it is thick, or a bracket round something very flat
+                    // degenerates into a scattering of cubes.
+                    float length = Mathf.Max(size[axis] * BracketStub, BracketThickness);
+
+                    var scale = new Vector3(BracketThickness, BracketThickness, BracketThickness);
+                    scale[axis] = length;
+
+                    // Runs from the corner inwards along this edge, so the bar ends exactly on
+                    // the corner rather than straddling it.
+                    Vector3 position = at;
+                    position[axis] -= sign[axis] * length * 0.5f;
+
+                    _bracketMatrices[n++] = Matrix4x4.TRS(position, Quaternion.identity, scale);
+                }
+            }
+
+            if (SubmitToGpu)
+                Graphics.RenderMeshInstanced(rp, PrimitiveMeshes.UnitCube, 0, _bracketMatrices, n);
             DrawCalls++;
+            InstancesDrawn += n;
         }
 
         public void Dispose() => _materials.Dispose();

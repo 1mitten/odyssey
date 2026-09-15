@@ -221,11 +221,27 @@ namespace Odyssey.Presentation.CameraRig
             else Selection = null;
         }
 
+        /// <summary>
+        /// The cell cursor — drawn only when nothing more specific has claimed the selection.
+        ///
+        /// A colonist's cursor is drawn by the composition root instead, because it has to hug the
+        /// figure and glide with it between cells, and that needs the published snapshot. The rig
+        /// has a model and a renderer and deliberately no access to the simulation at all.
+        /// </summary>
         void DrawSelection()
         {
-            if (_renderer == null || Selection == null) return;
+            if (_renderer == null || Selection == null || SuppressCellCursor) return;
             _renderer.DrawCellHighlight(Selection.Value, selectionColour);
         }
+
+        /// <summary>
+        /// Set each frame by whoever is drawing a better cursor, and cleared when they stop.
+        ///
+        /// A flag rather than an ordering rule, because the rig draws in its own Update and the
+        /// composition root in LateUpdate: whichever way round they ran, one of them would have to
+        /// know about the other. This way neither does.
+        /// </summary>
+        public bool SuppressCellCursor { get; set; }
 
         // -------------------------------------------------------- transform
 

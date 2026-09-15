@@ -270,11 +270,48 @@ namespace Odyssey.Presentation.Bootstrap
             if (_actorMaterial != null)
                 _renderer.RenderActors(_world.Views.Current, activeLayer, slice, _actorMaterial,
                     _tickAlpha, movePerTick, _figures?.Drawn);
+
+            DrawColonistCursor(_world.Views.Current, movePerTick);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
 
             float frameMs = Time.unscaledDeltaTime * 1000f;
             _smoothedFrameMs = _smoothedFrameMs <= 0f ? frameMs : Mathf.Lerp(_smoothedFrameMs, frameMs, 0.05f);
+        }
+
+        /// <summary>
+        /// The size of the bracket drawn around a selected colonist, in metres.
+        ///
+        /// Fixed rather than measured off the figure, and that is deliberate. A colonist's own
+        /// renderer bounds breathe with the walk cycle — the arms swing — so a cursor sized from
+        /// them would pulse in and out every stride, which is worse than one that is a few
+        /// centimetres off. The cast is all built to one scale, so one box fits all of them.
+        /// </summary>
+        [Tooltip("The bracket drawn around a selected colonist: width, height, depth in metres.")]
+        public Vector3 colonistCursor = new Vector3(1.15f, 2.7f, 1.15f);
+
+        /// <summary>
+        /// Bracket the selected colonist, and tell the rig to leave its cell cursor off.
+        ///
+        /// Placed with the same tween the figure itself uses, so the cursor rides the walk instead
+        /// of hopping cell to cell a fraction of a second out of step with the person inside it.
+        /// </summary>
+        void DrawColonistCursor(WorldSnapshot snapshot, int movePerTick)
+        {
+            if (cameraRig != null) cameraRig.SuppressCellCursor = false;
+            if (_renderer == null) return;
+
+            var readout = GetComponent<SelectionReadout>();
+            if (readout == null || !readout.SelectedPawn.IsValid) return;
+            if (!snapshot.TryGetPawn(readout.SelectedPawn, out PawnView pawn)) return;
+
+            Vector3 feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _);
+            Color colour = cameraRig != null ? cameraRig.selectionColour : Color.cyan;
+
+            _renderer.DrawSelectionBracket(
+                feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, colour);
+
+            if (cameraRig != null) cameraRig.SuppressCellCursor = true;
         }
 
         void OnGUI()
