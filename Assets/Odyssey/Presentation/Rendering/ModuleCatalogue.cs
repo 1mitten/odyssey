@@ -105,6 +105,28 @@ namespace Odyssey.Presentation.Rendering
 
         [Tooltip("The material this row wants, by asset name. Used to rebuild the reference.")]
         public string materialName = string.Empty;
+
+        /// <summary>
+        /// How many times the texture repeats across one cell. Zero leaves the material alone.
+        ///
+        /// One is what makes ground read as tiles laid on the floor. A pack terrain material is
+        /// authored for a Unity terrain hundreds of metres across, so it carries a repeat count
+        /// suited to that; worn by a 2.5 m cell the same setting crams two copies of the pattern
+        /// into every tile, and the surface reads as fine noise rather than as a floor. Matching
+        /// one repeat to one cell puts the pattern on the game's own grid, which is what the eye
+        /// is looking for.
+        /// </summary>
+        public float materialTilesPerCell;
+
+        /// <summary>
+        /// Drop the material's normal map.
+        ///
+        /// Pack terrain materials carry one so that ground looks rough under a moving first-person
+        /// light. This game looks down at a board under a fixed overhead sun, where the same
+        /// normal map only breaks the light up into a bumpy mottle and stops a tile reading as
+        /// flat and evenly lit. The art direction is flat-shaded low poly; the ground should match.
+        /// </summary>
+        public bool flattenNormalMap;
     }
 
     /// <summary>

@@ -121,7 +121,7 @@ namespace Odyssey.Presentation.Rendering
             {
                 // A material straight onto the cell-shaped box: how textured ground is drawn.
                 // Checked before the prefab paths so a row can carry both and prefer the texture.
-                parts = new[] { FallbackPart(shape, entry, entry.material!) };
+                parts = new[] { FallbackPart(shape, entry, DressGround(entry)) };
                 usesArt = true;
             }
             else if (entry != null && entry.prefab != null && entry.materialOnly)
@@ -236,6 +236,56 @@ namespace Odyssey.Presentation.Rendering
             return new ModulePart(
                 PrimitiveMeshes.UnitCube, 0, material ?? FallbackMaterial, local,
                 fallback: material == null);
+        }
+
+        static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
+        static readonly int MainTexId = Shader.PropertyToID("_MainTex");
+        static readonly int BumpMapId = Shader.PropertyToID("_BumpMap");
+        static readonly int BumpScaleId = Shader.PropertyToID("_BumpScale");
+
+        readonly Dictionary<(Material, float, bool), Material> _dressed =
+            new Dictionary<(Material, float, bool), Material>();
+
+        /// <summary>
+        /// A pack terrain material adjusted to this game's grid and lighting.
+        ///
+        /// Always a clone: the source lives under <c>Assets/Synty</c> and is licensed content that
+        /// must never be written to. The clone is cached per source and settings, so a terrain
+        /// type costs one material no matter how many cells wear it.
+        ///
+        /// See <see cref="ModuleEntry.materialTilesPerCell"/> and
+        /// <see cref="ModuleEntry.flattenNormalMap"/> for why each adjustment is made.
+        /// </summary>
+        Material DressGround(ModuleEntry entry)
+        {
+            Material source = entry.material!;
+            if (entry.materialTilesPerCell <= 0f && !entry.flattenNormalMap) return source;
+
+            var key = (source, entry.materialTilesPerCell, entry.flattenNormalMap);
+            if (_dressed.TryGetValue(key, out Material? ready)) return ready;
+
+            var dressed = new Material(source)
+            {
+                name = source.name + "/ground",
+                enableInstancing = true,
+            };
+
+            if (entry.materialTilesPerCell > 0f)
+            {
+                var repeats = new Vector2(entry.materialTilesPerCell, entry.materialTilesPerCell);
+                if (dressed.HasProperty(BaseMapId)) dressed.SetTextureScale(BaseMapId, repeats);
+                if (dressed.HasProperty(MainTexId)) dressed.SetTextureScale(MainTexId, repeats);
+            }
+
+            if (entry.flattenNormalMap)
+            {
+                if (dressed.HasProperty(BumpScaleId)) dressed.SetFloat(BumpScaleId, 0f);
+                if (dressed.HasProperty(BumpMapId)) dressed.SetTexture(BumpMapId, null);
+                dressed.DisableKeyword("_NORMALMAP");
+            }
+
+            _dressed[key] = dressed;
+            return dressed;
         }
 
         /// <summary>The first shared material on a prefab, used when only its look is wanted.</summary>

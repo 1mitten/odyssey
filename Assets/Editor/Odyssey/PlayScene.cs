@@ -253,6 +253,10 @@ namespace Odyssey.EditorTools
             {
                 moduleId = id, shape = ModuleShape.SolidBlock, prefabName = string.Empty,
                 materialName = material,
+                // One repeat per cell, so a cell reads as one tile laid on the floor rather than
+                // as a patch of fine noise, and no normal map, so the tile is lit flatly from
+                // above instead of being broken into a bumpy mottle.
+                materialTilesPerCell = 1f, flattenNormalMap = true,
             });
 
             // Walls, windows and doors. Several template ids share one piece for now; the point of
@@ -457,7 +461,13 @@ namespace Odyssey.EditorTools
             sun.color = new Color(1.0f, 0.97f, 0.90f);
             sun.shadows = LightShadows.Soft;
             sun.transform.SetParent(root, false);
-            sun.transform.rotation = Quaternion.Euler(50f, 35f, 0f);
+            // Steeply overhead, not raking across the board. At 50 degrees the key light struck the
+            // ground at a glancing angle, which is how you light a landscape you walk through and
+            // the wrong way to light one you look down at: it cost the ground a quarter of its
+            // brightness and threw long shadows across the very surface the player is reading. A
+            // high sun puts the light on the ground, keeps the tiles evenly lit, and leaves just
+            // enough offset for a colonist or a wall to cast a short shadow that grounds them.
+            sun.transform.rotation = Quaternion.Euler(72f, 35f, 0f);
 
             // Flat-lit low-poly, as the concept renders are: a strong key, a generous cool ambient
             // so nothing goes black, and no post stylisation. Cel shading was raised and rejected
