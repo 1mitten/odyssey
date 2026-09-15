@@ -47,6 +47,15 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public int MaxFigures { get; set; } = 64;
 
+        /// <summary>
+        /// How fast a figure turns to face where it is going, in degrees per second.
+        ///
+        /// Fast enough to be facing its path within a step, slow enough that the turn reads as a
+        /// turn. The simulation has no notion of facing at all — a pawn simply occupies the next
+        /// cell — so this is presentation inventing something plausible, not tracking anything.
+        /// </summary>
+        public float TurnDegreesPerSecond { get; set; } = 540f;
+
         /// <summary>Pawn ids drawn as live figures this frame. The instanced pass skips these.</summary>
         public HashSet<int> Drawn { get; } = new HashSet<int>();
 
@@ -174,18 +183,30 @@ namespace Odyssey.Presentation.World
             // Speed from displacement, which is right at every game speed and while paused, and
             // needs to know nothing about ticks. A figure that has just been leased has no
             // previous position worth differencing, hence Settled.
+            bool settled = figure.Settled;
+
             float speed = 0f;
-            if (figure.Settled && deltaTime > 1e-5f)
+            if (settled && deltaTime > 1e-5f)
                 speed = Vector3.Distance(position, figure.Transform.position) / deltaTime;
 
             // One frame of a lost path or a slice change can jump a pawn further than any gait
             // covers. Smoothing keeps a single frame from throwing the figure into a sprint.
-            figure.Speed = figure.Settled ? Mathf.Lerp(figure.Speed, speed, 0.35f) : 0f;
+            figure.Speed = settled ? Mathf.Lerp(figure.Speed, speed, 0.35f) : 0f;
             figure.Settled = true;
 
             figure.Transform.position = position;
-            float yaw = PawnPose.YawOf(heading);
-            if (heading.sqrMagnitude > 1e-4f) figure.Yaw = yaw;
+
+            // Turn towards the heading rather than snapping to it.
+            //
+            // A pawn that sets off in a new direction used to change facing between one frame and
+            // the next, which at this camera height reads as the figure blinking round. People
+            // turn. The rate is fast enough that a colonist is facing its path within a step, and
+            // slow enough that the turn is visible; a pawn that has never moved keeps whatever it
+            // was given rather than swinging to north.
+            if (heading.sqrMagnitude > 1e-4f) figure.TargetYaw = PawnPose.YawOf(heading);
+            figure.Yaw = settled
+                ? Mathf.MoveTowardsAngle(figure.Yaw, figure.TargetYaw, TurnDegreesPerSecond * deltaTime)
+                : figure.TargetYaw;
             figure.Transform.rotation = Quaternion.Euler(0f, figure.Yaw, 0f);
 
             Blend(figure, figure.Speed);
@@ -219,8 +240,31 @@ namespace Odyssey.Presentation.World
             figure.Speed = 0f;
             figure.Transform.position = at;
             figure.GameObject.SetActive(true);
+            Desynchronise(figure, pawn);
             _byPawn[pawn.Value] = figure;
             return figure;
+        }
+
+        /// <summary>
+        /// Start this figure's clips part-way through, at a phase fixed by the pawn's id.
+        ///
+        /// Every graph otherwise begins at zero, and a colony is created in a single frame, so
+        /// five colonists breathe in unison and put the same foot down on the same frame for as
+        /// long as they walk together. It is a small thing that makes a crowd read as a machine.
+        /// Keying the phase to the id rather than to a generator means a pawn keeps the same one
+        /// across a save, a slice change and a trip through the figure pool — a phase that
+        /// re-rolled on every lease would make colonists twitch each time they crossed a layer.
+        /// </summary>
+        static void Desynchronise(Figure figure, PawnId pawn)
+        {
+            // The golden ratio, which spreads successive ids about as evenly as anything can.
+            float phase = (pawn.Value * 0.6180339887f) % 1f;
+
+            for (int i = 0; i < figure.Clips.Length; i++)
+            {
+                double length = figure.Clips[i].GetAnimationClip().length;
+                figure.Clips[i].SetTime(length * phase);
+            }
         }
 
         Figure? Free()
@@ -335,7 +379,12 @@ namespace Odyssey.Presentation.World
             public bool Settled;
 
             public float Speed;
+
+            /// <summary>The bearing the figure is actually drawn at, which chases the target.</summary>
             public float Yaw;
+
+            /// <summary>The last real heading. Kept when standing, so a pawn faces where it walked in from.</summary>
+            public float TargetYaw;
         }
     }
 }
