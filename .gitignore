@@ -80,3 +80,7 @@ crashlytics-build.properties
 # Python bytecode from tools/
 __pycache__/
 *.py[cod]
+
+# dotnet build output from the mirror projects.
+/tools/dotnet/**/bin/
+/tools/dotnet/**/obj/
