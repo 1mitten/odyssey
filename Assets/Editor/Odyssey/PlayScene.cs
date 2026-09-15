@@ -94,6 +94,7 @@ namespace Odyssey.EditorTools
         {
             int exitCode = 0;
             ChunkRenderer? renderer = null;
+            Odyssey.Presentation.World.PawnFigureDirector? figures = null;
             System.Action<ScriptableRenderContext, Camera>? hook = null;
 
             try
@@ -158,12 +159,35 @@ namespace Odyssey.EditorTools
                 var actorMaterial = new Material(library.FallbackMaterial) { name = "Odyssey/Actor" };
                 actorMaterial.SetColor("_BaseColor", new Color(0.98f, 0.36f, 0.20f));
 
+                // Live figures, run forward far enough to be genuinely mid-stride.
+                //
+                // There is no player loop here, so nothing advances on its own: the world is
+                // ticked, the director is synced and the animation graphs are stepped by hand, all
+                // on the same nominal frame time. It has to be several frames rather than one,
+                // because a figure's speed is measured from how far it moved since the last frame
+                // and a figure leased this instant has not moved at all — a single frame would
+                // photograph five people standing still and prove nothing about the walk.
+                figures = new Odyssey.Presentation.World.PawnFigureDirector(catalogue, lighting, 0);
+                int movePerTick = PawnContent.Core().Movement.movePerTick;
+                const float FrameSeconds = 1f / 60f;
+                for (int frame = 0; frame < 40; frame++)
+                {
+                    world.Tick();
+                    figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                    figures.Evaluate(FrameSeconds);
+                }
+                Debug.Log($"[Shot] live figures: {figures.FigureCount} of {world.Views.Current.PawnCount} " +
+                          $"pawns, fastest {figures.FastestSpeed:0.00} m/s" +
+                          $"{(figures.Enabled ? string.Empty : " (director disabled: no art or no gaits)")}");
+
                 ChunkRenderer drawing = renderer;
+                Odyssey.Presentation.World.PawnFigureDirector walking = figures;
                 hook = (context, rendering) =>
                 {
                     if (rendering != camera) return;
                     drawing.Render(activeLayer, slice);
-                    drawing.RenderActors(world.Views.Current, activeLayer, slice, actorMaterial);
+                    drawing.RenderActors(world.Views.Current, activeLayer, slice, actorMaterial,
+                        drawnAsFigures: walking.Drawn);
                 };
                 RenderPipelineManager.beginCameraRendering += hook;
 
@@ -178,6 +202,11 @@ namespace Odyssey.EditorTools
 
                 Debug.Log("[Shot] wrote Logs/shot-play.png, Logs/shot-close.png, Logs/shot-down.png");
 
+                // Before the root goes: a playable graph bound to an Animator that has just been
+                // destroyed under it complains, and the complaint would be the picture's epitaph.
+                figures.Dispose();
+                figures = null;
+
                 UnityEngine.Object.DestroyImmediate(cameraObject);
                 UnityEngine.Object.DestroyImmediate(lighting.gameObject);
             }
@@ -189,6 +218,7 @@ namespace Odyssey.EditorTools
             finally
             {
                 if (hook != null) RenderPipelineManager.beginCameraRendering -= hook;
+                figures?.Dispose();
                 renderer?.Dispose();
                 if (exitWhenDone) EditorApplication.Exit(exitCode);
             }
@@ -589,6 +619,30 @@ namespace Odyssey.EditorTools
                 poseClipName = "A_Idle_Standing_Masc",
                 centreXZ = true, baseAtY = true,
                 scale = new Vector3(1.4f, 1.4f, 1.4f),
+
+                // The gaits a live figure blends through, slowest first. Idle is the same clip
+                // the bake is posed from, so a figure and its baked stand-in agree at rest.
+                //
+                // Both moving gaits are the **in-place** clips, because the simulation decides
+                // where a pawn is and a clip that also moved it would fight that. Their speeds
+                // come from the root-motion twins, measured at build time: see MeasureGaitSpeed.
+                // A walk alone was not enough — a colonist crosses a 2.5 m cell in fifty ticks at
+                // sixty ticks a second, which is three metres a second, nearer a run than a walk,
+                // and a walk clip stretched to cover it slides its feet across the ground.
+                locomotion = new List<LocomotionEntry>
+                {
+                    new LocomotionEntry { clipName = "A_Idle_Standing_Masc", metresPerSecond = 0f },
+                    new LocomotionEntry
+                    {
+                        clipName = "A_Walk_F_Masc",
+                        speedFromClipName = "A_Walk_F_RootMotion_Masc",
+                    },
+                    new LocomotionEntry
+                    {
+                        clipName = "A_Run_F_Masc",
+                        speedFromClipName = "A_Run_F_RootMotion_Masc",
+                    },
+                },
             });
 
             // Loose items on the ground. Before these rows existed every item fell through to the
@@ -664,6 +718,8 @@ namespace Odyssey.EditorTools
                 row.poseClip = clip;
             }
 
+            ResolveGaits(rows, clips);
+
             var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);
             if (catalogue == null)
             {
@@ -675,6 +731,61 @@ namespace Odyssey.EditorTools
             EditorUtility.SetDirty(catalogue);
             AssetDatabase.SaveAssets();
             return catalogue;
+        }
+
+        /// <summary>
+        /// Resolve each gait's clip, and calibrate how fast it covers ground.
+        ///
+        /// **Why the speed is read from a different clip than the one that plays.** The pack ships
+        /// every locomotion clip twice: once in place, and once with root motion. A pawn plays the
+        /// in-place twin, because the simulation owns where anybody is. But an in-place clip
+        /// travels nowhere by definition, so it cannot say how long its own stride was — and that
+        /// length is exactly what decides whether the feet grip the ground or skate over it. The
+        /// root-motion twin does move, and its average root velocity is that number, sitting in
+        /// the art where nobody has to guess it.
+        ///
+        /// A gait declaring no twin keeps whatever speed the row set by hand, which is how idle
+        /// stays at zero.
+        /// </summary>
+        static void ResolveGaits(List<ModuleEntry> rows, Dictionary<string, AnimationClip?> clips)
+        {
+            foreach (ModuleEntry row in rows)
+            foreach (LocomotionEntry gait in row.locomotion)
+            {
+                gait.clip = LookUpClip(gait.clipName, clips);
+                if (string.IsNullOrEmpty(gait.speedFromClipName)) continue;
+
+                AnimationClip? twin = LookUpClip(gait.speedFromClipName, clips);
+                if (twin == null) continue;
+
+                float measured = MeasureGaitSpeed(twin);
+                if (measured > 0.01f) gait.metresPerSecond = measured;
+                else
+                    Debug.LogWarning(
+                        $"[Odyssey] {gait.speedFromClipName} reports no root travel, so " +
+                        $"{gait.clipName} keeps its declared {gait.metresPerSecond} m/s.");
+            }
+        }
+
+        static AnimationClip? LookUpClip(string name, Dictionary<string, AnimationClip?> cache)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            if (cache.TryGetValue(name, out AnimationClip? cached)) return cached;
+            AnimationClip? clip = FindSyntyClip(name);
+            cache[name] = clip;
+            return clip;
+        }
+
+        /// <summary>
+        /// Metres per second a root-motion clip covers, horizontally.
+        ///
+        /// Horizontally on purpose: a walk cycle bobs, and counting the vertical would report a
+        /// stride slightly longer than the one that actually touches the floor.
+        /// </summary>
+        static float MeasureGaitSpeed(AnimationClip clip)
+        {
+            Vector3 velocity = clip.averageSpeed;
+            return new Vector2(velocity.x, velocity.z).magnitude;
         }
 
         /// <summary>Exact-name lookup under Assets/Synty. Absent packs give null, which is fine.</summary>

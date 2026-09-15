@@ -72,6 +72,7 @@ namespace Odyssey.Presentation.Bootstrap
         WorldRenderModel? _model;
         ChunkRenderer? _renderer;
         PawnContext? _pawns;
+        PawnFigureDirector? _figures;
         Material? _actorMaterial;
         MapGenDef? _gen;
         double _accumulator;
@@ -152,6 +153,10 @@ namespace Odyssey.Presentation.Bootstrap
             _actorMaterial = new Material(library.FallbackMaterial) { name = "Odyssey/Actor" };
             // High-contrast against grass, earth and stone, which tan was not.
             _actorMaterial.SetColor("_BaseColor", new Color(0.98f, 0.36f, 0.20f));
+
+            // Live figures for the pawns on screen. Everything else keeps the baked instanced
+            // form, and so does everybody if the packs are absent or the catalogue has no gaits.
+            _figures = new PawnFigureDirector(moduleCatalogue, transform, gameObject.layer);
 
             if (cameraRig != null)
             {
@@ -246,9 +251,16 @@ namespace Odyssey.Presentation.Bootstrap
 
             _frameTimer.Restart();
             _renderer.Render(activeLayer, slice);
+
+            // Figures first, because what they take is what the instanced pass must leave alone.
+            // Their graphs advance on their own clock once played, so nothing is evaluated here.
+            int movePerTick = PawnContent.Core().Movement.movePerTick;
+            _figures?.Sync(_world.Views.Current, activeLayer, slice, _tickAlpha, movePerTick,
+                Time.deltaTime);
+
             if (_actorMaterial != null)
                 _renderer.RenderActors(_world.Views.Current, activeLayer, slice, _actorMaterial,
-                    _tickAlpha, PawnContent.Core().Movement.movePerTick);
+                    _tickAlpha, movePerTick, _figures?.Drawn);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
 
@@ -266,7 +278,8 @@ namespace Odyssey.Presentation.Bootstrap
                 $"tick {_world.CurrentTick}  speed {_world.GameSpeed}   layer {activeLayer}/{_model.Size.SizeY - 1}" +
                 $"  above: {above}\n" +
                 $"draw calls {_renderer.DrawCalls}   instances {_renderer.InstancesDrawn}" +
-                $"   chunks {_renderer.ChunksDrawn}   materials {_renderer.MaterialCount}\n" +
+                $"   chunks {_renderer.ChunksDrawn}   materials {_renderer.MaterialCount}" +
+                $"   figures {_figures?.FigureCount ?? 0} @ {_figures?.FastestSpeed ?? 0f:0.0} m/s\n" +
                 $"frame {_smoothedFrameMs:0.00} ms ({(_smoothedFrameMs > 0f ? 1000f / _smoothedFrameMs : 0f):0}fps)" +
                 $"   submit {_renderMs:0.00} ms   tick {_tickMs:0.00} ms   remeshed {_renderer.ChunksMeshedThisFrame}\n" +
                 $"WASD pan - Q/E orbit - wheel zoom - R/F layer - V above-mode - B below-mode - " +
@@ -285,6 +298,7 @@ namespace Odyssey.Presentation.Bootstrap
                 cameraRig.ActiveLayerChanged -= OnActiveLayerChanged;
                 cameraRig.GameSpeedRequested -= OnGameSpeedRequested;
             }
+            _figures?.Dispose();
             _renderer?.Dispose();
             if (_actorMaterial != null) Destroy(_actorMaterial);
         }

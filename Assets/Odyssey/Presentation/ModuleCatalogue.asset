@@ -30,6 +30,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.wall.panel
     shape: 1
     prefab: {fileID: 1314183909916261615, guid: d6b56504304c325419b598fe3ddb95ed, type: 3}
@@ -47,6 +48,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.wall.block
     shape: 1
     prefab: {fileID: 1314183909916261615, guid: d6b56504304c325419b598fe3ddb95ed, type: 3}
@@ -64,6 +66,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.wall.curtain
     shape: 1
     prefab: {fileID: 2095505155170527388, guid: c5c2a8e6bf649504c9a44506e4e45bd9, type: 3}
@@ -81,6 +84,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.window
     shape: 1
     prefab: {fileID: 1575485029253254693, guid: 312c2475757f3d449bc5791d854de9f8, type: 3}
@@ -98,6 +102,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.wall.window
     shape: 1
     prefab: {fileID: 1575485029253254693, guid: 312c2475757f3d449bc5791d854de9f8, type: 3}
@@ -115,6 +120,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.wall.shopfront
     shape: 1
     prefab: {fileID: 2095505155170527388, guid: c5c2a8e6bf649504c9a44506e4e45bd9, type: 3}
@@ -132,6 +138,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.wall.glazed
     shape: 1
     prefab: {fileID: 2095505155170527388, guid: c5c2a8e6bf649504c9a44506e4e45bd9, type: 3}
@@ -149,6 +156,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.wall.vault
     shape: 1
     prefab: {fileID: 1314183909916261615, guid: d6b56504304c325419b598fe3ddb95ed, type: 3}
@@ -166,6 +174,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.door
     shape: 1
     prefab: {fileID: 1090055365757069019, guid: b00e173b113716a458e7d028b5a22a6e, type: 3}
@@ -183,6 +192,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.door.single
     shape: 1
     prefab: {fileID: 1090055365757069019, guid: b00e173b113716a458e7d028b5a22a6e, type: 3}
@@ -200,6 +210,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.door.double
     shape: 1
     prefab: {fileID: 5000267000382648265, guid: 4429b90df2f00014eb1874ba70387189, type: 3}
@@ -217,6 +228,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.door.lobby
     shape: 1
     prefab: {fileID: 6601050566410634084, guid: 80f8de5fa3b15d8459024f191962186c, type: 3}
@@ -234,6 +246,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.pillar
     shape: 4
     prefab: {fileID: 7567519678023432404, guid: 3c3333a360e049e459c73b3ca0afec89, type: 3}
@@ -251,6 +264,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.stair
     shape: 5
     prefab: {fileID: 5184713431846949732, guid: d1e81d08282ca3b49b6f9b7fb3935878, type: 3}
@@ -268,6 +282,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.stair.straight
     shape: 5
     prefab: {fileID: 5184713431846949732, guid: d1e81d08282ca3b49b6f9b7fb3935878, type: 3}
@@ -285,6 +300,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.stair.core
     shape: 5
     prefab: {fileID: 5184713431846949732, guid: d1e81d08282ca3b49b6f9b7fb3935878, type: 3}
@@ -302,6 +318,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.ladder
     shape: 6
     prefab: {fileID: 9016761526901123284, guid: 52340b3b1ff43e74bae915614541ffad, type: 3}
@@ -319,6 +336,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.ladder.fixed
     shape: 6
     prefab: {fileID: 9016761526901123284, guid: 52340b3b1ff43e74bae915614541ffad, type: 3}
@@ -336,6 +354,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.slab
     shape: 2
     prefab: {fileID: 218261247472390261, guid: 14c2043f70fad33459f6bbab2bef8720, type: 3}
@@ -353,6 +372,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.slab.concrete
     shape: 2
     prefab: {fileID: 218261247472390261, guid: 14c2043f70fad33459f6bbab2bef8720, type: 3}
@@ -370,6 +390,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.slab.deck
     shape: 2
     prefab: {fileID: 218261247472390261, guid: 14c2043f70fad33459f6bbab2bef8720, type: 3}
@@ -387,6 +408,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.utility.tap
     shape: 4
     prefab: {fileID: 0}
@@ -404,6 +426,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.pavement
     shape: 2
     prefab: {fileID: 1554687143679090, guid: 625e1518f7d51b741b259e863a096e42, type: 3}
@@ -421,6 +444,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.crackedpavement
     shape: 2
     prefab: {fileID: 1965909188301746, guid: ac86e58f7706ca04a9df3f348cf148bd, type: 3}
@@ -438,6 +462,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.rubble
     shape: 2
     prefab: {fileID: 1653527390631264, guid: bc32377f7b002c2408c36cbf8dcff58c, type: 3}
@@ -455,6 +480,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.soil
     shape: 2
     prefab: {fileID: 1577172829149528, guid: f1caf2cf329e69744a5b641ea8285df6, type: 3}
@@ -472,6 +498,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.gravel
     shape: 2
     prefab: {fileID: 1036822767203376, guid: 2d7c7ed92e45db34992dafca4ced6ea5, type: 3}
@@ -489,6 +516,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.engineeredfill
     shape: 3
     prefab: {fileID: 0}
@@ -506,6 +534,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.rock
     shape: 3
     prefab: {fileID: 0}
@@ -523,6 +552,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.buriedseam
     shape: 3
     prefab: {fileID: 0}
@@ -540,6 +570,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.salvage
     shape: 3
     prefab: {fileID: 0}
@@ -557,6 +588,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.grass
     shape: 3
     prefab: {fileID: 0}
@@ -574,6 +606,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.bareearth
     shape: 3
     prefab: {fileID: 0}
@@ -591,6 +624,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.packedgravel
     shape: 3
     prefab: {fileID: 0}
@@ -608,6 +642,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.subsoil
     shape: 3
     prefab: {fileID: 0}
@@ -625,6 +660,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.bedrock
     shape: 3
     prefab: {fileID: 0}
@@ -642,6 +678,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.sand
     shape: 3
     prefab: {fileID: 0}
@@ -659,6 +696,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.ironore
     shape: 3
     prefab: {fileID: 0}
@@ -676,6 +714,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.coalseam
     shape: 3
     prefab: {fileID: 0}
@@ -693,6 +732,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.tree.conifer
     shape: 4
     prefab: {fileID: 6131553767378768855, guid: ae12f1ba847c6f74281e7a9a7b0ac7fd, type: 3}
@@ -710,6 +750,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.tree.broadleaf
     shape: 4
     prefab: {fileID: 2137760205200772258, guid: 49091280d622b904f96e72e71fe4e877, type: 3}
@@ -727,6 +768,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.pawn.colonist
     shape: 4
     prefab: {fileID: 3755277747141990492, guid: 89e401adace34884084d47323dfed9fc, type: 3}
@@ -744,6 +786,19 @@ MonoBehaviour:
     poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
     poseClipName: A_Idle_Standing_Masc
     poseClipTime: 0
+    locomotion:
+    - clipName: A_Idle_Standing_Masc
+      clip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
+      speedFromClipName: 
+      metresPerSecond: 0
+    - clipName: A_Walk_F_Masc
+      clip: {fileID: 2571081563578608591, guid: eead3eb07cb89cb4eb25b3550df5e84b, type: 3}
+      speedFromClipName: A_Walk_F_RootMotion_Masc
+      metresPerSecond: 1.4571549
+    - clipName: A_Run_F_Masc
+      clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
+      speedFromClipName: A_Run_F_RootMotion_Masc
+      metresPerSecond: 2.5950913
   - moduleId: odyssey.module.item.meal
     shape: 4
     prefab: {fileID: 8752115278972753073, guid: 53e689cdb89924f4eacb5b2f01c0bae0, type: 3}
@@ -761,6 +816,7 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.item.salvage
     shape: 4
     prefab: {fileID: 1183212502589018, guid: 8c52c17108ac4d14b93017d91e804006, type: 3}
@@ -778,3 +834,4 @@ MonoBehaviour:
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
+    locomotion: []

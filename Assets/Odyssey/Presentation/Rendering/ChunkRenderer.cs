@@ -208,9 +208,16 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         /// <param name="tickAlpha">How far this frame sits between two ticks, 0 to 1.</param>
         /// <param name="movePerTick">Cost units a pawn retires per tick, so a partial tick can be extrapolated.</param>
+        /// <param name="drawnAsFigures">
+        /// Pawn ids that already have a live animated figure in the scene, which must not also be
+        /// drawn here. Without it a walking colonist renders twice — the figure and its own baked
+        /// stand-in occupying the same cell — which reads as one colonist with a shadow problem
+        /// rather than as two overlapping draws.
+        /// </param>
         public void RenderActors(
             WorldSnapshot snapshot, int activeLayer, SliceSettings slice, Material material,
-            float tickAlpha = 0f, int movePerTick = 0)
+            float tickAlpha = 0f, int movePerTick = 0,
+            System.Collections.Generic.HashSet<int>? drawnAsFigures = null)
         {
             if (snapshot.PawnCount == 0 && snapshot.ThingCount == 0) return;
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
@@ -224,28 +231,19 @@ namespace Odyssey.Presentation.Rendering
             {
                 var cell = pawns[i].Cell;
                 if (cell.Y < lowest || cell.Y > activeLayer) continue;
+                if (drawnAsFigures != null && drawnAsFigures.Contains(pawns[i].Id.Value)) continue;
 
                 // Glide between cells rather than snapping. The simulation is discrete and
-                // integer, which determinism requires; this is a presentation facade over it.
-                Vector3 drift = Vector3.zero;
-                Vector3 heading = Vector3.zero;
-                if (pawns[i].MovePercent > 0)
-                {
-                    Vector3 from = CellMetrics.FloorCentre(cell);
-                    Vector3 to = CellMetrics.FloorCentre(pawns[i].NextCell);
-                    heading = to - from;
-                    // Carry the pawn on through the part-tick this frame sits in, so the walk
-                    // stays smooth when frames outpace ticks. Clamped so it never runs past the
-                    // cell it is entering, which would look like a stumble.
-                    float percent = pawns[i].MovePercent + movePerTick * tickAlpha;
-                    drift = heading * (Mathf.Clamp(percent, 0f, 100f) * 0.01f);
-                }
+                // integer, which determinism requires; this is a presentation facade over it,
+                // and it is shared with the animated figures so the two cannot disagree.
+                Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading);
 
                 if (!hasFigure)
                 {
                     // No licensed art: the stand-in is a body and a beacon, both deliberately
                     // larger than life, because a true-to-scale figure is a few pixels once the
                     // camera pulls back. That is how five colonists managed to be invisible.
+                    Vector3 drift = position - CellMetrics.FloorCentre(cell);
                     DrawMarker(material, cell, new Vector3(1.4f, 2.6f, 1.4f), 1.3f, drift);
                     DrawMarker(material, cell, new Vector3(0.7f, 0.7f, 0.7f), 3.6f, drift);
                     continue;
@@ -253,7 +251,7 @@ namespace Odyssey.Presentation.Rendering
 
                 EnsureActorCapacity(pawns.Length);
                 _actorPlacements[drawn++] = Matrix4x4.TRS(
-                    CellMetrics.FloorCentre(cell) + drift,
+                    position,
                     Quaternion.Euler(0f, FacingOf(pawns[i].Id, heading), 0f),
                     Vector3.one);
 
@@ -389,7 +387,7 @@ namespace Odyssey.Presentation.Rendering
         {
             if (heading.sqrMagnitude > 1e-4f)
             {
-                float yaw = Mathf.Atan2(heading.x, heading.z) * Mathf.Rad2Deg;
+                float yaw = PawnPose.YawOf(heading);
                 _facing[id.Value] = yaw;
                 return yaw;
             }

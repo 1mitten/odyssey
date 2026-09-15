@@ -147,6 +147,43 @@ namespace Odyssey.Presentation.Rendering
 
         [Tooltip("Seconds into the pose clip to sample. Any settled frame of an idle will do.")]
         public float poseClipTime = 0f;
+
+        /// <summary>
+        /// Gaits this module can be animated through, slowest first, blended by how fast the thing
+        /// is actually moving. Empty for everything that is not a pawn.
+        ///
+        /// The baked mesh in <see cref="poseClip"/> is not replaced by this and is not a rival to
+        /// it: baking stays the cheap form for a crowd, and these drive the live figures that the
+        /// handful of pawns on screen are given instead. A module with no gaits simply never gets
+        /// a live figure.
+        /// </summary>
+        public List<LocomotionEntry> locomotion = new List<LocomotionEntry>();
+    }
+
+    /// <summary>
+    /// One gait: a clip, and how fast over the ground that clip was authored to look right at.
+    ///
+    /// The speed is what stops the feet from sliding, and it is **measured rather than guessed**.
+    /// The locomotion pack ships every clip twice, once in place and once with root motion; the
+    /// in-place twin is what a pawn plays, because the simulation decides where anybody is, and
+    /// the root-motion twin is what says how far that stride was meant to carry someone. The
+    /// editor reads the second to calibrate the first, so nobody has to eyeball a number that the
+    /// art already knows.
+    /// </summary>
+    [Serializable]
+    public sealed class LocomotionEntry
+    {
+        [Tooltip("The in-place clip a pawn plays, by asset name.")]
+        public string clipName = string.Empty;
+
+        [Tooltip("The clip. Null on a clone without the packs, which falls back to the baked mesh.")]
+        public AnimationClip? clip;
+
+        [Tooltip("The root-motion twin this gait's speed was measured from, by asset name.")]
+        public string speedFromClipName = string.Empty;
+
+        [Tooltip("Metres per second the gait covers ground at. Zero means standing still.")]
+        public float metresPerSecond;
     }
 
     /// <summary>
