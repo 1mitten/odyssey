@@ -18,21 +18,22 @@ A prototype colony sim in the RimWorld mould, in true 3D with discrete vertical 
 
 ## Current status
 
-- **Phase 0 (ground): done remotely on 2026-09-15**, with two items blocked until run on the dev machine: the Synty import spike and the asset inventory. See `docs/research/phase0-ground.md` and `docs/research/synty-import.md`.
-- **Phase 1 (interview): asked, unanswered.** Q1 additional Synty packs (assumed none). Q2 cell size (needs the inventory). Q3 ruined-city generation (assumed template stamping). Q4 Unity MCP server (recommended IvanMurzak/Unity-MCP, see `docs/research/unity-mcp-server.md`).
-- **Phase 2 (research): not started.** Lanes A–F in brief §5. Lanes E and D3 wait for the inventory; everything else can start once Phase 1 is answered.
-- **Cell size: not fixed.** Nothing is built until `docs/research/synty-inventory.md` exists and the owner confirms the size.
+- **Phase 0 (ground): complete 2026-09-15.** The import spike and asset inventory ran on the **Windows** dev machine: Unity 6000.3.24f1 LTS + URP 17.3.0 project at the repository root, five Synty packs imported headless under `Assets/Synty/` (7,222 assets, zero import errors). Record in `docs/research/synty-import.md`; measurements in `docs/research/synty-inventory.md`.
+- **Phase 1 (interview): partially answered** — see `docs/research/phase1-answers.md`. Q1 **answered**: owner supplied Sci-Fi City 1.3.3, Farm 1.7.3, Western Frontier 1.7.2, Particle FX 1.4.1, ANIMATION Base Locomotion 1.1.3. Q2 **proposed**: inventory implies a **2.5 × 2.5 × 3.0 m cell**, awaiting owner confirmation. Q3 (template stamping) and Q4 (IvanMurzak/Unity-MCP) assumptions stand, unconfirmed.
+- **Phase 2 (research): not started.** Lanes A–F in brief §5. The inventory exists, so Lanes E and D3 are unblocked; all lanes start once Phase 1 is confirmed.
+- **Cell size: proposed 2.5 × 2.5 × 3.0 m, not confirmed.** Nothing is built until the owner confirms it.
+- Owner reference (2026-09-15): `github.com/RimWorldMods` for understanding RimWorld mechanics — clean-room rules apply, nothing is copied from it (note in `docs/research/INDEX.md`).
 
 ## Repository layout
 
-- `docs/brief.md` governing brief · `docs/research/` research files and `INDEX.md` · `docs/reference/screenshots/` reference images and descriptions · `docs/setup/local-dev.md` dev-machine setup. Later phases add `docs/design/`, `docs/adr/`, `docs/plans/`, `docs/milestones/`.
-- The Unity project lives at the **repository root** (`Assets/`, `Packages/`, `ProjectSettings/`), created on the dev machine per `docs/research/synty-import.md`.
-- `Assets/Editor/Odyssey/` editor tooling (currently `SyntyInventory.cs`, uncompiled until first run). `Assets/Synty/` licensed packs, ignored by git.
+- `docs/brief.md` governing brief · `docs/research/` research files and `INDEX.md` · `docs/reference/screenshots/` reference images and descriptions · `docs/setup/local-dev.md` dev-machine setup (§8 for Windows). Later phases add `docs/design/`, `docs/adr/`, `docs/plans/`, `docs/milestones/`.
+- The Unity project lives at the **repository root** (`Assets/`, `Packages/`, `ProjectSettings/`), created 2026-09-15 on the Windows dev machine (Unity 6000.3.24f1, Universal 3D template).
+- `Assets/Editor/Odyssey/` editor tooling: `SyntyInventory.cs` (the inventory report) and `SyntyImport.cs` (headless `.unitypackage` import + URP material upgrade); both compile on 6000.3.24f1. `Assets/Synty/` licensed packs, ignored by git.
 - `scripts/unity.sh` headless Unity wrapper: `inventory`, `test editmode|playmode`, `exec <Namespace.Class.Method>`, `open`, `which`.
 
 ## Environment
 
-- **Dev machine:** Pop!_OS, Unity Hub, Unity 6000.3.x LTS, RTX 5070 Ti (not the performance target; the target is a 2022 mid-range laptop). Keep the project path free of spaces (a Unity-MCP constraint).
+- **Dev machines:** Pop!_OS (Unity Hub, RTX 5070 Ti) and Windows 11 (`D:\code\odyssey`, Unity CLI/Hub beta — see `docs/setup/local-dev.md` §8). Both run Unity 6000.3.x LTS; neither is the performance target (that is a 2022 mid-range laptop). Keep the project path free of spaces (a Unity-MCP constraint).
 - **Remote Claude Code container:** no Unity, no dotnet SDK, no Synty. Use it for research and documentation only, until the environment gains a dotnet SDK for pure-C# simulation tests.
 - **Blender (optional):** only for gaps no Synty asset fills (a stair or ladder variant at the cell size, UV or atlas fixes, rig or animation retargeting). Synty first. Blender-made pieces go under `Assets/Art/Custom/` and are committed; they must match the Synty style and snap to the cell grid.
 - **Unity MCP:** IvanMurzak/Unity-MCP, installed per `docs/setup/local-dev.md`. Once connected, Claude Code can open scenes, run EditMode/PlayMode tests, read the console and execute editor C#. Prefer `scripts/unity.sh` for anything that must also work in CI.

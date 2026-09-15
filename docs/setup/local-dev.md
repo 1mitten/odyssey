@@ -1,6 +1,8 @@
-# Local development setup (Pop!_OS)
+# Local development setup (Pop!_OS and Windows)
 
 Goal: a machine where Claude Code can drive Unity end to end: create and open scenes, run tests, read the console, and run headless batch jobs. The remote Claude Code container cannot do any of this (no Unity, no dotnet SDK, no Synty), so the Unity-side work happens here.
+
+Two dev machines exist as of 2026-09-15: the Pop!_OS machine this file was written for, and a Windows 11 machine (`D:\code\odyssey`) where Phase 0 was actually run. Sections 1–7 apply to both unless marked; Windows specifics are in §8.
 
 ## 1. Prerequisites
 
@@ -70,3 +72,21 @@ There are no tests yet; the wrapper is here so that M0 has a stable command surf
 - `claude` in the repository root reads `CLAUDE.md` automatically.
 - `.claude/settings.json` pre-approves read-only git commands and `scripts/unity.sh` so the agent is not interrupted for them. Edit it if you want more or less.
 - Keep the phase discipline: the agent stops after each phase; you answer; it continues. Answers go into `docs/` so they survive `/clear`.
+
+## 8. Windows dev machine notes
+
+What differs from the Linux instructions above (verified on Windows 11, 2026-09-15):
+
+- **Unity CLI instead of classic Hub.** The machine runs the Unity Hub beta with its `unity` CLI at `%LOCALAPPDATA%\Unity\bin\unity.exe`. Useful commands: `unity editors -r` (list installable versions), `unity install 6000.3.24f1 -y --non-interactive --accept-eula` (headless editor install — expect one UAC prompt for `C:\Program Files`), `unity env` (paths). Editors land in `C:\Program Files\Unity\Hub\Editor\<version>\Editor\Unity.exe`.
+- **`scripts/unity.sh` works from Git Bash** (the shell Claude Code uses on Windows). It finds editors under `C:\Program Files\Unity\Hub\Editor` automatically, preferring the version in `ProjectSettings/ProjectVersion.txt`.
+- **Headless Synty import.** With the `.unitypackage` files downloaded (never committed):
+
+  ```
+  "C:\Program Files\Unity\Hub\Editor\<ver>\Editor\Unity.exe" -batchmode -nographics -projectPath D:\code\odyssey ^
+    -executeMethod Odyssey.EditorTools.SyntyImport.ImportAll ^
+    -odysseyPackages "C:\path\pack1.unitypackage;C:\path\pack2.unitypackage" ^
+    -logFile Logs\synty-import.log
+  ```
+
+  No `-quit` — the method exits the editor itself. `AssetDatabase.ImportPackage` merely queues imports under `-executeMethod` (a run can "succeed" having imported nothing), so `SyntyImport.cs` calls the editor's synchronous internal import; see the comment in that file.
+- **Keep the project path free of spaces** here too (`D:\code\odyssey` is fine) — same Unity-MCP constraint.
