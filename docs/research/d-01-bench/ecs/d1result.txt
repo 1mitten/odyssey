@@ -1,0 +1,29 @@
+D1RESULT candidate=ecs
+D1RESULT unity=6000.3.24f1 packages=com.unity.entities@1.4.8,com.unity.burst@1.8.30,com.unity.collections@2.6.8,com.unity.mathematics@1.3.3,burst_enabled@on
+D1RESULT hash_run1=c7d0d7f512c0feca hash_run2=c7d0d7f512c0feca
+D1RESULT phase1_ms_mean=0.442 phase1_ms_p95=0.727 phase1_ms_max=1.049
+D1RESULT phase2_ms_mean=0.171 phase2_ms_p95=0.182 phase2_ms_max=1.427
+D1RESULT phase3_ms_mean=1.622 phase3_ms_p95=2.861 phase3_ms_max=3.638
+D1RESULT phase4_ms_mean=0.212 phase4_ms_p95=0.223 phase4_ms_max=0.414
+D1RESULT tick_ms_mean=2.446 tick_ms_p95=3.892 tick_ms_max=5.883
+D1RESULT alloc_bytes_per_tick=0.0 gc0=0 gc1=0 gc2=0
+D1RESULT managed_bytes=425279488 native_bytes=36094472
+D1RESULT setup_ms=33.813
+D1NOBURST hash=c7d0d7f512c0feca setup_ms=38.590
+D1NOBURST phase1_ms_mean=0.699 phase1_ms_p95=1.170 phase1_ms_max=2.453
+D1NOBURST phase2_ms_mean=1.256 phase2_ms_p95=1.275 phase2_ms_max=1.824
+D1NOBURST phase3_ms_mean=4.343 phase3_ms_p95=7.625 phase3_ms_max=11.214
+D1NOBURST phase4_ms_mean=0.559 phase4_ms_p95=0.567 phase4_ms_max=1.080
+D1NOBURST tick_ms_mean=6.857 tick_ms_p95=10.401 tick_ms_max=15.005
+D1DIAG solid_ones=874876 rng_after_setup=2439470761 hash_setup=1fccfcc133363bf8
+D1DIAG setup_hash_temp=66ae896aae97a76c setup_hash_things=9b85a68c78294d25 setup_hash_pawns=abcb22d26dece989
+D1DIAG setup_frontier_len=2000 setup_pawn0=1139503 setup_thing0=1709073
+D1DIAG after_tick1 hash=13aa7e16b2c05f7a rng=3850712527 frontier=7719 replans=1 ok=0
+D1DIAG after_tick2 hash=56a40c21d925e472 rng=818016482 frontier=8000 replans=2 ok=0
+D1DIAG after_tick10 hash=9e91ec5aee5f67cf rng=759189131 frontier=7910 replans=10 ok=3
+D1DIAG after_tick100 hash=46f27d52fd182721 rng=1142198311 frontier=5490 replans=100 ok=38
+D1DIAG after_warmup hash=79d3cb216e79b118 rng=2176627636 replans=300 ok=111
+D1DIAG final_hash_temp=af4857d71a7c0527 final_hash_things=c588422eb3f1880f final_hash_pawns=6da271c1d76627de
+D1DIAG final_rng=3054264371 final_tick=1800 replans=1800 replan_ok=742 temp_sum=12723036
+D1DIAG final_pawncells=1139000|1516707|1193292|417402|1735997|34983|1789238|2458012|2059493|606401
+D1DIAG budgetmode0_hash=589e9d8d4279a733 replan_ok=736 hash_temp=af4857d71a7c0527 hash_things=c588422eb3f1880f hash_pawns=42284189d0b2ff2f

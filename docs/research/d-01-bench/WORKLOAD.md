@@ -84,7 +84,7 @@ Per tick, for i = 0 .. 19999 in order, with `interval = thingTicker[i] == 0 ? 25
 - Heuristic to (tx,tz,ty): `h = 10 * (|x-tx| + |z-tz|) + 10 * |y-ty|`.
 - Open set: a binary min-heap of (f, cellIndex), ordered by f ascending, ties broken by cellIndex ascending. In sift-down, when the two children compare exactly equal, choose the left child. Lazy deletion: duplicates may be pushed; on pop, skip a cell already closed.
 - `g` and `cameFrom` are per-cell int arrays, `closed` a per-cell byte array, all persistent across searches. Every cell a search touches is appended to a touched list and reset after that search — never clear the whole arrays.
-- Expansion budget: stop after 20,000 pops and treat it as failure.
+- Expansion budget: stop after 20,000 pops and treat it as failure. **Clarified 2026-09-15 after both runs:** the budget counts only pops that *expand* — a pop that is discarded because the cell is already closed (lazy deletion) does not count against it. Counting discarded pops as well is self-consistent but yields a different world: hash `589e9d8d4279a733` with 736 successful replans, against `c7d0d7f512c0feca` with 742. Both candidates ship both variants behind a switch; the expanding-pops reading is the contract.
 - On popping the target, walk cameFrom back to the start, reverse, and store the first 64 steps after the start.
 
 ## 5. Phase 4 — the view build (the UI seam)
