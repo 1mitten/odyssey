@@ -146,7 +146,11 @@ namespace Odyssey.Presentation.Bootstrap
 
             if (cameraRig != null)
             {
-                cameraRig.Bind(_model, _renderer, _gen.groundLayer);
+                // Bind to the layer the colony actually stands on, not the generator nominal
+                // ground layer. The surface is terraced, so StartCell.Y sits one to three layers
+                // above groundLayer, and RenderActors culls anything above the active layer -
+                // which meant every colonist was culled every frame while the terrain drew fine.
+                cameraRig.Bind(_model, _renderer, outcome.StartCell.Y);
                 cameraRig.ActiveLayerChanged += OnActiveLayerChanged;
                 cameraRig.GameSpeedRequested += OnGameSpeedRequested;
                 // Open on the colony, not on the whole map: see SliceCameraRig.FocusOn.

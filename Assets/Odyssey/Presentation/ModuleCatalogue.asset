@@ -303,22 +303,22 @@ MonoBehaviour:
     scale: {x: 1, y: 1, z: 1}
   - moduleId: odyssey.module.terrain.grass
     shape: 3
-    prefab: {fileID: 4383323913801607863, guid: f424c7a3d926b314d8a867a7b24487bc, type: 3}
-    prefabName: SM_Gen_Env_Ground_Grass_01
+    prefab: {fileID: 1287145345238434, guid: 534497d369ca4de4aaeb048a9211449c, type: 3}
+    prefabName: SM_Env_Ground_Tile_01
     centreXZ: 1
     baseAtY: 0
     offset: {x: 0, y: 3, z: 0}
     yaw: 0
-    scale: {x: 0.5543237, y: 1, z: 0.5720824}
+    scale: {x: 0.5, y: 1, z: 0.5}
   - moduleId: odyssey.module.terrain.bareearth
     shape: 3
-    prefab: {fileID: 3890554199827564479, guid: 5f13adf1020d9d3428e681e3b4de11ff, type: 3}
-    prefabName: SM_Gen_Env_Ground_Dirt_01
+    prefab: {fileID: 1665593956161272, guid: 5e4bdc96038d5424fbd9029b5ecaea9f, type: 3}
+    prefabName: SM_Env_Ground_Tile_04
     centreXZ: 1
     baseAtY: 0
     offset: {x: 0, y: 3, z: 0}
     yaw: 0
-    scale: {x: 0.5543237, y: 1, z: 0.5720824}
+    scale: {x: 0.5, y: 1, z: 0.5}
   - moduleId: odyssey.module.terrain.packedgravel
     shape: 3
     prefab: {fileID: 0}
