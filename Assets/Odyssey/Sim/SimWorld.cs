@@ -180,6 +180,9 @@ namespace Odyssey.Sim
 
         internal void SetSnapshotContributors(ISnapshotContributor[] contributors) => _contributors = contributors;
 
+        /// <summary>Restore the tick counter when loading a save. Not for any other use.</summary>
+        internal void RestoreTick(int tick) => CurrentTick = tick;
+
         /// <summary>The random stream for this tick and a named purpose.</summary>
         public DeterministicRandom RandomForTick(uint purpose) =>
             DeterministicRandom.ForTick(Seed, CurrentTick, purpose);

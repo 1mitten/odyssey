@@ -177,10 +177,16 @@ case "$cmd" in
       playmode|PlayMode) platform=PlayMode ;;
       *) echo "unity.sh: test editmode|playmode" >&2; exit 2 ;;
     esac
-    mkdir -p TestResults
-    # No -quit here: Unity exits on its own after -runTests and -quit would drop the results file.
-    run_batch "Logs/test-$platform.log" -nographics -runTests -testPlatform "$platform" \
-      -testResults "$ROOT/TestResults/$platform.xml" "$@"
+    # No -quit here: -quit can cut the run short before results are written. Unity is documented
+    # to exit on its own after -runTests but sometimes does not, so the watchdog supervises it.
+    # PlayMode needs a real graphics device, so -nographics is EditMode-only.
+    if [[ "$platform" == "EditMode" ]]; then
+      run_tests_watchdog "Logs/test-$platform.log" "$ROOT/TestResults/$platform.xml" \
+        -nographics -testPlatform "$platform" "$@"
+    else
+      run_tests_watchdog "Logs/test-$platform.log" "$ROOT/TestResults/$platform.xml" \
+        -testPlatform "$platform" "$@"
+    fi
     ;;
   exec)
     UNITY="$(find_unity)"
