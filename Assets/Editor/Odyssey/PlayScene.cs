@@ -591,6 +591,37 @@ namespace Odyssey.EditorTools
                 scale = new Vector3(1.4f, 1.4f, 1.4f),
             });
 
+            // Loose items on the ground. Before these rows existed every item fell through to the
+            // stand-in marker, so a scenario that scatters twelve ration stacks and eight pieces
+            // of salvage painted twenty orange boxes across a barren map — the first thing anyone
+            // noticed about the scene, and not in a good way.
+            //
+            // What each piece is has to be readable from the silhouette, because at board-camera
+            // height colour tells you very little and outline tells you nearly everything: a
+            // rounded stack of ration sacks against a square crate of stripped machine parts.
+            // Both were chosen by rendering them and looking. The pack's "supplies" box is in
+            // fact full of scrap components, which reads as salvage and not at all as food, and a
+            // first pass that used it for meals had the two exactly the wrong way round.
+            //
+            // Measured against the 2.5 m cell, as everything here is. The sack stack is
+            // 1.00 x 0.96 x 1.00 and the crate 0.80 x 0.78 x 0.73; at true scale both read as
+            // litter dropped on a field, so each is drawn about half again as large and still
+            // leaves a clear margin inside the cell.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemMeal, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Prop_Sack_Stack_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1.6f, 1.6f, 1.6f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemSalvage, shape = ModuleShape.Pillar,
+                prefabName = "SM_Prop_Box_Supplies_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1.5f, 1.5f, 1.5f),
+            });
+
             return rows;
         }
 

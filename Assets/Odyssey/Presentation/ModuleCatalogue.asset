@@ -744,3 +744,37 @@ MonoBehaviour:
     poseClip: {fileID: 1827226128182048838, guid: a4b8f2deec6a99945987cfc59b1b4e54, type: 3}
     poseClipName: A_Idle_Standing_Masc
     poseClipTime: 0
+  - moduleId: odyssey.module.item.meal
+    shape: 4
+    prefab: {fileID: 8752115278972753073, guid: 53e689cdb89924f4eacb5b2f01c0bae0, type: 3}
+    prefabName: SM_Gen_Prop_Sack_Stack_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.6, y: 1.6, z: 1.6}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+  - moduleId: odyssey.module.item.salvage
+    shape: 4
+    prefab: {fileID: 1183212502589018, guid: 8c52c17108ac4d14b93017d91e804006, type: 3}
+    prefabName: SM_Prop_Box_Supplies_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1.5, y: 1.5, z: 1.5}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0

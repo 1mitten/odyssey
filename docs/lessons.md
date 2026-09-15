@@ -123,3 +123,20 @@ Two lessons.
 Handing over `sharedMesh` would not have fixed it either: that is the bind pose in bone space, and `RenderMeshInstanced` takes one mesh and many matrices with no per-instance bone palette, so a skinned mesh cannot go through the instanced path at all. Baking each `SkinnedMeshRenderer` once at load collapses the rig into an ordinary mesh, after which a colonist costs what a wall costs and travels the same path as everything else. The price is that a baked figure glides rather than walks, which at board-camera distance is a far smaller deficit than a grey box, and it composes with a pooled animated `GameObject` later for the handful of pawns actually on screen.
 
 **Bake without posing first and everyone stands in a T-pose.** The bake captures the *current* pose, and with no Animator having evaluated, that is the bind pose: arms straight out. Sampling a standing idle clip onto the instance first is what makes a baked character read as a person. Nothing reports the difference, so it is measured instead: a T-posed figure is about as wide as it is tall, an idle one about half a metre wide. The slice measurement prints the baked figure's box for exactly this reason.
+
+## Choosing pack art
+
+**A Synty prefab's name describes where it was meant to be used, not what it looks like.**
+`SM_Prop_Box_Supplies_01` is an open crate of stripped mechanical parts. Picked from the name it
+became the game's rations, and the scrap heap became its salvage, so the first render had the two
+kinds of item exactly the wrong way round — each one perfectly legible, and each one labelled as
+the other. The inventory CSV gives dimensions and triangle counts, which is enough to rule a piece
+out for size but nothing at all about what it depicts. **Render it and look before writing the
+catalogue row**; `scripts/unity.sh shot` costs about a minute.
+
+**An item with no module id draws as the stand-in marker and never says so.** The orange box the
+renderer falls back to is the same shape and colour for every kind of item, so a barren map with
+twelve ration stacks and eight pieces of salvage on it came out spattered with identical orange
+blobs. Nothing in the log mentions it, because falling back is the designed behaviour for a clone
+without the licensed packs. `ModuleIdTests` now fails if an item def index exists with no module
+id, which is the only moment the mistake is cheap to catch.

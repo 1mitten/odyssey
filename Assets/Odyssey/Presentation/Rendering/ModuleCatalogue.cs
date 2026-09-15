@@ -224,6 +224,31 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const string Colonist = Prefix + "pawn.colonist";
 
+        // Loose items lying in a cell: a crate of rations to be eaten, a heap of scrap to be
+        // hauled. These are drawn by the actor pass for the same reason the colonist is — they
+        // come from the published snapshot rather than from the mirror, because an item that is
+        // picked up and carried moves without any cell changing.
+        public const string ItemMeal = Prefix + "item.meal";
+        public const string ItemSalvage = Prefix + "item.salvage";
+
+        /// <summary>
+        /// Module ids for item def indices, in <c>ItemIndex</c> order.
+        ///
+        /// The order is the coupling, and it is the whole point of the array: this is
+        /// <c>ItemIndex</c> read from the presentation side, and <c>ModuleIdTests</c> fails if the
+        /// two drift apart. Until this existed every item on the ground drew as the same orange
+        /// stand-in box, which is what made a barren map look like it had been spattered with
+        /// paint.
+        /// </summary>
+        static readonly string[] ItemModules = { ItemMeal, ItemSalvage };
+
+        /// <summary>How many item def indices have a module. Must equal <c>ItemIndex.Count</c>.</summary>
+        public static int ItemModuleCount => ItemModules.Length;
+
+        /// <summary>The module for an item def index, or null when it has none and falls back.</summary>
+        public static string? Item(int itemDefIndex) =>
+            itemDefIndex >= 0 && itemDefIndex < ItemModules.Length ? ItemModules[itemDefIndex] : null;
+
         /// <summary>Terrain is not authored per template, so its ids are derived from the def name.</summary>
         public static string Terrain(string terrainDefName) =>
             Prefix + "terrain." + terrainDefName.ToLowerInvariant();

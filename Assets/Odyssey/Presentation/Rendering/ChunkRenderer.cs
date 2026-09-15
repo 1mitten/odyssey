@@ -263,16 +263,96 @@ namespace Odyssey.Presentation.Rendering
                 // interface, not for a cube floating over their heads.
             }
 
-            if (drawn > 0) SubmitActors(colonist, drawn);
+            if (drawn > 0) SubmitInstances(colonist, _actorPlacements, drawn, ref _actorMatrices);
 
-            var things = snapshot.Things;
+            RenderThings(snapshot.Things, lowest, activeLayer, material);
+        }
+
+        // ---- loose items ----------------------------------------------------------------------
+
+        int[] _itemModules = System.Array.Empty<int>();
+        Matrix4x4[][] _itemPlacements = System.Array.Empty<Matrix4x4[]>();
+        int[] _itemCounts = System.Array.Empty<int>();
+        Matrix4x4[] _itemMatrices = new Matrix4x4[16];
+
+        /// <summary>
+        /// Draw the items lying on the ground, one instanced submission per item kind.
+        ///
+        /// Items are grouped by def before anything is submitted, because the alternative — a
+        /// draw per item, which is what the stand-in marker did — costs a call for every ration
+        /// crate on a map that will eventually hold thousands of them.
+        /// </summary>
+        void RenderThings(System.ReadOnlySpan<ThingView> things, int lowest, int activeLayer, Material fallback)
+        {
+            if (things.Length == 0) return;
+            EnsureItemModules();
+            System.Array.Clear(_itemCounts, 0, _itemCounts.Length);
+
             for (int i = 0; i < things.Length; i++)
             {
-                var cell = things[i].Cell;
+                CellRef cell = things[i].Cell;
                 if (cell.Y < lowest || cell.Y > activeLayer) continue;
-                DrawMarker(material, cell, new Vector3(1.2f, 0.8f, 1.2f), 0.4f);
+
+                int def = things[i].DefIndex;
+                ResolvedModule? module = ItemModule(def);
+                if (module == null || module.IsEmpty || !module.UsesArt)
+                {
+                    // No art for this kind — either the packs are absent or the def is newer than
+                    // the catalogue. The stand-in marker is deliberately ugly so the gap shows.
+                    DrawMarker(fallback, cell, new Vector3(1.2f, 0.8f, 1.2f), 0.4f);
+                    continue;
+                }
+
+                AppendItem(def, Matrix4x4.TRS(
+                    CellMetrics.FloorCentre(cell),
+                    Quaternion.Euler(0f, YawOf(things[i].Id), 0f),
+                    Vector3.one));
+            }
+
+            for (int def = 0; def < _itemCounts.Length; def++)
+                if (_itemCounts[def] > 0)
+                    SubmitInstances(_model.Library[_itemModules[def]], _itemPlacements[def],
+                        _itemCounts[def], ref _itemMatrices);
+        }
+
+        void EnsureItemModules()
+        {
+            if (_itemModules.Length == ModuleIds.ItemModuleCount) return;
+
+            _itemModules = new int[ModuleIds.ItemModuleCount];
+            _itemCounts = new int[ModuleIds.ItemModuleCount];
+            _itemPlacements = new Matrix4x4[ModuleIds.ItemModuleCount][];
+            for (int i = 0; i < _itemModules.Length; i++)
+            {
+                // Pillar is only the shape of the primitive the library invents when the catalogue
+                // has no row at all; in that case UsesArt is false and the marker is drawn
+                // instead, so the invented shape is never what reaches the screen.
+                _itemModules[i] = _model.Library.Resolve(ModuleIds.Item(i), ModuleShape.Pillar);
+                _itemPlacements[i] = new Matrix4x4[16];
             }
         }
+
+        ResolvedModule? ItemModule(int defIndex) =>
+            defIndex >= 0 && defIndex < _itemModules.Length ? _model.Library[_itemModules[defIndex]] : null;
+
+        void AppendItem(int def, in Matrix4x4 placement)
+        {
+            Matrix4x4[] into = _itemPlacements[def];
+            if (_itemCounts[def] == into.Length)
+            {
+                System.Array.Resize(ref into, into.Length * 2);
+                _itemPlacements[def] = into;
+            }
+            into[_itemCounts[def]++] = placement;
+        }
+
+        /// <summary>
+        /// A stable bearing per item, so eight heaps of scrap are not eight copies of one heap.
+        ///
+        /// Derived from the id rather than drawn from a generator: presentation must not consume
+        /// simulation randomness, and the same item has to face the same way after a reload.
+        /// </summary>
+        static float YawOf(ThingId id) => (id.Value * 137) % 360;
 
         // ---- colonist figures ---------------------------------------------------------------
 
@@ -316,14 +396,26 @@ namespace Odyssey.Presentation.Rendering
             return _facing.TryGetValue(id.Value, out float last) ? last : 0f;
         }
 
-        void SubmitActors(ResolvedModule colonist, int count)
+        /// <summary>
+        /// Submit <paramref name="count"/> copies of a module, one instanced call per part.
+        ///
+        /// Shared by colonists and by loose items: both are placements published in a snapshot
+        /// rather than cells in the mirror, and both want the art drawn the same way the world is.
+        /// <paramref name="scratch"/> is the caller's own buffer for placement × part, grown here
+        /// so a caller never has to size it against a part count it cannot see.
+        /// </summary>
+        void SubmitInstances(ResolvedModule module, Matrix4x4[] placements, int count,
+            ref Matrix4x4[] scratch)
         {
-            var parts = colonist.Parts;
+            if (count == 0) return;
+            if (scratch.Length < count) scratch = new Matrix4x4[count];
+
+            var parts = module.Parts;
             for (int p = 0; p < parts.Length; p++)
             {
                 ModulePart part = parts[p];
                 for (int i = 0; i < count; i++)
-                    _actorMatrices[i] = _actorPlacements[i] * part.Local;
+                    scratch[i] = placements[i] * part.Local;
 
                 // Through the cache, not the pack material directly: the clone is what carries
                 // GPU instancing, and a pack material does not have it switched on.
@@ -342,7 +434,7 @@ namespace Odyssey.Presentation.Rendering
                 {
                     int n = Mathf.Min(MaxInstancesPerCall, count - sent);
                     if (SubmitToGpu)
-                        Graphics.RenderMeshInstanced(rp, part.Mesh, part.Submesh, _actorMatrices, n, sent);
+                        Graphics.RenderMeshInstanced(rp, part.Mesh, part.Submesh, scratch, n, sent);
                     sent += n;
                     DrawCalls++;
                 }
