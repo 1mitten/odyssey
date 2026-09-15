@@ -38,6 +38,36 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// <summary>Which generator <see cref="MapGenerator.Generate"/> dispatches to.</summary>
         public MapType mapType = MapType.Natural;
 
+        /// <summary>
+        /// A plain starting board: flat ground, grass everywhere, no trees, outcrops, ore or bare
+        /// patches. The strata below are untouched, so digging still finds rock.
+        ///
+        /// This exists to be the baseline the prototype builds from. Judging a change to
+        /// movement, rendering or the build pipeline against varied terrain means arguing about
+        /// what is terrain and what is a bug; against a uniform board, anything that is not grass
+        /// is a bug. <see cref="MakeBarren"/> applies it.
+        /// </summary>
+        public bool barren;
+
+        /// <summary>Flatten the surface and switch off every scattered feature.</summary>
+        public NaturalMapGenDef MakeBarren()
+        {
+            barren = true;
+            surfaceRelief = 0;              // one flat surface layer, no terracing
+            treeDensityPerMille = 0;
+            outcropsPer10000Columns = 0;
+            oreDepositsPer10000Columns = 0;
+
+            // The cover pass keeps grass when `cover >= barePatchThreshold`, so zero keeps grass
+            // everywhere: noise is never negative, so the test always passes. Reaching for a huge
+            // value instead does the exact opposite and strips the grass off the whole map, which
+            // is the mistake this comment exists to stop the next person repeating. The generator
+            // validates its own parameters and rejected it immediately, which is the system
+            // working.
+            barePatchThreshold = 0;
+            return this;
+        }
+
         // ---- pass 1, heightfield -------------------------------------------------------------
 
         /// <summary>

@@ -25,7 +25,10 @@ namespace Odyssey.Sim.Worldgen.Natural
         {
             var gen = ctx.Gen;
             int count = ctx.Columns * gen.outcropsPer10000Columns / 10000;
-            if (count < 1) count = 1;
+            // A rate of zero means zero. The floor below exists so that rounding on a small map
+            // cannot silently wipe the feature out; it is not a licence to overrule a map that
+            // asked for no outcrops at all.
+            if (count < 1) count = gen.outcropsPer10000Columns > 0 ? 1 : 0;
 
             int cells = 0;
             for (int i = 0; i < count; i++)
@@ -130,7 +133,10 @@ namespace Odyssey.Sim.Worldgen.Natural
         {
             var gen = ctx.Gen;
             int count = ctx.Columns * gen.oreDepositsPer10000Columns / 10000;
-            if (count < 1) count = 1;
+            // A rate of zero means zero. The floor below exists so that rounding on a small map
+            // cannot silently wipe the feature out; it is not a licence to overrule a map that
+            // asked for no ore at all.
+            if (count < 1) count = gen.oreDepositsPer10000Columns > 0 ? 1 : 0;
 
             int totalWeight = NaturalContent.TotalOreWeight();
 
