@@ -122,7 +122,7 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// ground sits about two fifths of the way up, which leaves a deep enough column to mine
         /// and plenty of headroom to build in.
         /// </summary>
-        public static NaturalMapGenDef For(GridSize size)
+        public static new NaturalMapGenDef For(GridSize size)
         {
             var gen = new NaturalMapGenDef { defName = "MapGenNatural_" + size };
             gen.groundLayer = Math.Max(1, Math.Min(14, size.SizeY * 2 / 5));
@@ -130,7 +130,7 @@ namespace Odyssey.Sim.Worldgen.Natural
         }
 
         /// <summary>The slice-sized wilderness map, for tests and the look-check scene.</summary>
-        public static NaturalMapGenDef Slice() => For(new GridSize(60, 60, 16));
+        public static new NaturalMapGenDef Slice() => For(new GridSize(60, 60, 16));
 
         /// <summary>
         /// Everything <see cref="MapGenDef.Validate"/> checks, plus the natural parameters. The

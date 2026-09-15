@@ -26,7 +26,37 @@ editor_bin() {
   return 1
 }
 
+check_version_pin() {
+  # Unity Hub opens a project with the NEWEST installed editor, not the one the project is
+  # pinned to. A newer editor then upgrades the project in place without asking: it rewrites
+  # ProjectVersion.txt and bumps URP, Timeline, uGUI and Burst to its own generation, after
+  # which the code no longer compiles (obsolete APIs) and the benchmark numbers no longer apply.
+  # This happened on 2026-09-15 and cost a diagnosis; ADR 0001 pinned the version deliberately.
+  #
+  # .unity-version is the committed pin. If ProjectVersion.txt has drifted from it, restore it
+  # along with the package files, rather than letting unity.sh dutifully launch the wrong editor
+  # because it read the upgraded file.
+  [[ -f .unity-version && -f ProjectSettings/ProjectVersion.txt ]] || return 0
+
+  local pinned actual
+  pinned="$(tr -d '[:space:]' < .unity-version)"
+  actual="$(sed -n 's/^m_EditorVersion: *//p' ProjectSettings/ProjectVersion.txt | tr -d '[:space:]')"
+  [[ "$pinned" == "$actual" ]] && return 0
+
+  echo "unity.sh: this project is pinned to $pinned but ProjectVersion.txt says $actual." >&2
+  echo "          A newer editor has upgraded the project in place. Restoring the pin." >&2
+  git checkout -- ProjectSettings/ProjectVersion.txt Packages/manifest.json Packages/packages-lock.json 2>/dev/null || {
+    echo "unity.sh: could not restore automatically; fix ProjectSettings/ProjectVersion.txt by hand." >&2
+    return 4
+  }
+  rm -rf Library/PackageCache Library/ScriptAssemblies 2>/dev/null || true
+  echo "          Restored. Open this project with the $pinned entry in Unity Hub, or via" >&2
+  echo "          scripts/unity.sh open, which always picks the pinned editor." >&2
+  return 0
+}
+
 find_unity() {
+  check_version_pin || return $?
   if [[ -n "${UNITY_EDITOR:-}" ]]; then
     if [[ -x "$UNITY_EDITOR" ]]; then echo "$UNITY_EDITOR"; return 0; fi
     echo "unity.sh: UNITY_EDITOR is set but not executable: $UNITY_EDITOR" >&2

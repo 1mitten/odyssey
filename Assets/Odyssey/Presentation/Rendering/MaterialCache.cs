@@ -25,27 +25,27 @@ namespace Odyssey.Presentation.Rendering
     {
         readonly struct Key : IEquatable<Key>
         {
-            readonly int _baseId;
+            readonly Material _base;
             readonly uint _tint;
             readonly uint _emission;
             readonly bool _ghost;
 
-            public Key(int baseId, uint tint, uint emission, bool ghost)
+            public Key(Material baseMaterial, uint tint, uint emission, bool ghost)
             {
-                _baseId = baseId;
+                _base = baseMaterial;
                 _tint = tint;
                 _emission = emission;
                 _ghost = ghost;
             }
 
             public bool Equals(Key other) =>
-                _baseId == other._baseId && _tint == other._tint &&
+                ReferenceEquals(_base, other._base) && _tint == other._tint &&
                 _emission == other._emission && _ghost == other._ghost;
 
             public override bool Equals(object? obj) => obj is Key other && Equals(other);
 
             public override int GetHashCode() =>
-                unchecked((((_baseId * 397) ^ (int)_tint) * 397 ^ (int)_emission) * 397 ^ (_ghost ? 1 : 0));
+                unchecked(((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_base) * 397) ^ (int)_tint) * 397 ^ (int)_emission) * 397 ^ (_ghost ? 1 : 0);
         }
 
         readonly Dictionary<Key, Material> _cache = new Dictionary<Key, Material>();
@@ -66,7 +66,9 @@ namespace Odyssey.Presentation.Rendering
         {
             Material source = ghost ? GhostBase : baseMaterial;
             var colour = new Color(tint.r, tint.g, tint.b, ghost ? alpha : 1f);
-            var key = new Key(source.GetInstanceID(), Pack(colour), Pack(emission), ghost);
+            // Keyed on the material reference rather than its instance id: identity is what we
+            // actually mean, and it avoids an API whose name changed between Unity versions.
+            var key = new Key(source, Pack(colour), Pack(emission), ghost);
             if (_cache.TryGetValue(key, out Material cached)) return cached;
 
             var material = new Material(source)
