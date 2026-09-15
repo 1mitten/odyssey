@@ -107,7 +107,7 @@ Both run headless. Use the fast one while working and the authoritative one befo
 | | Command | Cycle | What it covers |
 |---|---|---|---|
 | **Fast** | `scripts/test-fast.sh` | **~1.7 s** warm | Everything in `Odyssey.Sim` and `Odyssey.Sim.Contracts`, which is all pure C# by design |
-| **Authoritative** | `scripts/unity.sh test editmode` | minutes | The same tests, plus assembly-definition boundaries, editor tooling and anything touching Unity |
+| **Authoritative** | `scripts/unity.sh test editmode` | **~37 s** | The same tests, plus assembly-definition boundaries, editor tooling and anything touching Unity |
 
 The tests themselves take about 40 ms. The difference is entirely Unity booting, refreshing the asset database and reloading the script domain, so filtering which tests run saves nothing; avoiding Unity is the only thing that helps.
 
