@@ -1,5 +1,7 @@
 #nullable enable
 
+using UnityEngine;
+
 namespace Odyssey.Presentation.Rendering
 {
     /// <summary>
@@ -60,11 +62,34 @@ namespace Odyssey.Presentation.Rendering
             out float offsetX, out float offsetZ, out float yaw, out float scale)
         {
             uint salt = SaltPlace + (uint)slot * 7919u;
-            offsetX = (Unit(x, z, salt) - 0.5f) * 0.76f;
-            offsetZ = (Unit(x, z, salt + 1u) - 0.5f) * 0.76f;
+
+            // Placed in a ring, not over the whole cell, and that is the whole point of the polar
+            // form. A clump is nearly two metres across; a colonist, a crate and a stack of
+            // rations are all drawn at the **cell centre**. Scattering uniformly put clump centres
+            // on top of them, so grass grew through people's legs and out of the side of crates —
+            // which reads, convincingly and wrongly, as green light coming off the grass.
+            //
+            // Keeping the middle clear costs nothing and needs to know nothing about what is
+            // standing there, which matters: pawns and items live in the published snapshot, not
+            // in the cell mirror the mesher reads, and re-meshing a chunk every time somebody
+            // walked across it would be a far worse cure than the disease.
+            //
+            // The square root spreads clumps evenly over the ring's area rather than crowding them
+            // against its inner edge, which is what a linear radius would do.
+            float angle = Unit(x, z, salt) * (Mathf.PI * 2f);
+            float radius = Mathf.Lerp(InnerRadius, OuterRadius, Mathf.Sqrt(Unit(x, z, salt + 1u)));
+
+            offsetX = Mathf.Cos(angle) * radius;
+            offsetZ = Mathf.Sin(angle) * radius;
             yaw = Unit(x, z, salt + 2u) * 360f;
-            scale = 0.75f + Unit(x, z, salt + 3u) * 0.6f;
+            scale = 0.7f + Unit(x, z, salt + 3u) * 0.5f;
         }
+
+        /// <summary>How close to the cell centre a tuft may stand, as a fraction of the cell.</summary>
+        public const float InnerRadius = 0.30f;
+
+        /// <summary>How far out it may stand. Short of the edge, so a tuft does not straddle the grid.</summary>
+        public const float OuterRadius = 0.44f;
 
         /// <summary>Which of the available tuft meshes this one is.</summary>
         public static int VariantFor(int x, int z, int slot, int variants)

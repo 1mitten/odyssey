@@ -203,3 +203,27 @@ See `d-10-outline-pass.md`.
 **One-sided ink is half the width, so the thickness has to be re-tuned when you switch.** Otherwise
 the change reads as "the outlines have mostly disappeared" rather than "the outlines are now on the
 object".
+
+## Diagnosing a colour cast
+
+**"It looks like light bouncing off the grass" was geometry growing through people.** Colonists
+picked up green and the natural reading was a lighting fault — bounced light, an ambient ground
+colour, a reflection probe. It was none of those, and it could not have been: ambient is Trilight
+with three neutral blue-grey colours, there is no baked GI, no probe volumes and no light probes,
+so there is no mechanism in the scene by which one surface can tint another at all. What was
+actually happening is that grass clumps are nearly two metres across, a cell is 2.5 m, and tufts
+were scattered over the whole cell — while colonists, crates and ration stacks are all drawn at the
+**cell centre**. The grass simply grew through them.
+
+The method is worth keeping, because "does X tint Y" will come up again. `GreenCheck` stages the
+suspects beside **two reference objects of undisputed colour** — a white cube and a mid-grey sphere
+— and renders the matrix of {grass ground, neutral ground} x {outline on, off} x {tufts, no tufts}.
+The white cube staying white over grass killed the bounced-light theory in one picture, and adding
+tufts as a variable produced the culprit in the next. Change one thing at a time and photograph it;
+four renders cost six minutes and the wrong theory would have cost an afternoon in the lighting
+settings.
+
+**The fix keeps the middle of a cell clear rather than asking what is standing in it.** Tufts are
+placed in a ring now. The alternative — skipping scatter on occupied cells — cannot work: pawns and
+items live in the published snapshot, not in the cell mirror the mesher reads, so the mesher would
+have to re-mesh a chunk every time somebody walked across it.

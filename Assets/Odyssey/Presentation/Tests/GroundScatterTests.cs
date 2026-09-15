@@ -95,6 +95,27 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
+        public void NoTuftStandsWhereSomethingElseWould()
+        {
+            // Colonists, crates and ration stacks are all drawn at the cell centre, and a clump is
+            // nearly two metres across. Scattered over the whole cell, clumps landed on top of
+            // them and grass grew through people's legs — which reads as green light coming off
+            // the grass and was reported as exactly that. The middle of a cell is spoken for.
+            for (int x = -30; x < 30; x++)
+            for (int z = -30; z < 30; z++)
+            for (int slot = 0; slot < GroundScatter.MaxPerCell; slot++)
+            {
+                GroundScatter.Placement(x, z, slot, out float ox, out float oz, out _, out _);
+
+                float distance = Mathf.Sqrt(ox * ox + oz * oz);
+                Assert.That(distance, Is.GreaterThanOrEqualTo(GroundScatter.InnerRadius - 1e-4f),
+                    $"tuft at {x},{z} slot {slot} is standing in the middle of the cell");
+                Assert.That(distance, Is.LessThanOrEqualTo(GroundScatter.OuterRadius + 1e-4f),
+                    $"tuft at {x},{z} slot {slot} has wandered out of its ring");
+            }
+        }
+
+        [Test]
         public void NeighbouringCellsDoNotShareAPlacement()
         {
             // The failure this catches is a hash whose low bits track its input, which lays the

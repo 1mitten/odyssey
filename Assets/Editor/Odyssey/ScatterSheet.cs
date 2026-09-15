@@ -146,13 +146,13 @@ namespace Odyssey.EditorTools
                 at.x - bounds.center.x, at.y - bounds.min.y, at.z - bounds.center.z);
         }
 
-        static GameObject? FindPrefab(string exactName) =>
+        internal static GameObject? FindPrefab(string exactName) =>
             Load<GameObject>($"{exactName} t:Prefab", exactName);
 
-        static Material? FindMaterial(string exactName) =>
+        internal static Material? FindMaterial(string exactName) =>
             Load<Material>($"{exactName} t:Material", exactName);
 
-        static T? Load<T>(string filter, string exactName) where T : UnityEngine.Object
+        internal static T? Load<T>(string filter, string exactName) where T : UnityEngine.Object
         {
             if (!Directory.Exists(Path.GetFullPath("Assets/Synty"))) return null;
             string? path = AssetDatabase.FindAssets(filter, new[] { "Assets/Synty" })
