@@ -19,13 +19,27 @@ namespace Odyssey.Sim.Contracts
         public readonly int Rest;
         public readonly int Mood;
 
-        public PawnView(PawnId id, CellRef cell, int food, int rest, int mood)
+        /// <summary>
+        /// The job this pawn is running, as an integer handle into the job table, or -1 when idle.
+        ///
+        /// An index rather than a label on purpose: a string per pawn per tick would allocate in
+        /// the publish phase, which is meant to be allocation-free in steady state. Presentation
+        /// turns the index into words, which is also where localisation belongs.
+        ///
+        /// This field exists because a colonist walking to a meal and a colonist wandering because
+        /// they are miserable looked identical on screen, and a simulation you cannot read is a
+        /// simulation you cannot trust.
+        /// </summary>
+        public readonly int JobDef;
+
+        public PawnView(PawnId id, CellRef cell, int food, int rest, int mood, int jobDef = -1)
         {
             Id = id;
             Cell = cell;
             Food = food;
             Rest = rest;
             Mood = mood;
+            JobDef = jobDef;
         }
     }
 

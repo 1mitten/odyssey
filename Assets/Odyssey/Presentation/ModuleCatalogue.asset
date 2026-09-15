@@ -301,3 +301,93 @@ MonoBehaviour:
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
     scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.grass
+    shape: 3
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.bareearth
+    shape: 3
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.packedgravel
+    shape: 3
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.sand
+    shape: 3
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.subsoil
+    shape: 3
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.bedrock
+    shape: 3
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.ironore
+    shape: 3
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.terrain.coalseam
+    shape: 3
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.tree.conifer
+    shape: 4
+    prefab: {fileID: 6131553767378768855, guid: ae12f1ba847c6f74281e7a9a7b0ac7fd, type: 3}
+    prefabName: SM_Gen_Env_Tree_Pine_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+  - moduleId: odyssey.module.tree.broadleaf
+    shape: 4
+    prefab: {fileID: 2137760205200772258, guid: 49091280d622b904f96e72e71fe4e877, type: 3}
+    prefabName: SM_Gen_Env_Tree_03
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}

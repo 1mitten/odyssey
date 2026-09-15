@@ -47,6 +47,19 @@ namespace Odyssey.Presentation.Rendering
             new Color(0.24f, 0.25f, 0.28f),            // rock
             new Color(0.21f, 0.28f, 0.31f),            // buried city seam
             new Color(0.30f, 0.42f, 0.45f),            // salvage
+
+            // Natural terrain. NaturalContent continues CoreContent's numbering rather than
+            // replacing it, so these must stay in the same order and this array must stay as long
+            // as NaturalContent.TerrainCount. Without them a wilderness map drew entirely in the
+            // fallback grey, which is what made the first natural scene look like nothing.
+            new Color(0.36f, 0.52f, 0.24f),            // 10 grass
+            new Color(0.42f, 0.33f, 0.22f),            // 11 bare earth
+            new Color(0.48f, 0.46f, 0.42f),            // 12 packed gravel
+            new Color(0.76f, 0.70f, 0.52f),            // 13 sand
+            new Color(0.31f, 0.24f, 0.17f),            // 14 subsoil
+            new Color(0.20f, 0.20f, 0.22f),            // 15 bedrock
+            new Color(0.46f, 0.32f, 0.22f),            // 16 iron ore
+            new Color(0.13f, 0.13f, 0.15f),            // 17 coal seam
         };
 
         /// <summary>The cyan trim. Black means the material has no emissive contribution.</summary>

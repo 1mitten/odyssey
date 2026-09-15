@@ -1,14 +1,16 @@
 # Synty asset inventory (generated)
 
-Generated 2026-09-15 19:41 UTC by `SyntyInventory.cs` on Unity 6000.3.24f1. Do not edit by hand; re-run the script.
+Generated 2026-09-15 21:55 UTC by `SyntyInventory.cs` on Unity 6000.3.24f1. Do not edit by hand; re-run the script.
 
 ## Packs present under Assets/Synty
 
 | Folder | Assets | Notes (first lines of any top-level .txt/.md) |
 |---|---|---|
 | `Assets/Synty/AnimationBaseLocomotion` | 1128 | LICENSE.MD: # License Summary / This is a summary of the license for the Synty Animation Base Locomotion software provided by Synty Studios Limited. This summary is for convenience only and is not legally binding. The full terms of the End User License Agreement (EULA) apply and can be found at [https://syntystore.com/pages/end-user-licence-agreement](https://syntystore.com/pages/end-user-licence-agreement). / ## Key Points: |
+| `Assets/Synty/PNB_Core` | 112 |  |
 | `Assets/Synty/PolygonFarm` | 1583 |  |
 | `Assets/Synty/PolygonGeneric` | 1299 |  |
+| `Assets/Synty/PolygonNatureBiomes` | 740 |  |
 | `Assets/Synty/PolygonParticleFX` | 335 |  |
 | `Assets/Synty/PolygonSciFiCity` | 1777 |  |
 | `Assets/Synty/PolygonWesternFrontier` | 1089 |  |
@@ -24,40 +26,42 @@ Pack version strings are shown by the Package Manager (My Assets); copy them int
 
 ## Piece counts by family and role
 
-2138 prefabs under `Assets/Synty`. Full per-prefab data in `synty-inventory.csv`.
+2330 prefabs under `Assets/Synty`. Full per-prefab data in `synty-inventory.csv`.
 
 | Family | Wall | Floor | Roof | Door | Window | Stair | Pillar | Railing | Ladder | Other | Total |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Prop | 17 | 0 | 6 | 7 | 5 | 0 | 10 | 42 | 2 | 684 | 773 |
-| Env | 23 | 24 | 0 | 0 | 0 | 0 | 3 | 3 | 0 | 490 | 543 |
-| Bld | 36 | 8 | 17 | 15 | 8 | 6 | 13 | 0 | 1 | 133 | 237 |
+| Prop | 17 | 0 | 6 | 7 | 5 | 0 | 12 | 57 | 2 | 753 | 859 |
+| Env | 23 | 24 | 0 | 0 | 0 | 0 | 3 | 3 | 0 | 573 | 626 |
+| Bld | 36 | 8 | 17 | 15 | 8 | 6 | 13 | 0 | 1 | 137 | 241 |
 | Chr | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 99 | 99 |
 | Wep | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 80 | 80 |
 | Sign | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 80 | 80 |
 | Generic | 0 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 42 | 45 |
-| Veh | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 33 | 33 |
-| Fire | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 19 | 19 |
+| Veh | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 34 | 34 |
+| Fire | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 20 | 20 |
 | Smoke | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 12 | 12 |
-| Other | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 9 | 9 |
+| Other | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 10 | 10 |
 | Gunshot | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 9 | 9 |
 | Impact | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 8 | 8 |
-| Dust | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 6 | 6 |
+| Dust | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 7 | 7 |
+| Rain | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 6 | 6 |
+| Wind | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 6 | 6 |
 | Grenade | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 6 | 6 |
 | Money | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 6 | 6 |
 | Pickup | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 6 | 6 |
 | Shell | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 6 | 6 |
+| Leaves | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 5 | 5 |
 | Cartoony | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 5 | 5 |
 | Fireworks | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 5 | 5 |
 | Icon | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 5 | 5 |
-| Rain | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 4 |
-| Wind | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 4 |
+| SunBeam | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 4 |
+| Butterflies | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 4 |
 | Explosion | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 4 |
 | Steam | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 4 |
 | Swirl | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 4 |
 | Trail | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 4 | 4 |
+| Snow | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 3 | 3 |
 | Fog | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 3 | 3 |
-| Leaves | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 3 | 3 |
-| SunBeam | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 3 | 3 |
 | BloodSplat | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 3 | 3 |
 | Direction | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 3 | 3 |
 | Electricity | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 3 | 3 |
@@ -71,7 +75,7 @@ Pack version strings are shown by the Package Manager (My Assets); copy them int
 | Sprinkler | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2 | 2 |
 | Wheat | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2 | 2 |
 | Flies | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2 | 2 |
-| Snow | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2 | 2 |
+| Petals | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2 | 2 |
 | Confetti | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2 | 2 |
 | FlameThrower | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2 | 2 |
 | Heal | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 2 | 2 |
@@ -96,6 +100,7 @@ Pack version strings are shown by the Package Manager (My Assets); copy them int
 | Blood | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 |
 | Candle | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 |
 | Waterfall | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 |
+| Water | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 |
 | ArtilleryShell | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 |
 | ArtilleryStrike | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 |
 | Blizzard | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 1 | 1 |
@@ -238,7 +243,7 @@ Pivot: base 77%, centre 31%, corner 31%. Triangles per piece: median 44.00, max 
 
 Pivot: base 100%, centre 0%, corner 100%. Triangles per piece: median 302.00, max 302.
 
-### Other (133)
+### Other (137)
 
 | Size X × Y × Z (m) | Count | Example |
 |---|---:|---|
@@ -251,7 +256,7 @@ Pivot: base 100%, centre 0%, corner 100%. Triangles per piece: median 302.00, ma
 | 13.49 × 9.11 × 7.44 | 1 | `SM_Bld_Barn_02` |
 | 9.77 × 9.11 × 7.44 | 1 | `SM_Bld_Barn_03` |
 
-Pivot: base 80%, centre 59%, corner 0%. Triangles per piece: median 592.00, max 16362.
+Pivot: base 79%, centre 59%, corner 0%. Triangles per piece: median 612.00, max 16362.
 
 ## Grid pitch test (this fixes the cell size)
 
@@ -299,7 +304,7 @@ Prefabs with a SkinnedMeshRenderer: 76.
 
 ## Animation clips and controllers
 
-Animation clips: 693. Animator controllers: 174.
+Animation clips: 695. Animator controllers: 176.
 
 | Clip | Length (s) | Humanoid | Asset |
 |---|---:|---|---|
@@ -453,40 +458,53 @@ Animation clips: 693. Animator controllers: 174.
 | A_Walk_FwdStrafeFL_Femn | 1.03 | yes | `A_Walk_FwdStrafeFL_Femn.fbx` |
 | A_Walk_FwdStrafeFL_RootMotion_Femn | 1.03 | yes | `A_Walk_FwdStrafeFL_RootMotion_Femn.fbx` |
 | A_Walk_FwdStrafeFR_Femn | 1.03 | yes | `A_Walk_FwdStrafeFR_Femn.fbx` |
-| … and 561 more | | | |
+| … and 563 more | | | |
 
 ## Materials, shaders and textures
 
 | Shader | Materials | URP? |
 |---|---:|---|
-| `Synty/Generic_Basic` | 110 | check |
+| `Synty/Generic_Basic` | 116 | check |
+| `Universal Render Pipeline/Lit` | 86 | yes |
 | `Synty/Generic_Decals` | 59 | check |
-| `Legacy Shaders/Particles/Additive` | 28 | check |
-| `Synty/Generic_ParticlesUnlit` | 16 | check |
-| `Legacy Shaders/Particles/Additive (Soft)` | 15 | check |
-| `Universal Render Pipeline/Lit` | 14 | yes |
+| `Synty/Foliage` | 41 | check |
+| `Legacy Shaders/Particles/Additive` | 29 | check |
+| `Synty/Generic_ParticlesUnlit` | 27 | check |
+| `Legacy Shaders/Particles/Additive (Soft)` | 16 | check |
 | `Synty/Generic_Standard` | 14 | check |
+| `Synty/Generic_ParticlesLit` | 12 | check |
 | `Legacy Shaders/Particles/Alpha Blended` | 9 | check |
-| `Synty/Generic_ParticlesLit` | 6 | check |
+| `Synty/PolygonShader` | 6 | check |
+| `Synty/Clouds` | 4 | check |
+| `Synty/Water` | 4 | check |
 | `Legacy Shaders/Particles/Multiply` | 4 | check |
-| `Synty/PolygonShader` | 3 | check |
+| `Synty/SkyDome` | 3 | check |
 | `Synty/Polygon_Triplanar` | 3 | check |
 | `Unlit/Color` | 3 | check |
+| `Shader Graphs/New Shader Graph` | 2 | yes |
+| `Shader Graphs/noiseTest` | 2 | yes |
+| `Synty/Refractive_Transparent` | 2 | check |
 | `Synty/Skybox_Generic` | 2 | check |
 | `Synty/Generic_Basic_Specular` | 2 | check |
 | `Legacy Shaders/Particles/Multiply (Double)` | 2 | check |
 | `Unlit/Texture` | 2 | check |
 | `Synty/Polygon_UVScroll` | 2 | check |
+| `Synty/Aurora` | 1 | check |
+| `Hidden/InternalErrorShader` | 1 | check |
+| `Synty/TexturePanner` | 1 | check |
+| `Synty/TexturePanner_Simple` | 1 | check |
+| `Synty/TexturePanner_Transparent` | 1 | check |
 | `Synty/Generic_Basic_Bloody` | 1 | check |
 | `Synty/Generic_Basic_Specular_Bloody` | 1 | check |
 | `Synty/Ghost_Shader` | 1 | check |
 | `Synty/PolygonShaderTransparent` | 1 | check |
-| `Synty/SkyDome` | 1 | check |
 | `Synty/Triplanar_Basic` | 1 | check |
+| `Universal Render Pipeline/Particles/Unlit` | 1 | yes |
 
-No materials with an error or hidden shader (nothing should render magenta).
+**1 materials have an error/hidden shader (will render magenta):**
+- `Assets/Synty/PNB_Core/Shaders/Synty_Fabric.mat`
 
-Textures: 234. Sizes: 2048×2048 ×91, 512×1024 ×35, 512×512 ×32, 4096×4096 ×30, 1024×1024 ×23, 256×256 ×5, 256×1024 ×2, 128×1024 ×2, 256×128 ×2, 4096×2048 ×2, 1024×512 ×2, 512×256 ×2, 128×128 ×1, 512×128 ×1, 2048×512 ×1, 1×25 ×1, 1×33 ×1, 3×41 ×1.
+Textures: 415. Sizes: 2048×2048 ×230, 512×512 ×47, 1024×1024 ×38, 512×1024 ×35, 4096×4096 ×30, 256×256 ×7, 64×64 ×4, 128×128 ×4, 2048×1024 ×3, 256×1024 ×2, 128×1024 ×2, 256×128 ×2, 4096×2048 ×2, 1024×512 ×2, 512×256 ×2, 512×128 ×1, 2048×512 ×1, 1×25 ×1, 1×33 ×1, 3×41 ×1.
 
 Lane E needs to know whether the pack uses one shared colour atlas (typical for Synty: a few 1024/2048 atlases and vertex-colour or UV-offset tinting) because that decides the runtime "stuff" tint strategy.
 
@@ -501,6 +519,9 @@ Lane E needs to know whether the pack uses one shared colour atlas (typical for 
 | `Assets/Synty/PolygonFarm/Scenes/Demo.unity` | 11 | 8969 | 0 | 0 |
 | `Assets/Synty/PolygonFarm/Scenes/Overview.unity` | 10 | 633 | 0 | 0 |
 | `Assets/Synty/PolygonGeneric/Scenes/Overview.unity` | 11 | 380 | 0 | 0 |
+| `Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest/Scene/Demo.unity` | 43 | 32526 | 0 | 0 |
+| `Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest/Scene/Demo_02_BIRP.unity` | 42 | 32526 | 0 | 0 |
+| `Assets/Synty/PolygonNatureBiomes/PNB_Meadow_Forest/Scene/Overview.unity` | 6 | 289 | 0 | 0 |
 | `Assets/Synty/PolygonParticleFX/Scenes/Demo.unity` | 11 | 555 | 2 | 1 |
 | `Assets/Synty/PolygonSciFiCity/Scenes/Demo.unity` | 4 | 2869 | 0 | 0 |
 | `Assets/Synty/PolygonSciFiCity/Scenes/Demo_TriplanarDirt.unity` | 4 | 20 | 0 | 0 |

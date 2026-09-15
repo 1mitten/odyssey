@@ -293,6 +293,35 @@ namespace Odyssey.EditorTools
             Block(ModuleIds.Terrain("BuriedSeam"));
             Block(ModuleIds.Terrain("Salvage"));
 
+            // ---- natural wilderness (ADR 0008) --------------------------------------------
+            // Ground and strata stay tinted blocks for the same reason the city strata do: the
+            // Nature Biomes pack has no cubic ground module. Its "grass planes" measure
+            // 1.00 x h x 0.00 — they are standing grass cards for scattering, not tiles. The
+            // colours that make these read as landscape are in StuffPalette.TerrainSolids.
+            Block(ModuleIds.Terrain("Grass"));
+            Block(ModuleIds.Terrain("BareEarth"));
+            Block(ModuleIds.Terrain("PackedGravel"));
+            Block(ModuleIds.Terrain("Sand"));
+            Block(ModuleIds.Terrain("Subsoil"));
+            Block(ModuleIds.Terrain("Bedrock"));
+            Block(ModuleIds.Terrain("IronOre"));
+            Block(ModuleIds.Terrain("CoalSeam"));
+
+            // Trees are the pieces that actually make this look like a place. Measured widths
+            // decide the casting: the pines are 1.78–2.12 m and sit inside a 2.5 m cell, while the
+            // broadleaf trees run 2.74–4.32 m. Tree_03 at 2.74 m is the closest fit, and a little
+            // overspill between neighbouring trees reads as canopy rather than as error.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = "odyssey.module.tree.conifer", shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Env_Tree_Pine_01", centreXZ = true, baseAtY = true,
+            });
+            rows.Add(new ModuleEntry
+            {
+                moduleId = "odyssey.module.tree.broadleaf", shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Env_Tree_03", centreXZ = true, baseAtY = true,
+            });
+
             return rows;
         }
 
@@ -386,6 +415,7 @@ namespace Odyssey.EditorTools
             var go = new GameObject("Bootstrap");
             go.transform.SetParent(root, false);
             var boot = go.AddComponent<OdysseyBootstrap>();
+            go.AddComponent<SelectionReadout>();   // click a colonist to see what they are doing
             boot.sizeX = 60;
             boot.sizeZ = 60;
             boot.layers = 5;

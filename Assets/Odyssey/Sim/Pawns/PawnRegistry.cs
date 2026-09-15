@@ -92,7 +92,8 @@ namespace Odyssey.Sim.Pawns
                     size.FromIndex(pawn.Cell),
                     pawn.Needs[NeedIndex.Food],
                     pawn.Needs[NeedIndex.Rest],
-                    pawn.Mood));
+                    pawn.Mood,
+                    pawn.CurrentJob != null ? pawn.CurrentJob.DefIndex : -1));
             }
 
             var items = _ctx.Items.Items;
