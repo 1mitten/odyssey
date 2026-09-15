@@ -1,0 +1,383 @@
+key,label,namespace,milestone,tooltip_seed
+ui.res.scrap,Scrap,ui.res,M1,Mixed unsorted salvage. Feeds the reclaimer
+ui.res.rubble,Rubble,ui.res,M1,"Broken concrete and masonry. Cleared, not mined"
+ui.res.girder,Girder,ui.res,M1,"Structural steel cut from a shell. Heavy, valuable"
+ui.res.panel,Hull panel,ui.res,M1,Flat salvaged plating. The cheapest wall material
+ui.res.alloy,Alloy,ui.res,M1,Refined structural metal. The default build material
+ui.res.composite,Composite,ui.res,M1,"Light high-strength laminate. Scarce, from deep salvage"
+ui.res.concrete,Concrete,ui.res,M1,"Poured floors and heavy walls. Bulky, cheap"
+ui.res.glass,Glass,ui.res,M1,"Windows, screens and hydroponic covers"
+ui.res.polymer,Polymer,ui.res,M1,"Moulded plastics. Light, flammable"
+ui.res.ceramic,Ceramic,ui.res,M1,Heat-resistant tile and insulator stock
+ui.res.rebar,Rebar,ui.res,M1,Reinforcing rod. Doubles a span's support
+ui.res.wire,Wire,ui.res,M1,Conduit and machine winding stock
+ui.res.circuitry,Circuitry,ui.res,M1,Salvaged boards. Every powered thing needs some
+ui.res.chip,Processor,ui.res,M1,Intact pre-collapse logic. Rarely recoverable
+ui.res.mechanism,Mechanism,ui.res,M1,"Gears and actuators. Doors, lifts, turrets"
+ui.res.pipe,Pipe,ui.res,M1,"Fluid and gas runs, and cheap conduit"
+ui.res.cell,Power cell,ui.res,M1,Portable charge. Batteries and tools
+ui.res.fuel,Fuel,ui.res,M1,"Burns in generators. Salvaged, not refined, at first"
+ui.res.coolant,Coolant,ui.res,M1,Keeps fabricators and reactors inside tolerance
+ui.res.optic,Optic,ui.res,M1,Lenses and sensors. Scanners and scopes
+ui.res.fabric,Fabric,ui.res,M1,"Bedding, apparel and filters"
+ui.res.leather,Leather,ui.res,M1,Tanned hide. Tougher apparel than fabric
+ui.res.cord,Cord,ui.res,M1,"Rope and cable. Ladders, lifts, bindings"
+ui.res.insulation,Insulation,ui.res,M1,Foam batting. Slows heat through a wall
+ui.res.paper,Paper,ui.res,M1,Records and packaging. Research feedstock
+ui.res.rations,Rations,ui.res,M1,"Sealed pre-collapse food. Never spoils, nobody enjoys it"
+ui.res.meal,Meal,ui.res,M1,Cooked at a galley. Mood as well as nutrition
+ui.res.protein,Protein paste,ui.res,M1,Reclaimed nutrition. Edible; that is all
+ui.res.meat,Raw meat,ui.res,M1,Butchered. Spoils without cold
+ui.res.produce,Produce,ui.res,M1,"Grown food, uncooked"
+ui.res.grain,Grain,ui.res,M1,"Bulk staple. Stores well, needs cooking"
+ui.res.fungus,Fungus,ui.res,M1,Grows without light. The underground staple
+ui.res.water,Water,ui.res,M1,Drinking and hydroponics
+ui.res.stimulant,Stimulant,ui.res,M1,Buys an hour of wakefulness at a cost
+ui.res.alcohol,Alcohol,ui.res,M1,"Recreation, and a problem for some"
+ui.res.medkit,Medkit,ui.res,M1,Field tending. Consumed per treatment
+ui.res.medicine,Medicine,ui.res,M1,Compounded drugs. Better outcomes than a medkit
+ui.res.organ,Organ,ui.res,M1,"Harvested and kept cold. Surgery, or trade"
+ui.res.prosthetic,Prosthetic,ui.res,M1,Replaces a lost part. Quality varies wildly
+ui.res.bone,Bone,ui.res,M1,Butchery by-product. Tool and craft stock
+ui.res.tallow,Tallow,ui.res,M1,"Rendered fat. Candles, soap, fuel"
+ui.res.plantmatter,Plant matter,ui.res,M1,Cuttings and chaff. Compost and feedstock
+ui.res.seed,Seed,ui.res,M1,Plants a growing zone. Some strains are irreplaceable
+ui.res.ammo,Ammunition,ui.res,M1,Feeds firearms and turrets
+ui.res.credit,Credit chit,ui.res,M1,The one currency every faction still honours
+ui.res.relic,Relic,ui.res,M1,Pre-collapse curio. Trade value and a mood lift
+ui.res.smokes,Smokes,ui.res,M1,Cheap comfort with a long bill
+ui.res.curio,Curio,ui.res,M1,Sentimental object. Worth more to a colonist than a trader
+ui.need.food,Food,ui.need,M2,How hungry this colonist is
+ui.need.rest,Rest,ui.need,M2,Sleep debt
+ui.need.joy,Recreation,ui.need,M2,Time spent on anything enjoyable
+ui.need.comfort,Comfort,ui.need,M2,Quality of what they sit and sleep on
+ui.need.beauty,Beauty,ui.need,M2,How the surroundings look to them
+ui.need.space,Space,ui.need,M2,Room to move. Cramped quarters grate
+ui.need.outdoors,Outdoors,ui.need,M2,"Time under open sky. Some need it, some dread it"
+ui.need.hygiene,Cleanliness,ui.need,M2,Filth underfoot and in the air
+ui.mood.content,Content,ui.mood,M2,Mood is comfortable
+ui.mood.strained,Strained,ui.mood,M2,Mood is falling. Watch this one
+ui.mood.breaking,Breaking,ui.mood,M2,At the threshold of a mental break
+ui.mood.broken,Breaking down,ui.mood,M2,In a mental break now
+ui.skill.construction,Construction,ui.skill,M2,"Building, and the quality of what is built"
+ui.skill.mining,Mining,ui.skill,M2,"Digging, rubble clearance and salvage extraction"
+ui.skill.salvage,Salvage,ui.skill,M2,Stripping a shell without wrecking what is in it
+ui.skill.cooking,Cooking,ui.skill,M2,"Meal quality, and food poisoning avoided"
+ui.skill.growing,Growing,ui.skill,M2,Yield and harvest speed
+ui.skill.animals,Animals,ui.skill,M2,"Taming, training and husbandry"
+ui.skill.crafting,Crafting,ui.skill,M2,Bench work and item quality
+ui.skill.fabrication,Fabrication,ui.skill,M2,Advanced production. Gates the best gear
+ui.skill.medicine,Medicine,ui.skill,M2,"Tending, surgery and survival odds"
+ui.skill.social,Social,ui.skill,M2,"Negotiation, recruitment and warden work"
+ui.skill.shooting,Shooting,ui.skill,M2,Ranged accuracy
+ui.skill.melee,Melee,ui.skill,M2,"Close combat, hit and parry"
+ui.skill.intellect,Intellect,ui.skill,M2,Research speed
+ui.pawn.colonist,Colonist,ui.pawn,M2,One of ours
+ui.pawn.visitor,Visitor,ui.pawn,M2,"Here peacefully, and watching"
+ui.pawn.hostile,Hostile,ui.pawn,M2,Will attack
+ui.pawn.prisoner,Prisoner,ui.pawn,M2,"Held, and someone must feed them"
+ui.pawn.animal,Animal,ui.pawn,M2,Tame or wild creature
+ui.pawn.synth,Synth,ui.pawn,M2,"Machine intelligence. Not alive, not harmless"
+ui.pawn.corpse,Corpse,ui.pawn,M2,"Rots, upsets people, can be buried or worse"
+ui.status.hauling,Hauling,ui.status,M2,Carrying something to storage
+ui.status.building,Building,ui.status,M2,Working a frame or blueprint
+ui.status.mining,Mining,ui.status,M2,"Cutting into rubble, concrete or rock"
+ui.status.sleeping,Sleeping,ui.status,M2,"Asleep, and should stay that way"
+ui.status.eating,Eating,ui.status,M2,Taking a meal
+ui.status.idle,Idle,ui.status,M2,Nothing to do. Usually a priorities problem
+ui.status.recreating,Recreating,ui.status,M2,Off duty on purpose
+ui.status.tending,Tending,ui.status,M2,Treating a patient
+ui.status.downed,Downed,ui.status,M2,Cannot move. Needs rescue
+ui.status.bleeding,Bleeding,ui.status,M2,Losing blood. Timed problem
+ui.status.burning,On fire,ui.status,M2,Burning now
+ui.status.drafted,Drafted,ui.status,M2,"Under direct order, not the work list"
+ui.work.firefighting,Firefighting,ui.work,M7,Put out fires. Always first
+ui.work.patient,Patient,ui.work,M7,Accept treatment when hurt
+ui.work.bedrest,Bed rest,ui.work,M7,Stay in bed while recovering
+ui.work.doctor,Doctor,ui.work,M7,Tend the injured and operate
+ui.work.warden,Warden,ui.work,M7,"Feed, talk to and recruit prisoners"
+ui.work.handling,Handling,ui.work,M7,"Tame, train and feed animals"
+ui.work.cooking,Cooking,ui.work,M7,Prepare meals and butcher
+ui.work.hunting,Hunting,ui.work,M7,Kill wild animals for meat
+ui.work.construction,Construction,ui.work,M7,Build frames and blueprints
+ui.work.growing,Growing,ui.work,M7,Sow and harvest growing zones
+ui.work.mining,Mining,ui.work,M7,"Dig, and clear rubble"
+ui.work.salvaging,Salvaging,ui.work,M7,Strip shells and extract salvage
+ui.work.cutting,Cutting,ui.work,M7,Cut plants and clear growth
+ui.work.hauling,Hauling,ui.work,M7,Move things to storage
+ui.work.cleaning,Cleaning,ui.work,M7,Clear filth from rooms
+ui.work.research,Research,ui.work,M7,Work the research bench
+ui.work.crafting,Crafting,ui.work,M7,General bench work
+ui.work.tailoring,Tailoring,ui.work,M7,Make apparel from fabric and leather
+ui.work.fabrication,Fabrication,ui.work,M7,Advanced production
+ui.work.art,Art,ui.work,M7,Make sculptures and decoration
+ui.work.operating,Operating,ui.work,M7,Run powered machinery
+ui.work.rescue,Rescue,ui.work,M7,Carry the downed to a bed
+ui.arch.category.structure,Structure,ui.arch.category,M3,"Walls, doors, floors and vertical connectors"
+ui.arch.category.zones,Zones,ui.arch.category,M3,"Stockpiles, growing zones and allowed areas"
+ui.arch.category.orders,Orders,ui.arch.category,M3,One-off designations on existing things
+ui.arch.category.power,Power,ui.arch.category,M3,"Generation, storage and conduit"
+ui.arch.category.production,Production,ui.arch.category,M3,Benches and machines that make things
+ui.arch.category.furniture,Furniture,ui.arch.category,M3,"Beds, seating, storage and lighting"
+ui.arch.category.security,Security,ui.arch.category,M3,"Turrets, traps and hard cover"
+ui.arch.category.salvage,Salvage,ui.arch.category,M3,Tools for taking a ruin apart profitably
+ui.arch.category.floors,Floors,ui.arch.category,M3,"Surfaces, and the roof of the layer below"
+ui.arch.category.recreation,Recreation,ui.arch.category,M3,Things colonists enjoy
+ui.arch.tool.wall,Wall,ui.arch.tool,M3,"Blocks movement, sight and heat"
+ui.arch.tool.door,Door,ui.arch.tool,M3,"Passable, and holds a room's air"
+ui.arch.tool.stair,Stair,ui.arch.tool,M3,Two cells. The fast way between layers
+ui.arch.tool.ladder,Ladder,ui.arch.tool,M3,"One cell. Slow, cheap, no hauling"
+ui.arch.tool.pillar,Support pillar,ui.arch.tool,M3,Extends how far a roof can span
+ui.arch.tool.roof,Roof and floor above,ui.arch.tool,M3,Roofs this layer and floors the next
+ui.arch.tool.reclaim,Reclaim shell,ui.arch.tool,M3,Adopt existing ruined structure as ours
+ui.arch.tool.window,Window,ui.arch.tool,M3,"Light through a wall, less insulation"
+ui.arch.tool.hatch,Hatch,ui.arch.tool,M3,A door in a floor
+ui.arch.tool.airlock,Airlock,ui.arch.tool,M3,Two doors and a seal. Holds atmosphere
+ui.arch.tool.stockpile,Stockpile,ui.arch.tool,M3,Where hauled things go
+ui.arch.tool.growzone,Growing zone,ui.arch.tool,M3,Soil or hydroponics planted with one crop
+ui.arch.tool.allowed,Allowed area,ui.arch.tool,M3,Where colonists may go
+ui.arch.tool.dumping,Dumping zone,ui.arch.tool,M3,Where rubbish and rubble go
+ui.arch.tool.kennel,Animal area,ui.arch.tool,M3,Where tame animals may roam
+ui.arch.tool.mine,Mine,ui.arch.tool,M3,Dig out a cell
+ui.arch.tool.deconstruct,Deconstruct,ui.arch.tool,M3,Take our own building apart for materials
+ui.arch.tool.salvage,Salvage,ui.arch.tool,M3,"Strip a ruin. Slower than deconstruct, better yield"
+ui.arch.tool.haulurgent,Haul urgently,ui.arch.tool,M3,Jump this to the top of the haul list
+ui.arch.tool.cancel,Cancel,ui.arch.tool,M3,Remove designations and orders
+ui.arch.tool.forbid,Forbid,ui.arch.tool,M3,Hands off this
+ui.arch.tool.allowitem,Allow,ui.arch.tool,M3,Hands back on
+ui.arch.tool.clearrubble,Clear rubble,ui.arch.tool,M3,Remove loose debris from a cell
+ui.arch.tool.extinguish,Extinguish,ui.arch.tool,M3,Put this fire out now
+ui.arch.tool.harvest,Harvest,ui.arch.tool,M3,Take the crop
+ui.arch.tool.conduit,Conduit,ui.arch.tool,M3,Carries power. Connects vertically
+ui.arch.tool.battery,Battery,ui.arch.tool,M3,Stores charge against the night
+ui.arch.tool.generator,Generator,ui.arch.tool,M3,Burns fuel for power
+ui.arch.tool.solar,Solar array,ui.arch.tool,M3,"Free power, and useless in the dark"
+ui.arch.tool.wind,Wind turbine,ui.arch.tool,M3,Needs open sky and clear space
+ui.arch.tool.geothermal,Geothermal tap,ui.arch.tool,M3,"Deep, expensive, constant"
+ui.arch.tool.switch,Power switch,ui.arch.tool,M3,Cuts a net in two
+ui.arch.tool.reactor,Reactor,ui.arch.tool,M3,"Late, enormous, dangerous"
+ui.arch.tool.fabricator,Fabricator,ui.arch.tool,M3,Makes refined materials and components
+ui.arch.tool.galley,Galley,ui.arch.tool,M3,Cooks meals
+ui.arch.tool.reclaimer,Reclaimer,ui.arch.tool,M3,Sorts scrap into usable material
+ui.arch.tool.hydroponics,Hydroponics basin,ui.arch.tool,M3,"Grows without soil, needs power"
+ui.arch.tool.bench,Crafting bench,ui.arch.tool,M3,General making
+ui.arch.tool.tailorbench,Tailoring bench,ui.arch.tool,M3,Apparel from fabric and leather
+ui.arch.tool.smithy,Forge,ui.arch.tool,M3,Works metal by hand
+ui.arch.tool.butcher,Butcher table,ui.arch.tool,M3,Carcasses into meat and leather
+ui.arch.tool.researchbench,Research bench,ui.arch.tool,M3,Where research happens
+ui.arch.tool.comms,Comms console,ui.arch.tool,M3,Talk to factions and traders
+ui.arch.tool.bunk,Bunk,ui.arch.tool,M3,Cheap sleeping. Poor comfort
+ui.arch.tool.bed,Bed,ui.arch.tool,M3,"Better rest, better mood"
+ui.arch.tool.table,Table,ui.arch.tool,M3,Eating at one beats eating on the floor
+ui.arch.tool.chair,Chair,ui.arch.tool,M3,Comfort while working or eating
+ui.arch.tool.lamp,Lamp,ui.arch.tool,M3,Light. Costs power
+ui.arch.tool.shelf,Shelf,ui.arch.tool,M3,Storage that keeps things off the floor
+ui.arch.tool.locker,Locker,ui.arch.tool,M3,Personal storage
+ui.arch.tool.brazier,Brazier,ui.arch.tool,M3,"Heat and light, no power, some risk"
+ui.arch.tool.cooler,Cooler,ui.arch.tool,M3,Moves heat out of a room
+ui.arch.tool.heater,Heater,ui.arch.tool,M3,Moves heat into a room
+ui.arch.tool.vent,Vent,ui.arch.tool,M3,Lets two rooms share air
+ui.arch.tool.turret,Turret,ui.arch.tool,M3,Shoots hostiles. Needs power and ammunition
+ui.arch.tool.trap,Trap,ui.arch.tool,M3,"One-shot, cheap, forgettable by your own colonists"
+ui.arch.tool.barricade,Barricade,ui.arch.tool,M3,Cover without blocking sight
+ui.arch.tool.blastdoor,Blast door,ui.arch.tool,M3,"Slow, strong, holds a breach"
+ui.arch.tool.sandbag,Sandbags,ui.arch.tool,M3,Fast cover from salvage
+ui.arch.tool.searchlight,Searchlight,ui.arch.tool,M3,Light where you need to shoot
+ui.arch.tool.deckplate,Deck plate,ui.arch.tool,M3,Metal flooring. Fast to lay
+ui.arch.tool.grating,Grating,ui.arch.tool,M3,See and fall through. Light passes
+ui.arch.tool.concretefloor,Poured concrete,ui.arch.tool,M3,"Slow, cheap, permanent"
+ui.arch.tool.tile,Tile,ui.arch.tool,M3,Clean and pretty. Hospitals and kitchens
+ui.arch.tool.removefloor,Remove floor,ui.arch.tool,M3,Back to bare substrate
+ui.arch.tool.recbench,Bench,ui.arch.tool,M3,Somewhere to sit and talk
+ui.arch.tool.gamestable,Games table,ui.arch.tool,M3,"Two colonists, one distraction"
+ui.arch.tool.viewscreen,Viewscreen,ui.arch.tool,M3,Recreation for a room at once
+ui.arch.tool.planter,Planter,ui.arch.tool,M3,Decorative growth indoors
+ui.arch.tool.sculpture,Sculpture,ui.arch.tool,M3,"Beauty, made by hand"
+ui.command.draft,Draft,ui.command,M3,Take direct control
+ui.command.undraft,Undraft,ui.command,M3,Return to the work list
+ui.command.attack,Attack,ui.command,M3,Engage this target
+ui.command.moveto,Move to,ui.command,M3,Go here
+ui.command.hold,Hold position,ui.command,M3,Stay and shoot from here
+ui.command.prioritise,Prioritise,ui.command,M3,Do this job next
+ui.command.rescue,Rescue,ui.command,M3,Carry to a bed
+ui.command.capture,Capture,ui.command,M3,Carry to a prisoner bed
+ui.command.arrest,Arrest,ui.command,M3,Take into custody
+ui.command.tend,Tend,ui.command,M3,Treat this patient
+ui.command.operate,Operate,ui.command,M3,Perform surgery
+ui.command.install,Install,ui.command,M3,Place this built thing
+ui.command.uninstall,Uninstall,ui.command,M3,Pick up intact for moving
+ui.command.reinstall,Reinstall,ui.command,M3,Move without rebuilding
+ui.command.equip,Equip,ui.command,M3,Take this weapon or tool
+ui.command.unequip,Unequip,ui.command,M3,Put it down
+ui.command.wear,Wear,ui.command,M3,Put this on
+ui.command.drop,Drop,ui.command,M3,Leave this here
+ui.command.pickup,Pick up,ui.command,M3,Carry in inventory
+ui.command.refuel,Refuel,ui.command,M3,Top this up
+ui.command.switchon,Switch on,ui.command,M3,Power this up
+ui.command.switchoff,Switch off,ui.command,M3,Power this down
+ui.command.tame,Tame,ui.command,M3,Try to tame this animal
+ui.command.train,Train,ui.command,M3,Teach this animal
+ui.command.slaughter,Slaughter,ui.command,M3,Kill this tame animal
+ui.command.butcher,Butcher,ui.command,M3,Process this carcass
+ui.command.release,Release,ui.command,M3,Let this animal go
+ui.command.sow,Sow,ui.command,M3,Plant here
+ui.command.bury,Bury,ui.command,M3,Put this body in a grave
+ui.command.sleep,Sleep,ui.command,M3,Go and rest
+ui.command.eat,Eat,ui.command,M3,Take a meal
+ui.command.recreate,Recreate,ui.command,M3,Go and enjoy something
+ui.command.setpriority,Set priority,ui.command,M3,Change the work priority
+ui.command.setowner,Assign,ui.command,M3,Give this to a colonist
+ui.command.setzone,Set area,ui.command,M3,Restrict where this one goes
+ui.command.copysettings,Copy settings,ui.command,M3,Take this thing's configuration
+ui.command.pastesettings,Paste settings,ui.command,M3,Apply the copied configuration
+ui.command.rename,Rename,ui.command,M3,Give this a name
+ui.command.selectsimilar,Select similar,ui.command,M3,Everything of this kind on screen
+ui.command.jumpto,Jump to,ui.command,M3,Put the camera and slice here
+ui.command.follow,Follow,ui.command,M3,Keep the camera on this
+ui.command.inspect,Inspect,ui.command,M3,Open the full record
+ui.command.trade,Trade,ui.command,M3,Open the ledger with this trader
+ui.command.recruit,Recruit,ui.command,M3,Try to talk them round
+ui.command.gift,Gift,ui.command,M3,Give this away for goodwill
+ui.command.evacuate,Evacuate,ui.command,M3,Everyone out of this area
+ui.command.hunt,Hunt,ui.command,M3,Kill this wild animal for meat
+ui.command.strip,Strip,ui.command,M3,Take everything they carry
+ui.overlay.temperature,Temperature,ui.overlay,M1,Warm to cold across the slice
+ui.overlay.light,Light,ui.overlay,M1,How lit each cell is
+ui.overlay.beauty,Beauty,ui.overlay,M1,What the room looks like to a colonist
+ui.overlay.cleanliness,Cleanliness,ui.overlay,M1,"Filth, and where it matters"
+ui.overlay.roofs,Roofs,ui.overlay,M1,"What is roofed, and by what"
+ui.overlay.zones,Zones,ui.overlay,M1,"Stockpiles, growing and allowed areas"
+ui.overlay.power,Power,ui.overlay,M1,"Nets, and which of them are short"
+ui.overlay.salvage,Salvage density,ui.overlay,M1,Where the worthwhile scrap is
+ui.overlay.support,Structural support,ui.overlay,M1,What is holding this layer up
+ui.overlay.traffic,Traffic,ui.overlay,M1,Where colonists actually walk
+ui.tab.work,Work,ui.tab,M1,The priority grid
+ui.tab.schedule,Schedule,ui.tab,M1,"Who does what, and when"
+ui.tab.research,Research,ui.tab,M1,"The tree, and what is being worked on"
+ui.tab.colonists,Colonists,ui.tab,M1,"Everyone, at a glance"
+ui.tab.animals,Animals,ui.tab,M1,Tame beasts and their training
+ui.tab.wildlife,Wildlife,ui.tab,M1,What is out there
+ui.tab.bills,Bills,ui.tab,M1,Standing production orders
+ui.tab.trade,Trade,ui.tab,M1,Caravans and traders
+ui.tab.factions,Factions,ui.tab,M1,"Who likes us, and how much"
+ui.tab.archive,History,ui.tab,M1,Everything that has happened
+ui.tab.menu,Menu,ui.tab,M1,"Save, load, settings, quit"
+ui.alert.starvation,Starving,ui.alert,M2,Someone is going hungry
+ui.alert.breach,Breach,ui.alert,M2,The outside has got in
+ui.alert.unsupported,Unsupported span,ui.alert,M2,This will collapse
+ui.alert.collapse,Collapse,ui.alert,M2,Something has already come down
+ui.alert.cold,Too cold,ui.alert,M2,A room is below tolerance
+ui.alert.heat,Too hot,ui.alert,M2,A room is above tolerance
+ui.alert.idle,Idle colonists,ui.alert,M2,Nothing assigned that they can do
+ui.alert.nomedicine,No medicine,ui.alert,M2,Nothing to tend with
+ui.alert.nobed,No bed,ui.alert,M2,Someone has nowhere to sleep
+ui.alert.nofood,No food,ui.alert,M2,The stores are empty
+ui.alert.fire,Fire,ui.alert,M2,Burning now
+ui.alert.injured,Injured,ui.alert,M2,Someone needs treatment
+ui.alert.disease,Disease,ui.alert,M2,An illness has taken hold
+ui.alert.infection,Infection,ui.alert,M2,A wound has gone bad
+ui.alert.mentalbreak,Mental break,ui.alert,M2,A colonist has lost control
+ui.alert.prisonerescape,Prisoner escaping,ui.alert,M2,One is getting out
+ui.alert.raid,Raid,ui.alert,M2,Hostiles are here
+ui.alert.drop,Drop from above,ui.alert,M2,Something came in through open sky
+ui.alert.powerloss,Power failure,ui.alert,M2,A net has gone dark
+ui.alert.spoilage,Spoiling,ui.alert,M2,Food is going off
+ui.alert.darkness,No light,ui.alert,M2,Work is slowed for want of a lamp
+ui.alert.trapped,Trapped,ui.alert,M2,Someone cannot reach the colony
+ui.bulletin.salvage,Salvage found,ui.bulletin,M2,Something worthwhile in the rubble
+ui.bulletin.arrival,Arrival,ui.bulletin,M2,Someone new is here
+ui.bulletin.trader,Trader,ui.bulletin,M2,A trader has come to us
+ui.bulletin.caravan,Caravan,ui.bulletin,M2,Ours has arrived or returned
+ui.bulletin.raidincoming,Raid warning,ui.bulletin,M2,Hostiles are on the way
+ui.bulletin.weather,Weather,ui.bulletin,M2,The conditions have turned
+ui.bulletin.death,Death,ui.bulletin,M2,We have lost someone
+ui.bulletin.recruited,Recruited,ui.bulletin,M2,A prisoner has joined us
+ui.bulletin.research,Research complete,ui.bulletin,M2,A project has finished
+ui.bulletin.quest,Opportunity,ui.bulletin,M2,An offer with a deadline
+ui.bulletin.wanderer,Wanderer,ui.bulletin,M2,Someone wants to join
+ui.bulletin.refugee,Refugee,ui.bulletin,M2,Someone is asking for shelter
+ui.bulletin.animaljoin,Animal joined,ui.bulletin,M2,A tame beast has attached itself to us
+ui.bulletin.crash,Crash,ui.bulletin,M2,Something has come down nearby
+ui.bulletin.birth,Birth,ui.bulletin,M2,A tame animal has given birth
+ui.weather.clear,Clear,ui.weather,M1,Open sky
+ui.weather.cloudy,Cloudy,ui.weather,M1,"Less light, no other effect"
+ui.weather.rain,Rain,ui.weather,M1,"Puts out fires, waters crops"
+ui.weather.storm,Storm,ui.weather,M1,"Rain, wind and lightning"
+ui.weather.snow,Snow,ui.weather,M1,"Cold, and it settles"
+ui.weather.fog,Fog,ui.weather,M1,Sight and shooting suffer
+ui.weather.ashfall,Ashfall,ui.weather,M1,"Filth from the sky, and no sun"
+ui.weather.heatwave,Heatwave,ui.weather,M1,Everything outdoors is too hot
+ui.weather.coldsnap,Cold snap,ui.weather,M1,Everything outdoors is too cold
+ui.weather.toxic,Toxic fallout,ui.weather,M1,Do not go outside
+ui.weather.windstorm,Windstorm,ui.weather,M1,"Wind power up, everything else down"
+ui.layer.up,Layer up,ui.layer,M1,Slice one layer higher
+ui.layer.down,Layer down,ui.layer,M1,Slice one layer lower
+ui.layer.ground,Ground level,ui.layer,M1,Jump the slice to the street
+ui.layer.policy.hide,Hide above,ui.layer,M1,Draw nothing above the slice
+ui.layer.policy.ghost,Ghost above,ui.layer,M1,Structural outlines only
+ui.layer.policy.xraymin,"X-ray, one layer",ui.layer,M1,Just the storey overhead
+ui.layer.policy.xray,"X-ray, all layers",ui.layer,M1,"Everything above, fading with distance"
+ui.layer.policy.roofsoff,Roofs off,ui.layer,M1,"Solid above, but roofs and floors dropped"
+ui.layer.policy.full,No cut-away,ui.layer,M1,Draw everything solid
+ui.speed.pause,Pause,ui.speed,M1,Stop time
+ui.speed.play,Normal speed,ui.speed,M1,One tick per tick
+ui.speed.fast,Fast,ui.speed,M1,Three times speed
+ui.speed.ultra,Very fast,ui.speed,M1,As fast as the simulation will go
+ui.health.brain,Brain,ui.health,M6,"Consciousness, and everything downstream of it"
+ui.health.head,Head,ui.health,M6,Houses most of what matters
+ui.health.eye,Eye,ui.health,M6,"Sight, and therefore shooting"
+ui.health.ear,Ear,ui.health,M6,"Hearing, and social work"
+ui.health.nose,Nose,ui.health,M6,"Minor, until it is gone"
+ui.health.jaw,Jaw,ui.health,M6,Eating and talking
+ui.health.neck,Neck,ui.health,M6,A bad place to be hurt
+ui.health.torso,Torso,ui.health,M6,Everything vital is in here
+ui.health.heart,Heart,ui.health,M6,Blood pumping. Fatal to lose
+ui.health.lung,Lung,ui.health,M6,"Breathing, and stamina"
+ui.health.liver,Liver,ui.health,M6,Filters. Slow to kill you
+ui.health.kidney,Kidney,ui.health,M6,You have two for a reason
+ui.health.stomach,Stomach,ui.health,M6,Digestion
+ui.health.spine,Spine,ui.health,M6,Moving at all
+ui.health.shoulder,Shoulder,ui.health,M6,Carries the arm
+ui.health.arm,Arm,ui.health,M6,Manipulation
+ui.health.hand,Hand,ui.health,M6,Fine work
+ui.health.finger,Finger,ui.health,M6,"Small loss, real cost"
+ui.health.leg,Leg,ui.health,M6,Walking speed
+ui.health.foot,Foot,ui.health,M6,Balance and pace
+ui.health.blood,Blood loss,ui.health,M6,How much has been lost
+ui.health.scar,Scar,ui.health,M6,"Permanent, and it aches"
+ui.health.wound,Wound,ui.health,M6,Fresh injury
+ui.health.burn,Burn,ui.health,M6,Fire damage
+ui.health.fracture,Fracture,ui.health,M6,"Broken, not severed"
+ui.health.missing,Missing part,ui.health,M6,Gone. Replace or adapt
+ui.health.implant,Implant,ui.health,M6,"Fitted, and working"
+ui.health.anaesthetic,Anaesthetic,ui.health,M6,"Under, and safe to operate on"
+ui.item.knife,Knife,ui.item,M3,"Close work, and butchery"
+ui.item.sword,Blade,ui.item,M3,Reach and damage in melee
+ui.item.club,Club,ui.item,M3,Blunt. Downs rather than kills
+ui.item.spear,Spear,ui.item,M3,Cheap reach
+ui.item.pickaxe,Pickaxe,ui.item,M3,Mining tool. A weapon in a pinch
+ui.item.shovel,Shovel,ui.item,M3,Rubble and soil
+ui.item.hammer,Hammer,ui.item,M3,Construction tool
+ui.item.wrench,Wrench,ui.item,M3,Machinery and repair
+ui.item.drill,Drill,ui.item,M3,Powered cutting. Fast salvage
+ui.item.axe,Axe,ui.item,M3,"Cutting, and felling"
+ui.item.cutter,Cutting torch,ui.item,M3,Opens a hull. Opens a wall
+ui.item.pistol,Sidearm,ui.item,M3,"Short range, always to hand"
+ui.item.rifle,Rifle,ui.item,M3,The standard ranged weapon
+ui.item.shotgun,Scattergun,ui.item,M3,"Devastating close, useless far"
+ui.item.crossbow,Crossbow,ui.item,M3,"Silent, slow, makeable"
+ui.item.grenade,Grenade,ui.item,M3,"Area damage, and friendly fire"
+ui.item.shield,Shield,ui.item,M3,Melee defence
+ui.item.helmet,Helmet,ui.item,M3,Protects the head
+ui.item.vest,Vest,ui.item,M3,Torso armour
+ui.item.jacket,Jacket,ui.item,M3,Warmth and a little protection
+ui.item.mask,Mask,ui.item,M3,Filters what you would rather not breathe
+ui.item.boots,Boots,ui.item,M3,Pace and protection
+ui.item.pack,Pack,ui.item,M3,Carry more on a caravan
+ui.item.flashlight,Torch,ui.item,M3,Portable light
+ui.item.radio,Radio,ui.item,M3,Talk at distance
+ui.item.compass,Compass,ui.item,M3,Travel without getting lost
+ui.item.binoculars,Binoculars,ui.item,M3,See further than you can shoot
+ui.item.toolkit,Toolkit,ui.item,M3,"Better work, faster"
+ui.item.canteen,Canteen,ui.item,M3,"Water, carried"
+ui.item.bedroll,Bedroll,ui.item,M3,Sleep away from home

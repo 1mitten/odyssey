@@ -339,6 +339,7 @@ times a second.
 | Opening a panel, one-off | ≤ 64 kB |
 | Gen-0 collections attributable to the HUD in a 60-second idle soak | **0** |
 | HUD steady-state managed footprint including atlases | ≤ 12 MB |
+| of which the dynamic atlas page | ≤ 8.4 MB, one 2048 × 1024 RGBA32 page at 382 keys and 64-pixel icons. ADR 0004 |
 
 ### 4.4 Draw calls and element counts
 
@@ -353,7 +354,7 @@ times a second.
 | Realised rows in any virtualised list, regardless of data size | ≤ 40 |
 | Hierarchy depth | ≤ 12 |
 | Dynamic text labels | ≤ 300, every one fed from a cached string |
-| Icon atlas | one 2048-pixel page, two as a hard cap; icons at 128 pixels, uncompressed, no mips |
+| Icon atlas | one 2048 page, **≤ 878 entries** at 64-pixel icons; 382 keys is 43 per cent of it. The second page exists only for a second filter mode and must stay unallocated, so **every** texture under `Assets/Art/Ui/` is point-filtered. Overflow is not a second page: it is one draw call per icon. ADR 0004 |
 
 ### 4.5 Portraits are a trap
 
@@ -442,6 +443,7 @@ Odyssey.Tests.Sim           EditMode
 Odyssey.Tests.Hud           EditMode         the bulk of interface testing, with no Unity dependency in the
                                              code under test
 Odyssey.Tests.Arch          EditMode         asserts the dependency graph and the banned-API configuration
+Odyssey.Tests.Editor        EditMode         references UnityEditor; asserts importer settings and the atlas rules
 Odyssey.Tests.Presentation  PlayMode         thin: element existence, virtualisation counts, input routing
                                              smoke tests, performance scenarios
 ```
@@ -526,7 +528,12 @@ Defs reference keys. Renaming a key is a patchable Def change, not a code change
 **The placeholder generator** is an editor script. For every icon Def with no art it generates
 a deterministic texture: a rounded square whose hue comes from a stable hash of the key mapped
 into a colour-blind-safe wheel, with a two-or-three character abbreviation drawn in a built-in
-font, at 128 pixels, uncompressed, no mips, so it is atlas-eligible by construction.
+font, at **64 pixels, point-filtered, sRGB, not readable, uncompressed, no mips**, which is what the
+dynamic atlas actually requires. The 128 pixels this document used to specify were **not**
+atlas-eligible at all: the engine's default maximum sub-texture size is 64. `docs/adr/0004-pixel-art-icon-pipeline.md`
+has the arithmetic. Point filtering matters as much as size, because filter mode selects which of the
+two atlas pages a texture lands on, so one bilinear placeholder allocates the second page and spends
+the whole budget by itself.
 Deterministic means stable across runs, so screenshots are comparable week to week and the
 owner can evaluate **layout and density** long before any art exists. That is the actual goal.
 
@@ -549,8 +556,24 @@ screenshots can be scripted:
 **What an icon-only interface owes the player**, enforced by tests rather than hoped for:
 every interactive element has a tooltip carrying name, hotkey and a one-line description;
 alert severity is encoded in colour *and* shape *and* stack position, never colour alone; icons
-are authored at 128 pixels and used at 24, 32 and 48. If the 24-pixel case looks rough without
-mips, author a second size rather than enabling mips and losing atlas eligibility.
+are authored at **64 pixels** and used at **32 and 64**, and at 128 only at a 200 per cent interface
+scale. Below 32 pixels an icon is not shrunk, it is replaced by the text badge above. The art is
+pixel art (ADR 0004), so a display size is offered only when it is an integer ratio of the source.
+That is also why no second authored size is needed, and why the scale slider in §9 D4 steps icons
+rather than scaling them smoothly.
+
+**Four eligibility conditions**, because this document previously had two of them wrong and omitted
+two altogether. The texture must be **at most 64 pixels** on each axis; **point-filtered**, and
+uniformly so across the whole set; **not readable**, since Read/Write being on rejects it outright;
+and **sRGB**, since under linear rendering, which URP is, a non-gamma texture is rejected.
+Uncompressed and no mip-maps remain the rule but for **fidelity and memory**, not eligibility: block
+compression destroys single-pixel edges and hard alpha, and mips of an icon drawn at 1:1 are a third
+more memory that is never sampled. A rule kept for the wrong reason is a rule the next reader
+relaxes.
+
+**Mod-supplied overrides** arrive through chain step 1 at any size and filter mode, so the resolver
+applies the same four conditions at load time and logs and down-ranks anything oversized. Otherwise
+one modder's 256-pixel set costs a draw call per icon.
 
 ---
 
@@ -619,7 +642,7 @@ minutes and should be done first because they shape the design.
 | D1 | Icon-only forever, or icons plus a micro-label once meaning proves unclear? | Icon-only with mandatory tooltips, and ship the text-fallback mode from M0 as both an accessibility mode and a comprehension check. Hotkey hints on hover only |
 | D2 | The concept render duplicates the colonist bar top and bottom. Which survives, and what takes the freed slot? | Keep the **top** roster bar; the top edge is otherwise dead space. Bottom-left is the inspect pane. Give the **right edge** to the Depth Ruler and the alert stack |
 | ~~D3~~ | Above-and-below policy: ghost the storey above, or hide it? | **Answered 2026-09-15: neither.** X-ray by default, with six modes, a depth cap and a below-slice treatment shipped for playtest. See `docs/adr/0003-layer-visibility-policy.md`. The row keeps its number so D4 to D9 keep theirs |
-| D4 | Reference resolution, scale policy, minimum supported resolution | 1080p reference, relative-unit scaling with a user slider from 80 to 150 per cent, minimum 1366 × 768 |
+| D4 | Reference resolution, scale policy, minimum supported resolution | 1080p reference, relative-unit scaling with a user slider from 80 to 150 per cent, minimum 1366 × 768. **Amended by ADR 0004:** text and padding scale continuously, icons step through 32, 64 and 128, because pixel art at a fractional scale either shimmers or smears |
 | D5 | Colour-blind-safe alert palette from day one? | Yes. Severity encoded as colour **and** shape **and** position. Nearly free now, expensive later |
 | D6 | Is mod-supplied layout a day-one promise or an M8 one? | Day-one plumbing, because our own HUD is driven by it and therefore exercises it. M8 promise, documented and frozen |
 | D7 | Cell size | Blocking for the world, **not** for the interface. `WorldMetrics` is the only consumer, so the interface is not structurally blocked on it |

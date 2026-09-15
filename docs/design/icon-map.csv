@@ -1,0 +1,383 @@
+key,sheet,row,col,cell_description,confidence,status
+ui.res.scrap,04,,,pile of mixed metal offcuts,med,mapped
+ui.res.rubble,01,,,loose grey stones,high,mapped
+ui.res.girder,04,,,"metal beam, I-section",med,mapped
+ui.res.panel,04,,,flat metal sheet,high,mapped
+ui.res.alloy,04,,,metal ingot,high,mapped
+ui.res.composite,04,,,"gold or pale ingot, the second ingot variant",med,mapped
+ui.res.concrete,08,,,grey breeze block,med,mapped
+ui.res.glass,04,,,glass pane,high,mapped
+ui.res.polymer,04,,,rubber ring or moulded plastic,med,mapped
+ui.res.ceramic,01,,,white clay ball,low,mapped
+ui.res.rebar,04,,,metal rod and nails,med,mapped
+ui.res.wire,04,,,coil of wire,high,mapped
+ui.res.circuitry,04,,,green circuit board,high,mapped
+ui.res.chip,04,,,microchip,high,mapped
+ui.res.mechanism,04,,,gear,high,mapped
+ui.res.pipe,04,,,length of pipe,high,mapped
+ui.res.cell,08,,,battery,high,mapped
+ui.res.fuel,08,,,jerrycan,high,mapped
+ui.res.coolant,08,,,pressurised gas canister,med,mapped
+ui.res.optic,01,,,magnifying lens,low,mapped
+ui.res.fabric,04,,,roll of cloth,high,mapped
+ui.res.leather,07,,,tanned hide,high,mapped
+ui.res.cord,04,,,coil of rope,high,mapped
+ui.res.insulation,04,,,foam block,med,mapped
+ui.res.paper,04,,,rolled paper,high,mapped
+ui.res.rations,02,,,sealed food packet,high,mapped
+ui.res.meal,02,,,bowl of cooked food,high,mapped
+ui.res.protein,02,,,carton or tub,med,mapped
+ui.res.meat,07,,,raw meat slab,high,mapped
+ui.res.produce,02,,,carrot and potato,high,mapped
+ui.res.grain,01,,,wheat sheaf,med,mapped
+ui.res.fungus,01,,,cluster of mushrooms,high,mapped
+ui.res.water,08,,,water bottle,high,mapped
+ui.res.stimulant,02,,,coffee cup,med,mapped
+ui.res.alcohol,02,,,wine bottle,high,mapped
+ui.res.medkit,08,,,first-aid kit,high,mapped
+ui.res.medicine,02,,,jar of pills,low,mapped
+ui.res.organ,07,,,heart,high,mapped
+ui.res.prosthetic,05,,,mechanical hand or fitting,low,mapped
+ui.res.bone,07,,,bone,high,mapped
+ui.res.tallow,07,,,block of fat,med,mapped
+ui.res.plantmatter,01,,,leaves and fern,high,mapped
+ui.res.seed,01,,,acorns,med,mapped
+ui.res.ammo,08,,,ammunition box,high,mapped
+ui.res.credit,08,,,coin,high,mapped
+ui.res.relic,08,,,old photographs,med,mapped
+ui.res.smokes,08,,,cigarette packet,med,mapped
+ui.res.curio,08,,,teddy bear,high,mapped
+ui.need.food,02,,,bread loaf,high,mapped
+ui.need.rest,08,,,mattress,high,mapped
+ui.need.joy,-,,,"something unmistakably recreational: dice, cards, a games board",-,gap
+ui.need.comfort,-,,,"an armchair or cushion, read as comfort rather than as furniture",-,gap
+ui.need.beauty,06,,,paint brush tile,low,mapped
+ui.need.space,-,,,an abstract for room to move. Hardest of the needs to draw,-,gap
+ui.need.outdoors,06,,,forest and trees tile,med,mapped
+ui.need.hygiene,08,,,toilet roll,med,mapped
+ui.mood.content,-,,,"mood face, content. No sheet has a human face at all",-,gap
+ui.mood.strained,-,,,"mood face, strained",-,gap
+ui.mood.breaking,-,,,"mood face, at the break threshold",-,gap
+ui.mood.broken,-,,,"mood face, in a break",-,gap
+ui.skill.construction,06,,,hammer and tools tile,med,mapped
+ui.skill.mining,05,,,pickaxe,high,mapped
+ui.skill.salvage,05,,,powered drill,med,mapped
+ui.skill.cooking,06,,,cooking pot tile,high,mapped
+ui.skill.growing,06,,,ploughed field tile,high,mapped
+ui.skill.animals,06,,,paw print tile,high,mapped
+ui.skill.crafting,03,,,anvil,high,mapped
+ui.skill.fabrication,06,,,gears tile,med,mapped
+ui.skill.medicine,06,,,medical cross tile,high,mapped
+ui.skill.social,08,,,two-way radio,low,mapped
+ui.skill.shooting,06,,,crosshair tile,high,mapped
+ui.skill.melee,05,,,blade,high,mapped
+ui.skill.intellect,06,,,book tile,high,mapped
+ui.pawn.colonist,-,,,"a human figure. No sheet contains one, and this is the most-used icon in the HUD",-,gap
+ui.pawn.visitor,-,,,"human figure, neutral",-,gap
+ui.pawn.hostile,-,,,"human figure, hostile",-,gap
+ui.pawn.prisoner,-,,,"human figure, restrained",-,gap
+ui.pawn.animal,06,,,boar,med,mapped
+ui.pawn.synth,-,,,a machine intelligence. Nothing in the sheets is recognisably robotic,-,gap
+ui.pawn.corpse,07,,,skull,high,mapped
+ui.status.hauling,08,,,duffel bag,low,mapped
+ui.status.building,06,,,hammer and tools tile,med,shared
+ui.status.mining,05,,,pickaxe,high,shared
+ui.status.sleeping,08,,,mattress,high,shared
+ui.status.eating,02,,,bowl of cooked food,high,shared
+ui.status.idle,06,,,hourglass tile,med,mapped
+ui.status.recreating,-,,,off-duty by choice. Blocked on the same missing recreation art as ui.need.joy,-,gap
+ui.status.tending,06,,,medical cross tile,high,shared
+ui.status.downed,-,,,a figure prone. Blocked on the missing human figure,-,gap
+ui.status.bleeding,06,,,blood bag tile,low,mapped
+ui.status.burning,06,,,flame tile,high,mapped
+ui.status.drafted,05,,,rifle,med,mapped
+ui.work.firefighting,05,,,"spray canister, read as an extinguisher",low,mapped
+ui.work.patient,06,,,medical cross tile,high,shared
+ui.work.bedrest,08,,,mattress,high,shared
+ui.work.doctor,08,,,first-aid kit,high,shared
+ui.work.warden,06,,,barred cage tile,med,mapped
+ui.work.handling,06,,,paw print tile,high,shared
+ui.work.cooking,06,,,cooking pot tile,high,shared
+ui.work.hunting,06,,,spear and hunt tile,high,mapped
+ui.work.construction,06,,,hammer and tools tile,med,shared
+ui.work.growing,06,,,ploughed field tile,high,shared
+ui.work.mining,05,,,pickaxe,high,shared
+ui.work.salvaging,05,,,powered drill,med,shared
+ui.work.cutting,05,,,sickle,high,mapped
+ui.work.hauling,08,,,duffel bag,low,shared
+ui.work.cleaning,08,,,bucket,low,mapped
+ui.work.research,06,,,book tile,high,shared
+ui.work.crafting,03,,,anvil,high,shared
+ui.work.tailoring,04,,,thread spool,high,mapped
+ui.work.fabrication,06,,,gears tile,med,shared
+ui.work.art,06,,,paint brush tile,low,shared
+ui.work.operating,04,,,gear,high,shared
+ui.work.rescue,-,,,carrying a casualty. Blocked on the missing human figure,-,gap
+ui.health.brain,07,,,brain,high,mapped
+ui.health.head,07,,,skull,high,shared
+ui.health.eye,07,,,eyeball,high,mapped
+ui.health.ear,-,,,an ear,-,gap
+ui.health.nose,-,,,a nose,-,gap
+ui.health.jaw,07,,,tooth or tusk,med,mapped
+ui.health.neck,-,,,"a neck, distinguishable from a torso",-,gap
+ui.health.torso,07,,,ribcage,high,mapped
+ui.health.heart,07,,,heart,high,shared
+ui.health.lung,07,,,lungs,high,mapped
+ui.health.liver,07,,,liver,high,mapped
+ui.health.kidney,07,,,kidney,med,mapped
+ui.health.stomach,07,,,stomach,med,mapped
+ui.health.spine,07,,,spine or vertebrae,med,mapped
+ui.health.shoulder,-,,,a shoulder joint,-,gap
+ui.health.arm,07,,,arm,med,mapped
+ui.health.hand,07,,,hand or claws,med,mapped
+ui.health.finger,-,,,a finger,-,gap
+ui.health.leg,07,,,leg,med,mapped
+ui.health.foot,-,,,a foot,-,gap
+ui.health.blood,06,,,blood bag tile,low,shared
+ui.health.scar,-,,,an old healed wound,-,gap
+ui.health.wound,07,,,"cut of meat, read as a fresh wound",low,mapped
+ui.health.burn,06,,,flame tile,low,shared
+ui.health.fracture,07,,,cracked bone,med,mapped
+ui.health.missing,-,,,"an absent limb, shown as a silhouette gap",-,gap
+ui.health.implant,-,,,a fitted mechanical part,-,gap
+ui.health.anaesthetic,-,,,under anaesthetic. A syringe or a mask would do,-,gap
+ui.item.knife,05,,,knife,high,mapped
+ui.item.sword,05,,,blade,high,shared
+ui.item.club,05,,,spiked club,high,mapped
+ui.item.spear,03,,,spear,high,mapped
+ui.item.pickaxe,05,,,pickaxe,high,shared
+ui.item.shovel,05,,,shovel,high,mapped
+ui.item.hammer,05,,,hammer,high,mapped
+ui.item.wrench,01,,,wrench,high,mapped
+ui.item.drill,05,,,powered drill,high,shared
+ui.item.axe,05,,,hatchet,high,mapped
+ui.item.cutter,05,,,cutting torch or spray,low,mapped
+ui.item.pistol,05,,,revolver,high,mapped
+ui.item.rifle,05,,,rifle,med,shared
+ui.item.shotgun,-,,,"a scattergun, distinguishable from the rifle",-,gap
+ui.item.crossbow,05,,,crossbow,high,mapped
+ui.item.grenade,08,,,grenade or flare,med,mapped
+ui.item.shield,05,,,shield,high,mapped
+ui.item.helmet,-,,,a helmet,-,gap
+ui.item.vest,08,,,hi-vis or armoured vest,med,mapped
+ui.item.jacket,-,,,a coat or jacket,-,gap
+ui.item.mask,08,,,gas mask,high,mapped
+ui.item.boots,-,,,a pair of boots,-,gap
+ui.item.pack,08,,,backpack,high,mapped
+ui.item.flashlight,08,,,torch,high,mapped
+ui.item.radio,08,,,two-way radio,high,shared
+ui.item.compass,08,,,compass,high,mapped
+ui.item.binoculars,08,,,binoculars,high,mapped
+ui.item.toolkit,08,,,briefcase or tool case,med,mapped
+ui.item.canteen,08,,,water bottle,high,shared
+ui.item.bedroll,03,,,bedroll,high,mapped
+ui.arch.category.structure,06,,,gate and doorway tile,med,mapped
+ui.arch.category.zones,08,,,folded map,med,mapped
+ui.arch.category.orders,06,,,hammer and tools tile,med,shared
+ui.arch.category.power,08,,,battery,high,shared
+ui.arch.category.production,06,,,gears tile,med,shared
+ui.arch.category.furniture,03,,,table,high,mapped
+ui.arch.category.security,05,,,shield,high,shared
+ui.arch.category.salvage,05,,,powered drill,med,shared
+ui.arch.category.floors,04,,,metal floor plate,high,mapped
+ui.arch.category.recreation,-,,,a recreation category mark. Blocked on the same missing art as ui.need.joy,-,gap
+ui.arch.tool.wall,03,,,brick wall section,med,mapped
+ui.arch.tool.door,06,,,gate and doorway tile,med,shared
+ui.arch.tool.stair,-,,,a staircase. M1 needs it and no sheet has one,-,gap
+ui.arch.tool.ladder,-,,,a ladder. M1 needs it and no sheet has one,-,gap
+ui.arch.tool.pillar,04,,,pipe or column length,low,mapped
+ui.arch.tool.roof,-,,,a roof or ceiling panel seen from below. Central to the layer model,-,gap
+ui.arch.tool.reclaim,-,,,"adopting existing ruined structure. Our own invention, nothing to borrow",-,gap
+ui.arch.tool.window,04,,,glass pane,high,shared
+ui.arch.tool.hatch,-,,,a hatch in a floor,-,gap
+ui.arch.tool.airlock,-,,,a sealed double door,-,gap
+ui.arch.tool.stockpile,08,,,wooden crate,high,mapped
+ui.arch.tool.growzone,06,,,ploughed field tile,high,shared
+ui.arch.tool.allowed,08,,,folded map,med,shared
+ui.arch.tool.dumping,08,,,plastic rubbish bag,low,mapped
+ui.arch.tool.kennel,06,,,paw print tile,high,shared
+ui.arch.tool.mine,05,,,pickaxe,high,shared
+ui.arch.tool.deconstruct,01,,,wrench,med,shared
+ui.arch.tool.salvage,05,,,powered drill,med,shared
+ui.arch.tool.haulurgent,08,,,duffel bag,low,shared
+ui.arch.tool.cancel,-,,,"a cancel mark. Trivial to draw, and in the HUD constantly",-,gap
+ui.arch.tool.forbid,08,,,"padlock, closed",high,mapped
+ui.arch.tool.allowitem,08,,,key,high,mapped
+ui.arch.tool.clearrubble,05,,,shovel,high,shared
+ui.arch.tool.extinguish,05,,,spray canister,low,shared
+ui.arch.tool.harvest,05,,,sickle,high,shared
+ui.arch.tool.conduit,04,,,coil of wire,high,shared
+ui.arch.tool.battery,08,,,battery,high,shared
+ui.arch.tool.generator,08,,,petrol generator,high,mapped
+ui.arch.tool.solar,08,,,solar panel,high,mapped
+ui.arch.tool.wind,-,,,a wind turbine,-,gap
+ui.arch.tool.geothermal,-,,,a geothermal or steam tap,-,gap
+ui.arch.tool.switch,-,,,a power switch or breaker,-,gap
+ui.arch.tool.reactor,08,,,radiation canister,med,mapped
+ui.arch.tool.fabricator,06,,,gears tile,med,shared
+ui.arch.tool.galley,03,,,cauldron over a fire,high,mapped
+ui.arch.tool.reclaimer,-,,,a machine that sorts scrap. Our own invention,-,gap
+ui.arch.tool.hydroponics,-,,,a hydroponic basin. Central to food in a ruined city,-,gap
+ui.arch.tool.bench,03,,,workbench,high,mapped
+ui.arch.tool.tailorbench,03,,,spinning wheel,low,mapped
+ui.arch.tool.smithy,03,,,anvil,high,shared
+ui.arch.tool.butcher,05,,,cleaver,high,mapped
+ui.arch.tool.researchbench,06,,,book tile,high,shared
+ui.arch.tool.comms,08,,,two-way radio,high,shared
+ui.arch.tool.bunk,03,,,bedroll,high,shared
+ui.arch.tool.bed,08,,,mattress,high,shared
+ui.arch.tool.table,03,,,table,high,shared
+ui.arch.tool.chair,03,,,stool or bench,med,mapped
+ui.arch.tool.lamp,08,,,light bulb,high,mapped
+ui.arch.tool.shelf,08,,,metal shelving or case,low,mapped
+ui.arch.tool.locker,08,,,metal footlocker,med,mapped
+ui.arch.tool.brazier,03,,,campfire,high,mapped
+ui.arch.tool.cooler,-,,,a cooling unit,-,gap
+ui.arch.tool.heater,-,,,"a heating unit, distinct from the brazier",-,gap
+ui.arch.tool.vent,04,,,length of pipe,med,shared
+ui.arch.tool.turret,-,,,an automated gun. M6 needs it,-,gap
+ui.arch.tool.trap,03,,,snare trap,high,mapped
+ui.arch.tool.barricade,08,,,sandbag,high,mapped
+ui.arch.tool.sandbag,08,,,sandbag,high,shared
+ui.arch.tool.searchlight,08,,,warning light,med,mapped
+ui.arch.tool.deckplate,04,,,metal floor plate,high,shared
+ui.arch.tool.grating,04,,,mesh or mat,med,mapped
+ui.arch.tool.concretefloor,08,,,breeze block,med,shared
+ui.arch.tool.tile,-,,,a finished floor tile,-,gap
+ui.arch.tool.removefloor,-,,,removing a floor. Pairs with the missing roof icon,-,gap
+ui.arch.tool.recbench,03,,,stool or bench,med,shared
+ui.arch.tool.gamestable,-,,,a games table. Same gap as recreation throughout,-,gap
+ui.arch.tool.viewscreen,-,,,a screen or monitor,-,gap
+ui.arch.tool.planter,03,,,clay pot,low,mapped
+ui.arch.tool.sculpture,-,,,a sculpture or art object,-,gap
+ui.command.draft,05,,,rifle,med,shared
+ui.command.undraft,-,,,standing down. Pairs with draft,-,gap
+ui.command.attack,06,,,crosshair tile,high,shared
+ui.command.moveto,-,,,a movement order marker,-,gap
+ui.command.hold,-,,,holding position,-,gap
+ui.command.prioritise,-,,,"do this next. An abstract, and heavily used",-,gap
+ui.command.rescue,-,,,carrying a casualty. Blocked on the missing human figure,-,gap
+ui.command.capture,-,,,taking someone prisoner,-,gap
+ui.command.arrest,-,,,an arrest,-,gap
+ui.command.tend,06,,,medical cross tile,high,shared
+ui.command.operate,05,,,"knife, read as a scalpel",med,mapped
+ui.command.install,-,,,placing a built thing,-,gap
+ui.command.uninstall,-,,,picking a built thing up intact,-,gap
+ui.command.reinstall,-,,,moving a built thing,-,gap
+ui.command.equip,05,,,hammer,med,shared
+ui.command.unequip,-,,,putting a weapon down,-,gap
+ui.command.wear,08,,,hi-vis or armoured vest,med,shared
+ui.command.drop,-,,,dropping a carried item,-,gap
+ui.command.pickup,08,,,backpack,med,shared
+ui.command.refuel,08,,,jerrycan,high,shared
+ui.command.switchon,-,,,"a power state, on",-,gap
+ui.command.switchoff,-,,,"a power state, off",-,gap
+ui.command.tame,06,,,paw print tile,high,shared
+ui.command.train,-,,,"training an animal, distinct from taming",-,gap
+ui.command.slaughter,05,,,cleaver,high,shared
+ui.command.butcher,05,,,cleaver,high,shared
+ui.command.release,-,,,releasing an animal,-,gap
+ui.command.sow,01,,,acorns and seeds,med,shared
+ui.command.bury,-,,,a grave,-,gap
+ui.command.sleep,08,,,mattress,high,shared
+ui.command.eat,02,,,bowl of cooked food,high,shared
+ui.command.recreate,-,,,the recreation gap again,-,gap
+ui.command.setpriority,-,,,a priority number badge,-,gap
+ui.command.setowner,-,,,assigning a thing to a person,-,gap
+ui.command.setzone,08,,,folded map,med,shared
+ui.command.copysettings,-,,,copy. Pure interface abstraction,-,gap
+ui.command.pastesettings,-,,,paste. Pure interface abstraction,-,gap
+ui.command.rename,-,,,renaming. Pure interface abstraction,-,gap
+ui.command.selectsimilar,-,,,select-similar. Pure interface abstraction,-,gap
+ui.command.jumpto,-,,,jump the camera and slice here,-,gap
+ui.command.follow,08,,,binoculars,med,shared
+ui.command.inspect,01,,,magnifying glass,high,shared
+ui.command.trade,08,,,coin,high,shared
+ui.command.recruit,-,,,persuading someone to join,-,gap
+ui.command.gift,08,,,wrapped parcel or crate,low,mapped
+ui.command.evacuate,-,,,clear this area now,-,gap
+ui.command.hunt,06,,,spear and hunt tile,high,shared
+ui.command.strip,-,,,taking everything a pawn carries,-,gap
+ui.overlay.temperature,06,,,flame tile,med,shared
+ui.overlay.light,06,,,torch tile,med,mapped
+ui.overlay.beauty,06,,,paint brush tile,low,shared
+ui.overlay.cleanliness,08,,,bucket,low,shared
+ui.overlay.roofs,-,,,a roofed-area mark. Pairs with the missing roof tool icon,-,gap
+ui.overlay.zones,08,,,folded map,med,shared
+ui.overlay.power,08,,,battery,high,shared
+ui.overlay.salvage,05,,,powered drill,med,shared
+ui.overlay.support,04,,,"metal beam, I-section",med,shared
+ui.overlay.traffic,-,,,footfall. An abstract with no obvious source,-,gap
+ui.tab.work,06,,,hammer and tools tile,med,shared
+ui.tab.schedule,06,,,hourglass tile,med,shared
+ui.tab.research,06,,,book tile,high,shared
+ui.tab.colonists,-,,,a group of people. Blocked on the missing human figure,-,gap
+ui.tab.animals,06,,,paw print tile,high,shared
+ui.tab.wildlife,06,,,boar,med,shared
+ui.tab.bills,04,,,rolled paper,high,shared
+ui.tab.trade,08,,,coin,high,shared
+ui.tab.factions,08,,,red flag,high,mapped
+ui.tab.archive,08,,,notebook,high,mapped
+ui.tab.menu,-,,,a settings or menu mark,-,gap
+ui.alert.starvation,02,,,empty bowl,low,mapped
+ui.alert.breach,-,,,a hole in a wall. Our own concept,-,gap
+ui.alert.unsupported,-,,,an unsupported span about to fall. Central to the layer model,-,gap
+ui.alert.collapse,-,,,a collapse that has happened,-,gap
+ui.alert.cold,06,,,snowflake tile,high,mapped
+ui.alert.heat,06,,,flame tile,med,shared
+ui.alert.idle,06,,,hourglass tile,med,shared
+ui.alert.nomedicine,08,,,"first-aid kit, empty or crossed",low,mapped
+ui.alert.nobed,08,,,mattress,low,shared
+ui.alert.nofood,02,,,empty bowl,low,shared
+ui.alert.fire,06,,,flame tile,high,shared
+ui.alert.injured,06,,,blood bag tile,med,shared
+ui.alert.disease,07,,,larvae or parasite,low,mapped
+ui.alert.infection,07,,,diseased organ,low,mapped
+ui.alert.mentalbreak,-,,,a mental break. Blocked on the missing face art,-,gap
+ui.alert.prisonerescape,-,,,a prisoner getting out,-,gap
+ui.alert.raid,06,,,crosshair tile,med,shared
+ui.alert.drop,-,,,"something arriving through open sky. Our own concept, and verticality-specific",-,gap
+ui.alert.powerloss,08,,,"battery, empty",med,shared
+ui.alert.spoilage,02,,,mouldy or spoiled food,low,mapped
+ui.alert.darkness,06,,,"torch tile, unlit",low,shared
+ui.alert.trapped,-,,,a colonist cut off from the colony,-,gap
+ui.bulletin.salvage,04,,,pile of mixed metal offcuts,med,shared
+ui.bulletin.arrival,-,,,someone arriving. Blocked on the missing human figure,-,gap
+ui.bulletin.trader,08,,,briefcase,med,shared
+ui.bulletin.caravan,08,,,backpack,med,shared
+ui.bulletin.raidincoming,06,,,crosshair tile,med,shared
+ui.bulletin.weather,06,,,water drop tile,med,mapped
+ui.bulletin.death,07,,,skull,high,shared
+ui.bulletin.recruited,-,,,a prisoner joining us,-,gap
+ui.bulletin.research,06,,,book tile,high,shared
+ui.bulletin.quest,08,,,sealed envelope or document,low,mapped
+ui.bulletin.wanderer,-,,,someone asking to join,-,gap
+ui.bulletin.refugee,-,,,someone asking for shelter,-,gap
+ui.bulletin.animaljoin,06,,,paw print tile,med,shared
+ui.bulletin.crash,-,,,a crashed ship or drop pod,-,gap
+ui.bulletin.birth,-,,,a newborn animal,-,gap
+ui.weather.clear,-,,,clear sky or sun,-,gap
+ui.weather.cloudy,-,,,cloud,-,gap
+ui.weather.rain,06,,,water drop tile,med,shared
+ui.weather.storm,-,,,lightning,-,gap
+ui.weather.snow,06,,,snowflake tile,high,shared
+ui.weather.fog,-,,,fog or mist,-,gap
+ui.weather.ashfall,-,,,ash falling,-,gap
+ui.weather.heatwave,06,,,flame tile,low,shared
+ui.weather.coldsnap,06,,,snowflake tile,low,shared
+ui.weather.toxic,08,,,radiation trefoil,high,mapped
+ui.weather.windstorm,-,,,wind,-,gap
+ui.layer.up,06,,,green upward arrow tile,med,mapped
+ui.layer.down,-,,,a downward arrow to match the up arrow,-,gap
+ui.layer.ground,-,,,a ground or street level mark,-,gap
+ui.layer.policy.hide,-,,,visibility mode: hide above,-,gap
+ui.layer.policy.ghost,-,,,visibility mode: ghost outlines,-,gap
+ui.layer.policy.xraymin,-,,,"visibility mode: x-ray, one layer",-,gap
+ui.layer.policy.xray,-,,,"visibility mode: x-ray, all layers",-,gap
+ui.layer.policy.roofsoff,-,,,visibility mode: roofs off,-,gap
+ui.layer.policy.full,-,,,visibility mode: no cut-away,-,gap
+ui.speed.pause,-,,,"pause. Universal symbol, trivial to draw, not in the sheets",-,gap
+ui.speed.play,-,,,normal speed,-,gap
+ui.speed.fast,-,,,fast forward,-,gap
+ui.speed.ultra,-,,,very fast,-,gap
+ui.arch.tool.blastdoor,-,,,"a heavy blast door, distinct from a normal door",-,gap

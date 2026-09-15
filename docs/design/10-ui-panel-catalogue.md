@@ -633,8 +633,14 @@ the published frame. Asserted by `Cadence_At3xSpeed_RunsSameNumberOfEvaluations`
 
 ## Icon key inventory
 
-The interface needs roughly **250 icon keys** by M8, and about **95** by the end of the M3
-vertical slice. None exist as art. All are generated as deterministic placeholders per `09` §7,
+The interface needs **382 icon keys** by M8, and about **95** by the end of the M3
+vertical slice. They are enumerated in `docs/design/icon-keys.csv`; this figure read "roughly 250"
+until they were, while the per-namespace counts below always summed to about 380, so the headline was
+the number that was wrong. It matters: 382 keys at the 128-pixel size this document assumed would not
+fit one atlas page and would cost a draw call each, which is what
+`docs/adr/0004-pixel-art-icon-pipeline.md` is about. **268 of them now have owner-owned art assigned**
+in `docs/design/icon-map.csv`; the remaining 114 are listed as gaps in
+`docs/design/11-icon-library.md`. All are generated as deterministic placeholders per `09` §7,
 so layout and density can be reviewed now and art can arrive at any time without a code change.
 
 | Namespace | Count | First needed |
