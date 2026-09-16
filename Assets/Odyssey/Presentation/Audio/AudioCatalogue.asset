@@ -51,10 +51,16 @@ MonoBehaviour:
   - Id: odyssey.sound.work.pick
     Clips:
     - {fileID: 8300000, guid: 55c7d1949d76a8f42882883788f36db6, type: 3}
+    - {fileID: 8300000, guid: 20b48f9682e40104d8146cd9e9a38a2a, type: 3}
+    - {fileID: 8300000, guid: 6ce94acea65514a43a254ae2e5ded324, type: 3}
+    - {fileID: 8300000, guid: 96a758342d59e96479055455ccd30602, type: 3}
+    - {fileID: 8300000, guid: 268a99aa4329fd549a3317badd2807d6, type: 3}
+    - {fileID: 8300000, guid: d02c26af1c995724a97cdaf915fc947c, type: 3}
+    - {fileID: 8300000, guid: 4ec6cdc752b5f92419df368c38aad6c8, type: 3}
     Bus: 3
     Volume: 0.8
-    VolumeVariance: 0.14
-    PitchVariance: 0.06
+    VolumeVariance: 0.18
+    PitchVariance: 0.1
     SpatialBlend: 1
     MinDistance: 20
     MaxDistance: 210

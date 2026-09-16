@@ -522,10 +522,14 @@ namespace Odyssey.EditorTools
                 },
                 new AudioCatalogue.SoundDef
                 {
+                    // More variance than the axe gets, because the axe has twenty-four separate
+                    // takes and the pick has one recording pitched seven ways: the recorded
+                    // difference between two blows has to be made up somewhere, and per-play
+                    // pitch is where the ear is least able to hear the seam.
                     Id = SoundIds.WorkPick,
                     Clips = Variants("pick"),
                     Bus = SoundBus.Effects,
-                    Volume = 0.8f, VolumeVariance = 0.14f, PitchVariance = 0.06f,
+                    Volume = 0.8f, VolumeVariance = 0.18f, PitchVariance = 0.10f,
                     SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 210f,
                     Priority = 120, Cooldown = 0.12f,
                 },

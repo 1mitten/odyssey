@@ -47,6 +47,13 @@ sample.
 `water`, `alert`, the two outdoor beds and the music tracks do not take variants; one of each is
 right.
 
+**If only one take exists, variants can be made from it** — the pick is one recorded strike
+resampled to seven pitches, three of them dulled to stand in for a glancing blow. Pitch is most
+of what the ear uses to tell two impacts apart, and resampling moves the whole spectrum together
+the way a heavier or lighter swing does. It is honestly less than seven recordings and a great
+deal more than one clip repeated, and a sound made this way is given more per-play variance than
+one with real takes behind it.
+
 ## Why WAV, and not OGG or MP3
 
 The source file never ships. Unity decodes whatever you import and **re-encodes** it into the
