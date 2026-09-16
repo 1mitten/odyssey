@@ -725,6 +725,11 @@ real conditions, layer-aware with jump-to-layer; panel director.
 The tombstone behaviour gets its test here, because M2 is the first milestone where a subject
 can die.
 
+*Landed 2026-09-16 (`claude/selection-mvp`): the multi-select half of the selection row —
+the ordered set in `SelectionDirector`, the drag box, shift-toggle, double-click
+select-similar (screen-space, per this doc's "on screen"), and the roster bar's
+click / shift-click / shift-drag-range. Everything else in M2 remains open.*
+
 ### M3 Build and dig — vertical-slice HUD complete
 
 Tool director and the Build palette driven by category and tool Defs; placement validator
