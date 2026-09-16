@@ -223,10 +223,13 @@ namespace Odyssey.Hud
                 {
                     if (_missingFrames >= GraceFrames)
                     {
-                        Clear(SelectionChange.Died);
-                        return;
+                        // Announced by hand rather than through Clear(), which would see an
+                        // already-empty selection and say nothing — the one handle the frame
+                        // carried away took the announcement with it.
+                        _missingFrames = 0;
+                        Changed?.Invoke(SelectionChange.Died);
                     }
-                    _missingFrames++;
+                    else _missingFrames++;
                     return;
                 }
                 _missingFrames = anyMissing ? _missingFrames + 1 : 0;
