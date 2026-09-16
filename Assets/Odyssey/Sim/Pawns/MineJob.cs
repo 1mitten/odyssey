@@ -190,8 +190,14 @@ namespace Odyssey.Sim.Pawns
             }
 
             ushort terrain = ctx.Cells.Terrain[cell];
+
+            // Banked on the cell rather than counted on the job. A miner who breaks off for a
+            // meal, a sleep or a mental break used to take the whole morning's work with it, and
+            // the next colonist started the face from nothing — hours quietly thrown away, and
+            // the reason a half-cut face could never be drawn as half cut.
             ToilProgress++;
-            if (ToilProgress < NaturalContent.TerrainAt(terrain).workToClear) return JobStatus.Ongoing;
+            if (designations.AddWork(cell, 1) < NaturalContent.TerrainAt(terrain).workToClear)
+                return JobStatus.Ongoing;
 
             designations.Clear(cell);
             ctx.Defer(_ => MineCell(ctx, cell, terrain));

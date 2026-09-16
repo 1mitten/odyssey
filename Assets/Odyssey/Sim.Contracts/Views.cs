@@ -118,6 +118,7 @@ namespace Odyssey.Sim.Contracts
         ThingView[] _things = Array.Empty<ThingView>();
         byte[] _sliceCells = Array.Empty<byte>();
         byte[] _designations = Array.Empty<byte>();
+        byte[] _designationProgress = Array.Empty<byte>();
 
         public int Tick { get; private set; }
         public int SliceLayer { get; private set; }
@@ -142,6 +143,19 @@ namespace Odyssey.Sim.Contracts
         /// <c>DesignationKind</c> value, or 0. Empty when the world has no designation grid.
         /// </summary>
         public ReadOnlySpan<byte> Designations => new ReadOnlySpan<byte>(_designations, 0, DesignationCellCount);
+
+        /// <summary>
+        /// One byte per cell of the active layer: how far through its order that cell is, 0 for
+        /// untouched and 255 for finished. Same length and same indexing as
+        /// <see cref="Designations"/>, and 0 wherever there is no order.
+        ///
+        /// <para>Quantised rather than exact because it is a picture, not a number: what reads on
+        /// screen is whether a face is barely scratched, half cut or nearly through, and a byte
+        /// says that to a tenth of a per cent. The exact tick count stays in the simulation, where
+        /// the arithmetic is done.</para>
+        /// </summary>
+        public ReadOnlySpan<byte> DesignationProgress =>
+            new ReadOnlySpan<byte>(_designationProgress, 0, DesignationCellCount);
 
         /// <summary>Find a pawn by id. Returns false when it is gone, which callers must handle.</summary>
         public bool TryGetPawn(PawnId id, out PawnView view)
@@ -193,6 +207,12 @@ namespace Odyssey.Sim.Contracts
             Grow(ref _designations, cellCount);
             DesignationCellCount = cellCount;
             return new Span<byte>(_designations, 0, cellCount);
+        }
+
+        internal Span<byte> BeginDesignationProgress(int cellCount)
+        {
+            Grow(ref _designationProgress, cellCount);
+            return new Span<byte>(_designationProgress, 0, cellCount);
         }
 
         static void Grow<T>(ref T[] array, int needed)

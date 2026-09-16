@@ -695,6 +695,47 @@ namespace Odyssey.Presentation.Rendering
         /// in one axis than another. Giving each stub its own matrix makes thickness exact, and it
         /// is still one instanced call because every stub is the same unit cube.
         /// </summary>
+        /// <summary>
+        /// How far a cell has been cut into, drawn as the material already taken out of it: a
+        /// slab eating down from the top of the cell as the work goes on.
+        ///
+        /// <para><b>An overlay, and deliberately not the rock itself.</b> The obvious way to show
+        /// a half-mined cell is to shrink its lump, and that is the one thing that must not
+        /// happen: a cell that pulls in from its neighbours opens daylight at the joint, which is
+        /// precisely the fault the whole solidity rule exists to prevent. The rock keeps filling
+        /// its box for as long as it exists and then goes all at once; what changes is this.</para>
+        ///
+        /// <para>Eating downward rather than filling upward because that is the way a cut reads —
+        /// the missing part is at the top, where a pick would have taken it. At nought nothing is
+        /// drawn at all, so an untouched order is a bracket and no more.</para>
+        /// </summary>
+        public void DrawCellCut(CellRef cell, float fraction, Color colour)
+        {
+            if (fraction <= 0.02f) return;
+            if (fraction > 1f) fraction = 1f;
+
+            Material material = BracketMaterial(colour);
+            var rp = new RenderParams(material)
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+
+            // Inset a little so the slab sits inside the cell rather than z-fighting the faces of
+            // the rock it is drawn over, and of whatever stands beside it.
+            const float Inset = 0.06f;
+            float height = CellMetrics.SizeY * fraction;
+            var size = new Vector3(
+                CellMetrics.SizeXZ - Inset * 2f, height, CellMetrics.SizeXZ - Inset * 2f);
+
+            Vector3 centre = CellMetrics.Centre(cell.X, cell.Z, cell.Y);
+            centre.y += (CellMetrics.SizeY - height) * 0.5f;
+
+            Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
+                Matrix4x4.TRS(centre, Quaternion.identity, size));
+        }
+
         public void DrawSelectionBracket(Vector3 centre, Vector3 size, Color colour)
         {
             // Translucent, and emissive so it does not go dim with the light: a cursor has to be

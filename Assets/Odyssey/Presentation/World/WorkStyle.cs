@@ -237,9 +237,24 @@ namespace Odyssey.Presentation.World
         /// <summary>How far up the haft from the fist the off hand sits, as a fraction.</summary>
         public readonly float OffHandSpacing;
 
+        /// <summary>
+        /// How far back out of the work, towards the worker, the debris is thrown from, in metres.
+        ///
+        /// <para>Chips spawn at the head, and the head is deliberately <em>inside</em> the thing
+        /// being struck — that is what <see cref="AimFromCentre"/> is for. For a tree that is a
+        /// few centimetres into a trunk and the burst still reads. For rock the head finishes just
+        /// inside the face of an opaque block, so the pieces are born inside solid stone and the
+        /// first part of their flight is invisible; what reaches the eye is a thin spray appearing
+        /// out of nowhere a moment later. Backing the spawn out to the face fixes it, and the
+        /// distance is per style because only the style knows how deep it struck.</para>
+        /// </summary>
+        public readonly float ChipStandOff;
+
         public WorkStyle(WorkStroke stroke, string toolModule, ChipRecipe chips, float aimFromCentre,
-            float tilt, float gripFraction, float bladeRoll, float bladeYaw, float offHandSpacing)
+            float tilt, float gripFraction, float bladeRoll, float bladeYaw, float offHandSpacing,
+            float chipStandOff = 0f)
         {
+            ChipStandOff = chipStandOff;
             Stroke = stroke;
             ToolModule = toolModule;
             Chips = chips;
@@ -255,7 +270,9 @@ namespace Odyssey.Presentation.World
         public static readonly WorkStyle Felling = new WorkStyle(
             WorkStroke.Axe, ModuleIds.ToolAxe, ChipRecipe.Wood,
             aimFromCentre: 0.15f,
-            tilt: -30f, gripFraction: 0.16f, bladeRoll: 0f, bladeYaw: 0f, offHandSpacing: 0.11f);
+            // Nothing: an axe bites a few centimetres into a trunk and the chips already read.
+            tilt: -30f, gripFraction: 0.16f, bladeRoll: 0f, bladeYaw: 0f, offHandSpacing: 0.11f,
+            chipStandOff: 0f);
 
         /// <summary>
         /// Mining. **Proposed, not settled** — see <see cref="WorkStroke.Pick"/>.
@@ -272,7 +289,11 @@ namespace Odyssey.Presentation.World
             // Just inside the near face of a 2.5 m cell, rather than 1.1 m into the rock.
             aimFromCentre: CellMetrics.SizeXZ * 0.5f - 0.12f,
             // A pick goes over the crown and down the midline, so much less tilt than an axe.
-            tilt: -8f, gripFraction: 0.16f, bladeRoll: 180f, bladeYaw: 0f, offHandSpacing: 0.11f);
+            tilt: -8f, gripFraction: 0.16f, bladeRoll: 180f, bladeYaw: 0f, offHandSpacing: 0.11f,
+            // Out past the face and a little clear of it, so the lumps are seen leaving the rock
+            // rather than appearing in mid-air once they have already cleared it.
+            // 12 cm back out to the face the head went in through, and 10 cm clear of it.
+            chipStandOff: 0.22f);
 
         /// <summary>How many styles there are. Sizes the per-figure tool table.</summary>
         public const int Count = 2;
@@ -308,6 +329,6 @@ namespace Odyssey.Presentation.World
             float? bladeRoll = null, float? bladeYaw = null, float? offHandSpacing = null) =>
             new WorkStyle(Stroke, ToolModule, Chips, AimFromCentre,
                 tilt ?? Tilt, gripFraction ?? GripFraction, bladeRoll ?? BladeRoll,
-                bladeYaw ?? BladeYaw, offHandSpacing ?? OffHandSpacing);
+                bladeYaw ?? BladeYaw, offHandSpacing ?? OffHandSpacing, ChipStandOff);
     }
 }

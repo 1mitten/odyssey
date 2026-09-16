@@ -120,10 +120,15 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
-        public void ASeamAlwaysGivesUpItsMetalAndRockSometimesGivesUpStone()
+        public void EveryCutCellGivesUpWhatItIsMadeOf()
         {
-            // Called directly rather than mined, because the point is the rule and not the walk:
-            // twenty cells of rock and twenty of iron, and what each leaves.
+            // Called directly rather than mined, because the point is the rule and not the walk.
+            //
+            // It used to be "ore always, rock one time in four", and four was tuned against the
+            // wrong denominator: the board holds eighty thousand cells of rock, but a player mines
+            // the tens of cells they mark, and a dozen orders produced three piles of stone
+            // against five hundred wood from the trees beside them. A playtest said the colony got
+            // nothing out of the rock, and it was right.
             ColonyWorld colony = Board();
             PawnContext ctx = colony.Pawns;
             int stone = 0, iron = 0;
@@ -131,12 +136,12 @@ namespace Odyssey.Tests.Sim
             for (int i = 0; i < 20; i++)
             {
                 int cell = Size.Index(10 + i, 10, 4);
-                if (MineJobDriver.Yield(ctx, cell, NaturalContent.TerrainRock, out int item, out int count))
-                {
-                    Assert.That(item, Is.EqualTo(ItemIndex.Stone));
-                    Assert.That(count, Is.EqualTo(ctx.Content.StonePerRock));
-                    stone++;
-                }
+
+                Assert.That(MineJobDriver.Yield(ctx, cell, NaturalContent.TerrainRock, out int item, out int count),
+                    Is.True, "a cell of rock gave up nothing");
+                Assert.That(item, Is.EqualTo(ItemIndex.Stone));
+                Assert.That(count, Is.EqualTo(ctx.Content.StonePerRock));
+                stone++;
 
                 Assert.That(MineJobDriver.Yield(ctx, cell, NaturalContent.TerrainIronOre, out int ore, out int oreCount),
                     Is.True, "an iron seam gave up nothing");
@@ -145,8 +150,42 @@ namespace Odyssey.Tests.Sim
                 iron++;
             }
 
+            Assert.That(stone, Is.EqualTo(20));
             Assert.That(iron, Is.EqualTo(20), "a seam is never empty-handed");
-            Assert.That(stone, Is.InRange(1, 19), $"{stone} of 20 rock cells yielded, which is not 'sometimes'");
+        }
+
+        [Test]
+        public void ThePartialYieldDialStillWorksAndIsDecidedByTheCell()
+        {
+            // The dial was kept rather than deleted when the rate went to one-in-one, because the
+            // machinery behind it is the part worth having: the roll is a pure function of (world
+            // seed, cell index), so a partial yield can come back without reopening how it is
+            // decided. A dial nothing exercises is a dial that has quietly stopped working.
+            ColonyWorld colony = Board();
+            PawnContext ctx = colony.Pawns;
+            ctx.Content.StoneChanceOneIn = 4;
+
+            // One tick first. PawnContext.Seed is filled in when a pawn system syncs, so before
+            // the world has ticked at all it is still zero — and a roll taken against seed 0 and
+            // then against the world's real seed disagrees for reasons that have nothing to do
+            // with the cell. That is a trap for any test that asks the simulation a question
+            // before running it.
+            colony.World.Tick();
+
+            int yielded = 0;
+            for (int i = 0; i < 200; i++)
+                if (MineJobDriver.Yield(ctx, Size.Index(10 + i % 40, 12 + i / 40, 4),
+                        NaturalContent.TerrainRock, out _, out _))
+                    yielded++;
+
+            Assert.That(yielded, Is.InRange(20, 80), $"{yielded} of 200 is not about a quarter");
+
+            // And still the cell's answer rather than the moment's.
+            int cell = Size.Index(15, 15, 4);
+            bool first = MineJobDriver.Yield(ctx, cell, NaturalContent.TerrainRock, out _, out _);
+            colony.World.Tick(9);
+            Assert.That(MineJobDriver.Yield(ctx, cell, NaturalContent.TerrainRock, out _, out _),
+                Is.EqualTo(first), "the same cell answered differently a moment later");
         }
 
         [Test]

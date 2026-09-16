@@ -410,25 +410,25 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public int WoodPerTree = 27;
 
-        /// <summary>
-        /// Stone a plain rock cell leaves, when it leaves any. ASSUMED, like everything else here.
-        /// </summary>
-        public int StonePerRock = 10;
+        /// <summary>Stone a plain rock cell leaves. ASSUMED, like everything else here.</summary>
+        public int StonePerRock = 8;
 
         /// <summary>
-        /// One rock cell in this many yields stone; the rest yield nothing at all.
+        /// One rock cell in this many yields stone. **One, meaning every cell does.**
         ///
-        /// <para>This is the dial that stops the colony drowning in gravel. The played board holds
-        /// something like eighty thousand cells of rock, so a yield from every one of them would
-        /// put eight hundred thousand stone on the map and make the material worthless before it
-        /// had a use. One in four keeps a dug shaft feeling like work with an occasional payoff,
-        /// which is what a shaft is.</para>
+        /// <para>It was four, and four was tuned against the wrong denominator. The reasoning was
+        /// that the played board holds eighty thousand cells of rock and a yield from every one
+        /// would put six hundred thousand stone on the map — true, and irrelevant, because nobody
+        /// mines a board. A player mines what they mark, which is tens of cells, and at one in
+        /// four a dozen orders produced three piles of stone against five hundred and sixty-seven
+        /// wood from the trees beside them. The colony read as getting nothing out of the rock,
+        /// which is what a playtest said in as many words (owner, 2026-09-16).</para>
         ///
-        /// <para>Ore is not rolled at all: a seam always gives up its metal. Finding one is the
-        /// scarce event, and making the reward for finding it a second dice roll would be two
-        /// scarcities stacked on one moment.</para>
+        /// <para>Kept as a dial rather than deleted, because the machinery behind it is worth
+        /// having: the roll is a pure function of (world seed, cell index), so a partial yield can
+        /// be reintroduced the day something wants one without reopening how it is decided.</para>
         /// </summary>
-        public int StoneChanceOneIn = 4;
+        public int StoneChanceOneIn = 1;
 
         /// <summary>Ore a seam cell leaves. Always, never rolled. ASSUMED.</summary>
         public int OrePerCell = 15;

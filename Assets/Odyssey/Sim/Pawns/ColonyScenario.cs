@@ -65,6 +65,17 @@ namespace Odyssey.Sim.Pawns
         public int startingMineRadius = 30;
 
         /// <summary>
+        /// How many outcrops near the start are marked for mining.
+        ///
+        /// <para>One was not enough by a long way. A single outcrop is about a dozen cells; the
+        /// colony worked through it in six game-hours and then never mined again, while the trees
+        /// beside it kept five colonists busy all day. Three gives mining roughly the standing the
+        /// felling order has, which is "enough to watch" rather than "enough to finish"
+        /// (owner, 2026-09-16: no stone was appearing on the floor at all).</para>
+        /// </summary>
+        public int startingMineOutcrops = 3;
+
+        /// <summary>
         /// How many of the starting colonists take mining as their first call, the rest taking
         /// cutting. Zero leaves every colonist on the default priority, which sends them all to
         /// the trees together.
@@ -88,7 +99,7 @@ namespace Odyssey.Sim.Pawns
             new ScenarioDef
             {
                 defName = "Scenario_Bare", label = "bare",
-                startingFellRadius = 0, startingMineRadius = 0, miners = 0,
+                startingFellRadius = 0, startingMineRadius = 0, startingMineOutcrops = 0, miners = 0,
             };
     }
 
@@ -114,8 +125,9 @@ namespace Odyssey.Sim.Pawns
             int marked = 0;
             if (scenario.startingFellRadius > 0)
                 marked += DesignateTreesNear(designations, start, scenario.startingFellRadius);
-            if (scenario.startingMineRadius > 0)
-                marked += DesignateOutcropNear(designations, start, scenario.startingMineRadius);
+            if (scenario.startingMineRadius > 0 && scenario.startingMineOutcrops > 0)
+                marked += DesignateOutcropsNear(designations, start,
+                    scenario.startingMineRadius, scenario.startingMineOutcrops);
             return marked;
         }
 
@@ -135,6 +147,33 @@ namespace Odyssey.Sim.Pawns
         /// rather than a player command, so it writes the grid directly rather than queueing
         /// intents.</para>
         /// </summary>
+        public static int DesignateOutcropsNear(Designations.DesignationGrid designations, CellRef start,
+            int radius, int wanted)
+        {
+            int marked = 0;
+            for (int i = 0; i < wanted; i++)
+            {
+                int got = DesignateOutcropNear(designations, start, radius);
+                // Nothing left within reach that is not already ordered: stop rather than spin.
+                if (got == 0) break;
+                marked += got;
+            }
+            return marked;
+        }
+
+        /// <summary>
+        /// Mark the nearest unordered rock outcrop to the start for mining: find the closest
+        /// minable stone at or above the start layer that carries no order yet, then mark
+        /// everything belonging to the same lump. Returns how many cells were marked.
+        ///
+        /// <para>Above the start layer, so this only ever finds an <em>outcrop</em> — stone
+        /// standing on the ground that a colonist can walk up to and swing at. The rock beneath
+        /// the subsoil is out of reach until somebody has dug down to it, and an order nobody can
+        /// take is worse than no order.</para>
+        ///
+        /// <para>It is a scenario choice rather than a player command, so it writes the grid
+        /// directly rather than queueing intents.</para>
+        /// </summary>
         public static int DesignateOutcropNear(Designations.DesignationGrid designations, CellRef start, int radius)
         {
             GridSize size = designations.Size;
@@ -149,6 +188,8 @@ namespace Odyssey.Sim.Pawns
 
                 int index = size.Index(x, z, y);
                 if (!designations.IsMinableStone(index)) continue;
+                // Already ordered, so this is a lump a previous pass took.
+                if (designations.At(index) != Designations.DesignationKind.None) continue;
 
                 int distance = System.Math.Abs(dx) + System.Math.Abs(dz) + System.Math.Abs(y - start.Y);
                 if (distance >= foundDistance) continue;
@@ -159,7 +200,7 @@ namespace Odyssey.Sim.Pawns
             if (found < 0) return 0;
 
             CellRef at = size.FromIndex(found);
-            int marked = 0;
+            int count = 0;
             for (int dy = -OutcropLumpRadius; dy <= OutcropLumpRadius; dy++)
             for (int dz = -OutcropLumpRadius; dz <= OutcropLumpRadius; dz++)
             for (int dx = -OutcropLumpRadius; dx <= OutcropLumpRadius; dx++)
@@ -169,10 +210,10 @@ namespace Odyssey.Sim.Pawns
                 if (y < start.Y - 1) continue;
                 if (!designations.IsMinableStone(size.Index(x, z, y))) continue;
                 if (designations.Designate(new CellRef(x, z, y), Designations.DesignationKind.Mine) == IntentRejection.None)
-                    marked++;
+                    count++;
             }
 
-            return marked;
+            return count;
         }
 
         /// <summary>How far from its first cell an outcrop is taken to extend. The pass makes them 1 to 3.</summary>

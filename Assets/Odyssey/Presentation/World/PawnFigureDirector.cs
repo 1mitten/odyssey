@@ -496,6 +496,12 @@ namespace Odyssey.Presentation.World
                 Vector3 outward = figure.Transform.position - figure.WorkCentre;
                 outward.y = 0f;
 
+                // Thrown from the face rather than from wherever the head stopped. See
+                // WorkStyle.ChipStandOff: the head finishes inside the thing it struck, which for
+                // a 2.5 m block of stone means the pieces are born inside solid rock.
+                if (look.ChipStandOff > 0f && outward.sqrMagnitude > 1e-6f)
+                    edge += outward.normalized * look.ChipStandOff;
+
                 // Which debris, chosen from the job the snapshot already publishes. This is the
                 // smallest possible version of what docs/design/12-work-poses-and-tools.md calls
                 // a WorkStyle — that note bundles the tool, the stroke, the grip and the chips
