@@ -190,35 +190,30 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void DerivedFieldsAreNotSavedAndDoNotComeBack()
         {
-            // Support and region are rebuilt on load by the caller, because a recomputed value is
-            // correct by construction whereas a saved one can be stale. This pins that they are
-            // genuinely absent — and that loading clears them, so a loaded grid cannot keep a
-            // stale derivation from whatever the world held before.
+            // Support is rebuilt on load by the caller, because a recomputed value is correct by
+            // construction whereas a saved one can be stale. This pins that it is genuinely
+            // absent — and that loading clears it, so a loaded grid cannot keep a stale
+            // derivation from whatever the world held before. Region used to be asserted on
+            // beside it, and the assertion was vacuous: nothing ever wrote the field (OQ-38).
             var grid = City(Small);
-            for (int i = 0; i < grid.Support.Length; i++)
-            {
-                grid.Support[i] = 4;
-                grid.Region[i] = 9;
-            }
+            for (int i = 0; i < grid.Support.Length; i++) grid.Support[i] = 4;
 
             byte[] withDerived = SaveOf(grid);
 
             Array.Clear(grid.Support, 0, grid.Support.Length);
-            Array.Clear(grid.Region, 0, grid.Region.Length);
             byte[] withoutDerived = SaveOf(grid);
 
             Assert.That(withDerived, Is.EqualTo(withoutDerived),
-                "support and region changed the file, so they are being saved");
+                "support changed the file, so it is being saved");
 
             var target = new CellGrid(Small);
-            for (int i = 0; i < target.Support.Length; i++) { target.Support[i] = 7; target.Region[i] = 7; }
+            for (int i = 0; i < target.Support.Length; i++) target.Support[i] = 7;
 
             var world = WorldFor(Small);
             using var stream = new MemoryStream(withDerived, writable: false);
             WorldSave.Load(world, stream, new ISaveable[] { new GridSaveSection(target) });
 
             Assert.That(target.Support, Is.All.Zero, "load left a stale support value");
-            Assert.That(target.Region, Is.All.Zero, "load left a stale region id");
         }
 
         [Test]

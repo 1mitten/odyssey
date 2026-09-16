@@ -51,7 +51,7 @@ namespace Odyssey.Tests.PlayMode
                 // Every region of the screen map, built once by the shell: ledger, architect,
                 // clock, alerts, ruler, inspect, overlays — seven framed regions.
                 Assert.That(doc.rootVisualElement.Query(className: "region").ToList().Count,
-                    Is.EqualTo(7), "the HUD did not build every region");
+                    Is.EqualTo(6), "the HUD did not build every region (the overlay strip is not framed)");
 
                 // The roster is bound to the frame: one card per published pawn.
                 int cards = doc.rootVisualElement.Query(className: "card").ToList().Count;
@@ -59,7 +59,7 @@ namespace Odyssey.Tests.PlayMode
                     "the roster bar does not match the published pawn count");
 
                 // The ruler covers every layer.
-                Assert.That(doc.rootVisualElement.Query(className: "ruler__row").ToList().Count,
+                Assert.That(doc.rootVisualElement.Query(className: "ruler__tick").ToList().Count,
                     Is.EqualTo(boot.Model!.Size.SizeY));
 
                 // Four speed buttons, and the clock has a time in it.
@@ -167,7 +167,6 @@ namespace Odyssey.Tests.PlayMode
             boot.barrenMap = true;
             boot.grassScatter = 0;
             boot.cameraRig = rig;
-            boot.showReadout = false;
             bootObject.AddComponent<SelectionPresenter>();
 
             var doc = bootObject.AddComponent<UIDocument>();

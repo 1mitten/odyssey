@@ -398,10 +398,11 @@ namespace Odyssey.Sim.Pawns
         public int ThinkLoopLimit = 10;
 
         /// <summary>
-        /// Wood a felled tree leaves on the ground. ASSUMED: nothing in docs/research/ has
-        /// measured it; A8 (plants) is still an open row. One stack, so a single haul clears it.
+        /// Wood a felled tree leaves on the ground: 27, the pine class's vanilla yield
+        /// (docs/research/a-08-plants-growing-food.md §1; the oak class gives 46). One stack of
+        /// 75, so a single haul clears it.
         /// </summary>
-        public int WoodPerTree = 20;
+        public int WoodPerTree = 27;
 
         public int ThinkLoopWindowTicks = 60;
 
@@ -471,11 +472,12 @@ namespace Odyssey.Sim.Pawns
                 new JobDef { defName = "Job_Sleep", driver = JobIndex.Sleep, casuallyInterruptible = false },
                 new JobDef { defName = "Job_Wander", driver = JobIndex.Wander, expiryTicks = 1_200 },
                 new JobDef { defName = "Job_Wait", driver = JobIndex.Wait, workTicks = 120 },
-                // ASSUMED: ten seconds of work at normal speed, and one tree per job. Nothing in
-                // docs/research/ has measured what a tree should take; A8 (plants) is still open.
+                // 800 ticks is the vanilla harvest work of the pine class, the wooded meadow's only
+                // species (docs/research/a-08-plants-growing-food.md §1). One tree per job, and the
+                // swings train cutting.
                 new JobDef
                 {
-                    defName = "Job_Fell", driver = JobIndex.Fell, workTicks = 600, expiryTicks = 6_000,
+                    defName = "Job_Fell", driver = JobIndex.Fell, workTicks = 800, expiryTicks = 6_000,
                     trainsSkill = SkillIndex.Cutting, experiencePerWorkTick = 110,
                 },
             };
@@ -501,8 +503,21 @@ namespace Odyssey.Sim.Pawns
 
             content.Items = new[]
             {
-                new ItemDef { defName = "Item_Meal", label = "ration pack", nutrition = 450 },
+                // 900 units is 0.9 nutrition, the vanilla value of every meal class including the
+                // packaged ration this stands for (a-08 §2). At 450 it was half a meal, which is
+                // why five colonists ate fifteen a day. The ration class never rots, which is what
+                // lets a pantry be an objective rather than a four-day countdown; spoilage itself
+                // is out of the slice.
+                // Meals stack to 20, so a whole starting pile (ScenarioDef.mealsPerPile, 12) is
+                // legal stock in one cell and a hauler moves it in one trip (a-14: one stack per
+                // trip). The ItemDef default of 1 would make every pile "full" the moment it was
+                // hauled and no meal could ever be stowed beside another. The 20 is ASSUMED as a
+                // number: the research records limits from 1 to 500 and none for a meal.
+                new ItemDef { defName = "Item_Meal", label = "ration pack", nutrition = 900, stackLimit = 20 },
+                // Salvage is a heap in its own right, one to a cell, until the things line
+                // decides what it is made of.
                 new ItemDef { defName = "Item_Salvage", label = "salvage" },
+                // Wood's 75 is the one limit the research states outright (a-14 §4).
                 new ItemDef { defName = "Item_Wood", label = "wood", stackLimit = 75 },
             };
 

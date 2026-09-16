@@ -425,7 +425,6 @@ namespace Odyssey.Tests.Sim
             Array.Copy(source.FloorStuff, copy.FloorStuff, source.FloorStuff.Length);
             Array.Copy(source.Edifice, copy.Edifice, source.Edifice.Length);
             Array.Copy(source.Support, copy.Support, source.Support.Length);
-            Array.Copy(source.Region, copy.Region, source.Region.Length);
             Array.Copy(source.Flags, copy.Flags, source.Flags.Length);
             return copy;
         }
