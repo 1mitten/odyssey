@@ -24,15 +24,15 @@ namespace Odyssey.Sim.Pawns
         public int mealPiles = 12;
 
         /// <summary>
-        /// Meals in each starting pile. Twelve piles of twenty is 240 meals. Measured, not
-        /// estimated: five colonists ate 120 meals in about 7.8 days on the ten-day soak (seed 1),
-        /// which is 15 a day, so ten days is about 155 and this leaves a good half in hand. The
-        /// arithmetic from the Defs said 9 a day and was wrong, which is why the number comes
-        /// from the run. The ten-day run proves the simulation is stable unattended, not that a
-        /// food economy balances, and nothing in the slice makes food (OQ-39); the pantry is sized
-        /// so the gate measures the simulation.
+        /// Meals in each starting pile. Twelve piles of twelve is 144 meals. Measured on the
+        /// ten-day soak (seed 1) with a ration worth a full vanilla meal of 900 units: five
+        /// colonists ate 92 meals in ten days, 1.8 a day each, which is the vanilla figure
+        /// (docs/research/a-08-plants-growing-food.md §2), so 144 leaves a third in hand. It
+        /// was 240 when the ration restored 450 and the burn was double. The ten-day run proves
+        /// the simulation is stable unattended, not that a food economy balances, and nothing in
+        /// the slice makes food (OQ-39); the pantry is sized so the gate measures the simulation.
         /// </summary>
-        public int mealsPerPile = 20;
+        public int mealsPerPile = 12;
 
         /// <summary>
         /// One per colonist is what the placement always gave. A number of its own so that a

@@ -114,7 +114,6 @@ namespace Odyssey.Tests.PlayMode
             boot.barrenMap = barren;
             boot.grassScatter = 60;
             boot.cameraRig = rig;
-            boot.showReadout = false;
 #if UNITY_EDITOR
             // Real art when the packs are present, the same way the scene gets it. A clone without
             // them renders primitives, which is still a frame worth timing.
