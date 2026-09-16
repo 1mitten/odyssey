@@ -2,6 +2,7 @@
 using System.IO;
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Saving;
 
@@ -125,7 +126,7 @@ namespace Odyssey.Tests.Sim
             // stock and a hauler moves a pile in one trip (a-14: one stack per trip). A limit
             // of 1 — the ItemDef default — would make every pile of twenty "full" for hauling
             // and no meal could ever be stowed beside another.
-            var content = PawnContent.Core();
+            var content = ContentPack.Pawns();
             Assert.That(content.Items[Meal].stackLimit, Is.GreaterThan(1));
             Assert.That(content.Items[Meal].stackLimit, Is.GreaterThanOrEqualTo(ScenarioDef.Bare().mealsPerPile));
             Assert.That(content.Items[Meal].stackLimit, Is.GreaterThanOrEqualTo(ScenarioDef.Playtest().mealsPerPile));

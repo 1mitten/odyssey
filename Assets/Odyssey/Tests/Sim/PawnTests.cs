@@ -4,6 +4,7 @@ using System.IO;
 using NUnit.Framework;
 using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Saving;
@@ -37,7 +38,7 @@ namespace Odyssey.Tests.Sim
             Nav = new NavGraph(Cells);
             var finder = new PathFinder(Nav);
             var paths = new PathService(finder);
-            Ctx = new PawnContext(Cells, Nav, paths, PawnContent.Core());
+            Ctx = new PawnContext(Cells, Nav, paths, ContentPack.Pawns());
 
             Needs = new NeedsSystem(Ctx);
             Jobs = new JobSystem(Ctx);
@@ -135,7 +136,7 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void FallRateIsPerBandNotFlat()
         {
-            var food = PawnContent.Core().Needs[NeedIndex.Food];
+            var food = ContentPack.Pawns().Needs[NeedIndex.Food];
             Assert.That(food.FallPerInterval(900), Is.GreaterThan(food.FallPerInterval(200)));
             Assert.That(food.MoodOffset(900), Is.GreaterThan(food.MoodOffset(100)));
         }

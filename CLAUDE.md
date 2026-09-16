@@ -82,12 +82,22 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 **Before more features, open the seams.** The mining line was 73 files and had to edit six shared
 files to add itself, five of which should have been extension points. The table and the order are in
 `docs/plans/vertical-slice.md`, "Where the seams are" — **audited against the code on 2026-09-17,
-because it had gone stale and misled a session.** Three of the five are now open: work givers
-register themselves (OQ-44), the content tables are XML (OQ-15/OQ-16), and a feature can publish
-about a pawn without widening `PawnView` (OQ-45, ADR 0004 amended). **Two are left, and the cheaper
-one is not the one with a queue row:** `PawnContent.Core()` still exists and the bootstrap and
-`ColonyWorld` still build from it, so the XML is a checked mirror rather than the source and every
-new item is still written twice. Then mesh contributors (OQ-46).
+because it had gone stale and misled a session into recommending work that had already landed.**
+Three of the five chokepoints are open:
+
+- **Work givers register themselves** (OQ-44): a giver in the simulation assembly joins by existing.
+- **Content is written once** (OQ-15/OQ-16, finished by OQ-48 on 2026-09-17). `PawnContent.Core()`
+  is deleted and the XML under `Assets/Odyssey/Defs/Core/Pawns` is the only copy; every caller goes
+  through `ContentPack.Pawns()`, which finds the pack by walking up to the repository root and
+  caches the parse. A built player would not find it — nothing builds one, and `ContentPack.UseRoot`
+  is the tested seam for the day something does. **The world tables are still doubled**
+  (`CoreContent.Terrain`, `NaturalContent.Terrain` against `Defs/Core/World/*.xml`); that is the
+  remaining half, and the risk in it is the terrain *index order*, which is in every save and hash.
+- **A feature can describe a pawn without widening `PawnView`** (OQ-45, ADR 0004 amended): a sparse
+  `PawnAspect` row keyed by a name the feature mints for itself.
+
+**Still open:** the world tables above, mesh contributors for `ChunkMesher` (OQ-46), and
+`OdysseyBootstrap` wiring every presentation system by hand — the one chokepoint with no queue row.
 
 ### What runs today
 
@@ -140,7 +150,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~10 s, no Unity): **444 Sim + 110 Hud**.
+- **Fast tier** (`scripts/test-fast.sh`, ~10 s, no Unity): **448 Sim + 110 Hud**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and

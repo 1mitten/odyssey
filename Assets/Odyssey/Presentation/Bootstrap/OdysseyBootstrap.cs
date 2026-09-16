@@ -8,6 +8,7 @@ using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
@@ -163,8 +164,18 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         public float TickAlpha => _tickAlpha;
 
-        /// <summary>Cost units a pawn retires in one tick, the other half of that same tween.</summary>
-        public int MovePerTick => PawnContent.Core().Movement.movePerTick;
+        /// <summary>
+        /// Cost units a pawn retires in one tick, the other half of that same tween.
+        ///
+        /// <para>Read off the colony's own content rather than loaded per read. It used to call
+        /// <c>PawnContent.Core()</c>, which built the whole content table — every Def, every array
+        /// and list — and then took one integer off it. This property is read three times a frame
+        /// (twice by <see cref="SelectionPresenter"/>, once by the render path), so that was a
+        /// full content table allocated three times a frame to answer a question the world already
+        /// knew the answer to. Zero before the world is built, which is the value the callers
+        /// already substitute when the bootstrap is missing.</para>
+        /// </summary>
+        public int MovePerTick => _pawns?.Content.Movement.movePerTick ?? 0;
 
         /// <summary>
         /// The live figures, for anything that must agree with where a colonist is actually drawn
@@ -237,7 +248,7 @@ namespace Odyssey.Presentation.Bootstrap
             var nav = new NavGraph(_grid);
             nav.Rebuild();
             var pathService = new PathService(new PathFinder(nav));
-            _pawns = new PawnContext(_grid, nav, pathService, PawnContent.Core()) { Chunks = chunks };
+            _pawns = new PawnContext(_grid, nav, pathService, ContentPack.Pawns()) { Chunks = chunks };
 
             var support = new SupportSystem(grid, solver, chunks);
             var designations = new DesignationGrid(_grid, edifices);
@@ -552,7 +563,7 @@ namespace Odyssey.Presentation.Bootstrap
             _frameTimer.Restart();
             // The rig sits on the camera, so its position is the viewer's.
             if (cameraRig != null) _renderer.ViewerPosition = cameraRig.transform.position;
-            int movePerTick = PawnContent.Core().Movement.movePerTick;
+            int movePerTick = MovePerTick;
 
             // Before the world is submitted, because it decides how part of the world is drawn.
             // It reads the figures placed on the *previous* frame, which is the one frame of lag

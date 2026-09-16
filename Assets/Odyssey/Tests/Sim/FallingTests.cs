@@ -1,6 +1,7 @@
 #nullable enable
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Worldgen;
@@ -180,7 +181,7 @@ namespace Odyssey.Tests.Sim
             // The owner's decision and the point of the exercise: one hauler trip should carry
             // what took two. Measured on the playtest board, the same stone came out as 81 stacks
             // where it had been 107.
-            var items = new ColonyItems(PawnContent.Core());
+            var items = new ColonyItems(ContentPack.Pawns());
             ThingId first = items.Spawn(ItemIndex.Stone, 100, 8);
             items.Spawn(ItemIndex.Stone, 200, 8);
 
@@ -195,7 +196,7 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void AMoveToItsOwnCellChangesNothing()
         {
-            var items = new ColonyItems(PawnContent.Core());
+            var items = new ColonyItems(ContentPack.Pawns());
             ThingId id = items.Spawn(ItemIndex.Stone, 100, 8);
             var item = items.Get(id)!;
 
@@ -368,7 +369,7 @@ namespace Odyssey.Tests.Sim
             // 400: the figure reached the bottom a quarter of the way through the step and then
             // stood frozen in the shaft for the other three quarters, at six and a half seconds a
             // rung. That is most of what "colonists float down slowly" was.
-            var pawn = new Pawn(new PawnId(1), 0, PawnContent.Core());
+            var pawn = new Pawn(new PawnId(1), 0, ContentPack.Pawns());
             Assert.That(pawn.MoveStepCost, Is.EqualTo(Odyssey.Sim.Pathing.MoveCost.Orthogonal),
                 "a pawn that has never stepped would publish a nonsense fraction");
 

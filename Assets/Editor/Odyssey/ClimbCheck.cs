@@ -5,6 +5,7 @@ using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
@@ -108,7 +109,7 @@ namespace Odyssey.EditorTools
                 var nav = new NavGraph(grid);
                 nav.Rebuild();
                 var pawns = new PawnContext(
-                    grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core())
+                    grid, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns())
                     { Chunks = chunks };
                 var support = new SupportSystem(grid, new SupportSolver(grid), chunks);
                 var mirror = new GridMirrorContributor(grid, result.Edifices, model);
@@ -133,7 +134,7 @@ namespace Odyssey.EditorTools
                     Debug.LogWarning("[Climb] no live figures: no character art or no gait clips. " +
                                      "The pictures will show the baked meshes and prove nothing.");
 
-                int movePerTick = PawnContent.Core().Movement.movePerTick;
+                int movePerTick = ContentPack.Pawns().Movement.movePerTick;
 
                 for (int tick = 0; tick < 400; tick++)
                 {
