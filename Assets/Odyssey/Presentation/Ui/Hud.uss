@@ -206,23 +206,40 @@
 
 .ledger__name {
     flex-grow: 1;
-    color: #93a4b5;
+    color: #b9c7d4;
     font-size: 11px;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
+
+    /* The height is load-bearing and must not be tidied away. An ellipsis needs
+       overflow:hidden, and overflow:hidden clips the glyphs to the element's *content* box —
+       which, left to size itself, comes out shorter than the type it is holding. Reported as
+       "A1 resources, cannot read any of the text" on 2026-09-16: the names were shorn while
+       the quantities beside them, which carry no overflow rule, drew in full.
+
+       Padding does not fix it. Raising padding-bottom from 3px to 5px produced a
+       byte-identical picture, because padding extends the padding box and the clip is taken
+       at the content box. Only height moves it. Centring the text in the taller box then
+       keeps the row looking as it did. */
+    height: 18px;
+    -unity-text-align: middle-left;
 }
 
 .ledger__qty {
-    color: #dde6ee;
+    color: #e6eef5;
     font-size: 11px;
 }
 
+/* Dim enough to read as "not yet", light enough to read at all. The old #63758a was about
+   3.5:1 against the panel, which is under the threshold for text this size; these are about
+   5:1. The distinction from a live row is carried by the gap between them, not by taking the
+   greyed rows down to where they cannot be made out. */
 .ledger__row--planned .ledger__name,
-.ledger__row--planned .ledger__qty { color: #63758a; }
+.ledger__row--planned .ledger__qty { color: #8b9db0; }
 
 .ledger__note {
-    color: #63758a;
+    color: #8b9db0;
     font-size: 9px;
     margin-top: 4px;
 }
