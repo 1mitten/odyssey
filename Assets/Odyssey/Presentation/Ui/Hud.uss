@@ -304,28 +304,25 @@
     background-color: #20303a;
 }
 
-.card__top {
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-}
-
 .card__name {
     font-size: 10px;
     color: #dde6ee;
-    margin-top: 2px;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
     max-width: 50px;
+    /* Height, for the same reason the ledger's names need one: overflow:hidden clips glyphs to
+       the content box, and a name with a descender in it loses its tail without this. */
+    height: 15px;
+    -unity-text-align: middle-center;
 }
 
-.card__layer {
-    font-size: 9px;
-    color: #5ec8dc;
-}
+.card .bar { margin-top: 3px; align-self: stretch; }
 
-.card .bar { margin-top: 2px; align-self: stretch; }
+/* Food above mood, and told apart by colour rather than by a label: at this size a word would
+   be most of the card. Mood keeps the green-to-red band it already had, so the card still goes
+   red when a colonist is in trouble. */
+.card .bar--food .bar__fill { background-color: #5ec8dc; }
 
 /* ---------------- clock + speed (A3/A4) ---------------- */
 
@@ -354,11 +351,18 @@
     flex-grow: 1;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     border-width: 1px;
     border-color: #3d4f61;
     border-radius: 4px;
-    padding: 3px 0 2px 0;
+    height: 26px;
     margin-right: 3px;
+}
+
+.speed__glyph {
+    font-size: 11px;
+    color: #cdd9e4;
+    -unity-text-align: middle-center;
 }
 
 .speed__btn:hover { background-color: #243140; }

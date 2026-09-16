@@ -99,11 +99,15 @@ namespace Odyssey.Presentation.Ui
         struct CardView
         {
             public VisualElement Root;
-            public IconBadge Job;
             public Label Name;
-            public Label Layer;
+
+            /// <summary>Mood, which is the one the card is bordered and coloured by.</summary>
             public VisualElement Fill;
             public VisualElement Bar;
+
+            /// <summary>Food. Nought to a thousand in the frame, unlike mood's nought to a
+            /// hundred, which is why the two are scaled differently where they are bound.</summary>
+            public VisualElement FoodFill;
         }
 
         struct RulerTickView
@@ -499,23 +503,29 @@ namespace Odyssey.Presentation.Ui
 
             while (_cards.Count < _roster.Cards.Count)
             {
+                // A name and two bars. The placeholder badges and the layer number are gone
+                // (owner, 2026-09-16): the badges named nothing a player could read, and the
+                // layer is on the ruler and in the inspect pane already. What a card is for is
+                // "is this colonist all right", and that is food and mood.
                 var card = new VisualElement();
                 card.AddToClassList("card");
-                var top = new VisualElement();
-                top.AddToClassList("card__top");
-                top.Add(new IconBadge("ui.pawn.colonist"));
-                var job = new IconBadge("ui.status.idle");
-                top.Add(job);
                 var name = Label(string.Empty, "card__name");
-                var layer = Label(string.Empty, "card__layer");
+
+                var foodBar = new VisualElement();
+                foodBar.AddToClassList("bar");
+                foodBar.AddToClassList("bar--food");
+                var foodFill = new VisualElement();
+                foodFill.AddToClassList("bar__fill");
+                foodBar.Add(foodFill);
+
                 var bar = new VisualElement();
                 bar.AddToClassList("bar");
                 var fill = new VisualElement();
                 fill.AddToClassList("bar__fill");
                 bar.Add(fill);
-                card.Add(top);
+
                 card.Add(name);
-                card.Add(layer);
+                card.Add(foodBar);
                 card.Add(bar);
 
                 int index = _cards.Count;
@@ -527,7 +537,7 @@ namespace Odyssey.Presentation.Ui
                 _rosterHost.Add(card);
                 _cards.Add(new CardView
                 {
-                    Root = card, Job = job, Name = name, Layer = layer, Fill = fill, Bar = bar,
+                    Root = card, Name = name, Fill = fill, Bar = bar, FoodFill = foodFill,
                 });
             }
             while (_cards.Count > _roster.Cards.Count)
@@ -542,9 +552,8 @@ namespace Odyssey.Presentation.Ui
                 CardView view = _cards[i];
 
                 view.Name.text = model.Name;
-                view.Layer.text = "L" + model.Layer;
-                view.Job.SetKey(JobLabels.IconKey(model.JobDef));
-                view.Fill.style.width = Length.Percent(Mathf.Clamp(model.Mood, 0, 100));
+                view.FoodFill.style.width = Length.Percent(Clamp1000(model.Food));
+                view.Fill.style.width = Length.Percent(Clamp1000(model.Mood));
                 view.Bar.EnableInClassList("bar--lo", model.Mood < MoodBands.Strained);
                 view.Root.EnableInClassList("card--sel", model.Selected);
                 view.Root.tooltip = $"{model.Name} — {JobLabels.Label(model.JobDef)}, layer {model.Layer}." +
@@ -566,19 +575,20 @@ namespace Odyssey.Presentation.Ui
 
             var speed = new VisualElement();
             speed.AddToClassList("speed");
-            (string key, string label)[] speeds =
+            // Shapes, not words and not placeholder badges: stop, play, double, triple. A
+            // transport control is the one row on this sheet that needs no naming, because the
+            // shapes are older than the game and everyone already reads them (owner, 2026-09-16).
+            (string glyph, string name)[] speeds =
             {
-                ("ui.speed.pause", "pause"), ("ui.speed.play", "1×"),
-                ("ui.speed.fast", "2×"), ("ui.speed.ultra", "3×"),
+                ("■", "Stop"), ("▶", "Play"), ("▶▶", "Double"), ("▶▶▶", "Triple"),
             };
             for (int i = 0; i < speeds.Length; i++)
             {
                 int requested = i; // 0 paused, 1..3 speeds — the rig's own convention
                 var button = new VisualElement();
                 button.AddToClassList("speed__btn");
-                button.Add(new IconBadge(speeds[i].key));
-                button.Add(Label(speeds[i].label, "speed__label"));
-                button.tooltip = speeds[i].label + " — Space pauses, 1/2/3 set speed";
+                button.Add(Label(speeds[i].glyph, "speed__glyph"));
+                button.tooltip = speeds[i].name + " — Space pauses, 1/2/3 set speed";
                 button.RegisterCallback<ClickEvent>(_ => _rig?.RequestGameSpeed(requested));
                 speed.Add(button);
                 _speedButtons.Add(button);
@@ -742,10 +752,10 @@ namespace Odyssey.Presentation.Ui
             {
                 _food.Value.text = Percent(_inspect.Food);
                 _rest.Value.text = Percent(_inspect.Rest);
-                _mood.Value.text = _inspect.Mood.ToString();
+                _mood.Value.text = Percent(_inspect.Mood);
                 _food.Fill.style.width = Length.Percent(Clamp1000(_inspect.Food));
                 _rest.Fill.style.width = Length.Percent(Clamp1000(_inspect.Rest));
-                _mood.Fill.style.width = Length.Percent(Mathf.Clamp(_inspect.Mood, 0, 100));
+                _mood.Fill.style.width = Length.Percent(Clamp1000(_inspect.Mood));
                 _mood.Bar.EnableInClassList("bar--lo", _inspect.Mood < MoodBands.Strained);
             }
         }
