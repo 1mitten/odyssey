@@ -64,7 +64,7 @@ namespace Odyssey.Tests.PlayMode
             // See InputPump: queued events have to be processed at the top of a frame, not from
             // a coroutine that resumes after every Update has already run.
             _pump = new GameObject("InputPump");
-            _pump.AddComponent<InputPump>();
+            Pump = _pump.AddComponent<InputPump>();
 
             Mouse? existing = Mouse.current;
             _deviceWasAlreadyThere = existing != null;
@@ -78,6 +78,9 @@ namespace Odyssey.Tests.PlayMode
         }
 
         public Mouse Device { get; }
+
+        /// <summary>The component that processes events at the top of each frame.</summary>
+        public InputPump Pump { get; }
 
         /// <summary>
         /// Turn the wheel over a point: one notch, delivered for exactly one frame.
@@ -94,9 +97,9 @@ namespace Odyssey.Tests.PlayMode
             // same frame; by the time this coroutine resumes, the frame has happened.
             yield return null;
 
-            Assert.That(Device.scroll.ReadValue().y, Is.EqualTo(notches).Within(0.001f),
-                "the wheel state did not survive to the frame the game reads it in, so nothing " +
-                "downstream can be tested. See MouseHarness and InputPump.");
+            Assert.That(Pump.LastScrollY, Is.EqualTo(notches).Within(0.001f),
+                "the wheel never reached the game: the pump saw nothing on the frame it processed " +
+                "the event. See MouseHarness and InputPump for the three ways this fails silently.");
         }
 
         /// <summary>Move the pointer without pressing anything.</summary>

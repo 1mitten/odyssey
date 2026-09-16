@@ -23,6 +23,29 @@ namespace Odyssey.Tests.PlayMode
     [DefaultExecutionOrder(-10000)]
     public sealed class InputPump : MonoBehaviour
     {
-        void Update() => InputSystem.Update();
+        /// <summary>
+        /// What the wheel read immediately after the last update, and the frame it read it on.
+        ///
+        /// <para>A test cannot observe this for itself. A delta control accumulates during an
+        /// update and is spent by the end of the frame, so a coroutine — which resumes after every
+        /// <c>Update</c> has run — always reads zero and cannot tell "delivered and consumed" from
+        /// "never delivered". Recording it here, at the one moment the game sees it, is what makes
+        /// the harness able to fail loudly instead of quietly.</para>
+        /// </summary>
+        public float LastScrollY { get; private set; }
+
+        public int LastScrollFrame { get; private set; } = -1;
+
+        void Update()
+        {
+            InputSystem.Update();
+
+            float scroll = Mouse.current?.scroll.ReadValue().y ?? 0f;
+            if (Mathf.Abs(scroll) > 0.0001f)
+            {
+                LastScrollY = scroll;
+                LastScrollFrame = Time.frameCount;
+            }
+        }
     }
 }
