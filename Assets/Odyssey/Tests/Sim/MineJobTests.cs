@@ -245,6 +245,47 @@ namespace Odyssey.Tests.Sim
             Assert.That(first.Grid.IsSolidTerrain(rock), Is.False, "nothing was actually mined");
         }
 
+        [Test, Category("Long")]
+        public void ADayOfMiningLeavesAWorkingColony()
+        {
+            // A dozen orders prove the mechanism; a day proves it does not rot. The faults this
+            // is for take hours rather than seconds — a reservation held by a job that ended, a
+            // colonist that walked into a shaft and stopped being part of the colony, an order
+            // nobody can ever take because its stand was dug away.
+            ColonyWorld colony = Board();
+            Pawn first = colony.Pawns.Pawns.All[0];
+            int marked = 0;
+
+            for (int y = 0; y < Size.SizeY && marked < 80; y++)
+            for (int z = 0; z < Size.SizeZ && marked < 80; z++)
+            for (int x = 0; x < Size.SizeX && marked < 80; x++)
+            {
+                int index = Size.Index(x, z, y);
+                if (colony.Grid.Terrain[index] != NaturalContent.TerrainRock) continue;
+                if (!colony.Designations.CanMine(index)) continue;
+                if (MineWorkGiver.StandToMine(colony.Pawns, first, index) < 0) continue;
+                if (colony.Designations.Designate(Size.FromIndex(index), DesignationKind.Mine) == IntentRejection.None)
+                    marked++;
+            }
+
+            Assume.That(marked, Is.GreaterThan(20), "not enough reachable rock to be worth a day");
+            colony.World.Tick(60_000);
+
+            Assert.That(colony.Jobs.CompletedOf(JobIndex.Mine), Is.GreaterThan(0), "not one mining job completed");
+            Assert.That(colony.Designations.Count, Is.Zero, "orders were left standing after a full day");
+
+            foreach (Pawn pawn in colony.Pawns.Pawns.All)
+            {
+                Assert.That(colony.Grid.IsWalkable(pawn.Cell), Is.True,
+                    $"a colonist is standing in {Size.FromIndex(pawn.Cell)}, which cannot be stood in");
+                Assert.That(pawn.HeldReservations.Count,
+                    pawn.CurrentJob == null ? Is.EqualTo(0) : Is.GreaterThanOrEqualTo(0),
+                    "a colonist with no job is still holding a claim");
+            }
+
+            Assert.That(OnTheGround(colony, ItemIndex.Stone), Is.GreaterThan(0), "a day of mining left no stone");
+        }
+
         [Test]
         public void MinedStoneIsHauledToTheStockpile()
         {

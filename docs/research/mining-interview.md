@@ -188,6 +188,62 @@ Eight steps, each independently testable, in dependency order.
 | **7** | The shaft ladder: connector registration on a downward dig | A colonist descends five layers and returns |
 | **8** | Gate: `unity.sh test editmode`, headless one-day run, milestone note | The standing five-part gate |
 
+## 6a. What was actually built, and where it departed from the plan
+
+Built on branch `claude/mines` on 2026-09-16, eight steps, one commit each. Where the code and this
+plan disagree, **the code is right and this section says why** — a plan that quietly stops matching
+what shipped is worse than no plan.
+
+### The board, as it now generates
+
+`120 × 120 × 16`, ground at layer 10, surface terraced across **y8–12** with three layers of sky above
+the highest terrace. Per seed: **23 outcrops** (≈330 cells), **4 caverns** (52 cells), **100 ore
+deposits** (≈1,145 cells: iron ≈667, coal ≈478) inside ≈83,000 cells of rock.
+
+### Six deliberate departures
+
+1. **Ore sight is authored, not derived** (§4d said derived). It is a `CellFlags.Discovered` bit,
+   hashed and saved with the other flags. The reason is that it is a **one-way latch**: a seam the
+   colony has seen and then walled back up is still known, and a derived bit would forget it the
+   moment the wall went up and remember it when the wall came down. Knowledge is history, so it is
+   state.
+2. **Nothing at all is discovered at generation** — stronger than "hidden until a face is exposed".
+   The ore lining a cavern wall is adjacent to open air from the moment it generates, so the literal
+   rule would have revealed every chamber's treasure on a board nobody had dug into: the sealed
+   caverns would have been a treasure map. Discovery now latches only on a dig.
+3. **A connector is its own floor** — a change to `NavGrid.RefreshFrom`, outside the planned scope.
+   A shaft's middle cells rest on nothing, so they failed the floor test, so they were not walkable,
+   so the portal links at both ends of every ladder had nothing to join: a shaft laddered top to
+   bottom that nothing could climb. A cell carrying a declared stair, ladder or lift footprint now
+   counts as having something to stand in, because that is what those things are. **Found by the
+   test, not by reasoning.**
+4. **A colonist steps down into the cell it just dug.** Cutting a shaft means mining downward, and
+   mining downward means standing on the cell being cut away — there is no other stance. The
+   alternative was a pawn standing on nothing.
+5. **The ground under a standing tree refuses the Mine order**, which the interview never covered.
+   Digging it away would leave the tree rooted in mid-air; felling it first is the answer, and the
+   order becomes available the moment the tree is gone.
+6. **Iron outweighs coal by about 4 to 3**, not dramatically. Coal's band only overlaps the bottom
+   of the rock, so on the lowest terraces it is pulled up into whatever rock exists. It is the
+   deeper find, not a rare one.
+
+### Assumptions as shipped
+
+A1–A8 all shipped at their proposed values. The 1-in-4 stone roll was verified at **3 of 12** cells
+in the end-to-end run, and the roll is drawn from (world seed, **cell index**), never the tick.
+
+### Known limitations, named rather than discovered later
+
+- **A sealed cavern is still visible if the player scrolls the layer down.** There is no fog of war,
+  and building one was not in this MVP. What the ore-sight rule buys is that the *treasure* stays
+  hidden: a chamber reads as an empty void until somebody cuts a face near it. If the caverns should
+  be genuinely unfindable, that is a fog-of-war feature and a separate decision.
+- **Mined cells and shaft ladders are not saved.** The grid is not in the save (OQ-08), so a world
+  reloaded mid-dig comes back undug and its shafts unclimbable. Both halves are fixed by the same
+  piece of work, and the ladder's placeholder status (§4f) should be paid off at the same time.
+- **Mining still collapses nothing** (answer 12, deliberate). A cell mined out under a slab is
+  structurally dishonest until U29.
+
 ## 7. Risks
 
 1. **Golden tests re-base twice** — once for the raised ground, once for terracing. Both are
