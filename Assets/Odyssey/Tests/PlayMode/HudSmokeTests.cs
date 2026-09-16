@@ -160,6 +160,108 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// Every layer of the shipped world has a step on the Depth Ruler that a player can hit,
+        /// and hitting it moves the slice to that layer.
+        ///
+        /// <b>At the depth the game ships, not the depth the other tests use.</b> Everything else
+        /// in this file builds eight layers because eight is quick; OdysseyBootstrap ships
+        /// <b>sixteen</b>, and the ruler has to fit them into whatever height is left in the right
+        /// column once the clock and the alerts have taken theirs. A ruler that fits eight and
+        /// silently loses half of sixteen passes every other assertion here — the steps it did
+        /// build would be in the right order and would carry the right layers. That is the report
+        /// this was written for: the low steps could not be reached, and nor could the layer the
+        /// colony starts on.
+        ///
+        /// The depth is read off a fresh bootstrap rather than typed, so it cannot drift from the
+        /// game. What is asserted is what a player needs, in order: a step for every layer, each
+        /// given a size, none clipped out of the panel by the ruler's own overflow rule, and each
+        /// moving the slice to the layer it names.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EveryLayerHasAStepThatCanBeHit()
+        {
+            int shipped = ShippedLayerCount();
+            GameObject root = Build(out OdysseyBootstrap boot, shipped);
+            try
+            {
+                yield return WarmUp();
+
+                var doc = root.GetComponentInChildren<UIDocument>();
+                Assert.That(doc, Is.Not.Null);
+
+                // Laid out at the size a player runs at, not at the size the batch window
+                // happens to be. The panel scales with the screen, so USS lengths are reference
+                // pixels and the logical height of the sheet depends on the *aspect* it is given:
+                // the 640x480 batch window works out about 848 of them tall, where 1920x1080 and
+                // 4K are both about 735. The ruler therefore has a hundred more pixels of room
+                // in a default headless run than on the owner's monitor, and a bar that does not
+                // fit sixteen layers on screen would fit them here and pass.
+                var settings = Object.Instantiate(doc!.panelSettings);
+                var surface = new RenderTexture(PlayWidth, PlayHeight, 24, RenderTextureFormat.ARGB32,
+                    RenderTextureReadWrite.sRGB);
+                settings.targetTexture = surface;
+                doc.panelSettings = settings;
+
+                for (int i = 0; i < 20; i++) yield return null;
+
+                var rows = doc.rootVisualElement.Q(className: "ruler");
+                Assert.That(rows, Is.Not.Null, "the ruler has no row container");
+
+                var steps = doc.rootVisualElement.Query(className: "ruler__tick").ToList();
+                Assert.That(steps.Count, Is.EqualTo(shipped),
+                    $"the world has {shipped} layers and the ruler built {steps.Count} steps");
+
+                Rect inside = rows!.worldBound;
+                for (int i = 0; i < steps.Count; i++)
+                {
+                    Rect box = steps[i].worldBound;
+
+                    Assert.That(box.height, Is.GreaterThan(1f),
+                        $"step {i} of {steps.Count} was laid out {box.height:0.00} px tall, which " +
+                        "is not something a player can click");
+
+                    // Clipped, not merely off: .ruler hides its overflow, so a step past the
+                    // bottom of the container is drawn nowhere and receives nothing.
+                    Assert.That(box.yMax, Is.LessThanOrEqualTo(inside.yMax + 0.5f),
+                        $"step {i} of {steps.Count} ends {box.yMax - inside.yMax:0.0} px below the " +
+                        "ruler's own box, so it is clipped away and cannot be hit");
+
+                    Assert.That(steps[i].userData, Is.EqualTo(shipped - 1 - i),
+                        $"step {i} from the top should move the slice to layer {shipped - 1 - i}");
+                }
+
+                // And the click does what the step says, for every layer including the one the
+                // colony starts on.
+                foreach (var step in steps)
+                {
+                    int target = (int)step.userData;
+                    boot.Directors!.Slice.SetLayer(target);
+                    Assert.That(boot.Directors.Slice.ActiveLayer, Is.EqualTo(target),
+                        $"asking for layer {target} left the slice on {boot.Directors.Slice.ActiveLayer}");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>The resolution the ruler is judged at: a common desktop, and the same shape
+        /// as 4K, which is what the owner plays on.</summary>
+        const int PlayWidth = 1920;
+        const int PlayHeight = 1080;
+
+        /// <summary>The layer count the game ships, read off a bootstrap rather than typed.</summary>
+        static int ShippedLayerCount()
+        {
+            var probe = new GameObject("LayerProbe");
+            probe.SetActive(false);
+            int layers = probe.AddComponent<OdysseyBootstrap>().layers;
+            Object.DestroyImmediate(probe);
+            return layers;
+        }
+
+        /// <summary>
         /// Real seconds, not frame counts: the shell primes on the first frame a world exists,
         /// and the cadence buckets after that are wall-clock, which in this harness advances
         /// by well under a millisecond a frame. Waiting on frames would not let a bucket fire.
@@ -175,7 +277,9 @@ namespace Odyssey.Tests.PlayMode
         /// bootstrap, pick resolver, document and shell, with the real generated panel asset
         /// and the authored stylesheet — the same assets the scene carries.
         /// </summary>
-        static GameObject Build(out OdysseyBootstrap boot)
+        static GameObject Build(out OdysseyBootstrap boot) => Build(out boot, layers: 8);
+
+        static GameObject Build(out OdysseyBootstrap boot, int layers)
         {
             var root = new GameObject("HudSmoke");
 
@@ -200,7 +304,7 @@ namespace Odyssey.Tests.PlayMode
             boot = bootObject.AddComponent<OdysseyBootstrap>();
             boot.sizeX = 60;
             boot.sizeZ = 60;
-            boot.layers = 8;
+            boot.layers = layers;
             boot.seed = 1;
             boot.barrenMap = true;
             boot.grassScatter = 0;
