@@ -169,7 +169,17 @@ namespace Odyssey.Presentation.Rendering
         void EmitWater(ChunkBatch batch, int module, ushort terrain, int x, int z, int y)
         {
             Vector3 centre = CellMetrics.FloorCentre(x, z, y) + Vector3.up * (CellMetrics.SizeY * WaterSurface);
-            AddRoof(batch, module, TintCode.Water(terrain), GroundRelief.Drape(centre));
+
+            // **Lifted, not draped** — the one piece of ground-level geometry that is not sheared
+            // onto the relief, and the rule in `06-rendering-and-camera.md` already covers it:
+            // ground is sheared, everything standing on it is lifted. Water stands *in* the
+            // ground; it is not ground, and a water surface is level by definition.
+            //
+            // It also fixes a visible fault. A sheared tile disagrees with its neighbour along
+            // their shared edge, and where the ground's own texture hides that, a translucent
+            // surface does not: the disagreement overlaps, the overlap blends twice, and the
+            // board came out ruled into dark squares. Level tiles meet exactly.
+            AddRoof(batch, module, TintCode.Water(terrain), Matrix4x4.Translate(GroundRelief.Lift(centre)));
         }
 
         // ------------------------------------------------------------- scatter

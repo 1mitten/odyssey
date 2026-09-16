@@ -41,7 +41,23 @@ Shader "Odyssey/Water"
         _ReflectionStrength("Reflection strength", Range(0, 1)) = 0.66
         _FresnelPower("Fresnel power", Range(1, 8)) = 2.5
 
-        _ShoreFade("Shore fade (metres)", Float) = 1.4
+        // Wide, because this is the only thing standing between a cell grid and a shoreline
+        // that looks like one. The water meets its bank at a right angle every 2.5 m, and what
+        // stops that reading as a staircase is the edge dissolving over a distance comparable to
+        // a cell rather than over a few centimetres.
+        //
+        // Two metres and not more, and the ceiling is arithmetic rather than taste: the fade is
+        // driven by the depth of water the eye looks through, and that is at most the height of
+        // the surface above its bed - 2.16 m at the default ChunkMesher.WaterSurface. A fade set
+        // wider than that never reaches one anywhere, so it stops being an edge treatment and
+        // quietly makes the whole body more transparent.
+        _ShoreFade("Shore fade (metres)", Float) = 2.0
+
+        // How far the waterline is pushed in and out by the ripple field, in metres. A fade of
+        // any width still follows the cells exactly if it is a pure function of depth; warping
+        // it with the waves already being computed costs nothing and is what turns the corners
+        // round, because the edge no longer agrees with the grid it was cut on.
+        _ShoreWobble("Shore wobble (metres)", Float) = 0.55
         _SunGlint("Sun glint", Range(0, 4)) = 1.1
     }
 
@@ -102,6 +118,7 @@ Shader "Odyssey/Water"
                 float _ReflectionStrength;
                 float _FresnelPower;
                 float _ShoreFade;
+                float _ShoreWobble;
                 float _SunGlint;
             CBUFFER_END
 
@@ -144,7 +161,10 @@ Shader "Odyssey/Water"
             // irrational-ish ratio to the first so the pattern does not visibly repeat at board
             // distance. The result perturbs the normal only — the surface stays flat, which is
             // what keeps this a terrain tile and not a mesh that has to agree with its neighbours.
-            float3 RippleNormal(float3 normalWS, float3 positionWS)
+            // Returns the perturbed normal, and hands back the wave height as well: the shoreline
+            // is warped by the same field that makes the ripples, so the edge and the surface
+            // agree with each other and neither needs a field of its own.
+            float3 RippleNormal(float3 normalWS, float3 positionWS, out float wave)
             {
                 float t = _Time.y * _RippleSpeed;
                 float2 p = positionWS.xz * _RippleScale;
@@ -157,6 +177,13 @@ Shader "Odyssey/Water"
                 // own frequency, which is cheaper than finite differences and indistinguishable.
                 float2 slope = float2(a * 1.00 - b * 0.55 + c * 1.90,
                                       a * 0.35 + b * 1.30 + c * 1.70) * _RippleStrength * 0.25;
+
+                // A slower, longer version of the same waves for the shoreline. The ripple scale
+                // is tuned to put two or three crests on a cell, which as a waterline would be a
+                // frill rather than a bay, so this is sampled a quarter as often.
+                float2 q = positionWS.xz * (_RippleScale * 0.25);
+                wave = sin(q.x * 1.00 + q.y * 0.70 + t * 0.35) * 0.65 +
+                       sin(q.x * -0.80 + q.y * 1.10 - t * 0.21) * 0.35;
 
                 return normalize(normalWS + float3(slope.x, 0.0, slope.y));
             }
@@ -177,7 +204,8 @@ Shader "Odyssey/Water"
                 UNITY_SETUP_INSTANCE_ID(input);
 
                 float3 viewWS = normalize(GetWorldSpaceViewDir(input.positionWS));
-                float3 normalWS = RippleNormal(normalize(input.normalWS), input.positionWS);
+                float wave;
+                float3 normalWS = RippleNormal(normalize(input.normalWS), input.positionWS, wave);
 
                 // How much water the eye is looking through, in metres, from the depth of whatever
                 // was drawn behind this pixel. The bed is opaque and drawn before us, so this is
@@ -191,7 +219,15 @@ Shader "Odyssey/Water"
                 // A shore is where there is barely any water between the surface and the bed, so
                 // the edge dissolves instead of ending in a line. This is also why shallow water
                 // looks shallow without being told that it is.
-                float shore = saturate(through / max(_ShoreFade, 1e-3));
+                //
+                // The wobble is what stops it being a *square* line. A fade driven by depth alone
+                // is a pure function of the geometry, so however wide it is made it still traces
+                // the cell boundaries exactly; pushing the waterline in and out with the wave
+                // field breaks the edge off the grid it was cut on, and the corners round
+                // themselves. Smoothstep rather than a linear ramp, so the water thins into the
+                // bank instead of arriving at it.
+                float fade = max(_ShoreFade, 1e-3);
+                float shore = smoothstep(0.0, 1.0, saturate((through + wave * _ShoreWobble) / fade));
 
                 half4 base = _BaseColor;
                 half3 colour = base.rgb;
