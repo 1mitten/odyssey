@@ -1,8 +1,10 @@
 #nullable enable
+using System.Collections.Generic;
 using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Sim.Contracts;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace Odyssey.Presentation.Bootstrap
 {
@@ -19,22 +21,39 @@ namespace Odyssey.Presentation.Bootstrap
     /// working simulation from a stuck one by looking at it. The readout that answered it grew
     /// into the HUD's inspect pane; the resolution stayed here and the decision moved to the
     /// director.
+    ///
+    /// The same feet-placing maths answers the two gestures that select many at once: a drag box
+    /// (containment of each colonist's screen point in the released rect) and a double click
+    /// (everything of the clicked kind visible on screen), per <c>09-ui-and-input.md</c> M2.
     /// </summary>
     public sealed class SelectionPresenter : MonoBehaviour
     {
+        /// <summary>Two presses closer than this, on the same colonist, are a double click.</summary>
+        const float DoubleClickSeconds = 0.35f;
+
         OdysseyBootstrap? _bootstrap;
         SliceCameraRig? _rig;
+        float _lastClickAt;
+        PawnId _lastClickPawn;
 
         void Awake()
         {
             _bootstrap = GetComponent<OdysseyBootstrap>();
             _rig = _bootstrap != null ? _bootstrap.cameraRig : null;
-            if (_rig != null) _rig.Picked += OnPicked;
+            if (_rig != null)
+            {
+                _rig.Picked += OnPicked;
+                _rig.BoxSelected += OnBoxSelected;
+            }
         }
 
         void OnDestroy()
         {
-            if (_rig != null) _rig.Picked -= OnPicked;
+            if (_rig != null)
+            {
+                _rig.Picked -= OnPicked;
+                _rig.BoxSelected -= OnBoxSelected;
+            }
         }
 
         void OnPicked(CellRef? picked, Ray ray)
@@ -54,7 +73,91 @@ namespace Odyssey.Presentation.Bootstrap
             PawnId under = picked.HasValue
                 ? PawnUnderRay(world.Views.Current, ray, picked.Value.Y)
                 : PawnId.None;
-            directors.Selection.Pick(picked, under, world.Views.Current);
+
+            bool shift = Keyboard.current?.shiftKey.isPressed == true;
+
+            // A double click on a colonist asks for everything of the same kind on screen —
+            // today the one kind is colonists, so the kind is everyone. It replaces unless shift
+            // is held, like every other selection gesture.
+            if (under.IsValid && !shift && under == _lastClickPawn
+                && Time.unscaledTime - _lastClickAt <= DoubleClickSeconds)
+            {
+                var camera = Camera();
+                var onScreen = new List<PawnId>();
+                if (camera != null && PawnsOnScreen(camera, world.Views.Current, _rig!.ActiveLayer, onScreen))
+                {
+                    directors.Selection.PickMany(onScreen, additive: false, SelectionChange.Similar);
+                    _lastClickPawn = PawnId.None;
+                    return;
+                }
+            }
+            _lastClickAt = Time.unscaledTime;
+            _lastClickPawn = under;
+
+            directors.Selection.Pick(picked, under, world.Views.Current, additive: shift);
+        }
+
+        void OnBoxSelected(Rect screenRect, bool additive)
+        {
+            var world = _bootstrap?.World;
+            var directors = _bootstrap?.Directors;
+            var camera = Camera();
+            if (world == null || directors == null || camera == null) return;
+
+            // Containment, not enclosure: a colonist whose bracket the box touches is selected,
+            // because the box is drawn on screen and so is the colonist — the test that matches
+            // what the player saw is whether their point is inside the rect.
+            var snapshot = world.Views.Current;
+            int activeLayer = _rig!.ActiveLayer;
+            var boxed = new List<PawnId>();
+            var pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                PawnView pawn = pawns[i];
+                if (pawn.Cell.Y > activeLayer) continue;
+                Vector3 point = camera.WorldToScreenPoint(ScreenPointOf(pawn));
+                if (point.z <= 0f) continue;
+                if (screenRect.Contains(new Vector2(point.x, point.y))) boxed.Add(pawn.Id);
+            }
+
+            directors.Selection.PickMany(boxed, additive, SelectionChange.Boxed);
+        }
+
+        /// <summary>
+        /// Every colonist of the picked kind whose screen point is inside the viewport, on or
+        /// below the active layer — the population a double click means by "on screen".
+        /// </summary>
+        bool PawnsOnScreen(UnityEngine.Camera camera, WorldSnapshot snapshot, int activeLayer, List<PawnId> into)
+        {
+            var pawns = snapshot.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+            {
+                PawnView pawn = pawns[i];
+                if (pawn.Cell.Y > activeLayer) continue;
+                Vector3 point = camera.WorldToScreenPoint(ScreenPointOf(pawn));
+                if (point.z <= 0f) continue;
+                if (point.x >= 0f && point.y >= 0f && point.x <= camera.pixelWidth && point.y <= camera.pixelHeight)
+                    into.Add(pawn.Id);
+            }
+            return into.Count > 0;
+        }
+
+        UnityEngine.Camera? Camera() => _rig != null ? _rig.GetComponent<UnityEngine.Camera>() : null;
+
+        /// <summary>
+        /// The point that stands for a colonist on screen: the middle of the chest rather than
+        /// the feet, so a box drawn over the visible half of a figure still catches them when
+        /// the feet are below the frame's edge.
+        /// </summary>
+        Vector3 ScreenPointOf(PawnView pawn)
+        {
+            if (_bootstrap != null && _bootstrap.Figures != null
+                && _bootstrap.Figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                return feet + Vector3.up * (_bootstrap.colonistCursor.y * 0.5f);
+            int movePerTick = _bootstrap != null ? _bootstrap.MovePerTick : 0;
+            float tickAlpha = _bootstrap != null ? _bootstrap.TickAlpha : 0f;
+            return Odyssey.Presentation.Rendering.PawnPose.Of(pawn, tickAlpha, movePerTick, out _)
+                + Vector3.up * (_bootstrap != null ? _bootstrap.colonistCursor.y * 0.5f : 1.35f);
         }
 
         /// <summary>

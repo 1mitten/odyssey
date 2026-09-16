@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
@@ -96,6 +97,10 @@ namespace Odyssey.Presentation.Ui
         NeedViews _mood = new();
         Label _tombReason = null!;
 
+        // the drag-select marquee, and the roster's shift-drag sweep state
+        VisualElement _marquee = null!;
+        bool _sweepingRoster;
+
         struct CardView
         {
             public VisualElement Root;
@@ -146,6 +151,14 @@ namespace Odyssey.Presentation.Ui
             _hud = new VisualElement { pickingMode = PickingMode.Ignore };
             _hud.AddToClassList("hud");
             root.Add(_hud);
+
+            // The drag-select marquee (A2's box in the world): a picture, not a decision, so it
+            // sits here and polls the rig's rect every frame rather than subscribing to anything.
+            // Screen-bottom-left origins become panel-top-left ones in UpdateMarquee.
+            _marquee = new VisualElement { pickingMode = PickingMode.Ignore };
+            _marquee.AddToClassList("marquee");
+            _marquee.style.display = DisplayStyle.None;
+            _hud.Add(_marquee);
 
             // The left edge is one column, not two absolute slots: the ledger and the architect
             // palette stack inside it, so neither can ever sit on top of the other.
@@ -296,6 +309,36 @@ namespace Odyssey.Presentation.Ui
                 RefreshClock();
                 RefreshRuler();
             }
+
+            UpdateMarquee();
+
+            // The roster sweep ends when the button does, wherever the pointer happens to be when
+            // it ends — a card's own PointerUp never arrives if the release landed off the bar.
+            if (_sweepingRoster && UnityEngine.InputSystem.Mouse.current?.leftButton.isPressed != true)
+                _sweepingRoster = false;
+        }
+
+        /// <summary>
+        /// The marquee follows the rig's box every frame — a 15 Hz marquee trails the cursor and
+        /// reads as lag. Screen coordinates grow from the bottom-left; panel coordinates grow
+        /// from the top-left, so the rect is flipped once, here, at the only place that draws it.
+        /// </summary>
+        void UpdateMarquee()
+        {
+            Rect? box = _rig?.DragBox;
+            if (box == null || _hud.panel == null)
+            {
+                _marquee.style.display = DisplayStyle.None;
+                return;
+            }
+
+            Vector2 min = RuntimePanelUtils.ScreenToPanel(_hud.panel, box.Value.min);
+            Vector2 max = RuntimePanelUtils.ScreenToPanel(_hud.panel, box.Value.max);
+            _marquee.style.left = Mathf.Min(min.x, max.x);
+            _marquee.style.top = Mathf.Min(min.y, max.y);
+            _marquee.style.width = Mathf.Abs(max.x - min.x);
+            _marquee.style.height = Mathf.Abs(max.y - min.y);
+            _marquee.style.display = DisplayStyle.Flex;
         }
 
         void OnLayerChanged(int layer)
@@ -499,7 +542,7 @@ namespace Odyssey.Presentation.Ui
             var world = _boot!.World;
             if (world == null) return;
             _roster.Refresh(world.Views.Current,
-                selected: _directors != null ? _directors.Selection.Pawn : PawnId.None);
+                selected: _directors != null ? _directors.Selection.Pawns : (IReadOnlyList<PawnId>)Array.Empty<PawnId>());
 
             while (_cards.Count < _roster.Cards.Count)
             {
@@ -529,11 +572,28 @@ namespace Odyssey.Presentation.Ui
                 card.Add(bar);
 
                 int index = _cards.Count;
-                card.RegisterCallback<ClickEvent>(_ =>
+
+                // Shift is the roster's toggle, exactly as it is in the world: a shift-press on a
+                // card turns it on or off without moving the camera, and while shift is held a
+                // drag across cards toggles each one it crosses (A2 "drag-select a range"). A
+                // plain press keeps the jump: a card is a way of getting to someone far away.
+                card.RegisterCallback<PointerDownEvent>(evt =>
                 {
-                    if (index < _roster.Cards.Count && _boot!.World != null)
-                        _directors?.ChooseColonist(_roster.Cards[index].Id, _boot.World.Views.Current);
+                    if (index >= _roster.Cards.Count || _boot!.World == null) return;
+                    PawnId id = _roster.Cards[index].Id;
+                    if (evt.shiftKey)
+                    {
+                        _sweepingRoster = true;
+                        _directors?.Selection.Toggle(id);
+                    }
+                    else _directors?.ChooseColonist(id, _boot.World.Views.Current);
                 });
+                card.RegisterCallback<PointerEnterEvent>(_ =>
+                {
+                    if (!_sweepingRoster || index >= _roster.Cards.Count) return;
+                    _directors?.Selection.Toggle(_roster.Cards[index].Id);
+                });
+
                 _rosterHost.Add(card);
                 _cards.Add(new CardView
                 {
@@ -765,7 +825,15 @@ namespace Odyssey.Presentation.Ui
             switch (_inspect.Subject)
             {
                 case InspectSubject.Colonist:
-                    return $"{_inspect.Job}  ·  {_inspect.Position}  ·  mood {MoodBands.Band(_inspect.Mood)}";
+                    {
+                        // A multi-selection shows the primary colonist in full, with the size of
+                        // the set said out loud: "3 selected" is the whole of what a pane can add
+                        // to several brackets until commands arrive (A9).
+                        string count = _directors != null && _directors.Selection.HasMultiple
+                            ? $"{_directors.Selection.Pawns.Count} selected  ·  "
+                            : string.Empty;
+                        return count + $"{_inspect.Job}  ·  {_inspect.Position}  ·  mood {MoodBands.Band(_inspect.Mood)}";
+                    }
                 case InspectSubject.Item:
                     return _inspect.Position;
                 case InspectSubject.Cell:
