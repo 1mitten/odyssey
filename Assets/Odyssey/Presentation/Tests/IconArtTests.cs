@@ -30,6 +30,24 @@ namespace Odyssey.Tests.Presentation
             "ui.status.felling",
             "ui.status.mining",
             "ui.status.building",
+
+            // Twelve of the thirteen skills, cut from sheet 06 by tools/icons/icons.py. Social
+            // is not here and is not an oversight: nothing on a survival sheet depicts people
+            // talking (docs/design/15-skills.md §4), so it draws the placeholder square and the
+            // two idioms sit side by side in the same panel, which is the arrangement ADR 0007
+            // says the HUD must be correct under.
+            "ui.skill.construction",
+            "ui.skill.mining",
+            "ui.skill.salvage",
+            "ui.skill.cooking",
+            "ui.skill.growing",
+            "ui.skill.animals",
+            "ui.skill.crafting",
+            "ui.skill.fabrication",
+            "ui.skill.medicine",
+            "ui.skill.shooting",
+            "ui.skill.melee",
+            "ui.skill.intellect",
         };
 
         [Test]

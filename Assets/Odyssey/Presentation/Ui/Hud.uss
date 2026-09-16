@@ -587,6 +587,65 @@
     margin-right: 18px;
 }
 
+/* ---------------------------------------------------------------- B1 Skills tab
+
+   The same two-column grid as the needs, for the same reason: thirteen skills in one column
+   would make the pane 280 px taller than the screen has to spare over the command bar, and would
+   leave half of a 560 px pane empty while doing it. The negative trailing margins are the .needs
+   trick above and carry the same explanation. */
+.skills {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 9px;
+    margin-right: -18px;
+    margin-bottom: -4px;
+}
+
+.skill {
+    width: 256px;
+    height: 19px;
+    margin-bottom: 4px;
+    margin-right: 18px;
+    flex-direction: row;
+    align-items: center;
+}
+
+/* A skill with no system behind it yet. Present and readable rather than hidden — the panel
+   catalogue's "disabled with a reason" rule — but visibly not a number you have. */
+.skill--off { opacity: 0.45; }
+
+.skill__name {
+    flex-grow: 1;
+    margin-left: 9px;
+    color: #eef3f6;
+    white-space: nowrap;
+    overflow: hidden;
+    -unity-text-align: middle-left;
+}
+
+.skill__level {
+    width: 22px;
+    color: rgba(255, 255, 255, 0.66);
+    -unity-text-align: middle-right;
+}
+
+/* Two lozenges rather than the word "major": thirteen rows of words is a column nobody reads,
+   and what the player wants from this list is its shape at a glance. */
+.skill__passion {
+    flex-direction: row;
+    align-items: center;
+    width: 18px;
+    margin-left: 7px;
+}
+
+.skill__pip {
+    width: 5px;
+    height: 5px;
+    margin-right: 3px;
+    border-radius: 3px;
+    background-color: #e8b55c;
+}
+
 .need__line {
     flex-direction: row;
     align-items: center;

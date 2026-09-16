@@ -66,6 +66,9 @@ namespace Odyssey.Tests.Hud
             (".card__initial", "color", () => HudTheme.OnAccent, "on-accent ink"),
 
             (".bar__fill", "background-color", () => HudTheme.Good, "good"),
+            (".skill__pip", "background-color", () => HudTheme.Warn, "warn"),
+            (".skill__name", "color", () => HudTheme.TextPrimary, "text primary"),
+            (".skill__level", "color", () => HudTheme.TextMeta, "text meta"),
             (".rail__dot", "background-color", () => HudTheme.Warn, "warn"),
             (".inspect__reason", "color", () => HudTheme.Warn, "warn"),
 
@@ -128,6 +131,8 @@ namespace Odyssey.Tests.Hud
             (".inspect__tabs", "margin-top", () => HudLayout.InspectHeaderGap, "header to tabs"),
             (".needs", "margin-top", () => HudLayout.InspectTabGap, "tabs to needs"),
             (".need", "margin-bottom", () => HudLayout.NeedRowGap, "need row gap"),
+            (".skill", "height", () => HudLayout.SkillRow, "a skill line"),
+            (".skill", "margin-bottom", () => HudLayout.SkillRowGap, "skill row gap"),
 
             (".alert", "min-height", () => HudLayout.AlertHeight, "an alert row"),
             (".alerts__rows", "margin-top", () => HudLayout.HeaderGap, "header to first alert"),

@@ -899,6 +899,58 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     iron ore and scrap. That column records what the owner's *sheets* can draw, and these are
     hand-drawn files; the honest fix is for the wiki to read the icons folder, which is a change to
     `build_wiki.py` and is deliberately not made here.
+- **The Skills tab is real, and sheet 06 is in the repository (owner, 2026-09-17; design
+  `docs/design/15-skills.md`).** The owner supplied `SurvivalSkills-Sheet.png` — 56 framed 32 px
+  tiles, 8 x 7 — asked what the skills on it could mean for this game, and asked for the icons
+  beside a colonist's skills. It **is** the sheet the icon map has been calling 06 since that map
+  was written blind: every item the sheets README predicts for 06 is on it. It is registered at
+  `art-source/icons/sheets/06-action-tiles.png`, `sheets.csv` carries its grid, and all 56 cells
+  are catalogued in `15-skills.md` §2.
+  - **The finding is that the sheet is a skill list for a game two or three milestones out.**
+    Three cells draw something the simulation has; ten draw a skill the design has named and
+    nothing implements; the other **forty-three argue for systems nobody has designed** — hunting,
+    trapping and fishing, butchery and tanning, textiles, a refining chain, demolition, foraging,
+    warmth and light as needs, injury and death, research and blueprints. `15-skills.md` §3c is
+    the table. So the skill rows had to be chosen deliberately rather than taken wholesale, or the
+    interface would promise weaving to a player who can only chop and dig.
+  - **Four decisions, all by interview, all the recommendation** (`15-skills.md` §6): thirteen
+    rows with the simulated ones live and the rest visibly unavailable; **the thirteen in
+    `icon-keys.csv` are canon**, not `a-01`'s twelve, so hauling and cutting are work types and
+    not skills; a row is an icon, a name, a level and a passion mark (no progress bar — thirteen
+    bars is furniture, and passion is what decides who you put on a job); and **two icon idioms**,
+    framed painted tiles for skills against bare marks for status, because a skill is a portrait
+    read once in a pane and a status is glanced at over the world.
+  - **The contract change closes OQ-45.** `SkillView` (pawn, skill, level, passion, experience) is
+    a **sparse counted list** on `WorldSnapshot`, the shape `OrderView` established — not fields on
+    `PawnView`, which is copied per pawn per frame for every figure on screen and would have taken
+    an allocation in the publish phase (ADR 0003 F1) or a width fixed at three. `SkillHandle` sits
+    beside `JobHandle` and `SkillIndex` aliases it, so the two sides cannot drift. **The level is
+    carried, not just the experience**: deriving one needs the def's ladder, which is simulation
+    content and is not published. Every colonist's skills go out every frame — a few hundred bytes
+    into a reused buffer — because the snapshot has no notion of selection and should not grow one.
+  - **The pane has working tabs at last.** They were chips with no click and one body; now
+    `InspectModel.ActiveTab` / `ShowTab`, a disabled tab cannot become active, and the choice is
+    **model state** so it survives the refresh that follows every click — in the view it would
+    undo itself fifteen times a second. Both bodies are built once and hidden, not built on
+    demand.
+  - **Twelve icons are cut from the sheet by the pipeline, and that is the first time its output
+    has been loadable.** `tools/icons/icons.py` wrote to `Assets/Art/Ui/icons/` while `IconArt`
+    loads from `Assets/Art/Ui/Resources/odyssey/icons/` — so anything ever exported by that tool
+    would have drawn the placeholder square, **silently**, because a key with no art is not an
+    error and is not logged. `ui.skill.social` has no cell (nothing on a survival sheet depicts
+    people talking) and keeps its square, which is the mixed state ADR 0007 requires the HUD to be
+    correct under.
+  - **Where the simulation's three went.** Mining is `ui.skill.mining`. **Cutting feeds
+    `ui.skill.growing`** — felling is plant work, the canon work type `ui.work.cutting` is "cut
+    plants and clear growth", and the row's tooltip says so precisely so it can be objected to.
+    **`Skill_Hauling` should be deleted**: under the canon list hauling is a work type and not a
+    skill, so its experience has nowhere to go. That is a Defs, `SkillIndex`, save-format and hash
+    change and is **not done here**.
+  - **Not judged by eye, and one thing measured against it: a framed tile does not read at 17 px.**
+    The frame is a large share of the tile and what is left of the painting is a few pixels of
+    colour. Contact sheet `Logs/skill-icons.png` (64 px over 17 px). Cropping the frames is the
+    fix if one is wanted, and the pipeline cannot do it — these cells are opaque edge to edge, so
+    `tight_box` returns the whole cell whatever `trim_mode` says. **Press Play in `Play.unity`.**
 - **Colonists are recoloured, and there was never a body to dress (owner question, 2026-09-16; research `e-05-character-customisation.md`).** The question was whether a *generic* Synty model exists that we could make clothes for. It does not: a character is **one skinned mesh from scalp to boots with one material**, 69 of them across four packs, and nothing below the neck is separable anywhere. Synty's **Sidekick** line is the only route to real modular garments (free starter pack, ~£184 a pack or $30/mo) and the owner declined it — no purchases, no new art, *"recolour and retheme as much as we can without creating anything new"*.
   - **What made recolouring possible is a fact about the art, not a technique.** The pack atlas carries a labelled **`Character Colours`** block of small *flat* swatch cells, and every garment, hair patch and skin region is UV-mapped onto one of them — so **a vertex's cell already is its material identity**. No mask texture, no authored ID channel, no mesh surgery. `SwatchProbe` measured the claim before anything was built: the colour deviation inside every cluster of eight bodies across all four packs is **zero**. So the shader does not sample a different cell, it outputs a colour — no second fetch, no mip or derivative consequence, and the palette is no longer limited to what Synty painted. A *patterned* garment cell is the observation that would send this back to moving UVs.
   - **`Odyssey/Character`** is hand-written HLSL like the other three shaders here, every property in `UnityPerMaterial` so the SRP Batcher still sees one variant across a colony of materials. Three passes; the shadow pass repeats the forward pass's alpha clip or hair cards cast the shadow of a solid rectangle. **An unused slot is the rectangle `(1,1,0,0)`**, which no UV is inside, so "off" is a value rather than a branch.

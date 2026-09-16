@@ -29,6 +29,9 @@ namespace Odyssey.Sim
 
         /// <summary>Publish one standing order, wherever in the world it is.</summary>
         public void AddOrder(in OrderView view) => _target.AddOrder(view);
+
+        /// <summary>Publish one colonist's standing in one skill.</summary>
+        public void AddSkill(in SkillView view) => _target.AddSkill(view);
     }
 
     /// <summary>

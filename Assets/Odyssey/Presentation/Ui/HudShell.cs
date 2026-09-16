@@ -125,6 +125,10 @@ namespace Odyssey.Presentation.Ui
         Label _inspectState = null!;
         IconBadge _inspectAvatar = null!;
         readonly List<NeedView> _needs = new List<NeedView>();
+        readonly List<SkillLineView> _skills = new List<SkillLineView>();
+        readonly List<Label> _tabChips = new List<Label>();
+        VisualElement? _needsGrid;
+        VisualElement? _skillsGrid;
         Label _tombReason = null!;
         int _needRows;
 
@@ -230,6 +234,24 @@ namespace Odyssey.Presentation.Ui
             public Label Value = null!;
             public VisualElement Fill = null!;
             public int LastPercent = int.MinValue;
+        }
+
+        sealed class SkillLineView
+        {
+            public VisualElement Root = null!;
+            public IconBadge Icon = null!;
+            public Label Name = null!;
+
+            /// <summary>The level, or the reason there is no level.</summary>
+            public Label Value = null!;
+
+            /// <summary>One or two lozenges, hidden at no passion.</summary>
+            public VisualElement Passion = null!;
+
+            public string LastKey = string.Empty;
+            public int LastLevel = int.MinValue;
+            public int LastPassion = int.MinValue;
+            public bool LastLive;
         }
 
         void Awake()
@@ -1239,6 +1261,12 @@ namespace Odyssey.Presentation.Ui
             SetNeed(0, _inspect.Food);
             SetNeed(1, _inspect.Rest);
             SetNeed(2, _inspect.Mood);
+
+            for (int i = 0; i < _inspect.Skills.Count; i++)
+            {
+                SkillRow row = _inspect.Skills[i];
+                SetSkill(i, row);
+            }
         }
 
         void SetNeed(int index, int thousandths)
@@ -1301,6 +1329,10 @@ namespace Odyssey.Presentation.Ui
         {
             _inspectBody.Clear();
             _needs.Clear();
+            _skills.Clear();
+            _tabChips.Clear();
+            _needsGrid = null;
+            _skillsGrid = null;
             _needRows = 0;
 
             // Nothing selected: no panel at all (owner, 2026-09-16), and this is the HUD's resting
@@ -1368,12 +1400,22 @@ namespace Odyssey.Presentation.Ui
             {
                 var strip = new VisualElement();
                 strip.AddToClassList("inspect__tabs");
-                foreach (InspectTab tab in _inspect.Tabs)
+                _tabChips.Clear();
+                for (int i = 0; i < _inspect.Tabs.Count; i++)
                 {
+                    InspectTab tab = _inspect.Tabs[i];
                     Label chip = HudText.Make(tab.Name, HudTextRole.Body, ussClass: "tab");
-                    chip.EnableInClassList("tab--on", tab.Enabled);
-                    chip.EnableInClassList("tab--off", !tab.Enabled);
-                    chip.tooltip = tab.Enabled ? "Needs" : tab.Name + " — " + tab.Reason;
+                    chip.tooltip = tab.Enabled ? tab.Name : tab.Name + " — " + tab.Reason;
+                    if (tab.Enabled)
+                    {
+                        int index = i;
+                        chip.RegisterCallback<PointerDownEvent>(_ =>
+                        {
+                            _inspect.ShowTab(index);
+                            ShowActiveTab();
+                        });
+                    }
+                    _tabChips.Add(chip);
                     strip.Add(chip);
                 }
                 _inspectBody.Add(strip);
@@ -1384,7 +1426,16 @@ namespace Odyssey.Presentation.Ui
                 _needs.Add(Need(grid, "Rest"));
                 _needs.Add(Need(grid, "Mood"));
                 _needRows = (_needs.Count + 1) / 2;
+                _needsGrid = grid;
                 _inspectBody.Add(grid);
+
+                _skillsGrid = new VisualElement();
+                _skillsGrid.AddToClassList("skills");
+                for (int i = 0; i < _inspect.Skills.Count; i++)
+                    _skills.Add(SkillLine(_skillsGrid));
+                _inspectBody.Add(_skillsGrid);
+
+                ShowActiveTab();
             }
 
             _tombReason = HudText.Make("no longer present — the pane keeps last-known values",
@@ -1404,6 +1455,104 @@ namespace Odyssey.Presentation.Ui
             button.Add(HudText.Make(command.Label, HudTextRole.Meta, ussClass: "action__label"));
             button.tooltip = command.Label + " — " + command.Reason;
             return button;
+        }
+
+        /// <summary>
+        /// Show the tab the model says is active, and mark its chip.
+        ///
+        /// <para>The bodies are built once and hidden, not built on demand: a tab that rebuilds
+        /// its tree on every click churns thirteen rows of elements for a control the player
+        /// flicks between, and the pane's own rule is that structure is rebuilt when the subject
+        /// changes and never for a value.</para>
+        /// </summary>
+        void ShowActiveTab()
+        {
+            string active = _inspect.ActiveTabName;
+            bool skills = active == "Skills";
+
+            if (_needsGrid != null)
+                _needsGrid.style.display = skills ? DisplayStyle.None : DisplayStyle.Flex;
+            if (_skillsGrid != null)
+                _skillsGrid.style.display = skills ? DisplayStyle.Flex : DisplayStyle.None;
+
+            for (int i = 0; i < _tabChips.Count && i < _inspect.Tabs.Count; i++)
+            {
+                bool on = _inspect.Tabs[i].Enabled && i == _inspect.ActiveTab;
+                _tabChips[i].EnableInClassList("tab--on", on);
+                _tabChips[i].EnableInClassList("tab--off", !_inspect.Tabs[i].Enabled);
+            }
+        }
+
+        /// <summary>
+        /// One line of the Skills tab. The passion mark is two lozenges rather than a word,
+        /// because thirteen rows of "major"/"minor" is a column of text nobody reads and the
+        /// thing the player wants is the shape of the list at a glance.
+        /// </summary>
+        static SkillLineView SkillLine(VisualElement grid)
+        {
+            var view = new SkillLineView();
+
+            view.Root = new VisualElement();
+            view.Root.AddToClassList("skill");
+
+            view.Icon = new IconBadge(string.Empty, IconBadge.RowSize);
+            view.Icon.Inherit(HudTokens.TextMeta);
+            view.Name = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "skill__name");
+            view.Value = HudText.Make(string.Empty, HudTextRole.Meta, numeric: true, "skill__level");
+
+            view.Passion = new VisualElement();
+            view.Passion.AddToClassList("skill__passion");
+            for (int i = 0; i < 2; i++)
+            {
+                var pip = new VisualElement();
+                pip.AddToClassList("skill__pip");
+                view.Passion.Add(pip);
+            }
+
+            view.Root.Add(view.Icon);
+            view.Root.Add(view.Name);
+            view.Root.Add(view.Value);
+            view.Root.Add(view.Passion);
+
+            grid.Add(view.Root);
+            return view;
+        }
+
+        void SetSkill(int index, in SkillRow row)
+        {
+            if (index >= _skills.Count) return;
+            SkillLineView view = _skills[index];
+
+            if (view.LastKey != row.IconKey)
+            {
+                view.LastKey = row.IconKey;
+                view.Icon.SetKey(row.IconKey);
+                HudText.Set(view.Name, row.Name, HudTextRole.Body);
+                view.Root.tooltip = row.Live
+                    ? (row.Note.Length > 0 ? row.Name + " — " + row.Note : row.Name)
+                    : row.Name + " — " + row.Reason;
+            }
+
+            if (view.LastLive != row.Live)
+            {
+                view.LastLive = row.Live;
+                view.Root.EnableInClassList("skill--off", !row.Live);
+                view.Icon.Inherit(row.Live ? HudTokens.TextMeta : HudTokens.TextFaint);
+            }
+
+            // A level moves once in a working day, so the string is built on the change and not
+            // fifteen times a second for as long as somebody is selected.
+            if (view.LastLevel != row.Level || !row.Live)
+            {
+                view.LastLevel = row.Level;
+                HudText.Set(view.Value, row.Live ? row.Level.ToString("0") : "—", HudTextRole.Meta);
+            }
+
+            if (view.LastPassion == row.Passion) return;
+            view.LastPassion = row.Passion;
+            for (int i = 0; i < view.Passion.childCount; i++)
+                view.Passion[i].style.display =
+                    row.Live && row.Passion > i ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         static NeedView Need(VisualElement grid, string name)

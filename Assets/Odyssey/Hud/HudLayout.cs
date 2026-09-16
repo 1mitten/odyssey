@@ -81,13 +81,22 @@ namespace Odyssey.Hud
         /// selected and the pane is one dim line.</summary>
         public readonly int NeedRows;
 
-        public HudContent(int colonists, int storeRows, int alerts, int layers, int needRows)
+        /// <summary>
+        /// Rows of skills in the same grid, when the pane is showing the Skills tab instead. One
+        /// tab is on screen at a time, so at most one of this and <see cref="NeedRows"/> is ever
+        /// non-zero — the pane is as tall as the body it is actually showing.
+        /// </summary>
+        public readonly int SkillRows;
+
+        public HudContent(int colonists, int storeRows, int alerts, int layers, int needRows,
+                          int skillRows = 0)
         {
             Colonists = Math.Max(0, colonists);
             StoreRows = Math.Max(0, storeRows);
             Alerts = Math.Max(0, alerts);
             Layers = Math.Max(1, layers);
             NeedRows = Math.Max(0, needRows);
+            SkillRows = Math.Max(0, skillRows);
         }
 
         /// <summary>The state the coverage criterion is stated against: a colony running, nothing
@@ -390,6 +399,16 @@ namespace Odyssey.Hud
 
         public const int NeedRowGap = 9;
 
+        /// <summary>
+        /// One line of the Skills tab: an icon, a name, a level and a passion mark, on one row of
+        /// the same two-column grid the needs use. Thirteen skills in one column would make a
+        /// pane 280 px taller than the screen has to spare over the command bar, and would leave
+        /// half of a 560 px pane empty while doing it.
+        /// </summary>
+        public const int SkillRow = 19;
+
+        public const int SkillRowGap = 4;
+
 
         // ================================================================== solve
 
@@ -438,7 +457,7 @@ namespace Odyssey.Hud
 
             // ---- inspect, bottom left, clear of the bar. Nothing selected, no pane: an empty
             // rect, which is how every other region says "I am not on screen" here.
-            float inspectHeight = InspectHeight(content.NeedRows);
+            float inspectHeight = InspectHeight(content.NeedRows, content.SkillRows);
             boxes[HudRegion.Inspect] = inspectHeight <= 0f
                 ? new HudRect(Edge, height - InspectBottom, 0f, 0f)
                 : new HudRect(Edge, height - InspectBottom - inspectHeight, InspectWidth, inspectHeight);
@@ -544,11 +563,26 @@ namespace Odyssey.Hud
         /// because every criterion stated against this model — coverage, overlap, the clearance
         /// above the bar — is stated with nothing selected or a colonist selected.</para>
         /// </summary>
-        public static float InspectHeight(int needRows) =>
-            needRows <= 0
+        public static float InspectHeight(int needRows) => InspectHeight(needRows, 0);
+
+        /// <summary>
+        /// The pane's height with a given tab showing. Exactly one of the two counts is non-zero
+        /// when a colonist is selected: the pane shows one tab's body at a time, and its height
+        /// is that body's plus the chrome above and below it.
+        /// </summary>
+        public static float InspectHeight(int needRows, int skillRows)
+        {
+            float body = skillRows > 0
+                ? skillRows * SkillRow + (skillRows - 1) * SkillRowGap
+                : needRows <= 0
+                    ? 0f
+                    : needRows * NeedRow + (needRows - 1) * NeedRowGap;
+
+            return body <= 0f
                 ? 0f
                 : Frame + Pad + InspectHeader + InspectHeaderGap + InspectTabs + InspectTabGap +
-                  needRows * NeedRow + (needRows - 1) * NeedRowGap + Pad;
+                  body + Pad;
+        }
 
         // ---------------------------------------------------------------- fitting
 

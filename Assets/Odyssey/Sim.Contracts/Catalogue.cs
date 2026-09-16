@@ -21,6 +21,23 @@ namespace Odyssey.Sim.Contracts
         public const int Count = 7;
     }
 
+    /// <summary>
+    /// See <see cref="JobHandle"/>: skill def indices as <see cref="SkillView"/> carries them.
+    ///
+    /// <para><b>These are the simulation's three, not the design's thirteen.</b> The interface
+    /// lists every skill the design names and draws the ones it has no simulation for as
+    /// unavailable, which is the idiom it already uses for a tab or a command that does not exist
+    /// yet. What this table counts is what a colonist can actually gain experience in, and it
+    /// grows a row at a time as the systems land.</para>
+    /// </summary>
+    public static class SkillHandle
+    {
+        public const int Hauling = 0;
+        public const int Cutting = 1;
+        public const int Mining = 2;
+        public const int Count = 3;
+    }
+
     /// <summary>See <see cref="JobHandle"/>: item def indices as <see cref="ThingView"/> carries them.</summary>
     public static class ItemHandle
     {

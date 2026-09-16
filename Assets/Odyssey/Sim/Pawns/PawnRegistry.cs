@@ -129,6 +129,15 @@ namespace Odyssey.Sim.Pawns
                     workFocus >= 0 ? size.FromIndex(workFocus) : cell,
                     pawn.Gesture,
                     pawn.GestureSerial));
+
+                // Skills go out for every colonist, not only whoever is selected: the snapshot
+                // has no notion of selection — that belongs to presentation — and the whole
+                // colony's skills are a few hundred bytes into a buffer that is reused, so a
+                // steady-state publish still allocates nothing. The level is derived here because
+                // the ladder that derives it is simulation content and is not published.
+                for (int s = 0; s < SkillIndex.Count; s++)
+                    writer.AddSkill(new SkillView(
+                        pawn.Id, (byte)s, (byte)pawn.SkillLevel(s), pawn.Passions[s], pawn.Skills[s]));
             }
 
             var items = _ctx.Items.Items;

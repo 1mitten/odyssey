@@ -470,6 +470,85 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// The Skills tab builds, switches and draws real art (owner, 2026-09-17).
+        ///
+        /// <para><b>What only the player loop can answer.</b> The fast tier proves the model
+        /// lists thirteen skills and numbers the two the simulation backs. It cannot say whether
+        /// the tab strip is clickable, whether the two bodies swap, or whether a single key of
+        /// the owner's sheet resolves to a texture rather than falling back to the placeholder
+        /// square — which is the failure ADR 0007 calls out as invisible, because a key with no
+        /// art is not an error and is not logged.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheSkillsTabSwitchesAndDrawsTheOwnersArt()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                var world = boot.World;
+                Assert.That(world, Is.Not.Null, "no world to select a colonist in");
+                Assert.That(world!.Views.Current.PawnCount, Is.GreaterThan(0), "no colonists");
+
+                PawnId first = world.Views.Current.Pawns[0].Id;
+                boot.Directors!.ChooseColonist(first, world.Views.Current);
+
+                yield return Settle(doc);
+
+                var tabs = doc.rootVisualElement.Query<Label>(className: "tab").ToList();
+                Label? skillsTab = tabs.Find(t => t.text == "Skills");
+                Assert.That(skillsTab, Is.Not.Null, "the pane built no Skills tab");
+
+                VisualElement? grid = doc.rootVisualElement.Q(className: "skills");
+                Assert.That(grid, Is.Not.Null, "the pane built no skills grid");
+                Assert.That(grid!.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                    "the pane must open on Needs, not on Skills");
+
+                using (var press = PointerDownEvent.GetPooled())
+                {
+                    press.target = skillsTab;
+                    skillsTab!.SendEvent(press);
+                }
+                yield return Settle(doc);
+
+                Assert.That(grid.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex),
+                    "clicking the Skills tab did not show the skills");
+                VisualElement? needs = doc.rootVisualElement.Q(className: "needs");
+                Assert.That(needs!.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                    "two tab bodies are on screen at once");
+
+                var rows = grid.Query(className: "skill").ToList();
+                Assert.That(rows.Count, Is.EqualTo(SkillCatalogue.All.Length),
+                    "the tab does not list every skill the design names");
+
+                int drawn = 0;
+                foreach (VisualElement row in rows)
+                {
+                    var badge = row.Q<IconBadge>();
+                    Assert.That(badge, Is.Not.Null, "a skill row with no icon slot");
+                    if (IconArt.Has(badge!.Key)) drawn++;
+                }
+
+                Debug.Log($"[HudGeometry] skills: {rows.Count} rows, {drawn} drawing real art");
+                Assert.That(drawn, Is.EqualTo(SkillCatalogue.All.Length - 1),
+                    "every skill but social is cut from the owner's sheet; a shortfall means a " +
+                    "key resolved to nothing and quietly drew its placeholder square");
+
+                // And the pane still clears the command bar with its tallest body showing.
+                Rect pane = doc.rootVisualElement.Q(name: "inspect")!.worldBound;
+                Rect bar = doc.rootVisualElement.Q(name: "bar")!.worldBound;
+                Assert.That(pane.yMax, Is.LessThanOrEqualTo(bar.yMin + 0.01f),
+                    $"the skills pane ends at {pane.yMax:0.#} and the command bar starts at " +
+                    $"{bar.yMin:0.#}");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
         /// <summary>What a string really draws in a label's own face and size.</summary>
         static float Draws(Label label, string text) =>
             label.MeasureTextSize(text, 0f, VisualElement.MeasureMode.Undefined,

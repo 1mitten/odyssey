@@ -203,6 +203,50 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// One colonist's standing in one skill.
+    ///
+    /// <para><b>Why a sparse list rather than fields on <see cref="PawnView"/>.</b> A pawn view is
+    /// a value copied once per pawn per frame and read by the renderer for every figure on screen;
+    /// skills are read by one pane about one colonist. Widening the hot struct by an array would
+    /// put an allocation in the publish phase, which ADR 0003's flip condition F1 forbids, and
+    /// fixing its width at three would have to change again at four. This is the shape
+    /// <see cref="OrderView"/> already established: a counted list into a reused buffer, costing
+    /// nothing when there is nothing to say.</para>
+    ///
+    /// <para><b>The level is carried, not the experience alone.</b> Deriving a level needs the
+    /// skill def's ladder, which lives in the simulation's content and is not published — so a
+    /// reader with only the experience could not turn it into the number a player reads. The
+    /// experience comes too, because a bar of progress towards the next level is the obvious next
+    /// thing the pane will want and it costs four bytes.</para>
+    /// </summary>
+    public readonly struct SkillView
+    {
+        /// <summary>Whose skill this is.</summary>
+        public readonly PawnId Pawn;
+
+        /// <summary>Which skill, as a <see cref="SkillHandle"/> value.</summary>
+        public readonly byte Skill;
+
+        /// <summary>0 to 20, derived by the simulation from the experience and the skill's ladder.</summary>
+        public readonly byte Level;
+
+        /// <summary>0 none, 1 minor, 2 major — the simulation's own <c>Passion</c> values.</summary>
+        public readonly byte Passion;
+
+        /// <summary>Experience in thousandths of a point, the simulation's own unit.</summary>
+        public readonly int Experience;
+
+        public SkillView(PawnId pawn, byte skill, byte level, byte passion, int experience)
+        {
+            Pawn = pawn;
+            Skill = skill;
+            Level = level;
+            Passion = passion;
+            Experience = experience;
+        }
+    }
+
+    /// <summary>
     /// One published frame of world state: everything presentation may read, and nothing else.
     ///
     /// Buffers are pooled and reused, so a snapshot is only valid until the next publish. The
@@ -216,6 +260,7 @@ namespace Odyssey.Sim.Contracts
         ThingView[] _things = Array.Empty<ThingView>();
         byte[] _sliceCells = Array.Empty<byte>();
         OrderView[] _orders = Array.Empty<OrderView>();
+        SkillView[] _skills = Array.Empty<SkillView>();
 
         public int Tick { get; private set; }
         public int SliceLayer { get; private set; }
@@ -265,6 +310,9 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many standing orders the colony has, anywhere in the world.</summary>
         public int OrderCount { get; private set; }
 
+        /// <summary>How many (colonist, skill) pairs this frame carries.</summary>
+        public int SkillCount { get; private set; }
+
         public ReadOnlySpan<PawnView> Pawns => new ReadOnlySpan<PawnView>(_pawns, 0, PawnCount);
         public ReadOnlySpan<ThingView> Things => new ReadOnlySpan<ThingView>(_things, 0, ThingCount);
 
@@ -280,6 +328,12 @@ namespace Odyssey.Sim.Contracts
         /// Empty when the world has no designation grid.
         /// </summary>
         public ReadOnlySpan<OrderView> Orders => new ReadOnlySpan<OrderView>(_orders, 0, OrderCount);
+
+        /// <summary>
+        /// Every colonist's skills, grouped by colonist. Empty when the world has no skill system.
+        /// See <see cref="SkillView"/> for why this is a list rather than a field on a pawn.
+        /// </summary>
+        public ReadOnlySpan<SkillView> Skills => new ReadOnlySpan<SkillView>(_skills, 0, SkillCount);
 
         /// <summary>Find a pawn by id. Returns false when it is gone, which callers must handle.</summary>
         public bool TryGetPawn(PawnId id, out PawnView view)
@@ -308,6 +362,7 @@ namespace Odyssey.Sim.Contracts
             ThingCount = 0;
             SliceCellCount = 0;
             OrderCount = 0;
+            SkillCount = 0;
         }
 
         internal void AddPawn(in PawnView view)
@@ -333,6 +388,12 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _orders, OrderCount + 1);
             _orders[OrderCount++] = view;
+        }
+
+        internal void AddSkill(in SkillView view)
+        {
+            Grow(ref _skills, SkillCount + 1);
+            _skills[SkillCount++] = view;
         }
 
         static void Grow<T>(ref T[] array, int needed)

@@ -207,10 +207,13 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public static class SkillIndex
     {
-        public const int Hauling = 0;
-        public const int Cutting = 1;
-        public const int Mining = 2;
-        public const int Count = 3;
+        // Aliases of Odyssey.Sim.Contracts.SkillHandle, for the same reason JobIndex aliases
+        // JobHandle: the published SkillView carries these indices, so both sides of the seam
+        // must count the same way, and the simulation's own code keeps the short names.
+        public const int Hauling = SkillHandle.Hauling;
+        public const int Cutting = SkillHandle.Cutting;
+        public const int Mining = SkillHandle.Mining;
+        public const int Count = SkillHandle.Count;
     }
 
     /// <summary>

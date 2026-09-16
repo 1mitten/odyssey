@@ -236,6 +236,13 @@ namespace Odyssey.Tests.Hud
             yield return new HudContent(Colonists, AllStoreRows, 3, Layers, 2);     // and in trouble
             yield return new HudContent(0, 0, 0, Layers, 0);                        // nobody left
             yield return new HudContent(8, AllStoreRows, 1, 32, 4);                 // a deeper, fuller game
+
+            // The Skills tab, which is the tallest body the pane has: seven rows of the design's
+            // thirteen skills in two columns, against the needs tab's two.
+            yield return new HudContent(Colonists, AllStoreRows, 0, Layers, needRows: 0,
+                                        skillRows: SkillCatalogue.Rows);
+            yield return new HudContent(8, AllStoreRows, 3, 32, needRows: 0,
+                                        skillRows: SkillCatalogue.Rows);
         }
     }
 
