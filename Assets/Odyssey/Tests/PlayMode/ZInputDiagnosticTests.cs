@@ -39,6 +39,12 @@ namespace Odyssey.Tests.PlayMode
                         scroll = new Vector2(0f, 1f),
                     });
                     log.Append($"[queued#{attempt}] ");
+                    if (attempt == 1)
+                    {
+                        InputSystem.Update();
+                        log.Append($"[after manual Update: scroll={mouse.scroll.ReadValue().y:F2} " +
+                                   $"pos={mouse.position.ReadValue().x:F0}] ");
+                    }
 
                     for (int frame = 0; frame < 4; frame++)
                     {
