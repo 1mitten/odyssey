@@ -319,9 +319,24 @@ namespace Odyssey.EditorTools
             return $"{size.x:0.00} wide x {size.y:0.00} tall x {size.z:0.00} deep, base y {min.y:0.00}";
         }
 
-        internal static void Shoot(Camera camera, Vector3 focus, float pitch, float distance, string path)
+        /// <summary>
+        /// The standard three-quarter shot: the board camera's own bearing, which is the one
+        /// every picture of the world should be judged in unless there is a reason otherwise.
+        /// </summary>
+        internal static void Shoot(Camera camera, Vector3 focus, float pitch, float distance, string path) =>
+            Shoot(camera, focus, pitch, 45f, distance, path);
+
+        /// <summary>
+        /// The same, from a bearing of your choosing.
+        ///
+        /// Worth having because a three-quarter view cannot answer a question about a distance
+        /// along one particular line — a colonist and the tree she is working on sit at different
+        /// depths in it, so the gap between an axe head and a trunk can be read as anything you
+        /// like. Side on to that line, it can only be read as what it is.
+        /// </summary>
+        internal static void Shoot(Camera camera, Vector3 focus, float pitch, float yaw, float distance, string path)
         {
-            var rotation = Quaternion.Euler(pitch, 45f, 0f);
+            var rotation = Quaternion.Euler(pitch, yaw, 0f);
             camera.transform.SetPositionAndRotation(focus - rotation * Vector3.forward * distance, rotation);
 
             var target = new RenderTexture(1600, 900, 24, RenderTextureFormat.ARGB32)
@@ -844,6 +859,19 @@ namespace Odyssey.EditorTools
             {
                 moduleId = "odyssey.module.tree.broadleaf", shape = ModuleShape.Pillar,
                 prefabName = "SM_Gen_Env_Tree_03", centreXZ = true, baseAtY = true,
+            });
+
+            // The axe a colonist swings while felling. One row, held by whoever is working: it is
+            // parented to a hand rather than placed in a cell, so it needs no shape, no centring
+            // and no base — the hand decides where it is.
+            //
+            // The Generic pack's, and not the Farm or Western Frontier tool of the same name,
+            // because Generic is already the pack the trees come from and a felling axe wants to
+            // read as a tool rather than as a weapon or as set dressing for a barn.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ToolAxe, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Wep_Axe_01",
             });
 
             // Colonists. A Synty character is a rigged humanoid with no MeshFilter anywhere on it,
