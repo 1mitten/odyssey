@@ -1,4 +1,5 @@
 #nullable enable
+using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
 using UnityEngine;
 
@@ -29,14 +30,20 @@ namespace Odyssey.Presentation.Rendering
         ///
         /// <paramref name="heading"/> is zero for a pawn that is standing still, which callers
         /// must treat as "keep facing wherever you were" rather than as "face north".
+        ///
+        /// <paramref name="world"/> is what lets a pawn stand on a bank rather than in one; see
+        /// <see cref="BankLayout"/>. Null is a pawn on flat cells, which is what the arithmetic
+        /// tests want and what a caller with no mirror to hand gets.
         /// </summary>
-        public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick, out Vector3 heading)
+        public static Vector3 Of(in PawnView pawn, float tickAlpha, int movePerTick,
+            out Vector3 heading, WorldRenderModel? world = null)
         {
             Vector3 from = CellMetrics.FloorCentre(pawn.Cell);
             if (pawn.MovePercent <= 0)
             {
                 heading = Vector3.zero;
-                return GroundRelief.Lift(from);
+                return GroundRelief.Lift(from) +
+                       Vector3.up * BankLayout.RiseAt(world, pawn.Cell, from.x, from.z);
             }
 
             Vector3 to = CellMetrics.FloorCentre(pawn.NextCell);
@@ -62,7 +69,60 @@ namespace Odyssey.Presentation.Rendering
             // out on purpose, and a pawn that moved along it would climb a shaft without going
             // down. The lift is taken at the interpolated position, not at either end, so a pawn
             // walks along the drawn ground instead of cutting the chord between two cell centres.
-            return GroundRelief.Lift(from + travel * (Mathf.Clamp(percent, 0f, 100f) * 0.01f));
+            float t = Mathf.Clamp(percent, 0f, 100f) * 0.01f;
+            Vector3 along = GroundRelief.Lift(from + travel * t);
+            return OnTheDrawnGround(along, pawn, t, world);
+        }
+
+        /// <summary>
+        /// The chord between two cell centres, raised onto whatever is drawn under the figure.
+        ///
+        /// <para><b>Why anything is needed at all.</b> A bank fills the cell it stands in from the
+        /// floor to the rim, and that cell is walkable — it is the cell at the foot of a terrace,
+        /// which is the take-off cell for the hop the bank is the picture of. A pawn drawn at its
+        /// cell's floor is therefore waist-deep in the ramp, for exactly the reason a miner used to
+        /// be waist-deep in a quarry.</para>
+        ///
+        /// <para><b>Which cell the figure is over</b> is the first half's or the second's, split at
+        /// the midpoint, because that is where a step crosses the boundary. The two answers agree
+        /// at the crossing: <c>BankMesh</c>'s three shapes are built to tile, and the tests that
+        /// say so — a straight piece's open edge sits at the floor, a hip's at the floor, and
+        /// neighbouring pieces match along the edge they share — are the same tests that make this
+        /// continuous for a walker.</para>
+        ///
+        /// <para><b>Going up, take the higher of the two; going down, ease the lift out.</b> The
+        /// asymmetry is not tidiness, it is two different faults. Climbing, the chord runs *below*
+        /// the ground for the second half of the step — a hop's straight line from one cell centre
+        /// to the next passes a metre and a half inside the block being climbed — so the figure
+        /// has to be pushed up onto the surface, and the surface is continuous, so the maximum is
+        /// too. Descending, the ground is a step function: taking the maximum would hold the
+        /// figure flat to the edge and then drop it 1.5 m in one frame. Fading the lift out over
+        /// the step is smooth at both ends, and a drop is short (<c>MoveCost.Drop</c> is 50, about
+        /// four fifths of a second) so there is no time to read it as floating.</para>
+        /// </summary>
+        static Vector3 OnTheDrawnGround(Vector3 along, in PawnView pawn, float t, WorldRenderModel? world)
+        {
+            if (world == null) return along;
+
+            if (pawn.NextCell.Y < pawn.Cell.Y)
+            {
+                // **Both ends, not just the one being left.** The first version faded out the rise
+                // of the cell the figure was leaving and forgot the one it was arriving in, which
+                // is fine dropping off a bank onto flat ground and a metre and a half of teleport
+                // dropping off a step *into* one — and a terrace has banks at the bottom of it by
+                // definition, so that was the common case rather than the exotic one.
+                Vector3 from = CellMetrics.FloorCentre(pawn.Cell);
+                Vector3 to = CellMetrics.FloorCentre(pawn.NextCell);
+                float leaving = BankLayout.RiseAt(world, pawn.Cell, from.x, from.z);
+                float arriving = BankLayout.RiseAt(world, pawn.NextCell, to.x, to.z);
+                return along + Vector3.up * (leaving * (1f - t) + arriving * t);
+            }
+
+            CellRef over = t < 0.5f ? pawn.Cell : pawn.NextCell;
+            float ground = GroundRelief.Lift(CellMetrics.FloorCentre(over)).y +
+                           BankLayout.RiseAt(world, over, along.x, along.z);
+
+            return along.y >= ground ? along : new Vector3(along.x, ground, along.z);
         }
 
         /// <summary>The yaw a heading implies, in degrees. Zero-length headings give zero.</summary>

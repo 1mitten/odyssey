@@ -280,7 +280,7 @@ cheap to decide: it stands at the same layer as the riser, on the top of the low
 the top of the riser. Everything the decision needs is on one layer plus the cell directly below, so
 a single-layer chunk pass sees all of it.
 
-Four conditions, each with a test, each ruling out something that would look wrong:
+Five conditions, each with a test, each ruling out something that would look wrong:
 
 - **Empty, and standing on ground**, or the bank hangs in the air.
 - **The step is earth.** A mined face and a quarry wall stay sheer; a grassy ramp growing out of cut
@@ -288,6 +288,72 @@ Four conditions, each with a test, each ruling out something that would look wro
 - **The top of the step is open**, or this is the wall of a tunnel rather than a terrace.
 - **The cell is open to the sky**, which keeps banks on the outdoor hillside and the inside of a
   working sharp-edged.
+- **Neither the cell's floor nor the step beside it is a face the colony cut.** See below: this one
+  arrived as a reported bug rather than as a condition thought of in advance.
+
+**Nothing grows inside a working (owner report, 2026-09-16: "you can't see the colonists").** The
+"step is earth" rule reads as though it had already covered this, and it does not: grass, bare earth
+and subsoil are all mineable — 60, 60 and 160 ticks to clear — so a quarry sunk into the meadow is a
+hole whose walls are earth with open tops, which is every condition a terrace step has. A bank
+therefore grew **in the cell that had just been cut**, filling it from its floor to the rim, and the
+miner standing in it to cut the next face was drawn up to the chest in ground. Measured on the played
+board: a 3 × 3 pit one layer deep grew 8 banks and swallowed one of the five colonists whole.
+
+The mark presentation reads is `CellFlags.Discovered`, taken for its *other* meaning. The two are
+coextensive rather than merely similar — the flag is set by `CellGrid.RevealAround`, which is called
+from exactly one place, `MineJobDriver.MineCell`, and worldgen sets it on nothing at all — so a solid
+cell carries it if and only if a colonist has taken the cell next to it out of the world. The
+coupling is stated in `WorldRenderModel.IsCutFace`, which is the one place that would change if a
+deep scanner ever revealed rock nobody had touched.
+
+**It has to be asked of the floor and not only of the sides**, and the shortfall is invisible in the
+obvious case. Mining a cell reveals all six of its solid neighbours, so a cut cell's four sides are
+all cut faces — `StepsAround` comes back empty, and the hip branch then went looking at the
+*diagonal* neighbours, which nothing reveals, because a colonist who cuts past the corner of a seam
+has not seen into it. The hole filled with a hip piece instead of a corner one: a single cut cell
+still drew 1 bank and a four-cell bench still drew 2. A mined cell's floor is revealed too, being one
+of the six, so asking the floor catches every shape of working at once.
+
+**A figure stands on a bank, not in one.** A bank fills its cell from the floor to the rim and a
+pawn is drawn at the middle of its cell, so the fault above has a second home on the outdoor
+hillside — where the ramp is the picture of a hop and must stay, so the answer is the opposite one.
+Measured on the played board before the fix: **three of five colonists** standing at the foot of a
+terrace, every one of them 1.500 m through the slope; afterwards, 0.000 m.
+
+The decision therefore left the mesher. `BankLayout` holds all of it — whether a bank stands in a
+cell, which of the three shapes it is, what it is made of, and `RiseAt`, how far its surface stands
+above its own floor at a point. `ChunkMesher` turns that into an instance and `PawnPose` stands a
+figure on it, so the two cannot drift; two copies of this arithmetic would look identical until the
+day they disagreed, and the symptom would be blamed on the animation. The levers went static with
+it (`BankLayout.Enabled`, `InWorkings`, `LiftFigures`), because a per-renderer lever would let banks
+be off while colonists still hovered 1.5 m over the meadow.
+
+**The tiling is what makes it safe.** `BankMesh`'s three shapes were built to agree where they
+meet — a straight piece's open edge sits at its floor, a hip's does too, and neighbouring pieces
+match along the shared edge — and those same tests are what make the surface continuous for a
+walker. Nothing extra was needed for a run of bank, for leaving one onto flat ground, or for walking
+onto one.
+
+**Going up, take the higher of chord and ground; going down, fade the lift out.** The asymmetry is
+two different faults, not untidiness. Climbing, the chord between two cell centres runs *below* the
+ground for the second half of the step — a hop passes a metre and a half inside the block being
+climbed, which it did before banks existed — so the figure is pushed up onto the surface, and the
+surface is continuous so the maximum is too. Descending, the drawn ground is a step function: taking
+the maximum would hold the figure flat to the edge and then drop it 1.5 m in one frame. The rise is
+faded out over the step instead, **at both ends** — the first version faded out only the cell being
+left and forgot the one being entered, which is fine dropping off a bank onto flat ground and a
+metre and a half of teleport dropping off a step *into* one, and a terrace has banks at the bottom
+of it by definition. `BankFootingTests` samples each case 400 times across the step and asserts no
+frame-to-frame jump over 5 cm.
+
+**Open: whether the feet need the bank's own gradient.** `Footing` leans the root toward the ground
+normal and plants both boots with `TwoBoneIk`, off `GroundRelief.SlopeAt` — the rolling field, which
+is eight degrees where a bank is fifty. A stance 0.3 m across therefore spans about 0.36 m of slope
+the feet know nothing about. The sheet could not settle it: the colonist the harness picked wears a
+full-length skirt, so her legs are not in the picture at all. It is a fifth of a metre at the boots,
+usually occluded by the slope itself, and §2b's standing rule — ground lies along the slope, people
+stand up on it — predicts the lift alone is enough. Judge it from `bank-on-boots.png` on a run that
+picks a colonist in trousers.
 
 Two of those carry the argument. *Flat ground grows none* is the cost claim — the meadow is nearly
 all flat, and a bank on flat ground would put an instance on every cell of the board. *A two-layer
@@ -361,6 +427,29 @@ with banks. **Side on and low is the shot that answers the question**, for the s
 `SwingCheck` photographs the axe across the line to the tree: in the three-quarter view a step and
 the ground in front of it sit at different depths, and the profile of a bank reads as anything you
 like.
+
+A quarry has its own instrument, because a terrace and a working are different pictures and
+`SlopeCheck` frames a terrace by construction: *Odyssey → Presentation → Check a quarry*
+(`scripts/unity.sh shot Odyssey.EditorTools.QuarryCheck.Run`) cuts a 3 × 3 pit **under a colonist's
+feet** — `MineJobDriver.MineCell` steps whoever was standing on a cell down onto the floor it just
+cut, so she ends up in the hole exactly as the game puts her there — and shoots it with
+`ChunkRenderer.BanksInWorkings` on and then off. That lever exists only so the fault can be
+photographed rather than remembered. One trap it records: an instance matrix is
+`placement * part.Local` and a module's local transform puts the mesh's origin at the middle of its
+cell, not at its floor, so matching a bank to the cell it stands in by an exact position finds
+nothing and reports a clean board.
+
+And the figure on a bank has its own: *Odyssey → Presentation → Check a bank underfoot*
+(`scripts/unity.sh shot Odyssey.EditorTools.BankCheck.Run`). It **builds** its step rather than
+finding one — a block of earth laid on the columns beside a colonist, which is a natural step and
+not a cut one, so it grows a bank where `SlopeCheck`'s hunt for the longest terrace run would put
+the camera somewhere nobody is standing. It shoots with `BankLayout.LiftFigures` off and then on and
+prints `MeasuredFootGap` for **every** colonist in a bank, not just the subject, because a figure
+sunk into a ramp and a figure standing behind one look the same from every bearing. Two traps it
+records: the first version measured the gap through the same call the lever gates, so it reported a
+perfect 0.000 m in both conditions — an instrument wired to the thing it is measuring — and the
+board is wooded at the generator's own density, so two sheets running put a trunk between the camera
+and the subject and the harness now clears the trees around it.
 
 ## 2d. The day
 
