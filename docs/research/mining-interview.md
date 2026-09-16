@@ -226,6 +226,29 @@ deposits** (≈1,145 cells: iron ≈667, coal ≈478) inside ≈83,000 cells of 
 6. **Iron outweighs coal by about 4 to 3**, not dramatically. Coal's band only overlaps the bottom
    of the rock, so on the lowest terraces it is pulled up into whatever rock exists. It is the
    deeper find, not a rare one.
+7. **A marked stack is worked from the top down.** Cutting out the bottom of one first leaves the
+   rock above it hanging in the air, and nothing catches that — the generator's column check runs
+   at generation only and collapse is U29's work. A tapering outcrop turns out to be safe by its
+   own geometry (the ring below a peak has rock on every side until the peak goes, so nobody can
+   reach the lower cell), but a **terrace step** is not: a two-cell face whose bottom can be cut
+   from the side is exactly what the starting order marks.
+8. **The colony starts with an outcrop marked for mining**, because there is still no tool to give
+   the order with — the same reason `startingFellRadius` exists. Checked over five seeds against
+   the board the scene actually loads, not the 60-cell test fixture.
+
+### Two things only the Unity gate could catch
+
+The fast tier does not compile the Presentation assembly, so neither of these could fail until the
+authoritative gate ran, and both are worth remembering:
+
+- **`ModuleIdTests` pins the item module table against `ItemIndex`.** Three new item defs with no
+  module id would have drawn as the orange stand-in marker for ever — no compile error, no
+  exception. No pack contains ore, so all three are rock, and the catalogue rows exist to make them
+  three *different* rocks (a cairn, a boulder, a flat scatter) chosen by silhouette, because items
+  are drawn with no per-item tint and colour cannot separate them.
+- **A piped gate hides its exit code.** `unity.sh test editmode | tail` reports the failures in its
+  own output and then exits 0, because the pipeline takes `tail`'s status. The script itself is
+  correct; the invocation was not.
 
 ### Assumptions as shipped
 
