@@ -224,7 +224,8 @@ namespace Odyssey.Presentation.Rendering
                 ModulePart part = _model.Library[bucket.Module].Parts[bucket.Part];
                 ResolveColour(bucket.Tint, part.IsFallback, shade, out Color tint, out Color emission);
                 Material material = _materials.Get(part.Material, tint, emission, ghost, alpha,
-                    foliage: TintCode.IsFoliage(bucket.Tint));
+                    foliage: TintCode.IsFoliage(bucket.Tint),
+                    water: TintCode.IsWater(bucket.Tint));
 
                 // Terrain receives shadows but never casts them, and that is not a saving so much
                 // as a correctness fix. Ground is a contiguous mass of cell-sized boxes; letting
@@ -242,6 +243,7 @@ namespace Odyssey.Presentation.Rendering
                 // map to cast a shadow a few centimetres long onto grass of the same colour. The
                 // reference art has no per-tuft shadows either — its ground is evenly lit and the
                 // shadows that matter are the ones people and buildings cast onto it.
+                // Water is terrain, so it already inherits terrain's "receives but never casts".
                 bool terrain = TintCode.IsTerrain(bucket.Tint);
                 bool foliage = TintCode.IsFoliage(bucket.Tint);
 
@@ -282,6 +284,14 @@ namespace Odyssey.Presentation.Rendering
                 tint = StuffPalette.FoliageTint(value);
                 emission = Color.black;
             }
+            else if (TintCode.IsWater(tintCode))
+            {
+                // Always the solid colour, whatever art resolved underneath: water is drawn by
+                // Odyssey/Water and the palette entry *is* its colour. The alpha is carried
+                // through untouched below, because for water it is the opacity.
+                tint = StuffPalette.TerrainSolid(value);
+                emission = Color.black;
+            }
             else if (TintCode.IsTerrain(tintCode))
             {
                 // Over a primitive the tint is the only colour there is. Over a texture it grades
@@ -296,7 +306,10 @@ namespace Odyssey.Presentation.Rendering
                 emission = Color.black;
             }
 
-            tint = new Color(tint.r * shade, tint.g * shade, tint.b * shade, 1f);
+            // Alpha survives the shade for water and for nothing else. Everywhere else it is
+            // meaningless and forcing it to one keeps the material key from splitting on noise.
+            float keepAlpha = TintCode.IsWater(tintCode) ? tint.a : 1f;
+            tint = new Color(tint.r * shade, tint.g * shade, tint.b * shade, keepAlpha);
             emission = new Color(emission.r * shade, emission.g * shade, emission.b * shade, 1f);
         }
 

@@ -235,15 +235,27 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// </summary>
         public int deepShoreDistance = 2;
 
-        /// <summary>Rings of wet ground around water. Marsh columns are never lowered.</summary>
-        public int marshFringe = 2;
+        /// <summary>
+        /// Rings of wet ground around water. Marsh columns are never lowered.
+        ///
+        /// One, not two. Two rings around every water cell put more marsh on the board than
+        /// water — measured, 427 columns against 382 — and a dark ribbon two cells wide either
+        /// side of a stream one cell wide is not a fringe, it is the feature. A fringe should be
+        /// the thing you notice second.
+        /// </summary>
+        public int marshFringe = 1;
 
         /// <summary>
-        /// Cover noise, 0..1023, above which a fringe column is marsh. Zero makes the first ring
-        /// solid; the falloff below then frays the rings beyond it, so the bog has an edge rather
-        /// than a contour line. Set both to zero for a plain ring.
+        /// Cover noise, 0..1023, above which a fringe column is marsh, with
+        /// <see cref="marshFalloff"/> added per ring beyond the first.
+        ///
+        /// Above zero on purpose: at zero the first ring is solid, and a solid ring of anything
+        /// traces the water like a drawn outline. Breaking it up with the field the cover pass
+        /// already uses — no new noise — leaves bog where the ground was going to be poor anyway
+        /// and grass where it was not, which is both cheaper and more like a real margin. Set
+        /// both to zero for a plain ring.
         /// </summary>
-        public int marshThreshold;
+        public int marshThreshold = 300;
         public int marshFalloff = 340;
 
         // ---- pass 9, start -------------------------------------------------------------------
