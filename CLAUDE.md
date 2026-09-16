@@ -77,6 +77,46 @@ after a rebuild, republish `docs/wiki/artifact.html` and
   ground level, desaturates on a ramp from the rim so the playable area still reads as bounded, and
   is switched by `OdysseyBootstrap.terrainSkirt` with `skirtTreeDensity` as the cost lever. The
   camera's far plane went 600 m → 1,800 m to contain it.
+- **The ground has a shape, and none of it is a cell (owner decision 2026-09-16).** The board read
+  as a carpet of blocks because two things compound: the wooded board sets the generator's own
+  `surfaceRelief` to zero, and a ground cell is drawn as one instanced 2.5 x 3.0 x 2.5 cube placed
+  by a bare translate, so every top face is a flat quad at exactly the layer height. `GroundRelief`
+  (`Presentation/Rendering/`) is the facade that fixes it, in the sense the grass tufts and the axe
+  chips are facades: **drawn, and in no cell, no save and no hash**. `surfaceRelief` is still zero,
+  the simulation is untouched, and the goldens did not move — ADR 0002's "no slopes, no
+  half-heights" is a rule about cells and this adds nothing to a cell. **The governing rule is that
+  relief is a drawing offset and never a position**, so `CellMetrics.FloorCentre` is untouched and
+  every draw site applies it explicitly. The one thing that must follow the drawn ground is
+  **picking**: `SlicePicker` now meets each cell's own tilted floor instead of one flat plane per
+  layer, because otherwise a click lands most of a cell away at a shallow pitch, which is exactly
+  the misclicking complaint the picker's own remarks cite Going Medieval for. **Ground is sheared,
+  everything standing on it is lifted** — a per-cell offset alone gives plateaus with little steps,
+  so each cell takes the tangent plane of the field, which is affine and fits in the instance matrix
+  it already had: no extra instance, no extra draw call, no new mesh, no shader change, and the
+  normal tilts under the ordinary inverse-transpose so the lighting is free. A colonist stands up on
+  a hillside; only the ground lies along it. **Two layers of one field**: the board rolls 2 m over
+  150 m, the surround adds hills of 50 m over 1,000 m ramped from zero at the rim to full height by
+  700 m out, so the join is continuous by construction and the surround no longer cuts across the
+  rolling board as a hard line. Hills cannot be the board's field turned up — amplitude and
+  wavelength together decide a slope, and 50 m over 150 m stands at sixty degrees. **Two numbers
+  came from measurement rather than taste**: a 0.35 m amplitude would have been invisible (a
+  1.7-degree slope moves the lit value under one per cent against a 72-degree sun and strong
+  ambient), and hills past about 900 m are pointless because fog is opaque at 1,100 m and at the
+  default 48-degree pitch the horizon is not in frame at all — only ground 50–224 m away is. Cost,
+  measured under the real player loop and never `RenderBench`: meadow 0.41 → **0.68 ms** mean,
+  1.10 ms worst, city 0.88 ms, against a 5 ms budget; the shear is free (identical draw calls and
+  instances off and on) and the 0.27 ms is the finer surround tiles, which went from 40 m and 120 m
+  to 20 m and 60 m because a tilted tile disagrees with its neighbour as the *square* of its width —
+  at 120 m that was twenty metres and read as diagonal cracks across the hillsides. Levers:
+  `OdysseyBootstrap.groundRelief` and `groundReliefPeriod` (0 is the old flat board exactly),
+  `GroundRelief.HillAmplitude/HillPeriod/HillRampMetres`. Judge it with **`Odyssey → Presentation →
+  Check the ground relief`** (`scripts/unity.sh shot Odyssey.EditorTools.ReliefCheck.Run`), which
+  shoots relief off and on at 48, 20 and 14 degrees. Design: `06-rendering-and-camera.md` §2b, which
+  also records the amendment to §2a's "not a framing ring of hills". **Still wants the owner's eye
+  in `Play.unity`**: this worktree has no Synty packs, so the ground there is untextured flat colour
+  with no grain for a slope to catch, and the board's own roll reads far more weakly than it should.
+  Real terracing (`surfaceRelief = 2`) is deliberately left off; it is one line away and would
+  change worldgen, goldens, pathing and the start cell.
 - **Colonists swing an axe, and no pack contains the clip, 2026-09-16.** There is no work animation anywhere in the 7,222 imported assets — `AnimationBaseLocomotion` ships idle, walk, run, sprint, crouch, in-air, turns, transitions and additive lean/look, and the character packs ship none — so a colonist felling a tree stood breathing in the idle for ten seconds and then the tree fell over. The pose is therefore **computed rather than authored**: every character is a Humanoid rig, so `WorkSwing` (`Presentation/World/`) turns a stroke phase into shoulder, elbow and spine angles, and `PawnFigureDirector` pitches those five bones **about the figure's own right-hand axis, never the bone's local axis** (local axes belong to whoever rigged the character; the plane an axe swings in is a fact about the figure), laid over whatever the gait mixer wrote. **The signs are not one convention**: an arm hangs down so a negative pitch carries it forward, a spine stands up so a positive one folds it forward, and the director subtracts the spine's pitch back out of the shoulders so the three angles are genuinely independent. The stroke is three unequal parts — long eased raise, short accelerating strike, dwell with the blade in the wood — because a sine reads as a metronome. It eases in and out over `WorkEaseSeconds`, and it **freezes when the game is paused**, inferred from the tick standing still: a paused pawn settles into the idle by itself, so a swinging colonist would otherwise be the only thing moving. The axe is an ordinary catalogue row, `ModuleIds.ToolAxe` (`SM_Gen_Wep_Axe_01`), parented to the right hand only while the work lasts; a clone without the packs fells trees bare-handed. It is **gripped by measurement, not by authored Euler angles**: the haft is the long axis of the combined mesh bounds, the head is the end the mass sits towards, the tool is laid along the forearm with the grip in the palm, and the blade's roll is computed so the bit faces the way the head is travelling — leaving `AxeBladeRoll` as a trim. **Both hands grip it**, the off hand placed by a two-bone IK solve (`ArmIk`), because no pair of angles will ever bring the second fist to a haft held in the first. And `WorkStance` draws a working figure **wherever puts its blade in the wood**, eased in with the swing — solved from the figure's whole measured strike offset, never from a scalar reach, because with the swing tilted over the shoulder 1.12 m of a 1.68 m strike is *sideways* and a figure stood at 1.68 m puts its axe a metre beside the tree. Contact is checked by `MeasuredBladeGap` (0.19 m from the trunk's middle) rather than by eye: a three-quarter photograph puts the woodcutter and her tree at different depths and cannot settle it. Only the drawn figure steps in; the pawn stays in its cell for picking, the cursor and the whole simulation.
 
   **Chips fly when the blade lands (2026-09-16).** `ChipDirector` (beside `PawnFigureDirector`, disposed with it) throws a few pieces of debris on the frame the stroke crosses the strike, which `WorkSwing.Lands` decides. **One particle system for the whole colony**, world-simulated, and the material is a `ChipRecipe` value — colour, size, speed, life, count and spread are per particle, so wood off an axe and stone off a pick share the system, the material and the draw call; `ChipRecipe.Stone` is written and waiting for mining. Gravity is the one thing a recipe cannot carry (it belongs to the system), so heavier debris leaves faster, smaller and shorter-lived. **It is warmed on construction** — an unwarmed particle material compiles its shader on the first frame it is drawn, which would be the exact frame the first axe lands. Chips are decoration like the grass tufts: no cell, no save, no hash.

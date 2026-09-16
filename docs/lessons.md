@@ -437,3 +437,42 @@ resolves to the Microsoft Store stub and answers *"Python was not found"* to eve
 `build_wiki.py --check` included. It looks exactly like Python not being installed. Check with
 `which -a python3`, and in a stale session call
 `$LOCALAPPDATA/Programs/Python/Python313/python.exe` directly rather than believing the stub.
+
+## Displacing instanced geometry
+
+Written after giving the flat board a shape (`GroundRelief`, `06-rendering-and-camera.md` §2b).
+Four of these cost more than ten minutes each.
+
+- **A shear belongs in the Y row, and Unity writes matrices row-column.** `y' = y + gx*x + gz*z` is
+  `m10` and `m12`. Setting `m01` and `m21` is its transpose: it leans the cubes sideways and leaves
+  their tops flat, which looks exactly like a rotation bug and sends you hunting in the wrong place.
+- **An object-to-world matrix is handed local coordinates, so the shear acts on them.** The mesh
+  arrives already relative to the cell centre, so the Y row is just the height. Subtracting the
+  centre out of it as well — which is what you would write for a shear expressed in world
+  coordinates — takes it off twice. Neighbouring cells then disagreed by 1.15 m instead of by
+  millimetres, and the seam test is what caught it.
+- **Gentle slopes are invisible, so amplitude has to be chosen against the lighting, not against
+  intuition.** With the sun at 72 degrees over a strong trilight ambient, a 1.7-degree slope moves
+  the lit value by well under one per cent. The prudent-looking 0.35 m amplitude would have shipped
+  the whole system with nothing whatever to see. Sizing a visual effect is a measurement, not a
+  matter of taste, and the cautious number is not the safe one when the failure mode is "no effect".
+- **Tangent-plane displacement scales with the square of the tile.** Two neighbouring tiles drawn as
+  tilted planes part company across their shared edge by roughly `(A/2) * (2*pi*L/P)^2`. At the
+  board's 2.5 m cells that is 41 mm and invisible; at the surround's old 120 m tiles it was twenty
+  metres, and it read as long diagonal cracks scored across the hillsides. The same technique is
+  fine at one scale and useless at another, and the arithmetic tells you which before the screenshot
+  does.
+
+## A loose tolerance can make a test prove nothing
+
+The test for "a click on a slope lands on the cell under the cursor" allowed the answer to be one
+cell out. It passed. It also passed with the bug deliberately put back, because the error a flat
+floor plane produces at that amplitude is *almost exactly one cell* — the tolerance had been sized,
+without anyone meaning to, to admit precisely the failure the test existed to catch.
+
+The negative control is the only thing that showed it, and it took a minute: put the bug back, run
+the test, check it goes red. The general rule is the standing one about re-running after a fix to
+see whether the output means anything, applied to tolerances — **a tolerance chosen for comfort
+rather than derived from the thing being measured is where a vacuous test comes from.** Prefer an
+exact assertion where the quantity is exact, as a cell index is.
+
