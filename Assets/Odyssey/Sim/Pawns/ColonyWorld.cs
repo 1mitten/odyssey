@@ -34,6 +34,9 @@ namespace Odyssey.Sim.Pawns
         public MapGenOutcome Outcome { get; }
         public ColonyScenario.Result Placement { get; }
 
+        /// <summary>What the colony was given at the start, for a run's report to say so.</summary>
+        public ScenarioDef Scenario { get; }
+
         /// <summary>The job pipeline, for the per-def counters a soak run asserts on.</summary>
         public JobSystem Jobs { get; }
 
@@ -50,10 +53,11 @@ namespace Odyssey.Sim.Pawns
         readonly NavGraph _nav;
 
         ColonyWorld(CellGrid grid, PawnContext pawns, DesignationGrid designations, SimWorld world,
-            MapGenOutcome outcome, ColonyScenario.Result placement, SupportSolver solver, NavGraph nav,
-            JobSystem jobs)
+            MapGenOutcome outcome, ScenarioDef scenario, ColonyScenario.Result placement, SupportSolver solver,
+            NavGraph nav, JobSystem jobs)
         {
             Jobs = jobs;
+            Scenario = scenario;
             Grid = grid;
             Pawns = pawns;
             Designations = designations;
@@ -121,6 +125,9 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// Build the world the play scene plays.
         /// </summary>
+        /// <param name="scenario">Who and what is placed at the start, and which orders are already
+        /// given. Headless runs and tests take <see cref="ScenarioDef.Bare"/>, the scene takes
+        /// <see cref="ScenarioDef.Playtest"/>.</param>
         /// <param name="barren">Flat grass with no rock, ore or bare patches. False gives the full
         /// natural generator with hills, rock and ore.</param>
         /// <param name="chunks">The presentation chunk grid, when a renderer will be attached, so
@@ -131,10 +138,8 @@ namespace Odyssey.Sim.Pawns
         /// needs, because it is the only map with storeys to climb between.</param>
         /// <param name="wooded">With <paramref name="barren"/>: keep the woodland, which is what
         /// the scene loads since 2026-09-16. False is the bare board the tests baseline on.</param>
-        /// <param name="fellRadius">Cells around the start within which every tree is marked for
-        /// felling before the first tick, as the scene does. Zero marks nothing.</param>
-        public static ColonyWorld Build(GridSize size, uint seed, int colonists = 5, bool barren = true,
-            ChunkGrid? chunks = null, MapType mapType = MapType.Natural, bool wooded = false, int fellRadius = 0)
+        public static ColonyWorld Build(GridSize size, uint seed, ScenarioDef scenario, bool barren = true,
+            ChunkGrid? chunks = null, MapType mapType = MapType.Natural, bool wooded = false)
         {
             MapGenDef gen = MapGenerator.DefaultDef(mapType, size);
             if (barren && gen is NaturalMapGenDef natural)
@@ -167,10 +172,10 @@ namespace Odyssey.Sim.Pawns
                 .AddColony(pawns, designations, support, nav, jobs)
                 .Build();
 
-            ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed, colonists);
-            if (fellRadius > 0) ColonyScenario.DesignateTreesNear(designations, outcome.StartCell, fellRadius);
+            ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed, scenario);
+            ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenario);
 
-            var built = new ColonyWorld(grid, pawns, designations, world, outcome, placement, solver, nav, jobs);
+            var built = new ColonyWorld(grid, pawns, designations, world, outcome, scenario, placement, solver, nav, jobs);
             built.RebuildDerived();
             return built;
         }

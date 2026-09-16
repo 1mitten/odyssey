@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using Odyssey.Hud;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
@@ -16,7 +17,13 @@ namespace Odyssey.Presentation.CameraRig
     /// in a layered colony sim is a change of what you are working on, not a change of vantage.
     /// The camera follows the layer so the focus stays at eye level for whatever is being built.
     ///
-    /// Selection goes through <see cref="SlicePicker"/>, which cannot return a cell above the
+    /// The rig decides nothing about layer or selection. It reads the keys and the mouse, hands
+    /// a layer request to the <see cref="SliceDirector"/> and a pick to whoever listens to
+    /// <see cref="Picked"/>, glides to wherever the <see cref="CameraDirector"/> has been asked to
+    /// go, and draws the cell cursor for the <see cref="SelectionDirector"/>. Those three are
+    /// Unity-free and tested without it; this class is the one that needs a camera.
+    ///
+    /// Picking goes through <see cref="SlicePicker"/>, which cannot return a cell above the
     /// active layer. That is the non-negotiable part of this class.
     ///
     /// Input goes through the Input System package, because the project is configured for it
@@ -44,26 +51,23 @@ namespace Odyssey.Presentation.CameraRig
 
         WorldRenderModel? _model;
         ChunkRenderer? _renderer;
+        HudDirectors? _directors;
         Vector3 _focus;
         Vector3? _glideTarget;
+        CellRef? _glidingTo;
         float _targetYaw;
         float _targetDistance;
         bool _orbiting;
         Vector2 _lastPointer;
 
-        public int ActiveLayer { get; private set; }
+        /// <summary>The slice director's layer. The rig realises it; it does not own it.</summary>
+        public int ActiveLayer => _directors?.Slice.ActiveLayer ?? 0;
 
         /// <summary>Where the camera is looking, in world metres. For tests and readouts.</summary>
         public Vector3 Focus => _focus;
 
         /// <summary>Where a glide is taking the focus, or null when the camera is where it was asked to be.</summary>
         public Vector3? GlideTarget => _glideTarget;
-
-        /// <summary>The cell the player last clicked, or none. Never above the active layer.</summary>
-        public CellRef? Selection { get; private set; }
-
-        /// <summary>Raised when the player changes layer, so the world can be told through an intent.</summary>
-        public event Action<int>? ActiveLayerChanged;
 
         /// <summary>Raised when the player asks for a speed: 0 paused, 1 normal, 2 fast, 3 very fast.</summary>
         public event Action<int>? GameSpeedRequested;
@@ -85,50 +89,23 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         public void RequestGameSpeed(int speed) => GameSpeedRequested?.Invoke(speed);
 
-        /// <summary>
-        /// Move the slice to a layer from anywhere the keyboard cannot reach — the Depth Ruler,
-        /// later alerts and bulletins. Same clamping, selection clearing and event as the
-        /// PageUp/PageDown path.
-        /// </summary>
-        public void SetLayer(int layer)
-        {
-            if (_model == null) return;
-            int next = Mathf.Clamp(layer, 0, _model.Size.SizeY - 1);
-            if (next == ActiveLayer) return;
-            ActiveLayer = next;
-            SetSelection(null, default);
-            ActiveLayerChanged?.Invoke(ActiveLayer);
-        }
+        /// <summary>Move the slice: the keys' path, and anything else that has a layer in mind.</summary>
+        public void SetLayer(int layer) => _directors?.Slice.SetLayer(layer);
 
         /// <summary>
-        /// Raised the instant the selection changes — a pick that hit, a pick that missed, or a
-        /// layer change clearing it.
-        ///
-        /// An event and not a value to poll, because polling had a race in it. The readout used to
-        /// read <see cref="Selection"/> in its own <c>Update</c>, and Unity does not order two
-        /// components' Updates: on the click frame it could run first, see last frame's cell, and
-        /// resolve the wrong colonist or item — so the cursor drew one tier, then snapped to the
-        /// right one a frame later. A handler runs inside the pick, so by the time anything draws
-        /// the answer is already known.
+        /// Raised the instant a world pick lands, with the cell (or none) and the ray, so the
+        /// presenter can hit-test the colonists that stand *in* a cell rather than settle for the
+        /// cell. An event and not a value to poll, because polling had a race in it: two
+        /// components' Updates are unordered, and on the click frame the listener could see last
+        /// frame's pick. A handler runs inside the pick, so the answer exists before anything draws.
         /// </summary>
-        public event Action<CellRef?, Ray>? SelectionChanged;
+        public event Action<CellRef?, Ray>? Picked;
 
-        /// <param name="ray">The pick ray, so a listener can hit-test things that stand *in* a
-        /// cell rather than settle for the cell. Meaningless when <paramref name="cell"/> is null.</param>
-        void SetSelection(CellRef? cell, Ray ray)
-        {
-            bool same = cell.HasValue == Selection.HasValue
-                        && (!cell.HasValue || cell.Value == Selection!.Value);
-            Selection = cell;
-            // Re-clicking the same cell still announces: the thing standing in it may have moved.
-            if (!same || cell.HasValue) SelectionChanged?.Invoke(cell, ray);
-        }
-
-        public void Bind(WorldRenderModel model, ChunkRenderer renderer, int startLayer)
+        public void Bind(WorldRenderModel model, ChunkRenderer renderer, HudDirectors directors)
         {
             _model = model;
             _renderer = renderer;
-            ActiveLayer = Mathf.Clamp(startLayer, 0, model.Size.SizeY - 1);
+            _directors = directors;
             _targetYaw = yaw;
             _targetDistance = distance;
             _focus = new Vector3(
@@ -140,11 +117,12 @@ namespace Odyssey.Presentation.CameraRig
 
         void Update()
         {
-            if (_model == null) return;
+            if (_model == null || _directors == null) return;
             float dt = Mathf.Max(Time.unscaledDeltaTime, 1e-4f);
 
             ReadKeyboard(dt);
             ReadMouse(dt);
+            TakeJumpRequest();
             ApplyTransform(instant: false);
             DrawSelection();
         }
@@ -166,8 +144,8 @@ namespace Odyssey.Presentation.CameraRig
             if (keys.qKey.wasPressedThisFrame) _targetYaw -= 90f;
             if (keys.eKey.wasPressedThisFrame) _targetYaw += 90f;
 
-            if (keys.pageUpKey.wasPressedThisFrame || keys.rKey.wasPressedThisFrame) SetLayer(ActiveLayer + 1);
-            if (keys.pageDownKey.wasPressedThisFrame || keys.fKey.wasPressedThisFrame) SetLayer(ActiveLayer - 1);
+            if (keys.pageUpKey.wasPressedThisFrame || keys.rKey.wasPressedThisFrame) _directors!.Slice.Step(1);
+            if (keys.pageDownKey.wasPressedThisFrame || keys.fKey.wasPressedThisFrame) _directors!.Slice.Step(-1);
 
             if (keys.spaceKey.wasPressedThisFrame) RequestGameSpeed(0);
             if (keys.digit1Key.wasPressedThisFrame) RequestGameSpeed(1);
@@ -225,8 +203,10 @@ namespace Odyssey.Presentation.CameraRig
             Quaternion flat = Quaternion.Euler(0f, yaw, 0f);
             Vector3 forward = flat * Vector3.forward;
             Vector3 right = flat * Vector3.right;
-            // A pan is the player taking the camera back: whatever a glide was heading for, it stops.
+            // A pan is the player taking the camera back: whatever a jump was heading for, it stops.
+            _directors?.Camera.Cancel();
             _glideTarget = null;
+            _glidingTo = null;
             _focus += forward * amount.y + right * amount.x;
             ClampFocus();
         }
@@ -268,15 +248,25 @@ namespace Odyssey.Presentation.CameraRig
         }
 
         /// <summary>
-        /// Glide the view to a cell at the current zoom, on the smoothing the rest of the camera
-        /// uses. For the roster: clicking a colonist's card means "take me to them", and a cut
-        /// would lose the player their bearings where a glide keeps them. A pan cancels it.
+        /// Realise the camera director's jump: a glide to the cell at the current zoom, on the
+        /// smoothing the rest of the camera uses, because a cut would lose the player their
+        /// bearings where a glide keeps them. The director is told when the rig has landed.
         /// </summary>
-        public void GlideTo(CellRef cell)
+        void TakeJumpRequest()
         {
-            Vector3 target = CellMetrics.FloorCentre(cell);
+            CellRef? wanted = _directors!.Camera.JumpTarget;
+            if (!wanted.HasValue)
+            {
+                _glideTarget = null;
+                _glidingTo = null;
+                return;
+            }
+            if (_glidingTo.HasValue && _glidingTo.Value == wanted.Value) return;
+
+            Vector3 target = CellMetrics.FloorCentre(wanted.Value);
             target.y = _focus.y;
             _glideTarget = target;
+            _glidingTo = wanted;
         }
 
         // -------------------------------------------------------- selection
@@ -286,8 +276,8 @@ namespace Odyssey.Presentation.CameraRig
             if (_model == null) return;
             var camera = GetComponent<UnityEngine.Camera>();
             Ray ray = camera.ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
-            if (SlicePicker.Pick(ray, _model, ActiveLayer, out CellRef cell)) SetSelection(cell, ray);
-            else SetSelection(null, ray);
+            if (SlicePicker.Pick(ray, _model, ActiveLayer, out CellRef cell)) Picked?.Invoke(cell, ray);
+            else Picked?.Invoke(null, ray);
         }
 
         /// <summary>
@@ -299,8 +289,10 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         void DrawSelection()
         {
-            if (_renderer == null || Selection == null || SuppressCellCursor) return;
-            _renderer.DrawCellHighlight(Selection.Value, selectionColour);
+            if (_renderer == null || SuppressCellCursor) return;
+            CellRef? cell = _directors!.Selection.Cell;
+            if (cell == null) return;
+            _renderer.DrawCellHighlight(cell.Value, selectionColour);
         }
 
         /// <summary>
@@ -333,6 +325,8 @@ namespace Odyssey.Presentation.CameraRig
                     _focus.x = target.x;
                     _focus.z = target.z;
                     _glideTarget = null;
+                    _glidingTo = null;
+                    _directors?.Camera.Arrived();
                 }
             }
 

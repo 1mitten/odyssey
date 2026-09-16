@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 using System.Diagnostics;
+using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
@@ -17,6 +18,17 @@ using Debug = UnityEngine.Debug;
 
 namespace Odyssey.Presentation.Bootstrap
 {
+    /// <summary>
+    /// The scenarios the inspector can pick from. Until scenario Defs load from a content pack
+    /// this is the whole list, one entry per factory on <see cref="ScenarioDef"/>; the scene
+    /// chooses a scenario by name here and holds none of its numbers.
+    /// </summary>
+    public enum StartingScenario
+    {
+        Playtest,
+        Bare,
+    }
+
     /// <summary>
     /// The composition root for a playable scene: generate a world, register its systems, tick it
     /// at a fixed rate, and hand the renderer the published frame.
@@ -53,11 +65,12 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("With barrenMap: keep the woodland, so there are trees to fell. Off gives the bare board.")]
         public bool woodedMap = true;
 
-        [Tooltip("Colonists spawned near the start location when the scene begins.")]
-        public int colonistCount = 5;
-
-        [Tooltip("Every tree within this many cells of the start is marked for felling before the first tick, so the colony has work from the moment it exists. 0 marks nothing.")]
-        public int startingFellRadius = 10;
+        // Playtest marks the trees near the start for felling before the first tick, because
+        // there is no tool to give that order with yet and a colony with nothing to do proves
+        // nothing. When the UI line's designate tool lands, the default here flips to Bare and
+        // the first order is the player's.
+        [Tooltip("What the colony starts with. Playtest gives it felling work near the start at once; Bare gives the same colony and no orders. The default flips to Bare when the designate tool lands.")]
+        public StartingScenario scenario = StartingScenario.Playtest;
 
         [Tooltip("Which faces the colonists get. 0 draws a fresh cast every session; any other value pins one, and the log prints the value each session used so a cast you liked can be kept.")]
         public int colonistLookSeed = 0;
@@ -98,6 +111,13 @@ namespace Odyssey.Presentation.Bootstrap
         string _catalogueNote = string.Empty;
 
         public SimWorld? World => _world;
+
+        /// <summary>
+        /// The interface directors: selection, slice and camera, Unity-free and made here with the
+        /// world, because the composition root is the one place that knows the layer count and
+        /// the start layer. The rig, the pick presenter and the HUD shell all realise these.
+        /// </summary>
+        public HudDirectors? Directors { get; private set; }
         public WorldRenderModel? Model => _model;
         public ChunkRenderer? Renderer => _renderer;
 
@@ -154,14 +174,13 @@ namespace Odyssey.Presentation.Bootstrap
                 .AddColony(_pawns, designations, support, nav)
                 .Build();
 
-            var placement = ColonyScenario.Place(_grid, _pawns, outcome.StartCell, seed, colonistCount);
+            ScenarioDef scenarioDef = scenario == StartingScenario.Bare ? ScenarioDef.Bare() : ScenarioDef.Playtest();
+            var placement = ColonyScenario.Place(_grid, _pawns, outcome.StartCell, seed, scenarioDef);
             if (placement.Colonists == 0)
                 Debug.LogError($"[Odyssey] no colonists were placed near {outcome.StartCell}: {placement}");
-            if (startingFellRadius > 0)
-            {
-                int marked = ColonyScenario.DesignateTreesNear(designations, outcome.StartCell, startingFellRadius);
-                Debug.Log($"[Odyssey] {marked} trees within {startingFellRadius} cells of the start are marked for felling");
-            }
+            int marked = ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenarioDef);
+            if (marked > 0)
+                Debug.Log($"[Odyssey] {scenarioDef}: {marked} trees within {scenarioDef.startingFellRadius} cells of the start are marked for felling");
 
             // One tick primes the mirror: the contributor runs in the publish phase, so until the
             // world has ticked once there is no published frame and nothing to draw.
@@ -196,18 +215,19 @@ namespace Odyssey.Presentation.Bootstrap
                 LookSalt = lookSalt,
             };
 
+            Directors = new HudDirectors(size.SizeY, outcome.StartCell.Y);
+            Directors.Slice.LayerChanged += OnActiveLayerChanged;
+
             if (cameraRig != null)
             {
                 // Bind to the layer the colony actually stands on, not the generator nominal
                 // ground layer. The surface is terraced, so StartCell.Y sits one to three layers
                 // above groundLayer, and RenderActors culls anything above the active layer -
                 // which meant every colonist was culled every frame while the terrain drew fine.
-                cameraRig.Bind(_model, _renderer, outcome.StartCell.Y);
+                cameraRig.Bind(_model, _renderer, Directors);
                 // The composition root draws every cursor tier; the rig's own cell cube is off from
                 // the first frame, not from the first LateUpdate that happens to say so.
-                cameraRig.SuppressCellCursor = true;
-                cameraRig.ActiveLayerChanged += OnActiveLayerChanged;
-                cameraRig.GameSpeedRequested += OnGameSpeedRequested;
+                cameraRig.SuppressCellCursor = true;                cameraRig.GameSpeedRequested += OnGameSpeedRequested;
                 // Open on the colony, not on the whole map: see SliceCameraRig.FocusOn.
                 cameraRig.FocusOn(outcome.StartCell);
             }
@@ -355,10 +375,10 @@ namespace Odyssey.Presentation.Bootstrap
             cameraRig.SuppressCellCursor = true;
 
             Color colour = cameraRig.selectionColour;
-            var readout = GetComponent<SelectionReadout>();
+            SelectionDirector? selection = Directors?.Selection;
 
-            if (readout != null && readout.SelectedPawn.IsValid
-                && snapshot.TryGetPawn(readout.SelectedPawn, out PawnView pawn))
+            if (selection != null && selection.HasPawn
+                && snapshot.TryGetPawn(selection.Pawn, out PawnView pawn))
             {
                 Vector3 feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _);
                 _renderer.DrawSelectionBracket(
@@ -366,14 +386,14 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
-            CellRef? picked = cameraRig.Selection;
+            CellRef? picked = selection?.Cell;
             if (picked == null) return;
             CellRef cell = picked.Value;
 
-            if (readout != null && readout.SelectedThing.IsValid)
+            if (selection != null && selection.HasThing)
             {
                 ResolvedModule item = _model.Library[
-                    _model.Library.Resolve(ModuleIds.Item(readout.SelectedThingDef), ModuleShape.Pillar)];
+                    _model.Library.Resolve(ModuleIds.Item(selection.ThingDef), ModuleShape.Pillar)];
                 if (item.UsesArt && !item.IsEmpty)
                 {
                     Bounds box = item.Bounds;
@@ -424,7 +444,7 @@ namespace Odyssey.Presentation.Bootstrap
         {
             if (cameraRig != null)
             {
-                cameraRig.ActiveLayerChanged -= OnActiveLayerChanged;
+                if (Directors != null) Directors.Slice.LayerChanged -= OnActiveLayerChanged;
                 cameraRig.GameSpeedRequested -= OnGameSpeedRequested;
             }
             _figures?.Dispose();

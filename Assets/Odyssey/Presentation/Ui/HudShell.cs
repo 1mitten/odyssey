@@ -35,7 +35,6 @@ namespace Odyssey.Presentation.Ui
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
     [RequireComponent(typeof(OdysseyBootstrap))]
-    [RequireComponent(typeof(SelectionReadout))]
     public sealed class HudShell : MonoBehaviour
     {
         [Tooltip("The HUD stylesheet. Assigned by the play-scene builder; authored at Assets/Odyssey/Presentation/Ui/Hud.uss.")]
@@ -52,7 +51,7 @@ namespace Odyssey.Presentation.Ui
 
         OdysseyBootstrap? _boot;
         SliceCameraRig? _rig;
-        SelectionReadout? _picks;
+        HudDirectors? _directors;
 
         /// <summary>The layer the colony actually stands on, for the ruler's surface marker.
         /// Captured from the rig on the first frame the world exists, because component Start
@@ -119,7 +118,6 @@ namespace Odyssey.Presentation.Ui
         {
             _boot = GetComponent<OdysseyBootstrap>();
             _rig = _boot.cameraRig;
-            _picks = GetComponent<SelectionReadout>();
         }
 
         void Start()
@@ -156,14 +154,28 @@ namespace Odyssey.Presentation.Ui
             BuildOverlays();
             BuildCancel();
 
-            if (_picks != null) _picks.SelectionResolved += OnSelectionResolved;
-            if (_rig != null) _rig.ActiveLayerChanged += OnLayerChanged;
         }
 
-        void OnDestroy()
+        void OnDestroy() => Detach();
+
+        /// <summary>
+        /// The directors are made by the bootstrap when the world is, which may be after this
+        /// Start: component order on one GameObject is not defined. So the shell attaches to
+        /// them on the first Update that finds them, and answers their events from then on.
+        /// </summary>
+        void Attach(HudDirectors directors)
         {
-            if (_picks != null) _picks.SelectionResolved -= OnSelectionResolved;
-            if (_rig != null) _rig.ActiveLayerChanged -= OnLayerChanged;
+            _directors = directors;
+            _directors.Selection.Changed += OnSelectionChanged;
+            _directors.Slice.LayerChanged += OnLayerChanged;
+        }
+
+        void Detach()
+        {
+            if (_directors == null) return;
+            _directors.Selection.Changed -= OnSelectionChanged;
+            _directors.Slice.LayerChanged -= OnLayerChanged;
+            _directors = null;
         }
 
         void OnEnable()
@@ -194,10 +206,18 @@ namespace Odyssey.Presentation.Ui
         {
             var world = _boot!.World;
             if (world == null || _hud == null) return;
-
-            if (!_surfaceCaptured && _rig != null)
+            if (_directors == null)
             {
-                _surfaceLayer = _rig.ActiveLayer;
+                if (_boot.Directors == null) return;
+                Attach(_boot.Directors);
+            }
+
+            // Dead handles are dropped before anything below reads the selection.
+            _directors!.Refresh(world.Views.Current);
+
+            if (!_surfaceCaptured)
+            {
+                _surfaceLayer = _directors.Slice.ActiveLayer;
                 _surfaceCaptured = true;
             }
 
@@ -255,14 +275,15 @@ namespace Odyssey.Presentation.Ui
         /// selection directly). Push it into the inspect model and answer in the same frame —
         /// a click that only shows up on the next cadence pass reads as ignored.
         /// </summary>
-        void OnSelectionResolved()
+        void OnSelectionChanged(SelectionChange reason)
         {
             var world = _boot!.World;
-            if (world == null || _picks == null) return;
+            if (world == null || _directors == null) return;
 
-            if (_picks.SelectedPawn.IsValid) _inspect.SetColonist(_picks.SelectedPawn);
-            else if (_picks.SelectedThing.IsValid) _inspect.SetItem(_picks.SelectedThing);
-            else if (_rig != null && _rig.Selection is { } cell) _inspect.SetCell(cell);
+            SelectionDirector selection = _directors.Selection;
+            if (selection.HasPawn) _inspect.SetColonist(selection.Pawn);
+            else if (selection.HasThing) _inspect.SetItem(selection.Thing);
+            else if (selection.Cell is { } cell) _inspect.SetCell(cell);
             else _inspect.ClearSelection();
 
             _inspect.Refresh(world.Views.Current);
@@ -419,7 +440,7 @@ namespace Odyssey.Presentation.Ui
             var world = _boot!.World;
             if (world == null) return;
             _roster.Refresh(world.Views.Current,
-                selected: _picks != null ? _picks.SelectedPawn : PawnId.None);
+                selected: _directors != null ? _directors.Selection.Pawn : PawnId.None);
 
             while (_cards.Count < _roster.Cards.Count)
             {
@@ -445,7 +466,8 @@ namespace Odyssey.Presentation.Ui
                 int index = _cards.Count;
                 card.RegisterCallback<ClickEvent>(_ =>
                 {
-                    if (index < _roster.Cards.Count) _picks?.SelectPawn(_roster.Cards[index].Id);
+                    if (index < _roster.Cards.Count && _boot!.World != null)
+                        _directors?.ChooseColonist(_roster.Cards[index].Id, _boot.World.Views.Current);
                 });
                 _rosterHost.Add(card);
                 _cards.Add(new CardView
@@ -557,10 +579,10 @@ namespace Odyssey.Presentation.Ui
 
         void RefreshRuler()
         {
-            if (_rig == null) return;
+            if (_directors == null) return;
             var world = _boot!.World;
             if (world == null) return;
-            _ruler.Refresh(world.Views.Current, _rig.ActiveLayer, _surfaceLayer);
+            _ruler.Refresh(world.Views.Current, _directors.Slice.ActiveLayer, _surfaceLayer);
 
             // Rows are built once, from the layer count of the first frame with a world in it.
             while (_rulerRowViews.Count < _ruler.Rows.Count)
@@ -582,7 +604,7 @@ namespace Odyssey.Presentation.Ui
                 row.Add(mark);
 
                 int clicked = layer;
-                row.RegisterCallback<ClickEvent>(_ => _rig!.SetLayer(clicked));
+                row.RegisterCallback<ClickEvent>(_ => _directors?.Slice.SetLayer(clicked));
                 _rulerRows.Add(row);
                 _rulerRowViews.Add(new RulerRowView { Root = row, Count = count, PipFill = fill });
             }

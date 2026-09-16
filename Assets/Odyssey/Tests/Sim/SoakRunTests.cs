@@ -46,7 +46,7 @@ namespace Odyssey.Tests.Sim
         /// scope problem (OQ-39: 48 meals, nothing in the slice makes more). The scope problem
         /// was real but four times smaller than measured: eating despawned the whole pile of four
         /// rather than one meal from it. With that fixed and the pantry sized for the run
-        /// (<see cref="ColonyScenario.MealsPerPile"/>), the ten-day gate is a gate again.
+        /// (<see cref="ScenarioDef.mealsPerPile"/>), the ten-day gate is a gate again.
         /// </summary>
         [Test, Category("Long")]
         public void ThreeDays() => Soak(seed: 1u, ticks: 3 * Day, budgetSeconds: 0);
@@ -59,7 +59,7 @@ namespace Odyssey.Tests.Sim
 
         static void Soak(uint seed, int ticks, int budgetSeconds)
         {
-            ColonyWorld colony = ColonyWorld.Build(PlaySize, seed);
+            ColonyWorld colony = ColonyWorld.Build(PlaySize, seed, ScenarioDef.Bare());
             int pawnCount = colony.Pawns.Pawns.Count;
             Assert.That(pawnCount, Is.EqualTo(5), colony.Placement.ToString());
 
@@ -194,7 +194,7 @@ namespace Odyssey.Tests.Sim
                 $"rest {worstStreak[NeedIndex.Rest]}, joy {worstStreak[NeedIndex.Joy]} ticks " +
                 $"(limit {MaxTicksAtZero})");
             TestContext.WriteLine(
-                $"  meals left {MealsLeft(colony)} of the {colony.Placement.Meals * ColonyScenario.MealsPerPile} placed — " +
+                $"  meals left {MealsLeft(colony)} of the {colony.Placement.Meals * colony.Scenario.mealsPerPile} placed — " +
                 "nothing in the slice makes more (OQ-39), so the pantry is sized for the run");
             TestContext.WriteLine($"  final hash {colony.World.ComputeStateHash().Value:x16}");
         }

@@ -10,10 +10,18 @@ namespace Odyssey.Tests.Sim
     {
         static readonly GridSize Size = new GridSize(40, 40, 6);
 
+        static ScenarioDef Colony(int colonists)
+        {
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = colonists;
+            scenario.beds = colonists;
+            return scenario;
+        }
+
         [Test]
         public void ForbidFlipsTheFlagAndRefusesWhatMakesNoSense()
         {
-            ColonyWorld colony = ColonyWorld.Build(Size, seed: 1u, colonists: 2);
+            ColonyWorld colony = ColonyWorld.Build(Size, seed: 1u, Colony(2));
             var items = colony.Pawns.Items.Items;
             Assume.That(items.Count, Is.GreaterThan(0));
             ThingId thing = items[0].Id;
@@ -36,7 +44,7 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void AForbiddenThingIsNotHauledUntilAllowed()
         {
-            ColonyWorld colony = ColonyWorld.Build(Size, seed: 2u, colonists: 3);
+            ColonyWorld colony = ColonyWorld.Build(Size, seed: 2u, Colony(3));
             var items = colony.Pawns.Items.Items;
             // The scenario scatters salvage over the start spots, some of which are stockpile
             // cells, so the baseline is whatever already lies in the zone before anyone moves.
