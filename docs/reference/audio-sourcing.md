@@ -22,7 +22,7 @@ putting a file of the same name in the same folder.
 | `chop.wav` | An axe biting into a tree trunk — the felling stroke landing. Dull; wood does not ring. | 0.2–0.8 s | no | mono |
 | `pick.wav` | A pick striking stone — the mining stroke landing. A click and a short ring. | 0.2–0.8 s | no | mono |
 | `alert.wav` | The chime for "a colonist is starving". Heard over the music, which ducks for it. Must read as *attention*, not as alarm — it will fire in a quiet room. | 0.5–1.5 s | no | stereo |
-| `water.wav` | The bed for ponds, streams and the river. Flat and eventless — nothing may *happen* in it, or the event repeats every few seconds and becomes the only thing you hear. | 4–15 s | **yes, seamlessly** | mono |
+| `water.wav` | The bed for ponds, streams and the river. Flat and eventless — nothing may *happen* in it, or the event repeats every few seconds and becomes the only thing you hear. Its level is driven by how much water is near the camera, so what is wanted is the sound of standing beside a stream, not of approaching one. | 15–90 s | **yes, seamlessly** | mono |
 | `ambience-day.wav` | The sound of the world outdoors by day, under everything else: air, distance, birds. The floor of the mix — the thing you stop hearing and would notice the absence of. Eventless, like the water. | 10–60 s | **yes, seamlessly** | stereo |
 | `ambience-night.wav` | The same after dark, and a *different world* rather than a quieter one: the day's birds gone, something else started. It plays at a lower level than the day bed. | 10–60 s | **yes, seamlessly** | stereo |
 | `music-day.wav` | The daytime track. Plays from 06:00 to 19:00 game time, crossfading in over 3 s. | any | **yes, seamlessly** | stereo |

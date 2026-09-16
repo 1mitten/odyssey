@@ -134,7 +134,10 @@ namespace Odyssey.EditorTools
         /// </summary>
         internal static readonly ClipSpec[] Clips =
         {
-            new("water", AudioCompressionFormat.ADPCM, AudioClipLoadType.DecompressOnLoad,
+            // A real stream recording is over a minute long, so it is compressed in memory
+            // rather than decompressed into it: ADPCM decodes for almost nothing and keeps a
+            // seventy-second mono loop under two megabytes instead of seven.
+            new("water", AudioCompressionFormat.ADPCM, AudioClipLoadType.CompressedInMemory,
                 mono: true, loadInBackground: false, () => Water(6.0f)),
             new("chop", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: true, loadInBackground: false, Chop),
@@ -554,9 +557,13 @@ namespace Odyssey.EditorTools
             catalogue.Ambience.Clear();
             catalogue.Ambience.Add(new AudioCatalogue.AmbienceDef
             {
+                // Quiet on purpose. This one is *already* scaled by how much water is near the
+                // camera — that is what the probe is for — so its volume is what "standing in
+                // the middle of the river" is worth, and a stream should not be able to shout
+                // down the work going on beside it.
                 Id = SoundIds.AmbienceWater,
                 Clip = Require("water"),
-                Volume = 0.30f, FadeSeconds = 2.5f, MinDistance = 60f, MaxDistance = 300f,
+                Volume = 0.20f, FadeSeconds = 2.5f, MinDistance = 60f, MaxDistance = 300f,
             });
 
             // The outdoor bed, and it is *quiet*. It is the floor of the mix — the thing you
