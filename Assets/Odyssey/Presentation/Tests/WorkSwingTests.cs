@@ -1,5 +1,6 @@
 #nullable enable
 using NUnit.Framework;
+using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using UnityEngine;
 
@@ -17,24 +18,31 @@ namespace Odyssey.Tests.Presentation
     /// </summary>
     public class WorkSwingTests
     {
+        /// <summary>
+        /// The stroke these are about. They were written when there was exactly one and its
+        /// numbers were consts on <see cref="WorkSwing"/>; the maths is unchanged and now belongs
+        /// to a value, so a second stroke can exist.
+        /// </summary>
+        static readonly WorkStroke Stroke = WorkStroke.Axe;
+
         [Test]
         public void ThePhaseAlwaysLandsInsideOneStroke()
         {
-            Assert.That(WorkSwing.Phase(0f), Is.EqualTo(0f).Within(1e-4f));
-            Assert.That(WorkSwing.Phase(WorkSwing.StrokeSeconds * 0.5f), Is.EqualTo(0.5f).Within(1e-4f));
+            Assert.That(Stroke.Phase(0f), Is.EqualTo(0f).Within(1e-4f));
+            Assert.That(Stroke.Phase(Stroke.StrokeSeconds * 0.5f), Is.EqualTo(0.5f).Within(1e-4f));
 
             // Three strokes on is the same instant as none. It has to be stated as a wrap and not
             // as an equality: 1.15 * 3 divided by 1.15 is not 3 in single precision, so the phase
             // comes back a hair under 1 rather than at 0. Both are the same point on a circle,
             // and the stroke is flat across it, so nothing is visible — but an assertion that
             // demanded zero would fail for a reason that has nothing to do with the swing.
-            float wrapped = WorkSwing.Phase(WorkSwing.StrokeSeconds * 3f);
+            float wrapped = Stroke.Phase(Stroke.StrokeSeconds * 3f);
             Assert.That(Mathf.Min(wrapped, 1f - wrapped), Is.LessThan(1e-3f));
 
             // And whatever it is handed, the phase is a phase.
             for (int step = 0; step < 50; step++)
             {
-                float phase = WorkSwing.Phase(step * 0.37f, step * 0.11f);
+                float phase = Stroke.Phase(step * 0.37f, step * 0.11f);
                 Assert.That(phase, Is.InRange(0f, 1f));
             }
         }
@@ -47,7 +55,7 @@ namespace Odyssey.Tests.Presentation
             // the ease-in had to carry it there from a standing idle. Whatever the offset, a clock
             // at nought is now the start of a stroke.
             foreach (float offset in new[] { 0f, 0.25f, 0.618f, 0.99f })
-                Assert.That(WorkSwing.Phase(0f, offset), Is.EqualTo(0f).Within(1e-5f));
+                Assert.That(Stroke.Phase(0f, offset), Is.EqualTo(0f).Within(1e-5f));
         }
 
         [Test]
@@ -56,10 +64,10 @@ namespace Odyssey.Tests.Presentation
             // In step at the first blow, plainly out of it a few strokes later, which is how two
             // people chopping actually fall out of time.
             const float A = 0.1f, B = 0.9f;
-            Assert.That(WorkSwing.Phase(0f, A), Is.EqualTo(WorkSwing.Phase(0f, B)).Within(1e-5f));
+            Assert.That(Stroke.Phase(0f, A), Is.EqualTo(Stroke.Phase(0f, B)).Within(1e-5f));
 
-            float apart = Mathf.Abs(WorkSwing.Phase(WorkSwing.StrokeSeconds * 4f, A)
-                                    - WorkSwing.Phase(WorkSwing.StrokeSeconds * 4f, B));
+            float apart = Mathf.Abs(Stroke.Phase(Stroke.StrokeSeconds * 4f, A)
+                                    - Stroke.Phase(Stroke.StrokeSeconds * 4f, B));
             Assert.That(Mathf.Min(apart, 1f - apart), Is.GreaterThan(0.15f),
                 "four strokes in and still in unison reads as a machine");
         }
@@ -69,9 +77,9 @@ namespace Odyssey.Tests.Presentation
         {
             // The spread is either side of the stated length, not on top of it, or the whole
             // colony would quietly work faster or slower than the number in the source says.
-            Assert.That(WorkSwing.PeriodFor(0.5f), Is.EqualTo(WorkSwing.StrokeSeconds).Within(1e-4f));
-            Assert.That(WorkSwing.PeriodFor(0f),
-                Is.EqualTo(WorkSwing.StrokeSeconds * (1f - WorkSwing.StrokeSpread * 0.5f)).Within(1e-4f));
+            Assert.That(Stroke.PeriodFor(0.5f), Is.EqualTo(Stroke.StrokeSeconds).Within(1e-4f));
+            Assert.That(Stroke.PeriodFor(0f),
+                Is.EqualTo(Stroke.StrokeSeconds * (1f - WorkStroke.StrokeSpread * 0.5f)).Within(1e-4f));
         }
 
         [Test]
@@ -94,8 +102,8 @@ namespace Odyssey.Tests.Presentation
             float end = InStrike(0.99f);
             float middle = (start + end) * 0.5f;
 
-            float first = WorkSwing.Stroke(middle) - WorkSwing.Stroke(start);
-            float second = WorkSwing.Stroke(end) - WorkSwing.Stroke(middle);
+            float first = Stroke.Stroke(middle) - Stroke.Stroke(start);
+            float second = Stroke.Stroke(end) - Stroke.Stroke(middle);
 
             Assert.That(second, Is.GreaterThan(first));
         }
@@ -106,8 +114,8 @@ namespace Odyssey.Tests.Presentation
             // The beat after impact in which the woodcutter is doing nothing at all. Without it
             // the arm turns round the instant it arrives and the motion never reads as a blow
             // landing on something solid.
-            Assert.That(WorkSwing.Stroke(0.85f), Is.EqualTo(1f).Within(1e-4f));
-            Assert.That(WorkSwing.Stroke(0.99f), Is.EqualTo(1f).Within(1e-4f));
+            Assert.That(Stroke.Stroke(0.85f), Is.EqualTo(1f).Within(1e-4f));
+            Assert.That(Stroke.Stroke(0.99f), Is.EqualTo(1f).Within(1e-4f));
         }
 
         [Test]
@@ -121,10 +129,10 @@ namespace Odyssey.Tests.Presentation
             // The thresholds sit above the fastest the curve legitimately moves, which is the
             // last instant of the strike: the blade is accelerating there and covers about
             // seven degrees of shoulder in a step. Anything past twelve is a tear, not a swing.
-            var previous = WorkSwing.At(0f);
+            var previous = Stroke.At(0f);
             for (int step = 1; step <= 240; step++)
             {
-                var current = WorkSwing.At(step / 240f);
+                var current = Stroke.At(step / 240f);
                 Assert.That(Mathf.Abs(current.Shoulder - previous.Shoulder), Is.LessThan(12f),
                     $"the shoulder jumped at phase {step / 240f:0.000}");
                 Assert.That(Mathf.Abs(current.Spine - previous.Spine), Is.LessThan(3f),
@@ -136,8 +144,8 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void TheArmAndTheBodyMoveTogether()
         {
-            WorkSwing top = WorkSwing.At(Trough());
-            WorkSwing impact = WorkSwing.At(0.9f);
+            WorkSwing top = Stroke.At(Trough());
+            WorkSwing impact = Stroke.At(0.9f);
 
             Assert.That(impact.Shoulder, Is.GreaterThan(top.Shoulder), "the arm comes down out of the raise");
             Assert.That(impact.Elbow, Is.GreaterThan(top.Elbow), "the forearm straightens into the blow");
@@ -156,12 +164,12 @@ namespace Odyssey.Tests.Presentation
             // How the pose eases in and out. A figure that snapped into a full swing on the tick
             // the walk ended would pop, and a figure that kept the last angle after the tree fell
             // would stand there with one arm in the air.
-            WorkSwing rest = WorkSwing.At(0.4f).Scaled(0f);
+            WorkSwing rest = Stroke.At(0.4f).Scaled(0f);
             Assert.That(rest.Shoulder, Is.EqualTo(0f).Within(1e-4f));
             Assert.That(rest.Elbow, Is.EqualTo(0f).Within(1e-4f));
             Assert.That(rest.Spine, Is.EqualTo(0f).Within(1e-4f));
 
-            WorkSwing full = WorkSwing.At(0.4f);
+            WorkSwing full = Stroke.At(0.4f);
             Assert.That(full.Scaled(1f).Shoulder, Is.EqualTo(full.Shoulder).Within(1e-4f));
         }
 
@@ -174,8 +182,8 @@ namespace Odyssey.Tests.Presentation
             float previous = 0f;
             for (int step = 1; step <= 600; step++)
             {
-                float current = WorkSwing.Phase(step * WorkSwing.StrokeSeconds / 200f);
-                if (WorkSwing.Lands(previous, current)) landings++;
+                float current = Stroke.Phase(step * Stroke.StrokeSeconds / 200f);
+                if (Stroke.Lands(previous, current)) landings++;
                 previous = current;
             }
 
@@ -188,7 +196,7 @@ namespace Odyssey.Tests.Presentation
             // The phase restarts inside the dwell, with the blade already in the wood. Firing
             // again there would put a second burst of chips a quarter of a second after the first,
             // for one blow.
-            Assert.That(WorkSwing.Lands(0.9f, 0.05f), Is.False);
+            Assert.That(Stroke.Lands(0.9f, 0.05f), Is.False);
         }
 
         [Test]
@@ -196,16 +204,16 @@ namespace Odyssey.Tests.Presentation
         {
             // A frame long enough to step over the whole strike. Rare, but a stutter is not a
             // reason for an axe to pass through a tree in silence.
-            Assert.That(WorkSwing.Lands(0.5f, 0.95f), Is.True);
-            Assert.That(WorkSwing.Lands(0.3f, 0.2f), Is.True, "and a long frame that also wrapped");
+            Assert.That(Stroke.Lands(0.5f, 0.95f), Is.True);
+            Assert.That(Stroke.Lands(0.3f, 0.2f), Is.True, "and a long frame that also wrapped");
         }
 
         [Test]
         public void NothingLandsWhileTheAxeIsStillGoingUp()
         {
-            Assert.That(WorkSwing.Lands(0.1f, 0.2f), Is.False);
-            Assert.That(WorkSwing.Lands(0.6f, 0.7f), Is.False);
-            Assert.That(WorkSwing.Lands(0.85f, 0.9f), Is.False, "nor during the dwell after it");
+            Assert.That(Stroke.Lands(0.1f, 0.2f), Is.False);
+            Assert.That(Stroke.Lands(0.6f, 0.7f), Is.False);
+            Assert.That(Stroke.Lands(0.85f, 0.9f), Is.False, "nor during the dwell after it");
         }
 
         const int Steps = 20_000;
@@ -221,7 +229,7 @@ namespace Odyssey.Tests.Presentation
             for (int step = 0; step <= Steps; step++)
             {
                 float phase = step / (float)Steps;
-                float stroke = WorkSwing.Stroke(phase);
+                float stroke = Stroke.Stroke(phase);
                 if (stroke >= lowest) continue;
                 lowest = stroke;
                 best = phase;
@@ -236,7 +244,7 @@ namespace Odyssey.Tests.Presentation
             for (int step = 0; step <= Steps; step++)
             {
                 float phase = trough * step / Steps;
-                if (WorkSwing.Stroke(phase) <= stroke) return phase;
+                if (Stroke.Stroke(phase) <= stroke) return phase;
             }
             return trough;
         }
@@ -248,7 +256,7 @@ namespace Odyssey.Tests.Presentation
             for (int step = 0; step <= Steps; step++)
             {
                 float phase = trough + (1f - trough) * step / Steps;
-                if (WorkSwing.Stroke(phase) >= stroke) return phase;
+                if (Stroke.Stroke(phase) >= stroke) return phase;
             }
             return 1f;
         }
@@ -263,6 +271,9 @@ namespace Odyssey.Tests.Presentation
     /// </summary>
     public class WorkStanceTests
     {
+        /// <summary>How far into the work felling aims. It used to be a constant on WorkStance.</summary>
+        static readonly float Bite = WorkStyle.Felling.AimFromCentre;
+
         static readonly Vector3 Tree = new Vector3(10f, 3f, 10f);
 
         /// <summary>
@@ -286,9 +297,9 @@ namespace Odyssey.Tests.Presentation
                 Tree + new Vector3(-2f, 0f, 2.5f),
             })
             {
-                Vector3 stand = WorkStance.StandAt(start, Tree, Vector3.forward, 1f, Strike);
+                Vector3 stand = WorkStance.StandAt(start, Tree, Vector3.forward, 1f, Strike, Bite);
                 Vector3 edge = stand + Strike;
-                Assert.That(Flat(edge - Tree).magnitude, Is.LessThan(WorkStance.Bite + 1e-3f),
+                Assert.That(Flat(edge - Tree).magnitude, Is.LessThan(Bite + 1e-3f),
                     $"the axe missed the tree from {start}");
             }
         }
@@ -298,10 +309,10 @@ namespace Odyssey.Tests.Presentation
         {
             // Aimed at the centre the axe is buried to the eye; aimed at the near face it stops on
             // the bark, which reads as not quite touching. The bite is the difference.
-            Vector3 stand = WorkStance.StandAt(Tree + Vector3.right * 2f, Tree, Vector3.forward, 1f, Strike);
+            Vector3 stand = WorkStance.StandAt(Tree + Vector3.right * 2f, Tree, Vector3.forward, 1f, Strike, Bite);
             Vector3 edge = stand + Strike;
 
-            Assert.That(Flat(edge - Tree).magnitude, Is.EqualTo(WorkStance.Bite).Within(1e-3f));
+            Assert.That(Flat(edge - Tree).magnitude, Is.EqualTo(Bite).Within(1e-3f));
             Assert.That(Vector3.Dot(Flat(edge - Tree).normalized, Vector3.right), Is.GreaterThan(0.9f),
                 "the edge stops short on the side the colonist is standing, not past the far side");
         }
@@ -310,7 +321,7 @@ namespace Odyssey.Tests.Presentation
         public void TheFigureKeepsItsHeight()
         {
             Vector3 start = Tree + new Vector3(2f, 0.8f, 2f);
-            Vector3 stand = WorkStance.StandAt(start, Tree, Vector3.forward, 1f, Strike);
+            Vector3 stand = WorkStance.StandAt(start, Tree, Vector3.forward, 1f, Strike, Bite);
 
             Assert.That(stand.y, Is.EqualTo(start.y).Within(1e-4f),
                 "the step is across the ground, never up or down it");
@@ -322,10 +333,10 @@ namespace Odyssey.Tests.Presentation
             // The case the committed fell job actually produces: the colonist walks into the
             // tree's own cell, so the positions give no direction at all and the only thing left
             // to go on is which way it is pointed.
-            Vector3 stand = WorkStance.StandAt(Tree, Tree, Vector3.forward, 1f, Strike);
+            Vector3 stand = WorkStance.StandAt(Tree, Tree, Vector3.forward, 1f, Strike, Bite);
 
             Assert.That(Flat(stand - Tree).magnitude, Is.GreaterThan(0.1f), "it is still in the trunk");
-            Assert.That(Flat(stand + Strike - Tree).magnitude, Is.LessThan(WorkStance.Bite + 1e-3f));
+            Assert.That(Flat(stand + Strike - Tree).magnitude, Is.LessThan(Bite + 1e-3f));
         }
 
         [Test]
@@ -334,7 +345,7 @@ namespace Odyssey.Tests.Presentation
             // Standing in the trunk and facing nowhere, which a figure leased this frame is. Any
             // direction beats a zero vector, which would make the stand depend on nothing but
             // floating-point noise.
-            Vector3 stand = WorkStance.StandAt(Tree, Tree, Vector3.zero, 1f, Strike);
+            Vector3 stand = WorkStance.StandAt(Tree, Tree, Vector3.zero, 1f, Strike, Bite);
             Assert.That(Flat(stand - Tree).magnitude, Is.GreaterThan(0.1f));
         }
 
@@ -345,7 +356,7 @@ namespace Odyssey.Tests.Presentation
             // angles could solve to no offset at all. The floor is what stops that arriving on
             // screen as a colonist standing in the middle of the tree she is felling; the blow
             // lands short instead, which is a great deal less wrong.
-            Vector3 stand = WorkStance.StandAt(Tree + Vector3.right, Tree, Vector3.forward, 1f, Vector3.zero);
+            Vector3 stand = WorkStance.StandAt(Tree + Vector3.right, Tree, Vector3.forward, 1f, Vector3.zero, Bite);
             Assert.That(Flat(stand - Tree).magnitude,
                 Is.EqualTo(WorkStance.MinimumStandOff).Within(1e-3f));
         }
@@ -356,13 +367,49 @@ namespace Odyssey.Tests.Presentation
             // How the step eases in. At zero the figure is exactly where the simulation put it,
             // which is what makes the walk-in and the step-up join without a seam.
             Vector3 start = Tree + new Vector3(3f, 0f, 1f);
-            Assert.That(WorkStance.StandAt(start, Tree, Vector3.forward, 0f, Strike), Is.EqualTo(start));
+            Assert.That(WorkStance.StandAt(start, Tree, Vector3.forward, 0f, Strike, Bite), Is.EqualTo(start));
 
-            Vector3 half = WorkStance.StandAt(start, Tree, Vector3.forward, 0.5f, Strike);
-            Vector3 full = WorkStance.StandAt(start, Tree, Vector3.forward, 1f, Strike);
+            Vector3 half = WorkStance.StandAt(start, Tree, Vector3.forward, 0.5f, Strike, Bite);
+            Vector3 full = WorkStance.StandAt(start, Tree, Vector3.forward, 1f, Strike, Bite);
             Assert.That(Vector3.Distance(start, half), Is.LessThan(Vector3.Distance(start, full)));
         }
 
         static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);
+    
+        [Test]
+        public void MiningAimsJustInsideTheRockFaceAndNotAtItsMiddle()
+        {
+            // The bug 12-work-poses-and-tools.md was written to catch. Felling aims 0.15 m past
+            // the centre of the cell, which is about the middle of a trunk six-tenths of a metre
+            // through. A rock CELL is 2.5 m through: aim 0.15 m past its centre and the pick
+            // finishes 1.1 m inside solid stone, with the chips spawning in there with it, so the
+            // head vanishes and the burst is never seen. MinimumStandOff does not save it — the
+            // figure solves well outside that floor and still has its pick buried.
+            float half = CellMetrics.SizeXZ * 0.5f;
+            float aim = WorkStyle.Mining.AimFromCentre;
+
+            Assert.That(aim, Is.LessThan(half), "mining aims outside the cell it is cutting");
+            Assert.That(half - aim, Is.LessThan(0.3f),
+                $"mining aims {half - aim:F2} m inside the face, which is a buried head again");
+            Assert.That(aim, Is.GreaterThan(WorkStyle.Felling.AimFromCentre),
+                "mining aims no further out than felling, so it is still aiming at the middle of the block");
+        }
+
+        [Test]
+        public void EveryStyleAimsInsideItsOwnCellFromAnyApproach()
+        {
+            // Expressed as a distance from the centre rather than as a face point, and this is
+            // why: on the diagonal the cell boundary is 1.77 m out rather than 1.25 m, so one
+            // number is inside the cell from every approach angle where a chosen axis would not be.
+            float halfDiagonal = CellMetrics.SizeXZ * 0.5f * Mathf.Sqrt(2f);
+
+            foreach (WorkStyle style in WorkStyle.All)
+            {
+                Assert.That(style.AimFromCentre, Is.GreaterThan(0f),
+                    "an aim at or behind the centre puts the head through to the far side");
+                Assert.That(style.AimFromCentre, Is.LessThan(halfDiagonal),
+                    "the aim leaves the cell when the worker stands on the diagonal");
+            }
+        }
     }
 }

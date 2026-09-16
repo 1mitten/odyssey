@@ -940,6 +940,24 @@ namespace Odyssey.EditorTools
                 prefabName = "SM_Gen_Wep_Axe_01",
             });
 
+            // The pick, from the same pack for the same reasons, and chosen over two alternatives
+            // on measurements rather than taste (12-work-poses-and-tools.md §5): 0.53 x 0.74 x
+            // 0.09 against the axe's 0.27 x 0.74 x 0.08 — the same haft length to the centimetre
+            // and the same pivot convention, so it is the one pick in the packs already known to
+            // suit the fitting path. Western Frontier's is 0.98 m of haft, which reads as a sledge
+            // at board height, pivots at the butt rather than mid-haft, and has its filename
+            // misspelt in the pack, which is a permanent trap for anyone grepping.
+            //
+            // One caution recorded where it will be read: GripTool finds the haft as the long axis
+            // of the bounds, and the pick's margin is 0.74 against 0.53 — 1.4 : 1, against the
+            // axe's 2.7 : 1. The right axis still wins, but a pick modelled a hand longer in the
+            // head would be gripped by its own point, and it would look deliberate.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ToolPickaxe, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Wep_Pickaxe_01",
+            });
+
             // Colonists. A Synty character is a rigged humanoid with no MeshFilter anywhere on it,
             // so the ordinary prefab path finds no geometry at all and quietly falls back to a
             // grey box; ModuleLibrary.CollectSkinned explains why baking is the way out and what

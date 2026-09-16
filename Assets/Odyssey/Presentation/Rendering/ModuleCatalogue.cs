@@ -349,6 +349,13 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const string ToolAxe = Prefix + "tool.axe";
 
+        /// <summary>
+        /// The pick. Same pack as the axe, same pivot convention and the same haft length to the
+        /// centimetre, which is why it is the one prop in the packs already known to suit the
+        /// fitting path (<c>12-work-poses-and-tools.md</c> §5).
+        /// </summary>
+        public const string ToolPickaxe = Prefix + "tool.pickaxe";
+
         // Tufts of grass strewn over the ground. Decoration and nothing else: they block nothing,
         // are not in the save, and the simulation has never heard of them. What they are for is
         // that a field of one flat colour reads as a carpet, and a field with clumps standing up

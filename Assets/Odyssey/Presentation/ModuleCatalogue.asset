@@ -1201,6 +1201,24 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+  - moduleId: odyssey.module.tool.pickaxe
+    shape: 4
+    prefab: {fileID: 203093951140853599, guid: 02233d3c799d9b746bcfa1a8b34a3ade, type: 3}
+    prefabName: SM_Gen_Wep_Pickaxe_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.pawn.colonist
     shape: 4
     prefab: {fileID: 6597860165486235920, guid: 0a84514f554d6724098bbb2bd951d28b, type: 3}
