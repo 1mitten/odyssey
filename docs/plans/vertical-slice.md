@@ -141,6 +141,36 @@ critical path.
 
 ---
 
+## Deferred: the rest of the look (recorded 2026-09-16, owner deferred)
+
+Pull request #50 landed the day/night cycle, the golden hour under it, the hill wood and the B17
+settings stub. **The owner deferred the remainder rather than dropping it**, so it is written down
+here in the order it should be picked up, with what each depends on.
+
+The governing fact for all of it: **nobody has pressed Play.** Every judgement in #50, and every
+number in it, comes from contact sheets shot by editor tools and from `FrameTimeTests`. Contact
+sheets cannot show whether the light steps visibly at speed 3, whether night is genuinely playable
+rather than merely pretty, whether the panel sits correctly over a live scene, or whether a
+seventeen-minute day feels too fast. Those are cheap to find by playing and impossible to find any
+other way, so the first item is not code.
+
+| Item | Size | Depends on | Done when |
+|---|---|---|---|
+| **Play it** | S | — | The owner has run `Play.unity` through a full day at each speed and said what is wrong. Everything below may be re-tuned by what that finds, which is why it is first. |
+| **The Low quality tier** | M | — | The interview committed to a tier that drops the expensive effects for the 2022 laptop, and nothing tiers today. A URP asset per quality level plus a generated `VolumeProfile` per tier, assigned from `QualitySettings.GetQualityLevel()`; Low differs in exactly three ways (no depth of field, quarter-resolution bloom, FXAA) and keeps an identical grade. **The trap is recorded in `d-12`: use `volume.profile`, never `sharedProfile`, or a runtime override is written to the asset on disk.** Independent of the verdict above, and the only answer to the budget question — every figure on record is from an RTX 5070 Ti at 640 × 480, where post costs a fraction of what it does at 1080p. |
+| **The new levers in the settings panel** | S | Low tier | The panel exists precisely to compare looks and still offers only the four decoration switches it shipped with. Bloom, the grade, anti-aliasing and the day cycle all want rows, and the tier wants a preset control. Each new row is a `ui.settings.*` key in `icon-keys.csv` with the wiki and registry regenerated in the same commit. |
+| **Sun shafts** | L | The framing experiment | **The case for these improved when the cycle landed and the plan should say why.** `d-13` blocked them because at a 48° pitch a fixed overhead sun sits about 120° off the view direction — behind the camera, where a radial blur has nothing to radiate from. The cycle now sweeps the sun from roughly east to west and holds it low at both ends of the day, so there are hours where it is plainly in frame. The experiment is unchanged and still comes first: two sliders in `Play.unity`, and if no framing works the fallback is billboard shafts, which is a different question. Design committed in `d-13`: half-res R8 mask from depth only, three 12-tap blur passes, full-res Screen composite at `AfterRenderingSkybox` so the glow sits under our outline. |
+| **Tilt-shift** | M | — | `d-12` found URP's cheap depth of field blurs only the far field and cannot make a band at all, and Bokeh needs dishonest optics and a real pass. A fullscreen pass blurring by **screen Y** is exact, needs no depth texture, costs the same whatever the scene holds and tiers away trivially — and appears to be what the reference game does. Open question carried from the interview: whether the band should follow the active layer, which would make it a slice cue as well as a look. |
+| **Marsh reads as a sandy bank** | S | — | Pre-dates this work (ADR 0009) and is still open: either a greener tint or a different name. An owner call, not a technical one. |
+
+Two smaller corrections worth doing whenever the files are next open: `CLAUDE.md` still carries a
+stale line claiming `AxeBladeRoll` is 270 when the code says 0 and is right, and the concept
+renders' cyan-emissive night bar in `d-03-rendering.md` now differs from the shipped look, which
+the owner should reconcile rather than either document quietly winning.
+
+---
+
+
 ## Risk register for the slice
 
 Ordered by how much trouble each would cause, with the cheapest experiment that would settle it.
