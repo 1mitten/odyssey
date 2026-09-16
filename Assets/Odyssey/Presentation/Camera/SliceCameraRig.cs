@@ -101,6 +101,55 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         public event Action<CellRef?, Ray>? Picked;
 
+        /// <summary>
+        /// Raised when a left drag that became a box is released, with the screen rect and whether
+        /// shift was held. A press that never crossed the drag threshold raises <see cref="Picked"/>
+        /// instead, so the box and the click cannot both fire off one press.
+        /// </summary>
+        public event Action<Rect, bool>? BoxSelected;
+
+        /// <summary>
+        /// The screen rect of the box being dragged, or none. Polled by the HUD each frame to draw
+        /// the marquee, because a marquee is a picture, not a decision.
+        /// </summary>
+        public Rect? DragBox => _boxActive && _dragStart.HasValue ? RectFromTo(_dragStart.Value, _draggedTo) : null;
+
+        /// <summary>
+        /// Set by the interface: true while a designate tool is armed, and then the world gesture
+        /// belongs to designation rather than to selection.
+        ///
+        /// <para><b>Somebody has to own a press, and until now nobody did.</b> `BoxSelected` and
+        /// `Picked` are events, so designation could simply subscribe — and then a drag with the
+        /// mine tool armed would mark the rock <i>and</i> box-select every colonist under it. Two
+        /// consumers of one gesture with no arbiter is the bug, not the merge.</para>
+        ///
+        /// <para>This is deliberately the same shape as <see cref="PointerOverInterface"/>: a
+        /// predicate the rig consults, owned by whoever knows the answer, rather than the rig
+        /// growing an opinion about tools. It is the cheap half of design 09 §6's
+        /// <c>InputRouter</c> — one claim, checked once, at the moment the gesture completes. The
+        /// capture stack and the eight enumerated cases are still that router's to build; this
+        /// settles only the one case that is in the way today.</para>
+        /// </summary>
+        public Func<bool>? WorldToolArmed { get; set; }
+
+        /// <summary>
+        /// A completed world gesture that belongs to a tool: the cell the drag started on and the
+        /// cell it ended on, both on the active layer.
+        ///
+        /// <para>Cells rather than a screen rect, because only the rig can turn a screen point
+        /// into a cell — it holds the render mirror and the picker. A click with no travel raises
+        /// this too, with both cells the same, which is what makes "click to mark one" and "drag
+        /// to mark many" one gesture rather than two.</para>
+        /// </summary>
+        public event Action<CellRef, CellRef>? ToolDrag;
+
+        /// <summary>A press must travel this many pixels before it counts as a box and not a click.</summary>
+        const float DragThresholdPixels = 6f;
+
+        Vector2? _dragStart;
+        Vector2 _draggedTo;
+        bool _boxActive;
+
         public void Bind(WorldRenderModel model, ChunkRenderer renderer, HudDirectors directors)
         {
             _model = model;
@@ -222,9 +271,61 @@ namespace Odyssey.Presentation.CameraRig
                 _orbiting = false;
             }
 
+            // A left press on the world is a click until it travels: past the threshold it
+            // becomes a box, and on release the box is completed against the world even if the
+            // pointer ends over a panel (input case 1 of design 09 §6) — a drag begun on the
+            // world belongs to the world. The press itself was gated on the interface, so a
+            // drag begun on a panel never starts (case 2).
             if (mouse.leftButton.wasPressedThisFrame && !_orbiting && !overInterface)
-                PickAt(pointer);
+            {
+                _dragStart = pointer;
+                _draggedTo = pointer;
+                _boxActive = false;
+            }
+            if (_dragStart.HasValue && mouse.leftButton.isPressed)
+            {
+                _draggedTo = pointer;
+                if (!_boxActive && (pointer - _dragStart.Value).sqrMagnitude
+                    >= DragThresholdPixels * DragThresholdPixels)
+                    _boxActive = true;
+            }
+            else if (_dragStart.HasValue)
+            {
+                bool shift = Keyboard.current?.shiftKey.isPressed == true;
+                Vector2 start = _dragStart.Value;
+                bool wasBox = _boxActive;
+                _dragStart = null;
+                _boxActive = false;
+                // Who owns this press. Asked once, on release, so arming a tool mid-drag cannot
+                // turn a half-drawn selection box into an order.
+                if (WorldToolArmed != null && WorldToolArmed())
+                {
+                    if (CellAt(start, out CellRef anchor) && CellAt(_draggedTo, out CellRef head))
+                        ToolDrag?.Invoke(anchor, head);
+                }
+                else if (wasBox) BoxSelected?.Invoke(RectFromTo(start, _draggedTo), shift);
+                else PickAt(_draggedTo);
+            }
         }
+
+        /// <summary>
+        /// The one place a screen position becomes a ray. Shared so that a tool drag and a
+        /// selection click cannot resolve the same pixel to different cells.
+        /// </summary>
+        Ray RayAt(Vector2 screenPosition) =>
+            GetComponent<UnityEngine.Camera>()
+                .ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
+
+        /// <summary>The cell under a screen point on the active layer, or false when the ray misses.</summary>
+        bool CellAt(Vector2 screenPosition, out CellRef cell)
+        {
+            cell = default;
+            if (_model == null) return false;
+            return SlicePicker.Pick(RayAt(screenPosition), _model, ActiveLayer, out cell);
+        }
+
+        static Rect RectFromTo(Vector2 a, Vector2 b) => Rect.MinMaxRect(
+            Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
 
         float DistanceScale => Mathf.Clamp(_targetDistance / 40f, 0.35f, 3f);
 
@@ -304,8 +405,7 @@ namespace Odyssey.Presentation.CameraRig
         void PickAt(Vector2 screenPosition)
         {
             if (_model == null) return;
-            var camera = GetComponent<UnityEngine.Camera>();
-            Ray ray = camera.ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
+            Ray ray = RayAt(screenPosition);
             if (SlicePicker.Pick(ray, _model, ActiveLayer, out CellRef cell)) Picked?.Invoke(cell, ray);
             else Picked?.Invoke(null, ray);
         }

@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 
@@ -30,13 +31,23 @@ namespace Odyssey.Hud
     {
         public readonly List<RosterCard> Cards = new List<RosterCard>();
 
-        public void Refresh(WorldSnapshot snapshot, PawnId selected)
+        public void Refresh(WorldSnapshot snapshot, PawnId selected) =>
+            Refresh(snapshot, selected.IsValid ? new[] { selected } : Array.Empty<PawnId>());
+
+        /// <summary>
+        /// Marks a card selected for every member of a multi-selection, so the roster bar answers
+        /// a drag box on the world the same frame the brackets do.
+        /// </summary>
+        public void Refresh(WorldSnapshot snapshot, IReadOnlyList<PawnId> selected)
         {
             Cards.Clear();
             var pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length; i++)
             {
                 PawnView pawn = pawns[i];
+                bool isSelected = false;
+                for (int s = 0; s < selected.Count; s++)
+                    if (selected[s] == pawn.Id) { isSelected = true; break; }
                 Cards.Add(new RosterCard
                 {
                     Id = pawn.Id,
@@ -46,7 +57,7 @@ namespace Odyssey.Hud
                     Rest = pawn.Rest,
                     JobDef = pawn.JobDef,
                     Layer = pawn.Cell.Y,
-                    Selected = pawn.Id == selected,
+                    Selected = isSelected,
                 });
             }
         }

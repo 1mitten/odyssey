@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
@@ -96,6 +97,10 @@ namespace Odyssey.Presentation.Ui
         NeedViews _mood = new();
         Label _tombReason = null!;
 
+        // the drag-select marquee, and the roster's shift-drag sweep state
+        VisualElement _marquee = null!;
+        bool _sweepingRoster;
+
         struct CardView
         {
             public VisualElement Root;
@@ -146,6 +151,14 @@ namespace Odyssey.Presentation.Ui
             _hud = new VisualElement { pickingMode = PickingMode.Ignore };
             _hud.AddToClassList("hud");
             root.Add(_hud);
+
+            // The drag-select marquee (A2's box in the world): a picture, not a decision, so it
+            // sits here and polls the rig's rect every frame rather than subscribing to anything.
+            // Screen-bottom-left origins become panel-top-left ones in UpdateMarquee.
+            _marquee = new VisualElement { pickingMode = PickingMode.Ignore };
+            _marquee.AddToClassList("marquee");
+            _marquee.style.display = DisplayStyle.None;
+            _hud.Add(_marquee);
 
             // The left edge is one column, not two absolute slots: the ledger and the architect
             // palette stack inside it, so neither can ever sit on top of the other.
@@ -232,10 +245,37 @@ namespace Odyssey.Presentation.Ui
         /// a click on a panel never reaches the world (input case 2 of design 09 §6); the shell
         /// element itself is non-pickable, so empty screen still belongs to the world.
         /// </summary>
+        /// <summary>
+        /// A pointer position, as the mouse reports it, in this panel's coordinates.
+        ///
+        /// <para><b>The Y axis has to be turned over first, and that is the whole of it.</b>
+        /// <c>Mouse.current.position</c> is screen space with its origin at the <i>bottom</i> left
+        /// and y climbing upward; a UI Toolkit panel has its origin at the <i>top</i> left with y
+        /// climbing downward. <see cref="RuntimePanelUtils.ScreenToPanel"/> resolves the panel's
+        /// own scaling — which is why it cannot simply be divided out by hand — but it does not
+        /// turn the axis over, so handing it a mouse position directly mirrors everything about
+        /// the middle of the screen.</para>
+        ///
+        /// <para>Reported by the owner against the drag marquee: "the selectable box does not come
+        /// from the mouse cursor but actually quite below it some distance... like the exact
+        /// opposite side of the screen". Mirrored is exactly what that describes, and the x axis
+        /// being right is what identifies it.</para>
+        ///
+        /// <para><b><see cref="PointOverUi"/> had the same line and therefore the same fault</b>,
+        /// which is worse because it fails quietly: it decides whether a click belongs to the HUD
+        /// or to the world, so a press near the bottom bar was tested against the top of the
+        /// screen. <c>docs/plans/next-session-prompt.md</c> item 2 already recorded that guard as
+        /// shipping "on inspection only" with no test, and this is what was waiting in it. Both
+        /// call sites go through here now so they cannot disagree again.</para>
+        /// </summary>
+        Vector2 ToPanel(Vector2 screenPosition) =>
+            RuntimePanelUtils.ScreenToPanel(
+                _hud.panel, new Vector2(screenPosition.x, Screen.height - screenPosition.y));
+
         public bool PointOverUi(Vector2 screenPosition)
         {
             if (_hud == null || _hud.panel == null) return false;
-            VisualElement? hit = _hud.panel.Pick(RuntimePanelUtils.ScreenToPanel(_hud.panel, screenPosition));
+            VisualElement? hit = _hud.panel.Pick(ToPanel(screenPosition));
             return hit != null && hit != _hud;
         }
 
@@ -296,6 +336,39 @@ namespace Odyssey.Presentation.Ui
                 RefreshClock();
                 RefreshRuler();
             }
+
+            UpdateMarquee();
+
+            // The roster sweep ends when the button does, wherever the pointer happens to be when
+            // it ends — a card's own PointerUp never arrives if the release landed off the bar.
+            if (_sweepingRoster && UnityEngine.InputSystem.Mouse.current?.leftButton.isPressed != true)
+                _sweepingRoster = false;
+        }
+
+        /// <summary>
+        /// The marquee follows the rig's box every frame — a 15 Hz marquee trails the cursor and
+        /// reads as lag. Screen coordinates grow from the bottom-left; panel coordinates grow
+        /// from the top-left, so the rect is flipped once, here, at the only place that draws it.
+        /// </summary>
+        void UpdateMarquee()
+        {
+            Rect? box = _rig?.DragBox;
+            if (box == null || _hud.panel == null)
+            {
+                _marquee.style.display = DisplayStyle.None;
+                return;
+            }
+
+            // Both corners through the same conversion. Screen min-y is the BOTTOM of the box
+            // and panel min-y is the top, so which corner is which flips with the axis — hence the
+            // Min/Max pair below rather than using min for left/top directly.
+            Vector2 min = ToPanel(box.Value.min);
+            Vector2 max = ToPanel(box.Value.max);
+            _marquee.style.left = Mathf.Min(min.x, max.x);
+            _marquee.style.top = Mathf.Min(min.y, max.y);
+            _marquee.style.width = Mathf.Abs(max.x - min.x);
+            _marquee.style.height = Mathf.Abs(max.y - min.y);
+            _marquee.style.display = DisplayStyle.Flex;
         }
 
         void OnLayerChanged(int layer)
@@ -499,7 +572,7 @@ namespace Odyssey.Presentation.Ui
             var world = _boot!.World;
             if (world == null) return;
             _roster.Refresh(world.Views.Current,
-                selected: _directors != null ? _directors.Selection.Pawn : PawnId.None);
+                selected: _directors != null ? _directors.Selection.Pawns : (IReadOnlyList<PawnId>)Array.Empty<PawnId>());
 
             while (_cards.Count < _roster.Cards.Count)
             {
@@ -529,11 +602,28 @@ namespace Odyssey.Presentation.Ui
                 card.Add(bar);
 
                 int index = _cards.Count;
-                card.RegisterCallback<ClickEvent>(_ =>
+
+                // Shift is the roster's toggle, exactly as it is in the world: a shift-press on a
+                // card turns it on or off without moving the camera, and while shift is held a
+                // drag across cards toggles each one it crosses (A2 "drag-select a range"). A
+                // plain press keeps the jump: a card is a way of getting to someone far away.
+                card.RegisterCallback<PointerDownEvent>(evt =>
                 {
-                    if (index < _roster.Cards.Count && _boot!.World != null)
-                        _directors?.ChooseColonist(_roster.Cards[index].Id, _boot.World.Views.Current);
+                    if (index >= _roster.Cards.Count || _boot!.World == null) return;
+                    PawnId id = _roster.Cards[index].Id;
+                    if (evt.shiftKey)
+                    {
+                        _sweepingRoster = true;
+                        _directors?.Selection.Toggle(id);
+                    }
+                    else _directors?.ChooseColonist(id, _boot.World.Views.Current);
                 });
+                card.RegisterCallback<PointerEnterEvent>(_ =>
+                {
+                    if (!_sweepingRoster || index >= _roster.Cards.Count) return;
+                    _directors?.Selection.Toggle(_roster.Cards[index].Id);
+                });
+
                 _rosterHost.Add(card);
                 _cards.Add(new CardView
                 {
@@ -765,7 +855,15 @@ namespace Odyssey.Presentation.Ui
             switch (_inspect.Subject)
             {
                 case InspectSubject.Colonist:
-                    return $"{_inspect.Job}  ·  {_inspect.Position}  ·  mood {MoodBands.Band(_inspect.Mood)}";
+                    {
+                        // A multi-selection shows the primary colonist in full, with the size of
+                        // the set said out loud: "3 selected" is the whole of what a pane can add
+                        // to several brackets until commands arrive (A9).
+                        string count = _directors != null && _directors.Selection.HasMultiple
+                            ? $"{_directors.Selection.Pawns.Count} selected  ·  "
+                            : string.Empty;
+                        return count + $"{_inspect.Job}  ·  {_inspect.Position}  ·  mood {MoodBands.Band(_inspect.Mood)}";
+                    }
                 case InspectSubject.Item:
                     return _inspect.Position;
                 case InspectSubject.Cell:
