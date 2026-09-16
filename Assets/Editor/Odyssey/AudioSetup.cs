@@ -34,18 +34,36 @@ namespace Odyssey.EditorTools
 
         const int Rate = 44_100;
 
-        [MenuItem("Odyssey/Presentation/Build audio placeholders")]
-        public static void BuildFromMenu() => Build(exitWhenDone: false);
+        [MenuItem("Odyssey/Presentation/Build audio catalogue")]
+        public static void BuildFromMenu() =>
+            Build(exitWhenDone: false, overwritePlaceholders: false);
+
+        /// <summary>
+        /// Throw away the clips folder's base clips and put the synthesised stand-ins back.
+        /// Named for what it does, because under those filenames there may be audio somebody
+        /// paid for.
+        /// </summary>
+        [MenuItem("Odyssey/Presentation/Overwrite audio clips with placeholders")]
+        public static void RebuildPlaceholdersFromMenu()
+        {
+            if (EditorUtility.DisplayDialog(
+                    "Overwrite audio clips?",
+                    $"This replaces the base clip of every sound in {ClipFolder} with its " +
+                    "synthesised placeholder. Sourced audio under those names is lost.",
+                    "Overwrite", "Cancel"))
+                Build(exitWhenDone: false, overwritePlaceholders: true);
+        }
 
         /// <summary>Batchmode entry point. Exits 0 on success, 1 on failure.</summary>
-        public static void Build() => Build(exitWhenDone: Application.isBatchMode);
+        public static void Build() =>
+            Build(exitWhenDone: Application.isBatchMode, overwritePlaceholders: false);
 
-        static void Build(bool exitWhenDone)
+        static void Build(bool exitWhenDone, bool overwritePlaceholders)
         {
             int exit = 0;
             try
             {
-                GenerateClips();
+                GenerateClips(overwritePlaceholders);
                 BuildCatalogue();
             }
             catch (System.Exception e)
@@ -61,45 +79,138 @@ namespace Odyssey.EditorTools
 
         // ---- the clips ----
 
-        static void GenerateClips()
+        /// <summary>
+        /// One clip the game expects to find, and how it is to be imported.
+        ///
+        /// <para>The table is the contract with whoever sources the real audio: a file of this
+        /// name in this folder becomes this sound, imported as the class its use demands, with
+        /// no code change. <c>docs/reference/audio-sourcing.md</c> is the same table written for
+        /// a person holding a sound library.</para>
+        /// </summary>
+        internal readonly struct ClipSpec
+        {
+            public readonly string Name;
+            public readonly AudioCompressionFormat Format;
+            public readonly AudioClipLoadType LoadType;
+
+            /// <summary>Whether the file is flattened to one channel on import. A spatialised
+            /// source is placed in the world and has to be mono to be placed at all; music is
+            /// nowhere, and keeps the stereo image it was mixed with.</summary>
+            public readonly bool Mono;
+
+            public readonly bool LoadInBackground;
+
+            /// <summary>The synthesised stand-in, used only when no file of this name exists.</summary>
+            public readonly System.Func<float[]> Placeholder;
+
+            public ClipSpec(string name, AudioCompressionFormat format, AudioClipLoadType loadType,
+                bool mono, bool loadInBackground, System.Func<float[]> placeholder)
+            {
+                Name = name;
+                Format = format;
+                LoadType = loadType;
+                Mono = mono;
+                LoadInBackground = loadInBackground;
+                Placeholder = placeholder;
+            }
+        }
+
+        /// <summary>
+        /// Every clip the shipped catalogue names.
+        ///
+        /// Impacts are PCM decompressed on load, so there is no decode at the moment they play.
+        /// The water bed is ADPCM, the manual's own answer for noisy sounds played in quantity.
+        /// Music is Vorbis streamed from disc, because decompressed Vorbis costs some ten times
+        /// its compressed size in memory and a track is long.
+        /// </summary>
+        internal static readonly ClipSpec[] Clips =
+        {
+            new("water", AudioCompressionFormat.ADPCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, () => Water(6.0f)),
+            new("chop", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, Chop),
+            new("pick", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: true, loadInBackground: false, Pick),
+            new("alert", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
+                mono: false, loadInBackground: false, Alert),
+            new("music-day", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
+                mono: false, loadInBackground: true,
+                () => Music(24f, 130.81f, 196.00f, 329.63f, 0.11f)),
+            new("music-night", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
+                mono: false, loadInBackground: true,
+                () => Music(24f, 110.00f, 164.81f, 261.63f, 0.07f)),
+        };
+
+        /// <summary>How many numbered takes of one sound the tool looks for.</summary>
+        internal const int MaxVariants = 16;
+
+        /// <summary>
+        /// Write a placeholder for every clip that is missing, and set the import class on every
+        /// clip that is there.
+        ///
+        /// <para><b>A file that exists is never overwritten.</b> Real audio arrives under these
+        /// names — that is what the naming is for — and a tool that lays its placeholders back
+        /// over the top destroys work somebody paid for. Wiping the folder back to the
+        /// synthesised stand-ins has to be asked for, and the menu item that asks says so.</para>
+        ///
+        /// <para>The import settings are applied either way, so a sourced file gets the class its
+        /// use demands without anyone remembering the inspector, and so does a variant dropped in
+        /// beside its sibling.</para>
+        /// </summary>
+        static void GenerateClips(bool overwritePlaceholders)
         {
             Directory.CreateDirectory(ClipFolder);
 
-            // Water: two bands of low-passed noise, breathing slowly, looped seamlessly by
-            // crossfading the tail into the head. A bed, not an event: nothing may happen in it.
-            WriteWav($"{ClipFolder}/water.wav", Rate, Water(6.0f));
-            Import($"{ClipFolder}/water.wav", AudioCompressionFormat.ADPCM,
-                AudioClipLoadType.DecompressOnLoad);
+            int written = 0, kept = 0;
+            foreach (ClipSpec spec in Clips)
+            {
+                foreach (string path in PathsFor(spec.Name, includeMissingBase: true))
+                {
+                    bool isBase = path == BasePath(spec.Name);
 
-            // A chop: a soft body thump under a short burst of bite. Wood is dull; the pitch
-            // variance in the catalogue does the rest of the work.
-            WriteWav($"{ClipFolder}/chop.wav", Rate, Chop());
-            Import($"{ClipFolder}/chop.wav", AudioCompressionFormat.PCM,
-                AudioClipLoadType.DecompressOnLoad);
+                    if (!File.Exists(path) || (overwritePlaceholders && isBase))
+                    {
+                        WriteWav(path, Rate, spec.Placeholder());
+                        written++;
+                    }
+                    else
+                    {
+                        kept++;
+                    }
 
-            // A pick strike: a click and a ring. Stone rings; wood does not.
-            WriteWav($"{ClipFolder}/pick.wav", Rate, Pick());
-            Import($"{ClipFolder}/pick.wav", AudioCompressionFormat.PCM,
-                AudioClipLoadType.DecompressOnLoad);
+                    Import(path, spec.Format, spec.LoadType, spec.Mono, spec.LoadInBackground);
+                }
+            }
 
-            // The alert chime: two tones, falling, clean attack and decay so it reads as a chime
-            // and not as a beep that was cut off.
-            WriteWav($"{ClipFolder}/alert.wav", Rate, Alert());
-            Import($"{ClipFolder}/alert.wav", AudioCompressionFormat.PCM,
-                AudioClipLoadType.DecompressOnLoad);
+            Debug.Log($"[AudioSetup] {written} placeholder clip(s) written, {kept} existing " +
+                      $"clip(s) kept and re-imported, in {ClipFolder}.");
+        }
 
-            // The music: one chord each, every partial an integer number of cycles in the loop
-            // length so the loop point is sample-exact. Day is a major triad, night the same
-            // shape a third lower and darker; 24 s each, streamed.
-            WriteWav($"{ClipFolder}/music-day.wav", Rate, Music(24f, 130.81f, 196.00f, 329.63f, 0.11f));
-            Import($"{ClipFolder}/music-day.wav", AudioCompressionFormat.Vorbis,
-                AudioClipLoadType.Streaming, loadInBackground: true);
+        static string BasePath(string name) => $"{ClipFolder}/{name}.wav";
 
-            WriteWav($"{ClipFolder}/music-night.wav", Rate, Music(24f, 110.00f, 164.81f, 261.63f, 0.07f));
-            Import($"{ClipFolder}/music-night.wav", AudioCompressionFormat.Vorbis,
-                AudioClipLoadType.Streaming, loadInBackground: true);
+        /// <summary>
+        /// Every file standing for one sound: <c>chop.wav</c>, and any <c>chop_01.wav</c>,
+        /// <c>chop_02.wav</c> … beside it.
+        ///
+        /// Variants are how a colony stops sounding like a typewriter, and they are a file rather
+        /// than a code change: the director already picks one at random per play, so three takes
+        /// of an axe in wood are three files with a suffix and nothing else.
+        /// </summary>
+        internal static System.Collections.Generic.List<string> PathsFor(
+            string name, bool includeMissingBase = false)
+        {
+            var paths = new System.Collections.Generic.List<string>();
 
-            Debug.Log($"[AudioSetup] wrote six placeholder clips to {ClipFolder}.");
+            string root = BasePath(name);
+            if (includeMissingBase || File.Exists(root)) paths.Add(root);
+
+            for (int i = 1; i <= MaxVariants; i++)
+            {
+                string variant = $"{ClipFolder}/{name}_{i:00}.wav";
+                if (File.Exists(variant)) paths.Add(variant);
+            }
+
+            return paths;
         }
 
         /// <summary>White noise through a one-pole lowpass — the workhorse of every placeholder
@@ -253,6 +364,26 @@ namespace Odyssey.EditorTools
                 Clip(name) ?? throw new System.InvalidOperationException(
                     $"[AudioSetup] {ClipFolder}/{name}.wav did not import; the catalogue was not written.");
 
+            // Every take of one sound, in the order the folder gives them: the base file and any
+            // numbered siblings. Three files named chop.wav, chop_01.wav and chop_02.wav are
+            // three variants of the felling blow, and the director picks one per swing.
+            AudioClip[] Variants(string name)
+            {
+                var clips = new System.Collections.Generic.List<AudioClip>();
+                foreach (string path in PathsFor(name))
+                {
+                    AudioClip? clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+                    if (clip != null) clips.Add(clip);
+                }
+
+                if (clips.Count == 0)
+                    throw new System.InvalidOperationException(
+                        $"[AudioSetup] no clip for '{name}' imported from {ClipFolder}; " +
+                        "the catalogue was not written.");
+
+                return clips.ToArray();
+            }
+
             var catalogue = AssetDatabase.LoadAssetAtPath<AudioCatalogue>(CataloguePath);
             if (catalogue == null)
             {
@@ -266,7 +397,7 @@ namespace Odyssey.EditorTools
                 new AudioCatalogue.SoundDef
                 {
                     Id = SoundIds.WorkChop,
-                    Clips = new[] { Require("chop") },
+                    Clips = Variants("chop"),
                     Bus = SoundBus.Effects,
                     Volume = 0.85f, VolumeVariance = 0.15f, PitchVariance = 0.07f,
                     SpatialBlend = 1f, MinDistance = 5f, MaxDistance = 48f,
@@ -275,7 +406,7 @@ namespace Odyssey.EditorTools
                 new AudioCatalogue.SoundDef
                 {
                     Id = SoundIds.WorkPick,
-                    Clips = new[] { Require("pick") },
+                    Clips = Variants("pick"),
                     Bus = SoundBus.Effects,
                     Volume = 0.8f, VolumeVariance = 0.14f, PitchVariance = 0.06f,
                     SpatialBlend = 1f, MinDistance = 5f, MaxDistance = 52f,
@@ -284,7 +415,7 @@ namespace Odyssey.EditorTools
                 new AudioCatalogue.SoundDef
                 {
                     Id = SoundIds.AlertStarving,
-                    Clips = new[] { Require("alert") },
+                    Clips = Variants("alert"),
                     Bus = SoundBus.Alerts,
                     Volume = 0.9f, VolumeVariance = 0f, PitchVariance = 0f,
                     SpatialBlend = 0f, MinDistance = 1f, MaxDistance = 500f,
@@ -316,7 +447,7 @@ namespace Odyssey.EditorTools
         // ---- plumbing ----
 
         static void Import(string path, AudioCompressionFormat format, AudioClipLoadType loadType,
-            bool loadInBackground = false)
+            bool mono, bool loadInBackground)
         {
             AssetDatabase.ImportAsset(path);
             if (AssetImporter.GetAtPath(path) is not AudioImporter importer) return;
@@ -326,7 +457,10 @@ namespace Odyssey.EditorTools
             settings.compressionFormat = format;
             settings.sampleRateSetting = AudioSampleRateSetting.PreserveSampleRate;
             importer.defaultSampleSettings = settings;
-            importer.forceToMono = true;
+            // Only where the sound has a position. A spatialised source is placed in the world
+            // and a stereo file cannot be placed; music is nowhere, and forcing every clip to
+            // mono threw away the image it was mixed with.
+            importer.forceToMono = mono;
             importer.loadInBackground = loadInBackground;
             importer.SaveAndReimport();
         }
