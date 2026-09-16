@@ -927,6 +927,43 @@ namespace Odyssey.Sim.Pathing
             return id;
         }
 
+        /// <summary>
+        /// Put a ladder between two vertically adjacent open cells, unless one is already there.
+        /// Returns the connector id, or -1 if nothing was added.
+        ///
+        /// <para><b>Why a dug shaft gets one.</b> A fall edge is one-way and excluded from
+        /// districts, so a colonist who cut its way down a shaft would be in a district of its
+        /// own: unable to climb out, and — because every work-giver scan gates on the district
+        /// comparison — invisible to every job on the surface. It would not even look like a bug
+        /// from outside; the colony would simply stop having a colonist. A declared connector is
+        /// the only vertical edge that can be walked, so cutting a shaft has to declare one.</para>
+        ///
+        /// <para><b>What it is standing in for.</b> A free ladder appearing in a hole is a
+        /// fiction. The honest version is a ladder edifice the colony builds out of wood, which
+        /// declares both of its ends the way every other connector does, and it should replace
+        /// this the moment there is a build job to make one with. Until then this is the smallest
+        /// thing that makes depth reachable at all, and it is deliberately confined to
+        /// <c>MineJobDriver.MineCell</c> so there is one place to delete it from.</para>
+        ///
+        /// <para>It is also not saved, because a runtime connector is not part of the grid — the
+        /// same gap as OQ-08, which keeps a mined cell out of the save too. A world reloaded
+        /// mid-dig comes back with its shafts unclimbable, and both halves are fixed by the same
+        /// piece of work.</para>
+        /// </summary>
+        public int EnsureLadder(int lowerCell, int upperCell)
+        {
+            if ((uint)lowerCell >= (uint)Size.CellCount) return -1;
+            if ((uint)upperCell >= (uint)Size.CellCount) return -1;
+            if (upperCell - lowerCell != Size.LayerStride) return -1;
+
+            // Both ends already carry a ladder footprint: there is one here, and adding a second
+            // would flag the same cells twice and leave a connector nothing can remove.
+            const NavFlags ladder = NavFlags.ConnectorLadder;
+            if ((Grid.Flags[lowerCell] & ladder) != 0 && (Grid.Flags[upperCell] & ladder) != 0) return -1;
+
+            return AddConnector(ConnectorKind.Ladder, new[] { lowerCell }, new[] { upperCell });
+        }
+
         void FlagConnectorCell(int cell, NavFlags footprint, int connectorId)
         {
             Grid.Flags[cell] |= footprint;

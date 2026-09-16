@@ -172,6 +172,15 @@ namespace Odyssey.Sim.Pathing
         /// A door is walkable here whatever its state: the mode decides whether it may pass, and
         /// pushing that decision into the link and the per-cell entry test keeps closed doors
         /// from carving the region graph apart every time one shuts.
+        ///
+        /// <para><b>A connector is its own floor.</b> A cell carrying a declared stair, ladder or
+        /// lift footprint has something to stand in whether or not a slab happens to be under it,
+        /// because that is what those things are. Without this a vertical shaft is unusable: only
+        /// its bottom cell rests on anything, so every cell above it fails the floor test, is
+        /// therefore not walkable, and the portal links at both ends of the ladder have nothing to
+        /// join — a shaft laddered from top to bottom that nothing can climb. The rule is stated
+        /// here rather than worked around at each end because "can something stand here" is this
+        /// method's one question.</para>
         /// </summary>
         public void RefreshFrom(CellGrid grid, int index)
         {
@@ -179,7 +188,7 @@ namespace Odyssey.Sim.Pathing
 
             bool solid = grid.IsSolidTerrain(index);
             bool blocked = grid.IsBlockedByEdifice(index);
-            bool floor = grid.HasFloor(index);
+            bool floor = grid.HasFloor(index) || (sticky & NavFlags.Connector) != 0;
             bool door = (sticky & NavFlags.Door) != 0;
 
             NavFlags f = sticky;

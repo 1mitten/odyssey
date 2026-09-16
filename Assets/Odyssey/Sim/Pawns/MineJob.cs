@@ -180,11 +180,39 @@ namespace Odyssey.Sim.Pawns
             int above = cell + size.LayerStride;
             if (above < size.CellCount) ctx.Nav.MarkDirty(above);
 
+            // 3a. A shaft has to be climbable, or the colonist that cut it is lost down it.
+            LadderTheShaft(ctx, cell);
+
             // 4. Anybody standing on this cell is now standing on nothing.
             StepDownOntoTheFloorJustCut(ctx, cell);
 
             // 5. What the cell was made of, if it left anything.
             SpawnYield(ctx, cell, terrain);
+        }
+
+        /// <summary>
+        /// Join a newly opened cell to whichever of its vertical neighbours is also open.
+        ///
+        /// <para>Both directions, because a shaft is cut in both: downward, where the cell above
+        /// is the one the colonist was standing in, and upward, where a dig breaks into a chamber
+        /// or an older working from below. Asking the question as "is my vertical neighbour open"
+        /// covers the two without caring which happened.</para>
+        ///
+        /// <para>The ladder itself is a placeholder, and <see cref="NavGraph.EnsureLadder"/> says
+        /// what for.</para>
+        /// </summary>
+        static void LadderTheShaft(PawnContext ctx, int cell)
+        {
+            GridSize size = ctx.Size;
+            CellGrid grid = ctx.Cells;
+
+            int above = cell + size.LayerStride;
+            if (above < size.CellCount && !grid.IsSolidTerrain(above) && !grid.IsBlockedByEdifice(above))
+                ctx.Nav.EnsureLadder(cell, above);
+
+            int below = cell - size.LayerStride;
+            if (below >= 0 && !grid.IsSolidTerrain(below) && !grid.IsBlockedByEdifice(below))
+                ctx.Nav.EnsureLadder(below, cell);
         }
 
         static void MarkChunksAround(PawnContext ctx, int cell)
