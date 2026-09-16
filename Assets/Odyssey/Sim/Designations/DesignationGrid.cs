@@ -101,7 +101,7 @@ namespace Odyssey.Sim.Designations
             switch (kind)
             {
                 case DesignationKind.Mine:
-                    return _grid.IsSolidTerrain(index);
+                    return CanMine(index);
                 case DesignationKind.Deconstruct:
                     return TryEdificeDef(index, out ushort built) && built < NaturalContent.FirstEdifice;
                 case DesignationKind.Fell:
@@ -109,6 +109,28 @@ namespace Odyssey.Sim.Designations
                 default:
                     return false;
             }
+        }
+
+        /// <summary>
+        /// Can this cell be dug out at all?
+        ///
+        /// <para>Solid terrain, and not bedrock. **Bedrock is the floor of the world**, not merely
+        /// an expensive rock: it refuses the order outright rather than quoting the 2,400 ticks it
+        /// would otherwise take — roughly forty trees for one cell of nothing. An order a colonist
+        /// would spend a day on and get no material from is worse than no order, because the
+        /// colonist takes the day.</para>
+        ///
+        /// <para>And not the ground under a standing tree. Digging it away would leave the tree
+        /// rooted in mid-air, and the right answer is to fell it first rather than to invent a
+        /// falling rule here. The order becomes available the moment the tree is gone.</para>
+        /// </summary>
+        public bool CanMine(int index)
+        {
+            if (!_grid.IsSolidTerrain(index)) return false;
+            if (_grid.Terrain[index] == NaturalContent.TerrainBedrock) return false;
+
+            int above = index + _grid.Size.LayerStride;
+            return above >= _grid.Size.CellCount || !IsTree(above);
         }
 
         /// <summary>Whether a tree stands in the cell right now.</summary>
