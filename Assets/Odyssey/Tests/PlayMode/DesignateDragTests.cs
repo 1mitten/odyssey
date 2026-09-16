@@ -35,6 +35,13 @@ namespace Odyssey.Tests.PlayMode
         /// <summary>What the rig resolved the last gesture to, or null when it never fired.</summary>
         (CellRef Anchor, CellRef Head)? _resolved;
 
+        /// <summary>Whether the selection events fired instead — which would mean the tool gate said no.</summary>
+        bool _pickedFired;
+        bool _boxFired;
+
+        /// <summary>Where the gesture was aimed, so the diagnosis can re-ask the picker about it.</summary>
+        Vector2 _aim;
+
         /// <summary>Frames to let the drag reach the rig, the intent reach the tick, and the tick reach the snapshot.</summary>
         const int SettleFrames = 12;
 
@@ -63,8 +70,13 @@ namespace Odyssey.Tests.PlayMode
                     "no tree on the active layer is visible, so a felling order has nothing to aim at");
 
                 _resolved = null;
+                _pickedFired = false;
+                _boxFired = false;
                 rig.ToolDrag += (a, h) => _resolved = (a, h);
+                rig.Picked += (_, __) => _pickedFired = true;
+                rig.BoxSelected += (_, __) => _boxFired = true;
 
+                _aim = tree;
                 designate.Director.Tool = DesignateTool.Fell;
                 yield return _mouse.Drag(tree - new Vector2(60f, 60f), tree + new Vector2(60f, 60f));
                 for (int i = 0; i < SettleFrames; i++) yield return null;
@@ -106,8 +118,13 @@ namespace Odyssey.Tests.PlayMode
                     "no tree on the active layer is visible, so a felling order has nothing to aim at");
 
                 _resolved = null;
+                _pickedFired = false;
+                _boxFired = false;
                 rig.ToolDrag += (a, h) => _resolved = (a, h);
+                rig.Picked += (_, __) => _pickedFired = true;
+                rig.BoxSelected += (_, __) => _boxFired = true;
 
+                _aim = tree;
                 designate.Director.Tool = DesignateTool.Fell;
                 yield return _mouse.Click(tree);
                 for (int i = 0; i < SettleFrames; i++) yield return null;
@@ -246,14 +263,28 @@ namespace Odyssey.Tests.PlayMode
         string Diagnosis(OdysseyBootstrap boot, SliceCameraRig rig)
         {
             WorldSnapshot? snap = boot.World?.Views.Current;
-            string gesture = _resolved == null
-                ? "the rig never raised ToolDrag at all, so the gesture did not reach the presenter"
-                : $"the rig resolved the gesture to {_resolved.Value.Anchor}..{_resolved.Value.Head}";
+            // Which of the three ways the gesture can end actually happened, and — the question
+            // that separates a bad aim from a bad gate — whether the picker resolves that very
+            // screen point at all when asked directly.
+            string gesture = _resolved != null
+                ? $"the rig resolved the gesture to {_resolved.Value.Anchor}..{_resolved.Value.Head}"
+                : _pickedFired || _boxFired
+                    ? $"the rig sent it to SELECTION instead (Picked={_pickedFired}, Box={_boxFired}), " +
+                      "so WorldToolArmed answered false"
+                    : "the rig raised nothing at all: neither ToolDrag nor the selection events";
+
+            Camera? cam = Camera.main;
+            string resolves = "not checked";
+            if (cam != null && boot.Model != null)
+                resolves = SlicePicker.Pick(cam.ScreenPointToRay(new Vector3(_aim.x, _aim.y, 0f)),
+                    boot.Model, rig.ActiveLayer, out CellRef hit)
+                    ? $"the picker resolves that point to {hit}"
+                    : "THE PICKER CANNOT RESOLVE THAT POINT AT ALL, so the aim is still wrong";
 
             return snap == null
                 ? "there is no published frame at all."
                 : $"Active layer {rig.ActiveLayer}, snapshot slice layer {snap.SliceLayer}, " +
-                  $"designation channel {snap.DesignationCellCount} cells, and {gesture}.";
+                  $"designation channel {snap.DesignationCellCount} cells; {gesture}; and {resolves}.";
         }
 
         static Vector2 Near(float x, float y) => new Vector2(Screen.width * x, Screen.height * y);
