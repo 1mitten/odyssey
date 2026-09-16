@@ -67,6 +67,8 @@ namespace Odyssey.Presentation.Ui
         // ---- element references, resolved once the tree is built
         VisualElement _hud = null!;
         VisualElement _leftColumn = null!;
+        VisualElement _rightColumn = null!;
+        VisualElement _bottomRow = null!;
         readonly List<CardView> _cards = new List<CardView>();
         VisualElement _rosterHost = null!;
         VisualElement _rulerRows = null!;
@@ -143,6 +145,25 @@ namespace Odyssey.Presentation.Ui
             _leftColumn = new VisualElement();
             _leftColumn.AddToClassList("slot-left");
             _hud.Add(_leftColumn);
+
+            // And the right edge, for the same reason and after the same accident. The clock,
+            // the alerts and the ruler were three absolutely positioned slots with hand-picked
+            // offsets, so the alerts panel sat at a fixed 132px from the top whatever height the
+            // clock above it had grown to — and it had grown past it, burying the speed buttons.
+            // A column cannot do that: whatever each region's height turns out to be, the next
+            // one starts below it.
+            _rightColumn = new VisualElement();
+            _rightColumn.AddToClassList("slot-right");
+            _hud.Add(_rightColumn);
+
+            // And the bottom edge, third time. The tab bar, the overlay strip and the cancel
+            // button were three absolute slots along the same line, so the strip sat on top of
+            // the bar's right end and ate the last tab -- which read as the bar being too wide
+            // when it was not. In a row they divide the edge between them: the tabs take what is
+            // left after the other two have taken what they need.
+            _bottomRow = new VisualElement();
+            _bottomRow.AddToClassList("slot-bottom");
+            _hud.Add(_bottomRow);
 
             BuildLedger();
             BuildArchitect();
@@ -332,7 +353,7 @@ namespace Odyssey.Presentation.Ui
 
         void BuildLedger()
         {
-            var region = Region(_leftColumn, "A1 · RESOURCES", string.Empty);
+            var region = Region(_leftColumn, "A1 · RESOURCES", "slot-ledger");
             _ledgerRows = new VisualElement();
             _ledgerRows.AddToClassList("ledger");
             region.Add(_ledgerRows);
@@ -401,6 +422,15 @@ namespace Odyssey.Presentation.Ui
             var region = Region(_leftColumn, "A7 · ARCHITECT", "arch");
             var cats = new VisualElement();
             cats.AddToClassList("arch__cats");
+
+            // The categories scroll. The left column is not tall enough for the ledger and ten
+            // categories at once -- and USS lengths here are reference pixels, not screen ones,
+            // so the column is about 353 of them however large the monitor is. Left to flex, the
+            // shortfall lands on whichever region yields first: it took the last row off the
+            // palette, and when the palette was told not to yield it crushed the ledger instead.
+            // A list too long for its panel should scroll rather than quietly lose its end.
+            var scroll = new ScrollView(ScrollViewMode.Vertical);
+            scroll.AddToClassList("arch__scroll");
             for (int i = 0; i < ArchitectCategories.Length; i++)
             {
                 var (key, label, _) = ArchitectCategories[i];
@@ -410,7 +440,8 @@ namespace Odyssey.Presentation.Ui
                 chip.RegisterCallback<ClickEvent>(_ => SelectArchitectCategory(index));
                 cats.Add(chip);
             }
-            region.Add(cats);
+            scroll.Add(cats);
+            region.Add(scroll);
 
             _archPalette = new VisualElement();
             _archPalette.AddToClassList("arch__tools");
@@ -502,7 +533,7 @@ namespace Odyssey.Presentation.Ui
 
         void BuildClock()
         {
-            var region = Region(_hud, "A3 · TIME   ·   A4 · SPEED", "slot-clock");
+            var region = Region(_rightColumn, "A3 · TIME   ·   A4 · SPEED", "slot-clock");
             var body = new VisualElement();
             body.AddToClassList("clock");
             _clockTime = Label(string.Empty, "clock__time");
@@ -556,12 +587,12 @@ namespace Odyssey.Presentation.Ui
 
         void BuildAlerts()
         {
-            var region = Region(_hud, "A5 · ALERTS", "slot-alerts");
+            var region = Region(_rightColumn, "A5 · ALERTS", "slot-alerts");
             var body = new VisualElement();
             body.AddToClassList("alerts");
             body.Add(Label("No active alerts.", "alerts__empty"));
             body.Add(Label("Conditions arrive with M2; each will carry its layer and a jump target.",
-                "alerts__empty"));
+                "alerts__note"));
             region.Add(body);
         }
 
@@ -569,7 +600,7 @@ namespace Odyssey.Presentation.Ui
 
         void BuildRuler()
         {
-            var region = Region(_hud, "A11 · DEPTH", "slot-ruler");
+            var region = Region(_rightColumn, "A11 · DEPTH", "slot-ruler");
             _rulerActive = Label(string.Empty, "ruler__active");
             region.Add(_rulerActive);
             _rulerRows = new VisualElement();
@@ -839,7 +870,7 @@ namespace Odyssey.Presentation.Ui
                 chip.tooltip = TabKeys[i] + " — " + TabReasons[i];
                 bar.Add(chip);
             }
-            _hud.Add(bar);
+            _bottomRow.Add(bar);
         }
 
         static readonly string[] OverlayKeys =
@@ -868,7 +899,7 @@ namespace Odyssey.Presentation.Ui
                 button.tooltip = key[11..].Capitalise() + " — overlay channels arrive with M4";
                 strip.Add(button);
             }
-            _hud.Add(strip);
+            _bottomRow.Add(strip);
         }
 
         void BuildCancel()
@@ -877,7 +908,7 @@ namespace Odyssey.Presentation.Ui
             cancel.AddToClassList("cancel");
             cancel.Add(Label("✕", "cancel__x"));
             cancel.tooltip = "Nothing to cancel — tools and panels arrive with M3";
-            _hud.Add(cancel);
+            _bottomRow.Add(cancel);
         }
 
         // ------------------------------------------------------------ formatting
