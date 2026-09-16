@@ -32,6 +32,9 @@ namespace Odyssey.Tests.PlayMode
     {
         MouseHarness _mouse = null!;
 
+        /// <summary>What the rig resolved the last gesture to, or null when it never fired.</summary>
+        (CellRef Anchor, CellRef Head)? _resolved;
+
         /// <summary>Frames to let the drag reach the rig, the intent reach the tick, and the tick reach the snapshot.</summary>
         const int SettleFrames = 12;
 
@@ -58,6 +61,9 @@ namespace Odyssey.Tests.PlayMode
                 Camera camera = Camera.main!;
                 Assume.That(TryFindATreeOnScreen(boot, rig, camera, out Vector2 tree, out CellRef treeCell), Is.True,
                     "no tree on the active layer is visible, so a felling order has nothing to aim at");
+
+                _resolved = null;
+                rig.ToolDrag += (a, h) => _resolved = (a, h);
 
                 designate.Director.Tool = DesignateTool.Fell;
                 yield return _mouse.Drag(tree - new Vector2(60f, 60f), tree + new Vector2(60f, 60f));
@@ -98,6 +104,9 @@ namespace Odyssey.Tests.PlayMode
                 Camera camera = Camera.main!;
                 Assume.That(TryFindATreeOnScreen(boot, rig, camera, out Vector2 tree, out CellRef treeCell), Is.True,
                     "no tree on the active layer is visible, so a felling order has nothing to aim at");
+
+                _resolved = null;
+                rig.ToolDrag += (a, h) => _resolved = (a, h);
 
                 designate.Director.Tool = DesignateTool.Fell;
                 yield return _mouse.Click(tree);
@@ -215,7 +224,13 @@ namespace Odyssey.Tests.PlayMode
                 cell = size.FromIndex(i);
                 if (cell.Y != rig.ActiveLayer) continue;
 
-                Vector3 point = camera.WorldToScreenPoint(CellMetrics.FloorCentre(cell));
+                // The DRAWN floor, not the nominal one. Relief is a drawing offset — CLAUDE.md
+                // is explicit that CellMetrics.FloorCentre is untouched by it and every draw site
+                // applies it — and SlicePicker deliberately meets each cell's own tilted floor
+                // rather than one flat plane per layer. Project the unlifted centre and the ray
+                // comes back to a different cell, by up to a cell at this camera pitch.
+                Vector3 point = camera.WorldToScreenPoint(
+                    GroundRelief.Lift(CellMetrics.FloorCentre(cell)));
                 if (point.z <= 0f) continue;
                 if (point.x < 0f || point.y < 0f || point.x > Screen.width || point.y > Screen.height) continue;
 
@@ -228,14 +243,17 @@ namespace Odyssey.Tests.PlayMode
 
         /// <summary>What the world looked like when an assertion failed, so one run answers the
         /// next question rather than costing another round.</summary>
-        static string Diagnosis(OdysseyBootstrap boot, SliceCameraRig rig)
+        string Diagnosis(OdysseyBootstrap boot, SliceCameraRig rig)
         {
             WorldSnapshot? snap = boot.World?.Views.Current;
+            string gesture = _resolved == null
+                ? "the rig never raised ToolDrag at all, so the gesture did not reach the presenter"
+                : $"the rig resolved the gesture to {_resolved.Value.Anchor}..{_resolved.Value.Head}";
+
             return snap == null
                 ? "there is no published frame at all."
                 : $"Active layer {rig.ActiveLayer}, snapshot slice layer {snap.SliceLayer}, " +
-                  $"designation channel {snap.DesignationCellCount} cells. If the two layers " +
-                  "differ, the channel is a slice through somewhere else and this oracle is blind.";
+                  $"designation channel {snap.DesignationCellCount} cells, and {gesture}.";
         }
 
         static Vector2 Near(float x, float y) => new Vector2(Screen.width * x, Screen.height * y);
