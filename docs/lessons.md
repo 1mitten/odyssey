@@ -770,6 +770,41 @@ conclusion: a stubbing experiment "proved" the suspect loop was innocent when in
 never been applied — the file was unchanged. Read the file back, or use the Edit tool, before
 believing an experiment that depends on an edit.
 
+## Driving the mouse in a PlayMode test: three silent failures, in order
+
+`OQ-40` was blocked for a week on "mouse input cannot be driven in a PlayMode test". It can. Three
+separate things stop it, each of which looks exactly like the others from outside, and none of
+which reports anything:
+
+1. **There is no mouse.** `Mouse.current` is null in a batch run: no window, no pointer, no device.
+   Queueing state at it does nothing, and `SliceCameraRig.ReadMouse` returns immediately when the
+   device is null, so nothing downstream can be reached. `InputSystem.AddDevice<Mouse>()` fixes it.
+2. **The device you add is disabled.** `backgroundBehavior` defaults to
+   `ResetAndDisableNonBackgroundDevices` and a batch player is never focused, so the device is
+   disabled and every event is dropped. Set `InputSettings.BackgroundBehavior.IgnoreFocus` and
+   enable the device. This one is also why an early attempt looked like it worked: between adding
+   a device and focus being applied there is a window where events do land, so the same test passed
+   when it ran first and failed when it ran second.
+3. **Nothing processes the queue, and a queued event does not survive the frame.** The player loop
+   never calls `InputSystem.Update()` in a batch run, and queueing in one frame and updating in the
+   next delivers nothing — queue and update have to be one act.
+
+Then there is the observation problem on top: **a test coroutine resumes after every `Update` has
+run**, so it is always too late to see a delta control, which is spent within the frame. A
+coroutine reading `mouse.scroll` therefore cannot tell "delivered and consumed by the game" from
+"never delivered at all". That is what made the earlier three tests pass vacuously.
+
+The answer is `MouseHarness` plus `InputPump` in `Tests/PlayMode`: a component at
+`DefaultExecutionOrder(-10000)` that takes posted state, queues **and** updates at the top of the
+frame, and records what the device read immediately afterwards. The game then reads it through its
+ordinary path later in the same frame, and the recording is what lets the harness fail loudly.
+
+**Assert the intent, not the smoothed value.** The first working version still failed: a notch
+moved the camera's *target* by six units but its drawn `distance` by 0.457, because the rig smooths
+exponentially and a batch player runs frames in about a millisecond. The same test would have
+passed on a machine running at sixty frames a second. `SliceCameraRig.TargetDistance` exists for
+this: it moves the instant input is read and does not drift, so the assertion and its control are
+both exact. Any frame-rate-dependent assertion is a flaky test waiting for a faster machine.
 ## Photographing a figure: the mesh is not square to its own root
 
 Three traps, all found in one afternoon building `GestureCheck`, and all three produced pictures
