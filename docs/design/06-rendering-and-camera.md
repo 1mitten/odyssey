@@ -341,14 +341,14 @@ a precision modifier instead, which is allowed on purpose.
 
 | Layer relative to the slice | Rendered | Interactive |
 |---|---|---|
-| Above the active layer | Ghosted outline, heavily transparent, or hidden entirely (a player setting) | **Never** |
+| Above the active layer | Ghosted outline, heavily transparent, or hidden entirely (a player setting) | **Never** (amended — see §3c: solid is clickable, a ghost never is) |
 | The active layer | Fully, and with its ceiling slab suppressed so interiors are visible | Yes |
-| 1 to N layers below | Fully, progressively darkened with depth | No |
+| 1 to N layers below | Fully, progressively darkened with depth | No (amended — see §3c) |
 | Deeper than N below | Not drawn | No |
 
 Three decisions inside that table are deliberate:
 
-1. **Layers above are never interactive.** Going Medieval's single most-reported complaint is misclicking something on another floor, with players reporting buildings deconstructed by accident (`b-going-medieval.md`). Ghosted geometry is a depth cue and nothing else; selection and designation raycasts stop at the active layer. This costs nothing to decide now and is unpleasant to retrofit.
+1. **Layers above are never interactive.** Going Medieval's single most-reported complaint is misclicking something on another floor, with players reporting buildings deconstructed by accident (`b-going-medieval.md`). Ghosted geometry is a depth cue and nothing else; selection and designation raycasts stop at the active layer. This costs nothing to decide now and is unpleasant to retrofit. **Amended 2026-09-16 by §3c, and the amendment keeps the sentence that was doing the work: a *ghost* is never a pointer target. What changed is that above the surface nothing above the slice is a ghost any more.**
 2. **The active layer is drawn roofless.** The ceiling slab of the active layer is suppressed — exactly what the concept renders show, and the only way interiors read at all. The slab is still *there* in the simulation; this is purely a render decision.
 3. **Layers below stay visible and darkened.** This is the depth cue that makes a hole in the floor legible as a hole rather than a black square, and it is what makes building above an occupied room comprehensible. N and the darkening curve are settings, because the right value is a matter of taste and screen size.
 
@@ -419,6 +419,62 @@ the new one is four. Nothing on the board being played pays anything at all.
 The six ADR 0006 modes are untouched and still ship. Switching `followDepth` off obeys every field
 exactly as before, which is what choosing a mode explicitly does: the V key's first press pins
 whatever is on screen and hands over control, and cycling past the last mode gives the default back.
+
+### 3c. What can be clicked is what is drawn solid (owner, 2026-09-16)
+
+§3 point 1 said selection and designation rays stop at the active layer. Once §3a made the whole
+stack above the surface draw **solid**, that rule started costing the player the world it had just
+been given:
+
+> *"On my default depth level I can only select objects/things on my level — I couldn't select the
+> stones for mining, for example. I should be able to click on an object in 3D space."*
+
+An outcrop standing two cells proud of the meadow is now drawn as a rock, at full opacity, and it
+could be looked at and not marked. So the rule is restated rather than dropped:
+
+| Layer, relative to the slice | Drawn | A pointer target |
+|---|---|---|
+| Above, solid (`full` / `roofs-off`, and the depth-following default above ground) | Yes | **Yes** |
+| Above, translucent (`ghost`, `xray`, `xray-min` — which is what underground gets) | Yes | **No** |
+| Above, hidden (`hide`) | No | No |
+| The active layer | Yes | Yes |
+| Below, within `belowDepth` | Yes, dimmed | **Yes** |
+| Below, beyond `belowDepth` | No | No |
+
+**The misclick complaint is answered by the second row, not by the first.** What makes a misclick a
+misclick is clicking a *cue* — a translucent hint of a wall, drawn to tell you something is there
+rather than to be operated on. Underground, where the layer overhead is x-rayed precisely so you can
+see through it, a click still cannot leave the active layer upwards and the old behaviour is
+unchanged, which is the case the Going Medieval reports are actually about. Dimmed is not ghosted: a
+layer below is opaque, and a ray only reaches one where nothing above it occludes — down a shaft,
+over a cliff, through a stairwell — which is exactly where a player means to click.
+
+**The old answers did not move, because of one tie-break.** A solid cell's top face and the floor of
+the air cell above it are the same surface at the same distance, so both layers offer a hit at the
+same ray parameter; the layer nearer the slice wins. Clicking the meadow therefore still gives the
+air cell you stand in — the cell a colonist occupies, a bed is placed in, a stockpile covers — and
+clicking an outcrop still gives the rock. Without the tie-break the first would have started
+returning the rock under the grass, which is the kind of regression that is invisible until a
+stockpile refuses to be drawn.
+
+**A surface that is not drawn is not clickable, and that has a case of its own.** The active layer's
+ceiling is the slab of the layer *above* it, and §3 point 2 meshes it away. So that one layer offers
+only what occludes: the rock over your head stays pickable, the dropped slab does not.
+
+**`SlicePicker` walks the band rather than raycasting the scene.** There are still no colliders —
+the world is instanced geometry with no GameObjects — so it clips the ray analytically to each
+candidate layer's slab and marches it, taking the nearest hit. The band is a `SliceSettings`
+question (`HighestSelectableLayer` / `LowestSelectableLayer`), so "selectable" and "drawn solid"
+come from the same object that decides what is drawn and cannot drift apart. Colonists follow the
+same band: `SelectionPresenter` culls the figure hit-test and the drag box against it, with one
+extra rule for a ray — a pawn must be at or above the layer of the cell the ray ended on, because
+the pick ray descends, so everything it met before the ground is at or above it. That is the cheap
+stand-in for comparing ray distances and it is exact for the only camera this game has.
+
+**Cost:** one cell march per candidate layer, on a click and on the hover that draws the cursor.
+Four layers above and three below on the prototype board is eight marches of at most a few hundred
+array reads. The band is capped at `WorldRenderModel.HighestOccupiedLayer`, the same cap the
+renderer's own loop uses, so a tall map does not march through empty sky.
 
 **Implementation:** per-layer visibility on the instanced batches, not a clipping plane. The renderer simply does not submit buckets outside the drawn range, which is cheaper than submitting and clipping, keeps shadow casters honest, and makes the ghosted layer a different material rather than a shader branch. A clip plane remains the fallback if a single mesh ever needs to be cut mid-cell, which the discrete-cell model is specifically designed to avoid.
 

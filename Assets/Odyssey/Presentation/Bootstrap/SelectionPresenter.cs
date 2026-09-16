@@ -67,9 +67,9 @@ namespace Odyssey.Presentation.Bootstrap
             // replaced a catchment radius of two cells — a five-by-five-cell square, twelve metres
             // across — that made it hard to click off a colonist or on to anything near one.
             //
-            // The picker cannot return a cell above the active layer, and the hit-test only looks
-            // at pawns on drawn layers, so a colonist upstairs is still never selected through
-            // the floor they are standing on.
+            // The picker returns the nearest cell on any solid-drawn layer, and the hit-test
+            // looks only at pawns at or above it, so a colonist upstairs is clickable where they
+            // are drawn and a colonist below the floor the ray stopped at is not.
             PawnId under = picked.HasValue
                 ? PawnUnderRay(world.Views.Current, ray, picked.Value.Y)
                 : PawnId.None;
@@ -84,7 +84,7 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 var camera = Camera();
                 var onScreen = new List<PawnId>();
-                if (camera != null && PawnsOnScreen(camera, world.Views.Current, _rig!.ActiveLayer, onScreen))
+                if (camera != null && PawnsOnScreen(camera, world.Views.Current, onScreen))
                 {
                     directors.Selection.PickMany(onScreen, additive: false, SelectionChange.Similar);
                     _lastClickPawn = PawnId.None;
@@ -108,13 +108,13 @@ namespace Odyssey.Presentation.Bootstrap
             // because the box is drawn on screen and so is the colonist — the test that matches
             // what the player saw is whether their point is inside the rect.
             var snapshot = world.Views.Current;
-            int activeLayer = _rig!.ActiveLayer;
+            SelectableBand(out int lowest, out int highest);
             var boxed = new List<PawnId>();
             var pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length; i++)
             {
                 PawnView pawn = pawns[i];
-                if (!Visible(pawn, activeLayer, snapshot)) continue;
+                if (!Visible(pawn, lowest, highest)) continue;
                 Vector3 point = camera.WorldToScreenPoint(ScreenPointOf(pawn));
                 if (point.z <= 0f) continue;
                 if (screenRect.Contains(new Vector2(point.x, point.y))) boxed.Add(pawn.Id);
@@ -124,44 +124,44 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         /// <summary>
-        /// Every colonist of the picked kind whose screen point is inside the viewport, on or
-        /// below the active layer — the population a double click means by "on screen".
-        /// </summary>
-        /// <summary>
-        /// Is this pawn on a layer the player can actually see?
+        /// Is this pawn on a layer the player can actually see and click?
         ///
-        /// <para><b>Both ends, and the lower one is the bug this exists for.</b> A ray pick is
-        /// constrained by the picker, which cannot return a cell above the active layer, so asking
-        /// only "not above" was safe there. A screen-rect containment test has no such constraint:
-        /// a colonist eight layers down projects to a screen point exactly like one at your feet,
-        /// so a box dragged across the surface selected miners underground that were never drawn.
-        /// The command grid would then act on colonists the player had never seen, let alone
-        /// chosen.</para>
+        /// <para><b>Both ends, and both are bugs this exists for.</b> The lower one came first: a
+        /// screen-rect containment test has no depth constraint, so a colonist eight layers down
+        /// projects to a screen point exactly like one at your feet, and a box dragged across the
+        /// surface selected miners underground that were never drawn. The command grid would then
+        /// act on colonists the player had never seen, let alone chosen.</para>
         ///
-        /// <para>The bounds are the ones the renderers cull against — <c>PawnFigureDirector.Sync</c>
-        /// and <c>ChunkRenderer.RenderActors</c> both use this pair — so "selectable" and "drawn"
-        /// cannot drift apart. That matters more since figures began being drawn <i>above</i> the
-        /// slice: ADR 0006 still says nothing above it may be a pointer target, so a colonist
-        /// working a storey up is deliberately visible and deliberately not selectable, and the
-        /// upper bound here is that decision rather than a leftover.</para>
+        /// <para>The upper one used to be the active layer, because ADR 0006 said nothing above
+        /// the slice may be a pointer target. The owner took that up on 2026-09-16 along with the
+        /// cell picker: above the surface every layer is drawn <i>solid</i>, and a figure working a
+        /// storey up that can be seen and not clicked is the same complaint as an outcrop that can
+        /// be seen and not mined. The bound is now the band the picker walks, which is the band the
+        /// renderer draws at full opacity — so "selectable" and "drawn solid" cannot drift
+        /// apart.</para>
         /// </summary>
-        bool Visible(PawnView pawn, int activeLayer, WorldSnapshot snapshot)
+        bool Visible(PawnView pawn, int lowest, int highest) =>
+            pawn.Cell.Y >= lowest && pawn.Cell.Y <= highest;
+
+        /// <summary>The layers a colonist may be selected on, matching <c>SlicePicker</c>'s band.</summary>
+        void SelectableBand(out int lowest, out int highest)
         {
-            if (pawn.Cell.Y > activeLayer) return false;
-
-            SliceSettings? slice = _rig != null ? _rig.slice : null;
-            if (slice == null) return true;
-
-            return pawn.Cell.Y >= Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
+            lowest = _rig != null ? Mathf.Max(0, _rig.LowestSelectableLayer) : 0;
+            highest = _rig != null ? _rig.HighestSelectableLayer : int.MaxValue;
         }
 
-        bool PawnsOnScreen(UnityEngine.Camera camera, WorldSnapshot snapshot, int activeLayer, List<PawnId> into)
+        /// <summary>
+        /// Every colonist whose screen point is inside the viewport, on a layer that can be seen
+        /// and clicked — the population a double click means by "on screen".
+        /// </summary>
+        bool PawnsOnScreen(UnityEngine.Camera camera, WorldSnapshot snapshot, List<PawnId> into)
         {
+            SelectableBand(out int lowest, out int highest);
             var pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length; i++)
             {
                 PawnView pawn = pawns[i];
-                if (!Visible(pawn, activeLayer, snapshot)) continue;
+                if (!Visible(pawn, lowest, highest)) continue;
                 Vector3 point = camera.WorldToScreenPoint(ScreenPointOf(pawn));
                 if (point.z <= 0f) continue;
                 if (point.x >= 0f && point.y >= 0f && point.x <= camera.pixelWidth && point.y <= camera.pixelHeight)
@@ -189,12 +189,20 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         /// <summary>
-        /// The nearest colonist whose cursor box the ray passes through, on or below the picked
-        /// layer. Placed with the same tween the figure is drawn with, so a walking colonist is
-        /// clickable where they appear, not where their cell says they are.
+        /// The nearest colonist whose cursor box the ray passes through, at or above the layer of
+        /// the cell the ray ended on. Placed with the same tween the figure is drawn with, so a
+        /// walking colonist is clickable where they appear, not where their cell says they are.
         /// </summary>
-        PawnId PawnUnderRay(WorldSnapshot snapshot, Ray ray, int activeLayer)
+        PawnId PawnUnderRay(WorldSnapshot snapshot, Ray ray, int pickedLayer)
         {
+            SelectableBand(out int lowest, out int highest);
+
+            // The pick ray descends, so everything it met before the terrain it stopped at is at
+            // or above that cell's layer — which is how a colonist standing on an outcrop stays
+            // clickable while a miner eight layers below, whose box the same ray clips long after
+            // it has already buried itself in the ground, does not. It is the cheap stand-in for
+            // comparing ray distances, and it is exact for the only camera this game has.
+            lowest = Mathf.Max(lowest, pickedLayer);
             Vector3 box = _bootstrap != null ? _bootstrap.colonistCursor : new Vector3(1.15f, 2.7f, 1.15f);
             float tickAlpha = _bootstrap != null ? _bootstrap.TickAlpha : 0f;
             int movePerTick = _bootstrap != null ? _bootstrap.MovePerTick : 0;
@@ -206,12 +214,7 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 PawnView pawn = pawns[i];
 
-                // The same bound as the box, and for the same reason. The ray runs down through
-                // the world from a camera looking at it obliquely, so it passes through cells many
-                // layers below the slice: a colonist down there whose cursor box the ray clips was
-                // pickable by an ordinary click without ever having been drawn. The remark above
-                // already claimed "the hit-test only looks at pawns on drawn layers"; now it does.
-                if (!Visible(pawn, activeLayer, snapshot)) continue;
+                if (!Visible(pawn, lowest, highest)) continue;
 
                 // The same tween the figure is drawn with, which is what the summary above claims
                 // and what this line did not do: it passed 0 and 0, placing the box at the tick

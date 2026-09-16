@@ -166,15 +166,18 @@ namespace Odyssey.Tests.Sim
             Assert.That(world.Intents.Rejected[0].Reason, Is.EqualTo(IntentRejection.NotPermitted));
             Assert.That(d.At(grid.Index(3, 3, Layer)), Is.EqualTo(DesignationKind.Fell));
 
+            // The channel is sparse and whole-world: one entry per order, carrying the cell index
+            // it was given at rather than an offset into the published layer. That is what lets an
+            // order given on an outcrop above the slice be drawn at all.
             var snapshot = world.Views.Current;
-            Assert.That(snapshot.Designations.Length, Is.EqualTo(grid.Size.LayerStride));
-            Assert.That(snapshot.Designations[grid.Size.Index(3, 3, 0)], Is.EqualTo((byte)DesignationKind.Fell),
-                "the slice channel is indexed within the layer");
+            Assert.That(snapshot.Orders.Length, Is.EqualTo(1), "one order was accepted, so one is published");
+            Assert.That(snapshot.Orders[0].CellIndex, Is.EqualTo(grid.Index(3, 3, Layer)));
+            Assert.That(snapshot.Orders[0].Kind, Is.EqualTo((byte)DesignationKind.Fell));
 
             world.Intents.Submit(new Intent(IntentKind.CancelDesignation, new CellRef(3, 3, Layer)));
             world.Tick();
             Assert.That(d.Count, Is.Zero);
-            Assert.That(world.Views.Current.Designations[grid.Size.Index(3, 3, 0)], Is.Zero);
+            Assert.That(world.Views.Current.Orders.Length, Is.Zero);
         }
 
         [Test]

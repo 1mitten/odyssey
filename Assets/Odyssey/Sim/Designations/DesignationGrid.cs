@@ -356,41 +356,35 @@ namespace Odyssey.Sim.Designations
             }
         }
 
-        // ---- ISnapshotContributor: one byte per cell of the active layer ---------------------
+        // ---- ISnapshotContributor: one entry per standing order, anywhere in the world -------
 
+        /// <summary>
+        /// Publish every standing order the colony has, with how far through it is.
+        ///
+        /// <para><b>Walked over the orders, not over the board.</b> The first version asked
+        /// <c>Fraction()</c> for all 14,400 cells of the active layer every tick, which cost
+        /// 0.055 ms on a board with no orders on it at all — twenty-eight times the entire rest of
+        /// the simulation, and it took the ten-day soak from 1 second a seed to 39. A layer has
+        /// fourteen thousand cells and a colony has tens of orders, so sparse is the right shape by
+        /// three orders of magnitude.</para>
+        ///
+        /// <para><b>And every layer, not the active one.</b> It used to copy the active layer's
+        /// slice of <c>_kinds</c>, which was right while a click could not reach another layer.
+        /// Since 2026-09-16 it can, so an order given on an outcrop standing over the meadow was
+        /// accepted, worked and never drawn — the player's reading being that nothing happened.
+        /// Publishing every order costs less than publishing one layer of mostly nothing did, and
+        /// presentation filters to the layers it is drawing.</para>
+        /// </summary>
         public void Contribute(SimWorld world, SnapshotWriter writer)
         {
-            var size = _grid.Size;
-            int layer = world.Views.SliceLayer;
-            if (layer < 0) layer = 0;
-            if (layer >= size.SizeY) layer = size.SizeY - 1;
-
-            var channel = writer.BeginDesignations(size.LayerStride);
-            new ReadOnlySpan<byte>(_kinds, layer * size.LayerStride, size.LayerStride).CopyTo(channel);
-
-            // How far along each order is, quantised to a byte. Presentation cannot work this out
-            // for itself: the denominator is the terrain's work-to-clear, which is content.
-            //
-            // **Walked over the orders, not over the layer.** This asked Fraction() for all 14,400
-            // cells of the active layer every tick, which cost 0.055 ms a tick on a board with no
-            // orders on it at all — twenty-eight times the entire rest of the simulation, and it
-            // took the ten-day soak from 1 second a seed to 39. A layer has fourteen thousand
-            // cells and a colony has tens of orders, so the sparse list is the right shape by
-            // three orders of magnitude; the clear is what makes the sparse write correct, since
-            // the snapshot is double-buffered and the buffer still holds the frame before last.
-            var progress = writer.BeginDesignationProgress(size.LayerStride);
-            progress.Clear();
-
-            int first = layer * size.LayerStride;
-            int last = first + size.LayerStride;
+            // _cells is sorted, so orders arrive in cell-index order and presentation gets a
+            // stable sequence rather than one that reshuffles as orders are given and carried out.
             for (int i = 0; i < _cells.Count; i++)
             {
                 int index = _cells[i];
-                // _cells is sorted, so the active layer is one contiguous run: skip to it, stop
-                // after it.
-                if (index < first) continue;
-                if (index >= last) break;
-                progress[index - first] = (byte)(Fraction(index) * 255f);
+                byte kind = _kinds[index];
+                if (kind == 0) continue;
+                writer.AddOrder(new OrderView(index, kind, (byte)(Fraction(index) * 255f)));
             }
         }
     }

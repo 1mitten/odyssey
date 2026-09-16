@@ -154,9 +154,14 @@ namespace Odyssey.Hud
         ///
         /// <para>Row by row from the low corner, and the order is part of the contract rather than
         /// an accident: these become intents, intents are hashed into the state, and a set of
-        /// orders that arrives in a different order on two machines is a divergence. The box is
-        /// always on the anchor's layer — the picker cannot return a cell above the active one, so
-        /// a drag cannot climb a wall half way across.</para>
+        /// orders that arrives in a different order on two machines is a divergence.</para>
+        ///
+        /// <para><b>The box is always on the anchor's layer</b>, and since 2026-09-16 that is a
+        /// rule this class enforces rather than one it inherits. The picker used to be clipped to
+        /// the active layer and now returns the nearest cell on any layer drawn solid, so a drag
+        /// dragged up the face of an outcrop would otherwise climb a wall half way across. Where
+        /// the drag *starts* is what it means: begin on the rock and the whole box is on the
+        /// rock's layer.</para>
         /// </summary>
         void CoveredInto(List<CellRef> into)
         {

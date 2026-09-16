@@ -53,41 +53,67 @@ namespace Odyssey.Tests.Sim
             colony.Designations.AddWork(cell, colony.Designations.WorkFor(cell) / 2);
             colony.World.Tick();
 
-            ReadOnlySpan<byte> progress = colony.World.Views.Current.DesignationProgress;
-            int offset = cell - Size.FromIndex(cell).Y * Size.LayerStride;
+            ReadOnlySpan<OrderView> orders = colony.World.Views.Current.Orders;
+            Assert.That(orders.Length, Is.EqualTo(1));
+            Assert.That(orders[0].CellIndex, Is.EqualTo(cell));
 
             // Half of 255, give or take the quantisation and the integer halving of odd work.
-            Assert.That(progress[offset], Is.InRange(120, 135),
+            Assert.That(orders[0].Progress, Is.InRange(120, 135),
                 "a face cut half way through is not published as half cut");
         }
 
         /// <summary>
-        /// The control for the sparse walk, and the reason it needs the clear: the snapshot is
-        /// double-buffered, so a cell written in one frame still holds its byte two frames later
-        /// unless the buffer is cleared. Without the clear this test reads the old value and the
-        /// rock face stays half cut on screen after the order is gone.
+        /// The control for the sparse walk. It used to guard a clear: the two per-cell channels
+        /// were written sparsely into a double-buffered array, so a cell written in one frame
+        /// still held its byte two frames later unless the buffer was cleared first, and a
+        /// cancelled order stayed half cut on screen. The channel is a counted list now, so the
+        /// hazard is gone by construction rather than by remembering — which is worth a test
+        /// precisely because the failure it replaces was silent.
         /// </summary>
         [Test]
         public void ACancelledOrderStopsBeingPublished()
         {
             ColonyWorld colony = Build();
             int cell = FindMinable(colony);
-            int offset = cell - Size.FromIndex(cell).Y * Size.LayerStride;
 
             colony.Designations.Designate(Size.FromIndex(cell), DesignationKind.Mine);
             colony.Designations.AddWork(cell, colony.Designations.WorkFor(cell) / 2);
             colony.World.Tick();
-            Assert.That(colony.World.Views.Current.DesignationProgress[offset], Is.GreaterThan(0),
+            Assert.That(colony.World.Views.Current.Orders.Length, Is.EqualTo(1),
                 "nothing was published, so the test below would pass for the wrong reason");
 
             colony.Designations.Cancel(Size.FromIndex(cell));
 
-            // Twice, because the buffer that must not hold a stale byte is the one two frames back.
+            // Twice, because the buffer that must not hold a stale entry is the one two frames back.
             colony.World.Tick();
             colony.World.Tick();
 
-            Assert.That(colony.World.Views.Current.DesignationProgress[offset], Is.Zero,
+            Assert.That(colony.World.Views.Current.Orders.Length, Is.Zero,
                 "a cancelled order is still drawn as a half-cut face");
+        }
+
+        /// <summary>
+        /// The reason the channel went whole-world on 2026-09-16: an order can be given on any
+        /// layer the player can click, which since the picker stopped being clipped to the slice
+        /// means any layer drawn solid. Publishing only the active layer meant an order on an
+        /// outcrop standing over the meadow was accepted, worked and never drawn.
+        /// </summary>
+        [Test]
+        public void AnOrderOffTheActiveLayerIsStillPublished()
+        {
+            ColonyWorld colony = Build();
+            int cell = FindMinable(colony);
+            CellRef at = Size.FromIndex(cell);
+
+            colony.Designations.Designate(at, DesignationKind.Mine);
+
+            // Put the slice somewhere else entirely, which is what used to erase it.
+            colony.World.Intents.Submit(new Intent(IntentKind.SetSliceLayer, a: at.Y + 2 < Size.SizeY ? at.Y + 2 : 0));
+            colony.World.Tick();
+
+            ReadOnlySpan<OrderView> orders = colony.World.Views.Current.Orders;
+            Assert.That(orders.Length, Is.EqualTo(1));
+            Assert.That(orders[0].CellIndex, Is.EqualTo(cell), "the order is published where it was given");
         }
 
         /// <summary>
