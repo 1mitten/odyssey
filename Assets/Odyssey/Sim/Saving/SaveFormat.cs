@@ -57,7 +57,8 @@ namespace Odyssey.Sim.Saving
         public void Write(ReadOnlySpan<byte> bytes)
         {
             _writer.Write(bytes.Length);
-            foreach (byte b in bytes) _writer.Write(b);
+            // One call, not one per byte: a 1.1 MiB grid section was a million writes (OQ-36).
+            _writer.Write(bytes);
         }
     }
 
