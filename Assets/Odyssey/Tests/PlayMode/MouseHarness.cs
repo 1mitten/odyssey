@@ -114,7 +114,7 @@ namespace Odyssey.Tests.PlayMode
         {
             Pump.Post(new MouseState { position = at }.WithButton(MouseButton.Left));
             yield return null;
-            InputSystem.QueueStateEvent(Device, new MouseState { position = at });
+            Pump.Post(new MouseState { position = at });
             yield return null;
         }
 
