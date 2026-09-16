@@ -52,6 +52,9 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Colonists spawned near the start location when the scene begins.")]
         public int colonistCount = 5;
 
+        [Tooltip("Which faces the colonists get. 0 draws a fresh cast every session; any other value pins one, and the log prints the value each session used so a cast you liked can be kept.")]
+        public int colonistLookSeed = 0;
+
         [Header("Presentation")]
         public ModuleCatalogue? moduleCatalogue;
         public SliceCameraRig? cameraRig;
@@ -153,11 +156,22 @@ namespace Odyssey.Presentation.Bootstrap
             _world.Intents.Submit(new Intent(IntentKind.SetSliceLayer, default, outcome.StartCell.Y));
             _world.Tick();
 
+            // The face lottery is a presentation choice and never enters the simulation, so it is
+            // free to be genuinely random per session — which is the point: with a fixed hash the
+            // starting five wore the same five faces every play and a cast of sixty-one read as a
+            // cast of five. Logged so a cast worth keeping can be pinned by copying the number
+            // into colonistLookSeed.
+            uint lookSalt = colonistLookSeed != 0
+                ? (uint)colonistLookSeed
+                : (uint)UnityEngine.Random.Range(1, int.MaxValue);
+            Debug.Log($"[Odyssey] colonist look seed {lookSalt} (set colonistLookSeed to keep this cast)");
+
             _renderer = new ChunkRenderer(_model)
             {
                 CastShadows = castShadows,
                 GameObjectLayer = gameObject.layer,
                 ScatterDensity = grassScatter,
+                ColonistLookSalt = lookSalt,
             };
             _actorMaterial = new Material(library.FallbackMaterial) { name = "Odyssey/Actor" };
             // High-contrast against grass, earth and stone, which tan was not.
@@ -165,7 +179,10 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Live figures for the pawns on screen. Everything else keeps the baked instanced
             // form, and so does everybody if the packs are absent or the catalogue has no gaits.
-            _figures = new PawnFigureDirector(moduleCatalogue, transform, gameObject.layer);
+            _figures = new PawnFigureDirector(moduleCatalogue, transform, gameObject.layer)
+            {
+                LookSalt = lookSalt,
+            };
 
             if (cameraRig != null)
             {

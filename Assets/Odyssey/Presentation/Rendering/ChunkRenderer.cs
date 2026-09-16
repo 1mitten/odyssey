@@ -57,6 +57,12 @@ namespace Odyssey.Presentation.Rendering
         public bool FoliageCastsShadows { get; set; }
 
         /// <summary>
+        /// Per-session salt for which face a baked colonist wears. Must match the figure director's
+        /// <c>LookSalt</c>, or a colonist changes identity on crossing the figure cap.
+        /// </summary>
+        public uint ColonistLookSalt { get; set; }
+
+        /// <summary>
         /// Tufts of grass per hundred grass cells. Zero is bare ground. Changing it after chunks
         /// have been meshed has no effect until they are meshed again, which is the same rule
         /// every other meshing decision follows.
@@ -275,7 +281,7 @@ namespace Odyssey.Presentation.Rendering
 
                 // The same face the live figures would have given this pawn, so a colonist does
                 // not change identity on crossing the figure cap.
-                int variant = ColonistLook.For(pawns[i].Id.Value, _colonistModules.Length);
+                int variant = ColonistLook.For(pawns[i].Id.Value, _colonistModules.Length, ColonistLookSalt);
                 ResolvedModule colonist = ColonistModule(variant);
 
                 if (!colonist.UsesArt || colonist.IsEmpty)

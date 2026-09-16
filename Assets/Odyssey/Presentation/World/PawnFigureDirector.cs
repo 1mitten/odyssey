@@ -147,7 +147,14 @@ namespace Odyssey.Presentation.World
         /// the drawn layers, and a colonist who came back from a trip downstairs as somebody else
         /// would be worse than a colony of identical twins.
         /// </summary>
-        int LookFor(PawnId pawn) => ColonistLook.For(pawn.Value, _looks.Length);
+        /// <summary>
+        /// Per-session salt for the face lottery. Set before the first <see cref="Sync"/> and then
+        /// left alone, and set to the *same* value on the instanced renderer, or a colonist will
+        /// change face on crossing the figure cap.
+        /// </summary>
+        public uint LookSalt { get; set; }
+
+        int LookFor(PawnId pawn) => ColonistLook.For(pawn.Value, _looks.Length, LookSalt);
 
         /// <summary>Gaits with a live clip, slowest first. Order is what makes the blend a blend.</summary>
         static LocomotionEntry[] Gaits(ModuleEntry? row)

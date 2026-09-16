@@ -17,8 +17,17 @@ namespace Odyssey.Presentation.Rendering
     /// </summary>
     public static class ColonistLook
     {
-        /// <summary>The face index for a pawn, or 0 when there is only one to choose from.</summary>
-        public static int For(int pawnId, int variants)
+        /// <summary>
+        /// The face index for a pawn, or 0 when there is only one to choose from.
+        ///
+        /// <paramref name="salt"/> is what makes a fresh session a fresh cast. Without it the
+        /// starting colony is always pawns 1 to 5, and a pure hash of the id deals those five the
+        /// same five faces every single time — so a cast of sixty-one looked like a cast of five.
+        /// The salt is chosen once per session by whoever owns the session and handed to every
+        /// drawer of colonists, so the same pawn still gets the same face everywhere *within* a
+        /// session; only between sessions does it change.
+        /// </summary>
+        public static int For(int pawnId, int variants, uint salt = 0u)
         {
             if (variants <= 1) return 0;
 
@@ -28,7 +37,7 @@ namespace Odyssey.Presentation.Rendering
             // being office workers.
             unchecked
             {
-                uint h = (uint)pawnId * 2654435761u;
+                uint h = ((uint)pawnId ^ salt) * 2654435761u;
                 h ^= h >> 15;
                 h *= 2246822519u;
                 h ^= h >> 13;
