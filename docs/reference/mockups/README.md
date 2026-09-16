@@ -37,10 +37,12 @@ using. Below about 800 pixels the density stops being reviewable.
    the owner picked **x-ray** by eye, and `docs/adr/0006-layer-visibility-policy.md` records it
    together with the three further modes and two axes the decision added. Brief Lane B still owns
    the prior-art half and now challenges a default rather than choosing one.
-2. **Density at a glance.** Can you read the screen without labels? The **Icons** control has
-   five positions. *Icon* is the target. *+ label* is what a fallback looks like if icon-only
-   proves unreadable. *Keys*, *Text only* and *Missing* are the three debug modes the game will
-   actually ship.
+2. **Density at a glance.** The **Icons** control has five positions, and **+ label is now the
+   default** — the owner's decision of 2026-09-16 (`09` §7a) is that while the icons are
+   placeholders a control is named by its full word, never by an abbreviation. *Icon* is what the
+   screen becomes again once real art is in the build; the question to review in that mode is
+   whether density survives the labels going away. *Keys*, *Text only* and *Missing* are the three
+   debug modes the game will actually ship.
 3. **Whether the region set is right.** Turn on **Annotate regions**. Every region shows its
    catalogue identifier, the director that owns it, the view fields it reads and its update
    cadence. Anything missing from the screen is missing from the design.

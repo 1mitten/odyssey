@@ -61,6 +61,12 @@ mip-maps, sRGB on, Read/Write off. Display at 32 and 64 only, and at 128 for a 2
 interface scale. Below 32 pixels do not draw a pixel-art icon at all: use the two-to-four character
 text badge that `09` §7 already specifies.**
 
+**Amended 2026-09-16 (owner).** The text badge is a rendering rule for a space too small to hold an
+icon, not a way of naming anything. Until real icon art is in the build, every icon-bearing control
+draws its **full name** beside the icon per `09` §7a, so the badge appears only inside a generated
+placeholder tile and below 32 pixels — and never as the only thing identifying a control. The
+pixel arithmetic in this ADR is unaffected; the labels are text and do not enter the icon atlas.
+
 Consequences that follow and are therefore also decided:
 
 - **Every texture under `Assets/Art/Ui/` is point-filtered, including the generated placeholders.**
