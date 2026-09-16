@@ -1158,3 +1158,48 @@ Two things generalise:
   visual fault, every test green, and the cycle looked perfect in every screenshot. The only
   symptom available was a number that had moved, which is the entire argument for having the number
   in the first place.
+
+## A PlayMode test cannot press a mouse button, and the suite said it could
+
+`MouseHarness` carries three documented failure modes, each measured, each fixed, each guarded by
+an assertion so it can never come back in silence. It looked like a finished piece of work. It was
+not: **no PlayMode test in this project has ever delivered a mouse press**, so every world gesture —
+click-to-inspect, box-select, drag-to-designate — has been untestable since the rig was written.
+
+**Why it stayed hidden.** The three fixed failures were all about state *arriving*, and the two
+gestures that had callers, `Scroll` and `MoveTo`, read plain values. **Reading a value has no frame
+gate; every edge property does.** `wasPressedThisFrame` is gated on
+`InputDevice.wasUpdatedThisFrame`, and that asks whether the device was updated in a *player*
+update. A PlayMode test runs inside the editor, where the update type is `Editor`. So the button
+goes down, `isPressed` reads true, and the press edge the game reads never exists at all.
+
+The measurement, which is the only reason any of this is known rather than argued:
+
+```
+press edges 0, release edges 0, deliveries with the button down 1,
+deliveries the device counted as this frame 0
+mode=ProcessEventsManually updateType=Editor
+```
+
+**Three method notes, in the order they cost time.**
+
+- **An unexercised helper is not code, it is a plan.** `Click` had shipped with no assertion and no
+  caller. The first test to call it failed, and four rounds of debugging went into the *product*
+  before anyone asked whether the harness worked — during which the real finding, that the rig
+  raised no gesture at all while the picker resolved the same point perfectly, read as an
+  impossible result rather than as the obvious symptom of a press that never happened.
+- **Assert what the helper claims, not what is convenient to check.** `Scroll` and `MoveTo` assert;
+  `Click` did not, and it is the one that was broken. A gesture helper should verify the thing the
+  game actually reads. `Click` now asserts the button went down, which is genuinely not enough —
+  it passes today while the edge never fires — and the docstring says so, because an assertion that
+  covers a third of a helper's claim is worth having only if nobody mistakes it for the whole.
+- **`[Ignore]`, never `Assume`.** `AClickIsSeenAsAPressAndARelease` is ignored with the reason in
+  the attribute, so it is visible in every run. An `Assume` would skip it in silence, which is
+  precisely how six `MineJobTests` sat dead on main — the trap this file already documents, walked
+  into again the same day by the person who wrote it down.
+
+**Still open, with one untried lead.** Setting `ProcessEventsManually` applied and changed nothing,
+because the mode is not what decides the update type. The next thing to try is asking for a player
+update explicitly — `InputSystem.Update(InputUpdateType.Dynamic)` in `InputPump` rather than the
+bare `InputSystem.Update()`, which resolves to `Editor` in this context. Un-ignore that test to find
+out.
