@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 # Odyssey: the fast test tier. Runs the pure-C# simulation tests with no Unity at all.
 #
-#   scripts/test-fast.sh                 run every Sim test
-#   scripts/test-fast.sh --filter Name~Def   run a subset (dotnet test filter syntax)
+#   scripts/test-fast.sh                        run the default tier (everything but Long)
+#   scripts/test-fast.sh --filter TestCategory=Long   run the slow ones
+#   scripts/test-fast.sh --filter Name~Def      run a subset (dotnet test filter syntax)
+#   ODYSSEY_TEST_ALL=1 scripts/test-fast.sh     run everything, Long included
+#
+# The default excludes TestCategory=Long, which is where soak runs, scale-target round trips and
+# anything else measured in seconds lives. That boundary is the reason the default tier stays
+# worth running after every commit: a tier nobody waits for is a tier nobody runs. Passing an
+# explicit --filter replaces the default entirely, so a filter of your own sees every test.
 #
 # Why this exists: Unity batchmode spends tens of seconds booting the editor, refreshing the
 # asset database and reloading the script domain. The tests themselves take about 0.06 seconds.
@@ -61,4 +68,15 @@ find_dotnet() {
 }
 
 DOTNET_BIN="$(find_dotnet)"
-exec "$DOTNET_BIN" test "$PROJECT" --nologo "$@"
+
+# dotnet test takes one --filter, so a caller's own filter replaces ours rather than joining it.
+has_filter=0
+for arg in "$@"; do
+  case "$arg" in --filter|--filter=*) has_filter=1 ;; esac
+done
+
+if [[ $has_filter -eq 1 || -n "${ODYSSEY_TEST_ALL:-}" ]]; then
+  exec "$DOTNET_BIN" test "$PROJECT" --nologo "$@"
+fi
+
+exec "$DOTNET_BIN" test "$PROJECT" --nologo --filter "TestCategory!=Long" "$@"
