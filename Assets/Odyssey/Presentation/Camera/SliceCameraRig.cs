@@ -183,7 +183,7 @@ namespace Odyssey.Presentation.CameraRig
             // the world zooms the camera. Until this guard the wheel did both at once — a scroll
             // down the ledger hauled the camera in behind it.
             float scroll = mouse.scroll.ReadValue().y;
-            if (Mathf.Abs(scroll) > 0.01f && !overInterface)
+            if (Mathf.Abs(scroll) > 0.01f) // CONTROL: guard removed
                 _targetDistance = Mathf.Clamp(
                     _targetDistance - Mathf.Sign(scroll) * zoomSpeed * DistanceScale,
                     minDistance, maxDistance);
