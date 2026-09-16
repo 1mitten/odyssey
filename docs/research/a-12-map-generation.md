@@ -136,4 +136,8 @@ Translation table — one line per RimWorld element:
 - Steam geyser count per map size and minimum spacing.
 - Per-ore commonality weights, lump sizes for ores other than steel, and deep-drill deposit sizes (wiki pages are stubs).
 - Noise specifics (octaves, frequencies, thresholds) beyond "layered Perlin-style noise".
-- Exactly how river carving interacts with terrain and bridges on the local map.
+- Exactly how river carving interacts with terrain and bridges on the local map. **Closed for
+  Odyssey's own purposes, 2026-09-16 (ADR 0009)**, without ever learning what RimWorld does: we
+  carve a channel one layer down and settle the banks around it until a bank stands exactly one
+  layer above its bed, and bridges are deferred with the build pipeline. The question of what the
+  reference game does remains unanswered and no longer blocks anything.

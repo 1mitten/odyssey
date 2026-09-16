@@ -65,6 +65,15 @@ namespace Odyssey.Presentation.Rendering
             new Color(0.20f, 0.20f, 0.22f),            // 15 bedrock
             new Color(0.46f, 0.32f, 0.22f),            // 16 iron ore
             new Color(0.13f, 0.13f, 0.15f),            // 17 coal seam
+
+            // Water carries its opacity in the alpha, which is the one place in this file where
+            // alpha means anything: Odyssey/Water reads _BaseColor.a directly, and it is how the
+            // two depths are told apart. They must stay close in hue — a body of water has one
+            // colour and gets darker, it does not change colour halfway across — so the deep
+            // entry is the shallow one darkened and closed up rather than a different blue.
+            new Color(0.28f, 0.52f, 0.55f, 0.62f),     // 18 shallow water — the bed reads through
+            new Color(0.10f, 0.26f, 0.34f, 0.90f),     // 19 deep water — almost nothing does
+            new Color(0.44f, 0.46f, 0.34f),            // 20 marsh — wet ground, not shadow
         };
 
         /// <summary>
@@ -100,6 +109,17 @@ namespace Odyssey.Presentation.Rendering
             Color.white,                               // 15 bedrock
             Color.white,                               // 16 iron ore
             Color.white,                               // 17 coal seam
+
+            // Water is never drawn over pack art — it has a shader of its own and the solids
+            // above are what it uses — so these two are placeholders that keep the arrays the
+            // same length, which is the invariant this file's own comment asks for.
+            Color.white,                               // 18 shallow water
+            Color.white,                               // 19 deep water
+            // Over the dirt texture: pulled green and kept bright. The first value tried was
+            // darker, and against a meadow lifted to 1.04/1.30/1.55 it read as shadow rather
+            // than as bog — the eye takes a dark band beside bright grass for a shade before it
+            // takes it for a material.
+            new Color(0.92f, 1.10f, 0.74f),            // 20 marsh
         };
 
         public static Color TerrainTint(int terrain) =>

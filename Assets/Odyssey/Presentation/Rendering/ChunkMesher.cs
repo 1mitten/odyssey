@@ -108,6 +108,21 @@ namespace Odyssey.Presentation.Rendering
 
         // --------------------------------------------------------------- cells
 
+        /// <summary>
+        /// How far up its own cell a water surface is drawn, as a fraction of the cell height.
+        ///
+        /// Both depths use the same number, and that is the point: a body of water has one
+        /// level. Shallow and deep sit side by side in the same pond, so drawing them at
+        /// different heights would put a step in the middle of the surface. Depth is told by
+        /// colour and opacity instead — which is also why the channel is one cell deep whatever
+        /// the depth, since a two-layer deep core would put neighbouring surface cells two layers
+        /// apart and break the invariant that keeps the board walkable.
+        ///
+        /// Just under a full cell, so the water nearly fills the channel it was cut into and a
+        /// bank reads as a low bank rather than as the lip of a dry ditch.
+        /// </summary>
+        public static float WaterSurface { get; set; } = 0.72f;
+
         void EmitTerrain(ChunkBatch batch, int index, int x, int z, int y)
         {
             ushort terrain = _model.Terrain(index);
@@ -115,6 +130,12 @@ namespace Odyssey.Presentation.Rendering
 
             int module = _model.TerrainModule(index);
             if (module == 0) return;
+
+            if (NaturalContent.IsWater(terrain))
+            {
+                EmitWater(batch, module, terrain, x, z, y);
+                return;
+            }
 
             int tint = TintCode.Terrain(terrain);
             // Terrain is the ground, so it is the one thing that is draped rather than lifted: the
@@ -132,6 +153,33 @@ namespace Odyssey.Presentation.Rendering
 
             if (!HasExposedFace(index, x, z, y)) return;
             AddBody(batch, module, tint, at);
+        }
+
+        /// <summary>
+        /// A water surface: one tile, draped onto the relief like any other ground so that a pond
+        /// on a rolling board does not cut across it, and raised inside its cell to
+        /// <see cref="WaterSurface"/>.
+        ///
+        /// It goes in the roof list with the rest of the ground, so a storey above the slice
+        /// drops its water along with its floor, and it carries a water tint code so the renderer
+        /// hands it <c>Odyssey/Water</c> rather than tinting a ground tile blue. No catalogue
+        /// entry is wanted and none is looked for: water has a shader of its own, so a clone
+        /// without the licensed packs draws exactly the same water as a machine with them.
+        /// </summary>
+        void EmitWater(ChunkBatch batch, int module, ushort terrain, int x, int z, int y)
+        {
+            Vector3 centre = CellMetrics.FloorCentre(x, z, y) + Vector3.up * (CellMetrics.SizeY * WaterSurface);
+
+            // **Lifted, not draped** — the one piece of ground-level geometry that is not sheared
+            // onto the relief, and the rule in `06-rendering-and-camera.md` already covers it:
+            // ground is sheared, everything standing on it is lifted. Water stands *in* the
+            // ground; it is not ground, and a water surface is level by definition.
+            //
+            // It also fixes a visible fault. A sheared tile disagrees with its neighbour along
+            // their shared edge, and where the ground's own texture hides that, a translucent
+            // surface does not: the disagreement overlaps, the overlap blends twice, and the
+            // board came out ruled into dark squares. Level tiles meet exactly.
+            AddRoof(batch, module, TintCode.Water(terrain), Matrix4x4.Translate(GroundRelief.Lift(centre)));
         }
 
         // ------------------------------------------------------------- scatter

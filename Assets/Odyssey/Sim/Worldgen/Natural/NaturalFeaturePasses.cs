@@ -6,7 +6,7 @@ using Odyssey.Sim.World;
 namespace Odyssey.Sim.Worldgen.Natural
 {
     /// <summary>
-    /// Pass 4 — rock outcrops.
+    /// Pass 6 — rock outcrops.
     ///
     /// Occasional stone formations standing above the ground: the early mining target, and the
     /// only vertical relief on a map that is otherwise a heightfield. A mound tapers with distance
@@ -18,7 +18,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// </summary>
     public sealed class RockOutcropPass : INaturalGenPass
     {
-        public int Order => 4;
+        public int Order => 6;
         public string Name => "Outcrops";
 
         public void Run(NaturalGenContext ctx)
@@ -38,6 +38,12 @@ namespace Odyssey.Sim.Worldgen.Natural
                 int cz = rng.NextInt(ctx.Size.SizeZ);
                 int radius = rng.NextInt(gen.minOutcropRadius, gen.maxOutcropRadius + 1);
                 int height = rng.NextInt(gen.minOutcropHeight, gen.maxOutcropHeight + 1);
+
+                // A mound rising out of a river would be rock standing in the water, and would
+                // break the fill pass's assumption that a water column's top solid cell is its
+                // bed. Rejecting on the centre rather than per cell keeps a mound from becoming
+                // a ring around a pond.
+                if (ctx.Water[ctx.Column(cx, cz)] != (byte)WaterClass.None) continue;
 
                 int placed = Raise(ctx, cx, cz, radius, height);
                 if (placed <= 0) continue;
@@ -72,6 +78,8 @@ namespace Odyssey.Sim.Worldgen.Natural
                 if (localHeight < 1) continue;
 
                 int column = ctx.Column(x, z);
+                if (ctx.Water[column] != (byte)WaterClass.None) continue;
+
                 int top = ctx.TopSolidY[column] + localHeight;
                 if (top > ceiling) top = ceiling;
                 if (top <= ctx.TopSolidY[column]) continue;
@@ -112,7 +120,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     }
 
     /// <summary>
-    /// Pass 6 — ore deposits.
+    /// Pass 8 — ore deposits.
     ///
     /// Lumps grown by a bounded random walk, the same shape the city generator scatters salvage
     /// with, and bounded for the same reason: an unbounded walk is the one worldgen construct that
@@ -126,7 +134,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// </summary>
     public sealed class OrePass : INaturalGenPass
     {
-        public int Order => 6;
+        public int Order => 8;
         public string Name => "Ore";
 
         public void Run(NaturalGenContext ctx)
@@ -215,7 +223,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     }
 
     /// <summary>
-    /// Pass 7 — the start location, and the consistency check that ends generation.
+    /// Pass 9 — the start location, and the consistency check that ends generation.
     ///
     /// The colony lands in a clearing: a square of ground that is flat, free of outcrops and free
     /// of trees, as near the middle of the map as one can be found. Flatness matters more than
@@ -230,7 +238,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// </summary>
     public sealed class NaturalStartPass : INaturalGenPass
     {
-        public int Order => 7;
+        public int Order => 9;
         public string Name => "Start";
 
         public void Run(NaturalGenContext ctx)
@@ -259,6 +267,7 @@ namespace Odyssey.Sim.Worldgen.Natural
             int z = column / ctx.Size.SizeX;
             ctx.Report.StartCell = new CellRef(x, z, ctx.TopSolidY[column] + 1);
 
+            EnsureReachable(ctx, column);
             AssertConsistent(ctx);
         }
 
@@ -284,6 +293,11 @@ namespace Odyssey.Sim.Worldgen.Natural
 
                 int minY = int.MaxValue, maxY = int.MinValue, trees = 0;
                 bool usable = true;
+
+                // Dry ground, with a margin. Marsh counts as ground — it has to, or a bog column
+                // would fail every surface-kind and walkability invariant — so the ground check
+                // below would happily land the colony in a swamp. This is what does not.
+                if (!DryAround(ctx, x, z, radius + ctx.Gen.startWaterClearance)) continue;
 
                 for (int dz = -radius; dz <= radius && usable; dz++)
                 for (int dx = -radius; dx <= radius; dx++)
@@ -312,6 +326,156 @@ namespace Odyssey.Sim.Worldgen.Natural
             }
 
             return best;
+        }
+
+        /// <summary>Nothing wet inside the square. Off-map cells are not an obstacle.</summary>
+        static bool DryAround(NaturalGenContext ctx, int cx, int cz, int reach)
+        {
+            for (int dz = -reach; dz <= reach; dz++)
+            for (int dx = -reach; dx <= reach; dx++)
+            {
+                int x = cx + dx, z = cz + dz;
+                if ((uint)x >= (uint)ctx.Size.SizeX || (uint)z >= (uint)ctx.Size.SizeZ) continue;
+                if (ctx.Water[ctx.Column(x, z)] != (byte)WaterClass.None) return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// The colony must be able to walk to most of its map. A wide river is the one shape that
+        /// can cut it in two, and with no build pipeline yet a far bank is not merely inconvenient
+        /// but dead, so this floods the surface from the start and cuts another ford wherever the
+        /// river separates the two components.
+        ///
+        /// Forcing a ford rather than re-rolling the map is deliberate. Re-rolling makes
+        /// generation take unbounded time on an unlucky seed, and a generator handed a seed that
+        /// quietly uses a different one is a determinism smell even when it is reproducible.
+        ///
+        /// Failing after <see cref="NaturalMapGenDef.maxForcedFords"/> throws rather than shipping
+        /// a severed map: a pond cannot sever anything, so a river still splitting the board after
+        /// three crossings means the shape code is wrong, which is a bug and not a seed.
+        /// </summary>
+        static void EnsureReachable(NaturalGenContext ctx, int startColumn)
+        {
+            if (!ctx.Gen.water) return;
+
+            var seen = new byte[ctx.Columns];
+            var queue = new int[ctx.Columns];
+
+            for (int attempt = 0; ; attempt++)
+            {
+                int reached = Flood(ctx, startColumn, seen, queue, out int walkable);
+                ctx.Report.ReachableColumns = reached;
+                ctx.Report.WalkableColumns = walkable;
+
+                if (walkable <= 0 || reached * 100 / walkable >= ctx.Gen.minReachablePercent) return;
+                if (attempt >= ctx.Gen.maxForcedFords || ctx.RiverCross == null)
+                    throw new NaturalGenException(
+                        $"The start reaches only {reached} of {walkable} walkable columns after " +
+                        $"{ctx.Report.ForcedFords} forced fords. The water shapes have severed the map.");
+
+                if (!ForceAFord(ctx, seen)) return;   // nothing left to open; the rest is islands
+            }
+        }
+
+        /// <summary>
+        /// Walkable columns reachable from the start, 4-connected, stepping at most one layer at
+        /// a time. Columns rather than cells: the surface is a heightfield, so one bit per column
+        /// answers the only question that matters here.
+        /// </summary>
+        static int Flood(NaturalGenContext ctx, int startColumn, byte[] seen, int[] queue, out int walkable)
+        {
+            Array.Clear(seen, 0, seen.Length);
+
+            walkable = 0;
+            for (int column = 0; column < ctx.Columns; column++)
+                if (Standable(ctx, column)) walkable++;
+
+            if (!Standable(ctx, startColumn)) return 0;
+
+            int head = 0, tail = 0, reached = 0;
+            seen[startColumn] = 1;
+            queue[tail++] = startColumn;
+
+            while (head < tail)
+            {
+                int column = queue[head++];
+                reached++;
+                int x = column % ctx.Size.SizeX, z = column / ctx.Size.SizeX;
+
+                for (int d = 0; d < 4; d++)
+                {
+                    int nx = x + StepX[d], nz = z + StepZ[d];
+                    if ((uint)nx >= (uint)ctx.Size.SizeX || (uint)nz >= (uint)ctx.Size.SizeZ) continue;
+
+                    int n = ctx.Column(nx, nz);
+                    if (seen[n] != 0 || !Standable(ctx, n)) continue;
+                    if (Math.Abs(ctx.SurfaceY[n] - ctx.SurfaceY[column]) > 1) continue;
+
+                    seen[n] = 1;
+                    queue[tail++] = n;
+                }
+            }
+
+            return reached;
+        }
+
+        static readonly int[] StepX = { -1, 1, 0, 0 };
+        static readonly int[] StepZ = { 0, 0, -1, 1 };
+
+        static bool Standable(NaturalGenContext ctx, int column)
+        {
+            if (ctx.Water[column] == (byte)WaterClass.Deep) return false;
+            if (ctx.TopSolidY[column] != ctx.SurfaceY[column]) return false;   // an outcrop
+            return true;
+        }
+
+        /// <summary>
+        /// Cut the river at the first march step whose two banks are on opposite sides of the
+        /// flood, and rewrite the cells the class change touched. False when no such step exists,
+        /// which means what is unreached is islanded by something other than the river.
+        /// </summary>
+        static bool ForceAFord(NaturalGenContext ctx, byte[] seen)
+        {
+            for (int step = 0; step < ctx.RiverSteps; step++)
+            {
+                int cross = ctx.RiverCross![step], half = ctx.RiverHalfWidth![step];
+                int near = BankColumn(ctx, step, cross - half - 1);
+                int far = BankColumn(ctx, step, cross + half + 1);
+                if (near < 0 || far < 0) continue;
+                if ((seen[near] != 0) == (seen[far] != 0)) continue;
+
+                if (ctx.Ford(step, ctx.Gen.fordHalfLength) <= 0) continue;
+                ctx.Report.ForcedFords++;
+                Rewrite(ctx, step);
+                return true;
+            }
+
+            return false;
+        }
+
+        static int BankColumn(NaturalGenContext ctx, int step, int cross)
+        {
+            int x = ctx.RiverAlongX ? step : cross;
+            int z = ctx.RiverAlongX ? cross : step;
+            if ((uint)x >= (uint)ctx.Size.SizeX || (uint)z >= (uint)ctx.Size.SizeZ) return -1;
+            return ctx.Column(x, z);
+        }
+
+        /// <summary>Re-lay the cells of a ford, whose columns just changed depth.</summary>
+        static void Rewrite(NaturalGenContext ctx, int step)
+        {
+            int reach = ctx.Gen.fordHalfLength;
+            for (int s = step - reach; s <= step + reach; s++)
+            {
+                if ((uint)s >= (uint)ctx.RiverSteps) continue;
+                int cross = ctx.RiverCross![s], half = ctx.RiverHalfWidth![s];
+                for (int b = cross - half; b <= cross + half; b++)
+                {
+                    int column = BankColumn(ctx, s, b);
+                    if (column >= 0) WaterFillPass.WriteColumn(ctx, column);
+                }
+            }
         }
 
         static void ClearTrees(NaturalGenContext ctx, int centreColumn, int radius)

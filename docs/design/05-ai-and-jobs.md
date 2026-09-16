@@ -93,6 +93,9 @@ Missing floors become explicit **one-way fall edges**. Ladders are single-occupa
 Non-negotiable, since every milestone gate hashes state:
 
 - **Integer costs only.** One unit = 1/100 of a flat-cell crossing. No floats anywhere in the cost model.
+- **Terrain cost is live as of 2026-09-16** (ADR 0009), through `NavGrid.CostClass` and `CostByClass`, which had been wired into `EnterCost` since the pathfinder was written and which nothing had ever written: every walkable step cost exactly 100. Three classes now: clear ground 0, marsh +40, shallow water +200 — so wading is exactly a third of walking speed. Deep water has **no** class, because it is impassable, and a cost that says "very expensive" is a different and worse claim from one that says "not at all".
+
+  The trap, worth stating once: **a cost class belongs to the cell being *entered*.** Wading, that is the water cell itself. Crossing a bog, it is the air cell above the marsh. Written the other way round, marsh is free and nothing says so.
 - **Total order in the open list**: `(f, h, cellIndex)` — never a partial order that leaves ties to heap internals.
 - **Compile-time neighbour order.**
 - **Deterministic region and district id assignment**, and a deterministic flood order.

@@ -57,11 +57,13 @@ SECTIONS = [
      "Alerts are conditions that persist until fixed. Bulletins are things that happened. Both "
      "carry the layer they occurred on and jump the camera there, which a flat colony sim never "
      "has to think about."),
-    ("world", "World and interface", ["ui.weather", "ui.overlay", "ui.layer", "ui.tab", "ui.speed"],
+    ("world", "World and interface", ["ui.terrain", "ui.weather", "ui.overlay", "ui.layer",
+                                      "ui.tab", "ui.speed"],
      "Weather, the data overlays, the layer controls and the rest of the interface furniture. The "
      "six layer visibility modes are decided: see ADR 0006."),
 ]
 NS_TITLES = {
+    "ui.terrain": "Terrain",
     "ui.res": "Commodities", "ui.item": "Items and equipment",
     "ui.arch.category": "Architect categories", "ui.arch.tool": "Architect tools",
     "ui.command": "Commands", "ui.work": "Work types", "ui.skill": "Skills",

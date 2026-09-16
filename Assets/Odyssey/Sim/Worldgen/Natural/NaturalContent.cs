@@ -58,8 +58,29 @@ namespace Odyssey.Sim.Worldgen.Natural
         public const ushort TerrainIronOre = (ushort)(FirstTerrain + 6);
         public const ushort TerrainCoalSeam = (ushort)(FirstTerrain + 7);
 
+        // ---- water -------------------------------------------------------------------------
+        //
+        // Water sits in a channel cut one layer below the ground around it, so the cell holding
+        // it is level with the bank's own solid top and a colonist steps *down* to wade. Neither
+        // water is solid: the bed beneath it is what a wader stands on.
+
+        /// <summary>Wadeable water. Walkable, and a third of walking speed (cost class 2).</summary>
+        public const ushort TerrainShallowWater = (ushort)(FirstTerrain + 8);
+
+        /// <summary>
+        /// Water out of one's depth. Impassable rather than merely expensive, so the pathfinder
+        /// routes around a lake instead of pricing a swim nobody can survive.
+        /// </summary>
+        public const ushort TerrainDeepWater = (ushort)(FirstTerrain + 9);
+
+        /// <summary>
+        /// Wet ground fringing water. Ordinary solid ground at its own height — a marsh column is
+        /// never lowered — and slow to cross (cost class 1) rather than impassable.
+        /// </summary>
+        public const ushort TerrainMarsh = (ushort)(FirstTerrain + 10);
+
         /// <summary>One past the last natural index. Sizes any table that must span both sets.</summary>
-        public const int TerrainCount = FirstTerrain + 8;
+        public const int TerrainCount = FirstTerrain + 11;
 
         /// <summary>Stone, shared with the city generator. Ore is grown inside this and nothing else.</summary>
         public const ushort TerrainRock = CoreContent.TerrainRock;
@@ -111,6 +132,9 @@ namespace Odyssey.Sim.Worldgen.Natural
         public const string ModuleBedrock = Prefix + "terrain.bedrock";
         public const string ModuleIronOre = Prefix + "terrain.ironore";
         public const string ModuleCoalSeam = Prefix + "terrain.coalseam";
+        public const string ModuleShallowWater = Prefix + "terrain.shallowwater";
+        public const string ModuleDeepWater = Prefix + "terrain.deepwater";
+        public const string ModuleMarsh = Prefix + "terrain.marsh";
         public const string ModuleTreeConifer = Prefix + "tree.conifer";
         public const string ModuleTreeBroadleaf = Prefix + "tree.broadleaf";
 
@@ -125,6 +149,9 @@ namespace Odyssey.Sim.Worldgen.Natural
             ModuleBedrock,
             ModuleIronOre,
             ModuleCoalSeam,
+            ModuleShallowWater,
+            ModuleDeepWater,
+            ModuleMarsh,
             ModuleTreeConifer,
             ModuleTreeBroadleaf,
         };
@@ -145,6 +172,9 @@ namespace Odyssey.Sim.Worldgen.Natural
                 case TerrainBedrock: return ModuleBedrock;
                 case TerrainIronOre: return ModuleIronOre;
                 case TerrainCoalSeam: return ModuleCoalSeam;
+                case TerrainShallowWater: return ModuleShallowWater;
+                case TerrainDeepWater: return ModuleDeepWater;
+                case TerrainMarsh: return ModuleMarsh;
                 case CoreContent.TerrainRock: return ModuleRock;
                 default: return null;
             }
@@ -179,13 +209,76 @@ namespace Odyssey.Sim.Worldgen.Natural
 
         public static bool IsKnown(ushort terrain) => terrain < TerrainCount;
 
-        /// <summary>Ground a colonist can stand on and a tree can be rooted in.</summary>
+        /// <summary>
+        /// Terrain nothing can stand in or on. Only deep water, and only on this table — no core
+        /// terrain is impassable, and both waters are already non-solid, so this is an extra
+        /// question rather than a correction to <see cref="IsSolid"/>.
+        /// </summary>
+        public static bool IsImpassable(ushort terrain) =>
+            terrain >= FirstTerrain && terrain < TerrainCount &&
+            NaturalTerrain[terrain - FirstTerrain].impassable;
+
+        /// <summary>
+        /// Ground a colonist can stand on. Marsh is in: it is solid ground, and leaving it out
+        /// would make a bog column fail every surface-kind and walkability invariant the
+        /// generator asserts. A tree does *not* grow in it — the tree pass asks for grass
+        /// specifically, which is why this can stay the broad question it is.
+        /// </summary>
         public static bool IsGround(ushort terrain) =>
             terrain == TerrainGrass || terrain == TerrainBareEarth ||
-            terrain == TerrainPackedGravel || terrain == TerrainSand;
+            terrain == TerrainPackedGravel || terrain == TerrainSand ||
+            terrain == TerrainMarsh;
 
         public static bool IsOre(ushort terrain) =>
             terrain == TerrainIronOre || terrain == TerrainCoalSeam;
+
+        /// <summary>Either depth of water. The bed beneath it is ground and answers false.</summary>
+        public static bool IsWater(ushort terrain) =>
+            terrain == TerrainShallowWater || terrain == TerrainDeepWater;
+
+        // ---- movement cost classes -----------------------------------------------------------
+        //
+        // The pathfinder charges MoveCost.Orthogonal plus an addend chosen by a per-cell byte
+        // (NavGrid.CostClass indexing NavGrid.CostByClass). Worldgen owns which terrain is which
+        // class, because terrain is content; navigation owns the per-cell grid. The addends are
+        // in hundredths of a flat clear crossing, so +200 is exactly a third of walking speed.
+
+        public const byte CostClassClear = 0;
+        public const byte CostClassMarsh = 1;
+        public const byte CostClassShallowWater = 2;
+
+        /// <summary>The cost class of a terrain, or <see cref="CostClassClear"/> for most of them.</summary>
+        public static byte CostClassOf(ushort terrain)
+        {
+            if (terrain == TerrainShallowWater) return CostClassShallowWater;
+            if (terrain == TerrainMarsh) return CostClassMarsh;
+            return CostClassClear;
+        }
+
+        /// <summary>
+        /// Fills a <c>NavGrid.CostByClass</c> table. Deep water has no class: it is impassable,
+        /// and a cost saying "very expensive" is a different and worse thing from one saying "not
+        /// at all" — the first still lets a desperate search price a drowning.
+        /// </summary>
+        public static void ApplyCostClasses(int[] costByClass)
+        {
+            if (costByClass == null) throw new System.ArgumentNullException(nameof(costByClass));
+            costByClass[CostClassClear] = 0;
+            costByClass[CostClassMarsh] = 40;            // 140 per cell: boggy, not slow
+            costByClass[CostClassShallowWater] = 200;    // 300 per cell: exactly a third speed
+        }
+
+        /// <summary>
+        /// The cost class a cell is *entered* at, which is not always its own terrain. A wader
+        /// enters the water cell itself, so shallow water's class comes from that cell. Someone
+        /// crossing a bog enters the **air cell above** the marsh, so marsh's class comes from
+        /// the cell below. Getting this the wrong way round gives free marsh and fails silently.
+        /// </summary>
+        public static byte EntryCostClass(ushort here, ushort below)
+        {
+            byte own = CostClassOf(here);
+            return own != CostClassClear ? own : CostClassOf(below);
+        }
 
         static TerrainDef[] BuildTerrain()
         {
@@ -203,6 +296,16 @@ namespace Odyssey.Sim.Worldgen.Natural
                 new TerrainDef { defName = "Bedrock", label = "bedrock", solid = true, workToClear = 2400, fertility = 0, salvageWeight = 0 },
                 new TerrainDef { defName = "IronOre", label = "iron ore", solid = true, workToClear = 900, fertility = 0, salvageWeight = 0 },
                 new TerrainDef { defName = "CoalSeam", label = "coal seam", solid = true, workToClear = 760, fertility = 0, salvageWeight = 0 },
+
+                // Water. Neither depth is solid, so the bed below is the floor; deep water adds
+                // `impassable`, which is the only thing that stops a colonist walking on a lake
+                // (solid would let them walk *over* it, non-solid alone lets them walk *into*
+                // it). Neither is buildable and both are bridgeable: that pair is the whole of
+                // "you cannot build on water without a bridge", written where the build pipeline
+                // will find it. Marsh is ordinary ground that happens to be slow.
+                new TerrainDef { defName = "ShallowWater", label = "shallow water", solid = false, workToClear = 0, fertility = 0, salvageWeight = 0, buildable = false, bridgeable = true },
+                new TerrainDef { defName = "DeepWater", label = "deep water", solid = false, impassable = true, workToClear = 0, fertility = 0, salvageWeight = 0, buildable = false, bridgeable = true },
+                new TerrainDef { defName = "Marsh", label = "marsh", solid = true, workToClear = 70, fertility = 40, salvageWeight = 0 },
             };
         }
 

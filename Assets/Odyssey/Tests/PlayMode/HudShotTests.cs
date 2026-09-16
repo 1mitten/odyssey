@@ -1,0 +1,203 @@
+#nullable enable
+using System.Collections;
+using System.IO;
+using NUnit.Framework;
+using Odyssey.Presentation.Bootstrap;
+using Odyssey.Presentation.CameraRig;
+using Odyssey.Presentation.Ui;
+using UnityEngine;
+using UnityEngine.TestTools;
+using UnityEngine.UIElements;
+
+namespace Odyssey.Tests.PlayMode
+{
+    /// <summary>
+    /// Photograph the HUD as the player sees it, so a complaint about it can be looked at rather
+    /// than reasoned about.
+    ///
+    /// **Why this is a test and not an editor tool.** A UI Toolkit panel does not render into a
+    /// camera's target texture, so `PlayScene.Shoot` — which is how every other picture in this
+    /// project is taken — photographs the world with no interface on it at all. The panel is drawn
+    /// by the player loop onto the screen, so the only place to catch it composited over the world
+    /// is a PlayMode run with a graphics device, which is exactly what the Unity gate already is.
+    ///
+    /// The resolution matters more than anything else here, because the panel scales with it:
+    /// `HudPanelSettings` is ScaleWithScreenSize against 1200x800 with a balanced match, so the
+    /// same 11 px label is 6 px in a 640x480 batch window and 32 px on a 4K monitor. A picture
+    /// taken at the default batch size would therefore prove nothing about what the owner can
+    /// read. Pass `-screen-width 1920 -screen-height 1080` to the run and this records what it
+    /// actually got, so a picture can never be mistaken for one taken at another size.
+    ///
+    /// Not an assertion, deliberately: there is no automatic answer to "can a human read this".
+    /// It writes `Logs/hud-shot.png` and passes if it managed to take the picture at all.
+    /// </summary>
+    public class HudShotTests
+    {
+        const string PanelPath = "Assets/Odyssey/Presentation/Ui/HudPanelSettings.asset";
+        const string StylesPath = "Assets/Odyssey/Presentation/Ui/Hud.uss";
+
+        /// <summary>The size the picture is taken at, which decides how big the type is.</summary>
+        const int Width = 1920;
+        const int Height = 1080;
+
+        /// <summary>The close-up of the top-left corner, which is where A1 Resources sits.</summary>
+        const int CloseWidth = 420;
+        const int CloseHeight = 320;
+
+        [UnityTest]
+        public IEnumerator PhotographTheHud()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot);
+            try
+            {
+                yield return new WaitForSecondsRealtime(0.5f);
+                for (int i = 0; i < 20; i++) yield return null;
+
+                var doc = root.GetComponentInChildren<UIDocument>();
+                Assert.That(doc, Is.Not.Null, "no HUD document");
+                Assert.That(doc!.rootVisualElement, Is.Not.Null, "the panel has no root");
+
+                // Select a colonist so the panes that only appear with a selection are in the
+                // picture too, rather than photographing the empty state and calling it the HUD.
+                if (boot.World != null && boot.World.Views.Current.PawnCount > 0 && boot.Directors != null)
+                {
+                    boot.Directors.ChooseColonist(
+                        boot.World.Views.Current.Pawns[0].Id, boot.World.Views.Current);
+                }
+
+                for (int i = 0; i < 10; i++) yield return null;
+
+                // The panel renders into a texture of our choosing rather than onto the screen.
+                // Two reasons, and the first is not optional: `WaitForEndOfFrame` is never evoked
+                // in batchmode, so `ScreenCapture` cannot be used from a headless run at all. The
+                // second is that it fixes the resolution, and resolution is the whole question
+                // here — the same sheet is unreadable at 640x480 and comfortable at 4K.
+                //
+                // The settings object is cloned, because it is a committed project asset and a
+                // test has no business dirtying it.
+                var settings = Object.Instantiate(doc.panelSettings);
+                // sRGB, and that is not a detail. Read back through a linear target the whole
+                // sheet comes out washed olive and every judgement about contrast made from the
+                // picture would be a judgement about the capture instead.
+                var target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32,
+                    RenderTextureReadWrite.sRGB)
+                {
+                    antiAliasing = 2,
+                };
+
+                // Cleared to something like the meadow, so the panel's ten per cent of
+                // translucency is represented rather than flattered by a black void behind it.
+                settings.clearColor = true;
+                settings.colorClearValue = new Color(0.36f, 0.58f, 0.22f);
+                settings.targetTexture = target;
+                doc.panelSettings = settings;
+
+                for (int i = 0; i < 10; i++) yield return null;
+
+                RenderTexture previous = RenderTexture.active;
+                RenderTexture.active = target;
+                var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+                image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                image.Apply();
+                RenderTexture.active = previous;
+
+                Directory.CreateDirectory(Path.GetFullPath("Logs"));
+                File.WriteAllBytes(Path.GetFullPath("Logs/hud-shot.png"), image.EncodeToPNG());
+
+                // And a close-up of one region, because the whole sheet shrunk to fit a page
+                // cannot answer "can you read this" either. ReadPixels takes its rect from the
+                // bottom left, so the top-left panel is at the top of the buffer.
+                RenderTexture.active = target;
+                var close = new Texture2D(CloseWidth, CloseHeight, TextureFormat.RGB24, false);
+                close.ReadPixels(new Rect(0, Height - CloseHeight, CloseWidth, CloseHeight), 0, 0);
+                close.Apply();
+                RenderTexture.active = previous;
+                File.WriteAllBytes(Path.GetFullPath("Logs/hud-a1.png"), close.EncodeToPNG());
+                Object.Destroy(close);
+
+                Debug.Log($"[HudShot] {target.width}x{target.height} to Logs/hud-shot.png; " +
+                          $"scale mode {settings.scaleMode}, reference {settings.referenceResolution}. " +
+                          $"An 11 px label in Hud.uss lands at about " +
+                          $"{11f * Mathf.Sqrt((target.width / 1200f) * (target.height / 800f)):0.0} px here, " +
+                          $"and a 9 px one at about " +
+                          $"{9f * Mathf.Sqrt((target.width / 1200f) * (target.height / 800f)):0.0} px.");
+
+                // And again with the architect palette open, since it is hidden until the
+                // bottom bar opens it and a picture of the closed state cannot show it at all.
+                var palette = doc.rootVisualElement.Q(className: "arch");
+                if (palette != null)
+                {
+                    palette.style.display = DisplayStyle.Flex;
+                    for (int i = 0; i < 10; i++) yield return null;
+
+                    RenderTexture.active = target;
+                    var open = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+                    open.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                    open.Apply();
+                    RenderTexture.active = previous;
+                    File.WriteAllBytes(Path.GetFullPath("Logs/hud-architect.png"), open.EncodeToPNG());
+                    Object.Destroy(open);
+                }
+
+                Object.Destroy(image);
+                Object.Destroy(target);
+                Object.Destroy(settings);
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>The play scene's HUD stack, as <c>HudSmokeTests</c> builds it.</summary>
+        static GameObject Build(out OdysseyBootstrap boot)
+        {
+            var root = new GameObject("HudShot");
+
+            var cameraObject = new GameObject("Camera");
+            cameraObject.transform.SetParent(root.transform, false);
+            cameraObject.tag = "MainCamera";
+            var camera = cameraObject.AddComponent<Camera>();
+            camera.fieldOfView = 40f;
+            camera.nearClipPlane = 0.3f;
+            camera.farClipPlane = 600f;
+            var rig = cameraObject.AddComponent<SliceCameraRig>();
+
+            var sun = new GameObject("Sun").AddComponent<Light>();
+            sun.transform.SetParent(root.transform, false);
+            sun.type = LightType.Directional;
+            sun.intensity = 1.35f;
+            sun.transform.rotation = Quaternion.Euler(72f, 35f, 0f);
+
+            var bootObject = new GameObject("Bootstrap");
+            bootObject.transform.SetParent(root.transform, false);
+            bootObject.SetActive(false);
+            boot = bootObject.AddComponent<OdysseyBootstrap>();
+            boot.sizeX = 60;
+            boot.sizeZ = 60;
+            boot.layers = 8;
+            boot.seed = 1;
+            boot.barrenMap = false;
+            boot.grassScatter = 60;
+            boot.cameraRig = rig;
+            bootObject.AddComponent<SelectionPresenter>();
+
+            var doc = bootObject.AddComponent<UIDocument>();
+#if UNITY_EDITOR
+            doc.panelSettings = UnityEditor.AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelPath);
+#endif
+            if (doc.panelSettings == null)
+            {
+                doc.panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+                doc.panelSettings.themeStyleSheet = ScriptableObject.CreateInstance<ThemeStyleSheet>();
+            }
+
+            var shell = bootObject.AddComponent<HudShell>();
+#if UNITY_EDITOR
+            shell.hudStyles = UnityEditor.AssetDatabase.LoadAssetAtPath<StyleSheet>(StylesPath);
+#endif
+            bootObject.SetActive(true);
+            return root;
+        }
+    }
+}

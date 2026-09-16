@@ -98,6 +98,14 @@ namespace Odyssey.Sim.Designations
         /// <summary>Whether the cell can take this kind of order right now.</summary>
         public bool Allows(int index, DesignationKind kind)
         {
+            // Nothing is ordered in water. Every kind below would refuse it anyway today — mining
+            // wants solid ground, felling wants a tree, deconstructing wants something built —
+            // so this line changes no behaviour and is here for the kind that comes next, which
+            // would otherwise have to rediscover that a river is not a building site. When the
+            // build pipeline lands, the rule it needs is already stated, in the one place this
+            // class's own doc says validation lives.
+            if (IsWater(index)) return false;
+
             switch (kind)
             {
                 case DesignationKind.Mine:
@@ -110,6 +118,13 @@ namespace Odyssey.Sim.Designations
                     return false;
             }
         }
+
+        /// <summary>
+        /// Water of either depth. Shallow water is walkable, so a colonist may stand in it, and
+        /// that is exactly why the question has to be asked separately from walkability: a cell
+        /// you can wade through is still not one you can put a wall in.
+        /// </summary>
+        public bool IsWater(int index) => NaturalContent.IsWater(_grid.Terrain[index]);
 
         /// <summary>Whether a tree stands in the cell right now.</summary>
         public bool IsTree(int index) => TryEdificeDef(index, out ushort def) && NaturalContent.IsTree(def);

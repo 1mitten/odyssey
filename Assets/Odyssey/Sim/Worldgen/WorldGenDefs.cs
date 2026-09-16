@@ -27,6 +27,27 @@ namespace Odyssey.Sim.Worldgen
 
         /// <summary>Relative weight for salvage scattering. 0 = never carries salvage.</summary>
         public int salvageWeight;
+
+        /// <summary>
+        /// Neither standable nor stood upon — deep water. Distinct from <see cref="solid"/>,
+        /// which blocks the cell but holds up the one above it. Sets
+        /// <see cref="World.CellFlags.ImpassableTerrain"/>.
+        /// </summary>
+        public bool impassable;
+
+        /// <summary>
+        /// Whether the colony may put anything here at all. False for water, which needs a
+        /// bridge first. Nothing constructs anything yet, so today this is read by placement
+        /// validation only; the build pipeline inherits it rather than reopening the question.
+        /// </summary>
+        public bool buildable = true;
+
+        /// <summary>
+        /// Whether a bridge may be built over it: the complement of <see cref="buildable"/> for
+        /// water, and false for everything else. A bridge spans what cannot be built on, and
+        /// bridging solid ground is not a thing.
+        /// </summary>
+        public bool bridgeable;
     }
 
     /// <summary>

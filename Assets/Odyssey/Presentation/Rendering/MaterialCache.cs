@@ -30,14 +30,16 @@ namespace Odyssey.Presentation.Rendering
             readonly uint _emission;
             readonly bool _ghost;
             readonly bool _foliage;
+            readonly bool _water;
 
-            public Key(Material baseMaterial, uint tint, uint emission, bool ghost, bool foliage)
+            public Key(Material baseMaterial, uint tint, uint emission, bool ghost, bool foliage, bool water)
             {
                 _base = baseMaterial;
                 _tint = tint;
                 _emission = emission;
                 _ghost = ghost;
                 _foliage = foliage;
+                _water = water;
             }
 
             // Foliage is part of the key because a foliage clone carries a queue and a cutoff a
@@ -45,17 +47,19 @@ namespace Odyssey.Presentation.Rendering
             // that only holds by convention is one a test cannot trust.
             public bool Equals(Key other) =>
                 ReferenceEquals(_base, other._base) && _tint == other._tint &&
-                _emission == other._emission && _ghost == other._ghost && _foliage == other._foliage;
+                _emission == other._emission && _ghost == other._ghost &&
+                _foliage == other._foliage && _water == other._water;
 
             public override bool Equals(object? obj) => obj is Key other && Equals(other);
 
             public override int GetHashCode() =>
-                unchecked(((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_base) * 397) ^ (int)_tint) * 397 ^ (int)_emission) * 397 ^ (_ghost ? 1 : 0) ^ (_foliage ? 1 << 30 : 0);
+                unchecked(((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_base) * 397) ^ (int)_tint) * 397 ^ (int)_emission) * 397 ^ (_ghost ? 1 : 0) ^ (_foliage ? 1 << 30 : 0) ^ (_water ? 1 << 29 : 0);
         }
 
         readonly Dictionary<Key, Material> _cache = new Dictionary<Key, Material>();
         readonly List<Material> _owned = new List<Material>();
         Material? _ghostBase;
+        Material? _waterBase;
 
         public int MaterialCount => _owned.Count;
 
@@ -109,14 +113,22 @@ namespace Odyssey.Presentation.Rendering
 
         /// <param name="foliage">Clone with the softer foliage cutoff and the late queue. Part of
         /// the cache key, so the same art asked for plain and as foliage gives two clones.</param>
+        /// <param name="water">
+        /// Draw with <c>Odyssey/Water</c> instead of the art material, and take the opacity from
+        /// the tint's own alpha. Water replaces its source material the way a ghost does, rather
+        /// than tinting one, because what makes water look like water is the shading and not the
+        /// colour: ripples, a sun glint, a Fresnel-weighted reflection and a shore that fades
+        /// against the depth of the bed behind it. None of that can be reached by tinting a Synty
+        /// ground tile, and a clone without the packs draws exactly the same water as one with.
+        /// </param>
         public Material Get(Material baseMaterial, Color tint, Color emission, bool ghost, float alpha,
-            bool foliage = false)
+            bool foliage = false, bool water = false)
         {
-            Material source = ghost ? GhostBase : baseMaterial;
-            var colour = new Color(tint.r, tint.g, tint.b, ghost ? alpha : 1f);
+            Material source = ghost ? GhostBase : water ? WaterBase : baseMaterial;
+            var colour = new Color(tint.r, tint.g, tint.b, ghost ? alpha : water ? tint.a : 1f);
             // Keyed on the material reference rather than its instance id: identity is what we
             // actually mean, and it avoids an API whose name changed between Unity versions.
-            var key = new Key(source, Pack(colour), Pack(emission), ghost, foliage);
+            var key = new Key(source, Pack(colour), Pack(emission), ghost, foliage, water);
             if (_cache.TryGetValue(key, out Material cached)) return cached;
 
             var material = new Material(source)
@@ -205,6 +217,37 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
+        /// <summary>
+        /// The one material every water tile is cloned from.
+        ///
+        /// If <c>Odyssey/Water</c> is missing — a stripped build, a shader that failed to compile
+        /// — this falls back to the ghost's Lit material made transparent, so the water is a flat
+        /// blue-grey pane rather than magenta. That matters more than it sounds: a shader error
+        /// that renders as magenta gets fixed, and one that renders as *nothing* gets shipped.
+        /// </summary>
+        Material WaterBase
+        {
+            get
+            {
+                if (_waterBase != null) return _waterBase;
+
+                Shader? shader = Shader.Find("Odyssey/Water");
+                if (shader != null)
+                {
+                    _waterBase = new Material(shader) { name = "Odyssey/Water", enableInstancing = true };
+                    _owned.Add(_waterBase);
+                    return _waterBase;
+                }
+
+                Debug.LogWarning("Odyssey/Water shader not found; water will draw as flat translucency.");
+                shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                _waterBase = new Material(shader) { name = "Odyssey/Water(fallback)", enableInstancing = true };
+                MakeTransparent(_waterBase);
+                _owned.Add(_waterBase);
+                return _waterBase;
+            }
+        }
+
         /// <summary>Destroy every material this cache made. Called when the renderer shuts down.</summary>
         public void Dispose()
         {
@@ -217,6 +260,7 @@ namespace Odyssey.Presentation.Rendering
             _owned.Clear();
             _cache.Clear();
             _ghostBase = null;
+            _waterBase = null;
         }
 
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
