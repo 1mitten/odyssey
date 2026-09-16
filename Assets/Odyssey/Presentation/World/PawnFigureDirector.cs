@@ -177,6 +177,20 @@ namespace Odyssey.Presentation.World
         /// intersect whatever their relative height. See <see cref="MeasuredOffArmAbove"/>.</summary>
         public float MeasuredArmGap { get; private set; }
 
+        /// <summary>
+        /// How far the off hand's palm finished from the line of the haft, in metres. Zero is a
+        /// hand on the wood.
+        ///
+        /// <para>The grip's <see cref="MeasuredBladeGap"/>. A hand seated on the wrist bone — which
+        /// is what every hand in this project did until 2026-09-16 — reads as "near the axe" in any
+        /// photograph and is unmistakable the moment it is stated in centimetres.</para>
+        /// </summary>
+        public float MeasuredGripGap { get; private set; }
+
+        /// <summary>How much further away the haft is than the off arm is long, in metres.
+        /// Positive means no solver can reach it and the stroke must bring the tool nearer.</summary>
+        public float MeasuredGripOverreach { get; private set; }
+
         /// <summary>Which style a pawn is worked in, the override first. See <see cref="StyleOverride"/>.</summary>
         int StyleFor(int jobDef) =>
             StyleOverride >= 0 && StyleOverride < Styles.Length
@@ -982,128 +996,90 @@ namespace Odyssey.Presentation.World
             Pitch(figure.RightUpperArm, axis, swing.Shoulder - swing.Spine);
             Pitch(figure.RightLowerArm, axis, swing.Elbow);
 
-            // The off hand goes on the haft rather than being swung in sympathy.
-            //
-            // It used to take a fraction of the same angles, which put it in roughly the right
-            // attitude and about forty centimetres to the side of the axe — two hands doing the
-            // same dance, one of them holding nothing. Shoulders are that far apart, so no pair of
-            // angles will ever bring the second fist to the haft; only reaching for it will. Hence
-            // the small inverse-kinematics solve, which is also what will hold a stretcher, a
-            // crate or the other end of a beam later.
-            if (figure.Held.Transform != null && figure.LeftHand != null)
+            TakeHold(figure, axis, swing);
+        }
+
+        /// <summary>
+        /// Put both fists on the haft of whatever this figure is working with.
+        ///
+        /// <para>All of the hard part is in <see cref="Grasp"/> now, and that is the point: taking
+        /// hold of something arrived here as part of an axe swing, and a ladder rung, a rifle
+        /// fore-end, a carried crate and the other end of a stretcher all want the same thing and
+        /// none of them is a swing. What is left here is the part that really is about this figure
+        /// and this tool — where the haft is, how far apart the hands go on it, and the fact that
+        /// the working hand has an axe hanging off it.</para>
+        ///
+        /// <para><b>The tool is put back where it was.</b> Turning a wrist turns everything
+        /// parented to it, and where that blade points was settled against photographs — the roll,
+        /// the yaw, and the measured strike offset the whole stance is solved from. So the tool's
+        /// place in the world is taken before the hand moves and restored after, and the fist
+        /// rotates inside a stationary axe.</para>
+        ///
+        /// <para>A figure with no tool holds nothing rather than clenching: a clone without the
+        /// packs has colonists chopping bare-handed, and bare hands balled into fists would be a
+        /// worse picture than open ones.</para>
+        /// </summary>
+        void TakeHold(Figure figure, Vector3 axis, WorkSwing swing)
+        {
+            Transform? tool = figure.Held.Transform;
+            if (tool == null)
             {
-                Vector3 target = figure.Held.Transform.TransformPoint(figure.Held.OffHandGrip);
-
-                // The elbow goes out to the left and down, which is where a left elbow goes.
-                //
-                // It used to be sent to a point behind the figure's feet, and the left arm
-                // reaching across the body for a haft held in the right hand duly folded its
-                // elbow straight through the ribs and out the other side. A pole beside the
-                // shoulder on the arm's own side cannot do that: the elbow has to leave the torso
-                // to get there.
-                // **And it goes over the top of the working arm, not under it.**
-                //
-                // The pole used to be out to the left and a long way *down*, which is where a left
-                // elbow lives when the arm is doing nothing. With both fists on one haft it is the
-                // wrong answer: the two forearms end up nearly parallel and reaching the same way,
-                // and the lower elbow puts the off arm underneath the working one, where the two
-                // meshes intersect at the wrists. A colonist appeared to be swinging an axe through
-                // its own forearm (owner, 2026-09-16).
-                //
-                // Which arm passes over which is not a detail the solver can be left to settle. It
-                // is decided entirely by the pole, because every position on the spin about the
-                // shoulder-to-haft line is an equally correct answer to "put the fist here" — see
-                // TwoBoneIk.Reach. So it is stated, and stated as a lift relative to the shoulder
-                // rather than an absolute point, so it holds on every rig's proportions.
-                Transform body = figure.Transform;
-                Vector3 shoulder = figure.LeftUpperArm != null ? figure.LeftUpperArm.position : body.position;
-
-                // **The pole is perpendicular to the arm, not fixed to the body**, and that is the
-                // whole of what keeps the off arm over the working one for the *whole* stroke.
-                //
-                // A pole at a fixed place beside the shoulder holds while the haft is out in front
-                // and stops holding the moment it goes overhead: the line from shoulder to grip
-                // swings up past the pole, the elbow solution rolls under with it, and the off arm
-                // ends up beneath the working one. Measured across the stroke, a fixed pole put the
-                // off forearm 0.17 m clear at the blow and 0.075 m *under* at the top of the raise
-                // — and two forearms on one haft are a hand thick each, so anything near zero is
-                // two meshes in the same place. That is the clipping the owner saw, and it is
-                // invisible at the blow, which is the only instant the old sheet photographed.
-                //
-                // Taking the up-and-out direction square to the arm instead makes the lift mean the
-                // same thing wherever the haft has got to.
-                Vector3 along = target - shoulder;
-                Vector3 up = body.up - along * (Vector3.Dot(body.up, along) / Mathf.Max(along.sqrMagnitude, 1e-6f));
-                if (up.sqrMagnitude < 1e-6f) up = body.up;
-
-                Vector3 pole = shoulder
-                               + up.normalized * OffHandElbowLift
-                               - body.right * OffHandElbowOut;
-                TwoBoneIk.Reach(figure.LeftUpperArm, figure.LeftLowerArm, figure.LeftHand, target, pole);
-
-                if (figure.LeftLowerArm != null && figure.RightLowerArm != null)
-                {
-                    MeasuredOffArmAbove =
-                        figure.LeftLowerArm.position.y - figure.RightLowerArm.position.y;
-
-                    // And how far apart they are at all, which is the question height was standing
-                    // in for. Two forearms are about a hand thick each, so under roughly 0.15 m
-                    // between them is two meshes occupying the same space whatever their relative
-                    // height — and stacking them vertically cannot fix that, because at the top of
-                    // the raise the working arm is overhead and genuinely belongs above the off
-                    // arm. Room has to come from the hands being apart along the haft.
-                    MeasuredArmGap =
-                        Vector3.Distance(figure.LeftLowerArm.position, figure.RightLowerArm.position);
-                }
-            }
-            else
-            {
+                // No tool: the off arm swings in sympathy, which is what it did before there was
+                // ever anything to hold and is still the right answer for empty hands.
                 Pitch(figure.LeftUpperArm, axis, swing.Shoulder - swing.Spine);
                 Pitch(figure.LeftLowerArm, axis, swing.Elbow);
+                return;
             }
 
-            // And close both fists on the haft.
-            //
-            // **Last, and after the off hand has reached**, because curling a finger rotates it
-            // about the hand it hangs off: close the hand first and the reach then carries a fist
-            // somewhere else, which is a fist in the air rather than a fist on the axe.
-            //
-            // Both hands were on the haft long before this and neither of them held it. The
-            // working hand got there by having the tool parented to it and the off hand by an
-            // inverse-kinematics reach, and in both cases the fingers stayed in whatever the idle
-            // clip left them — open, flat, with the haft passing through the palm. It reads as
-            // balancing an axe rather than holding one (owner, 2026-09-16).
-            //
-            // Scaled by the same weight as the rest of the pose, so a colonist takes hold as it
-            // lifts the tool rather than snapping into a fist on one frame. A figure with no tool
-            // fitted — a clone without the packs — closes nothing, because there is nothing there
-            // to hold and a colony of people walking about with clenched fists is worse than a
-            // colony chopping bare-handed.
-            Transform? tool = figure.Held.Transform;
-            if (tool != null)
+            float amount = Mathf.Clamp01(figure.WorkWeight);
+            Transform body = figure.Transform;
+
+            // The haft as a hold: from the working fist to the head, which is the length of it a
+            // hand can be put on.
+            Vector3 butt = tool.TransformPoint(figure.Held.OffHandGrip);
+            Vector3 head = tool.TransformPoint(figure.Held.BladeTip);
+            Hold haft = Hold.Bar(butt, head);
+
+            // Out to the side and up, so the off elbow leaves the ribs and the off forearm passes
+            // over the working one rather than through it.
+            var offArm = new GripArm(figure.LeftUpperArm, figure.LeftLowerArm, figure.LeftGrip,
+                new Vector3(-OffHandElbowOut, OffHandElbowLift, 0f));
+            var workArm = new GripArm(figure.RightUpperArm, figure.RightLowerArm, figure.RightGrip,
+                new Vector3(OffHandElbowOut, OffHandElbowLift, 0f));
+
+            MeasuredGripGap = Grasp.One(offArm, haft, 0f, body.right, body.up, amount);
+
+            // Can the arm even get there? TwoBoneIk straightens towards a target it cannot reach
+            // and stops, which is the right behaviour and is indistinguishable, in a photograph or
+            // in a distance-to-the-haft measurement, from a solve that simply missed. Positive here
+            // means the haft is further from the shoulder than the arm is long, and no solver will
+            // ever close that gap — the stroke's own angles have to bring the tool nearer.
+            if (figure.LeftUpperArm != null && figure.LeftLowerArm != null && figure.LeftHand != null)
             {
-                float grip = Mathf.Clamp01(figure.WorkWeight);
+                float armLength =
+                    Vector3.Distance(figure.LeftUpperArm.position, figure.LeftLowerArm.position)
+                    + Vector3.Distance(figure.LeftLowerArm.position, figure.LeftHand.position);
+                MeasuredGripOverreach =
+                    Vector3.Distance(figure.LeftUpperArm.position, butt) - armLength;
+            }
 
-                // The haft as a line in the world: a point on it, and the way it runs.
-                Vector3 haftPoint = tool.TransformPoint(figure.Held.OffHandGrip);
-                Vector3 haftDirection = tool.TransformPoint(figure.Held.BladeTip) - haftPoint;
+            // The working hand last, and inside a tool pinned in place.
+            Vector3 toolPosition = tool.position;
+            Quaternion toolRotation = tool.rotation;
 
-                // The off hand first, and freely: nothing hangs off it.
-                HandGrip.FaceHaft(figure.LeftGrip, haftPoint, haftDirection, grip);
-                HandGrip.Close(figure.LeftGrip, grip);
+            // Its wrist is not solved — the arm's angles put it where the stroke wants it and the
+            // tool was fitted to that. Only the palm turns and the fingers close.
+            HandGrip.FaceHaft(figure.RightGrip, butt, head - butt, amount);
+            HandGrip.Close(figure.RightGrip, amount);
 
-                // The working hand carries the axe, so turning it turns the axe. Everything about
-                // where the blade points was settled against photographs — the roll, the yaw, the
-                // measured strike offset the whole stance is solved from — and none of that may
-                // move because a wrist did. So the tool's place in the world is taken before the
-                // hand turns and put back afterwards, and the fist rotates inside a stationary axe.
-                Vector3 toolPosition = tool.position;
-                Quaternion toolRotation = tool.rotation;
+            tool.SetPositionAndRotation(toolPosition, toolRotation);
 
-                HandGrip.FaceHaft(figure.RightGrip, haftPoint, haftDirection, grip);
-                HandGrip.Close(figure.RightGrip, grip);
-
-                tool.SetPositionAndRotation(toolPosition, toolRotation);
+            if (figure.LeftLowerArm != null && figure.RightLowerArm != null)
+            {
+                MeasuredOffArmAbove =
+                    figure.LeftLowerArm.position.y - figure.RightLowerArm.position.y;
+                MeasuredArmGap =
+                    Vector3.Distance(figure.LeftLowerArm.position, figure.RightLowerArm.position);
             }
         }
 
@@ -1793,7 +1769,13 @@ namespace Odyssey.Presentation.World
             // Local, so the yaw above does not disturb it: these are points on the mesh, and the
             // mesh has not moved relative to itself.
             Vector3 grip = butt + haft * (length * Mathf.Clamp01(look.GripFraction));
-            axe.position += hand.position - axe.TransformPoint(grip);
+
+            // Into the palm, and *not* onto the hand bone. A humanoid hand bone is the wrist, so
+            // seating the haft on it put the tool behind the hand — every hand in this project has
+            // been holding its axe by the wrist since there was an axe, and the fingers reach past
+            // it rather than round it. HandGrip.Palm says where a held thing really sits, measured
+            // off the knuckles now that the fingers are bound.
+            axe.position += HandGrip.Palm(figure.RightGrip) - axe.TransformPoint(grip);
 
             // Where the off hand takes hold, and where the edge is. Both are wanted every frame
             // afterwards — one to put the second fist on the haft, one to know how far this

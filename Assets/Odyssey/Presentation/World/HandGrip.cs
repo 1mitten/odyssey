@@ -96,6 +96,50 @@ namespace Odyssey.Presentation.World
         }
 
         /// <summary>
+        /// Where in the hand a held thing actually sits, in world space.
+        ///
+        /// <para><b>This is the bug the fists were really suffering from, and it predates them.</b>
+        /// Everything that has ever put a tool in a hand here has put it at
+        /// <c>hand.position</c> — and a humanoid hand bone is the <em>wrist</em>. The palm and the
+        /// knuckles are five to eight centimetres further on, so the haft was seated behind the
+        /// hand for as long as there has been an axe: the fingers are near it rather than round
+        /// it, and no amount of curling them closes a fist on something that is not there. The
+        /// owner saw it as "the hands aren't really near the actual axe" (2026-09-16), which is
+        /// exactly what it is.</para>
+        ///
+        /// <para>It could not be computed before, because the fingers were not bound. Now that
+        /// they are, the palm is a measurement rather than a guessed offset: it lies between the
+        /// wrist and the knuckles, nearer the knuckles, which is where the hollow of a hand closed
+        /// on a haft is. With no fingers mapped there is nothing to measure and the wrist is the
+        /// best available answer — the same fallback as everywhere else here.</para>
+        /// </summary>
+        public static Vector3 Palm(in Bones bones)
+        {
+            Transform? hand = bones.Hand;
+            if (hand == null) return Vector3.zero;
+
+            Transform? index = bones.IndexProximal;
+            Transform? middle = bones.MiddleProximal;
+            if (index == null && middle == null) return hand.position;
+
+            Vector3 knuckles = index != null && middle != null
+                ? (index.position + middle.position) * 0.5f
+                : (index != null ? index.position : middle!.position);
+
+            return Vector3.Lerp(hand.position, knuckles, PalmFraction);
+        }
+
+        /// <summary>
+        /// How far from the wrist towards the knuckles the haft sits, as a fraction.
+        ///
+        /// <para>Not a half: a haft held in a closed hand rests against the heads of the fingers
+        /// rather than in the middle of the palm, so it sits nearer the knuckles. Under about a
+        /// half it slides back towards the wrist and the fingers reach past it again, which is the
+        /// state this whole change is fixing.</para>
+        /// </summary>
+        public const float PalmFraction = 0.7f;
+
+        /// <summary>
         /// Turn the hand so its palm addresses the haft, before the fingers close on it.
         ///
         /// <para>Closing the fingers is only half of holding something. A hand whose palm faces the
