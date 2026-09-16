@@ -31,6 +31,27 @@ namespace Odyssey.Tests.Sim
             return ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: true);
         }
 
+        /// <summary>
+        /// A walkable cell on the colony's own layer next door to the shaft.
+        ///
+        /// <para>Every test here used to use the cell directly over the shaft as its idea of "the
+        /// surface", and that is exactly the cell a dig takes the floor out from under. It worked
+        /// only while a climb ended in the air above the hole and a colonist could stand there. A
+        /// climb now ends on the ground <em>beside</em> the hole, which is where a person actually
+        /// ends up, so the surface reference has to be a cell that is still ground.</para>
+        /// </summary>
+        static int GroundBeside(ColonyWorld colony, CellRef at)
+        {
+            foreach (var d in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+            {
+                int x = at.X + d.Item1, z = at.Z + d.Item2;
+                if (!Size.Contains(x, z, at.Y)) continue;
+                int cell = Size.Index(x, z, at.Y);
+                if (colony.Grid.IsWalkable(cell)) return cell;
+            }
+            return -1;
+        }
+
         /// <summary>Mine one cell to completion by hand, without waiting for a colonist to walk.</summary>
         static void Dig(ColonyWorld colony, int cell)
         {
@@ -55,11 +76,16 @@ namespace Odyssey.Tests.Sim
             int bottom = first - 2 * Size.LayerStride;
             Assert.That(colony.Grid.IsWalkable(bottom), Is.True, "the bottom of the shaft cannot be stood in");
 
+            // From the ground BESIDE the hole, not from over it: the cell over it is the one whose
+            // floor was just dug away. See GroundBeside.
+            int ground = GroundBeside(colony, start);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0), "no ground beside the shaft on this board");
+
             // Reachable both ways. Down is the easy direction and proves little; up is the one a
             // fall edge would fail, because falls are one-way and are left out of the districts.
-            Assert.That(colony.Pawns.Nav.Reachable(surface, bottom, TraverseMode.Colonist), Is.True,
+            Assert.That(colony.Pawns.Nav.Reachable(ground, bottom, TraverseMode.Colonist), Is.True,
                 "the bottom of the shaft cannot be walked to");
-            Assert.That(colony.Pawns.Nav.Reachable(bottom, surface, TraverseMode.Colonist), Is.True,
+            Assert.That(colony.Pawns.Nav.Reachable(bottom, ground, TraverseMode.Colonist), Is.True,
                 "a colonist at the bottom of the shaft cannot get out");
         }
 
@@ -82,11 +108,14 @@ namespace Odyssey.Tests.Sim
 
             colony.World.Tick(4_000);
 
+            int ground = GroundBeside(colony, start);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0), "no ground beside the shaft on this board");
+
             foreach (Pawn pawn in colony.Pawns.Pawns.All)
             {
                 Assert.That(colony.Grid.IsWalkable(pawn.Cell), Is.True,
                     $"a colonist is standing in {Size.FromIndex(pawn.Cell)}, which cannot be stood in");
-                Assert.That(colony.Pawns.Nav.Reachable(pawn.Cell, surface, TraverseMode.Colonist), Is.True,
+                Assert.That(colony.Pawns.Nav.Reachable(pawn.Cell, ground, TraverseMode.Colonist), Is.True,
                     $"the colonist at {Size.FromIndex(pawn.Cell)} cannot get back to the surface");
             }
         }
@@ -99,12 +128,17 @@ namespace Odyssey.Tests.Sim
             // nothing can take away again.
             ColonyWorld colony = Board();
             CellRef start = colony.Start;
-            int upper = Size.Index(start.X, start.Z, start.Y);
-            int lower = upper - Size.LayerStride;
+            int lower = Size.Index(start.X, start.Z, start.Y) - Size.LayerStride;
 
             Dig(colony, lower);
-            int again = colony.Pawns.Nav.EnsureClimb(lower, upper);
 
+            // Asked for the very climb the dig declared: onto the ground beside the hole, which is
+            // where a climb lands now. Asking for the vertical pair would be asking for a climb
+            // that was never made and would say nothing about stacking.
+            int landing = GroundBeside(colony, start);
+            Assume.That(landing, Is.GreaterThanOrEqualTo(0), "no ground beside the hole on this board");
+
+            int again = colony.Pawns.Nav.EnsureClimb(lower, landing);
             Assert.That(again, Is.EqualTo(-1), "a second climb was stacked on the first");
         }
 

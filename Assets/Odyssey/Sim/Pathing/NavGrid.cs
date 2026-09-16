@@ -42,6 +42,20 @@ namespace Odyssey.Sim.Pathing
         /// <summary>A cell a colonist can climb through, hands on rock. Nothing is built there.</summary>
         ConnectorClimb = 1 << 10,
 
+        /// <summary>
+        /// Standable only because a climb passes through it: a rock face, with nothing underneath.
+        ///
+        /// <para>Derived, never sticky — recomputed from the terrain and the climb footprint on
+        /// every refresh. It exists because <see cref="Walkable"/> was being asked two different
+        /// questions and answering both yes: "may a region form here" and "may somebody walk in
+        /// here". A cell on a rock face has to say yes to the first, or the shaft drops out of the
+        /// region graph and the miner in it becomes unreachable; it must say no to the second, or a
+        /// row of them is a bridge and colonists walk out over the hole. Measured before this
+        /// existed: <b>10,180 of 69,013</b> sideways steps — better than one in seven — went into a
+        /// cell with nothing under it, and every one of them carried a climb footprint.</para>
+        /// </summary>
+        ClimbOnly = 1 << 11,
+
         /// <summary>Any connector footprint cell.</summary>
         Connector = ConnectorStair | ConnectorLadder | ConnectorLift | ConnectorClimb,
 
@@ -212,7 +226,8 @@ namespace Odyssey.Sim.Pathing
 
             bool solid = grid.IsSolidTerrain(index);
             bool blocked = grid.IsBlockedByEdifice(index);
-            bool floor = grid.HasFloor(index) || (sticky & NavFlags.Connector) != 0;
+            bool realFloor = grid.HasFloor(index);
+            bool floor = realFloor || (sticky & NavFlags.Connector) != 0;
             bool door = (sticky & NavFlags.Door) != 0;
 
             NavFlags f = sticky;
@@ -220,6 +235,11 @@ namespace Odyssey.Sim.Pathing
             if (blocked) f |= NavFlags.Blocked;
             if (floor) f |= NavFlags.HasFloor;
             if (floor && !solid && (!blocked || door)) f |= NavFlags.Walkable;
+
+            // A rock face is somewhere to be, not somewhere to walk to. See NavFlags.ClimbOnly.
+            // Only a climb: a stair, a ladder and a lift are built things with a tread under you.
+            if (!realFloor && !solid && !blocked && (sticky & NavFlags.ConnectorClimb) != 0)
+                f |= NavFlags.ClimbOnly;
 
             Flags[index] = f;
         }
@@ -252,6 +272,26 @@ namespace Odyssey.Sim.Pathing
             if ((f & NavFlags.Door) == 0 || (f & NavFlags.DoorOpen) != 0) return true;
             return mode != TraverseMode.Animal;
         }
+
+        /// <summary>
+        /// May a pawn <em>walk</em> into this cell — a step on its own layer?
+        ///
+        /// <para>Narrower than <see cref="CanEnter"/>, and the difference is a cell that is
+        /// standable only because a climb goes through it. You may step <b>off</b> a rock face onto
+        /// solid ground, which is how anybody gets out of a shaft; you may not step <b>onto</b>
+        /// one, because walking onto a rock face is not a thing a person does — you would have to
+        /// climb to it, and a climb is a declared edge.</para>
+        ///
+        /// <para>The destination is the whole test and the source is deliberately not. Refusing to
+        /// leave a climb cell sideways sounds tidier and strands every colonist that ever climbs
+        /// out of a two-deep shaft: the top of that climb is itself a floorless cell, and stepping
+        /// off it onto the ground beside the hole is the last move of getting out.</para>
+        /// </summary>
+        public bool CanWalkInto(int index, TraverseMode mode) =>
+            (Flags[index] & NavFlags.ClimbOnly) == 0 && CanEnter(index, mode);
+
+        /// <summary>Is this cell standable only because a climb passes through it?</summary>
+        public bool IsClimbOnly(int index) => (Flags[index] & NavFlags.ClimbOnly) != 0;
 
         /// <summary>The cost of stepping into this cell, orthogonally, for this mode.</summary>
         public int EnterCost(int index, TraverseMode mode)

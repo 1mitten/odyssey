@@ -57,10 +57,17 @@ namespace Odyssey.EditorTools
             ColonyScenario.Place(grid, pawns, result.StartCell, 1u, scenario);
             ColonyScenario.GiveStartingOrders(designations, result.StartCell, scenario);
 
+            // How much rock is standing before anybody touches it, so the run can report what the
+            // colony actually got done. A fix that makes the board tidy by stopping the work is
+            // not a fix, and nothing else here would notice.
+            int solidAtStart = 0;
+            for (int i = 0; i < size.CellCount; i++) if (grid.IsSolidTerrain(i)) solidAtStart++;
+
             var floating = new Dictionary<int, int>();   // pawn id -> first tick seen unsupported
                         int layerSteps = 0, expensiveSteps = 0, worstCost = 0;
             int longestHang = 0, totalHang = 0, hangs = 0, ladderStands = 0;
             int climbTicks = 0, climbsAgainstNothing = 0;
+            int horizontalSteps = 0, stepsOntoAir = 0, standingOnAir = 0, airSamples = 0;
 
             for (int tick = 0; tick < 40_000; tick++)
             {
@@ -105,6 +112,36 @@ namespace Odyssey.EditorTools
                                   $"{size.FromIndex(pawn.Cell)} with no floor under it, " +
                                   $"{drop} empty layer(s) below it, path={pawn.HasPath}");
                     }
+
+                    // 1b. WALKING on air. The question the earlier version of this probe could
+                    //     not ask, because it counted a connector cell as somewhere to stand: a
+                    //     cell carrying a climb footprint has a floor as far as navigation is
+                    //     concerned and nothing whatever underneath it, so a row of them is a
+                    //     bridge over a hole. A HORIZONTAL step into one is a colonist walking
+                    //     out over thin air.
+                    if (pawn.HasPath)
+                    {
+                        int into = pawn.Path[pawn.PathIndex];
+                        if (pawn.Cell / size.LayerStride == into / size.LayerStride)
+                        {
+                            horizontalSteps++;
+                            if (!grid.HasFloor(into))
+                            {
+                                stepsOntoAir++;
+                                if (airSamples < 6)
+                                {
+                                    airSamples++;
+                                    Debug.Log($"[Footing] tick {tick}: pawn {pawn.Id.Value} steps " +
+                                              $"sideways from {size.FromIndex(pawn.Cell)} into " +
+                                              $"{size.FromIndex(into)}, which has no floor " +
+                                              $"(connector flags {nav.Grid.Flags[into] & NavFlags.Connector})");
+                                }
+                            }
+                        }
+                    }
+
+                    // 1c. STANDING on air: not moving at all, in a cell with nothing under it.
+                    if (!pawn.HasPath && !grid.HasFloor(pawn.Cell)) standingOnAir++;
 
                     // 2a. Is there anything to climb AGAINST? A climb needs a block beside the
                     //     hole whose edge the colonist goes up. An open quarry has none in the
@@ -162,6 +199,46 @@ namespace Odyssey.EditorTools
                           $"{size.FromIndex(item.Cell)} with {drop} empty layer(s) below it");
             }
 
+            int solidAtEnd = 0;
+            for (int i = 0; i < size.CellCount; i++) if (grid.IsSolidTerrain(i)) solidAtEnd++;
+            // And what is LEFT, which is the difference between "the colony had to walk further"
+            // and "the colony cannot get at its own orders any more". A fix that tidies the board
+            // by quietly making the work unreachable is not a fix, and the cells-mined count on
+            // its own cannot tell the two apart.
+            int ordered = 0, ordersWithNoStance = 0, ordersCutOff = 0;
+            Pawn first = pawns.Pawns.All[0];
+            var marked = designations.Cells;
+            for (int i = 0; i < marked.Count; i++)
+            {
+                int cell = marked[i];
+                if (designations.At(cell) != Odyssey.Sim.Designations.DesignationKind.Mine) continue;
+                if (!designations.CanMine(cell)) continue;
+                ordered++;
+                if (MineWorkGiver.StandToMine(pawns, first, cell) >= 0) continue;
+                ordersWithNoStance++;
+
+                // Two very different faults with one symptom. "No ground" means the cells around
+                // the rock genuinely have nothing to stand on and the order was always going to
+                // wait. "Cut off" means there IS somewhere to stand and the colony cannot get to
+                // it, which is a routing failure and mine to fix.
+                bool anyGround = false;
+                CellRef at = size.FromIndex(cell);
+                for (int dz = -1; dz <= 1 && !anyGround; dz++)
+                for (int dx = -1; dx <= 1 && !anyGround; dx++)
+                for (int dy = 0; dy <= 1 && !anyGround; dy++)
+                {
+                    if (dx == 0 && dz == 0) continue;
+                    if (!size.Contains(at.X + dx, at.Z + dz, at.Y + dy)) continue;
+                    if (grid.IsWalkable(size.Index(at.X + dx, at.Z + dz, at.Y + dy))) anyGround = true;
+                }
+
+                if (anyGround) ordersCutOff++;
+            }
+
+            Debug.Log($"[Footing] work: {solidAtStart - solidAtEnd} cells mined out in 40,000 ticks; " +
+                      $"{ordered} orders still standing, {ordersWithNoStance} with no stance " +
+                      $"({ordersCutOff} of those have ground beside them and cannot be reached)");
+
             Debug.Log($"[Footing] items: {floatingItems} of {itemsOnGround} stacks on the ground " +
                       $"have no floor under them, deepest drop {deepest} layer(s)");
 
@@ -180,7 +257,9 @@ namespace Odyssey.EditorTools
                       $"worst {worstCost} units; {hangs} hangs, longest {longestHang} ticks, " +
                       $"mean {(hangs > 0 ? totalHang / hangs : 0)} ticks; " +
                       $"{ladderStands} pawn-ticks spent on a connector; " +
-                      $"{climbsAgainstNothing} of {climbTicks} climbing pawn-ticks had no wall beside them");
+                      $"{climbsAgainstNothing} of {climbTicks} climbing pawn-ticks had no wall beside them; " +
+                      $"{stepsOntoAir} of {horizontalSteps} sideways pawn-ticks stepped onto a floorless cell; " +
+                      $"{standingOnAir} pawn-ticks stood still on one");
         }
 
         /// <summary>Is any of the four horizontal neighbours of this cell solid rock?</summary>

@@ -40,6 +40,25 @@ namespace Odyssey.Tests.Sim
             colony.World.Tick();
         }
 
+        /// <summary>
+        /// A walkable cell next door on the same layer: where a climb out of a hole now lands.
+        ///
+        /// The cell directly over a dug cell is the one whose floor was just taken away, so it is
+        /// no longer somewhere a colonist may be — which is the whole point of the change these
+        /// tests are written against.
+        /// </summary>
+        static int GroundBeside(ColonyWorld colony, CellRef at)
+        {
+            foreach (var d in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+            {
+                int x = at.X + d.Item1, z = at.Z + d.Item2;
+                if (!Size.Contains(x, z, at.Y)) continue;
+                int cell = Size.Index(x, z, at.Y);
+                if (colony.Grid.IsWalkable(cell)) return cell;
+            }
+            return -1;
+        }
+
         // ---- where a thing lands ---------------------------------------------------------
 
         [Test]
@@ -202,10 +221,15 @@ namespace Odyssey.Tests.Sim
 
             Dig(colony, shaft);
 
+            // Out onto the ground BESIDE the hole. The cell directly over it is the one whose
+            // floor was just dug away, so it is no longer somewhere a colonist may be.
+            int ground = GroundBeside(colony, start);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0), "no ground beside the hole on this board");
+
             Assert.That(colony.Grid.Edifice[shaft], Is.LessThan(0),
                 "something is standing in the shaft; the owner asked for nothing to be");
             Assert.That(
-                colony.Pawns.Nav.Reachable(shaft, surface, Odyssey.Sim.Pathing.TraverseMode.Colonist),
+                colony.Pawns.Nav.Reachable(shaft, ground, Odyssey.Sim.Pathing.TraverseMode.Colonist),
                 Is.True, "a colonist that cut this shaft cannot get out of it");
         }
 
@@ -228,8 +252,11 @@ namespace Odyssey.Tests.Sim
             // Untouched ground, so the cut cell has rock on all four sides.
             Assert.That(MineJobDriver.HasWallBeside(colony.Grid, shaft), Is.True);
             Dig(colony, shaft);
+
+            int ground = GroundBeside(colony, start);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0), "no ground beside the hole on this board");
             Assert.That(
-                colony.Pawns.Nav.Reachable(shaft, surface, Odyssey.Sim.Pathing.TraverseMode.Colonist),
+                colony.Pawns.Nav.Reachable(shaft, ground, Odyssey.Sim.Pathing.TraverseMode.Colonist),
                 Is.True, "a hole with rock on every side of it is not climbable");
         }
 
@@ -360,6 +387,96 @@ namespace Odyssey.Tests.Sim
 
             Assert.That(colony.Grid.HasFloor(pawn.Cell), Is.True,
                 $"the colonist is in {Size.FromIndex(pawn.Cell)}, which has nothing under it");
+        }
+
+        [Test]
+        public void AClimbLandsOnTheGroundBesideTheHoleAndNotInTheAirAboveIt()
+        {
+            // The fault that sealed pits shut. A climb used to end in the cell directly above the
+            // one it started in — which, for a hole in flat ground, is open air with its floor
+            // just dug away. That was survivable only while a colonist could stand there and walk
+            // off, and standing there is what the owner reported as walking across air. Forbid it
+            // and the one cell joining the pit to the world is a cell nobody may enter.
+            ColonyWorld colony = Board();
+            CellRef start = colony.Start;
+            int over = Size.Index(start.X, start.Z, start.Y);
+            int pit = over - Size.LayerStride;
+            Assume.That(colony.Designations.CanMine(pit), Is.True);
+
+            Dig(colony, pit);
+
+            Assert.That(colony.Grid.HasFloor(over), Is.False,
+                "the cell over the pit still has a floor, so this proves nothing");
+            Assert.That(colony.Pawns.Nav.Grid.IsClimbOnly(over), Is.False,
+                "the climb ended in the air above the hole instead of on the ground beside it");
+
+            int ground = GroundBeside(colony, start);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+            Assert.That(
+                colony.Pawns.Nav.Reachable(ground, pit, Odyssey.Sim.Pathing.TraverseMode.Colonist),
+                Is.True, "a colonist standing beside the pit cannot get into it");
+        }
+
+        [Test]
+        public void YouMayStepOffARockFaceButNotOntoOne()
+        {
+            // The asymmetry is the whole rule, and getting it the tidy-looking way round strands
+            // everybody: the top of a climb out of a deep shaft is itself a floorless cell, and
+            // stepping off it onto the ground is the last move of getting out.
+            ColonyWorld colony = Board();
+            CellRef start = colony.Start;
+            int over = Size.Index(start.X, start.Z, start.Y);
+            int pit = over - Size.LayerStride;
+            int deeper = pit - Size.LayerStride;
+            Assume.That(colony.Designations.CanMine(pit), Is.True);
+            Dig(colony, pit);
+            Assume.That(colony.Designations.CanMine(deeper), Is.True);
+            Dig(colony, deeper);
+
+            // The middle of a two-deep shaft is standable and has nothing under it.
+            Assume.That(colony.Pawns.Nav.Grid.IsClimbOnly(pit), Is.True,
+                "the middle of the shaft is not a rock face on this board");
+
+            var nav = colony.Pawns.Nav;
+            var mode = Odyssey.Sim.Pathing.TraverseMode.Colonist;
+            int ground = GroundBeside(colony, start);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+
+            Assert.That(nav.Grid.CanWalkInto(pit, mode), Is.False,
+                "a colonist may walk sideways onto a rock face");
+            Assert.That(nav.Grid.CanEnter(pit, mode), Is.True,
+                "a colonist may not be on a rock face at all, so nobody can climb");
+            Assert.That(nav.Grid.CanWalkInto(ground, mode), Is.True,
+                "ordinary ground stopped being walkable");
+        }
+
+        [Test]
+        public void NobodyHangsOnARockFaceDoingNothing()
+        {
+            // A cell a climb passes through is standable and has no floor, so a pawn whose path
+            // ends or fails while it is on one used to stay there, idle, in mid-air — 702
+            // pawn-ticks of it over 40,000. Letting go is the only honest answer: there is
+            // nothing to hold on to.
+            ColonyWorld colony = Board();
+            CellRef start = colony.Start;
+            int over = Size.Index(start.X, start.Z, start.Y);
+            int pit = over - Size.LayerStride;
+            int deeper = pit - Size.LayerStride;
+            Assume.That(colony.Designations.CanMine(pit), Is.True);
+            Dig(colony, pit);
+            Assume.That(colony.Designations.CanMine(deeper), Is.True);
+            Dig(colony, deeper);
+            Assume.That(colony.Pawns.Nav.Grid.IsClimbOnly(pit), Is.True);
+
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            pawn.ClearPath();
+            pawn.Cell = pit;
+
+            colony.World.Tick();
+
+            Assert.That(pawn.Cell, Is.Not.EqualTo(pit), "the colonist is still clinging to the face");
+            Assert.That(colony.Grid.HasFloor(pawn.Cell), Is.True,
+                $"it let go and landed in {Size.FromIndex(pawn.Cell)}, which has nothing under it");
         }
 
         [Test]

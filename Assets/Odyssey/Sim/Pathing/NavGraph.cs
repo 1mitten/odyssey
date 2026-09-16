@@ -965,12 +965,26 @@ namespace Odyssey.Sim.Pathing
         {
             if ((uint)lowerCell >= (uint)Size.CellCount) return -1;
             if ((uint)upperCell >= (uint)Size.CellCount) return -1;
-            if (upperCell - lowerCell != Size.LayerStride) return -1;
 
-            // Both ends already carry a climb footprint: there is one here, and adding a second
-            // would flag the same cells twice and leave a connector nothing can remove.
-            const NavFlags climb = NavFlags.ConnectorClimb;
-            if ((Grid.Flags[lowerCell] & climb) != 0 && (Grid.Flags[upperCell] & climb) != 0) return -1;
+            // One layer up, and not necessarily straight up. **The far end of a climb is normally
+            // the ground BESIDE the hole, not the air above it** — you go up the face of the block
+            // and step off on top of it, which is the only ending that leaves a colonist standing
+            // on something. A strictly vertical climb finishes in a cell with nothing under it,
+            // and a pit whose only way in was such a cell sealed itself the moment walking onto a
+            // rock face was forbidden.
+            CellRef from = Size.FromIndex(lowerCell);
+            CellRef to = Size.FromIndex(upperCell);
+            if (to.Y != from.Y + 1) return -1;
+            if (Math.Abs(to.X - from.X) + Math.Abs(to.Z - from.Z) > 1) return -1;
+
+            // One way out of a cell, not one per direction.
+            //
+            // The guard used to ask whether BOTH ends already carried a climb footprint, which was
+            // sound while a climb could only go straight up and there was one possible pair. Now
+            // that it lands on whichever block is beside the hole there are up to four, and asking
+            // about the pair would let a cell collect a climb in every direction — four connectors
+            // flagging the same cell, all but one of which nothing would ever remove.
+            if (HasClimbFrom(lowerCell)) return -1;
 
             return AddConnector(ConnectorKind.Climb, new[] { lowerCell }, new[] { upperCell });
         }
@@ -1029,6 +1043,25 @@ namespace Odyssey.Sim.Pathing
         /// <para>The scan is over the connectors recorded in this cell's own block, which is a
         /// handful, and it is guarded by the footprint flag so the common case costs one bit test.</para>
         /// </summary>
+        /// <summary>Does a climb already lead up out of this cell?</summary>
+        public bool HasClimbFrom(int lowerCell)
+        {
+            if ((uint)lowerCell >= (uint)Size.CellCount) return false;
+            if ((Grid.Flags[lowerCell] & NavFlags.ConnectorClimb) == 0) return false;
+
+            int block = BlockIndexOfCell(lowerCell);
+            if (!_connectorsByBlock.TryGetValue(block, out List<int>? ids)) return false;
+
+            for (int i = 0; i < ids.Count; i++)
+            {
+                Connector? con = _connectors[ids[i]];
+                if (con == null || con.Kind != ConnectorKind.Climb) continue;
+                if (con.LowerCells.Length == 1 && con.LowerCells[0] == lowerCell) return true;
+            }
+
+            return false;
+        }
+
         public bool RemoveClimbAt(int lowerCell)
         {
             if ((uint)lowerCell >= (uint)Size.CellCount) return false;
@@ -1216,7 +1249,11 @@ namespace Odyssey.Sim.Pathing
                 int dx = Math.Abs(a.X - b.X);
                 int dz = Math.Abs(a.Z - b.Z);
                 if (dx + dz != 1) return false;
-                return Grid.CanEnter(from, mode) && Grid.CanEnter(to, mode);
+
+                // Out of anywhere you can be, into anywhere you can stand. The asymmetry is the
+                // point: stepping off a rock face onto solid ground is the last move of getting
+                // out of a shaft, and stepping onto one is walking into mid-air.
+                return Grid.CanEnter(from, mode) && Grid.CanWalkInto(to, mode);
             }
 
             for (int e = FirstPortalEdge(from); e != -1; e = _peNext[e])

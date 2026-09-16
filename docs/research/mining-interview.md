@@ -492,6 +492,64 @@ settling-in. `PawnFigureDirector.DescribeClimb` prints phase, weight and which w
 | colonists unsupported at the end | 0 | 0 |
 | spoil stacks with no floor | 0 of 81 | 0 of 84 |
 
+## 6f. Sixth round: walking on air, and where a climb actually ends
+
+The owner: *"colonists were still climbing mid air with no block/tile there and then walking across
+air with no tile beneath them after they mined those rocks."*
+
+**The previous round's probe said zero because it was asking the wrong question.** It counted a cell
+carrying a connector footprint as somewhere to stand — which is what the navigation grid believes,
+and the belief is the bug. Asked properly, the board was full of it:
+
+```
+10,180 of 69,013 sideways pawn-ticks stepped into a cell with NO floor
+ 6,317 pawn-ticks stood still on one
+```
+
+Every one of them carried a climb footprint. `NavGrid.Refresh` grants `Walkable` to any connector
+cell, so a row of them is a bridge and colonists walked out over their own quarry.
+
+**`NavFlags.ClimbOnly` splits the two questions `Walkable` was answering at once.** "May a region
+form here" must stay yes, or the shaft drops out of the region graph and the miner in it becomes
+unreachable. "May somebody walk in here" must be no. `NavGrid.CanWalkInto` is the second question;
+`CanEnter` remains the first. The asymmetry is deliberate and getting it the tidy-looking way round
+strands everybody: **you may step off a rock face onto ground, and not onto one from ground.**
+
+**And that exposed the deeper fault: a climb was ending in the wrong place.** It went from the floor
+of a pit to the cell directly above — open air whose floor had just been dug away. That only ever
+worked because a colonist could stand there. Ban it and a pit seals itself: the single cell joining
+it to the world is a cell nobody may enter. Measured: mining fell to **24 cells** from a baseline of
+63, with **40** standing orders that had ground beside them and could not be reached.
+
+A climb now ends **on top of the block beside the hole**, which is where a person actually ends up
+and is real ground. The vertical climb survives as a fallback for the bottom of a shaft two or more
+cells deep, where the block beside you is taller than you can reach past; those intermediate cells
+are the only floorless standable cells left, and they are entered and left by climbing alone.
+`EnsureClimb` now refuses a second way out of a cell whatever direction it is asked in — with four
+possible landings the old "both ends already flagged" guard would have let a cell collect a climb in
+every direction.
+
+**Nobody hangs on a rock face doing nothing.** A pawn whose path ends or fails on one used to stay
+there, idle, in mid-air. `MovementSystem` lets it go to the first real floor.
+
+| measured over 40,000 ticks | before | strict rule only | now |
+|---|---|---|---|
+| sideways steps onto a floorless cell | 10,180 of 69,013 | 0 | **1 of 68,222** |
+| pawn-ticks standing still on one | 6,317 | 0 | **1** |
+| cells mined | 63 | 24 | **58** |
+| standing orders that cannot be reached | 17 of 45 | 57 of 84 | **16 of 50** |
+| climbs with no wall beside them | 0 | 0 | **0** |
+| colonists unsupported | 0 | 0 | **0** |
+
+The two remaining 1s are single-tick transients — the tick before the let-go rule fires, and a step
+begun in the tick the world changed under it.
+
+**A lesson worth keeping.** Three rounds of this were spent fixing what a photograph appeared to
+show. What settled it every time was a probe, and the probe was wrong twice before it was right:
+first it counted a connector as a floor, then it only asked about *climbing* when the complaint was
+about *walking*. A measurement that agrees with you is worth no more than a screenshot until you
+have checked what it is actually counting.
+
 ## 7. Risks
 
 1. **Golden tests re-base twice** — once for the raised ground, once for terracing. Both are

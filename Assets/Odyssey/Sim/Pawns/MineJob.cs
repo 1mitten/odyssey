@@ -309,15 +309,65 @@ namespace Odyssey.Sim.Pawns
             GridSize size = ctx.Size;
             CellGrid grid = ctx.Cells;
 
-            int above = cell + size.LayerStride;
-            if (above < size.CellCount && !grid.IsSolidTerrain(above) && !grid.IsBlockedByEdifice(above)
-                && HasWallBeside(grid, cell))
-                ctx.Nav.EnsureClimb(cell, above);
+            ClimbOutOf(ctx, cell);
 
+            // And out of whatever is under it, which may only now have a way up.
             int below = cell - size.LayerStride;
-            if (below >= 0 && !grid.IsSolidTerrain(below) && !grid.IsBlockedByEdifice(below)
-                && HasWallBeside(grid, below))
-                ctx.Nav.EnsureClimb(below, cell);
+            if (below >= 0 && !grid.IsSolidTerrain(below) && !grid.IsBlockedByEdifice(below))
+                ClimbOutOf(ctx, below);
+        }
+
+        /// <summary>
+        /// Declare the way up out of one open cell, if there is one to declare.
+        ///
+        /// <para><b>Onto the block, not over the hole.</b> The first version climbed straight up,
+        /// from the floor of a pit to the cell directly above it — which is open air with nothing
+        /// under it. That was survivable only while a colonist could stand on such a cell and walk
+        /// off it, and standing on it is precisely what the owner reported as walking across air.
+        /// Forbid that and a pit seals itself: the one cell joining it to the world is a cell
+        /// nobody may enter. Ending the climb on top of the block beside the hole fixes both at
+        /// once — it is where a person actually ends up, and it is ground.</para>
+        ///
+        /// <para>The fallback is the old vertical climb, and it is needed: at the bottom of a shaft
+        /// two or more cells deep the block beside you is taller than you can reach past, so the
+        /// climb goes up the face to the cell above and that one carries on. Those intermediate
+        /// cells are the only ones left that are standable without a floor, they are entered and
+        /// left by climbing alone, and <c>NavFlags.ClimbOnly</c> is how the rest of the code knows
+        /// not to walk into one.</para>
+        /// </summary>
+        static void ClimbOutOf(PawnContext ctx, int from)
+        {
+            GridSize size = ctx.Size;
+            CellGrid grid = ctx.Cells;
+
+            int above = from + size.LayerStride;
+            if (above >= size.CellCount) return;
+            if (grid.IsSolidTerrain(above) || grid.IsBlockedByEdifice(above)) return;
+            if (!HasWallBeside(grid, from)) return;
+
+            CellRef at = size.FromIndex(from);
+
+            // Onto the top of whichever neighbouring block can be stepped off onto.
+            if (TryStepOff(at.X - 1, at.Z)) return;
+            if (TryStepOff(at.X + 1, at.Z)) return;
+            if (TryStepOff(at.X, at.Z - 1)) return;
+            if (TryStepOff(at.X, at.Z + 1)) return;
+
+            // Nothing to step off onto: go up the face and let the cell above carry on.
+            ctx.Nav.EnsureClimb(from, above);
+
+            bool TryStepOff(int x, int z)
+            {
+                if (!size.Contains(x, z, at.Y)) return false;
+                if (!grid.IsSolidTerrain(size.Index(x, z, at.Y))) return false;
+
+                // The cell on top of that block. Solid below it is what gives it a floor, so
+                // there is no need to ask a second time — only whether it is clear.
+                int landing = size.Index(x, z, at.Y + 1);
+                if (grid.IsSolidTerrain(landing) || grid.IsBlockedByEdifice(landing)) return false;
+
+                return ctx.Nav.EnsureClimb(from, landing) >= 0;
+            }
         }
 
         /// <summary>
