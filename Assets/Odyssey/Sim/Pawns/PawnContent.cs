@@ -123,7 +123,8 @@ namespace Odyssey.Sim.Pawns
         public const int Sleep = 2;
         public const int Wander = 3;
         public const int Wait = 4;
-        public const int Count = 5;
+        public const int Fell = 5;
+        public const int Count = 6;
     }
 
     /// <summary>A job names a driver; the driver runs toils. This is the naming half.</summary>
@@ -145,7 +146,8 @@ namespace Odyssey.Sim.Pawns
     public static class WorkTypeIndex
     {
         public const int Haul = 0;
-        public const int Count = 1;
+        public const int Cutting = 1;
+        public const int Count = 2;
     }
 
     /// <summary>A container for work givers, carrying the natural order they scan in.</summary>
@@ -159,7 +161,8 @@ namespace Odyssey.Sim.Pawns
     {
         public const int Meal = 0;
         public const int Salvage = 1;
-        public const int Count = 2;
+        public const int Wood = 2;
+        public const int Count = 3;
     }
 
     /// <summary>
@@ -249,6 +252,12 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Job starts allowed inside <see cref="ThinkLoopWindowTicks"/> before a stand-down.</summary>
         public int ThinkLoopLimit = 10;
 
+        /// <summary>
+        /// Wood a felled tree leaves on the ground. ASSUMED: nothing in docs/research/ has
+        /// measured it; A8 (plants) is still an open row. One stack, so a single haul clears it.
+        /// </summary>
+        public int WoodPerTree = 20;
+
         public int ThinkLoopWindowTicks = 60;
 
         /// <summary>How long a pawn tripped by the think-loop trap stands still.</summary>
@@ -313,17 +322,24 @@ namespace Odyssey.Sim.Pawns
                 new JobDef { defName = "Job_Sleep", driver = JobIndex.Sleep, casuallyInterruptible = false },
                 new JobDef { defName = "Job_Wander", driver = JobIndex.Wander, expiryTicks = 1_200 },
                 new JobDef { defName = "Job_Wait", driver = JobIndex.Wait, workTicks = 120 },
+                // ASSUMED: ten seconds of work at normal speed, and one tree per job. Nothing in
+                // docs/research/ has measured what a tree should take; A8 (plants) is still open.
+                new JobDef { defName = "Job_Fell", driver = JobIndex.Fell, workTicks = 600, expiryTicks = 6_000 },
             };
 
             content.WorkTypes = new[]
             {
-                new WorkTypeDef { defName = "Work_Haul", label = "hauling", order = 0 },
+                // Cutting scans before hauling at equal priority: felled wood is what there is
+                // to haul, so the order that makes the work exist comes first.
+                new WorkTypeDef { defName = "Work_Haul", label = "hauling", order = 1 },
+                new WorkTypeDef { defName = "Work_Cutting", label = "cutting", order = 0 },
             };
 
             content.Items = new[]
             {
                 new ItemDef { defName = "Item_Meal", label = "ration pack", nutrition = 450 },
                 new ItemDef { defName = "Item_Salvage", label = "salvage" },
+                new ItemDef { defName = "Item_Wood", label = "wood", stackLimit = 75 },
             };
 
             content.Mood = new MoodDef { defName = "Mood_Default" };

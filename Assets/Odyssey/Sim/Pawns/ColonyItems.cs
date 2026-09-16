@@ -173,6 +173,21 @@ namespace Odyssey.Sim.Pawns
         public bool CellHasSpace(int cell) => !_itemAtCell.ContainsKey(cell);
 
         /// <summary>
+        /// <c>SetForbidden(A = thing, B = on)</c>. Forbidding is the player taking a thing out of
+        /// every scan without moving it: a hauler ignores a forbidden item and takes it once it is
+        /// allowed again.
+        /// </summary>
+        public IntentRejection HandleSetForbidden(Intent intent)
+        {
+            var item = Get(new ThingId(intent.A));
+            if (item == null) return IntentRejection.OutOfBounds;
+            bool on = intent.B != 0;
+            if (item.Forbidden == on) return IntentRejection.AlreadyInThatState;
+            item.Forbidden = on;
+            return IntentRejection.None;
+        }
+
+        /// <summary>
         /// Approximate travel cost between two cells: Manhattan on the layer plus a per-layer
         /// charge. An item three metres away horizontally but ten storeys down is not close, and
         /// a Euclidean measure would say it was.

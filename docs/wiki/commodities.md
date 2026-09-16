@@ -2,7 +2,7 @@
 
 What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the ore classes a wilderness colony sim would have, because the setting is a dead city and the ground is already full of manufactured things. These names appear in the resource ledger, in every bill and in every trade, so they are the names worth arguing about first.
 
-48 entries, 0 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+49 entries, 1 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
@@ -36,6 +36,7 @@ What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the o
 | **Protein paste** | `ui.res.protein` | Reclaimed nutrition. Edible; that is all | sheet 02 (food), med | M1 |
 | **Raw meat** | `ui.res.meat` | Butchered. Spoils without cold | sheet 07 (anatomy), high | M1 |
 | **Produce** | `ui.res.produce` | Grown food, uncooked | sheet 02 (food), high | M1 |
+| **Wood** | `ui.res.wood` | Felled timber. The first thing the colony builds with <br>**Needs:** a short stack of logs, cut ends showing | no art | M3 |
 | **Grain** | `ui.res.grain` | Bulk staple. Stores well, needs cooking | sheet 01 (raw materials), med | M1 |
 | **Fungus** | `ui.res.fungus` | Grows without light. The underground staple | sheet 01 (raw materials), high | M1 |
 | **Water** | `ui.res.water` | Drinking and hydroponics | sheet 08 (salvage gear), high | M1 |

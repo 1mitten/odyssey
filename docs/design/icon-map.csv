@@ -29,6 +29,7 @@ ui.res.meal,02,,,bowl of cooked food,high,mapped
 ui.res.protein,02,,,carton or tub,med,mapped
 ui.res.meat,07,,,raw meat slab,high,mapped
 ui.res.produce,02,,,carrot and potato,high,mapped
+ui.res.wood,-,,,"a short stack of logs, cut ends showing",-,gap
 ui.res.grain,01,,,wheat sheaf,med,mapped
 ui.res.fungus,01,,,cluster of mushrooms,high,mapped
 ui.res.water,08,,,water bottle,high,mapped
@@ -202,6 +203,7 @@ ui.arch.tool.salvage,05,,,powered drill,med,shared
 ui.arch.tool.haulurgent,08,,,duffel bag,low,shared
 ui.arch.tool.cancel,-,,,"a cancel mark. Trivial to draw, and in the HUD constantly",-,gap
 ui.arch.tool.forbid,08,,,"padlock, closed",high,mapped
+ui.arch.tool.fell,-,,,"an axe against a trunk",-,gap
 ui.arch.tool.allowitem,08,,,key,high,mapped
 ui.arch.tool.clearrubble,05,,,shovel,high,shared
 ui.arch.tool.extinguish,05,,,spray canister,low,shared

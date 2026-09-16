@@ -21,6 +21,8 @@ namespace Odyssey.Sim
         readonly List<ITickable> _tickables = new List<ITickable>();
         readonly List<ITickable>[] _byGroup;
         readonly List<Action<SimWorld>> _deferred = new List<Action<SimWorld>>();
+        readonly Dictionary<IntentKind, Func<Intent, IntentRejection>> _intentHandlers =
+            new Dictionary<IntentKind, Func<Intent, IntentRejection>>();
         ISnapshotContributor[] _contributors = Array.Empty<ISnapshotContributor>();
 
         internal SimWorld(uint seed, GridSize size)
@@ -121,6 +123,11 @@ namespace Odyssey.Sim
         /// </summary>
         IntentRejection HandleIntent(Intent intent)
         {
+            // A component that owns a kind of command handles it; the switch below is only for
+            // what the world itself owns. One handler per kind, registered at construction, so
+            // two components can never both claim a command and disagree about it.
+            if (_intentHandlers.TryGetValue(intent.Kind, out var handler)) return handler(intent);
+
             switch (intent.Kind)
             {
                 case IntentKind.SetSliceLayer:
@@ -186,6 +193,17 @@ namespace Odyssey.Sim
 
         internal void SetSnapshotContributors(ISnapshotContributor[] contributors) => _contributors = contributors;
 
+        internal void SetIntentHandler(IntentKind kind, Func<Intent, IntentRejection> handler)
+        {
+            if (kind == IntentKind.None) throw new ArgumentOutOfRangeException(nameof(kind));
+            if (_intentHandlers.ContainsKey(kind))
+                throw new InvalidOperationException($"Intent {kind} already has a handler.");
+            _intentHandlers[kind] = handler ?? throw new ArgumentNullException(nameof(handler));
+        }
+
+        /// <summary>Whether a component has claimed this kind of command.</summary>
+        public bool HandlesIntent(IntentKind kind) => _intentHandlers.ContainsKey(kind);
+
         internal void SetSystems(WorldSystemSchedule schedule) => Systems = schedule;
 
         /// <summary>Restore the tick counter when loading a save. Not for any other use.</summary>
@@ -206,6 +224,8 @@ namespace Odyssey.Sim
         readonly List<Func<SimWorld, ITickable>> _factories = new List<Func<SimWorld, ITickable>>();
         readonly List<ISnapshotContributor> _contributors = new List<ISnapshotContributor>();
         readonly List<Func<SimWorld, IWorldSystem>> _systemFactories = new List<Func<SimWorld, IWorldSystem>>();
+        readonly List<(IntentKind kind, Func<Intent, IntentRejection> handler)> _intentHandlers =
+            new List<(IntentKind, Func<Intent, IntentRejection>)>();
         uint _seed = 1;
         GridSize _size = GridSize.ScaleTarget;
 
@@ -248,9 +268,21 @@ namespace Odyssey.Sim
             return this;
         }
 
+        /// <summary>
+        /// Let a component own one kind of player command. The handler returns
+        /// <see cref="IntentRejection.None"/> when it applied the intent, or the reason it did not.
+        /// Handlers are consulted before the world's own switch, and a kind may be claimed once.
+        /// </summary>
+        public SimWorldBuilder AddIntentHandler(IntentKind kind, Func<Intent, IntentRejection> handler)
+        {
+            _intentHandlers.Add((kind, handler ?? throw new ArgumentNullException(nameof(handler))));
+            return this;
+        }
+
         public SimWorld Build()
         {
             var world = new SimWorld(_seed, _size);
+            foreach (var (kind, handler) in _intentHandlers) world.SetIntentHandler(kind, handler);
             foreach (var factory in _factories) world.Register(factory(world));
             world.SetSnapshotContributors(_contributors.ToArray());
 

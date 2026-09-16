@@ -1,5 +1,6 @@
 #nullable enable
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Designations;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -190,6 +191,88 @@ namespace Odyssey.Sim.Pawns
             int duration = Job.WorkTicks > 0 ? Job.WorkTicks : ctx.Content.Jobs[Job.DefIndex].workTicks;
             ToilProgress++;
             return ToilProgress >= duration ? JobStatus.Succeeded : JobStatus.Ongoing;
+        }
+    }
+}
+
+namespace Odyssey.Sim.Pawns
+{
+    /// <summary>
+    /// Walk to a marked tree, work at it, and leave wood where it stood.
+    ///
+    /// A tree blocks nothing, so the colonist walks into its cell rather than to a neighbour.
+    /// The order is cleared the moment the last swing lands, so no other colonist sets off for
+    /// it; the world edit itself (the tree going and the wood appearing) is a structural event
+    /// and runs in the deferred phase of the same tick, like every collapse and removal.
+    /// </summary>
+    public class FellJobDriver : JobDriver
+    {
+        public override bool TryMakeReservations(PawnContext ctx)
+        {
+            if (Job.TargetCell < 0) return false;
+            long key = ReservationManager.Key(ReservationTargetKind.Cell, Job.TargetCell);
+            if (!ctx.Reservations.Reserve(Pawn.Id, key)) return false;
+            Pawn.HeldReservations.Add(key);
+            return true;
+        }
+
+        public override JobStatus Tick(PawnContext ctx)
+        {
+            var designations = ctx.Designations;
+            if (designations == null) return JobStatus.Failed;
+
+            int cell = Job.TargetCell;
+            // Somebody else felled it, or the player changed their mind: stop, do not swing at air.
+            if (designations.At(cell) != DesignationKind.Fell || !designations.IsTree(cell))
+                return JobStatus.Failed;
+
+            if (ToilIndex == 0)
+            {
+                JobStatus walk = GotoCell(ctx, cell);
+                if (walk == JobStatus.Succeeded) NextToil();
+                return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
+            }
+
+            ToilProgress++;
+            if (ToilProgress < ctx.Content.Jobs[Job.DefIndex].workTicks) return JobStatus.Ongoing;
+
+            designations.Clear(cell);
+            int yield = ctx.Content.WoodPerTree;
+            ctx.Defer(_ => FellTree(ctx, cell, yield));
+            return JobStatus.Succeeded;
+        }
+
+        static void FellTree(PawnContext ctx, int cell, int yield)
+        {
+            ctx.Cells.RemoveEdifice(cell);
+            ctx.Chunks?.MarkDirty(ctx.Size.FromIndex(cell));
+
+            int at = FreeCellNear(ctx, cell);
+            // Nowhere within three cells to put it is a board packed solid with things, which
+            // nothing in the game can produce yet; losing the wood then is the least bad answer,
+            // because spawning onto an occupied cell would corrupt the item index.
+            if (at >= 0) ctx.Items.Spawn(ItemIndex.Wood, at, yield);
+        }
+
+        /// <summary>The cell itself, or the nearest walkable empty cell on the same layer, ring by ring.</summary>
+        static int FreeCellNear(PawnContext ctx, int cell)
+        {
+            if (ctx.Items.CellHasSpace(cell)) return cell;
+
+            GridSize size = ctx.Size;
+            CellRef origin = size.FromIndex(cell);
+            for (int radius = 1; radius <= 3; radius++)
+            for (int dz = -radius; dz <= radius; dz++)
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dz)) != radius) continue;
+                int x = origin.X + dx, z = origin.Z + dz;
+                if (!size.Contains(x, z, origin.Y)) continue;
+                int candidate = size.Index(x, z, origin.Y);
+                if (!ctx.Cells.IsWalkable(candidate) || !ctx.Items.CellHasSpace(candidate)) continue;
+                return candidate;
+            }
+            return -1;
         }
     }
 }

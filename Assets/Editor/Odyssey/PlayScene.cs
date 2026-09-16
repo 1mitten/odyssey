@@ -135,26 +135,25 @@ namespace Odyssey.EditorTools
                 var nav = new NavGraph(grid);
                 nav.Rebuild();
                 var pawns = new PawnContext(
-                    grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core());
+                    grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core()) { Chunks = chunks };
                 var support = new SupportSystem(grid, new SupportSolver(grid), chunks);
                 var mirror = new Odyssey.Presentation.World.GridMirrorContributor(
-                    grid, result.Natural!.Context.Edifices, model);
+                    grid, result.Edifices, model);
+                var designations = new Odyssey.Sim.Designations.DesignationGrid(grid, result.Edifices);
 
                 SimWorld world = new SimWorldBuilder()
                     .WithSeed(1u)
                     .WithSize(size)
-                    .AddSystem(_ => support)
-                    .AddSystem(_ => new NavigationSystem(nav, support))
-                    .AddSystem(_ => new NeedsSystem(pawns))
-                    .AddSystem(_ => new JobSystem(pawns))
-                    .AddSystem(_ => new MovementSystem(pawns))
-                    .AddTickable(_ => pawns.Pawns)
                     .AddSnapshotContributor(mirror)
-                    .AddSnapshotContributor(pawns.Pawns)
+                    .AddColony(pawns, designations, support, nav)
                     .Build();
 
                 ColonyScenario.Place(grid, pawns, result.StartCell, 1u, 5);
-                for (int i = 0; i < 120; i++) world.Tick();   // let them pick jobs and start walking
+                // The orders the scene gives, then long enough for the first tree to come down and
+                // its wood to be lying there: the picture has to show the job line, not just the
+                // colonists setting off along it.
+                ColonyScenario.DesignateTreesNear(designations, result.StartCell, 10);
+                for (int i = 0; i < 2_400; i++) world.Tick();
 
                 var actorMaterial = new Material(library.FallbackMaterial) { name = "Odyssey/Actor" };
                 actorMaterial.SetColor("_BaseColor", new Color(0.98f, 0.36f, 0.20f));
@@ -915,6 +914,16 @@ namespace Odyssey.EditorTools
                 centreXZ = true, baseAtY = true,
                 scale = new Vector3(1.5f, 1.5f, 1.5f),
             });
+            // Felled wood. The Western Frontier log pile is 5.71 m long, so at 0.4 it lies 2.3 m
+            // across the cell and half a metre high: a stack of logs on the ground, which is
+            // exactly what a felled tree leaves. The short logs in the same pack are litter.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemWood, shape = ModuleShape.Pillar,
+                prefabName = "SM_Prop_LogPile_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(0.4f, 0.4f, 0.4f),
+            });
 
             return rows;
         }
@@ -1190,7 +1199,13 @@ namespace Odyssey.EditorTools
             var camera = go.AddComponent<Camera>();
             camera.fieldOfView = 40f;
             camera.nearClipPlane = 0.3f;
-            camera.farClipPlane = 600f;
+            // Far enough to contain the surround. The board itself needs 600 m and had exactly
+            // that; the land outside it reaches 1,220 m past the rim, and a far plane at 600 cut
+            // it off in a hard arc with sky beyond — which is the board-game edge again, only
+            // moved. It costs nothing: fog is opaque by 1,100 m, so everything the extra range
+            // admits is already the colour of the sky, and reversed-Z leaves the depth precision
+            // where it was.
+            camera.farClipPlane = 1800f;
             camera.clearFlags = CameraClearFlags.Skybox;
             camera.backgroundColor = new Color(0.10f, 0.12f, 0.16f);
             go.AddComponent<AudioListener>();
