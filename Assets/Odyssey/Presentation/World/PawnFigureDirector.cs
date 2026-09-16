@@ -209,6 +209,32 @@ namespace Odyssey.Presentation.World
         public int FigureCount => _byPawn.Count;
 
         /// <summary>
+        /// How many figures actually have a prop fitted for each style, and what the catalogue
+        /// answered for it.
+        ///
+        /// A tool that is missing looks exactly like a tool that is mis-fitted from any distance
+        /// — the hands are empty either way — and the two want completely different fixes. This
+        /// says which, in one line, rather than by staring at a picture.
+        /// </summary>
+        public string DescribeTools()
+        {
+            var report = new System.Text.StringBuilder();
+            for (int style = 0; style < WorkStyle.Count; style++)
+            {
+                int fitted = 0;
+                for (int i = 0; i < _figures.Count; i++)
+                    if (_figures[i].Tools[style].Object != null) fitted++;
+
+                report.Append(style == 0 ? "" : "; ")
+                      .Append(Styles[style].ToolModule).Append(": row ")
+                      .Append(_toolRows[style] == null ? "missing"
+                            : _toolRows[style]!.prefab == null ? "no prefab" : "ok")
+                      .Append(", fitted on ").Append(fitted).Append('/').Append(_figures.Count);
+            }
+            return report.ToString();
+        }
+
+        /// <summary>
         /// The reach measured off the last figure built, in metres, and how high off the ground
         /// its edge lands.
         ///
@@ -865,8 +891,18 @@ namespace Odyssey.Presentation.World
                 // Where the hand is pointing, which way the head is travelling and how far in
                 // front of herself a colonist can put an edge are all different at the moment of
                 // the blow than they are standing idle, and all three are wanted. So the figure is
-                // struck once, here, and the grip and the reach are both taken from that. The pose
-                // is thrown away by the next animation update, before anything is drawn.
+                // struck, here, and the grip and the reach are both taken from that. The pose is
+                // thrown away by the next animation update, before anything is drawn.
+                //
+                // **Back to the clip pose before each one.** Strike ADDS its angles to whatever
+                // the bones are already at, so striking once per style without resetting poses the
+                // second on top of the first: the arm goes half as far again, and the tool is
+                // fitted and measured against a figure reaching somewhere no pose will ever put
+                // it. That is exactly what happened — the pick measured a blade height of 2.39 m,
+                // above the crown of a 1.79 m colonist, and read on screen as a miner swinging at
+                // the sky with empty-looking hands. RegripTools has always done this; the loop
+                // here had to learn it.
+                figure.Graph.Evaluate(0f);
                 Strike(figure, Styles[style].Stroke.AtStrike, Styles[style].Tilt);
                 GripTool(figure, style, tool.transform, hand, figure.RightLowerArm);
 

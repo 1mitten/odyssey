@@ -298,6 +298,91 @@ namespace Odyssey.EditorTools
                     }
                 }
 
+                // Whoever is swinging at rock, close and side on.
+                //
+                // SwingCheck is the harness meant for this and it segfaults inside the render
+                // pipeline in batchmode — twice, on a settled assembly, after six of its nine
+                // samples. That is worth its own fix and is not worth blocking a picture on: the
+                // ordinary screenshot path renders this same world reliably, and what is wanted
+                // here is only whether a miner has a pick in its hands and is facing the stone.
+                //
+                // The colony has already run 2,400 ticks by this point, which is long enough for
+                // the miners the scenario appoints to have reached the outcrop it marks.
+                WorldSnapshot published = world.Views.Current;
+                PawnView miner = default;
+                bool foundMiner = false;
+
+                // Prefer a miner cutting SIDEWAYS. One cutting the cell under its own feet is
+                // doing the same work, but the line from worker to work is straight down, so
+                // there is no side-on bearing to be had from it at all — the horizontal component
+                // is zero and any bearing derived from it is arbitrary. The first attempt at this
+                // put the camera inside the outcrop for exactly that reason.
+                for (int i = 0; i < published.Pawns.Length; i++)
+                {
+                    PawnView worker = published.Pawns[i];
+                    if (!worker.Working || worker.JobDef != JobHandle.Mine) continue;
+
+                    bool sideways = worker.WorkCell.Y == worker.Cell.Y;
+                    if (!foundMiner || sideways) { miner = worker; foundMiner = true; }
+                    if (sideways) break;
+                }
+
+                if (foundMiner)
+                {
+                    // Side on to the line between the miner and the rock, and midway along it.
+                    //
+                    // Not a taste in framing. A three-quarter view puts the two at different
+                    // depths and the one thing worth seeing — whether the head is in the stone,
+                    // short of it or buried past it — then reads as whatever you please. Across
+                    // the line it reads as what it is, which is why SwingCheck shoots this way and
+                    // why this borrows its bearing rather than inventing one.
+                    Vector3 toWork = CellMetrics.FloorCentre(miner.WorkCell)
+                                   - CellMetrics.FloorCentre(miner.Cell);
+                    toWork.y = 0f;
+
+                    // Straight up or down leaves nothing to be side-on to. Quarter past the
+                    // figure's own facing is at least a stable choice rather than a silent
+                    // fallback to world forward, which is what pointed the camera into the rock.
+                    float sideOn = toWork.sqrMagnitude > 1e-4f
+                        ? PawnPose.YawOf(toWork) + 90f
+                        : 45f;
+
+                    Vector3 waist = (CellMetrics.FloorCentre(miner.Cell)
+                                   + CellMetrics.FloorCentre(miner.WorkCell)) * 0.5f + Vector3.up * 1.3f;
+                    Shoot(camera, waist, 12f, sideOn, 6.5f, "Logs/shot-miner.png");
+
+                    // And again with the pick in the air.
+                    //
+                    // The struck pose is the one worth measuring and the WORST one to judge a
+                    // tool's head by: the aim puts the head just inside the rock, so at the
+                    // moment of the blow it is buried in the stone where nothing can see it —
+                    // which is correct, and tells you nothing about which way round it is.
+                    // Held part way up the raise, the head is against the sky.
+                    //
+                    // This is what the blade roll has to be settled from, and BitAxis cannot
+                    // settle it: it signs the head towards its fat side, and a pick sticks out
+                    // both ways — point one side, adze the other — so the sign is whichever end
+                    // the modeller made heavier rather than anything anybody chose.
+                    figures.HeldPhase = 0.30f;
+                    figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                    figures.Evaluate(FrameSeconds);
+                    Shoot(camera, waist, 12f, sideOn, 5.5f, "Logs/shot-miner-raised.png");
+                    figures.HeldPhase = null;
+                    figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                    figures.Evaluate(FrameSeconds);
+                    Debug.Log($"[Shot] a miner at {miner.Cell} is cutting {miner.WorkCell}" +
+                              (toWork.sqrMagnitude > 1e-4f ? " sideways" : " under its own feet"));
+
+                    // Measured, not squinted at. An empty hand in a photograph is either a tool
+                    // the catalogue never gave us or a tool fitted somewhere absurd, and those
+                    // want different fixes.
+                    Debug.Log($"[Shot] tools — {figures.DescribeTools()}");
+                    Debug.Log($"[Shot] reach {figures.MeasuredReach:F2} m, " +
+                              $"blade gap {figures.MeasuredBladeGap:F2} m, " +
+                              $"blade height {figures.MeasuredBladeHeight:F2} m, " +
+                              $"sideways {figures.MeasuredStrikeSideways:F2} m");
+                }
+
                 // A grass-free twin of the horizon shot was tried here, swapping in a second
                 // renderer with scatter off, and it drew grass anyway — on two consecutive
                 // renders, with the swap plainly in place. Not a one-frame latency, then, and not
@@ -306,7 +391,7 @@ namespace Odyssey.EditorTools
                 // before trusting it to draw nothing.
 
                 Debug.Log("[Shot] wrote Logs/shot-play.png, Logs/shot-close.png, " +
-                          "Logs/shot-down.png, Logs/shot-horizon.png, Logs/shot-rock.png");
+                          "Logs/shot-down.png, Logs/shot-horizon.png, Logs/shot-rock.png, Logs/shot-miner.png");
 
                 // Before the root goes: a playable graph bound to an Animator that has just been
                 // destroyed under it complains, and the complaint would be the picture's epitaph.
