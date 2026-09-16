@@ -242,6 +242,19 @@ namespace Odyssey.Presentation.Tests
         }
 
         [Test]
+        public void ColonistsAreDrawnAfterTheInkIsPainted()
+        {
+            // The outline is a fullscreen pass that paints over the finished image, and colonists
+            // are absent from the depth texture it reads -- so it does not know a colonist stands
+            // in front of a tree and paints the tree's line over them. Drawing characters after
+            // the pass is what puts them on top of that ink rather than under it, and it is the
+            // same mechanism, and the same queue, that keeps grass from being inked.
+            Assert.That(ColonistMaterials.CharacterQueue,
+                Is.GreaterThan(MaterialCache.DefaultFoliageQueue),
+                "colonists must be drawn after the ink, or other objects paint their lines over them");
+        }
+
+        [Test]
         public void TheCharacterShaderCarriesAnInkPass()
         {
             Shader shader = Shader.Find("Odyssey/Character");

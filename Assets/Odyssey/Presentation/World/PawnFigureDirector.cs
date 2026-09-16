@@ -733,12 +733,73 @@ namespace Odyssey.Presentation.World
             if (figure.LeftFoot == null || figure.RightFoot == null) return 0f;
 
             float ankle = Mathf.Min(figure.LeftFoot.position.y, figure.RightFoot.position.y);
-            float sole = ankle - figure.Transform.position.y;
 
-            // A negative or absurd answer means the rig is not built the way this assumes -- the
-            // root somewhere other than the feet, or the pose never evaluated. Better to correct
-            // nothing than to lift a colonist into the air on a bad measurement.
-            return sole > 0f && sole < 0.5f ? sole : 0f;
+            // Measured from the *posed mesh*, not from the root and not from the bounds.
+            //
+            // The first version took the root as the sole, which is true of a booted character and
+            // not of a barefoot one: those kept sinking, because the root sits where a boot would
+            // have been and a bare heel is higher. The second asked the renderer for its bounds
+            // and got 0.394 m, because a SkinnedMeshRenderer's bounds are the loose precomputed
+            // volume rather than the posed mesh. Baking the pose and reading the lowest vertex is
+            // the only one of the three that answers the question actually being asked, and it
+            // gets right whatever the next pack does -- the cast is sixty-one characters from four
+            // packs and nothing says their rigs were built to one convention.
+            float lowest = LowestDrawnPoint(figure);
+
+            float sole = lowest < float.MaxValue
+                ? ankle - lowest
+                : ankle - figure.Transform.position.y;   // nothing bakeable: the old assumption
+
+            // And a little more, so nothing grazes. A sole measured exactly right still leaves the
+            // foot touching the ground at a single plane, and the drawn ground is not a plane --
+            // GroundRelief shears every cell and the turf mesh is not flat inside one. A couple of
+            // centimetres is below the threshold at which a figure reads as floating and above the
+            // one at which the toe of a bare foot catches on the grass.
+            sole += Footing.SoleClearance;
+
+            // An absurd answer means the rig is not built the way this assumes, or the pose was
+            // never evaluated. Better to correct nothing than to lift a colonist into the air on a
+            // bad measurement.
+            // A quarter of a metre is already a tall boot at this scale. Anything past it means
+            // the rig is not built the way this assumes, and correcting nothing beats lifting a
+            // colonist into the air on a bad measurement -- which is exactly what the bounds
+            // version would have done.
+            return sole > 0f && sole < 0.25f ? sole : 0f;
+        }
+
+        /// <summary>
+        /// The world height of the lowest vertex this figure actually draws, in its current pose.
+        ///
+        /// <para>Baked rather than read off the renderer: <c>SkinnedMeshRenderer.bounds</c> is a
+        /// conservative volume, not the posed mesh, and using it measured a sole of 0.394 m on a
+        /// figure whose real one is a tenth of that. The bake is a script-created mesh, so it is
+        /// readable whatever the source model's import settings say, and it happens once per
+        /// figure at bind rather than per frame.</para>
+        /// </summary>
+        static float LowestDrawnPoint(Figure figure)
+        {
+            float lowest = float.MaxValue;
+            Mesh? baked = null;
+
+            for (int i = 0; i < figure.Skins.Length; i++)
+            {
+                SkinnedMeshRenderer skin = figure.Skins[i];
+                if (skin == null || !skin.enabled || skin.sharedMesh == null) continue;
+
+                baked ??= new Mesh { name = "Odyssey/SoleProbe" };
+                skin.BakeMesh(baked, useScale: true);
+
+                Vector3[] vertices = baked.vertices;
+                Transform at = skin.transform;
+                for (int v = 0; v < vertices.Length; v++)
+                {
+                    float y = at.TransformPoint(vertices[v]).y;
+                    if (y < lowest) lowest = y;
+                }
+            }
+
+            if (baked != null) UnityEngine.Object.DestroyImmediate(baked);
+            return lowest;
         }
 
         /// <summary>True when this pawn's face resolved to art and a figure can be built for it.</summary>

@@ -127,6 +127,15 @@ namespace Odyssey.Presentation.Rendering
         public static float InkWidth { get; set; } = 2.2f;
 
         /// <summary>
+        /// Where a colonist is drawn: just past the grass, which is itself just past the ink.
+        ///
+        /// Opaque in everything but ordering — the material writes and tests depth exactly as it
+        /// did. See the note where it is applied.
+        /// </summary>
+        public static int CharacterQueue { get; set; } =
+            MaterialCache.DefaultFoliageQueue + 1;
+
+        /// <summary>
         /// Copy the ink colour and width off the real outline feature, so the two agree in the
         /// running game rather than only in their defaults.
         ///
@@ -171,6 +180,22 @@ namespace Odyssey.Presentation.Rendering
             {
                 name = source.name + "/colonist#" + look.Cloth.Packed.ToString("x6"),
                 enableInstancing = true,
+
+                // Drawn after the ink, for the same reason and by the same mechanism the grass is
+                // (MaterialCache.FoliageQueue).
+                //
+                // The outline is a fullscreen pass that paints over the finished image wherever it
+                // finds a depth step, and colonists are absent from the depth texture it reads --
+                // measured: a cube stood behind a colonist keeps its ink running straight across
+                // the colonist. So the pass does not know a colonist is in front of the tree and
+                // paints the tree's line over them, which is what the owner reported as seeing the
+                // black lines of the trees through the colonists. Drawing characters after the
+                // pass puts them on top of that ink instead of under it.
+                //
+                // Nothing about how a colonist occludes changes: the queue moves when they are
+                // drawn, not whether they write depth or test against it, so a colonist behind a
+                // wall is still behind it.
+                renderQueue = CharacterQueue,
             };
 
             Carry(source, material);
