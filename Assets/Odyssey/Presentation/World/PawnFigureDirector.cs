@@ -230,6 +230,19 @@ namespace Odyssey.Presentation.World
                       .Append(_toolRows[style] == null ? "missing"
                             : _toolRows[style]!.prefab == null ? "no prefab" : "ok")
                       .Append(", fitted on ").Append(fitted).Append('/').Append(_figures.Count);
+
+                // The dip's own numbers, per style, because the global Measured* properties only
+                // ever hold whichever style was measured last. Height is the one that matters: it
+                // should be near nought, the face being level with the miner's boots.
+                if (Styles[style].Dip != 0f && _figures.Count > 0)
+                {
+                    FittedTool tool = _figures[_figures.Count - 1].Tools[style];
+                    report.Append(", dip ").Append(Styles[style].Dip.ToString("0"))
+                          .Append("° -> reach ").Append(tool.DippedStrike.magnitude.ToString("0.00"))
+                          .Append(" m, height ").Append(MeasuredDippedBladeHeight.ToString("0.00"))
+                          .Append(" m (level ").Append(MeasuredBladeHeight.ToString("0.00"))
+                          .Append(" m)");
+                }
             }
             return report.ToString();
         }
@@ -280,6 +293,20 @@ namespace Odyssey.Presentation.World
         /// distance puts its axe beside the tree rather than in it.
         /// </summary>
         public float MeasuredStrikeSideways { get; private set; }
+
+        /// <summary>
+        /// How high the edge lands above the feet with the stroke aimed down, in metres.
+        ///
+        /// The number that says whether the dip is the right size. It wants to be near zero: the
+        /// face a miner strikes from a rim is level with its own boots, so an edge landing a metre
+        /// up is a pick passing over the rock and one landing below the feet is a pick through the
+        /// floor. Nothing else in the pipeline can tell you this — the stand solve only ever looks
+        /// at the horizontal part.
+        /// </summary>
+        public float MeasuredDippedBladeHeight { get; private set; }
+
+        /// <summary>How far in front the edge lands with the stroke aimed down, in metres.</summary>
+        public float MeasuredDippedReach { get; private set; }
 
         /// <summary>
         /// The fastest live figure's ground speed, in metres per second.
@@ -470,7 +497,10 @@ namespace Odyssey.Presentation.World
                 WorkStyle look = Styles[figure.Style];
                 WorkSwing swing = look.Stroke.At(
                     HeldPhase ?? look.Stroke.Phase(figure.SwingClock, figure.SwingOffset));
-                Strike(figure, swing.Scaled(figure.WorkWeight), look.Tilt);
+
+                // Dipped before scaled, so the lean comes on with the rest of the pose rather than
+                // snapping into a bow the frame the work starts.
+                Strike(figure, swing.Dipped(figure.WorkDip).Scaled(figure.WorkWeight), look.Tilt);
 
                 // Check the blade got there, on the frame where it should have. Only at the moment
                 // of the blow: anywhere else in the stroke the axe is over a shoulder and a
@@ -658,6 +688,26 @@ namespace Odyssey.Presentation.World
             {
                 figure.WorkCentre = CellMetrics.FloorCentre(pawn.WorkCell);
 
+                // Work below the feet is struck on its top face, not on its floor, and it is
+                // struck with the stroke aimed down. See WorkStyle.Dip: a miner cutting the layer
+                // below stands on the rim of the hole or on the cell itself, and in both the stone
+                // is level with its boots. Aimed at the floor centre and swung level, the pick
+                // passed over the rock entirely.
+                //
+                // Half a cell is the threshold rather than a whole one so that the test is about
+                // which layer the work is on and not about exactly where in a cell a pawn is drawn.
+                float drop = position.y - figure.WorkCentre.y;
+                bool below = drop > CellMetrics.SizeY * 0.5f;
+                if (below)
+                {
+                    figure.WorkCentre.y += CellMetrics.SizeY;
+                    figure.WorkDip = Styles[WorkStyle.IndexForJob(pawn.JobDef)].Dip;
+                }
+                else
+                {
+                    figure.WorkDip = 0f;
+                }
+
                 // Carried on the figure because the pose pass runs later, over figures alone,
                 // with no snapshot in scope. It is the job def and not a style, so the one place
                 // that turns a job into a look stays the one place.
@@ -672,7 +722,7 @@ namespace Odyssey.Presentation.World
             Quaternion facing = Quaternion.Euler(0f, figure.Yaw, 0f);
             figure.Transform.position = figure.WorkWeight > 0.001f
                 ? WorkStance.StandAt(position, figure.WorkCentre,
-                    facing * Vector3.forward, figure.WorkWeight, facing * figure.Held.Strike,
+                    facing * Vector3.forward, figure.WorkWeight, facing * figure.StrikeNow,
                     Styles[figure.Style].AimFromCentre)
                 : position;
 
@@ -920,6 +970,7 @@ namespace Odyssey.Presentation.World
 
                 tool.SetActive(false);
                 MeasureStrike(figure, style);
+                MeasureDippedStrike(figure, style);
             }
         }
 
@@ -1056,6 +1107,7 @@ namespace Odyssey.Presentation.World
                     Strike(figure, Styles[style].Stroke.AtStrike, Styles[style].Tilt);
                     GripTool(figure, style, fitted.Transform, hand, figure.RightLowerArm);
                     MeasureStrike(figure, style);
+                    MeasureDippedStrike(figure, style);
                 }
             }
         }
@@ -1128,8 +1180,38 @@ namespace Odyssey.Presentation.World
             // axe is several bones deep and its own space says nothing about where the figure is
             // pointing.
             fitted.Strike = Quaternion.Inverse(figure.Transform.rotation) * edge;
+            fitted.DippedStrike = fitted.Strike;
             MeasuredReach = edge.magnitude;
             MeasuredStrikeSideways = fitted.Strike.x;
+        }
+
+        /// <summary>
+        /// The same measurement for the stroke aimed down, and what it costs in reach.
+        ///
+        /// Struck a second time rather than derived from the first: the dip is a rotation of a
+        /// chain of bones about a pivot nobody has written down, so the only honest way to know
+        /// where the edge ends up is to put the figure there and look. Skipped entirely for a
+        /// style with no dip, which leaves <see cref="FittedTool.DippedStrike"/> equal to the
+        /// upright one.
+        /// </summary>
+        void MeasureDippedStrike(Figure figure, int style)
+        {
+            WorkStyle look = Styles[style];
+            if (look.Dip == 0f) return;
+
+            FittedTool fitted = figure.Tools[style];
+            if (fitted.Transform == null || figure.RightUpperArm == null) return;
+
+            // Back to the clip pose first. Strike ADDS — the same trap that once measured the
+            // pick's blade at 2.39 m, above the crown of the colonist holding it.
+            figure.Graph.Evaluate(0f);
+            Strike(figure, look.Stroke.AtStrike.Dipped(look.Dip), look.Tilt);
+
+            Vector3 edge = fitted.Transform.TransformPoint(fitted.BladeTip) - figure.Transform.position;
+            MeasuredDippedBladeHeight = edge.y;
+            edge.y = 0f;
+            fitted.DippedStrike = Quaternion.Inverse(figure.Transform.rotation) * edge;
+            MeasuredDippedReach = edge.magnitude;
         }
 
         /// <summary>
@@ -1282,8 +1364,24 @@ namespace Odyssey.Presentation.World
             /// <summary>The tool actually held. Every per-frame reader wants this one.</summary>
             public FittedTool Held => Tools[Style];
 
-            /// <summary>The middle of what this figure is working on. Kept only to check the blade got there.</summary>
+            /// <summary>Where the edge lands this frame, which depends on whether the aim is dipped.</summary>
+            public Vector3 StrikeNow => WorkDip != 0f ? Held.DippedStrike : Held.Strike;
+
+            /// <summary>
+            /// The point the blade is aimed at. The middle of the work cell's floor for work on
+            /// the figure's own layer, and the middle of its <em>top face</em> for work below —
+            /// which is the surface a miner on the rim actually strikes.
+            /// </summary>
             public Vector3 WorkCentre;
+
+            /// <summary>
+            /// Degrees this figure is aiming its stroke below level, this frame.
+            ///
+            /// The style's <see cref="WorkStyle.Dip"/> when the work is a layer down and zero when
+            /// it is not, so the same mining style covers an adit cut level into a face and a shaft
+            /// cut down from the rim without needing two of them.
+            /// </summary>
+            public float WorkDip;
 
             static FittedTool[] NewTools()
             {
@@ -1315,6 +1413,18 @@ namespace Odyssey.Presentation.World
             /// in front. See <see cref="PawnFigureDirector.MeasureStrike"/>.
             /// </summary>
             public Vector3 Strike;
+
+            /// <summary>
+            /// The same offset for the stroke aimed down at work a layer below — see
+            /// <see cref="WorkStyle.Dip"/>. Equal to <see cref="Strike"/> for a style with no dip.
+            ///
+            /// <para>Measured separately because it is a different number and not a small one: a
+            /// figure bent 45° over its work reaches about a quarter of a metre less far in front
+            /// of itself than one standing up. Solve the stand against the upright reach and the
+            /// miner stands that far too far back from the hole, which is the same class of
+            /// mistake as writing the reach down instead of measuring it.</para>
+            /// </summary>
+            public Vector3 DippedStrike;
         }
     }
 }

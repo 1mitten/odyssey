@@ -67,6 +67,30 @@ namespace Odyssey.Presentation.World
         public WorkSwing Scaled(float weight) =>
             new WorkSwing(Shoulder * weight, Elbow * weight, Spine * weight);
 
+        /// <summary>
+        /// The same stroke, aimed lower: the worker bends over its work and the arc comes down
+        /// with it.
+        ///
+        /// <para><b>Why this is one number added to two of the three.</b> The director applies
+        /// <see cref="Spine"/> to the back and <c>Shoulder - Spine</c> to the upper arm, so that
+        /// <see cref="Shoulder"/> means the arm's pitch against the world rather than against the
+        /// chest. Add the same angle to both and the difference is unchanged: the back folds
+        /// further forward and the arm goes with it through the skeleton, which is a person
+        /// leaning over a hole. Add it to the shoulder alone and the back stays upright while the
+        /// arm drops, which is a person pointing at the floor.</para>
+        ///
+        /// <para>The elbow is untouched. It is a local bend — how far the forearm is cocked
+        /// against the upper arm — and it means the same thing whatever the rest of the body is
+        /// doing. Dipping it as well would straighten the arm out of the stroke as the aim
+        /// lowered, and the tool would arrive at a different distance from the fist depending on
+        /// how deep the work was.</para>
+        ///
+        /// <para>Positive is downward for both, and the two get there by opposite routes: a spine
+        /// stands up, so positive folds it forward; an arm hangs down, so positive carries it back
+        /// towards the ground it started pointing at.</para>
+        /// </summary>
+        public WorkSwing Dipped(float degrees) =>
+            degrees == 0f ? this : new WorkSwing(Shoulder + degrees, Elbow, Spine + degrees);
     }
 
     /// <summary>

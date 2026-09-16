@@ -83,23 +83,67 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Where a colonist stands to cut this cell out: beside it if that is possible at all,
-        /// and only otherwise on top of it.
+        /// Where a colonist stands to cut this cell out. Three stances, tried in this order:
+        /// beside it, on the rim above it, and only then on top of it.
         ///
-        /// <para>The preference is the whole method. Standing on top works — it is the only
-        /// stance there is for cutting a shaft downward — but it costs the colonist its own floor
-        /// when the cell goes, and it is answered by stepping down into the hole
-        /// (<c>MineJobDriver.StepDownOntoTheFloorJustCut</c>). Sideways costs nothing at all. So a
-        /// colonist cuts an adit into a terrace or an outcrop by walking up to it, and only drops
-        /// into a shaft when the player has asked for a hole in the ground.</para>
+        /// <para><b>Beside</b> — one of the eight neighbours on the same layer, diagonals
+        /// included, because a colonist can swing round a corner. This is an adit into a terrace
+        /// or an outcrop: the rock is at eye level, the swing is level, and nothing moves under
+        /// the colonist when the cell goes.</para>
         ///
-        /// <para>Beside means the eight neighbours on the same layer, including the diagonals: a
-        /// colonist can swing round a corner.</para>
+        /// <para><b>On the rim</b> — one of the eight neighbours a layer up, and only where the
+        /// rock's own ceiling is open. The top face is then exactly at the colonist's feet, one
+        /// cell across, and the stroke comes down into it. It costs nothing either: the floor that
+        /// goes is not the one being stood on. This is how a person digs, and it is the stance the
+        /// owner asked for after watching a miner swing horizontally through the air above a cell
+        /// it was cutting a layer below. The ceiling test is what keeps it honest — a buried cell
+        /// has no top face to strike, and without it the giver hands out stances at rock nobody
+        /// can get near.</para>
+        ///
+        /// <para><b>On top</b> — last, because it is the one that costs. It is also unavoidable:
+        /// the first cut into flat ground has no rim to stand on, and there is no other stance for
+        /// starting a shaft. The floor goes with the cell, and the colonist steps down into the
+        /// hole it made (<c>MineJobDriver.StepDownOntoTheFloorJustCut</c>). Ordering it last means
+        /// a step down is a consequence of the shape of the dig rather than a surprise: once one
+        /// cell of a shaft is open, every cell beside it is worked from the rim.</para>
+        ///
+        /// <para>Both of the stances above the rock want the same thing from presentation — a
+        /// stroke aimed downward rather than level — and <c>WorkStyle.Dip</c> is where that
+        /// lives.</para>
         /// </summary>
         public static int StandToMine(PawnContext ctx, Pawn pawn, int cell)
         {
             GridSize size = ctx.Size;
             CellRef at = size.FromIndex(cell);
+
+            int beside = NearestStandOnLayer(ctx, pawn, at, at.Y);
+            if (beside >= 0) return beside;
+
+            int above = cell + size.LayerStride;
+            if (above >= size.CellCount) return -1;
+
+            // Only if the rock's own ceiling is open. A cell with solid rock on top of it has no
+            // top face to strike: a colonist stood on the rim of a *buried* cell would be swinging
+            // at the cell above instead, which is the wall of the tunnel it is standing in. That
+            // is not a cosmetic mistake — it is the work giver claiming a stance that does not
+            // exist, and it showed up as a dozen orders accepted on rock nobody could get near.
+            if (!ctx.Cells.IsSolidTerrain(above))
+            {
+                int rim = NearestStandOnLayer(ctx, pawn, at, at.Y + 1);
+                if (rim >= 0) return rim;
+            }
+
+            if (!ctx.Cells.IsWalkable(above) || !ctx.Reachable(pawn, above)) return -1;
+            return above;
+        }
+
+        /// <summary>
+        /// The nearest walkable, reachable cell of the eight around <paramref name="at"/> in XZ,
+        /// taken on <paramref name="layer"/> rather than on the cell's own.
+        /// </summary>
+        static int NearestStandOnLayer(PawnContext ctx, Pawn pawn, CellRef at, int layer)
+        {
+            GridSize size = ctx.Size;
             int best = -1, bestDistance = int.MaxValue;
 
             for (int dz = -1; dz <= 1; dz++)
@@ -107,9 +151,9 @@ namespace Odyssey.Sim.Pawns
             {
                 if (dx == 0 && dz == 0) continue;
                 int x = at.X + dx, z = at.Z + dz;
-                if (!size.Contains(x, z, at.Y)) continue;
+                if (!size.Contains(x, z, layer)) continue;
 
-                int candidate = size.Index(x, z, at.Y);
+                int candidate = size.Index(x, z, layer);
                 if (!ctx.Cells.IsWalkable(candidate)) continue;
 
                 int distance = ctx.Distance(pawn.Cell, candidate);
@@ -120,12 +164,7 @@ namespace Odyssey.Sim.Pawns
                 best = candidate;
             }
 
-            if (best >= 0) return best;
-
-            int above = cell + size.LayerStride;
-            if (above >= size.CellCount) return -1;
-            if (!ctx.Cells.IsWalkable(above) || !ctx.Reachable(pawn, above)) return -1;
-            return above;
+            return best;
         }
     }
 

@@ -411,5 +411,88 @@ namespace Odyssey.Tests.Presentation
                     "the aim leaves the cell when the worker stands on the diagonal");
             }
         }
+
+        // ---- aiming the stroke downward ----------------------------------------------------
+
+        [Test]
+        public void DippingBowsTheBackAndCarriesTheArmWithIt()
+        {
+            // The whole of the mechanism, and the thing that is easy to get wrong. The director
+            // gives the back `Spine` and the upper arm `Shoulder - Spine`, so that Shoulder means
+            // the arm's pitch against the WORLD. Adding the dip to both therefore leaves the arm's
+            // angle against the chest untouched and lowers the pair together, which is a person
+            // leaning over a hole. Adding it to the shoulder alone would lower the arm against a
+            // chest that stayed upright, which is a person pointing at the floor.
+            var level = new WorkSwing(-52f, -16f, 22f);
+            WorkSwing dipped = level.Dipped(45f);
+
+            Assert.That(dipped.Spine, Is.EqualTo(level.Spine + 45f).Within(1e-4f),
+                "the back did not fold any further into the blow");
+            Assert.That(dipped.Shoulder - dipped.Spine, Is.EqualTo(level.Shoulder - level.Spine).Within(1e-4f),
+                "the arm changed its angle against the chest, so it is pointing rather than leaning");
+            Assert.That(dipped.Shoulder, Is.EqualTo(level.Shoulder + 45f).Within(1e-4f),
+                "the arm's pitch against the world did not come down by the dip");
+        }
+
+        [Test]
+        public void DippingLeavesTheElbowAlone()
+        {
+            // A local bend: how far the forearm is cocked against the upper arm means the same
+            // thing whatever the rest of the body is doing. Dipping it too would straighten the
+            // arm as the aim lowered, and the tool would arrive at a different distance from the
+            // fist depending on how deep the work was.
+            var level = new WorkSwing(-52f, -16f, 22f);
+            Assert.That(level.Dipped(45f).Elbow, Is.EqualTo(level.Elbow).Within(1e-4f));
+        }
+
+        [Test]
+        public void NoDipIsTheSamePoseBackAgain()
+        {
+            var level = new WorkSwing(-140f, -68f, -10f);
+            WorkSwing same = level.Dipped(0f);
+            Assert.That(same.Shoulder, Is.EqualTo(level.Shoulder));
+            Assert.That(same.Elbow, Is.EqualTo(level.Elbow));
+            Assert.That(same.Spine, Is.EqualTo(level.Spine));
+        }
+
+        [Test]
+        public void OnlyMiningAimsDownward()
+        {
+            // A tree and the colonist felling it stand on the same floor, always. A miner cutting
+            // the layer below does not, which is the one case that needed this.
+            Assert.That(WorkStyle.Felling.Dip, Is.EqualTo(0f),
+                "felling acquired a downward aim it has no use for");
+            Assert.That(WorkStyle.Mining.Dip, Is.GreaterThan(0f),
+                "mining cannot reach stone a layer below its feet");
+        }
+
+        [Test]
+        public void TheDipIsBigEnoughToReachTheFloorAndNotSoBigItGoesThroughIt()
+        {
+            // Derived rather than dialled: the edge lands about 1.34 m up and 1.73 m in front of a
+            // chain pivoting around the base of the spine, roughly a metre up. Bringing a point
+            // 1.76 m out and 0.34 m above that pivot down to a metre below it wants some 46
+            // degrees. This brackets that reasoning; PawnFigureDirector.MeasuredDippedBladeHeight
+            // is what actually settles it, on a real rig, and DescribeTools prints it.
+            Assert.That(WorkStyle.Mining.Dip, Is.GreaterThan(25f),
+                "too shallow: the pick still passes over rock that is level with the boots");
+            Assert.That(WorkStyle.Mining.Dip, Is.LessThan(70f),
+                "too deep: the figure is folded double and the pick goes through the floor");
+        }
+
+        [Test]
+        public void TheDippedStrokeIsStillAStrokeAndNotAHeldPose()
+        {
+            // Dipping must move the whole curve, not flatten it: a raise and a strike that end up
+            // at the same angles are a miner holding a pick against a rock.
+            // Off Raised and Struck rather than off At(0) and At(1): Stroke(0) is 1, so phase
+            // nought is the moment the head is IN the work and the two would be the same pose.
+            WorkStroke pick = WorkStroke.Pick;
+            WorkSwing raised = pick.Raised.Dipped(WorkStyle.Mining.Dip);
+            WorkSwing struck = pick.Struck.Dipped(WorkStyle.Mining.Dip);
+
+            Assert.That(Mathf.Abs(struck.Shoulder - raised.Shoulder), Is.GreaterThan(45f),
+                "the dipped stroke has no travel left in it");
+        }
     }
 }

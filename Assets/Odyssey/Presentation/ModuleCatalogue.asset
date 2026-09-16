@@ -3105,13 +3105,13 @@ MonoBehaviour:
     locomotion: []
   - moduleId: odyssey.module.item.stone
     shape: 4
-    prefab: {fileID: 3621875773770697450, guid: 8ccba9dd8ca4fa049936ac69cb28f89f, type: 3}
-    prefabName: SM_Prop_StonePile_01
+    prefab: {fileID: 7211606713778384998, guid: cc46b771562eb3e4793292607fc3f72b, type: 3}
+    prefabName: SM_Gen_Env_Rock_03
     centreXZ: 1
     baseAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
-    scale: {x: 0.9, y: 0.9, z: 0.9}
+    scale: {x: 0.35, y: 0.35, z: 0.35}
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3123,13 +3123,13 @@ MonoBehaviour:
     locomotion: []
   - moduleId: odyssey.module.item.ironore
     shape: 4
-    prefab: {fileID: 7211606713778384998, guid: cc46b771562eb3e4793292607fc3f72b, type: 3}
-    prefabName: SM_Gen_Env_Rock_03
+    prefab: {fileID: 1168210563750090145, guid: daad3195a405192409324b56eec44e2b, type: 3}
+    prefabName: SM_Gen_Env_Rock_08
     centreXZ: 1
     baseAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
-    scale: {x: 0.8, y: 0.8, z: 0.8}
+    scale: {x: 0.16, y: 0.16, z: 0.16}
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
@@ -3141,13 +3141,13 @@ MonoBehaviour:
     locomotion: []
   - moduleId: odyssey.module.item.coal
     shape: 4
-    prefab: {fileID: 315675889818940899, guid: 256212dab9cb9d040bdae30d4f256a44, type: 3}
-    prefabName: SM_Gen_Env_Rock_Pebbles_05
+    prefab: {fileID: 6873938577213127126, guid: a9a82dc7a09f37741916c33cc3483e7c, type: 3}
+    prefabName: SM_Gen_Env_Rock_Pebbles_02
     centreXZ: 1
     baseAtY: 1
     offset: {x: 0, y: 0, z: 0}
     yaw: 0
-    scale: {x: 1, y: 1, z: 1}
+    scale: {x: 0.5, y: 0.5, z: 0.5}
     materialOnly: 0
     material: {fileID: 0}
     materialName: 

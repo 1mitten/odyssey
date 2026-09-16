@@ -276,6 +276,70 @@ in the end-to-end run, and the roll is drawn from (world seed, **cell index**), 
 - **Mining still collapses nothing** (answer 12, deliberate). A cell mined out under a slab is
   structurally dishonest until U29.
 
+## 6b. Second interview: what spoil looks like, and digging downward
+
+Two things the owner watched and did not like, and the three decisions that came out of asking.
+
+**"The rocks looked odd when they are mined — just a few gray rocks would be fine and not a weird
+pile."** Dropped stone drew as `SM_Prop_StonePile_01`, a cairn **1.48 m tall**, so eight stone
+knocked off a face appeared as a chest-high monument standing in the cell.
+
+- **Decision (owner): two or three chunky boulders.** Stone is now `SM_Gen_Env_Rock_03` at 0.35 —
+  a lump 0.48 × 0.36 × 0.40 m, about shin high. Iron ore moved to `SM_Gen_Env_Rock_08` at 0.16
+  (taller than wide: shards off a seam) and coal to `SM_Gen_Env_Rock_Pebbles_02` at 0.5 (the
+  flattest of the three). Silhouette is still the only axis available — items carry no per-item
+  tint — so the three were kept deliberately different in proportion.
+- **Decision (owner): a bigger pile looks bigger.** `ItemHeap` draws a rubble item as *several*
+  rocks, the count running from 2 at a fresh drop to 7 at a full stack of 75. The mechanism is
+  **count rather than size**, which is a small departure from the way the option was worded: eight
+  stone scaled to a quarter of a boulder reads as one small rock, where three rocks read as three
+  rocks — and "two or three boulders" is a count in the first place. Size still varies ±20% per
+  rock, for variety and not for quantity.
+- It costs nothing to draw. Items were already grouped by def and submitted instanced, so seven
+  rocks are seven matrices in a buffer that was going to be submitted anyway.
+- The layout is a **sunflower spiral** (golden angle, √index radius) turned by the item's own id.
+  Independent random offsets pass every "inside the cell" check and still put two boulders in the
+  same place often enough to be seen, and two boulders in one place read as one bad boulder.
+- Only what a mine leaves is a heap. Rations come in a crate and wood in a bundle, and both draw
+  one prop exactly as before.
+
+**"When you mine on stone below the current height, the animation needs to swing down into the
+stone."** The miner was standing on top of the cell it was cutting and swinging horizontally at
+1.34 m — a metre and a third of clear air above the rock.
+
+- **Decision (owner): step to the edge and swing in.** `MineWorkGiver.StandToMine` now tries three
+  stances in order: beside it on its own layer, **on the rim a layer up**, and only then on top of
+  it. The rim stance costs the colonist nothing, because the floor that goes is not the one it is
+  standing on.
+- The rim is offered **only where the rock's own ceiling is open**. Without that test the giver
+  hands out stances at buried cells, where a colonist stood "on the rim" would be swinging at the
+  cell above — the floor it is standing on. This was not reasoned out in advance: it was caught by
+  `MinedStoneIsHauledToTheStockpile` going red, a dozen orders having been accepted on rock nobody
+  could get near.
+- Standing on top survives for the case that cannot be designed away: a one-cell-wide shaft has
+  solid rock on all eight sides of its bottom and of the cell below that, so the only floor within
+  reach of the next cut is the one standing on it.
+- **`WorkStyle.Dip`** aims the whole stroke down by 45° whenever the work is a layer below the
+  feet, and the aim point rises from the work cell's floor to its **top face** — which is the
+  surface a miner on a rim actually strikes. The 45° is derived, not dialled: the edge lands about
+  1.34 m up and 1.73 m in front of a chain pivoting near the base of the spine, and bringing that
+  point down to a metre below the pivot is some 46°.
+- The dip goes on the **spine and the shoulder together** and not on the shoulder alone. The
+  director gives the back `Spine` and the arm `Shoulder - Spine`, so adding the same angle to both
+  leaves the arm's angle against the chest alone and lowers the pair together — a person leaning
+  over a hole rather than a person pointing at the floor.
+- The **reach is measured a second time** in the dipped pose (`MeasuredDippedBladeHeight`,
+  `MeasuredDippedReach`, both printed by `DescribeTools`). A figure bent 45° reaches about a
+  quarter of a metre less far in front of itself; solving the stand against the upright reach would
+  stand the miner that far back from its own hole, which is the same class of mistake as writing
+  the reach down instead of measuring it.
+- **The design note was wrong about this.** `12-work-poses-and-tools.md` states that no vertical
+  aiming is needed now or for mining. Its reasoning holds for felling — a tree and the colonist
+  cutting it stand on the same floor — and it assumed a miner would too. A miner does not.
+- **Still owed:** the 45° has been derived and bracketed by a test, not photographed. The number
+  that settles it is `MeasuredDippedBladeHeight`, which wants to be near nought, and `SwingCheck`
+  is still exhausting render textures in batch mode.
+
 ## 7. Risks
 
 1. **Golden tests re-base twice** — once for the raised ground, once for terracing. Both are

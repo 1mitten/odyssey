@@ -383,6 +383,77 @@ namespace Odyssey.EditorTools
                               $"sideways {figures.MeasuredStrikeSideways:F2} m");
                 }
 
+                // And a miner cutting the layer BELOW itself, which is the case the downward aim
+                // was built for and the only one that can show whether it works.
+                //
+                // Kept separate from the shot above rather than folded into its preference order:
+                // that one deliberately wants a SIDEWAYS cut, because a level swing is what its
+                // measurements are about. These are two different poses and they want two
+                // pictures, not one picture of whichever happened to be running.
+                PawnView digger = default;
+                bool foundDigger = false;
+                for (int i = 0; i < published.Pawns.Length; i++)
+                {
+                    PawnView worker = published.Pawns[i];
+                    if (!worker.Working || worker.JobDef != JobHandle.Mine) continue;
+                    if (worker.WorkCell.Y >= worker.Cell.Y) continue;
+                    digger = worker;
+                    foundDigger = true;
+                    break;
+                }
+
+                if (foundDigger)
+                {
+                    Vector3 toWork = CellMetrics.FloorCentre(digger.WorkCell)
+                                   - CellMetrics.FloorCentre(digger.Cell);
+                    toWork.y = 0f;
+                    float sideOn = toWork.sqrMagnitude > 1e-4f
+                        ? PawnPose.YawOf(toWork) + 90f
+                        : 45f;
+
+                    // Framed on the stone's own top face rather than on a waist height between
+                    // the two: the whole question is whether the head reaches that face, and a
+                    // frame centred a cell above it puts the answer at the bottom of the picture.
+                    Vector3 face = CellMetrics.FloorCentre(digger.WorkCell)
+                                 + Vector3.up * CellMetrics.SizeY;
+                    Shoot(camera, face + Vector3.up * 0.9f, 8f, sideOn, 6.0f, "Logs/shot-miner-down.png");
+
+                    Debug.Log($"[Shot] a miner at {digger.Cell} is cutting {digger.WorkCell}, " +
+                              (toWork.sqrMagnitude > 1e-4f ? "from the rim" : "from directly on top"));
+                }
+                else
+                {
+                    Debug.Log("[Shot] no miner was cutting a layer below itself, so no downward shot");
+                }
+
+                // Spoil on the floor: what a dug-out cell actually leaves to look at.
+                {
+                    CellRef spoil = default;
+                    int most = 0;
+                    for (int i = 0; i < published.Things.Length; i++)
+                    {
+                        ThingView thing = published.Things[i];
+                        if (thing.DefIndex != ItemIndex.Stone || thing.Stack <= most) continue;
+                        most = thing.Stack;
+                        spoil = thing.Cell;
+                    }
+
+                    if (most > 0)
+                    {
+                        // Steeply down and well back. The first attempt shot it from 4.5 m at 30
+                        // degrees and spent most of the frame inside the rock face beside it:
+                        // spoil lies at the foot of a wall, so anything near the horizontal is
+                        // looking through the wall.
+                        Shoot(camera, CellMetrics.FloorCentre(spoil) + Vector3.up * 0.3f,
+                              55f, 35f, 9f, "Logs/shot-spoil.png");
+                        Debug.Log($"[Shot] the biggest heap of stone is {most} at {spoil}");
+                    }
+                    else
+                    {
+                        Debug.Log("[Shot] no stone on the ground yet, so no spoil shot");
+                    }
+                }
+
                 // A grass-free twin of the horizon shot was tried here, swapping in a second
                 // renderer with scatter off, and it drew grass anyway — on two consecutive
                 // renders, with the swap plainly in place. Not a one-frame latency, then, and not
@@ -1136,37 +1207,43 @@ namespace Odyssey.EditorTools
             });
 
             // What a mine leaves. No pack contains ore, so all three are rock, and the job these
-            // rows do is to make them three *different* rocks: a cairn, a boulder and a scatter,
-            // chosen for silhouette because that is the only axis available — items are drawn by
-            // the actor pass with no per-item tint, so colour cannot tell them apart. All three
-            // are recorded as art gaps in the registry and want real tiles eventually; three
-            // distinguishable shapes beats three identical orange stand-in markers meanwhile.
+            // rows do is to make them three *different* rocks, chosen for silhouette because that
+            // is the only axis available — items are drawn by the actor pass with no per-item
+            // tint, so colour cannot tell them apart. All three are recorded as art gaps in the
+            // registry and want real tiles eventually.
+            //
+            // **One row is one rock, not one pile.** These three are drawn several times over by
+            // ItemHeap, scattered across the cell floor, with the count reading the stack size —
+            // so every scale here is the size of a single lump you could carry, and a full
+            // stockpile square is seven of them rather than one enormous one. The first version
+            // used SM_Prop_StonePile_01, a 1.48 m cairn, which is the shape of a monument and not
+            // of eight stone knocked off a rock face.
             rows.Add(new ModuleEntry
             {
-                // 0.88 x 1.48 x 0.73 at source: a heap tall enough to read as stacked rather than
-                // dropped, and well clear of the 2.5 m cell at 0.9.
+                // 1.37 x 1.04 x 1.14 at source; 0.48 x 0.36 x 0.40 at this scale. A squat lump
+                // about shin high — the plainest "grey rock" in any pack we own.
                 moduleId = ModuleIds.ItemStone, shape = ModuleShape.Pillar,
-                prefabName = "SM_Prop_StonePile_01",
-                centreXZ = true, baseAtY = true,
-                scale = new Vector3(0.9f, 0.9f, 0.9f),
-            });
-            rows.Add(new ModuleEntry
-            {
-                // A single boulder, 1.37 x 1.04 x 1.14, so ore reads as lumps hewn out of a face
-                // rather than as sweepings.
-                moduleId = ModuleIds.ItemIronOre, shape = ModuleShape.Pillar,
                 prefabName = "SM_Gen_Env_Rock_03",
                 centreXZ = true, baseAtY = true,
-                scale = new Vector3(0.8f, 0.8f, 0.8f),
+                scale = new Vector3(0.35f, 0.35f, 0.35f),
             });
             rows.Add(new ModuleEntry
             {
-                // Flat scatter, 1.75 x 0.22 x 1.59: coal in lumps on the ground, and the lowest
-                // silhouette of the three so a coal pile is not mistaken for a stone one.
-                moduleId = ModuleIds.ItemCoal, shape = ModuleShape.Pillar,
-                prefabName = "SM_Gen_Env_Rock_Pebbles_05",
+                // 2.12 x 3.38 x 2.82 at source; 0.34 x 0.54 x 0.45 here. Taller than it is wide,
+                // where stone is wider than it is tall: ore reads as shards split off a seam.
+                moduleId = ModuleIds.ItemIronOre, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Env_Rock_08",
                 centreXZ = true, baseAtY = true,
-                scale = new Vector3(1.0f, 1.0f, 1.0f),
+                scale = new Vector3(0.16f, 0.16f, 0.16f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                // 1.11 x 0.30 x 0.89 at source; 0.55 x 0.15 x 0.45 here. Low rubble, and the
+                // flattest of the three, so a coal pile is never mistaken for a stone one.
+                moduleId = ModuleIds.ItemCoal, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Env_Rock_Pebbles_02",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(0.5f, 0.5f, 0.5f),
             });
 
             return rows;

@@ -250,11 +250,33 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public readonly float ChipStandOff;
 
+        /// <summary>
+        /// Degrees the whole stroke is aimed downward when the work is below the worker's feet.
+        ///
+        /// <para><b>The design note said no vertical aim would ever be wanted, and it was wrong
+        /// about mining.</b> Its reasoning held for felling — a tree and the colonist cutting it
+        /// stand on the same floor — and it assumed a miner would too. A miner does not. Cutting a
+        /// cell out of the layer below means standing on its rim or on top of it, and in both the
+        /// rock's top face is at the worker's own feet, a whole cell below the height the blade
+        /// travels at. Drawn level, the pick sweeps through empty air a metre and a third above the
+        /// stone it is supposedly breaking, which is what the owner saw.</para>
+        ///
+        /// <para>45° is derived, not dialled: the edge lands about 1.34 m above the feet and about
+        /// 1.73 m in front, and the chain it hangs off pivots around the base of the spine roughly
+        /// a metre up. Bringing a point 1.76 m out and 0.34 m above that pivot down to a metre
+        /// below it is a rotation of some 46°. <c>DescribeTools</c> prints the measured result, so
+        /// the number is checkable rather than argued.</para>
+        ///
+        /// <para>Zero for felling, which is the same as not having it.</para>
+        /// </summary>
+        public readonly float Dip;
+
         public WorkStyle(WorkStroke stroke, string toolModule, ChipRecipe chips, float aimFromCentre,
             float tilt, float gripFraction, float bladeRoll, float bladeYaw, float offHandSpacing,
-            float chipStandOff = 0f)
+            float chipStandOff = 0f, float dip = 0f)
         {
             ChipStandOff = chipStandOff;
+            Dip = dip;
             Stroke = stroke;
             ToolModule = toolModule;
             Chips = chips;
@@ -293,7 +315,9 @@ namespace Odyssey.Presentation.World
             // Out past the face and a little clear of it, so the lumps are seen leaving the rock
             // rather than appearing in mid-air once they have already cleared it.
             // 12 cm back out to the face the head went in through, and 10 cm clear of it.
-            chipStandOff: 0.22f);
+            chipStandOff: 0.22f,
+            // Bent over the hole when the rock is below. See Dip.
+            dip: 45f);
 
         /// <summary>How many styles there are. Sizes the per-figure tool table.</summary>
         public const int Count = 2;
@@ -329,6 +353,6 @@ namespace Odyssey.Presentation.World
             float? bladeRoll = null, float? bladeYaw = null, float? offHandSpacing = null) =>
             new WorkStyle(Stroke, ToolModule, Chips, AimFromCentre,
                 tilt ?? Tilt, gripFraction ?? GripFraction, bladeRoll ?? BladeRoll,
-                bladeYaw ?? BladeYaw, offHandSpacing ?? OffHandSpacing, ChipStandOff);
+                bladeYaw ?? BladeYaw, offHandSpacing ?? OffHandSpacing, ChipStandOff, Dip);
     }
 }

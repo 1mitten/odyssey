@@ -380,6 +380,9 @@ namespace Odyssey.Presentation.Rendering
         int[] _itemCounts = System.Array.Empty<int>();
         Matrix4x4[] _itemMatrices = new Matrix4x4[16];
 
+        /// <summary>Scratch for one heap's worth of rocks. Reused, never grown: ItemHeap caps it.</summary>
+        readonly Matrix4x4[] _heapPlacements = new Matrix4x4[ItemHeap.Most];
+
         /// <summary>
         /// Draw the items lying on the ground, one instanced submission per item kind.
         ///
@@ -408,8 +411,21 @@ namespace Odyssey.Presentation.Rendering
                     continue;
                 }
 
+                Vector3 floor = CellMetrics.FloorCentre(cell);
+
+                // Rubble is several rocks, and how many says how much. See ItemHeap: everything
+                // else on the floor is one prop, and stone drawn that way was a cairn standing in
+                // the cell rather than spoil lying in it.
+                if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe heap))
+                {
+                    int rocks = ItemHeap.Place(things[i].Stack, (uint)things[i].Id.Value,
+                        floor, heap, _heapPlacements);
+                    for (int rock = 0; rock < rocks; rock++) AppendItem(def, _heapPlacements[rock]);
+                    continue;
+                }
+
                 AppendItem(def, Matrix4x4.TRS(
-                    CellMetrics.FloorCentre(cell),
+                    floor,
                     Quaternion.Euler(0f, YawOf(things[i].Id), 0f),
                     Vector3.one));
             }
