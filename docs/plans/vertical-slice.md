@@ -129,6 +129,18 @@ At the end of M2, three pawns live in a ruined shell: they walk upstairs, sleep,
 
 ---
 
+## After the slice — additions the plan never scheduled
+
+Units the slice did not ask for, added here when they land so the plan stays the index of what
+exists. Each is presentation-side, self-contained in its own files, and independent of the M3
+critical path.
+
+| Unit | Size | Depends on | Done when |
+|---|---|---|---|
+| **U33 Environmental audio** | M | U23, U24 | The playback layer, per ADR 0010 and `d-12-audio.md`: one pooled-voice director serving the whole colony (work impacts from the stroke clock's `BlowLanded`, with distance culling, per-sound cooldown and pitch variance), camera-anchored ambience (water measured around the camera's focus from the terrain mirror, one bed per environment, layer-aware), day/night music crossfaded from the tick through `GameClock`, alerts with hysteresis off the published pawn list, five code buses in dB with a persisted settings stub (B17) and alert ducking. A generated catalogue and six synthesised placeholder clips (`AudioSetup`), so a clone without it runs silent; EditMode suites for the math, probe, clock, watcher and director, plus a PlayMode smoke test. Nothing in Sim or Hud gains a UnityEngine reference, and no sound enters the save or the hash. |
+
+---
+
 ## Risk register for the slice
 
 Ordered by how much trouble each would cause, with the cheapest experiment that would settle it.
