@@ -71,6 +71,7 @@ namespace Odyssey.Tests.PlayMode
             Device = existing ?? InputSystem.AddDevice<Mouse>();
 
             if (!Device.enabled) InputSystem.EnableDevice(Device);
+            Pump.Device = Device;
 
             Assert.That(Device.enabled, Is.True,
                 "the mouse device is disabled, so every event queued at it will be dropped in " +
@@ -87,11 +88,7 @@ namespace Odyssey.Tests.PlayMode
         /// </summary>
         public IEnumerator Scroll(float notches, Vector2 at)
         {
-            InputSystem.QueueStateEvent(Device, new MouseState
-            {
-                position = at,
-                scroll = new Vector2(0f, notches),
-            });
+            Pump.Post(new MouseState { position = at, scroll = new Vector2(0f, notches) });
 
             // The pump processes it at the top of the next frame and the rig reads it in that
             // same frame; by the time this coroutine resumes, the frame has happened.
@@ -105,7 +102,7 @@ namespace Odyssey.Tests.PlayMode
         /// <summary>Move the pointer without pressing anything.</summary>
         public IEnumerator MoveTo(Vector2 at)
         {
-            InputSystem.QueueStateEvent(Device, new MouseState { position = at });
+            Pump.Post(new MouseState { position = at });
             yield return null;
 
             Assert.That(Device.position.ReadValue().x, Is.EqualTo(at.x).Within(0.5f),
@@ -115,7 +112,7 @@ namespace Odyssey.Tests.PlayMode
         /// <summary>Press and release the left button at a point, a frame apart each way.</summary>
         public IEnumerator Click(Vector2 at)
         {
-            InputSystem.QueueStateEvent(Device, new MouseState { position = at }.WithButton(MouseButton.Left));
+            Pump.Post(new MouseState { position = at }.WithButton(MouseButton.Left));
             yield return null;
             InputSystem.QueueStateEvent(Device, new MouseState { position = at });
             yield return null;
