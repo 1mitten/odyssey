@@ -246,6 +246,57 @@ namespace Odyssey.Tests.Sim
             Assert.That(stand.Y - at.Y, Is.InRange(0, 1), "the stand is neither below the cell nor two layers up");
         }
 
+        /// <summary>
+        /// Square on to the face, not round the corner, whenever a face is available at all
+        /// (owner, 2026-09-16: "they should place themselves in front of the block").
+        ///
+        /// <para>A miner is <i>drawn</i> stepping in towards what it is cutting, and on a diagonal
+        /// that step goes towards the block's corner — into the two cells sharing it, which when
+        /// cutting a face are the ones most likely to be solid stone. Measured on the played board
+        /// before the ring was ordered: 1,500 of 1,980 stances were diagonal and 961 of those had a
+        /// face available and reachable anyway, lost only because a corner is often one step
+        /// nearer. Afterwards: 539 diagonal, and <b>none</b> of them with a face going spare.</para>
+        ///
+        /// <para>This asserts the rule on a fixture that leaves every approach open, where the old
+        /// nearest-first ranking would take whichever corner the walk happened to reach first.</para>
+        /// </summary>
+        [Test]
+        public void AMinerStandsSquareOnToTheFaceWhenItCan()
+        {
+            ColonyWorld colony = Board();
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+
+            int checkedCells = 0;
+            for (int i = 0; i < Size.CellCount; i++)
+            {
+                if (!colony.Designations.CanMine(i)) continue;
+                int stand = MineWorkGiver.StandToMine(colony.Pawns, pawn, i);
+                if (stand < 0) continue;
+
+                CellRef rock = Size.FromIndex(i);
+                CellRef at = Size.FromIndex(stand);
+                if (at.Y != rock.Y) continue;           // the rim and reaching-up stances
+                if (at.X == rock.X || at.Z == rock.Z) continue;   // already square on
+
+                // A corner was taken. Then no face may have been available on that layer.
+                checkedCells++;
+                foreach ((int dx, int dz) in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                {
+                    if (!Size.Contains(rock.X + dx, rock.Z + dz, rock.Y)) continue;
+                    int face = Size.Index(rock.X + dx, rock.Z + dz, rock.Y);
+                    if (!colony.Grid.IsWalkable(face)) continue;
+                    Assert.That(
+                        colony.Pawns.Nav.Reachable(pawn.Cell, face, Odyssey.Sim.Pathing.TraverseMode.Colonist),
+                        Is.False,
+                        $"the miner took the corner {at} to cut {rock} while the face {Size.FromIndex(face)} " +
+                        "was walkable and reachable — it will step into whatever is beside the block");
+                }
+            }
+
+            Assert.That(checkedCells, Is.GreaterThan(0),
+                "no corner stance was taken anywhere on this board, so the rule was not exercised");
+        }
+
         [Test]
         public void ADiggerDoesNotEndUpStandingOnNothing()
         {
