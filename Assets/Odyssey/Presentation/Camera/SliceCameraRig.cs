@@ -47,7 +47,7 @@ namespace Odyssey.Presentation.CameraRig
         public float smoothing = 12f;
 
         [Header("Selection")]
-        public Color selectionColour = new Color(0.25f, 0.85f, 0.95f, 0.35f);
+        public Color selectionColour = Color.white;
 
         WorldRenderModel? _model;
         ChunkRenderer? _renderer;

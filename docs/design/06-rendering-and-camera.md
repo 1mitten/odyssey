@@ -25,6 +25,57 @@ Instance data per chunk is rebuilt only when the chunk is dirty, and the sim sig
 
 **Still to be measured** (`d-03-rendering.md`, performance half): draw calls and frame time at full scale, with emissive materials, real-time shadows and the cut-away all enabled, plus whether the GPU Resident Drawer beats explicit `RenderMeshInstanced` for this shape. Matching the look is part of the budget, not something to switch off to hit a number.
 
+## 2a. The land beyond the board
+
+The board is finite and the simulation has no cells past it. Until 2026-09-16 that was exactly what
+it looked like: the meadow stopped at the rim in mid-air over the sky gradient, and the whole thing
+read as a board game on a table rather than as a clearing in a landscape. **The surround is
+decoration that fixes the framing and nothing else** (`TerrainSkirt`, `SkirtLayout`).
+
+What it is not: it is not a second world. Nothing out there is a cell, so nothing is pathable,
+selectable, buildable, fellable or in the save. `SlicePicker` cannot return a cell that does not
+exist, which is why the surround needs no defence against being clicked.
+
+Four decisions, all taken with the owner on 2026-09-16:
+
+- **The meadow continues, thinning into haze.** Not a framing ring of hills and not a bare plane:
+  the same ground and the same wood carried outwards until linear fog has closed over it.
+- **A fixed skirt, built once, reaching 1,220 m past the rim.** Concentric rings of instanced
+  ground tiles, one cell per tile at the seam and coarsening outwards, so 1.2 km of ground costs
+  about 7,900 instances rather than about 200,000. Each ring is covered by four strips, each split
+  into a whole number of equal tiles that fills it exactly — so the rings cannot gap (sky showing
+  through) or overlap (coplanar ground z-fighting), and the board's dimensions need not divide
+  anything. Fog is opaque by 1,100 m, so the skirt ends where nothing can see it end. The camera's
+  far plane went from 600 m to 1,800 m to contain it.
+- **The playable area still reads as bounded**, but softly: the surround desaturates towards its own
+  luminance, ramping from nothing at the rim to full strength 18 m out. A step change at the join
+  is the exact tell the feature exists to remove, so the change is a ramp and never a line.
+- **Below ground level the surround is not drawn.** A sheet of landscape sitting over an open mine
+  would bury the thing the player went down to look at. The ground is drawn from the surface layer
+  upwards and the trees a layer higher again, which is the ordinary slice rule applied to a thing
+  that has no layers of its own.
+
+**The grass goes with it.** Tufts that stopped at the boundary drew a straight line three hundred
+metres long between a field of grass and bare ground — a better advertisement for where the board
+ends than the mid-air edge ever was. The first ring is strewn by the same hash of the same
+coordinates the mesher uses inside the board, at the same density, fading to nothing 20 m out. A
+clone without the licensed packs gets bare ground out there, exactly as it does on the board.
+
+**The surround measures the board rather than being configured.** The surface level, the terrain and
+its tint, which trees grow and how thickly are all read off the generated map, so a bare board gets
+bare ground, the wooded meadow gets woodland at its own density, and the ruined city gets whatever
+the ruined city has. Nothing here needs changing when a new map type is added, and the surround can
+never disagree with the board about what the board is.
+
+Cost, and where the lever is. The ground is cheap and fixed; the trees are the only part with a real
+vertex cost — about 3,500 of them on the 120-cell wooded board, roughly what the board itself
+carries. `OdysseyBootstrap.skirtTreeDensity` scales that as a percentage for a machine that cannot
+afford it, and `terrainSkirt` turns the whole thing off. Batches are split by strip (ground) and by
+an 80 m sector grid (trees) so that the half of the surround behind the camera is culled rather than
+drawn, and only trees within 10 m of the rim are in the shadow pass — the sun is 72 degrees
+overhead, so a tree casts a couple of metres and a generous range would buy a thousand extra casters
+and no visible shadow.
+
 ## 3. The camera and the slice
 
 **The camera** is a three-quarter orbit at a constrained pitch, matching the concept renders: pan across x/z, zoom, rotate in 90° steps or freely, and a vertical control that changes the **active layer** rather than the camera height.
