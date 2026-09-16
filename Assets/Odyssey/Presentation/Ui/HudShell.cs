@@ -67,6 +67,8 @@ namespace Odyssey.Presentation.Ui
         // ---- element references, resolved once the tree is built
         VisualElement _hud = null!;
         VisualElement _leftColumn = null!;
+        VisualElement _rightColumn = null!;
+        VisualElement _bottomRow = null!;
         readonly List<CardView> _cards = new List<CardView>();
         VisualElement _rosterHost = null!;
         VisualElement _rulerRows = null!;
@@ -143,6 +145,25 @@ namespace Odyssey.Presentation.Ui
             _leftColumn = new VisualElement();
             _leftColumn.AddToClassList("slot-left");
             _hud.Add(_leftColumn);
+
+            // And the right edge, for the same reason and after the same accident. The clock,
+            // the alerts and the ruler were three absolutely positioned slots with hand-picked
+            // offsets, so the alerts panel sat at a fixed 132px from the top whatever height the
+            // clock above it had grown to — and it had grown past it, burying the speed buttons.
+            // A column cannot do that: whatever each region's height turns out to be, the next
+            // one starts below it.
+            _rightColumn = new VisualElement();
+            _rightColumn.AddToClassList("slot-right");
+            _hud.Add(_rightColumn);
+
+            // And the bottom edge, third time. The tab bar, the overlay strip and the cancel
+            // button were three absolute slots along the same line, so the strip sat on top of
+            // the bar's right end and ate the last tab -- which read as the bar being too wide
+            // when it was not. In a row they divide the edge between them: the tabs take what is
+            // left after the other two have taken what they need.
+            _bottomRow = new VisualElement();
+            _bottomRow.AddToClassList("slot-bottom");
+            _hud.Add(_bottomRow);
 
             BuildLedger();
             BuildArchitect();
@@ -332,7 +353,7 @@ namespace Odyssey.Presentation.Ui
 
         void BuildLedger()
         {
-            var region = Region(_leftColumn, "A1 · RESOURCES", string.Empty);
+            var region = Region(_leftColumn, "A1 · RESOURCES", "slot-ledger");
             _ledgerRows = new VisualElement();
             _ledgerRows.AddToClassList("ledger");
             region.Add(_ledgerRows);
@@ -401,6 +422,15 @@ namespace Odyssey.Presentation.Ui
             var region = Region(_leftColumn, "A7 · ARCHITECT", "arch");
             var cats = new VisualElement();
             cats.AddToClassList("arch__cats");
+
+            // The categories scroll. The left column is not tall enough for the ledger and ten
+            // categories at once -- and USS lengths here are reference pixels, not screen ones,
+            // so the column is about 353 of them however large the monitor is. Left to flex, the
+            // shortfall lands on whichever region yields first: it took the last row off the
+            // palette, and when the palette was told not to yield it crushed the ledger instead.
+            // A list too long for its panel should scroll rather than quietly lose its end.
+            var scroll = new ScrollView(ScrollViewMode.Vertical);
+            scroll.AddToClassList("arch__scroll");
             for (int i = 0; i < ArchitectCategories.Length; i++)
             {
                 var (key, label, _) = ArchitectCategories[i];
@@ -410,7 +440,8 @@ namespace Odyssey.Presentation.Ui
                 chip.RegisterCallback<ClickEvent>(_ => SelectArchitectCategory(index));
                 cats.Add(chip);
             }
-            region.Add(cats);
+            scroll.Add(cats);
+            region.Add(scroll);
 
             _archPalette = new VisualElement();
             _archPalette.AddToClassList("arch__tools");
@@ -502,7 +533,7 @@ namespace Odyssey.Presentation.Ui
 
         void BuildClock()
         {
-            var region = Region(_hud, "A3 · TIME   ·   A4 · SPEED", "slot-clock");
+            var region = Region(_rightColumn, "A3 · TIME   ·   A4 · SPEED", "slot-clock");
             var body = new VisualElement();
             body.AddToClassList("clock");
             _clockTime = Label(string.Empty, "clock__time");
@@ -556,12 +587,12 @@ namespace Odyssey.Presentation.Ui
 
         void BuildAlerts()
         {
-            var region = Region(_hud, "A5 · ALERTS", "slot-alerts");
+            var region = Region(_rightColumn, "A5 · ALERTS", "slot-alerts");
             var body = new VisualElement();
             body.AddToClassList("alerts");
             body.Add(Label("No active alerts.", "alerts__empty"));
             body.Add(Label("Conditions arrive with M2; each will carry its layer and a jump target.",
-                "alerts__empty"));
+                "alerts__note"));
             region.Add(body);
         }
 
@@ -569,7 +600,7 @@ namespace Odyssey.Presentation.Ui
 
         void BuildRuler()
         {
-            var region = Region(_hud, "A11 · DEPTH", "slot-ruler");
+            var region = Region(_rightColumn, "A11 · DEPTH", "slot-ruler");
             _rulerActive = Label(string.Empty, "ruler__active");
             region.Add(_rulerActive);
             _rulerRows = new VisualElement();
@@ -596,7 +627,12 @@ namespace Odyssey.Presentation.Ui
             // and added top layer first so the bar reads downwards like depth does.
             while (_rulerTicks.Count < _ruler.Rows.Count)
             {
-                int layer = _ruler.Rows[_ruler.Rows.Count - 1 - _rulerTicks.Count].Layer;
+                // Rows come out of the model top layer first and the bar is a column, so the
+                // first step built is the top step and tick i is Rows[i]. This used to index
+                // from the far end, which built the bar upside down: the top step was layer 0
+                // and the bottom step the sky. Clicking low on the ruler took you high, which
+                // is how it was reported from a playtest on 2026-09-16.
+                int layer = _ruler.Rows[_rulerTicks.Count].Layer;
                 var tick = new VisualElement();
                 tick.AddToClassList("ruler__tick");
                 var dot = new VisualElement();
@@ -605,6 +641,13 @@ namespace Odyssey.Presentation.Ui
 
                 int clicked = layer;
                 tick.RegisterCallback<ClickEvent>(_ => _directors?.Slice.SetLayer(clicked));
+
+                // The layer this step will actually send, hung on the element so a test can read
+                // it. Without it the only observable is the lit step, and the lit step cannot
+                // tell these two bugs apart: build the bar upside down, read it with a mirrored
+                // index, and the highlight lands correctly while the click still goes elsewhere.
+                // A test written against the highlight passed with the bug restored.
+                tick.userData = clicked;
                 _rulerRows.Add(tick);
                 _rulerTicks.Add(new RulerTickView { Root = tick, Dot = dot, Layer = layer });
             }
@@ -615,7 +658,13 @@ namespace Odyssey.Presentation.Ui
             for (int i = 0; i < _rulerTicks.Count; i++)
             {
                 RulerTickView view = _rulerTicks[i];
-                LayerRow model = _ruler.Rows[view.Layer];
+
+                // By index, not by layer number. Rows[i].Layer is layers-1-i, so indexing the
+                // list with a layer number reads a different row for every layer but the middle
+                // one — which mirrored the lit step, the surface mark, the colonist dot and the
+                // tooltip all at once. The two bugs hid each other: both were mirrored, so the
+                // lit step often looked plausible while the click did something else.
+                LayerRow model = _ruler.Rows[i];
 
                 view.Root.EnableInClassList("ruler__tick--active", model.Active);
                 view.Root.EnableInClassList("ruler__tick--surface", model.Surface);
@@ -821,7 +870,7 @@ namespace Odyssey.Presentation.Ui
                 chip.tooltip = TabKeys[i] + " — " + TabReasons[i];
                 bar.Add(chip);
             }
-            _hud.Add(bar);
+            _bottomRow.Add(bar);
         }
 
         static readonly string[] OverlayKeys =
@@ -850,7 +899,7 @@ namespace Odyssey.Presentation.Ui
                 button.tooltip = key[11..].Capitalise() + " — overlay channels arrive with M4";
                 strip.Add(button);
             }
-            _hud.Add(strip);
+            _bottomRow.Add(strip);
         }
 
         void BuildCancel()
@@ -859,7 +908,7 @@ namespace Odyssey.Presentation.Ui
             cancel.AddToClassList("cancel");
             cancel.Add(Label("✕", "cancel__x"));
             cancel.tooltip = "Nothing to cancel — tools and panels arrive with M3";
-            _hud.Add(cancel);
+            _bottomRow.Add(cancel);
         }
 
         // ------------------------------------------------------------ formatting

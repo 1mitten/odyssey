@@ -62,6 +62,44 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(doc.rootVisualElement.Query(className: "ruler__tick").ToList().Count,
                     Is.EqualTo(boot.Model!.Size.SizeY));
 
+                // The ruler reads like a ruler: the top step is the top layer. Asserted by the
+                // lit step's position rather than by anything the shell reports about itself,
+                // because the bug this pins was a pair of mirrored indices that agreed with each
+                // other — the bar was built upside down and then read with the layer number used
+                // as a list index, so the lit step often looked plausible while a click low on
+                // the bar moved the slice high. Reported from a playtest on 2026-09-16.
+                int layers = boot.Model.Size.SizeY;
+                var steps = doc.rootVisualElement.Query(className: "ruler__tick").ToList();
+
+                // What a step will DO, read off userData, not what it looks like. The lit step
+                // cannot tell the two bugs apart: build the bar upside down, read it back with a
+                // mirrored index, and the highlight lands correctly while the click goes
+                // elsewhere. An earlier version of this test asserted on the highlight and passed
+                // with the bug deliberately restored, which is the only reason this one exists.
+                for (int i = 0; i < steps.Count; i++)
+                {
+                    Assert.That(steps[i].userData, Is.EqualTo(layers - 1 - i),
+                        $"step {i} from the top of the ruler should move the slice to layer " +
+                        $"{layers - 1 - i} on a click, and the top step should be the top layer");
+                    Assert.That(steps[i].tooltip, Does.StartWith($"Layer {layers - 1 - i}"),
+                        $"step {i} describes a different layer than the one it would move to, so " +
+                        "the bar is built one way round and read the other");
+                }
+
+                // And then the highlight, which is the half the player sees.
+                for (int layer = 0; layer < layers; layer++)
+                {
+                    boot.Directors!.Slice.SetLayer(layer);
+                    yield return null;
+                    yield return null;
+
+                    var ticks = doc.rootVisualElement.Query(className: "ruler__tick").ToList();
+                    int lit = ticks.FindIndex(t => t.ClassListContains("ruler__tick--active"));
+                    Assert.That(lit, Is.EqualTo(layers - 1 - layer),
+                        $"the slice is on layer {layer} of {layers}, so the lit step should be " +
+                        $"{layers - 1 - layer} from the top; it is {lit}");
+                }
+
                 // Four speed buttons, and the clock has a time in it.
                 Assert.That(doc.rootVisualElement.Query(className: "speed__btn").ToList().Count,
                     Is.EqualTo(4));
