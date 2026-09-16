@@ -496,6 +496,38 @@ Four of these cost more than ten minutes each.
   fine at one scale and useless at another, and the arithmetic tells you which before the screenshot
   does.
 
+## Per-cell geometry cracks where a continuous field does not
+
+Written after giving earth its own mesh (`GroundMesh`, `06-rendering-and-camera.md` §2c). The
+mistake took one screenshot to find and would have taken a long time to reason out.
+
+- **A mesh shared by every cell cannot make neighbours agree at a shared edge.** Each cell picks its
+  own variant, so if the rim moves at all, two neighbours disagree across their boundary by up to
+  *twice* the movement. At 12 cm of rim ripple that is a 24 cm step at every cell edge on the board,
+  and the meadow came out as crazy paving — visibly worse than the flat quads it replaced. There is
+  no amount of tuning that fixes this, only a smaller number that hides it: the ceiling is set by
+  the fact that the rim height is a function of the *cell*, when it needs to be a function of the
+  *shared corner's world position*. That wants vertex displacement in a shader, or per-cell meshes
+  and no instancing.
+- **The same trick at a different scale is the opposite of the same trick.** `GroundRelief` gives
+  the board a rolling surface that never cracks, because it is one smooth field sampled per cell and
+  neighbouring tangent planes part by millimetres. Adding per-cell noise on top looked like more of
+  the same thing and is structurally the reverse of it. Compare with the sibling lesson above:
+  tangent-plane displacement scales with the square of the tile, and this is what happens at the
+  other end of that argument.
+- **Photograph the control, not just the change.** The shot of the change alone showed a textured
+  meadow and could plausibly have been called a success. The shot of the board *without* it showed a
+  clean green surface, and the comparison settled it in one glance. `SlopeCheck` shoots plain, earth
+  and banks for exactly this reason, and the harness paid for itself on its first run.
+- **Frame the instrument before trusting it.** The first side-on shot put the camera 3 m above its
+  focus — one layer — so it sat inside the hillside and all three conditions photographed the same
+  flat green nothing, at identical file sizes. Identical output from conditions that must differ is
+  the instrument telling you it is broken, and it is worth checking the file sizes for that.
+- **Verify which fault you were asked to fix.** The complaint was a terrace riser: "one big block
+  and then a completely straight wall". The top surface was never mentioned and was already fine.
+  Adding geometry to the part that worked, and only then getting to the part that did not, is how a
+  change ends up net negative while every piece of it passes its tests.
+
 ## A loose tolerance can make a test prove nothing
 
 The test for "a click on a slope lands on the cell under the cursor" allowed the answer to be one

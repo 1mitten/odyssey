@@ -65,14 +65,29 @@ namespace Odyssey.Presentation.Rendering
         public const int Variants = 2;
 
         /// <summary>
-        /// How far a rim vertex moves, up or down, as a fraction of the cell's height (3 m): 12 cm.
+        /// How far a rim vertex moves, up or down, as a fraction of the cell's height (3 m): 3.6 cm.
         ///
-        /// <para>Small on purpose. It has to be enough to catch the light across a 2.5 m tile and
-        /// to break the ruled line where two cells meet, and small enough that it can never be
-        /// mistaken for a step, be walked into, or visibly disagree with where a tuft of grass or
-        /// a dropped log is drawn. A tenth of the cell would be terrain; this is texture.</para>
+        /// <para><b>This number was measured, and the first guess was three times too big.</b> At
+        /// 0.04 — 12 cm — two neighbours can disagree across their shared edge by 24 cm, which is a
+        /// tenth of a cell width, and <c>SlopeCheck</c> showed the result immediately: every cell
+        /// boundary on the board became a dark dash and the meadow read as crazy paving. It is
+        /// worth recording why that is worse than what it replaced. The top surface was never the
+        /// complaint — <see cref="GroundRelief"/> already rolls it at a scale where neighbours are
+        /// tangent planes of one smooth field and part company by millimetres. The complaint was
+        /// the riser, and adding per-cell noise to the part that was working traded a good surface
+        /// for a bad one.</para>
+        ///
+        /// <para>So this is now a grain rather than a shape: at most 7 cm between neighbours, which
+        /// catches the light across a 2.5 m tile without drawing a line around it.</para>
+        ///
+        /// <para><b>The ceiling on this approach, for whoever raises it next.</b> Cells pick their
+        /// tops independently, so any rim movement disagrees with the neighbour by up to twice it —
+        /// there is no amount of tuning that makes a large ripple continuous. Genuinely uneven
+        /// ground at cell scale needs the rim height to be a function of the *shared corner's world
+        /// position*, which a mesh reused by every cell cannot express and a vertex shader can.
+        /// That is a different piece of work and it is the one to do, not a bigger number here.</para>
         /// </summary>
-        public const float MaxRipple = 0.04f;
+        public const float MaxRipple = 0.012f;
 
         /// <summary>
         /// How far a course of a terrace face steps out, as a fraction of the cell's width: 12 cm.

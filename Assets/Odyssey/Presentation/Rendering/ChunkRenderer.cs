@@ -118,6 +118,25 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
+        /// Draw banks up terrace steps, and soil with a surface of its own. Both are levers for
+        /// the check harness rather than settings anyone is expected to turn off, and both only
+        /// take effect on chunks meshed after they change — the same rule
+        /// <see cref="ScatterDensity"/> follows, because meshing is where the decision is made.
+        /// </summary>
+        public bool Banks
+        {
+            get => _mesher.Banks;
+            set => _mesher.Banks = value;
+        }
+
+        /// <inheritdoc cref="Banks"/>
+        public bool EarthGeometry
+        {
+            get => _mesher.Earth;
+            set => _mesher.Earth = value;
+        }
+
+        /// <summary>
         /// Off, everything happens except the submission itself. That makes the draw-call and
         /// instance counts measurable in a headless editor run with no graphics device, which is
         /// the only way to get real numbers into a milestone report from CI.

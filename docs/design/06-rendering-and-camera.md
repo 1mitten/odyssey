@@ -155,10 +155,102 @@ meadow went from 0.41 ms to 0.68 ms mean, 1.10 ms worst, at 640 x 480 on the RTX
 relief off and on. The 0.27 ms is the finer surround tiles: 30,665 instances against 23,156, at the
 same number of draw calls.
 
-**If the real terracing is ever wanted**, `surfaceRelief` is one line away in `MakeWooded`, and the
-facade would then smooth its 3 m risers into slopes. It is deliberately not taken: it changes
-worldgen output, the goldens, pathing and the start cell, and the look should be judged on the
-change that risks nothing first.
+**The real terracing arrived, and this section did not notice.** The paragraph that stood here said
+`surfaceRelief` was one line away in `MakeWooded` and deliberately not taken. That line was taken by
+the mining work, which made `MakeWooded` a *cover* mode rather than `MakeBarren` with the trees put
+back — so it stopped zeroing anything, and the played board has run at the def's own `surfaceRelief`
+of 2 ever since. `WoodedMapTests.TheDrySurfaceIsTerracedAndCoveredInGrass` requires it. The board
+therefore carries real 3 m risers **and** a 2 m drawn roll over the top of them, and the smoothing
+this section promised for that day was never written. §2c is that work.
+
+## 2c. Earth has a surface, and a step has a way up
+
+Added 2026-09-16, after the owner asked whether the terrain could carry "a facade of geometry with
+slopes and uneven grass", whether the characters could answer it, and whether the height difference
+— "one big block and then a completely straight wall" — could be "spanned out to half or quarter
+blocks".
+
+**Where the half and quarter steps go.** Three places were possible and only one is affordable.
+
+| Where | What it costs | Verdict |
+|---|---|---|
+| The cell model — quarter-height cells | ADR 0002 is "effectively irreversible": the state hash, every save, the pathfinder, the support solver, mining and every golden | No |
+| A drawn height field derived from the terrace map | Drawn ground detaches from layer height everywhere, dragging picking, item drops, built walls and the strata behind it; a cell straddling a step shears fifty degrees | Not taken |
+| **The mesh** | A variant costs one instancing *bucket*, not one instance per cell, and four bearings are free because a square footprint is unchanged by a quarter turn | **Taken** |
+
+So the detail the cell model cannot carry is carried by geometry, and §2b's governing rule is
+untouched: **relief is a drawing offset, never a position.** `CellMetrics.FloorCentre` is not
+touched, no cell knows about any of this, and nothing enters the save or the state hash.
+
+**`GroundMesh` is `RockMesh` for earth, with one rule stone does not have.** The middle of a ground
+cell is where everything stands — a colonist, a stack of wood, a tree and the cursor are all drawn
+at `FloorCentre`. Rock may chip its whole top face down, because whatever stands on a rock stands on
+the cell *above* it; a dished meadow would hover every colonist on it. So the centre vertex is
+pinned exactly and only the rim moves. The rim may also rise, which stone forbids: a rim that can
+only drop gives every cell the same shallow bowl, and a field of identical bowls is a waffle — a
+more obviously artificial pattern than the flat quads it replaced. Two neighbours disagreeing across
+a shared edge leave a few centimetres of side face showing, never a hole, because a cell carries all
+four walls whether or not anything can see them.
+
+**Two meshes, and it is a performance decision.** Ground is the largest instance population in the
+world. On flat ground a surface cell's four same-layer neighbours are solid too, so only its top is
+ever seen; sides appear at terrace risers, at mined faces and at outcrops, which are a small
+fraction of what is drawn. *Turf* is the cheap common case at 32 triangles against a cube's 12;
+*Face*, at 80, has its walls in courses that step out — never in, because an inward step recedes
+past geometry the mesher may have culled for being buried, which is a hole through the world to the
+sky. `GroundMeshTests` asserts that ordering rather than trusting it: if the cheap case ever stops
+being cheap, the cost lands on every cell of the board at once.
+
+**`BankMesh` is the answer to the straight wall.** The simulation already says a colonist walks up a
+one-block step — `MoveCost.JumpUp`, a hop into the column next door — so the board was showing a
+wall where the game had a path. A bank is three treads and three risers, a metre of rise and 83 cm
+of tread, drawn in the *empty cell* beside the step. Stepped rather than smooth on purpose: 3 m over
+one cell is a fifty-degree ramp however it is drawn, and a smooth fifty-degree ramp reads as a road
+somebody built, where treads read as a bank weathered into ledges.
+
+The bank belongs to the empty cell rather than to the block it climbs, and that is what makes it
+cheap to decide: it stands at the same layer as the riser, on the top of the lower terrace, reaching
+the top of the riser. Everything the decision needs is on one layer plus the cell directly below, so
+a single-layer chunk pass sees all of it.
+
+Four conditions, each with a test, each ruling out something that would look wrong:
+
+- **Empty, and standing on ground**, or the bank hangs in the air.
+- **The step is earth.** A mined face and a quarry wall stay sheer; a grassy ramp growing out of cut
+  rock is a lie about what was done to it.
+- **The top of the step is open**, or this is the wall of a tunnel rather than a terrace.
+- **The cell is open to the sky**, which keeps banks on the outdoor hillside and the inside of a
+  working sharp-edged.
+
+Two of those carry the argument. *Flat ground grows none* is the cost claim — the meadow is nearly
+all flat, and a bank on flat ground would put an instance on every cell of the board. *A two-layer
+face grows none* is the honesty claim: the simulation refuses it
+(`VerticalMovementTests.ATwoBlockFaceIsAWall`), and drawing a bank up one would promise a route that
+does not exist, which is worse than drawing a cliff.
+
+**Water is included as the low side deliberately.** A channel is cut one layer down (ADR 0009), so
+every stream and pond bank is one of these steps and had been a 3 m vertical ditch wall.
+
+**The landscape is one colour, whatever height it sits at.** The board is terraced across five
+layers and only one of them is ever the active one, so the depth shade was multiplying every other
+step by `belowFalloff` once per layer of drop: grass two terraces down drew at 0.46 of its colour,
+and one meadow came out in three greens. The fix is not "terrain never dims", which would take the
+cue off the rock in a mine, where it is the whole readout of a working. The shade says how far you
+are peering *through* the world, and nothing is over an outdoor surface — so `TintCode.DaylitBase`
+marks a cell with no slab and no solid cell anywhere above it, and `ResolveColour` ignores the shade
+for one. A tree is not a roof, so grass in woodland is lit like the grass beside it. Ground, water
+and tufts all ask; a tuft that kept dimming while the terrace under it stopped would be the same
+fault, a layer smaller and much harder to see.
+
+**Levers and the instrument.** `ChunkRenderer.EarthGeometry` and `ChunkRenderer.Banks`, both off
+being exactly the ground as it was drawn before. Judge it with *Odyssey → Presentation → Check the
+slopes and banks* (`scripts/unity.sh shot Odyssey.EditorTools.SlopeCheck.Run`), which finds the
+longest run of one-layer step on the board rather than being told where one is — a hardcoded
+position is a terrace on one seed and open meadow on the next — and shoots it plain, with earth and
+with banks. **Side on and low is the shot that answers the question**, for the same reason
+`SwingCheck` photographs the axe across the line to the tree: in the three-quarter view a step and
+the ground in front of it sit at different depths, and the profile of a bank reads as anything you
+like.
 
 ## 3. The camera and the slice
 

@@ -73,7 +73,7 @@ namespace Odyssey.Presentation.Rendering
         /// the deepest possible dip costs nothing — what is buried is buried — and removes the
         /// question.</para>
         /// </summary>
-        public const float Sink = GroundMesh.MaxRipple + 0.01f;
+        public const float Sink = GroundMesh.MaxRipple + 0.02f;
 
         static readonly Mesh?[] Cache = new Mesh?[Variants];
 

@@ -170,7 +170,7 @@ namespace Odyssey.Presentation.Rendering
                 return;
             }
 
-            if (_model.IsEarth(index))
+            if (Earth && _model.IsEarth(index))
             {
                 // Earth is a block with an uneven top, and — only where a side of it can be seen —
                 // coursed walls as well. The two are different meshes and so different buckets, so
@@ -363,6 +363,13 @@ namespace Odyssey.Presentation.Rendering
         /// photograph the same board with and without them.
         /// </summary>
         public bool Banks { get; set; } = true;
+
+        /// <summary>
+        /// Draw soil as <see cref="GroundMesh"/> rather than as the plain cube. On by default, and
+        /// off is exactly the ground as it was drawn before any of this, which is what makes the
+        /// check harness's first photograph a real comparison rather than a remembered one.
+        /// </summary>
+        public bool Earth { get; set; } = true;
 
         /// <summary>
         /// A stepped earth bank in this empty cell, for each one-layer step beside it that a
