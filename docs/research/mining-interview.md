@@ -1,0 +1,200 @@
+# Mining, rock and caverns — owner interview
+
+**Phase:** Interview (feature-level, in the shape of `phase1-answers.md`). **Date:** 2026-09-16.
+**Worktree:** `D:\code\odyssey-mines`, branch `claude/mines`, off `main` at `c1b5c21`.
+**Conducted by:** Claude Code, sixteen questions in five rounds. No code was written before this file.
+
+The owner's brief: *"We now need to include mines/rocks for generation. Clarify what constitutes a
+mine plot — what materials it contains, what colour — and can create caves etc."* Animations are
+explicitly out of scope for this piece.
+
+## 1. What the code already had
+
+Grounding first, so the interview asked about real gaps rather than solved ones.
+
+| Piece | State on `main` at `c1b5c21` |
+|---|---|
+| Rock, bedrock, subsoil, iron ore, coal-seam terrain defs | **Exist** — `NaturalContent`, work-to-clear 700 / 2400 / 160 / 900 / 760 |
+| Rock-outcrop pass (pass 5), ore-blob pass (pass 6) | **Exist, tested, deterministic** — `NaturalFeaturePasses.cs`, ore depth-banded |
+| Colours for every one of them | **Exist** — `StuffPalette.TerrainSolids` indices 15–17 |
+| Caves | Only in the **ruined-city** generator — `DepthPasses.cs`, 3D value noise, threshold 790. The natural generator has none. |
+| `Mine` designation | **Exists** — validated, hashed, saved, published as a snapshot channel |
+| A mine *job* | **Missing.** `Fell` is the only job that edits the world. U28 in `vertical-slice.md`. |
+| A stone or ore *item* | **Missing.** Meal, salvage, wood are the whole item table. |
+| Any of it on the board that is played | **No.** `MakeWooded()` explicitly zeroes `outcropsPer10000Columns` and `oreDepositsPer10000Columns`. |
+
+So the honest position: generation is roughly 70% built and switched off, and nothing downstream of
+it exists.
+
+## 2. The answers
+
+| # | Question | Answer |
+|---|---|---|
+| 1 | What is a "mine plot"? | **Strata + outcrops, everywhere.** No discrete mine site, no city quarry plot. Rock below the subsoil across the whole map, outcrops scattered on the surface, ore grown inside the rock. |
+| 2 | Which materials? | **Plain stone, iron ore, coal.** No exotic mineral in the MVP. |
+| 3 | Caves? | **A connected tunnel system** was the first answer; refined at Q14 to *a few small sealed chambers*. |
+| 4 | How does it read on screen? | **Flat palette colours, and ore glows** — the cyan emissive trim the concept renders use for salvage seams. |
+| 5 | Scope | **The whole loop, end to end** — generation, work giver, job driver, items, hauling. |
+| 6 | Which board? | **The wooded board that is played now.** `MakeWooded()` gains rock, ore and caverns; `MakeBarren()` stays the clean baseline. |
+| 7 | Caverns: how reachable? | **No mouth — sealed caverns only.** You find one by digging into it. |
+| 8 | Ore sight | **Only on an exposed face.** A seam is invisible until a neighbouring cell is open. |
+| 9 | Yield | **Ore always, stone sometimes.** No rubble stage. |
+| 10 | Bedrock | **Not minable at all** — a hard floor, refused at designation with a reason. |
+| 11 | Stone's use | **A hauled pile, nothing more.** No building material, no reserved stuff index. |
+| 12 | Collapse | **Not yet.** Mining edits terrain and marks navigation dirty; nothing falls. U29 keeps collapse. |
+| 13 | Depth | **Raise the ground, same 16 layers** — not a deeper board. |
+| 14 | Cavern size | **A few small chambers**, three to five, a handful of cells each. |
+| 15 | Descent | **A mined shaft leaves a ladder** — a downward dig registers a Ladder connector. |
+| 16 | Surface relief | **Gentle terracing** — `surfaceRelief` 2, a five-step surface. |
+
+Questions 13 and 15 were forced by findings in the code rather than offered cold; §3 and §4f record why.
+
+## 3. The finding that changed the plan: the board is too shallow
+
+`120 × 120 × 16` with `NaturalMapGenDef.For` puts `groundLayer` at `min(14, 16 × 2/5) = 6`. Below the
+surface that leaves six layers: two of bedrock at the bottom, two of subsoil under the grass, and
+therefore **exactly two layers of rock**. Iron's band (3–13 cells below the local surface) barely
+reaches it; coal's band starts 7 cells down, so **coal could not generate on this board at all**, and
+a sealed cavern had nowhere to be.
+
+The owner chose to raise the ground rather than deepen the board. That buys depth for free — not one
+extra cell, so no frame-time number moves — and spends headroom above ground.
+
+**Consequence the owner should see in the playtest.** Raising the ground *and* adding terracing both
+eat the same budget, because a terrace rises above `groundLayer`. The proposal below sets
+`groundLayer = 10` with `surfaceRelief = 2`, which gives surfaces at y8–12 and leaves **three layers,
+9 m, above the highest terrace**. That is three storeys, and more than the colony has ever built, but
+it is noticeably less sky than the board has today. If it reads as cramped, the fix is the 32-layer
+board that was declined here, and it is a one-field change.
+
+## 4. The MVP, derived
+
+### 4a. The board
+
+| Parameter | Today | Proposed | Why |
+|---|---|---|---|
+| `groundLayer` | 6 | **10** | Ten layers below the surface, so both ore bands and the caverns fit |
+| `surfaceRelief` (wooded) | 0 | **2** | A five-step surface; exposes natural rock faces at terrace edges |
+| `outcropsPer10000Columns` (wooded) | 0 | **16** | ≈23 outcrops on a 14,400-column board, radius 1–3, height 1–3 |
+| `oreDepositsPer10000Columns` (wooded) | 0 | **70** | ≈100 deposits of 5–20 cells ≈ 1.2% of the rock |
+| Map extent | 120 × 120 × 16 | **unchanged** | |
+
+Strata for a column whose surface sits at `Ys`: grass at `Ys`; subsoil at `Ys-1, Ys-2`; rock from
+`y = 2` to `Ys-3`; bedrock at `y = 0, 1`.
+
+`MakeWooded()` stops zeroing the two feature dials and stops flattening the surface, exactly as it
+already makes an exception for trees. `MakeBarren()` is untouched — anything that is not grass on the
+bare board remains a bug.
+
+### 4b. Materials and colour — the question as asked
+
+Every colour below already exists in `StuffPalette.TerrainSolids`; none is invented here.
+
+| Material | Index | Colour (RGB) | Reads as | Work to clear | Found | Yields |
+|---|---|---|---|---|---|---|
+| Rock | 7 | `0.24, 0.25, 0.28` | dark blue-grey | 700 | Everywhere below the subsoil | Stone, **sometimes** |
+| Bedrock | 15 | `0.20, 0.20, 0.22` | near-black, flatter than rock | 2400 | The bottom two layers | Nothing — **cannot be mined** |
+| Iron ore | 16 | `0.46, 0.32, 0.22` | rust-brown, + cyan emissive | 900 | 3–13 cells below the local surface | Iron ore, always |
+| Coal seam | 17 | `0.13, 0.13, 0.15` | near-black, + cyan emissive | 760 | 7–22 cells down — deeper than iron, on purpose | Coal, always |
+| Subsoil | 14 | `0.31, 0.24, 0.17` | brown | 160 | Two cells under the grass | Nothing |
+
+**The emissive is what makes coal visible.** Coal at `0.13` grey against rock at `0.25` is nearly
+invisible in an unlit shaft; the cyan trim the concept renders already use for salvage seams is what
+separates them. It is applied **only to a discovered seam** (§4d), so it never gives away ore the
+colony has not exposed.
+
+### 4c. Caverns
+
+Three to five sealed voids per map, each a blob of roughly 6–20 cells, carved in the rock band only:
+never touching bedrock, never touching the subsoil, so none of them can breach the surface. You find
+one by mining into it. A cavern cell is walkable the moment it is opened — it has rock beneath it, and
+`CellGrid.HasFloor` already treats solid terrain below as a floor.
+
+Ore is concentrated around cavern walls, so breaking into one is worth something beyond the space.
+
+### 4d. Ore sight
+
+A new `CellFlags` bit, `Discovered = 1 << 5` (bit 5 is free). An ore cell is discovered when any of
+its six orthogonal neighbours is non-solid. It is **derived, not authored**: computed after
+generation and updated when a cell is dug, rebuilt on load, and therefore excluded from the state
+hash exactly as `Support` and `Region` are. It is published on the snapshot so the renderer can draw
+an undiscovered seam in rock's own colour.
+
+### 4e. The loop
+
+Following the pattern `Fell` set, which is the point of having built it first:
+
+1. `Work_Mining`, a new work type. Order: **cutting 0, mining 1, hauling 2** — the orders that make
+   work exist scan before the order that tidies it up.
+2. `MineWorkGiver` scans `DesignationGrid.Cells` for `Mine`, filtered by reachability before any path
+   is computed.
+3. `MineJobDriver` walks to a cell beside the target, works `TerrainAt(terrain).workToClear` ticks —
+   the per-material number the defs already carry, rather than one constant for all rock — then
+   defers the edit to the structural phase.
+4. The edit: terrain becomes air, the solid flag clears, the chunk is marked dirty, navigation is
+   marked dirty, the designation is cleared, the six neighbours are re-tested for discovery, and the
+   yield is spawned by `FreeCellNear` for the existing haul to collect.
+
+**Where a miner may stand:** the eight neighbours on the same layer, *or* the cell directly above.
+The second is what makes a downward shaft possible, and it is what §4f exists to make survivable.
+
+### 4f. Descent — the hard problem
+
+**Vertical movement in this codebase is only ever a declared connector.** `Connector.cs` refuses an
+end that skips a layer; `NavGrid` has no free one-layer step. That was a deliberate decision, taken
+against the decade-old CDDA stair-matching bug documented in `c-cataclysm-dda.md`. Nothing builds
+ladders yet, because the build job does not exist.
+
+So without a rule, a colonist who mines straight down is **stranded at the bottom of the shaft** and
+hauling breaks silently.
+
+The rule: **mining the cell directly below an open one registers a `ConnectorKind.Ladder` between the
+two and places an `EdificeLadder` in the shaft.** A vertical shaft is climbable the moment it is dug.
+The connector declares both ends, so the architecture's rule is kept — nothing is inferred from cell
+contents at run time. The dig already marks navigation dirty, which is the rebuild the registrar's
+own docstring requires.
+
+**This is a fiction and should be recorded as one.** A free ladder appearing in a mined shaft is a
+placeholder for a built ladder with a wood cost, and it should become one the moment the build job
+lands. It is here because it is the smallest change that makes depth reachable at all.
+
+## 5. Assumptions awaiting the owner's veto
+
+Marked `ASSUMED` in code, per the convention `WoodPerTree` already follows.
+
+| # | Assumption | Value | Note |
+|---|---|---|---|
+| A1 | Stone drops from a plain rock cell | **1 cell in 4** | Derived from a pure hash of (seed, cell index), **never a live RNG draw**, so replay, save/load and mining order all agree |
+| A2 | Stone per drop | **10** | Stack limit 75, so a full stack is four hauls' worth |
+| A3 | Iron ore per cell | **15** | |
+| A4 | Coal per cell | **15** | |
+| A5 | Caverns per map | **4** (range 3–5) | |
+| A6 | Cavern size | **6–20 cells** | |
+| A7 | Headroom above the highest terrace | **3 layers, 9 m** | The consequence flagged in §3 |
+| A8 | Item names for the wiki | `ui.res.stone` "Stone" · `ui.res.ironore` "Iron ore" · `ui.res.coal` "Coal" | `ui.arch.tool.mine` and `ui.status.mining` already exist and need no change |
+
+## 6. Build plan
+
+Eight steps, each independently testable, in dependency order.
+
+| Step | What | Gate |
+|---|---|---|
+| **1** | Board and strata: `groundLayer` 10, `surfaceRelief` 2, `MakeWooded()` re-enables outcrops and ore | Strata test per column; golden re-base; determinism |
+| **2** | Cavern pass: 3–5 sealed chambers in the rock band | Never breaches surface, never touches bedrock; byte-identical from seed |
+| **3** | Ore sight: `Discovered` derivation, snapshot channel, renderer + emissive | Undiscovered seam draws as rock; rebuild-on-load equals generate |
+| **4** | Bedrock refuses `Mine`, with a rejection reason | Designation test |
+| **5** | The mine job line: work type, work giver, driver, structural edit | Headless colony mines a marked cell |
+| **6** | Yields: stone, iron ore and coal items, the drop rule, hauling; **wiki rows in the same commit** | `build_wiki.py --check` passes; stack reaches the stockpile |
+| **7** | The shaft ladder: connector registration on a downward dig | A colonist descends five layers and returns |
+| **8** | Gate: `unity.sh test editmode`, headless one-day run, milestone note | The standing five-part gate |
+
+## 7. Risks
+
+1. **Golden tests re-base twice** — once for the raised ground, once for terracing. Both are
+   legitimate, and both must be re-based with the mechanism named, not by accepting new numbers.
+2. **The free ladder** (§4f) is a design debt, recorded above so it is paid rather than forgotten.
+3. **Headroom** (§3, A7) is the one decision most likely to be reversed after a playtest.
+4. **Mining does not collapse anything** (answer 12), so a mined-out cell under a slab is currently
+   structurally dishonest. That is U29's work and is deliberately not done here.
+5. **`NaturalContent`'s coupling to `CoreContent`** — no index may be renumbered. Nothing in this
+   plan adds a terrain index, which is the cheapest way to keep that true.
