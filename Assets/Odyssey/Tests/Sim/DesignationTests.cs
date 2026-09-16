@@ -188,5 +188,53 @@ namespace Odyssey.Tests.Sim
                 .AddIntentHandler(IntentKind.Designate, _ => IntentRejection.None);
             Assert.Throws<System.InvalidOperationException>(() => builder.Build());
         }
+        /// <summary>
+        /// <b>A fell order named at solid ground means the tree standing on it.</b>
+        ///
+        /// The picker stopped answering a click on bare ground with the air cell above it on
+        /// 2026-09-16 — the owner wanted "the tile below it or not at all" — and a tree is an
+        /// edifice standing in exactly that air cell. A click straight on a tree still names the
+        /// tree; a drag box begun on open grass arrives a layer too low, and without this every
+        /// cell of it is refused in silence. Sweeping the cut tool across a wood would do nothing
+        /// at all, with no error to show for it.
+        /// </summary>
+        [Test]
+        public void AFellOrderOnTheGroundMarksTheTreeStandingOnIt()
+        {
+            var (grid, _, d) = Board();
+            int ground = grid.Index(3, 3, Layer - 1);
+            int tree = grid.Index(3, 3, Layer);
+
+            Assume.That(d.IsTree(tree), Is.True, "the fixture must actually stand a tree there");
+            Assume.That(grid.IsSolidTerrain(ground), Is.True, "and the tree must stand on solid ground");
+
+            Assert.That(d.Designate(new CellRef(3, 3, Layer - 1), DesignationKind.Fell),
+                Is.EqualTo(IntentRejection.None));
+            Assert.That(d.At(tree), Is.EqualTo(DesignationKind.Fell), "the tree, not the ground");
+            Assert.That(d.At(ground), Is.EqualTo(DesignationKind.None));
+
+            // And taking it off again the same way, which is what a cancel drag over grass does.
+            Assert.That(d.Cancel(new CellRef(3, 3, Layer - 1)), Is.EqualTo(IntentRejection.None));
+            Assert.That(d.At(tree), Is.EqualTo(DesignationKind.None));
+        }
+
+        /// <summary>
+        /// The control for the test above: only felling is lifted. Mining means the block the
+        /// player clicked, which is what the picker now hands over, and a mine order on ground
+        /// with a tree on it is still refused outright — <c>CanMine</c>'s own rule, because
+        /// digging it out would leave the tree rooted in mid-air.
+        /// </summary>
+        [Test]
+        public void OnlyFellingIsLiftedOffTheGround()
+        {
+            var (grid, _, d) = Board();
+            int ground = grid.Index(3, 3, Layer - 1);
+
+            Assume.That(d.IsTree(grid.Index(3, 3, Layer)), Is.True);
+
+            Assert.That(d.Designate(new CellRef(3, 3, Layer - 1), DesignationKind.Mine),
+                Is.EqualTo(IntentRejection.NotPermitted), "the ground under a standing tree is not diggable");
+            Assert.That(d.At(ground), Is.EqualTo(DesignationKind.None));
+        }
     }
 }

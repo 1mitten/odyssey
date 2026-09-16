@@ -449,13 +449,38 @@ unchanged, which is the case the Going Medieval reports are actually about. Dimm
 layer below is opaque, and a ray only reaches one where nothing above it occludes — down a shaft,
 over a cliff, through a stairwell — which is exactly where a player means to click.
 
-**The old answers did not move, because of one tie-break.** A solid cell's top face and the floor of
-the air cell above it are the same surface at the same distance, so both layers offer a hit at the
-same ray parameter; the layer nearer the slice wins. Clicking the meadow therefore still gives the
-air cell you stand in — the cell a colonist occupies, a bed is placed in, a stockpile covers — and
-clicking an outcrop still gives the rock. Without the tie-break the first would have started
-returning the rock under the grass, which is the kind of regression that is invisible until a
-stockpile refuses to be drawn.
+**What a click selects: the thing you clicked, or nothing.** The first attempt kept the picker's
+old convention — a floor crossing returns the *air* cell whose floor it crossed — and the owner
+rejected it: *"I still wanted to select the tile below it or not at all."* That convention was never
+chosen; on one layer the air cell was the only cell on offer. Carried up and down a stack it reads
+as clicking a rock and selecting the sky above it. So:
+
+| What the ray meets | What is selected |
+|---|---|
+| An occluding cell — wall, door, pillar, solid strata | that cell |
+| The floor of a cell holding an **edifice** — a tree, and later a bed or a workbench | that cell: the edifice is the thing you clicked |
+| The floor of a cell holding a **built floor slab** | that cell: the slab is drawn in it |
+| The floor of a cell with nothing but solid terrain beneath | **the block beneath**, whose top face that is |
+| The floor of a cell with nothing beneath | nothing. A hole is a hole |
+
+A solid cell's top face and the floor of the air cell above it are one surface at one distance, so
+two layers bid at the same ray parameter — and under this rule they resolve to the same block, which
+is what makes the tie harmless. Where they disagree is a tree: the tree's cell and the ground under
+it offer the same face, and **a thing beats bare ground**, failing which the layer nearer the slice
+wins.
+
+**The edifice row is not an exception, and leaving it out would have broken felling outright.** A
+tree is an edifice that blocks nothing, standing in the walkable cell. "Select the tile below" taken
+literally hands back the ground under every tree and the Fell order can never be given again. What
+the player is looking at there is the tree.
+
+**And the order had to be lifted to match, for a drag.** A click on a tree names the tree, but a
+fell box begun on open grass anchors a layer too low and every cell of it would be refused in
+silence — the tool swept across a wood and nothing happening. `DesignationGrid.Designate` therefore
+reads a Fell order named at solid ground as the tree standing on it, and `Cancel` mirrors it. Only
+felling: mining means the block itself, which is exactly what the click now gives, and it is the
+same relation `CanMine` already knew from the other side — that the ground under a standing tree is
+not diggable while the tree is up.
 
 **A surface that is not drawn is not clickable, and that has a case of its own.** The active layer's
 ceiling is the slab of the layer *above* it, and §3 point 2 meshes it away. So that one layer offers

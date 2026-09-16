@@ -119,6 +119,14 @@ This does not weaken rationale 1 to 3; it completes them. A player who can see w
 head and cannot act on it has been given a picture, and rationale 2's "verticality has to be legible
 or the premise fails" was never only about legibility.
 
+**A second rule fell out of it, and the owner settled that one too: a face belongs to whatever you
+clicked, or the click misses** — *"I still wanted to select the tile below it or not at all."* The
+picker used to answer a floor crossing with the *air* cell above the surface, which was never a
+choice: on one layer it was the only cell on offer. Reaching up and down a stack it reads as
+clicking a rock and selecting the sky. Bare ground now resolves to the block beneath it, an edifice
+and a built floor resolve to their own cell, and a hole resolves to nothing. Details and the
+felling consequence are in `06-rendering-and-camera.md` §3c.
+
 **Flip condition F5.** If playtesting turns up the misclick complaint this rule was guarding against
 — an order landing a storey away from where it was aimed — the answer is not to re-clip the ray but
 to make the depth the click landed on visible before it is committed: the cursor already knows the

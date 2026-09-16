@@ -124,7 +124,7 @@ namespace Odyssey.Sim.Designations
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
             if (kind == DesignationKind.None) return IntentRejection.NotPermitted;
 
-            int index = _grid.Index(cell);
+            int index = TreeAbove(_grid.Index(cell), kind);
             if (!Allows(index, kind)) return IntentRejection.NotPermitted;
             if (_kinds[index] == (byte)kind) return IntentRejection.AlreadyInThatState;
 
@@ -136,9 +136,44 @@ namespace Odyssey.Sim.Designations
         {
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
             int index = _grid.Index(cell);
+
+            // The mirror of TreeAbove: the order the player can see over this patch of ground is
+            // the one standing on it, so naming the ground takes it off.
+            if (_kinds[index] == 0)
+            {
+                int above = index + _grid.Size.LayerStride;
+                if (_grid.IsSolidTerrain(index) && above < _grid.Size.CellCount && _kinds[above] != 0)
+                    index = above;
+            }
+
             if (_kinds[index] == 0) return IntentRejection.AlreadyInThatState;
             Set(index, DesignationKind.None);
             return IntentRejection.None;
+        }
+
+        /// <summary>
+        /// A fell order named at solid ground means the tree standing on it.
+        ///
+        /// <para><b>A click names a surface; an order names a cell, and the two stopped being the
+        /// same thing on 2026-09-16.</b> The picker now answers a click on bare ground with the
+        /// ground <i>block</i> rather than the air above it (owner: "I still wanted to select the
+        /// tile below it or not at all") — and a tree is an edifice standing in that air cell. So
+        /// a click straight on a tree still names the tree, but a drag box begun on open grass
+        /// comes through a layer too low, and every cell of it would be refused in silence. The
+        /// player would have swept the tool across a wood and watched nothing happen.</para>
+        ///
+        /// <para>It is the same relation <see cref="CanMine"/> already knows about from the other
+        /// side — that the ground under a standing tree is not diggable while the tree is up — so
+        /// the ground and the tree on it were already two views of one thing here.</para>
+        ///
+        /// <para>Only felling. Mining means the block itself, which is exactly what the click now
+        /// gives, and no other kind is about something standing on the ground.</para>
+        /// </summary>
+        int TreeAbove(int index, DesignationKind kind)
+        {
+            if (kind != DesignationKind.Fell || !_grid.IsSolidTerrain(index)) return index;
+            int above = index + _grid.Size.LayerStride;
+            return above < _grid.Size.CellCount && IsTree(above) ? above : index;
         }
 
         /// <summary>Clear a cell without ceremony: the order was carried out.</summary>

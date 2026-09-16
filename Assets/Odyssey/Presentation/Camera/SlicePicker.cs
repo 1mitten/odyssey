@@ -25,12 +25,23 @@ namespace Odyssey.Presentation.CameraRig
     /// the renderer draws <i>solid</i> — underground, where the layer above is x-rayed, the old
     /// behaviour is unchanged and a click cannot leave the active layer upwards.</para>
     ///
-    /// <para><b>Nearest along the ray wins, and the active layer breaks a tie.</b> The top face of
-    /// a solid cell and the floor of the air cell above it are the same surface at the same
-    /// distance, so the two candidates arrive together; whichever layer is nearer the slice is
-    /// returned. That reproduces the old single-layer answers exactly — clicking the meadow gives
-    /// the air cell you stand in, clicking an outcrop gives the rock — and extends them upwards and
-    /// downwards without a second convention.</para>
+    /// <para><b>A face belongs to whatever you clicked, and if nothing is there the click misses.</b>
+    /// The owner's rule, 2026-09-16: <i>"I still wanted to select the tile below it or not at
+    /// all."</i> So the top of the meadow is the <b>ground block</b>, not the empty cell standing
+    /// on it, and the top of an outcrop is the rock. This replaced a first attempt that returned the air cell
+    /// above a surface — the convention the picker had always used on one layer, because on one
+    /// layer it was the only cell on offer. Carried up and down a stack it reads as clicking a
+    /// rock and selecting the sky above it.</para>
+    ///
+    /// <para><b>An edifice standing in a cell is the thing you clicked, and that is the same rule
+    /// rather than an exception to it.</b> A tree is an edifice that blocks nothing, standing in
+    /// the walkable cell — so a literal reading of "select the tile below" would hand back the
+    /// ground under every tree and <i>felling could never be ordered again</i>. What you are
+    /// looking at there is the tree, and the tree owns the face. The same holds for a wall, a door
+    /// and a built floor slab: each is drawn in its own cell and each is returned in it.</para>
+    ///
+    /// <para><b>Nearest along the ray wins</b>, with a thing beating bare ground at the same
+    /// distance and, failing that, the layer nearer the slice.</para>
     ///
     /// It is a pure function over the render mirror: no Unity scene, no physics, and therefore
     /// testable in EditMode without a camera existing.
@@ -44,20 +55,28 @@ namespace Odyssey.Presentation.CameraRig
         const float SameSurface = 1e-3f;
 
         /// <summary>
-        /// The first cell the ray meets on the active layer, and on no other. The form the tests
-        /// and any caller without a slice policy use; equivalent to passing a
-        /// <see cref="SliceSettings"/> that draws nothing above or below.
+        /// The form for a caller with no slice policy: only the active layer is marched, which is
+        /// what every call site did before the band existed.
+        ///
+        /// <para>Marched, not returned — a floor crossing on the active layer is the top of the
+        /// block holding it up, so the answer may be the layer below. The one thing a null slice
+        /// guarantees is that nothing is searched anywhere else.</para>
         /// </summary>
         public static bool Pick(Ray ray, WorldRenderModel model, int activeLayer, out CellRef cell) =>
             Pick(ray, model, activeLayer, null, out cell);
 
         /// <summary>
-        /// The nearest cell the ray meets on any layer the slice draws solid.
+        /// The nearest thing the ray meets on any layer the slice draws solid.
         ///
-        /// A cell counts as hit when it holds something that occludes — wall, door, pillar, solid
-        /// strata — or when the ray crosses that cell's floor. The returned cell's layer is always
-        /// one <paramref name="slice"/> would draw at full opacity; that is a guarantee, not a
-        /// consequence.
+        /// <para>A cell counts as hit when it holds something that occludes — wall, door, pillar,
+        /// solid strata — or when the ray crosses a floor it owns. <b>Only layers drawn at full
+        /// opacity are searched</b>, which is the guarantee that matters and the one ADR 0006's
+        /// misclick argument rests on.</para>
+        ///
+        /// <para>The cell handed back may still be one layer under the lowest searched, because a
+        /// floor crossing resolves to the block underneath and that block's top face is the
+        /// surface the player aimed at. Refusing it would mean refusing to select the ground at
+        /// the bottom of the drawn range, which is ground they can see.</para>
         /// </summary>
         public static bool Pick(
             Ray ray, WorldRenderModel model, int activeLayer, SliceSettings? slice, out CellRef cell)
@@ -69,11 +88,12 @@ namespace Odyssey.Presentation.CameraRig
             Band(model, activeLayer, slice, out int lowest, out int highest);
 
             bool found = false;
+            bool bestIsThing = false;
             float best = float.MaxValue;
 
             // Outwards from the slice, so that when two layers offer the same surface at the same
-            // distance the first one accepted is the one nearest the layer being worked. The
-            // strict improvement below is what makes the visit order the tie-break.
+            // distance and neither holds a thing, the first one accepted is the one nearest the
+            // layer being worked.
             for (int step = 0; step <= Mathf.Max(activeLayer - lowest, highest - activeLayer); step++)
             for (int side = 0; side < 2; side++)
             {
@@ -87,11 +107,21 @@ namespace Odyssey.Presentation.CameraRig
                 // your head stays pickable, the floor slab that was meshed away does not.
                 bool floors = !(slice != null && layer == activeLayer + 1 && slice.SuppressCeilingAt(activeLayer));
 
-                if (!PickOnLayer(ray, model, layer, floors, out CellRef hit, out float t)) continue;
-                if (found && t >= best - SameSurface) continue;
+                if (!PickOnLayer(ray, model, layer, floors, out CellRef hit, out float t, out bool thing))
+                    continue;
+
+                // Strictly nearer, or the same surface with something standing on it. The second
+                // clause is what keeps a tree clickable: the tree's cell and the ground block
+                // underneath it offer the same face at the same distance, and the tree is what the
+                // player is looking at.
+                bool nearer = !found || t < best - SameSurface;
+                bool sameSurfaceButAThing = found && !nearer
+                    && Mathf.Abs(t - best) <= SameSurface && thing && !bestIsThing;
+                if (!nearer && !sameSurfaceButAThing) continue;
 
                 best = t;
                 cell = hit;
+                bestIsThing = thing;
                 found = true;
             }
 
@@ -124,18 +154,22 @@ namespace Odyssey.Presentation.CameraRig
         }
 
         /// <summary>
-        /// The first cell of one layer the ray meets, with the distance at which it met it.
+        /// The first thing the ray meets while marching one layer, the distance at which it met
+        /// it, and whether what it met was an object rather than bare ground.
         ///
-        /// <para>This is the original picker, unchanged but for the two outputs and the
-        /// <paramref name="floors"/> switch: the ray is clipped analytically to the layer's own
-        /// slab before a single cell is visited, so geometry on other layers cannot be returned by
-        /// accident — only by the caller asking for that layer deliberately.</para>
+        /// <para>The ray is clipped analytically to this layer's own slab before a single cell is
+        /// visited, so geometry on other layers cannot be returned by accident — only by the caller
+        /// asking for that layer deliberately. <b>The cell returned may still be the one below</b>,
+        /// because a floor crossing means the player has clicked the top of whatever holds this
+        /// cell up, and that is the block underneath.</para>
         /// </summary>
         static bool PickOnLayer(
-            Ray ray, WorldRenderModel model, int layer, bool floors, out CellRef cell, out float hitAt)
+            Ray ray, WorldRenderModel model, int layer, bool floors,
+            out CellRef cell, out float hitAt, out bool thing)
         {
             cell = default;
             hitAt = float.MaxValue;
+            thing = false;
             var size = model.Size;
             if (layer < 0 || layer >= size.SizeY) return false;
 
@@ -184,14 +218,19 @@ namespace Odyssey.Presentation.CameraRig
                 if (model.OccludesFace(index))
                 {
                     cell = new CellRef(x, z, layer);
+                    thing = model.EdificeDef(index) != 0;
 
                     // The distance has to be the drawn surface, not the clip. A ray coming in
                     // steeply meets a solid cell at the slab entry, and that entry was opened up
                     // by the relief's reach a few lines above -- so an unclamped answer would put
-                    // this cell up to half a metre nearer the camera than it is drawn, and a
-                    // buried rock would out-bid the meadow standing on top of it. Clamping to the
-                    // cell's own drawn top face makes the two exactly equal, which is what they
-                    // are: one surface, and the tie-break picks which cell owns it.
+                    // this cell up to half a metre nearer the camera than it is drawn.
+                    //
+                    // **It is what keeps a tree clickable on rolling ground.** The tree's cell and
+                    // the ground block under it are one face at one distance, and the tie is
+                    // broken in the tree's favour; half a metre of slack turns that tie into a
+                    // win for the ground and the tree cannot be marked. Flat ground hides it --
+                    // with relief off the reach is nought and the two agree anyway -- and the
+                    // board that is played is not flat.
                     hitAt = ray.direction.y < 0f
                         ? Mathf.Max(t, FloorCrossing(ray, slabMax + FloorHeightAt(x, z)))
                         : t;
@@ -204,9 +243,10 @@ namespace Odyssey.Presentation.CameraRig
                 // has to meet.
                 float tFloor = floors ? FloorCrossing(ray, slabMin + FloorHeightAt(x, z)) : float.MaxValue;
 
-                if (tFloor >= t - 1e-4f && tFloor <= tCellEnd && HasFloor(model, index, layer))
+                if (tFloor >= t - 1e-4f && tFloor <= tCellEnd
+                    && Owner(model, index, layer, out CellRef owner, out thing))
                 {
-                    cell = new CellRef(x, z, layer);
+                    cell = owner;
                     hitAt = tFloor;
                     return true;
                 }
@@ -250,11 +290,49 @@ namespace Odyssey.Presentation.CameraRig
             return amplitude + GroundRelief.MaxSlope(amplitude) * CellMetrics.SizeXZ;
         }
 
-        static bool HasFloor(WorldRenderModel model, int index, int layer)
+        /// <summary>
+        /// Which cell owns the floor of this one — the thing the player has actually clicked when
+        /// the ray crosses it — and whether that thing is an object rather than bare ground.
+        ///
+        /// <para>Three answers in order, and the order is the whole rule:</para>
+        /// <list type="number">
+        /// <item>an edifice standing here: the tree, the bed, whatever it is. It is drawn in this
+        /// cell and it is what the player is looking at.</item>
+        /// <item>a built floor slab: also drawn in this cell, so this cell owns it.</item>
+        /// <item>solid terrain underneath: <b>the block below</b>, because its top face is the
+        /// surface the ray just met. This is the owner's rule — "the tile below it or not at
+        /// all" — and it is why clicking the meadow gives the ground rather than the air above
+        /// it.</item>
+        /// </list>
+        ///
+        /// <para>Nothing under it at all is a hole, and a click through a hole selects nothing.</para>
+        /// </summary>
+        static bool Owner(WorldRenderModel model, int index, int layer, out CellRef cell, out bool thing)
         {
-            if (model.Floor(index) != 0) return true;
-            if (layer == 0) return false;
-            return model.IsSolid(index - model.Size.LayerStride);
+            var size = model.Size;
+            thing = false;
+            cell = default;
+
+            if (model.EdificeDef(index) != 0)
+            {
+                cell = size.FromIndex(index);
+                thing = true;
+                return true;
+            }
+
+            if (model.Floor(index) != 0)
+            {
+                cell = size.FromIndex(index);
+                return true;
+            }
+
+            if (layer > 0 && model.IsSolid(index - size.LayerStride))
+            {
+                cell = size.FromIndex(index - size.LayerStride);
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>Where the ray crosses the layer's floor plane, or "never".</summary>

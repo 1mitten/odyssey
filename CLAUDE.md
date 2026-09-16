@@ -368,13 +368,28 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     drawn, so "selectable" and "drawn solid" cannot drift apart. It is capped at
     `WorldRenderModel.HighestOccupiedLayer`, the same cap `ChunkRenderer.Render` uses, or a tall
     map would march through empty sky on every hover.
-  - **One tie-break is why none of the old answers moved.** A solid cell's top face and the floor
-    of the air cell above it are **one surface at one distance**, so both layers bid at the same
-    ray parameter; the layer nearer the slice wins. Clicking the meadow therefore still gives the
-    air cell you stand in and clicking an outcrop still gives the rock. Without it, ordinary ground
-    would have started returning the buried rock beneath the grass — a regression invisible until
-    a stockpile refused to be drawn. It needed the occlusion hit's reported distance to be the
-    **drawn top face**, not the slab clip, which the relief had opened up by half a metre.
+  - **A face belongs to whatever you clicked, or the click misses (owner, second correction the
+    same day: *"I still wanted to select the tile below it or not at all"*).** The first attempt
+    kept the picker's old convention — a floor crossing returns the *air* cell whose floor it
+    crossed — which was never chosen: on one layer the air cell was the only cell on offer. Reaching
+    up and down a stack it reads as clicking a rock and selecting the sky. Now: an occluder is its
+    own cell; a cell holding an **edifice** or a **built floor slab** is its own cell; bare ground
+    resolves to **the block beneath**, whose top face that is; and nothing beneath is nothing
+    picked. A solid cell's top face and the floor of the air cell above it are **one surface at one
+    distance**, so two layers bid at the same ray parameter — and they now resolve to the same
+    block, which is what makes the tie harmless. Where they disagree is a tree, and **a thing beats
+    bare ground**, failing which the layer nearer the slice wins. The occlusion hit's reported
+    distance had to be the **drawn top face** rather than the slab clip, which the relief had
+    opened up by half a metre.
+  - **The edifice rule is not an exception and leaving it out would have broken felling outright.**
+    A tree is an edifice that blocks nothing standing in the walkable cell, so "select the tile
+    below" taken literally hands back the ground under every tree and Fell can never be ordered
+    again. **And the order had to be lifted to match, for a drag**: a click on a tree names the
+    tree, but a fell box begun on open grass anchors a layer too low and every cell of it is
+    refused *in silence* — the tool swept across a wood and nothing happening.
+    `DesignationGrid.Designate` reads a Fell order named at solid ground as the tree on it, and
+    `Cancel` mirrors it. Only felling; mining means the block itself, which is what the click now
+    gives. It is the same relation `CanMine` already knew from the other side.
   - **A surface that is not drawn is not clickable.** The active layer's ceiling is the slab of the
     layer above and the renderer meshes it away, so that one layer offers only what occludes: rock
     over your head stays pickable, the dropped slab does not.
