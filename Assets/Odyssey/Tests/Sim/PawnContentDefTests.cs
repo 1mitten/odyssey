@@ -1,8 +1,6 @@
 #nullable enable
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
 using NUnit.Framework;
 using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pawns;
@@ -29,20 +27,14 @@ namespace Odyssey.Tests.Sim
     /// </summary>
     public class PawnContentDefTests
     {
-        static DefDatabase LoadCore()
-        {
-            var loader = new DefLoader();
-            PawnContent.Register(loader);
-            return loader.AddSource(new DirectoryDefSource("Core", RepoPaths.CoreDefs)).Load();
-        }
+        static DefDatabase LoadCore() => ContentPack.LoadCore(RepoPaths.CoreDefs);
 
         [Test]
         public void TheXmlIsTheSameContentAsTheCodeOracle()
         {
             PawnContent fromXml = PawnContent.FromDefs(LoadCore());
 
-            var differences = new List<string>();
-            Compare(PawnContent.Core(), fromXml, "PawnContent", differences);
+            var differences = DefComparison.Differences(PawnContent.Core(), fromXml, "PawnContent");
 
             Assert.That(differences, Is.Empty,
                 "the XML content and PawnContent.Core() have parted:" + Environment.NewLine +
@@ -60,8 +52,7 @@ namespace Odyssey.Tests.Sim
             PawnContent fromXml = PawnContent.FromDefs(LoadCore());
             fromXml.Items[ItemIndex.Wood].stackLimit += 1;
 
-            var differences = new List<string>();
-            Compare(PawnContent.Core(), fromXml, "PawnContent", differences);
+            var differences = DefComparison.Differences(PawnContent.Core(), fromXml, "PawnContent");
 
             Assert.That(differences, Has.Count.EqualTo(1), string.Join(Environment.NewLine, differences));
             Assert.That(differences[0], Does.Contain("Items[2].stackLimit"));
@@ -78,8 +69,7 @@ namespace Odyssey.Tests.Sim
             PawnContent fromXml = PawnContent.FromDefs(LoadCore());
             fromXml.Needs[NeedIndex.Rest].bands[2].fallPerInterval += 1;
 
-            var differences = new List<string>();
-            Compare(PawnContent.Core(), fromXml, "PawnContent", differences);
+            var differences = DefComparison.Differences(PawnContent.Core(), fromXml, "PawnContent");
 
             Assert.That(differences, Has.Count.EqualTo(1), string.Join(Environment.NewLine, differences));
             Assert.That(differences[0], Does.Contain("Needs[1].bands[2].fallPerInterval"));
@@ -163,53 +153,5 @@ namespace Odyssey.Tests.Sim
             Assert.That(error.Message, Does.Contain("Item_Salvage").Or.Contain("NeedDef"));
         }
 
-        // ------------------------------------------------------------------ the comparison
-
-        /// <summary>
-        /// Walk two objects of the same shape and record every public field that differs, with
-        /// the path to it. Fields only: <c>Def.Origin</c> and <c>Def.Abstract</c> are properties
-        /// and are provenance rather than content — the XML has a file and a line and the oracle
-        /// does not, and that is not a difference in the content.
-        /// </summary>
-        static void Compare(object? expected, object? actual, string path, List<string> differences)
-        {
-            if (expected == null || actual == null)
-            {
-                if (!ReferenceEquals(expected, actual))
-                    differences.Add($"{path}: expected {Show(expected)}, found {Show(actual)}");
-                return;
-            }
-
-            Type type = expected.GetType();
-            if (type != actual.GetType())
-            {
-                differences.Add($"{path}: expected a {type.Name}, found a {actual.GetType().Name}");
-                return;
-            }
-
-            if (type.IsPrimitive || type.IsEnum || type == typeof(string))
-            {
-                if (!expected.Equals(actual))
-                    differences.Add($"{path}: expected {Show(expected)}, found {Show(actual)}");
-                return;
-            }
-
-            if (expected is IList expectedList && actual is IList actualList)
-            {
-                if (expectedList.Count != actualList.Count)
-                {
-                    differences.Add($"{path}: expected {expectedList.Count} entries, found {actualList.Count}");
-                    return;
-                }
-                for (int i = 0; i < expectedList.Count; i++)
-                    Compare(expectedList[i], actualList[i], $"{path}[{i}]", differences);
-                return;
-            }
-
-            foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Instance))
-                Compare(field.GetValue(expected), field.GetValue(actual), $"{path}.{field.Name}", differences);
-        }
-
-        static string Show(object? value) => value == null ? "nothing" : $"'{value}'";
     }
 }
