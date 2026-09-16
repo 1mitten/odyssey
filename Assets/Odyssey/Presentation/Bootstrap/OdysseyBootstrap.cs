@@ -580,7 +580,7 @@ namespace Odyssey.Presentation.Bootstrap
         /// good rather than negotiated frame by frame.
         /// </summary>
         /// <summary>
-        /// Every standing order on the drawn layer, and how far through it the colony is.
+        /// Every standing order on a drawn layer, and how far through it the colony is.
         ///
         /// <para><b>Nothing drew these at all.</b> The designation channel has been published
         /// since designations existed and no part of presentation ever read it, so a marked cell
@@ -588,34 +588,32 @@ namespace Odyssey.Presentation.Bootstrap
         /// to watch somebody walk to it. A bracket says the order is there; the cut slab says how
         /// far along it is (owner, 2026-09-16 — "some graphical indication").</para>
         ///
-        /// <para>Per order rather than per cell of the board: the channel is a layer's worth of
-        /// bytes but the loop only draws the ones that carry an order, which on any real board is
-        /// tens of cells out of sixty thousand.</para>
+        /// <para><b>Filtered to the drawn band rather than to the active layer</b>, because the
+        /// picker stopped being clipped to one layer on 2026-09-16 and an order can now be given
+        /// anywhere the player can see. Marking it on the layer it was given on is the whole point;
+        /// drawing it on a layer that is not on screen would put a bracket in mid-air.</para>
         /// </summary>
         void DrawStandingOrders(WorldSnapshot snapshot)
         {
-            if (_renderer == null) return;
+            if (_renderer == null || cameraRig == null) return;
 
-            System.ReadOnlySpan<byte> orders = snapshot.Designations;
-            System.ReadOnlySpan<byte> progress = snapshot.DesignationProgress;
+            System.ReadOnlySpan<OrderView> orders = snapshot.Orders;
             if (orders.Length == 0) return;
 
             GridSize size = snapshot.Size;
-            int layer = snapshot.SliceLayer;
+            int lowest = System.Math.Max(0, cameraRig.LowestSelectableLayer);
+            int highest = cameraRig.HighestSelectableLayer;
 
             for (int i = 0; i < orders.Length; i++)
             {
-                if (orders[i] == 0) continue;
+                CellRef cell = size.FromIndex(orders[i].CellIndex);
+                if (cell.Y < lowest || cell.Y > highest) continue;
 
-                int x = i % size.SizeX;
-                int z = i / size.SizeX;
-                var cell = new CellRef(x, z, layer);
-
-                Color tint = orders[i] == (byte)DesignationKind.Mine ? MineOrderColour : FellOrderColour;
+                Color tint = orders[i].Kind == (byte)DesignationKind.Mine ? MineOrderColour : FellOrderColour;
                 _renderer.DrawCellMark(cell, tint);
 
-                if (i < progress.Length && progress[i] > 0)
-                    _renderer.DrawCellCut(cell, progress[i] / 255f, CutColour);
+                if (orders[i].Progress > 0)
+                    _renderer.DrawCellCut(cell, orders[i].Progress / 255f, CutColour);
             }
         }
 

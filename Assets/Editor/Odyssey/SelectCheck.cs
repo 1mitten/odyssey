@@ -173,7 +173,7 @@ namespace Odyssey.EditorTools
                 Vector3 screen = camera.WorldToScreenPoint(aimAt);
                 Ray ray = camera.ScreenPointToRay(screen);
 
-                bool pickedCell = SlicePicker.Pick(ray, model, activeLayer, out CellRef cell);
+                bool pickedCell = SlicePicker.Pick(ray, model, activeLayer, slice, out CellRef cell);
                 bool hitsAtPose = Hits(ray, pose);
                 bool hitsAtFigure = Hits(ray, feet);
 

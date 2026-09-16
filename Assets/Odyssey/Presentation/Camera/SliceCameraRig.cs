@@ -23,8 +23,10 @@ namespace Odyssey.Presentation.CameraRig
     /// go, and draws the cell cursor for the <see cref="SelectionDirector"/>. Those three are
     /// Unity-free and tested without it; this class is the one that needs a camera.
     ///
-    /// Picking goes through <see cref="SlicePicker"/>, which cannot return a cell above the
-    /// active layer. That is the non-negotiable part of this class.
+    /// Picking goes through <see cref="SlicePicker"/>, which returns the nearest cell on any
+    /// layer the slice draws solid — the whole stack above the surface, the active layer alone
+    /// when a layer above it is x-rayed. What is non-negotiable is the second half: a ghosted
+    /// layer is a depth cue and is never a pointer target.
     ///
     /// Input goes through the Input System package, because the project is configured for it
     /// (<c>activeInputHandler: 1</c>) and the legacy <c>Input</c> class throws outright under that
@@ -358,12 +360,23 @@ namespace Odyssey.Presentation.CameraRig
             GetComponent<UnityEngine.Camera>()
                 .ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
 
-        /// <summary>The cell under a screen point on the active layer, or false when the ray misses.</summary>
+        /// <summary>
+        /// The highest layer a click may land on, and the lowest. The picker's band, published so
+        /// that the colonist hit-test and the drag box cull against the same bounds the world does
+        /// — "selectable" and "drawn solid" must not be allowed to drift apart.
+        /// </summary>
+        public int HighestSelectableLayer =>
+            _model == null ? ActiveLayer : slice.HighestSelectableLayer(ActiveLayer, _model.Size.SizeY);
+
+        /// <inheritdoc cref="HighestSelectableLayer"/>
+        public int LowestSelectableLayer => slice.LowestSelectableLayer(ActiveLayer);
+
+        /// <summary>The cell under a screen point on a drawn layer, or false when the ray misses.</summary>
         bool CellAt(Vector2 screenPosition, out CellRef cell)
         {
             cell = default;
             if (_model == null) return false;
-            return SlicePicker.Pick(RayAt(screenPosition), _model, ActiveLayer, out cell);
+            return SlicePicker.Pick(RayAt(screenPosition), _model, ActiveLayer, slice, out cell);
         }
 
         static Rect RectFromTo(Vector2 a, Vector2 b) => Rect.MinMaxRect(
@@ -466,7 +479,7 @@ namespace Odyssey.Presentation.CameraRig
         {
             if (_model == null) return;
             Ray ray = RayAt(screenPosition);
-            if (SlicePicker.Pick(ray, _model, ActiveLayer, out CellRef cell)) Picked?.Invoke(cell, ray);
+            if (SlicePicker.Pick(ray, _model, ActiveLayer, slice, out CellRef cell)) Picked?.Invoke(cell, ray);
             else Picked?.Invoke(null, ray);
         }
 

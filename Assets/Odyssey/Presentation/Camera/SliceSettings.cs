@@ -204,6 +204,33 @@ namespace Odyssey.Presentation.CameraRig
         }
 
         /// <summary>
+        /// The highest layer a click may land on.
+        ///
+        /// <para><b>Solid is clickable; a ghost never is.</b> ADR 0006 originally said nothing
+        /// above the slice may be a pointer target, and the owner took that up on 2026-09-16:
+        /// <i>"I couldn't select the stones for mining … I should be able to click on an object in
+        /// 3D space"</i>. The part of the old rule that was really carrying the weight is that a
+        /// translucent hint of a wall is a depth cue, and clicking a depth cue is Going Medieval's
+        /// misclick complaint. Drawn at full opacity it is not a cue, it is the world.</para>
+        ///
+        /// <para>So this follows <see cref="AboveAt"/> exactly: above the surface, where every
+        /// layer is drawn solid, the whole stack is selectable up to the fade bound; underground,
+        /// where the one layer above is x-rayed, a click cannot leave the active layer upwards and
+        /// the old behaviour is unchanged.</para>
+        /// </summary>
+        public int HighestSelectableLayer(int activeLayer, int layerCount) =>
+            GhostsAbove(activeLayer) ? activeLayer : HighestVisibleLayer(activeLayer, layerCount);
+
+        /// <summary>
+        /// The lowest layer a click may land on — every layer drawn below the slice.
+        ///
+        /// <para>Dimmed is not ghosted: a layer below is drawn opaque and merely darker, and it is
+        /// only reachable by a ray at all where nothing above it occludes — through a shaft, over
+        /// a cliff, down a stairwell. Which is exactly where a player means to click it.</para>
+        /// </summary>
+        public int LowestSelectableLayer(int activeLayer) => Mathf.Max(0, LowestDrawnLayer(activeLayer));
+
+        /// <summary>
         /// Should the active layer's ceiling — the slab stored on the layer above — be dropped?
         ///
         /// <para><b>`Full` normally keeps its lid and the depth-following default does not,

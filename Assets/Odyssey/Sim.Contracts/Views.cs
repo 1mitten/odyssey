@@ -164,6 +164,45 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// One standing order the player has given, wherever in the world it is.
+    ///
+    /// <para><b>A whole-world cell index, not an offset into a layer.</b> The two channels this
+    /// replaced were one byte per cell of the active layer, which was the right shape while a
+    /// click could not reach another layer. Since 2026-09-16 it can — an outcrop standing above
+    /// the meadow is clickable where it is drawn — and an order the player had just given went
+    /// undrawn because it was not on the published layer. The reading was "nothing happened".</para>
+    ///
+    /// <para>Sparse because orders are sparse: a layer is fourteen thousand cells on the prototype
+    /// board and a colony has tens of orders, so this is smaller than the one layer it replaces
+    /// even while covering every layer. Presentation filters to the layers it is drawing.</para>
+    /// </summary>
+    public readonly struct OrderView
+    {
+        /// <summary>The cell, as a whole-world index. <c>GridSize.FromIndex</c> unpacks it.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>The standing order, as a <c>DesignationKind</c> value. Never 0.</summary>
+        public readonly byte Kind;
+
+        /// <summary>
+        /// How far through the order that cell is, 0 for untouched and 255 for finished.
+        ///
+        /// <para>Quantised rather than exact because it is a picture, not a number: what reads on
+        /// screen is whether a face is barely scratched, half cut or nearly through, and a byte
+        /// says that to a tenth of a per cent. The exact tick count stays in the simulation, where
+        /// the arithmetic is done.</para>
+        /// </summary>
+        public readonly byte Progress;
+
+        public OrderView(int cellIndex, byte kind, byte progress)
+        {
+            CellIndex = cellIndex;
+            Kind = kind;
+            Progress = progress;
+        }
+    }
+
+    /// <summary>
     /// One published frame of world state: everything presentation may read, and nothing else.
     ///
     /// Buffers are pooled and reused, so a snapshot is only valid until the next publish. The
@@ -176,8 +215,7 @@ namespace Odyssey.Sim.Contracts
         PawnView[] _pawns = Array.Empty<PawnView>();
         ThingView[] _things = Array.Empty<ThingView>();
         byte[] _sliceCells = Array.Empty<byte>();
-        byte[] _designations = Array.Empty<byte>();
-        byte[] _designationProgress = Array.Empty<byte>();
+        OrderView[] _orders = Array.Empty<OrderView>();
 
         public int Tick { get; private set; }
         public int SliceLayer { get; private set; }
@@ -207,7 +245,9 @@ namespace Odyssey.Sim.Contracts
         public int PawnCount { get; private set; }
         public int ThingCount { get; private set; }
         public int SliceCellCount { get; private set; }
-        public int DesignationCellCount { get; private set; }
+
+        /// <summary>How many standing orders the colony has, anywhere in the world.</summary>
+        public int OrderCount { get; private set; }
 
         public ReadOnlySpan<PawnView> Pawns => new ReadOnlySpan<PawnView>(_pawns, 0, PawnCount);
         public ReadOnlySpan<ThingView> Things => new ReadOnlySpan<ThingView>(_things, 0, ThingCount);
@@ -219,23 +259,11 @@ namespace Odyssey.Sim.Contracts
         public ReadOnlySpan<byte> SliceCells => new ReadOnlySpan<byte>(_sliceCells, 0, SliceCellCount);
 
         /// <summary>
-        /// One byte per cell of the active layer: the standing order there, as a
-        /// <c>DesignationKind</c> value, or 0. Empty when the world has no designation grid.
+        /// Every standing order in the world, in cell-index order. See <see cref="OrderView"/>
+        /// for why this is sparse and whole-world rather than one byte per cell of one layer.
+        /// Empty when the world has no designation grid.
         /// </summary>
-        public ReadOnlySpan<byte> Designations => new ReadOnlySpan<byte>(_designations, 0, DesignationCellCount);
-
-        /// <summary>
-        /// One byte per cell of the active layer: how far through its order that cell is, 0 for
-        /// untouched and 255 for finished. Same length and same indexing as
-        /// <see cref="Designations"/>, and 0 wherever there is no order.
-        ///
-        /// <para>Quantised rather than exact because it is a picture, not a number: what reads on
-        /// screen is whether a face is barely scratched, half cut or nearly through, and a byte
-        /// says that to a tenth of a per cent. The exact tick count stays in the simulation, where
-        /// the arithmetic is done.</para>
-        /// </summary>
-        public ReadOnlySpan<byte> DesignationProgress =>
-            new ReadOnlySpan<byte>(_designationProgress, 0, DesignationCellCount);
+        public ReadOnlySpan<OrderView> Orders => new ReadOnlySpan<OrderView>(_orders, 0, OrderCount);
 
         /// <summary>Find a pawn by id. Returns false when it is gone, which callers must handle.</summary>
         public bool TryGetPawn(PawnId id, out PawnView view)
@@ -261,7 +289,7 @@ namespace Odyssey.Sim.Contracts
             PawnCount = 0;
             ThingCount = 0;
             SliceCellCount = 0;
-            DesignationCellCount = 0;
+            OrderCount = 0;
         }
 
         internal void AddPawn(in PawnView view)
@@ -283,17 +311,10 @@ namespace Odyssey.Sim.Contracts
             return new Span<byte>(_sliceCells, 0, cellCount);
         }
 
-        internal Span<byte> BeginDesignations(int cellCount)
+        internal void AddOrder(in OrderView view)
         {
-            Grow(ref _designations, cellCount);
-            DesignationCellCount = cellCount;
-            return new Span<byte>(_designations, 0, cellCount);
-        }
-
-        internal Span<byte> BeginDesignationProgress(int cellCount)
-        {
-            Grow(ref _designationProgress, cellCount);
-            return new Span<byte>(_designationProgress, 0, cellCount);
+            Grow(ref _orders, OrderCount + 1);
+            _orders[OrderCount++] = view;
         }
 
         static void Grow<T>(ref T[] array, int needed)
