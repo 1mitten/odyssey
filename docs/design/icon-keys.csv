@@ -30,6 +30,9 @@ ui.res.protein,Protein paste,ui.res,M1,Reclaimed nutrition. Edible; that is all
 ui.res.meat,Raw meat,ui.res,M1,Butchered. Spoils without cold
 ui.res.produce,Produce,ui.res,M1,"Grown food, uncooked"
 ui.res.wood,Wood,ui.res,M3,"Felled timber. The first thing the colony builds with"
+ui.res.stone,Stone,ui.res,M3,"Broken rock from a mined face. Heavy, and there is always more"
+ui.res.ironore,Iron ore,ui.res,M3,Raw ore. Worthless until something smelts it
+ui.res.coal,Coal,ui.res,M3,"Burns hot. Found deeper than iron, and for that reason"
 ui.res.grain,Grain,ui.res,M1,"Bulk staple. Stores well, needs cooking"
 ui.res.fungus,Fungus,ui.res,M1,Grows without light. The underground staple
 ui.res.water,Water,ui.res,M1,Drinking and hydroponics
