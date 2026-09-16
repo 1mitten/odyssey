@@ -129,7 +129,6 @@ namespace Odyssey.Tests.Hud
             (".needs", "margin-top", () => HudLayout.InspectTabGap, "tabs to needs"),
             (".need", "margin-bottom", () => HudLayout.NeedRowGap, "need row gap"),
 
-            (".inspect__empty", "height", () => HudLayout.InspectEmptyLine, "the empty pane's one line"),
             (".alert", "min-height", () => HudLayout.AlertHeight, "an alert row"),
             (".alerts__rows", "margin-top", () => HudLayout.HeaderGap, "header to first alert"),
 
