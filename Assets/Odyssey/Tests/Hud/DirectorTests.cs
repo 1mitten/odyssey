@@ -319,3 +319,133 @@ namespace Odyssey.Tests.Hud
         }
     }
 }
+
+namespace Odyssey.Tests.Hud
+{
+    /// <summary>
+    /// A fake preference store, so persistence can be proved without a machine to store anything
+    /// on. The real one writes to <c>PlayerPrefs</c> and lives in the Presentation assembly for
+    /// exactly this reason.
+    /// </summary>
+    sealed class FakeSettingsStore : ISettingsStore
+    {
+        readonly System.Collections.Generic.Dictionary<string, bool> _values = new();
+
+        public int Writes { get; private set; }
+
+        public bool? Read(string key) => _values.TryGetValue(key, out bool value) ? value : null;
+
+        public void Write(string key, bool value)
+        {
+            _values[key] = value;
+            Writes++;
+        }
+
+        public void Preset(string key, bool value) => _values[key] = value;
+    }
+
+    public class SettingsDirectorTests
+    {
+        [Test]
+        public void ThePanelIsShutUntilAskedForAndAnnouncesEachChange()
+        {
+            var settings = new SettingsDirector();
+            int raised = 0;
+            settings.Changed += () => raised++;
+
+            Assert.That(settings.Open, Is.False, "nothing opens a panel the player did not ask for");
+            settings.Toggle();
+            Assert.That(settings.Open, Is.True);
+            settings.SetOpen(true);
+            Assert.That(raised, Is.EqualTo(1), "setting what is already set says nothing");
+            settings.Toggle();
+            Assert.That(settings.Open, Is.False);
+            Assert.That(raised, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void EscapeCancelsTheToolBeforeItTouchesThePanel()
+        {
+            var settings = new SettingsDirector();
+
+            // The order is the whole rule: a player who armed a tool and pressed Escape wants the
+            // tool put down, not a settings panel in the middle of the screen.
+            Assert.That(settings.Escape(toolArmed: true), Is.EqualTo(EscapeAction.DisarmTool));
+            settings.SetOpen(true);
+            Assert.That(settings.Escape(toolArmed: true), Is.EqualTo(EscapeAction.DisarmTool),
+                "an armed tool outranks an open panel, however the panel got there");
+
+            Assert.That(settings.Escape(toolArmed: false), Is.EqualTo(EscapeAction.ClosePanel));
+            settings.SetOpen(false);
+            Assert.That(settings.Escape(toolArmed: false), Is.EqualTo(EscapeAction.OpenPanel));
+        }
+
+        [Test]
+        public void EveryOptionStartsOnAndReportsWhetherChangingItCostsARedraw()
+        {
+            var settings = new SettingsDirector();
+            foreach (GraphicsOption option in SettingsDirector.All)
+                Assert.That(settings.IsOn(option), Is.True, $"{option} should default to drawn");
+
+            // Two are read as the frame is submitted; two are baked into the instance matrices
+            // when a chunk is meshed, and the panel has to know which it is holding.
+            Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.Shadows), Is.False);
+            Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.Surround), Is.False);
+            Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.GrassTufts), Is.True);
+            Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.GroundRelief), Is.True);
+        }
+
+        [Test]
+        public void AnOptionAnnouncesOnlyRealChanges()
+        {
+            var settings = new SettingsDirector();
+            var changed = new System.Collections.Generic.List<GraphicsOption>();
+            settings.OptionChanged += changed.Add;
+
+            settings.Set(GraphicsOption.Shadows, true);
+            Assert.That(changed, Is.Empty, "it was already on");
+
+            settings.Toggle(GraphicsOption.Shadows);
+            Assert.That(settings.IsOn(GraphicsOption.Shadows), Is.False);
+            Assert.That(changed, Is.EqualTo(new[] { GraphicsOption.Shadows }));
+        }
+
+        [Test]
+        public void TheSceneSetsTheStartingStateAndAStoredPreferenceBeatsIt()
+        {
+            var settings = new SettingsDirector();
+            var store = new FakeSettingsStore();
+
+            // The scene was built with no grass. Seeding says so without raising anything, so a
+            // panel cannot change the board merely by existing.
+            var changed = new System.Collections.Generic.List<GraphicsOption>();
+            settings.OptionChanged += changed.Add;
+            settings.Seed(GraphicsOption.GrassTufts, false);
+            Assert.That(settings.IsOn(GraphicsOption.GrassTufts), Is.False);
+            Assert.That(changed, Is.Empty, "seeding is a record of what is, not a request");
+
+            // This machine was told once to keep the shadows off. That outranks the scene.
+            store.Preset(SettingsDirector.KeyOf(GraphicsOption.Shadows), false);
+            settings.UseStore(store);
+
+            Assert.That(settings.IsOn(GraphicsOption.Shadows), Is.False);
+            Assert.That(changed, Is.EqualTo(new[] { GraphicsOption.Shadows }),
+                "only the stored value that differed had to be applied to the board");
+            Assert.That(settings.IsOn(GraphicsOption.GrassTufts), Is.False,
+                "an option the store has never heard of keeps what the scene gave it");
+        }
+
+        [Test]
+        public void AChoiceIsWrittenDownAsSoonAsItIsMade()
+        {
+            var settings = new SettingsDirector();
+            var store = new FakeSettingsStore();
+            settings.UseStore(store);
+            Assert.That(store.Writes, Is.Zero, "attaching a store that knows nothing writes nothing");
+
+            settings.Toggle(GraphicsOption.GroundRelief);
+            Assert.That(store.Read(SettingsDirector.KeyOf(GraphicsOption.GroundRelief)), Is.False);
+            Assert.That(store.Writes, Is.EqualTo(1));
+        }
+    }
+}

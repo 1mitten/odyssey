@@ -597,6 +597,40 @@ with conflict detection. Reads and writes user settings, not simulation state, s
 panel that bypasses the intent queue. Icons `ui.settings.*`, six. Milestone M1 for a stub,
 M8 for the full pass.
 
+**The M1 stub is built (2026-09-16).** Escape opens a centred panel holding one Graphics section
+of four switches: shadows, the surrounding land, the grass tufts and the ground relief. It exists
+because every graphics lever in the project was an inspector field, so comparing two looks meant
+stopping play, editing a number and starting a board that is no longer the board you were judging.
+
+Four things about it are decisions rather than omissions, and each is a place the full pass picks
+up rather than a thing it must undo.
+
+- **It is not modal**, which contradicts nothing in `09` §6 case 5 because that case describes a
+  modal and this is not one. The world runs, the clock ticks and the camera orbits while it is
+  open, since the only reason to open it is to watch the board while a switch moves. Clicks stop
+  at the panel edge through the shell's existing pointer gate, which is the only blocking it
+  needs. The cost is that the tool keys still work behind it.
+- **The switches are chips, not UI Toolkit `Toggle` controls.** A lit chip is the on-off idiom
+  this HUD already uses everywhere, and the project's first real engine control should arrive with
+  the interface pass, not in a settings panel.
+- **Preferences live on the machine, never in the colony save.** A graphics setting is
+  presentation, exactly like the grass tufts themselves: no cell, no save section, no hash. A save
+  that carried them would carry the machine it was made on into a file the determinism tests
+  compare.
+- **The scene still decides how a session starts.** The panel is seeded from the bootstrap's own
+  fields before anything may change them, and a stored preference is laid over that, so the order
+  is preference beats scene beats nothing. A panel whose defaults silently overrode the scene
+  would be a panel that changed the game by existing.
+
+Two of the four switches are free, because shadows and the surround are read as the frame is
+submitted. The other two are baked into instance matrices when a chunk is meshed, so throwing them
+sends the board back through the mesher and rebuilds the surround. The panel says which is which
+in the row's tooltip, so a player is never left wondering why one switch stutters and three do not.
+
+Audio, interface scale, accessibility and keybindings are all still M8, and the golden-hour work
+(`docs/research/look-interview.md`) is what fills the Graphics section out, since its own
+quality tier is a settings surface by definition.
+
 **Accessibility modes exposed here**, all specified in `09`: text fallback for icons,
 colour-blind-safe alert palette, interface scale from 80 to 150 per cent.
 

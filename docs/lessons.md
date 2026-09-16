@@ -1099,3 +1099,121 @@ else was compiling shaders", and it fails in the direction that looks like a reg
 - **Read the whole report before believing the headline.** The run that failed also carried
   `EditMode 696 total, 694 passed, 0 failed`, identical to the local run — which already said the
   change was innocent and narrowed it to one timing assertion.
+## A scene rebuild in a packless worktree quietly guts the art catalogue
+
+`scripts/unity.sh exec Odyssey.EditorTools.PlayScene.Build` does what it says and also rewrites
+`Assets/Odyssey/Presentation/ModuleCatalogue.asset`. In a worktree with no `Assets/Synty` — which
+is every worktree that has not had the junction from the lesson above — every Synty prefab
+reference in that asset is resolved against nothing and written back as `{fileID: 0}`. On
+2026-09-16 that was 501 lines changed, the whole catalogue reduced to names with no art, and the
+run **exited zero and said nothing**. `git add -A` would have committed it, and the next person to
+open the main checkout would have had a colony of grey boxes with no failing test to explain it.
+
+Three things make this worth a section rather than a footnote.
+
+- **It looks like ordinary Unity churn.** The same run also re-serialises `OdysseySky.mat`,
+  `HudPanelSettings.asset` and `ProjectSettings/ShaderGraphSettings.asset` with no content change
+  at all. Three harmless files and one catastrophic one arrive in `git status` together, and the
+  catastrophic one is not the one with the alarming name.
+- **The tests do not catch it**, and cannot. The catalogue is licensed art, the fast tier never
+  loads it, and the whole point of the clean-room rule is that the simulation runs without it.
+  A green tier here means the code is fine, not that the commit is.
+- **The scene itself is not damaged**, which makes the diff misleading. `Play.unity` keeps its
+  catalogue reference by GUID and only renumbers its fileIDs, so reading the scene diff reassures
+  you about the wrong file.
+
+**So: after any editor command in a worktree, diff the assets it touched before staging anything,
+and never `git add -A` on the strength of an exit code.** If the catalogue is in the list, either
+revert it or make the junction first and rebuild. Reverting is right whenever the catalogue is not
+what you changed — `git checkout -- Assets/Odyssey/Presentation/ModuleCatalogue.asset` — because a
+catalogue rebuilt without the packs can never be more correct than the committed one.
+
+## A generated asset and its generator had drifted apart, and only a rebuild said so
+
+Worse than the packless rebuild above, because it survives having the packs. On 2026-09-16 the
+committed `ModuleCatalogue.asset` held a `terrain.marsh` row with the bare-earth material, and
+`PlayScene.cs` — the only thing that writes that asset — had stopped emitting it. It also emitted a
+`tool.hammer` row the asset did not have. So the asset was simultaneously ahead of and behind its
+own generator, and had been for as long as nobody rebuilt it.
+
+Nothing could have caught this. The asset is licensed art, so no test loads it; the generator is
+editor tooling, so no test runs it; and both sides were individually valid. The only symptom
+available was a diff, and only if somebody rebuilt and then read it rather than staging it.
+
+The damage it was holding: marsh terrain resolves `odyssey.module.terrain.marsh` through
+`NaturalContent`, so the next rebuild would have dropped marsh to the untextured fallback — the
+dark olive slab that reads as shadow, which is exactly the fault the water work had gone and fixed.
+A rebuild for an unrelated reason would have quietly undone it, weeks later, with no failing test
+and nothing in the commit to connect the two.
+
+**The rule this suggests is narrow and worth keeping: a generated asset that is committed must be
+rebuilt by whoever changes its generator, in the same commit.** And when a rebuild's diff shows a
+row *disappearing*, that is never churn — a generator emits what it is told to emit, so a missing
+row means the instruction went missing. Read the diff for absences, not just for changes.
+
+## URP keeps post-processing per camera, and a camera built in script has it off
+
+Two days of this project's screenshots were of an ungraded image and nobody could have known. URP
+stores `renderPostProcessing` on the camera's `UniversalAdditionalCameraData`, and a camera created
+with `AddComponent<Camera>()` gets it **false**. Every contact-sheet tool here builds its own camera,
+so every photograph ever taken by one had no volume applied. That was harmless while the project had
+no volume at all, and became actively misleading the moment there was a grade to look at: the first
+golden-hour contact sheet showed the lighting change and none of the warmth, which reads exactly
+like the grade not working.
+
+The same default made a *measurement* lie, which is worse than a picture lying. `FrameTimeTests`
+builds its own camera too, so the first run after the grade landed reported it as costing almost
+nothing. That was a true statement about a frame the player never sees. A perfectly green test tier
+said the effect was free.
+
+Both are fixed at the source — `PlayScene.Shoot` and the frame-time harness now switch post on, and
+the harness attaches the profile and uses the real sun angle, since shadow length is height over the
+tangent of elevation and the old steep sun understated the shadow pass by most of its cost.
+
+**The general rule: when a harness builds its own camera, lights or volumes, list what the real
+scene has that the harness does not.** A harness is a claim that it resembles the game, and every
+default it silently takes is a way for that claim to be false while every test passes.
+
+## A volume profile written from code saves five nulls unless you add the components to the asset
+
+A `VolumeComponent` is a `ScriptableObject` in its own right, and `VolumeProfile.Add<T>()` only
+creates one in memory. Saved without `AssetDatabase.AddObjectToAsset`, the profile serialises its
+`components` list as five entries of `{fileID: 0}` — 571 bytes of an asset that holds nothing. The
+correct file is 4,853 bytes with six `MonoBehaviour` blocks in it, which is the cheapest way to tell
+the two apart without opening Unity.
+
+It is the same fault as a renderer feature appended to a `ScriptableRendererData` without being
+added to its asset, recorded above, and it fails the same way: no error, no warning, the effect
+simply never runs.
+
+**What makes this one nastier is that it hides from its own verification.** The editor command that
+writes the profile also builds the components in memory, so any screenshot taken in that same run
+shows the grade working perfectly. The broken half only appears in a session that did not write the
+file — a later run, a player build, or the owner pressing Play tomorrow. Two contact sheets were
+taken off a profile that was empty on disk, and both looked right.
+
+**So when code writes an asset, check the file, not the picture.** `grep -c "fileID: 0}"` on the
+result costs nothing and answers it exactly.
+
+## Writing RenderSettings every frame costs half a millisecond, even when nothing changed
+
+The day/night cycle sets the sun, the ambient colours and the fog from the tick. Driven from
+`Update` that is sixty writes a second, and at speed 1 a frame advances the clock by one tick —
+four ten-thousandths of an hour, a change no colour channel can even hold. So almost every write
+was setting a value to what it already was.
+
+It was not free. The frame-time test put the meadow at **2.14 ms with the cycle against 1.66 ms
+without**, and a guard that skips the whole apply unless the hour has moved by a fiftieth of that
+step took it to **1.71 ms**. Roughly **0.43 ms a frame** for writes that changed nothing.
+`RenderSettings.ambientSkyColor` and friends are not plain fields; they are engine state with work
+behind them, and assigning the same value is not free.
+
+Two things generalise:
+
+- **A per-frame write of a value derived from game time is almost always redundant**, because game
+  time moves far more slowly than frames do. Guard on the input having changed, not on the output
+  looking different — comparing colours is more work than comparing one float.
+- **It was only found because a test measures the real frame.** Nothing was wrong: no error, no
+  visual fault, every test green, and the cycle looked perfect in every screenshot. The only
+  symptom available was a number that had moved, which is the entire argument for having the number
+  in the first place.

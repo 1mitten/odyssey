@@ -48,10 +48,17 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(doc.panelSettings.scaleMode, Is.EqualTo(PanelScaleMode.ScaleWithScreenSize));
                 Assert.That(doc.panelSettings.referenceResolution, Is.EqualTo(new Vector2Int(1200, 800)));
 
-                // Every region of the screen map, built once by the shell: ledger, architect,
-                // clock, alerts, ruler, inspect, overlays — seven framed regions.
+                // Every region of the screen map, built once by the shell: ledger, build palette,
+                // clock, alerts, ruler, inspect and the settings panel. Seven framed regions —
+                // the overlay strip is not framed, which is why the count is one short of the
+                // list in the catalogue.
+                //
+                // It is a bare number on purpose and it has just earned its keep: adding the
+                // settings panel moved it from six to seven and this was the test that said so.
+                // A panel built but never parented, or parented twice, is invisible in every
+                // other check we have.
                 Assert.That(doc.rootVisualElement.Query(className: "region").ToList().Count,
-                    Is.EqualTo(6), "the HUD did not build every region (the overlay strip is not framed)");
+                    Is.EqualTo(7), "the HUD did not build every region (the overlay strip is not framed)");
 
                 // The roster is bound to the frame: one card per published pawn.
                 int cards = doc.rootVisualElement.Query(className: "card").ToList().Count;
