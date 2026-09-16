@@ -22,16 +22,17 @@ namespace Odyssey.Sim.Worldgen
     }
 
     /// <summary>
-    /// A hook for the structural solve that ends generation (section 6, pass 10).
+    /// The structural solve that ends generation (section 6, pass 10).
     ///
-    /// TODO(SupportSolver): pass 10 must run a **full support solve** over the finished map and
-    /// assert that every stamped slab stands, so that a template which cannot hold itself up is a
-    /// failing test rather than a map that collapses on tick one. That solver is
-    /// <c>Assets/Odyssey/Sim/World/SupportSolver.cs</c>, which is being written in parallel;
-    /// worldgen deliberately does not implement its own. Once it lands, the default
-    /// implementation of this interface becomes "run SupportSolver over the whole grid and throw
-    /// on any cell whose support is zero", and <see cref="WorldGenReport.StructuralCheckRan"/>
-    /// stops being an interesting field.
+    /// The implementation is <c>Assets/Odyssey/Sim/World/SupportConsistencyCheck.cs</c>: clear
+    /// every construction-trust mark, then solve the whole grid until it reaches a fixed point.
+    /// It is what <see cref="StartPass"/> uses when no other check is supplied, so a template that
+    /// cannot hold itself up is caught at generation rather than collapsing on tick one. Worldgen
+    /// deliberately implements no support rule of its own — the solver is the single definition,
+    /// and the generator is one of its callers.
+    ///
+    /// The seam stays an interface for the two cases that want something else: a test that needs
+    /// to observe the call, and a future map type whose consistency means something different.
     /// </summary>
     public interface IStructuralConsistencyCheck
     {
@@ -136,6 +137,13 @@ namespace Odyssey.Sim.Worldgen
         public int SealedVaults;
         public CellRef StartCell;
         public bool StructuralCheckRan;
+
+        /// <summary>Slabs the pass-10 solve dropped because the damage pass had orphaned them.</summary>
+        public int SettledSlabs;
+
+        /// <summary>Solves the map needed to reach a fixed point. Two is the settled case.</summary>
+        public int SettleRounds;
+
         public int PassesRun;
 
         public override string ToString() =>

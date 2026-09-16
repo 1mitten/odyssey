@@ -548,8 +548,9 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void TheStructuralHookIsCalledWhenOneIsSupplied()
         {
-            // The full support solve is SupportSolver's job and is not written yet; pass 10 calls
-            // the hook so that wiring it in later is a one-line change at the call site.
+            // A supplied check replaces the default one. The probe records that pass 10 reaches
+            // it exactly once, which is what keeps the hook itself testable now that the real
+            // check does the work.
             var probe = new RecordingStructuralCheck();
             var grid = new CellGrid(SliceSize);
             var result = WorldGenerator.Generate(grid, 9, MapGenDef.For(SliceSize),
@@ -563,6 +564,109 @@ namespace Odyssey.Tests.Sim
         {
             public int Calls;
             public void Verify(CellGrid grid, WorldGenContext context) => Calls++;
+        }
+
+        [Test]
+        public void TheFullSupportSolveIsTheDefaultCheck()
+        {
+            // Passing null is not "skip the check" — it is "use the real one". Every worldgen
+            // test in this file therefore proves its map stands up, whether it meant to or not.
+            var grid = new CellGrid(SliceSize);
+            var result = WorldGenerator.Generate(grid, 9, MapGenDef.For(SliceSize),
+                TemplateLibrary.Slice(), WorldGenerator.PassCount, null);
+
+            Assert.That(result.Report.StructuralCheckRan, Is.True);
+        }
+
+        [Test]
+        public void EveryShippedTemplateStandsAtEveryDamageSetting()
+        {
+            // The guarantee from 02-world-and-layers.md section 4: a stamped shell must be
+            // *initially* consistent, judged by the ordinary rule with every construction-trust
+            // mark revoked. A template that cannot hold itself up is a content bug, and this is
+            // where it is caught — not on tick one.
+            //
+            // The undamaged map is the template's own exam, so shedding is off and any collapse
+            // throws. A damaged map is allowed to shed, because the damage pass removes walls
+            // that were holding slabs up and a ruin has already dropped what those walls carried;
+            // the assertion there is that it settles, and that what is left stands on its own.
+            foreach (var damage in DamageSettings)
+            {
+                for (uint seed = 1; seed <= 10; seed++)
+                {
+                    var grid = new CellGrid(SliceSize);
+                    var gen = damage.Apply(MapGenDef.For(SliceSize));
+                    var check = new SupportConsistencyCheck(allowShedding: damage.Damages);
+
+                    // Pass 10's check is the assertion: reaching the next line means no throw.
+                    var result = WorldGenerator.Generate(grid, seed, gen, TemplateLibrary.Slice(),
+                        WorldGenerator.PassCount, check);
+                    var report = result.Report;
+
+                    Assert.That(report.StructuralCheckRan, Is.True,
+                        $"{damage.Name}, seed {seed}: the structural check did not run");
+                    Assert.That(report.SettleRounds, Is.LessThanOrEqualTo(2),
+                        $"{damage.Name}, seed {seed}: settling took {report.SettleRounds} solves");
+
+                    if (!damage.Damages)
+                        Assert.That(report.SettledSlabs, Is.Zero,
+                            $"{damage.Name}, seed {seed}: an undamaged map shed a slab");
+
+                    // Whatever survived stands on the ordinary rule with no construction trust at
+                    // all, which is the property the first tick depends on.
+                    var audit = new SupportSolver(grid);
+                    audit.ClearAllConstructionMarks();
+                    Assert.That(audit.SolveFull(), Is.Empty,
+                        $"{damage.Name}, seed {seed}: the settled map still has slabs that cannot stand");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Every damage setting <see cref="MapGenDef"/> exposes, as the extremes of its band.
+        /// Damage off is the pure template — a failure there is the template's own fault. Damage
+        /// at full is the ruin the generator actually ships.
+        /// </summary>
+        static readonly DamageSetting[] DamageSettings =
+        {
+            new DamageSetting("damage off", false, gen =>
+            {
+                gen.minDamageIntensity = 0;
+                gen.maxDamageIntensity = 0;
+                gen.toppleChance = 0;
+            }),
+            new DamageSetting("default damage", true, _ => { }),
+            new DamageSetting("damage at full", true, gen =>
+            {
+                gen.minDamageIntensity = 1000;
+                gen.maxDamageIntensity = 1000;
+                gen.toppleChance = 1000;
+            }),
+        };
+
+        sealed class DamageSetting
+        {
+            readonly System.Action<MapGenDef> _configure;
+
+            public DamageSetting(string name, bool damages, System.Action<MapGenDef> configure)
+            {
+                Name = name;
+                Damages = damages;
+                _configure = configure;
+            }
+
+            public string Name { get; }
+
+            /// <summary>Whether this setting can remove a wall, and so orphan a slab.</summary>
+            public bool Damages { get; }
+
+            public MapGenDef Apply(MapGenDef gen)
+            {
+                _configure(gen);
+                return gen;
+            }
+
+            public override string ToString() => Name;
         }
 
         [Test]
