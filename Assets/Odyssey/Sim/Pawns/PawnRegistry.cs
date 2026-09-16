@@ -126,7 +126,9 @@ namespace Odyssey.Sim.Pawns
                     nextCell,
                     movePercent,
                     workFocus >= 0,
-                    workFocus >= 0 ? size.FromIndex(workFocus) : cell));
+                    workFocus >= 0 ? size.FromIndex(workFocus) : cell,
+                    pawn.Gesture,
+                    pawn.GestureSerial));
             }
 
             var items = _ctx.Items.Items;

@@ -43,6 +43,34 @@ namespace Odyssey.Presentation.World
         /// <summary>True once the material and the system exist and have been stepped at least once.</summary>
         public bool Warmed { get; private set; }
 
+        /// <summary>
+        /// Whether the chips are falling. False holds every piece of debris exactly where it is.
+        ///
+        /// <para>Chips are simulated in world space by Unity's own particle update, which knows
+        /// nothing about the simulation clock, so a burst thrown on the frame before the player
+        /// pressed space went on arcing to the ground after everything that threw it had stopped.
+        /// A simulation speed of zero is Unity's own way of saying "hold": positions, velocities
+        /// and ages are all kept, and putting it back to one continues the flight rather than
+        /// restarting it or dropping the particles.</para>
+        ///
+        /// <para>It is deliberately not <c>Pause()</c>: this system is emitted into while it is
+        /// stopped, and its play state is load-bearing for that. See <see cref="Configure"/>.</para>
+        /// </summary>
+        public bool Running
+        {
+            get => _running;
+            set
+            {
+                if (_running == value) return;
+                _running = value;
+                if (_system == null) return;
+                ParticleSystem.MainModule main = _system.main;
+                main.simulationSpeed = value ? 1f : 0f;
+            }
+        }
+
+        bool _running = true;
+
         readonly GameObject? _object;
         readonly ParticleSystem? _system;
         readonly System.Random _random = new System.Random(20260916);

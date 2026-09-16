@@ -632,3 +632,184 @@ exponentially and a batch player runs frames in about a millisecond. The same te
 passed on a machine running at sixty frames a second. `SliceCameraRig.TargetDistance` exists for
 this: it moves the instant input is read and does not drift, so the assertion and its control are
 both exact. Any frame-rate-dependent assertion is a flaky test waiting for a faster machine.
+## Photographing a figure: the mesh is not square to its own root
+
+Three traps, all found in one afternoon building `GestureCheck`, and all three produced pictures
+that looked like a reasonable answer to the wrong question.
+
+**A "side on" camera aimed at `facing + 90` shoots the colonist's back.** The arithmetic is right —
+the camera really is perpendicular to the bearing the figure's transform reports — and the picture
+is still square behind the figure. The **mesh inside a Synty character prefab is turned ninety
+degrees from its root**, so a colonist faces across the yaw its transform carries. `SwingCheck`
+never met this because it aims across the *line between the worker and the work*, which is a
+world-space line and owes nothing to the rig.
+
+Do not reason about it, and above all do not reason about it twice: shoot four bearings at the pose
+worth judging and pick the profile out by looking, the way the axe's blade roll was settled. Two
+rounds went into re-deriving the yaw convention from the source, both wrong in the same confident
+way, before four pictures answered it in a single run.
+
+**Ask the transform, not the field it came from.** `PawnFigureDirector`'s `Yaw` is the director's
+own eased bearing; `Transform.eulerAngles.y` is what the figure is drawn at, and the gait clip's
+root rotation sits between them. And neither can be had from the snapshot at all: the obvious
+bearing is `NextCell - Cell`, which is **zero for a pawn standing still** — exactly what a pose
+harness photographs. It falls back to a fixed bearing and the whole sheet comes out from one
+arbitrary side.
+
+**A measured value with an early return goes stale, and a stale measurement is worse than none.**
+`MeasuredCrouchDrop` was written only when there was a crouch to report, so at the top of a motion
+it kept the last non-zero reading: the log said 0.22 m of stoop beside a picture of a colonist
+standing plainly upright. A measurement exists to be trusted over the picture — `MeasuredBladeGap`
+is in the code precisely because a photograph can be read either way — so one that lies is the only
+thing on the board with nothing to catch it. Clear it at the top of the pass that computes it.
+
+**And characters draw flat yellow for the first frames after their material is first touched.** Not
+magenta, so it does not read as a missing shader: the whole colonist is one flat unlit colour while
+the ground and trees around it are correct, and it settles a frame or two later. Same class of thing
+`ChipDirector` warms its particle material for, and the same fix — take a few throwaway pictures
+first, where nobody is looking.
+
+## The pose runs twice a frame, and only one of them starts from clean bones
+
+`PawnFigureDirector.ApplyWorkPose` is called at the end of **both** `Sync` and `Evaluate`, and only
+`Evaluate` evaluates the animation graph first. So every pose operation happens twice per frame:
+once on a freshly written skeleton, and once on whatever the previous frame left behind.
+
+For a **bone** that is harmless, and the file has always said so. Unity rewrites every bone on each
+graph evaluation, so an additive `Pitch` is re-derived from scratch on the pass that is actually
+drawn, and the stale pass's result is discarded unseen. This has been true and invisible since the
+swing landed.
+
+For **anything the graph does not own it is fatal**, because nothing ever resets it. Two things bit
+on the same day (2026-09-16), both reported by the owner as visible faults and neither catchable by
+a contact sheet, since the harnesses step the graph by hand, one pose per picture:
+
+- **The axe span, fast.** The tool was kept still while the wrist turned by capturing its *world*
+  pose and putting it back. On a child object, that writes a **local** rotation worked out from the
+  parent's rotation at that instant — it never sets the tool to a known orientation, it only nudges
+  it by the inverse of whatever the wrist just did. Two unbounded nudges a frame and it winds.
+- **The off hand hunted round the haft and sometimes flipped across it.** `HandGrip.FaceHaft`
+  searched for the best roll *starting from the hand's current rotation*. Three `Grasp` passes times
+  two pose passes is six partial, quantised turns a frame, converging on nothing.
+
+**The rule: a pose may add to a bone, because the graph rewrites bones; it may never add to
+anything the graph does not own.** Props, search results and anything else outside the skeleton are
+*placed* — computed absolutely from the fitting and the current state — so that running the pass
+twice does nothing the second time and a dropped frame leaves no trace.
+
+**And a corollary that cost an extra round.** The two hands are not the same problem. The off hand
+is *reaching for* wood whose position is known, so seating it to the haft is right. The working hand
+*carries the tool*, so its orientation belongs to the stroke and the tool's to the fitting: turning
+that wrist to face the haft turns the blade with it, and the axe comes out facing the wrong way.
+Applying the off hand's fix to both hands was a regression, and the owner caught it in one look.
+
+**Measure it rather than trusting it.** `MeasuredToolDrift` is how far the worst tool had turned in
+its fist since it was last put right. Zero is the only acceptable value, and it is "a tool never
+spins" written as something a log can print.
+
+## A state that is inferred is a state that is late, and a state that is partial
+
+The owner reported that pausing "resets" every figure and that some "carry on for a moment". Two
+symptoms, one cause: presentation was *guessing* at the pause instead of being told.
+
+**The guess had to be late, by construction.** A stopped tick cannot be told from a slow frame
+without waiting, so the director waited a quarter of a second before calling it a pause. That is
+fifteen frames at sixty, and against the axe's 1.15 s stroke it is 24% of a swing that ran on after
+the player pressed space. No tuning fixes this; only a real signal does. `WorldSnapshot.GameSpeed`
+is now published with every frame, and the tick the bootstrap already spends letting a speed change
+through is the frame that carries it, so the lag is one frame.
+
+**And the guess was only ever wired to one thing.** It gated the swing, because the swing was what
+somebody had noticed. Everything else in the pose pass went on easing, and the one that shows is
+the gait: a paused pawn stops moving, so the measured speed is nought, so the figure's smoothed
+speed is carried to nought at 0.35 a frame — **ten frames, 0.167 s, from 73.5% walk weight to 99%
+idle**. Nobody wrote a line that resets a figure; the reset is what a blend to idle looks like at
+sixty frames a second, and it was reported as a reset because from outside it is one. **When a flag
+means "the world is stopped", every clock in the file is its business, not just the clock that was
+in the bug report.** Running the whole pass on one delta that is zero while paused is the shape
+that cannot be half-applied.
+
+**Absence of movement is not a measurement of nought.** The general form, and the line that is most
+of the fix: a frame in which the pawn had no opportunity to move says nothing whatever about how
+fast the figure is going, so the last answer must stand. Reading it as a measured zero and
+smoothing towards it is what made the figures snap.
+
+**Unity's own clocks are not on the simulation's clock.** A `PlayableGraph` played with
+`DirectorUpdateMode.GameTime` and a world-simulated `ParticleSystem` both advance on wall-clock
+frames, and nothing in this project touches `Time.timeScale`, so both went on running through a
+pause. The narrow fixes are a clip speed of zero (the same `SetSpeed` call `Blend` already makes
+every frame, and it *continues* rather than restarting when the rate comes back) and
+`main.simulationSpeed = 0`. Stopping the graph outright would leave the bones unwritten, which the
+additive work pose needs.
+
+**Measuring this with the editor open.** None of it can be run: a `PawnFigureDirector` cannot be
+constructed outside a running editor, because its constructor builds a `ChipDirector` and
+`Shader.Find` is a native call. What *can* be run is the arithmetic, and it is worth extracting for
+that reason alone — pulling the speed smoothing out as a static over two positions
+(`PawnFigureDirector.ObserveSpeed`) made the whole pause behaviour testable by an ordinary test, and
+the test file itself was then executed headlessly by compiling it against the rebuilt
+`Odyssey.Presentation.dll` with the NuGet NUnit and invoking every `[Test]` by reflection. Three of
+the five went red against the old behaviour, which is the only reason they are worth anything.
+## An Assume can hide a dead feature, and a green tier can mean nothing ran
+
+Six of `MineJobTests`' thirteen tests open with a variant of `Assume.That(rock >= 0)` — the fixture
+looks for a cell of rock a colonist could actually get at, and gives up if there is none. On `main`
+that assumption was failing: **not one rock cell on the fixture's board had a stance a colonist
+could reach**, so `NearestRock` returned -1 and the tests reported *inconclusive*. The default fast
+tier prints those as part of a passing run. Mining was effectively dead on that board and the suite
+said nothing.
+
+It cost a wrong conclusion in this session. Checking "was this failing before my change?" by
+stashing and re-running showed `Passed: 6, Failed: 0` and I read it as "these tests passed on main,
+so I broke them". They had not passed; seven of them had not run. Only `-v n`, which prints a line
+per test, showed six `Skipped`.
+
+- **Read the total, not the verdict.** `Passed: 6 ... Total: 6` against a file with thirteen
+  `[Test]` methods is the finding. Compare the count to the file before comparing anything else.
+- **An `Assume` guards a fixture, not a feature.** It is right for "this seed happened not to put a
+  pond here" and wrong for "the thing under test is unreachable", which is the failure itself
+  wearing the fixture's clothes. Where the assumption is really a precondition the feature must
+  meet, make it an `Assert`.
+- **A skip is not a pass, and neither is a category.** The same board also hid this behind
+  `Category("Long")`, which the default tier excludes — so the one test that would have run the
+  colony for a day only ran when something passed an explicit filter.
+
+## A merge that auto-resolves in the wrong direction, and a compile check that lies
+
+Reconciling the vertical-movement line (which deleted climbing as a mining mechanic) with the
+gesture line (which had just finished the climb *pose*, legs and all) produced two separate traps
+worth the same hour twice.
+
+**Git flagged three conflicts and silently dropped four more things.** The conflicts were the
+obvious ones — the pose methods, and two documents both lines had appended to. What auto-merged
+without a murmur was every deletion made in a region the other branch had not touched:
+`World = _model` in the composition root, the whole climb shot in `PlayScene`, the `Figure` fields
+(`ClimbPhase`, `ClimbWeight`, `ClimbFace`), and the `ClimbLean` / `ClimbEaseSeconds` constants.
+
+The result compiled in the reviewer's head and would have run wrong: with no world mirror,
+`TryWallBeside` returns false, `ClimbFace` stays zero, and `ApplyClimbPose` is gated on it — so the
+pose would have been present, correct, and **never executed**, with the one diagnostic that could
+have shown it also deleted.
+
+- **A merge conflict list is not a change list.** After a merge that removes a feature one side
+  extended, grep the merged tree for the feature's own vocabulary and check each hit is where you
+  expect. `git merge-tree --write-tree` gives you the merged blobs without touching a working tree,
+  so this can be done *before* committing to the merge.
+- **Resolving conflict hunks is not the same as taking a side.** Keeping "ours" in five hunks still
+  left the file broken, because the losses were outside the hunks. Taking the whole file from the
+  branch that owns the feature and re-applying the other side's few real additions was quicker and
+  correct — and the second approach is the one to reach for first when one side deleted a subsystem.
+
+**And the headless compile check can bind stale assemblies.** `docs/lessons.md` above recommends
+compiling the Unity-only assemblies against `Library/ScriptAssemblies`. In a *worktree* that is a
+trap: the built DLLs there belong to whatever branch the main checkout is on. Worse, pointing the
+generated csproj at freshly built DLLs did not fix it — the compiler went on reporting members that
+were plainly in the source (`MoveCost.Drop`, `WorldSnapshot.Running`) even after the only Odyssey
+references in the project were the fresh ones, after `obj/` was cleared, and after every prebuilt
+`Odyssey.*` was excluded. Roughly an hour went into that, and none of it was a real defect.
+
+**Compile the sources, not against the binaries.** One csproj that includes `Sim.Contracts`, `Sim`,
+`Hud`, `Presentation` and `Editor/Odyssey` as `<Compile>` items, referencing only Unity's own DLLs
+and the package assemblies, builds in seconds and answers the only question a handoff needs: do
+*these sources* agree with each other. Assembly-definition boundaries are then unverified, which is
+what `scripts/unity.sh test editmode` is for.

@@ -154,16 +154,21 @@ namespace Odyssey.Presentation.Rendering
 
             var size = _model.Size;
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
+            // Capped at the top of the geometry as well as at the policy's own limit. Above the
+            // surface the policy says "every layer, solid", and solid has no fade to cut the loop
+            // short — so without this a tall map would mesh a dozen layers of empty sky on every
+            // edit. See WorldRenderModel.HighestOccupiedLayer.
             int highest = Mathf.Min(size.SizeY - 1, slice.HighestDrawnLayer(activeLayer, size.SizeY));
+            highest = Mathf.Max(activeLayer, Mathf.Min(highest, _model.HighestOccupiedLayer));
             int chunksPerLayer = _model.Chunks.ChunksX * _model.Chunks.ChunksZ;
 
             for (int layer = lowest; layer <= highest; layer++)
             {
                 int steps = layer - activeLayer;
                 bool above = steps > 0;
-                bool ghost = above && slice.GhostsAbove;
-                float alpha = ghost ? slice.AlphaAbove(steps) : 1f;
-                if (ghost && alpha < 0.012f) continue;
+                bool ghost = above && slice.GhostsAbove(activeLayer);
+                float alpha = ghost ? slice.AlphaAbove(activeLayer, steps) : 1f;
+                if (ghost && alpha < SliceSettings.MinVisibleAlpha) continue;
 
                 // The layer immediately below the active one is the floor being stood on, not a
                 // storey beneath it, so it is lit as part of the active layer. Dimming it was
@@ -177,12 +182,10 @@ namespace Odyssey.Presentation.Rendering
                 // The active layer's ceiling is the slab of the layer above it. Dropping it is
                 // what makes interiors visible, and it is also exactly what roofs-off mode wants
                 // for every layer it draws.
+                AboveMode aboveMode = slice.AboveAt(activeLayer);
                 bool drawRoof = true;
-                if (slice.above != AboveMode.Full)
-                {
-                    if (above && slice.above == AboveMode.RoofsOff) drawRoof = false;
-                    else if (steps == 1 && slice.suppressActiveCeiling) drawRoof = false;
-                }
+                if (above && aboveMode == AboveMode.RoofsOff) drawRoof = false;
+                else if (steps == 1 && slice.SuppressCeilingAt(activeLayer)) drawRoof = false;
 
                 int first = layer * chunksPerLayer;
                 for (int i = 0; i < chunksPerLayer; i++)
@@ -336,6 +339,16 @@ namespace Odyssey.Presentation.Rendering
             if (snapshot.PawnCount == 0 && snapshot.ThingCount == 0) return;
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
 
+            // Up to the highest layer anything is drawn on, NOT up to the active layer.
+            //
+            // **This was the owner's bug** (2026-09-16): "I couldn't see another person mining
+            // above me." The layers above the slice were x-rayed, so the rock was there — but
+            // everything alive in them was culled outright, by this line and by the one in
+            // PawnFigureDirector. A colonist working a storey up simply did not exist on screen.
+            // Actors are drawn solid at full opacity (owner's call), so the cut-off has to be the
+            // fade cutoff rather than the nominal cap, or a figure is drawn in rock that is not.
+            int highest = slice.HighestVisibleLayer(activeLayer, _model.Size.SizeY);
+
             EnsureColonistModules();
             System.Array.Clear(_colonistCounts, 0, _colonistCounts.Length);
 
@@ -343,7 +356,7 @@ namespace Odyssey.Presentation.Rendering
             for (int i = 0; i < pawns.Length; i++)
             {
                 var cell = pawns[i].Cell;
-                if (cell.Y < lowest || cell.Y > activeLayer) continue;
+                if (cell.Y < lowest || cell.Y > highest) continue;
                 if (drawnAsFigures != null && drawnAsFigures.Contains(pawns[i].Id.Value)) continue;
 
                 // Glide between cells rather than snapping. The simulation is discrete and
@@ -386,7 +399,7 @@ namespace Odyssey.Presentation.Rendering
                     SubmitInstances(ColonistModule(variant),
                         _colonistPlacements[variant], _colonistCounts[variant], ref _actorMatrices);
 
-            RenderThings(snapshot.Things, lowest, activeLayer, material);
+            RenderThings(snapshot.Things, lowest, highest, material);
         }
 
         // ---- loose items ----------------------------------------------------------------------
@@ -406,7 +419,7 @@ namespace Odyssey.Presentation.Rendering
         /// draw per item, which is what the stand-in marker did — costs a call for every ration
         /// crate on a map that will eventually hold thousands of them.
         /// </summary>
-        void RenderThings(System.ReadOnlySpan<ThingView> things, int lowest, int activeLayer, Material fallback)
+        void RenderThings(System.ReadOnlySpan<ThingView> things, int lowest, int highest, Material fallback)
         {
             if (things.Length == 0) return;
             EnsureItemModules();
@@ -415,7 +428,7 @@ namespace Odyssey.Presentation.Rendering
             for (int i = 0; i < things.Length; i++)
             {
                 CellRef cell = things[i].Cell;
-                if (cell.Y < lowest || cell.Y > activeLayer) continue;
+                if (cell.Y < lowest || cell.Y > highest) continue;
 
                 int def = things[i].DefIndex;
                 ResolvedModule? module = ItemModule(def);

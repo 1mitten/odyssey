@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
@@ -80,6 +81,23 @@ namespace Odyssey.Presentation.World
 
         /// <summary>Bumped whenever any chunk is refreshed, so the renderer can cheaply notice.</summary>
         public int Version { get; private set; }
+
+        /// <summary>
+        /// The highest layer worth drawing: the top of the geometry, plus the one a colonist
+        /// standing on it occupies.
+        ///
+        /// <para><b>Why the renderer needs a ceiling at all.</b> Above the surface the slice draws
+        /// every layer above it solid, with no fade to cut the loop short (owner, 2026-09-16), and
+        /// <c>ChunkRenderer.BatchFor</c> <i>meshes</i> a chunk the first time it is asked for and
+        /// again after every version bump. Without a bound, a 40-layer map would mesh a dozen
+        /// layers of empty sky on every edit and walk them on every frame, for nothing.</para>
+        ///
+        /// <para>It is a high-water mark: raised as cells are copied in, never lowered except by a
+        /// full refresh. That is deliberate and it is the safe direction — the worst it can do is
+        /// draw a few empty layers after something is demolished, where the other way round it
+        /// would hide a roof somebody had just built.</para>
+        /// </summary>
+        public int HighestOccupiedLayer { get; private set; }
 
         /// <summary>Chunks refreshed on the most recent publish. A milestone-report number.</summary>
         public int LastRefreshedChunks { get; private set; }
@@ -295,6 +313,9 @@ namespace Odyssey.Presentation.World
         /// <summary>Copy every cell. Run once, after generation, before the first frame.</summary>
         public void RefreshAll(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices)
         {
+            // The one place the high-water mark is allowed to fall: everything is being rewritten,
+            // so what comes out is exact rather than accumulated.
+            HighestOccupiedLayer = 0;
             for (int index = 0; index < _terrain.Length; index++) CopyCell(grid, edifices, index);
             LastRefreshedChunks = Chunks.Count;
             Version++;
@@ -350,6 +371,17 @@ namespace Odyssey.Presentation.World
                 _edifice[index] = CoreContent.EdificeNone;
                 _edificeStuff[index] = CoreContent.StuffNone;
             }
+
+            // Anything at all here means this layer is worth drawing, and so is the one above it —
+            // that is where a colonist standing on this cell is, and where a roof laid on it goes.
+            bool anything = (_flags[index] & (byte)CellFlags.SolidTerrain) != 0
+                         || _floor[index] != 0
+                         || _edifice[index] != CoreContent.EdificeNone;
+            if (!anything) return;
+
+            int layer = index / Size.LayerStride;
+            if (layer + 1 > HighestOccupiedLayer)
+                HighestOccupiedLayer = Math.Min(Size.SizeY - 1, layer + 1);
         }
 
         /// <summary>

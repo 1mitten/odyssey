@@ -192,6 +192,32 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// The toil index a driver uses for its settle, if it has one. Drivers put the settle last,
+        /// so this is a name rather than a rule.
+        /// </summary>
+        public const int SettleToil = 2;
+
+        /// <summary>
+        /// Stand still for a beat now the work is done, then end the job.
+        ///
+        /// <para>Called as the whole of the settle toil, and it must be reached <b>before</b> a
+        /// driver's own guards — by then the tree is felled and the designation cleared, so a
+        /// guard asking "is this still a marked tree" would fail the job on the first settle tick
+        /// and undo the very thing being added.</para>
+        ///
+        /// <para>The work has already happened. Nothing here changes the world, earns experience
+        /// or holds anything up: the pawn simply stays where it is with
+        /// <see cref="WorkFocus"/> reporting nothing, so the drawn figure eases out of its work
+        /// stance while standing still instead of while walking away. See
+        /// <see cref="JobDef.settleTicks"/> for the measurement that made this necessary.</para>
+        /// </summary>
+        protected JobStatus Settle(PawnContext ctx)
+        {
+            if (++ToilProgress < ctx.Content.Jobs[Job.DefIndex].settleTicks) return JobStatus.Ongoing;
+            return JobStatus.Succeeded;
+        }
+
+        /// <summary>
         /// Count this tick as work: the pawn earns the job's experience in the skill the job
         /// trains. A driver calls it on the ticks that are the work — the swing, the carry — and
         /// not on the walk to it. A job that trains nothing costs one comparison.
@@ -201,6 +227,46 @@ namespace Odyssey.Sim.Pawns
             var def = ctx.Content.Jobs[Job.DefIndex];
             if (def.trainsSkill < 0 || def.experiencePerWorkTick <= 0) return;
             Pawn.GainExperience(def.trainsSkill, def.experiencePerWorkTick, ctx.CurrentTick);
+        }
+
+        /// <summary>
+        /// Take a thing up off the floor, and report the stoop that goes with it.
+        ///
+        /// <para><b>The two belong together, which is why they are one call.</b> Anything a
+        /// colonist lifts — a log, a stack of stone, a basket at the end of a row of crops, a
+        /// carcass — is the same motion, and a job that picked something up without saying so would
+        /// show a colonist acquiring it by magic while standing upright. Today there is exactly one
+        /// pickup in the game and it is wired; tomorrow there is a harvest driver and a butcher's,
+        /// and a seam is the only thing that stops either of them forgetting. This is the
+        /// <c>docs/plans/vertical-slice.md</c> "where the seams are" argument applied to a very
+        /// small thing.</para>
+        ///
+        /// <para>The simulation's whole part is that it happened, here, now: this is one tick and
+        /// stays one tick. The stoop and the rise are presentation's, take about eight-tenths of a
+        /// second of game time and cost the colony nothing, so no throughput, golden or balance
+        /// number moves — which means a figure may still be straightening as its pawn sets off
+        /// walking. That is the accepted price of the owner's decision (2026-09-16) to keep the
+        /// duration out of the simulation.</para>
+        /// </summary>
+        protected void TakeUp(PawnContext ctx, ColonyItem item)
+        {
+            ctx.Items.PickUp(item, Pawn.Id);
+            Pawn.BeginGesture(PawnGesture.Lift);
+        }
+
+        /// <summary>
+        /// Set a carried thing down on purpose, and report the motion that goes with it.
+        ///
+        /// <para><b>On purpose</b> is the whole of the distinction, and it is why this is not
+        /// simply "whenever a carried thing reaches the floor". A job that fails mid-carry also
+        /// puts its load somewhere, and that is a colonist dropping what it is holding rather than
+        /// stowing it — a different motion, and one nothing draws yet. So a failure path calls the
+        /// store directly and says nothing, deliberately.</para>
+        /// </summary>
+        protected void PutDown(PawnContext ctx, ColonyItem item, int cell)
+        {
+            ctx.Items.Drop(item, cell);
+            Pawn.BeginGesture(PawnGesture.Stow);
         }
 
         /// <summary>

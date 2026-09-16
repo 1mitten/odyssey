@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using NUnit.Framework;
+using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Worldgen.Natural;
@@ -25,9 +26,11 @@ namespace Odyssey.Tests.Sim
     /// took the nearest layer at every column, and on a city map nearly every column is walkable
     /// at the start layer, so everything landed on one floor and a full day passed without a
     /// single layer change. That measurement is not history: it is
-    /// <see cref="ADayOnOneFloorNeverTouchesAStair"/>, which runs the same day with the offsets
-    /// removed and asserts that nobody changes layer. It is the control. If the assertion below
-    /// could pass without the stairs being used, that test would fail.</para>
+    /// <see cref="TheStairsInTheDemoAreTheScenariosDoingAndNotTheMaps"/>, which runs the same day
+    /// with the offsets removed and differences the two. It is the control, and it counts stair
+    /// steps rather than storeys visited — since hops became cheap a colonist wanders up and down
+    /// rubble all day without a stair in sight, so storeys visited no longer separates the two
+    /// runs and stair use separates them better than ten to one.</para>
     /// </summary>
     public class M2DemoTests
     {
@@ -110,12 +113,16 @@ namespace Odyssey.Tests.Sim
 
             // M2's whole claim: not that a colonist *can* reach another storey, which
             // StampedConnectorTests proves on a graph, but that one does it in the course of an
-            // ordinary day because what it needs is up there. Every colonist, not some: a pawn
-            // that stayed on one floor all day either could not get off it or had no reason to,
-            // and both are the failure this run exists to catch.
+            // ordinary day because what it needs is up there.
+            //
+            // A liveness check and NOT the evidence. Since hops became cheap a colonist spans
+            // three storeys on a one-floor map too, so a spread here proves only that nobody sat
+            // still all day — which is worth asserting and is not the claim. The claim is that the
+            // stairs are the scenario's doing, and it is measured by differencing this run against
+            // the one-floor control: see TheStairsInTheDemoAreTheScenariosDoingAndNotTheMaps.
             foreach (var pawn in visited)
-                Assert.That(pawn.Value.Count, Is.GreaterThan(1),
-                    $"colonist {pawn.Key} spent the whole day on storey {string.Join(", ", pawn.Value)}, " +
+                Assert.That(Span(pawn.Value), Is.GreaterThanOrEqualTo(2),
+                    $"colonist {pawn.Key} kept to storeys {string.Join(", ", pawn.Value)}, " +
                     "with its bed one floor up and its food two");
 
             // The three behaviours, as the soak asserts them — on the city map this time, which
@@ -144,36 +151,78 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// The control for the test above, and the reason its layer assertion is evidence.
+        /// The control for the test above, and the reason its claim is evidence.
         ///
-        /// <para>The same map, the same seed, the same day — with the colony placed the way it was
-        /// placed before a scenario could name a storey, everything on the floor it wakes up on.
-        /// Nobody changes layer. So the stairs in the run above are not something the city
-        /// generator would have given us anyway, or something the sampling would report whatever
-        /// happened: they are the consequence of putting the beds and the food upstairs.</para>
+        /// <para>The same map, the same seed, the same day, run twice — once with the colony spread
+        /// over three storeys and once with everything on the floor it wakes up on. The stairs in
+        /// the demo run have to be the consequence of putting the beds and the food upstairs, and
+        /// not something the city generator would have given us anyway.</para>
         ///
-        /// <para>If this ever starts failing it is good news that still needs looking at — some
-        /// other reason to change storey has appeared, and the test above stops being a clean
-        /// measurement of this one.</para>
+        /// <para><b>What it measures has had to change twice, and both times for the same reason:
+        /// counting layers stopped meaning anything.</b> It began as "each colonist used exactly
+        /// one storey". Then hops arrived — a jump up onto the block next door, with nothing built
+        /// — and on the city's rubble one colonist touched two storeys without a stair in sight,
+        /// so it became a span rather than a count. Then the jump was made half as dear and hopping
+        /// a one-block pile became cheaper than walking round it: every colonist now spans three
+        /// storeys on one floor.</para>
+        ///
+        /// <para>So it counts <b>stairs</b> — connector steps, the one thing a hop can never be.
+        /// Measured over a day on four seeds, control against demo: 1/9, 0/15, 0/15, 5/12. The
+        /// threshold is twice the control and at least eight, which every one of those clears; a
+        /// three-to-one threshold was tried first and seed 4 breaks it.</para>
+        ///
+        /// <para><b>The counts are small, and that is itself the finding.</b> On seed 1 the demo
+        /// takes 9 connector steps against 31 hops: most of its vertical movement is now hops, not
+        /// stairs, because a hop costs 135 against a stair's 290 and the city is built of
+        /// one-block rubble. M2's claim that an ordinary day exercises the stair connectors is
+        /// therefore weaker than it was — true, but carried by single figures. Widening the gap
+        /// again means making the map want a stair, not tuning this test.</para>
+        ///
+        /// <para>It is one test running both configurations rather than two tests with a magic
+        /// number each, because the claim is a comparison and nothing else. "Never touches a stair"
+        /// is no longer literally true — a colonist crosses one incidentally — and a control that
+        /// overstates itself is worse than one that measures the difference it really has.</para>
         /// </summary>
         [Test, Category("Long")]
-        public void ADayOnOneFloorNeverTouchesAStair()
+        public void TheStairsInTheDemoAreTheScenariosDoingAndNotTheMaps()
         {
-            ColonyWorld colony = Build(seed: 1u, acrossStoreys: false);
-            var visited = new Dictionary<int, HashSet<int>>();
+            int spread = StairStepsOverADay(acrossStoreys: true);
+            int oneFloor = StairStepsOverADay(acrossStoreys: false);
 
-            Record(colony, visited);
-            for (int done = 0; done < Day; done += SampleEvery)
-            {
-                colony.World.Tick(Math.Min(SampleEvery, Day - done));
-                Record(colony, visited);
-            }
+            Assert.That(spread, Is.GreaterThanOrEqualTo(8),
+                $"the demo run took only {spread} stair steps in a day, with its beds one floor up "
+                + "and its food two — the storey offsets have stopped sending anybody up a stair");
+            Assert.That(spread, Is.GreaterThanOrEqualTo(oneFloor * 2),
+                $"a colony spread over three storeys took {spread} stair steps and one living on a "
+                + $"single floor took {oneFloor}. The demo's verticality is no longer evidence that "
+                + "the scenario put its beds and its food upstairs — something else on this map is "
+                + "sending colonists up and down.");
+        }
 
-            foreach (var pawn in visited)
-                Assert.That(pawn.Value.Count, Is.EqualTo(1),
-                    $"colonist {pawn.Key} used storeys {string.Join(", ", pawn.Value)} with everything " +
-                    "on one floor, so a layer change in the demo run is no longer evidence that the " +
-                    "scenario put it there");
+        /// <summary>Steps taken along a declared connector over one day. See the control above.</summary>
+        static int StairStepsOverADay(bool acrossStoreys)
+        {
+            ColonyWorld colony = Build(seed: 1u, acrossStoreys: acrossStoreys);
+            colony.World.Tick(Day);
+
+            foreach (IWorldSystem system in colony.World.Systems.PawnSystems)
+                if (system is MovementSystem movement) return movement.ConnectorSteps;
+
+            throw new InvalidOperationException("the colony has no movement system");
+        }
+
+        /// <summary>
+        /// How far apart the highest and lowest storey a colonist stood on are — 0 for a pawn that
+        /// never left its floor, 1 for one that hopped onto the rubble next door and back.
+        ///
+        /// <para>The count of distinct storeys would say two for that hopping pawn and two for one
+        /// that climbed a flight of stairs, which is why the demo run differences it instead.</para>
+        /// </summary>
+        static int Span(HashSet<int> storeys)
+        {
+            int low = int.MaxValue, high = int.MinValue;
+            foreach (int y in storeys) { if (y < low) low = y; if (y > high) high = y; }
+            return high - low;
         }
 
         static ulong RunForHash(uint seed)

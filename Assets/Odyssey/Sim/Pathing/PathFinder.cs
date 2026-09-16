@@ -393,6 +393,27 @@ namespace Odyssey.Sim.Pathing
                 if (z > 0) Relax(c, c - _sizeX, g, goal, mode, stamp, rstamp, constrained);
                 if (z + 1 < _size.SizeZ) Relax(c, c + _sizeX, g, goal, mode, stamp, rstamp, constrained);
 
+                // A hop: one block up or one block down, into the column next door. Unaided
+                // vertical movement is exactly this and nothing else (owner, 2026-09-16) — the
+                // cell entered has a floor, so no route can end in mid-air the way a climb could.
+                if (y + 1 < _size.SizeY)
+                {
+                    int up = c + _layerStride;
+                    if (x > 0) RelaxHop(c, up - 1, g + MoveCost.JumpUp, goal, mode, stamp, rstamp, constrained);
+                    if (x + 1 < _sizeX) RelaxHop(c, up + 1, g + MoveCost.JumpUp, goal, mode, stamp, rstamp, constrained);
+                    if (z > 0) RelaxHop(c, up - _sizeX, g + MoveCost.JumpUp, goal, mode, stamp, rstamp, constrained);
+                    if (z + 1 < _size.SizeZ) RelaxHop(c, up + _sizeX, g + MoveCost.JumpUp, goal, mode, stamp, rstamp, constrained);
+                }
+
+                if (y > 0)
+                {
+                    int down = c - _layerStride;
+                    if (x > 0) RelaxHop(c, down - 1, g + MoveCost.Drop, goal, mode, stamp, rstamp, constrained);
+                    if (x + 1 < _sizeX) RelaxHop(c, down + 1, g + MoveCost.Drop, goal, mode, stamp, rstamp, constrained);
+                    if (z > 0) RelaxHop(c, down - _sizeX, g + MoveCost.Drop, goal, mode, stamp, rstamp, constrained);
+                    if (z + 1 < _size.SizeZ) RelaxHop(c, down + _sizeX, g + MoveCost.Drop, goal, mode, stamp, rstamp, constrained);
+                }
+
                 if ((_grid.Flags[c] & NavFlags.Connector) != 0)
                 {
                     for (int e = _graph.FirstPortalEdge(c); e != -1; e = _graph.PortalEdgeNext(e))
@@ -424,6 +445,24 @@ namespace Odyssey.Sim.Pathing
             // is exactly how a colonist is supposed to reach one.
             if (!_grid.CanWalkInto(n, mode)) return;
             RelaxExplicit(from, n, g + _grid.EnterCost(n, mode), goal, mode, stamp, rstamp, constrained);
+        }
+
+        /// <summary>
+        /// A hop costs its own price rather than the destination's entry cost, and is refused
+        /// unless the destination is somewhere a colonist could walk — the same test as a step on
+        /// the flat, because the point of the rule is that both ends have a floor.
+        /// </summary>
+        void RelaxHop(int from, int n, int ng, int goal, TraverseMode mode, int stamp, int rstamp,
+            bool constrained)
+        {
+            if (!_grid.CanWalkInto(n, mode)) return;
+
+            // Onto a block, never up a storey: the upper end of the hop has to be standing on
+            // solid terrain. See NavGraph.UpperEndIsABlockTop — without it every floor of every
+            // building is one hop from the floor below and stairs are decoration.
+            if (!_graph.UpperEndIsABlockTop(n > from ? n : from)) return;
+
+            RelaxExplicit(from, n, ng, goal, mode, stamp, rstamp, constrained);
         }
 
         void RelaxExplicit(int from, int n, int ng, int goal, TraverseMode mode, int stamp,
