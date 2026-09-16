@@ -496,6 +496,40 @@ Four of these cost more than ten minutes each.
   fine at one scale and useless at another, and the arithmetic tells you which before the screenshot
   does.
 
+## Getting the licensed packs into a worktree without copying or committing them
+
+A git worktree is a fresh checkout, and `Assets/Synty/` is gitignored, so a worktree has no art at
+all. Everything still builds and every test passes — degrading without the packs is a designed path,
+not an error path — but **every screenshot is untextured flat colour**, which makes a worktree the
+wrong place to settle any question about how something looks. That cost a whole contact sheet once.
+
+**Junction the folder rather than copying it.** On Windows, from the worktree:
+
+```
+cmd /c mklink /J "<worktree>\Assets\Synty" "D:\code\odyssey\Assets\Synty"
+copy "D:\code\odyssey\Assets\Synty.meta" "<worktree>\Assets\Synty.meta"
+```
+
+`mklink /J` makes a directory junction and needs no administrator rights, unlike `/D`. Three reasons
+it beats a copy of 1.5 GB and 15,868 files:
+
+- **The `.meta` files are shared, so the GUIDs match.** This is the load-bearing part.
+  `ModuleCatalogue.asset` is committed and refers to prefabs by GUID, so art that imported under
+  different GUIDs would resolve to nothing and the world would draw as boxes *with* the packs
+  present — which looks exactly like not having them and is far more confusing.
+- Nothing is duplicated on disk, and nothing can drift out of step with the main checkout.
+- `Assets/Synty/` is gitignored in every worktree too, so `git status` stays empty and licensed
+  content cannot be staged by accident. Check that before the first commit, not after.
+
+Two things to know. The two projects share the source files, so if one of them rewrites an import
+setting the other sees it — Unity does not rewrite an existing `.meta` during an ordinary import, but
+changing an importer setting in one project changes it for both. And the worktree still builds its
+*own* `Library`, so the first run after junctioning imports the whole pack set and takes many
+minutes and a couple of gigabytes; run it in the background and do something else.
+
+Remove the junction with `rmdir` (not `Remove-Item -Recurse`, which on some shells follows the link
+and would delete the real packs).
+
 ## Per-cell geometry cracks where a continuous field does not
 
 Written after giving earth its own mesh (`GroundMesh`, `06-rendering-and-camera.md` §2c). The
