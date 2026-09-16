@@ -778,3 +778,36 @@ references in the project were the fresh ones, after `obj/` was cleared, and aft
 and the package assemblies, builds in seconds and answers the only question a handoff needs: do
 *these sources* agree with each other. Assembly-definition boundaries are then unverified, which is
 what `scripts/unity.sh test editmode` is for.
+
+## A generated file that is also committed fails silently when it goes stale
+
+`Assets/Scenes/Play.unity` is committed *and* generated — `PlayScene.cs` is the generator and the
+scene is its output. Add a component to the generator and the committed scene does not have it
+until somebody runs **Odyssey → Presentation → Build play scene**.
+
+Until they do, the feature is simply **absent**. No error, no missing reference, nothing in the
+console. It is indistinguishable from a broken feature, and that is exactly how it was read: the
+designate tool was reported as "nothing happened" and "I couldn't mark anything", when in truth
+nothing was there to respond. A playtest round was spent on it.
+
+The same trap caught the same session twice over, in two forms:
+
+- **The owner's checkout was 22 commits behind** and the build under test predated every change
+  being tested. Three further observations — a pause that reset a walker to standing, colonists
+  repeating a bad move, animations "a mess" — were all faithful reports of bugs that had already
+  been fixed on `main`. **Before reading a playtest report, confirm the commit it was taken
+  against.** `git log --oneline -1` in their checkout costs nothing and reframes everything.
+- **"git pull" was written as one bullet in a list of steps**, and the whole exercise depended on
+  it. A step that everything hinges on is not a bullet; and handing over instructions in the same
+  message as the merge they depend on guarantees a race.
+
+Two rules follow.
+
+- **A generated artefact under version control needs a staleness check, not a convention.** The
+  wiki and the label registry already have one — `build_wiki.py --check` and `emit_labels.py
+  --check` exit 1 when the output does not match the source, and both are CI gates. The play scene
+  has no equivalent. Until it does, `OdysseyBootstrap.WarnIfTheSceneIsStale` at least turns silence
+  into a console line naming the menu item.
+- **Warn, do not self-heal.** Adding the missing component at runtime would paper over a scene
+  that may be stale in ways the check cannot see — the camera rig, the lighting, the module
+  catalogue. The useful signal is "rebuild the scene", not "one thing was quietly patched".

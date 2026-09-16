@@ -154,6 +154,8 @@ namespace Odyssey.Presentation.Bootstrap
 
         void Start()
         {
+            WarnIfTheSceneIsStale();
+
             // Set before anything is meshed, because the relief is read at mesh time and a chunk
             // built flat would stay flat until something dirtied it. Statics, like the scatter
             // density beside them: the field has to be reachable from the mesher, the picker and
@@ -369,6 +371,38 @@ namespace Odyssey.Presentation.Bootstrap
                     _speedChangePending = false;
                 }
             }
+        }
+
+        /// <summary>
+        /// Say so, loudly, when the play scene was built before a presenter existed.
+        ///
+        /// <para><b>A stale scene fails silently, and that is what makes it expensive.</b>
+        /// <c>Assets/Scenes/Play.unity</c> is committed <i>and</i> generated: the generator is
+        /// <c>PlayScene.cs</c> and the scene is its output. Add a component to the generator and
+        /// the committed scene does not have it until somebody runs
+        /// <b>Odyssey → Presentation → Build play scene</b>. Until they do, the feature is simply
+        /// absent — no error, no missing reference, nothing to see. It is indistinguishable from a
+        /// broken feature, and it cost a whole playtest round: designation was reported as "nothing
+        /// happened" when in truth nothing was there.</para>
+        ///
+        /// <para>Checked by name rather than by a generator stamp because a stamp has to be
+        /// remembered and this does not: a presenter the composition root depends on is either on
+        /// the object or it is not. The list is short and it is the list of things whose absence
+        /// is silent — a missing renderer throws, a missing presenter does nothing at all.</para>
+        ///
+        /// <para>It warns rather than adding the component itself. Adding it would paper over a
+        /// scene that may be stale in ways this cannot see — the camera rig, the lighting, the
+        /// module catalogue — and the useful signal is "rebuild the scene", not "one thing has
+        /// been quietly patched".</para>
+        /// </summary>
+        void WarnIfTheSceneIsStale()
+        {
+            if (GetComponent<DesignatePresenter>() != null) return;
+
+            Debug.LogWarning(
+                "[Odyssey] This play scene was built before DesignatePresenter existed, so no tool " +
+                "can be armed and the mining and felling keys (M, C, X) will do nothing. The scene " +
+                "is generated: rebuild it with Odyssey > Presentation > Build play scene.");
         }
 
         void LateUpdate()
