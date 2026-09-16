@@ -442,6 +442,56 @@ pawn-ticks.
 out of a shaft for no materials and no work. Making that a built thing is the building line's job,
 and it will place its own edifice when it comes.
 
+## 6e. Fifth round: the ladder is eliminated, and a climb needs something to climb
+
+The owner, in three messages: *"the models need to fall twice as quick"*; *"I did see a colonist
+climb back up in mid air with nothing there that made no sense — a climb can only happen if there is
+a tile in front of you, a height block above and you climb against the edge of that block"*;
+*"eliminate the ladder and use climbing instead because it's causing bugs"*; *"ladders are used in
+game not for mining"*.
+
+**Ladders and climbs are now different things.** `ConnectorKind.Climb` is appended to the enum (no
+existing value renumbered — these are part of the save contract), with its own footprint flag
+`NavFlags.ConnectorClimb` and its own costs. Built ladders keep `ConnectorKind.Ladder` and their
+original `LadderUp`/`LadderDown` of 540/400: the generator puts them in buildings and they had no
+business being repriced to fix mining. `NavGraph.EnsureLadder` became `EnsureClimb` and is the
+mining path's alone.
+
+Modelling a mined shaft as a ladder had quietly claimed three untrue things — that somebody built
+it, that it costs what a built ladder costs, and that it is a fixture with geometry. The third one
+reached the screen, as §6d records.
+
+**A climb requires a block beside it, and keeps requiring one.** Checking at creation was not
+enough and the measurement said so: with the creation test in place, **1,890 of 9,880** climbing
+pawn-ticks still had no wall, because a climb laid against rock that is *later* mined away goes on
+insisting there is a face to hold. `MineJobDriver.RetireClimbsThatLostTheirWall` drops it when the
+cut takes its last face, and the number went to **0 of 9,828**. Four faces and not the diagonals: a
+corner is not something you can get your weight against.
+
+**And that created a live cause for the safety net §6c had declined to build.** Retiring a climb
+takes away the footing of whoever was on it — a climb cell counts as standable to navigation, which
+is the whole point of it — and the probe duly found two of five colonists standing still in mid-air
+for the last 12,600 ticks of the run. `DropAnyoneStandingIn` now lands them on the first real floor,
+the same `CellGrid.FirstFloorAtOrBelow` the items use, and `StepDownOntoTheFloorJustCut` was
+rewritten in terms of it: it used to move a colonist exactly one layer, which is wrong over a
+two-deep hole and left them in the middle of it.
+
+**Falling is twice as quick again.** `ClimbDown` 100 → **50**, about five sixths of a second for
+three metres. `ClimbUp` stays 270.
+
+**The climb pose eases in four times faster.** It first borrowed `WorkEaseSeconds` at 0.44 s, which
+is right for setting yourself in front of a tree and far too slow here: a drop takes 0.83 s, so the
+reach was measured **41% arrived** at the moment it was photographed and the arms had barely left
+the figure's sides. `ClimbEaseSeconds` is 0.15 s — reaching for a hold is a grab, not a
+settling-in. `PawnFigureDirector.DescribeClimb` prints phase, weight and which way the wall is, so
+"the arms are down" can be told apart from "there is no wall" and "there is no world to ask".
+
+| measured over 40,000 ticks | §6d | now |
+|---|---|---|
+| climbing pawn-ticks with no wall beside them | 1,890 of 9,880 | **0 of 9,828** |
+| colonists unsupported at the end | 0 | 0 |
+| spoil stacks with no floor | 0 of 81 | 0 of 84 |
+
 ## 7. Risks
 
 1. **Golden tests re-base twice** — once for the raised ground, once for terracing. Both are

@@ -269,8 +269,13 @@ namespace Odyssey.Sim.Pawns
             int above = cell + size.LayerStride;
             if (above < size.CellCount) ctx.Nav.MarkDirty(above);
 
-            // 3a. A shaft has to be climbable, or the colonist that cut it is lost down it.
-            LadderTheShaft(ctx, cell);
+            // 3a. A climb is the claim that there is a rock face here. This cut may have just
+            //     taken one away, and a climb against a wall that is gone is a colonist going up
+            //     through clear air — the thing the owner reported seeing.
+            RetireClimbsThatLostTheirWall(ctx, cell);
+
+            // 3b. A shaft has to be climbable, or the colonist that cut it is lost down it.
+            ClimbTheShaft(ctx, cell);
 
             // 4. Anybody standing on this cell is now standing on nothing.
             StepDownOntoTheFloorJustCut(ctx, cell);
@@ -299,18 +304,91 @@ namespace Odyssey.Sim.Pawns
         /// the board. What a colonist does instead is climb the rock, and making that read is
         /// presentation's job (<c>PawnFigureDirector</c>), not a prop's.</para>
         /// </summary>
-        static void LadderTheShaft(PawnContext ctx, int cell)
+        static void ClimbTheShaft(PawnContext ctx, int cell)
         {
             GridSize size = ctx.Size;
             CellGrid grid = ctx.Cells;
 
             int above = cell + size.LayerStride;
-            if (above < size.CellCount && !grid.IsSolidTerrain(above) && !grid.IsBlockedByEdifice(above))
-                ctx.Nav.EnsureLadder(cell, above);
+            if (above < size.CellCount && !grid.IsSolidTerrain(above) && !grid.IsBlockedByEdifice(above)
+                && HasWallBeside(grid, cell))
+                ctx.Nav.EnsureClimb(cell, above);
 
             int below = cell - size.LayerStride;
-            if (below >= 0 && !grid.IsSolidTerrain(below) && !grid.IsBlockedByEdifice(below))
-                ctx.Nav.EnsureLadder(below, cell);
+            if (below >= 0 && !grid.IsSolidTerrain(below) && !grid.IsBlockedByEdifice(below)
+                && HasWallBeside(grid, below))
+                ctx.Nav.EnsureClimb(below, cell);
+        }
+
+        /// <summary>
+        /// Drop any climb beside this cell that no longer has a face to go up.
+        ///
+        /// <para>The four cells this cut could have been the wall for, on its own layer. Checking
+        /// only at the moment a climb is created leaves every one of them behind as the quarry
+        /// widens: a colonist cuts a shaft, the shaft's walls are then mined out around it, and the
+        /// climb goes on insisting there is rock to hold on to.</para>
+        /// </summary>
+        static void RetireClimbsThatLostTheirWall(PawnContext ctx, int cell)
+        {
+            GridSize size = ctx.Size;
+            CellGrid grid = ctx.Cells;
+            CellRef at = size.FromIndex(cell);
+
+            Beside(at.X - 1, at.Z);
+            Beside(at.X + 1, at.Z);
+            Beside(at.X, at.Z - 1);
+            Beside(at.X, at.Z + 1);
+
+            void Beside(int x, int z)
+            {
+                if (!size.Contains(x, z, at.Y)) return;
+                int neighbour = size.Index(x, z, at.Y);
+                if (HasWallBeside(grid, neighbour)) return;
+                if (!ctx.Nav.RemoveClimbAt(neighbour)) return;
+
+                ctx.Nav.MarkDirty(neighbour);
+
+                // The cell may have been standable only because of the climb that was just taken
+                // out of it. Whoever was on it has nothing to hold now, so they fall.
+                DropAnyoneStandingIn(ctx, neighbour);
+                int overIt = neighbour + size.LayerStride;
+                if (overIt < size.CellCount) DropAnyoneStandingIn(ctx, overIt);
+            }
+        }
+
+        /// <summary>
+        /// Is there a block beside this cell to climb against?
+        ///
+        /// <para><b>The owner's rule, and the fault it fixes.</b> "A climb can only happen if there
+        /// is a tile in front of you — a height block above and you climb against the edge of that
+        /// block." Without it a connector was laid on <em>every</em> cut cell whose ceiling was
+        /// open, which in the middle of an open quarry is a colonist going up through clear air
+        /// with nothing anywhere near it. Measured over 40,000 ticks before the rule: <b>1,890 of
+        /// 9,880</b> climbing pawn-ticks — near enough one in five — had no wall beside them.</para>
+        ///
+        /// <para>The four faces and not the diagonals. A corner is not something you can get your
+        /// weight against, and a colonist climbing the outside of a rock's edge on the diagonal
+        /// would be hanging off a line rather than pressed to a face.</para>
+        ///
+        /// <para>Asked of the <em>lower</em> cell, which is the one whose walls you are inside
+        /// while you climb. The block beside it is by definition a whole cell tall, so its top is
+        /// the floor of the cell you are climbing out to — which is why the same test also
+        /// guarantees there is somewhere to arrive.</para>
+        ///
+        /// <para>Nobody is stranded by this. A quarry's <em>edge</em> cells always have untouched
+        /// ground beside them, so the way out is at the rim; what the rule removes is the middle,
+        /// where there was never anything to climb and a colonist could stand on open air.</para>
+        /// </summary>
+        public static bool HasWallBeside(CellGrid grid, int cell)
+        {
+            GridSize size = grid.Size;
+            CellRef at = size.FromIndex(cell);
+
+            if (at.X > 0 && grid.IsSolidTerrain(size.Index(at.X - 1, at.Z, at.Y))) return true;
+            if (at.X < size.SizeX - 1 && grid.IsSolidTerrain(size.Index(at.X + 1, at.Z, at.Y))) return true;
+            if (at.Z > 0 && grid.IsSolidTerrain(size.Index(at.X, at.Z - 1, at.Y))) return true;
+            if (at.Z < size.SizeZ - 1 && grid.IsSolidTerrain(size.Index(at.X, at.Z + 1, at.Y))) return true;
+            return false;
         }
 
         static void MarkChunksAround(PawnContext ctx, int cell)
@@ -344,14 +422,37 @@ namespace Odyssey.Sim.Pawns
         static void StepDownOntoTheFloorJustCut(PawnContext ctx, int cell)
         {
             int above = cell + ctx.Size.LayerStride;
-            if (above >= ctx.Size.CellCount) return;
+            if (above < ctx.Size.CellCount) DropAnyoneStandingIn(ctx, above);
+        }
+
+        /// <summary>
+        /// Anybody standing in this cell falls to the first real floor below it.
+        ///
+        /// <para><b>The first floor, not one layer.</b> Dropping a colonist exactly one layer is
+        /// right only when the cell below is solid, and a shaft is by definition the case where it
+        /// is not — so a colonist over a two-deep hole was moved into the middle of it and left
+        /// there. The item rule already landed on the first real floor and this is the same rule
+        /// for people, asking the same <see cref="CellGrid.FirstFloorAtOrBelow"/>.</para>
+        ///
+        /// <para><b>Real floor, and a climb is not one.</b> A cell with a climb footprint counts as
+        /// standable to navigation — that is what lets a colonist be on a rock face at all — but
+        /// there is nothing under it, so it is not somewhere to be left. This matters because a
+        /// climb can now be <em>retired</em> when the wall it went up is mined away, and the
+        /// colonist that was on it has to go somewhere. Measured without this: two of five
+        /// colonists spent the last 12,600 ticks of a 40,000-tick run standing still in mid-air,
+        /// which is precisely the fault the owner reported.</para>
+        /// </summary>
+        static void DropAnyoneStandingIn(PawnContext ctx, int cell)
+        {
+            int landing = ctx.Cells.FirstFloorAtOrBelow(cell);
+            if (landing == cell) return;
 
             var pawns = ctx.Pawns.All;
             for (int i = 0; i < pawns.Count; i++)
             {
                 Pawn pawn = pawns[i];
-                if (pawn.Cell != above) continue;
-                pawn.Cell = cell;
+                if (pawn.Cell != cell) continue;
+                pawn.Cell = landing;
                 pawn.ClearPath();
                 pawn.Destination = -1;
             }

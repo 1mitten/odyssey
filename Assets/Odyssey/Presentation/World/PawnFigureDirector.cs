@@ -270,6 +270,47 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public float? HeldPhase { get; set; }
 
+        /// <summary>
+        /// The mirrored world, when there is one, so a climbing figure can find the block it is
+        /// climbing against.
+        ///
+        /// <para>Optional, and everything degrades to the old behaviour without it: a climber with
+        /// no world to ask stays at the middle of its cell. Read-only here — the director never
+        /// writes to it — and it is the same mirror the chunk renderer meshes from, so the rock a
+        /// colonist is pressed against is the rock that is drawn.</para>
+        /// </summary>
+        public WorldRenderModel? World { get; set; }
+
+        /// <summary>
+        /// What every live figure is doing about climbing, for a harness to print beside a picture.
+        ///
+        /// A climber with its arms at its sides looks exactly like a colonist standing still, and
+        /// the three things that can cause it — no world to ask, no wall found, no weight yet —
+        /// are indistinguishable in a photograph and want different fixes.
+        /// </summary>
+        public string DescribeClimb()
+        {
+            if (World == null) return "no world: a climber cannot find its wall";
+
+            var report = new System.Text.StringBuilder();
+            int climbing = 0;
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn < 0 || figure.ClimbPhase < 0f) continue;
+                climbing++;
+                report.Append(climbing == 1 ? "" : "; ")
+                      .Append("pawn ").Append(figure.Pawn)
+                      .Append(" phase ").Append(figure.ClimbPhase.ToString("0.00"))
+                      .Append(" weight ").Append(figure.ClimbWeight.ToString("0.00"))
+                      .Append(" face ").Append(figure.ClimbFace == Vector3.zero
+                          ? "NONE - nothing to climb"
+                          : figure.ClimbFace.ToString("0.0"));
+            }
+
+            return climbing == 0 ? "nobody is on a wall" : report.ToString();
+        }
+
         /// <summary>Where the edge was on the last posed frame. Used to frame a picture on it.</summary>
         public Vector3 LastBladePosition { get; private set; }
 
@@ -499,7 +540,8 @@ namespace Odyssey.Presentation.World
                 // order, for ever.
                 if (figure.WorkWeight <= 0.001f)
                 {
-                    if (figure.ClimbPhase >= 0f) ApplyClimbPose(figure);
+                    if (figure.ClimbPhase >= 0f && figure.ClimbFace != Vector3.zero)
+                        ApplyClimbPose(figure);
                     continue;
                 }
 
@@ -584,16 +626,16 @@ namespace Odyssey.Presentation.World
             const float ElbowBend = -30f;
 
             float swing = Mathf.Sin(figure.ClimbPhase * ReachesPerCell * 2f * Mathf.PI);
-            float right = Mathf.Lerp(Pulling, Reaching, (swing + 1f) * 0.5f);
-            float left = Mathf.Lerp(Reaching, Pulling, (swing + 1f) * 0.5f);
+            float right = Mathf.Lerp(Pulling, Reaching, (swing + 1f) * 0.5f) * figure.ClimbWeight;
+            float left = Mathf.Lerp(Reaching, Pulling, (swing + 1f) * 0.5f) * figure.ClimbWeight;
 
             // No tilt: a climb is straight up the sagittal plane, where a swing is across the body.
             Vector3 axis = SwingAxis(figure.Transform, 0f);
 
             Pitch(figure.RightUpperArm, axis, right);
-            Pitch(figure.RightLowerArm, axis, ElbowBend);
+            Pitch(figure.RightLowerArm, axis, ElbowBend * figure.ClimbWeight);
             Pitch(figure.LeftUpperArm, axis, left);
-            Pitch(figure.LeftLowerArm, axis, ElbowBend);
+            Pitch(figure.LeftLowerArm, axis, ElbowBend * figure.ClimbWeight);
         }
 
         /// <summary>
@@ -653,6 +695,52 @@ namespace Odyssey.Presentation.World
             }
         }
 
+        /// <summary>
+        /// How far from the middle of its cell a climbing figure is drawn, towards the rock.
+        ///
+        /// A cell face is 1.25 m from its centre and a colonist is about half a metre through, so
+        /// this leaves the body against the stone rather than inside it. It is the same kind of
+        /// facade as <see cref="WorkStance"/> — the pawn is still in its cell for picking and for
+        /// every part of the simulation, and only the drawn figure leans in.
+        /// </summary>
+        public const float ClimbLean = 0.95f;
+
+        /// <summary>
+        /// How long a figure takes to reach for the wall and let go of it again, in seconds.
+        ///
+        /// <para>Much quicker than the work pose's ease, and measurement is why. The lean first
+        /// borrowed <see cref="WorkEaseSeconds"/> at 0.44 s, which is right for setting yourself in
+        /// front of a tree and far too slow for this: a drop of one layer takes about five sixths
+        /// of a second, so the reach was still only <b>41%</b> arrived at the moment it was
+        /// photographed and the arms had barely left the figure's sides. Reaching for a hold is a
+        /// grab, not a settling-in.</para>
+        /// </summary>
+        public const float ClimbEaseSeconds = 0.15f;
+
+        /// <summary>
+        /// The direction of the nearest solid face beside a cell, or false when there is none.
+        ///
+        /// <para>Four faces, not the diagonals, and the first one found in a fixed order — a
+        /// colonist wants one wall to climb, and which it picks matters far less than picking the
+        /// same one every frame. A search that preferred the nearest or the biggest would swap
+        /// walls as the world changed and swing the figure round the shaft.</para>
+        /// </summary>
+        bool TryWallBeside(CellRef at, out Vector3 toWall)
+        {
+            toWall = Vector3.zero;
+            WorldRenderModel? world = World;
+            if (world == null) return false;
+
+            GridSize size = world.Size;
+            if (at.X > 0 && world.IsSolid(size.Index(at.X - 1, at.Z, at.Y))) toWall = Vector3.left;
+            else if (at.X < size.SizeX - 1 && world.IsSolid(size.Index(at.X + 1, at.Z, at.Y))) toWall = Vector3.right;
+            else if (at.Z > 0 && world.IsSolid(size.Index(at.X, at.Z - 1, at.Y))) toWall = Vector3.back;
+            else if (at.Z < size.SizeZ - 1 && world.IsSolid(size.Index(at.X, at.Z + 1, at.Y))) toWall = Vector3.forward;
+            else return false;
+
+            return true;
+        }
+
         /// <summary>Add a world-space pitch to a bone, leaving the rest of its pose alone.</summary>
         static void Pitch(Transform? bone, Vector3 axis, float degrees)
         {
@@ -706,6 +794,40 @@ namespace Odyssey.Presentation.World
             figure.ClimbPhase = pawn.MovePercent > 0 && pawn.NextCell.Y != pawn.Cell.Y
                 ? Mathf.Clamp01(pawn.MovePercent * 0.01f)
                 : -1f;
+
+            // And WHAT it is climbing. A colonist goes up the edge of the block beside the hole,
+            // not up the middle of the hole: drawn at the cell centre it is a person levitating
+            // through clear air, which is what the owner saw. The simulation now refuses to lay a
+            // connector where there is no block (MineWorkGiver's HasWallBeside), so this should
+            // always find one — and where it does not, the figure simply stays where it was, which
+            // is the behaviour before any of this existed.
+            figure.ClimbFace = Vector3.zero;
+            if (figure.ClimbPhase >= 0f)
+            {
+                CellRef lower = pawn.NextCell.Y < pawn.Cell.Y ? pawn.NextCell : pawn.Cell;
+                if (TryWallBeside(lower, out Vector3 toWall))
+                {
+                    figure.ClimbFace = toWall;
+                    figure.LastClimbFace = toWall;
+
+                    // Face what you are climbing. This is also the only thing that gives a purely
+                    // vertical step a bearing at all: PawnPose hands back none, deliberately, and
+                    // the turn itself is eased by the ordinary yaw rate.
+                    heading = toWall;
+                }
+            }
+
+            // Eased, and not applied to `position`. Two traps, both of which this avoids by being
+            // a weight rather than a jump:
+            //
+            //  * the lean is nearly a metre sideways, and `position` is what the gait blend
+            //    differences for ground speed — moved here, the first frame of every climb would
+            //    read as several metres a second and throw the figure into a sprint;
+            //  * snapped on, a colonist would jump to the wall the instant its step began, which
+            //    is exactly the class of jolt this whole round is about.
+            float leanStep = deltaTime / ClimbEaseSeconds;
+            figure.ClimbWeight = Mathf.MoveTowards(
+                figure.ClimbWeight, figure.ClimbFace != Vector3.zero ? 1f : 0f, leanStep);
 
             // Face the work. A pawn that has stopped walking has no heading left — that is what
             // makes PawnPose hand back a zero vector — so without the work cell the figure would
@@ -796,11 +918,19 @@ namespace Odyssey.Presentation.World
                 if (figure.WorkWeight <= 0.5f) figure.Style = WorkStyle.IndexForJob(pawn.JobDef);
             }
             Quaternion facing = Quaternion.Euler(0f, figure.Yaw, 0f);
-            figure.Transform.position = figure.WorkWeight > 0.001f
+            Vector3 drawn = figure.WorkWeight > 0.001f
                 ? WorkStance.StandAt(position, figure.WorkCentre,
                     facing * Vector3.forward, figure.WorkWeight, facing * figure.StrikeNow,
                     Styles[figure.Style].AimFromCentre)
                 : position;
+
+            // Chest to the rock, after the speed has been taken and after the work stance has had
+            // its say. Kept applied while the weight eases back out, so stepping off the wall
+            // retraces the way on to it rather than snapping to the cell centre.
+            if (figure.ClimbWeight > 0.001f && figure.LastClimbFace != Vector3.zero)
+                drawn += figure.LastClimbFace * (ClimbLean * figure.ClimbWeight);
+
+            figure.Transform.position = drawn;
 
             // Turn towards the heading rather than snapping to it.
             //
@@ -1459,6 +1589,23 @@ namespace Odyssey.Presentation.World
             /// of step because their steps are — none of which a free-running clock would give.
             /// </summary>
             public float ClimbPhase = -1f;
+
+            /// <summary>
+            /// Which way the block being climbed lies, as a unit vector, or zero when there is
+            /// none to find. Zero means the climb pose is not applied at all: arms reaching up a
+            /// wall that is not there is worse than arms at your sides.
+            /// </summary>
+            public Vector3 ClimbFace;
+
+            /// <summary>
+            /// The last wall there was, kept while the lean eases back out. Without it a colonist
+            /// stepping off the top of a climb loses its direction on the same frame the weight
+            /// starts falling, and eases towards nothing instead of away from the rock.
+            /// </summary>
+            public Vector3 LastClimbFace;
+
+            /// <summary>How far into the lean this figure is, 0 to 1. See PawnFigureDirector.ClimbLean.</summary>
+            public float ClimbWeight;
 
             /// <summary>
             /// Degrees this figure is aiming its stroke below level, this frame.

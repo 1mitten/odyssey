@@ -92,9 +92,9 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
-        public void ASecondDigDoesNotStackASecondLadder()
+        public void ASecondDigDoesNotStackASecondClimb()
         {
-            // EnsureLadder is asked on both sides of every dig, so a shaft cut downward asks for
+            // EnsureClimb is asked on both sides of every dig, so a shaft cut downward asks for
             // the same pair twice. Flagging one cell's footprint twice would leave a connector
             // nothing can take away again.
             ColonyWorld colony = Board();
@@ -103,27 +103,27 @@ namespace Odyssey.Tests.Sim
             int lower = upper - Size.LayerStride;
 
             Dig(colony, lower);
-            int again = colony.Pawns.Nav.EnsureLadder(lower, upper);
+            int again = colony.Pawns.Nav.EnsureClimb(lower, upper);
 
-            Assert.That(again, Is.EqualTo(-1), "a second ladder was stacked on the first");
+            Assert.That(again, Is.EqualTo(-1), "a second climb was stacked on the first");
         }
 
         [Test]
-        public void ALadderJoinsOnlyCellsOneLayerApart()
+        public void AClimbJoinsOnlyCellsOneLayerApart()
         {
             ColonyWorld colony = Board();
             CellRef start = colony.Start;
             int cell = Size.Index(start.X, start.Z, start.Y);
 
-            Assert.That(colony.Pawns.Nav.EnsureLadder(cell, cell + 2 * Size.LayerStride), Is.EqualTo(-1),
-                "a ladder skipped a layer");
-            Assert.That(colony.Pawns.Nav.EnsureLadder(cell, cell + 1), Is.EqualTo(-1),
-                "a ladder was laid sideways");
-            Assert.That(colony.Pawns.Nav.EnsureLadder(-1, cell), Is.EqualTo(-1));
+            Assert.That(colony.Pawns.Nav.EnsureClimb(cell, cell + 2 * Size.LayerStride), Is.EqualTo(-1),
+                "a climb skipped a layer");
+            Assert.That(colony.Pawns.Nav.EnsureClimb(cell, cell + 1), Is.EqualTo(-1),
+                "a climb was laid sideways");
+            Assert.That(colony.Pawns.Nav.EnsureClimb(-1, cell), Is.EqualTo(-1));
         }
 
         [Test]
-        public void BreakingIntoAChamberFromBelowIsAlsoLaddered()
+        public void BreakingIntoAChamberFromBelowIsAlsoClimbable()
         {
             // The upward case: a dig that opens into something already hollow. Asking "is my
             // vertical neighbour open" covers both directions without caring which happened.

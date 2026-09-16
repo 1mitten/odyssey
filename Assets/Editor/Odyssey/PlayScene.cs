@@ -180,7 +180,8 @@ namespace Odyssey.EditorTools
                 // because a figure's speed is measured from how far it moved since the last frame
                 // and a figure leased this instant has not moved at all — a single frame would
                 // photograph five people standing still and prove nothing about the walk.
-                figures = new Odyssey.Presentation.World.PawnFigureDirector(catalogue, lighting, 0);
+                figures = new Odyssey.Presentation.World.PawnFigureDirector(catalogue, lighting, 0)
+                    { World = model };   // so a climber can find its wall
                 int movePerTick = PawnContent.Core().Movement.movePerTick;
                 const float FrameSeconds = 1f / 60f;
                 for (int frame = 0; frame < 40; frame++)
@@ -492,9 +493,30 @@ namespace Odyssey.EditorTools
                     {
                         Vector3 between = (CellMetrics.FloorCentre(climber.Cell)
                                          + CellMetrics.FloorCentre(climber.NextCell)) * 0.5f;
-                        Shoot(camera, between + Vector3.up * 1.4f, 10f, 35f, 11f, "Logs/shot-climb.png");
+
+                        // Looking AT the wall the colonist is on, so the rock is behind it and the
+                        // camera is on the open side. A fixed bearing put the outcrop between the
+                        // camera and the subject as often as not, and a photograph of a rock
+                        // proves nothing about the pose behind it.
+                        CellRef lower = climber.NextCell.Y < climber.Cell.Y
+                            ? climber.NextCell : climber.Cell;
+                        Vector3 toWall = Vector3.zero;
+                        if (lower.X > 0 && grid.IsSolidTerrain(size.Index(lower.X - 1, lower.Z, lower.Y)))
+                            toWall = Vector3.left;
+                        else if (lower.X < size.SizeX - 1
+                                 && grid.IsSolidTerrain(size.Index(lower.X + 1, lower.Z, lower.Y)))
+                            toWall = Vector3.right;
+                        else if (lower.Z > 0 && grid.IsSolidTerrain(size.Index(lower.X, lower.Z - 1, lower.Y)))
+                            toWall = Vector3.back;
+                        else if (lower.Z < size.SizeZ - 1
+                                 && grid.IsSolidTerrain(size.Index(lower.X, lower.Z + 1, lower.Y)))
+                            toWall = Vector3.forward;
+
+                        float bearing = toWall == Vector3.zero ? 35f : PawnPose.YawOf(toWall);
+                        Shoot(camera, between + Vector3.up * 1.4f, 10f, bearing, 11f, "Logs/shot-climb.png");
                         Debug.Log($"[Shot] a colonist is {climber.MovePercent}% of the way from " +
                                   $"{climber.Cell} to {climber.NextCell}");
+                        Debug.Log($"[Shot] climbing — {figures.DescribeClimb()}");
                     }
                     else
                     {

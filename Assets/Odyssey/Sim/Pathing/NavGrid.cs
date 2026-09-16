@@ -39,8 +39,11 @@ namespace Odyssey.Sim.Pathing
 
         Hazard = 1 << 9,
 
+        /// <summary>A cell a colonist can climb through, hands on rock. Nothing is built there.</summary>
+        ConnectorClimb = 1 << 10,
+
         /// <summary>Any connector footprint cell.</summary>
-        Connector = ConnectorStair | ConnectorLadder | ConnectorLift,
+        Connector = ConnectorStair | ConnectorLadder | ConnectorLift | ConnectorClimb,
 
         /// <summary>
         /// Bits owned by registration rather than by the terrain. A flag rebuild recomputes
@@ -117,24 +120,28 @@ namespace Odyssey.Sim.Pathing
         public const int StairUp = 290;
         public const int StairDown = 230;
 
-        /// <summary>
-        /// Climbing a layer. Dear, because it is work: a colonist hauling stone out of a shaft
-        /// should prefer a ramp, and the pathfinder only learns that from the price.
-        ///
-        /// <para>Was 540 — nine seconds a rung at a hundred units to the tick, which the owner
-        /// twice described as floating. Half of that is still three times a flat cell and still
-        /// the dearest ordinary step there is.</para>
-        /// </summary>
-        public const int LadderUp = 270;
+        public const int LadderUp = 540;
+        public const int LadderDown = 400;
 
         /// <summary>
-        /// Dropping a layer. Priced as a flat cell, because that is what it is: you let go.
+        /// Hauling yourself up a rock face. Dear, because it is work: a colonist carrying stone out
+        /// of a shaft should prefer a ramp, and the pathfinder only learns that from the price.
         ///
-        /// <para>Was 400. The asymmetry is the point and it is not a fudge — going down a hole and
-        /// coming back up it are genuinely not the same job, and pricing them alike is what made a
-        /// colonist take six and a half seconds to descend three metres.</para>
+        /// <para>Half a built ladder's, which is the right relation — a ladder is a thing somebody
+        /// made to make this easier. It is still nearly three times a flat cell.</para>
         /// </summary>
-        public const int LadderDown = 100;
+        public const int ClimbUp = 270;
+
+        /// <summary>
+        /// Dropping down a rock face. Half of a flat cell, because you mostly let go.
+        ///
+        /// <para>Tuned twice at the owner's word — 400, then 100, then half of that again: about
+        /// five sixths of a second for three metres. The asymmetry against <see cref="ClimbUp"/> is
+        /// the point and not a fudge: going down a hole and coming back up it are genuinely not the
+        /// same job, and pricing them alike is what made a colonist take six and a half seconds to
+        /// descend three metres.</para>
+        /// </summary>
+        public const int ClimbDown = 50;
         public const int LiftUp = 400;
         public const int LiftDown = 400;
 
