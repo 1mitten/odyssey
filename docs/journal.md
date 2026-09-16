@@ -857,3 +857,60 @@ work itself.
     the slice arithmetic and the three-seed board measurement were *run* outside the player against
     the built DLL. **Not verified:** `scripts/unity.sh test editmode`, PlayMode, frame time, and
     whether the recovered terraces look right.
+
+- **A feature can now say something about a pawn without widening the contract everybody reads
+  (OQ-45, 2026-09-17; ADR 0004 amended for the first time).** `PawnView` is a struct in the
+  assembly both sides reference, and every feature so far has had to edit it to add itself: felling
+  added `Working` and `WorkCell`, hauling added `Gesture` and its serial, mining widened it again,
+  and hauling water, sleeping in a bed and being injured each would in turn. That is five features
+  into a prototype. The seam is now a sparse `PawnAspect` row — `(PawnId, AspectKey, int)` —
+  written with `SnapshotWriter.AddPawnAspect` and read with `WorldSnapshot.TryGetPawnAspect`.
+  - **The cheapest part of the design was noticing that no new mechanism was needed.** The row
+    asked for something "mirroring `ISnapshotContributor`", and the closest mirror turned out to be
+    *reusing it*: a feature registers through `AddSnapshotContributor` exactly as it always could,
+    and the seam that already existed for the frame now reaches pawns. A second registration path
+    would have been a second thing to keep in step, for no gain. Sixty lines of contract, no
+    subsystem.
+  - **The key had to be a hashed name, and an enum would have recreated the problem.** An enum of
+    aspect kinds would live in `Sim.Contracts` — the file the whole row exists to stop people
+    editing — so the mechanism would have been the chokepoint it was built to open. A key minted
+    from a symbolic name is the only form that lets a feature declare its own vocabulary against no
+    shared file, which is the reasoning that already made interface icons symbolic keys rather than
+    filenames. **Sixty-four bits, not thirty-two:** a collision here is not a crash, it is one
+    feature silently reading another's number in a value the player is looking at, and at 32 bits
+    that is roughly one chance in two hundred thousand over a few hundred keys. Detecting it
+    instead would have needed a central registry, which is the shared file again.
+  - **Every positive has a control, and the controls were run rather than asserted.** With
+    `AddPawnAspect` stubbed to a no-op, **8 Sim and 3 Hud tests fail and every control stays
+    green** — including `PublishingAnAspectDoesNotEnterTheStateHash`, whose own "the control must
+    actually differ in what it published" guard is what makes it fail. Separately, perturbing the
+    hash arithmetic fails **exactly one test**, the golden `TheKeyForANameIsFixedForEver`, and
+    nothing else: every other test mints its keys through the same function and therefore cannot
+    tell. That is the argument for the golden existing at all — the name-to-key mapping is a
+    contract between two assemblies and across two runtimes, and only a literal can hold it.
+  - **The `Tests/Hud` half is the architectural point, not a convenience.** That assembly cannot
+    reference `Odyssey.Sim` — ADR 0004's strongest structural guard — so it cannot name the feature
+    that published a value, cannot share an enum with it, and has nothing but the string. Four
+    tests there prove the string is enough, including the case the contract was shaped around: a
+    panel open on a pawn that dies reads nothing rather than stale numbers.
+  - **Aspects are a report, not state**, exactly as `PawnGesture` is. The fixture feature's numbers
+    enter the state hash and the save; its published report does not, proved by a control that
+    stops it publishing and leaves the hash identical to a world that never published at all.
+  - **What the amendment admits.** ADR 0004 specified that "expensive detail is
+    subscription-scoped"; **no subscription mechanism was ever built**, and aspects are the
+    unscoped form — every installed feature publishes for every pawn it tracks, every frame. At
+    tens of rows against a 62,500-cell slice already in the same buffer that does not register, but
+    the honest statement is that the cheap thing was built and the specified thing deferred. Flip
+    condition F1 names the order of retreat and the 0.8 ms budget that triggers it.
+  - **A stale plan misled this session before it started.** `docs/plans/vertical-slice.md` listed
+    OQ-15/OQ-16 as "written and open" and as step 1 of the seam order; both had landed a day
+    earlier, as had OQ-44, and the first answer given to the owner about what to do next was wrong
+    because of it. Both plan files were audited against the code in the same change. **The audit
+    found something neither the plan nor the queue said:** `PawnContent.Core()` still exists and
+    the bootstrap and `ColonyWorld` still build from it, so the XML is a *checked mirror and not
+    the source* — mining still added 59 lines to `PawnContent.cs`. That, and not this row, is now
+    the cheapest remaining seam work.
+  - **Verified:** fast tier **444 Sim + 110 Hud** (from 428 + 106), both content gates green, and
+    both negative controls run and restored. **Not verified:** `scripts/unity.sh test editmode` and
+    PlayMode — a Unity editor was open on the main checkout throughout, so no batch run was
+    attempted.
