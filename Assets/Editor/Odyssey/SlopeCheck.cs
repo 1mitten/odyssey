@@ -206,6 +206,13 @@ namespace Odyssey.EditorTools
                     PlayScene.Shoot(camera, focus, 24f, facing + 30f, 45f, $"Logs/slope-{condition.Name}-low.png");
                     // The view the game is judged in.
                     PlayScene.Shoot(camera, focus, 48f, facing + 45f, 70f, $"Logs/slope-{condition.Name}-play.png");
+                    // Right in, at the zoom the owner plays at when something looks wrong.
+                    //
+                    // Worth having as a separate shot rather than trusting the others: a seam, a
+                    // z-fight and the colour of a tuft of grass are all sub-pixel at 70 m and
+                    // obvious at 14 m, and the faults reported so far have all been reported from
+                    // close up while the sheet was being judged from far away.
+                    PlayScene.Shoot(camera, focus, 40f, facing + 45f, 14f, $"Logs/slope-{condition.Name}-macro.png");
 
                     RenderPipelineManager.beginCameraRendering -= hook;
                     hook = null;

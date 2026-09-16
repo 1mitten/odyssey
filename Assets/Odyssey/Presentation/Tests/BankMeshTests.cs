@@ -296,11 +296,19 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
-        public void AnInsideCornerGrowsOneBankPerStep()
+        public void AnInsideCornerGrowsOneBankAndNotTwo()
         {
-            // One empty cell can face two risers at once. Two banks overlap there, which is a
-            // lumpy corner and is right; what would be wrong is drawing one and leaving the other
-            // face as a bare wall.
+            // **A z-fighting fix, and the fault was invisible to every other test.** A bank fills
+            // its cell in plan, so two banks in one cell are two boxes turned ninety degrees to
+            // each other — and the side wall of one lands in the same plane as the *back* wall of
+            // the other, facing the same way. Coplanar surfaces with opposite normals are harmless,
+            // because culling removes one from every viewpoint; coplanar surfaces facing the same
+            // way are two candidates for one pixel with nothing to separate them, and the result
+            // flickers as the camera moves and the rounding changes. The owner saw it before any
+            // test did, because no test was looking at pairs of surfaces.
+            //
+            // A straight run is fine, and that is what the count in the test above is checking: two
+            // neighbouring banks touch along walls that face away from each other.
             const int n = 5;
             var world = new RenderTestWorld(n, n, 8);
             for (int z = 0; z < n; z++)
@@ -313,8 +321,9 @@ namespace Odyssey.Tests.Presentation
             }
             world.Publish();
 
-            Assert.That(BanksIn(world, MeshLayer(world, 2)), Is.EqualTo(2),
-                "the notch should face two risers and grow a bank up each");
+            Assert.That(BanksIn(world, MeshLayer(world, 2)), Is.EqualTo(1),
+                "the notch faces two risers and must still grow exactly one bank: two would " +
+                "put coplanar same-facing walls in one cell, which is the flicker this pins");
         }
     }
 }

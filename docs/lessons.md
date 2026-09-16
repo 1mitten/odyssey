@@ -496,6 +496,54 @@ Four of these cost more than ten minutes each.
   fine at one scale and useless at another, and the arithmetic tells you which before the screenshot
   does.
 
+## A tint aimed at a property a shader does not declare fails silently
+
+The owner reported the grass clumps drawing yellow when they should be green. It took **three wrong
+explanations reasoned out of the source** before anyone measured, which is the standing lesson in
+this file arriving again, so the method is worth recording as much as the answer.
+
+- **`Material.SetColor` on a property the shader does not declare does nothing and reports
+  nothing.** `MaterialCache` writes `_BaseColor` and `_Color`. The grass clumps use
+  `Synty/Foliage`, which declares neither, so every value ever put in the foliage tint table was
+  decorative — the table looked like a working lever for as long as nobody moved it. Note that the
+  same file reaches emission through `_Emission_Color` and the cutout through
+  `_Alpha_Clip_Threshold`, both Synty Shader Graph names: the evidence that the pack does not use
+  URP naming was already in the file, two lines above the code that assumed it did.
+- **Synty foliage is procedural.** There is no albedo texture to tint. `Synty/Foliage` mixes a leaf
+  from `_Leaf_Base_Color`, `_Leaf_Noise_Color` and `_Leaf_Noise_Large_Color`, and the last of those
+  is `(0.50, 0.58, 0.06)` — the near-zero blue against a red nearly as high as the green is exactly
+  what "straw" is. Those three are the only handles there are.
+- **To turn a yellow-green green, bring red down.** Lifting blue is the instinct and it is a weak
+  handle, because green is a low-blue colour too: multiplying 0.06 by two is still 0.12. The
+  multipliers that work look lopsided (`0.55, 1.00, 2.20`) and that is why.
+- **Two honest pictures of one asset disagreeing is the tell.** `ScatterSheet` instantiates prefabs
+  untouched and showed green clumps; the board drew the same clumps yellow. That difference *is* the
+  bug localised to the draw path, and it was sitting in the logs from the first run. The other half
+  of the answer was that the ground is deliberately lifted by `(1.04, 1.30, 1.55)` while the tufts
+  were not moved at all, so even correct art reads warm on a cooled field.
+- **Enumerate, do not guess at names.** `TintProbe`
+  (`unity.sh exec Odyssey.EditorTools.TintProbe.Run`) prints each module's material, its shader, and
+  every colour property that shader actually declares. A list of eleven plausible names matched
+  none of them; asking the shader took one run and answered it completely. Reach for it whenever a
+  tint, an emission or a cutoff appears to have no effect.
+
+## Coplanar surfaces flicker only when they face the same way
+
+A bank fills its cell in plan, so an inside corner where two terrace steps meet was drawing two
+banks in one cell, turned ninety degrees to each other. The side wall of one then lands in the same
+plane as the *back* wall of the other, **facing the same way**, and the depth buffer has nothing to
+choose between them — so it picks whichever rounds higher, and the choice changes as the camera
+moves. That is z-fighting, and the owner saw it before any test did.
+
+The distinction is the useful part. Coplanar surfaces with *opposite* normals are harmless, because
+back-face culling removes one of them from every viewpoint — which is why a straight run of banks,
+whose touching walls face away from each other, never flickered. Only the corner did. When hunting a
+flicker, look for same-facing coplanar pairs and ignore back-to-back ones.
+
+It is also worth noting what no test could have caught: every mesh was watertight, every face was
+wound correctly, every instance was in the right place, and the fault was a *relationship between
+two of them*. Geometry tests check one mesh at a time.
+
 ## Getting the licensed packs into a worktree without copying or committing them
 
 A git worktree is a fresh checkout, and `Assets/Synty/` is gitignored, so a worktree has no art at

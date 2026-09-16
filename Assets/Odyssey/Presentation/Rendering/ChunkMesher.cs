@@ -311,15 +311,23 @@ namespace Odyssey.Presentation.Rendering
             // Daylit on the same terms as the ground it stands in, and it has to be asked rather
             // than assumed: a tuft that kept dimming while the terrace under it stopped would be
             // the same fault, a layer smaller and much harder to see.
-            int tint = TintCode.Daylit(TintCode.FoliageBase, OpenToTheSky(index, y));
+            bool daylit = OpenToTheSky(index, y);
 
             for (int slot = 0; slot < count; slot++)
             {
                 GroundScatter.Placement(x, z, slot,
                     out float offsetX, out float offsetZ, out float yaw, out float scale);
 
-                int module = _scatterModules[
-                    GroundScatter.VariantFor(x, z, slot, _scatterModules.Length)];
+                int which = GroundScatter.VariantFor(x, z, slot, _scatterModules.Length);
+                int module = _scatterModules[which];
+
+                // The tint follows the clump mesh rather than the tuft, and that is what makes a
+                // varied meadow free: a module is already its own instancing bucket, so three
+                // tints across three modules costs exactly what one tint across three modules did.
+                // Choosing per tuft would multiply the buckets by the number of tints, on the
+                // heaviest instanced thing in the world.
+                int tint = TintCode.Daylit(
+                    TintCode.Foliage(which % StuffPalette.FoliageTintCount), daylit);
 
                 // Lifted at the tuft's own position rather than the cell's, because the cell is
                 // tilted: a tuft near the low corner of a sloping cell would otherwise float, and
@@ -429,6 +437,25 @@ namespace Odyssey.Presentation.Rendering
 
             if (!OpenToTheSky(index, y)) return;
 
+            // **One bank to a cell, even at an inside corner where two steps meet.**
+            //
+            // This is a z-fighting fix and the fault is worth recording, because every piece of it
+            // is individually correct. A bank fills its cell in plan, so two banks in one cell are
+            // two boxes turned ninety degrees to each other — and the side wall of the first lands
+            // in the same plane as the *back* wall of the second, facing the same way. Coplanar
+            // surfaces with opposite normals are harmless, because back-face culling removes one of
+            // them from every viewpoint; coplanar surfaces facing the *same* way are two candidates
+            // for the same pixel with nothing to separate them, and the depth buffer picks whichever
+            // rounds higher. That is the flickering the owner saw, and it moves with the camera
+            // because the rounding does.
+            //
+            // A straight run has no such problem: the touching walls of two neighbouring banks face
+            // away from each other, so one is always culled. It is only the corner.
+            //
+            // Drawing one is also the better picture. Two stepped banks crossing at a corner put
+            // their treads at different heights through one another, which reads as rubble rather
+            // than as a path; one bank fills the cell, meets the other riser along its side, and
+            // the corner is still somewhere a colonist can walk up.
             for (int dir = 0; dir < Directions.Count; dir++)
             {
                 int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
@@ -452,6 +479,7 @@ namespace Odyssey.Presentation.Rendering
                 AddBody(batch, module, TintCode.Daylit(TintCode.Terrain(terrain), open: true),
                     GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
                     Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f)));
+                return;
             }
         }
 

@@ -144,6 +144,7 @@ namespace Odyssey.Presentation.Rendering
                 if (material.HasProperty(AlphaClipThresholdId)) material.SetFloat(AlphaClipThresholdId, FoliageClipThreshold);
                 if (material.HasProperty(CutoffId)) material.SetFloat(CutoffId, FoliageClipThreshold);
                 material.renderQueue = FoliageQueue;
+                GradeSyntyFoliage(material, source, colour);
             }
 
             _cache.Add(key, material);
@@ -175,6 +176,54 @@ namespace Odyssey.Presentation.Rendering
         {
             if (material.HasProperty(BaseColorId)) material.SetColor(BaseColorId, colour);
             if (material.HasProperty(ColorId)) material.SetColor(ColorId, colour);
+        }
+
+        /// <summary>
+        /// The three colours <c>Synty/Foliage</c> actually builds a leaf out of.
+        ///
+        /// <para>It is a <em>procedural</em> shader: there is no albedo texture to tint and no
+        /// <c>_BaseColor</c> to multiply. The leaf colour is mixed from a dark base and two noise
+        /// colours, and those are the only handles on it there are.</para>
+        /// </summary>
+        static readonly int[] SyntyLeafColourIds =
+        {
+            Shader.PropertyToID("_Leaf_Base_Color"),
+            Shader.PropertyToID("_Leaf_Noise_Color"),
+            Shader.PropertyToID("_Leaf_Noise_Large_Color"),
+        };
+
+        /// <summary>
+        /// Grade a Synty foliage material by the tint, on the properties it really has.
+        ///
+        /// <para><b>Why this exists, and why it was invisible.</b> <see cref="SetColour"/> writes
+        /// <c>_BaseColor</c> and <c>_Color</c>, which is right for URP Lit and for the pack's
+        /// ordinary materials. <c>Synty/Foliage</c> declares neither, so every value ever put in
+        /// the foliage tint table did exactly nothing — a tint aimed at a property a shader does
+        /// not declare fails silently, with the art drawing in its own colour and nothing anywhere
+        /// reporting a problem. The table looked like a working lever and was not, which is why
+        /// three separate explanations for yellow grass were reasoned out and all three were wrong.
+        /// <c>TintProbe</c> is the instrument that settled it by enumerating what the shader really
+        /// declares instead of guessing at names.</para>
+        ///
+        /// <para><b>Multiplied, not set.</b> These three carry the art — the clumps are straw
+        /// because <c>_Leaf_Noise_Large_Color</c> is <c>(0.50, 0.58, 0.06)</c> and that blue is
+        /// near zero — so replacing them would throw the pack's work away and flatten every clump
+        /// to one colour. Multiplying grades what the artist made, which is what every tint table
+        /// in this file is written to mean.</para>
+        ///
+        /// <para>Alpha is left alone. On this shader it is not opacity; the cutout comes from the
+        /// leaf texture and <see cref="FoliageClipThreshold"/>.</para>
+        /// </summary>
+        static void GradeSyntyFoliage(Material material, Material source, Color colour)
+        {
+            foreach (int id in SyntyLeafColourIds)
+            {
+                if (!material.HasProperty(id) || !source.HasProperty(id)) continue;
+
+                Color art = source.GetColor(id);
+                material.SetColor(id, new Color(
+                    art.r * colour.r, art.g * colour.g, art.b * colour.b, art.a));
+            }
         }
 
         static void SetEmission(Material material, Color emission)
