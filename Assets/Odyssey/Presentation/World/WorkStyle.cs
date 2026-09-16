@@ -345,7 +345,14 @@ namespace Odyssey.Presentation.World
             WorkStroke.Axe, ModuleIds.ToolAxe, ChipRecipe.Wood,
             aimFromCentre: 0.15f,
             // Nothing: an axe bites a few centimetres into a trunk and the chips already read.
-            tilt: -30f, gripFraction: 0.16f, bladeRoll: 0f, bladeYaw: 0f, offHandSpacing: 0.11f,
+            // The off hand sits a quarter of the haft above the working one rather than 0.11, and
+            // this is a correction rather than a preference. At 0.11 the two fists were about 8 cm
+            // apart on a 0.74 m haft and a hand is about 9 cm across, so the hand meshes occupied
+            // the same space and the grip read as one arm passing through the other (owner,
+            // 2026-09-16). Measured, the *forearms* were never the problem: they are 0.35 to 0.51 m
+            // apart across the whole stroke and could not intersect if they tried. It was always
+            // the hands, and no amount of routing one elbow over the other could have fixed it.
+            tilt: -30f, gripFraction: 0.16f, bladeRoll: 0f, bladeYaw: 0f, offHandSpacing: 0.26f,
             chipStandOff: 0f);
 
         /// <summary>

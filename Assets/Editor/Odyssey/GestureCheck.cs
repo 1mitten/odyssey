@@ -86,6 +86,7 @@ namespace Odyssey.EditorTools
         {
             Motion = motion;
             Execute(exitWhenDone);
+            if (!exitWhenDone) ShotFolder.Reveal($"{Tag}-*.png");
         }
 
         static void Execute(bool exitWhenDone)

@@ -158,6 +158,25 @@ namespace Odyssey.Presentation.World
         /// <summary>See <see cref="CrouchedFigures"/>. Non-zero means some rig has no legs.</summary>
         public int LeglessFigures { get; private set; }
 
+        /// <summary>
+        /// How far the off forearm sits above the working one at the moment of the blow, in metres.
+        /// Positive is over, negative is under.
+        ///
+        /// <para>The grip's answer to <see cref="MeasuredBladeGap"/>, and needed for the same
+        /// reason. Which arm passes over which cannot be read off the pictures this project takes:
+        /// in profile the two arms are one behind the other, and from the front the tree is in the
+        /// way of the very place they cross. It is a number, so it should be reported as one.</para>
+        ///
+        /// <para>Measured at the forearms rather than the hands because the hands are both on the
+        /// haft within a few centimetres of each other by construction — where they *cross* is the
+        /// forearm, which is also the part whose mesh intersects the other arm's.</para>
+        /// </summary>
+        public float MeasuredOffArmAbove { get; private set; }
+
+        /// <summary>How far apart the two forearms are at all, in metres. Under about 0.15 m they
+        /// intersect whatever their relative height. See <see cref="MeasuredOffArmAbove"/>.</summary>
+        public float MeasuredArmGap { get; private set; }
+
         /// <summary>Which style a pawn is worked in, the override first. See <see cref="StyleOverride"/>.</summary>
         int StyleFor(int jobDef) =>
             StyleOverride >= 0 && StyleOverride < Styles.Length
@@ -803,6 +822,27 @@ namespace Odyssey.Presentation.World
         public const float DeepestCrouch = 0.45f;
 
         /// <summary>
+        /// How far out from the shoulder the off-hand elbow is sent, in metres. Keeps it clear of
+        /// the ribs — a left arm reaching across the body for a haft held in the right hand folds
+        /// its elbow straight through the torso if the pole is anywhere near the midline.
+        /// </summary>
+        public const float OffHandElbowOut = 1.0f;
+
+        /// <summary>
+        /// How far *above* the shoulder the off-hand elbow is sent, in metres, and therefore which
+        /// of the two arms passes over the other.
+        ///
+        /// <para>Positive lifts the off elbow so the forearm crosses above the working arm.
+        /// Negative drops it underneath, which is what this was — the two arms reach the same way
+        /// along one haft, so with a low elbow they lie in the same place and their meshes
+        /// intersect at the wrists.</para>
+        ///
+        /// <para>Modest on purpose: an elbow much above the shoulder is a chicken wing, and reads
+        /// as a person struggling with something heavy rather than gripping it.</para>
+        /// </summary>
+        public const float OffHandElbowLift = 0.35f;
+
+        /// <summary>
         /// Stoop to the ground and straighten up again: the lift, the stow, and whatever else ends
         /// up reaching the floor.
         ///
@@ -961,10 +1001,60 @@ namespace Odyssey.Presentation.World
                 // elbow straight through the ribs and out the other side. A pole beside the
                 // shoulder on the arm's own side cannot do that: the elbow has to leave the torso
                 // to get there.
+                // **And it goes over the top of the working arm, not under it.**
+                //
+                // The pole used to be out to the left and a long way *down*, which is where a left
+                // elbow lives when the arm is doing nothing. With both fists on one haft it is the
+                // wrong answer: the two forearms end up nearly parallel and reaching the same way,
+                // and the lower elbow puts the off arm underneath the working one, where the two
+                // meshes intersect at the wrists. A colonist appeared to be swinging an axe through
+                // its own forearm (owner, 2026-09-16).
+                //
+                // Which arm passes over which is not a detail the solver can be left to settle. It
+                // is decided entirely by the pole, because every position on the spin about the
+                // shoulder-to-haft line is an equally correct answer to "put the fist here" — see
+                // TwoBoneIk.Reach. So it is stated, and stated as a lift relative to the shoulder
+                // rather than an absolute point, so it holds on every rig's proportions.
                 Transform body = figure.Transform;
-                Vector3 pole = (figure.LeftUpperArm != null ? figure.LeftUpperArm.position : body.position)
-                               - body.right * 1.0f - body.up * 0.7f;
+                Vector3 shoulder = figure.LeftUpperArm != null ? figure.LeftUpperArm.position : body.position;
+
+                // **The pole is perpendicular to the arm, not fixed to the body**, and that is the
+                // whole of what keeps the off arm over the working one for the *whole* stroke.
+                //
+                // A pole at a fixed place beside the shoulder holds while the haft is out in front
+                // and stops holding the moment it goes overhead: the line from shoulder to grip
+                // swings up past the pole, the elbow solution rolls under with it, and the off arm
+                // ends up beneath the working one. Measured across the stroke, a fixed pole put the
+                // off forearm 0.17 m clear at the blow and 0.075 m *under* at the top of the raise
+                // — and two forearms on one haft are a hand thick each, so anything near zero is
+                // two meshes in the same place. That is the clipping the owner saw, and it is
+                // invisible at the blow, which is the only instant the old sheet photographed.
+                //
+                // Taking the up-and-out direction square to the arm instead makes the lift mean the
+                // same thing wherever the haft has got to.
+                Vector3 along = target - shoulder;
+                Vector3 up = body.up - along * (Vector3.Dot(body.up, along) / Mathf.Max(along.sqrMagnitude, 1e-6f));
+                if (up.sqrMagnitude < 1e-6f) up = body.up;
+
+                Vector3 pole = shoulder
+                               + up.normalized * OffHandElbowLift
+                               - body.right * OffHandElbowOut;
                 TwoBoneIk.Reach(figure.LeftUpperArm, figure.LeftLowerArm, figure.LeftHand, target, pole);
+
+                if (figure.LeftLowerArm != null && figure.RightLowerArm != null)
+                {
+                    MeasuredOffArmAbove =
+                        figure.LeftLowerArm.position.y - figure.RightLowerArm.position.y;
+
+                    // And how far apart they are at all, which is the question height was standing
+                    // in for. Two forearms are about a hand thick each, so under roughly 0.15 m
+                    // between them is two meshes occupying the same space whatever their relative
+                    // height — and stacking them vertically cannot fix that, because at the top of
+                    // the raise the working arm is overhead and genuinely belongs above the off
+                    // arm. Room has to come from the hands being apart along the haft.
+                    MeasuredArmGap =
+                        Vector3.Distance(figure.LeftLowerArm.position, figure.RightLowerArm.position);
+                }
             }
             else
             {

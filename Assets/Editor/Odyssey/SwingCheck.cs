@@ -106,6 +106,7 @@ namespace Odyssey.EditorTools
         {
             Style = style;
             Execute(exitWhenDone);
+            if (!exitWhenDone) ShotFolder.Reveal($"{Tag}-*.png");
         }
 
         static void Execute(bool exitWhenDone)
@@ -240,6 +241,13 @@ namespace Odyssey.EditorTools
                     // the blade arrives at the trunk with room to have travelled — then reads as
                     // whatever you please. Across the line it reads as what it is.
                     PlayScene.Shoot(camera, Waist(now), 12f, SideOn(now), 6.5f, $"Logs/{Tag}-{sample}.png");
+
+                    // Across the whole stroke, not only at the blow. Two forearms on one haft are
+                    // about a hand thick each, so anything under about 0.2 m apart is two meshes in
+                    // the same place however far "above" the number says the off arm is — and the
+                    // arms are closest together somewhere in the raise, not at the strike.
+                    Debug.Log($"[Swing] sample {sample}: off forearm " +
+                              $"{drawn.MeasuredOffArmAbove:+0.000;-0.000} m above the working one, {drawn.MeasuredArmGap:0.000} m apart");
                 }
 
                 // The blow itself, pinned rather than hoped for.
@@ -301,6 +309,37 @@ namespace Odyssey.EditorTools
                     Debug.Log($"[Swing] wrote {path}");
                 }
 
+                // The hands, from in front of the worker and from over its shoulder.
+                //
+                // **The side-on shot cannot answer this and never could.** In profile the two arms
+                // are one behind the other, so which of them passes over the other — the thing the
+                // owner is looking at — is precisely what is hidden. The grip is the one part of
+                // this pose where the useful camera is the one square to the chest.
+                //
+                // The bearings are figure-relative, and the offsets are not the obvious ones: the
+                // mesh inside a Synty character prefab is turned ninety degrees from its root, so
+                // the transform's own yaw is a *profile* view and the front is a further 270.
+                // docs/lessons.md, "Photographing a figure".
+                // All the way round, at the blow, because a bearing that is "the front" for one
+                // harness is not for another: the figure here is turned to face its tree, so the
+                // offset that gave a profile in GestureCheck gives something else again. Shooting
+                // the circle costs four pictures and settles it without an argument.
+                drawn.HeldPhase = 0.9f;
+                foreach (float turn in new[] { 0f, 90f, 180f, 270f })
+                {
+                    drawn.Sync(Current(), activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                    drawn.Evaluate(FrameSeconds);
+
+                    PawnView who = FirstWorker(Current());
+                    if (!who.Working) break;
+                    drawn.TryGetFacing(who.Id, out float about);
+
+                    PlayScene.Shoot(camera, Chest(drawn, who), 8f, about + turn, 4.5f,
+                        $"Logs/{Tag}-arms-{turn:000}.png");
+                    PlayScene.Shoot(camera, Chest(drawn, who), 40f, about + turn, 4.5f,
+                        $"Logs/{Tag}-arms-over-{turn:000}.png");
+                }
+
                 drawn.HeldPhase = null;
                 drawn.Styles[Style] = drawn.Styles[Style].With(bladeYaw: yawWas);
                 drawn.RegripTools();
@@ -318,7 +357,7 @@ namespace Odyssey.EditorTools
                           $"strike {figures.MeasuredReach:0.00} m, of which {figures.MeasuredStrikeSideways:0.00} m " +
                           $"sideways; edge lands {figures.MeasuredBladeHeight:0.00} m off the ground, " +
                           $"{figures.MeasuredBladeGap:0.00} m from the middle of the trunk; " +
-                          $"{figures.Chips?.ChipsThrown ?? 0} chips thrown");
+                          $"{figures.Chips?.ChipsThrown ?? 0} chips thrown; off forearm {figures.MeasuredOffArmAbove:+0.000;-0.000} m above the working one");
             }
             catch (Exception e)
             {
@@ -364,6 +403,17 @@ namespace Odyssey.EditorTools
             toWork.y = 0f;
             return PawnPose.YawOf(toWork.sqrMagnitude > 1e-4f ? toWork : Vector3.forward) + 90f;
         }
+
+        /// <summary>
+        /// The drawn figure's chest, for the grip shots. The figure's own position and not the
+        /// pawn's cell, because <c>WorkStance</c> steps a working colonist off its cell to put its
+        /// blade in the wood — up to a metre and a half, which at four metres' range is most of
+        /// the frame.
+        /// </summary>
+        static Vector3 Chest(PawnFigureDirector figures, in PawnView pawn) =>
+            (figures.TryGetFeet(pawn.Id, out Vector3 feet)
+                ? feet
+                : CellMetrics.FloorCentre(pawn.Cell)) + Vector3.up * 1.5f;
 
         static Vector3 Waist(in PawnView pawn) =>
             (CellMetrics.FloorCentre(pawn.Cell) + CellMetrics.FloorCentre(pawn.WorkCell)) * 0.5f
