@@ -299,3 +299,37 @@ is a real shader because the pack's meshes are not readable and their normals ca
 load. Two things that *were* wrong and are fixed on the same day, and would have muddied the
 test if left: one of the three clumps was a flat olive-brown patch, and the sky's underside was a
 dark grey that showed as a band between the board's rim and the horizon.
+
+## Compiling the game code while the editor holds the project
+
+`scripts/unity.sh` refuses to run while the editor is open, and the editor is often open because the
+owner is doing visual work in it. That does not mean code has to be written blind until the editor
+closes. Everything the assemblies need is already on disk:
+
+```
+dotnet build <scratch>/PresCheck.csproj   # Assets/Odyssey/Presentation/**/*.cs
+```
+
+against `Library/ScriptAssemblies/*.dll` (the compiled package and sibling assemblies, minus the one
+being compiled) and `<Unity>/Editor/Data/Managed/UnityEngine/UnityEngine*.dll`. Add
+`Library/PackageCache/com.unity.ext.nunit@*/net40/unity-custom/nunit.framework.dll` to compile the
+test assembly too. That catches every compile error in seconds. It is **not** a substitute for
+`scripts/unity.sh test editmode`, which is still the gate — it only stops a broken handoff.
+
+Pure layout and arithmetic can be *run* the same way: reference the built DLL from a throwaway
+`net8.0` console project and print the numbers. `Mathf`, `Color` and the rest of the value types in
+`UnityEngine.CoreModule` are managed code and work outside the player. That is how the surround's
+ring coverage was checked to be exactly 100.0000% of the area outside the board before anything was
+committed.
+
+Two traps while doing it. MSBuild reads `<HintPath>` as XML, so a Windows path written with
+backslashes dies on `MSB4025: hexadecimal value 0x0C is an invalid character` — the `` in a path
+segment. **Write every path in a generated csproj with forward slashes**; MSBuild accepts them and
+the error message points nowhere near the cause.
+
+And a shell trap that is not a documentation error: the user PATH does put Python 3.13 ahead of
+`WindowsApps`, but a shell started before that change inherits the old environment, so `python3`
+resolves to the Microsoft Store stub and answers *"Python was not found"* to everything —
+`build_wiki.py --check` included. It looks exactly like Python not being installed. Check with
+`which -a python3`, and in a stale session call
+`$LOCALAPPDATA/Programs/Python/Python313/python.exe` directly rather than believing the stub.
