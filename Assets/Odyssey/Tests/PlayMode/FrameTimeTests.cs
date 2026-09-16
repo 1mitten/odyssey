@@ -92,7 +92,7 @@ namespace Odyssey.Tests.PlayMode
             var camera = cameraObject.AddComponent<Camera>();
             camera.fieldOfView = 40f;
             camera.nearClipPlane = 0.3f;
-            camera.farClipPlane = 600f;
+            camera.farClipPlane = 1800f; // as the play scene, so the surround is measured too
             var rig = cameraObject.AddComponent<SliceCameraRig>();
 
             var sun = new GameObject("Sun").AddComponent<Light>();

@@ -72,6 +72,13 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("What the colony starts with. Playtest gives it felling work near the start at once; Bare gives the same colony and no orders. The default flips to Bare when the designate tool lands.")]
         public StartingScenario scenario = StartingScenario.Playtest;
 
+        [Tooltip("Carry the land on past the rim of the board, so it does not end in mid-air. Decoration only: nothing out there is a cell.")]
+        public bool terrainSkirt = true;
+
+        [Tooltip("How much of the board's own tree density the surround gets. 100 continues the wood; lower is the lever for a machine that cannot afford it.")]
+        [Range(0, 100)]
+        public int skirtTreeDensity = 100;
+
         [Tooltip("Which faces the colonists get. 0 draws a fresh cast every session; any other value pins one, and the log prints the value each session used so a cast you liked can be kept.")]
         public int colonistLookSeed = 0;
 
@@ -102,6 +109,18 @@ namespace Odyssey.Presentation.Bootstrap
         MapGenDef? _gen;
         double _accumulator;
         float _tickAlpha;
+
+        /// <summary>
+        /// How far this frame sits between two ticks, 0 to 1.
+        ///
+        /// Exposed because the pick hit-test has to build its box from the same number the figure
+        /// is drawn with. When it did not, the box sat at the tick boundary and the figure had
+        /// moved on, so a walking colonist was not clickable where they appeared.
+        /// </summary>
+        public float TickAlpha => _tickAlpha;
+
+        /// <summary>Cost units a pawn retires in one tick, the other half of that same tween.</summary>
+        public int MovePerTick => PawnContent.Core().Movement.movePerTick;
         readonly Stopwatch _frameTimer = new Stopwatch();
         double _renderMs;
         double _tickMs;
@@ -202,6 +221,16 @@ namespace Odyssey.Presentation.Bootstrap
                 ScatterDensity = grassScatter,
                 ColonistLookSalt = lookSalt,
             };
+            _renderer.Skirt.Enabled = terrainSkirt;
+            _renderer.Skirt.TreeDensityPercent = skirtTreeDensity;
+            if (terrainSkirt)
+            {
+                _renderer.Skirt.Build();
+                Debug.Log($"[Odyssey] surround: {_renderer.Skirt.GroundInstances} ground tiles, " +
+                          $"{_renderer.Skirt.TreeInstances} trees and {_renderer.Skirt.TuftInstances} tufts " +
+                          $"beyond the rim, at the board's own " +
+                          $"{_renderer.Skirt.MeasuredTreeDensity} trees per thousand cells");
+            }
             _actorMaterial = new Material(library.FallbackMaterial) { name = "Odyssey/Actor" };
             // High-contrast against grass, earth and stone, which tan was not.
             _actorMaterial.SetColor("_BaseColor", new Color(0.98f, 0.36f, 0.20f));
@@ -426,6 +455,7 @@ namespace Odyssey.Presentation.Bootstrap
                 $"  above: {above}\n" +
                 $"draw calls {_renderer.DrawCalls}   instances {_renderer.InstancesDrawn}" +
                 $"   chunks {_renderer.ChunksDrawn}   materials {_renderer.MaterialCount}" +
+                $"   surround {_renderer.Skirt.InstancesDrawn}" +
                 $"   figures {_figures?.FigureCount ?? 0} @ {_figures?.FastestSpeed ?? 0f:0.0} m/s\n" +
                 $"frame {_smoothedFrameMs:0.00} ms ({(_smoothedFrameMs > 0f ? 1000f / _smoothedFrameMs : 0f):0}fps)" +
                 $"   submit {_renderMs:0.00} ms   tick {_tickMs:0.00} ms   remeshed {_renderer.ChunksMeshedThisFrame}\n" +

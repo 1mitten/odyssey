@@ -25,6 +25,57 @@ Instance data per chunk is rebuilt only when the chunk is dirty, and the sim sig
 
 **Still to be measured** (`d-03-rendering.md`, performance half): draw calls and frame time at full scale, with emissive materials, real-time shadows and the cut-away all enabled, plus whether the GPU Resident Drawer beats explicit `RenderMeshInstanced` for this shape. Matching the look is part of the budget, not something to switch off to hit a number.
 
+## 2a. The land beyond the board
+
+The board is finite and the simulation has no cells past it. Until 2026-09-16 that was exactly what
+it looked like: the meadow stopped at the rim in mid-air over the sky gradient, and the whole thing
+read as a board game on a table rather than as a clearing in a landscape. **The surround is
+decoration that fixes the framing and nothing else** (`TerrainSkirt`, `SkirtLayout`).
+
+What it is not: it is not a second world. Nothing out there is a cell, so nothing is pathable,
+selectable, buildable, fellable or in the save. `SlicePicker` cannot return a cell that does not
+exist, which is why the surround needs no defence against being clicked.
+
+Four decisions, all taken with the owner on 2026-09-16:
+
+- **The meadow continues, thinning into haze.** Not a framing ring of hills and not a bare plane:
+  the same ground and the same wood carried outwards until linear fog has closed over it.
+- **A fixed skirt, built once, reaching 1,220 m past the rim.** Concentric rings of instanced
+  ground tiles, one cell per tile at the seam and coarsening outwards, so 1.2 km of ground costs
+  about 7,900 instances rather than about 200,000. Each ring is covered by four strips, each split
+  into a whole number of equal tiles that fills it exactly — so the rings cannot gap (sky showing
+  through) or overlap (coplanar ground z-fighting), and the board's dimensions need not divide
+  anything. Fog is opaque by 1,100 m, so the skirt ends where nothing can see it end. The camera's
+  far plane went from 600 m to 1,800 m to contain it.
+- **The playable area still reads as bounded**, but softly: the surround desaturates towards its own
+  luminance, ramping from nothing at the rim to full strength 18 m out. A step change at the join
+  is the exact tell the feature exists to remove, so the change is a ramp and never a line.
+- **Below ground level the surround is not drawn.** A sheet of landscape sitting over an open mine
+  would bury the thing the player went down to look at. The ground is drawn from the surface layer
+  upwards and the trees a layer higher again, which is the ordinary slice rule applied to a thing
+  that has no layers of its own.
+
+**The grass goes with it.** Tufts that stopped at the boundary drew a straight line three hundred
+metres long between a field of grass and bare ground — a better advertisement for where the board
+ends than the mid-air edge ever was. The first ring is strewn by the same hash of the same
+coordinates the mesher uses inside the board, at the same density, fading to nothing 20 m out. A
+clone without the licensed packs gets bare ground out there, exactly as it does on the board.
+
+**The surround measures the board rather than being configured.** The surface level, the terrain and
+its tint, which trees grow and how thickly are all read off the generated map, so a bare board gets
+bare ground, the wooded meadow gets woodland at its own density, and the ruined city gets whatever
+the ruined city has. Nothing here needs changing when a new map type is added, and the surround can
+never disagree with the board about what the board is.
+
+Cost, and where the lever is. The ground is cheap and fixed; the trees are the only part with a real
+vertex cost — about 3,500 of them on the 120-cell wooded board, roughly what the board itself
+carries. `OdysseyBootstrap.skirtTreeDensity` scales that as a percentage for a machine that cannot
+afford it, and `terrainSkirt` turns the whole thing off. Batches are split by strip (ground) and by
+an 80 m sector grid (trees) so that the half of the surround behind the camera is culled rather than
+drawn, and only trees within 10 m of the rim are in the shadow pass — the sun is 72 degrees
+overhead, so a tree casts a couple of metres and a generous range would buy a thousand extra casters
+and no visible shadow.
+
 ## 3. The camera and the slice
 
 **The camera** is a three-quarter orbit at a constrained pitch, matching the concept renders: pan across x/z, zoom, rotate in 90° steps or freely, and a vertical control that changes the **active layer** rather than the camera height.
@@ -72,6 +123,137 @@ RimWorld's building materials colour the thing built from them. With tens of tho
 Pawns are `SkinnedMeshRenderer` GameObjects — 50 colonists and a few hundred animals is well inside what Unity handles conventionally, and they need Mecanim anyway. The rig is the Polygon ~50-bone humanoid with one shared controller (`e-02-characters-animation.md`); the 88-bone Sidekick rig was rejected as roughly double the cost for no benefit at this count.
 
 Pawns are visible only on the drawn layers and are culled with the slice, so a colonist three floors down does not draw.
+
+## 6a. Work poses, where no clip exists
+
+None of the packs contains a work animation. `AnimationBaseLocomotion` ships idle, walk, run,
+sprint, crouch, in-air, turns and transitions plus additive lean and look, and the character packs
+ship no clips at all. There is no swing, no strike, no lift and no carry anywhere in 7,222 imported
+assets. A colonist felling a tree therefore stood in the standing idle, breathing, for the ten
+seconds the job takes, and then the tree fell over — the single least readable thing on the board,
+because the one moment the player most wants to see is the moment work happens.
+
+**The decision (2026-09-16): compute the pose rather than author the clip.** Every character in the
+packs is a Humanoid rig, so the arm and torso angles can be asked for by *role* —
+`HumanBodyBones.RightUpperArm` and its four neighbours — and one set of angles drives all 61 faces
+without touching a single character. `WorkSwing` holds the timing and the angles as pure arithmetic
+with a test against it; `PawnFigureDirector` lays the result over whatever the gait mixer produced,
+in the same frame, just before the figure is drawn.
+
+Four things about it are deliberate and each was a way of getting it wrong:
+
+- **The pitch is applied about the *figure's* right-hand axis, not the bone's local axis.** Which
+  way a bone's local axes point is a decision made by whoever rigged the character. The plane an
+  axe swings in is a fact about the figure, and is the same on every rig the packs will ever hold.
+- **The stroke is not a sine.** It is three unequal parts — a long eased raise, a short
+  accelerating strike, and a dwell with the blade in the wood. A symmetric swing reads as a
+  metronome and a swing with no dwell reads as waving; neither reads as work.
+- **The pose is laid over the clip, not in place of it.** The colonist goes on breathing.
+- **It freezes when the game is paused.** There is no pause signal in the snapshot, so the director
+  infers it from the tick standing still. Without that, a swinging colonist would be the only thing
+  moving on a paused board, since a pawn that has stopped moving settles into the idle by itself.
+- **The three angles are independent, which took work.** The spine carries the shoulders through the
+  skeleton, so folding the back further into the blow also swung both arms, and no amount of tuning
+  could settle one without moving the other. The director subtracts the spine's own pitch back out
+  of the shoulders, after which `Shoulder` means the upper arm's pitch against the world — which is
+  what anybody judging a photograph is actually looking at.
+- **The figure steps up to the tree, and that is presentation's business.** A cell is 2.5 m and a
+  person is half of one, so a colonist drawn on the cell centre is either inside the trunk or
+  shoulder against it, and in neither is there room for an axe to travel. `WorkStance` draws a
+  working figure wherever puts its blade in the wood, eased in by the same weight that eases in the
+  swing, so it reads as setting oneself. Nothing else moves: the pawn is still in its cell for
+  picking, for the cursor and for the whole simulation.
+- **The stand is solved from the whole strike offset, not from a reach.** The first version stood
+  the figure at the length of the line from its feet to its edge. That is right for a swing that
+  comes straight down in front and wrong for one that comes over the shoulder: of 1.68 m of
+  measured strike, **1.12 m is sideways**, so a figure stood at 1.68 m puts its axe a metre beside
+  the tree. Reach is not a scalar once the swing is diagonal. The figure now stores the whole
+  offset in its own frame and the stand is wherever puts that offset's far end in the trunk.
+- **Contact is measured, not photographed.** `PawnFigureDirector.MeasuredBladeGap` reports how far
+  the edge finished from the middle of what it was aimed at, on the frame that was drawn — 0.19 m
+  against a trunk about 0.6 m through, so the blade is in the wood. Twice the swing was judged to
+  be missing from a three-quarter photograph when it was not; the woodcutter and her tree sit at
+  different depths in that view and the gap can be read as anything.
+- **Both hands are on the haft, and the off hand reaches for it.** Angles pose the hand that holds
+  the tool and can never pose the hand that has to meet it: shoulders are the better part of half a
+  metre apart, so a left arm given a fraction of the right arm's angles ends up in a plausible
+  attitude holding nothing. `ArmIk` is the ordinary two-bone analytic solve, run in the same pass
+  as the rest of the work pose, and the same call will hold the other end of a stretcher or a
+  carried crate later.
+- **The axe is gripped by measurement, not by three Euler numbers.** Which way a prop's haft runs in
+  its own space is a decision made by whoever modelled it. So the haft is found — the long axis of
+  the combined mesh bounds — the head end is found, and the tool is laid along the forearm with the
+  grip in the palm. One tunable is left, `AxeBladeRoll`, because which way the edge faces is taste.
+  A fixed rotation tuned against one prefab hung the axe head-down by the hip, which reads as
+  carrying a hatchet rather than using one, and would have been wrong again for the next tool.
+
+The simulation's half of this is one signal: `PawnView.Working` and `PawnView.WorkCell`, published
+from `JobDriver.WorkFocus`. It is a cell rather than a flag because the pose needs a direction — a
+pawn that has stopped walking has no heading left to read, so without the work cell a colonist
+would swing at whatever they happened to be facing when they arrived. `WorkFocus` defaults to -1,
+so mining and building inherit the swing by overriding one expression.
+
+Two things about it are not obvious and both cost time on the way in. A `SkinnedMeshRenderer`
+caches the bone matrices handed to it by the animation update, so a bone written *after* that update
+moves anything parented to it and leaves the mesh where it was — the axe swung through a perfect arc
+while the colonist stood still. `forceMatrixRecalculationPerRender` on the figure's skinned
+renderers is the fix. And the sign of a limb rotation cannot be reasoned out from the axis name: a
+limb that hangs down travels forward under a *negative* pitch, while a spine, which starts upright,
+does the opposite, so one convention read off the axis gets one of the two wrong whichever way you
+read it. Both are in `docs/lessons.md`.
+
+A note on the harness itself, because it decides what can be settled. `SwingCheck` shoots **side on
+to the line between the woodcutter and her tree**, not from the board camera's three-quarter
+bearing. In three-quarter the two sit at different depths, and the one measurement that matters —
+whether the blade arrives at the trunk with room to have travelled — can be read as anything you
+like. It was, twice.
+
+**The pose itself is the owner's, settled by interview on 2026-09-16** rather than invented: the
+edge meets the wood angled about forty-five degrees down and in, cutting a felling scarf; the axe
+travels up past one shoulder and down diagonally across the body; it lands at waist height with the
+blade just into the bark; and both fists grip together at the butt of the haft. The roll of the
+blade follows from the first of those and is computed rather than dialled in — the bit is turned to
+face the way the head is travelling, so the edge bites at whatever angle the haft has reached.
+
+The axe itself is `ModuleIds.ToolAxe`, an ordinary catalogue row parented to the right hand for as
+long as the work lasts. A clone without the packs resolves it to null and colonists fell trees
+bare-handed, which is the same fallback every other piece of pack art has.
+
+### Debris: one director, one system, a recipe per material
+
+A blow with nothing coming off it reads as a colonist waving an axe near a tree, so a few chips fly
+on the frame the blade lands. `ChipDirector` owns that, beside `PawnFigureDirector` and disposed
+with it, and the design is meant to carry mining and everything after it:
+
+- **One particle system for the whole colony**, simulated in world space, so a single emitter
+  throws from wherever a blade happened to be. A system per figure would multiply draw calls by the
+  number of workers for a handful of quads.
+- **The material is a `ChipRecipe`**, not a director. Colour, size, speed, lifetime, count and
+  spread are all settable *per particle* at the moment of emission, so wood off an axe and stone
+  off a pick share the system, the material and the draw call. `ChipRecipe.Stone` is already
+  written. Adding a material costs a preset and a call, nothing else.
+- **Gravity is the one thing a recipe cannot have**, because it belongs to the system and applies
+  to everything in flight. Heavier debris is expressed by leaving the cut faster, smaller and dying
+  sooner, which at board-camera height reads the same.
+- **It is warmed on construction.** The first draw of a particle material compiles its shader
+  variant and allocates the system's buffers; left alone that lands on the frame the first axe
+  hits, which is the one frame anybody is watching. The warm throws eight transparent, zero-size
+  chips far below the board and steps the system once. It is a warm and not a guarantee — a
+  pipeline that defers compilation until a material is genuinely visible still pays once, and
+  doing better means a shader variant collection, which is a build-time job.
+- **The hard part is not the particles, it is knowing when.** For felling that is
+  `WorkSwing.Lands(previous, current)`: whether the stroke phase crossed the strike, which is three
+  questions rather than one — the ordinary crossing, the wrap that must not fire twice for one
+  blow, and a dropped frame that must still fire. It is pure arithmetic with its own tests, and it
+  is the part worth copying for mining rather than the particle setup.
+
+Chips are decoration in the same sense the grass tufts are: not simulation objects, not in a cell,
+not in the save, not in the state hash.
+
+**What this is not.** It is not a substitute for authored clips. When work animations exist — bought,
+or made in Blender against this rig — they replace the computed pose and `WorkSwing` goes. Until
+then this is the cheapest thing that makes the colony look like it is doing something, and it cost
+no art.
 
 ## 7. Presentation is a reader
 

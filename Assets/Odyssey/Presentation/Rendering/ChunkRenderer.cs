@@ -39,7 +39,19 @@ namespace Odyssey.Presentation.Rendering
             _model = model;
             _mesher = new ChunkMesher(model);
             _batches = new ChunkBatch?[model.Chunks.Count];
+            Skirt = new TerrainSkirt(model, _materials);
         }
+
+        /// <summary>
+        /// The land outside the board: decoration, drawn from the same materials and measured off
+        /// the same map, so the meadow does not end in mid-air at the rim.
+        ///
+        /// It lives here rather than beside the renderer because it shares the material cache and
+        /// because its draw calls have to be counted with everyone else's. A figure in the readout
+        /// that leaves the surround out is a figure that will be quoted at a milestone and be
+        /// wrong.
+        /// </summary>
+        public TerrainSkirt Skirt { get; }
 
         /// <summary>Unity layer the geometry is drawn on. Set before the first frame.</summary>
         public int GameObjectLayer { get; set; }
@@ -95,7 +107,14 @@ namespace Odyssey.Presentation.Rendering
         public int ScatterDensity
         {
             get => _mesher.ScatterDensity;
-            set => _mesher.ScatterDensity = value;
+            set
+            {
+                _mesher.ScatterDensity = value;
+                // The first ring of the surround is strewn at the same density, fading out. Kept
+                // in step here rather than read across at draw time so there is one setting, not
+                // two that can disagree about how grassy the meadow is.
+                Skirt.TuftDensity = value;
+            }
         }
 
         /// <summary>
@@ -122,6 +141,16 @@ namespace Odyssey.Presentation.Rendering
             InstancesDrawn = 0;
             ChunksDrawn = 0;
             ChunksMeshedThisFrame = 0;
+
+            // Before the board, not after it: the surround is the furthest thing in the scene, and
+            // submitting it first lets the depth buffer reject it behind the board rather than
+            // shading it and then overdrawing the lot.
+            Skirt.GameObjectLayer = GameObjectLayer;
+            Skirt.CastShadows = CastShadows;
+            Skirt.SubmitToGpu = SubmitToGpu;
+            Skirt.Render(activeLayer);
+            DrawCalls += Skirt.DrawCalls;
+            InstancesDrawn += Skirt.InstancesDrawn;
 
             var size = _model.Size;
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
@@ -242,7 +271,7 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
-        static void ResolveColour(int tintCode, bool fallback, float shade, out Color tint, out Color emission)
+        internal static void ResolveColour(int tintCode, bool fallback, float shade, out Color tint, out Color emission)
         {
             int value = TintCode.Value(tintCode);
             if (TintCode.IsFoliage(tintCode))
@@ -583,15 +612,23 @@ namespace Odyssey.Presentation.Rendering
         ///
         /// The rig's colour is the hue; this is the weight, and it lives with the drawing because
         /// it is a fact about how a cursor should sit on a scene rather than about which colour
-        /// was chosen. Low, by the owner's eye: a cursor is a note on the world, not a thing in it.
+        /// was chosen.
+        ///
+        /// Raised from 0.32 on the owner's eye, 2026-09-16: against the wooded meadow the cursor
+        /// was hard to pick out at a glance, which is the one job it has. Still short of solid,
+        /// because a cursor is a note on the world rather than a thing in it.
         /// </summary>
-        public const float BracketOpacity = 0.32f;
+        public const float BracketOpacity = 0.62f;
 
         /// <summary>
-        /// Emission on the cursor. Kept faint: the earlier value lifted the line so much that a
-        /// translucent material read as solid, which defeated the translucency entirely.
+        /// Emission on the cursor, which is what keeps it the same white in shade as in sun.
+        ///
+        /// Raised with the opacity above. The earlier note here warned that lifting emission made
+        /// a translucent material read as solid — that was a fair objection when the alpha was
+        /// 0.32 and the glow was doing the work of being visible on its own. With the alpha
+        /// carrying it, the emission can go back to holding the colour steady under the light.
         /// </summary>
-        const float BracketGlow = 0.25f;
+        const float BracketGlow = 0.85f;
 
         Material BracketMaterial(Color colour) =>
             _materials.Get(_model.Library.FallbackMaterial, colour, colour * BracketGlow,
@@ -720,6 +757,10 @@ namespace Odyssey.Presentation.Rendering
             InstancesDrawn += n;
         }
 
-        public void Dispose() => _materials.Dispose();
+        public void Dispose()
+        {
+            Skirt.Dispose();
+            _materials.Dispose();
+        }
     }
 }
