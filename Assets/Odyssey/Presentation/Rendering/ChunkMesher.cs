@@ -138,7 +138,7 @@ namespace Odyssey.Presentation.Rendering
                 return;
             }
 
-            int tint = TintCode.Daylit(TintCode.Terrain(terrain), OpenToTheSky(index, y));
+            int tint = TintCode.Daylit(TintCode.Terrain(terrain), _model.OpenToTheSky(index, y));
             // Terrain is the ground, so it is the one thing that is draped rather than lifted: the
             // cell is tilted onto the tangent plane of the relief field so its top face follows
             // the slope. Everything built or standing on it is lifted instead - see GroundRelief.
@@ -247,7 +247,7 @@ namespace Odyssey.Presentation.Rendering
             // faces of the box this tile is drawn from, blending over each other at every shared
             // edge, and the shader clips all but the top one.
             AddRoof(batch, module,
-                TintCode.Daylit(TintCode.Water(terrain), OpenToTheSky(_model.Index(x, z, y), y)),
+                TintCode.Daylit(TintCode.Water(terrain), _model.OpenToTheSky(_model.Index(x, z, y), y)),
                 GroundRelief.Drape(centre));
         }
 
@@ -311,7 +311,7 @@ namespace Odyssey.Presentation.Rendering
             // Daylit on the same terms as the ground it stands in, and it has to be asked rather
             // than assumed: a tuft that kept dimming while the terrace under it stopped would be
             // the same fault, a layer smaller and much harder to see.
-            bool daylit = OpenToTheSky(index, y);
+            bool daylit = _model.OpenToTheSky(index, y);
 
             for (int slot = 0; slot < count; slot++)
             {
@@ -386,11 +386,12 @@ namespace Odyssey.Presentation.Rendering
         /// Nothing interior changes, because a cut into the ground still exposes its neighbours in
         /// the ordinary way — a pit dug against the map edge still shows all four of its walls.
         /// </summary>
-        /// <summary>
-        /// Draw banks up terrace steps. On by default; the lever is here so the check harness can
-        /// photograph the same board with and without them.
-        /// </summary>
-        public bool Banks { get; set; } = true;
+        /// <inheritdoc cref="BankLayout.Enabled"/>
+        public bool Banks
+        {
+            get => BankLayout.Enabled;
+            set => BankLayout.Enabled = value;
+        }
 
         /// <summary>
         /// Draw soil as <see cref="GroundMesh"/> rather than as the plain cube. On by default, and
@@ -399,284 +400,38 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public bool Earth { get; set; } = true;
 
-        /// <summary>
-        /// Let banks grow inside a working, as they did before the cut-face rule. Off, and it
-        /// exists so the check harness can photograph the fault rather than describe it.
-        /// </summary>
-        public bool BanksInWorkings { get; set; }
+        /// <inheritdoc cref="BankLayout.InWorkings"/>
+        public bool BanksInWorkings
+        {
+            get => BankLayout.InWorkings;
+            set => BankLayout.InWorkings = value;
+        }
 
         /// <summary>
         /// A stepped earth bank in this empty cell, for each one-layer step beside it that a
         /// colonist could walk up.
         ///
-        /// <para><b>Why here and not on the step itself.</b> A bank belongs to the empty cell, not
-        /// to the block it climbs: it occupies the air beside the riser, at the same layer as the
-        /// riser, rising from its own floor — the top of the lower terrace — to its own ceiling,
-        /// which is the top of the riser. Everything the decision needs is therefore on one layer
-        /// plus the cell directly below, so a single-layer chunk pass can see all of it.</para>
-        ///
-        /// <para><b>What it is not.</b> Nothing in the simulation knows a bank exists. It is not
-        /// pathable, not selectable, not in the save and not in the state hash — a facade in
-        /// exactly the sense <see cref="GroundRelief"/> and <see cref="GroundScatter"/> are. The
-        /// hop it draws is real (<c>MoveCost.JumpUp</c>); the bank is only the picture of it.</para>
-        ///
-        /// <para><b>Four conditions, and each rules out a thing that would look wrong.</b> The cell
-        /// must be empty and standing on ground, or the bank hangs in the air. The step must be
-        /// earth, so a mined face and a quarry wall stay sheer — a grassy ramp growing out of cut
-        /// rock would be a lie about what was done to it. The top of the step must be open, or
-        /// this is the wall of a tunnel rather than a terrace. And the cell must be open to the
-        /// sky, which confines banks to the outdoor hillside where the fault is and keeps the
-        /// inside of a working sharp-edged.</para>
+        /// <para>Where one belongs, which of the three shapes it is and what it is made of all live
+        /// in <see cref="BankLayout"/>, because a drawn figure has to stand on the same surface
+        /// this draws — see that class for the conditions and for why they left the mesher. All
+        /// that is left here is turning the answer into an instance.</para>
         /// </summary>
         void EmitBank(ChunkBatch batch, int index, int x, int z, int y)
         {
-            var size = _model.Size;
 
-            // **One bank to a cell, even at an inside corner where two steps meet.**
-            //
-            // This is a z-fighting fix and the fault is worth recording, because every piece of it
-            // is individually correct. A bank fills its cell in plan, so two banks in one cell are
-            // two boxes turned ninety degrees to each other — and the side wall of the first lands
-            // in the same plane as the *back* wall of the second, facing the same way. Coplanar
-            // surfaces with opposite normals are harmless, because back-face culling removes one of
-            // them from every viewpoint; coplanar surfaces facing the *same* way are two candidates
-            // for the same pixel with nothing to separate them, and the depth buffer picks whichever
-            // rounds higher. That is the flickering the owner saw, and it moves with the camera
-            // because the rounding does.
-            //
-            // A straight run has no such problem: the touching walls of two neighbouring banks face
-            // away from each other, so one is always culled. It is only the corner.
-            //
-            // Drawing one is also the better picture. Two stepped banks crossing at a corner put
-            // their treads at different heights through one another, which reads as rubble rather
-            // than as a path; one bank fills the cell, meets the other riser along its side, and
-            // the corner is still somewhere a colonist can walk up.
-            //
-            // Every condition on whether a bank belongs here lives in BankDirection, because a bank
-            // has to ask the same question of its neighbours and two copies of a rule is one rule
-            // and one bug waiting.
-            if (!CanBank(x, z, y)) return;
+            BankLayout.Bank bank = BankLayout.At(_model, x, z, y);
+            if (!bank.Exists) return;
 
-            // **Which of the three shapes this cell wants, and which way round.**
-            //
-            // The bearing is what makes three meshes cover every case: local +z and +x are turned
-            // onto the world directions a shape expects its steps to be, exactly as
-            // Directions.Yaw is defined to do. A straight piece wants one step at local +z; a
-            // corner piece wants steps at local +z and +x; a hip wants one on the diagonal between
-            // them. So the rotation is always the lower-numbered direction of the pair.
-            int steps = StepsAround(x, z, y);
-            BankMesh.Kind kind;
-            int rotation;
-
-            if (steps != 0)
-            {
-                // Prefer a corner: a cell with steps on two adjacent sides is in a notch, and the
-                // straight piece would leave one of them bare.
-                rotation = AdjacentPair(steps);
-                if (rotation >= 0)
-                {
-                    kind = BankMesh.Kind.Inner;
-                }
-                else
-                {
-                    kind = BankMesh.Kind.Straight;
-                    rotation = FirstDirection(steps);
-                }
-            }
-            else
-            {
-                // No step orthogonally, but one on a diagonal: the cell wrapping the outside of a
-                // convex corner. It used to get nothing at all, which is why a run of banks had a
-                // square bite taken out of it at every corner.
-                rotation = DiagonalStep(x, z, y);
-                if (rotation < 0) return;
-                kind = BankMesh.Kind.Outer;
-            }
-
-            // Made of the terrain at the top of the step it climbs, because that is the ground it
-            // is spilling from. Always daylit: CanBank required the cell to be open to the sky.
-            ushort terrain = StepTerrain(x, z, y, rotation);
-            if (terrain == CoreContent.TerrainAir) return;
-
-            int module = _model.BankModuleFor(terrain, (int)kind);
+            int module = _model.BankModuleFor(bank.Terrain, (int)bank.Kind);
             if (module == 0) return;
 
-            // Draped, so a bank lies along the same rolling field the ground either side of it does.
-            AddBody(batch, module, TintCode.Daylit(TintCode.Terrain(terrain), open: true),
+            // Draped, so a bank lies along the same rolling field the ground either side of it
+            // does. Always daylit: BankLayout required the cell to be open to the sky.
+            AddBody(batch, module, TintCode.Daylit(TintCode.Terrain(bank.Terrain), open: true),
                 GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
-                Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[rotation], 0f)));
+                Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[bank.Rotation], 0f)));
         }
 
-        /// <summary>
-        /// Could a bank stand in this cell at all — is it empty, on ground, and under open sky?
-        ///
-        /// <para>Separate from which shape it wants, because the conditions are about the cell and
-        /// the shape is about its neighbours, and mixing the two is what made an earlier version
-        /// answer "no bank" and "a bank facing north" through the same integer.</para>
-        /// </summary>
-        bool CanBank(int x, int z, int y)
-        {
-            if (!Banks || y == 0) return false;
-
-            var size = _model.Size;
-            if (!size.Contains(x, z, y) || y + 1 >= size.SizeY) return false;
-
-            int index = size.Index(x, z, y);
-            if (_model.Terrain(index) != CoreContent.TerrainAir) return false;
-
-            // Something underfoot: the top of the lower terrace. Terrain rather than solidity, so a
-            // bank may also shelve down into the water it stands beside — a channel is cut one
-            // layer down, which makes every stream bank one of these steps.
-            int floor = index - size.LayerStride;
-            if (_model.Terrain(floor) == CoreContent.TerrainAir) return false;
-
-            // **Nothing grows inside a hole the colony cut**, and the floor is what says so: a
-            // mined cell reveals all six of its solid neighbours, and the one below it is the
-            // floor the miner is left standing on. So a cut floor is the mark of an excavation on
-            // the very cell a bank would fill.
-            //
-            // The same test on the sides (see IsStep) is not enough on its own, and the shortfall
-            // is worth recording because it is invisible in the obvious case. A cell cut out of
-            // flat ground has all four of its sides revealed, so StepsAround comes back empty —
-            // and the hip branch then went looking at the *diagonal* neighbours, which nothing
-            // reveals, because a colonist who cuts past the corner of a seam has not seen into
-            // it. So the hole filled with a hip piece instead of a corner one: measured, a single
-            // cut cell still drew 1 bank and a four-cell bench still drew 2. Asking the floor
-            // catches every shape of working at once, whatever its sides happen to say.
-            if (!BanksInWorkings && _model.IsCutFace(floor)) return false;
-
-            return OpenToTheSky(index, y);
-        }
-
-        /// <summary>Is the cell one step away in this direction a step this bank could climb?</summary>
-        bool IsStep(int x, int z, int y, int dx, int dz)
-        {
-            var size = _model.Size;
-            int nx = x + dx, nz = z + dz;
-            if (!size.Contains(nx, nz, y)) return false;
-
-            int step = size.Index(nx, nz, y);
-            if (!_model.IsSolid(step) || !_model.IsEarth(step)) return false;
-
-            // **A face somebody cut stays sheer, even in soil.**
-            //
-            // The terrain test above is not enough, and the gap was a reported bug: grass, bare
-            // earth and subsoil are all mineable (60, 60 and 160 ticks to clear), so a quarry sunk
-            // into the meadow is a hole whose walls are earth with open tops — every condition a
-            // terrace step has. A bank therefore grew in the cut cell itself, filling it from its
-            // floor to the rim with a stepped ramp, and the miner standing in it to cut the next
-            // face was drawn up to the chest in ground. The owner's report was that colonists
-            // disappear where people are mining.
-            //
-            // Refusing it here rather than in CanBank covers the whole of it with one test,
-            // because mining a cell reveals all six of its solid neighbours: whichever side of a
-            // cut cell you ask about, the step is a cut face. It also refuses the smaller lie on
-            // its own terms — a grassy ramp spilling down a quarry wall is exactly the same claim
-            // about cut rock that the terrain test already rejects.
-            if (!BanksInWorkings && _model.IsCutFace(step)) return false;
-
-            // Its top has to be open, or this is the wall of a tunnel rather than a terrace.
-            return !_model.IsSolid(step + size.LayerStride);
-        }
-
-        /// <summary>Which of the four sides of this cell have a step against them, as a bitmask.</summary>
-        int StepsAround(int x, int z, int y)
-        {
-            int mask = 0;
-            for (int dir = 0; dir < Directions.Count; dir++)
-                if (IsStep(x, z, y, Directions.DeltaX[dir], Directions.DeltaZ[dir])) mask |= 1 << dir;
-            return mask;
-        }
-
-        /// <summary>The first direction in a mask, or -1 when it is empty.</summary>
-        static int FirstDirection(int mask)
-        {
-            for (int dir = 0; dir < Directions.Count; dir++)
-                if ((mask & (1 << dir)) != 0) return dir;
-            return -1;
-        }
-
-        /// <summary>
-        /// The lower direction of a pair of adjacent set bits, or -1 when the mask has no such pair.
-        ///
-        /// A corner piece is turned by this, because its two steps are at local +z and +x, which the
-        /// bearing puts on directions <c>d</c> and <c>d + 1</c>.
-        /// </summary>
-        static int AdjacentPair(int mask)
-        {
-            for (int dir = 0; dir < Directions.Count; dir++)
-                if ((mask & (1 << dir)) != 0 && (mask & (1 << ((dir + 1) & 3))) != 0) return dir;
-            return -1;
-        }
-
-        /// <summary>
-        /// The direction <c>d</c> such that the step lies on the diagonal between <c>d</c> and
-        /// <c>d + 1</c>, or -1 when no diagonal neighbour is a step.
-        /// </summary>
-        int DiagonalStep(int x, int z, int y)
-        {
-            for (int dir = 0; dir < Directions.Count; dir++)
-            {
-                int next = (dir + 1) & 3;
-                int dx = Directions.DeltaX[dir] + Directions.DeltaX[next];
-                int dz = Directions.DeltaZ[dir] + Directions.DeltaZ[next];
-                if (IsStep(x, z, y, dx, dz)) return dir;
-            }
-            return -1;
-        }
-
-        /// <summary>
-        /// The terrain at the top of the step this bank climbs, which is what it is made of.
-        ///
-        /// A hip has no orthogonal step, so it takes the terrain from the diagonal one it wraps.
-        /// </summary>
-        ushort StepTerrain(int x, int z, int y, int rotation)
-        {
-            var size = _model.Size;
-            int next = (rotation + 1) & 3;
-
-            foreach (int dir in new[] { rotation, next })
-            {
-                int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
-                if (IsStep(x, z, y, Directions.DeltaX[dir], Directions.DeltaZ[dir]))
-                    return _model.Terrain(size.Index(nx, nz, y));
-            }
-
-            int cx = x + Directions.DeltaX[rotation] + Directions.DeltaX[next];
-            int cz = z + Directions.DeltaZ[rotation] + Directions.DeltaZ[next];
-            return size.Contains(cx, cz, y) ? _model.Terrain(size.Index(cx, cz, y)) : CoreContent.TerrainAir;
-        }
-
-        /// <summary>
-        /// Is there nothing at all over this cell — no slab and no solid cell, all the way up?
-        ///
-        /// <para>What earns a cell the daylight bit, and so exemption from the depth shade. See
-        /// <see cref="TintCode.DaylitBase"/> for why the landscape must not dim: the surface is
-        /// terraced across five layers and only one of them is ever the active one.</para>
-        ///
-        /// <para>A slab is stored on the cell <em>above</em> the boundary it occupies, so the roof
-        /// over this cell is the floor of the next one up — which is why the walk starts at
-        /// <c>y + 1</c> and asks about that cell's own floor. A blocking edifice is deliberately
-        /// not consulted: a wall standing beside you is not a roof over you, and neither is a
-        /// tree, so grass in woodland stays lit like the grass beside it.</para>
-        ///
-        /// <para>The loop looks unbounded and is not. A buried cell answers on its first step,
-        /// because the cell above it is solid; a surface cell walks the headroom, which the
-        /// generator holds at three layers. Nothing here walks a full column in practice.</para>
-        /// </summary>
-        bool OpenToTheSky(int index, int y)
-        {
-            var size = _model.Size;
-            int above = index + size.LayerStride;
-
-            for (int layer = y + 1; layer < size.SizeY; layer++, above += size.LayerStride)
-            {
-                if (_model.Floor(above) != 0) return false;
-                if (_model.IsSolid(above)) return false;
-            }
-
-            return true;
-        }
 
         /// <summary>
         /// Can any of this cell's four vertical faces be seen — is it a terrace riser, the wall of

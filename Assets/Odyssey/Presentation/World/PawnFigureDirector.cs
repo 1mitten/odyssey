@@ -748,7 +748,7 @@ namespace Odyssey.Presentation.World
                 CellRef cell = pawns[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
 
-                Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading);
+                Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading, World);
                 Figure figure = Lease(pawns[i].Id, position);
                 Pose(figure, in pawns[i], position, heading, deltaTime, running);
                 if (figure.Speed > FastestSpeed) FastestSpeed = figure.Speed;

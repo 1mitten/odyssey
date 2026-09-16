@@ -301,10 +301,33 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     the *diagonal* neighbours, which nothing reveals. Guarding only the sides still drew 1 bank for
     one cut cell and 2 for a four-cell bench. A mined cell's floor is revealed too, so asking the
     floor catches every shape of working at once.
-  - **Still open: a colonist standing on a *natural* bank is waist-deep in it**, because a bank
-    fills its cell and a pawn is drawn at the middle of its cell. There the ramp is the picture of a
-    hop and must stay; the answer is to lift the drawn figure onto `BankMesh.HeightAt` the way
-    `GroundRelief` already lifts it onto the rolling field, and it is not done.
+  - **A figure now stands on a bank rather than in one**, which is the same fault with the opposite
+    answer: on the hillside the ramp is the picture of a hop and must stay, so the figure comes up
+    to meet it. Measured on the played board: **three of five** colonists at the foot of a terrace,
+    every one 1.500 m through the slope; afterwards 0.000 m. The decision left the mesher into
+    `BankLayout` (where a bank is, which shape, what of, and `RiseAt`), `ChunkMesher` turns that
+    into an instance and `PawnPose` stands a figure on it, so the two cannot drift. The levers went
+    static with it — `BankLayout.Enabled` / `InWorkings` / `LiftFigures` — because a per-renderer
+    lever would let banks be off while colonists hovered 1.5 m over the meadow.
+  - **The tiling is what makes it safe.** `BankMesh`'s three shapes already had tests saying they
+    agree where they meet; those same properties are what make the surface continuous for a walker,
+    so a run of bank, leaving one and walking onto one needed nothing extra. **Going up take the
+    higher of chord and ground, going down fade the lift out** — a hop's chord runs 1.5 m *inside*
+    the block it climbs (true before banks existed), while the drawn ground going down is a step
+    function and following it would teleport the figure. The fade has to be at **both** ends: the
+    first version forgot the cell being entered, which is a metre and a half dropping off a step
+    *into* a bank, and a terrace has banks at the bottom of it by definition.
+    `BankFootingTests` samples 400 points across each step and allows no jump over 5 cm.
+  - **Open: whether the boots need the bank's own gradient.** `Footing` plants both feet off
+    `GroundRelief.SlopeAt`, the rolling field, which is eight degrees where a bank is fifty — a
+    0.3 m stance spans about 0.36 m of slope the feet know nothing about. The sheet could not
+    settle it: the colonist the harness picked wears a full-length skirt. §2b's standing rule
+    predicts the lift alone is enough.
+  - Judge it with **`Odyssey → Presentation → Check a bank underfoot`**
+    (`scripts/unity.sh shot Odyssey.EditorTools.BankCheck.Run`), which **builds** its step (earth
+    laid beside a colonist — a cut one would grow no bank), clears the woodland out of the camera's
+    way, and prints `MeasuredFootGap` for every colonist in a bank rather than only the subject,
+    because a figure sunk into a ramp and one standing behind it look identical from every bearing.
   - Judge it with **`Odyssey → Presentation → Check a quarry`**
     (`scripts/unity.sh shot Odyssey.EditorTools.QuarryCheck.Run`), which cuts a 3 × 3 pit **under a
     colonist's feet** — `MineCell` steps whoever was standing on a cell down onto the floor it just
