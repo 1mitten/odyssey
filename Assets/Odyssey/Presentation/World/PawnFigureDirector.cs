@@ -453,7 +453,16 @@ namespace Odyssey.Presentation.World
                 Vector3 edge = figure.AxeTransform.TransformPoint(figure.BladeTip);
                 Vector3 outward = figure.Transform.position - figure.WorkCentre;
                 outward.y = 0f;
-                Chips.Throw(ChipRecipe.Wood, edge, outward);
+
+                // Which debris, chosen from the job the snapshot already publishes. This is the
+                // smallest possible version of what docs/design/12-work-poses-and-tools.md calls
+                // a WorkStyle — that note bundles the tool, the stroke, the grip and the chips
+                // into one value selected from PawnView.JobDef, and the whole point of its design
+                // is that the contract needs no change because JobDef is published already. Only
+                // the chips are switched here; a pick in the hands and a stroke of its own are
+                // that piece of work, not this one.
+                ChipRecipe debris = figure.WorkJob == JobHandle.Mine ? ChipRecipe.Stone : ChipRecipe.Wood;
+                Chips.Throw(debris, edge, outward);
             }
         }
 
@@ -597,7 +606,15 @@ namespace Odyssey.Presentation.World
             // feet — and the ease-out, which should have walked her back out of the stand she had
             // stepped into, instead eased her towards a stand solved against herself. Keeping the
             // last one until the weight is gone makes the way out retrace the way in.
-            if (pawn.Working) figure.WorkCentre = CellMetrics.FloorCentre(pawn.WorkCell);
+            if (pawn.Working)
+            {
+                figure.WorkCentre = CellMetrics.FloorCentre(pawn.WorkCell);
+
+                // Carried on the figure because the pose pass runs later, over figures alone,
+                // with no snapshot in scope. It is the job def and not a chip recipe, so the one
+                // place that turns a job into a look stays the one place.
+                figure.WorkJob = pawn.JobDef;
+            }
             Quaternion facing = Quaternion.Euler(0f, figure.Yaw, 0f);
             figure.Transform.position = figure.WorkWeight > 0.001f
                 ? WorkStance.StandAt(position, figure.WorkCentre,
@@ -1136,6 +1153,9 @@ namespace Odyssey.Presentation.World
 
             /// <summary>Set on the frame the blade reaches the wood, cleared once the chips fly.</summary>
             public bool Landed;
+
+            /// <summary>The job being worked, as the snapshot published it, or -1.</summary>
+            public int WorkJob = -1;
 
             // The bones the swing pitches, resolved once when the figure is built. Null on
             // anything that is not a Humanoid rig, which simply never gets a work pose.

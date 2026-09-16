@@ -301,6 +301,49 @@ namespace Odyssey.Tests.Sim
             }
         }
 
+        [Test]
+        public void AMinerTellsPresentationWhatItIsSwingingAt()
+        {
+            // This was missing and nothing failed. A miner published Working = false, so the
+            // figure stood at the rock face with its arms down through the whole job — no swing,
+            // no chips — while every test here passed, because the simulation was perfectly
+            // correct and only the half of the contract that presentation reads was absent.
+            // It cost a playtest to notice, which is what a pinned contract is for.
+            ColonyWorld colony = Board();
+            int rock = NearestRock(colony);
+            Assume.That(rock, Is.GreaterThanOrEqualTo(0));
+
+            colony.World.Intents.Submit(
+                new Intent(IntentKind.Designate, Size.FromIndex(rock), (int)DesignationKind.Mine));
+
+            Pawn? miner = null;
+            bool sawWalkingEmptyHanded = false;
+            bool sawWorkingTheRock = false;
+
+            for (int tick = 0; tick < 12_000 && !sawWorkingTheRock; tick++)
+            {
+                colony.World.Tick();
+                foreach (Pawn pawn in colony.Pawns.Pawns.All)
+                {
+                    if (pawn.CurrentJob == null || pawn.CurrentJob.DefIndex != JobIndex.Mine) continue;
+                    miner = pawn;
+
+                    int focus = pawn.Driver!.WorkFocus;
+                    if (focus < 0) sawWalkingEmptyHanded = true;
+                    else
+                    {
+                        Assert.That(focus, Is.EqualTo(rock),
+                            "the miner is facing something other than the cell it is cutting");
+                        sawWorkingTheRock = true;
+                    }
+                }
+            }
+
+            Assert.That(miner, Is.Not.Null, "nobody took the mining order");
+            Assert.That(sawWalkingEmptyHanded, Is.True, "a colonist crossing the map should carry nothing");
+            Assert.That(sawWorkingTheRock, Is.True, "the miner never told presentation it was working");
+        }
+
         [Test, Category("Long")]
         public void ADayOfMiningLeavesAWorkingColony()
         {

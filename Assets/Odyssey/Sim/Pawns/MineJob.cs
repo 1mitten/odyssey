@@ -145,6 +145,24 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class MineJobDriver : JobDriver
     {
+        /// <summary>
+        /// The rock face, once the walk is over and the swings have started. Presentation turns
+        /// this into a tool in the hands and an arm that comes down on it; before the walk ends it
+        /// is -1, so a colonist crossing the map does it empty-handed.
+        ///
+        /// <para>The destination cell in preference to the target cell, exactly as
+        /// <see cref="FellJobDriver"/> does: the destination is the cell being cut and the target
+        /// is where the colonist stands to cut it, and the figure has to face the rock rather than
+        /// its own feet.</para>
+        ///
+        /// <para>Without this a miner publishes <c>Working = false</c> and stands at the face with
+        /// its arms down, however good the pose work is — the seam is only half a contract until
+        /// both ends are wired. The pose, the pickaxe and the stone chips are a separate piece of
+        /// work; this is the half the simulation owes it.</para>
+        /// </summary>
+        public override int WorkFocus =>
+            ToilIndex < 1 ? -1 : Job.DestCell >= 0 ? Job.DestCell : Job.TargetCell;
+
         public override bool TryMakeReservations(PawnContext ctx)
         {
             if (Job.TargetCell < 0 || Job.DestCell < 0) return false;
