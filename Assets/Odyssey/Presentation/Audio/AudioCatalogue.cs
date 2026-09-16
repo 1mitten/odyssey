@@ -122,13 +122,6 @@ namespace Odyssey.Presentation.Audio
         /// are standing in it, as against the water bed, which is what is near you.</summary>
         public List<PhaseTrackDef> Outdoor = new();
 
-        public SoundDef? Find(string id)
-        {
-            for (int i = 0; i < Sounds.Count; i++)
-                if (string.Equals(Sounds[i].Id, id, StringComparison.Ordinal)) return Sounds[i];
-            return null;
-        }
-
         public AmbienceDef? FindAmbience(string id)
         {
             for (int i = 0; i < Ambience.Count; i++)

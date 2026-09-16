@@ -75,14 +75,6 @@ namespace Odyssey.Presentation.Audio
         /// <summary>The night-time track.</summary>
         public const string MusicNight = MusicPrefix + "night";
 
-        /// <summary>Every id the shipped catalogue defines, for a generator or a test to walk.</summary>
-        public static readonly string[] All =
-        {
-            WorkChop, WorkPick, AlertStarving, Campfire,
-            AmbienceWater, AmbienceOutdoorDay, AmbienceOutdoorNight,
-            MusicDay, MusicNight,
-        };
-
         /// <summary>
         /// The sound a blow makes, from the work style the figure director already resolved.
         /// Mining is the only style with its own impact sound today; everything else swings an
