@@ -49,5 +49,25 @@ namespace Odyssey.Tests.PlayMode
             yield return new WaitForSecondsRealtime(0.3f);
             for (int i = 0; i < 3; i++) yield return null;
         }
+
+        /// <summary>
+        /// Wait until the camera has stopped moving of its own accord.
+        ///
+        /// <para>The rig smooths toward its target every frame, and after a warm-up it is still
+        /// arriving — measured by the control in <c>InputHarnessTests</c>, which caught the camera
+        /// drifting with no input at all and would have made any input test meaningless. Any probe
+        /// of "did input move the camera" has to start from a camera that is not already moving.</para>
+        /// </summary>
+        public static IEnumerator SettleCamera(SliceCameraRig rig, float tolerance = 0.0005f)
+        {
+            float last = rig.distance;
+            for (int frame = 0; frame < 240; frame++)
+            {
+                yield return null;
+                float now = rig.distance;
+                if (Mathf.Abs(now - last) <= tolerance && !rig.GlideTarget.HasValue) yield break;
+                last = now;
+            }
+        }
     }
 }

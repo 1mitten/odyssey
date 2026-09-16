@@ -28,6 +28,32 @@ namespace Odyssey.Tests.PlayMode
         /// <summary>Frames to let the rig read input and smooth toward its target.</summary>
         const int SettleFrames = 8;
 
+        Mouse? _mouse;
+
+        /// <summary>
+        /// <b>There is no mouse in a batch PlayMode run.</b> `Mouse.current` is null — the player
+        /// has no window, no operating-system pointer and therefore no device — and that, not the
+        /// queueing, is why the earlier attempt could not drive input: it queued state at a device
+        /// that did not exist, and <c>SliceCameraRig.ReadMouse</c> returns immediately when
+        /// <c>Mouse.current</c> is null, so nothing could ever have arrived.
+        ///
+        /// <para>Adding one makes a real <c>Mouse</c> out of the input system's own layout, with
+        /// no hardware behind it. Events queued at it go through the ordinary player-loop update,
+        /// so what is being tested is the game's real input path rather than a stub of it.</para>
+        /// </summary>
+        [SetUp]
+        public void AddAMouse()
+        {
+            _mouse = Mouse.current ?? InputSystem.AddDevice<Mouse>();
+        }
+
+        [TearDown]
+        public void RemoveTheMouse()
+        {
+            if (_mouse != null && _mouse.added) InputSystem.RemoveDevice(_mouse);
+            _mouse = null;
+        }
+
         [UnityTest]
         public IEnumerator AWheelNotchZoomsTheCamera()
         {
@@ -35,6 +61,7 @@ namespace Odyssey.Tests.PlayMode
             try
             {
                 yield return RigWorld.WarmUp();
+                yield return RigWorld.SettleCamera(rig);
                 float before = rig.distance;
 
                 yield return Scroll(+1f);
@@ -61,6 +88,7 @@ namespace Odyssey.Tests.PlayMode
             try
             {
                 yield return RigWorld.WarmUp();
+                yield return RigWorld.SettleCamera(rig);
                 float before = rig.distance;
 
                 for (int i = 0; i < SettleFrames; i++) yield return null;
