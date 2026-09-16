@@ -152,14 +152,38 @@ namespace Odyssey.Presentation.CameraRig
             if (keys.digit2Key.wasPressedThisFrame) RequestGameSpeed(2);
             if (keys.digit3Key.wasPressedThisFrame) RequestGameSpeed(3);
 
-            if (keys.vKey.wasPressedThisFrame)
-                slice.above = (AboveMode)(((int)slice.above + 1) % 6);
+            if (keys.vKey.wasPressedThisFrame) CycleAboveMode();
             if (keys.bKey.wasPressedThisFrame)
                 slice.below = (BelowMode)(((int)slice.below + 1) % 3);
             if (keys.homeKey.wasPressedThisFrame) Frame();
 
             // The developer overlay sits on the picture, so it is off until asked for.
             if (keys.backquoteKey.wasPressedThisFrame) _directors!.Overlays.ToggleDeveloper();
+        }
+
+        /// <summary>
+        /// Step through the seven states the V key offers: the depth-following default, then each
+        /// of ADR 0006's six modes, then back.
+        ///
+        /// <para><b>An explicit choice wins over the default.</b> With <c>followDepth</c> on the
+        /// mode is derived from where the slice sits, so setting the field would have done nothing
+        /// at all and the key would simply have looked broken. The first press therefore pins
+        /// whatever is currently on screen — which is why it copies the resolved mode across before
+        /// switching the default off — and the picture does not jump on the press that only means
+        /// "let me drive".</para>
+        /// </summary>
+        void CycleAboveMode()
+        {
+            if (slice.followDepth)
+            {
+                slice.above = slice.AboveAt(ActiveLayer);
+                slice.followDepth = false;
+                return;
+            }
+
+            int next = (int)slice.above + 1;
+            if (next >= 6) slice.followDepth = true;
+            else slice.above = (AboveMode)next;
         }
 
         void ReadMouse(float dt)

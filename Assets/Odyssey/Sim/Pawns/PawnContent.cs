@@ -148,6 +148,34 @@ namespace Odyssey.Sim.Pawns
         public int workTicks;
 
         /// <summary>
+        /// Ticks a colonist stands still after the work is done, before the job ends. Zero for a
+        /// job that does not want one.
+        ///
+        /// <para><b>Follow-through</b> (owner, 2026-09-16: "should there be a second delay so you
+        /// can motion more naturally instead of snapping?"). The work itself is finished — the
+        /// tree is already down and the rock already gone — and this is the beat afterwards in
+        /// which the colonist straightens up before walking off. Stopping an action dead is the
+        /// thing that reads as mechanical, and a recovery beat is ordinary practice for exactly
+        /// that reason.</para>
+        ///
+        /// <para><b>It also fixes a measured fault, which is why it is here and not a guess.</b>
+        /// The drawn figure steps <i>in</i> towards its work — about 0.8 m for felling — and eases
+        /// back out over <c>PawnFigureDirector.WorkEaseSeconds</c>, 0.45 s. Measured over 40,000
+        /// ticks: all 27 work-to-move transitions began gliding within <b>1 to 3 ticks</b> of the
+        /// work stopping, so every one of them was walking and un-stepping at the same time. The
+        /// gait blend deliberately excludes the stance from the speed it measures, so the feet
+        /// played an ordinary walk while the body covered the walk <i>and</i> the retraction —
+        /// which is the "very quickly walk and then come to a normal pace" the owner saw, lasting
+        /// exactly as long as the ease.</para>
+        ///
+        /// <para><b>So the number is not free taste: it must be at least the presentation ease</b>,
+        /// 27 ticks at sixty a second. 30 is that with a little margin. A simulation constant
+        /// chosen to cover a drawing constant is an uncomfortable coupling and it is the lesser
+        /// one — the alternative is presentation reaching into job timing.</para>
+        /// </summary>
+        public int settleTicks;
+
+        /// <summary>
         /// The skill a tick of this job's work trains, as a <see cref="SkillIndex"/> value, or -1
         /// for a job that trains nothing (eating, sleeping, wandering). One hop from the job to
         /// the skill rather than two through the work type, because a job is the thing that
@@ -618,7 +646,7 @@ namespace Odyssey.Sim.Pawns
                 new JobDef
                 {
                     defName = "Job_Fell", driver = JobIndex.Fell, workTicks = 800, expiryTicks = 6_000,
-                    trainsSkill = SkillIndex.Cutting, experiencePerWorkTick = 110,
+                    trainsSkill = SkillIndex.Cutting, experiencePerWorkTick = 110, settleTicks = 30,
                 },
                 // No workTicks: mining is priced per material, and the terrain defs already carry
                 // the number (rock 700, iron 900, coal 760). One constant here would make a seam
@@ -630,7 +658,7 @@ namespace Odyssey.Sim.Pawns
                 new JobDef
                 {
                     defName = "Job_Mine", driver = JobIndex.Mine, expiryTicks = 12_000,
-                    trainsSkill = SkillIndex.Mining, experiencePerWorkTick = 110,
+                    trainsSkill = SkillIndex.Mining, experiencePerWorkTick = 110, settleTicks = 30,
                 },
             };
 

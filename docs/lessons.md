@@ -596,3 +596,27 @@ the `\n` in the pattern does not match `\r\n`. It exits 0 and reports nothing. T
 conclusion: a stubbing experiment "proved" the suspect loop was innocent when in fact the stub had
 never been applied — the file was unchanged. Read the file back, or use the Edit tool, before
 believing an experiment that depends on an edit.
+
+## An Assume can hide a dead feature, and a green tier can mean nothing ran
+
+Six of `MineJobTests`' thirteen tests open with a variant of `Assume.That(rock >= 0)` — the fixture
+looks for a cell of rock a colonist could actually get at, and gives up if there is none. On `main`
+that assumption was failing: **not one rock cell on the fixture's board had a stance a colonist
+could reach**, so `NearestRock` returned -1 and the tests reported *inconclusive*. The default fast
+tier prints those as part of a passing run. Mining was effectively dead on that board and the suite
+said nothing.
+
+It cost a wrong conclusion in this session. Checking "was this failing before my change?" by
+stashing and re-running showed `Passed: 6, Failed: 0` and I read it as "these tests passed on main,
+so I broke them". They had not passed; seven of them had not run. Only `-v n`, which prints a line
+per test, showed six `Skipped`.
+
+- **Read the total, not the verdict.** `Passed: 6 ... Total: 6` against a file with thirteen
+  `[Test]` methods is the finding. Compare the count to the file before comparing anything else.
+- **An `Assume` guards a fixture, not a feature.** It is right for "this seed happened not to put a
+  pond here" and wrong for "the thing under test is unreachable", which is the failure itself
+  wearing the fixture's clothes. Where the assumption is really a precondition the feature must
+  meet, make it an `Assert`.
+- **A skip is not a pass, and neither is a category.** The same board also hid this behind
+  `Category("Long")`, which the default tier excludes — so the one test that would have run the
+  colony for a day only ran when something passed an explicit filter.

@@ -66,7 +66,7 @@ namespace Odyssey.EditorTools
             var floating = new Dictionary<int, int>();   // pawn id -> first tick seen unsupported
                         int layerSteps = 0, expensiveSteps = 0, worstCost = 0;
             int longestHang = 0, totalHang = 0, hangs = 0, ladderStands = 0;
-            int climbTicks = 0, climbsAgainstNothing = 0;
+            int hopTicks = 0, hopsOntoNothing = 0;
             int horizontalSteps = 0, stepsOntoAir = 0, standingOnAir = 0, airSamples = 0;
             int workTicks = 0, outOfReach = 0, reachSamples = 0;
 
@@ -175,18 +175,19 @@ namespace Odyssey.EditorTools
                     // 1c. STANDING on air: not moving at all, in a cell with nothing under it.
                     if (!pawn.HasPath && !grid.HasFloor(pawn.Cell)) standingOnAir++;
 
-                    // 2a. Is there anything to climb AGAINST? A climb needs a block beside the
-                    //     hole whose edge the colonist goes up. An open quarry has none in the
-                    //     middle of it, and a connector laid there is a colonist going up through
-                    //     thin air.
+                    // 2a. Is there anything to land ON? Climbing is gone (owner, 2026-09-16) and
+                    //     the only unaided layer change is a hop: one block up onto the block next
+                    //     door, or one block down off it. Its upper end has to be the top of solid
+                    //     terrain, or the colonist is stepping into clear air — the thing this
+                    //     probe was written to catch, in its new form.
                     if (pawn.HasPath)
                     {
                         int step = pawn.Path[pawn.PathIndex];
                         if (pawn.Cell / size.LayerStride != step / size.LayerStride)
                         {
-                            int lower = System.Math.Min(pawn.Cell, step);
-                            climbTicks++;
-                            if (!HasWallBeside(grid, size, lower)) climbsAgainstNothing++;
+                            int upper = System.Math.Max(pawn.Cell, step);
+                            hopTicks++;
+                            if (!nav.UpperEndIsABlockTop(upper)) hopsOntoNothing++;
                         }
                     }
 
@@ -198,7 +199,7 @@ namespace Odyssey.EditorTools
 
                     layerSteps++;
                     int cost = CostOf(nav, pawn, next);
-                    if (cost <= MoveCost.ClimbDown) continue;
+                    if (cost <= MoveCost.Drop) continue;
                     expensiveSteps++;
                     if (cost > worstCost)
                     {
@@ -289,21 +290,10 @@ namespace Odyssey.EditorTools
                       $"worst {worstCost} units; {hangs} hangs, longest {longestHang} ticks, " +
                       $"mean {(hangs > 0 ? totalHang / hangs : 0)} ticks; " +
                       $"{ladderStands} pawn-ticks spent on a connector; " +
-                      $"{climbsAgainstNothing} of {climbTicks} climbing pawn-ticks had no wall beside them; " +
+                      $"{hopsOntoNothing} of {hopTicks} layer-changing pawn-ticks had nothing to land on; " +
                       $"{stepsOntoAir} of {horizontalSteps} sideways pawn-ticks stepped onto a floorless cell; " +
                       $"{standingOnAir} pawn-ticks stood still on one; " +
                       $"{outOfReach} of {workTicks} working pawn-ticks were out of reach of their work");
-        }
-
-        /// <summary>Is any of the four horizontal neighbours of this cell solid rock?</summary>
-        static bool HasWallBeside(CellGrid grid, GridSize size, int cell)
-        {
-            CellRef at = size.FromIndex(cell);
-            if (at.X > 0 && grid.IsSolidTerrain(size.Index(at.X - 1, at.Z, at.Y))) return true;
-            if (at.X < size.SizeX - 1 && grid.IsSolidTerrain(size.Index(at.X + 1, at.Z, at.Y))) return true;
-            if (at.Z > 0 && grid.IsSolidTerrain(size.Index(at.X, at.Z - 1, at.Y))) return true;
-            if (at.Z < size.SizeZ - 1 && grid.IsSolidTerrain(size.Index(at.X, at.Z + 1, at.Y))) return true;
-            return false;
         }
 
         static int CostOf(NavGraph nav, Pawn pawn, int next)
