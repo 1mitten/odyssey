@@ -911,6 +911,9 @@ work itself.
     the source* — mining still added 59 lines to `PawnContent.cs`. That, and not this row, is now
     the cheapest remaining seam work.
   - **Verified:** fast tier **444 Sim + 110 Hud** (from 428 + 106), both content gates green, and
-    both negative controls run and restored. **Not verified:** `scripts/unity.sh test editmode` and
-    PlayMode — a Unity editor was open on the main checkout throughout, so no batch run was
-    attempted.
+    both negative controls run and restored. A Unity editor held the main checkout throughout, so
+    no batch run could be attempted locally; **both CI tiers ran it instead and passed** (PR #64),
+    with `PawnViewContributorTests` and `PawnAspectReadTests` both in the EditMode results. That
+    incidentally completes the golden's purpose: `TheKeyForANameIsFixedForEver` asserts the same
+    literal under CoreCLR in the fast tier and Mono in the Unity tier, so the name-to-key mapping
+    is now proved to agree across both runtimes rather than merely intended to.
