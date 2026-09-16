@@ -636,6 +636,62 @@ EditMode gate and the pictures are owed. `PlayScene` now has the shot that takes
 the slice layer is a variable the render hook reads, because `Shoot` calls `camera.Render`, which
 re-runs the hook — so rendering a different slice before shooting achieved nothing.
 
+## 6i. Reach: you work what you can get at, and a pick goes overhead
+
+Two reports, and the second answered a question the first had raised.
+
+**"I saw a colonist chop a tree from 1 block down — you should only be able to chop a tree at the
+same height."** `StandBeside` had always picked a cell on the tree's own layer, so the stance was
+never wrong. What was missing is that the driver never asked again: once the walk toil ended, both
+drivers worked every tick without checking where the pawn was. That held while nothing could move a
+pawn it had not asked to move — and mining ended it, deliberately, in §6c and §6e: a dig drops
+anybody standing on the cell it cuts, and retiring a climb drops whoever was on it. Measured with
+the check ablated: **2,674 of 55,100 working pawn-ticks — 4.9% — were out of reach of their work**,
+and the sample shows the reported shape exactly, a colonist at L12 working a cell at L13.
+
+`JobDriver.StillInReach` is the check, asked every tick of the working toil.
+
+**Out of reach walks back; it does not fail.** The first version failed the job, and that cost half
+the colony's mining over 40,000 ticks — **65 cells down to 32** — because every displacement threw
+away a walk as well as the work. Being moved is not the pawn's fault and is rarely permanent, so the
+driver returns to its walk toil instead. If the stance really has gone, `GotoCell` fails on the next
+tick and the job fails with it, which is the same answer arrived at honestly.
+
+**"The miners didn't even try to mine the rocks above and they were marked — they should be able to
+mine one height above as well (above or to the side)."** That was the rest of the throughput, and it
+was a missing stance rather than a broken one: with reach enforced but no way to work upward, **33
+standing orders had nowhere to stand at all**. `StandToMine` now has four stances, tried in order:
+
+1. **beside** — same layer, eight neighbours;
+2. **on the rim** — a layer up, where the rock's ceiling is open;
+3. **from below** — a layer down, all nine cells including the one directly underneath, reaching up;
+4. **on top** — last, because it costs the colonist its own floor.
+
+A pick goes overhead, so a colonist on the ground can cut the rock above its head or the overhang
+beside it. That is how a face is undercut.
+
+**The stroke aims up for it** (`WorkStyle.Raise`, −55°), which is the mirror of the downward dip and
+runs the same arithmetic. It is **not** as large as the dip and cannot be: the face it reaches for is
+the bottom of the cell above, three metres up, and the arm swings about 1.76 m from a pivot a metre
+off the ground. Measured, the raised strike puts the edge at **2.62 m** — 38 cm short, which is
+about all a 1.79 m colonist with a pick can do and reads as full stretch. The aim point comes *down*
+a cell rather than up, because the bottom face is the only part of an overhead cell a person could
+ever touch.
+
+| measured over 40,000 ticks | reach unchecked | checked, no upward stance | now |
+|---|---|---|---|
+| working pawn-ticks out of reach | 2,674 of 55,100 | — | **0 of 46,000** |
+| cells mined | 65 | 32 | **52** |
+| standing orders with nowhere to stand | 0 | 33 | **13** (11 genuinely cut off) |
+
+65 was never the honest number: it included work done by reaching up through floors.
+
+**Owed: the overhead swing has not been photographed.** A cell that can *only* be reached from
+underneath is rare on an open board — the shot harness marks one deliberately and found
+`(55,63,L5)`, which is deep underground with no route to it, so no colonist went. The stance is
+proven in the simulation and the pose is measured; the picture is not taken. `shot-miner-up.png` is
+written the moment a colony ever works one.
+
 ## 7. Risks
 
 1. **Golden tests re-base twice** — once for the raised ground, once for terracing. Both are

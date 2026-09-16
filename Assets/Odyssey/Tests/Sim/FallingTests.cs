@@ -479,6 +479,135 @@ namespace Odyssey.Tests.Sim
                 $"it let go and landed in {Size.FromIndex(pawn.Cell)}, which has nothing under it");
         }
 
+        // ---- you work what you can reach ------------------------------------------------
+
+        [Test]
+        public void ATreeCannotBeFelledFromALayerBelowIt()
+        {
+            // The owner watched a colonist chop a tree from one block down. StandBeside always
+            // picked a cell on the tree's own layer, so the stance was never wrong — what was
+            // missing is that the driver never asked again. Arriving is not staying, and mining
+            // now moves colonists that did not ask to be moved: a dig drops whoever stands on the
+            // cell it cuts, and retiring a climb drops whoever was on it.
+            ColonyWorld colony = Board();
+            CellRef start = colony.Start;
+
+            int tree = -1;
+            for (int i = 0; i < Size.CellCount && tree < 0; i++)
+                if (colony.Designations.IsTree(i)) tree = i;
+            Assume.That(tree, Is.GreaterThanOrEqualTo(0), "no tree on this board");
+
+            CellRef at = Size.FromIndex(tree);
+            Assume.That(at.Y, Is.GreaterThan(0));
+
+            colony.Designations.Designate(at, DesignationKind.Fell);
+
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            int stand = Size.Index(at.X + 1, at.Z, at.Y);
+            Assume.That(colony.Grid.IsWalkable(stand), Is.True, "nowhere to stand beside this tree");
+
+            var driver = new FellJobDriver();
+            var job = new Job();
+            job.Reset(JobIndex.Fell);
+            job.DestCell = tree;
+            job.TargetCell = stand;
+            driver.Begin(pawn, job);
+
+            // Walk toil: already there, so it completes and hands over to the working toil. Driven
+            // rather than poked, because the thing under test is what happens AFTER arriving.
+            pawn.Cell = stand;
+            Assert.That(driver.Tick(colony.Pawns), Is.Not.EqualTo(JobStatus.Failed));
+
+            // Beside it on its own layer is work.
+            Assert.That(driver.Tick(colony.Pawns), Is.Not.EqualTo(JobStatus.Failed),
+                "a colonist standing beside the tree cannot fell it");
+
+            // One layer down is not. It does not fail — being moved is not the colonist's fault
+            // and the stance is usually a step away — it goes back to the walk toil and returns.
+            int chopped = driver.ToilProgress;
+            Assume.That(chopped, Is.GreaterThan(0), "the colonist never got a swing in");
+
+            pawn.Cell = Size.Index(at.X + 1, at.Z, at.Y - 1);
+            driver.Tick(colony.Pawns);
+
+            Assert.That(driver.ToilIndex, Is.EqualTo(0),
+                "a colonist a layer below the tree went on chopping it instead of walking back");
+        }
+
+        [Test]
+        public void RockIsCutFromOneCellAwayInAnyDirectionAndNoFurther()
+        {
+            // Mining's own answer to the same question, and it is a wider one than felling's: a
+            // rock is cut from beside it, from a layer up — the rim stance and the on-top stance —
+            // and from a layer DOWN, because a pick goes overhead and undercutting a face is
+            // ordinary mining. What is not ordinary is reaching two layers or three cells.
+            ColonyWorld colony = Board();
+            CellRef start = colony.Start;
+            int rock = Size.Index(start.X, start.Z, start.Y) - Size.LayerStride;
+            Assume.That(colony.Designations.CanMine(rock), Is.True);
+            CellRef at = Size.FromIndex(rock);
+            Assume.That(at.Y, Is.GreaterThan(0));
+
+            colony.Designations.Designate(at, DesignationKind.Mine);
+
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            int stand = Size.Index(at.X, at.Z, at.Y + 1);
+            Assume.That(colony.Grid.IsWalkable(stand), Is.True, "nowhere to stand over this rock");
+
+            var driver = new MineJobDriver();
+            var job = new Job();
+            job.Reset(JobIndex.Mine);
+            job.DestCell = rock;
+            job.TargetCell = stand;
+            driver.Begin(pawn, job);
+
+            pawn.Cell = stand;
+            Assert.That(driver.Tick(colony.Pawns), Is.Not.EqualTo(JobStatus.Failed));
+
+            pawn.Cell = Size.Index(at.X + 1, at.Z, at.Y);
+            Assert.That(driver.Tick(colony.Pawns), Is.Not.EqualTo(JobStatus.Failed),
+                "a miner beside the rock cannot cut it");
+
+            pawn.Cell = Size.Index(at.X + 1, at.Z, at.Y + 1);
+            Assert.That(driver.Tick(colony.Pawns), Is.Not.EqualTo(JobStatus.Failed),
+                "a miner on the rim of the hole cannot cut it");
+
+            pawn.Cell = Size.Index(at.X, at.Z, at.Y + 1);
+            Assert.That(driver.Tick(colony.Pawns), Is.Not.EqualTo(JobStatus.Failed),
+                "a miner standing on the rock cannot cut it");
+
+            // Reaching up through a floor, and reaching across the room: neither is work. The
+            // pick of the two measurements is the work banked on the cell, because that is what
+            // a swing actually produces.
+            // A layer below is work now, and the same shape as the rim stance upside down.
+            pawn.Cell = Size.Index(at.X + 1, at.Z, at.Y - 1);
+            Assert.That(driver.Tick(colony.Pawns), Is.Not.EqualTo(JobStatus.Failed),
+                "a miner under the overhang cannot cut it");
+
+            pawn.Cell = Size.Index(at.X, at.Z, at.Y - 1);
+            Assert.That(driver.Tick(colony.Pawns), Is.Not.EqualTo(JobStatus.Failed),
+                "a miner directly under the rock cannot cut the ceiling over its head");
+
+            foreach (var (label, cell) in new[]
+            {
+                ("two layers below the rock", Size.Index(at.X, at.Z, at.Y - 2)),
+                ("three cells away", Size.Index(at.X + 3, at.Z, at.Y)),
+            })
+            {
+                pawn.Cell = Size.Index(at.X, at.Z, at.Y + 1);
+                driver.Tick(colony.Pawns);   // back in reach, so the walk toil is behind it again
+                int before = colony.Designations.WorkDone(rock);
+
+                pawn.Cell = cell;
+                driver.Tick(colony.Pawns);
+
+                Assert.That(colony.Designations.WorkDone(rock), Is.EqualTo(before),
+                    $"a miner {label} went on cutting it");
+                Assert.That(driver.ToilIndex, Is.EqualTo(0),
+                    $"a miner {label} did not go back to walk to its stance");
+            }
+        }
+
         [Test]
         public void AClimbIsNotALadder()
         {

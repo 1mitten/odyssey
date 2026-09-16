@@ -268,7 +268,9 @@ namespace Odyssey.Presentation.World
                           .Append("° -> reach ").Append(tool.DippedStrike.magnitude.ToString("0.00"))
                           .Append(" m, height ").Append(MeasuredDippedBladeHeight.ToString("0.00"))
                           .Append(" m (level ").Append(MeasuredBladeHeight.ToString("0.00"))
-                          .Append(" m)");
+                          .Append(" m), raise ").Append(Styles[style].Raise.ToString("0"))
+                          .Append("° -> height ").Append(MeasuredRaisedBladeHeight.ToString("0.00"))
+                          .Append(" m");
                 }
             }
             return report.ToString();
@@ -375,6 +377,17 @@ namespace Odyssey.Presentation.World
 
         /// <summary>How far in front the edge lands with the stroke aimed down, in metres.</summary>
         public float MeasuredDippedReach { get; private set; }
+
+        /// <summary>
+        /// How high the edge lands above the feet with the stroke aimed up, in metres.
+        ///
+        /// The number that says whether a miner can honestly reach the ceiling over its head. It
+        /// cannot reach the bottom face of the cell above — that is three metres up and the arm
+        /// swings about 1.76 m from a pivot a metre off the ground — so what this reports is how
+        /// close it gets, and the pose is judged on looking like full stretch rather than on
+        /// touching.
+        /// </summary>
+        public float MeasuredRaisedBladeHeight { get; private set; }
 
         /// <summary>
         /// The fastest live figure's ground speed, in metres per second.
@@ -927,11 +940,19 @@ namespace Odyssey.Presentation.World
                 // Half a cell is the threshold rather than a whole one so that the test is about
                 // which layer the work is on and not about exactly where in a cell a pawn is drawn.
                 float drop = position.y - figure.WorkCentre.y;
-                bool below = drop > CellMetrics.SizeY * 0.5f;
-                if (below)
+                WorkStyle style = Styles[WorkStyle.IndexForJob(pawn.JobDef)];
+
+                if (drop > CellMetrics.SizeY * 0.5f)
                 {
                     figure.WorkCentre.y += CellMetrics.SizeY;
-                    figure.WorkDip = Styles[WorkStyle.IndexForJob(pawn.JobDef)].Dip;
+                    figure.WorkDip = style.Dip;
+                }
+                else if (drop < -CellMetrics.SizeY * 0.5f)
+                {
+                    // Above the worker: the face it can actually reach is the BOTTOM of that cell,
+                    // not its middle, so the aim comes down by a cell rather than up by one.
+                    figure.WorkCentre.y -= CellMetrics.SizeY;
+                    figure.WorkDip = style.Raise;
                 }
                 else
                 {
@@ -1419,6 +1440,7 @@ namespace Odyssey.Presentation.World
             // pointing.
             fitted.Strike = Quaternion.Inverse(figure.Transform.rotation) * edge;
             fitted.DippedStrike = fitted.Strike;
+            fitted.RaisedStrike = fitted.Strike;
             MeasuredReach = edge.magnitude;
             MeasuredStrikeSideways = fitted.Strike.x;
         }
@@ -1435,21 +1457,50 @@ namespace Odyssey.Presentation.World
         void MeasureDippedStrike(Figure figure, int style)
         {
             WorkStyle look = Styles[style];
-            if (look.Dip == 0f) return;
-
             FittedTool fitted = figure.Tools[style];
             if (fitted.Transform == null || figure.RightUpperArm == null) return;
+
+            if (look.Dip != 0f && Aim(figure, style, look.Dip, out Vector3 dipped, out float dippedY))
+            {
+                fitted.DippedStrike = dipped;
+                MeasuredDippedBladeHeight = dippedY;
+                MeasuredDippedReach = dipped.magnitude;
+            }
+
+            if (look.Raise != 0f && Aim(figure, style, look.Raise, out Vector3 raised, out float raisedY))
+            {
+                fitted.RaisedStrike = raised;
+                MeasuredRaisedBladeHeight = raisedY;
+            }
+        }
+
+        /// <summary>
+        /// Strike the pose at an aim and report where the edge ends up, in the figure's own frame.
+        ///
+        /// Struck rather than derived, for both aims and for the same reason: the aim rotates a
+        /// chain of bones about a pivot nobody has written down, so the only honest way to know
+        /// where the edge lands is to put the figure there and look.
+        /// </summary>
+        bool Aim(Figure figure, int style, float degrees, out Vector3 strike, out float height)
+        {
+            strike = Vector3.zero;
+            height = 0f;
+
+            FittedTool fitted = figure.Tools[style];
+            if (fitted.Transform == null) return false;
+
+            WorkStyle look = Styles[style];
 
             // Back to the clip pose first. Strike ADDS — the same trap that once measured the
             // pick's blade at 2.39 m, above the crown of the colonist holding it.
             figure.Graph.Evaluate(0f);
-            Strike(figure, look.Stroke.AtStrike.Dipped(look.Dip), look.Tilt);
+            Strike(figure, look.Stroke.AtStrike.Dipped(degrees), look.Tilt);
 
             Vector3 edge = fitted.Transform.TransformPoint(fitted.BladeTip) - figure.Transform.position;
-            MeasuredDippedBladeHeight = edge.y;
+            height = edge.y;
             edge.y = 0f;
-            fitted.DippedStrike = Quaternion.Inverse(figure.Transform.rotation) * edge;
-            MeasuredDippedReach = edge.magnitude;
+            strike = Quaternion.Inverse(figure.Transform.rotation) * edge;
+            return true;
         }
 
         /// <summary>
@@ -1603,7 +1654,8 @@ namespace Odyssey.Presentation.World
             public FittedTool Held => Tools[Style];
 
             /// <summary>Where the edge lands this frame, which depends on whether the aim is dipped.</summary>
-            public Vector3 StrikeNow => WorkDip != 0f ? Held.DippedStrike : Held.Strike;
+            public Vector3 StrikeNow =>
+                WorkDip > 0f ? Held.DippedStrike : WorkDip < 0f ? Held.RaisedStrike : Held.Strike;
 
             /// <summary>
             /// The point the blade is aimed at. The middle of the work cell's floor for work on
@@ -1690,6 +1742,9 @@ namespace Odyssey.Presentation.World
             /// mistake as writing the reach down instead of measuring it.</para>
             /// </summary>
             public Vector3 DippedStrike;
+
+            /// <summary>The same again for the stroke aimed up at work overhead. See WorkStyle.Raise.</summary>
+            public Vector3 RaisedStrike;
         }
     }
 }

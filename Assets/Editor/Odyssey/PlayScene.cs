@@ -434,6 +434,87 @@ namespace Odyssey.EditorTools
                     Debug.Log("[Shot] no miner was cutting a layer below itself, so no downward shot");
                 }
 
+                // And a miner cutting the layer ABOVE itself, which is the owner's decision that
+                // a pick goes overhead. Waited for rather than hoped for, like the climb: the
+                // stance is one of four and it is not the common one.
+                {
+                    // Made rather than waited for. Four stances share the work and this is not the
+                    // common one, so 6,000 ticks of an ordinary colony went by without a single
+                    // colonist happening to cut a ceiling. Marking a cell that can ONLY be reached
+                    // from underneath is the honest way to photograph the stance that handles it.
+                    for (int gz = 0; gz < size.SizeZ; gz++)
+                    for (int gx = 0; gx < size.SizeX; gx++)
+                    for (int gy = 1; gy < size.SizeY - 1; gy++)
+                    {
+                        int under = size.Index(gx, gz, gy);
+                        int rock = under + size.LayerStride;
+                        if (!grid.IsWalkable(under)) continue;
+                        if (!designations.CanMine(rock)) continue;
+
+                        // Only from below, which means none of the three stances the giver
+                        // prefers: nothing walkable beside the rock on its own layer (beside),
+                        // nothing walkable on the layer above it (the rim, and standing on top).
+                        bool onlyFromUnder = true;
+                        for (int dy = 1; dy <= 2 && onlyFromUnder; dy++)
+                        for (int dz = -1; dz <= 1 && onlyFromUnder; dz++)
+                        for (int dx = -1; dx <= 1 && onlyFromUnder; dx++)
+                        {
+                            if (dy == 1 && dx == 0 && dz == 0) continue;   // the rock itself
+                            if (!size.Contains(gx + dx, gz + dz, gy + dy)) continue;
+                            if (grid.IsWalkable(size.Index(gx + dx, gz + dz, gy + dy)))
+                                onlyFromUnder = false;
+                        }
+
+                        if (!onlyFromUnder) continue;
+                        designations.Designate(size.FromIndex(rock), Odyssey.Sim.Designations.DesignationKind.Mine);
+                        Debug.Log($"[Shot] marked {size.FromIndex(rock)} which can only be cut " +
+                                  $"from {size.FromIndex(under)} underneath it");
+                        gz = size.SizeZ; gx = size.SizeX; break;
+                    }
+
+                    PawnView reacher = default;
+                    bool foundReacher = false;
+                    for (int waited = 0; waited < 12_000 && !foundReacher; waited++)
+                    {
+                        world.Tick();
+                        figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                        figures.Evaluate(FrameSeconds);
+
+                        var live = world.Views.Current.Pawns;
+                        for (int i = 0; i < live.Length; i++)
+                        {
+                            PawnView who = live[i];
+                            if (!who.Working || who.JobDef != JobHandle.Mine) continue;
+                            if (who.WorkCell.Y <= who.Cell.Y) continue;
+                            reacher = who;
+                            foundReacher = true;
+                            break;
+                        }
+                    }
+
+                    if (foundReacher)
+                    {
+                        Vector3 toWork = CellMetrics.FloorCentre(reacher.WorkCell)
+                                       - CellMetrics.FloorCentre(reacher.Cell);
+                        toWork.y = 0f;
+                        float sideOn = toWork.sqrMagnitude > 1e-4f
+                            ? PawnPose.YawOf(toWork) + 90f
+                            : 45f;
+
+                        // Framed on the face it is reaching for: the BOTTOM of the cell above,
+                        // which is the only part of it a person could ever touch.
+                        Vector3 face = CellMetrics.FloorCentre(reacher.WorkCell);
+                        Shoot(camera, face, 4f, sideOn, 7f, "Logs/shot-miner-up.png");
+                        Debug.Log($"[Shot] a miner at {reacher.Cell} is cutting {reacher.WorkCell} " +
+                                  "overhead");
+                        Debug.Log($"[Shot] tools (raise) — {figures.DescribeTools()}");
+                    }
+                    else
+                    {
+                        Debug.Log("[Shot] no miner was cutting a layer above itself, so no reach shot");
+                    }
+                }
+
                 // Spoil on the floor: what a dug-out cell actually leaves to look at.
                 {
                     CellRef spoil = default;

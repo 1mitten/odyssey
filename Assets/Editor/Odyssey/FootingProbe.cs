@@ -68,6 +68,7 @@ namespace Odyssey.EditorTools
             int longestHang = 0, totalHang = 0, hangs = 0, ladderStands = 0;
             int climbTicks = 0, climbsAgainstNothing = 0;
             int horizontalSteps = 0, stepsOntoAir = 0, standingOnAir = 0, airSamples = 0;
+            int workTicks = 0, outOfReach = 0, reachSamples = 0;
 
             for (int tick = 0; tick < 40_000; tick++)
             {
@@ -111,6 +112,37 @@ namespace Odyssey.EditorTools
                         Debug.Log($"[Footing] tick {tick}: pawn {pawn.Id.Value} is in " +
                                   $"{size.FromIndex(pawn.Cell)} with no floor under it, " +
                                   $"{drop} empty layer(s) below it, path={pawn.HasPath}");
+                    }
+
+                    // 1a. Working something it could not reach. WorkFocus is the cell the driver
+                    //     says it is working, published for presentation; -1 while walking. The
+                    //     reach rule is: beside it, and for mining one layer up as well.
+                    int focus = pawn.Driver != null ? pawn.Driver.WorkFocus : -1;
+                    if (focus >= 0)
+                    {
+                        workTicks++;
+                        CellRef me = size.FromIndex(pawn.Cell);
+                        CellRef it = size.FromIndex(focus);
+                        int up = me.Y - it.Y;
+                        // Felling shares a floor with its tree. Mining works from beside, from a
+                        // layer up (the rim and on-top stances) and from a layer down, because a
+                        // pick goes overhead.
+                        bool mining = pawn.CurrentJob != null && pawn.CurrentJob.DefIndex == JobIndex.Mine;
+                        int above = mining ? 1 : 0;
+                        int below = mining ? 1 : 0;
+                        bool near = System.Math.Abs(me.X - it.X) <= 1
+                                 && System.Math.Abs(me.Z - it.Z) <= 1
+                                 && up <= above && up >= -below;
+                        if (!near)
+                        {
+                            outOfReach++;
+                            if (reachSamples < 5)
+                            {
+                                reachSamples++;
+                                Debug.Log($"[Footing] tick {tick}: pawn {pawn.Id.Value} (job " +
+                                          $"{pawn.CurrentJob?.DefIndex}) is in {me} working {it}");
+                            }
+                        }
                     }
 
                     // 1b. WALKING on air. The question the earlier version of this probe could
@@ -259,7 +291,8 @@ namespace Odyssey.EditorTools
                       $"{ladderStands} pawn-ticks spent on a connector; " +
                       $"{climbsAgainstNothing} of {climbTicks} climbing pawn-ticks had no wall beside them; " +
                       $"{stepsOntoAir} of {horizontalSteps} sideways pawn-ticks stepped onto a floorless cell; " +
-                      $"{standingOnAir} pawn-ticks stood still on one");
+                      $"{standingOnAir} pawn-ticks stood still on one; " +
+                      $"{outOfReach} of {workTicks} working pawn-ticks were out of reach of their work");
         }
 
         /// <summary>Is any of the four horizontal neighbours of this cell solid rock?</summary>

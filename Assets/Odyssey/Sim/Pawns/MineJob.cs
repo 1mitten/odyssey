@@ -101,6 +101,11 @@ namespace Odyssey.Sim.Pawns
         /// has no top face to strike, and without it the giver hands out stances at rock nobody
         /// can get near.</para>
         ///
+        /// <para><b>From below</b> — one of the nine cells a layer down, the centre included,
+        /// reaching up. A pick goes overhead, so a colonist on the ground can cut the rock above
+        /// its head or the overhang beside it. Before this existed, a marked cell whose only
+        /// approach was from underneath had no stance at all and the order simply waited.</para>
+        ///
         /// <para><b>On top</b> — last, because it is the one that costs. It is also unavoidable:
         /// the first cut into flat ground has no rim to stand on, and there is no other stance for
         /// starting a shaft. The floor goes with the cell, and the colonist steps down into the
@@ -134,6 +139,17 @@ namespace Odyssey.Sim.Pawns
                 if (rim >= 0) return rim;
             }
 
+            // From underneath, reaching up. A pick goes overhead, so a miner standing on the
+            // ground can cut the rock above its head or the overhang beside it — which is how a
+            // face is undercut, and the owner's decision after watching marked rock above a
+            // colonist simply wait. Without it every cell whose only approach is from below had
+            // no stance at all: 33 standing orders, measured over 40,000 ticks.
+            if (at.Y > 0)
+            {
+                int under = NearestStandOnLayer(ctx, pawn, at, at.Y - 1, includeCentre: true);
+                if (under >= 0) return under;
+            }
+
             if (!ctx.Cells.IsWalkable(above) || !ctx.Reachable(pawn, above)) return -1;
             return above;
         }
@@ -142,7 +158,8 @@ namespace Odyssey.Sim.Pawns
         /// The nearest walkable, reachable cell of the eight around <paramref name="at"/> in XZ,
         /// taken on <paramref name="layer"/> rather than on the cell's own.
         /// </summary>
-        static int NearestStandOnLayer(PawnContext ctx, Pawn pawn, CellRef at, int layer)
+        static int NearestStandOnLayer(
+            PawnContext ctx, Pawn pawn, CellRef at, int layer, bool includeCentre = false)
         {
             GridSize size = ctx.Size;
             int best = -1, bestDistance = int.MaxValue;
@@ -150,7 +167,10 @@ namespace Odyssey.Sim.Pawns
             for (int dz = -1; dz <= 1; dz++)
             for (int dx = -1; dx <= 1; dx++)
             {
-                if (dx == 0 && dz == 0) continue;
+                // The cell straight under the rock counts when reaching upward — that is a miner
+                // cutting the ceiling over its own head. It never counts on the rock's own layer,
+                // where it would be the rock itself.
+                if (dx == 0 && dz == 0 && !includeCentre) continue;
                 int x = at.X + dx, z = at.Z + dz;
                 if (!size.Contains(x, z, layer)) continue;
 
@@ -227,6 +247,16 @@ namespace Odyssey.Sim.Pawns
                 JobStatus walk = GotoCell(ctx, Job.TargetCell);
                 if (walk == JobStatus.Succeeded) NextToil();
                 return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
+            }
+
+            // The same question felling asks, with mining's own answer to it: a rock is cut from
+            // beside it or from one layer up, which is the rim stance and the on-top stance, and
+            // never from below. Mining is where the displacement comes FROM — a dig drops whoever
+            // stands on the cell it cuts — so the job that causes it must check too.
+            if (!StillInReach(ctx, Pawn, cell, layersAbove: 1, layersBelow: 1))
+            {
+                WalkBack();
+                return JobStatus.Ongoing;
             }
 
             ushort terrain = ctx.Cells.Terrain[cell];

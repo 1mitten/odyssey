@@ -271,12 +271,34 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public readonly float Dip;
 
+        /// <summary>
+        /// Degrees the whole stroke is aimed <em>upward</em> when the work is above the worker.
+        ///
+        /// <para>The mirror of <see cref="Dip"/>, and it exists for the same reason: a miner can
+        /// cut the rock over its head or the overhang beside it — a pick goes overhead, and
+        /// undercutting a face is ordinary mining — so the stroke has to point there. Drawn level,
+        /// the pick swings at waist height under a ceiling three metres up.</para>
+        ///
+        /// <para><b>It is not as large as the dip, and it cannot be.</b> Bringing the edge down to
+        /// the feet is a rotation the arm can make; bringing it to the bottom face of the cell
+        /// above is not — that face is three metres up and the reach is about 1.76 m from a pivot
+        /// a metre off the ground, so no angle gets there. What this asks for instead is the
+        /// highest the figure can honestly put the head, which reads as a colonist working a
+        /// ceiling at full stretch. <c>MeasuredRaisedBladeHeight</c> is what it actually achieves.</para>
+        ///
+        /// <para>Negative because it runs the same arithmetic as the dip through
+        /// <see cref="WorkSwing.Dipped"/>: positive folds the back forward and carries the arm
+        /// down, so negative straightens up and lifts it.</para>
+        /// </summary>
+        public readonly float Raise;
+
         public WorkStyle(WorkStroke stroke, string toolModule, ChipRecipe chips, float aimFromCentre,
             float tilt, float gripFraction, float bladeRoll, float bladeYaw, float offHandSpacing,
-            float chipStandOff = 0f, float dip = 0f)
+            float chipStandOff = 0f, float dip = 0f, float raise = 0f)
         {
             ChipStandOff = chipStandOff;
             Dip = dip;
+            Raise = raise;
             Stroke = stroke;
             ToolModule = toolModule;
             Chips = chips;
@@ -316,8 +338,8 @@ namespace Odyssey.Presentation.World
             // rather than appearing in mid-air once they have already cleared it.
             // 12 cm back out to the face the head went in through, and 10 cm clear of it.
             chipStandOff: 0.22f,
-            // Bent over the hole when the rock is below. See Dip.
-            dip: 45f);
+            // Bent over the hole when the rock is below, and at full stretch when it is above.
+            dip: 45f, raise: -55f);
 
         /// <summary>How many styles there are. Sizes the per-figure tool table.</summary>
         public const int Count = 2;
@@ -353,6 +375,6 @@ namespace Odyssey.Presentation.World
             float? bladeRoll = null, float? bladeYaw = null, float? offHandSpacing = null) =>
             new WorkStyle(Stroke, ToolModule, Chips, AimFromCentre,
                 tilt ?? Tilt, gripFraction ?? GripFraction, bladeRoll ?? BladeRoll,
-                bladeYaw ?? BladeYaw, offHandSpacing ?? OffHandSpacing, ChipStandOff, Dip);
+                bladeYaw ?? BladeYaw, offHandSpacing ?? OffHandSpacing, ChipStandOff, Dip, Raise);
     }
 }
