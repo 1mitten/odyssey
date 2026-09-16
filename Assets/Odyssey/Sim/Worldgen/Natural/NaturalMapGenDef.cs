@@ -104,9 +104,14 @@ namespace Odyssey.Sim.Worldgen.Natural
             barePatchThreshold = 0;
 
             // And its water, by owner decision on 2026-09-16: a stream to wade and a pond or two
-            // to walk around, with the start clearing kept clear of both. The board is flat here
-            // (MakeBarren zeroed the relief), which is exactly the ground a pond wants — the
-            // level-footprint rule accepts every one of them.
+            // to walk around, with the start clearing kept clear of both.
+            //
+            // This comment used to say the board was flat here because MakeBarren had zeroed the
+            // relief, and that stopped being true the moment this became a cover mode rather than
+            // a call to MakeBarren with the trees put back. The surface is terraced — surfaceRelief
+            // keeps the def's own 2 — so the pond rule has real work to do: a pond is dropped
+            // unless its whole footprint is one level terrace, which is what keeps a water surface
+            // level and its banks a single step high.
             water = true;
             return this;
         }

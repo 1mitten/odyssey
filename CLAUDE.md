@@ -202,8 +202,68 @@ after a rebuild, republish `docs/wiki/artifact.html` and
   also records the amendment to §2a's "not a framing ring of hills". **Still wants the owner's eye
   in `Play.unity`**: this worktree has no Synty packs, so the ground there is untextured flat colour
   with no grain for a slope to catch, and the board's own roll reads far more weakly than it should.
-  Real terracing (`surfaceRelief = 2`) is deliberately left off; it is one line away and would
-  change worldgen, goldens, pathing and the start cell.
+  ~~Real terracing (`surfaceRelief = 2`) is deliberately left off.~~ **False since the mining
+  merge**, which made `MakeWooded` a *cover* mode rather than `MakeBarren` with the trees put back,
+  so it stopped zeroing anything: the played board has carried real 3 m terrace risers ever since,
+  and `WoodedMapTests.TheDrySurfaceIsTerracedAndCoveredInGrass` requires them. See the next bullet.
+- **Earth has a surface, and a terrace step has a way up (owner ask, 2026-09-16).** ADR 0002 fixes
+  the layer at 3.0 m and calls it irreversible, so the owner's "can we span this out to half or
+  quarter blocks" is answered in the **mesh**, where a variant costs one instancing *bucket* rather
+  than one instance per cell and four bearings are free. Nothing here is a cell: no save, no hash,
+  no pathing — §2b's "relief is a drawing offset, never a position" holds unchanged.
+  `GroundMesh` is `RockMesh` for earth with one rule stone does not have — **the middle of the top
+  face is pinned exactly**, because everything in the world is drawn standing at `FloorCentre` and a
+  dished meadow would hover every colonist on it. Two meshes, which is a performance decision: only
+  terrace risers, mined faces and outcrops ever show a side, so *Turf* is the cheap common case (32
+  triangles) and the coursed *Face* (80) goes only to cells that show one.
+  **`BankMesh` is the answer to the straight wall:** three treads and three risers drawn in the
+  *empty cell* beside a one-layer step — which the simulation already lets a colonist hop
+  (`MoveCost.JumpUp`), so the board was showing a wall where the game had a path. Stepped rather
+  than smooth, because 3 m over one cell is a fifty-degree ramp however it is drawn and a smooth one
+  reads as a road somebody built. Four conditions, each tested: empty and standing on ground, the
+  step is **earth** (a quarry wall stays sheer), its top is open, and the cell is open to the sky.
+  Water counts as the low side, so every stream bank stops being a 3 m ditch wall.
+  **The landscape is one colour at every height:** the surface spans five layers and only one is
+  ever active, so the depth shade was dimming grass two terraces down to 0.46 and the meadow came
+  out in three greens. `TintCode.DaylitBase` exempts any cell with no slab and no solid cell above
+  it — a tree is not a roof — while rock in a mine still dims, which is where that cue earns its
+  keep. **Figures answer the ground too:** `Footing` leans the root toward the ground normal (a
+  fraction of it, capped — people stand up on a hillside) and plants both feet with `ArmIk`, which
+  was already a general two-bone solve; the hips drop to the deepest foot, which is the one thing
+  that makes it read. Slope is not a cell property, so **nobody walks any slower**.
+  **The black lines between tiles were never holes** (owner report, 2026-09-16). A gap would show
+  the pale blue skybox; these were near-black, so they were geometry receiving no light — where two
+  sheared cells disagree, the taller one's vertical side wall fills the step and a vertical face
+  under a 72° sun with no shadow pass receives almost nothing. `GroundSeamTests` weighed the two
+  sources rather than guessing: the relief field's own parting is **14.7 mm** (the "about 41 mm" on
+  record was conservative) and that is the subtle line that has always been on `main`; a 3.6 cm rim
+  ripple added **72 mm** on top, and that was the obvious one. **So the ripple ships at zero** — five
+  times the artefact for a benefit no photograph could find — and the test asserts the default so
+  turning it back on needs a fresh sheet. The residual 14.7 mm cannot be removed while each cell is
+  its own box and does not need to be, only lit: **side faces carry shading normals tilted 38° up**
+  (`SideNormalTiltDegrees`), which costs no vertex, no triangle and no draw call. Any per-cell rim
+  movement disagrees with the neighbour by *twice* it, so genuinely uneven ground at cell scale wants
+  shader displacement keyed to the **shared corner's world position** — that is the next piece of
+  work, not a bigger number.
+  **The lip of a step is cut back** (`ChamferMetres`, 22 cm), on the sides that are actually open and
+  no others: chamfer all four and every riser cell grooves against the flat ground behind it, which
+  is the ripple's mistake arriving again. Sixteen patterns of exposed sides fold onto **five**,
+  because turning a mesh is free — at the price that a face spends its bearing orienting the pattern
+  and varies by its courses alone.
+  **Measured** (`SlopeCheck`, whole slice, no frustum culling, so compare within the run only):
+  plain 1,061 draw calls / 31,089 instances → earth **1,312 / 31,089** → banks 1,411 / 32,220. Earth
+  geometry costs buckets and **not one extra instance**, 137 of its 251 calls being the pattern
+  split; the chamfer *amount* costs nothing at all (1,312 at 0, 22 and 45 cm), and with it at zero
+  the five patterns collapse to one so that turning the lever off is not the expensive choice.
+  Levers: `ChunkRenderer.EarthGeometry`, `ChunkRenderer.Banks`, `GroundMesh.SideNormalTiltDegrees`,
+  `ChamferMetres`, `MaxRipple` — all off being exactly the old ground. The mesh levers are static and
+  the meshes are held by reference inside a `ModuleLibrary`, so moving one needs an explicit
+  `GroundMesh.Invalidate()` **and a fresh library**, or the ground draws against destroyed meshes and
+  silently disappears. Judge it with **`Odyssey → Presentation → Check the slopes and banks`**
+  (`scripts/unity.sh shot Odyssey.EditorTools.SlopeCheck.Run`), which finds the longest run of
+  one-layer step on the board rather than being told where one is, and sweeps six conditions
+  differing by one thing each. Design: `06-rendering-and-camera.md` §2c. **Frame time still needs
+  `FrameTimeTests`** on a machine with the packs.
 - **Colonists swing an axe, and no pack contains the clip, 2026-09-16.** There is no work animation anywhere in the 7,222 imported assets — `AnimationBaseLocomotion` ships idle, walk, run, sprint, crouch, in-air, turns, transitions and additive lean/look, and the character packs ship none — so a colonist felling a tree stood breathing in the idle for ten seconds and then the tree fell over. The pose is therefore **computed rather than authored**: every character is a Humanoid rig, so `WorkSwing` (`Presentation/World/`) turns a stroke phase into shoulder, elbow and spine angles, and `PawnFigureDirector` pitches those five bones **about the figure's own right-hand axis, never the bone's local axis** (local axes belong to whoever rigged the character; the plane an axe swings in is a fact about the figure), laid over whatever the gait mixer wrote. **The signs are not one convention**: an arm hangs down so a negative pitch carries it forward, a spine stands up so a positive one folds it forward, and the director subtracts the spine's pitch back out of the shoulders so the three angles are genuinely independent. The stroke is three unequal parts — long eased raise, short accelerating strike, dwell with the blade in the wood — because a sine reads as a metronome. It eases in and out over `WorkEaseSeconds`, and it **freezes when the game is paused**, inferred from the tick standing still: a paused pawn settles into the idle by itself, so a swinging colonist would otherwise be the only thing moving. The axe is an ordinary catalogue row, `ModuleIds.ToolAxe` (`SM_Gen_Wep_Axe_01`), parented to the right hand only while the work lasts; a clone without the packs fells trees bare-handed. It is **gripped by measurement, not by authored Euler angles**: the haft is the long axis of the combined mesh bounds, the head is the end the mass sits towards, the tool is laid along the forearm with the grip in the palm, and the blade's roll is computed so the bit faces the way the head is travelling — leaving `AxeBladeRoll` as a trim. **Both hands grip it**, the off hand placed by a two-bone IK solve (`ArmIk`), because no pair of angles will ever bring the second fist to a haft held in the first. And `WorkStance` draws a working figure **wherever puts its blade in the wood**, eased in with the swing — solved from the figure's whole measured strike offset, never from a scalar reach, because with the swing tilted over the shoulder 1.12 m of a 1.68 m strike is *sideways* and a figure stood at 1.68 m puts its axe a metre beside the tree. Contact is checked by `MeasuredBladeGap` (0.19 m from the trunk's middle) rather than by eye: a three-quarter photograph puts the woodcutter and her tree at different depths and cannot settle it. Only the drawn figure steps in; the pawn stays in its cell for picking, the cursor and the whole simulation.
 
   **Chips fly when the blade lands (2026-09-16).** `ChipDirector` (beside `PawnFigureDirector`, disposed with it) throws a few pieces of debris on the frame the stroke crosses the strike, which `WorkSwing.Lands` decides. **One particle system for the whole colony**, world-simulated, and the material is a `ChipRecipe` value — colour, size, speed, life, count and spread are per particle, so wood off an axe and stone off a pick share the system, the material and the draw call; `ChipRecipe.Stone` is written and waiting for mining. Gravity is the one thing a recipe cannot carry (it belongs to the system), so heavier debris leaves faster, smaller and shorter-lived. **It is warmed on construction** — an unwarmed particle material compiles its shader on the first frame it is drawn, which would be the exact frame the first axe lands. Chips are decoration like the grass tufts: no cell, no save, no hash.
