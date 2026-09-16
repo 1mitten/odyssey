@@ -68,7 +68,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
-| **Architect** | `ui.tab.architect` | Build, dig and zone — the palette of placement tools | no art | M1 |
+| **Build** | `ui.tab.build` | Build, dig and zone — the palette of placement tools | no art | M1 |
 | **Work** | `ui.tab.work` | The priority grid | sheet 06 (action tiles), med | M1 |
 | **Schedule** | `ui.tab.schedule` | Who does what, and when | sheet 06 (action tiles), med | M1 |
 | **Research** | `ui.tab.research` | The tree, and what is being worked on | sheet 06 (action tiles), high | M1 |

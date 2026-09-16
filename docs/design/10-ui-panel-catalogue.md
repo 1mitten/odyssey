@@ -182,7 +182,12 @@ Never colour alone. This costs nothing now and is expensive to retrofit.
 **Why separate from alerts.** An alert is a condition with a lifetime that can clear itself. A
 bulletin is an event, immutable once raised. Merging them produces a system wrong for both.
 
-## A7 Architect toolbar and palette
+## A7 Build toolbar and palette
+
+**Renamed from Architect by the owner, 2026-09-16**, and moved out of the left column onto the
+bottom bar as its first button, left of Work. Trade left the bar in the same change so that the
+row did not grow. The tool and category keys under `ui.arch.*` keep their spelling for now; that
+is a registry migration and a separate decision.
 
 | | |
 |---|---|

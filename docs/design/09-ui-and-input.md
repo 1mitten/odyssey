@@ -727,13 +727,13 @@ can die.
 
 ### M3 Build and dig — vertical-slice HUD complete
 
-Tool director and the architect palette driven by category and tool Defs; placement validator
+Tool director and the Build palette driven by category and tool Defs; placement validator
 with layer-aware rules and per-cell reasons; ghost renderer, instanced; the designation overlay
 as sparse instanced markers; stockpile zone painting and the zone overlay; gizmo registry and
 the first inspect-pane commands.
 
 **What M1 to M3 genuinely need:** slice navigation and the Depth Ruler, selection, the inspect
-pane, the architect palette with drag shapes, two overlay families, alerts, bulletins, time
+pane, the Build palette with drag shapes, two overlay families, alerts, bulletins, time
 controls, tooltips, hotkeys, the roster bar, the resource ledger, the developer overlay.
 
 **What is catalogued but not built:** the work grid, schedule, assign, animals, wildlife,

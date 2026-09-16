@@ -254,7 +254,7 @@ ui.overlay.power,Power,ui.overlay,M1,"Nets, and which of them are short"
 ui.overlay.salvage,Salvage density,ui.overlay,M1,Where the worthwhile scrap is
 ui.overlay.support,Structural support,ui.overlay,M1,What is holding this layer up
 ui.overlay.traffic,Traffic,ui.overlay,M1,Where colonists actually walk
-ui.tab.architect,Architect,ui.tab,M1,"Build, dig and zone — the palette of placement tools"
+ui.tab.build,Build,ui.tab,M1,"Build, dig and zone — the palette of placement tools"
 ui.tab.work,Work,ui.tab,M1,The priority grid
 ui.tab.schedule,Schedule,ui.tab,M1,"Who does what, and when"
 ui.tab.research,Research,ui.tab,M1,"The tree, and what is being worked on"

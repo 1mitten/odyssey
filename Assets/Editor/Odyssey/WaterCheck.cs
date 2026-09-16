@@ -121,6 +121,14 @@ namespace Odyssey.EditorTools
                     PlayScene.Shoot(camera, focus, 20f, 70f, $"Logs/water-{condition.Name}-grazing.png");
                     PlayScene.Shoot(camera, focus, 34f, 22f, $"Logs/water-{condition.Name}-close.png");
 
+                    // Lower and nearer than the camera rig will ever go, and deliberately so.
+                    // Seams between tiles are an angle problem: a height difference between one
+                    // tile and the next projects across the screen as the cotangent of the pitch,
+                    // so a step invisible from above opens into a band you can see the riverbed
+                    // through near the waterline. This is the shot that caught it, and the shot
+                    // that has to keep proving it has not come back.
+                    PlayScene.Shoot(camera, focus, 9f, 14f, $"Logs/water-{condition.Name}-waterline.png");
+
                     RenderPipelineManager.beginCameraRendering -= hook;
                     hook = null;
 

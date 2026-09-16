@@ -88,7 +88,7 @@
     /* Above the tab bar, never under it: the pane is what a click answers with.
     
        The offset clears a bar of two rows, which is what it became once every tab carried its
-       full name and the architect button joined them. This is a coupling and worth naming as
+       full name and the Build button joined them. This is a coupling and worth naming as
        one: the pane assumes a height for the bar rather than being laid out against it. It
        holds because the bar cannot exceed two rows at any resolution the panel scales to, and
        the honest fix is a three-row layout for the whole sheet rather than a fourth
@@ -106,7 +106,7 @@
     left: 10px; right: 10px; bottom: 10px;
     /* Reversed, so the bar is the first child and sits at the bottom while panels added later
        stack upwards above it. Plain column put the palette under the bar, because the regions
-       are built in catalogue order and the architect is built before the tabs. Ordering the
+       are built in catalogue order and the palette is built before the tabs. Ordering the
        stack by build order would make the layout depend on the order of ten method calls. */
     flex-direction: column-reverse;
 }
