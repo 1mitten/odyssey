@@ -303,6 +303,11 @@ The axe itself is `ModuleIds.ToolAxe`, an ordinary catalogue row parented to the
 long as the work lasts. A clone without the packs resolves it to null and colonists fell trees
 bare-handed, which is the same fallback every other piece of pack art has.
 
+**Everything a figure does that is not walking and not a tool stroke** — the lift, a crouch, the
+climb, an aimed weapon — is designed in `13-gestures.md`, which generalises this section's two
+hard-coded pose branches into a small vocabulary and adds the legs the climb pose does without.
+This section stays the record of the felling pose itself.
+
 ### Debris: one director, one system, a recipe per material
 
 A blow with nothing coming off it reads as a colonist waving an axe near a tree, so a few chips fly
