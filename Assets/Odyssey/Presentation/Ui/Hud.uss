@@ -85,18 +85,35 @@
 
 .slot-inspect {
     position: absolute;
-    /* Above the tab bar, never under it: the pane is what a click answers with. */
-    left: 10px; bottom: 60px;
+    /* Above the tab bar, never under it: the pane is what a click answers with.
+    
+       The offset clears a bar of two rows, which is what it became once every tab carried its
+       full name and the architect button joined them. This is a coupling and worth naming as
+       one: the pane assumes a height for the bar rather than being laid out against it. It
+       holds because the bar cannot exceed two rows at any resolution the panel scales to, and
+       the honest fix is a three-row layout for the whole sheet rather than a fourth
+       hand-picked offset. */
+    left: 10px; bottom: 104px;
     width: 356px;
     height: 302px;
 }
 
-/* The bottom edge, divided rather than overlapped. The tab bar takes what is left after the
-   overlay strip and the cancel button have taken what they need, so nothing can sit on top of
-   anything else along this line. */
-.slot-bottom {
+/* The bottom edge is a stack: whatever panels are open, then the bar. The bar's height is
+   content's business — it wraps to two rows once every tab carries its full name — so nothing
+   above it may assume a height for it. */
+.slot-bottom-stack {
     position: absolute;
     left: 10px; right: 10px; bottom: 10px;
+    /* Reversed, so the bar is the first child and sits at the bottom while panels added later
+       stack upwards above it. Plain column put the palette under the bar, because the regions
+       are built in catalogue order and the architect is built before the tabs. Ordering the
+       stack by build order would make the layout depend on the order of ten method calls. */
+    flex-direction: column-reverse;
+}
+
+/* The bar itself, divided rather than overlapped. The tab bar takes what is left after the
+   overlay strip and the cancel button have taken what they need. */
+.slot-bottom {
     flex-direction: row;
     align-items: flex-end;
 }
@@ -287,28 +304,25 @@
     background-color: #20303a;
 }
 
-.card__top {
-    flex-direction: row;
-    align-items: center;
-    justify-content: center;
-}
-
 .card__name {
     font-size: 10px;
     color: #dde6ee;
-    margin-top: 2px;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
     max-width: 50px;
+    /* Height, for the same reason the ledger's names need one: overflow:hidden clips glyphs to
+       the content box, and a name with a descender in it loses its tail without this. */
+    height: 15px;
+    -unity-text-align: middle-center;
 }
 
-.card__layer {
-    font-size: 9px;
-    color: #5ec8dc;
-}
+.card .bar { margin-top: 3px; align-self: stretch; }
 
-.card .bar { margin-top: 2px; align-self: stretch; }
+/* Food above mood, and told apart by colour rather than by a label: at this size a word would
+   be most of the card. Mood keeps the green-to-red band it already had, so the card still goes
+   red when a colonist is in trouble. */
+.card .bar--food .bar__fill { background-color: #5ec8dc; }
 
 /* ---------------- clock + speed (A3/A4) ---------------- */
 
@@ -337,11 +351,18 @@
     flex-grow: 1;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     border-width: 1px;
     border-color: #3d4f61;
     border-radius: 4px;
-    padding: 3px 0 2px 0;
+    height: 26px;
     margin-right: 3px;
+}
+
+.speed__glyph {
+    font-size: 11px;
+    color: #cdd9e4;
+    -unity-text-align: middle-center;
 }
 
 .speed__btn:hover { background-color: #243140; }
@@ -451,17 +472,31 @@
 
 /* ---------------- architect (A7) ---------------- */
 
-/* The ledger is what it is: six rows and a note, and it keeps its height. */
+/* The ledger has the left column to itself now that the palette has moved to the bottom bar,
+   so there is nothing left to shrink it. */
 .slot-ledger {
     flex-shrink: 0;
 }
 
-/* The palette takes what is left of the column and scrolls inside it. min-height:0 is required
-   or a flex child refuses to shrink below its content and the scroll never engages. */
+/* The palette, opened from the bottom bar rather than pinned to the left edge. It sits beside
+   the inspect pane in the space that was empty, and above the bar that opens it. The scroll
+   stays: ten categories and their tools will outgrow any panel that has to share a screen. */
 .arch {
-    margin-top: 8px;
-    flex-shrink: 1;
-    min-height: 0;
+    /* In the stack above the bar, so it can never cross it. Held clear of the inspect pane on
+       its left, whose width is fixed at 356 by .slot-inspect. */
+    align-self: flex-start;
+    margin-left: 366px;
+    margin-bottom: 8px;
+    width: 300px;
+    max-height: 340px;
+}
+
+/* On, when its panel is open. The bar's other tabs are all disabled, so this is the only one
+   that ever lights. */
+.tab--architect.chip--on {
+    background-color: #2b7f8f;
+    border-color: #5ec8dc;
+    color: #ffffff;
 }
 
 .arch__scroll {

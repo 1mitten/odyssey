@@ -122,6 +122,23 @@ namespace Odyssey.Tests.PlayMode
                           $"and a 9 px one at about " +
                           $"{9f * Mathf.Sqrt((target.width / 1200f) * (target.height / 800f)):0.0} px.");
 
+                // And again with the architect palette open, since it is hidden until the
+                // bottom bar opens it and a picture of the closed state cannot show it at all.
+                var palette = doc.rootVisualElement.Q(className: "arch");
+                if (palette != null)
+                {
+                    palette.style.display = DisplayStyle.Flex;
+                    for (int i = 0; i < 10; i++) yield return null;
+
+                    RenderTexture.active = target;
+                    var open = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+                    open.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                    open.Apply();
+                    RenderTexture.active = previous;
+                    File.WriteAllBytes(Path.GetFullPath("Logs/hud-architect.png"), open.EncodeToPNG());
+                    Object.Destroy(open);
+                }
+
                 Object.Destroy(image);
                 Object.Destroy(target);
                 Object.Destroy(settings);

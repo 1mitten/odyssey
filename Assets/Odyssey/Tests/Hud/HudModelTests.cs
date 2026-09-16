@@ -74,8 +74,13 @@ namespace Odyssey.Tests.Hud
         public void CardsFollowTheFrameAndMarkTheSelection()
         {
             var snapshot = Frame.Write();
-            snapshot.AddPawn(new PawnView(new PawnId(1), new CellRef(1, 1, 2), 400, 900, 80, JobHandle.Haul));
-            snapshot.AddPawn(new PawnView(new PawnId(2), new CellRef(2, 2, 0), 950, 100, 30, JobHandle.Sleep));
+            // Thousandths, which is the scale the simulation publishes. These read 80 and 30
+            // until 2026-09-16 and so agreed with the bug they were meant to catch: a mood of
+            // 30 is not "breaking" in the game, it is a colonist one point off death, and the
+            // band function happened to call it breaking because it was reading the number as
+            // a percentage.
+            snapshot.AddPawn(new PawnView(new PawnId(1), new CellRef(1, 1, 2), 400, 900, 800, JobHandle.Haul));
+            snapshot.AddPawn(new PawnView(new PawnId(2), new CellRef(2, 2, 0), 950, 100, 300, JobHandle.Sleep));
 
             var roster = new RosterModel();
             roster.Refresh(snapshot, selected: new PawnId(2));
@@ -87,6 +92,34 @@ namespace Odyssey.Tests.Hud
             Assert.That(roster.Cards[1].Name, Is.EqualTo("Odile"));
             Assert.That(roster.Cards[1].Selected, Is.True);
             Assert.That(MoodBands.Band(roster.Cards[1].Mood), Is.EqualTo("breaking"));
+        }
+
+        /// <summary>
+        /// The bands are read against the scale the simulation actually publishes.
+        ///
+        /// Everything about mood in the interface was wrong until 2026-09-16 and none of it was
+        /// visible in a test, because the fixtures used a scale the game does not produce. A
+        /// colonist starts at 600 of 1000; against bands of 60 and 35 that is "content", and it
+        /// stays "content" all the way down to 35 — which is to say the whole of the range a
+        /// player would ever see was one band, every mood bar drew full, and a colonist could
+        /// not go red before they were practically dead.
+        ///
+        /// So this test names the simulation's own numbers rather than round ones: a colonist as
+        /// placed, a colonist in trouble, and the floor.
+        /// </summary>
+        [Test]
+        public void MoodBandsReadTheScaleTheSimulationPublishes()
+        {
+            // PawnContent.Core().Mood: baseMood 500, a colonist is placed at 600.
+            Assert.That(MoodBands.Band(600), Is.EqualTo("content"), "a colonist as placed is content");
+            Assert.That(MoodBands.Band(500), Is.EqualTo("strained"), "the mood base is not contentment");
+            Assert.That(MoodBands.Band(200), Is.EqualTo("breaking"), "a colonist in real trouble is breaking");
+            Assert.That(MoodBands.Band(0), Is.EqualTo("breaking"));
+
+            // And the bands have to divide the range a player can see, or the bar says one thing
+            // for the whole game. Three distinct answers across the middle of the scale.
+            Assert.That(MoodBands.Band(900), Is.Not.EqualTo(MoodBands.Band(500)));
+            Assert.That(MoodBands.Band(500), Is.Not.EqualTo(MoodBands.Band(200)));
         }
     }
 

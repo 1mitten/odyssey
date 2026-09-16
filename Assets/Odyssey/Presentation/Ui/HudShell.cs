@@ -69,6 +69,9 @@ namespace Odyssey.Presentation.Ui
         VisualElement _leftColumn = null!;
         VisualElement _rightColumn = null!;
         VisualElement _bottomRow = null!;
+        VisualElement _bottomStack = null!;
+        VisualElement _archPanel = null!;
+        VisualElement _archButton = null!;
         readonly List<CardView> _cards = new List<CardView>();
         VisualElement _rosterHost = null!;
         VisualElement _rulerRows = null!;
@@ -96,11 +99,15 @@ namespace Odyssey.Presentation.Ui
         struct CardView
         {
             public VisualElement Root;
-            public IconBadge Job;
             public Label Name;
-            public Label Layer;
+
+            /// <summary>Mood, which is the one the card is bordered and coloured by.</summary>
             public VisualElement Fill;
             public VisualElement Bar;
+
+            /// <summary>Food. Nought to a thousand in the frame, unlike mood's nought to a
+            /// hundred, which is why the two are scaled differently where they are bound.</summary>
+            public VisualElement FoodFill;
         }
 
         struct RulerTickView
@@ -161,9 +168,17 @@ namespace Odyssey.Presentation.Ui
             // the bar's right end and ate the last tab -- which read as the bar being too wide
             // when it was not. In a row they divide the edge between them: the tabs take what is
             // left after the other two have taken what they need.
+            // A stack, not a row, and the palette lives in it above the bar. Pinning the
+            // palette to a fixed distance from the bottom is the same mistake this file has
+            // now made three times: the bar wraps to two rows once every tab carries its full
+            // name, and a hand-picked offset put the palette straight through it.
+            _bottomStack = new VisualElement();
+            _bottomStack.AddToClassList("slot-bottom-stack");
+            _hud.Add(_bottomStack);
+
             _bottomRow = new VisualElement();
             _bottomRow.AddToClassList("slot-bottom");
-            _hud.Add(_bottomRow);
+            _bottomStack.Add(_bottomRow);
 
             BuildLedger();
             BuildArchitect();
@@ -419,7 +434,9 @@ namespace Odyssey.Presentation.Ui
 
         void BuildArchitect()
         {
-            var region = Region(_leftColumn, "A7 · ARCHITECT", "arch");
+            var region = Region(_bottomStack, "A7 · ARCHITECT", "arch");
+            _archPanel = region;
+            region.style.display = DisplayStyle.None;
             var cats = new VisualElement();
             cats.AddToClassList("arch__cats");
 
@@ -446,6 +463,16 @@ namespace Odyssey.Presentation.Ui
             _archPalette = new VisualElement();
             _archPalette.AddToClassList("arch__tools");
             region.Add(_archPalette);
+        }
+
+        const string ArchitectKey = "ui.tab.architect";
+
+        /// <summary>Open or close the placement palette from the bottom bar.</summary>
+        void ToggleArchitect()
+        {
+            bool opening = _archPanel.style.display == DisplayStyle.None;
+            _archPanel.style.display = opening ? DisplayStyle.Flex : DisplayStyle.None;
+            _archButton.EnableInClassList("chip--on", opening);
         }
 
         void SelectArchitectCategory(int index)
@@ -476,23 +503,29 @@ namespace Odyssey.Presentation.Ui
 
             while (_cards.Count < _roster.Cards.Count)
             {
+                // A name and two bars. The placeholder badges and the layer number are gone
+                // (owner, 2026-09-16): the badges named nothing a player could read, and the
+                // layer is on the ruler and in the inspect pane already. What a card is for is
+                // "is this colonist all right", and that is food and mood.
                 var card = new VisualElement();
                 card.AddToClassList("card");
-                var top = new VisualElement();
-                top.AddToClassList("card__top");
-                top.Add(new IconBadge("ui.pawn.colonist"));
-                var job = new IconBadge("ui.status.idle");
-                top.Add(job);
                 var name = Label(string.Empty, "card__name");
-                var layer = Label(string.Empty, "card__layer");
+
+                var foodBar = new VisualElement();
+                foodBar.AddToClassList("bar");
+                foodBar.AddToClassList("bar--food");
+                var foodFill = new VisualElement();
+                foodFill.AddToClassList("bar__fill");
+                foodBar.Add(foodFill);
+
                 var bar = new VisualElement();
                 bar.AddToClassList("bar");
                 var fill = new VisualElement();
                 fill.AddToClassList("bar__fill");
                 bar.Add(fill);
-                card.Add(top);
+
                 card.Add(name);
-                card.Add(layer);
+                card.Add(foodBar);
                 card.Add(bar);
 
                 int index = _cards.Count;
@@ -504,7 +537,7 @@ namespace Odyssey.Presentation.Ui
                 _rosterHost.Add(card);
                 _cards.Add(new CardView
                 {
-                    Root = card, Job = job, Name = name, Layer = layer, Fill = fill, Bar = bar,
+                    Root = card, Name = name, Fill = fill, Bar = bar, FoodFill = foodFill,
                 });
             }
             while (_cards.Count > _roster.Cards.Count)
@@ -519,9 +552,8 @@ namespace Odyssey.Presentation.Ui
                 CardView view = _cards[i];
 
                 view.Name.text = model.Name;
-                view.Layer.text = "L" + model.Layer;
-                view.Job.SetKey(JobLabels.IconKey(model.JobDef));
-                view.Fill.style.width = Length.Percent(Mathf.Clamp(model.Mood, 0, 100));
+                view.FoodFill.style.width = Length.Percent(Clamp1000(model.Food));
+                view.Fill.style.width = Length.Percent(Clamp1000(model.Mood));
                 view.Bar.EnableInClassList("bar--lo", model.Mood < MoodBands.Strained);
                 view.Root.EnableInClassList("card--sel", model.Selected);
                 view.Root.tooltip = $"{model.Name} — {JobLabels.Label(model.JobDef)}, layer {model.Layer}." +
@@ -543,19 +575,20 @@ namespace Odyssey.Presentation.Ui
 
             var speed = new VisualElement();
             speed.AddToClassList("speed");
-            (string key, string label)[] speeds =
+            // Shapes, not words and not placeholder badges: stop, play, double, triple. A
+            // transport control is the one row on this sheet that needs no naming, because the
+            // shapes are older than the game and everyone already reads them (owner, 2026-09-16).
+            (string glyph, string name)[] speeds =
             {
-                ("ui.speed.pause", "pause"), ("ui.speed.play", "1×"),
-                ("ui.speed.fast", "2×"), ("ui.speed.ultra", "3×"),
+                ("■", "Stop"), ("▶", "Play"), ("▶▶", "Double"), ("▶▶▶", "Triple"),
             };
             for (int i = 0; i < speeds.Length; i++)
             {
                 int requested = i; // 0 paused, 1..3 speeds — the rig's own convention
                 var button = new VisualElement();
                 button.AddToClassList("speed__btn");
-                button.Add(new IconBadge(speeds[i].key));
-                button.Add(Label(speeds[i].label, "speed__label"));
-                button.tooltip = speeds[i].label + " — Space pauses, 1/2/3 set speed";
+                button.Add(Label(speeds[i].glyph, "speed__glyph"));
+                button.tooltip = speeds[i].name + " — Space pauses, 1/2/3 set speed";
                 button.RegisterCallback<ClickEvent>(_ => _rig?.RequestGameSpeed(requested));
                 speed.Add(button);
                 _speedButtons.Add(button);
@@ -719,10 +752,10 @@ namespace Odyssey.Presentation.Ui
             {
                 _food.Value.text = Percent(_inspect.Food);
                 _rest.Value.text = Percent(_inspect.Rest);
-                _mood.Value.text = _inspect.Mood.ToString();
+                _mood.Value.text = Percent(_inspect.Mood);
                 _food.Fill.style.width = Length.Percent(Clamp1000(_inspect.Food));
                 _rest.Fill.style.width = Length.Percent(Clamp1000(_inspect.Rest));
-                _mood.Fill.style.width = Length.Percent(Mathf.Clamp(_inspect.Mood, 0, 100));
+                _mood.Fill.style.width = Length.Percent(Clamp1000(_inspect.Mood));
                 _mood.Bar.EnableInClassList("bar--lo", _inspect.Mood < MoodBands.Strained);
             }
         }
@@ -864,9 +897,24 @@ namespace Odyssey.Presentation.Ui
         {
             var bar = new VisualElement();
             bar.AddToClassList("slot-tabs");
+
+            // Architect first, left of Work, because it is the one control on this bar that
+            // does something today: it opens the placement palette. It used to be a panel
+            // pinned to the left edge, where it competed with the ledger for a column that
+            // could not hold both (owner decision, 2026-09-16).
+            _archButton = Chip(new IconBadge(ArchitectKey), Registry.Label(ArchitectKey));
+            _archButton.AddToClassList("tab--architect");
+            _archButton.tooltip = "Build, dig and zone — placement tools arrive with M3";
+            _archButton.RegisterCallback<ClickEvent>(_ => ToggleArchitect());
+            bar.Add(_archButton);
+
             for (int i = 0; i < TabKeys.Length; i++)
             {
-                var chip = Off(Chip(new IconBadge(TabKeys[i]), TabKeys[i][7..].Capitalise()));
+                // The label comes from the naming registry, which is the whole point of the
+                // registry: a name the owner corrects in the CSV reaches the screen without
+                // anyone retyping it. Deriving it from the key spelled ui.tab.archive as
+                // "Archive" while the registry called it "History".
+                var chip = Off(Chip(new IconBadge(TabKeys[i]), Registry.Label(TabKeys[i])));
                 chip.tooltip = TabKeys[i] + " — " + TabReasons[i];
                 bar.Add(chip);
             }
