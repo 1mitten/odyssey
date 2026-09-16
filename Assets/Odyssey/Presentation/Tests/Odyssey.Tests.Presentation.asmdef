@@ -3,6 +3,7 @@
     "rootNamespace": "Odyssey.Tests.Presentation",
     "references": [
         "Odyssey.Presentation",
+        "Unity.RenderPipelines.Universal.Runtime",
         "Odyssey.Hud",
         "Odyssey.Sim",
         "Odyssey.Sim.Contracts",

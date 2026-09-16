@@ -207,4 +207,58 @@ namespace Odyssey.Presentation.Tests
             }
         }
     }
+
+    /// <summary>
+    /// There is one ink line in this game, and it has to stay one.
+    ///
+    /// <para>The world is inked by <c>OutlineFeature</c>, a screen-space pass over the camera
+    /// depth texture. Characters cannot use it: skinned meshes are absent from that texture, which
+    /// was measured rather than assumed -- a cube stood behind a colonist keeps its outline
+    /// running straight across the colonist, while occluding it perfectly in colour. So characters
+    /// ink themselves with a hull pass in <c>Odyssey/Character</c>.</para>
+    ///
+    /// <para>Two mechanisms drawing what is meant to be the same line is exactly the sort of thing
+    /// that drifts, and drifts silently -- somebody retunes the feature and half the picture
+    /// follows. The bootstrap copies the feature's values across at startup; this pins the
+    /// fallback defaults to the feature's own, so the two agree even before it runs.</para>
+    /// </summary>
+    public class InkConsistencyTests
+    {
+        [Test]
+        public void TheCharacterInkDefaultsMatchTheOutlineFeature()
+        {
+            var feature = ScriptableObject.CreateInstance<OutlineFeature>();
+            try
+            {
+                Assert.That(ColonistMaterials.InkWidth, Is.EqualTo(feature.thickness).Within(0.001f),
+                    "character ink width has drifted from the outline feature");
+
+                Color ink = ColonistMaterials.InkColour;
+                Assert.That(ink.r, Is.EqualTo(feature.outlineColour.r).Within(0.002f), "ink red");
+                Assert.That(ink.g, Is.EqualTo(feature.outlineColour.g).Within(0.002f), "ink green");
+                Assert.That(ink.b, Is.EqualTo(feature.outlineColour.b).Within(0.002f), "ink blue");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(feature); }
+        }
+
+        [Test]
+        public void TheCharacterShaderCarriesAnInkPass()
+        {
+            Shader shader = Shader.Find("Odyssey/Character");
+            if (shader == null) Assert.Ignore("Odyssey/Character is not in this build");
+
+            UnityEditor.ShaderData data = UnityEditor.ShaderUtil.GetShaderData(shader);
+            UnityEditor.ShaderData.Subshader sub = data.GetSubshader(0);
+
+            var names = new List<string>();
+            for (int i = 0; i < sub.PassCount; i++) names.Add(sub.GetPass(i).Name);
+
+            // The ink hull, the lit pass, and a shadow pass that repeats the same alpha clip --
+            // without which a hair card casts the shadow of a solid rectangle.
+            Assert.That(names, Does.Contain("CharacterInk"));
+            Assert.That(names, Does.Contain("CharacterForward"));
+            Assert.That(names, Does.Contain("ShadowCaster"));
+            Assert.That(UnityEditor.ShaderUtil.ShaderHasError(shader), Is.False);
+        }
+    }
 }

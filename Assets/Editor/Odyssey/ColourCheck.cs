@@ -158,6 +158,7 @@ namespace Odyssey.EditorTools
                 RenderPipelineManager.beginCameraRendering += hook;
 
                 Report(world.Views.Current, appearances, catalogue, figures);
+                ReportRenderState(lightingRoot);
 
                 // The same warm-up GestureCheck needs: a character drawn in the first frames after
                 // its material is first touched comes out flat and untextured, then draws properly
@@ -214,14 +215,38 @@ namespace Odyssey.EditorTools
                 // reaches the depth texture here and that is a much larger finding.
                 var probe = GameObject.CreatePrimitive(PrimitiveType.Cube);
                 probe.name = "InkProbe";
-                probe.transform.position = centre + new Vector3(2.5f, 0.5f, 0f);
-                probe.transform.localScale = new Vector3(1.2f, 2.4f, 1.2f);
+                // Deliberately *behind* the colonists and overlapping them on screen. If a
+                // colonist is in the depth texture it occludes the cube, and the cube's ink stops
+                // at the colonist's silhouette. If the ink runs straight across the colonist, the
+                // colonist is not in the depth texture -- which is the whole question, answered
+                // without writing a debug shader.
+                Vector3 behind = camera.transform.forward;
+                behind.y = 0f;
+                probe.transform.position = centre + behind.normalized * 3.5f + new Vector3(0f, 0.6f, 0f);
+                probe.transform.localScale = new Vector3(2.4f, 3.0f, 0.4f);
 
                 SetOutline(true, 0f, 0.001f, 5f);
                 world.Tick();
                 figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
                 figures.Evaluate(FrameSeconds);
                 PlayScene.Shoot(camera, centre, 12f, 30f, 7f, "Logs/colour-maxink.png");
+
+                // The one thing a figure has that the cube does not: skinning forced to
+                // recalculate on every render. It is set for a good reason -- without it a held
+                // axe swings while the colonist holding it stands still -- but a depth prepass is
+                // another render, and this is the only difference left to test.
+                int touched = 0;
+                foreach (SkinnedMeshRenderer skin in lightingRoot.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+                {
+                    skin.forceMatrixRecalculationPerRender = false;
+                    touched++;
+                }
+                world.Tick();
+                figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                figures.Evaluate(FrameSeconds);
+                PlayScene.Shoot(camera, centre, 12f, 30f, 7f, "Logs/colour-noforce.png");
+                Debug.Log($"[Colour] forceMatrixRecalculationPerRender cleared on {touched} renderers");
+
                 UnityEngine.Object.DestroyImmediate(probe);
                 SetOutline(true, 3f, 0.012f, 2.2f);
 
@@ -352,6 +377,38 @@ namespace Odyssey.EditorTools
                 report.AppendLine($"  pawn {pawn.Id.Value,3}  {body,-34} {quality,-10} {shares}");
                 report.AppendLine($"           {look}");
             }
+            Debug.Log(report.ToString());
+        }
+
+        /// <summary>
+        /// What queue every figure renderer actually draws in, and with what shader.
+        ///
+        /// The outline reads a depth texture copied after the opaques, so anything drawn in the
+        /// transparent range is absent from it and can never be inked -- and water, which fades
+        /// against that same depth, shades straight over it. Both of the owner reported symptoms
+        /// fall out of one number, so the number is worth printing rather than reasoning about.
+        /// </summary>
+        static void ReportRenderState(GameObject root)
+        {
+            var report = new System.Text.StringBuilder();
+            report.AppendLine("=== Figure render state ===");
+            report.AppendLine("  queue  castShadows  shader / renderer");
+
+            foreach (SkinnedMeshRenderer skin in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                Material? m = skin.sharedMaterial;
+                report.AppendLine($"  {(m == null ? -1 : m.renderQueue),5}  {skin.shadowCastingMode,11}  " +
+                                  $"{(m == null ? "<none>" : m.shader.name)}  [{skin.name}] " +
+                                  $"enabled={skin.enabled} layer={skin.gameObject.layer}");
+            }
+
+            foreach (MeshRenderer mesh in root.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                Material? m = mesh.sharedMaterial;
+                report.AppendLine($"  {(m == null ? -1 : m.renderQueue),5}  {mesh.shadowCastingMode,11}  " +
+                                  $"{(m == null ? "<none>" : m.shader.name)}  [{mesh.name}] (mesh)");
+            }
+
             Debug.Log(report.ToString());
         }
 

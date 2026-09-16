@@ -108,6 +108,42 @@ namespace Odyssey.Presentation.Rendering
         static readonly int[] ClothRectIds = { Shader.PropertyToID("_ClothRect0"), Shader.PropertyToID("_ClothRect1") };
         static readonly int[] Cloth2RectIds = { Shader.PropertyToID("_Cloth2Rect0"), Shader.PropertyToID("_Cloth2Rect1") };
 
+        static readonly int InkColourId = Shader.PropertyToID("_InkColour");
+        static readonly int InkWidthId = Shader.PropertyToID("_InkWidth");
+
+        /// <summary>
+        /// The ink line characters draw for themselves, which must match the one the rest of the
+        /// world gets from <c>OutlineFeature</c>.
+        ///
+        /// <para>Characters cannot use the screen-space outline pass: skinned meshes are missing
+        /// from the depth texture it reads, which was measured rather than assumed — a cube stood
+        /// behind a colonist keeps its outline straight across the colonist. So the world is inked
+        /// from depth and characters from a hull in <c>Odyssey/Character</c>, and there being two
+        /// mechanisms is exactly why there must be one colour and one width. The bootstrap copies
+        /// these off the real feature, and a test pins the defaults to the feature's own.</para>
+        /// </summary>
+        public static Color InkColour { get; set; } = new Color(0.06f, 0.09f, 0.08f, 1f);
+
+        public static float InkWidth { get; set; } = 2.2f;
+
+        /// <summary>
+        /// Copy the ink colour and width off the real outline feature, so the two agree in the
+        /// running game rather than only in their defaults.
+        ///
+        /// Found by asking for the loaded asset rather than by walking the pipeline asset, whose
+        /// renderer features are not publicly enumerable. If it is not found, the defaults stand
+        /// and a test has already pinned those to the feature's own.
+        /// </summary>
+        public static void AdoptInkFrom()
+        {
+            OutlineFeature[] features = Resources.FindObjectsOfTypeAll<OutlineFeature>();
+            if (features.Length == 0) return;
+
+            OutlineFeature feature = features[0];
+            InkColour = feature.outlineColour;
+            InkWidth = feature.thickness;
+        }
+
         static readonly int SkinColourId = Shader.PropertyToID("_SkinColour");
         static readonly int HairColourId = Shader.PropertyToID("_HairColour");
         static readonly int ClothColourId = Shader.PropertyToID("_ClothColour");
@@ -174,6 +210,9 @@ namespace Odyssey.Presentation.Rendering
             material.SetColor(HairColourId, Colour(look.Hair));
             material.SetColor(ClothColourId, Colour(look.Cloth));
             material.SetColor(Cloth2ColourId, Colour(look.Cloth2));
+
+            material.SetColor(InkColourId, InkColour);
+            material.SetFloat(InkWidthId, InkWidth);
         }
 
         /// <summary>

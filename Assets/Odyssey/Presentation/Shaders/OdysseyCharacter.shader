@@ -65,6 +65,11 @@ Shader "Odyssey/Character"
 
         // 0 draws the art untouched, which is what the fidelity contact sheet compares against.
         _RemapStrength("Remap strength", Range(0, 1)) = 1
+
+        [Header(Ink)]
+        _InkColour("Ink colour", Color) = (0.06, 0.09, 0.08, 1)
+        _InkWidth("Ink width in pixels", Float) = 2.2
+        _InkOn("Draw the ink hull", Float) = 1
     }
 
     SubShader
@@ -104,6 +109,9 @@ Shader "Odyssey/Character"
             float4 _ClothColour;
             float4 _Cloth2Colour;
             float _RemapStrength;
+            float4 _InkColour;
+            float _InkWidth;
+            float _InkOn;
         CBUFFER_END
 
         TEXTURE2D(_Albedo_Map);     SAMPLER(sampler_Albedo_Map);
@@ -141,6 +149,87 @@ Shader "Odyssey/Character"
             return c;
         }
         ENDHLSL
+
+        // The ink line, drawn as an expanded back-face hull rather than read from the depth
+        // texture like everything else in the world.
+        //
+        // **Why characters cannot use the screen-space pass.** OdysseyOutline inks depth
+        // discontinuities in _CameraDepthTexture, and skinned meshes are not in it. That was
+        // measured rather than guessed: a plain cube stood behind a colonist keeps its outline
+        // running straight across the colonist, so the colonist never occludes the ink, while
+        // occluding the cube perfectly well in colour. The renderer is Forward+, which builds its
+        // depth from a prepass, and the figures do not reach it. Until that is fixed the world is
+        // inked from depth and characters are inked here, and the two agree by their numbers --
+        // _InkColour and _InkWidth are set from the feature, so there is one colour and one
+        // thickness in the game rather than two.
+        //
+        // **Why a hull is affordable here and nowhere else.** OdysseyOutline rejects hull outlines
+        // for world geometry, and rightly: a second draw of every object is the one thing a
+        // renderer submitting tens of thousands of instanced modules must not do. A colony is
+        // capped at 64 live figures, so this is at most 64 extra draws of a small mesh. The
+        // argument that kills it for walls does not reach characters.
+        Pass
+        {
+            Name "CharacterInk"
+            Tags { "LightMode" = "SRPDefaultUnlit" }
+
+            Cull Front
+            ZWrite On
+            ZTest LEqual
+
+            HLSLPROGRAM
+            #pragma vertex InkVertex
+            #pragma fragment InkFragment
+            #pragma multi_compile_instancing
+            #pragma target 3.5
+
+            struct InkAttributes
+            {
+                float4 positionOS : POSITION;
+                float3 normalOS   : NORMAL;
+                float2 uv         : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            struct InkVaryings
+            {
+                float4 positionCS : SV_POSITION;
+                float2 uv         : TEXCOORD0;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+            };
+
+            InkVaryings InkVertex(InkAttributes input)
+            {
+                InkVaryings output = (InkVaryings)0;
+                UNITY_SETUP_INSTANCE_ID(input);
+                UNITY_TRANSFER_INSTANCE_ID(input, output);
+
+                float4 positionCS = TransformObjectToHClip(input.positionOS.xyz);
+
+                // Widened in clip space, so the line is a constant number of *pixels* however far
+                // away the colonist is, which is what the screen-space pass gives the rest of the
+                // world. Expanding by a fixed number of metres instead would make a distant
+                // colonist a black dot and a near one a hairline.
+                float3 normalVS = TransformWorldToViewDir(TransformObjectToWorldNormal(input.normalOS));
+                float2 offset = normalize(normalVS.xy + 1e-6) * (_InkWidth * 2.0 / _ScreenParams.y);
+                positionCS.xy += offset * positionCS.w * _InkOn;
+
+                output.positionCS = positionCS;
+                output.uv = TRANSFORM_TEX(input.uv, _Albedo_Map);
+                return output;
+            }
+
+            half4 InkFragment(InkVaryings input) : SV_Target
+            {
+                UNITY_SETUP_INSTANCE_ID(input);
+                // The same cutout the lit pass uses, or the hull of a hair card is a solid slab.
+                float alpha = SAMPLE_TEXTURE2D(_Albedo_Map, sampler_Albedo_Map, input.uv).a;
+                clip(alpha - _Alpha_Clip_Threshold);
+                clip(_InkOn - 0.5);
+                return half4(_InkColour.rgb, 1);
+            }
+            ENDHLSL
+        }
 
         Pass
         {
