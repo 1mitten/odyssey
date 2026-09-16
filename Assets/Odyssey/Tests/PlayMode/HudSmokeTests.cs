@@ -95,7 +95,7 @@ namespace Odyssey.Tests.PlayMode
                     "the scenario placed no colonists to select");
 
                 PawnId pawn = boot.World.Views.Current.Pawns[0].Id;
-                root.GetComponentInChildren<SelectionReadout>().SelectPawn(pawn);
+                boot.Directors!.ChooseColonist(pawn, boot.World.Views.Current);
                 yield return null; // the resolved event answers in the frame it happened
 
                 var doc = root.GetComponentInChildren<UIDocument>();
@@ -168,7 +168,7 @@ namespace Odyssey.Tests.PlayMode
             boot.grassScatter = 0;
             boot.cameraRig = rig;
             boot.showReadout = false;
-            bootObject.AddComponent<SelectionReadout>();
+            bootObject.AddComponent<SelectionPresenter>();
 
             var doc = bootObject.AddComponent<UIDocument>();
 #if UNITY_EDITOR
