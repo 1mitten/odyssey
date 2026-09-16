@@ -101,8 +101,28 @@ namespace Odyssey.Presentation.Ui
             MarkDirtyRepaint();
         }
 
+        /// <summary>
+        /// Whether the drawn glyph is stood down. Set by a subclass that has something better to
+        /// put in the box — <see cref="IconBadge"/> sets it when the key has real art, because a
+        /// placeholder square stroked over a picture is a frame nobody asked for.
+        /// </summary>
+        protected bool PaintSuppressed
+        {
+            get => _suppressed;
+            set
+            {
+                if (_suppressed == value) return;
+                _suppressed = value;
+                MarkDirtyRepaint();
+            }
+        }
+
+        bool _suppressed;
+
         void Paint(MeshGenerationContext context)
         {
+            if (_suppressed) return;
+
             Rect box = contentRect;
             if (box.width <= 1f || box.height <= 1f) return;
 

@@ -21,6 +21,12 @@ namespace Odyssey.Presentation.Ui
     /// sheets land this element becomes a sprite lookup on the same key, at the same three sizes,
     /// and nothing about the HUD's layout moves.</para>
     ///
+    /// <para><b>That lookup exists now</b> (<see cref="IconArt"/>), and it arrives one key at a
+    /// time rather than eight sheets at once: a key with art draws the art, a key without draws
+    /// the square, and the two live side by side on the same screen without either knowing about
+    /// the other. So the interface is correct at every stage between no art and all of it, which
+    /// is what lets a single icon be judged in the running game before the set is drawn.</para>
+    ///
     /// <para><b>Three sizes exist and no others</b> (spec): <see cref="RowSize"/> in a list row,
     /// <see cref="BarSize"/> in the command bar, <see cref="AvatarSize"/> for the selected
     /// thing.</para>
@@ -67,7 +73,36 @@ namespace Odyssey.Presentation.Ui
             if (key == Key) return;
             Key = key;
             tooltip = key;
+            Dress();
             Recolour();
+        }
+
+        /// <summary>
+        /// Put the key's art in the box, or take it out again. Real art is drawn **untinted** —
+        /// the category colour exists to say what a placeholder stands for, and a picture says
+        /// that for itself; tinting it would mean the colour of wood on screen was a HUD
+        /// decision rather than the artist's.
+        /// </summary>
+        void Dress()
+        {
+            Texture2D? art = IconArt.For(Key);
+            PaintSuppressed = art != null;
+
+            if (art == null)
+            {
+                style.backgroundImage = StyleKeyword.Null;
+                return;
+            }
+
+            style.backgroundImage = new StyleBackground(art);
+            style.unityBackgroundImageTintColor = Color.white;
+
+            // Every one of these is explicit because UI Toolkit's own defaults would tile a
+            // 64 px drawing inside a 17 px row and show the player its top-left corner.
+            style.backgroundRepeat = new BackgroundRepeat(Repeat.NoRepeat, Repeat.NoRepeat);
+            style.backgroundSize = new BackgroundSize(BackgroundSizeType.Contain);
+            style.backgroundPositionX = new BackgroundPosition(BackgroundPositionKeyword.Center);
+            style.backgroundPositionY = new BackgroundPosition(BackgroundPositionKeyword.Center);
         }
 
         /// <summary>
