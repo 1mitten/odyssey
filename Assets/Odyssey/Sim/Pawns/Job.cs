@@ -185,6 +185,41 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Anything to undo when the job ends, beyond releasing reservations.</summary>
         public virtual void Cleanup(PawnContext ctx, JobStatus status) { }
 
+        /// <summary>
+        /// Put down whatever the pawn is still holding, wherever there is room for it.
+        ///
+        /// <para><b>A job that ends mid-carry must put its load somewhere real. Anything else
+        /// deletes it</b>, and a ten-day run would quietly eat the colony's stores. Where the pawn
+        /// stands is the first choice, then the nearest cell that can take the load; it used to
+        /// fall back to the cell the thing was carried <i>from</i>, which is -1 while it is
+        /// carried, and the thing then existed nowhere at all.</para>
+        ///
+        /// <para>Shared rather than copied because there are two carriers now — a haul and a
+        /// delivery — and a third would have copied whichever it happened to read. It says nothing
+        /// to presentation, deliberately: this is a colonist dropping what it is holding, not
+        /// stowing it on purpose, and that is a different motion which nothing draws yet. See
+        /// <see cref="PutDown"/>.</para>
+        /// </summary>
+        protected void DropCarried(PawnContext ctx)
+        {
+            if (Job.CarriedItem < 0) return;
+            var item = ctx.Items.Get(new ThingId(Job.CarriedItem));
+            Job.CarriedItem = -1;
+            if (item == null) return;
+
+            int at = ctx.Items.NearestCellWithSpace(
+                ctx.Cells, Pawn.Cell, item.DefIndex, item.Stack, DropSearchRadius);
+
+            // A board with no room within that radius is packed solid with things, which nothing
+            // in the game can produce; losing the load is the least bad answer, because putting it
+            // down on top of something else would corrupt the cell index.
+            if (at >= 0) ctx.Items.Drop(item, at);
+            else ctx.Items.Despawn(item);
+        }
+
+        /// <summary>Cells to search outward for somewhere to put a dropped load down.</summary>
+        public const int DropSearchRadius = 8;
+
         protected void NextToil()
         {
             ToilIndex++;

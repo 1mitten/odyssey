@@ -1,5 +1,6 @@
 #nullable enable
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Construction;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.World;
@@ -32,9 +33,11 @@ namespace Odyssey.Sim.Pawns
         /// <param name="jobs">The job pipeline to run, when the caller wants to hold on to it for its
         /// per-def counters; a fresh one otherwise.</param>
         public static SimWorldBuilder AddColony(this SimWorldBuilder builder, PawnContext pawns,
-            DesignationGrid designations, SupportSystem support, NavGraph nav, JobSystem? jobs = null)
+            DesignationGrid designations, SupportSystem support, NavGraph nav, JobSystem? jobs = null,
+            ConstructionGrid? construction = null)
         {
             pawns.Designations = designations;
+            pawns.Construction = construction;
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
             builder
                 .AddSystem(_ => support)
@@ -55,6 +58,10 @@ namespace Odyssey.Sim.Pawns
                 .AddSnapshotContributor(pawns.Pawns)
                 .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden);
             designations.Attach(builder);
+            // Optional, and null in a fixture that never means to build anything, exactly as
+            // PawnContext.Construction is. A world without one rejects PlaceBuilding with
+            // UnknownIntent rather than silently accepting an order nobody will ever carry out.
+            construction?.Attach(builder);
             return builder;
         }
     }

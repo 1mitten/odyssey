@@ -29,6 +29,10 @@ namespace Odyssey.Presentation.Rendering
             // pack material, which is already the right green and brown, and a built wooden wall
             // will get its own art rather than a tinted concrete one.
             Color.white,                               // wood
+            // Stone is the second thing a colony can build with (NaturalContent.StuffStone). A
+            // grey against the concrete's warm cream, so a stone wall reads as cut rock rather
+            // than as poured slab; it takes the rock material, which is already close.
+            new Color(0.86f, 0.87f, 0.88f),            // stone
         };
 
         static readonly Color[] StuffSolids =
@@ -38,6 +42,7 @@ namespace Odyssey.Presentation.Rendering
             new Color(0.48f, 0.53f, 0.60f),            // steel
             new Color(0.60f, 0.66f, 0.70f),            // composite
             new Color(0.46f, 0.34f, 0.22f),            // wood
+            new Color(0.52f, 0.51f, 0.49f),            // stone
         };
 
         static readonly Color[] TerrainSolids =

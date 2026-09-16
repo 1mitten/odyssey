@@ -45,6 +45,13 @@ namespace Odyssey.Sim.Pawns
         public DesignationGrid? Designations { get; set; }
 
         /// <summary>
+        /// The building sites, when the world has them. Null in a bare pawn fixture, exactly as
+        /// <see cref="Designations"/> is, so the two work givers answer no rather than throwing in
+        /// a test that never meant to build anything.
+        /// </summary>
+        public Construction.ConstructionGrid? Construction { get; set; }
+
+        /// <summary>
         /// The presentation chunk grid, when a renderer is attached, so a job that edits the world
         /// can say which chunk to re-mesh. Null for a purely headless run.
         /// </summary>

@@ -202,6 +202,46 @@ namespace Odyssey.Sim.Contracts
         }
     }
 
+
+    /// <summary>
+    /// A building site: something the player has asked for that is not there yet.
+    ///
+    /// <para>Its own channel rather than a sixth <c>DesignationKind</c>, because an order is a
+    /// verb applied to a cell and a site is a <i>thing in waiting</i> — it has a def, a material
+    /// and two independent measures of how far along it is. Sparse for the same reason
+    /// <see cref="OrderView"/> is: a colony has tens of sites and a layer has thousands of
+    /// cells.</para>
+    ///
+    /// <para><b>Two fractions, not one.</b> A site fills with material and then is worked, and a
+    /// player needs to tell "nobody has brought the wood yet" from "it is half built" — they are
+    /// different problems with different answers, and a single bar would merge them.</para>
+    /// </summary>
+    public readonly struct SiteView
+    {
+        /// <summary>The cell, as a whole-world index. <c>GridSize.FromIndex</c> unpacks it.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>What is being built, as a <see cref="BuildingHandle"/> value. Never 0.</summary>
+        public readonly byte Building;
+
+        /// <summary>What of, as a <see cref="StuffHandle"/> value.</summary>
+        public readonly byte Stuff;
+
+        /// <summary>Material delivered, 0 for none and 255 for all of it.</summary>
+        public readonly byte Delivered;
+
+        /// <summary>Work applied, 0 for untouched and 255 for finished. Quantised, per <see cref="OrderView.Progress"/>.</summary>
+        public readonly byte Progress;
+
+        public SiteView(int cellIndex, byte building, byte stuff, byte delivered, byte progress)
+        {
+            CellIndex = cellIndex;
+            Building = building;
+            Stuff = stuff;
+            Delivered = delivered;
+            Progress = progress;
+        }
+    }
     /// <summary>
     /// One published frame of world state: everything presentation may read, and nothing else.
     ///
@@ -216,6 +256,7 @@ namespace Odyssey.Sim.Contracts
         ThingView[] _things = Array.Empty<ThingView>();
         byte[] _sliceCells = Array.Empty<byte>();
         OrderView[] _orders = Array.Empty<OrderView>();
+        SiteView[] _sites = Array.Empty<SiteView>();
 
         public int Tick { get; private set; }
         public int SliceLayer { get; private set; }
@@ -265,6 +306,9 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many standing orders the colony has, anywhere in the world.</summary>
         public int OrderCount { get; private set; }
 
+        /// <summary>How many building sites <see cref="Sites"/> holds.</summary>
+        public int SiteCount { get; private set; }
+
         public ReadOnlySpan<PawnView> Pawns => new ReadOnlySpan<PawnView>(_pawns, 0, PawnCount);
         public ReadOnlySpan<ThingView> Things => new ReadOnlySpan<ThingView>(_things, 0, ThingCount);
 
@@ -280,6 +324,9 @@ namespace Odyssey.Sim.Contracts
         /// Empty when the world has no designation grid.
         /// </summary>
         public ReadOnlySpan<OrderView> Orders => new ReadOnlySpan<OrderView>(_orders, 0, OrderCount);
+
+        /// <summary>Every building site in the world, in cell-index order. See <see cref="SiteView"/>.</summary>
+        public ReadOnlySpan<SiteView> Sites => new ReadOnlySpan<SiteView>(_sites, 0, SiteCount);
 
         /// <summary>Find a pawn by id. Returns false when it is gone, which callers must handle.</summary>
         public bool TryGetPawn(PawnId id, out PawnView view)
@@ -308,6 +355,7 @@ namespace Odyssey.Sim.Contracts
             ThingCount = 0;
             SliceCellCount = 0;
             OrderCount = 0;
+            SiteCount = 0;
         }
 
         internal void AddPawn(in PawnView view)
@@ -333,6 +381,12 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _orders, OrderCount + 1);
             _orders[OrderCount++] = view;
+        }
+
+        internal void AddSite(in SiteView view)
+        {
+            Grow(ref _sites, SiteCount + 1);
+            _sites[SiteCount++] = view;
         }
 
         static void Grow<T>(ref T[] array, int needed)

@@ -96,13 +96,17 @@ namespace Odyssey.Tests.Sim
         // ---- scan order --------------------------------------------------------------------
 
         [Test]
-        public void TheShippedColonyScansCuttingThenMiningThenHauling()
+        public void TheShippedColonyScansConstructionThenCuttingThenMiningThenHauling()
         {
             // Pinned deliberately. Adding a kind of work is allowed to change this line — it is
             // the one place in the repository where the scan order is written down — but it must
             // be a decision somebody made, never something that moved on its own.
+            //
+            // Construction leads because a site is work already begun, and delivery leads within it
+            // because a site cannot be worked until it has been fed. Cutting, mining and hauling
+            // keep the order they have always had, relative to each other.
             var names = Shipped().Givers.Select(g => g.Name).ToArray();
-            Assert.That(names, Is.EqualTo(new[] { "Fell", "Mine", "Haul" }));
+            Assert.That(names, Is.EqualTo(new[] { "Deliver", "Build", "Fell", "Mine", "Haul" }));
         }
 
         [Test]

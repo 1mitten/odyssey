@@ -5,11 +5,12 @@ namespace Odyssey.Sim.Defs
     /// The one place that knows what the core content pack is made of.
     ///
     /// <para>It exists because half a pack is worse than none. The Def types are registered in
-    /// two families — the pawn tuning (<see cref="Pawns.PawnContent.Register"/>) and the world
-    /// tables (<see cref="Worldgen.WorldContent.Register"/>) — and a loader given only one of
-    /// them reads the other's files as "unknown Def type" and fails with a list of errors that
+    /// three families — the pawn tuning (<see cref="Pawns.PawnContent.Register"/>), the world
+    /// tables (<see cref="Worldgen.WorldContent.Register"/>) and what can be built
+    /// (<see cref="Construction.ConstructionContent.Register"/>) — and a loader given only some of
+    /// them reads the others' files as "unknown Def type" and fails with a list of errors that
     /// blames the content rather than the caller. Every caller that wants the shipped pack asks
-    /// here instead, so adding a third family is one edit rather than a hunt.</para>
+    /// here instead, so adding a fourth family is one edit rather than a hunt.</para>
     ///
     /// <para>Nothing in the running game calls this yet: the simulation still builds from the
     /// in-code tables, which remain the oracle the loaded pack is tested against. See
@@ -22,7 +23,8 @@ namespace Odyssey.Sim.Defs
 
         /// <summary>Register every Def type the core pack contains.</summary>
         public static DefLoader Register(DefLoader loader) =>
-            Worldgen.WorldContent.Register(Pawns.PawnContent.Register(loader));
+            Construction.ConstructionContent.Register(
+                Worldgen.WorldContent.Register(Pawns.PawnContent.Register(loader)));
 
         /// <summary>Load the core pack from a directory: every <c>.xml</c> beneath it.</summary>
         public static DefDatabase LoadCore(string root) =>

@@ -29,6 +29,9 @@ namespace Odyssey.Sim
 
         /// <summary>Publish one standing order, wherever in the world it is.</summary>
         public void AddOrder(in OrderView view) => _target.AddOrder(view);
+
+        /// <summary>Publish one building site, wherever in the world it is.</summary>
+        public void AddSite(in SiteView view) => _target.AddSite(view);
     }
 
     /// <summary>

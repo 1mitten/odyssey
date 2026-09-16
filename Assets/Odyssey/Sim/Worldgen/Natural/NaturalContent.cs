@@ -120,6 +120,20 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// <summary>What a tree is made of, and what felling one yields.</summary>
         public const ushort StuffWood = 4;
 
+        /// <summary>
+        /// What mining leaves and what a stone wall is built of.
+        ///
+        /// <para>A stuff rather than only an item, because a wall has to <i>be</i> made of
+        /// something: <c>PlacedEdifice</c> carries a stuff, the mesher tints by it, and the
+        /// support solver will one day span by it. Wood was already here for the trees; stone
+        /// joins it so that the two things a colony can dig up are the two things it can build
+        /// with, with no refining step in between.</para>
+        /// </summary>
+        public const ushort StuffStone = 5;
+
+        /// <summary>One past the last stuff. The width of any table indexed by one.</summary>
+        public const int StuffCount = 6;
+
         // ---- presentation module ids -------------------------------------------------------
         //
         // Id strings only. Nothing here resolves a module, so a clone without the licensed art

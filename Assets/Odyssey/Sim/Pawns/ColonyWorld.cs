@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 using System.IO;
+using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
@@ -30,6 +31,9 @@ namespace Odyssey.Sim.Pawns
         public CellGrid Grid { get; }
         public PawnContext Pawns { get; }
         public DesignationGrid Designations { get; }
+
+        /// <summary>What the colony has ordered built but has not built yet.</summary>
+        public ConstructionGrid Construction { get; }
         public SimWorld World { get; }
         public MapGenOutcome Outcome { get; }
         public ColonyScenario.Result Placement { get; }
@@ -52,7 +56,8 @@ namespace Odyssey.Sim.Pawns
         readonly SupportSolver _solver;
         readonly NavGraph _nav;
 
-        ColonyWorld(CellGrid grid, PawnContext pawns, DesignationGrid designations, SimWorld world,
+        ColonyWorld(CellGrid grid, PawnContext pawns, DesignationGrid designations,
+            ConstructionGrid construction, SimWorld world,
             MapGenOutcome outcome, ScenarioDef scenario, ColonyScenario.Result placement, SupportSolver solver,
             NavGraph nav, JobSystem jobs)
         {
@@ -61,6 +66,7 @@ namespace Odyssey.Sim.Pawns
             Grid = grid;
             Pawns = pawns;
             Designations = designations;
+            Construction = construction;
             World = world;
             Outcome = outcome;
             Placement = placement;
@@ -74,6 +80,7 @@ namespace Odyssey.Sim.Pawns
                 pawns.Pawns,
                 jobs,
                 designations,
+                construction,
             };
         }
 
@@ -164,18 +171,19 @@ namespace Odyssey.Sim.Pawns
             var solver = new SupportSolver(grid);
             var support = new SupportSystem(grid, solver, chunks);
             var designations = new DesignationGrid(grid, outcome.Edifices);
+            var construction = new ConstructionGrid(grid, outcome.Placements, pawns.Items);
             var jobs = new JobSystem(pawns);
 
             SimWorld world = new SimWorldBuilder()
                 .WithSeed(seed)
                 .WithSize(size)
-                .AddColony(pawns, designations, support, nav, jobs)
+                .AddColony(pawns, designations, support, nav, jobs, construction)
                 .Build();
 
             ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed, scenario);
             ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenario);
 
-            var built = new ColonyWorld(grid, pawns, designations, world, outcome, scenario, placement, solver, nav, jobs);
+            var built = new ColonyWorld(grid, pawns, designations, construction, world, outcome, scenario, placement, solver, nav, jobs);
             built.RebuildDerived();
             return built;
         }

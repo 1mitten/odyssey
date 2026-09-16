@@ -13,6 +13,18 @@ namespace Odyssey.Sim.Contracts
         Designate,
         CancelDesignation,
         SetForbidden,
+
+        /// <summary>
+        /// Put a building site on a cell: <c>A</c> is a <c>BuildingHandle</c>, <c>B</c> a
+        /// <c>StuffHandle</c>. Its own kind rather than a <c>Designate</c> with a third argument,
+        /// because a designation is a verb applied to whatever is already there and this names a
+        /// thing that is not there yet — it carries what to make and what to make it of, and the
+        /// component that owns it is not the one that owns orders.
+        /// </summary>
+        PlaceBuilding,
+
+        /// <summary>Take a building site off a cell, refunding whatever was delivered to it.</summary>
+        CancelBuilding,
     }
 
     /// <summary>

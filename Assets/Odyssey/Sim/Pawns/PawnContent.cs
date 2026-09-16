@@ -129,6 +129,8 @@ namespace Odyssey.Sim.Pawns
         public const int Wait = JobHandle.Wait;
         public const int Fell = JobHandle.Fell;
         public const int Mine = JobHandle.Mine;
+        public const int Deliver = JobHandle.Deliver;
+        public const int Build = JobHandle.Build;
         public const int Count = JobHandle.Count;
     }
 
@@ -198,7 +200,12 @@ namespace Odyssey.Sim.Pawns
         public const int Haul = 0;
         public const int Cutting = 1;
         public const int Mining = 2;
-        public const int Count = 3;
+
+        /// <summary>Carrying material to a building site, and working at one. Both, deliberately:
+        /// fetching the wood is part of building the wall, not a haul that happens to help.</summary>
+        public const int Construction = 3;
+
+        public const int Count = 4;
     }
 
     /// <summary>
@@ -210,7 +217,8 @@ namespace Odyssey.Sim.Pawns
         public const int Hauling = 0;
         public const int Cutting = 1;
         public const int Mining = 2;
-        public const int Count = 3;
+        public const int Construction = 3;
+        public const int Count = 4;
     }
 
     /// <summary>
@@ -536,9 +544,12 @@ namespace Odyssey.Sim.Pawns
             content.Thoughts = ByName<ThoughtDef>(defs,
                 "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround");
             content.Jobs = ByName<JobDef>(defs,
-                "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine");
-            content.WorkTypes = ByName<WorkTypeDef>(defs, "Work_Haul", "Work_Cutting", "Work_Mining");
-            content.Skills = ByName<SkillDef>(defs, "Skill_Hauling", "Skill_Cutting", "Skill_Mining");
+                "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine",
+                "Job_Deliver", "Job_Build");
+            content.WorkTypes = ByName<WorkTypeDef>(defs,
+                "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction");
+            content.Skills = ByName<SkillDef>(defs,
+                "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction");
             content.Items = ByName<ItemDef>(defs,
                 "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal");
 
@@ -660,6 +671,25 @@ namespace Odyssey.Sim.Pawns
                     defName = "Job_Mine", driver = JobIndex.Mine, expiryTicks = 12_000,
                     trainsSkill = SkillIndex.Mining, experiencePerWorkTick = 110, settleTicks = 30,
                 },
+                // Carrying material to a site. It trains construction rather than hauling, which
+                // is the one decision in this def: the alternative is that a colony builds its
+                // first hut and comes out of it with four expert haulers and no builder, because
+                // most of the labour in a wall is the walk. The carry is the work, exactly as it
+                // is for a haul, so the experience is bounded the same way.
+                new JobDef
+                {
+                    defName = "Job_Deliver", driver = JobIndex.Deliver, expiryTicks = 6_000,
+                    trainsSkill = SkillIndex.Construction, experiencePerWorkTick = 110,
+                },
+                // No workTicks: building is priced per thing and per material, and
+                // ConstructionContent.WorkFor reads both as the colonist swings. One number here
+                // would make a stone wall cost what a wooden one does, which is the whole
+                // difference between materials — the same reasoning mining's def gives.
+                new JobDef
+                {
+                    defName = "Job_Build", driver = JobIndex.Build, expiryTicks = 12_000,
+                    trainsSkill = SkillIndex.Construction, experiencePerWorkTick = 110, settleTicks = 30,
+                },
             };
 
             // Both skills share one curve, one cap and one ladder, because the reference does
@@ -672,6 +702,7 @@ namespace Odyssey.Sim.Pawns
                 Skill("Skill_Hauling", "hauling"),
                 Skill("Skill_Cutting", "cutting"),
                 Skill("Skill_Mining", "mining"),
+                Skill("Skill_Construction", "construction"),
             };
 
             content.WorkTypes = new[]
@@ -679,9 +710,16 @@ namespace Odyssey.Sim.Pawns
                 // Cutting and mining scan before hauling at equal priority: the orders that make
                 // work exist come before the order that tidies it up. Cutting is first of the two
                 // because felling is the shorter job and the wood is usually nearer.
-                new WorkTypeDef { defName = "Work_Haul", label = "hauling", order = 2 },
-                new WorkTypeDef { defName = "Work_Cutting", label = "cutting", order = 0 },
-                new WorkTypeDef { defName = "Work_Mining", label = "mining", order = 1 },
+                //
+                // Construction scans before all three, which is the reference's own order and the
+                // right one here for a plainer reason: a site is work already begun, and a colony
+                // that wanders off to fell another tree with half a wall standing is a colony that
+                // finishes nothing. It costs the other three nothing while there are no sites,
+                // because both construction givers then answer in a single comparison.
+                new WorkTypeDef { defName = "Work_Haul", label = "hauling", order = 3 },
+                new WorkTypeDef { defName = "Work_Cutting", label = "cutting", order = 1 },
+                new WorkTypeDef { defName = "Work_Mining", label = "mining", order = 2 },
+                new WorkTypeDef { defName = "Work_Construction", label = "construction", order = 0 },
             };
 
             content.Items = new[]
