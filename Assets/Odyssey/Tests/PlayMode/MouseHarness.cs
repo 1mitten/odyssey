@@ -114,6 +114,8 @@ namespace Odyssey.Tests.PlayMode
         {
             Pump.Post(new MouseState { position = at }.WithButton(MouseButton.Left));
             yield return null;
+            AssertTheButtonWentDown();
+
             Pump.Post(new MouseState { position = at });
             yield return null;
         }
@@ -131,6 +133,7 @@ namespace Odyssey.Tests.PlayMode
         {
             Pump.Post(new MouseState { position = from }.WithButton(MouseButton.Left));
             yield return null;
+            AssertTheButtonWentDown();
 
             Pump.Post(new MouseState { position = (from + to) * 0.5f }.WithButton(MouseButton.Left));
             yield return null;
@@ -141,6 +144,18 @@ namespace Odyssey.Tests.PlayMode
             Pump.Post(new MouseState { position = to });
             yield return null;
         }
+
+        /// <summary>
+        /// The button is a <b>level</b>, not a delta, so unlike the wheel it can still be read
+        /// after the frame that delivered it — it stays down until the release is posted. That
+        /// makes this the one thing about a click a coroutine can check for itself, and it is
+        /// worth checking: the wheel arriving proves state is delivered, but every world gesture
+        /// is built on <c>wasPressedThisFrame</c>, which is true for exactly one input update.
+        /// </summary>
+        void AssertTheButtonWentDown() =>
+            Assert.That(Device.leftButton.isPressed, Is.True,
+                "the left button never went down on the device, so no press reached the game and " +
+                "no gesture can follow. See MouseHarness for the ways mouse input fails silently.");
 
         public void Dispose()
         {
