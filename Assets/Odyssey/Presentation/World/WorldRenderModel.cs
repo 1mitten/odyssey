@@ -340,7 +340,10 @@ namespace Odyssey.Presentation.World
         static int[][] ResolveEarth(ModuleLibrary library, ModuleShape shape)
         {
             var table = new int[NaturalContent.TerrainCount][];
-            int count = shape == ModuleShape.Bank ? BankMesh.Variants : GroundMesh.Variants;
+            int count =
+                shape == ModuleShape.Bank ? BankMesh.Variants
+                : shape == ModuleShape.GroundBlock ? GroundMesh.TurfVariants
+                : GroundMesh.Variants;
             for (int i = 0; i < table.Length; i++)
             {
                 if (!GroundLook.IsEarth((ushort)i)) { table[i] = System.Array.Empty<int>(); continue; }

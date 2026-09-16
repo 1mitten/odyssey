@@ -73,9 +73,26 @@ namespace Odyssey.Presentation.Rendering
         /// the deepest possible dip costs nothing — what is buried is buried — and removes the
         /// question.</para>
         /// </summary>
-        public const float Sink = GroundMesh.MaxRipple + 0.02f;
+        public static float Sink => GroundMesh.MaxRipple + 0.02f;
 
         static readonly Mesh?[] Cache = new Mesh?[Variants];
+
+        /// <summary>
+        /// Throw away the built banks so the next request rebuilds them, for a harness sweeping
+        /// <see cref="GroundMesh.SideNormalTiltDegrees"/>. Destroyed rather than dropped, because a
+        /// mesh made in code is a GPU allocation Unity never collects.
+        /// </summary>
+        public static void Invalidate()
+        {
+            for (int i = 0; i < Cache.Length; i++)
+            {
+                Mesh? mesh = Cache[i];
+                if (mesh == null) continue;
+                if (Application.isPlaying) Object.Destroy(mesh);
+                else Object.DestroyImmediate(mesh);
+                Cache[i] = null;
+            }
+        }
 
         /// <summary>
         /// One of the banks, built on first use and kept.
@@ -207,8 +224,14 @@ namespace Odyssey.Presentation.Rendering
             normal = normal.sqrMagnitude < 1e-12f ? Vector3.up : normal.normalized;
             int start = vertices.Count;
 
+            // Shaded like the ground it grows out of, through GroundMesh.SideNormalTiltDegrees.
+            // A bank is a metre-high riser every 83 cm, so if its risers kept true vertical normals
+            // while the terrace either side of it did not, the bank would come out as a ladder of
+            // black bars laid across the one place the eye is being drawn to.
+            Vector3 shaded = GroundMesh.ShadingNormal(normal);
+
             vertices.Add(a); vertices.Add(b); vertices.Add(c); vertices.Add(d);
-            for (int i = 0; i < 4; i++) normals.Add(normal);
+            for (int i = 0; i < 4; i++) normals.Add(shaded);
 
             // Planar UVs, one repeat per cell, so the bank wears the same tiling terrain texture
             // at the same scale as the ground it grows out of.

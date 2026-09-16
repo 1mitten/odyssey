@@ -65,29 +65,51 @@ namespace Odyssey.Presentation.Rendering
         public const int Variants = 2;
 
         /// <summary>
-        /// How far a rim vertex moves, up or down, as a fraction of the cell's height (3 m): 3.6 cm.
+        /// How many turf meshes are actually built, which is one when there is nothing to vary.
         ///
-        /// <para><b>This number was measured, and the first guess was three times too big.</b> At
-        /// 0.04 — 12 cm — two neighbours can disagree across their shared edge by 24 cm, which is a
-        /// tenth of a cell width, and <c>SlopeCheck</c> showed the result immediately: every cell
-        /// boundary on the board became a dark dash and the meadow read as crazy paving. It is
-        /// worth recording why that is worse than what it replaced. The top surface was never the
-        /// complaint — <see cref="GroundRelief"/> already rolls it at a scale where neighbours are
-        /// tangent planes of one smooth field and part company by millimetres. The complaint was
-        /// the riser, and adding per-cell noise to the part that was working traded a good surface
-        /// for a bad one.</para>
-        ///
-        /// <para>So this is now a grain rather than a shape: at most 7 cm between neighbours, which
-        /// catches the light across a 2.5 m tile without drawing a line around it.</para>
-        ///
-        /// <para><b>The ceiling on this approach, for whoever raises it next.</b> Cells pick their
-        /// tops independently, so any rim movement disagrees with the neighbour by up to twice it —
-        /// there is no amount of tuning that makes a large ripple continuous. Genuinely uneven
-        /// ground at cell scale needs the rim height to be a function of the *shared corner's world
-        /// position*, which a mesh reused by every cell cannot express and a vertex shader can.
-        /// That is a different piece of work and it is the one to do, not a bigger number here.</para>
+        /// <para>With <see cref="MaxRipple"/> at zero every turf variant is the same flat-topped
+        /// block, and two identical meshes are two instancing buckets and two draw calls a chunk
+        /// for no difference on screen. Ground is the largest instance population in the world, so
+        /// that is not a rounding error. Faces are unaffected: their courses are hashed
+        /// independently of the ripple, so they differ whatever it is set to.</para>
         /// </summary>
-        public const float MaxRipple = 0.012f;
+        public static int TurfVariants => MaxRipple > 0f ? Variants : 1;
+
+        /// <summary>
+        /// How far a rim vertex moves, up or down, as a fraction of the cell's height.
+        /// <b>Zero, and it ships that way because it was measured and it lost.</b>
+        ///
+        /// <para><b>What it was for.</b> The owner asked for uneven grass, and moving each cell's
+        /// rim is the only way a mesh reused by every cell can offer any. It was tried at 12 cm and
+        /// then at 3.6 cm.</para>
+        ///
+        /// <para><b>Why it is off.</b> Cells pick their tops independently, so two neighbours can
+        /// disagree across a shared edge by <em>twice</em> whatever this is. The step is filled by
+        /// the taller cell's own side wall — nothing is missing — but that wall is vertical and
+        /// catches almost no light, so every cell boundary on the board came out as a dark dash and
+        /// the meadow read as crazy paving. <c>GroundSeamTests</c> weighed the two contributions:
+        /// the relief field's own parting is <b>14.7 mm</b> at the shipped amplitude, and the
+        /// ripple at 3.6 cm added <b>72 mm</b> on top of it — five times the artefact for a benefit
+        /// no photograph could find. The owner reported not seeing it on `main`, which has no
+        /// <see cref="GroundMesh"/> at all; that is the feature being absent rather than evidence
+        /// about its cause, and the measurement is what settled it.</para>
+        ///
+        /// <para>It is also worth recording that the top surface was never the complaint.
+        /// <see cref="GroundRelief"/> already rolls it at a scale where neighbours are tangent
+        /// planes of one smooth field. The complaint was the riser, and adding per-cell noise to
+        /// the part that was working traded a good surface for a bad one while every test passed.</para>
+        ///
+        /// <para><b>The ceiling on the approach, for whoever raises it next.</b> No amount of
+        /// tuning makes a per-cell ripple continuous. Genuinely uneven ground at cell scale needs
+        /// the rim height to be a function of the <em>shared corner's world position</em>, which a
+        /// mesh reused by every cell cannot express and a vertex shader can. That is the piece of
+        /// work to do, not a bigger number here.</para>
+        ///
+        /// <para>It survives as a lever rather than being deleted so the contact sheet can keep
+        /// showing what it costs. Moving it needs an explicit <see cref="Invalidate"/> and a fresh
+        /// library, like <see cref="SideNormalTiltDegrees"/>.</para>
+        /// </summary>
+        public static float MaxRipple { get; set; } = 0f;
 
         /// <summary>
         /// How far a course of a terrace face steps out, as a fraction of the cell's width: 12 cm.
@@ -113,6 +135,107 @@ namespace Odyssey.Presentation.Rendering
         /// inequality rather than leaving it to whoever next tunes one of these numbers.</para>
         /// </summary>
         public const float Skirt = 0.10f;
+
+        /// <summary>
+        /// How far a side face's shading normal is tilted up towards the sky, in degrees.
+        ///
+        /// <para><b>This is the fix for the black lines between tiles, and it is a lighting fix
+        /// rather than a geometry one because the lines were never holes.</b> Every cell is drawn
+        /// as its own box sheared onto the tangent plane of the relief field, so where two
+        /// neighbouring planes disagree — a few centimetres, by <c>GroundSeamTests</c> — the taller
+        /// cell's own side wall fills the step. Nothing is missing. But that wall is vertical, the
+        /// sun sits at 72 degrees and terrain casts no shadows, so it receives almost nothing and
+        /// reads as a black hairline drawn round every cell on the board.</para>
+        ///
+        /// <para>Tilting the shading normal up decouples how a face is lit from how it is placed.
+        /// The sliver then shades like the ground it sits between instead of like the side of a
+        /// building, and the seam stops being a line. It costs nothing at all: no extra vertex, no
+        /// extra triangle, no extra draw call and no shader change — only different numbers in a
+        /// buffer the mesh already had.</para>
+        ///
+        /// <para><b>It is a lever because it trades against readability.</b> The same tilt also
+        /// lifts a 3 m terrace riser towards the colour of the ground above and below it, and past
+        /// some angle you can no longer see at a glance where the ground changes level, which is
+        /// information a player needs. Zero is exactly the old normals. The owner picks the number
+        /// off a contact sheet; it is not a thing to reason out.</para>
+        ///
+        /// <para>The normal keeps its horizontal bearing, so a face still lights from the side it
+        /// faces. Turning that as well would light a wall from behind, which is a worse fault than
+        /// the one being fixed.</para>
+        ///
+        /// <para><b>Changing it does not rebuild anything by itself</b>, and that is deliberate
+        /// rather than an omission. A <see cref="ModuleLibrary"/> holds the built meshes by
+        /// reference, so destroying them under a live one leaves it pointing at nothing and the
+        /// ground silently stops drawing. A caller that moves this calls <see cref="Invalidate"/>
+        /// and then builds a fresh library, which is what the check harness already does once per
+        /// condition for its own reasons.</para>
+        /// </summary>
+        public static float SideNormalTiltDegrees { get; set; } = 38f;
+
+        static float Tilt => SideNormalTiltDegrees;
+
+        /// <summary>
+        /// Throw away the built meshes so the next request rebuilds them.
+        ///
+        /// <para>Only the tuning levers need this, and in practice only the check harness moves
+        /// them. The meshes are destroyed rather than dropped: a <c>Mesh</c> made in code is a GPU
+        /// allocation Unity never collects, and a harness that sweeps a dozen settings would
+        /// otherwise leak one set per setting — the same fault that once took the graphics device
+        /// down through <c>ModuleLibrary</c>.</para>
+        /// </summary>
+        public static void Invalidate()
+        {
+            Release(TurfCache);
+            Release(FaceCache);
+        }
+
+        /// <summary>
+        /// Put the tuning levers back to what the game ships with, and rebuild.
+        ///
+        /// For tests, which must not inherit each other's tuning — the same service
+        /// <c>GroundRelief.Reset</c> and <c>Footing.Reset</c> provide, and needed for the same
+        /// reason now that these are levers a contact sheet sweeps rather than constants.
+        /// </summary>
+        public static void ResetLevers()
+        {
+            MaxRipple = 0f;
+            SideNormalTiltDegrees = 38f;
+            Invalidate();
+            BankMesh.Invalidate();
+        }
+
+        static void Release(Mesh?[] cache)
+        {
+            for (int i = 0; i < cache.Length; i++)
+            {
+                Mesh? mesh = cache[i];
+                if (mesh == null) continue;
+                if (Application.isPlaying) Object.Destroy(mesh);
+                else Object.DestroyImmediate(mesh);
+                cache[i] = null;
+            }
+        }
+
+        /// <summary>
+        /// The shading normal for a face, given the way the face actually points.
+        ///
+        /// Horizontal faces are tilted up by <see cref="SideNormalTiltDegrees"/>; anything already
+        /// pointing up or down is left exactly alone, because tilting a top face would light the
+        /// whole board as though the sun were somewhere it is not.
+        /// </summary>
+        public static Vector3 ShadingNormal(Vector3 geometric)
+        {
+            if (Mathf.Abs(geometric.y) > 0.1f) return geometric;
+
+            float tilt = Mathf.Clamp(Tilt, 0f, 89f);
+            if (tilt <= 0f) return geometric;
+
+            float radians = tilt * Mathf.Deg2Rad;
+            var flat = new Vector3(geometric.x, 0f, geometric.z);
+            if (flat.sqrMagnitude < 1e-8f) return geometric;
+
+            return (flat.normalized * Mathf.Cos(radians) + Vector3.up * Mathf.Sin(radians)).normalized;
+        }
 
         /// <summary>Heights of the two intermediate courses on a face, as a fraction of base to rim.</summary>
         static readonly float[] CourseHeights = { 0.38f, 0.72f };
@@ -369,8 +492,13 @@ namespace Odyssey.Presentation.Rendering
             normal = normal.sqrMagnitude < 1e-12f ? Vector3.up : normal.normalized;
             int start = vertices.Count;
 
+            // The UVs are laid out from the face's own geometry and the shading normal is written
+            // to the buffer, which is the whole trick: how a face is lit stops being how it is
+            // placed. See SideNormalTiltDegrees.
+            Vector3 shaded = ShadingNormal(normal);
+
             vertices.Add(a); vertices.Add(b); vertices.Add(c); vertices.Add(d);
-            for (int i = 0; i < 4; i++) normals.Add(normal);
+            for (int i = 0; i < 4; i++) normals.Add(shaded);
             uvs.Add(uv(a, normal)); uvs.Add(uv(b, normal)); uvs.Add(uv(c, normal)); uvs.Add(uv(d, normal));
 
             triangles.Add(start); triangles.Add(start + 2); triangles.Add(start + 1);

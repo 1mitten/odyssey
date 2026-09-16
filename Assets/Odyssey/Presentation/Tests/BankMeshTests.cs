@@ -22,6 +22,12 @@ namespace Odyssey.Tests.Presentation
     {
         const float Tolerance = 1e-4f;
 
+        [SetUp]
+        public void ResetLevers() => GroundMesh.ResetLevers();
+
+        [TearDown]
+        public void RestoreLevers() => GroundMesh.ResetLevers();
+
         static IEnumerable<int> Variants
         {
             get { for (int v = 0; v < BankMesh.Variants; v++) yield return v; }
@@ -72,6 +78,10 @@ namespace Odyssey.Tests.Presentation
         {
             // The cell below wears a GroundMesh top whose rim may dip. A bank sitting exactly on
             // the nominal floor would hang over that dip along its whole foot.
+            // Measured against the lever at its documented setting, not at the shipped zero:
+            // the inequality has to hold if anybody ever turns the ripple back on, and at zero it
+            // would hold trivially and prove nothing.
+            GroundMesh.MaxRipple = 0.012f;
             Assert.That(BankMesh.Sink, Is.GreaterThan(GroundMesh.MaxRipple),
                 "a bank can hang over the dip in the ground under it");
         }

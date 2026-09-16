@@ -47,16 +47,24 @@ namespace Odyssey.EditorTools
 
         readonly struct Condition
         {
-            public Condition(string name, bool earth, bool banks)
+            public Condition(string name, bool earth, bool banks, float tilt, float ripple = 0f)
             {
                 Name = name;
                 Earth = earth;
                 Banks = banks;
+                Tilt = tilt;
+                Ripple = ripple;
             }
 
             public readonly string Name;
             public readonly bool Earth;
             public readonly bool Banks;
+
+            /// <summary>Side-face normal tilt in degrees. See GroundMesh.SideNormalTiltDegrees.</summary>
+            public readonly float Tilt;
+
+            /// <summary>Rim ripple, as a fraction of cell height. See GroundMesh.MaxRipple.</summary>
+            public readonly float Ripple;
         }
 
         static void Execute(bool exitWhenDone)
@@ -70,6 +78,8 @@ namespace Odyssey.EditorTools
 
             float amplitudeWas = GroundRelief.Amplitude;
             float periodWas = GroundRelief.Period;
+            float rippleWas = GroundMesh.MaxRipple;
+            float tiltWas = GroundMesh.SideNormalTiltDegrees;
 
             try
             {
@@ -118,15 +128,35 @@ namespace Odyssey.EditorTools
                 camera.clearFlags = CameraClearFlags.Skybox;
                 camera.backgroundColor = new Color(0.16f, 0.19f, 0.24f);
 
+                // A contact sheet rather than an argument, because every one of these is a
+                // judgement about how something looks and reasoning about a renderer from its
+                // source is guesswork. The conditions are chosen so that consecutive pairs differ
+                // by exactly one thing: plain to flat is the coursed riser alone, flat to ripple is
+                // the rim noise alone, ripple to tilt is the lighting alone.
                 var conditions = new[]
                 {
-                    new Condition("plain", earth: false, banks: false),
-                    new Condition("earth", earth: true, banks: false),
-                    new Condition("banks", earth: true, banks: true),
+                    // What main draws today, for a control that is not a memory.
+                    new Condition("plain", earth: false, banks: false, tilt: 0f),
+                    // The riser geometry on its own: coursed walls, flat tops, true normals.
+                    new Condition("flat", earth: true, banks: false, ripple: 0f, tilt: 0f),
+                    // Add the rim ripple. This is the one the owner saw as dark cell boundaries.
+                    new Condition("ripple", earth: true, banks: false, ripple: 0.012f, tilt: 0f),
+                    // Drop the ripple again and light the side faces like ground instead.
+                    new Condition("tilt", earth: true, banks: false, ripple: 0f, tilt: 38f),
+                    // Everything, banks included.
+                    new Condition("banks", earth: true, banks: true, ripple: 0f, tilt: 38f),
                 };
 
                 foreach (Condition condition in conditions)
                 {
+                    // Before the library, never after: a ModuleLibrary holds the built meshes by
+                    // reference, so rebuilding them under a live one leaves it pointing at
+                    // destroyed meshes and the ground silently stops drawing.
+                    GroundMesh.MaxRipple = condition.Ripple;
+                    GroundMesh.SideNormalTiltDegrees = condition.Tilt;
+                    GroundMesh.Invalidate();
+                    BankMesh.Invalidate();
+
                     // A renderer per condition, for the reason ReliefCheck gives: the choice of
                     // mesh is made at mesh time and baked into the buckets, so a renderer built
                     // under one setting keeps it however the lever is moved afterwards.
@@ -174,7 +204,8 @@ namespace Odyssey.EditorTools
                     // supposed to cost buckets, which is draw calls, and not instances. If the
                     // instance count moves between the first two conditions, something is emitting
                     // geometry per cell that was meant to be a choice of mesh.
-                    Debug.Log($"[Slope] {condition.Name}: earth {condition.Earth}, banks {condition.Banks} — " +
+                    Debug.Log($"[Slope] {condition.Name}: earth {condition.Earth}, banks {condition.Banks}, " +
+                              $"ripple {condition.Ripple * CellMetrics.SizeY * 100f:F1} cm, tilt {condition.Tilt} deg — " +
                               $"{renderer.DrawCalls} draw calls, {renderer.InstancesDrawn} instances, " +
                               $"{renderer.ChunksDrawn} chunks");
 
@@ -198,6 +229,14 @@ namespace Odyssey.EditorTools
                 library?.Dispose();
                 GroundRelief.Amplitude = amplitudeWas;
                 GroundRelief.Period = periodWas;
+
+                // Put the meshes back as the rest of the editor expects to find them. Without the
+                // rebuild every scene opened after this one would draw whatever the last condition
+                // happened to be, which is a confusing thing to inherit from a screenshot tool.
+                GroundMesh.MaxRipple = rippleWas;
+                GroundMesh.SideNormalTiltDegrees = tiltWas;
+                GroundMesh.Invalidate();
+                BankMesh.Invalidate();
                 if (cameraObject != null) UnityEngine.Object.DestroyImmediate(cameraObject);
                 if (lightingRoot != null) UnityEngine.Object.DestroyImmediate(lightingRoot);
                 if (exitWhenDone) EditorApplication.Exit(exitCode);

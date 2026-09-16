@@ -26,6 +26,12 @@ namespace Odyssey.Tests.Presentation
     {
         const float Tolerance = 1e-4f;
 
+        [SetUp]
+        public void ResetLevers() => GroundMesh.ResetLevers();
+
+        [TearDown]
+        public void RestoreLevers() => GroundMesh.ResetLevers();
+
         static IEnumerable<int> Variants
         {
             get { for (int v = 0; v < GroundMesh.Variants; v++) yield return v; }
@@ -45,6 +51,8 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void NothingMovesInPlan()
         {
+            WithRipple();
+
             // Earth meets air at a riser, where a sideways bulge would hang over the terrace
             // below. Rock is free to bulge because neighbouring rock overlaps invisibly; turf is
             // not, so its footprint is exactly the cell and two neighbours cannot disagree.
@@ -68,9 +76,24 @@ namespace Odyssey.Tests.Presentation
             }
         }
 
+        /// <summary>
+        /// Turn the ripple on for the tests that are about the ripple.
+        ///
+        /// It ships at zero -- see GroundMesh.MaxRipple for the measurement that decided that --
+        /// so the mechanism would otherwise go untested and quietly rot, and the lever would be
+        /// broken by the time anyone next reached for it.
+        /// </summary>
+        static void WithRipple(float ripple = 0.012f)
+        {
+            GroundMesh.MaxRipple = ripple;
+            GroundMesh.Invalidate();
+        }
+
         [Test]
         public void TheRimRipplesBothWaysAndStaysInsideItsBudget()
         {
+            WithRipple();
+
             // Both ways is the point. A rim that can only drop gives every cell the same shallow
             // bowl, and a field of identical bowls is a waffle — a more obviously artificial
             // pattern than the flat quads it replaced.
@@ -96,6 +119,8 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void TheSkirtIsDeeperThanTheRimCanDip()
         {
+            WithRipple();
+
             // The rule that keeps a column of earth solid. A dipped rim means the cell does not
             // fill its own box, so there is a horizontal slot at every layer boundary — and at a
             // terrace riser, which is exactly where anyone is looking, that slot is a dark line
@@ -260,6 +285,8 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void TheHeightFunctionIsTheSurfaceThatIsDrawn()
         {
+            WithRipple();
+
             // What a tuft of grass asks. If it disagreed with the mesh the grass would float or
             // sink, which is exactly the fault it exists to prevent.
             foreach (int v in Variants)
@@ -289,6 +316,7 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void TheTopsAreActuallyDifferentFromOneAnother()
         {
+            WithRipple();
             var seen = new HashSet<string>();
             foreach (int v in Variants)
             {
