@@ -917,6 +917,69 @@ work itself.
     incidentally completes the golden's purpose: `TheKeyForANameIsFixedForEver` asserts the same
     literal under CoreCLR in the fast tier and Mono in the Unity tier, so the name-to-key mapping
     is now proved to agree across both runtimes rather than merely intended to.
+- **The pawn content is written once now (2026-09-17, closing the half of OQ-15 left open).**
+  `PawnContent.Core()` is deleted: 163 lines of content tables hand-written in C#, plus the private
+  `Skill()` helper that built the experience and decay ladders. The XML at
+  `Assets/Odyssey/Defs/Core/Pawns` is the only copy. Every call site — 10 editor tools, 6 test
+  files, `ColonyWorld` and `OdysseyBootstrap`, about thirty-five in all — now goes through
+  `ContentPack.Pawns()`.
+  - **The blocker was never the switch, it was the path.** OQ-15 shipped `FromDefs` working and
+    proved equal to the oracle, then stopped, because `FromDefs` needs a `DefDatabase`, a
+    `DefDatabase` needs a directory, and "a world that needs a path on disk cannot be built from a
+    unit test fixture". The answer was already sitting in the test assembly: `RepoPaths` walks up
+    from the running assembly to the directory holding both `Assets` and `ProjectSettings`, which
+    is true of the fast tier's `bin/Debug/net8.0`, of Unity's `Library/ScriptAssemblies` and of
+    the editor while playing. Generalising that into `ContentPack.FindRoot` made every caller work
+    with no path at all.
+  - **A built player would fail this, and that is deliberate rather than overlooked.** Nothing in
+    CI or `scripts/` builds one — checked — so shipping the pack is *not solved* here instead of
+    solved speculatively. The throw names the answer `d-07-data-pipeline.md` already gave (copy the
+    pack to `StreamingAssets`, call `ContentPack.UseRoot`), and `UseRoot` exists and is tested so
+    the seam is not discovered broken on the day somebody first needs it. **Worth noting against
+    d-07:** that research said the pack should live in `Content/` at the repository root, *outside*
+    `Assets/`; OQ-15 put it inside. Nothing here depends on which is right, but the two disagree
+    and nobody has recorded why.
+  - **The parse is cached and the record is not, and that distinction is load-bearing.**
+    `MineJobTests` writes `ctx.Content.StoneChanceOneIn = 4` on the record it is handed. A shared
+    record would have leaked that into every test that ran afterwards, and it would have looked
+    like a flaky test rather than a cache. So `ContentPack.Core` holds the parsed database and
+    `Pawns()` rebuilds the cheap record per call — exactly `Core()`'s old semantics, which is why
+    no call site needed anything but a rename. What *is* shared is the Defs themselves, since the
+    record's arrays point into the database; the two fingerprint controls perturb Defs and
+    therefore load a pack of their own rather than using the cached one.
+  - **A per-frame allocation fell out of it.** `OdysseyBootstrap.MovePerTick` was
+    `PawnContent.Core().Movement.movePerTick` — it built the *entire* content table, every Def,
+    array and list, and took one integer off it. It is read three times a frame, twice by
+    `SelectionPresenter` and once by the render path. It now reads off the colony that already
+    holds the content. Nobody was looking for this; it turned up because switching a call site
+    forces you to read it.
+  - **The oracle had to go, and the file it lived in had already said so.** `PawnContentDefTests`
+    argued *against* a golden — "a baked hash of the XML would prove only that the XML has not
+    changed, which is not the question" — because while the simulation built from `Core()`, the
+    code was the specification every soak hash and tuning decision had been measured against. The
+    same comment set the expiry: the oracle stands *"until the bootstrap loads content at
+    startup"*. It does now, there is no second copy to disagree with, and keeping one would have
+    meant writing every new item twice for ever — which is the cost the row existed to remove. So
+    the question becomes the one a golden answers, and `DefComparison.Fingerprint` folds the loaded
+    record through the same reflective walk `Differences` uses into one literal. A content change
+    costs one deliberate line; an accidental one fails, and `git diff Assets/Odyssey/Defs/Core` is
+    the answer to "what moved" because that is the only way content *can* move.
+  - **The controls are the reason to believe any of it.** With the walk stubbed to reach nothing,
+    **all four fingerprint tests fail** — which is precisely the failure mode the original file
+    warned a reflective comparer has, now caught rather than described. Run and restored.
+  - **Content equivalence is proved by the history, not by an assertion.** The oracle test passed
+    on every commit up to the one that deleted it, and `FromDefs` was not touched, so the content
+    the simulation loads today is the content it was measured on. There was no moment at which
+    both sides could have moved together.
+  - **Deliberately left: the world half.** `CoreContent.Terrain` and `NaturalContent.Terrain` are
+    still in-code tables duplicated by `Defs/Core/World/*.xml`, and `WorldContentDefTests` still
+    uses them as its oracle. They are read at runtime almost nowhere — the oracle and one count
+    assertion — so migrating them is a different and subtler change than this one, and the
+    `TODO(content)` in `WorldGenDefs.cs` still stands.
+  - **Verified:** fast tier **432 Sim + 106 Hud** (from 428 + 106). **Not verified locally:**
+    `scripts/unity.sh test editmode` and PlayMode — a Unity editor held the main checkout
+    throughout, which matters more than usual here because **the ten editor tools are compiled by
+    nothing else**, so CI's Unity tier is the first thing to compile a third of this change.
 
 - **The roster card says what a colonist is doing with a picture (owner, 2026-09-17).** Three of
   the owner's 32 px drawings went in as `ui.status.felling`, `ui.status.mining` and

@@ -429,20 +429,18 @@ namespace Odyssey.Sim.Pawns
     /// <summary>
     /// Every tunable number the pawn simulation reads, in one frozen record.
     ///
-    /// <para><b>There are two ways to build one, and that is deliberate.</b>
+    /// <para><b>There is one way to build one, and that is the point.</b>
     /// <see cref="FromDefs"/> reads the content pack at <c>Assets/Odyssey/Defs/Core/Pawns</c>,
-    /// which is where these numbers now live and where a mod or a design change edits them
-    /// (OQ-15). <see cref="Core"/> builds the same content in code and remains the oracle:
-    /// <c>PawnContentDefTests</c> compares the two field for field on every run, so the XML
-    /// cannot drift away from the content every soak hash and tuning decision was measured
-    /// against without a test saying which field moved.</para>
+    /// which is where these numbers live and where a mod or a design change edits them. Most
+    /// callers want <c>ContentPack.Pawns()</c>, which finds that pack and caches the parse.</para>
     ///
-    /// <para>The simulation still constructs with <c>Core()</c>, because a headless world is
-    /// built in a dozen places — tests, the editor harnesses, the bootstrap — and a world that
-    /// needs a path on disk cannot be built from a unit test fixture. TODO(content): give the
-    /// composition root a loaded <see cref="DefDatabase"/>, switch those call sites to
-    /// <see cref="FromDefs"/>, and delete <see cref="Core"/>. Nothing that <i>reads</i> this
-    /// record has to change either way.</para>
+    /// <para><b>There used to be a second way, and removing it is what closed OQ-15.</b> A
+    /// <c>Core()</c> factory held the same tables written out in C#, and a test compared the two
+    /// field for field — which made the migration safe but meant every new item, job and work
+    /// type had to be written twice, in two languages, with nothing but that test to notice when
+    /// one of them was forgotten. Every call site now loads the XML, so the duplicate is gone and
+    /// <c>PawnContentDefTests</c> guards the content with a fingerprint instead: a change to these
+    /// numbers is one deliberate line, and an accidental one fails.</para>
     ///
     /// <para>The array order below <em>is</em> the handle order, and it is not the order the
     /// loader stores Defs in: see <see cref="FromDefs"/>.</para>
@@ -589,169 +587,6 @@ namespace Odyssey.Sim.Pawns
             if (!defs.Table<T>().TryGetHandle(defName, out var handle))
                 throw new DefLoadException($"the content has no {typeof(T).Name} named '{defName}'.");
             return defs.Table<T>()[handle];
-        }
-
-        public static PawnContent Core()
-        {
-            var content = new PawnContent();
-
-            content.Needs = new[]
-            {
-                new NeedDef
-                {
-                    defName = "Need_Food", label = "food", seekThreshold = 300,
-                    bands =
-                    {
-                        // Drain slackens as the bar empties, per a-01-pawns.md.
-                        new NeedBandDef { upperBound = 0,    fallPerInterval = 0, moodOffset = -200 },
-                        new NeedBandDef { upperBound = 125,  fallPerInterval = 1, moodOffset = -120 },
-                        new NeedBandDef { upperBound = 250,  fallPerInterval = 2, moodOffset = -60 },
-                        new NeedBandDef { upperBound = 1000, fallPerInterval = 4, moodOffset = 0 },
-                    },
-                },
-                new NeedDef
-                {
-                    defName = "Need_Rest", label = "rest", seekThreshold = 280,
-                    bands =
-                    {
-                        new NeedBandDef { upperBound = 0,    fallPerInterval = 0, moodOffset = -180 },
-                        new NeedBandDef { upperBound = 100,  fallPerInterval = 1, moodOffset = -180 },
-                        new NeedBandDef { upperBound = 200,  fallPerInterval = 2, moodOffset = -120 },
-                        new NeedBandDef { upperBound = 280,  fallPerInterval = 3, moodOffset = -60 },
-                        new NeedBandDef { upperBound = 1000, fallPerInterval = 3, moodOffset = 0 },
-                    },
-                },
-                new NeedDef
-                {
-                    defName = "Need_Joy", label = "recreation", seekThreshold = 0,
-                    bands =
-                    {
-                        new NeedBandDef { upperBound = 0,    fallPerInterval = 0, moodOffset = -200 },
-                        new NeedBandDef { upperBound = 150,  fallPerInterval = 1, moodOffset = -100 },
-                        new NeedBandDef { upperBound = 300,  fallPerInterval = 1, moodOffset = -50 },
-                        new NeedBandDef { upperBound = 700,  fallPerInterval = 2, moodOffset = 0 },
-                        new NeedBandDef { upperBound = 850,  fallPerInterval = 2, moodOffset = 50 },
-                        new NeedBandDef { upperBound = 1000, fallPerInterval = 2, moodOffset = 100 },
-                    },
-                },
-            };
-
-            content.Thoughts = new[]
-            {
-                new ThoughtDef { defName = "Thought_Catharsis", moodOffset = 150, durationTicks = 30_000 },
-                new ThoughtDef { defName = "Thought_AteMeal", moodOffset = 20, durationTicks = 15_000, stackLimit = 2 },
-                new ThoughtDef { defName = "Thought_SleptOnGround", moodOffset = -40, durationTicks = 15_000 },
-            };
-
-            content.Jobs = new[]
-            {
-                new JobDef
-                {
-                    defName = "Job_Haul", driver = JobIndex.Haul, expiryTicks = 5_000,
-                    trainsSkill = SkillIndex.Hauling, experiencePerWorkTick = 110,
-                },
-                new JobDef { defName = "Job_Eat", driver = JobIndex.Eat, casuallyInterruptible = false, workTicks = 300 },
-                new JobDef { defName = "Job_Sleep", driver = JobIndex.Sleep, casuallyInterruptible = false },
-                new JobDef { defName = "Job_Wander", driver = JobIndex.Wander, expiryTicks = 1_200 },
-                new JobDef { defName = "Job_Wait", driver = JobIndex.Wait, workTicks = 120 },
-                // 800 ticks is the vanilla harvest work of the pine class, the wooded meadow's only
-                // species (docs/research/a-08-plants-growing-food.md §1). One tree per job, and the
-                // swings train cutting.
-                new JobDef
-                {
-                    defName = "Job_Fell", driver = JobIndex.Fell, workTicks = 800, expiryTicks = 6_000,
-                    trainsSkill = SkillIndex.Cutting, experiencePerWorkTick = 110, settleTicks = 30,
-                },
-                // No workTicks: mining is priced per material, and the terrain defs already carry
-                // the number (rock 700, iron 900, coal 760). One constant here would make a seam
-                // cost the same as the stone around it, which is the whole difference between
-                // materials. The driver reads TerrainAt(...).workToClear as it swings.
-                //
-                // The expiry is generous because a shaft can be a long walk from the colony and a
-                // job that expires on the way there is a colonist who never arrives.
-                new JobDef
-                {
-                    defName = "Job_Mine", driver = JobIndex.Mine, expiryTicks = 12_000,
-                    trainsSkill = SkillIndex.Mining, experiencePerWorkTick = 110, settleTicks = 30,
-                },
-            };
-
-            // Both skills share one curve, one cap and one ladder, because the reference does
-            // (a-01: twelve skills, one formula). Two Defs rather than one shared record so that
-            // the XML can give a skill its own numbers the day a design wants that.
-            content.Skills = new[]
-            {
-                // The labels are the work types' own words, which the registry already carries
-                // as ui.work.hauling and ui.work.cutting; nothing displays a skill yet.
-                Skill("Skill_Hauling", "hauling"),
-                Skill("Skill_Cutting", "cutting"),
-                Skill("Skill_Mining", "mining"),
-            };
-
-            content.WorkTypes = new[]
-            {
-                // Cutting and mining scan before hauling at equal priority: the orders that make
-                // work exist come before the order that tidies it up. Cutting is first of the two
-                // because felling is the shorter job and the wood is usually nearer.
-                new WorkTypeDef { defName = "Work_Haul", label = "hauling", order = 2 },
-                new WorkTypeDef { defName = "Work_Cutting", label = "cutting", order = 0 },
-                new WorkTypeDef { defName = "Work_Mining", label = "mining", order = 1 },
-            };
-
-            content.Items = new[]
-            {
-                // 900 units is 0.9 nutrition, the vanilla value of every meal class including the
-                // packaged ration this stands for (a-08 §2). At 450 it was half a meal, which is
-                // why five colonists ate fifteen a day. The ration class never rots, which is what
-                // lets a pantry be an objective rather than a four-day countdown; spoilage itself
-                // is out of the slice.
-                // Meals stack to 20, so a whole starting pile (ScenarioDef.mealsPerPile, 12) is
-                // legal stock in one cell and a hauler moves it in one trip (a-14: one stack per
-                // trip). The ItemDef default of 1 would make every pile "full" the moment it was
-                // hauled and no meal could ever be stowed beside another. The 20 is ASSUMED as a
-                // number: the research records limits from 1 to 500 and none for a meal.
-                new ItemDef { defName = "Item_Meal", label = "ration pack", nutrition = 900, stackLimit = 20 },
-                // Salvage is a heap in its own right, one to a cell, until the things line
-                // decides what it is made of.
-                new ItemDef { defName = "Item_Salvage", label = "salvage" },
-                // Wood's 75 is the one limit the research states outright (a-14 §4).
-                new ItemDef { defName = "Item_Wood", label = "wood", stackLimit = 75 },
-                new ItemDef { defName = "Item_Stone", label = "stone", stackLimit = 75 },
-                new ItemDef { defName = "Item_IronOre", label = "iron ore", stackLimit = 75 },
-                new ItemDef { defName = "Item_Coal", label = "coal", stackLimit = 75 },
-            };
-
-            content.Mood = new MoodDef { defName = "Mood_Default" };
-            content.Break = new MentalBreakDef { defName = "Break_Wander" };
-            content.Movement = new MovementDef { defName = "Movement_Colonist" };
-            content.Kind = new PawnKindDef { defName = "PawnKind_Colonist" };
-            return content;
-        }
-
-        static SkillDef Skill(string defName, string label)
-        {
-            var def = new SkillDef { defName = defName, label = label };
-
-            // a-01 gives 1,000 × (L + 1) points from L to L + 1 and a cumulative 265,000 to reach
-            // 20, and those two only agree if the slope doubles from level 10: the first ten
-            // steps sum to 55,000, so the last ten must sum to 210,000, which 12,000 rising by
-            // 2,000 a step to 30,000 does exactly (and 30,000 is where a-01's ladder ends). The
-            // second slope is therefore ASSUMED from the two figures, not read from a table.
-            // A table, not a formula, so that OQ-15 moves it to XML unchanged. In thousandths.
-            def.experienceToAdvance = new int[def.maxLevel];
-            for (int level = 0; level < def.maxLevel; level++)
-            {
-                int points = level < 10 ? 1_000 * (level + 1) : 10_000 + 2_000 * (level - 9);
-                def.experienceToAdvance[level] = points * 1_000;
-            }
-
-            // a-01 measured 30 a day at 10 and 3,600 at 20; the nine between are ASSUMED, a
-            // geometric ladder (see SkillDef.decayPerDay). Points, in thousandths.
-            def.decayPerDay = new int[def.maxLevel + 1];
-            int[] ladder = { 30, 48, 78, 126, 203, 328, 530, 855, 1_380, 2_230, 3_600 };
-            for (int i = 0; i < ladder.Length; i++)
-                def.decayPerDay[def.decayFromLevel + i] = ladder[i] * 1_000;
-            return def;
         }
     }
 

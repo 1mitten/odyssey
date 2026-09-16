@@ -5,6 +5,7 @@ using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
@@ -77,7 +78,7 @@ namespace Odyssey.EditorTools
                 var nav = new NavGraph(grid);
                 nav.Rebuild();
                 var pawns = new PawnContext(
-                    grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core()) { Chunks = chunks };
+                    grid, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns()) { Chunks = chunks };
                 var support = new SupportSystem(grid, new SupportSolver(grid), chunks);
                 var mirror = new GridMirrorContributor(grid, result.Edifices, model);
                 var designations = new Odyssey.Sim.Designations.DesignationGrid(grid, result.Edifices);
@@ -100,7 +101,7 @@ namespace Odyssey.EditorTools
                     Debug.LogWarning("[Select] no live figures: no character art or no gait clips. " +
                                      "Without a figure there is no displacement to measure and this proves nothing.");
 
-                int movePerTick = PawnContent.Core().Movement.movePerTick;
+                int movePerTick = ContentPack.Pawns().Movement.movePerTick;
 
                 // Synced every tick, as SwingCheck does, because the walk in is part of what puts
                 // the figure where it ends up.

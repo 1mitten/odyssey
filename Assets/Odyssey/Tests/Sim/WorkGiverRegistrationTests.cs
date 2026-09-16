@@ -5,6 +5,7 @@ using System.Linq;
 using NUnit.Framework;
 using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
@@ -58,7 +59,7 @@ namespace Odyssey.Tests.Sim
             for (int i = 0; i < size.CellCount; i++) cells.Floor[i] = 1;
             var nav = new NavGraph(cells);
             nav.Rebuild();
-            return new PawnContext(cells, nav, new PathService(new PathFinder(nav)), PawnContent.Core());
+            return new PawnContext(cells, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns());
         }
 
         // ---- discovery ---------------------------------------------------------------------
@@ -128,7 +129,7 @@ namespace Odyssey.Tests.Sim
             // The negative control for the test above. If two givers compared equal on every key,
             // the sort would be free to order them either way and the permutation test would be
             // asserting that List.Sort is stable rather than that our ordering is total.
-            var content = PawnContent.Core();
+            var content = ContentPack.Pawns();
             WorkGiver[] givers = WorkGiverRegistry.Discover();
 
             for (int i = 0; i < givers.Length; i++)
@@ -207,7 +208,7 @@ namespace Odyssey.Tests.Sim
 
                 var nav = new NavGraph(cells);
                 nav.Rebuild();
-                var pawns = new PawnContext(cells, nav, new PathService(new PathFinder(nav)), PawnContent.Core());
+                var pawns = new PawnContext(cells, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns());
                 var solver = new SupportSolver(cells);
                 var support = new SupportSystem(cells, solver);
                 var designations = new DesignationGrid(cells, Array.Empty<PlacedEdifice>());

@@ -2,6 +2,7 @@
 using System.IO;
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Saving;
@@ -23,7 +24,7 @@ namespace Odyssey.Tests.Sim
     {
         const int Point = 1_000;
 
-        static PawnContent Content => PawnContent.Core();
+        static PawnContent Content => ContentPack.Pawns();
 
         static Pawn Lone(Colony colony) => colony.Ctx.Pawns.Spawn(colony.Cell(8, 8, 0));
 

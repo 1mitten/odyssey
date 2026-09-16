@@ -110,7 +110,7 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void MoodBandsReadTheScaleTheSimulationPublishes()
         {
-            // PawnContent.Core().Mood: baseMood 500, a colonist is placed at 600.
+            // Mood_Default in the content pack: baseMood 500, a colonist is placed at 600.
             Assert.That(MoodBands.Band(600), Is.EqualTo("content"), "a colonist as placed is content");
             Assert.That(MoodBands.Band(500), Is.EqualTo("strained"), "the mood base is not contentment");
             Assert.That(MoodBands.Band(200), Is.EqualTo("breaking"), "a colonist in real trouble is breaking");
