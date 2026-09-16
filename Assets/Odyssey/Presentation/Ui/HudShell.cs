@@ -245,10 +245,37 @@ namespace Odyssey.Presentation.Ui
         /// a click on a panel never reaches the world (input case 2 of design 09 §6); the shell
         /// element itself is non-pickable, so empty screen still belongs to the world.
         /// </summary>
+        /// <summary>
+        /// A pointer position, as the mouse reports it, in this panel's coordinates.
+        ///
+        /// <para><b>The Y axis has to be turned over first, and that is the whole of it.</b>
+        /// <c>Mouse.current.position</c> is screen space with its origin at the <i>bottom</i> left
+        /// and y climbing upward; a UI Toolkit panel has its origin at the <i>top</i> left with y
+        /// climbing downward. <see cref="RuntimePanelUtils.ScreenToPanel"/> resolves the panel's
+        /// own scaling — which is why it cannot simply be divided out by hand — but it does not
+        /// turn the axis over, so handing it a mouse position directly mirrors everything about
+        /// the middle of the screen.</para>
+        ///
+        /// <para>Reported by the owner against the drag marquee: "the selectable box does not come
+        /// from the mouse cursor but actually quite below it some distance... like the exact
+        /// opposite side of the screen". Mirrored is exactly what that describes, and the x axis
+        /// being right is what identifies it.</para>
+        ///
+        /// <para><b><see cref="PointOverUi"/> had the same line and therefore the same fault</b>,
+        /// which is worse because it fails quietly: it decides whether a click belongs to the HUD
+        /// or to the world, so a press near the bottom bar was tested against the top of the
+        /// screen. <c>docs/plans/next-session-prompt.md</c> item 2 already recorded that guard as
+        /// shipping "on inspection only" with no test, and this is what was waiting in it. Both
+        /// call sites go through here now so they cannot disagree again.</para>
+        /// </summary>
+        Vector2 ToPanel(Vector2 screenPosition) =>
+            RuntimePanelUtils.ScreenToPanel(
+                _hud.panel, new Vector2(screenPosition.x, Screen.height - screenPosition.y));
+
         public bool PointOverUi(Vector2 screenPosition)
         {
             if (_hud == null || _hud.panel == null) return false;
-            VisualElement? hit = _hud.panel.Pick(RuntimePanelUtils.ScreenToPanel(_hud.panel, screenPosition));
+            VisualElement? hit = _hud.panel.Pick(ToPanel(screenPosition));
             return hit != null && hit != _hud;
         }
 
@@ -332,8 +359,11 @@ namespace Odyssey.Presentation.Ui
                 return;
             }
 
-            Vector2 min = RuntimePanelUtils.ScreenToPanel(_hud.panel, box.Value.min);
-            Vector2 max = RuntimePanelUtils.ScreenToPanel(_hud.panel, box.Value.max);
+            // Both corners through the same conversion. Screen min-y is the BOTTOM of the box
+            // and panel min-y is the top, so which corner is which flips with the axis — hence the
+            // Min/Max pair below rather than using min for left/top directly.
+            Vector2 min = ToPanel(box.Value.min);
+            Vector2 max = ToPanel(box.Value.max);
             _marquee.style.left = Mathf.Min(min.x, max.x);
             _marquee.style.top = Mathf.Min(min.y, max.y);
             _marquee.style.width = Mathf.Abs(max.x - min.x);
