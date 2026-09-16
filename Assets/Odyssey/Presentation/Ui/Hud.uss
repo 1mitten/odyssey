@@ -88,7 +88,8 @@
     translate: -50% 0;
     flex-direction: row;
     padding: 5px;
-    background-color: #141b24e6;
+    /* Solid: the bottom bar is always on screen, so nothing behind it needs showing through. */
+    background-color: #141b24;
     border-width: 1px;
     border-color: #2b3947;
     border-radius: 6px;
@@ -102,7 +103,7 @@
     flex-direction: row;
     align-items: center;
     padding: 0 4px;
-    background-color: #141b24e6;
+    background-color: #141b24;
     border-width: 1px;
     border-color: #2b3947;
     border-radius: 6px;
