@@ -21,12 +21,17 @@ namespace Odyssey.Sim.Pathing
     /// <summary>
     /// Regions, links and districts: the structure that answers reachability without searching.
     ///
-    /// The whole unit exists because of one measurement. The D1 architecture benchmark timed a
-    /// naive layer-aware A-star at 65% of total tick time, and 1,058 of its 1,800 replans burned
-    /// their entire 20,000-node budget and then failed. Those were searches for targets that were
-    /// never reachable at all, and a failed A-star is the <em>worst</em> case of the algorithm:
-    /// it expands the whole connected component before admitting defeat. The fix is not a faster
-    /// search. The fix is to not start one.
+    /// The D1 architecture benchmark timed a naive layer-aware A-star at 65% of total tick time,
+    /// and 1,058 of its 1,800 replans burned their entire 20,000-node budget and then failed. The
+    /// first explanation — that those were searches for targets that were never reachable at all
+    /// — was tested and falsified: only 14% of the exhausted budgets were genuinely unreachable,
+    /// under 1% on a structured map (<c>docs/design/05-ai-and-jobs.md</c> §6). The measured
+    /// win against the tick came from the abstract region stage and its connector-density
+    /// heuristic, not from reachability. This unit exists for a different, larger reason: a
+    /// job-giver scan asks "can this pawn get there?" thousands of times per tick against
+    /// candidate targets, and answering that with A-star at that frequency is unaffordable
+    /// regardless of failure rate. <see cref="Reachable"/> has to be free — two array reads,
+    /// never a search.
     ///
     /// <para>The three tiers, from <c>docs/research/d-04-pathfinding.md</c>:</para>
     /// <list type="bullet">
