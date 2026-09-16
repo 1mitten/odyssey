@@ -64,7 +64,11 @@ jobs:
     timeout-minutes: 60
     defaults:
       run:
-        shell: bash    # Git Bash on Windows; this is what scripts/unity.sh expects.
+        # Git Bash by its full path. A self-hosted runner installed as a service has no Git on
+        # its PATH, and "bash" then resolves to the Windows WSL stub in system32, which has no
+        # distribution and exits 1 before the script runs. scripts/unity.sh expects Git Bash.
+        # If Git is installed elsewhere on the runner, change this one line.
+        shell: C:\Program Files\Git\bin\bash.exe --noprofile --norc -eo pipefail {0}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
