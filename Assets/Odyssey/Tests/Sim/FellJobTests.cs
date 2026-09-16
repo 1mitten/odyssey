@@ -15,8 +15,14 @@ namespace Odyssey.Tests.Sim
     {
         static readonly GridSize Size = new GridSize(60, 60, 8);
 
-        static ColonyWorld Wooded(uint seed = 1u, int fellRadius = 0) =>
-            ColonyWorld.Build(Size, seed, colonists: 3, barren: true, wooded: true, fellRadius: fellRadius);
+        static ColonyWorld Wooded(uint seed = 1u, int fellRadius = 0)
+        {
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 3;
+            scenario.beds = 3;
+            scenario.startingFellRadius = fellRadius;
+            return ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: true);
+        }
 
         /// <summary>The nearest tree to the start on the start layer, as a cell index, or -1.</summary>
         static int NearestTree(ColonyWorld colony)

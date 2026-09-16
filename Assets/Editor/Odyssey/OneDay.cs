@@ -54,7 +54,7 @@ namespace Odyssey.EditorTools
             {
                 var size = new GridSize(120, 120, 16);
                 var setup = Stopwatch.StartNew();
-                ColonyWorld colony = ColonyWorld.Build(size, seed: 1u);
+                ColonyWorld colony = ColonyWorld.Build(size, seed: 1u, ScenarioDef.Bare());
                 setup.Stop();
 
                 if (colony.Placement.Colonists != 5)

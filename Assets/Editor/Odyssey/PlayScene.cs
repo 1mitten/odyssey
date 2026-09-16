@@ -160,11 +160,12 @@ namespace Odyssey.EditorTools
                     .AddColony(pawns, designations, support, nav)
                     .Build();
 
-                ColonyScenario.Place(grid, pawns, result.StartCell, 1u, 5);
-                // The orders the scene gives, then long enough for the first tree to come down and
-                // its wood to be lying there: the picture has to show the job line, not just the
-                // colonists setting off along it.
-                ColonyScenario.DesignateTreesNear(designations, result.StartCell, 10);
+                // The scene's own scenario, orders included, then long enough for the first tree
+                // to come down and its wood to be lying there: the picture has to show the job
+                // line, not just the colonists setting off along it.
+                ScenarioDef scenario = ScenarioDef.Playtest();
+                ColonyScenario.Place(grid, pawns, result.StartCell, 1u, scenario);
+                ColonyScenario.GiveStartingOrders(designations, result.StartCell, scenario);
                 for (int i = 0; i < 2_400; i++) world.Tick();
 
                 var actorMaterial = new Material(library.FallbackMaterial) { name = "Odyssey/Actor" };
