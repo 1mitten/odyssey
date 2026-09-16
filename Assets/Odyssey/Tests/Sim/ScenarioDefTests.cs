@@ -1,8 +1,10 @@
 #nullable enable
+using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pawns;
+using Odyssey.Sim.Worldgen.Natural;
 
 namespace Odyssey.Tests.Sim
 {
@@ -17,6 +19,13 @@ namespace Odyssey.Tests.Sim
 
         static ColonyWorld Wooded(ScenarioDef scenario) =>
             ColonyWorld.Build(Size, seed: 1u, scenario, barren: true, wooded: true);
+
+        /// <summary>The ruined city, because it is the only map that has storeys to name.</summary>
+        static readonly GridSize CitySize = new GridSize(60, 60, 5);
+
+        static ColonyWorld City(ScenarioDef scenario) =>
+            ColonyWorld.Build(CitySize, seed: 1u, scenario, barren: false, chunks: null,
+                mapType: MapType.RuinedCity);
 
         [Test]
         public void PlaytestMarksEveryTreeNearTheStart()
@@ -143,6 +152,107 @@ namespace Odyssey.Tests.Sim
 
             Assert.That(sawFelling, Is.True, "nobody went to the trees");
             Assert.That(sawMining, Is.True, "nobody went to the stone");
+        }
+
+        /// <summary>
+        /// A scenario that names no storey places its colony cell for cell where it always did.
+        /// This is the half of OQ-47 that is a promise not to change anything: every hash, golden
+        /// and ten-day soak on record was run against this placement.
+        ///
+        /// <para><b>Where the numbers come from.</b> They were measured on the commit <i>before</i>
+        /// the storey work, in the sibling checkout, by the same signature this test computes, and
+        /// they did not move. That is the whole evidence: a baked number nobody has seen the old
+        /// code produce proves only that the new code is consistent with itself.</para>
+        ///
+        /// <para>Deliberately not "everything is on the start layer" — that is false and the first
+        /// draft of this test asserted it. The old search widens through nearby layers when a
+        /// column has nothing walkable at the start layer, so five colonists on a ruined city
+        /// already spread across storeys before any scenario asked them to. The promise is
+        /// sameness, not flatness.</para>
+        /// </summary>
+        [Test]
+        public void AScenarioThatNamesNoStoreyPlacesExactlyWhereItAlwaysDid()
+        {
+            Assert.That(PlacementSignature(City(ScenarioDef.Bare())), Is.EqualTo("34/36347CC0728A29AC"),
+                "the default placement moved on the ruined city");
+            Assert.That(PlacementSignature(Wooded(ScenarioDef.Bare())), Is.EqualTo("34/1A786205CF734E9A"),
+                "the default placement moved on the wooded map");
+        }
+
+        /// <summary>
+        /// Every cell the placement filled, in the order it filled them, as one string. Coarse on
+        /// purpose: it says "the same colony in the same cells" and nothing about why.
+        /// </summary>
+        static string PlacementSignature(ColonyWorld colony)
+        {
+            var parts = new List<string>();
+            foreach (var pawn in colony.World.Views.Current.Pawns) parts.Add("p" + pawn.Cell);
+            foreach (int cell in colony.Pawns.Items.Beds) parts.Add("b" + cell);
+            foreach (var item in colony.Pawns.Items.Items)
+                parts.Add("i" + item.DefIndex + ":" + item.Cell + ":" + item.Stack);
+            foreach (var pile in colony.Pawns.Items.Stockpiles)
+                foreach (int cell in pile.Cells) parts.Add("s" + cell);
+
+            ulong hash = 14695981039346656037UL;
+            foreach (string part in parts)
+            foreach (char c in part)
+            {
+                hash ^= c;
+                hash *= 1099511628211UL;
+            }
+            return parts.Count + "/" + hash.ToString("X16");
+        }
+
+        /// <summary>
+        /// And the other half: a scenario that does name storeys is obeyed. On a flat map this
+        /// could not be asked at all, so it is asked on the ruined city, which has the storeys.
+        ///
+        /// <para>The negative control is the test above: the same map and the same seed with no
+        /// offsets place a colony whose signature is the one the old code produced, beds and all.
+        /// So a bed a floor up here is the offset putting it there, not the finder wandering.</para>
+        /// </summary>
+        [Test]
+        public void AScenarioPlacesOnTheStoreysItNames()
+        {
+            var scenario = ScenarioDef.Bare();
+            scenario.bedLayerOffset = 1;
+            scenario.mealLayerOffset = 2;
+
+            ColonyWorld colony = City(scenario);
+            int floor = colony.Start.Y;
+
+            Assert.That(colony.Placement.Beds, Is.EqualTo(scenario.beds), colony.Placement.ToString());
+            Assert.That(colony.Placement.Meals, Is.EqualTo(scenario.mealPiles), colony.Placement.ToString());
+
+            foreach (int cell in colony.Pawns.Items.Beds)
+                Assert.That(CitySize.FromIndex(cell).Y, Is.EqualTo(floor + 1), "a bed is not on the storey asked for");
+
+            foreach (var item in colony.Pawns.Items.Items)
+            {
+                if (item.DefIndex != ItemIndex.Meal || item.Cell < 0) continue;
+                Assert.That(CitySize.FromIndex(item.Cell).Y, Is.EqualTo(floor + 2), "a meal is not on the storey asked for");
+            }
+        }
+
+        /// <summary>
+        /// A storey with nothing walkable on it places nothing, and says so. The alternative —
+        /// falling back to the floor below — is worse than a shortfall: it silently gives a
+        /// scenario a colony it did not ask for, and a run built on it would prove the wrong
+        /// thing. The city is five layers and the start is on the second, so +3 is off the top of
+        /// the shells.
+        /// </summary>
+        [Test]
+        public void AStoreyThatCannotBeReachedPlacesNothingRatherThanPlacingItLower()
+        {
+            var scenario = ScenarioDef.Bare();
+            scenario.bedLayerOffset = 3;
+
+            ColonyWorld colony = City(scenario);
+
+            Assert.That(colony.Placement.Beds, Is.Zero, colony.Placement.ToString());
+            Assert.That(colony.Pawns.Items.Beds.Count, Is.Zero, "a bed was placed on a storey that was not asked for");
+            Assert.That(colony.Placement.Colonists, Is.EqualTo(scenario.colonists),
+                "the rest of the colony should be unaffected by a storey that could not be filled");
         }
 
         [Test]

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
+using Odyssey.Sim.Pathing;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen.Natural;
 
@@ -82,6 +83,24 @@ namespace Odyssey.Sim.Pawns
         /// the trees together.
         /// </summary>
         public int miners = 2;
+
+        /// <summary>
+        /// Which storey the meals go on, counted from the start layer. Zero is the layer the
+        /// colony wakes up on, which is where everything went before these existed.
+        ///
+        /// <para>A scenario says <i>where</i> as well as <i>how much</i> because on a map with
+        /// storeys the two are not separable: a colony whose food, beds and store are all on the
+        /// floor it wakes up on never uses a stair, and a run of that colony cannot demonstrate
+        /// that stairs work (OQ-47, and M2's central claim). An offset rather than an absolute
+        /// layer, because a scenario does not know where the generator will put the start.</para>
+        /// </summary>
+        public int mealLayerOffset = 0;
+
+        /// <summary>Which storey the beds go on, counted from the start layer.</summary>
+        public int bedLayerOffset = 0;
+
+        /// <summary>Which storey the stockpile goes on, counted from the start layer.</summary>
+        public int stockpileLayerOffset = 0;
 
         /// <summary>
         /// The scene's scenario: the colony has felling work the moment it exists, because there
@@ -299,7 +318,8 @@ namespace Odyssey.Sim.Pawns
         /// and a search pinned to a single layer finds a thin scatter of cells rather than a
         /// clearing.
         /// </summary>
-        public static List<int> FindStartSpots(CellGrid grid, CellRef start, int wanted, int maxRadius = 24, int layerSpread = 2)
+        public static List<int> FindStartSpots(CellGrid grid, CellRef start, int wanted, int maxRadius = 24,
+            int layerSpread = 2, Filter? filter = null)
         {
             var size = grid.Size;
             var spots = new List<int>(wanted);
@@ -316,19 +336,32 @@ namespace Odyssey.Sim.Pawns
                     // Nearest layer first, so the colony stays on one level where it can.
                     for (int spread = 0; spread <= layerSpread; spread++)
                     {
-                        if (TryTake(grid, size, x, z, start.Y + spread, spots)) break;
-                        if (spread != 0 && TryTake(grid, size, x, z, start.Y - spread, spots)) break;
+                        if (TryTake(grid, size, x, z, start.Y + spread, spots, filter)) break;
+                        if (spread != 0 && TryTake(grid, size, x, z, start.Y - spread, spots, filter)) break;
                     }
                 }
             }
             return spots;
         }
 
-        static bool TryTake(CellGrid grid, GridSize size, int x, int z, int y, List<int> spots)
+        /// <summary>
+        /// An extra condition a spot must meet, beyond standing on something walkable and dry.
+        /// Null is the search as it has always been.
+        ///
+        /// <para>It exists because a storey a scenario <i>names</i> needs two guarantees the
+        /// start layer never did: that a cell already handed to an earlier group is not handed
+        /// out twice, and that the storey can actually be walked to — a bed stamped inside a
+        /// sealed shell two floors up is a colonist who never sleeps, and the day's run would
+        /// report it as a mood failure rather than as a placement one.</para>
+        /// </summary>
+        public delegate bool Filter(int cellIndex);
+
+        static bool TryTake(CellGrid grid, GridSize size, int x, int z, int y, List<int> spots, Filter? filter)
         {
             if (!size.Contains(x, z, y)) return false;
             int index = size.Index(x, z, y);
             if (!grid.IsWalkable(index)) return false;
+            if (filter != null && !filter(index)) return false;
 
             // Walkable is not enough. Shallow water can be waded, so it passes the test above,
             // and a bed or a stockpile would be placed standing in a stream. Deep water is
@@ -339,38 +372,187 @@ namespace Odyssey.Sim.Pawns
             return true;
         }
 
+        /// <summary>The storey the colonists themselves wake up on: the one the generator chose.</summary>
+        const int ColonistStorey = 0;
+
+        /// <summary>
+        /// Spare spots per storey, so a pile that lands on an awkward cell is not the last one.
+        /// Four is what the single-list search always asked for.
+        /// </summary>
+        const int Slack = 4;
+
+        /// <summary>
+        /// The spots a placement has to hand, grouped by the storey they were asked for.
+        ///
+        /// <para>One search per distinct storey rather than one search widened to cover them all,
+        /// because the two searches want opposite things. The colonists' own storey wants the
+        /// nearest walkable cell whatever layer it is on — natural terrain is terraced, and a
+        /// search pinned to one layer finds a scatter rather than a clearing. A storey a scenario
+        /// <i>named</i> wants that layer and no other, or it has not been honoured.</para>
+        ///
+        /// <para>When every offset is zero there is exactly one group, asked for exactly the
+        /// number the single list used to be asked for, so a scenario that names no storey places
+        /// its colony cell for cell where it always did. <c>ScenarioDefTests</c> pins that.</para>
+        /// </summary>
+        sealed class Storeys
+        {
+            readonly CellGrid grid;
+            readonly NavGraph nav;
+            readonly CellRef start;
+            readonly List<int> order = new List<int>(4);
+            readonly Dictionary<int, int> demand = new Dictionary<int, int>();
+            readonly Dictionary<int, List<int>> spots = new Dictionary<int, List<int>>();
+            readonly Dictionary<int, int> cursor = new Dictionary<int, int>();
+            readonly HashSet<int> taken = new HashSet<int>();
+
+            public Storeys(CellGrid grid, NavGraph nav, CellRef start)
+            {
+                this.grid = grid;
+                this.nav = nav;
+                this.start = start;
+            }
+
+            /// <summary>How many spots a storey has been found, across all of them.</summary>
+            public int Found { get; private set; }
+
+            public void Want(int offset, int count)
+            {
+                // The colonists' own storey is asked for even when it is asked for nothing: the
+                // salvage is scattered over it, and a colony of none is still a colony.
+                if (count <= 0 && offset != ColonistStorey) return;
+                if (count < 0) count = 0;
+                if (!demand.ContainsKey(offset))
+                {
+                    order.Add(offset);
+                    demand[offset] = 0;
+                }
+                demand[offset] += count;
+            }
+
+            /// <summary>
+            /// Search each storey once, in the order it was first asked for, so that two groups
+            /// contending for one cell resolve the same way on every run.
+            /// </summary>
+            public void Search()
+            {
+                foreach (int offset in order)
+                {
+                    var origin = new CellRef(start.X, start.Z, start.Y + offset);
+                    List<int> found = grid.Size.Contains(origin.X, origin.Z, origin.Y)
+                        ? FindStartSpots(grid, origin, demand[offset] + Slack,
+                            layerSpread: offset == ColonistStorey ? 2 : 0,
+                            filter: Free(offset))
+                        : new List<int>();
+
+                    foreach (int index in found) taken.Add(index);
+                    spots[offset] = found;
+                    cursor[offset] = 0;
+                    Found += found.Count;
+                }
+            }
+
+            /// <summary>
+            /// The next unclaimed spot on a storey, or -1 when that storey has run out. A
+            /// shortfall is reported rather than filled from elsewhere: a scenario that asks for
+            /// beds two floors up and gets them on the ground floor has been quietly disobeyed,
+            /// and the run that follows would prove the wrong thing.
+            /// </summary>
+            public int Next(int offset)
+            {
+                if (!spots.TryGetValue(offset, out List<int>? list)) return -1;
+                int at = cursor[offset];
+                if (at >= list.Count) return -1;
+                cursor[offset] = at + 1;
+                return list[at];
+            }
+
+            public List<int> On(int offset) =>
+                spots.TryGetValue(offset, out List<int>? list) ? list : new List<int>();
+
+            /// <summary>
+            /// A cell no earlier storey has claimed — and, off the colonists' own storey, one
+            /// they can walk to. Reachability is not asked of the home storey because that is
+            /// where they stand: the question answers itself, and asking it would move a
+            /// placement that has been the same since the colony first spawned.
+            /// </summary>
+            Filter Free(int offset)
+            {
+                if (offset == ColonistStorey) return index => !taken.Contains(index);
+
+                int anchor = Anchor();
+                return index => !taken.Contains(index) &&
+                                nav.Reachable(anchor, index, TraverseMode.Colonist);
+            }
+
+            /// <summary>
+            /// Where "can be walked to" is measured from: a cell a colonist actually stands on,
+            /// falling back to the start cell when none has been found yet. The start cell of a
+            /// stamped city map is not always walkable itself.
+            /// </summary>
+            int Anchor()
+            {
+                List<int> home = On(ColonistStorey);
+                return home.Count > 0 ? home[0] : grid.Size.Index(start);
+            }
+        }
+
         /// <summary>
         /// Place the colony. Returns what it managed, so the caller can assert rather than assume.
         /// </summary>
         public static Result Place(CellGrid grid, PawnContext pawns, CellRef start, uint seed, ScenarioDef scenario)
         {
-            int wanted = scenario.colonists + scenario.mealPiles + scenario.beds + scenario.stockpileCells + 4;
-            var spots = FindStartSpots(grid, start, wanted);
-            if (spots.Count == 0) return new Result(0, 0, 0, 0, 0, 0);
+            var storeys = new Storeys(grid, pawns.Nav, start);
+            storeys.Want(ColonistStorey, scenario.colonists);
+            storeys.Want(scenario.mealLayerOffset, scenario.mealPiles);
+            storeys.Want(scenario.bedLayerOffset, scenario.beds);
+            storeys.Want(scenario.stockpileLayerOffset, scenario.stockpileCells);
+            storeys.Search();
+
+            List<int> home = storeys.On(ColonistStorey);
+            if (storeys.Found == 0) return new Result(0, 0, 0, 0, 0, 0);
 
             var rng = DeterministicRandom.ForTick(seed, 0, purpose: 0xC0101);
-            int take = 0;
 
             int placedColonists = 0;
-            for (int i = 0; i < scenario.colonists && take < spots.Count; i++, take++, placedColonists++)
+            for (int i = 0; i < scenario.colonists; i++)
             {
+                int spot = storeys.Next(ColonistStorey);
+                if (spot < 0) break;
                 // Passions come from the seed and the pawn's own id, not from this placement
                 // stream, so rolling them does not move the salvage that is scattered below.
-                Pawn colonist = pawns.Pawns.Spawn(spots[take]);
+                // Main's storey-aware spot, this branch's trade split: a scenario now says
+                // which floor a colonist starts on AND which of them mine rather than cut.
+                Pawn colonist = pawns.Pawns.Spawn(spot);
                 colonist.RollPassions(seed);
                 AssignTrade(colonist, i, scenario);
+                placedColonists++;
             }
 
             int placedMeals = 0;
-            for (int i = 0; i < scenario.mealPiles && take < spots.Count; i++, take++, placedMeals++)
-                pawns.Items.Spawn(ItemIndex.Meal, spots[take], stack: scenario.mealsPerPile);
+            for (int i = 0; i < scenario.mealPiles; i++)
+            {
+                int spot = storeys.Next(scenario.mealLayerOffset);
+                if (spot < 0) break;
+                pawns.Items.Spawn(ItemIndex.Meal, spot, stack: scenario.mealsPerPile);
+                placedMeals++;
+            }
 
             int placedBeds = 0;
-            for (int i = 0; i < scenario.beds && take < spots.Count; i++, take++, placedBeds++)
-                pawns.Items.AddBed(spots[take]);
+            for (int i = 0; i < scenario.beds; i++)
+            {
+                int spot = storeys.Next(scenario.bedLayerOffset);
+                if (spot < 0) break;
+                pawns.Items.AddBed(spot);
+                placedBeds++;
+            }
 
             var stockpile = new List<int>(scenario.stockpileCells);
-            for (int i = 0; i < scenario.stockpileCells && take < spots.Count; i++, take++) stockpile.Add(spots[take]);
+            for (int i = 0; i < scenario.stockpileCells; i++)
+            {
+                int spot = storeys.Next(scenario.stockpileLayerOffset);
+                if (spot < 0) break;
+                stockpile.Add(spot);
+            }
             if (stockpile.Count > 0)
             {
                 var allow = new bool[ItemIndex.Count];
@@ -385,9 +567,9 @@ namespace Odyssey.Sim.Pawns
             int placedSalvage = 0;
             for (int i = 0; i < scenario.salvage; i++)
             {
-                for (int attempt = 0; attempt < spots.Count; attempt++)
+                for (int attempt = 0; attempt < home.Count; attempt++)
                 {
-                    int spot = spots[rng.NextInt(spots.Count)];
+                    int spot = home[rng.NextInt(home.Count)];
                     if (!pawns.Items.CellHasSpace(spot, ItemIndex.Salvage, 1)) continue;
                     pawns.Items.Spawn(ItemIndex.Salvage, spot);
                     placedSalvage++;
@@ -395,7 +577,7 @@ namespace Odyssey.Sim.Pawns
                 }
             }
 
-            return new Result(placedColonists, placedMeals, placedBeds, stockpile.Count, placedSalvage, spots.Count);
+            return new Result(placedColonists, placedMeals, placedBeds, stockpile.Count, placedSalvage, storeys.Found);
         }
     }
 }
