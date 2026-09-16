@@ -893,18 +893,41 @@ namespace Odyssey.Tests.Sim
         {
             // 250 x 250 x 40, the scale target from ADR 0002. This is the test that keeps the
             // large path honest, per docs/design/02-world-and-layers.md section 7.
+            //
+            // The budget is the M1 one: 2,000 ms, ten times the 215 ms first measured, and now
+            // inclusive of pass 10's full support solve over all 2.5M cells. The median of five
+            // seeds rather than one run, because a single timing on a shared machine measures the
+            // machine's mood as much as the generator.
             var size = GridSize.ScaleTarget;
-            var grid = new CellGrid(size);
-            var gen = MapGenDef.For(size);
+            var times = new List<long>();
+            WorldGenResult? last = null;
 
-            var watch = Stopwatch.StartNew();
-            var result = WorldGenerator.Generate(grid, 4242, gen);
-            watch.Stop();
+            for (uint seed = 4242; seed < 4247; seed++)
+            {
+                var grid = new CellGrid(size);
+                var watch = Stopwatch.StartNew();
+                last = WorldGenerator.Generate(grid, seed, MapGenDef.For(size));
+                watch.Stop();
+                times.Add(watch.ElapsedMilliseconds);
 
-            TestContext.WriteLine($"scale target {size}: {watch.ElapsedMilliseconds} ms — {result.Report}");
-            Assert.That(result.Report.ShellsStamped, Is.GreaterThan(100));
-            Assert.That(result.Report.PassesRun, Is.EqualTo(WorldGenerator.PassCount));
-            Assert.That(watch.ElapsedMilliseconds, Is.LessThan(20_000));
+                Assert.That(last.Report.ShellsStamped, Is.GreaterThan(100));
+                Assert.That(last.Report.PassesRun, Is.EqualTo(WorldGenerator.PassCount));
+            }
+
+            long median = Median(times);
+            TestContext.WriteLine($"scale target {size}: median {median} ms of {Listed(times)} — {last!.Report}");
+            TestContext.WriteLine($"  settled {last.Report.SettledSlabs} slab(s) in {last.Report.SettleRounds} solves");
+            Assert.That(median, Is.LessThan(2_000), $"M1 generation budget: {Listed(times)}");
         }
+
+        /// <summary>The middle of an odd-length sample, which is what the budget is judged on.</summary>
+        internal static long Median(List<long> times)
+        {
+            var sorted = new List<long>(times);
+            sorted.Sort();
+            return sorted[sorted.Count / 2];
+        }
+
+        internal static string Listed(List<long> times) => $"[{string.Join(", ", times)}] ms";
     }
 }

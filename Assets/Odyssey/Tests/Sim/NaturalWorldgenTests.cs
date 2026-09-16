@@ -635,20 +635,28 @@ namespace Odyssey.Tests.Sim
         public void GeneratingTheScaleTargetMapIsReasonable()
         {
             // 250 x 250 x 40, the scale target from ADR 0002, and the figure to compare with the
-            // ruined-city generator's own scale-target test.
+            // ruined-city generator's own scale-target test. Same M1 budget of 2,000 ms, same
+            // five-seed median, for the same reason: one timing measures the machine's mood.
             var size = GridSize.ScaleTarget;
-            var grid = new CellGrid(size);
-            var gen = NaturalMapGenDef.For(size);
+            var times = new List<long>();
+            NaturalMapResult? last = null;
 
-            var watch = Stopwatch.StartNew();
-            var result = NaturalMapGenerator.Generate(grid, 4242, gen);
-            watch.Stop();
+            for (uint seed = 4242; seed < 4247; seed++)
+            {
+                var grid = new CellGrid(size);
+                var watch = Stopwatch.StartNew();
+                last = NaturalMapGenerator.Generate(grid, seed, NaturalMapGenDef.For(size));
+                watch.Stop();
+                times.Add(watch.ElapsedMilliseconds);
 
-            TestContext.WriteLine($"scale target {size}: {watch.ElapsedMilliseconds} ms — {result.Report}");
-            Assert.That(result.Report.PassesRun, Is.EqualTo(NaturalMapGenerator.PassCount));
-            Assert.That(result.Report.Trees, Is.GreaterThan(100));
-            Assert.That(result.Report.OreDeposits, Is.GreaterThan(10));
-            Assert.That(watch.ElapsedMilliseconds, Is.LessThan(20_000));
+                Assert.That(last.Report.PassesRun, Is.EqualTo(NaturalMapGenerator.PassCount));
+                Assert.That(last.Report.Trees, Is.GreaterThan(100));
+                Assert.That(last.Report.OreDeposits, Is.GreaterThan(10));
+            }
+
+            long median = WorldgenTests.Median(times);
+            TestContext.WriteLine($"scale target {size}: median {median} ms of {WorldgenTests.Listed(times)} — {last!.Report}");
+            Assert.That(median, Is.LessThan(2_000), $"M1 generation budget: {WorldgenTests.Listed(times)}");
         }
 
         // ---------------------------------------------------------------- helpers
