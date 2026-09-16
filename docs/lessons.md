@@ -1019,6 +1019,65 @@ Two rules follow.
 - **Warn, do not self-heal.** Adding the missing component at runtime would paper over a scene
   that may be stale in ways the check cannot see — the camera rig, the lighting, the module
   catalogue. The useful signal is "rebuild the scene", not "one thing was quietly patched".
+## The owner playtests `main`; a worktree is invisible until it is merged
+
+Four rounds of "it still does not work" were spent on a fix that was **green on every tier and not
+in the code being played**. Work done in `.claude/worktrees/` sits on its own branch. The owner
+opens `D:\code\odyssey`, which is on `main`. Until the branch is merged or pulled, every playtest
+exercises the old behaviour — and reports back a symptom that is a perfect description of the bug
+that was just fixed, which reads exactly like the fix not working.
+
+**Confirm delivery before diagnosing.** One command settles it, and it is cheaper than any
+hypothesis:
+
+```
+git show main:<the file you changed> | grep <the thing you added>
+```
+
+If it is not there, stop. Do not look for a second cause, do not write another test, do not
+theorise about serialised defaults — say where the code is and how to get it. Every minute spent
+diagnosing before that check is spent on a machine state that does not exist.
+
+Three things make this trap worse here:
+
+- **`main` moves under you.** Other sessions land PRs through the day, so the owner may genuinely
+  be pulling fresh code — just not *your* fresh code. "They must have merged by now" is not a
+  check.
+- **A worktree session cannot merge for them.** Git operations outside the worktree are refused, so
+  the only ways across are the owner running `git merge <branch>` or a pushed PR. Offering and
+  waiting is not delivery; ask once, then make it the first line of the reply, not the last.
+- **The symptom is indistinguishable from a real regression**, so every measurement you take comes
+  back consistent with "still broken". That is what makes it burn hours rather than minutes.
+
+Related: a stale `Play.unity` fails the same way for a different reason — see the generated-file
+lesson above. Both end with the owner reporting a working feature as broken.
+
+## A promising hypothesis about serialised defaults, and why it was wrong
+
+Worth recording because it is the obvious wrong idea and it will occur to the next person.
+
+`SliceSettings` is a `[Serializable]` field on `SliceCameraRig`, so **the scene's copy, not the
+field initialiser, is what the game runs**. `Play.unity` was generated before `followDepth` and
+`surfaceLayer` existed and its YAML contains neither, while its `above` is `3` — `Xray`, under
+which nothing above the slice is a pointer target. That is a complete, self-consistent explanation
+for "a click will not leave the active layer", arrived at from reading the YAML.
+
+**It is wrong.** Measured by opening the scene in an EditMode test and printing what loads:
+
+```
+[Scene] slice as loaded: followDepth=True, above=Xray, ... surfaceLayer=0
+[Scene] at L12: above=Full, selectable L9..L15
+```
+
+Unity **keeps the field initialiser** for a field missing from the YAML — it does not zero it. So a
+field added after a scene was generated takes its code default, and only fields actually present in
+the file override. `PlaySceneContentsTests` holds that measurement.
+
+The general rule this belongs to is the one at the top of this file: **reading code and reasoning
+about a framework's behaviour has been wrong every time.** Unity's deserialisation of a missing
+field is a fact to be measured, and measuring it took one test and four minutes against an
+afternoon of a confident wrong answer.
+
 ## The CI runner is the owner's machine, and a timing test cannot tell you apart from a regression
 
 `HudStressTests.Adr0003_F1_TheDenseHudHoldsItsBudgetAndAllocatesNothing` failed on CI —
