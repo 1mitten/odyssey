@@ -13,7 +13,9 @@ namespace Odyssey.Presentation.Bootstrap
     /// would disagree about what the board looks like. It would also, far worse, put a drawing
     /// decision inside the thing the determinism tests compare.</para>
     ///
-    /// <para>This is the only class in the project that touches <c>PlayerPrefs</c>, and it exists
+    /// <para>One of two places the project touches <c>PlayerPrefs</c> — <c>AudioSettingsStore</c>
+    /// is the other, holding the volume faders in dB under its own prefix, so the two cannot
+    /// collide. This one exists
     /// so that <see cref="SettingsDirector"/> need not: that assembly is compiled without
     /// UnityEngine so it can run in the fast tier, and an interface is the price of keeping it
     /// there.</para>

@@ -19,6 +19,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Odyssey.Presentation.Audio;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Sim;
 using Odyssey.Sim.Pathing;
@@ -42,6 +43,7 @@ namespace Odyssey.EditorTools
     {
         const string ScenePath = "Assets/Scenes/Play.unity";
         internal const string CataloguePath = "Assets/Odyssey/Presentation/ModuleCatalogue.asset";
+        internal const string AudioCataloguePath = "Assets/Odyssey/Presentation/Audio/AudioCatalogue.asset";
 
         // The HUD's three assets: an authored stylesheet, plus a theme and panel settings made
         // once on demand. Real assets rather than in-memory ones because the scene serialises the
@@ -1794,6 +1796,10 @@ namespace Odyssey.EditorTools
             boot.seed = 1;
             boot.moduleCatalogue = catalogue;
             boot.cameraRig = rig;
+            // The sound table, on the same generated-asset bargain as the module catalogue: the
+            // asset is built by AudioSetup and loaded here by fixed path, and a clone without it
+            // gets a silent game that still runs.
+            boot.audioCatalogue = AssetDatabase.LoadAssetAtPath<AudioCatalogue>(AudioCataloguePath);
             // Written explicitly, because the scene serialises these and a C# default changes
             // nothing for a field the scene already holds. Sparse by owner request: six cells in
             // ten get a tuft. Zero on the look seed means a fresh cast of colonists every session.
