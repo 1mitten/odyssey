@@ -194,7 +194,21 @@ namespace Odyssey.Sim
             for (int i = 0; i < _tickables.Count; i++)
                 if (_tickables[i] is IStateHashable hashable)
                     hashable.ContributeTo(ref hash);
+
+            // Subsystems too, in schedule order. They were left out until a system first had
+            // state worth pinning — the job counters — and the omission was the sort that shows
+            // up as a save that resumes wrongly rather than as anything obvious. Schedule order
+            // is sorted and fixed at construction, so this is as deterministic as the tickables.
+            Contribute(Systems.WorldSystems, ref hash);
+            Contribute(Systems.PawnSystems, ref hash);
             return hash;
+        }
+
+        static void Contribute(IReadOnlyList<IWorldSystem> systems, ref StateHash hash)
+        {
+            for (int i = 0; i < systems.Count; i++)
+                if (systems[i] is IStateHashable hashable)
+                    hashable.ContributeTo(ref hash);
         }
 
         internal void SetSnapshotContributors(ISnapshotContributor[] contributors) => _contributors = contributors;

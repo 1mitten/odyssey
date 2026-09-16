@@ -31,6 +31,9 @@ namespace Odyssey.Sim.Pawns
         public MapGenOutcome Outcome { get; }
         public ColonyScenario.Result Placement { get; }
 
+        /// <summary>The job pipeline, for the per-def counters a soak run asserts on.</summary>
+        public JobSystem Jobs { get; }
+
         public CellRef Start => Outcome.StartCell;
 
         /// <summary>
@@ -44,8 +47,9 @@ namespace Odyssey.Sim.Pawns
         readonly NavGraph _nav;
 
         ColonyWorld(CellGrid grid, PawnContext pawns, SimWorld world, MapGenOutcome outcome,
-            ColonyScenario.Result placement, SupportSolver solver, NavGraph nav)
+            ColonyScenario.Result placement, SupportSolver solver, NavGraph nav, JobSystem jobs)
         {
+            Jobs = jobs;
             Grid = grid;
             Pawns = pawns;
             World = world;
@@ -59,6 +63,7 @@ namespace Odyssey.Sim.Pawns
                 new GridSaveSection(grid),
                 pawns.Items,
                 pawns.Pawns,
+                jobs,
             };
         }
 
@@ -135,6 +140,7 @@ namespace Odyssey.Sim.Pawns
             var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core());
             var solver = new SupportSolver(grid);
             var support = new SupportSystem(grid, solver, chunks);
+            var jobs = new JobSystem(pawns);
 
             // The order is the schedule: support before navigation because a collapse changes
             // what is walkable, and needs before jobs because a hungry pawn picks a different job.
@@ -144,14 +150,14 @@ namespace Odyssey.Sim.Pawns
                 .AddSystem(_ => support)
                 .AddSystem(_ => new NavigationSystem(nav, support))
                 .AddSystem(_ => new NeedsSystem(pawns))
-                .AddSystem(_ => new JobSystem(pawns))
+                .AddSystem(_ => jobs)
                 .AddSystem(_ => new MovementSystem(pawns))
                 .AddTickable(_ => pawns.Pawns)
                 .AddSnapshotContributor(pawns.Pawns)
                 .Build();
 
             ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed, colonists);
-            var built = new ColonyWorld(grid, pawns, world, outcome, placement, solver, nav);
+            var built = new ColonyWorld(grid, pawns, world, outcome, placement, solver, nav, jobs);
             built.RebuildDerived();
             return built;
         }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Pathing;
+using Odyssey.Sim.Saving;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -50,7 +51,7 @@ namespace Odyssey.Sim.Pawns
     /// before the next think runs. That single rule is what a reservation leak is the absence of,
     /// and it is the fault a ten-day unattended run surfaces and a two-minute test does not.
     /// </summary>
-    public sealed class JobSystem : IWorldSystem
+    public sealed class JobSystem : IWorldSystem, IStateHashable, ISaveable
     {
         readonly PawnContext _ctx;
         readonly ThinkNode[] _tree;
@@ -63,6 +64,8 @@ namespace Odyssey.Sim.Pawns
             _ctx = ctx;
             _givers = SortGivers(ctx, givers);
             _tree = tree;
+            _completed = new int[ctx.Content.Jobs.Length];
+            _failed = new int[ctx.Content.Jobs.Length];
             for (int i = 0; i < _tree.Length; i++)
                 if (_tree[i] is WorkThinkNode work) work.Bind(_givers);
         }
@@ -82,6 +85,25 @@ namespace Odyssey.Sim.Pawns
 
         public int JobsStarted { get; private set; }
         public int JobsFailed { get; private set; }
+
+        /// <summary>
+        /// Jobs that ended, per job def, split by outcome.
+        ///
+        /// <para>A soak run's only real question is "did the colony keep working", and a total
+        /// job count cannot answer it: five pawns wandering in a mental break for a day start and
+        /// end thousands of jobs. Per def, "at least one haul, one meal and one sleep completed"
+        /// is the assertion that actually distinguishes a living colony from a busy one.</para>
+        ///
+        /// <para>Counted in <see cref="EndJob"/>, which is the single funnel every ending goes
+        /// through, rather than at the call sites — two of which were previously reached without
+        /// incrementing <see cref="JobsFailed"/> at all.</para>
+        /// </summary>
+        public int CompletedOf(int jobDefIndex) => _completed[jobDefIndex];
+
+        public int FailedOf(int jobDefIndex) => _failed[jobDefIndex];
+
+        readonly int[] _completed;
+        readonly int[] _failed;
 
         /// <summary>
         /// Sorted once at construction by emergency flag, then work-type order, then the giver's
@@ -165,6 +187,61 @@ namespace Odyssey.Sim.Pawns
         bool IsBreakJob(Pawn pawn, Job job) =>
             _ctx.Content.Jobs[job.DefIndex].driver == JobIndex.Wander;
 
+        // ---- state ------------------------------------------------------------------------
+        //
+        // The counters are hashed, which makes them state rather than statistics: two runs that
+        // reach the same world by different sequences of job outcomes are no longer allowed to
+        // agree. That is the point — a job that silently fails and is silently retried leaves
+        // the world identical and the counters different.
+        //
+        // Hashed therefore means saved. A counter in the hash and not in the file is a save that
+        // resumes wrongly, which is the failure this pairing exists to prevent; the round-trip
+        // test in WorldRoundTripTests is what enforces it.
+
+        public void ContributeTo(ref StateHash hash)
+        {
+            hash.Add(JobsStarted);
+            hash.Add(JobsFailed);
+            for (int i = 0; i < _completed.Length; i++)
+            {
+                hash.Add(_completed[i]);
+                hash.Add(_failed[i]);
+            }
+        }
+
+        public string SaveKey => "odyssey.jobs";
+
+        public void Save(SaveWriter writer)
+        {
+            writer.Write(JobsStarted);
+            writer.Write(JobsFailed);
+            writer.Write(_completed.Length);
+            for (int i = 0; i < _completed.Length; i++)
+            {
+                writer.Write(_completed[i]);
+                writer.Write(_failed[i]);
+            }
+        }
+
+        public void Load(SaveReader reader)
+        {
+            JobsStarted = reader.ReadInt();
+            JobsFailed = reader.ReadInt();
+
+            int count = reader.ReadInt();
+            if (count != _completed.Length)
+                throw new SaveLoadException(
+                    $"The save has {count} job defs and this build has {_completed.Length}. Def " +
+                    "migration is not written yet, and guessing at the mapping would silently " +
+                    "attribute one job's history to another.");
+
+            for (int i = 0; i < count; i++)
+            {
+                _completed[i] = reader.ReadInt();
+                _failed[i] = reader.ReadInt();
+            }
+        }
+
         void Think(Pawn pawn, int tick)
         {
             // The circuit breaker. A pawn that starts job after job inside a short window is in a
@@ -231,6 +308,9 @@ namespace Odyssey.Sim.Pawns
                 _ctx.Reservations.ReleaseAll(pawn);
                 return;
             }
+
+            if (status == JobStatus.Failed) _failed[pawn.CurrentJob.DefIndex]++;
+            else _completed[pawn.CurrentJob.DefIndex]++;
 
             pawn.Driver?.Cleanup(_ctx, status);
             _ctx.Reservations.ReleaseAll(pawn);

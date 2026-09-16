@@ -89,7 +89,12 @@ namespace Odyssey.Tests.Sim
             return pile;
         }
 
-        public IReadOnlyList<ISaveable> SaveComponents => new ISaveable[] { Ctx.Pawns, Ctx.Items };
+        /// <summary>
+        /// Everything this fixture's world holds that is in its state hash. The job system is
+        /// here because its per-def counters are hashed: a hashed field that is not saved is a
+        /// save that resumes wrongly, and this list is where the two are kept in step.
+        /// </summary>
+        public IReadOnlyList<ISaveable> SaveComponents => new ISaveable[] { Ctx.Pawns, Ctx.Items, Jobs };
     }
 
     public class PawnNeedsTests
