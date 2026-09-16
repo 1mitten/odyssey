@@ -49,17 +49,19 @@ namespace Odyssey.Sim.Worldgen
             slabModuleId = "odyssey.module.slab.concrete",
             rows = new List<string>
             {
-                // layer 0 — street level, one door onto the plot frontage
+                // layer 0 — street level, one door onto the plot frontage. A pillar at (2,2)
+                // and one founding the upper partition at (3,3) keep the interior off the
+                // perimeter wall alone.
                 "######",
                 "#....#",
-                "#..L.#",
-                "#....#",
+                "#.IL.#",
+                "#..I.#",
                 "#....#",
                 "##+###",
                 // layer 1 — upper storey, a partition and two windows
                 "#oo###",
                 "#....#",
-                "#....#",
+                "#.I..#",
                 "#.##.#",
                 "#....#",
                 "###o##",
@@ -89,40 +91,42 @@ namespace Odyssey.Sim.Worldgen
             slabModuleId = "odyssey.module.slab.concrete",
             rows = new List<string>
             {
-                // layer -1 — basement, reached by the stairwell only
+                // layer -1 — basement, reached by the stairwell only. Two pillar columns at
+                // (3,2), (6,2), (3,5), (6,5) run the full height of the block (every layer
+                // below), so the floor plan never depends on the perimeter wall alone.
                 "##########",
                 "#........#",
-                "#........#",
+                "#..I..I..#",
                 "#...<>...#",
                 "#........#",
-                "#........#",
+                "#..I..I..#",
                 "#........#",
                 "##########",
                 // layer 0 — street level, double doors on the frontage
                 "####++####",
                 "#........#",
-                "#........#",
+                "#..I..I..#",
                 "#...<>...#",
                 "#..##.##.#",
-                "#...#....#",
+                "#..I#.I..#",
                 "#...#....#",
                 "##########",
                 // layer 1
                 "#oo####oo#",
                 "#........#",
-                "#........#",
+                "#..I..I..#",
                 "#...<>...#",
                 "#..####..#",
-                "#........#",
+                "#..I..I..#",
                 "#........#",
                 "##########",
                 // layer 2 — top storey, no stair above it
                 "#oo####oo#",
                 "#........#",
+                "#..I..I..#",
                 "#........#",
                 "#........#",
-                "#........#",
-                "#........#",
+                "#..I..I..#",
                 "#........#",
                 "##########",
             },
@@ -137,19 +141,23 @@ namespace Odyssey.Sim.Worldgen
         {
             var rows = new List<string>(84);
 
+            // A twelve-wide floor plate needs more than a perimeter wall and one small stair
+            // core: nine pillar columns at x,z in {3,6,9} run the full height, on every layer,
+            // clear of the stairwell (x=5,6 z=4..5).
+
             // layer -1 — basement
             rows.AddRange(new[]
             {
                 "############",
                 "#..........#",
                 "#..........#",
-                "#..........#",
+                "#..I..I..I.#",
                 "#....<>....#",
                 "#..........#",
+                "#..I..I..I.#",
                 "#..........#",
                 "#..........#",
-                "#..........#",
-                "#..........#",
+                "#..I..I..I.#",
                 "#..........#",
                 "############",
             });
@@ -160,13 +168,13 @@ namespace Odyssey.Sim.Worldgen
                 "####o++o####",
                 "#..........#",
                 "#..........#",
-                "#..........#",
+                "#..I..I..I.#",
                 "#....<>....#",
                 "#....##....#",
+                "#..I..I..I.#",
                 "#..........#",
                 "#..........#",
-                "#..........#",
-                "#..........#",
+                "#..I..I..I.#",
                 "#..........#",
                 "####oooo####",
             });
@@ -180,13 +188,13 @@ namespace Odyssey.Sim.Worldgen
                     "#oo#oooo#oo#",
                     "#..........#",
                     "#..........#",
-                    "#..........#",
+                    "#..I..I..I.#",
                     "#....<>....#",
                     "#....##....#",
+                    "#..I..I..I.#",
                     "#..........#",
                     "#..........#",
-                    "#..........#",
-                    "#..........#",
+                    "#..I..I..I.#",
                     "#..........#",
                     "#oo#oooo#oo#",
                 });
@@ -198,13 +206,13 @@ namespace Odyssey.Sim.Worldgen
                 "#oo#oooo#oo#",
                 "#..........#",
                 "#..........#",
+                "#..I..I..I.#",
                 "#..........#",
                 "#..........#",
+                "#..I..I..I.#",
                 "#..........#",
                 "#..........#",
-                "#..........#",
-                "#..........#",
-                "#..........#",
+                "#..I..I..I.#",
                 "#..........#",
                 "#oo#oooo#oo#",
             });

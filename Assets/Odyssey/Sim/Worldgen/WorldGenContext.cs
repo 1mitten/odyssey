@@ -22,16 +22,11 @@ namespace Odyssey.Sim.Worldgen
     }
 
     /// <summary>
-    /// A hook for the structural solve that ends generation (section 6, pass 10).
-    ///
-    /// TODO(SupportSolver): pass 10 must run a **full support solve** over the finished map and
-    /// assert that every stamped slab stands, so that a template which cannot hold itself up is a
-    /// failing test rather than a map that collapses on tick one. That solver is
-    /// <c>Assets/Odyssey/Sim/World/SupportSolver.cs</c>, which is being written in parallel;
-    /// worldgen deliberately does not implement its own. Once it lands, the default
-    /// implementation of this interface becomes "run SupportSolver over the whole grid and throw
-    /// on any cell whose support is zero", and <see cref="WorldGenReport.StructuralCheckRan"/>
-    /// stops being an interesting field.
+    /// A hook for the structural solve that ends generation (section 6, pass 10): does every
+    /// stamped slab stand once its construction trust is gone? The default implementation is
+    /// <c>Odyssey.Sim.World.SupportConsistencyCheck</c>, a full <c>SupportSolver</c> pass over the
+    /// finished grid that throws on any collapse; a test may supply another implementation (a
+    /// recording probe) instead.
     /// </summary>
     public interface IStructuralConsistencyCheck
     {

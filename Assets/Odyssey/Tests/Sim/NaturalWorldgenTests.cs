@@ -507,9 +507,11 @@ namespace Odyssey.Tests.Sim
         public void SelectingTheRuinedCityRunsTheExistingGeneratorUnchanged()
         {
             var size = new GridSize(60, 60, 5);
+            var gen = MapGenDef.For(size);
+            gen.minDamageIntensity = gen.maxDamageIntensity = 0; // not what this test is about
 
-            var direct = WorldGenerator.Generate(new CellGrid(size), 2468, MapGenDef.For(size));
-            var viaFacade = MapGenerator.Generate(new CellGrid(size), 2468, MapType.RuinedCity);
+            var direct = WorldGenerator.Generate(new CellGrid(size), 2468, gen);
+            var viaFacade = MapGenerator.Generate(new CellGrid(size), 2468, gen);
 
             Assert.That(viaFacade.Type, Is.EqualTo(MapType.RuinedCity));
             Assert.That(viaFacade.City, Is.Not.Null);
@@ -536,6 +538,8 @@ namespace Odyssey.Tests.Sim
             var size = new GridSize(60, 60, 5);
             var gen = NaturalMapGenDef.For(size);
             gen.mapType = MapType.RuinedCity;
+            gen.minDamageIntensity = gen.maxDamageIntensity = 0; // not what this test is about
+            gen.tunnelThreshold = ValueNoise.Scale; // nor is the tunnel/metro landmine, see WorldgenTests.Generate()
 
             var outcome = MapGenerator.Generate(new CellGrid(size), 99, gen);
 

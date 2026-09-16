@@ -414,18 +414,18 @@ namespace Odyssey.Sim.Worldgen
     /// The start is the walkable street cell nearest the middle of the map: streets are the
     /// circulation, so starting on one guarantees the colony can reach something.
     ///
-    /// The pass then asserts the map is internally consistent. What it does **not** yet do is the
-    /// full support solve the design document requires — see <see cref="IStructuralConsistencyCheck"/>
-    /// and the TODO there. The hook is called if one is supplied, so the day SupportSolver lands,
-    /// wiring it in is one line at the call site and every existing test starts checking it.
+    /// The pass then asserts the map is internally consistent and runs the structural check — by
+    /// default <see cref="SupportConsistencyCheck"/>, the full support solve over the finished
+    /// grid. A caller may still supply another <see cref="IStructuralConsistencyCheck"/> (tests
+    /// use a recording probe); passing none is not the same as skipping the check.
     /// </summary>
     public sealed class StartPass : IWorldGenPass
     {
-        readonly IStructuralConsistencyCheck? _structuralCheck;
+        readonly IStructuralConsistencyCheck _structuralCheck;
 
         public StartPass(IStructuralConsistencyCheck? structuralCheck = null)
         {
-            _structuralCheck = structuralCheck;
+            _structuralCheck = structuralCheck ?? new SupportConsistencyCheck();
         }
 
         public int Order => 10;
@@ -436,17 +436,8 @@ namespace Odyssey.Sim.Worldgen
             ctx.Report.StartCell = ChooseStart(ctx);
             AssertConsistent(ctx);
 
-            // TODO(SupportSolver): replace this with an unconditional full solve over the grid
-            // once Assets/Odyssey/Sim/World/SupportSolver.cs exists, per
-            // docs/design/02-world-and-layers.md section 4 ("worldgen must also guarantee that
-            // every stamped shell is initially consistent, or the first tick collapses the map")
-            // and section 6 pass 10. Until then the assertion below is structural bookkeeping
-            // only and does not prove that anything stands up.
-            if (_structuralCheck != null)
-            {
-                _structuralCheck.Verify(ctx.Grid, ctx);
-                ctx.Report.StructuralCheckRan = true;
-            }
+            _structuralCheck.Verify(ctx.Grid, ctx);
+            ctx.Report.StructuralCheckRan = true;
 
             // TODO(items): "scatter starting resources" is the other half of this pass. It needs
             // the thing registry, which does not exist yet; nothing about the cell grid changes
