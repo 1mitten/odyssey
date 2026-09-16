@@ -114,7 +114,7 @@ namespace Odyssey.Presentation.Bootstrap
             for (int i = 0; i < pawns.Length; i++)
             {
                 PawnView pawn = pawns[i];
-                if (pawn.Cell.Y > activeLayer) continue;
+                if (!Visible(pawn, activeLayer, snapshot)) continue;
                 Vector3 point = camera.WorldToScreenPoint(ScreenPointOf(pawn));
                 if (point.z <= 0f) continue;
                 if (screenRect.Contains(new Vector2(point.x, point.y))) boxed.Add(pawn.Id);
@@ -127,13 +127,41 @@ namespace Odyssey.Presentation.Bootstrap
         /// Every colonist of the picked kind whose screen point is inside the viewport, on or
         /// below the active layer — the population a double click means by "on screen".
         /// </summary>
+        /// <summary>
+        /// Is this pawn on a layer the player can actually see?
+        ///
+        /// <para><b>Both ends, and the lower one is the bug this exists for.</b> A ray pick is
+        /// constrained by the picker, which cannot return a cell above the active layer, so asking
+        /// only "not above" was safe there. A screen-rect containment test has no such constraint:
+        /// a colonist eight layers down projects to a screen point exactly like one at your feet,
+        /// so a box dragged across the surface selected miners underground that were never drawn.
+        /// The command grid would then act on colonists the player had never seen, let alone
+        /// chosen.</para>
+        ///
+        /// <para>The bounds are the ones the renderers cull against — <c>PawnFigureDirector.Sync</c>
+        /// and <c>ChunkRenderer.RenderActors</c> both use this pair — so "selectable" and "drawn"
+        /// cannot drift apart. That matters more since figures began being drawn <i>above</i> the
+        /// slice: ADR 0006 still says nothing above it may be a pointer target, so a colonist
+        /// working a storey up is deliberately visible and deliberately not selectable, and the
+        /// upper bound here is that decision rather than a leftover.</para>
+        /// </summary>
+        bool Visible(PawnView pawn, int activeLayer, WorldSnapshot snapshot)
+        {
+            if (pawn.Cell.Y > activeLayer) return false;
+
+            SliceSettings? slice = _rig != null ? _rig.slice : null;
+            if (slice == null) return true;
+
+            return pawn.Cell.Y >= Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
+        }
+
         bool PawnsOnScreen(UnityEngine.Camera camera, WorldSnapshot snapshot, int activeLayer, List<PawnId> into)
         {
             var pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length; i++)
             {
                 PawnView pawn = pawns[i];
-                if (pawn.Cell.Y > activeLayer) continue;
+                if (!Visible(pawn, activeLayer, snapshot)) continue;
                 Vector3 point = camera.WorldToScreenPoint(ScreenPointOf(pawn));
                 if (point.z <= 0f) continue;
                 if (point.x >= 0f && point.y >= 0f && point.x <= camera.pixelWidth && point.y <= camera.pixelHeight)
@@ -177,7 +205,13 @@ namespace Odyssey.Presentation.Bootstrap
             for (int i = 0; i < pawns.Length; i++)
             {
                 PawnView pawn = pawns[i];
-                if (pawn.Cell.Y > activeLayer) continue;
+
+                // The same bound as the box, and for the same reason. The ray runs down through
+                // the world from a camera looking at it obliquely, so it passes through cells many
+                // layers below the slice: a colonist down there whose cursor box the ray clips was
+                // pickable by an ordinary click without ever having been drawn. The remark above
+                // already claimed "the hit-test only looks at pawns on drawn layers"; now it does.
+                if (!Visible(pawn, activeLayer, snapshot)) continue;
 
                 // The same tween the figure is drawn with, which is what the summary above claims
                 // and what this line did not do: it passed 0 and 0, placing the box at the tick
