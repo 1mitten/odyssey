@@ -299,6 +299,18 @@ like.
 
 **The camera** is a three-quarter orbit at a constrained pitch, matching the concept renders: pan across x/z, zoom, rotate in 90° steps or freely, and a vertical control that changes the **active layer** rather than the camera height.
 
+**Holding shift moves further** (owner ask, 2026-09-16). The board is 300 m across and the pan speed
+is chosen for looking at one colony, so crossing it takes a while. Shift multiplies every camera
+*translation* — WASD or the arrows, the middle-drag pan, the scroll zoom, and the slice step, which
+covers `fastLayerStep` storeys instead of one. It scales **on top of** the existing distance
+scaling rather than replacing it, so a fast pan zoomed out is still faster than a fast pan zoomed
+in, which is what keeps the two feeling like one control.
+
+Orbiting is deliberately excluded. It is already a direct mouse-delta mapping, and three times a
+mouse delta is not a fast orbit but an uncontrollable one. The levers are
+`SliceCameraRig.fastMultiplier` (3) and `fastLayerStep` (4); a multiplier below one turns shift into
+a precision modifier instead, which is allowed on purpose.
+
 **The slice model**, which is the whole point of the project:
 
 | Layer relative to the slice | Rendered | Interactive |

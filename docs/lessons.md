@@ -459,6 +459,19 @@ Pure layout and arithmetic can be *run* the same way: reference the built DLL fr
 ring coverage was checked to be exactly 100.0000% of the area outside the board before anything was
 committed.
 
+Two more, found on 2026-09-16 doing exactly this for a camera change:
+
+- **Exclude `Presentation/Tests/`.** It is its own assembly definition and needs NUnit, so a glob of
+  `Presentation/**/*.cs` fails with a screenful of `CS0246: NUnit could not be found` that has
+  nothing to do with the code being checked. Adding NUnit to compile it is also an option; excluding
+  it is faster when the question is only "does the game code still build".
+- **Glob the references rather than naming them.** `$(UnityManaged)\UnityEngine*.dll` and
+  `Library/ScriptAssemblies/Unity.RenderPipelines*.dll` in one `<Reference Include>` each. The
+  Presentation assembly reaches into particles, physics, animation, the Playables graph and the
+  render pipeline, and naming the modules one at a time is a game of whack-a-mole against an error
+  list that only reveals the next missing one. `Unity.InputSystem.dll` is needed too, and lives in
+  `Library/ScriptAssemblies/` rather than with the engine.
+
 Two traps while doing it. MSBuild reads `<HintPath>` as XML, so a Windows path written with
 backslashes dies on `MSB4025: hexadecimal value 0x0C is an invalid character` — the `` in a path
 segment. **Write every path in a generated csproj with forward slashes**; MSBuild accepts them and
