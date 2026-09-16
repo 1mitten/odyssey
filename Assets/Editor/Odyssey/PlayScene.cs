@@ -102,7 +102,7 @@ namespace Odyssey.EditorTools
                 var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);
                 var size = new GridSize(PlaySizeXZ, PlaySizeXZ, PlayLayers);
                 var gen = (NaturalMapGenDef)MapGenerator.DefaultDef(MapType.Natural, size);
-                gen.MakeBarren();
+                gen.MakeWooded();   // the board the scene loads, trees and all
                 var grid = new CellGrid(size);
                 var chunks = new ChunkGrid(size);
                 MapGenOutcome result = MapGenerator.Generate(grid, 1u, gen);
@@ -387,7 +387,7 @@ namespace Odyssey.EditorTools
                 // scene moved to a barren 120 x 120 wilderness.
                 var size = new GridSize(PlaySizeXZ, PlaySizeXZ, PlayLayers);
                 MapGenDef gen = MapGenerator.DefaultDef(mapType, size);
-                if (gen is NaturalMapGenDef natural) natural.MakeBarren();
+                if (gen is NaturalMapGenDef natural) natural.MakeWooded();
                 var grid = new CellGrid(size);
                 var chunks = new ChunkGrid(size);
 

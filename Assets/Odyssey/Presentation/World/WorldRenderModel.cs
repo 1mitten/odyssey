@@ -46,6 +46,7 @@ namespace Odyssey.Presentation.World
 
         ModuleGroup[] _groups;
         readonly int[] _terrainModule;
+        readonly int[] _naturalEdificeModule;
         readonly int _vaultWallModule;
         readonly int _utilityTapModule;
 
@@ -66,6 +67,7 @@ namespace Odyssey.Presentation.World
 
             _groups = new[] { ResolveGroup(library, new TemplateDef()) };
             _terrainModule = ResolveTerrain(library);
+            _naturalEdificeModule = ResolveNaturalEdifices(library);
             _vaultWallModule = library.Resolve(ModuleIds.VaultWall, ModuleShape.WallPanel);
             _utilityTapModule = library.Resolve(ModuleIds.UtilityTap, ModuleShape.Pillar);
         }
@@ -119,6 +121,11 @@ namespace Odyssey.Presentation.World
         {
             ushort def = _edifice[index];
             if (def == CoreContent.EdificeNone) return 0;
+            // The natural table continues CoreContent's numbering, as terrain does. A tree is not
+            // a kind of wall: before this branch existed every tree fell through the switch below
+            // to the wall module and the woodland rendered as a grid of grey boxes.
+            if (def >= NaturalContent.FirstEdifice)
+                return def < NaturalContent.EdificeCount ? _naturalEdificeModule[def - NaturalContent.FirstEdifice] : 0;
             ref ModuleGroup group = ref _groups[_slot[index]];
             switch (def)
             {
@@ -192,6 +199,18 @@ namespace Odyssey.Presentation.World
             Ladder = library.Resolve(def.ladderModuleId, ModuleShape.Ladder),
             Slab = library.Resolve(def.slabModuleId, ModuleShape.FloorSlab),
         };
+
+        /// <summary>Tree modules by natural edifice code, offset by <see cref="NaturalContent.FirstEdifice"/>.</summary>
+        static int[] ResolveNaturalEdifices(ModuleLibrary library)
+        {
+            var table = new int[NaturalContent.EdificeCount - NaturalContent.FirstEdifice];
+            for (int i = 0; i < table.Length; i++)
+            {
+                var def = (ushort)(NaturalContent.FirstEdifice + i);
+                table[i] = library.Resolve(NaturalContent.ModuleForEdifice(def), ModuleShape.Pillar);
+            }
+            return table;
+        }
 
         static int[] ResolveTerrain(ModuleLibrary library)
         {

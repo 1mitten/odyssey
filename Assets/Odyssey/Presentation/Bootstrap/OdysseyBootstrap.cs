@@ -46,8 +46,11 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Natural wilderness is the prototype default (ADR 0008). RuinedCity is kept and still works.")]
         public MapType mapType = MapType.Natural;
 
-        [Tooltip("Flat grass everywhere, no trees, rock or ore. The plain board to build from.")]
+        [Tooltip("Flat grass everywhere, no rock or ore. The plain board to build from.")]
         public bool barrenMap = true;
+
+        [Tooltip("With barrenMap: keep the woodland, so there are trees to fell. Off gives the bare board.")]
+        public bool woodedMap = true;
 
         [Tooltip("Colonists spawned near the start location when the scene begins.")]
         public int colonistCount = 5;
@@ -104,7 +107,11 @@ namespace Odyssey.Presentation.Bootstrap
             // (ADR 0008). The ruined-city generator is still here and still tested; switch
             // mapType to reach it.
             _gen = MapGenerator.DefaultDef(mapType, size);
-            if (barrenMap && _gen is NaturalMapGenDef natural) natural.MakeBarren();
+            if (barrenMap && _gen is NaturalMapGenDef natural)
+            {
+                if (woodedMap) natural.MakeWooded();
+                else natural.MakeBarren();
+            }
 
             var generation = Stopwatch.StartNew();
             MapGenOutcome outcome = MapGenerator.Generate(_grid, seed, _gen);
