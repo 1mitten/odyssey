@@ -178,7 +178,9 @@ namespace Odyssey.Presentation.Bootstrap
                 Debug.LogError($"[Odyssey] no colonists were placed near {outcome.StartCell}: {placement}");
             int marked = ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenarioDef);
             if (marked > 0)
-                Debug.Log($"[Odyssey] {scenarioDef}: {marked} trees within {scenarioDef.startingFellRadius} cells of the start are marked for felling");
+                Debug.Log($"[Odyssey] {scenarioDef}: {marked} cells marked for work before the first tick — " +
+                          $"trees within {scenarioDef.startingFellRadius} cells of the start, and the nearest " +
+                          $"outcrop within {scenarioDef.startingMineRadius}");
 
             // One tick primes the mirror: the contributor runs in the publish phase, so until the
             // world has ticked once there is no published frame and nothing to draw.

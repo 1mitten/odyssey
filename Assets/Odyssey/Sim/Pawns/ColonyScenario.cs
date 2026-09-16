@@ -53,6 +53,18 @@ namespace Odyssey.Sim.Pawns
         public int startingFellRadius = 10;
 
         /// <summary>
+        /// The nearest rock outcrop within this many cells of the start is marked for mining
+        /// before the first tick. Zero marks nothing.
+        ///
+        /// <para>It exists for the same reason <see cref="startingFellRadius"/> does: there is no
+        /// tool to give the order with yet, and a feature nobody can reach is a feature nobody can
+        /// judge. The radius is generous because outcrops are scattered thinly — twenty-three over
+        /// a 120-cell board — and a playtest where the nearest stone is off in the trees shows
+        /// nothing at all.</para>
+        /// </summary>
+        public int startingMineRadius = 30;
+
+        /// <summary>
         /// The scene's scenario: the colony has felling work the moment it exists, because there
         /// is no tool to give the order with yet. When the UI line's designate tool lands, the
         /// scene moves to <see cref="Bare"/> and the player gives the first order.
@@ -66,7 +78,11 @@ namespace Odyssey.Sim.Pawns
         /// order nobody gave is not part of the simulation they are proving.
         /// </summary>
         public static ScenarioDef Bare() =>
-            new ScenarioDef { defName = "Scenario_Bare", label = "bare", startingFellRadius = 0 };
+            new ScenarioDef
+            {
+                defName = "Scenario_Bare", label = "bare",
+                startingFellRadius = 0, startingMineRadius = 0,
+            };
     }
 
     /// <summary>
@@ -84,12 +100,76 @@ namespace Odyssey.Sim.Pawns
     {
         /// <summary>
         /// The standing orders a scenario starts with, given before the first tick. Returns how
-        /// many trees were marked; zero when the scenario gives none.
+        /// many cells were marked in total; zero when the scenario gives none.
         /// </summary>
-        public static int GiveStartingOrders(Designations.DesignationGrid designations, CellRef start, ScenarioDef scenario) =>
-            scenario.startingFellRadius > 0
-                ? DesignateTreesNear(designations, start, scenario.startingFellRadius)
-                : 0;
+        public static int GiveStartingOrders(Designations.DesignationGrid designations, CellRef start, ScenarioDef scenario)
+        {
+            int marked = 0;
+            if (scenario.startingFellRadius > 0)
+                marked += DesignateTreesNear(designations, start, scenario.startingFellRadius);
+            if (scenario.startingMineRadius > 0)
+                marked += DesignateOutcropNear(designations, start, scenario.startingMineRadius);
+            return marked;
+        }
+
+        /// <summary>
+        /// Mark the nearest rock outcrop to the start for mining: find the closest minable stone
+        /// standing at or above the start layer, then mark everything that belongs to the same
+        /// lump. Returns how many cells were marked.
+        ///
+        /// <para>Above the start layer, so this only ever finds an <em>outcrop</em> — stone
+        /// standing on the ground where a colonist can walk up to it and swing. The rock beneath
+        /// the subsoil is out of reach until somebody has dug a way down, and marking a cell
+        /// nobody can reach would give the colony an order it can never take.</para>
+        ///
+        /// <para>The lump is taken as everything minable within
+        /// <see cref="OutcropLumpRadius"/> of the first cell found, which matches how the outcrop
+        /// pass builds one — a tapering mound of radius one to three. It is a scenario choice
+        /// rather than a player command, so it writes the grid directly rather than queueing
+        /// intents.</para>
+        /// </summary>
+        public static int DesignateOutcropNear(Designations.DesignationGrid designations, CellRef start, int radius)
+        {
+            GridSize size = designations.Size;
+
+            int found = -1, foundDistance = int.MaxValue;
+            for (int y = start.Y - 1; y < size.SizeY; y++)
+            for (int dz = -radius; dz <= radius; dz++)
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                int x = start.X + dx, z = start.Z + dz;
+                if (!size.Contains(x, z, y)) continue;
+
+                int index = size.Index(x, z, y);
+                if (!designations.IsMinableStone(index)) continue;
+
+                int distance = System.Math.Abs(dx) + System.Math.Abs(dz) + System.Math.Abs(y - start.Y);
+                if (distance >= foundDistance) continue;
+                foundDistance = distance;
+                found = index;
+            }
+
+            if (found < 0) return 0;
+
+            CellRef at = size.FromIndex(found);
+            int marked = 0;
+            for (int dy = -OutcropLumpRadius; dy <= OutcropLumpRadius; dy++)
+            for (int dz = -OutcropLumpRadius; dz <= OutcropLumpRadius; dz++)
+            for (int dx = -OutcropLumpRadius; dx <= OutcropLumpRadius; dx++)
+            {
+                int x = at.X + dx, z = at.Z + dz, y = at.Y + dy;
+                if (!size.Contains(x, z, y)) continue;
+                if (y < start.Y - 1) continue;
+                if (!designations.IsMinableStone(size.Index(x, z, y))) continue;
+                if (designations.Designate(new CellRef(x, z, y), Designations.DesignationKind.Mine) == IntentRejection.None)
+                    marked++;
+            }
+
+            return marked;
+        }
+
+        /// <summary>How far from its first cell an outcrop is taken to extend. The pass makes them 1 to 3.</summary>
+        public const int OutcropLumpRadius = 3;
 
         /// <summary>
         /// Mark every tree within <paramref name="radius"/> cells of the start for felling, on the

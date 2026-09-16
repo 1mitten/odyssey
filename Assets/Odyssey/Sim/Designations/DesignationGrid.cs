@@ -133,6 +133,14 @@ namespace Odyssey.Sim.Designations
             return above >= _grid.Size.CellCount || !IsTree(above);
         }
 
+        /// <summary>Rock or ore that can be dug out — what a scenario means by "an outcrop".</summary>
+        public bool IsMinableStone(int index)
+        {
+            ushort terrain = _grid.Terrain[index];
+            bool stone = terrain == NaturalContent.TerrainRock || NaturalContent.IsOre(terrain);
+            return stone && CanMine(index);
+        }
+
         /// <summary>Whether a tree stands in the cell right now.</summary>
         public bool IsTree(int index) => TryEdificeDef(index, out ushort def) && NaturalContent.IsTree(def);
 
