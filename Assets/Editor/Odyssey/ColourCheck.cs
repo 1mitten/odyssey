@@ -171,6 +171,60 @@ namespace Odyssey.EditorTools
                     PlayScene.Shoot(camera, centre, 25f, 30f, 16f, "Logs/colour-warm.png");
                 }
 
+                // The ink experiment, before the ordinary sheets. Shooting each material
+                // condition with the outline feature off and then on isolates the ink: the trees
+                // and rocks contribute the same line in both conditions and cancel, so what is
+                // left in the difference is the colonists. Comparing the pack material against
+                // ours this way is the only way to answer "are our colonists inked" without a
+                // judgement about how dark a coat is, which is what confounded the first attempt.
+                foreach (Sheet sheet in new[] { Sheet.Art, Sheet.Palette })
+                foreach (bool ink in new[] { false, true })
+                {
+                    SetOutline(ink);
+                    Dress(sheet, world.Views.Current, appearances, figures, materials);
+                    world.Tick();
+                    figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                    figures.Evaluate(FrameSeconds);
+                    centre = Centre(world.Views.Current, figures);
+                    string tag = sheet.ToString().ToLowerInvariant() + (ink ? "-ink" : "-noink");
+                    PlayScene.Shoot(camera, centre, 12f, 30f, 7f, $"Logs/colour-{tag}.png");
+                    // And at the framing the game is actually played from. The ink fades from
+                    // 150 m, so the board camera is well inside it, but a colonist is small and a
+                    // line that reads at seven metres may not read at forty.
+                    PlayScene.Shoot(camera, centre, 48f, 30f, 45f, $"Logs/colour-{tag}-board.png");
+                }
+                // Is the sliver test what keeps colonists out of the ink? It suppresses the line
+                // on anything narrower than the line itself, which is what stops a meadow reading
+                // as dark smudges -- and a colonist is a bundle of narrow limbs. Shooting with it
+                // switched off answers in one picture what no amount of reading the shader will.
+                SetOutline(true, 0f);
+                Dress(Sheet.Palette, world.Views.Current, appearances, figures, materials);
+                world.Tick();
+                figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                figures.Evaluate(FrameSeconds);
+                centre = Centre(world.Views.Current, figures);
+                PlayScene.Shoot(camera, centre, 12f, 30f, 7f, "Logs/colour-nosliver.png");
+
+                // And with the detector wound right up: no sliver test, a threshold twelve times
+                // finer and a fat line. If a colonist gains no ink even here, the silhouette is
+                // not in the depth texture at all, and no amount of tuning will ink it.
+                // A control object: an ordinary GameObject cube with a stock URP material, stood
+                // beside the colonists. If the cube inks and the colonists do not, the fault is in
+                // the figures; if neither inks while the instanced trees do, then no GameObject
+                // reaches the depth texture here and that is a much larger finding.
+                var probe = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                probe.name = "InkProbe";
+                probe.transform.position = centre + new Vector3(2.5f, 0.5f, 0f);
+                probe.transform.localScale = new Vector3(1.2f, 2.4f, 1.2f);
+
+                SetOutline(true, 0f, 0.001f, 5f);
+                world.Tick();
+                figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                figures.Evaluate(FrameSeconds);
+                PlayScene.Shoot(camera, centre, 12f, 30f, 7f, "Logs/colour-maxink.png");
+                UnityEngine.Object.DestroyImmediate(probe);
+                SetOutline(true, 3f, 0.012f, 2.2f);
+
                 foreach (Sheet sheet in new[] { Sheet.Art, Sheet.Palette, Sheet.Skin, Sheet.Hair, Sheet.Cloth })
                 {
                     Dress(sheet, world.Views.Current, appearances, figures, materials);
@@ -205,6 +259,36 @@ namespace Odyssey.EditorTools
             }
 
             if (!exitWhenDone) ShotFolder.Reveal("colour-*.png");
+        }
+
+        /// <summary>
+        /// Switch the ink line on or off, so a pair of pictures can be differenced.
+        ///
+        /// The outline is a renderer feature on the pipeline's renderer asset rather than
+        /// anything this harness owns, so it is reached through the asset. Left switched back on.
+        /// </summary>
+        static void SetOutline(bool on, float sliverRadius = -1f, float depthThreshold = -1f, float thickness = -1f)
+        {
+            var data = AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.Universal.ScriptableRendererData>(
+                "Assets/Settings/PC_Renderer.asset");
+            if (data == null) { Debug.LogWarning("[Colour] no PC_Renderer.asset; ink cannot be toggled"); return; }
+
+            foreach (UnityEngine.Rendering.Universal.ScriptableRendererFeature feature in data.rendererFeatures)
+            {
+                if (feature == null || !feature.GetType().Name.Contains("Outline")) continue;
+                feature.SetActive(on);
+                Set(feature, "sliverRadius", sliverRadius);
+                Set(feature, "depthThreshold", depthThreshold);
+                Set(feature, "thickness", thickness);
+            }
+            data.SetDirty();
+        }
+
+        static void Set(object feature, string name, float value)
+        {
+            if (value < 0f) return;
+            System.Reflection.FieldInfo? field = feature.GetType().GetField(name);
+            if (field != null) field.SetValue(feature, value);
         }
 
         /// <summary>
