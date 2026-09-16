@@ -54,23 +54,33 @@
     border-radius: 6px;
 }
 
-.slot-clock {
+.slot-right {
     position: absolute;
-    top: 10px; right: 10px;
+    right: 10px; top: 10px; bottom: 56px;
     width: 214px;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+/* The three right-hand regions stack in the column above. They carried absolute offsets and
+   hand-picked tops until 2026-09-16, when the clock grew taller than the 122px the alerts
+   panel's fixed top allowed it and buried the speed buttons underneath. Heights are content's
+   business; only the order is ours. */
+.slot-clock {
+    width: 100%;
 }
 
 .slot-alerts {
-    position: absolute;
-    top: 132px; right: 10px;
-    width: 214px;
+    width: 100%;
+    margin-top: 10px;
 }
 
 .slot-ruler {
-    position: absolute;
-    right: 10px; bottom: 56px;
-    width: 64px;
-    top: 292px;
+    /* Narrow, and takes whatever height is left under the two above it. */
+    width: 76px;
+    margin-top: 10px;
+    flex-grow: 1;
+    min-height: 140px;
 }
 
 .slot-inspect {
@@ -81,12 +91,26 @@
     height: 302px;
 }
 
-.slot-tabs {
+/* The bottom edge, divided rather than overlapped. The tab bar takes what is left after the
+   overlay strip and the cancel button have taken what they need, so nothing can sit on top of
+   anything else along this line. */
+.slot-bottom {
     position: absolute;
-    bottom: 10px;
-    left: 50%;
-    translate: -50% 0;
+    left: 10px; right: 10px; bottom: 10px;
     flex-direction: row;
+    align-items: flex-end;
+}
+
+.slot-tabs {
+    /* Takes the remaining width and wraps inside it. Once every tab carries its full name
+       (09 §7a) the row does not fit at modest resolutions, and wrapping is the honest answer:
+       a bar that cannot fit its contents should get taller, not hide the last of them. */
+    flex-grow: 1;
+    flex-shrink: 1;
+    justify-content: center;
+    flex-wrap: wrap;
+    flex-direction: row;
+    margin-right: 8px;
     padding: 5px;
     /* Solid: the bottom bar is always on screen, so nothing behind it needs showing through. */
     background-color: #141b24;
@@ -97,9 +121,9 @@
 
 .slot-overlays {
     /* A strip of icons beside the cancel affordance, one row, no frame. */
-    position: absolute;
-    right: 56px; bottom: 10px;
     height: 36px;
+    flex-shrink: 0;
+    margin-right: 8px;
     flex-direction: row;
     align-items: center;
     padding: 0 4px;
@@ -122,9 +146,8 @@
 .overlay__btn .icon { margin-right: 0; }
 
 .cancel {
-    position: absolute;
-    right: 10px; bottom: 10px;
     width: 36px; height: 36px;
+    flex-shrink: 0;
     border-radius: 6px;
     border-width: 1px;
     border-color: #7a3a30;
@@ -206,23 +229,40 @@
 
 .ledger__name {
     flex-grow: 1;
-    color: #93a4b5;
+    color: #b9c7d4;
     font-size: 11px;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
+
+    /* The height is load-bearing and must not be tidied away. An ellipsis needs
+       overflow:hidden, and overflow:hidden clips the glyphs to the element's *content* box —
+       which, left to size itself, comes out shorter than the type it is holding. Reported as
+       "A1 resources, cannot read any of the text" on 2026-09-16: the names were shorn while
+       the quantities beside them, which carry no overflow rule, drew in full.
+
+       Padding does not fix it. Raising padding-bottom from 3px to 5px produced a
+       byte-identical picture, because padding extends the padding box and the clip is taken
+       at the content box. Only height moves it. Centring the text in the taller box then
+       keeps the row looking as it did. */
+    height: 18px;
+    -unity-text-align: middle-left;
 }
 
 .ledger__qty {
-    color: #dde6ee;
+    color: #e6eef5;
     font-size: 11px;
 }
 
+/* Dim enough to read as "not yet", light enough to read at all. The old #63758a was about
+   3.5:1 against the panel, which is under the threshold for text this size; these are about
+   5:1. The distinction from a live row is carried by the gap between them, not by taking the
+   greyed rows down to where they cannot be made out. */
 .ledger__row--planned .ledger__name,
-.ledger__row--planned .ledger__qty { color: #63758a; }
+.ledger__row--planned .ledger__qty { color: #8b9db0; }
 
 .ledger__note {
-    color: #63758a;
+    color: #8b9db0;
     font-size: 9px;
     margin-top: 4px;
 }
@@ -319,9 +359,18 @@
 }
 
 .alerts__empty {
-    color: #63758a;
+    color: #b9c7d4;
     font-size: 10px;
     padding: 3px 2px 2px 2px;
+}
+
+/* Wraps. It is a sentence, not a label, and nowrap ran it out through the side of its own
+   panel and off the edge of the screen. */
+.alerts__note {
+    color: #8b9db0;
+    font-size: 9px;
+    padding: 3px 2px 2px 2px;
+    white-space: normal;
 }
 
 /* ---------------- depth ruler (A11) ---------------- */
@@ -402,8 +451,53 @@
 
 /* ---------------- architect (A7) ---------------- */
 
+/* The ledger is what it is: six rows and a note, and it keeps its height. */
+.slot-ledger {
+    flex-shrink: 0;
+}
+
+/* The palette takes what is left of the column and scrolls inside it. min-height:0 is required
+   or a flex child refuses to shrink below its content and the scroll never engages. */
 .arch {
     margin-top: 8px;
+    flex-shrink: 1;
+    min-height: 0;
+}
+
+.arch__scroll {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+/* The scroller, dressed for this sheet. Unity's default is a light-grey bar with two arrow
+   buttons, which against a near-black panel reads as something broken rather than as a way to
+   see the rest of the list. Thin, dark, no arrows, and the track left invisible. */
+.arch__scroll .unity-scroller--vertical {
+    width: 8px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    margin-left: 2px;
+}
+
+.arch__scroll .unity-scroller--vertical .unity-repeat-button {
+    display: none;
+}
+
+.arch__scroll .unity-scroller--vertical .unity-base-slider__tracker {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+
+.arch__scroll .unity-scroller--vertical .unity-base-slider__dragger {
+    width: 6px;
+    background-color: #3d4f61;
+    border-width: 0;
+    border-radius: 3px;
+    margin-left: 0;
+}
+
+.arch__scroll .unity-scroller--vertical .unity-base-slider__dragger:hover {
+    background-color: #5ec8dc;
 }
 
 .arch__cats {
