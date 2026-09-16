@@ -129,16 +129,29 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     whole step), so 270 was **4.5 s** to get up one block against 1.7 s for a flat cell — not a
     jump, a haul, and it read as the figure being stuck. `Drop` stays at 50, deliberately: that is
     0.83 s for three metres and a three-metre free fall takes 0.78 s, so halving it again would
-    have a colonist outrun gravity. **Side effect, measured and worth watching:** hopping a
-    one-block pile now costs 185 against 200 to walk round it, where it used to cost 320 — so
-    colonists go over obstacles rather than around them. On the ruined city that is 6,302 hops a
-    day for three colonists. Plausible (a person steps over a low rock) but it is a real change in
-    how they move, and the lever is the one constant.
+    have a colonist outrun gravity. **Side effect:** hopping a
+    one-block pile now costs 185 against 200 to walk round it, where it used to cost 320, so the
+    preference flipped — but it fires rarely. Measured a day at a time with three colonists:
+    **67 hops** on the ruined city and **4** on the meadow. (An earlier note here said 6,302, which
+    was the broken counter described below.)
   - **A real proof that stairs are used had to be built**, because storeys-visited stopped meaning
     anything once hops were cheap: `MovementSystem.ConnectorSteps` and `HopSteps` count the two
-    kinds of layer change. `M2DemoTests`'s control now runs both configurations and differences
-    them — **231** connector steps on a one-floor colony against **2,439** when its beds and food
-    are upstairs, better than ten to one, where every colonist spans three storeys either way.
+    kinds of layer change. `M2DemoTests`'s control runs both configurations and differences them.
+    - **The first version of those counters was wrong, and the owner caught it.** They sat above
+      the `MoveProgress < cost` guard, where `StepsTaken++` correctly sits below it, so they fired
+      on every tick a pawn spent part way through a vertical step: they counted **pawn-ticks
+      weighted by the cost of the move**, not moves. A jump at 135 counted 135 times, a stair up at
+      290 counted 290 — which inflated everything and made the two categories incomparable with
+      each other, since stairs are dearer per traversal than hops. Every figure taken from them was
+      wrong by about two orders of magnitude.
+    - **The corrected numbers, control against demo over a day on four seeds:** 1/9, 0/15, 0/15,
+      5/12. The test asserts twice the control and at least eight, which all four clear; three to
+      one was tried first and seed 4 breaks it.
+    - **The small counts are themselves a finding.** On seed 1 the demo takes 9 connector steps
+      against 31 hops — most of its vertical movement is hops, not stairs, because a hop costs 135
+      against a stair's 290 and the city is built of one-block rubble. **M2's claim that an ordinary
+      day exercises the stair connectors is weaker than it was**, and widening the gap means
+      making the map want a stair rather than tuning the test.
 - **The HUD's first pass landed 2026-09-16,** the first built interface since the design docs: the Unity-free `Odyssey.Hud` assembly (roster, inspect, depth-ruler, ledger and calendar models behind ADR 0003's split, tested in `Odyssey.Tests.Hud` in both tiers) and a UI Toolkit shell `HudShell` styled by `Hud.uss` after the hud-v2 mockup, with every HUD region of the catalogue's screen map in place. **Live:** the colonist inspect pane (world click or roster card — needs, mood, tabs, commands), the roster bar, the clock, the speed buttons, Depth Ruler layer clicks, and the ledger's real rows. **Displayed for the look, disabled with a reason:** main tabs, overlay toggles, alerts, cancel. **The Build palette (A7, called Architect until the owner renamed it on 2026-09-16) is a button on the bottom bar, left of Work**, opening a panel above the bar; Trade was removed from the bar in the same change so the row did not grow. Icons are deterministic placeholder badges keyed by icon key; the ADR 0007 pipeline replaces them when the sheets land. Clicks on HUD regions are gated from the world by `SliceCameraRig.PointerOverInterface`. **Directors (2026-09-16):** `HudDirectors` in the Hud assembly holds `SelectionDirector`, `SliceDirector` and `CameraDirector` per 09 §3; the composition root makes them with the world, the rig, `SelectionPresenter` and the shell only realise them, and a new region arrives as a director plus a presenter, not as more shell. **View-level behaviour is proven in the playmode gate** by `HudSmokeTests` — every region built, roster bound to the frame, selection answered by name, the player-loop half of experiment R4 in `g-02`; whether a panel also resolves under `-nographics` is still open. **The look itself still needs eyes: press Play in `Play.unity`** (regenerated with the HUD).
 - **The board no longer ends in mid-air (owner decision 2026-09-16).** A decorative surround carries
   the ground and the wood 1,220 m past the rim into the fog, so the map reads as a clearing in a
