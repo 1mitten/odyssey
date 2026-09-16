@@ -63,6 +63,7 @@ namespace Odyssey.Presentation.Ui
         float _fast;
         float _mid;
         float _slow;
+        bool _primed;
 
         // ---- element references, resolved once the tree is built
         VisualElement _hud = null!;
@@ -198,6 +199,22 @@ namespace Odyssey.Presentation.Ui
             {
                 _surfaceLayer = _rig.ActiveLayer;
                 _surfaceCaptured = true;
+            }
+
+            // Prime on the first frame a world exists, rather than waiting out the fastest
+            // cadence bucket: the shell's Start can run before the bootstrap's has built
+            // anything, and a HUD that is empty for its first fraction of a second reads as
+            // broken. It also makes the shell correct in any host whose frames cost almost no
+            // real time — the playmode test harness being the one we actually meet.
+            if (!_primed)
+            {
+                _primed = true;
+                RefreshRoster();
+                RefreshInspect();
+                RefreshLedger();
+                RefreshSpeed();
+                RefreshClock();
+                RefreshRuler();
             }
 
             _fast += Time.unscaledDeltaTime;

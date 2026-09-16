@@ -204,7 +204,7 @@ namespace Odyssey.Hud
         {
             Commands.Add(new InspectCommand
             {
-                IconKey = "ui.command.inspect", Label = "Full record",
+                IconKey = "ui.command.inspect", Label = "Inspect",
                 Enabled = false, Reason = "the record view arrives with the log (M6)",
             });
             Commands.Add(new InspectCommand
