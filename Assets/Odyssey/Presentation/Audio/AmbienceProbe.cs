@@ -114,7 +114,7 @@ namespace Odyssey.Presentation.Audio
                     float weight = 1f - (dx * dx + dz * dz) / (radius * radius);
                     if (weight <= 0f) continue;
 
-                    if (!NaturalContent.IsWater(terrain.TerrainAt(size.Index(x, z, layer)))) continue;
+                    if (!IsWet(terrain, size, x, z, layer)) continue;
 
                     weightSum += weight;
                     centreX += x * weight;
@@ -127,6 +127,29 @@ namespace Odyssey.Presentation.Audio
             return new AmbienceField(
                 Mathf.Clamp01(weightSum / SaturateWeight),
                 new Vector2(centreX / weightSum, centreZ / weightSum));
+        }
+
+        /// <summary>
+        /// Whether the column at (x, z) is water at the slice, reading the layer itself
+        /// <b>and the one below it</b>.
+        ///
+        /// <para>The slice layer is where a colonist <i>stands</i>, not what it stands on: the
+        /// start cell is <c>TopSolidY + 1</c>, the air above the ground. Terrain is a property of
+        /// the solid cell, so grass, rock and the surface of a pond all live one layer under the
+        /// slice, and a probe reading the slice layer alone measures nothing but air — the water
+        /// bed would have been silent on every map the game actually generates, with the fixture
+        /// passing because it put its pond on the layer it also probed.</para>
+        ///
+        /// <para>Two layers and not the whole column, because that is exactly the floor underfoot
+        /// and the air in front of the eye: water further down is under a floor, and the point of
+        /// reading the slice at all is that a player who has descended into a shaft does not hear
+        /// the river through the rock.</para>
+        /// </summary>
+        static bool IsWet(ITerrainLookup terrain, GridSize size, int x, int z, int layer)
+        {
+            if (NaturalContent.IsWater(terrain.TerrainAt(size.Index(x, z, layer)))) return true;
+            return layer > 0
+                   && NaturalContent.IsWater(terrain.TerrainAt(size.Index(x, z, layer - 1)));
         }
     }
 }

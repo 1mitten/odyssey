@@ -68,6 +68,21 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
+        public void ThePondUnderfootIsHeardFromTheLayerAColonistStandsIn()
+        {
+            var terrain = new FlatTerrain(Size);
+            terrain.Pond(24, 24, 4, layer: 0);
+
+            // The slice layer is the air a colonist stands in; the water is the solid cell it
+            // stands on. This is the arrangement every generated map has, and a probe that read
+            // only its own layer measured air and reported silence in the middle of a river.
+            AmbienceField field = AmbienceProbe.Sample(terrain, Size, 1, new Vector2(24f, 24f));
+
+            Assert.That(field.WaterIntensity, Is.GreaterThan(0f),
+                "standing in the stream is audible water");
+        }
+
+        [Test]
         public void ALakeAScreenAwayIsSilent()
         {
             var terrain = new FlatTerrain(Size);

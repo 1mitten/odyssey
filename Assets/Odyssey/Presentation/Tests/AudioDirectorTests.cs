@@ -268,6 +268,64 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
+        public void APhaseWithNoTrackDoesNotCostTheNextOneItsVoice()
+        {
+            // A clip that failed to import leaves a phase with no track: the playing track is
+            // handed to the fade-out and nothing replaces it. If the phase turns again *before*
+            // that fade has finished, the voice picked for the new track must not be the one
+            // still fading — it would be both halves of the crossfade at once, and the fade-out
+            // would end by stopping the track that is supposed to be playing.
+            //
+            // The shipped phases are hours apart and the fades are seconds, so this needs a
+            // phase shorter than a fade to reach. That is a hazard rather than a live fault,
+            // and it is held here because the thing that would create it — a dawn or dusk phase,
+            // which the music design already calls "a constant away" — is a constant away.
+            _catalogue.Music.Find(track => track.Phase == MusicPhase.Night)!.Clip = null;
+            using var audio = Make();
+
+            Advance(audio, 3f, tick: DayTick);
+            Advance(audio, 0.3f, tick: NightTick);
+            Advance(audio, 3f, tick: DayTick);
+
+            Assert.That(audio.MusicPhase, Is.EqualTo(MusicPhase.Day));
+            Assert.That(VoicePlaying(_day), Is.Not.Null,
+                "the day track came back on a voice that was not the one fading out");
+            Assert.That(audio.MusicVolume, Is.GreaterThan(0.4f),
+                "and it is up, not stopped by the fade that belonged to the track it replaced");
+        }
+
+        [Test]
+        public void ATrackFadesOutAtItsOwnRateAndNotTheOneReplacingIt()
+        {
+            _catalogue.Music.Find(track => track.Phase == MusicPhase.Day)!.FadeSeconds = 1f;
+            _catalogue.Music.Find(track => track.Phase == MusicPhase.Night)!.FadeSeconds = 4f;
+            using var audio = Make();
+
+            Advance(audio, 4f, tick: NightTick);
+            Assume.That(VoicePlaying(_night), Is.Not.Null, "the night track is up");
+
+            // Morning. The night track owns a four-second fade; the day track's one second is
+            // the incoming half of the crossfade and has nothing to do with it.
+            Advance(audio, 1.5f, tick: DayTick);
+
+            Assert.That(VoicePlaying(_night), Is.Not.Null,
+                "a second and a half into a four-second fade, the night track is still carrying");
+            Assert.That(VoicePlaying(_night)!.volume, Is.GreaterThan(0f));
+        }
+
+        [Test]
+        public void ADryMapNeverSpinsUpTheWaterLoop()
+        {
+            using var audio = Make();   // no terrain at all: the clone case, and a map with no water
+
+            Advance(audio, 4f);
+
+            Assert.That(audio.WaterLevel, Is.EqualTo(0f));
+            Assert.That(Playing().Find(voice => voice.clip == _water), Is.Null,
+                "a loop spinning at volume nought is a real voice spent on silence");
+        }
+
+        [Test]
         public void AnAlertChimesAndDucksTheMusic()
         {
             using var audio = Make();

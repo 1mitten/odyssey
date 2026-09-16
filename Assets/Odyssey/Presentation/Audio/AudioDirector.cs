@@ -55,6 +55,13 @@ namespace Odyssey.Presentation.Audio
         /// <summary>The linear gain the music ducks to. Half-ish, not a dip to nothing.</summary>
         public const float DuckGain = 0.45f;
 
+        /// <summary>
+        /// The bed level under which the loop is stopped rather than played quietly. A thousandth
+        /// of full is some sixty dB down: inaudible under anything, and the exponential approach
+        /// would otherwise never reach nought at all.
+        /// </summary>
+        public const float AudibleLevel = 0.001f;
+
         readonly AudioCatalogue? _catalogue;
         readonly ITerrainLookup? _terrain;
         readonly GridSize _size;
@@ -86,6 +93,7 @@ namespace Odyssey.Presentation.Audio
         float _musicFadeSeconds = 3f;
         float _musicElapsed;
         float _musicLeavingElapsed;
+        float _musicLeavingFadeSeconds = 3f;
         float _duckRemaining;
         float _duckGain = 1f;
 
@@ -95,6 +103,10 @@ namespace Odyssey.Presentation.Audio
         {
             public AudioSource? Source;
             public float Level;
+
+            /// <summary>Whether the loop is running. Book-kept rather than read off
+            /// <c>isPlaying</c>, for the reason every other piece of this director's state is.</summary>
+            public bool Playing;
         }
 
         readonly Dictionary<string, Bed> _beds = new();
@@ -107,6 +119,14 @@ namespace Odyssey.Presentation.Audio
         public int DistanceCulled { get; private set; }
         public int CooldownSkipped { get; private set; }
         public int VoiceStarved { get; private set; }
+
+        /// <summary>
+        /// Sounds that had a def, a voice and the range to be heard, and no clip to play — an
+        /// asset deleted or a catalogue written while the import had not settled. Its own
+        /// counter because every other reason for silence has one, and a director with all four
+        /// at nought used to be indistinguishable from a director nobody ever called.
+        /// </summary>
+        public int ClipMissing { get; private set; }
 
         /// <summary>The smoothed water level the bed is playing at, 0 to 1.</summary>
         public float WaterLevel =>
@@ -257,7 +277,11 @@ namespace Odyssey.Presentation.Audio
             // all missing — an asset deleted since the catalogue was built — is silent here
             // rather than an exception at a stranger's volume.
             AudioClip? clip = PickClip(def.Clips);
-            if (clip == null) return false;
+            if (clip == null)
+            {
+                ClipMissing++;
+                return false;
+            }
 
             float pitch = 1f + Range(-def.PitchVariance, def.PitchVariance);
             float gain = Mathf.Clamp01(
@@ -347,6 +371,13 @@ namespace Odyssey.Presentation.Audio
             float approach = 1f - Mathf.Exp(-deltaTime / Mathf.Max(0.01f, def.FadeSeconds));
             bed.Level += (field.WaterIntensity - bed.Level) * approach;
 
+            // A bed is only made, and only kept running, while there is something to hear. A map
+            // with the water generator switched off still carries the water def, and a loop
+            // spinning at volume nought for the whole session is a decoded stream and one of the
+            // platform's real voices spent on silence.
+            bool audible = bed.Level > AudibleLevel || field.WaterIntensity > 0f;
+            if (bed.Source == null && !audible) return;
+
             if (bed.Source == null)
             {
                 AudioSource source = Voice($"Bed {SoundIds.AmbienceWater}");
@@ -358,8 +389,18 @@ namespace Odyssey.Presentation.Audio
                 source.minDistance = def.MinDistance;
                 source.maxDistance = def.MaxDistance;
                 source.volume = 0f;
-                source.Play();
                 bed.Source = source;
+            }
+
+            if (audible && !bed.Playing)
+            {
+                bed.Source.Play();
+                bed.Playing = true;
+            }
+            else if (!audible && bed.Playing)
+            {
+                bed.Source.Stop();
+                bed.Playing = false;
             }
 
             bed.Source.volume = def.Volume * bed.Level * AudioMath.DbToLinear(GainDb(SoundBus.Ambience));
@@ -386,11 +427,22 @@ namespace Odyssey.Presentation.Audio
                     _musicLeaving = _musicCurrent;
                     _musicLeavingVolume = _musicVolume;
                     _musicLeavingElapsed = 0f;
+
+                    // Its own fade length and not the incoming track's: the shipped tracks fade
+                    // over three seconds and four, so one shared field stretched every fade-out
+                    // to the length of the fade-in that replaced it and the two halves of the
+                    // crossfade were never the same length.
+                    _musicLeavingFadeSeconds = _musicFadeSeconds;
                 }
 
                 if (def?.Clip != null)
                 {
-                    AudioSource next = ReferenceEquals(_musicCurrent, _musicA) ? _musicB : _musicA;
+                    // The voice that is *not* fading out. Choosing "the other one from current"
+                    // aliased the two the moment a phase had no track at all: current went null
+                    // while leaving still held A, and the next phase then picked A as well —
+                    // both halves of the crossfade writing one voice's volume, and the leaving
+                    // fade stopping the track that was supposed to be playing.
+                    AudioSource next = ReferenceEquals(_musicLeaving, _musicA) ? _musicB : _musicA;
                     next.clip = def.Clip;
                     next.volume = 0f;
                     next.Play();
@@ -417,7 +469,7 @@ namespace Odyssey.Presentation.Audio
             if (_musicLeaving != null)
             {
                 _musicLeavingElapsed += deltaTime;
-                float fade = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(_musicLeavingElapsed / _musicFadeSeconds));
+                float fade = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(_musicLeavingElapsed / _musicLeavingFadeSeconds));
                 _musicLeaving.volume = (1f - fade) * _musicLeavingVolume * _duckGain *
                                        AudioMath.DbToLinear(GainDb(SoundBus.Music));
                 if (fade >= 1f)

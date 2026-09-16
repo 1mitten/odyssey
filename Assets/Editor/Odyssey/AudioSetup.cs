@@ -244,6 +244,15 @@ namespace Odyssey.EditorTools
         {
             AudioClip? Clip(string name) => AssetDatabase.LoadAssetAtPath<AudioClip>($"{ClipFolder}/{name}.wav");
 
+            // A clip that did not load is a catalogue that is silent at runtime and cheerful at
+            // build time: the null goes into the array behind a `!`, every gate in the director
+            // passes, and the sound simply never arrives. Fail the build instead — the tool has
+            // just written these files, so a null here means the import did not settle and the
+            // answer is to run it again, not to ship the table.
+            AudioClip Require(string name) =>
+                Clip(name) ?? throw new System.InvalidOperationException(
+                    $"[AudioSetup] {ClipFolder}/{name}.wav did not import; the catalogue was not written.");
+
             var catalogue = AssetDatabase.LoadAssetAtPath<AudioCatalogue>(CataloguePath);
             if (catalogue == null)
             {
@@ -257,7 +266,7 @@ namespace Odyssey.EditorTools
                 new AudioCatalogue.SoundDef
                 {
                     Id = SoundIds.WorkChop,
-                    Clips = new[] { Clip("chop")! },
+                    Clips = new[] { Require("chop") },
                     Bus = SoundBus.Effects,
                     Volume = 0.85f, VolumeVariance = 0.15f, PitchVariance = 0.07f,
                     SpatialBlend = 1f, MinDistance = 5f, MaxDistance = 48f,
@@ -266,7 +275,7 @@ namespace Odyssey.EditorTools
                 new AudioCatalogue.SoundDef
                 {
                     Id = SoundIds.WorkPick,
-                    Clips = new[] { Clip("pick")! },
+                    Clips = new[] { Require("pick") },
                     Bus = SoundBus.Effects,
                     Volume = 0.8f, VolumeVariance = 0.14f, PitchVariance = 0.06f,
                     SpatialBlend = 1f, MinDistance = 5f, MaxDistance = 52f,
@@ -275,7 +284,7 @@ namespace Odyssey.EditorTools
                 new AudioCatalogue.SoundDef
                 {
                     Id = SoundIds.AlertStarving,
-                    Clips = new[] { Clip("alert")! },
+                    Clips = new[] { Require("alert") },
                     Bus = SoundBus.Alerts,
                     Volume = 0.9f, VolumeVariance = 0f, PitchVariance = 0f,
                     SpatialBlend = 0f, MinDistance = 1f, MaxDistance = 500f,
@@ -287,15 +296,15 @@ namespace Odyssey.EditorTools
             catalogue.Ambience.Add(new AudioCatalogue.AmbienceDef
             {
                 Id = SoundIds.AmbienceWater,
-                Clip = Clip("water"),
+                Clip = Require("water"),
                 Volume = 0.75f, FadeSeconds = 2.5f, MinDistance = 30f, MaxDistance = 110f,
             });
 
             catalogue.Music.Clear();
             catalogue.Music.AddRange(new[]
             {
-                new AudioCatalogue.MusicDef { Phase = MusicPhase.Day, Clip = Clip("music-day"), Volume = 0.5f, FadeSeconds = 3f },
-                new AudioCatalogue.MusicDef { Phase = MusicPhase.Night, Clip = Clip("music-night"), Volume = 0.42f, FadeSeconds = 4f },
+                new AudioCatalogue.MusicDef { Phase = MusicPhase.Day, Clip = Require("music-day"), Volume = 0.5f, FadeSeconds = 3f },
+                new AudioCatalogue.MusicDef { Phase = MusicPhase.Night, Clip = Require("music-night"), Volume = 0.42f, FadeSeconds = 4f },
             });
 
             EditorUtility.SetDirty(catalogue);
