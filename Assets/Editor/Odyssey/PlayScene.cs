@@ -1266,13 +1266,20 @@ namespace Odyssey.EditorTools
         /// </summary>
         static PanelSettings BuildHudPanelSettings()
         {
+            // A theme is a text stylesheet that imports Unity's default runtime theme, and it has
+            // to be written as one: a ThemeStyleSheet made with CreateInstance and saved as YAML
+            // under a .tss name is fed to the stylesheet importer as text, comes out empty, and
+            // a panel with no default font draws nothing at all. That is the first HUD build in a
+            // sentence. The file is authored and committed; this only recreates it if it is gone.
+            if (!File.Exists(Path.GetFullPath(HudThemePath)))
+            {
+                Directory.CreateDirectory(Path.GetFullPath(Path.GetDirectoryName(HudThemePath)!));
+                File.WriteAllText(Path.GetFullPath(HudThemePath), "@import url(\"unity-theme://default\");\n");
+                AssetDatabase.ImportAsset(HudThemePath);
+            }
             var theme = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(HudThemePath);
             if (theme == null)
-            {
-                theme = ScriptableObject.CreateInstance<ThemeStyleSheet>();
-                Directory.CreateDirectory(Path.GetFullPath(Path.GetDirectoryName(HudThemePath)!));
-                AssetDatabase.CreateAsset(theme, HudThemePath);
-            }
+                throw new InvalidOperationException($"the HUD theme at {HudThemePath} did not import as a ThemeStyleSheet");
 
             var panel = AssetDatabase.LoadAssetAtPath<PanelSettings>(HudPanelPath);
             if (panel == null)

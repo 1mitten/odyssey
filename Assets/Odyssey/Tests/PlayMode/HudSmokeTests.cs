@@ -62,6 +62,13 @@ namespace Odyssey.Tests.PlayMode
                 Label? clock = doc.rootVisualElement.Q<Label>(className: "clock__time");
                 Assert.That(clock, Is.Not.Null);
                 Assert.That(clock!.text, Is.Not.Empty, "the clock label never bound");
+
+                // The theme applied: a label resolves a font. An empty theme leaves every label
+                // fontless and the panel draws nothing at all, which no query on the tree can
+                // see. This is the assertion that would have caught the first HUD build.
+                var font = clock.resolvedStyle.unityFontDefinition;
+                Assert.That(font.fontAsset != null || font.font != null || clock.resolvedStyle.unityFont != null, Is.True,
+                    "no font resolved on a label: the runtime theme does not import unity-theme://default");
             }
             finally
             {
