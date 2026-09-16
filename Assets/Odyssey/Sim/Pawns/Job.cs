@@ -123,6 +123,65 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Run one tick of the current toil.</summary>
         public abstract JobStatus Tick(PawnContext ctx);
 
+        /// <summary>
+        /// Is the pawn still standing somewhere it could actually do this work?
+        ///
+        /// <para><b>Asked every tick of the working toil, because arriving is not staying.</b> The
+        /// walk toil puts a colonist on a stance its work giver chose, and every driver then
+        /// worked for as long as the job lasted without ever asking again. That held while nothing
+        /// could move a pawn it had not asked to move — and mining ended it: a dig drops anybody
+        /// standing on the cell it cuts, retiring a climb drops whoever was on it, and both are
+        /// deliberate. The owner watched the consequence and reported it as a colonist chopping a
+        /// tree from one block down.</para>
+        ///
+        /// <para>The envelope is given as two numbers because the two directions are different
+        /// questions. <paramref name="layersAbove"/> is how far above the work the pawn may stand
+        /// — nought for felling, one for mining, which is worked from the rim of a hole and from
+        /// directly on top of it as well as from beside it. <paramref name="layersBelow"/> is how
+        /// far under it — nought for felling, because a tree and the colonist cutting it share a
+        /// floor, and one for mining, because a pick goes overhead: a miner standing on the ground
+        /// can cut the rock above its head or the overhang beside it, which is how you undercut a
+        /// face. That second one is the owner's decision, and without it every rock that could
+        /// only be worked from below simply waited — 33 standing orders with nowhere to stand,
+        /// measured.</para>
+        ///
+        /// <para>Within one cell in X and Z, so the eight neighbours and the pawn's own cell. A
+        /// driver that stands its colonist <em>in</em> the work — felling did, once — is covered
+        /// by the same test.</para>
+        /// </summary>
+        /// <summary>
+        /// Send the pawn back to the walk toil: it has been moved off the stance it was given and
+        /// has to go and get back on it.
+        ///
+        /// <para>Walking back rather than failing, and measurement is why. Being displaced is not
+        /// the pawn's fault and usually not permanent — a dig drops whoever is standing on the
+        /// cell it cuts, and the stance is generally a step away afterwards. Failing the job
+        /// instead cost half the colony's mining over 40,000 ticks (65 cells to 32), because
+        /// every displacement threw away a walk as well as the work. If the stance really has
+        /// gone, <see cref="GotoCell"/> fails on the next tick and the job fails with it, which is
+        /// the same answer arrived at honestly.</para>
+        /// </summary>
+        protected void WalkBack()
+        {
+            ToilIndex = 0;
+            ToilProgress = 0;
+        }
+
+        protected static bool StillInReach(
+            PawnContext ctx, Pawn pawn, int work, int layersAbove, int layersBelow)
+        {
+            GridSize size = ctx.Size;
+            if ((uint)work >= (uint)size.CellCount) return false;
+
+            CellRef at = size.FromIndex(pawn.Cell);
+            CellRef target = size.FromIndex(work);
+
+            int up = at.Y - target.Y;
+            if (up > layersAbove || up < -layersBelow) return false;
+
+            return System.Math.Abs(at.X - target.X) <= 1 && System.Math.Abs(at.Z - target.Z) <= 1;
+        }
+
         /// <summary>Anything to undo when the job ends, beyond releasing reservations.</summary>
         public virtual void Cleanup(PawnContext ctx, JobStatus status) { }
 

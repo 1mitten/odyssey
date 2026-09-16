@@ -1,21 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Containers for work givers, carrying the natural order they scan in. Cutting scans before
-  hauling at equal priority: felled wood is what there is to haul, so the order that makes the
-  work exist comes first.
+  Containers for work givers, carrying the natural order they scan in. Cutting and mining scan
+  before hauling at equal priority: the orders that make work exist come before the order that
+  tidies it up. Cutting is first of the two because felling is the shorter job and the wood is
+  usually nearer.
 -->
 <Defs>
 
   <WorkTypeDef>
     <defName>Work_Haul</defName>
     <label>hauling</label>
-    <order>1</order>
+    <order>2</order>
   </WorkTypeDef>
 
   <WorkTypeDef>
     <defName>Work_Cutting</defName>
     <label>cutting</label>
     <order>0</order>
+  </WorkTypeDef>
+
+  <WorkTypeDef>
+    <defName>Work_Mining</defName>
+    <label>mining</label>
+    <order>1</order>
   </WorkTypeDef>
 
 </Defs>

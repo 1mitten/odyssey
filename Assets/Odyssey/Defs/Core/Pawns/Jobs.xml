@@ -60,4 +60,22 @@
     <experiencePerWorkTick>110</experiencePerWorkTick>
   </JobDef>
 
+
+  <!--
+    No workTicks: mining is priced per material, and the terrain defs already carry the number
+    (rock 700, iron 900, coal 760). One constant here would make a seam cost the same as the
+    stone around it, which is the whole difference between materials. The driver reads the
+    terrain's workToClear as it swings.
+
+    The expiry is generous because a shaft can be a long walk from the colony, and a job that
+    expires on the way there is a colonist who never arrives.
+  -->
+  <JobDef>
+    <defName>Job_Mine</defName>
+    <driver>6</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>2</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+  </JobDef>
+
 </Defs>

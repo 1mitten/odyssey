@@ -93,14 +93,26 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
-        public void StoneIsHeavierThanWoodInTheOnlyWayItCanBe()
+        public void StoneLeavesTheFaceHarderAndTighterThanWoodDoes()
         {
             // Gravity belongs to the system and applies to everything in flight at once, so it is
-            // not a lever a recipe has. Heavier debris is expressed by leaving faster, being
-            // smaller and dying sooner, which at board-camera height reads the same.
-            Assert.That(ChipRecipe.Stone.Speed.y, Is.GreaterThan(ChipRecipe.Wood.Speed.y));
-            Assert.That(ChipRecipe.Stone.Size.y, Is.LessThan(ChipRecipe.Wood.Size.y));
-            Assert.That(ChipRecipe.Stone.Life.y, Is.LessThan(ChipRecipe.Wood.Life.y));
+            // not a lever a recipe has. What is left is how fast the debris leaves and how wide it
+            // sprays, and stone does both like something heavy: quicker off the face, in a
+            // narrower cone.
+            //
+            // **This test used to assert that stone was also SMALLER and shorter-lived**, on the
+            // reasoning that small fast specks read as heavy at board-camera height. The owner
+            // watched it and asked for the opposite — "the particles need to be bigger and set
+            // back a bit (bigger chunks)" — because at that height small specks did not read as
+            // anything at all. A pick knocks lumps off a rock face; an axe takes slivers off a
+            // trunk. So stone is now the bigger and longer-lived of the two on purpose, and the
+            // weight is carried entirely by speed and spread.
+            Assert.That(ChipRecipe.Stone.Speed.y, Is.GreaterThan(ChipRecipe.Wood.Speed.y),
+                "stone no longer leaves the face faster than wood");
+            Assert.That(ChipRecipe.Stone.Spread, Is.LessThan(ChipRecipe.Wood.Spread),
+                "stone sprays as wide as wood, so nothing is left reading as heavy");
+            Assert.That(ChipRecipe.Stone.Size.y, Is.GreaterThan(ChipRecipe.Wood.Size.y),
+                "the chunks shrank back to slivers");
         }
     }
 }

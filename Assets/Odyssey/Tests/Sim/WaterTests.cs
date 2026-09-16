@@ -57,14 +57,32 @@ namespace Odyssey.Tests.Sim
         /// lowered — one of these moves and the barren board stops being the baseline that every
         /// other judgement is made against.
         /// </summary>
+        /// <remarks>
+        /// <b>Re-based on 2026-09-16 when the mining branch merged, and the mechanism is two
+        /// deliberate changes to every natural map — not water leaking past its switch.</b>
+        ///
+        /// <para><b>Headroom moved the ground.</b> The ground layer is now "as high as it can sit
+        /// while leaving <c>headroomLayers</c> of sky above the tallest terrace" rather than two
+        /// fifths of the way up, so every column on every board starts at a different height. That
+        /// is why the <em>barren</em> goldens moved as well, and they are still seed-invariant —
+        /// one flat board per size, exactly as before, at a new level.</para>
+        ///
+        /// <para><b>Caverns are a new pass.</b> Pass 8 carves sealed voids into the rock of any
+        /// board that has rock, which the dry board does. <c>MakeBarren</c> has no rock band worth
+        /// carving, which is why the barren hashes move only by the headroom and not by the seed.</para>
+        ///
+        /// <para>What this test is for is unchanged and still holds: with <c>water = false</c> the
+        /// water passes must draw nothing at all, so a dry map is exactly the map the rest of the
+        /// generator makes. The numbers are the baseline for that, not for anything else.</para>
+        /// </remarks>
         static readonly (GridSize size, uint seed, ulong dry, ulong barren)[] BeforeWater =
         {
-            (new GridSize(64, 64, 20), 1u, 0xe0efa30af0d9ac1dUL, 0xacf3307814dd2325UL),
-            (new GridSize(64, 64, 20), 7u, 0x15b83f039e34c5f6UL, 0xacf3307814dd2325UL),
-            (new GridSize(64, 64, 20), 42u, 0xc3f6290cc90fe117UL, 0xacf3307814dd2325UL),
-            (new GridSize(120, 120, 16), 1u, 0xf8a2a7fa786619a1UL, 0x7c5770574ec65925UL),
-            (new GridSize(120, 120, 16), 7u, 0x08e91e93ce4e43b0UL, 0x7c5770574ec65925UL),
-            (new GridSize(120, 120, 16), 42u, 0x2df9a99b85c445a2UL, 0x7c5770574ec65925UL),
+            (new GridSize(64, 64, 20), 1u, 0x3f6b1d0968b85c2dUL, 0x5ba75a6d28bea325UL),
+            (new GridSize(64, 64, 20), 7u, 0x2f80966928cab2f8UL, 0x5ba75a6d28bea325UL),
+            (new GridSize(64, 64, 20), 42u, 0xc41b0cde5c7f5e37UL, 0x5ba75a6d28bea325UL),
+            (new GridSize(120, 120, 16), 1u, 0x9be4e464f6eee813UL, 0xc0dc37cc3b1edd25UL),
+            (new GridSize(120, 120, 16), 7u, 0x9545d7795fa27142UL, 0xc0dc37cc3b1edd25UL),
+            (new GridSize(120, 120, 16), 42u, 0x672c6cde141b1bb0UL, 0xc0dc37cc3b1edd25UL),
         };
 
         [Test]

@@ -40,16 +40,29 @@ namespace Odyssey.Presentation.Rendering
             }
 
             Vector3 to = CellMetrics.FloorCentre(pawn.NextCell);
+            Vector3 travel = to - from;
 
-            // The heading is taken between the flat cell centres and stays horizontal, which is
-            // what every caller already assumes: it is a facing, and a pawn walking uphill faces
-            // along the ground rather than up into the air.
-            heading = to - from;
+            // **A heading is a bearing, and a bearing has no vertical part.**
+            //
+            // A step that only changes layer travels (0, ±3, 0), and the yaw of that is
+            // Atan2(0, 0) — which is not "no bearing", it is zero, which is due north. So every
+            // colonist entering a shaft turned slowly to face north and turned back on the way
+            // out. That is what the owner saw as the animation jolting about on a descent, and it
+            // was never anything to do with what it happened to be climbing.
+            //
+            // Flattened here rather than in either caller, because both of them want the same
+            // thing and a second copy of this arithmetic is how the instanced crowd and the live
+            // figures would come to disagree. Zero length already means "keep facing wherever you
+            // were", which is exactly right for a climb as well.
+            heading = new Vector3(travel.x, 0f, travel.z);
+
             float percent = pawn.MovePercent + movePerTick * tickAlpha;
 
-            // The lift is taken at the interpolated position, not at either end, so a pawn walks
-            // along the drawn ground instead of cutting the chord between two cell centres.
-            return GroundRelief.Lift(from + heading * (Mathf.Clamp(percent, 0f, 100f) * 0.01f));
+            // Along `travel` and not along `heading`: the bearing has had its vertical part taken
+            // out on purpose, and a pawn that moved along it would climb a shaft without going
+            // down. The lift is taken at the interpolated position, not at either end, so a pawn
+            // walks along the drawn ground instead of cutting the chord between two cell centres.
+            return GroundRelief.Lift(from + travel * (Mathf.Clamp(percent, 0f, 100f) * 0.01f));
         }
 
         /// <summary>The yaw a heading implies, in degrees. Zero-length headings give zero.</summary>

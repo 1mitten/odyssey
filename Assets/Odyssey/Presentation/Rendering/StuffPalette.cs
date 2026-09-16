@@ -98,7 +98,13 @@ namespace Odyssey.Presentation.Rendering
             Color.white,                               // soil
             Color.white,                               // gravel
             Color.white,                               // engineered fill
-            Color.white,                               // rock
+            // Rock, pulled cool. The pack's stone texture is a warm grey-brown, which at board
+            // distance reads as earth rather than as stone — the complaint that started this.
+            // _BaseColor is a plain multiply with no clamp, so red comes down and blue goes up
+            // and the brown neutralises into grey. It cannot desaturate (that would need a lerp
+            // towards luminance, which a multiply cannot express), so this is a hue shift, not a
+            // wash: the texture's own mottling survives it.
+            new Color(0.84f, 0.90f, 1.02f),            // rock
             Color.white,                               // buried city seam
             Color.white,                               // salvage
             new Color(1.04f, 1.30f, 1.55f),            // 10 grass — lifted towards the reference
@@ -106,7 +112,7 @@ namespace Odyssey.Presentation.Rendering
             Color.white,                               // 12 packed gravel
             Color.white,                               // 13 sand
             Color.white,                               // 14 subsoil
-            Color.white,                               // 15 bedrock
+            new Color(0.78f, 0.84f, 0.98f),            // 15 bedrock — the same cool pull, darker
             Color.white,                               // 16 iron ore
             Color.white,                               // 17 coal seam
 
@@ -146,13 +152,38 @@ namespace Odyssey.Presentation.Rendering
         public static Color FoliageTint(int variant) =>
             variant >= 0 && variant < FoliageTints.Length ? FoliageTints[variant] : Color.white;
 
-        /// <summary>The cyan trim. Black means the material has no emissive contribution.</summary>
+        /// <summary>
+        /// The cyan trim. Black means the material has no emissive contribution.
+        ///
+        /// <para>Ore glows for a reason that is not decoration. Coal sits at 0.13 grey and rock
+        /// at 0.25: down a shaft with no lamp in it they are the same colour, and a seam the
+        /// player cannot pick out of the wall is a seam that may as well not have generated. The
+        /// trim is what separates them, and it is the same cyan the concept renders use for
+        /// salvage — this world's signal for "there is something in there".</para>
+        ///
+        /// <para>It only ever reaches a <em>discovered</em> cell, because an undiscovered seam
+        /// arrives here as plain rock: <c>WorldRenderModel.Seen</c> has already substituted it.
+        /// So this table cannot give ore away, however bright it is.</para>
+        /// </summary>
         static readonly Color[] TerrainEmission =
         {
             Color.black, Color.black, Color.black, Color.black, Color.black,
             Color.black, Color.black, Color.black,
             new Color(0.06f, 0.30f, 0.34f),            // buried city seam
             new Color(0.10f, 0.50f, 0.56f),            // salvage
+
+            // Natural terrain, continuing CoreContent's numbering exactly as the tables above do.
+            Color.black,                               // 10 grass
+            Color.black,                               // 11 bare earth
+            Color.black,                               // 12 packed gravel
+            Color.black,                               // 13 sand
+            Color.black,                               // 14 subsoil
+            Color.black,                               // 15 bedrock
+            // Coal is the brighter of the two, which looks backwards and is not. Iron's rust
+            // brown already separates itself from rock on base colour alone; coal is a near-black
+            // against a dark grey and has nothing but the trim to be seen by.
+            new Color(0.08f, 0.38f, 0.43f),            // 16 iron ore
+            new Color(0.11f, 0.56f, 0.63f),            // 17 coal seam
         };
 
         public static readonly Color TrimEmission = new Color(0.10f, 0.62f, 0.70f);

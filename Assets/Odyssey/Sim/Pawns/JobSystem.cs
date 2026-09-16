@@ -134,7 +134,8 @@ namespace Odyssey.Sim.Pawns
             new IdleThinkNode(),
         };
 
-        public static WorkGiver[] DefaultGivers() => new WorkGiver[] { new FellWorkGiver(), new HaulWorkGiver() };
+        public static WorkGiver[] DefaultGivers() =>
+            new WorkGiver[] { new FellWorkGiver(), new MineWorkGiver(), new HaulWorkGiver() };
 
         public void Tick(SimWorld world)
         {

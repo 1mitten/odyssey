@@ -146,6 +146,22 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Cost units accumulated toward the next step.</summary>
         public int MoveProgress { get; internal set; }
 
+        /// <summary>
+        /// What the step now in progress costs, in the same units as <see cref="MoveProgress"/>.
+        ///
+        /// <para><b>Derived, and deliberately outside the hash and the save.</b> The movement
+        /// system recomputes it from the graph every tick it advances a pawn, so storing it would
+        /// be storing an answer the world can already give — and a saved copy that disagreed with
+        /// a rebuilt graph would be a divergence nothing could explain.</para>
+        ///
+        /// <para>It exists for presentation. The published move percentage used to be the raw
+        /// progress clamped to 100, which is exact for a flat cell at 100 units and wrong for
+        /// everything dearer: a ladder down costs 400, so the drawn figure completed its whole
+        /// descent in the first quarter of the step and then stood frozen at the bottom for the
+        /// other three — which is most of what "colonists float down slowly" was.</para>
+        /// </summary>
+        public int MoveStepCost { get; internal set; } = Pathing.MoveCost.Orthogonal;
+
         /// <summary>Where the pawn is trying to get to, or -1.</summary>
         public int Destination { get; internal set; } = -1;
 
