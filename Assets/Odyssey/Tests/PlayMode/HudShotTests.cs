@@ -115,12 +115,20 @@ namespace Odyssey.Tests.PlayMode
                 File.WriteAllBytes(Path.GetFullPath("Logs/hud-a1.png"), close.EncodeToPNG());
                 Object.Destroy(close);
 
+                // Reported in physical pixels, because that is the units the complaint that led to
+                // the interface-scale setting was made in: type that subtends the right angle can
+                // still read as too small on a large panel. The shell swaps in its own copy of the
+                // panel settings so the scale can move without writing to the asset, so the live
+                // one is read off the document rather than off the instance built above.
+                PanelSettings live = doc.panelSettings;
+                float scale = Mathf.Sqrt(
+                    (target.width / (float)live.referenceResolution.x) *
+                    (target.height / (float)live.referenceResolution.y));
                 Debug.Log($"[HudShot] {target.width}x{target.height} to Logs/hud-shot.png; " +
-                          $"scale mode {settings.scaleMode}, reference {settings.referenceResolution}. " +
-                          $"An 11 px label in Hud.uss lands at about " +
-                          $"{11f * Mathf.Sqrt((target.width / 1200f) * (target.height / 800f)):0.0} px here, " +
-                          $"and a 9 px one at about " +
-                          $"{9f * Mathf.Sqrt((target.width / 1200f) * (target.height / 800f)):0.0} px.");
+                          $"scale mode {live.scaleMode}, reference {live.referenceResolution}, " +
+                          $"panel scale {scale:0.00}x. Body text (13 px) lands at " +
+                          $"{13f * scale:0.0} physical px here, the panel label (11 px) at " +
+                          $"{11f * scale:0.0}, and the clock (24 px) at {24f * scale:0.0}.");
 
                 // And again with the architect palette open, since it is hidden until the
                 // bottom bar opens it and a picture of the closed state cannot show it at all.
@@ -137,6 +145,26 @@ namespace Odyssey.Tests.PlayMode
                     RenderTexture.active = previous;
                     File.WriteAllBytes(Path.GetFullPath("Logs/hud-architect.png"), open.EncodeToPNG());
                     Object.Destroy(open);
+                }
+
+                // And the settings panel, which is likewise hidden until asked for. It is the one
+                // panel whose whole purpose is to be judged by eye — every look decision this
+                // project has made ended wanting the owner's eye in the play scene, and this is
+                // the surface that turns a session per question into a question per session.
+                var panel = doc.rootVisualElement.Q(className: "settings");
+                if (panel != null)
+                {
+                    if (palette != null) palette.style.display = DisplayStyle.None;
+                    panel.style.display = DisplayStyle.Flex;
+                    for (int i = 0; i < 10; i++) yield return null;
+
+                    RenderTexture.active = target;
+                    var shot = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+                    shot.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                    shot.Apply();
+                    RenderTexture.active = previous;
+                    File.WriteAllBytes(Path.GetFullPath("Logs/hud-settings.png"), shot.EncodeToPNG());
+                    Object.Destroy(shot);
                 }
 
                 Object.Destroy(image);

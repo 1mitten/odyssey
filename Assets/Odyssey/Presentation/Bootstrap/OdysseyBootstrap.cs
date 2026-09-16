@@ -121,6 +121,17 @@ namespace Odyssey.Presentation.Bootstrap
         [Range(40f, 400f)]
         public float groundReliefPeriod = 150f;
 
+        [Tooltip("Fade whatever stands between the camera and a selected colonist, so a tree cannot hide the person you are watching.")]
+        public bool seeThroughToSelection = true;
+
+        [Tooltip("How wide the beam to a selected colonist is, in metres. It stands for the width of the person, not the thickness of the line.")]
+        [Range(0.2f, 3f)]
+        public float seeThroughRadius = SightLines.DefaultRadius;
+
+        [Tooltip("How solid an occluder in the way is left. 0 would be invisible; a hint of what is there reads better than a hole.")]
+        [Range(0f, 1f)]
+        public float seeThroughAlpha = ChunkRenderer.DefaultSightFadeAlpha;
+
         [Header("Tick")]
         [Tooltip("Ticks per second at speed 1. The simulation has no notion of seconds; this is it.")]
         public int ticksPerSecond = 60;
@@ -537,11 +548,17 @@ namespace Odyssey.Presentation.Bootstrap
             _frameTimer.Restart();
             // The rig sits on the camera, so its position is the viewer's.
             if (cameraRig != null) _renderer.ViewerPosition = cameraRig.transform.position;
+            int movePerTick = PawnContent.Core().Movement.movePerTick;
+
+            // Before the world is submitted, because it decides how part of the world is drawn.
+            // It reads the figures placed on the *previous* frame, which is the one frame of lag
+            // this is worth: a tree fading a sixtieth of a second late is not observable, and
+            // placing the figures first would mean drawing the world after the people in it.
+            UpdateSightLines(_world.Views.Current, movePerTick);
             _renderer.Render(activeLayer, slice);
 
             // Figures first, because what they take is what the instanced pass must leave alone.
             // Their graphs advance on their own clock once played, so nothing is evaluated here.
-            int movePerTick = PawnContent.Core().Movement.movePerTick;
             _figures?.Sync(_world.Views.Current, activeLayer, slice, _tickAlpha, movePerTick,
                 Time.deltaTime);
 
@@ -660,6 +677,54 @@ namespace Odyssey.Presentation.Bootstrap
         /// marker, and translucent so the rock is still visible through what has come off it.
         /// </summary>
         static readonly Color CutColour = new Color(0.86f, 0.87f, 0.90f, 0.30f);
+
+        /// <summary>
+        /// The lines the renderer fades along: eye to chest, one per selected colonist.
+        ///
+        /// <para><b>The same point the bracket is drawn at and the same point the hit-test aims
+        /// at</b>, taken from the live figure where there is one and from the pose otherwise —
+        /// which matters for exactly the reason it matters there: a working colonist is stepped
+        /// off their cell towards the tree they are felling, so a line aimed at the cell would
+        /// clear the trunk that is hiding them. Three readings of one position would drift; this
+        /// is the third caller of the same two lines and they should be one method
+        /// (<c>OQ</c>-worthy, not done here).</para>
+        ///
+        /// <para>Only colonists. An item or a cell can be selected too, but a crate does not walk
+        /// behind a tree and a marked rock is drawn with a bracket that already shows through.</para>
+        /// </summary>
+        void UpdateSightLines(WorldSnapshot snapshot, int movePerTick)
+        {
+            if (_renderer == null || _model == null) return;
+            _sight.Clear();
+            _renderer.Sight = _sight;
+            _renderer.SightFadeAlpha = seeThroughAlpha;
+            _sight.Radius = seeThroughRadius;
+
+            if (!seeThroughToSelection || cameraRig == null) return;
+            SelectionDirector? selection = Directors?.Selection;
+            if (selection == null || !selection.HasPawn) return;
+
+            Vector3 eye = cameraRig.transform.position;
+            var selected = selection.Pawns;
+            for (int i = 0; i < selected.Count && i < MaxSightLines; i++)
+            {
+                if (!snapshot.TryGetPawn(selected[i], out PawnView pawn)) continue;
+                if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
+                _sight.Add(eye, feet + Vector3.up * (colonistCursor.y * 0.5f));
+            }
+        }
+
+        /// <summary>
+        /// The most lines of sight drawn at once. A box selection can hold the whole colony, and
+        /// each line costs a slab test per instance in every chunk any of them crosses — so the
+        /// cost of the feature would grow with the size of the selection, which is the one thing
+        /// it must not do. Beyond this many the player is commanding a crowd rather than watching
+        /// a person, and the first few are the ones the camera is on.
+        /// </summary>
+        const int MaxSightLines = 8;
+
+        readonly SightLines _sight = new SightLines();
 
         void DrawSelectionCursor(WorldSnapshot snapshot, int movePerTick)
         {

@@ -98,6 +98,47 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
+        /// The scene opens with the see-through fade on.
+        ///
+        /// <para>The owner asked for it on by default (2026-09-16), and "default" has three
+        /// separate homes: the field initialiser, the director's own starting state, and the
+        /// serialised scene. A field absent from the YAML falls back to the initialiser, so the
+        /// scene was quietly right for a while without ever saying so — which is precisely the
+        /// arrangement that breaks silently the next time somebody rebuilds it with the lever
+        /// off. The scene names it now, and this is the only thing that would notice before a
+        /// playtest did.</para>
+        /// </summary>
+        [Test]
+        public void TheSceneOpensWithTheSeeThroughFadeOn()
+        {
+            Assert.That(File.Exists(ScenePath), Is.True, $"{ScenePath} is missing");
+
+            Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Additive);
+            try
+            {
+                var boot = FindOne<OdysseyBootstrap>(scene);
+                Assert.That(boot, Is.Not.Null, "the scene has no OdysseyBootstrap");
+
+                Console.WriteLine(
+                    $"[Scene] see-through as loaded: on={boot.seeThroughToSelection}, " +
+                    $"radius={boot.seeThroughRadius}, alpha={boot.seeThroughAlpha}");
+
+                Assert.That(boot.seeThroughToSelection, Is.True,
+                    "the scene opens with the see-through fade off, so a colonist selected under " +
+                    "a canopy is invisible until the camera is spun to find a gap");
+
+                // Zero would be a beam of no width, which fades nothing and looks exactly like the
+                // feature being broken rather than being switched off.
+                Assert.That(boot.seeThroughRadius, Is.GreaterThan(0f));
+                Assert.That(boot.seeThroughAlpha, Is.InRange(0f, 1f));
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, removeScene: true);
+            }
+        }
+
+        /// <summary>
         /// The pieces that make the scene playable, and which of them the scene itself must carry.
         ///
         /// <para><c>SelectionPresenter</c> must: nothing adds it at runtime, so a scene without it

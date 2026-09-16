@@ -11,6 +11,20 @@ dropped, mirroring how brief §5 treats simulation systems.
 **Clean room.** Every name here is ours. Nothing is copied from the reference game's text,
 labels or flavour. The taxonomy behind it is `docs/research/g-01-ui-information-design.md`.
 
+**B17, the settings panel, is tabbed since 2026-09-16**: an *Interface* section holding the
+interface-scale ladder, and the *Graphics* section it already had. It opens on Interface, because
+the first thing a player wants from a settings panel on a large monitor is to make the type bigger.
+
+**What the built HUD looks like is `docs/design/14-hud-layout.md`**, since the rebuild of
+2026-09-16. This file still says what each region *is* and what it will eventually hold; that one
+says how it is drawn and measured. Four entries here are overtaken by it and are worth knowing about
+before reading them: **A3 and A4 are one panel**, because two panels in the same corner is how the
+clock came to bury the speed buttons; **A7 is a palette opened by the Build command and closed by
+Escape**, not a permanently open column; **A12's overlay toggles live in the Menu popup**, labelled
+and disabled with their reason, rather than as unlabelled chips at the end of the bottom bar; and
+**A5 is hidden entirely when there is nothing to say** rather than printing that there is nothing to
+say. The region letters themselves are debug strings now and never reach the screen.
+
 ---
 
 ## Screen map

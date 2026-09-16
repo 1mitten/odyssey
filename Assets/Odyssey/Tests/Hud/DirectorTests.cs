@@ -330,6 +330,7 @@ namespace Odyssey.Tests.Hud
     sealed class FakeSettingsStore : ISettingsStore
     {
         readonly System.Collections.Generic.Dictionary<string, bool> _values = new();
+        readonly System.Collections.Generic.Dictionary<string, int> _numbers = new();
 
         public int Writes { get; private set; }
 
@@ -341,7 +342,17 @@ namespace Odyssey.Tests.Hud
             Writes++;
         }
 
+        public int? ReadInt(string key) => _numbers.TryGetValue(key, out int value) ? value : null;
+
+        public void WriteInt(string key, int value)
+        {
+            _numbers[key] = value;
+            Writes++;
+        }
+
         public void Preset(string key, bool value) => _values[key] = value;
+
+        public void Preset(string key, int value) => _numbers[key] = value;
     }
 
     public class SettingsDirectorTests
@@ -387,10 +398,11 @@ namespace Odyssey.Tests.Hud
             foreach (GraphicsOption option in SettingsDirector.All)
                 Assert.That(settings.IsOn(option), Is.True, $"{option} should default to drawn");
 
-            // Two are read as the frame is submitted; two are baked into the instance matrices
+            // Three are read as the frame is submitted; two are baked into the instance matrices
             // when a chunk is meshed, and the panel has to know which it is holding.
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.Shadows), Is.False);
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.Surround), Is.False);
+            Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.SeeThrough), Is.False);
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.GrassTufts), Is.True);
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.GroundRelief), Is.True);
         }

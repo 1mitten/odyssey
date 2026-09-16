@@ -109,6 +109,22 @@ namespace Odyssey.Hud
 
         CellRef _cell;
 
+        // The last cell Position was written for. The pane refreshes fifteen times a second and
+        // "at 78, 59" is an interpolated string, so without this the model allocates one per
+        // refresh for as long as anything is selected — which ADR 0003's flip condition F1
+        // forbids, and which also defeats the view's own guard, since a fresh string instance
+        // every time makes "has this changed" unanswerable by comparison.
+        CellRef _positionFor;
+        bool _positionWritten;
+
+        void SetPosition(CellRef cell)
+        {
+            if (_positionWritten && _positionFor == cell) return;
+            _positionFor = cell;
+            _positionWritten = true;
+            Position = $"at {cell.X}, {cell.Z}";
+        }
+
         /// <summary>
         /// Refill every field from the current frame. Called on the pane's cadence (15 Hz in the
         /// catalogue), and once more the moment the selection changes, so a click answers in the
@@ -131,7 +147,7 @@ namespace Odyssey.Hud
                     Food = pawn.Food;
                     Rest = pawn.Rest;
                     Mood = pawn.Mood;
-                    Position = $"at {pawn.Cell.X}, {pawn.Cell.Z}";
+                    SetPosition(pawn.Cell);
                     Layer = pawn.Cell.Y;
                 }
                 else
@@ -157,7 +173,7 @@ namespace Odyssey.Hud
                     ThingView thing = things[i];
                     Title = thing.DefIndex == ItemHandle.Meal ? "Meal" : "Salvage";
                     Subtitle = "item";
-                    Position = $"at {thing.Cell.X}, {thing.Cell.Z}";
+                    SetPosition(thing.Cell);
                     Layer = thing.Cell.Y;
                     found = true;
                     break;
@@ -170,7 +186,7 @@ namespace Odyssey.Hud
             {
                 Title = "Ground";
                 Subtitle = "cell";
-                Position = $"at {_cell.X}, {_cell.Z}";
+                SetPosition(_cell);
                 Layer = _cell.Y;
                 return;
             }
@@ -179,6 +195,7 @@ namespace Odyssey.Hud
             Title = "The holding";
             Subtitle = "nothing selected";
             Position = string.Empty;
+            _positionWritten = false;   // or a later selection on the same cell keeps the blank
             Layer = -1;
             ColonySize = snapshot.PawnCount;
             JobCounts.Clear();
