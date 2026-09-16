@@ -219,7 +219,9 @@ namespace Odyssey.Presentation.Bootstrap
                 Debug.LogError($"[Odyssey] no colonists were placed near {outcome.StartCell}: {placement}");
             int marked = ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenarioDef);
             if (marked > 0)
-                Debug.Log($"[Odyssey] {scenarioDef}: {marked} trees within {scenarioDef.startingFellRadius} cells of the start are marked for felling");
+                Debug.Log($"[Odyssey] {scenarioDef}: {marked} cells marked for work before the first tick — " +
+                          $"trees within {scenarioDef.startingFellRadius} cells of the start, and the nearest " +
+                          $"outcrop within {scenarioDef.startingMineRadius}");
 
             // One tick primes the mirror: the contributor runs in the publish phase, so until the
             // world has ticked once there is no published frame and nothing to draw.
@@ -262,6 +264,9 @@ namespace Odyssey.Presentation.Bootstrap
             _figures = new PawnFigureDirector(moduleCatalogue, transform, gameObject.layer)
             {
                 LookSalt = lookSalt,
+                // So a climbing figure can find the block it is climbing against. The same mirror
+                // the chunk renderer meshes from, so the rock it is pressed to is the rock drawn.
+                World = _model,
             };
 
             Directors = new HudDirectors(size.SizeY, outcome.StartCell.Y);
@@ -374,6 +379,7 @@ namespace Odyssey.Presentation.Bootstrap
                 _renderer.RenderActors(_world.Views.Current, activeLayer, slice, _actorMaterial,
                     _tickAlpha, movePerTick, _figures?.Drawn);
 
+            DrawStandingOrders(_world.Views.Current);
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
@@ -418,6 +424,58 @@ namespace Odyssey.Presentation.Bootstrap
         /// rig deliberately has no access to it; the rig's own cell cursor is switched off for
         /// good rather than negotiated frame by frame.
         /// </summary>
+        /// <summary>
+        /// Every standing order on the drawn layer, and how far through it the colony is.
+        ///
+        /// <para><b>Nothing drew these at all.</b> The designation channel has been published
+        /// since designations existed and no part of presentation ever read it, so a marked cell
+        /// looked exactly like an unmarked one and the only way to know what had been ordered was
+        /// to watch somebody walk to it. A bracket says the order is there; the cut slab says how
+        /// far along it is (owner, 2026-09-16 — "some graphical indication").</para>
+        ///
+        /// <para>Per order rather than per cell of the board: the channel is a layer's worth of
+        /// bytes but the loop only draws the ones that carry an order, which on any real board is
+        /// tens of cells out of sixty thousand.</para>
+        /// </summary>
+        void DrawStandingOrders(WorldSnapshot snapshot)
+        {
+            if (_renderer == null) return;
+
+            System.ReadOnlySpan<byte> orders = snapshot.Designations;
+            System.ReadOnlySpan<byte> progress = snapshot.DesignationProgress;
+            if (orders.Length == 0) return;
+
+            GridSize size = snapshot.Size;
+            int layer = snapshot.SliceLayer;
+
+            for (int i = 0; i < orders.Length; i++)
+            {
+                if (orders[i] == 0) continue;
+
+                int x = i % size.SizeX;
+                int z = i / size.SizeX;
+                var cell = new CellRef(x, z, layer);
+
+                Color tint = orders[i] == (byte)DesignationKind.Mine ? MineOrderColour : FellOrderColour;
+                _renderer.DrawCellMark(cell, tint);
+
+                if (i < progress.Length && progress[i] > 0)
+                    _renderer.DrawCellCut(cell, progress[i] / 255f, CutColour);
+            }
+        }
+
+        /// <summary>Marks a cell ordered dug. Warm, against the cool stone it is drawn over.</summary>
+        static readonly Color MineOrderColour = new Color(0.95f, 0.72f, 0.32f, 0.42f);
+
+        /// <summary>Marks a tree ordered felled.</summary>
+        static readonly Color FellOrderColour = new Color(0.55f, 0.85f, 0.45f, 0.42f);
+
+        /// <summary>
+        /// The cut itself: pale, so it reads as fresh broken stone rather than as a coloured
+        /// marker, and translucent so the rock is still visible through what has come off it.
+        /// </summary>
+        static readonly Color CutColour = new Color(0.86f, 0.87f, 0.90f, 0.30f);
+
         void DrawSelectionCursor(WorldSnapshot snapshot, int movePerTick)
         {
             if (_renderer == null || _model == null || cameraRig == null) return;

@@ -35,6 +35,17 @@ namespace Odyssey.Sim.Worldgen.Natural
         }
     }
 
+    /// <summary>
+    /// A sealed void carved in the rock: the cell the carve started from, and how many cells it
+    /// opened. There is no mouth — nothing connects it to the surface, and a colonist reaches it
+    /// only by mining into it.
+    /// </summary>
+    public readonly struct CavernChamber
+    {
+        public readonly int CellIndex, Cells;
+        public CavernChamber(int cellIndex, int cells) { CellIndex = cellIndex; Cells = cells; }
+    }
+
     /// <summary>A lump of ore grown inside the rock strata. Kind indexes <see cref="NaturalContent.Ores"/>.</summary>
     public readonly struct OreDeposit
     {
@@ -65,6 +76,8 @@ namespace Odyssey.Sim.Worldgen.Natural
         public int TreesClearedForStart;
         public int Outcrops;
         public int OutcropCells;
+        public int Caverns;
+        public int CavernCells;
         public int OreDeposits;
         public int OreCells;
 
@@ -112,7 +125,8 @@ namespace Odyssey.Sim.Worldgen.Natural
         public override string ToString() =>
             $"surface {SurfaceMinY}..{SurfaceMaxY}, grass {GrassCells}, patches " +
             $"{BareEarthCells + GravelCells + SandCells}, trees {Trees}, outcrops {Outcrops}/{OutcropCells}, " +
-            $"ore {OreDeposits}/{OreCells}, water {WaterShapes}/{WaterCells} " +
+            $"caverns {Caverns}/{CavernCells}, ore {OreDeposits}/{OreCells}, " +
+            $"water {WaterShapes}/{WaterCells} " +
             $"({ShallowWaterCells} shallow, {DeepWaterCells} deep, {MarshCells} marsh, {Fords} fords), " +
             $"start {StartCell}";
     }
@@ -250,7 +264,32 @@ namespace Odyssey.Sim.Worldgen.Natural
 
         public List<TreePlacement> Trees { get; } = new List<TreePlacement>();
         public List<RockOutcrop> Outcrops { get; } = new List<RockOutcrop>();
+        public List<CavernChamber> Caverns { get; } = new List<CavernChamber>();
         public List<OreDeposit> OreDeposits { get; } = new List<OreDeposit>();
+
+        /// <summary>
+        /// Every carved cavern cell, in carve order. The ore pass reads it to hang deposits on
+        /// chamber walls, and the consistency check reads it to know which holes were meant.
+        ///
+        /// A list rather than a set: it is appended in a fixed order and indexed by position, so
+        /// nothing here can become an unordered iteration that quietly reorders a map.
+        /// </summary>
+        public List<int> CavernCells { get; } = new List<int>();
+
+        bool[]? _carved;
+
+        /// <summary>Records a carved cell. The flag array is allocated only if a map has caverns.</summary>
+        public void Carve(int index)
+        {
+            _carved ??= new bool[Size.CellCount];
+            if (_carved[index]) return;
+            _carved[index] = true;
+            CavernCells.Add(index);
+            SetTerrain(index, NaturalContent.TerrainAir);
+        }
+
+        /// <summary>Was this cell hollowed out by the cavern pass? The one hole the column rule allows.</summary>
+        public bool IsCavern(int index) => _carved != null && _carved[index];
 
         public int Column(int x, int z) => z * Size.SizeX + x;
         public int Index(int x, int z, int y) => Size.Index(x, z, y);
@@ -341,5 +380,17 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// existed and a map generated with <c>water = false</c> is bit-identical to an old one.
         /// </summary>
         Water = 8,
+
+        /// <summary>
+        /// Added after the others. The value continues the run rather than being slotted in beside
+        /// the pass it belongs to, because these numbers seed the streams: renumbering
+        /// <see cref="Ore"/> to make room would reroll every ore deposit on every existing map.
+        ///
+        /// <para><b>Nine, not eight, and the reason is a merge.</b> This and <see cref="Water"/>
+        /// were written on separate branches and both took 8. Two purposes on one value is two
+        /// passes drawing from the same stream, which is the determinism leak this enum exists to
+        /// prevent. Water landed first and keeps the number it shipped with.</para>
+        /// </summary>
+        Caverns = 9,
     }
 }

@@ -63,6 +63,34 @@ namespace Odyssey.Sim.World
         /// <summary>An edifice that blocks movement, such as a wall or a closed door.</summary>
         public bool IsBlockedByEdifice(int index) => (Flags[index] & CellFlags.BlockingEdifice) != 0;
 
+        /// <summary>Has the colony seen what this cell is made of? See <see cref="CellFlags.Discovered"/>.</summary>
+        public bool IsDiscovered(int index) => (Flags[index] & CellFlags.Discovered) != 0;
+
+        /// <summary>
+        /// Open a cell up: everything solid that touches it face to face is now known.
+        ///
+        /// Six neighbours, not twenty-six. A colonist who cuts a shaft past the corner of a seam
+        /// has not seen into it, and counting diagonals would reveal ore through an edge that no
+        /// face was ever cut in.
+        /// </summary>
+        public void RevealAround(int index)
+        {
+            int stride = Size.LayerStride;
+            CellRef at = FromIndex(index);
+
+            if (at.X > 0) Reveal(index - 1);
+            if (at.X < Size.SizeX - 1) Reveal(index + 1);
+            if (at.Z > 0) Reveal(index - Size.SizeX);
+            if (at.Z < Size.SizeZ - 1) Reveal(index + Size.SizeX);
+            if (at.Y > 0) Reveal(index - stride);
+            if (at.Y < Size.SizeY - 1) Reveal(index + stride);
+        }
+
+        void Reveal(int index)
+        {
+            if (IsSolidTerrain(index)) Flags[index] |= CellFlags.Discovered;
+        }
+
         /// <summary>
         /// Take whatever stands in the cell out of the world: the handle goes, and so does the
         /// blocking flag. The placement list keeps its slot, so other handles stay valid. A caller
@@ -90,6 +118,34 @@ namespace Odyssey.Sim.World
             if (Floor[index] != 0) return true;
             int below = index - Size.LayerStride;
             return below >= 0 && IsSolidTerrain(below);
+        }
+
+        /// <summary>
+        /// The cell itself if it has something to stand on, else the first one below it that does.
+        ///
+        /// <para>Where a thing ends up when whatever it was resting on is taken away. It is the
+        /// bottom of the fall and not the length of it: a drop of three layers and a drop of one
+        /// both finish on the first real floor, because nothing in this game bounces.</para>
+        ///
+        /// <para>Falls out of the bottom of the world onto the lowest cell of the column rather
+        /// than returning -1. There is no floor below layer nought and never will be, so a caller
+        /// asking "where does this land" wants an answer it can put something in; the alternative
+        /// is every caller writing the same guard and one of them forgetting.</para>
+        ///
+        /// <para>Note that this asks the <em>cell</em> grid, which knows about slabs and solid
+        /// ground and nothing else. A ladder makes a cell standable to navigation but is not a
+        /// floor, and a stack of stone left on a rung would be resting on air.</para>
+        /// </summary>
+        public int FirstFloorAtOrBelow(int index)
+        {
+            int at = index;
+            while (!HasFloor(at))
+            {
+                int below = at - Size.LayerStride;
+                if (below < 0) return at;
+                at = below;
+            }
+            return at;
         }
 
         /// <summary>Is this cell covered? A slab one layer up is what makes it roofed.</summary>
@@ -139,6 +195,31 @@ namespace Odyssey.Sim.World
         /// <see cref="CellGrid.IsWalkable"/> and <c>NavGrid.RefreshFrom</c> are the only readers.
         /// </summary>
         ImpassableTerrain = 1 << 5,
+
+        /// <summary>
+        /// The colony has seen what this cell is made of. Set on every solid neighbour of a cell
+        /// that is mined out, and never cleared.
+        ///
+        /// <para>It exists for ore: a seam is drawn as plain rock until a face of it is exposed,
+        /// so finding one is worth something and a tunnel is a free look at a lot of rock
+        /// (<c>docs/research/mining-interview.md</c>, answer 8). Nothing is discovered when the
+        /// map is generated — not even the ore lining a cavern wall, which nobody has been in.</para>
+        ///
+        /// <para><b>Authored, not derived, and that is the deliberate part.</b> It would be
+        /// tempting to compute it — "an ore cell with an open neighbour" — and keep it out of the
+        /// save and the hash the way <see cref="CellGrid.Support"/> and <see cref="CellGrid.Region"/>
+        /// are kept out. But it is a one-way latch: a seam the colony has seen and then walled
+        /// back up is still a seam the colony knows about, and a derived bit would forget it the
+        /// moment the wall went up and remember it again when the wall came down. Knowledge is
+        /// history, so it is state, so it is hashed and saved like the rest of the flags.</para>
+        ///
+        /// <para><b>Bit six, not bit five, and the reason is a merge.</b> This and
+        /// <see cref="ImpassableTerrain"/> were written on separate branches and both took
+        /// <c>1 &lt;&lt; 5</c>. These flags are hashed and saved, so the numbering is part of the
+        /// save contract and two meanings on one bit is a world that loads as a different world.
+        /// Deep water landed first and keeps the bit it shipped with; this one moves.</para>
+        /// </summary>
+        Discovered = 1 << 6,
     }
 
     /// <summary>

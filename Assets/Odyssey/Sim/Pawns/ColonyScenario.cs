@@ -55,6 +55,36 @@ namespace Odyssey.Sim.Pawns
         public int startingFellRadius = 10;
 
         /// <summary>
+        /// The nearest rock outcrop within this many cells of the start is marked for mining
+        /// before the first tick. Zero marks nothing.
+        ///
+        /// <para>It exists for the same reason <see cref="startingFellRadius"/> does: there is no
+        /// tool to give the order with yet, and a feature nobody can reach is a feature nobody can
+        /// judge. The radius is generous because outcrops are scattered thinly — twenty-three over
+        /// a 120-cell board — and a playtest where the nearest stone is off in the trees shows
+        /// nothing at all.</para>
+        /// </summary>
+        public int startingMineRadius = 30;
+
+        /// <summary>
+        /// How many outcrops near the start are marked for mining.
+        ///
+        /// <para>One was not enough by a long way. A single outcrop is about a dozen cells; the
+        /// colony worked through it in six game-hours and then never mined again, while the trees
+        /// beside it kept five colonists busy all day. Three gives mining roughly the standing the
+        /// felling order has, which is "enough to watch" rather than "enough to finish"
+        /// (owner, 2026-09-16: no stone was appearing on the floor at all).</para>
+        /// </summary>
+        public int startingMineOutcrops = 3;
+
+        /// <summary>
+        /// How many of the starting colonists take mining as their first call, the rest taking
+        /// cutting. Zero leaves every colonist on the default priority, which sends them all to
+        /// the trees together.
+        /// </summary>
+        public int miners = 2;
+
+        /// <summary>
         /// Which storey the meals go on, counted from the start layer. Zero is the layer the
         /// colony wakes up on, which is where everything went before these existed.
         ///
@@ -86,7 +116,11 @@ namespace Odyssey.Sim.Pawns
         /// order nobody gave is not part of the simulation they are proving.
         /// </summary>
         public static ScenarioDef Bare() =>
-            new ScenarioDef { defName = "Scenario_Bare", label = "bare", startingFellRadius = 0 };
+            new ScenarioDef
+            {
+                defName = "Scenario_Bare", label = "bare",
+                startingFellRadius = 0, startingMineRadius = 0, startingMineOutcrops = 0, miners = 0,
+            };
     }
 
     /// <summary>
@@ -104,12 +138,106 @@ namespace Odyssey.Sim.Pawns
     {
         /// <summary>
         /// The standing orders a scenario starts with, given before the first tick. Returns how
-        /// many trees were marked; zero when the scenario gives none.
+        /// many cells were marked in total; zero when the scenario gives none.
         /// </summary>
-        public static int GiveStartingOrders(Designations.DesignationGrid designations, CellRef start, ScenarioDef scenario) =>
-            scenario.startingFellRadius > 0
-                ? DesignateTreesNear(designations, start, scenario.startingFellRadius)
-                : 0;
+        public static int GiveStartingOrders(Designations.DesignationGrid designations, CellRef start, ScenarioDef scenario)
+        {
+            int marked = 0;
+            if (scenario.startingFellRadius > 0)
+                marked += DesignateTreesNear(designations, start, scenario.startingFellRadius);
+            if (scenario.startingMineRadius > 0 && scenario.startingMineOutcrops > 0)
+                marked += DesignateOutcropsNear(designations, start,
+                    scenario.startingMineRadius, scenario.startingMineOutcrops);
+            return marked;
+        }
+
+        /// <summary>
+        /// Mark the nearest rock outcrop to the start for mining: find the closest minable stone
+        /// standing at or above the start layer, then mark everything that belongs to the same
+        /// lump. Returns how many cells were marked.
+        ///
+        /// <para>Above the start layer, so this only ever finds an <em>outcrop</em> — stone
+        /// standing on the ground where a colonist can walk up to it and swing. The rock beneath
+        /// the subsoil is out of reach until somebody has dug a way down, and marking a cell
+        /// nobody can reach would give the colony an order it can never take.</para>
+        ///
+        /// <para>The lump is taken as everything minable within
+        /// <see cref="OutcropLumpRadius"/> of the first cell found, which matches how the outcrop
+        /// pass builds one — a tapering mound of radius one to three. It is a scenario choice
+        /// rather than a player command, so it writes the grid directly rather than queueing
+        /// intents.</para>
+        /// </summary>
+        public static int DesignateOutcropsNear(Designations.DesignationGrid designations, CellRef start,
+            int radius, int wanted)
+        {
+            int marked = 0;
+            for (int i = 0; i < wanted; i++)
+            {
+                int got = DesignateOutcropNear(designations, start, radius);
+                // Nothing left within reach that is not already ordered: stop rather than spin.
+                if (got == 0) break;
+                marked += got;
+            }
+            return marked;
+        }
+
+        /// <summary>
+        /// Mark the nearest unordered rock outcrop to the start for mining: find the closest
+        /// minable stone at or above the start layer that carries no order yet, then mark
+        /// everything belonging to the same lump. Returns how many cells were marked.
+        ///
+        /// <para>Above the start layer, so this only ever finds an <em>outcrop</em> — stone
+        /// standing on the ground that a colonist can walk up to and swing at. The rock beneath
+        /// the subsoil is out of reach until somebody has dug down to it, and an order nobody can
+        /// take is worse than no order.</para>
+        ///
+        /// <para>It is a scenario choice rather than a player command, so it writes the grid
+        /// directly rather than queueing intents.</para>
+        /// </summary>
+        public static int DesignateOutcropNear(Designations.DesignationGrid designations, CellRef start, int radius)
+        {
+            GridSize size = designations.Size;
+
+            int found = -1, foundDistance = int.MaxValue;
+            for (int y = start.Y - 1; y < size.SizeY; y++)
+            for (int dz = -radius; dz <= radius; dz++)
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                int x = start.X + dx, z = start.Z + dz;
+                if (!size.Contains(x, z, y)) continue;
+
+                int index = size.Index(x, z, y);
+                if (!designations.IsMinableStone(index)) continue;
+                // Already ordered, so this is a lump a previous pass took.
+                if (designations.At(index) != Designations.DesignationKind.None) continue;
+
+                int distance = System.Math.Abs(dx) + System.Math.Abs(dz) + System.Math.Abs(y - start.Y);
+                if (distance >= foundDistance) continue;
+                foundDistance = distance;
+                found = index;
+            }
+
+            if (found < 0) return 0;
+
+            CellRef at = size.FromIndex(found);
+            int count = 0;
+            for (int dy = -OutcropLumpRadius; dy <= OutcropLumpRadius; dy++)
+            for (int dz = -OutcropLumpRadius; dz <= OutcropLumpRadius; dz++)
+            for (int dx = -OutcropLumpRadius; dx <= OutcropLumpRadius; dx++)
+            {
+                int x = at.X + dx, z = at.Z + dz, y = at.Y + dy;
+                if (!size.Contains(x, z, y)) continue;
+                if (y < start.Y - 1) continue;
+                if (!designations.IsMinableStone(size.Index(x, z, y))) continue;
+                if (designations.Designate(new CellRef(x, z, y), Designations.DesignationKind.Mine) == IntentRejection.None)
+                    count++;
+            }
+
+            return count;
+        }
+
+        /// <summary>How far from its first cell an outcrop is taken to extend. The pass makes them 1 to 3.</summary>
+        public const int OutcropLumpRadius = 3;
 
         /// <summary>
         /// Mark every tree within <paramref name="radius"/> cells of the start for felling, on the
@@ -130,6 +258,31 @@ namespace Odyssey.Sim.Pawns
                 if (designations.Designate(cell, Designations.DesignationKind.Fell) == IntentRejection.None) marked++;
             }
             return marked;
+        }
+
+
+        /// <summary>
+        /// Give a colonist a trade: the first <see cref="ScenarioDef.miners"/> of them favour
+        /// mining, the rest favour cutting.
+        ///
+        /// <para><b>Why this exists at all.</b> Every work priority starts at 3, and the givers are
+        /// scanned in work-type order — cutting, then mining, then hauling. So a colony of five
+        /// identical colonists all go to the trees, and the stone is not touched until the last
+        /// tree within reach is down. Watching both happen at once is the whole point of having
+        /// two kinds of work, and until the player can set priorities from the interface the
+        /// scenario has to do it, exactly as it has to give the first orders.</para>
+        ///
+        /// <para>The trade is a priority, not a restriction: a miner with no reachable rock left
+        /// still fells, hauls and eats. Priority 1 is scanned before 2, so the split decides what
+        /// a colonist reaches for first and nothing else.</para>
+        /// </summary>
+        static void AssignTrade(Pawn colonist, int index, ScenarioDef scenario)
+        {
+            if (scenario.miners <= 0) return;
+
+            bool miner = index < scenario.miners;
+            colonist.WorkPriorities[WorkTypeIndex.Mining] = (byte)(miner ? 1 : 3);
+            colonist.WorkPriorities[WorkTypeIndex.Cutting] = (byte)(miner ? 3 : 1);
         }
 
         /// <summary>What a placement actually managed to do, so a caller can check rather than hope.</summary>
@@ -367,7 +520,11 @@ namespace Odyssey.Sim.Pawns
                 if (spot < 0) break;
                 // Passions come from the seed and the pawn's own id, not from this placement
                 // stream, so rolling them does not move the salvage that is scattered below.
-                pawns.Pawns.Spawn(spot).RollPassions(seed);
+                // Main's storey-aware spot, this branch's trade split: a scenario now says
+                // which floor a colonist starts on AND which of them mine rather than cut.
+                Pawn colonist = pawns.Pawns.Spawn(spot);
+                colonist.RollPassions(seed);
+                AssignTrade(colonist, i, scenario);
                 placedColonists++;
             }
 
