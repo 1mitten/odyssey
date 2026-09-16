@@ -5,11 +5,14 @@ using Odyssey.Sim.Designations;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// Take a loose thing to a stockpile.
+    /// Take a thing to a stockpile: a loose one to any pile that will have it, or a stored one
+    /// to a better pile than it is in.
     ///
     /// Toils: walk to the thing, pick it up, walk to the destination, put it down. Both the thing
     /// and the destination cell are claimed up front, which is what stops two haulers setting off
-    /// for the same crate or for the same empty square.
+    /// for the same crate or for the same square. The destination may already hold a stack of
+    /// the same def: the load merges into it, and the cell claim is what keeps a second hauler
+    /// from counting on the same room.
     /// </summary>
     public class HaulJobDriver : JobDriver
     {
@@ -17,7 +20,7 @@ namespace Odyssey.Sim.Pawns
         {
             var item = ctx.Items.Get(Job.TargetItem);
             if (item == null || item.Cell < 0) return false;
-            if (!ctx.Items.CellHasSpace(Job.DestCell)) return false;
+            if (!ctx.Items.CellHasSpace(Job.DestCell, item.DefIndex, item.Stack)) return false;
 
             long itemKey = ReservationManager.Key(ReservationTargetKind.Item, Job.TargetItem.Value);
             long cellKey = ReservationManager.Key(ReservationTargetKind.Cell, Job.DestCell);
@@ -56,6 +59,10 @@ namespace Odyssey.Sim.Pawns
 
                 case 2:
                 {
+                    // The carry is the work of a haul. The walk to the thing is not counted,
+                    // because the pawn is not hauling yet; the drop is one tick and is not
+                    // counted either, so the experience is bounded by the carry alone.
+                    Work(ctx);
                     JobStatus walk = GotoCell(ctx, Job.DestCell);
                     if (walk == JobStatus.Succeeded) NextToil();
                     return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
@@ -63,7 +70,9 @@ namespace Odyssey.Sim.Pawns
 
                 default:
                 {
-                    if (!ctx.Items.CellHasSpace(Job.DestCell)) return JobStatus.Failed;
+                    // Checked again on arrival: something may have been dropped or eaten here
+                    // meanwhile, and the cell claim guards against haulers, not against eaters.
+                    if (!ctx.Items.CellHasSpace(Job.DestCell, item.DefIndex, item.Stack)) return JobStatus.Failed;
                     ctx.Items.Drop(item, Job.DestCell);
                     Job.CarriedItem = -1;
                     return JobStatus.Succeeded;
@@ -74,13 +83,25 @@ namespace Odyssey.Sim.Pawns
         public override void Cleanup(PawnContext ctx, JobStatus status)
         {
             // A job that fails mid-carry must put the thing down somewhere real. Anything else
-            // deletes it, and a ten-day run would quietly eat the colony's stores.
+            // deletes it, and a ten-day run would quietly eat the colony's stores. Where the
+            // pawn stands is the first choice, then the nearest cell that can take the load;
+            // it used to fall back to the cell the thing was carried from, which is -1 while
+            // it is carried, and the thing then existed nowhere at all.
             if (Job.CarriedItem < 0) return;
             var item = ctx.Items.Get(new ThingId(Job.CarriedItem));
             Job.CarriedItem = -1;
             if (item == null) return;
-            ctx.Items.Drop(item, ctx.Items.CellHasSpace(Pawn.Cell) ? Pawn.Cell : item.Cell);
+
+            int at = ctx.Items.NearestCellWithSpace(ctx.Cells, Pawn.Cell, item.DefIndex, item.Stack, DropSearchRadius);
+            // A board with no room within that radius is packed solid with things, which
+            // nothing in the game can produce; losing the load is the least bad answer, because
+            // putting it down on top of something else would corrupt the cell index.
+            if (at >= 0) ctx.Items.Drop(item, at);
+            else ctx.Items.Despawn(item);
         }
+
+        /// <summary>Cells to search outward for somewhere to put a failed haul's load down.</summary>
+        public const int DropSearchRadius = 8;
     }
 
     /// <summary>Walk to food, eat it, remember having done so.</summary>
@@ -254,6 +275,7 @@ namespace Odyssey.Sim.Pawns
             }
 
             ToilProgress++;
+            Work(ctx);
             if (ToilProgress < ctx.Content.Jobs[Job.DefIndex].workTicks) return JobStatus.Ongoing;
 
             designations.Clear(cell);
@@ -294,32 +316,14 @@ namespace Odyssey.Sim.Pawns
             ctx.Cells.RemoveEdifice(cell);
             ctx.Chunks?.MarkDirty(ctx.Size.FromIndex(cell));
 
-            int at = FreeCellNear(ctx, cell);
-            // Nowhere within three cells to put it is a board packed solid with things, which
-            // nothing in the game can produce yet; losing the wood then is the least bad answer,
-            // because spawning onto an occupied cell would corrupt the item index.
+            // Where the tree stood, or the nearest cell nearby that can take the wood — which
+            // includes a pile of wood from the tree next door with room on it, so a stand of
+            // trees comes down into a few stacks rather than a scatter of small ones. Nowhere
+            // within three cells is a board packed solid with things, which nothing in the game
+            // can produce yet; losing the wood then is the least bad answer, because spawning
+            // onto a cell that cannot take it would corrupt the cell index.
+            int at = ctx.Items.NearestCellWithSpace(ctx.Cells, cell, ItemIndex.Wood, yield, maxRadius: 3);
             if (at >= 0) ctx.Items.Spawn(ItemIndex.Wood, at, yield);
-        }
-
-        /// <summary>The cell itself, or the nearest walkable empty cell on the same layer, ring by ring.</summary>
-        static int FreeCellNear(PawnContext ctx, int cell)
-        {
-            if (ctx.Items.CellHasSpace(cell)) return cell;
-
-            GridSize size = ctx.Size;
-            CellRef origin = size.FromIndex(cell);
-            for (int radius = 1; radius <= 3; radius++)
-            for (int dz = -radius; dz <= radius; dz++)
-            for (int dx = -radius; dx <= radius; dx++)
-            {
-                if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dz)) != radius) continue;
-                int x = origin.X + dx, z = origin.Z + dz;
-                if (!size.Contains(x, z, origin.Y)) continue;
-                int candidate = size.Index(x, z, origin.Y);
-                if (!ctx.Cells.IsWalkable(candidate) || !ctx.Items.CellHasSpace(candidate)) continue;
-                return candidate;
-            }
-            return -1;
         }
     }
 }

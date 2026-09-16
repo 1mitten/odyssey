@@ -91,8 +91,6 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Ceiling on catch-up ticks in one frame, so a stall cannot spiral.")]
         public int maxTicksPerFrame = 8;
 
-        [Header("Diagnostics")]
-        public bool showReadout = true;
 
         SimWorld? _world;
         CellGrid? _grid;
@@ -416,7 +414,10 @@ namespace Odyssey.Presentation.Bootstrap
 
         void OnGUI()
         {
-            if (!showReadout || _renderer == null || _world == null || _model == null) return;
+            // The developer overlay (A15) is state on the overlay director, off by default and
+            // toggled by the backtick key; this is the one region immediate mode is permitted in.
+            if (Directors == null || !Directors.Overlays.DeveloperVisible) return;
+            if (_renderer == null || _world == null || _model == null) return;
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;
             AboveMode above = cameraRig != null ? cameraRig.slice.above : AboveMode.Xray;
 

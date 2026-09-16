@@ -70,7 +70,8 @@ namespace Odyssey.Presentation.Ui
         readonly List<CardView> _cards = new List<CardView>();
         VisualElement _rosterHost = null!;
         VisualElement _rulerRows = null!;
-        readonly List<RulerRowView> _rulerRowViews = new List<RulerRowView>();
+        readonly List<RulerTickView> _rulerTicks = new List<RulerTickView>();
+        Label _rulerActive = null!;
         Label _clockTime = null!;
         Label _clockDate = null!;
         readonly List<VisualElement> _speedButtons = new List<VisualElement>();
@@ -100,11 +101,11 @@ namespace Odyssey.Presentation.Ui
             public VisualElement Bar;
         }
 
-        struct RulerRowView
+        struct RulerTickView
         {
             public VisualElement Root;
-            public Label Count;
-            public VisualElement PipFill;
+            public VisualElement Dot;
+            public int Layer;
         }
 
         sealed class NeedViews
@@ -569,14 +570,21 @@ namespace Odyssey.Presentation.Ui
         void BuildRuler()
         {
             var region = Region(_hud, "A11 · DEPTH", "slot-ruler");
+            _rulerActive = Label(string.Empty, "ruler__active");
+            region.Add(_rulerActive);
             _rulerRows = new VisualElement();
             _rulerRows.AddToClassList("ruler");
             region.Add(_rulerRows);
-            region.Add(Label(
-                "Click a layer to move the slice · Page Up / Page Down, or R / F · Home frames it.",
-                "ruler__foot"));
+            region.Add(Label("R / F · Home", "ruler__foot"));
         }
 
+        /// <summary>
+        /// One bar, one step per layer, the top step the top layer: a depth ruler reads like a
+        /// ruler. A step is the whole width so it can be clicked at any zoom; the active step is
+        /// lit, the surface step carries a mark, and a step with colonists on it carries a dot
+        /// whose tooltip says how many. The row-per-layer list this replaces took the space of
+        /// a panel to say what a scale says at a glance.
+        /// </summary>
         void RefreshRuler()
         {
             if (_directors == null) return;
@@ -584,46 +592,40 @@ namespace Odyssey.Presentation.Ui
             if (world == null) return;
             _ruler.Refresh(world.Views.Current, _directors.Slice.ActiveLayer, _surfaceLayer);
 
-            // Rows are built once, from the layer count of the first frame with a world in it.
-            while (_rulerRowViews.Count < _ruler.Rows.Count)
+            // Steps are built once, from the layer count of the first frame with a world in it,
+            // and added top layer first so the bar reads downwards like depth does.
+            while (_rulerTicks.Count < _ruler.Rows.Count)
             {
-                int layer = _ruler.Rows[_rulerRowViews.Count].Layer;
-                var row = new VisualElement();
-                row.AddToClassList("ruler__row");
-                row.Add(Label(layer.ToString(), "ruler__label"));
-                var pip = new VisualElement();
-                pip.AddToClassList("ruler__pip");
-                var fill = new VisualElement();
-                fill.AddToClassList("ruler__pipfill");
-                pip.Add(fill);
-                var count = Label(string.Empty, "ruler__count");
-                var mark = new VisualElement();
-                mark.AddToClassList("ruler__mark");
-                row.Add(pip);
-                row.Add(count);
-                row.Add(mark);
+                int layer = _ruler.Rows[_ruler.Rows.Count - 1 - _rulerTicks.Count].Layer;
+                var tick = new VisualElement();
+                tick.AddToClassList("ruler__tick");
+                var dot = new VisualElement();
+                dot.AddToClassList("ruler__dot");
+                tick.Add(dot);
 
                 int clicked = layer;
-                row.RegisterCallback<ClickEvent>(_ => _directors?.Slice.SetLayer(clicked));
-                _rulerRows.Add(row);
-                _rulerRowViews.Add(new RulerRowView { Root = row, Count = count, PipFill = fill });
+                tick.RegisterCallback<ClickEvent>(_ => _directors?.Slice.SetLayer(clicked));
+                _rulerRows.Add(tick);
+                _rulerTicks.Add(new RulerTickView { Root = tick, Dot = dot, Layer = layer });
             }
-            if (_rulerRowViews.Count != _ruler.Rows.Count) return;
+            if (_rulerTicks.Count != _ruler.Rows.Count) return;
 
-            for (int i = 0; i < _ruler.Rows.Count; i++)
+            _rulerActive.text = "L" + _directors.Slice.ActiveLayer;
+
+            for (int i = 0; i < _rulerTicks.Count; i++)
             {
-                LayerRow model = _ruler.Rows[i];
-                RulerRowView view = _rulerRowViews[i];
+                RulerTickView view = _rulerTicks[i];
+                LayerRow model = _ruler.Rows[view.Layer];
 
-                view.Root.EnableInClassList("ruler__row--active", model.Active);
-                view.Count.text = model.Pawns > 0 ? model.Pawns.ToString() : string.Empty;
-                view.PipFill.style.width = Length.Percent(Mathf.Clamp01(model.Occupancy) * 100f);
+                view.Root.EnableInClassList("ruler__tick--active", model.Active);
+                view.Root.EnableInClassList("ruler__tick--surface", model.Surface);
+                view.Dot.style.display = model.Pawns > 0 ? DisplayStyle.Flex : DisplayStyle.None;
 
-                string suffix = model.Surface ? " (surface) " : " — ";
+                string surface = model.Surface ? " (surface)" : string.Empty;
                 string occupancy = model.Occupancy >= 0f
-                    ? $"{model.Occupancy * 100f:0}% of the layer is built"
+                    ? $"{model.Occupancy * 100f:0}% built"
                     : "occupancy publishes for the active slice only";
-                view.Root.tooltip = $"Layer {model.Layer}{suffix}{model.Pawns} colonists, {occupancy}";
+                view.Root.tooltip = $"Layer {model.Layer}{surface} — {model.Pawns} colonists, {occupancy}. Click to move the slice.";
             }
         }
 
@@ -829,18 +831,26 @@ namespace Odyssey.Presentation.Ui
             "ui.overlay.support", "ui.overlay.traffic",
         };
 
+        /// <summary>
+        /// A12 as a strip of icons beside the cancel affordance, not a framed panel: ten labelled
+        /// chips took a quarter of the bottom edge and read as a menu that is not open yet. The
+        /// icons are the same keys the eventual overlay menu will use, each disabled with its
+        /// reason in the tooltip until its channel renders (M4).
+        /// </summary>
         void BuildOverlays()
         {
-            var region = Region(_hud, "A12 · OVERLAYS", "slot-overlays");
-            var grid = new VisualElement();
-            grid.AddToClassList("overlays");
+            var strip = new VisualElement();
+            strip.AddToClassList("slot-overlays");
             foreach (string key in OverlayKeys)
             {
-                var chip = Off(Chip(new IconBadge(key), key[11..].Capitalise()));
-                chip.tooltip = key + " — overlay channels arrive with M4";
-                grid.Add(chip);
+                var button = new VisualElement();
+                button.AddToClassList("overlay__btn");
+                button.AddToClassList("chip--off");
+                button.Add(new IconBadge(key));
+                button.tooltip = key[11..].Capitalise() + " — overlay channels arrive with M4";
+                strip.Add(button);
             }
-            region.Add(grid);
+            _hud.Add(strip);
         }
 
         void BuildCancel()

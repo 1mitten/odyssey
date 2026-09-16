@@ -31,7 +31,6 @@ Structure-of-arrays, not an array of structs: systems touch one field across man
 | `edifice` | `int` | Handle of the wall, door or pillar occupying the cell; -1 = none |
 | `terrain` | `ushort` | Def index of the natural material — rock, fill, soil, pavement, rubble |
 | `flags` | `byte` | Bit field: reserved, forbidden, enclosed, supported-dirty, and so on |
-| `region` | `ushort` | Region id for reachability (system 18) |
 | `support` | `byte` | Cached structural support value (§4) |
 | `temp` | `short` | Temperature — M4; present in the layout from the start so it is never retrofitted |
 

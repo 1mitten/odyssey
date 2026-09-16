@@ -17,14 +17,14 @@ namespace Odyssey.Sim.Saving
     /// changed rather than the map. 25 × 25 × 5 is five render chunks stacked, and divides
     /// 250 × 250 × 40 exactly into 10 × 10 × 8 = 800 chunks with no padding.</para>
     ///
-    /// <para><b>What is not here.</b> <see cref="CellGrid.Support"/> and
-    /// <see cref="CellGrid.Region"/> are derived, and the container's rule is that derived state is
-    /// recomputed on load because a recomputed value is correct by construction whereas a saved
-    /// one can be stale. They are also excluded from <see cref="CellGrid.ContributeTo"/> for the
-    /// same reason, so saving them would put bytes in the file that the state hash does not agree
-    /// are state. <b>The load path owes a full support solve and a region rebuild</b>; until then
-    /// a freshly loaded grid has zero support everywhere, which is not the same thing as
-    /// unsupported.</para>
+    /// <para><b>What is not here.</b> <see cref="CellGrid.Support"/> is derived, and the
+    /// container's rule is that derived state is recomputed on load because a recomputed value is
+    /// correct by construction whereas a saved one can be stale. It is also excluded from
+    /// <see cref="CellGrid.ContributeTo"/> for the same reason, so saving it would put bytes in
+    /// the file that the state hash does not agree are state. Reachability lives in the
+    /// navigation graph, not on the grid, and is rebuilt from the loaded cells. <b>The load path
+    /// owes a full support solve and a navigation rebuild</b>; until then a freshly loaded grid
+    /// has zero support everywhere, which is not the same thing as unsupported.</para>
     ///
     /// <para><b>Byte stability.</b> Saving the same state twice must produce identical bytes —
     /// that is the cheap detector for unordered iteration. Palettes are therefore built in
@@ -101,10 +101,9 @@ namespace Odyssey.Sim.Saving
             LoadField(reader, (i, v) => _grid.Edifice[i] = unchecked((int)v));
             LoadField(reader, (i, v) => _grid.Flags[i] = (CellFlags)unchecked((int)v));
 
-            // Support and Region are not in the file. Zero them rather than leaving whatever the
-            // world happened to hold, so a loaded grid cannot silently keep a stale derivation.
+            // Support is not in the file. Zero it rather than leaving whatever the world
+            // happened to hold, so a loaded grid cannot silently keep a stale derivation.
             Array.Clear(_grid.Support, 0, _grid.Support.Length);
-            Array.Clear(_grid.Region, 0, _grid.Region.Length);
         }
 
         // ------------------------------------------------------------------ one field

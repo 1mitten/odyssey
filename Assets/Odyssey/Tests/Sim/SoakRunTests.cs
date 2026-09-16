@@ -51,9 +51,17 @@ namespace Odyssey.Tests.Sim
         [Test, Category("Long")]
         public void ThreeDays() => Soak(seed: 1u, ticks: 3 * Day, budgetSeconds: 0);
 
-        /// <summary>The M3 gate run: five pawns, ten in-game days, unattended.</summary>
+        /// <summary>
+        /// The M3 gate run: five pawns, ten in-game days, unattended. Three seeds rather than
+        /// one, because a run that survives one map proves less than the same run surviving
+        /// three: the colony lands somewhere different on each, and so does the salvage. The
+        /// measurements each run prints are what <c>docs/milestones/soak-runs.md</c> records.
+        /// </summary>
         [Test, Category("Long")]
-        public void TenDays() => Soak(seed: 1u, ticks: 10 * Day, budgetSeconds: 0);
+        [TestCase(1u)]
+        [TestCase(2u)]
+        [TestCase(3u)]
+        public void TenDays(uint seed) => Soak(seed, ticks: 10 * Day, budgetSeconds: 0);
 
         // ------------------------------------------------------------------ the run
 
