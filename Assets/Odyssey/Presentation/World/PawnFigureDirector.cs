@@ -2288,8 +2288,8 @@ namespace Odyssey.Presentation.World
         /// Take every tool out of every hand and fit it again.
         ///
         /// For tuning: the grip is fitted once when a figure is built, so a change to
-        /// <see cref="AxeBladeRoll"/> or <see cref="AxeGripFraction"/> would otherwise only show
-        /// on the next colonist to be given a figure. This makes a contact sheet of several
+        /// <see cref="WorkStyle.BladeRoll"/> or <see cref="WorkStyle.GripFraction"/> would
+        /// otherwise only show on the next colonist to be given a figure. This makes a contact sheet of several
         /// settings possible in one run of the editor rather than one run each.
         /// </summary>
         public void RegripTools()
@@ -2335,7 +2335,7 @@ namespace Odyssey.Presentation.World
         /// The rule that holds instead: a head is roughly symmetric about the haft along its edge
         /// and hangs off to one side along its bit, so the bit is whichever perpendicular axis the
         /// bounds centre is furthest from the haft line on — which also gives the sign for free.
-        /// <see cref="AxeBladeRoll"/> remains for a tool this is wrong about.
+        /// <see cref="WorkStyle.BladeRoll"/> remains for a tool this is wrong about.
         /// </summary>
         static Vector3 BitAxis(Bounds bounds, Vector3 haft)
         {
