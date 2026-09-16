@@ -90,6 +90,15 @@ bare board remains a bug.
 
 Every colour below already exists in `StuffPalette.TerrainSolids`; none is invented here.
 
+> **Correction, made after rendering the board (2026-09-16).** These RGB values are the
+> **no-art fallback** — what a clone without the licensed packs draws. On a machine with the packs,
+> `Rock` and `Bedrock` are textured (`Mat_Rock_01`, `Mat_Rock_Rough_01`) and their tint is white, so
+> a surface outcrop actually renders **brown**, not blue-grey. That is a pre-existing catalogue
+> choice, not something the mining work changed, and it is a look call for the owner: on screen an
+> outcrop reads more like earth than stone. **Iron ore and coal are unaffected** — they are
+> deliberately left untextured (`Block(...)`, with the comment "an ore seam has to stay findable at
+> a glance"), so they keep exactly the flat colours below plus the new emissive trim.
+
 | Material | Index | Colour (RGB) | Reads as | Work to clear | Found | Yields |
 |---|---|---|---|---|---|---|
 | Rock | 7 | `0.24, 0.25, 0.28` | dark blue-grey | 700 | Everywhere below the subsoil | Stone, **sometimes** |
