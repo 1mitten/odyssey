@@ -770,6 +770,41 @@ conclusion: a stubbing experiment "proved" the suspect loop was innocent when in
 never been applied — the file was unchanged. Read the file back, or use the Edit tool, before
 believing an experiment that depends on an edit.
 
+## Driving the mouse in a PlayMode test: three silent failures, in order
+
+`OQ-40` was blocked for a week on "mouse input cannot be driven in a PlayMode test". It can. Three
+separate things stop it, each of which looks exactly like the others from outside, and none of
+which reports anything:
+
+1. **There is no mouse.** `Mouse.current` is null in a batch run: no window, no pointer, no device.
+   Queueing state at it does nothing, and `SliceCameraRig.ReadMouse` returns immediately when the
+   device is null, so nothing downstream can be reached. `InputSystem.AddDevice<Mouse>()` fixes it.
+2. **The device you add is disabled.** `backgroundBehavior` defaults to
+   `ResetAndDisableNonBackgroundDevices` and a batch player is never focused, so the device is
+   disabled and every event is dropped. Set `InputSettings.BackgroundBehavior.IgnoreFocus` and
+   enable the device. This one is also why an early attempt looked like it worked: between adding
+   a device and focus being applied there is a window where events do land, so the same test passed
+   when it ran first and failed when it ran second.
+3. **Nothing processes the queue, and a queued event does not survive the frame.** The player loop
+   never calls `InputSystem.Update()` in a batch run, and queueing in one frame and updating in the
+   next delivers nothing — queue and update have to be one act.
+
+Then there is the observation problem on top: **a test coroutine resumes after every `Update` has
+run**, so it is always too late to see a delta control, which is spent within the frame. A
+coroutine reading `mouse.scroll` therefore cannot tell "delivered and consumed by the game" from
+"never delivered at all". That is what made the earlier three tests pass vacuously.
+
+The answer is `MouseHarness` plus `InputPump` in `Tests/PlayMode`: a component at
+`DefaultExecutionOrder(-10000)` that takes posted state, queues **and** updates at the top of the
+frame, and records what the device read immediately afterwards. The game then reads it through its
+ordinary path later in the same frame, and the recording is what lets the harness fail loudly.
+
+**Assert the intent, not the smoothed value.** The first working version still failed: a notch
+moved the camera's *target* by six units but its drawn `distance` by 0.457, because the rig smooths
+exponentially and a batch player runs frames in about a millisecond. The same test would have
+passed on a machine running at sixty frames a second. `SliceCameraRig.TargetDistance` exists for
+this: it moves the instant input is read and does not drift, so the assertion and its control are
+both exact. Any frame-rate-dependent assertion is a flaky test waiting for a faster machine.
 ## Photographing a figure: the mesh is not square to its own root
 
 Three traps, all found in one afternoon building `GestureCheck`, and all three produced pictures
@@ -952,6 +987,38 @@ and the package assemblies, builds in seconds and answers the only question a ha
 *these sources* agree with each other. Assembly-definition boundaries are then unverified, which is
 what `scripts/unity.sh test editmode` is for.
 
+## A generated file that is also committed fails silently when it goes stale
+
+`Assets/Scenes/Play.unity` is committed *and* generated — `PlayScene.cs` is the generator and the
+scene is its output. Add a component to the generator and the committed scene does not have it
+until somebody runs **Odyssey → Presentation → Build play scene**.
+
+Until they do, the feature is simply **absent**. No error, no missing reference, nothing in the
+console. It is indistinguishable from a broken feature, and that is exactly how it was read: the
+designate tool was reported as "nothing happened" and "I couldn't mark anything", when in truth
+nothing was there to respond. A playtest round was spent on it.
+
+The same trap caught the same session twice over, in two forms:
+
+- **The owner's checkout was 22 commits behind** and the build under test predated every change
+  being tested. Three further observations — a pause that reset a walker to standing, colonists
+  repeating a bad move, animations "a mess" — were all faithful reports of bugs that had already
+  been fixed on `main`. **Before reading a playtest report, confirm the commit it was taken
+  against.** `git log --oneline -1` in their checkout costs nothing and reframes everything.
+- **"git pull" was written as one bullet in a list of steps**, and the whole exercise depended on
+  it. A step that everything hinges on is not a bullet; and handing over instructions in the same
+  message as the merge they depend on guarantees a race.
+
+Two rules follow.
+
+- **A generated artefact under version control needs a staleness check, not a convention.** The
+  wiki and the label registry already have one — `build_wiki.py --check` and `emit_labels.py
+  --check` exit 1 when the output does not match the source, and both are CI gates. The play scene
+  has no equivalent. Until it does, `OdysseyBootstrap.WarnIfTheSceneIsStale` at least turns silence
+  into a console line naming the menu item.
+- **Warn, do not self-heal.** Adding the missing component at runtime would paper over a scene
+  that may be stale in ways the check cannot see — the camera rig, the lighting, the module
+  catalogue. The useful signal is "rebuild the scene", not "one thing was quietly patched".
 ## The CI runner is the owner's machine, and a timing test cannot tell you apart from a regression
 
 `HudStressTests.Adr0003_F1_TheDenseHudHoldsItsBudgetAndAllocatesNothing` failed on CI —
