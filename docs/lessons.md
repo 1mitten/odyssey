@@ -437,3 +437,49 @@ resolves to the Microsoft Store stub and answers *"Python was not found"* to eve
 `build_wiki.py --check` included. It looks exactly like Python not being installed. Check with
 `which -a python3`, and in a stale session call
 `$LOCALAPPDATA/Programs/Python/Python313/python.exe` directly rather than believing the stub.
+
+## A pose that adds, and a tool fitted to a doubled arm
+
+`PawnFigureDirector.Strike` **adds** its angles to whatever the bones are already at. It does not
+set them. `RegripTools` has always known this and resets with `figure.Graph.Evaluate(0f)` first,
+with a comment saying why: refitting mid-swing "measures a doubled pose and a reach to match".
+
+When `BindWorkBones` grew from fitting one tool to fitting one per `WorkStyle`, the loop struck once
+per style **without** the reset, so the second style was posed on top of the first. The pick was then
+gripped and measured against an arm reaching half as far again, and the result on screen was a
+colonist at a rock face with its arms in the strike and **nothing in its hands** — the tool was
+there, pointing at the sky above the top of the frame.
+
+Two things worth keeping from it:
+
+- **An empty hand in a screenshot is ambiguous and a number is not.** A tool the catalogue never
+  supplied and a tool fitted somewhere absurd look identical at any distance, and they want opposite
+  fixes. `PawnFigureDirector.DescribeTools()` answers the first question in one line (row present?
+  prefab present? fitted on how many figures?), and `MeasuredBladeHeight` answered the second: 2.39 m
+  against a colonist 1.79 m to the crown. The photograph said "empty"; the number said "above her
+  head", and only one of those points anywhere.
+- **The struck pose is the worst frame to judge a tool's head in.** The aim deliberately finishes the
+  head just inside the work, so at the moment of the blow it is buried in the rock where nothing can
+  see it — correct, and useless for deciding which way round the head is. Hold the stroke part way
+  up the raise (`HeldPhase`) and photograph it against the sky. That is why `SwingCheck` shoots its
+  blade sheet at a held phase rather than letting the stroke run.
+
+## SwingCheck exhausts render textures in batch mode
+
+`scripts/unity.sh exec Odyssey.EditorTools.SwingCheck.Run` segfaults inside
+`Camera::CustomRenderWithPipeline`, reproducibly, after about six of its nine sample frames and
+before it writes a single blade sheet. Running it twice — the usual cure for a batch run executing
+the previous assembly — does not help.
+
+The crash is not the first symptom. Further up `Logs/exec.log` is `RenderTexture.Create failed`
+followed by "Failed to set the active render target": it is **resource exhaustion**, not a logic
+fault. `PlayScene.Shoot` takes a render target per call, and `SwingCheck` calls it far more often
+than the screenshot path does — nine samples, then an impact frame, then eight blade rolls, then
+eight yaws. A give-away that it has already begun failing before it dies: every `Logs/swing-*.png`
+comes out at exactly the same byte size, because they are failed captures rather than pictures.
+
+Two consequences. **Do not diagnose this from `Logs/exec.log` after running `shot`** — `shot` writes
+`Logs/shot.log`, and reading the stale `exec.log` from a previous `SwingCheck` run attributes a
+crash to a command that only had a compile error. And until it is fixed, the pick's stroke angles
+cannot be settled the way the axe's were; the workaround is the `shot-miner` and `shot-miner-raised`
+frames in `PlayScene`, which render one setting at a time through the path that does work.
