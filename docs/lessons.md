@@ -227,3 +227,28 @@ settings.
 placed in a ring now. The alternative — skipping scatter on occupied cells — cannot work: pawns and
 items live in the published snapshot, not in the cell mirror the mesher reads, so the mesher would
 have to re-mesh a chunk every time somebody walked across it.
+
+## Benchmarking the renderer
+
+**`camera.Render()` in a loop is not a benchmark, and it convicted our renderer of a crime it
+did not commit.** An editor batch harness that renders a camera into a RenderTexture a few hundred
+times reported fourteen thousand instanced cubes at 16 ms on an RTX 5070 Ti, then 205 ms, then
+307 ms — on three runs of the same code. The numbers tracked how far down the table a row sat, not
+what it drew: a row of 26-triangle tufts cost five times a row of cubes with the same material, and
+an empty render placed last cost 464 ms against 2.65 ms for the same empty render placed first. A
+GPU sync per frame did not change it. There is no frame boundary in such a loop — nothing Presents,
+and the render pipeline's per-frame bookkeeping is never told a frame ended — so the cost of every
+render includes the debris of every render before it. The screenshot harness never noticed because
+it renders four times.
+
+Consequences. Frame time is measured **only** under a real player loop: the PlayMode test
+`FrameTimeTests` (which is also the first test the PlayMode gate has ever had), or the on-screen
+readout in Play. `RenderBench` is kept as the record of the failure and for *ordering* questions
+answered within one row, never for absolutes. And a milestone report stated a red result from that
+harness before the harness had been checked against an empty render placed last — the control that
+should have been the first row written, not the last.
+
+**A profiler recorder is not free to start.** Merely creating `ProfilerRecorder`s for the render
+statistics made every row of the same benchmark ten times slower. Counters that change the thing
+they count are worse than none; the editor's own `UnityStats` (what the Stats overlay reads) costs
+nothing to read, though in batchmode it returns zeros.

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.CameraRig;
@@ -19,34 +20,45 @@ using Debug = UnityEngine.Debug;
 namespace Odyssey.EditorTools
 {
     /// <summary>
-    /// Renders real frames on a real GPU and times them, one stylisation option at a time.
+    /// Renders frames on a real GPU and times them, one rendering decision at a time — and
+    /// **its absolute numbers must not be believed.** Read this before reading its output.
+    ///
+    /// A <c>camera.Render()</c> loop has no frame boundary: nothing Presents, and the render
+    /// pipeline is never told a frame ended, so every render carries the cost of every render
+    /// before it. Measured: the same empty render cost 2.65 ms as the first row and 464 ms as
+    /// the last, and a sync per frame did not help. Every row reads higher than the row above it
+    /// whatever it draws. This tool is kept as the record of that failure and for questions that
+    /// can be answered *within one row*; frame time is measured by <c>FrameTimeTests</c> under
+    /// the real player loop, and nowhere else. See <c>docs/lessons.md</c>, "Benchmarking".
     ///
     /// **Why this is separate from <c>PlayScene.Measure</c>.** That one runs headless with no
     /// graphics device, so it can report draw calls and instance counts — which are exact — and
     /// deliberately reports no frame time at all, because a frame time without a GPU would be
-    /// fiction. Every question about how much the grass or the outline costs is a question about
-    /// the GPU, so it needs a device, which means it belongs with the screenshot harness rather
-    /// than with the headless one.
+    /// fiction. Every question about how much something costs to draw is a question about the
+    /// GPU, so it needs a device, which means it belongs with the screenshot harness.
     ///
-    /// **What the numbers are worth.** This machine is not the target — that is a 2022 mid-range
-    /// laptop — so the absolute figures mean little. The comparisons mean a great deal: each
-    /// variant differs from its neighbour by exactly one decision, so the column that matters is
-    /// the delta, and a decision that costs nothing measurable is a decision that can be made on
-    /// looks alone.
+    /// **The rows are an experiment, not a list.** A *floor* row submits nothing, so what it
+    /// costs is the harness. *Direct* rows draw a fixed set of instances straight through
+    /// <c>Graphics.RenderMeshInstanced</c> with none of our code in the way, varying only the
+    /// mesh or the material — so a slow row names its own cause. The *renderer* rows drive the
+    /// real <see cref="ChunkRenderer"/>. Reading down the table answers, in order: is it the
+    /// harness, is it the API, is it their shader, is it our code.
     ///
-    /// Run with <c>scripts/unity.sh shot Odyssey.EditorTools.RenderBench.Run</c> — it needs a
-    /// graphics device, like everything else here that touches a frame.
+    /// **Counters are the editor's own.** <c>UnityEditor.UnityStats</c> is what the Game view's
+    /// Stats box reads — GPU draw calls, batches, SetPass calls — collected without the profiler,
+    /// which matters: the profiler's recorders were tried first and their mere presence made
+    /// every row ten times slower, which is a measurement that measures itself. Our code counts
+    /// what it *asked* for; these count what the GPU *got*, and the gap between them is where
+    /// instancing silently failing would show.
+    ///
+    /// Run with <c>scripts/unity.sh shot Odyssey.EditorTools.RenderBench.Run</c>.
     /// </summary>
     public static class RenderBench
     {
         const int PlaySizeXZ = 120;
         const int PlayLayers = 16;
         const string RendererPath = "Assets/Settings/PC_Renderer.asset";
-
-        /// <summary>Frames thrown away before timing, so shader compilation is not in the figure.</summary>
         const int WarmupFrames = 8;
-
-        /// <summary>Frames timed per variant. Enough to average out driver hitches.</summary>
         const int TimedFrames = 40;
 
         [MenuItem("Odyssey/Presentation/Benchmark the renderer")]
@@ -54,52 +66,25 @@ namespace Odyssey.EditorTools
 
         public static void Run() => Execute(Application.isBatchMode);
 
-        /// <summary>One row of the table: what was switched on, and what it cost.</summary>
-        readonly struct Variant
+        /// <summary>One row: either a direct submission of (mesh, material) or the real renderer.</summary>
+        sealed class Row
         {
-            public readonly string Name;
-            public readonly int Scatter;
-            public readonly bool FoliageShadows;
-            public readonly bool Outline;
-            public readonly bool Submit;
-
-            public Variant(string name, int scatter, bool foliageShadows, bool outline, bool submit = true)
-            {
-                Name = name;
-                Scatter = scatter;
-                FoliageShadows = foliageShadows;
-                Outline = outline;
-                Submit = submit;
-            }
+            public string Name = string.Empty;
+            public Action Submit = () => { };
+            public Func<string> Asked = () => string.Empty;
         }
-
-        static readonly Variant[] Variants =
-        {
-            // A ladder, each rung one decision away from the last, so every delta is attributable.
-            // The floor: the world is meshed and walked exactly as usual but nothing is handed to
-            // the GPU, so what remains is the harness itself — clear, sky, the read-back sync and
-            // whatever the editor does around a camera.Render(). Every other row is measured
-            // against this one; without it a slow harness reads as a slow renderer.
-            new Variant("nothing submitted (floor)",     0,   false, false, submit: false),
-            // 60 is what ships; 120 is the density it shipped at before the owner asked for sparser.
-            new Variant("bare ground, no outline",       0,   false, false),
-            new Variant("grass, no grass shadows",       60,  false, false),
-            new Variant("grass, grass casts shadows",    60,  true,  false),
-            new Variant("grass + outline",               60,  false, true),
-            new Variant("dense grass (120) + outline",   120, false, true),
-        };
 
         static void Execute(bool exitWhenDone)
         {
             int exitCode = 0;
             OutlineFeature? outline = FindOutlineFeature();
             bool outlineWas = outline != null && outline.isActive;
-            GameObject? lighting = null;
-            GameObject? cameraObject = null;
-            RenderTexture? target = null;
+            var owned = new List<UnityEngine.Object>();
 
             try
             {
+                if (outline != null) outline.SetActive(false);
+
                 var size = new GridSize(PlaySizeXZ, PlaySizeXZ, PlayLayers);
                 var gen = (NaturalMapGenDef)MapGenerator.DefaultDef(MapType.Natural, size);
                 gen.MakeBarren();
@@ -113,19 +98,21 @@ namespace Odyssey.EditorTools
                 var model = new Odyssey.Presentation.World.WorldRenderModel(size, chunks, library);
                 model.RefreshAll(grid, result.Natural!.Context.Edifices);
 
-                lighting = new GameObject("BenchLighting");
+                var lighting = new GameObject("BenchLighting");
+                owned.Add(lighting);
                 PlayScene.BuildSheetLighting(lighting.transform);
 
-                cameraObject = new GameObject("BenchCamera");
+                var cameraObject = new GameObject("BenchCamera");
+                owned.Add(cameraObject);
                 var camera = cameraObject.AddComponent<Camera>();
                 camera.fieldOfView = 40f;
                 camera.nearClipPlane = 0.3f;
                 camera.farClipPlane = 2000f;
                 camera.clearFlags = CameraClearFlags.Skybox;
-                camera.backgroundColor = new Color(0.16f, 0.19f, 0.24f);
                 camera.enabled = false;
 
-                target = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32);
+                var target = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32);
+                owned.Add(target);
                 camera.targetTexture = target;
 
                 int activeLayer = result.StartCell.Y;
@@ -134,61 +121,125 @@ namespace Odyssey.EditorTools
                     activeLayer * CellMetrics.SizeY,
                     result.StartCell.Z * CellMetrics.SizeXZ);
 
-                var report = new StringBuilder();
-                report.AppendLine($"[Bench] {PlaySizeXZ}x{PlaySizeXZ}x{PlayLayers} barren, " +
-                                  $"1920x1080, {TimedFrames} frames after {WarmupFrames} warm-up, " +
-                                  $"layer {activeLayer}. This machine is not the target; read the deltas.");
+                // ---- the materials and meshes under test --------------------------------------
 
-                // Two framings, because the two costs pull in opposite directions: close up the
-                // outline covers more of a pixel budget it barely uses, while zoomed out there is
-                // far more geometry on screen and the grass is what bites.
-                var framings = new (string name, float pitch, float distance)[]
+                var plainLit = new Material(Shader.Find("Universal Render Pipeline/Lit"))
                 {
-                    ("board", 48f, 48f),
-                    ("close", 42f, 18f),
+                    name = "Bench/PlainLit", enableInstancing = true,
                 };
+                owned.Add(plainLit);
 
-                double bareBoard = 0d;
-                foreach ((string framing, float pitch, float distance) in framings)
+                // Exactly what the renderer wears for ground: the terrain module's own part
+                // material, which is the cached clone with the tint applied — not the pack asset.
+                ResolvedModule ground = library[library.Resolve(
+                    ModuleIds.Terrain("Grass"), ModuleShape.SolidBlock)];
+                Material? groundMaterial = ground.IsEmpty ? null : ground.Parts[0].Material;
+                Mesh groundMesh = ground.IsEmpty ? PrimitiveMeshes.UnitCube : ground.Parts[0].Mesh;
+
+                ResolvedModule tuft = library[library.Resolve(ModuleIds.GrassTuftA, ModuleShape.Pillar)];
+                Mesh? tuftMesh = tuft.IsEmpty ? null : tuft.Parts[0].Mesh;
+                // Cloned with instancing on, as the renderer's material cache does. The raw pack
+                // material has it off, and RenderMeshInstanced throws rather than falling back —
+                // which drew nothing and clocked 0.25 ms, faster than the empty floor.
+                Material? tuftMaterial = null;
+                if (!tuft.IsEmpty)
                 {
-                    report.AppendLine();
-                    report.AppendLine($"  {framing} camera (pitch {pitch}, {distance} m)");
-
-                    double previous = 0d;
-                    for (int v = 0; v < Variants.Length; v++)
-                    {
-                        Variant variant = Variants[v];
-                        if (outline != null) outline.SetActive(variant.Outline);
-
-                        // A scatter change is a meshing change, so the batches have to go: the
-                        // renderer caches a meshed chunk until the model says it changed, and a
-                        // benchmark that quietly re-used last variant's grass would report the
-                        // same number twice and look like a very convincing null result.
-                        using var renderer = new ChunkRenderer(model)
-                        {
-                            ScatterDensity = variant.Scatter,
-                            FoliageCastsShadows = variant.FoliageShadows,
-                            SubmitToGpu = variant.Submit,
-                        };
-
-                        double ms = TimeFrames(camera, renderer, target, focus, pitch, distance,
-                            activeLayer);
-
-                        string delta = v == 0
-                            ? string.Empty
-                            : $"  ({ms - previous:+0.00;-0.00;0.00} ms)";
-                        previous = ms;
-                        if (v == 0 && framing == "board") bareBoard = ms;
-
-                        report.AppendLine(
-                            $"    {variant.Name,-30} {ms,7:0.00} ms/frame{delta,-14}" +
-                            $"  {renderer.DrawCalls,5} calls  {renderer.InstancesDrawn,7} instances");
-                    }
+                    tuftMaterial = new Material(tuft.Parts[0].Material) { enableInstancing = true };
+                    owned.Add(tuftMaterial);
                 }
 
+                Matrix4x4[] cubes = DirectMatrices(size, activeLayer - 1,
+                    new Vector3(CellMetrics.SizeXZ, CellMetrics.SizeY, CellMetrics.SizeXZ), 0f);
+                Matrix4x4[] tufts = DirectMatrices(size, activeLayer, Vector3.one, -CellMetrics.SizeY * 0.5f);
+
+                var report = new StringBuilder();
+                report.AppendLine($"[Bench] {PlaySizeXZ}x{PlaySizeXZ}x{PlayLayers} barren, 1920x1080, " +
+                                  $"{TimedFrames} frames after {WarmupFrames} warm-up, " +
+                                  $"{SystemInfo.graphicsDeviceName}, {SystemInfo.graphicsDeviceType}.");
+                report.AppendLine("[Bench] materials under test:");
+                report.AppendLine("    " + DescribeMaterial(plainLit));
+                if (groundMaterial != null) report.AppendLine("    " + DescribeMaterial(groundMaterial));
+                if (tuftMaterial != null) report.AppendLine("    " + DescribeMaterial(tuftMaterial));
+
+                // ---- the rows ------------------------------------------------------------------
+
+                var rows = new List<Row>
+                {
+                    new Row { Name = "floor: nothing submitted" },
+                    new Row
+                    {
+                        Name = "direct: 14,400 cubes, plain Lit",
+                        Submit = () => Direct(cubes, PrimitiveMeshes.UnitCube, plainLit),
+                        Asked = () => $"{Calls(cubes.Length)} calls, {cubes.Length} instances",
+                    },
+                };
+                if (groundMaterial != null)
+                    rows.Add(new Row
+                    {
+                        Name = "direct: 14,400 cubes, our ground material",
+                        Submit = () => Direct(cubes, groundMesh, groundMaterial),
+                        Asked = () => $"{Calls(cubes.Length)} calls, {cubes.Length} instances",
+                    });
+                if (tuftMesh != null && tuftMaterial != null)
+                {
+                    rows.Add(new Row
+                    {
+                        Name = "direct: 14,400 tufts, plain Lit",
+                        Submit = () => Direct(tufts, tuftMesh, plainLit),
+                        Asked = () => $"{Calls(tufts.Length)} calls, {tufts.Length} instances, {tuftMesh.triangles.Length / 3} tris each",
+                    });
+                    rows.Add(new Row
+                    {
+                        Name = "direct: 14,400 tufts, our grass material",
+                        Submit = () => Direct(tufts, tuftMesh, tuftMaterial),
+                        Asked = () => $"{Calls(tufts.Length)} calls, {tufts.Length} instances",
+                    });
+                }
+
+                ChunkRenderer? renderer = null;
+                var slice = new SliceSettings();
+                // Bare ground first and last. If the two disagree, the table is measuring its own
+                // history and every number between them is suspect.
+                foreach (int density in new[] { 0, 60, 0 })
+                {
+                    int captured = density;
+                    rows.Add(new Row
+                    {
+                        Name = captured == 0 ? "renderer: bare ground" : $"renderer: grass at {captured}/100",
+                        Submit = () =>
+                        {
+                            if (renderer == null || renderer.ScatterDensity != captured)
+                            {
+                                renderer?.Dispose();
+                                renderer = new ChunkRenderer(model) { ScatterDensity = captured };
+                            }
+                            renderer.Render(activeLayer, slice);
+                        },
+                        Asked = () => renderer == null
+                            ? string.Empty
+                            : $"{renderer.DrawCalls} calls, {renderer.InstancesDrawn} instances",
+                    });
+                }
+
+                // An empty render again, at the very end. It is the same nothing as the first row;
+                // if it costs a hundred times more here, the harness is measuring its own history
+                // and no row in between is worth reading.
+                rows.Add(new Row { Name = "floor again: nothing submitted, last" });
+
                 report.AppendLine();
-                report.AppendLine($"  bare board frame: {bareBoard:0.00} ms — the floor everything " +
-                                  $"else is measured against.");
+                report.AppendLine("  board camera (pitch 48, 48 m)");
+                double previous = 0d;
+                for (int i = 0; i < rows.Count; i++)
+                {
+                    double ms = TimeFrames(camera, rows[i].Submit, target, focus, 48f, 48f);
+                    string delta = i == 0 ? string.Empty : $"({ms - previous:+0.00;-0.00;0.00})";
+                    previous = ms;
+                    report.AppendLine(
+                        $"    {rows[i].Name,-44} {ms,8:0.00} ms {delta,-11} asked: {rows[i].Asked(),-40} " +
+                        $"got: {EditorStats()}");
+                }
+                renderer?.Dispose();
+
                 Debug.Log(report.ToString());
             }
             catch (Exception e)
@@ -199,25 +250,80 @@ namespace Odyssey.EditorTools
             finally
             {
                 if (outline != null) outline.SetActive(outlineWas);
-                if (cameraObject != null) UnityEngine.Object.DestroyImmediate(cameraObject);
-                if (lighting != null) UnityEngine.Object.DestroyImmediate(lighting);
-                if (target != null) UnityEngine.Object.DestroyImmediate(target);
+                foreach (UnityEngine.Object o in owned) if (o != null) UnityEngine.Object.DestroyImmediate(o);
                 if (exitWhenDone) EditorApplication.Exit(exitCode);
             }
         }
 
-        /// <summary>
-        /// Time a run of frames, with the world submitted exactly as the game submits it.
-        ///
-        /// The GPU is left to run ahead and is forced to catch up once, at the end, rather than
-        /// after every frame. Syncing per frame would serialise the two and measure their sum;
-        /// syncing once measures the throughput of the slower of them, which is the number that
-        /// decides a frame rate.
-        /// </summary>
-        static double TimeFrames(Camera camera, ChunkRenderer renderer, RenderTexture target,
-            Vector3 focus, float pitch, float distance, int activeLayer)
+        static int Calls(int instances) => (instances + ChunkRenderer.MaxInstancesPerCall - 1) / ChunkRenderer.MaxInstancesPerCall;
+
+        /// <summary>One instance per column at the given layer, with a uniform scale and a lift.</summary>
+        static Matrix4x4[] DirectMatrices(GridSize size, int layer, Vector3 scale, float lift)
         {
-            var slice = new SliceSettings();
+            var matrices = new Matrix4x4[size.SizeX * size.SizeZ];
+            int n = 0;
+            for (int z = 0; z < size.SizeZ; z++)
+            for (int x = 0; x < size.SizeX; x++)
+                matrices[n++] = Matrix4x4.TRS(
+                    CellMetrics.Centre(x, z, layer) + Vector3.up * lift, Quaternion.identity, scale);
+            return matrices;
+        }
+
+        /// <summary>The same submission the renderer makes, with none of the renderer.</summary>
+        static void Direct(Matrix4x4[] matrices, Mesh mesh, Material material)
+        {
+            var rp = new RenderParams(material)
+            {
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = true,
+                worldBounds = new Bounds(Vector3.zero, Vector3.one * 2000f),
+            };
+            for (int start = 0; start < matrices.Length; start += ChunkRenderer.MaxInstancesPerCall)
+            {
+                int n = Mathf.Min(ChunkRenderer.MaxInstancesPerCall, matrices.Length - start);
+                Graphics.RenderMeshInstanced(rp, mesh, 0, matrices, n, start);
+            }
+        }
+
+        /// <summary>
+        /// Name, shader, and whether the shader can instance at all.
+        ///
+        /// <c>Material.enableInstancing</c> is a request, not a fact: it does nothing for a shader
+        /// compiled without instancing support, and a submission through
+        /// <c>RenderMeshInstanced</c> then quietly becomes one draw per instance. Whether the
+        /// shader supports it is an editor-only question (<c>ShaderUtil.HasInstancing</c>), asked
+        /// by reflection because the method's visibility has moved between versions.
+        /// </summary>
+        static string DescribeMaterial(Material material)
+        {
+            MethodInfo? has = typeof(ShaderUtil).GetMethod("HasInstancing",
+                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+            string instancing = has != null
+                ? (has.Invoke(null, new object[] { material.shader }) is bool b ? (b ? "yes" : "NO") : "?")
+                : "unknown";
+            return $"{material.name}: shader '{material.shader.name}', enableInstancing {material.enableInstancing}, " +
+                   $"shader supports instancing: {instancing}";
+        }
+
+        static readonly Type? Stats = typeof(EditorWindow).Assembly.GetType("UnityEditor.UnityStats");
+
+        /// <summary>GPU draw calls, batches and SetPass calls for the frame just rendered.</summary>
+        static string EditorStats()
+        {
+            if (Stats == null) return "UnityStats n/a";
+            string Read(string name)
+            {
+                PropertyInfo? p = Stats.GetProperty(name,
+                    BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic);
+                return p?.GetValue(null)?.ToString() ?? "?";
+            }
+            return $"draws {Read("drawCalls")}, batches {Read("batches")}, setpass {Read("setPassCalls")}, " +
+                   $"tris {Read("triangles")}";
+        }
+
+        static double TimeFrames(Camera camera, Action submit, RenderTexture target,
+            Vector3 focus, float pitch, float distance)
+        {
             var rotation = Quaternion.Euler(pitch, 45f, 0f);
             camera.transform.SetPositionAndRotation(
                 focus - rotation * Vector3.forward * distance, rotation);
@@ -225,7 +331,7 @@ namespace Odyssey.EditorTools
             Action<ScriptableRenderContext, Camera> hook = (context, rendering) =>
             {
                 if (rendering != camera) return;
-                renderer.Render(activeLayer, slice);
+                submit();
             };
 
             RenderPipelineManager.beginCameraRendering += hook;
@@ -234,11 +340,23 @@ namespace Odyssey.EditorTools
                 for (int i = 0; i < WarmupFrames; i++) camera.Render();
                 Sync(target);
 
+                // Synced every frame, on purpose, and this is the opposite of the first design.
+                //
+                // Syncing once per run let the GPU run ahead, which is the honest way to measure
+                // throughput in a game — but there is no Present in a camera.Render() loop, so
+                // nothing ever told the driver a frame was over. Forty frames of discarded
+                // per-call constant buffers piled up before each sync and the driver stalled harder
+                // the more had been queued: the same row cost 16 ms early in a table and 307 ms
+                // late in it, and a row of 26-triangle tufts cost five times a row of cubes. The
+                // numbers tracked position, not content. A sync per frame is an upper bound —
+                // it serialises CPU and GPU — but it is the same upper bound for every row.
                 var clock = Stopwatch.StartNew();
-                for (int i = 0; i < TimedFrames; i++) camera.Render();
-                Sync(target);
+                for (int i = 0; i < TimedFrames; i++)
+                {
+                    camera.Render();
+                    Sync(target);
+                }
                 clock.Stop();
-
                 return clock.Elapsed.TotalMilliseconds / TimedFrames;
             }
             finally
@@ -247,14 +365,8 @@ namespace Odyssey.EditorTools
             }
         }
 
-        /// <summary>
-        /// Block until the GPU has finished everything queued, so the clock is honest.
-        ///
-        /// A one-pixel read-back rather than <c>AsyncGPUReadback.WaitForCompletion</c>: that call
-        /// wants a pump to service it and there is no player loop in a batch run, so it waits for
-        /// a completion that will never be signalled. Reading a pixel forces the same stall
-        /// through a path that does not need one.
-        /// </summary>
+        /// <summary>Block until the GPU has finished everything queued. See the earlier note on
+        /// why a one-pixel read-back and not AsyncGPUReadback in a batch run.</summary>
         static void Sync(RenderTexture target)
         {
             RenderTexture previous = RenderTexture.active;
@@ -269,8 +381,7 @@ namespace Odyssey.EditorTools
         static OutlineFeature? FindOutlineFeature()
         {
             var data = AssetDatabase.LoadAssetAtPath<UniversalRendererData>(RendererPath);
-            if (data == null) return null;
-            return data.rendererFeatures.OfType<OutlineFeature>().FirstOrDefault();
+            return data == null ? null : data.rendererFeatures.OfType<OutlineFeature>().FirstOrDefault();
         }
     }
 }

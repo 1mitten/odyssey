@@ -45,47 +45,45 @@ the headless half of U14's "20,000 walls across several materials" validation: 7
 over 42 materials. The Frame Debugger batch count — the other half — needs an editor window and
 is owner work.
 
-## 4. Rendering: GPU frame time — RED
+## 4. Rendering: GPU frame time — green, after a retraction
 
-`RenderBench.Run`, 1920 × 1080, 40 frames after 8 warm-up, GPU synced once per run, on the
-RTX 5070 Ti. Each row differs from the last by one decision.
+**An earlier draft of this section reported a red result, and it was wrong.** It came from
+`RenderBench`, an editor batch harness that drives `camera.Render()` in a loop into a
+RenderTexture. That loop has no frame boundary — nothing Presents, and URP's per-frame
+bookkeeping is never told a frame ended — so every render carries the debris of every render
+before it. The draft claimed 14,400 instanced cubes cost 16 ms; the same row read 205 ms and
+307 ms on later runs, a row of 26-triangle tufts cost five times a row of cubes with the same
+material, and the decisive control — the identical *empty* render placed first and last in one
+run — cost 2.65 ms and then 464 ms. The harness was measuring its own history. Every absolute
+number it produced is void, and the post-mortem is in `docs/lessons.md` under "Benchmarking the
+renderer". The two device-reset crashes the owner hit are therefore *not* explained by frame
+cost; the leak and the LOD bugs fixed the same day remain the standing explanation, together
+with script recompilation during Play.
 
-| Variant | Board camera | Close camera |
-|---|---|---|
-| Nothing submitted (harness floor) | 0.81 ms | 1.80 ms |
-| Bare ground: 14,400 instanced cubes, one material | **16.06 ms** | 16.28 ms |
-| + grass at 60/100 (8,756 tufts, 50 tris each) | 91.7 ms | 53.5 ms |
-| + grass casting shadows | +8.3 ms | +16.6 ms |
-| + outline pass | −22 ms (noise) | −15 ms (noise) |
-| Grass at 120/100 (17,347 tufts) | **610.9 ms** | 317.6 ms |
+**The real measurement** is `FrameTimeTests` — a PlayMode test, so a genuine player loop with a
+Present every frame, 180 frames after 60 warm-up, the full play world with shadows, sky, grass
+at 60/100 and the outline pass on, RTX 5070 Ti. It is also the first test the PlayMode gate has
+ever contained.
 
-**These numbers fail the plan.** ADR 0005 leaves roughly 8.7 ms of a frame for all rendering on
-the target laptop after a 3× discount; on a card several times faster than that laptop, bare
-ground alone takes 16 ms. This is not the harness (the floor is under a millisecond) and it is
-not triangle count: fourteen thousand cubes are a few hundred thousand triangles, which this
-card draws in a fraction of a millisecond. The cost is about a microsecond per instance and
-grows *superlinearly* with instance count — doubling the grass costs seven times as much — which
-points at the submission path, not the geometry.
+| World | Mean | Worst | Draw calls | Instances | Chunks |
+|---|---|---|---|---|---|
+| Barren meadow (the scene as shipped) | **0.39 ms** | 0.58 ms | 118 | 23,175 | 25 |
+| Ruined city, stamped shells | **1.46 ms** | 1.74 ms | 1,311 | 78,482 | 155 |
 
-**This is also the best candidate for the two `DXGI_ERROR_DEVICE_REMOVED` crashes** the owner hit
-in the editor this session. A 610 ms frame is within a factor of three of Windows' two-second GPU
-timeout; with the Scene view rendering the same world alongside the Game view, it would cross it.
-The two earlier fixes in that area (drawing every LOD level at once; leaking every baked mesh)
-were real bugs, but they are not this.
+Against ADR 0005 — roughly 8.7 ms of a frame for all rendering on the target laptop after a 3×
+discount — the city sits at about 4.4 ms discounted and the meadow at about 1.2 ms. **Within
+budget, with one caveat that must be re-measured on the owner's monitor:** the batch game view
+is 640 × 480, so per-pixel costs (the outline pass, the sky, overdraw) are under-represented
+here. Draw submission, which dominates the city at 1,311 calls, does not scale with resolution.
+The 1080p figure is one press of Play away — the bootstrap prints `frame … ms` top-left — and is
+listed as owner work in the queue. The 20,000-wall Frame Debugger check remains owner work too.
 
-**Not yet diagnosed.** The candidates, in the order they should be tested with the Frame
-Debugger or a micro-benchmark on bare ground (the simplest reproducer):
-1. The draws are not actually instancing — each instance becoming its own draw would give
-   exactly one microsecond per instance. Check whether the material clones in `MaterialCache`
-   really carry `enableInstancing` through to the URP Lit variant, and what the Frame Debugger
-   reports per `RenderMeshInstanced` call.
-2. `Graphics.RenderMeshInstanced` re-uploading every matrix array every frame through a path
-   that allocates, which would explain superlinear growth.
-3. The Synty terrain material's shader variant (alpha clip, fog, shadows) rather than the URP
-   Lit fallback — separable by drawing the same cubes with a plain Lit material.
-
-Until this is resolved the renderer is **not** within the plan's budget and M1 should not be
-called closed. It is the top row of `docs/plans/overnight-queue.md` for the Windows machine.
+What the failed benchmark did establish, and what stands: `Graphics.RenderMeshInstanced` throws
+rather than silently drawing one instance per draw when a material lacks instancing (the
+renderer's material cache enables it on every clone; the raw Synty foliage asset does not), and
+the research in `d-11-instanced-submission.md` names BatchRendererGroup as the destination if
+instance counts ever outgrow this path — with no urgency now that the path is measured inside
+budget.
 
 ## 5. What was learned this session
 
@@ -96,6 +94,7 @@ and that a `Mesh` created in code is a GPU allocation nobody collects.
 
 ## 6. Stop
 
-Per the plan, work stops here for review. The recommended next step is the diagnosis in §4,
-before any M2 unit, because a renderer that cannot draw an empty meadow inside budget will not
-draw a city with pawns in it.
+Per the plan, work stops here for review. Everything in the standing gate is green; two parts
+are green on fixtures rather than on a real world (§2, rows OQ-05 and OQ-08/09) and the 1080p
+frame time wants one look from the owner (§4). The recommended next step is M2, starting with
+the `CellGrid` save section so the round-trip gate can hold on a real world.
