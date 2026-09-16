@@ -535,6 +535,51 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     shaft below, the suppressed ceiling. The seven existing tests call the four-argument `Pick`,
     which means "the active layer alone" and is unchanged.
 
+- **The landscape is never cut away (owner report, 2026-09-16; ADR 0006 amended a third time,
+  `06-rendering-and-camera.md` §3b).** The report, with a screenshot: on the low ground under the
+  trees *"there appears to be no ground texture or grass"*. Nothing was wrong with the ground —
+  **it was not being drawn at all**, and the flat untextured plane in the picture was the sky
+  showing through the hole. **The surface is terraced and the depth budget is not:**
+  `surfaceRelief` 2 gives a five-step surface, so the outdoor ground spans five layers while
+  `SliceSettings.LowestDrawnLayer` stopped `belowDepth` (3) under the slice. **The trees survived
+  the cut because a tree lives in the air cell one layer above its ground**, so the wood was inside
+  the band and its ground was not, which is exactly the picture that arrived.
+  - **Measured on the played board** (120 × 120 × 16, seed 1): the ground runs L8 to L12 with
+    outcrops to L14, the colony opens on L12, and a slice one layer up draws from L10 — where
+    **6,140 of 14,400 columns have no ground at all**. At the opening layer itself it is 383,
+    small enough to be missed and it was. Seeds 2 and 3 open on L11 and lose 726 and 427 a layer
+    above that. Afterwards: **zero on all three, at both layers.**
+  - **The argument is `TintCode.DaylitBase`'s, one step earlier.** That bit exempts a cell open to
+    the sky from the depth *shade*, because the shade is a cue for looking **through** something
+    and there is nothing over an outdoor surface. The cut needed the identical exemption and did
+    not have it: there the fix was that a lower terrace must not be dim, here it is that it must
+    exist.
+  - **The floor is measured off the generated board and never moves after.**
+    `WorldRenderModel.LowestOutdoorLayer` walks every column from the sky down to the first solid
+    cell or slab and keeps the lowest — four or five reads a column, once, before the first frame.
+    It is deliberately **not** maintained by `RefreshDirty`, which is the opposite choice to
+    `HighestOccupiedLayer` and for the opposite reason: a roof somebody builds has to appear,
+    whereas a pit somebody digs is precisely the case the depth budget is for. Without that, a
+    shaft sunk to bedrock would force every cavern in the map to be drawn while the player stood
+    in a meadow.
+  - **It is a floor, not an override.** A landscape that stops inside the budget does not shrink
+    the band, `BelowMode.Hide` still hides everything below the slice, underground (where the cap
+    is already off downwards) it is not consulted, and `followDepth` off hands every field back
+    exactly as before.
+  - **Everything that reads the band reads the same one** — `ChunkRenderer.Render` and
+    `RenderActors`, `PawnFigureDirector.Sync`, `SlicePicker.Band`,
+    `SliceCameraRig.LowestSelectableLayer` — because a **colonist walking a low terrace was being
+    culled along with it**, and because a terrace you can see is one you can mark for mining.
+  - Guard tests: `LandscapeBandTests` generates the real wooded board on three seeds, mirrors it as
+    the bootstrap does and measures, each case against a control run on the band as it was; six new
+    `SliceSettingsTests` and three `WorldRenderModelTests` pin the arithmetic.
+  - **Verified: it compiles and every number above was run.** Fast tier 428 Sim and 106 Hud; the
+    Presentation and Presentation-test assemblies compiled headlessly against
+    `Library/ScriptAssemblies` (the owner's editor held the project); the slice arithmetic and the
+    three-seed board measurement were *run* outside the player against the built DLL. **Not
+    verified: `scripts/unity.sh test editmode`, PlayMode, frame time, and whether the newly drawn
+    terraces look right. Press Play in `Play.unity`.**
+
 - **Work ends with a beat, not a snap (owner, 2026-09-16).** `JobDef.settleTicks` (fell 30, mine 30)
   holds a colonist still for half a second after the work is done — the tree is already down and
   the rock already gone — before the job ends. It is a settle *toil*, last in the driver, reached

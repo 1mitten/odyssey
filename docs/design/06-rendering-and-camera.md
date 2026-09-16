@@ -629,7 +629,7 @@ now depends on how deep the slice is — `SliceSettings.followDepth`, on by defa
 
 | Where the slice is | Above it | Below it |
 |---|---|---|
-| At or above the surface (the layer the game opens at) | **Every layer, drawn solid.** No depth cap, no fade | `belowDepth` layers, dimmed |
+| At or above the surface (the layer the game opens at) | **Every layer, drawn solid.** No depth cap, no fade | `belowDepth` layers, dimmed — **or the bottom of the landscape, whichever is lower** (§3b) |
 | Below the surface | **One layer**, x-rayed — a ceiling, not a survey | **Every layer, to the floor**, dimmed with depth |
 
 The rule came out of a playtest report with a one-line diagnosis: *"I couldn't see another person
@@ -689,6 +689,58 @@ the new one is four. Nothing on the board being played pays anything at all.
 The six ADR 0006 modes are untouched and still ship. Switching `followDepth` off obeys every field
 exactly as before, which is what choosing a mode explicitly does: the V key's first press pins
 whatever is on screen and hands over control, and cycling past the last mode gives the default back.
+
+### 3b. The landscape is never cut away (owner, 2026-09-16)
+
+The owner's report, with a screenshot: on the low ground under the trees *"there appears to be no
+ground texture or grass"*. The picture showed a flat, untextured, un-tufted plane with woodland
+standing on it and a hard diagonal edge where the green meadow stopped. Nothing was wrong with the
+ground. It was not being drawn at all, and what showed through the hole was the sky.
+
+**The surface is terraced and the depth budget is not.** `surfaceRelief` of two gives a five-step
+surface, so the outdoor ground of a wooded board spans five layers and only one of them is ever the
+active one; the row above cut the drawn band off `belowDepth` (three) layers under the slice. Stand
+on a high terrace and the low ones fall out of it. The trees survived the cut because a tree lives in
+the air cell one layer *above* the ground it grows from — so the wood was inside the band while its
+ground was not, which is exactly the picture that arrived.
+
+Measured on the board that is played, 120 × 120 × 16, seed 1: the ground runs L8 to L12 with
+outcrops standing to L14, and the colony opens on L12. Move the slice one layer up, to L13, and the
+budget alone draws from L10 — where **6,140 of 14,400 columns have no ground at all**. At the
+opening layer itself it is 383 columns, which is small enough to be missed and was. Seeds 2 and 3
+both open on L11 and lose 726 and 427 columns a layer above that.
+
+**So the band reaches down to the bottom of the landscape**, and the argument is
+`TintCode.DaylitBase`'s, arriving one step earlier. That bit exists because the depth *shade* was
+dimming a lower terrace to 0.46 and the meadow came out in three greens: the shade is a cue for
+looking **through** something, and there is nothing over an outdoor surface for it to describe.
+The same is true of the cut. A lower terrace is not ground you are peering through something at, it
+is ground. There the fix was that it must not be dim; here it is that it must exist.
+
+**The floor is measured off the generated board and never moves after.**
+`WorldRenderModel.LowestOutdoorLayer` walks every column from the sky down to the first solid cell
+or floor slab in it and keeps the lowest answer — four or five reads a column, taken once before the
+first frame. It is deliberately *not* maintained as the world is edited, which is the opposite
+choice to `HighestOccupiedLayer` and for the opposite reason: a roof somebody builds has to appear,
+whereas a pit somebody digs is precisely the "looking through a hole" case the depth budget is for.
+Without that, a shaft sunk to bedrock would force every cavern in the map to be drawn while the
+player stood in a meadow.
+
+It is a floor and not an override: a landscape that stops inside the budget does not shrink the
+band, `BelowMode.Hide` still hides everything below the slice, and underground — where the cap is
+already off downwards — the floor has nothing to add and is not consulted. Switching `followDepth`
+off hands every field back exactly as before, the floor included.
+
+**Everything that reads the band reads the same one.** `ChunkRenderer.Render` and `RenderActors`,
+`PawnFigureDirector.Sync`, `SlicePicker.Band` and `SliceCameraRig.LowestSelectableLayer` all pass the
+model's floor in, because a colonist walking a low terrace was being culled along with the terrace,
+and because a terrace the player can see is a terrace they can mark for mining — "selectable" and
+"drawn solid" must not drift apart (§3c).
+
+The cost is the terraces themselves and nothing else. Buried cells are face-culled before they reach
+a bucket, so the two extra layers a slice at L13 now walks contribute the ground that was missing and
+no instances anywhere else, and the span is bounded by the generator's own relief at
+`surfaceRelief × 2 + 1` layers.
 
 ### 3c. What can be clicked is what is drawn solid (owner, 2026-09-16)
 

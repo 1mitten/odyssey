@@ -400,7 +400,8 @@ namespace Odyssey.Presentation.CameraRig
             _model == null ? ActiveLayer : slice.HighestSelectableLayer(ActiveLayer, _model.Size.SizeY);
 
         /// <inheritdoc cref="HighestSelectableLayer"/>
-        public int LowestSelectableLayer => slice.LowestSelectableLayer(ActiveLayer);
+        public int LowestSelectableLayer =>
+            _model == null ? ActiveLayer : slice.LowestSelectableLayer(ActiveLayer, _model.LowestOutdoorLayer);
 
         /// <summary>The cell under a screen point on a drawn layer, or false when the ray misses.</summary>
         bool CellAt(Vector2 screenPosition, out CellRef cell)

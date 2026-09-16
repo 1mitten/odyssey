@@ -155,8 +155,15 @@ namespace Odyssey.Presentation.CameraRig
             : BelowSurface(activeLayer) ? AboveMode.XrayMin
             : AboveMode.Full;
 
-        /// <summary>The lowest layer that is drawn at all.</summary>
-        public int LowestDrawnLayer(int activeLayer)
+        /// <summary>
+        /// The lowest layer that is drawn at all.
+        ///
+        /// <para><paramref name="lowestOutdoorLayer"/> is the floor of the open landscape —
+        /// <c>WorldRenderModel.LowestOutdoorLayer</c>, the lowest layer any column's surface sits
+        /// on. The default means "the caller knows of no landscape", which is what every call site
+        /// meant before the floor existed.</para>
+        /// </summary>
+        public int LowestDrawnLayer(int activeLayer, int lowestOutdoorLayer = int.MaxValue)
         {
             if (below == BelowMode.Hide) return activeLayer;
 
@@ -164,7 +171,24 @@ namespace Odyssey.Presentation.CameraRig
             // the dimming falloff is what keeps the active layer standing out from it.
             if (BelowSurface(activeLayer)) return 0;
 
-            return activeLayer - belowDepth;
+            int budget = activeLayer - belowDepth;
+            if (!followDepth) return budget;
+
+            // **The landscape is never cut away** (owner, 2026-09-16: on low ground under the
+            // trees "there appears to be no ground texture or grass"). The board is terraced, so
+            // the outdoor surface spans five layers and only one of them is the active one; a
+            // budget of three below the slice therefore deletes the bottom of a hillside, and what
+            // shows through the gap is the skybox with the wood still standing over it. Measured
+            // on the played board at seed 1: the ground runs L8 to L12, the colony opens on L12,
+            // and a slice one layer above that lost 6,140 of 14,400 columns.
+            //
+            // The depth budget is a cue for looking *through* the world — down a shaft, into a
+            // room, over the lip of a quarry — and it keeps all of that, because the floor handed
+            // in is the landscape as it was generated rather than as it has since been dug. It is
+            // the same distinction TintCode.DaylitBase draws for the depth *shade*, one step
+            // earlier: there the fix was that a lower terrace must not be dim, here it is that a
+            // lower terrace must exist at all.
+            return lowestOutdoorLayer < budget ? lowestOutdoorLayer : budget;
         }
 
         /// <summary>The highest layer that is drawn at all, before the fade cutoff.</summary>
@@ -227,8 +251,13 @@ namespace Odyssey.Presentation.CameraRig
         /// <para>Dimmed is not ghosted: a layer below is drawn opaque and merely darker, and it is
         /// only reachable by a ray at all where nothing above it occludes — through a shaft, over
         /// a cliff, down a stairwell. Which is exactly where a player means to click it.</para>
+        ///
+        /// <para>It follows <see cref="LowestDrawnLayer"/> exactly, landscape floor and all, for
+        /// the standing reason that "selectable" and "drawn solid" must not drift apart: a terrace
+        /// the player can see is a terrace they can mark for mining.</para>
         /// </summary>
-        public int LowestSelectableLayer(int activeLayer) => Mathf.Max(0, LowestDrawnLayer(activeLayer));
+        public int LowestSelectableLayer(int activeLayer, int lowestOutdoorLayer = int.MaxValue) =>
+            Mathf.Max(0, LowestDrawnLayer(activeLayer, lowestOutdoorLayer));
 
         /// <summary>
         /// Should the active layer's ceiling — the slab stored on the layer above — be dropped?

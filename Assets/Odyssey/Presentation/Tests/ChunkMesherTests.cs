@@ -330,6 +330,79 @@ namespace Odyssey.Tests.Presentation
             Assert.That(slice.AboveAt(6), Is.EqualTo(AboveMode.Hide));
             Assert.That(slice.HighestDrawnLayer(6, 20), Is.EqualTo(6));
             Assert.That(slice.LowestDrawnLayer(6), Is.EqualTo(3), "the cap was ignored below ground");
+            Assert.That(slice.LowestDrawnLayer(6, 2), Is.EqualTo(3),
+                "and the landscape floor is part of the default, so it goes with the rest of it");
+        }
+
+        /// <summary>
+        /// The owner's report, 2026-09-16: on the low ground under the trees "there appears to be
+        /// no ground texture or grass". The surface is terraced and spans five layers, so a budget
+        /// of three below the slice deletes the bottom of the hillside and leaves its wood standing
+        /// over the skybox. The landscape's own floor is what the band reaches down to.
+        /// </summary>
+        [Test]
+        public void TheDrawnBandReachesTheBottomOfTheLandscape()
+        {
+            var slice = new SliceSettings { surfaceLayer = 13, belowDepth = 3 };
+
+            Assert.That(slice.LowestDrawnLayer(13), Is.EqualTo(10),
+                "the budget alone, which is the behaviour that cut the terraces off");
+            Assert.That(slice.LowestDrawnLayer(13, 8), Is.EqualTo(8),
+                "a landscape reaching two layers past the budget is drawn to the bottom of it");
+        }
+
+        /// <summary>
+        /// And it is a floor, not an override. A landscape that stops inside the budget does not
+        /// shrink the band — the three layers below the slice are what looking into a room or over
+        /// the lip of a quarry needs, and they are still there.
+        /// </summary>
+        [Test]
+        public void AShallowLandscapeDoesNotShrinkTheBand()
+        {
+            var slice = new SliceSettings { surfaceLayer = 13, belowDepth = 3 };
+
+            Assert.That(slice.LowestDrawnLayer(13, 12), Is.EqualTo(10));
+            Assert.That(slice.LowestDrawnLayer(13, int.MaxValue), Is.EqualTo(10),
+                "no landscape known is the same as a landscape that is no help");
+        }
+
+        /// <summary>
+        /// Underground the floor has nothing to add: the cap is already off downwards, and it must
+        /// not be put back on by a landscape that happens to stop higher than the working does.
+        /// </summary>
+        [Test]
+        public void TheLandscapeFloorNeverLiftsTheUndergroundBand()
+        {
+            var slice = new SliceSettings { surfaceLayer = 11, belowDepth = 3 };
+
+            Assert.That(slice.BelowSurface(6), Is.True);
+            Assert.That(slice.LowestDrawnLayer(6, 9), Is.EqualTo(0));
+        }
+
+        /// <summary>
+        /// What a click may reach follows what is drawn solid, landscape floor included — the
+        /// standing rule that "selectable" and "drawn" must not drift apart. A terrace the player
+        /// can see is a terrace they can mark for mining.
+        /// </summary>
+        [Test]
+        public void ATerraceThatIsDrawnCanAlsoBeClicked()
+        {
+            var slice = new SliceSettings { surfaceLayer = 13, belowDepth = 3 };
+
+            Assert.That(slice.LowestSelectableLayer(13), Is.EqualTo(10));
+            Assert.That(slice.LowestSelectableLayer(13, 8), Is.EqualTo(8));
+        }
+
+        /// <summary>
+        /// Hiding everything below the slice still hides everything below the slice. The floor is
+        /// an extension of the depth budget, and <c>BelowMode.Hide</c> has no budget to extend.
+        /// </summary>
+        [Test]
+        public void HidingBelowIsNotUndoneByTheLandscapeFloor()
+        {
+            var slice = new SliceSettings { surfaceLayer = 13, belowDepth = 3, below = BelowMode.Hide };
+
+            Assert.That(slice.LowestDrawnLayer(13, 8), Is.EqualTo(13));
         }
 
         /// <summary>

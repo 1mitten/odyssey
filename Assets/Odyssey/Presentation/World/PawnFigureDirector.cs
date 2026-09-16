@@ -734,7 +734,11 @@ namespace Odyssey.Presentation.World
             // nothing here steps them; the speed is what Unity steps them at.
             if (Chips != null) Chips.Running = running;
 
-            int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
+            // Down to the bottom of the landscape, on the same terms the world is drawn on: the
+            // terraced surface spans several layers, and a figure walking a low one used to be
+            // culled with the ground it stood on. See WorldRenderModel.LowestOutdoorLayer.
+            int lowest = Mathf.Max(0, slice.LowestDrawnLayer(
+                activeLayer, World != null ? World.LowestOutdoorLayer : int.MaxValue));
 
             // And up to the highest layer the world is drawn on. A figure belongs wherever its
             // surroundings are visible: the owner's report was that a colonist mining one layer up
