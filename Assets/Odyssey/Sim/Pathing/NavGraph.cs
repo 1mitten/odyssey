@@ -23,10 +23,14 @@ namespace Odyssey.Sim.Pathing
     ///
     /// The whole unit exists because of one measurement. The D1 architecture benchmark timed a
     /// naive layer-aware A-star at 65% of total tick time, and 1,058 of its 1,800 replans burned
-    /// their entire 20,000-node budget and then failed. Those were searches for targets that were
-    /// never reachable at all, and a failed A-star is the <em>worst</em> case of the algorithm:
-    /// it expands the whole connected component before admitting defeat. The fix is not a faster
-    /// search. The fix is to not start one.
+    /// their entire 20,000-node budget and then failed. The reason recorded here at first — that
+    /// these were mostly searches for targets that were never reachable at all — was falsified by
+    /// a follow-up experiment: only 14% of the exhausted searches were actually unreachable, and
+    /// under 1% on a structured map (<c>docs/design/05-ai-and-jobs.md</c> §6). The real reason to
+    /// answer reachability without searching is that every job-giver scan asks it thousands of
+    /// times per tick against candidate targets, and it must be free there: an O(1) district
+    /// comparison, not a search. The replan speed-up itself comes mostly from the abstract region
+    /// stage and a better heuristic.
     ///
     /// <para>The three tiers, from <c>docs/research/d-04-pathfinding.md</c>:</para>
     /// <list type="bullet">

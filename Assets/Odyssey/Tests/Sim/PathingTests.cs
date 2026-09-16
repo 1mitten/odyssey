@@ -611,9 +611,14 @@ namespace Odyssey.Tests.Sim
     ///
     /// The D1 architecture benchmark's phase 3 measured a naive layer-aware A-star at 65% of
     /// total tick time, with 1,058 of its 1,800 replans exhausting a 20,000-node budget and
-    /// returning failure. The claim under test is that answering reachability with an O(1)
-    /// district comparison before the search makes the futile searches vanish and collapses the
-    /// cost.
+    /// returning failure. The premise under test was that these were mostly futile searches for
+    /// unreachable targets, and that an O(1) district comparison before the search would make
+    /// them vanish. That premise was falsified — only 14% of the exhausted searches were actually
+    /// district-unreachable, under 1% on a structured map (<c>docs/design/05-ai-and-jobs.md</c>
+    /// §6) — but the architecture stayed right for a different reason: reachability must be
+    /// answered before pathing because every job-giver scan asks it thousands of times per tick,
+    /// and it must be free there. The replan speed-up this benchmark measures comes mostly from
+    /// the abstract region stage and a better heuristic, not from the reachability check.
     ///
     /// Three arms over an identical, pre-recorded list of 1,800 (start, goal) requests:
     ///   A. naive — one cell A-star over the whole grid with a distance heuristic, no regions.
