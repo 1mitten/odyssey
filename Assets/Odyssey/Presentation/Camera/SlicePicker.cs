@@ -144,7 +144,8 @@ namespace Odyssey.Presentation.CameraRig
             }
 
             int layers = model.Size.SizeY;
-            lowest = Mathf.Clamp(slice.LowestSelectableLayer(activeLayer), 0, activeLayer);
+            lowest = Mathf.Clamp(
+                slice.LowestSelectableLayer(activeLayer, model.LowestOutdoorLayer), 0, activeLayer);
             highest = Mathf.Clamp(slice.HighestSelectableLayer(activeLayer, layers), activeLayer, layers - 1);
 
             // The same cap the renderer's loop uses. Above the surface the policy says "every

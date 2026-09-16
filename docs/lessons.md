@@ -1409,3 +1409,46 @@ house must say so — and it is worth knowing before you split anything in the P
 The fast tier does **not** catch it: `HotkeyClashTests` needs the real directory tree, so it is the
 Unity EditMode run that fails. Split a file, then run `scripts/unity.sh test editmode`, not just
 `scripts/test-fast.sh`.
+
+## A screenshot is data: sample it before you read the rendering code
+
+The report on 2026-09-17 was that low ground under the trees had *"no ground texture or grass"*, with
+a screenshot. Reading the rendering path produced three plausible and entirely wrong culprits in
+turn — an untextured fallback material (the library already logs that case and tints it), a
+desaturated surround, a sand cover patch — and each needed real work to rule out. None of them was
+it: **the ground was not being drawn at all**, and what the picture showed was the sky.
+
+**What settled it was measuring the image, which took about five minutes.** `tools/icons/icons.py`
+has a standard-library PNG codec, so a throwaway script can crop, magnify and sample any screenshot
+the owner sends without Pillow and without Unity:
+
+```python
+sys.path.insert(0, "tools/icons"); import icons
+img = icons.read_png(path); r, g, b, a = img.get(x, y)
+```
+
+Three measurements, in the order they mattered:
+
+- **The plane was the same colour near and far** — (171,129,100) at both ends of the depth range.
+  The scene runs exp2 fog dense enough to be a third opaque at the rim, so *any* lit surface grades
+  with distance. **A surface that does not fog is not a surface.**
+- **It had no outline.** The adjacent meadow was ringed by the ink pass; the plane was not.
+- **It had no tufts and no shadows**, while the meadow six metres behind it had both.
+
+Magnifying the boundary (a 160 px crop at 5x) then showed a hard diagonal edge with the meadow's own
+outline running along the meadow's side of it — a silhouette, not a seam. That is a hole, and a hole
+is a slice question, not a material question.
+
+**The generalisation.** A rendering complaint names a symptom in the vocabulary of art — texture,
+colour, grass — and reading the code invites you to look for a fault in the thing named. The image
+itself is evidence and it is cheap to interrogate: constant colour across depth, a missing outline, a
+missing shadow and a missing decoration are each a sharp signal, and together they said "nothing is
+there" before a single file was opened. This is the same rule as *Measure before diagnosing*
+elsewhere in this file, applied to the one artefact the owner actually hands you.
+
+**The second half, which is the real cost.** Once the mechanism was in hand it still had to be
+proved on the board that is played, not on a fixture — the terracing is what makes the bug, and no
+hand-built grid was going to reproduce five surface layers and their woodland. A throwaway NUnit
+case in the Sim fast tier printed the column histogram in nine seconds (`Assert.Fail` with a
+`StringBuilder`, since the runner swallows `Console.WriteLine`), which is how the 6,140-of-14,400
+figure exists at all. Delete the probe before committing.

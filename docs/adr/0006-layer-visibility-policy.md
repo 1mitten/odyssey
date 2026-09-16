@@ -136,6 +136,31 @@ layer, and the Depth Ruler is the place to show it.
 the cap returns above ground only — underground is where the rule earns its keep, and it is the
 cheaper half.
 
+## Amendment, 2026-09-16 — the landscape is never cut away
+
+The policy's depth cap below the slice was written for looking *through* the world — down a shaft,
+into a room, over the lip of a quarry — and it was being applied to a hillside, which nobody is
+looking through. The board is terraced, so the outdoor surface spans five layers and only one of
+them is ever the active one; the cap therefore deleted the low ground and left its woodland standing
+over the skybox. The owner's report was that the low ground under the trees had *"no ground texture
+or grass"*, which is what an absent surface looks like.
+
+**So the band below the slice reaches down to the bottom of the landscape, or `belowDepth` layers,
+whichever is lower.** The floor is measured off the generated board once — the lowest column top
+anywhere on it — and is deliberately not maintained as the world is edited, so a pit somebody digs
+is still governed by the cap while the landscape never is. Measured on the played board, a slice one
+layer above the colony's own had no ground at all in 6,140 of its 14,400 columns.
+
+This is the same distinction the depth *shade* already draws. A cell open to the sky is exempt from
+the dimming falloff (`TintCode.DaylitBase`) because there is nothing over it for the cue to describe;
+the cut needed the identical exemption one step earlier, and did not have it. Details, the
+measurement and the reasoning for not following a quarry down are in `06-rendering-and-camera.md`
+§3b.
+
+**Flip condition F6.** If a map type ever has a surface that is genuinely deep rather than terraced —
+a canyon, or open ground at two very different levels — the floor stops being cheap and the band
+wants to follow what the camera can actually see rather than what the board contains.
+
 ## Rationale
 
 1. **X-ray answers the question the player actually asks.** On a layered map the recurring question

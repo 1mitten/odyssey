@@ -122,7 +122,11 @@ it off for a stable cast.
 **What the player can see is decided by how deep they are.** At or above the surface, every layer
 above is drawn solid; below it, one layer above is x-rayed and every layer below is drawn. Anything
 drawn solid is clickable at any depth; a ghost never is. Whatever hides a selected colonist fades to
-a ghost while it stands there.
+a ghost while it stands there. **The landscape is never cut away:** the band below the slice reaches
+down to the lowest ground on the board (`WorldRenderModel.LowestOutdoorLayer`) or `belowDepth`
+layers, whichever is lower, because the surface is terraced and spans five layers while the depth
+budget is a cue for looking *through* something. A pit somebody digs is still governed by the
+budget; a hillside never was.
 
 **Nothing in presentation is in a cell, a save or the hash** — grass tufts, ground relief, banks,
 chips, the surrounding land, sound and the see-through fade are all drawn and none are simulated.

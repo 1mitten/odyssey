@@ -797,3 +797,63 @@ work itself.
   - **Appearance is derived from the world seed and the pawn id**, so the same world deals the same people on every load — replacing a salt rolled at startup, whose recorded reason (a fixed hash made *"a cast of sixty-one read as a cast of five"*) is preserved because the seed still differs between worlds. `colonistLookSeed` remains as the override. Nothing is saved and nothing is hashed; `WorldSnapshot.Seed` is published for the same reason `GameSpeed` is, and the seed was already an input to the hash.
   - **`ColonistAppearanceBook` is one object both drawers hold**, so "the two drawers deal the same face" is a fact about the object graph rather than a convention two doc comments had to keep. **It fixed a latent bug**: the instanced renderer sized its lottery from every catalogue row while the figure director dropped unusable rows and *compacted the survivors*, so look *i* was not row *i* the moment anything was missing — invisible today because either all four packs are installed or none are, and with three of four every colonist would have changed face on crossing the figure cap.
   - **Judge it with `Odyssey → Presentation → Check the colonist colours`** (`scripts/unity.sh shot Odyssey.EditorTools.ColourCheck.Run`), which shoots a control with no character material at all, the real palette, and three sheets forcing one slot to magenta across the colony — a judgement about *place* rather than about shade. **Open for the owner: the palette is deliberately muted and the parade sheet differs from the control only slightly.** It may be too subtle to get a feel from; `ColonistPalette` is the one-line lever. **Not measured: frame time** — `FrameTimeTests` has not been run on this change.
+
+- **The landscape is never cut away (owner report, 2026-09-17; ADR 0006 amended a third time,
+  `06-rendering-and-camera.md` §3b).** The report came with a screenshot: on the low ground under
+  the trees *"there appears to be no ground texture or grass"*. Nothing was wrong with the ground —
+  **it was not being drawn at all**, and the flat, untextured, un-tufted plane in the picture was
+  the sky showing through the hole. **The surface is terraced and the depth budget is not:**
+  `surfaceRelief` 2 gives a five-step surface, so the outdoor ground of a wooded board spans five
+  layers while `SliceSettings.LowestDrawnLayer` stopped `belowDepth` (3) layers under the slice.
+  Stand on a high terrace and the low ones fall out of the band. **The trees survived the cut
+  because a tree lives in the air cell one layer *above* the ground it grows from**, so the wood was
+  inside the band and its ground was not — which is exactly the picture that arrived, and the reason
+  the fault read as a texture problem rather than as missing geometry.
+  - **Measured on the board that is played** (120 x 120 x 16). Seed 1: the ground runs L8 to L12
+    with outcrops standing to L14, the colony opens on L12, and a slice one layer up draws from L10
+    — where **6,140 of 14,400 columns have no ground at all**. At the opening layer itself it is
+    383 columns, which is small enough to be missed and was. Seeds 2 and 3 open on L11 and lose 726
+    and 427 a layer above that. Afterwards: **zero on all three, at both layers.**
+  - **The argument is `TintCode.DaylitBase`'s, arriving one step earlier.** That bit exists because
+    the depth *shade* was dimming a lower terrace to 0.46 and the meadow came out in three greens:
+    the shade is a cue for looking **through** something and there is nothing over an outdoor
+    surface for it to describe. The cut needed the identical exemption and did not have it. There
+    the fix was that a lower terrace must not be dim; here it is that it must exist.
+  - **The floor is measured off the generated board and never moves after.**
+    `WorldRenderModel.LowestOutdoorLayer` walks every column from the sky down to the first solid
+    cell or floor slab in it and keeps the lowest answer — four or five reads a column, taken once
+    before the first frame. It is deliberately **not** maintained by `RefreshDirty`, which is the
+    opposite choice to `HighestOccupiedLayer` and for the opposite reason: a roof somebody builds
+    has to appear, whereas a pit somebody digs is precisely the "looking through a hole" case the
+    depth budget is for. Without that, a shaft sunk to bedrock would force every cavern in the map
+    to be drawn while the player stood in a meadow.
+  - **It is a floor, not an override.** A landscape that stops inside the budget does not shrink the
+    band, `BelowMode.Hide` still hides everything below the slice, underground — where the cap is
+    already off downwards — it is not consulted, and `followDepth` off hands every field back
+    exactly as before, the floor included.
+  - **Everything that reads the band reads the same one** — `ChunkRenderer.Render` and
+    `RenderActors`, `PawnFigureDirector.Sync`, `SlicePicker.Band` and
+    `SliceCameraRig.LowestSelectableLayer`. Two consequences beyond the ground itself: a **colonist
+    walking a low terrace was being culled along with the terrace**, which nobody had reported; and
+    a terrace the player can see is now one they can mark for mining, because "selectable" and
+    "drawn solid" must not drift apart (§3c).
+  - **The cost is the terraces themselves and nothing else.** Buried cells are face-culled before
+    they reach a bucket, so the two extra layers a slice at L13 now walks contribute the ground that
+    was missing and no instances anywhere else, and the span is bounded by the generator's own
+    relief at `surfaceRelief x 2 + 1` layers.
+  - **Diagnosed from the screenshot's pixels rather than from the code.** Three readings of the
+    rendering path produced three plausible and wrong culprits — an untextured fallback material, a
+    desaturated surround, sand cover. What settled it was measuring the image: the plane was the
+    *same* colour near and far (171,129,100 at both ends of the depth range) where exp2 fog would
+    have graded it, and it carried no outline, no tufts and no shadows. A surface that does not fog
+    is not a surface. `docs/lessons.md` carries the method note.
+  - Guard tests: **`LandscapeBandTests`** generates the real wooded board on three seeds, mirrors it
+    exactly as the bootstrap does, puts the slice where the composition root puts it and measures —
+    every case against a control run on the band as it was, because a passing measurement means
+    nothing until the same measurement is seen to fail. Six new `SliceSettingsTests` and three
+    `WorldRenderModelTests` pin the arithmetic.
+  - **Verified:** fast tier 428 Sim and 106 Hud; the Presentation and Presentation-test assemblies
+    compiled headlessly against `Library/ScriptAssemblies` (the owner's editor held the project);
+    the slice arithmetic and the three-seed board measurement were *run* outside the player against
+    the built DLL. **Not verified:** `scripts/unity.sh test editmode`, PlayMode, frame time, and
+    whether the recovered terraces look right.
