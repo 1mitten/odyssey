@@ -1442,6 +1442,14 @@ namespace Odyssey.Presentation.Ui
             _barRow.Add(_bar);
             _hud.Add(_barRow);
 
+            // The palette stands on the Build button, and the button moves: the bar is
+            // centred and its width follows the resolution and the interface scale. See
+            // AlignPaletteToItsButton.
+            _bar.RegisterCallback<GeometryChangedEvent>(_ =>
+            {
+                if (BuildPaletteOpen) AlignPaletteToItsButton();
+            });
+
             IReadOnlyList<HudCommand> commands = HudCommands.All;
             for (int i = 0; i < commands.Count; i++)
             {
@@ -1680,20 +1688,33 @@ namespace Odyssey.Presentation.Ui
         /// <para>It used to be a column pinned to the left edge and permanently open, competing
         /// with the stores panel for a column that could not hold both. As a transient panel over
         /// the board it costs nothing when it is shut, which is most of the time.</para>
+        ///
+        /// <para><b>A wide strip standing on its own button, not a block in the middle of the
+        /// screen</b> (owner, 2026-09-17: "condense the menu and move it above the build, left
+        /// aligned with that control as if it were connected … use the horizontal space more rather
+        /// than vertical"). Two consequences follow from that one sentence. The categories run in a
+        /// single row that scrolls <i>sideways</i> rather than wrapping into a block, because a
+        /// board is wide and short and a panel that eats vertical space eats the thing the player
+        /// is looking at. And the tools and the material sit on one row together, because the
+        /// material is part of the order being given and putting it on a line of its own cost a
+        /// whole row to say one word.</para>
+        ///
+        /// <para>No header either: the panel is attached to a button that says Build, and repeating
+        /// the word above it is the interface talking about itself — the same argument that took
+        /// the "Nothing selected" strip out of the inspect pane.</para>
         /// </summary>
         void BuildPalette()
         {
             _buildPanel = Panel("build", "build");
-            Header(_buildPanel, "Build", out _);
             _buildPanel.style.display = DisplayStyle.None;
 
             var cats = new VisualElement();
             cats.AddToClassList("build__cats");
 
-            // The categories scroll: ten categories and their tools will outgrow any panel that
-            // has to share a screen, and a list too long for its panel should scroll rather than
-            // quietly lose its end.
-            var scroll = new ScrollView(ScrollViewMode.Vertical);
+            // Sideways: ten categories will outgrow any strip that has to share a screen, and a
+            // list too long for its panel should scroll rather than quietly lose its end — but it
+            // should scroll along the axis the panel has room on.
+            var scroll = new ScrollView(ScrollViewMode.Horizontal);
             scroll.AddToClassList("build__scroll");
             for (int i = 0; i < BuildCategories.Length; i++)
             {
@@ -1707,15 +1728,20 @@ namespace Odyssey.Presentation.Ui
             scroll.Add(cats);
             _buildPanel.Add(scroll);
 
+            // One row: the tools, then the material they are made of. A material is a property of
+            // the order, not a category of its own, so it belongs beside the thing it qualifies.
+            var row = new VisualElement();
+            row.AddToClassList("build__row");
+            _buildPanel.Add(row);
+
             _buildTools = new VisualElement();
             _buildTools.AddToClassList("build__tools");
-            _buildPanel.Add(_buildTools);
+            row.Add(_buildTools);
 
-            // Below the tools, and only while something made of a material is armed.
             _buildMaterials = new VisualElement();
             _buildMaterials.AddToClassList("build__materials");
             _buildMaterials.style.display = DisplayStyle.None;
-            _buildPanel.Add(_buildMaterials);
+            row.Add(_buildMaterials);
 
             // Open on Structure rather than on nothing: the palette exists to be used, and
             // a first click that only reveals more buttons is a click the player did not need.
@@ -1739,7 +1765,45 @@ namespace Odyssey.Presentation.Ui
         {
             _buildPanel.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
             if (_barItems.Count > 0) _barItems[0].EnableInClassList("cmd--on", open);
+            if (open) AlignPaletteToItsButton();
         }
+
+        /// <summary>
+        /// Stand the palette on the Build button: its left edge on the button's left edge, its
+        /// bottom on the bar's top.
+        ///
+        /// <para><b>Measured rather than declared, because the bar is centred and its width moves.</b>
+        /// The command bar's width depends on how many items fit, which depends on the resolution
+        /// and the interface scale, so its left edge — and therefore the Build button's — is not a
+        /// number the stylesheet can hold. It used to be centred on the screen and floating clear
+        /// of everything, which reads as a panel that arrived from nowhere; the owner asked for it
+        /// to open off the button "as if it were connected" (2026-09-17).</para>
+        ///
+        /// <para>This is the same technique the bar's own overflow reflow uses: ask UI Toolkit what
+        /// it actually laid out rather than predicting it. Re-run on the bar's
+        /// <c>GeometryChangedEvent</c> as well as on opening, so a resolution change or a scale rung
+        /// moves the palette with the button instead of leaving it behind.</para>
+        /// </summary>
+        void AlignPaletteToItsButton()
+        {
+            if (_barItems.Count == 0 || _buildPanel == null) return;
+
+            Rect button = _barItems[0].worldBound;
+            Rect bar = _bar.worldBound;
+            Rect hud = _hud.worldBound;
+
+            // Before the first layout pass everything is zero or NaN. Leaving the sheet's own
+            // position in place is the right answer then: it is wrong, but it is on screen, and the
+            // geometry callback will correct it within the frame.
+            if (float.IsNaN(button.xMin) || bar.height <= 0f) return;
+
+            _buildPanel.style.left = button.xMin - hud.xMin;
+            _buildPanel.style.bottom = hud.yMax - bar.yMin + PaletteGap;
+            _buildPanel.style.translate = new StyleTranslate(new Translate(0, 0));
+        }
+
+        /// <summary>The gap between the palette and the bar it stands on. Enough to read as two panels, not more.</summary>
+        const float PaletteGap = 6f;
 
         /// <summary>
         /// The tools that actually do something, keyed the way everything in this interface is

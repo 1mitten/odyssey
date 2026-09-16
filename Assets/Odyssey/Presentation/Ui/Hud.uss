@@ -711,18 +711,19 @@
    edge and permanently open, competing with the stores panel for a column that could not hold
    both. */
 
+/* A wide, short strip standing on the Build button. Its left and bottom are written at
+   runtime by AlignPaletteToItsButton, because the command bar is centred and its width
+   follows the resolution and the interface scale, so neither edge is a number this sheet
+   can hold. The width is here: it is the strip's own proportion, not the bar's. */
 .build {
-    left: 50%;
-    translate: -50% 0;
-    bottom: 82px;
-    width: 420px;
-    max-height: 320px;
+    width: 620px;
+    max-height: 168px;
+    padding: 7px 9px;
 }
 
 .build__scroll {
-    flex-grow: 1;
-    min-height: 0;
-    margin-top: 9px;
+    flex-shrink: 0;
+    max-height: 70px;
 }
 
 /* Unity's default scroller is a light-grey bar with two arrow buttons, which against a near-black
@@ -753,18 +754,55 @@
     background-color: #6fd3e3;
 }
 
+/* The same again for the horizontal scroller, which is the one the categories use now that
+   they run in a single row. Unity styles the two independently and a rule written for one
+   does nothing for the other. */
+.build__scroll .unity-scroller--horizontal {
+    height: 8px;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    margin-top: 2px;
+}
+
+.build__scroll .unity-scroller--horizontal .unity-repeat-button { display: none; }
+
+.build__scroll .unity-scroller--horizontal .unity-base-slider__tracker {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+
+.build__scroll .unity-scroller--horizontal .unity-base-slider__dragger {
+    height: 6px;
+    background-color: rgba(255, 255, 255, 0.13);
+    border-width: 0;
+    border-radius: 3px;
+    margin-top: 0;
+}
+
+.build__scroll .unity-scroller--horizontal .unity-base-slider__dragger:hover {
+    background-color: #6fd3e3;
+}
+
 .build__cats {
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+}
+
+/* The tools and the material on one row, divided. Horizontal space is what this panel has. */
+.build__row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 7px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.09);
+    padding-top: 7px;
 }
 
 .build__tools {
     flex-direction: row;
     flex-wrap: wrap;
-    margin-top: 9px;
-    border-top-width: 1px;
-    border-top-color: rgba(255, 255, 255, 0.09);
-    padding-top: 9px;
+    flex-grow: 1;
+    flex-shrink: 1;
 }
 
 /* The material row, under the tools and shown only while something made of a material is
@@ -772,8 +810,11 @@
 .build__materials {
     flex-direction: row;
     align-items: center;
-    flex-wrap: wrap;
-    margin-top: 6px;
+    flex-shrink: 0;
+    margin-left: 9px;
+    padding-left: 9px;
+    border-left-width: 1px;
+    border-left-color: rgba(255, 255, 255, 0.09);
 }
 
 /* ---------------------------------------------------------------- B17 settings

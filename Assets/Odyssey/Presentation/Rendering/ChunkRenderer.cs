@@ -977,6 +977,37 @@ namespace Odyssey.Presentation.Rendering
                 Matrix4x4.TRS(centre, Quaternion.identity, size));
         }
 
+        /// <summary>
+        /// The outline of a whole cell, for a thing that is going to fill one.
+        ///
+        /// <para><b>A box rather than the floor plate <see cref="DrawCellMark"/> draws</b>, and the
+        /// shape is the whole point. A mine order and a fell order are read looking down at a face
+        /// that is already there, so paint on the floor says everything. A wall is not there yet
+        /// and stands three metres tall: marked with a plate, a row of ordered walls reads as a
+        /// path drawn on the grass. The owner asked for "some kind of outline" and this is it
+        /// (2026-09-17).</para>
+        ///
+        /// <para>The same corner brackets a selected thing gets, so an outlined cell and an
+        /// outlined colonist are recognisably the same language — one says "this is what you
+        /// picked", the other "this is what you asked for".</para>
+        /// </summary>
+        public void DrawCellOutline(CellRef cell, Color colour)
+        {
+            Vector3 centre = GroundRelief.Lift(CellMetrics.Centre(cell.X, cell.Z, cell.Y));
+            var size = new Vector3(
+                CellMetrics.SizeXZ - OutlineInset * 2f,
+                CellMetrics.SizeY - OutlineInset * 2f,
+                CellMetrics.SizeXZ - OutlineInset * 2f);
+
+            DrawSelectionBracket(centre, size, colour);
+        }
+
+        /// <summary>
+        /// Held in from the cell edges so that two outlined cells side by side read as two, and so
+        /// the box never z-fights the faces of whatever is standing next to it.
+        /// </summary>
+        const float OutlineInset = 0.12f;
+
         /// <summary>Clear of the face it is laid on, or it z-fights with it.</summary>
         const float MarkLift = 0.05f;
 

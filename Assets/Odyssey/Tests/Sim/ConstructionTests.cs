@@ -117,6 +117,72 @@ namespace Odyssey.Tests.Sim
             Assert.That(sites.Sites, Does.Contain(cell));
         }
 
+        /// <summary>
+        /// A click on open grass names the ground <i>block</i>, not the air above it, and a wall
+        /// goes in the air. The order has to be lifted or every cell of a wall dragged across a
+        /// meadow is refused in silence.
+        ///
+        /// <para><b>This is the case the whole feature is used through and it had no test.</b> Every
+        /// other test here picks its cell with <c>Allows</c>, which answers about air cells — so the
+        /// path a player actually takes was the one path never exercised. The owner reported
+        /// "dragging over grass and nothing appears" and the lift turned out to be working; that it
+        /// was working was luck, because nothing would have caught it breaking.</para>
+        /// </summary>
+        [Test]
+        public void AnOrderNamedAtTheGroundIsPlacedOnTheCellAboveIt()
+        {
+            ColonyWorld colony = Board();
+            int site = SiteBesideTheStart(colony);
+            Assume.That(site, Is.GreaterThanOrEqualTo(0));
+
+            int ground = site - Size.LayerStride;
+            Assume.That(colony.Grid.IsSolidTerrain(ground), Is.True, "the cell under a site is the ground");
+
+            // Named at the ground, exactly as the picker hands it to the designate tool.
+            Assert.That(Order(colony, ground), Is.EqualTo(IntentRejection.None));
+
+            Assert.That(colony.Construction.At(ground), Is.EqualTo(BuildingHandle.None),
+                "nothing is built inside the ground");
+            Assert.That(colony.Construction.At(site), Is.EqualTo(BuildingHandle.Wall),
+                "the order landed on the cell standing on it");
+        }
+
+        /// <summary>The mirror: naming the ground takes the site above it off again.</summary>
+        [Test]
+        public void CancellingAtTheGroundTakesOffTheSiteStandingOnIt()
+        {
+            ColonyWorld colony = Board();
+            int site = SiteBesideTheStart(colony);
+            Assume.That(site, Is.GreaterThanOrEqualTo(0));
+            Order(colony, site);
+
+            int ground = site - Size.LayerStride;
+            colony.World.Intents.Submit(new Intent(IntentKind.CancelBuilding, Size.FromIndex(ground)));
+            colony.World.Tick();
+
+            Assert.That(colony.Construction.At(site), Is.EqualTo(BuildingHandle.None));
+        }
+
+        /// <summary>
+        /// The negative control for the lift: solid rock with more solid rock above it is still a
+        /// refusal, not an order placed a layer away from where it was asked for.
+        /// </summary>
+        [Test]
+        public void TheLiftDoesNotInventASiteInsideAMassOfRock()
+        {
+            ColonyWorld colony = Board();
+
+            int buried = -1;
+            for (int i = 0; i < Size.CellCount - Size.LayerStride && buried < 0; i++)
+                if (colony.Grid.IsSolidTerrain(i) && colony.Grid.IsSolidTerrain(i + Size.LayerStride))
+                    buried = i;
+
+            Assume.That(buried, Is.GreaterThanOrEqualTo(0), "the board has rock with rock above it");
+
+            Assert.That(Order(colony, buried), Is.EqualTo(IntentRejection.NotPermitted));
+            Assert.That(colony.Construction.Count, Is.Zero);
+        }
+
         [Test]
         public void AMaterialTheColonyCannotCarryIsRefused()
         {

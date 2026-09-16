@@ -202,6 +202,26 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         public event Action<CellRef, CellRef>? ToolDrag;
 
+        /// <summary>
+        /// The box as it is being drawn, every frame the button is held with a tool armed.
+        ///
+        /// <para><b>Without this a tool gives no feedback at all until the button comes up.</b>
+        /// <see cref="ToolDrag"/> fires on release and nothing else ever did, so a player dragging
+        /// a wall across a meadow saw the board exactly as it was before they pressed — reported by
+        /// the owner as "nothing appears" even though the order was placed correctly on release
+        /// (2026-09-17). <c>DesignateDirector.TryPreview</c> was written for this and had never
+        /// been called by anything.</para>
+        ///
+        /// <para>Raised with the anchor and the current head, the same pair <see cref="ToolDrag"/>
+        /// carries, so the preview and the order that follows it cannot disagree about the box.
+        /// Raised before the threshold is crossed as well: a press that has not travelled yet is a
+        /// one-cell box, which is exactly what a click places.</para>
+        /// </summary>
+        public event Action<CellRef, CellRef>? ToolDragging;
+
+        /// <summary>The drag ended without placing anything — the tool was not armed, or it was a pick.</summary>
+        public event Action? ToolDragCancelled;
+
         /// <summary>A press must travel this many pixels before it counts as a box and not a click.</summary>
         const float DragThresholdPixels = 6f;
 
@@ -363,6 +383,17 @@ namespace Odyssey.Presentation.CameraRig
                 if (!_boxActive && (pointer - _dragStart.Value).sqrMagnitude
                     >= DragThresholdPixels * DragThresholdPixels)
                     _boxActive = true;
+
+                // Show the box while it is being drawn. Asked every frame rather than latched at
+                // the press, so arming a tool part way through a drag lights the preview up
+                // immediately — which is the same question the release below asks, and it must be
+                // asked the same way or the preview and the order disagree.
+                if (WorldToolArmed != null && WorldToolArmed()
+                    && CellAt(_dragStart.Value, out CellRef dragAnchor)
+                    && CellAt(_draggedTo, out CellRef dragHead))
+                    ToolDragging?.Invoke(dragAnchor, dragHead);
+                else
+                    ToolDragCancelled?.Invoke();
             }
             else if (_dragStart.HasValue)
             {
@@ -377,9 +408,18 @@ namespace Odyssey.Presentation.CameraRig
                 {
                     if (CellAt(start, out CellRef anchor) && CellAt(_draggedTo, out CellRef head))
                         ToolDrag?.Invoke(anchor, head);
+                    else ToolDragCancelled?.Invoke();
                 }
-                else if (wasBox) BoxSelected?.Invoke(RectFromTo(start, _draggedTo), shift);
-                else PickAt(_draggedTo);
+                else if (wasBox)
+                {
+                    ToolDragCancelled?.Invoke();
+                    BoxSelected?.Invoke(RectFromTo(start, _draggedTo), shift);
+                }
+                else
+                {
+                    ToolDragCancelled?.Invoke();
+                    PickAt(_draggedTo);
+                }
             }
         }
 

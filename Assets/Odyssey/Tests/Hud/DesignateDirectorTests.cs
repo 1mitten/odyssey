@@ -241,6 +241,51 @@ namespace Odyssey.Tests.Hud
                 "a wall is dragged out as a run, which is the whole reason to drag one");
         }
 
+        // ---- the live preview ------------------------------------------------------
+
+        /// <summary>
+        /// The preview and the order are the same object's answer a frame apart.
+        ///
+        /// <para>This is what the live preview is worth: <c>TryPreview</c> was written for
+        /// drawing the box and nothing ever called it, so a player saw no feedback at all
+        /// between pressing and releasing (owner, 2026-09-17). Driving the director live and
+        /// drawing its own preview is what makes the picture and the order impossible to
+        /// disagree, and this pins that they do not.</para>
+        /// </summary>
+        [Test]
+        public void ThePreviewCoversExactlyWhatTheCommitPlaces()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+            director.Begin(At(2, 7));
+            director.DragTo(At(4, 9));
+
+            Assert.That(director.TryPreview(out CellRef min, out CellRef max), Is.True);
+            Assert.That(director.PreviewCount, Is.EqualTo(9));
+
+            var previewed = new List<CellRef>();
+            for (int z = min.Z; z <= max.Z; z++)
+            for (int x = min.X; x <= max.X; x++)
+                previewed.Add(new CellRef(x, z, min.Y));
+
+            Assert.That(director.Commit(), Is.EqualTo(previewed));
+        }
+
+        /// <summary>A drag abandoned mid-way leaves nothing to draw, so the box vanishes with it.</summary>
+        [Test]
+        public void AnAbandonedDragHasNoPreviewToDraw()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+            director.Begin(At(1, 1));
+            director.DragTo(At(3, 3));
+
+            director.Abandon();
+
+            Assert.That(director.TryPreview(out _, out _), Is.False);
+            Assert.That(director.PreviewCount, Is.Zero);
+        }
+
         static List<CellRef> Cover(CellRef from, CellRef to)
         {
             var director = new DesignateDirector { Tool = DesignateTool.Mine };

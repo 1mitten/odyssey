@@ -146,6 +146,7 @@ namespace Odyssey.Presentation.Bootstrap
         ChunkRenderer? _renderer;
         PawnContext? _pawns;
         PawnFigureDirector? _figures;
+        DesignatePresenter? _designate;
         AudioDirector? _audio;
         DaylightDirector? _daylight;
         Material? _actorMaterial;
@@ -519,7 +520,8 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         void WarnIfTheSceneIsStale()
         {
-            if (GetComponent<DesignatePresenter>() != null) return;
+            _designate = GetComponent<DesignatePresenter>();
+            if (_designate != null) return;
 
             // Add it, then say so. **This reverses a decision, and the reversal is the point.**
             //
@@ -534,7 +536,7 @@ namespace Odyssey.Presentation.Bootstrap
             // is still reported rather than hidden. Rebuilding remains the right thing to do —
             // the scene may well be stale in other ways — but it is no longer the difference
             // between a feature existing and not.
-            gameObject.AddComponent<DesignatePresenter>();
+            _designate = gameObject.AddComponent<DesignatePresenter>();
 
             Debug.LogWarning(
                 "[Odyssey] This play scene was built before DesignatePresenter existed. It has " +
@@ -582,6 +584,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             DrawStandingOrders(_world.Views.Current);
             DrawBuildingSites(_world.Views.Current);
+            DrawToolPreview();
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
@@ -695,12 +698,78 @@ namespace Odyssey.Presentation.Bootstrap
                 CellRef cell = size.FromIndex(sites[i].CellIndex);
                 if (cell.Y < lowest || cell.Y > highest) continue;
 
+                // The outline first, because a site is a thing that is going to fill the cell and a
+                // plate on the floor reads as a path drawn on the grass. The plate stays under it:
+                // it is what says which cell, at a glance, from directly above.
+                _renderer.DrawCellOutline(cell, BuildOrderColour);
                 _renderer.DrawCellMark(cell, BuildOrderColour);
 
                 if (sites[i].Progress > 0)
                     _renderer.DrawCellFill(cell, sites[i].Progress / 255f, FrameColour);
             }
         }
+
+        /// <summary>
+        /// The box the player is dragging right now, before they let go.
+        ///
+        /// <para><b>Nothing drew this at all, and it is the whole of the owner's report that
+        /// dragging a wall over the meadow did nothing</b> (2026-09-17). The order was placed
+        /// correctly on release — measured — but between the press and the release the board
+        /// looked exactly as it had before, so there was no way to tell a tool that was working
+        /// from one that was not, and no way to see what a box was going to cover before
+        /// committing to it.</para>
+        ///
+        /// <para>Drawn from the director's own <c>TryPreview</c>, which was written for this and
+        /// had never been called. That is what stops the preview and the order disagreeing: they
+        /// are the same object's answer to "which cells does this box cover", a frame apart.</para>
+        ///
+        /// <para><b>Green for a build and the tool's own colour otherwise.</b> Green because it is
+        /// the colour of a thing about to be added and nothing else on the board uses it, and
+        /// because it is what the owner asked for by name.</para>
+        /// </summary>
+        void DrawToolPreview()
+        {
+            if (_renderer == null || _designate == null) return;
+
+            DesignateDirector director = _designate.Director;
+            if (!director.TryPreview(out CellRef min, out CellRef max)) return;
+
+            bool build = director.Tool == DesignateTool.Build;
+            Color tint = director.Tool switch
+            {
+                DesignateTool.Build => PreviewBuildColour,
+                DesignateTool.Mine => MineOrderColour,
+                DesignateTool.Fell => FellOrderColour,
+                _ => PreviewCancelColour,
+            };
+
+            for (int z = min.Z; z <= max.Z; z++)
+            for (int x = min.X; x <= max.X; x++)
+            {
+                var cell = new CellRef(x, z, min.Y);
+
+                // A build order is lifted onto the cell above solid ground by the simulation
+                // (ConstructionGrid.StandingOn), because a click on grass names the block and a
+                // wall goes in the air. The preview has to be lifted the same way or it is drawn
+                // one layer below the wall it is promising.
+                if (build && _grid != null && _grid.Contains(x, z, min.Y)
+                    && _grid.IsSolidTerrain(_grid.Index(cell)) && min.Y + 1 < _grid.Size.SizeY)
+                    cell = new CellRef(x, z, min.Y + 1);
+
+                if (build) _renderer.DrawCellOutline(cell, tint);
+                else _renderer.DrawCellMark(cell, tint);
+            }
+        }
+
+        /// <summary>
+        /// The box being dragged with a build tool. Green: the colour of a thing about to be added,
+        /// used nowhere else on the board, and brighter than a placed order because it is following
+        /// the pointer and has to be found instantly.
+        /// </summary>
+        static readonly Color PreviewBuildColour = new Color(0.42f, 0.95f, 0.45f, 0.70f);
+
+        /// <summary>The box being dragged with the cancel tool. Red, for the one tool that takes away.</summary>
+        static readonly Color PreviewCancelColour = new Color(0.95f, 0.38f, 0.34f, 0.60f);
 
         /// <summary>Marks a cell ordered dug. Warm, against the cool stone it is drawn over.</summary>
         static readonly Color MineOrderColour = new Color(0.95f, 0.72f, 0.32f, 0.42f);

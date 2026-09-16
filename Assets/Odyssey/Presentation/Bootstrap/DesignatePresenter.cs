@@ -64,14 +64,36 @@ namespace Odyssey.Presentation.Bootstrap
             // The rig asks this before it decides whether a press belonged to selection.
             _rig.WorldToolArmed = () => Director.Tool != DesignateTool.None;
             _rig.ToolDrag += OnToolDrag;
+            _rig.ToolDragging += OnToolDragging;
+            _rig.ToolDragCancelled += OnToolDragCancelled;
         }
 
         void OnDestroy()
         {
             if (_rig == null) return;
             _rig.ToolDrag -= OnToolDrag;
+            _rig.ToolDragging -= OnToolDragging;
+            _rig.ToolDragCancelled -= OnToolDragCancelled;
             if (_rig.WorldToolArmed != null) _rig.WorldToolArmed = null;
         }
+
+        /// <summary>
+        /// The box is being drawn: keep the director's own state machine in step with the pointer
+        /// so that <c>DesignateDirector.TryPreview</c> can be drawn.
+        ///
+        /// <para><b>The director is driven live rather than asked for a rectangle</b>, for the
+        /// reason <see cref="OnToolDrag"/> already gives: one implementation of "which cells does
+        /// this box cover", and it is the one the fast tier tests. It also means the preview cannot
+        /// disagree with the order that follows, because they are literally the same object's
+        /// answer a frame apart.</para>
+        /// </summary>
+        void OnToolDragging(CellRef anchor, CellRef head)
+        {
+            if (!Director.Dragging && !Director.Begin(anchor)) return;
+            Director.DragTo(head);
+        }
+
+        void OnToolDragCancelled() => Director.Abandon();
 
         void Update()
         {
@@ -122,7 +144,9 @@ namespace Odyssey.Presentation.Bootstrap
             if (world == null) return;
 
             DesignateTool tool = Director.Tool;
-            if (!Director.Begin(anchor)) return;
+            // Begun already by the live preview in the ordinary case; begun here for a press that
+            // never moved a pixel, which raises no dragging frame at all.
+            if (!Director.Dragging && !Director.Begin(anchor)) return;
             Director.DragTo(head);
             IReadOnlyList<CellRef> cells = Director.Commit();
 
