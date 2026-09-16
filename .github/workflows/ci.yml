@@ -1,0 +1,108 @@
+# Odyssey CI. Two tiers, the same two the working rules name.
+#
+# The fast tier runs on GitHub's own Linux machines on every push and pull request: the Sim and
+# Hud test projects through the dotnet SDK, the content-registry gates, and the icon tooling's
+# own tests. None of it needs Unity, so it is a real gate from the day this file lands.
+#
+# The Unity tier is the authority (assembly boundaries, editor tooling, PlayMode, the headless
+# day) and needs the owner's Windows machine as a self-hosted runner, per
+# docs/research/d-08-ci-tooling.md. It is switched on by a repository variable, UNITY_RUNNER=1,
+# set once the runner is registered with the labels self-hosted, windows and unity; until then
+# the job is skipped rather than left waiting for a machine that does not exist. Branch
+# protection on main should require "Fast tier" now and "Unity tests" once the variable is set.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  # One Unity run at a time per branch: the editor locks the project directory.
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  checks: write        # dorny/test-reporter creates the PR check
+  pull-requests: read
+
+jobs:
+  fast:
+    name: Fast tier
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Sim and Hud tests
+        run: bash scripts/test-fast.sh
+
+      - name: Long tier (soaks and scale-target round trips)
+        run: ODYSSEY_TEST_ALL=1 bash scripts/test-fast.sh --filter "TestCategory=Long"
+
+      - name: Content registry is current
+        run: python3 tools/wiki/build_wiki.py --check
+
+      - name: Icon tooling tests
+        run: python3 -m unittest discover -s tools/icons -t tools/icons
+
+  unity:
+    name: Unity tests
+    if: vars.UNITY_RUNNER == '1'
+    # Label the owner's Windows 11 machine with all three of these.
+    runs-on: [self-hosted, windows, unity]
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash    # Git Bash on Windows; this is what scripts/unity.sh expects.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          # clean: false keeps the gitignored Library/ between runs. This IS the cache;
+          # without it every run re-imports the whole project (tens of minutes).
+          clean: false
+          lfs: false
+
+      - name: Which editor
+        run: scripts/unity.sh which
+
+      # EditMode: pure Sim plus editor tooling. Runs with -nographics, the unity.sh default.
+      - name: EditMode tests
+        run: scripts/unity.sh test editmode
+
+      # PlayMode: unity.sh already drops -nographics for it, because URP needs a device and
+      # the self-hosted box has a GPU.
+      - name: PlayMode tests
+        run: scripts/unity.sh test playmode
+
+      # The milestone gate: a headless one-day simulation with no errors.
+      - name: Headless one-day simulation
+        run: scripts/unity.sh exec Odyssey.EditorTools.OneDay.Run
+
+      - name: Upload test results and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-test-results
+          path: |
+            TestResults/*.xml
+            Logs/*.log
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Publish test results as a check
+        if: always()
+        uses: dorny/test-reporter@v2
+        with:
+          name: Unity tests
+          path: TestResults/*.xml
+          reporter: dotnet-nunit
+          fail-on-error: true
