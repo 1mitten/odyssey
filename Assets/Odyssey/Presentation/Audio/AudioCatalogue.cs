@@ -102,6 +102,16 @@ namespace Odyssey.Presentation.Audio
 
             [Tooltip("Seconds of crossfade between phases.")]
             [Range(0.5f, 10f)] public float FadeSeconds = 3f;
+
+            [Tooltip("Seconds for the FIRST fade of a session, when the game is arriving rather " +
+                     "than changing. 0 uses FadeSeconds.")]
+            [Range(0f, 30f)] public float ArrivalFadeSeconds;
+
+            /// <summary>The fade to use, given whether this loop has played yet this session.
+            /// Arriving in a world is not the same event as the clock turning over in one, and a
+            /// bed that is already the air by the time you notice it is the point.</summary>
+            public float FadeFor(bool arriving) =>
+                arriving && ArrivalFadeSeconds > 0f ? ArrivalFadeSeconds : FadeSeconds;
         }
 
         public List<SoundDef> Sounds = new();

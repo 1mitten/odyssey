@@ -83,6 +83,14 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Which faces the colonists get. 0 draws a fresh cast every session; any other value pins one, and the log prints the value each session used so a cast you liked can be kept.")]
         public int colonistLookSeed = 0;
 
+        /// <summary>
+        /// The hour the colony's first day begins, 0 to 23. Noon by default: the board is lit for
+        /// midday and has no day/night lighting, so a clock starting at 00:00 meant a player saw
+        /// noon and heard the night bed. Set it negative to start at tick 0 the way a headless
+        /// run does.
+        /// </summary>
+        [Range(-1, 23)] public int startHour = 12;
+
         [Header("Presentation")]
         public ModuleCatalogue? moduleCatalogue;
         public AudioCatalogue? audioCatalogue;
@@ -215,6 +223,12 @@ namespace Odyssey.Presentation.Bootstrap
                 .AddSnapshotContributor(mirror)
                 .AddColony(_pawns, designations, support, nav)
                 .Build();
+
+            // Noon, before the world has ticked once. It has to be here and not further down:
+            // the composition root ticks once during setup to publish a first frame, and
+            // SimWorld.StartAtTick refuses a clock that has already run — which is how this was
+            // caught being in the wrong place rather than quietly starting the day an hour late.
+            if (startHour >= 0) _world.StartAtTick(startHour * GameClock.TicksPerHour);
 
             ScenarioDef scenarioDef = scenario == StartingScenario.Bare ? ScenarioDef.Bare() : ScenarioDef.Playtest();
             var placement = ColonyScenario.Place(_grid, _pawns, outcome.StartCell, seed, scenarioDef);

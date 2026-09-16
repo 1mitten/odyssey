@@ -42,6 +42,18 @@ namespace Odyssey.Presentation.Audio
         /// <summary>The chime for a colonist past starving. The one alert the snapshot can raise today.</summary>
         public const string AlertStarving = SoundPrefix + "alert.starving";
 
+        /// <summary>
+        /// A campfire burning. **In the library, not yet in the game.**
+        ///
+        /// <para>The clip and its catalogue row are here so the sound exists the day the fire
+        /// does. Nothing plays it, and nothing can yet: a fire is a <i>looping sound belonging to
+        /// a thing at a place</i>, which is a third kind of emitter the director does not have —
+        /// the one-shot pool is for moments, and the beds are one-per-environment measured from
+        /// the world. What is missing is an emitter that follows a thing and starts and stops
+        /// with it, which is a job for whoever builds fires, not a guess made in advance.</para>
+        /// </summary>
+        public const string Campfire = SoundPrefix + "campfire";
+
         /// <summary>Looping water: ponds, streams and the river, scaled by how much of it is near.</summary>
         public const string AmbienceWater = AmbiencePrefix + "water";
 
@@ -66,7 +78,7 @@ namespace Odyssey.Presentation.Audio
         /// <summary>Every id the shipped catalogue defines, for a generator or a test to walk.</summary>
         public static readonly string[] All =
         {
-            WorkChop, WorkPick, AlertStarving,
+            WorkChop, WorkPick, AlertStarving, Campfire,
             AmbienceWater, AmbienceOutdoorDay, AmbienceOutdoorNight,
             MusicDay, MusicNight,
         };

@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 using NUnit.Framework;
+using Odyssey.Hud;
 using Odyssey.Presentation.Audio;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Worldgen.Natural;
@@ -357,6 +358,37 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
+        public void TheWorldFadesUpOnArrivalRatherThanSnappingOn()
+        {
+            AudioCatalogue.PhaseTrackDef day =
+                _catalogue.Outdoor.Find(track => track.Phase == MusicPhase.Day)!;
+            day.FadeSeconds = 1f;
+            day.ArrivalFadeSeconds = 6f;
+
+            using var audio = Make();
+
+            // A sixth of the way into the arrival: audibly on its way up, nowhere near there.
+            Advance(audio, 1f, tick: DayTick);
+            Assert.That(audio.OutdoorLevel, Is.GreaterThan(0f).And.LessThan(day.Volume * 0.25f),
+                "arriving in the world is a fade, not a switch");
+
+            Advance(audio, 6f, tick: DayTick);
+            Assert.That(audio.OutdoorLevel, Is.GreaterThan(day.Volume * 0.9f),
+                "and it is fully up by the end of the arrival");
+
+            // Dusk, later: the clock turning over is a change and not an arrival, so it takes the
+            // phase's own fade. Arriving twice would mean the world faded in every evening.
+            AudioCatalogue.PhaseTrackDef night =
+                _catalogue.Outdoor.Find(track => track.Phase == MusicPhase.Night)!;
+            night.FadeSeconds = 1f;
+            night.ArrivalFadeSeconds = 6f;
+
+            Advance(audio, 1.2f, tick: NightTick);
+            Assert.That(audio.OutdoorLevel, Is.GreaterThan(night.Volume * 0.8f),
+                "the second phase uses its own fade, not the arrival again");
+        }
+
+        [Test]
         public void ThereIsNoOutdoorsUnderground()
         {
             using var audio = Make();
@@ -389,6 +421,48 @@ namespace Odyssey.Tests.Presentation
             Assert.That(audio.OutdoorLevel, Is.EqualTo(0f), "the ambience fader owns the bed");
             Assert.That(audio.MusicVolume, Is.EqualTo(music).Within(0.001f),
                 "and the music is not on that fader");
+        }
+
+        [Test]
+        public void ADayOfAudioIsTwoLoopsExceptWhileTheSunIsChangingSides()
+        {
+            using var audio = Make();
+            var frame = Frame();
+
+            // A whole game day at the shipped rate — one tick a frame, sixty frames a second —
+            // because the fades run on real seconds and the phases on ticks, and an answer that
+            // steps only one of them is about neither.
+            const float dt = 1f / 60f;
+            int worst = 0;
+            long worstAt = 0;
+            var stacked = new List<long>();
+
+            for (long tick = 0; tick < GameClock.TicksPerDay; tick++)
+            {
+                audio.Sync(dt, Frame(tick), Vector3.zero, Vector3.zero, Surface);
+
+                if (tick % 60 != 0) continue;   // once a game-second is enough to catch a stuck voice
+
+                int up = 0;
+                foreach (AudioSource voice in Playing())
+                    if (voice.clip != null && voice.volume > 0.005f) up++;
+
+                if (up > worst) { worst = up; worstAt = tick; }
+                if (up > 2) stacked.Add(tick);
+            }
+
+            // Two is the steady state: one music track and one outdoor bed. More than two is a
+            // crossfade, and a crossfade belongs only to the two moments the clock changes phase.
+            Assert.That(worst, Is.LessThanOrEqualTo(4),
+                $"at most both pairs mid-crossfade; saw {worst} at tick {worstAt}");
+
+            foreach (long tick in stacked)
+            {
+                int hour = GameClock.HourOfDay(tick);
+                Assert.That(hour == MusicClock.DayStartHour || hour == MusicClock.NightStartHour,
+                    $"more than two loops were up at {hour:00}:xx (tick {tick}), which is neither " +
+                    "dawn nor dusk — something is playing that should have stopped");
+            }
         }
 
         [Test]

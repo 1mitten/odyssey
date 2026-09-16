@@ -502,6 +502,10 @@ namespace Odyssey.Presentation.Audio
             float _volume, _fadeSeconds = 3f, _elapsed;
             float _leavingVolume, _leavingFadeSeconds = 3f, _leavingElapsed;
 
+            /// <summary>Whether nothing has played on this loop yet. The first fade of a session
+            /// is an arrival and may be slower than any later change of phase.</summary>
+            bool _arriving = true;
+
             public PhaseLoop(AudioSource a, AudioSource b)
             {
                 _a = a;
@@ -541,8 +545,9 @@ namespace Odyssey.Presentation.Audio
                         next.Play();
                         _current = next;
                         _volume = def.Volume;
-                        _fadeSeconds = def.FadeSeconds;
+                        _fadeSeconds = def.FadeFor(_arriving);
                         _elapsed = 0f;
+                        _arriving = false;
                     }
                     else
                     {

@@ -100,11 +100,20 @@ namespace Odyssey.EditorTools
 
             public readonly bool LoadInBackground;
 
-            /// <summary>The synthesised stand-in, used only when no file of this name exists.</summary>
-            public readonly System.Func<float[]> Placeholder;
+            /// <summary>
+            /// The synthesised stand-in, used only when no file of this name exists — or
+            /// <c>null</c> for a sound the game does without rather than fakes.
+            ///
+            /// <para>The difference is whether a crude stand-in is better than silence. For a
+            /// chop it plainly is: the work needs to be audible to be judged at all. For music it
+            /// plainly is not — three sine waves held as a chord is a test tone, it plays
+            /// continuously under everything, and what it tells a listener is that something is
+            /// broken. Silence is the honest placeholder for music.</para>
+            /// </summary>
+            public readonly System.Func<float[]>? Placeholder;
 
             public ClipSpec(string name, AudioCompressionFormat format, AudioClipLoadType loadType,
-                bool mono, bool loadInBackground, System.Func<float[]> placeholder)
+                bool mono, bool loadInBackground, System.Func<float[]>? placeholder)
             {
                 Name = name;
                 Format = format;
@@ -133,20 +142,30 @@ namespace Odyssey.EditorTools
                 mono: true, loadInBackground: false, Pick),
             new("alert", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: false, loadInBackground: false, Alert),
-            new("ambience-day", AudioCompressionFormat.ADPCM, AudioClipLoadType.DecompressOnLoad,
-                mono: false, loadInBackground: false, () => Outdoor(12f, day: true)),
-            new("ambience-night", AudioCompressionFormat.ADPCM, AudioClipLoadType.DecompressOnLoad,
-                mono: false, loadInBackground: false, () => Outdoor(12f, day: false)),
+            // The forest beds are minutes long, so they stream rather than sit in memory: a
+            // three-minute stereo bed decompressed on load is eighteen megabytes of RAM to play
+            // something the player is not supposed to notice. Streaming costs ~200 KB a voice.
+            new("ambience-day", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
+                mono: false, loadInBackground: true, () => Outdoor(12f, day: true)),
+            new("ambience-night", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
+                mono: false, loadInBackground: true, () => Outdoor(12f, day: false)),
+
+            // A fire is a place you stand near, so it is mono. Compressed in memory rather than
+            // decompressed, because it is a long loop that plays continuously: ADPCM decodes for
+            // almost nothing and keeps a thirty-five-second loop under a megabyte.
+            new("campfire", AudioCompressionFormat.ADPCM, AudioClipLoadType.CompressedInMemory,
+                mono: true, loadInBackground: false, Fire),
+            // No placeholder: see ClipSpec.Placeholder. A phase with no track is a case the
+            // director already handles — the bed plays alone and nothing fades in over it.
             new("music-day", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
-                mono: false, loadInBackground: true,
-                () => Music(24f, 130.81f, 196.00f, 329.63f, 0.11f)),
+                mono: false, loadInBackground: true, placeholder: null),
             new("music-night", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
-                mono: false, loadInBackground: true,
-                () => Music(24f, 110.00f, 164.81f, 261.63f, 0.07f)),
+                mono: false, loadInBackground: true, placeholder: null),
         };
 
-        /// <summary>How many numbered takes of one sound the tool looks for.</summary>
-        internal const int MaxVariants = 16;
+        /// <summary>How many numbered takes of one sound the tool looks for. The felling
+        /// recording split into twenty-four blows, so sixteen was already too few.</summary>
+        internal const int MaxVariants = 48;
 
         /// <summary>
         /// Write a placeholder for every clip that is missing, and set the import class on every
@@ -165,16 +184,23 @@ namespace Odyssey.EditorTools
         {
             Directory.CreateDirectory(ClipFolder);
 
-            int written = 0, kept = 0;
+            int written = 0, kept = 0, absent = 0;
             foreach (ClipSpec spec in Clips)
             {
                 foreach (string path in PathsFor(spec.Name, includeMissingBase: true))
                 {
                     bool isBase = path == BasePath(spec.Name);
+                    bool missing = !File.Exists(path);
 
-                    if (!File.Exists(path) || (overwritePlaceholders && isBase))
+                    if (missing && spec.Placeholder == null)
                     {
-                        WriteWav(path, Rate, spec.Placeholder());
+                        absent++;
+                        continue;
+                    }
+
+                    if (missing || (overwritePlaceholders && isBase))
+                    {
+                        WriteWav(path, Rate, spec.Placeholder!());
                         written++;
                     }
                     else
@@ -187,7 +213,8 @@ namespace Odyssey.EditorTools
             }
 
             Debug.Log($"[AudioSetup] {written} placeholder clip(s) written, {kept} existing " +
-                      $"clip(s) kept and re-imported, in {ClipFolder}.");
+                      $"clip(s) kept and re-imported, {absent} absent and done without, " +
+                      $"in {ClipFolder}.");
         }
 
         static string BasePath(string name) => $"{ClipFolder}/{name}.wav";
@@ -215,6 +242,37 @@ namespace Odyssey.EditorTools
             }
 
             return paths;
+        }
+
+        /// <summary>
+        /// A fire: a broad hiss with sharp little cracks through it, at random. Crude, and only
+        /// ever reached by a clone that has no recording of one.
+        /// </summary>
+        static float[] Fire()
+        {
+            int count = (int)(8f * Rate);
+            var random = new System.Random(4_411);
+
+            float[] body = NoiseBand(count, random, 1_400f, 0.05f);
+            var samples = new float[count];
+            System.Array.Copy(body, samples, count);
+
+            // The cracks. Each is a short decaying burst, thrown down at random and left to ring.
+            for (int n = 0; n < 220; n++)
+            {
+                int at = random.Next(count);
+                int length = Rate / 100 + random.Next(Rate / 40);
+                float loud = 0.12f + (float)random.NextDouble() * 0.35f;
+                for (int i = 0; i < length && at + i < count; i++)
+                {
+                    float decay = 1f - (float)i / length;
+                    samples[at + i] += ((float)random.NextDouble() * 2f - 1f)
+                                       * loud * decay * decay;
+                }
+            }
+
+            for (int i = 0; i < count; i++) samples[i] = Mathf.Clamp(samples[i], -1f, 1f);
+            return CrossfadeTail(samples, 1.0f);
         }
 
         /// <summary>
@@ -439,6 +497,14 @@ namespace Odyssey.EditorTools
                 AssetDatabase.CreateAsset(catalogue, CataloguePath);
             }
 
+            // **Ranges are distances from the camera, not from the ground.** The AudioListener
+            // lives on the camera, which the rig parks 32 m back at its closest and 160 m at its
+            // furthest, so a sound authored to die at 48 m — a sensible distance between two
+            // people — is a sound that is already faint at the default zoom and culled outright
+            // the moment the player pulls back. Every range here is therefore about four times
+            // what the same sound would be given in a first-person game. The alternative is to
+            // move the ears to the camera's focus, which would let these be ground distances
+            // again; it is written up as open in CLAUDE.md.
             catalogue.Sounds.Clear();
             catalogue.Sounds.AddRange(new[]
             {
@@ -448,7 +514,7 @@ namespace Odyssey.EditorTools
                     Clips = Variants("chop"),
                     Bus = SoundBus.Effects,
                     Volume = 0.85f, VolumeVariance = 0.15f, PitchVariance = 0.07f,
-                    SpatialBlend = 1f, MinDistance = 5f, MaxDistance = 48f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 200f,
                     Priority = 120, Cooldown = 0.15f,
                 },
                 new AudioCatalogue.SoundDef
@@ -457,7 +523,7 @@ namespace Odyssey.EditorTools
                     Clips = Variants("pick"),
                     Bus = SoundBus.Effects,
                     Volume = 0.8f, VolumeVariance = 0.14f, PitchVariance = 0.06f,
-                    SpatialBlend = 1f, MinDistance = 5f, MaxDistance = 52f,
+                    SpatialBlend = 1f, MinDistance = 20f, MaxDistance = 210f,
                     Priority = 120, Cooldown = 0.12f,
                 },
                 new AudioCatalogue.SoundDef
@@ -471,12 +537,26 @@ namespace Odyssey.EditorTools
                 },
             });
 
+            // The campfire: in the library, played by nothing. A looping sound that belongs to a
+            // thing at a place is a kind of emitter the director does not have — see
+            // SoundIds.Campfire. The row is here so the day fires arrive the sound is already
+            // named, imported and mixed, and the work is whatever plays it.
+            catalogue.Sounds.Add(new AudioCatalogue.SoundDef
+            {
+                Id = SoundIds.Campfire,
+                Clips = Variants("campfire"),
+                Bus = SoundBus.Ambience,
+                Volume = 0.55f, VolumeVariance = 0f, PitchVariance = 0f,
+                SpatialBlend = 1f, MinDistance = 15f, MaxDistance = 110f,
+                Priority = 180, Cooldown = 0f,
+            });
+
             catalogue.Ambience.Clear();
             catalogue.Ambience.Add(new AudioCatalogue.AmbienceDef
             {
                 Id = SoundIds.AmbienceWater,
                 Clip = Require("water"),
-                Volume = 0.75f, FadeSeconds = 2.5f, MinDistance = 30f, MaxDistance = 110f,
+                Volume = 0.75f, FadeSeconds = 2.5f, MinDistance = 60f, MaxDistance = 300f,
             });
 
             // The outdoor bed. Quieter than the music by design: it is the floor of the mix,
@@ -489,21 +569,32 @@ namespace Odyssey.EditorTools
                 new AudioCatalogue.PhaseTrackDef
                 {
                     Phase = MusicPhase.Day, Clip = Require("ambience-day"),
-                    Volume = 0.34f, FadeSeconds = 6f,
+                    Volume = 0.34f, FadeSeconds = 6f, ArrivalFadeSeconds = 10f,
                 },
                 new AudioCatalogue.PhaseTrackDef
                 {
                     Phase = MusicPhase.Night, Clip = Require("ambience-night"),
-                    Volume = 0.26f, FadeSeconds = 8f,
+                    Volume = 0.26f, FadeSeconds = 8f, ArrivalFadeSeconds = 10f,
                 },
             });
 
+            // Music is optional. A row is written only when there is a track to point it at, so
+            // a project with no music licensed plays the world and nothing else — which is a
+            // state the director handles and, until there is real music, the better one.
             catalogue.Music.Clear();
-            catalogue.Music.AddRange(new[]
+            AddTrack(catalogue.Music, MusicPhase.Day, "music-day", 0.5f, 3f);
+            AddTrack(catalogue.Music, MusicPhase.Night, "music-night", 0.42f, 4f);
+
+            void AddTrack(System.Collections.Generic.List<AudioCatalogue.PhaseTrackDef> into,
+                MusicPhase phase, string name, float volume, float fade)
             {
-                new AudioCatalogue.PhaseTrackDef { Phase = MusicPhase.Day, Clip = Require("music-day"), Volume = 0.5f, FadeSeconds = 3f },
-                new AudioCatalogue.PhaseTrackDef { Phase = MusicPhase.Night, Clip = Require("music-night"), Volume = 0.42f, FadeSeconds = 4f },
-            });
+                AudioClip? clip = Clip(name);
+                if (clip == null) return;
+                into.Add(new AudioCatalogue.PhaseTrackDef
+                {
+                    Phase = phase, Clip = clip, Volume = volume, FadeSeconds = fade,
+                });
+            }
 
             EditorUtility.SetDirty(catalogue);
             AssetDatabase.SaveAssets();
