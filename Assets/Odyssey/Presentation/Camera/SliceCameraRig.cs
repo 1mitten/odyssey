@@ -45,12 +45,19 @@ namespace Odyssey.Presentation.CameraRig
         WorldRenderModel? _model;
         ChunkRenderer? _renderer;
         Vector3 _focus;
+        Vector3? _glideTarget;
         float _targetYaw;
         float _targetDistance;
         bool _orbiting;
         Vector2 _lastPointer;
 
         public int ActiveLayer { get; private set; }
+
+        /// <summary>Where the camera is looking, in world metres. For tests and readouts.</summary>
+        public Vector3 Focus => _focus;
+
+        /// <summary>Where a glide is taking the focus, or null when the camera is where it was asked to be.</summary>
+        public Vector3? GlideTarget => _glideTarget;
 
         /// <summary>The cell the player last clicked, or none. Never above the active layer.</summary>
         public CellRef? Selection { get; private set; }
@@ -218,6 +225,8 @@ namespace Odyssey.Presentation.CameraRig
             Quaternion flat = Quaternion.Euler(0f, yaw, 0f);
             Vector3 forward = flat * Vector3.forward;
             Vector3 right = flat * Vector3.right;
+            // A pan is the player taking the camera back: whatever a glide was heading for, it stops.
+            _glideTarget = null;
             _focus += forward * amount.y + right * amount.x;
             ClampFocus();
         }
@@ -256,6 +265,18 @@ namespace Odyssey.Presentation.CameraRig
         {
             _focus = CellMetrics.FloorCentre(cell);
             _targetDistance = Mathf.Clamp(distance, minDistance, maxDistance);
+        }
+
+        /// <summary>
+        /// Glide the view to a cell at the current zoom, on the smoothing the rest of the camera
+        /// uses. For the roster: clicking a colonist's card means "take me to them", and a cut
+        /// would lose the player their bearings where a glide keeps them. A pan cancels it.
+        /// </summary>
+        public void GlideTo(CellRef cell)
+        {
+            Vector3 target = CellMetrics.FloorCentre(cell);
+            target.y = _focus.y;
+            _glideTarget = target;
         }
 
         // -------------------------------------------------------- selection
@@ -301,6 +322,19 @@ namespace Odyssey.Presentation.CameraRig
 
             float targetY = ActiveLayer * CellMetrics.SizeY;
             _focus.y = instant ? targetY : Mathf.Lerp(_focus.y, targetY, k);
+
+            if (_glideTarget.HasValue)
+            {
+                Vector3 target = _glideTarget.Value;
+                _focus.x = instant ? target.x : Mathf.Lerp(_focus.x, target.x, k);
+                _focus.z = instant ? target.z : Mathf.Lerp(_focus.z, target.z, k);
+                if (instant || (Mathf.Abs(_focus.x - target.x) < 0.02f && Mathf.Abs(_focus.z - target.z) < 0.02f))
+                {
+                    _focus.x = target.x;
+                    _focus.z = target.z;
+                    _glideTarget = null;
+                }
+            }
 
             var rotation = Quaternion.Euler(pitch, yaw, 0f);
             transform.SetPositionAndRotation(_focus - rotation * Vector3.forward * distance, rotation);

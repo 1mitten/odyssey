@@ -73,6 +73,18 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         public void SelectPawn(PawnId id)
         {
+            // A card is clicked for a colonist who may be anywhere, so the roster path also takes
+            // the camera to them: their layer first, since the rig will not look through a floor,
+            // then a glide to their cell at the current zoom. A world click does not do this — that
+            // colonist is already under the cursor, and moving the view under a click is what a
+            // player calls the camera fighting them.
+            var world = _bootstrap?.World;
+            if (_rig != null && world != null && world.Views.Current.TryGetPawn(id, out PawnView view))
+            {
+                if (view.Cell.Y != _rig.ActiveLayer) _rig.SetLayer(view.Cell.Y);
+                _rig.GlideTo(view.Cell);
+            }
+
             _selected = id;
             _selectedThing = ThingId.None;
             _selectedThingDef = -1;

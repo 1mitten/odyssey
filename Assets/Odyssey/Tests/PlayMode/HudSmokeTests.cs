@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
+using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.Ui;
 using Odyssey.Sim.Contracts;
 using UnityEngine;
@@ -102,6 +103,17 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(title, Is.Not.Null, "the inspect pane never built a header");
                 Assert.That(title!.text, Is.EqualTo(ColonistNames.Of(pawn)),
                     "the pane does not show the selected colonist by name");
+
+                // A card click also takes the camera to the colonist: the rig glides to their
+                // cell on its own smoothing, and lands within a fraction of a second.
+                var rig = boot.cameraRig!;
+                CellRef at = boot.World.Views.Current.Pawns[0].Cell;
+                Assert.That(rig.ActiveLayer, Is.EqualTo(at.Y), "the rig changes to the colonist's layer");
+                float waited = 0f;
+                while (rig.GlideTarget.HasValue && waited < 3f) { waited += Time.unscaledDeltaTime; yield return null; }
+                Vector3 centre = CellMetrics.FloorCentre(at);
+                Assert.That(rig.Focus.x, Is.EqualTo(centre.x).Within(0.05f), "the camera glided to the colonist");
+                Assert.That(rig.Focus.z, Is.EqualTo(centre.z).Within(0.05f));
             }
             finally
             {
