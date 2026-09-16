@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-45 entries, 22 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+46 entries, 23 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Weather
 
@@ -53,6 +53,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
+| **Architect** | `ui.tab.architect` | Build, dig and zone — the palette of placement tools | no art | M1 |
 | **Work** | `ui.tab.work` | The priority grid | sheet 06 (action tiles), med | M1 |
 | **Schedule** | `ui.tab.schedule` | Who does what, and when | sheet 06 (action tiles), med | M1 |
 | **Research** | `ui.tab.research` | The tree, and what is being worked on | sheet 06 (action tiles), high | M1 |
