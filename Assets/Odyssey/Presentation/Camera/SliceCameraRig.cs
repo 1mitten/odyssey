@@ -72,15 +72,17 @@ namespace Odyssey.Presentation.CameraRig
         /// right one a frame later. A handler runs inside the pick, so by the time anything draws
         /// the answer is already known.
         /// </summary>
-        public event Action<CellRef?>? SelectionChanged;
+        public event Action<CellRef?, Ray>? SelectionChanged;
 
-        void SetSelection(CellRef? cell)
+        /// <param name="ray">The pick ray, so a listener can hit-test things that stand *in* a
+        /// cell rather than settle for the cell. Meaningless when <paramref name="cell"/> is null.</param>
+        void SetSelection(CellRef? cell, Ray ray)
         {
             bool same = cell.HasValue == Selection.HasValue
                         && (!cell.HasValue || cell.Value == Selection!.Value);
             Selection = cell;
             // Re-clicking the same cell still announces: the thing standing in it may have moved.
-            if (!same || cell.HasValue) SelectionChanged?.Invoke(cell);
+            if (!same || cell.HasValue) SelectionChanged?.Invoke(cell, ray);
         }
 
         public void Bind(WorldRenderModel model, ChunkRenderer renderer, int startLayer)
@@ -200,7 +202,7 @@ namespace Odyssey.Presentation.CameraRig
             int next = Mathf.Clamp(ActiveLayer + delta, 0, _model.Size.SizeY - 1);
             if (next == ActiveLayer) return;
             ActiveLayer = next;
-            SetSelection(null);
+            SetSelection(null, default);
             ActiveLayerChanged?.Invoke(ActiveLayer);
         }
 
@@ -239,8 +241,8 @@ namespace Odyssey.Presentation.CameraRig
             if (_model == null) return;
             var camera = GetComponent<UnityEngine.Camera>();
             Ray ray = camera.ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
-            if (SlicePicker.Pick(ray, _model, ActiveLayer, out CellRef cell)) SetSelection(cell);
-            else SetSelection(null);
+            if (SlicePicker.Pick(ray, _model, ActiveLayer, out CellRef cell)) SetSelection(cell, ray);
+            else SetSelection(null, ray);
         }
 
         /// <summary>

@@ -27,19 +27,6 @@ namespace Odyssey.Presentation.Bootstrap
         static readonly string[] JobNames = { "hauling", "eating", "sleeping", "wandering", "waiting" };
 
         /// <summary>
-        /// How far from the clicked cell a colonist may stand and still be the one selected.
-        ///
-        /// Two, not one, and the reason is geometric rather than a matter of taste. The picker
-        /// answers with the floor cell the ray crosses, but a colonist is drawn as a body and a
-        /// beacon standing well clear of that floor. Under a tilted camera the player aims at the
-        /// beacon, so the ray passes over the pawn and meets the ground a cell or two beyond them.
-        /// A radius of one leaves the most natural click — straight at the bright marker — landing
-        /// on empty grass, which reads as the click being ignored rather than as a near miss.
-        /// </summary>
-        [Tooltip("Cells within this distance of the click count as picking that colonist.")]
-        public int pickRadius = 2;
-
-        /// <summary>
         /// The colonist the last click landed on, or <see cref="PawnId.None"/>.
         ///
         /// Public because the cursor needs it: a selected colonist gets a bracket around the
@@ -89,15 +76,23 @@ namespace Odyssey.Presentation.Bootstrap
         /// handler on the rig's event runs during the pick itself; the answer exists before any
         /// LateUpdate draws.
         /// </summary>
-        void OnSelectionChanged(CellRef? picked)
+        void OnSelectionChanged(CellRef? picked, Ray ray)
         {
             var world = _bootstrap?.World;
             if (world == null) return;
 
-            // The picker cannot return a cell above the active layer, so a colonist upstairs can
-            // never be selected through the floor they are standing on.
+            // A colonist is picked by the ray passing through the same box the cursor draws round
+            // them, so what is bracketed is exactly what can be clicked and nothing wider. This
+            // replaced a catchment radius of two cells — a five-by-five-cell square, twelve metres
+            // across — that made it hard to click off a colonist or on to anything near one. The
+            // radius had been compensating for a tilted ray sailing over a low baked box; the
+            // figures are full height now and a proper hit-test needs no compensation.
+            //
+            // The picker cannot return a cell above the active layer, and the hit-test only looks
+            // at pawns on drawn layers, so a colonist upstairs is still never selected through
+            // the floor they are standing on.
             _selected = picked.HasValue
-                ? NearestPawn(world.Views.Current, picked.Value, pickRadius)
+                ? PawnUnderRay(world.Views.Current, ray, picked.Value.Y)
                 : PawnId.None;
 
             // A colonist wins over an item, because a colonist standing on a crate is what you
@@ -124,20 +119,28 @@ namespace Odyssey.Presentation.Bootstrap
             def = -1;
         }
 
-        static PawnId NearestPawn(WorldSnapshot snapshot, CellRef cell, int radius)
+        /// <summary>
+        /// The nearest colonist whose cursor box the ray passes through, on or below the picked
+        /// layer. Placed with the same tween the figure is drawn with, so a walking colonist is
+        /// clickable where they appear, not where their cell says they are.
+        /// </summary>
+        PawnId PawnUnderRay(WorldSnapshot snapshot, Ray ray, int activeLayer)
         {
+            Vector3 box = _bootstrap != null ? _bootstrap.colonistCursor : new Vector3(1.15f, 2.7f, 1.15f);
             PawnId best = PawnId.None;
-            int bestDistance = int.MaxValue;
+            float nearest = float.MaxValue;
+
             var pawns = snapshot.Pawns;
             for (int i = 0; i < pawns.Length; i++)
             {
-                var pawn = pawns[i];
-                if (pawn.Cell.Y != cell.Y) continue;
-                int dx = Mathf.Abs(pawn.Cell.X - cell.X);
-                int dz = Mathf.Abs(pawn.Cell.Z - cell.Z);
-                int distance = Mathf.Max(dx, dz);
-                if (distance > radius || distance >= bestDistance) continue;
-                bestDistance = distance;
+                PawnView pawn = pawns[i];
+                if (pawn.Cell.Y > activeLayer) continue;
+
+                Vector3 feet = Odyssey.Presentation.Rendering.PawnPose.Of(pawn, 0f, 0, out _);
+                var bounds = new Bounds(feet + Vector3.up * (box.y * 0.5f), box);
+                if (!bounds.IntersectRay(ray, out float distance) || distance >= nearest) continue;
+
+                nearest = distance;
                 best = pawn.Id;
             }
             return best;

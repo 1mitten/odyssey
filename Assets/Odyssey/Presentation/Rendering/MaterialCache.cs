@@ -62,7 +62,24 @@ namespace Odyssey.Presentation.Rendering
         /// different material rather than a shader branch, and the pack shaders are alpha-clipped
         /// Shader Graphs that cannot be turned transparent from script without forking them.
         /// </summary>
-        public Material Get(Material baseMaterial, Color tint, Color emission, bool ghost, float alpha)
+        /// <summary>
+        /// Alpha cutoff for foliage, applied to every cloned foliage material.
+        ///
+        /// The pack's grass is a colour cutout imported without alpha-is-transparency, so its
+        /// mipmaps blend blade texels with the background behind the alpha: at distance the
+        /// grass goes darker and thinner at once, and the pack's own cutoff of 0.25 then discards
+        /// what is left. Lowering the cutoff keeps the far blades — a tunable, and the first lever
+        /// to pull when the meadow darkens towards the horizon.
+        /// </summary>
+        public static float FoliageClipThreshold { get; set; } = 0.12f;
+
+        static readonly int AlphaClipThresholdId = Shader.PropertyToID("_Alpha_Clip_Threshold");
+        static readonly int CutoffId = Shader.PropertyToID("_Cutoff");
+
+        /// <param name="foliage">Clone with the softer foliage cutoff. Foliage materials are never
+        /// shared with anything else, so the base material's identity keeps the cache key honest.</param>
+        public Material Get(Material baseMaterial, Color tint, Color emission, bool ghost, float alpha,
+            bool foliage = false)
         {
             Material source = ghost ? GhostBase : baseMaterial;
             var colour = new Color(tint.r, tint.g, tint.b, ghost ? alpha : 1f);
@@ -79,6 +96,11 @@ namespace Odyssey.Presentation.Rendering
             SetColour(material, colour);
             SetEmission(material, emission);
             if (ghost) MakeTransparent(material);
+            if (foliage)
+            {
+                if (material.HasProperty(AlphaClipThresholdId)) material.SetFloat(AlphaClipThresholdId, FoliageClipThreshold);
+                if (material.HasProperty(CutoffId)) material.SetFloat(CutoffId, FoliageClipThreshold);
+            }
 
             _cache.Add(key, material);
             _owned.Add(material);

@@ -180,13 +180,14 @@ namespace Odyssey.EditorTools
                           $"pawns, fastest {figures.FastestSpeed:0.00} m/s" +
                           $"{(figures.Enabled ? string.Empty : " (director disabled: no art or no gaits)")}");
 
-                ChunkRenderer drawing = renderer;
+                ChunkRenderer active = renderer;
                 Odyssey.Presentation.World.PawnFigureDirector walking = figures;
                 hook = (context, rendering) =>
                 {
                     if (rendering != camera) return;
-                    drawing.Render(activeLayer, slice);
-                    drawing.RenderActors(world.Views.Current, activeLayer, slice, actorMaterial,
+                    active.ViewerPosition = rendering.transform.position;
+                    active.Render(activeLayer, slice);
+                    active.RenderActors(world.Views.Current, activeLayer, slice, actorMaterial,
                         drawnAsFigures: walking.Drawn);
 
                     // Both cursors, so a picture can settle whether they look right: the cell
@@ -198,15 +199,15 @@ namespace Odyssey.EditorTools
                     // Every tier in one picture: the start cell is empty ground, so it gets the
                     // floor ring; the first item gets a bracket fitted to its own art; the full
                     // cube goes on the cell beside the start so the three can be compared by eye.
-                    drawing.DrawFloorBracket(result.StartCell, cursor);
-                    drawing.DrawCellHighlight(
+                    active.DrawFloorBracket(result.StartCell, cursor);
+                    active.DrawCellHighlight(
                         new CellRef(result.StartCell.X + 2, result.StartCell.Z, activeLayer), cursor);
                     if (shown.ThingCount > 0)
                     {
                         ThingView thing = shown.Things[0];
                         ResolvedModule item = library[library.Resolve(
                             ModuleIds.Item(thing.DefIndex), ModuleShape.Pillar)];
-                        drawing.DrawSelectionBracket(
+                        active.DrawSelectionBracket(
                             CellMetrics.FloorCentre(thing.Cell) + item.Bounds.center,
                             item.Bounds.size + Vector3.one * 0.16f, cursor);
                     }
@@ -228,7 +229,7 @@ namespace Odyssey.EditorTools
                     {
                         Vector3 feet = PawnPose.Of(shown.Pawns[nearest], 0f, movePerTick, out _);
                         var box = new Vector3(1.15f, 2.7f, 1.15f);
-                        drawing.DrawSelectionBracket(feet + Vector3.up * (box.y * 0.5f), box, cursor);
+                        active.DrawSelectionBracket(feet + Vector3.up * (box.y * 0.5f), box, cursor);
                     }
                 };
                 RenderPipelineManager.beginCameraRendering += hook;
@@ -246,6 +247,13 @@ namespace Odyssey.EditorTools
                 // sky above it. The play camera never looks this flat, but the sky, the fog and
                 // the edge of the world are only checkable from here.
                 Shoot(camera, focus, 9f, 150f, "Logs/shot-horizon.png");
+
+                // A grass-free twin of the horizon shot was tried here, swapping in a second
+                // renderer with scatter off, and it drew grass anyway — on two consecutive
+                // renders, with the swap plainly in place. Not a one-frame latency, then, and not
+                // understood; it is left out rather than left in as a picture that lies. If it is
+                // wanted again, prove the swap with a renderer that draws something unmistakable
+                // before trusting it to draw nothing.
 
                 Debug.Log("[Shot] wrote Logs/shot-play.png, Logs/shot-close.png, " +
                           "Logs/shot-down.png, Logs/shot-horizon.png");
@@ -804,7 +812,11 @@ namespace Odyssey.EditorTools
             // No scale correction: they are already sized for this grid, which is the other half
             // of why they were chosen.
             Tuft(ModuleIds.GrassTuftA, "SM_Env_Grass_Med_Clump_03", 1.0f);
-            Tuft(ModuleIds.GrassTuftB, "SM_Env_Grass_Short_Clump_03", 1.0f);
+            // Med_Clump_02 replaced Short_Clump_03 here: the short clump is a flat olive-brown
+            // patch that reads as dry grass up close and as a dark spot at board distance, and
+            // the far field was collecting dark spots. The contact sheet shows Med_Clump_02 as a
+            // lighter, fuller tuft on the same footprint.
+            Tuft(ModuleIds.GrassTuftB, "SM_Env_Grass_Med_Clump_02", 1.0f);
             Tuft(ModuleIds.GrassTuftC, "SM_Env_Grass_Tall_Clump_03", 1.0f);
 
             // Trees are the pieces that actually make this look like a place. Measured widths
@@ -1155,7 +1167,12 @@ namespace Odyssey.EditorTools
             material.shader = shader;
             material.SetColor("_SkyColour", new Color(0.36f, 0.60f, 0.86f));
             material.SetColor("_HorizonColour", SkyHorizon);
-            material.SetColor("_GroundColour", new Color(0.34f, 0.37f, 0.39f));
+            // Below the horizon is haze, not floor. Fog tints the far board towards SkyHorizon,
+            // so a dark underside put a grey band between the board's rim and the horizon —
+            // pale ground, then dark nothing, then pale sky — that read as a darkness in the
+            // distance with no cause. A shade under the horizon colour lets the rim fade into
+            // distance instead of falling off an edge.
+            material.SetColor("_GroundColour", new Color(0.70f, 0.80f, 0.86f));
             material.SetFloat("_HorizonFalloff", 2.2f);
             material.SetFloat("_GroundFalloff", 3.0f);
 

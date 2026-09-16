@@ -753,8 +753,8 @@ MonoBehaviour:
     locomotion: []
   - moduleId: odyssey.module.scatter.grass.b
     shape: 4
-    prefab: {fileID: 3245677754631507064, guid: bc5572ad125a1944a85c76ad20d6658c, type: 3}
-    prefabName: SM_Env_Grass_Short_Clump_03
+    prefab: {fileID: 7698657471702998983, guid: c0a9fc5c9edd29e4b9879734f3792d2c, type: 3}
+    prefabName: SM_Env_Grass_Med_Clump_02
     centreXZ: 1
     baseAtY: 1
     offset: {x: 0, y: 0, z: 0}

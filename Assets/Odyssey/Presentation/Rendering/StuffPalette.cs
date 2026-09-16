@@ -112,7 +112,10 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         static readonly Color[] FoliageTints =
         {
-            Color.white,                               // 0 grass
+            // A touch above white. At board distance a clump's blades are thinner than a pixel and
+            // the shadowed sides win the pixel, so the far meadow drifts dark; a small lift keeps
+            // it in the same key as the lifted ground beneath it without turning it neon.
+            new Color(1.06f, 1.08f, 1.02f),            // 0 grass
         };
 
         public static Color FoliageTint(int variant) =>

@@ -252,3 +252,18 @@ should have been the first row written, not the last.
 statistics made every row of the same benchmark ten times slower. Counters that change the thing
 they count are worse than none; the editor's own `UnityStats` (what the Stats overlay reads) costs
 nothing to read, though in batchmode it returns zeros.
+
+**Flat-lit grass reads dark at range, and the cause is lighting, not distance.** A clump is a fan
+of facets pointing every way; half of them turn from the sun and render at ambient. Up close the
+lit faces dominate; at range the eye averages the clump, and the average is darker than the
+flat-lit ground beside it — so the far meadow went dark wherever tufts crowded, and neither
+density, tint nor a softer alpha cutoff moved it, because none of them touches the lighting. The
+honest fix at this scale is not to draw grass past a distance at all (`ChunkRenderer.
+FoliageDrawDistance`, per chunk against the chunk bounds): a distant tuft is a few pixels, flat
+lit ground is what the reference art shows at range anyway, and it takes the largest instance
+count in the scene off the far half of the board. The fix that keeps far grass — a foliage
+shader that lights every blade as if its normal pointed straight up — is the next lever, and it
+is a real shader because the pack's meshes are not readable and their normals cannot be bent at
+load. Two things that *were* wrong and are fixed on the same day, and would have muddied the
+test if left: one of the three clumps was a flat olive-brown patch, and the sky's underside was a
+dark grey that showed as a band between the board's rim and the horizon.

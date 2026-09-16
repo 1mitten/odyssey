@@ -279,6 +279,8 @@ namespace Odyssey.Presentation.Bootstrap
             SliceSettings slice = cameraRig != null ? cameraRig.slice : new SliceSettings();
 
             _frameTimer.Restart();
+            // The rig sits on the camera, so its position is the viewer's.
+            if (cameraRig != null) _renderer.ViewerPosition = cameraRig.transform.position;
             _renderer.Render(activeLayer, slice);
 
             // Figures first, because what they take is what the instanced pass must leave alone.

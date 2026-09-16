@@ -63,6 +63,30 @@ namespace Odyssey.Presentation.Rendering
         public uint ColonistLookSalt { get; set; }
 
         /// <summary>
+        /// Where the viewer is, for the one culling decision that depends on distance. Null draws
+        /// everything, which is what a headless measurement wants.
+        /// </summary>
+        public Vector3? ViewerPosition { get; set; }
+
+        /// <summary>
+        /// Metres beyond which chunks draw no grass.
+        ///
+        /// **Why grass and only grass.** A clump is a fan of facets pointing every way, so half its
+        /// faces turn from the sun and render at ambient. Up close you see the lit faces; at range
+        /// the eye averages the clump, and the average is darker than the flat-lit ground beside
+        /// it — so the far meadow went dark exactly where the tufts crowded, and no tint or
+        /// density fixed it because the cause is lighting. Past this distance a tuft is a few
+        /// pixels anyway. Dropping it leaves flat lit ground, which is what the reference art
+        /// does at range and what aerial perspective does in life, and it removes the largest
+        /// instance count in the scene from the far half of the board for free.
+        ///
+        /// Per chunk, against the chunk's bounds, so the cutoff is a 62.5 m step rather than a
+        /// per-instance fade. Cheap and abrupt; if the step shows, the next lever is a ghosted
+        /// band one chunk wide.
+        /// </summary>
+        public float FoliageDrawDistance { get; set; } = 110f;
+
+        /// <summary>
         /// Tufts of grass per hundred grass cells. Zero is bare ground. Changing it after chunks
         /// have been meshed has no effect until they are meshed again, which is the same rule
         /// every other meshing decision follows.
@@ -169,7 +193,8 @@ namespace Odyssey.Presentation.Rendering
 
                 ModulePart part = _model.Library[bucket.Module].Parts[bucket.Part];
                 ResolveColour(bucket.Tint, part.IsFallback, shade, out Color tint, out Color emission);
-                Material material = _materials.Get(part.Material, tint, emission, ghost, alpha);
+                Material material = _materials.Get(part.Material, tint, emission, ghost, alpha,
+                    foliage: TintCode.IsFoliage(bucket.Tint));
 
                 // Terrain receives shadows but never casts them, and that is not a saving so much
                 // as a correctness fix. Ground is a contiguous mass of cell-sized boxes; letting
@@ -189,6 +214,10 @@ namespace Odyssey.Presentation.Rendering
                 // shadows that matter are the ones people and buildings cast onto it.
                 bool terrain = TintCode.IsTerrain(bucket.Tint);
                 bool foliage = TintCode.IsFoliage(bucket.Tint);
+
+                if (foliage && ViewerPosition.HasValue
+                    && batch.Bounds.SqrDistance(ViewerPosition.Value) > FoliageDrawDistance * FoliageDrawDistance)
+                    continue;
                 bool casts = CastShadows && !ghost && !terrain && (!foliage || FoliageCastsShadows);
 
                 var rp = new RenderParams(material)
@@ -548,6 +577,25 @@ namespace Odyssey.Presentation.Rendering
 
         readonly Matrix4x4[] _bracketMatrices = new Matrix4x4[24];
 
+        /// <summary>
+        /// How see-through every cursor is, applied on top of the colour's own alpha.
+        ///
+        /// The rig's colour is the hue; this is the weight, and it lives with the drawing because
+        /// it is a fact about how a cursor should sit on a scene rather than about which colour
+        /// was chosen. Low, by the owner's eye: a cursor is a note on the world, not a thing in it.
+        /// </summary>
+        public const float BracketOpacity = 0.32f;
+
+        /// <summary>
+        /// Emission on the cursor. Kept faint: the earlier value lifted the line so much that a
+        /// translucent material read as solid, which defeated the translucency entirely.
+        /// </summary>
+        const float BracketGlow = 0.25f;
+
+        Material BracketMaterial(Color colour) =>
+            _materials.Get(_model.Library.FallbackMaterial, colour, colour * BracketGlow,
+                ghost: true, alpha: colour.a * BracketOpacity);
+
         readonly Matrix4x4[] _floorMatrices = new Matrix4x4[8];
 
         /// <summary>
@@ -561,8 +609,7 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public void DrawFloorBracket(CellRef cell, Color colour)
         {
-            Material material = _materials.Get(_model.Library.FallbackMaterial, colour, colour * 0.75f,
-                ghost: true, alpha: colour.a);
+            Material material = BracketMaterial(colour);
             var rp = new RenderParams(material)
             {
                 layer = GameObjectLayer,
@@ -623,8 +670,7 @@ namespace Odyssey.Presentation.Rendering
             // Translucent, and emissive so it does not go dim with the light: a cursor has to be
             // findable at a glance without becoming the brightest thing on the board. The alpha
             // rides on the colour, so the one dial on the camera rig sets both.
-            Material material = _materials.Get(_model.Library.FallbackMaterial, colour, colour * 0.75f,
-                ghost: true, alpha: colour.a);
+            Material material = BracketMaterial(colour);
 
             var rp = new RenderParams(material)
             {
