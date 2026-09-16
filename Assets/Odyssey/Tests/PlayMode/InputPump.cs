@@ -42,6 +42,19 @@ namespace Odyssey.Tests.PlayMode
 
         public int LastScrollFrame { get; private set; } = -1;
 
+        /// <summary>
+        /// Whether the press <b>edge</b> existed immediately after the delivery, recorded for the
+        /// same reason as the wheel: a coroutine cannot tell "the edge never happened" from "the
+        /// edge happened and was spent before I looked", and the two want opposite fixes.
+        /// </summary>
+        public int PressEdgesAtDelivery { get; private set; }
+
+        public int ReleaseEdgesAtDelivery { get; private set; }
+
+        public int DeliveriesWithTheButtonDown { get; private set; }
+
+        public int DeliveriesTheDeviceSawAsThisFrame { get; private set; }
+
         /// <summary>Deliver this state at the top of the next frame.</summary>
         public void Post(MouseState state) => _pending.Enqueue(state);
 
@@ -56,6 +69,13 @@ namespace Odyssey.Tests.PlayMode
 
             LastScrollY = Device.scroll.ReadValue().y;
             LastScrollFrame = Time.frameCount;
+
+            // Counted rather than kept, because a click delivers twice and the release would
+            // otherwise overwrite what the press saw before any test could read it.
+            if (Device.leftButton.wasPressedThisFrame) PressEdgesAtDelivery++;
+            if (Device.leftButton.wasReleasedThisFrame) ReleaseEdgesAtDelivery++;
+            if (Device.leftButton.isPressed) DeliveriesWithTheButtonDown++;
+            if (Device.wasUpdatedThisFrame) DeliveriesTheDeviceSawAsThisFrame++;
         }
     }
 }

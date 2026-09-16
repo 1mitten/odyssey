@@ -126,7 +126,14 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(probe.Presses, Is.EqualTo(1),
                     $"an ordinary Update saw {probe.Presses} presses and {probe.Releases} releases " +
                     "from one Click. Every world gesture is built on wasPressedThisFrame, so if " +
-                    "this is zero the harness cannot click and no gesture test below means anything.");
+                    "this is zero the harness cannot click and no gesture test below means " +
+                    "anything. At the moment of delivery the pump itself saw: press edges " +
+                    $"{_mouse.Pump.PressEdgesAtDelivery}, release edges " +
+                    $"{_mouse.Pump.ReleaseEdgesAtDelivery}, deliveries with the button down " +
+                    $"{_mouse.Pump.DeliveriesWithTheButtonDown}, deliveries the device counted as " +
+                    $"this frame {_mouse.Pump.DeliveriesTheDeviceSawAsThisFrame} - which says " +
+                    "whether the edge was " +
+                    "never created or created and spent before an ordinary Update could see it.");
                 Assert.That(probe.Releases, Is.EqualTo(1),
                     $"the press arrived but the release did not ({probe.Releases}), so a gesture " +
                     "would begin and never end");
