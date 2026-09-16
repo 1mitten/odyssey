@@ -36,9 +36,12 @@ namespace Odyssey.Tests.PlayMode
 
         public int LastScrollFrame { get; private set; } = -1;
 
+        /// <summary>Whether this pump drives the update itself, or only watches.</summary>
+        public bool DriveUpdates { get; set; }
+
         void Update()
         {
-            InputSystem.Update();
+            if (DriveUpdates) InputSystem.Update();
 
             float scroll = Mouse.current?.scroll.ReadValue().y ?? 0f;
             if (Mathf.Abs(scroll) > 0.0001f)
