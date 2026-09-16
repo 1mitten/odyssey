@@ -2,7 +2,10 @@
 using System.Collections;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
+using Odyssey.Presentation.Rendering;
+using Odyssey.Presentation.Ui;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Odyssey.Tests.PlayMode
 {
@@ -16,7 +19,42 @@ namespace Odyssey.Tests.PlayMode
     /// </summary>
     public static class RigWorld
     {
-        public static GameObject Build(out OdysseyBootstrap boot, out SliceCameraRig rig)
+        const string PanelPath = "Assets/Odyssey/Presentation/Ui/HudPanelSettings.asset";
+        const string StylesPath = "Assets/Odyssey/Presentation/Ui/Hud.uss";
+
+        /// <summary>
+        /// The same world with the HUD on top of it, for the tests that are about the interface
+        /// standing between the pointer and the world.
+        /// </summary>
+        public static GameObject BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig rig,
+            out HudShell shell)
+        {
+            GameObject root = Build(out boot, out rig, active: false);
+            GameObject bootObject = boot.gameObject;
+
+            var doc = bootObject.AddComponent<UIDocument>();
+#if UNITY_EDITOR
+            doc.panelSettings = UnityEditor.AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelPath);
+#endif
+            if (doc.panelSettings == null)
+            {
+                doc.panelSettings = ScriptableObject.CreateInstance<PanelSettings>();
+                doc.panelSettings.themeStyleSheet = ScriptableObject.CreateInstance<ThemeStyleSheet>();
+            }
+
+            shell = bootObject.AddComponent<HudShell>();
+#if UNITY_EDITOR
+            shell.hudStyles = UnityEditor.AssetDatabase.LoadAssetAtPath<StyleSheet>(StylesPath);
+#endif
+            bootObject.AddComponent<SelectionPresenter>();
+            bootObject.SetActive(true);
+            return root;
+        }
+
+        public static GameObject Build(out OdysseyBootstrap boot, out SliceCameraRig rig) =>
+            Build(out boot, out rig, active: true);
+
+        static GameObject Build(out OdysseyBootstrap boot, out SliceCameraRig rig, bool active)
         {
             var root = new GameObject("RigWorld");
 
@@ -40,7 +78,9 @@ namespace Odyssey.Tests.PlayMode
             boot.barrenMap = true;
             boot.grassScatter = 0;
             boot.cameraRig = rig;
-            bootObject.SetActive(true);
+            // A HUD build keeps the object inactive so the shell and the document land before
+            // Start runs; a bare rig world has nothing more to add and can start at once.
+            if (active) bootObject.SetActive(true);
             return root;
         }
 
