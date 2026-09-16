@@ -148,6 +148,16 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public float MeasuredCrouchDrop { get; private set; }
 
+        /// <summary>
+        /// How many figures the crouch actually posed on the last pass, and how many it skipped for
+        /// want of a pelvis. Diagnostic: a rig that is not configured Humanoid binds no bones at
+        /// all, which is silent — that colonist simply goes on standing while the rest stoop.
+        /// </summary>
+        public int CrouchedFigures { get; private set; }
+
+        /// <summary>See <see cref="CrouchedFigures"/>. Non-zero means some rig has no legs.</summary>
+        public int LeglessFigures { get; private set; }
+
         /// <summary>Which style a pawn is worked in, the override first. See <see cref="StyleOverride"/>.</summary>
         int StyleFor(int jobDef) =>
             StyleOverride >= 0 && StyleOverride < Styles.Length
@@ -240,6 +250,37 @@ namespace Odyssey.Presentation.World
             }
 
             feet = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Which way a drawn figure is actually facing, in degrees.
+        ///
+        /// <para><b>Not derivable from the snapshot, and that cost a contact sheet.</b> The obvious
+        /// way to find a figure's bearing is the line from its cell to its next cell — which is
+        /// zero for a pawn that is standing still, and a pawn standing still is exactly what a pose
+        /// harness photographs. <c>GestureCheck</c> fell back to a fixed bearing and shot a crouch
+        /// head-on, which is the one view in which a vertical motion cannot be seen at all.</para>
+        ///
+        /// <para>The figure knows, because the yaw it is drawn at is eased and remembered here
+        /// across exactly the frames in which the snapshot has forgotten it.</para>
+        /// </summary>
+        public bool TryGetFacing(PawnId id, out float yaw)
+        {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                if (_figures[i].Pawn != id.Value || _figures[i].Transform == null) continue;
+
+                // The transform's own rotation, not the Yaw field it was derived from. They are
+                // not the same thing and the difference cost two contact sheets: Yaw is the
+                // director's eased bearing, and what a figure is actually drawn facing is that
+                // turned by whatever the gait clip's own root rotation adds. A camera aimed
+                // square across Yaw came out square behind the colonist.
+                yaw = _figures[i].Transform.eulerAngles.y;
+                return true;
+            }
+
+            yaw = 0f;
             return false;
         }
 
@@ -625,6 +666,15 @@ namespace Odyssey.Presentation.World
         /// </summary>
         void ApplyWorkPose()
         {
+            // Cleared every pass, because the crouch's own early return — nothing to do at the top
+            // of a motion — would otherwise leave the last non-zero reading standing. The first
+            // contact sheet reported 0.22 m of crouch on a figure that was plainly upright, which
+            // is worse than reporting nothing: a measurement exists to be trusted over the picture,
+            // and one that lies is the only thing on the board with no way of being caught.
+            MeasuredCrouchDrop = 0f;
+            CrouchedFigures = 0;
+            LeglessFigures = 0;
+
             for (int i = 0; i < _figures.Count; i++)
             {
                 Figure figure = _figures[i];
@@ -784,7 +834,13 @@ namespace Odyssey.Presentation.World
         /// </summary>
         void ApplyGesturePose(Figure figure)
         {
-            if (figure.Hips == null || figure.StandingHipHeight <= 0f) return;
+            if (figure.Hips == null || figure.StandingHipHeight <= 0f)
+            {
+                LeglessFigures++;
+                return;
+            }
+
+            CrouchedFigures++;
 
             Gesture motion = GestureOf(ForceGesture ?? figure.Gesture);
             float phase = HeldGesturePhase ?? motion.Phase(figure.GestureClock);
@@ -792,7 +848,11 @@ namespace Odyssey.Presentation.World
             if (depth <= 1e-4f) return;
 
             depth = Mathf.Min(depth, DeepestCrouch) * figure.StandingHipHeight;
-            MeasuredCrouchDrop = depth;
+
+            // The deepest of the figures drawn this pass, not the last one, so that a colony in
+            // which one colonist is stooping reports that colonist rather than whoever came last
+            // in the list and was standing.
+            if (depth > MeasuredCrouchDrop) MeasuredCrouchDrop = depth;
 
             // Read the feet BEFORE the pelvis moves. After it, they have already been dragged
             // down through the skeleton and the solve would be asked to put them back where the

@@ -39,6 +39,16 @@ namespace Odyssey.EditorTools
     /// <c>MeasuredBladeGap</c> is: an eye is a poor judge of how far something moved, and twice
     /// already a swing was declared to be missing its tree when it was not.</para>
     ///
+    /// <para><b>The bearing is the figure's own facing, not square across it, and that took four
+    /// sheets to find out.</b> Aimed at <c>facing + 90</c> — which is what "side on" plainly means,
+    /// and what <c>SwingCheck</c> does relative to the line of work — it came out square behind the
+    /// colonist every time, while the arithmetic insisted it was perpendicular. It was: the
+    /// <em>mesh</em> inside a Synty character prefab is turned ninety degrees from its own root, so
+    /// the figure faces across the bearing its transform reports. Nothing here reasons about that.
+    /// Four bearings were shot at the bottom of the motion and the profile picked out by looking,
+    /// exactly as the axe's blade roll was. If a future pack's characters are built differently,
+    /// shoot the four again rather than arguing with the picture.</para>
+    ///
     /// <para>Headless: <c>scripts/unity.sh shot Odyssey.EditorTools.GestureCheck.Run</c>. Output:
     /// <c>Logs/lift-N.png</c> and <c>Logs/stow-N.png</c>, one per phase, plus a wide shot.</para>
     /// </summary>
@@ -173,6 +183,22 @@ namespace Odyssey.EditorTools
 
                 figures.ForceGesture = Motion;
 
+                // Throw the first few pictures away. A character drawn in the first frames after
+                // its material is first touched comes out flat yellow — untextured, unlit, the
+                // whole colonist one colour — and then draws correctly from a frame or two later.
+                // It is the same class of thing ChipDirector warms its particle material for, and
+                // the same fix: pay the cost somewhere nobody is looking.
+                figures.HeldGesturePhase = 0.47f;
+                for (int warm = 0; warm < 4; warm++)
+                {
+                    world.Tick();
+                    figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                    figures.Evaluate(FrameSeconds);
+                    figures.TryGetFacing(subject.Id, out float warmFacing);
+                    PlayScene.Shoot(camera, Waist(figures, subject.Id), 6f, warmFacing, 7.5f,
+                        "Logs/gesture-warm.png");
+                }
+
                 foreach (float phase in Phases)
                 {
                     figures.HeldGesturePhase = phase;
@@ -183,10 +209,12 @@ namespace Odyssey.EditorTools
                     figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
                     figures.Evaluate(FrameSeconds);
 
-                    PawnView now = Find(world.Views.Current, subject.Id);
                     string path = $"Logs/{Tag}-{phase:0.00}.png";
-                    PlayScene.Shoot(camera, Waist(now), 6f, SideOn(now), 5.5f, path);
-                    Debug.Log($"[Gesture] {path}: hips {figures.MeasuredCrouchDrop:0.000} m below standing");
+                    figures.TryGetFacing(subject.Id, out float facing);
+                    PlayScene.Shoot(camera, Waist(figures, subject.Id), 6f, facing, 7.5f, path);
+                    Debug.Log($"[Gesture] {path}: hips {figures.MeasuredCrouchDrop:0.000} m below " +
+                              $"standing; {figures.CrouchedFigures} of {figures.Drawn.Count} figures " +
+                              $"stooping, {figures.LeglessFigures} with no pelvis to stoop with");
                 }
 
                 // And from the only bearing a player ever sees the board from, because a pose that
@@ -195,7 +223,7 @@ namespace Odyssey.EditorTools
                 world.Tick();
                 figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
                 figures.Evaluate(FrameSeconds);
-                PlayScene.Shoot(camera, Waist(Find(world.Views.Current, subject.Id)), 22f, 45f, 9f,
+                PlayScene.Shoot(camera, Waist(figures, subject.Id), 22f, 45f, 11f,
                     $"Logs/{Tag}-board.png");
 
                 figures.HeldGesturePhase = null;
@@ -230,35 +258,33 @@ namespace Odyssey.EditorTools
             return default;
         }
 
-        static PawnView Find(WorldSnapshot snapshot, PawnId id)
-        {
-            foreach (PawnView pawn in snapshot.Pawns)
-                if (pawn.Id.Value == id.Value) return pawn;
-            return default;
-        }
-
         /// <summary>
         /// Across the figure rather than along it.
         ///
-        /// A crouch is a vertical motion, so from in front or behind the shoulders merely come
+        /// <para>A crouch is a vertical motion, so from in front or behind the shoulders merely come
         /// towards the lens and half a metre of hip drop looks much like none. The profile is where
         /// the knee, the hip and the back are all visible at once, which is the whole of what there
-        /// is to judge.
+        /// is to judge.</para>
+        ///
+        /// <para><b>Asked of the figure and not of the snapshot, which the first sheet got wrong.</b>
+        /// The obvious bearing is the line from the pawn's cell to its next cell — and that is zero
+        /// for a pawn standing still, which is exactly what this harness photographs. It fell back
+        /// to a fixed bearing and shot the whole motion head-on: nine pictures of the one view in
+        /// which a crouch cannot be seen.</para>
         /// </summary>
-        static float SideOn(in PawnView pawn)
-        {
-            Vector3 heading = CellMetrics.FloorCentre(pawn.NextCell) - CellMetrics.FloorCentre(pawn.Cell);
-            heading.y = 0f;
-            return PawnPose.YawOf(heading.sqrMagnitude > 1e-4f ? heading : Vector3.forward) + 90f;
-        }
+        static float SideOn(PawnFigureDirector figures, PawnId id) =>
+            (figures.TryGetFacing(id, out float yaw) ? yaw : 0f) + 90f;
 
         /// <summary>
-        /// Framed at the hip and not the head. The motion happens between the knee and the
-        /// shoulder, and a shot framed on the head puts the feet out of the picture — which are
-        /// exactly what has to be checked, because a crouch whose feet slide is the failure this
-        /// whole design is shaped to avoid.
+        /// Framed at the chest of the *drawn* figure, and far enough back to keep the boots in.
+        ///
+        /// <para>Two corrections from the first sheet. It framed on the pawn's cell centre, which is
+        /// where the simulation keeps the colonist and not where the colonist is drawn — and it
+        /// framed at 0.9 m on figures drawn half again as large as life, so the feet sat on the
+        /// bottom edge. Feet are not optional here: a crouch whose feet slide is the exact failure
+        /// the leg solve exists to prevent, and a picture that crops them cannot show it.</para>
         /// </summary>
-        static Vector3 Waist(in PawnView pawn) =>
-            CellMetrics.FloorCentre(pawn.Cell) + Vector3.up * 0.9f;
+        static Vector3 Waist(PawnFigureDirector figures, PawnId id) =>
+            (figures.TryGetFeet(id, out Vector3 feet) ? feet : Vector3.zero) + Vector3.up * 1.25f;
     }
 }

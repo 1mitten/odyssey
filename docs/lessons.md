@@ -596,3 +596,40 @@ the `\n` in the pattern does not match `\r\n`. It exits 0 and reports nothing. T
 conclusion: a stubbing experiment "proved" the suspect loop was innocent when in fact the stub had
 never been applied — the file was unchanged. Read the file back, or use the Edit tool, before
 believing an experiment that depends on an edit.
+
+## Photographing a figure: the mesh is not square to its own root
+
+Three traps, all found in one afternoon building `GestureCheck`, and all three produced pictures
+that looked like a reasonable answer to the wrong question.
+
+**A "side on" camera aimed at `facing + 90` shoots the colonist's back.** The arithmetic is right —
+the camera really is perpendicular to the bearing the figure's transform reports — and the picture
+is still square behind the figure. The **mesh inside a Synty character prefab is turned ninety
+degrees from its root**, so a colonist faces across the yaw its transform carries. `SwingCheck`
+never met this because it aims across the *line between the worker and the work*, which is a
+world-space line and owes nothing to the rig.
+
+Do not reason about it, and above all do not reason about it twice: shoot four bearings at the pose
+worth judging and pick the profile out by looking, the way the axe's blade roll was settled. Two
+rounds went into re-deriving the yaw convention from the source, both wrong in the same confident
+way, before four pictures answered it in a single run.
+
+**Ask the transform, not the field it came from.** `PawnFigureDirector`'s `Yaw` is the director's
+own eased bearing; `Transform.eulerAngles.y` is what the figure is drawn at, and the gait clip's
+root rotation sits between them. And neither can be had from the snapshot at all: the obvious
+bearing is `NextCell - Cell`, which is **zero for a pawn standing still** — exactly what a pose
+harness photographs. It falls back to a fixed bearing and the whole sheet comes out from one
+arbitrary side.
+
+**A measured value with an early return goes stale, and a stale measurement is worse than none.**
+`MeasuredCrouchDrop` was written only when there was a crouch to report, so at the top of a motion
+it kept the last non-zero reading: the log said 0.22 m of stoop beside a picture of a colonist
+standing plainly upright. A measurement exists to be trusted over the picture — `MeasuredBladeGap`
+is in the code precisely because a photograph can be read either way — so one that lies is the only
+thing on the board with nothing to catch it. Clear it at the top of the pass that computes it.
+
+**And characters draw flat yellow for the first frames after their material is first touched.** Not
+magenta, so it does not read as a missing shader: the whole colonist is one flat unlit colour while
+the ground and trees around it are correct, and it settles a frame or two later. Same class of thing
+`ChipDirector` warms its particle material for, and the same fix — take a few throwaway pictures
+first, where nobody is looking.
