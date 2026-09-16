@@ -362,7 +362,48 @@ with banks. **Side on and low is the shot that answers the question**, for the s
 the ground in front of it sit at different depths, and the profile of a bank reads as anything you
 like.
 
-## 2d. The golden hour
+## 2d. The day
+
+**Amended 2026-09-16, the same day it landed: the fixed golden hour is now a cycle.** The owner saw
+the fixed hour lit and asked for blue by day, orange at dawn and dusk, and dark at night — which
+overturns question 2 of the look interview. That is a change of mind rather than a misreading, and
+it is recorded as one because the interview file will otherwise look wrong to the next session.
+
+**Everything below survives the change.** The identity between fog colour and the sky's horizon, the
+lifted shadows, the haze that crosses the board, the grade, the anti-aliasing, the shadow-cascade
+fix: all of it still holds, and all of it is now twelve numbers per key instead of twelve numbers
+once. What the cycle adds is `Daylight`, a keyed table in the *Presentation* assembly rather than
+the editor one, because a running game has to sample it and editor code cannot be called from a
+player.
+
+- **A table, not a formula.** A physical sun model would give an elevation for an hour and a
+  latitude, and it could not say that dawn should be held orange longer than dusk, or that the sky
+  should stay bright a little past sunset because that is when a colony looks best. Those are art
+  directions, and a table is their honest shape. It is also the thing the owner can edit.
+- **Midnight is both the first key and the last**, so the wrap needs no special case anywhere and
+  cannot be got wrong by a caller. A test walks the whole day at five-minute steps and fails on any
+  jump, including across the seam.
+- **Night is a readability floor, not realism.** The sun goes below the horizon but is not switched
+  off: a directional light at zero flattens every face to one value and the board reads as a paper
+  cut-out. A weak cool key still separates a wall from the ground it stands on, which is the
+  difference between night and nothing. Every reference game cheats this the same way.
+- **The sky material is copied, never edited.** `RenderSettings.skybox` points at an asset on disk,
+  so writing colours into it at runtime in the editor edits the asset — a play session would leave
+  the sky wherever the clock stopped, permanently, and it would surface as an unexplained diff days
+  later.
+- **The ambient probe is the only real cost**, and it is throttled to a tenth of a game hour, which
+  at speed 1 is about one re-integration every four seconds. The sun, the ambient colours and the
+  fog are not throttled, because stepping those is visible in the shadows.
+- **Nothing here is simulation.** The light is a pure function of the tick: not saved, not hashed,
+  and unreadable from the simulation, so a colonist at midnight is not blind. If darkness is ever to
+  matter to work or sight, that is a simulation feature with its own grid and its own tests.
+
+Judge it with **`Odyssey → Presentation → Check the daylight`**
+(`scripts/unity.sh shot Odyssey.EditorTools.DaylightCheck.Run`), which photographs eight hours at
+two pitches — the board pitch, where the day is shadows swinging across the ground, and a low pitch,
+where the sky is, since the default view never shows it. The hours deliberately straddle the keys
+rather than landing on them, so a crease at a key is visible in the sheet.
+
 
 Owner request 2026-09-16, against six reference screenshots of *Station to Station* now in
 `docs/reference/screenshots/station-to-station/`. Interview in `docs/research/look-interview.md`;
@@ -444,8 +485,12 @@ shadow pass by most of its cost.
 |---|---|---|
 | before the golden hour | 1.38 ms | 1.81 ms |
 | with it | 1.66 ms | 2.11 ms |
+| and with the day/night cycle | 1.71 ms | 2.31 ms |
 
-About 0.3 ms for the whole thing — grade, bloom, vignette, SMAA, and shadows reaching five times as
+The cycle itself is all but free once it stops writing values that have not changed: driven
+straight from `Update` it cost **0.43 ms a frame** setting `RenderSettings` sixty times a
+second to what it already held, which the frame-time test caught and a guard on the hour
+having moved recovered in full. About 0.3 ms for the whole thing — grade, bloom, vignette, SMAA, and shadows reaching five times as
 far — against a 5 ms budget. **That figure is a floor, not the laptop's number, and the reason is
 resolution**: everything in the post stack costs per pixel, and 1080p is nearly seven times the
 pixels this measures at, while the shadow and geometry work is unchanged by resolution. The laptop

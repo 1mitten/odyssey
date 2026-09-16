@@ -1068,3 +1068,26 @@ taken off a profile that was empty on disk, and both looked right.
 
 **So when code writes an asset, check the file, not the picture.** `grep -c "fileID: 0}"` on the
 result costs nothing and answers it exactly.
+
+## Writing RenderSettings every frame costs half a millisecond, even when nothing changed
+
+The day/night cycle sets the sun, the ambient colours and the fog from the tick. Driven from
+`Update` that is sixty writes a second, and at speed 1 a frame advances the clock by one tick —
+four ten-thousandths of an hour, a change no colour channel can even hold. So almost every write
+was setting a value to what it already was.
+
+It was not free. The frame-time test put the meadow at **2.14 ms with the cycle against 1.66 ms
+without**, and a guard that skips the whole apply unless the hour has moved by a fiftieth of that
+step took it to **1.71 ms**. Roughly **0.43 ms a frame** for writes that changed nothing.
+`RenderSettings.ambientSkyColor` and friends are not plain fields; they are engine state with work
+behind them, and assigning the same value is not free.
+
+Two things generalise:
+
+- **A per-frame write of a value derived from game time is almost always redundant**, because game
+  time moves far more slowly than frames do. Guard on the input having changed, not on the output
+  looking different — comparing colours is more work than comparing one float.
+- **It was only found because a test measures the real frame.** Nothing was wrong: no error, no
+  visual fault, every test green, and the cycle looked perfect in every screenshot. The only
+  symptom available was a number that had moved, which is the entire argument for having the number
+  in the first place.

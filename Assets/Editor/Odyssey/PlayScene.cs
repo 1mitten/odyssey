@@ -36,6 +36,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using Odyssey.Presentation.Rendering;
 using UnityEngine.UIElements;
 
 namespace Odyssey.EditorTools
@@ -1664,14 +1665,18 @@ namespace Odyssey.EditorTools
         static void BuildLighting(Transform root)
         {
             var sun = new GameObject("Sun").AddComponent<Light>();
+            // The hour the scene is baked at. The cycle takes over on the first frame; this is
+            // only so that opening the scene shows a lit board rather than whatever the sky
+            // happened to be saved as.
+            DaylightState baked = GoldenHour.Baked;
             sun.type = LightType.Directional;
-            sun.intensity = GoldenHour.SunIntensity;
-            sun.color = GoldenHour.SunColour;
+            sun.intensity = baked.SunIntensity;
+            sun.color = baked.SunColour;
             sun.shadows = LightShadows.Soft;
             // The lever the 72-degree decision never pulled. At full strength a shadowed
             // fragment falls back to ambient alone and loses the key light's hue, so a board
             // mostly in shadow goes mostly grey; at 0.6 it keeps the warmth and only darkens.
-            sun.shadowStrength = GoldenHour.ShadowStrength;
+            sun.shadowStrength = baked.ShadowStrength;
             sun.transform.SetParent(root, false);
             // Steeply overhead, not raking across the board. At 50 degrees the key light struck the
             // ground at a glancing angle, which is how you light a landscape you walk through and
@@ -1679,7 +1684,7 @@ namespace Odyssey.EditorTools
             // brightness and threw long shadows across the very surface the player is reading. A
             // high sun puts the light on the ground, keeps the tiles evenly lit, and leaves just
             // enough offset for a colonist or a wall to cast a short shadow that grounds them.
-            sun.transform.rotation = Quaternion.Euler(GoldenHour.SunElevation, GoldenHour.SunAzimuth, 0f);
+            sun.transform.rotation = Quaternion.Euler(baked.SunElevation, baked.SunAzimuth, 0f);
 
             // Flat-lit low-poly, as the concept renders are: a strong key, a generous cool ambient
             // so nothing goes black. Cel shading was raised and rejected
@@ -1697,9 +1702,9 @@ namespace Odyssey.EditorTools
             // puts the blue in them: a large hue gap and a small value gap, as the references have.
             // Grey ambient would give grey shadows, which is the overcast look this avoids.
             RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = GoldenHour.AmbientSky;
-            RenderSettings.ambientEquatorColor = GoldenHour.AmbientEquator;
-            RenderSettings.ambientGroundColor = GoldenHour.AmbientGround;
+            RenderSettings.ambientSkyColor = baked.AmbientSky;
+            RenderSettings.ambientEquatorColor = baked.AmbientEquator;
+            RenderSettings.ambientGroundColor = baked.AmbientGround;
             // **Fog crosses the board now, and the comment this replaces argued the opposite.**
             //
             // It was right for a blue-grey daylight wash: fog that started at 90 m covered the
@@ -1719,8 +1724,8 @@ namespace Odyssey.EditorTools
             RenderSettings.fogMode = FogMode.ExponentialSquared;
             // The horizon colour of the sky below, so what fades out at the rim of the board fades
             // into the sky rather than into a grey that does not belong to anything.
-            RenderSettings.fogColor = GoldenHour.Horizon;
-            RenderSettings.fogDensity = GoldenHour.FogDensity;
+            RenderSettings.fogColor = baked.Horizon;
+            RenderSettings.fogDensity = baked.FogDensity;
 
             RenderSettings.skybox = SkyMaterial();
 
@@ -1773,15 +1778,16 @@ namespace Odyssey.EditorTools
                 AssetDatabase.CreateAsset(material, SkyMaterialPath);
             }
 
+            DaylightState baked = GoldenHour.Baked;
             material.shader = shader;
-            material.SetColor("_SkyColour", GoldenHour.Zenith);
-            material.SetColor("_HorizonColour", GoldenHour.Horizon);
+            material.SetColor("_SkyColour", baked.Zenith);
+            material.SetColor("_HorizonColour", baked.Horizon);
             // Below the horizon is haze, not floor. Fog tints the far board towards the horizon
             // so a dark underside put a grey band between the board's rim and the horizon —
             // pale ground, then dark nothing, then pale sky — that read as a darkness in the
             // distance with no cause. A shade under the horizon colour lets the rim fade into
             // distance instead of falling off an edge.
-            material.SetColor("_GroundColour", GoldenHour.BelowHorizon);
+            material.SetColor("_GroundColour", baked.BelowHorizon);
             material.SetFloat("_HorizonFalloff", 2.2f);
             material.SetFloat("_GroundFalloff", 3.0f);
 

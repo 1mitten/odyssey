@@ -43,7 +43,7 @@ absent, not tuned. Most of the look is switching on and colouring what is alread
 | # | Question | Answer |
 |---|---|---|
 | 1 | Which of the layered effects matter? | **All four:** warm sky blending into fog; sun rays / light shafts; tilt-shift depth of field; bloom, grading and vignette. |
-| 2 | Fixed lighting state or time of day? | **Fixed golden hour, always on.** No cycle, no weather presets for now. |
+| 2 | Fixed lighting state or time of day? | **Fixed golden hour, always on.** No cycle, no weather presets for now. — **Reversed by the owner on 2026-09-16**, the same day it was built: seeing the fixed hour lit, they asked for a full cycle instead — blue by day, orange at dawn and dusk, dark at night. Not a misreading of the question; a decision made better by seeing the alternative. `Daylight` in the Presentation assembly is the keyed table, and every other answer in this file still stands. |
 | 3 | When does depth of field apply? | **Subtle, always on** — a wide sharp band around the focus, blur above and below, readability kept. |
 | 4 | Budget for the look | **Up to about 2 ms more, quality-tiered:** a Low tier drops rays and DoF on the 2022 laptop; the RTX machine gets the full look. |
 | 5 | References | Six screenshots supplied from the owner's downloads, now in `docs/reference/screenshots/station-to-station/`, described in that folder's README. |

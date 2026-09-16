@@ -100,6 +100,12 @@ namespace Odyssey.Presentation.Bootstrap
         public SliceCameraRig? cameraRig;
         public bool castShadows = true;
 
+        [Tooltip("The sun to move through the day. Left empty, the cycle finds the first directional light in the scene.")]
+        public Light? sun;
+
+        [Tooltip("Run the day through blue noon, orange dawn and dusk, and a dark night. Off holds the hour the scene was built at.")]
+        public bool daylightCycle = true;
+
         [Tooltip("Tufts of grass per hundred grass cells. 0 is bare ground; 60 is a tuft on six cells in ten.")]
         [Range(0, 300)]
         public int grassScatter = 60;
@@ -127,6 +133,7 @@ namespace Odyssey.Presentation.Bootstrap
         PawnContext? _pawns;
         PawnFigureDirector? _figures;
         AudioDirector? _audio;
+        DaylightDirector? _daylight;
         Material? _actorMaterial;
         MapGenDef? _gen;
         double _accumulator;
@@ -310,6 +317,16 @@ namespace Odyssey.Presentation.Bootstrap
                 audioCatalogue, _model != null ? new MirrorTerrain(_model) : null,
                 size, transform, gameObject.layer, outcome.StartCell.Y);
             AudioSettingsStore.Load().ApplyTo(_audio);
+
+            // The light through the day. It finds the scene's own sun rather than making one,
+            // because the scene builder already places it and two directional lights is a
+            // doubled key nobody would think to look for.
+            Light? key = sun != null ? sun : FindKeyLight();
+            if (daylightCycle && key != null)
+            {
+                _daylight = new DaylightDirector(key, RenderSettings.skybox);
+                _daylight.Apply(_world.CurrentTick);
+            }
             if (_figures != null) _figures.BlowLanded += OnBlowLanded;
 
             if (cameraRig != null)
@@ -410,6 +427,30 @@ namespace Odyssey.Presentation.Bootstrap
                     _speedChangePending = false;
                 }
             }
+
+            // The light follows the clock every frame, not every tick: at speed 3 several ticks
+            // retire in one frame and the sky would step, and when the game is paused the hour
+            // stops with it, which is right — a paused world should not go on getting dark.
+            _daylight?.Apply(_world.CurrentTick);
+        }
+
+        /// <summary>
+        /// The scene's own key light, when the inspector field is empty.
+        ///
+        /// <para>Found rather than created, because the scene builder already places a sun and a
+        /// second directional light would be a doubled key — everything lit twice, no error, and
+        /// nothing in the picture that says why. Brightest wins, so a lamp added for a screenshot
+        /// cannot quietly take the sun's job.</para>
+        /// </summary>
+        static Light? FindKeyLight()
+        {
+            Light? best = null;
+            foreach (Light light in FindObjectsByType<Light>(FindObjectsSortMode.None))
+            {
+                if (light.type != LightType.Directional) continue;
+                if (best == null || light.intensity > best.intensity) best = light;
+            }
+            return best;
         }
 
         void LateUpdate()
@@ -628,6 +669,11 @@ namespace Odyssey.Presentation.Bootstrap
                 $" skipped {_audio?.CooldownSkipped ?? 0} starved {_audio?.VoiceStarved ?? 0}" +
                 $" noclip {_audio?.ClipMissing ?? 0}" +
                 $" water {_audio?.WaterLevel ?? 0f:0.00} music {_audio?.MusicPhase.ToString().ToLowerInvariant() ?? "none"}\n" +
+                // The hour the light is at, and how often the ambient probe has been re-integrated.
+                // The second is the only real cost in the cycle, so it is the number to watch if
+                // the sky is ever suspected of being expensive.
+                $"light {(_daylight != null ? $"{_daylight.Hour:00.0}h" : "fixed")}" +
+                $"   probe {_daylight?.ProbeUpdates ?? 0}\n" +
                 $"WASD pan - Q/E orbit - wheel zoom - R/F layer - V above-mode - B below-mode - " +
                 $"space pause - 1/2/3 speed - Home frame\n{_catalogueNote}";
 
@@ -649,6 +695,7 @@ namespace Odyssey.Presentation.Bootstrap
             }
             if (_figures != null) _figures.BlowLanded -= OnBlowLanded;
             _audio?.Dispose();
+            _daylight?.Dispose();
             _figures?.Dispose();
             _renderer?.Dispose();
             // The library owns every mesh it baked or merged, and a Mesh made in code is a GPU

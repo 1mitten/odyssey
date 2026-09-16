@@ -1,5 +1,6 @@
 #nullable enable
 using System.IO;
+using Odyssey.Presentation.Rendering;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -33,107 +34,22 @@ namespace Odyssey.EditorTools
     /// </summary>
     public static class GoldenHour
     {
-        // ---------------------------------------------------------------- light
+        // ---------------------------------------------------------------- the hour
 
         /// <summary>
-        /// How high the sun stands, in degrees.
+        /// The light the scene is built at.
         ///
-        /// <para>Every reference image sits between roughly 25 and 35. The shadow a thing throws is
-        /// <c>height / tan(elevation)</c>, so at 30 degrees a 12 m tree lies down across eight
-        /// cells and a colonist across more than one. The board is therefore mostly in shadow, and
-        /// the answer is to make the shadows light rather than to make them few — which is what
-        /// the old 72-degree sun was really doing.</para>
+        /// <para><b>The palette itself is no longer here.</b> It moved to
+        /// <see cref="Daylight"/> in the Presentation assembly when the fixed golden hour became
+        /// a day, because a cycle has to sample it at runtime and editor code cannot be called
+        /// from a running game. This class keeps the two jobs that are genuinely the editor's:
+        /// baking one hour into the scene so a fresh open is lit before anything ticks, and
+        /// writing the grade profile.</para>
+
+        /// <para>Leaving a copy of the numbers behind would have been the worst of both: two
+        /// palettes that agree until somebody edits one.</para>
         /// </summary>
-        public const float SunElevation = 30f;
-
-        /// <summary>
-        /// Where the sun stands, in degrees, world-fixed.
-        ///
-        /// <para>Ninety degrees off the camera's default heading of 45, so the light rakes
-        /// <i>across</i> the view rather than along it: shadows lie sideways across the board,
-        /// where they describe the ground, instead of stretching toward the viewer and covering
-        /// what is behind each thing. World-fixed, never camera-relative — a key light that turns
-        /// with the camera is the single most-complained-of lighting bug in this genre, because
-        /// every building changes colour as you orbit.</para>
-        /// </summary>
-        public const float SunAzimuth = 135f;
-
-        /// <summary>
-        /// Brighter than the old sun, because a raking one delivers less.
-        ///
-        /// <para>Light landing on flat ground goes as the sine of the elevation: 0.50 at 30 degrees
-        /// against 0.95 at 72, so the same lamp lights the ground a little over half as well. Some
-        /// of that is made up here and the rest by the ambient below. Not all of it, deliberately —
-        /// the references do have brighter lit faces than shaded ground, and that contrast is the
-        /// look.</para>
-        /// </summary>
-        public const float SunIntensity = 2.0f;
-
-        /// <summary>Warm, but not orange. The grade's white balance carries the rest.</summary>
-        public static readonly Color SunColour = new Color(1.00f, 0.88f, 0.72f);
-
-        /// <summary>
-        /// How dark a shadow is allowed to get, 0 to 1.
-        ///
-        /// <para><b>This is the number the old decision never tried, and the reason a low sun is
-        /// affordable at all.</b> At full strength a shadowed fragment falls back to ambient alone
-        /// and loses the key light's hue entirely, so with the board mostly in shadow the board is
-        /// mostly grey. At 0.6 the shadow keeps enough of the warm key to stay the same landscape,
-        /// only cooler and darker — which is what a real shadow does, and it costs nothing.</para>
-        /// </summary>
-        public const float ShadowStrength = 0.6f;
-
-        // ---------------------------------------------------------------- ambient
-
-        /// <summary>
-        /// Cool sky against the warm key, which is what puts the blue in the shadows.
-        ///
-        /// <para>Ambient is what fills whatever the key does not reach, so the shadow colour *is*
-        /// the ambient colour. The references lift their shadows a long way and shift them hard
-        /// towards blue-violet: a large hue gap and a small value gap. Grey ambient would give grey
-        /// shadows, which is the overcast look this is trying not to be.</para>
-        /// </summary>
-        ///
-        /// <para><b>Lifted once already, by photograph.</b> The first values put the woodland in
-        /// near-silhouette: a low sun reaches very little of a tree's crown, so out of direct
-        /// light a tree is lit by this and nothing else, and it came out almost black against a
-        /// bright meadow. The references have lit crowns. Ambient is the only lever that reaches
-        /// them without also blowing out the ground the sun is already striking.</para>
-        public static readonly Color AmbientSky = new Color(0.54f, 0.64f, 0.80f);
-
-        public static readonly Color AmbientEquator = new Color(0.64f, 0.62f, 0.60f);
-
-        /// <summary>Warm, as bounce off a sunlit meadow is.</summary>
-        public static readonly Color AmbientGround = new Color(0.46f, 0.38f, 0.29f);
-
-        // ---------------------------------------------------------------- sky and haze
-
-        /// <summary>
-        /// The warm band the sky meets the ground at — and, by
-        /// <see cref="UnityEngine.RenderSettings.fogColor"/>, the colour distance dissolves into.
-        /// One value, used twice, which is the whole trick.
-        /// </summary>
-        public static readonly Color Horizon = new Color(0.96f, 0.82f, 0.62f);
-
-        /// <summary>Deeper than the old daylight blue, because a warm horizon needs something to be warm against.</summary>
-        public static readonly Color Zenith = new Color(0.30f, 0.50f, 0.80f);
-
-        /// <summary>Below the horizon is haze, not ground: a shade under the horizon so the rim fades rather than falls off an edge.</summary>
-        public static readonly Color BelowHorizon = new Color(0.90f, 0.77f, 0.60f);
-
-        /// <summary>
-        /// How thick the haze is, as exponential-squared density.
-        ///
-        /// <para>Chosen by arithmetic rather than by eye, which the research file works through:
-        /// at this density the air is 1% at 50 m, 20% at 224 m, about a third at the rim of the
-        /// board and 97% by 900 m. So the near cells are untouched, the far side of the board is
-        /// visibly further away, and the surround has dissolved before it ends. Plain exponential
-        /// would put 18% on the nearest cells, and the linear pair this replaces reached only 24%
-        /// at the rim while starting past the board entirely — it was holding the fog off the
-        /// playfield, which is the opposite of what the look wants.</para>
-        /// </summary>
-        public const float FogDensity = 0.0021f;
-
+        public static DaylightState Baked => Daylight.Sample(Daylight.DefaultHour);
         // ---------------------------------------------------------------- shadows
 
         /// <summary>
