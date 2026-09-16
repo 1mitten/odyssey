@@ -1,0 +1,799 @@
+# Build journal
+
+The narrative record of how Odyssey got here: what was decided, what it cost, what was measured
+and what turned out to be wrong. It was the **Current status** section of `CLAUDE.md` until
+2026-09-16, when that section had grown to 709 of the file's 814 lines — long enough that the file
+every session reads first had become mostly history, with a duplicated entry and several
+self-contradictions inside it.
+
+**The split.** `CLAUDE.md` now carries only what is true *now*, in a form a new session can act on.
+This file carries the reasoning behind it. Nothing was deleted in the move except one accidentally
+duplicated entry (the mining bullet appeared twice; the shorter copy was quoted in full by the
+longer one, so the longer was kept).
+
+**How to use it.** Read `CLAUDE.md` first. Come here when you need to know *why* something is the
+way it is, or when a decision looks arbitrary and you are about to change it. Entries are roughly
+chronological and each names its date and, where there was one, the owner decision behind it.
+
+**How to add to it.** Append; do not rewrite. When an entry here is superseded, say so in the new
+entry and leave the old one standing — several entries below are valuable precisely because they
+record a measurement that was later falsified. Design and mechanics still belong in `docs/design/`
+and `docs/adr/`; operational traps still belong in `docs/lessons.md`. This is the record of the
+work itself.
+
+> Entries below are preserved verbatim from `CLAUDE.md`. Some describe a state of affairs that a
+> later entry overturns — that is the point of a journal. Where an entry is known to be stale, a
+> later entry says so.
+
+## Entries
+
+
+- **Phase 0 (ground): complete 2026-09-15.** The import spike and asset inventory ran on the **Windows** dev machine: Unity 6000.3.24f1 LTS + URP 17.3.0 project at the repository root, five Synty packs imported headless under `Assets/Synty/` (7,222 assets, zero import errors). Record in `docs/research/synty-import.md`; measurements in `docs/research/synty-inventory.md`.
+- **Phase 1 (interview): complete 2026-09-15** — all seven answers in `docs/research/phase1-answers.md`: packs supplied (Q1), cell confirmed (Q2), template stamping (Q3), IvanMurzak/Unity-MCP now (Q4), pragmatic TDD (Q5), two-way architecture benchmark with determinism-first threading (Q6), Windows machine primary (Q7).
+- **Phase 2 (research): complete for the slice, 2026-09-15** — wave 1 (twelve files: Lane A pawns/jobs/building/mapgen/tick, Lane B Going Medieval, Lane C Cataclysm DDA, Lane E all four Synty files, Lane F prior art, which found a *Ramble* checkout at `D:\code\ramble`) plus wave 2 (A14 stockpiles, **D1 architecture benchmark**, D4 pathfinding, D6 save/load, D7 Defs, D8 CI). One-line results per file in `docs/research/INDEX.md`. Deferred until after the slice, by the Q8 fast-track: A2/A5–A11/A13/A16 and the remaining Lane B/C items. **Interface/UI research is owned by a separate agent session — do not duplicate it here** (`docs/design/ui-plan-reconciliation.md`).
+- **Where this is, 2026-09-16.** M0 is closed (U08 CI landed: two tiers, the Unity one on the owner's
+  machine, branch protection requiring both). M1 and M2 are done in substance and went further than
+  planned — colonists walk, chop and have needs, mood and skills; a colony survives ten headless days
+  on three seeds; there is a HUD, a naming registry, terrain relief, water and a work-pose system,
+  none of which the plan asked for. M3 has started ahead of itself: designations, felling and
+  stockpiles are in, and **mining merged on 2026-09-16** (PRs #30 and #31) with its Defs and with a
+  28x tick-cost regression fixed on the way in — `DesignationGrid` was publishing its progress
+  channel by walking every cell of the active layer every tick, which took the ten-day soak from
+  one second a seed to thirty-nine; it walks the sparse list of ordered cells now and a guard test
+  fails if it ever walks the layer again. **Neither felling nor mining can be *ordered*:** there is
+  no designate tool anywhere in the HUD or the input layer, so both get their orders from the
+  scenario before the first tick. That is what `OQ-40` unblocks. **M2 is closed and
+  reported: `docs/milestones/M2-report.md` (OQ-21, 2026-09-16).** All five parts of the standing
+  gate are green — EditMode 494/492, PlayMode 7/7, a 60,000-tick day ending on hash
+  `e134005c5408818d` under *both* Mono and CoreCLR, the save round trip on a real world, and three
+  ten-day seeds clean. The demo asserts the milestone's own claim at last: with `OQ-47` a scenario
+  names the storey a thing goes on, so the beds are a floor up and the food two, every colonist
+  changes storey across the day, and **the control is a test** —
+  `ADayOnOneFloorNeverTouchesAStair` runs the same day with the offsets removed and asserts nobody
+  moves. Two things are green but not clean, both in §5 of the report: `OQ-05` is open, so
+  cross-runtime determinism is a measurement rather than a standing test, and the city's frame time
+  moved from 0.88 ms to 1.56 ms unexplained (`OQ-43`).
+  **Before more features, `OQ-44` to `OQ-46` open the seams** — the mining line is 73 files and had
+  to edit six shared files to add itself, five of which should have been extension points. The
+  reasoning and the order are in `docs/plans/vertical-slice.md` under "Where the seams are".
+- **Phase 4 (execution): M0 complete, M1 under way on branch `claude/m1-world`.** U01-U07 done, and the whole simulation stack runs: grid, support solver, two worldgen paths, pathfinding, pawns, save/load, Def loader, subsystem schedule, and the snapshot-read / intent-write seam. M1 presentation has instanced chunk rendering (no GameObject per cell), a slice camera rig, click-to-inspect and a generated play scene (`scripts/unity.sh exec Odyssey.EditorTools.PlayScene.Build`). **488 EditMode tests (486 green, 2 skipped) plus 7 PlayMode**, and 326 Sim plus 29 Hud in the fast tier (1.7 s fast tier, 37 s Unity gate, `unity.sh test playmode` for frame time). **Frame time is measured only by `FrameTimeTests` under the real player loop** — wooded meadow 0.41 ms, city 1.48 ms on the RTX 5070 Ti at 640 × 480 (2026-09-16, grass to the rim and trees) — never by an editor `camera.Render()` loop, which measures its own history (`docs/lessons.md`, "Benchmarking the renderer"). M1 report: `docs/milestones/M1-report.md`. **U08 CI is done (2026-09-16).** `.github/workflows/ci.yml` runs two tiers on every push and pull request. *Fast tier*, on GitHub-hosted Linux: the Sim and Hud tests, the Long tier, the content-registry check and the icon tooling tests. *Unity tests*, on the owner's Windows machine as a self-hosted runner (labels `self-hosted`, `windows`, `unity`, switched on by the repository variable `UNITY_RUNNER=1`): EditMode, PlayMode and the headless one-day simulation, results published as a check by `dorny/test-reporter`. First green end to end on `bcf40d9`: **EditMode 398 total, 396 passed, 0 failed** (the two `[Explicit]` benchmarks skipped), **PlayMode 4/4**, the headless day clean, the whole job in 1 m 46 s. Branch protection on `main` requires both checks, a pull request and one approving review, with branches up to date; so **nothing reaches `main` except through a pull request with both tiers green** — agents included. Two runner traps are in `docs/lessons.md`, "Continuous integration". Plan: `docs/plans/vertical-slice.md`.
+- **The starting map is a wooded meadow (owner decision 2026-09-16; barren before that), now with water in it:** 120 x 120 x 16, flat, grass in every cell, woodland at the natural generator's density with a clearing at the start, a stream or two and a pond or two kept clear of that clearing (2026-09-16, ADR 0009), and no rock, ore or props — `NaturalMapGenDef.MakeWooded()`, chosen by `OdysseyBootstrap.woodedMap`. Trees are edifices that block nothing (a colonist walks through woodland) and felling them is the first job on the road to building. The bare board (`MakeBarren()`, `woodedMap` off) is kept as the test baseline on which anything that is not grass is a bug. The ruined-city generator is still present and still tested, but it is not what the scene loads. Tufts of grass are drawn over the ground as pure decoration by the mesher (`GroundScatter`, `OdysseyBootstrap.grassScatter`, default 120 per hundred cells, 0 to switch off); they are not simulation objects, block nothing and are not in the save.
+- **Designations and the first job line, 2026-09-16.** The player's standing orders live in `Sim/Designations/DesignationGrid.cs` (one byte per cell; Mine, Deconstruct, Fell; validated on placement, hashed, saved, published in the snapshot (a per-layer `Designations` byte channel then; replaced 2026-09-16 by the sparse whole-world `Orders` list, so an order given above the slice is drawn)). Player commands reach the colony through the intent bus: `Designate(cell, A = kind)`, `CancelDesignation(cell)` and `SetForbidden(A = thing, B = on)` are handled by the components that own them via `SimWorldBuilder.AddIntentHandler`, and the colony is wired in one place, `ColonyComposition.AddColony`, used by `ColonyWorld`, the bootstrap and the screenshot harness alike. **Felling is the first job that edits the world:** `FellWorkGiver` (work type *cutting*, scanned before hauling) hands a marked, reachable tree to a colonist; `FellJobDriver` walks into the tree's cell, works `Job_Fell.workTicks` (600, **ASSUMED**), clears the order, and defers the edit to the structural phase, where the tree goes and `WoodPerTree` (20, **ASSUMED**) wood appears as one stack that the existing haul takes to the stockpile. What the colony starts with is a `ScenarioDef` (`Sim/Pawns/ColonyScenario.cs`: colonists, meal piles, meals per pile, beds, stockpile cells, salvage, `startingFellRadius`), built in code like `PawnContent.Core()`; the scene's `ScenarioDef.Playtest` marks every tree within 10 cells of the start before its first tick so the colony has work at once, `ScenarioDef.Bare` gives the same colony and no orders and is what headless runs and tests build on, and `OdysseyBootstrap.scenario` picks one by name — it flips to Bare when the UI line's drag-to-designate tool lands (that line owns the tool and reads the snapshot channel). Wood is `ItemIndex.Wood`, drawn as a log pile, named `ui.res.wood` in the registry with `ui.arch.tool.fell` for the order. Not yet: felled trees are not in the save (the grid itself is not saved, OQ-08). **Stacks merge (OQ-24, 2026-09-16):** a cell has space for a load only when the whole load fits under the def's `stackLimit` (wood 75, meals 20 so a starting pile is one stack, salvage 1); a haul dropped onto a stack of the same def joins it; the destination rule is filter, then space, then priority, then nearest; and a hauler with nothing loose to carry re-stows from a lower-priority pile into a strictly higher one that accepts the thing (`ColonyItems.StoredItems`, `HaulWorkGiver`). `StockpileTests` holds the four-pile fixture.
+- **Skills (U20) landed 2026-09-16 (OQ-14).** A colonist has experience per skill (`SkillIndex`: hauling, cutting), a `Passion` per skill rolled once at placement from the seed and the pawn id, and a level 0–20 that `Pawn.SkillLevel` reads off the experience by the `SkillDef` table and is never stored. Work grants it: a job driver calls `Work(ctx)` on the ticks that are the work (the fell swing, the haul carry), which pays `JobDef.experiencePerWorkTick` into `JobDef.trainsSkill`, scaled by passion (×0.35 / ×1.0 / ×1.5, `a-01-pawns.md`) and slowed to a fifth after 4,000 points in a day; `SkillSystem` decays levels ten and up on the Long tick group. Experience is stored in thousandths of a point so every rate is an integer. Experience, passions and the day counter are hashed and saved (`SkillTests`, 13 tests). **ASSUMED** and marked in the code: the base rate per work tick (110 thousandths), the passion odds at spawn (35 % minor, 15 % major), the nine decay-ladder values between the two `a-01` measured, and the second slope of the level table (2,000 a level from 10, which is what reconciles `a-01`'s formula with its 265,000 total). Not carried: the 1,000-point grace before a level is lost (needs a stored level), the passion mood buff, and any effect of level on work speed — nothing reads the level yet except decay, and the HUD's Skills tab still says "no skill data yet" because `PawnView` does not carry it (a contract change for the UI line).
+- **Mining, rock and caverns, 2026-09-16** (`docs/research/mining-interview.md` — four rounds of interview, the plan, and every departure from it). **The board has a mine under it.** `MakeWooded()` is a cover mode rather than the barren board with trees put back, so terracing, rock outcrops, ore and caverns all reach the board that is played. **Depth is what is left after headroom** — the ground sits as high as it can while leaving `headroomLayers` (3) of sky above the tallest terrace. It used to sit two fifths of the way up, leaving two layers of rock, so coal (band 7-22 cells down) *could never generate at all*; `NaturalDepthTests` measures that now. **Caverns** (pass 8, before ore, `NaturalGenPurpose.Caverns = 9`) are sealed: no mouth, carved strictly inside each column's rock band, found by mining into one. **Ore is invisible until a face is cut in it** — `CellFlags.Discovered` (bit **6**; deep water took bit 5 on main), a one-way latch set on the six solid neighbours of a mined cell, with the render mirror substituting plain rock for an undiscovered seam. **Mining is the second job that edits the world:** `MineWorkGiver` (work type *mining*, scanned after cutting and before hauling) and `MineJobDriver`, priced per material from `TerrainAt(terrain).workToClear` (rock 700, iron 900, coal 760) rather than one number on the job def, and banked **on the cell** so a miner who breaks off does not throw the morning away. A seam yields `OrePerCell` (15); plain rock yields `StonePerRock` (8) with `StoneChanceOneIn` (1), rolled from (world seed, **cell index**) so the answer belongs to the cell and survives a save. **Bedrock refuses the order** rather than quoting its 2,400 ticks, and so does the ground under a standing tree. **Four stances, in order: beside, on the rim a layer up, from below, on top — and within each, square on to a face before round a corner** (owner, 2026-09-16: "they should place themselves in front of the block"). A miner is *drawn* stepping in towards what it cuts, so on a diagonal it steps towards the block's corner and into the two cells sharing it — the ones most likely to be solid stone when cutting a face. `NearestOfRing` tries the four faces before the four corners. Measured on the played board: 1,500 of 1,980 same-layer stances were diagonal, 961 of them with a face available and reachable anyway; afterwards 539 diagonal and **none** with a face going spare, and not one cell became unmineable. The residual 539 genuinely have no reachable face, and they want the *drawn* figure to stand further back — a body clears the corner-sharing cells only from about 2.4 m out along the diagonal against 1.65 m square on, and that is presentation's to fix, still open. The older wording of this line, kept because the reasoning still holds: **beside, on the rim a layer up, on top** — the rim only where the rock's own ceiling is open, or the giver hands out stances at buried rock; `WorkStyle.Dip` aims the stroke 45° down when the work is below the feet (measured: the edge lands 0.18 m above the boots against 1.34 m level) and the reach it costs is measured separately, or the stand solves 0.43 m too far back. **Spoil falls and merges**: `CellGrid.FirstFloorAtOrBelow` is the bottom of the fall for items and people alike, and landing merges up to the stack limit — 107 stacks became 81 on the same stone. `ItemHeap` draws rubble as 2-7 small rocks scattered over the floor rather than one cairn. **A shaft is climbed, not laddered** (`ConnectorKind.Climb`, `MoveCost.ClimbUp` 270 / `ClimbDown` 50): ladders stay a built thing the generator puts in buildings, nothing is drawn in a shaft, and `ApplyClimbPose` puts the hands on the rock. **A climb needs a block beside it and keeps needing one** — laid only where a face stands next to the lower cell, retired when that face is mined away, and it lands **on top of that block**, not in the air above the hole, or the pit seals itself shut. `NavFlags.ClimbOnly` splits the two questions `Walkable` was answering at once: a rock face is somewhere to be and not somewhere to walk to, so you may step **off** one onto ground and never onto one. Names: `ui.res.stone`, `ui.res.ironore`, `ui.res.coal`, all three art gaps. **Not yet:** the climb is free (no materials, no work — the building line's to price), mined cells and climbs are not in the save (OQ-08 again), mining collapses nothing (U29 keeps that), legs are missing from the climb pose, and a sealed cavern is still visible if the player scrolls the layer down — there is no fog of war, so what the ore-sight rule protects is the treasure, not the chamber.
+- **Climbing is gone; a colonist jumps one block and no more (owner, 2026-09-16).** This supersedes
+  the climb described in the bullet above — `ConnectorKind.Climb`, `MoveCost.ClimbUp`/`ClimbDown`,
+  `NavFlags.ConnectorClimb`/`ClimbOnly`, `EnsureClimb`/`RemoveClimbAt` and `HasWallBeside` are all
+  removed. **The whole of unaided vertical movement is a hop**: one block up into the column next
+  door is a jump (`MoveCost.JumpUp` 270), one block down off it is a drop (`MoveCost.Drop` 50), and
+  anything deeper wants a ladder, which is built. It is *not* straight up — that is what a climb
+  did, and the cell it landed in had no floor. **Every cell a pawn can be in now has something
+  under it**, which is what makes hanging in mid-air impossible rather than merely discouraged, and
+  is why `CanWalkInto` collapsed back into `CanEnter`. **You jump onto ground, not up a storey:**
+  `NavGraph.UpperEndIsABlockTop` requires the upper end to stand on solid *terrain*, or every floor
+  of every building would be one hop from the one below it and stairs would be decoration.
+  The owner's three playtest reports — sticking on faces over one block, climbing where nothing
+  should be climbed, repeating a failing route for ever — were one mechanism, pinned by
+  `VerticalMovementTests` before anything changed.
+  - **A hop is three seams, and missing any one of them fails silently.** The cell search
+    (`PathFinder.RelaxHop`), the region graph (`NavGraph.TryHopEdges`, or reachability says no and
+    the work-giver never offers the job) and **the mover's price** (`MovementSystem.StepCost`).
+    The third was the bug that stopped mining dead: a hop declares no connector, so `StepCost` fell
+    through to `MoveCost.Fall` — 100,000, meaning "effectively forbidden" — and the pawn stood in
+    front of the step with a legal path in hand, gaining about one unit a tick, still there after
+    10,000 ticks. **A price the planner and the mover disagree about is worse than a wrong price,
+    because nothing reports it.**
+  - **The incremental nav rebuild needed a new invalidation rule.** A dirty block is re-flooded and
+    its regions renumbered, so every zone holding a link into it must be relinked. Links used to be
+    horizontal or downward only, so expanding the affected set sideways was enough. A hop is owned
+    by the block holding its *lower* cell and reaches *up*, so `CollectAffectedZones` now also takes
+    the plate one layer down (relinked, not reflooded). Without it a stale link joined an
+    **Impassable** region into a district — the flood never seeds one but will absorb one through a
+    link that should not exist.
+  - **Mining refuses only the cut that strands the miner**, and it is asked of the *stance*, not of
+    the cell: `DesignationGrid.CanBeLeftAfterCutting` is checked in `MineWorkGiver.StandToMine`'s
+    on-top branch, the only stance that drops the colonist into the hole it just cut. Put in
+    `CanMine` it refused every buried cell — 143 of 8,885 marked cells survived — which makes the
+    first cut of a tunnel impossible. So the first cut into flat ground is allowed (the rim is one
+    block up beside it) and deepening a one-wide shaft is not: **a quarry comes out as benches.**
+  - **Mining was dead on `main` and the suite said nothing** — six `MineJobTests` were skipping on a
+    failed `Assume` because no rock had a reachable stance. They run now, and `docs/lessons.md`
+    carries the method note. `ADayOnOneFloorNeverTouchesAStair` measures a **span** rather than a
+    count of storeys, because a hop is worth one storey on city rubble and only a stair is worth two
+    (measured: control spans 1, 1, 1; demo 3, 2, 2).
+  - **The climb animation is gone and a jump is half as dear (owner, 2026-09-16: "the animation
+    going up and down heights is bad and looks bad … it looks buggy so remove it").** All of
+    `ApplyClimbPose`, `ClimbPhase`/`ClimbFace`/`ClimbWeight`, `ClimbLean`, `ClimbEaseSeconds`,
+    `TryWallBeside`, `DescribeClimb`, the director's `World` mirror and PlayScene's climbing shot
+    are deleted; a hop now plays whatever the gait mixer gives it. That reads far better than it
+    did, because a hop moves one cell *sideways* as well as one layer up — so ground speed is an
+    ordinary step and the figure walks up onto the block, where the straight-up climb it replaced
+    differenced to nought and blended to the idle. **`MoveCost.JumpUp` 270 → 135**: cost *is*
+    duration here (a pawn retires `movePerTick` of it a tick and presentation glides across the
+    whole step), so 270 was **4.5 s** to get up one block against 1.7 s for a flat cell — not a
+    jump, a haul, and it read as the figure being stuck. `Drop` stays at 50, deliberately: that is
+    0.83 s for three metres and a three-metre free fall takes 0.78 s, so halving it again would
+    have a colonist outrun gravity. **Side effect:** hopping a
+    one-block pile now costs 185 against 200 to walk round it, where it used to cost 320, so the
+    preference flipped — but it fires rarely. Measured a day at a time with three colonists:
+    **67 hops** on the ruined city and **4** on the meadow. (An earlier note here said 6,302, which
+    was the broken counter described below.)
+  - **A real proof that stairs are used had to be built**, because storeys-visited stopped meaning
+    anything once hops were cheap: `MovementSystem.ConnectorSteps` and `HopSteps` count the two
+    kinds of layer change. `M2DemoTests`'s control runs both configurations and differences them.
+    - **The first version of those counters was wrong, and the owner caught it.** They sat above
+      the `MoveProgress < cost` guard, where `StepsTaken++` correctly sits below it, so they fired
+      on every tick a pawn spent part way through a vertical step: they counted **pawn-ticks
+      weighted by the cost of the move**, not moves. A jump at 135 counted 135 times, a stair up at
+      290 counted 290 — which inflated everything and made the two categories incomparable with
+      each other, since stairs are dearer per traversal than hops. Every figure taken from them was
+      wrong by about two orders of magnitude.
+    - **The corrected numbers, control against demo over a day on four seeds:** 1/9, 0/15, 0/15,
+      5/12. The test asserts twice the control and at least eight, which all four clear; three to
+      one was tried first and seed 4 breaks it.
+    - **The small counts are themselves a finding.** On seed 1 the demo takes 9 connector steps
+      against 31 hops — most of its vertical movement is hops, not stairs, because a hop costs 135
+      against a stair's 290 and the city is built of one-block rubble. **M2's claim that an ordinary
+      day exercises the stair connectors is weaker than it was**, and widening the gap means
+      making the map want a stair rather than tuning the test.
+- **The HUD's first pass landed 2026-09-16,** the first built interface since the design docs: the Unity-free `Odyssey.Hud` assembly (roster, inspect, depth-ruler, ledger and calendar models behind ADR 0003's split, tested in `Odyssey.Tests.Hud` in both tiers) and a UI Toolkit shell `HudShell` styled by `Hud.uss` after the hud-v2 mockup, with every HUD region of the catalogue's screen map in place. **Live:** the colonist inspect pane (world click or roster card — needs, mood, tabs, commands), the roster bar, the clock, the speed buttons, Depth Ruler layer clicks, and the ledger's real rows. **Displayed for the look, disabled with a reason:** main tabs, overlay toggles, alerts, cancel. **The Build palette (A7, called Architect until the owner renamed it on 2026-09-16) is a button on the bottom bar, left of Work**, opening a panel above the bar; Trade was removed from the bar in the same change so the row did not grow. Icons are deterministic placeholder badges keyed by icon key; the ADR 0007 pipeline replaces them when the sheets land. Clicks on HUD regions are gated from the world by `SliceCameraRig.PointerOverInterface`. **Directors (2026-09-16):** `HudDirectors` in the Hud assembly holds `SelectionDirector`, `SliceDirector` and `CameraDirector` per 09 §3; the composition root makes them with the world, the rig, `SelectionPresenter` and the shell only realise them, and a new region arrives as a director plus a presenter, not as more shell. **View-level behaviour is proven in the playmode gate** by `HudSmokeTests` — every region built, roster bound to the frame, selection answered by name, the player-loop half of experiment R4 in `g-02`; whether a panel also resolves under `-nographics` is still open. **The look itself still needs eyes: press Play in `Play.unity`** (regenerated with the HUD).
+- **The HUD was rebuilt to an approved specification, 2026-09-16 (`docs/design/14-hud-layout.md`).** Same information, and **10.8 to 11.0% of the viewport at rest**, measured on the real panel at all three resolutions the criteria name. The “roughly 31% before” the brief quotes is the specification's own figure and was not re-measured here — the old HUD had no geometry model and no test that could produce one, which is most of why this pass exists. The first pass proved the catalogue and then could not be judged: it printed its own debug codes at the player ("A1 · RESOURCES"), carried three development notes as game text, put two or three letters of an icon key in a coloured tile wherever a picture was missing, and had accumulated **fourteen font sizes between 7 px and 16 px**, none chosen against the others, because every region picked its own as it was written. **No game logic changed**; this is the HUD layer only.
+  - **Contrast comes from two always-on scrims, not from the panels**, and that is what let the panels shrink. A panel dark enough to hold 13 px text over bright terrain has to be nearly opaque, and a screen of nearly opaque panels *is* the coverage figure. `HudContrast` measures it rather than asserting it by eye: over a panel over pure white (worse than any terrain in the game, so the figure cannot go stale when a biome lands) primary ink reads **11.6:1**, meta **6.6:1**, dim **4.5:1**. Faint (.35) does not clear the threshold and is therefore used only for hotkey caps.
+  - **The design system is in the Unity-free assembly, which is the whole reason the acceptance criteria are testable.** `HudTheme` (palette, spacing, radii, nine icon categories), `HudType` (six steps and no seventh, mono for every figure), `HudLayout` (where every region is anchored and how tall it comes out), `HudCommands` (the bar and its overflow rule) — all in `Odyssey.Hud`, so "no two panels overlap at three resolutions", "coverage at or under 18%", "every command item shows a hotkey" and "body text over 4.5:1" are **fast-tier arithmetic** rather than opinions in a review. 93 Hud tests, up from 60.
+  - **And the PlayMode gate is what stops the model describing a screen nobody is looking at.** `HudGeometryTests` lays the real HUD out in a real panel at 1280x720, 1920x1080 and 2560x1440 and measures the boxes UI Toolkit actually produced: no overlaps, coverage measured, and every realised box **inside** its modelled box. The model was exactly right for the stores and clock panels on the first run, which is the kind of agreement that makes the pair worth having.
+  - **`Hud.uss` sets no type at all** — not one `font-size`, `letter-spacing` or `-unity-font-style`, and a test asserts it. Type comes from `HudType` through `HudText`, because a size written in a stylesheet can only be tested by parsing the stylesheet, and two sources for one decision is exactly how fourteen font sizes happened. The sheet keeps its colour literals, which has always been its stated position, but `HudStyleSheetTests` now parses thirty colour declarations and forty length declarations out of it and compares them against the tokens — so the sheet can no longer hold a literal nobody agreed to.
+  - **Three-letter placeholders are gone** (ADR 0007, amended again). MEA / WOO / SCR read as truncated data, and a filled colour tile behind a value outshouts the value. A missing glyph is a **single-colour outlined square** at a 1.6 px stroke in the key's category colour, and a PlayMode test fails on any two- or three-letter capitalised fragment reaching a HUD label. **Chrome is drawn rather than imported**: `HudGlyph` renders play, pause, forward, fast-forward, chevrons, close, hamburger, alert triangle and info as `Painter2D` paths at Lucide's own proportions — one path each, no texture, no atlas, no licence. The icon *pipeline* is untouched: same symbolic keys, same three sizes, and when the owner's sheets land `IconBadge` becomes a sprite lookup with nothing about the layout moving.
+  - **Two OFL faces are committed** under `Assets/Odyssey/Presentation/Ui/Fonts/` with their licences: Archivo Narrow for words, IBM Plex Mono for every figure. A narrow face is not taste — the bar carries eleven labelled items across the screen and the criteria forbid both an abbreviation and an item running off the edge. **Weights 600 and 700 are synthesised**, because Google publishes Archivo Narrow only as a variable font and Unity's importer takes its default instance; `HudType.BoldFrom` is the one place that split lives. A clone without the fonts keeps the panel's theme face and the identical layout.
+  - **The reference canvas moved from 1200x800 to 1920x1080.** Every anchor in the specification is a 1080p pixel, so the old reference drew all of them 1.6 times too large. `PlayScene.HudReferenceResolution` and the committed `HudPanelSettings.asset` both carry it; the play scene was **hand-edited rather than regenerated** to bind the two fonts, because regenerating a scene without the packs present is what rewrote `ModuleCatalogue.asset` with empty prefab references once already.
+  - **The command bar may not wrap and may not overflow**; anything that does not fit moves into Menu, from the right, and Menu is never dropped. That is what lets the inspect pane above it stop guessing at the bar's height — a coupling the old sheet carried in a comment admitting it was one. The reflow uses widths UI Toolkit actually laid out, measured once while every item is present and **`visibility: hidden`**, because a `display: none` element has no width to read and the bar would otherwise have to be drawn overflowing for one frame to discover that it overflows. Hotkeys avoid every key the game already uses (M/C/X arm tools, R/F move the slice, V cycles visibility, Space and 1–3 are the clock), so Research is **E** and Colonists is **O**; **B** and **Escape** are live.
+  - **The alerts panel is real and hides when it is empty.** `AlertModel` raises three conditions the published frame can support — starving, close to breaking, a colony standing idle — leads with the actionable clause and trails the detail dim. Each latches with hysteresis for the reason `AlertWatch` already gives about chimes; idle is *sustained* rather than latched, because it is momentary rather than a level. **Stores marks a falling stock** against a baseline resampled every ten seconds rather than against the last refresh: the panel refreshes four times a second and a hauler picking a stack up lowers every count on screen, so frame-to-frame comparison would flicker the whole panel amber all day.
+  - **Every per-frame string is now built only when it would read differently**, because ADR 0003's flip condition F1 says the HUD allocates nothing per frame in steady state and `HudStressTests` asserts zero gen-0 collections. `InspectModel.Position` was rebuilding `"at 78, 59"` fifteen times a second; the alert leads were rebuilt four times a second for as long as an alert stood. Both now return the same instance until the value moves, which is also what makes the view's reference comparison work.
+  - **Three model faults the new tests found before any of it was drawn.** The colonist strip is centred on the *screen* while the panels either side are different widths, so a strip sized to the free span and then centred poked seventeen pixels into the clock column. The depth rail is the one region the *world* sizes, so it has to be the one that gives: its cells shrink in proportion rather than the rail overflowing, and above all rather than silently losing its last layers, which was a playtest report. And the rail runs down to the command bar, not to the bottom of the screen.
+  - **Escape now unwinds tool → Build palette → settings → menu**, one rule in `SettingsDirector.Escape` decided in the fast tier. The palette is new to that order because it used to be a permanently open column.
+  - **Not done: nobody has looked at it.** No test can say whether it reads well. **Press Play in `Play.unity`.** Also open: real icon art (every game glyph is an outlined square), no backdrop blur (UI Toolkit has none, and the scrims carry the contrast that mattered), and true 500/600/700 weights.
+- **The interface has a scale, and the camera turns freely (owner, 2026-09-16, both on the HUD rebuild branch).**
+  - **The type read too small on 4K**, which is not a contradiction of the panel scaling with the
+    screen: it subtends the same angle as at 1080p, but physically identical is not perceptually
+    identical at arm's length from a large panel, and the HUD this replaced was drawn against a
+    1200 x 800 reference, so every glyph on it was 1.6 times larger. The fix is the setting
+    `09-ui-and-input.md` §9 D4 planned for all along, which **closes D4**: a **ladder** of 80 / 90 /
+    100 / 110 / 125 / 150 per cent rather than a slider, because a HUD at a fractional scale puts
+    its one-pixel hairlines between pixels. It works by **dividing the reference canvas** — at 125%
+    the panel is told 1536 x 864 — so nothing else has to know: the anchored layout adapts, the
+    colonist strip re-clamps and the command bar moves its tail into Menu. `UiScaleTests` walks
+    every rung and asserts no two panels overlap at any of them. **The default is read off the
+    screen**: 100 below 1440p, 110 at 1440p, **125 at 4K**, and the defaults are checked against the
+    coverage ceiling (125% comes to about 17%, inside the 18% budget). Above that the player is
+    knowingly trading board for legibility and each rung's tooltip says so. **The panel settings
+    asset is copied before it is written**, the same trap the sky material already taught.
+  - **B17 is tabbed: Interface, then Graphics.** It opens on Interface, because the scale is the
+    one setting in it that changes the panel you are looking at while you look at it. Two new
+    registry names, `ui.settings.interface` and `ui.settings.uiscale`; wiki and `Registry.g.cs`
+    regenerated.
+  - **Q and E rotate freely while held** (`SliceCameraRig.rotateSpeed`, 90°/s, multiplied by shift
+    like every other camera speed). They used to snap ninety degrees a press, which is the genre's
+    convention and assumes a board that reads the same from four sides — this one does not, since
+    it is layered and its slice is cut at an angle, so a wall hides different things at fifty
+    degrees than at ninety. The *target* angle is driven rather than the yaw, so mouse orbit and
+    key rotation share one smoothing and cannot fight over the angle.
+  - **The command bar's hotkeys were wrong and the test written to catch that passed anyway.** Five
+    of eleven — W, S, E, A and B — were already camera keys (WASD pans, Q/E turn, B cycled the
+    below-slice mode), and the guard compared against a **reserved list written from memory** that
+    was missing all five. The panels are on **F1–F9** now (unclaimed, conventional for top-level
+    panels, and narrow, which the overflow budget likes), **Build keeps B**, and the below-slice
+    cycle moved to **shift-V** beside the above-slice cycle it belongs with. `HotkeyClashTests`
+    replaces the list: it **greps the Presentation assembly** for every `keys.somethingKey` and
+    allows a command's key only in the one file that reads it on that command's behalf. The lesson
+    generalises and is in `docs/lessons.md` — *a reserved list maintained by hand is wrong the
+    moment somebody binds a key without updating it.*
+- **Multi-selection landed 2026-09-16 (M2's selection slice, `claude/selection-mvp`).** `SelectionDirector` now holds an ordered set of colonist handles (`Pawns`, first is the primary `Pawn`) with `PickMany` (drag box / select-similar), shift-toggle on `Pick`/`Choose`/`Toggle`, and per-handle death pruning under the one-frame grace — items and cells stay single-subject, per 09 §3 row 5's "multi-select within one class". New reasons on `Changed`: `Boxed`, `Toggled`, `Similar`. **The gestures:** a left drag past a 6 px threshold in `SliceCameraRig` completes a screen rect against the world even over a panel (input case 1, §6); `SelectionPresenter` tests containment of each drawn colonist's chest point (feet-tweened, layer-filtered like the ray hit-test) and a double click on a colonist takes everything of that kind on screen — the docs' wording, not a vision radius, which stays a future knob. **The roster bar (A2) keeps pace:** every selected card is marked, shift-press toggles without the camera jump, shift-drag sweeps a range. The marquee is a UI Toolkit overlay in `Hud.uss`; multi-brackets are drawn by the composition root (primary full, rest at 0.45 alpha); the inspect pane prefixes "N selected" when the set is larger than one. Headless: seven new director tests in `DirectorTests`. **Not yet:** no per-colonist orders read the set — the command grid (A10) is the consumer this was built for; double-click select-similar does not yet jump the camera from the roster card (single double-click semantics still to settle).
+- **The board no longer ends in mid-air (owner decision 2026-09-16).** A decorative surround carries
+  the ground and the wood 1,220 m past the rim into the fog, so the map reads as a clearing in a
+  landscape rather than as a board game on a table — `TerrainSkirt` and `SkirtLayout`, design in
+  `06-rendering-and-camera.md` §2a. **Nothing out there is a cell**: not pathable, not selectable,
+  not buildable, not in the save. It *measures* the board rather than being configured, so a bare
+  board gets bare ground and a wooded one gets woodland at its own density. It is hidden below
+  ground level, desaturates on a ramp from the rim so the playable area still reads as bounded, and
+  is switched by `OdysseyBootstrap.terrainSkirt` with `skirtTreeDensity` as the cost lever. The
+  camera's far plane went 600 m → 1,800 m to contain it.
+- **The ground has a shape, and none of it is a cell (owner decision 2026-09-16).** The board read
+  as a carpet of blocks because two things compound: the wooded board sets the generator's own
+  `surfaceRelief` to zero, and a ground cell is drawn as one instanced 2.5 x 3.0 x 2.5 cube placed
+  by a bare translate, so every top face is a flat quad at exactly the layer height. `GroundRelief`
+  (`Presentation/Rendering/`) is the facade that fixes it, in the sense the grass tufts and the axe
+  chips are facades: **drawn, and in no cell, no save and no hash**. `surfaceRelief` is still zero,
+  the simulation is untouched, and the goldens did not move — ADR 0002's "no slopes, no
+  half-heights" is a rule about cells and this adds nothing to a cell. **The governing rule is that
+  relief is a drawing offset and never a position**, so `CellMetrics.FloorCentre` is untouched and
+  every draw site applies it explicitly. The one thing that must follow the drawn ground is
+  **picking**: `SlicePicker` now meets each cell's own tilted floor instead of one flat plane per
+  layer, because otherwise a click lands most of a cell away at a shallow pitch, which is exactly
+  the misclicking complaint the picker's own remarks cite Going Medieval for. **Ground is sheared,
+  everything standing on it is lifted** — a per-cell offset alone gives plateaus with little steps,
+  so each cell takes the tangent plane of the field, which is affine and fits in the instance matrix
+  it already had: no extra instance, no extra draw call, no new mesh, no shader change, and the
+  normal tilts under the ordinary inverse-transpose so the lighting is free. A colonist stands up on
+  a hillside; only the ground lies along it. **Two layers of one field**: the board rolls 2 m over
+  150 m, the surround adds hills of 50 m over 1,000 m ramped from zero at the rim to full height by
+  700 m out, so the join is continuous by construction and the surround no longer cuts across the
+  rolling board as a hard line. Hills cannot be the board's field turned up — amplitude and
+  wavelength together decide a slope, and 50 m over 150 m stands at sixty degrees. **Two numbers
+  came from measurement rather than taste**: a 0.35 m amplitude would have been invisible (a
+  1.7-degree slope moves the lit value under one per cent against a 72-degree sun and strong
+  ambient), and hills past about 900 m are pointless because fog is opaque at 1,100 m and at the
+  default 48-degree pitch the horizon is not in frame at all — only ground 50–224 m away is. Cost,
+  measured under the real player loop and never `RenderBench`: meadow 0.41 → **0.68 ms** mean,
+  1.10 ms worst, city 0.88 ms, against a 5 ms budget; the shear is free (identical draw calls and
+  instances off and on) and the 0.27 ms is the finer surround tiles, which went from 40 m and 120 m
+  to 20 m and 60 m because a tilted tile disagrees with its neighbour as the *square* of its width —
+  at 120 m that was twenty metres and read as diagonal cracks across the hillsides. Levers:
+  `OdysseyBootstrap.groundRelief` and `groundReliefPeriod` (0 is the old flat board exactly),
+  `GroundRelief.HillAmplitude/HillPeriod/HillRampMetres`. Judge it with **`Odyssey → Presentation →
+  Check the ground relief`** (`scripts/unity.sh shot Odyssey.EditorTools.ReliefCheck.Run`), which
+  shoots relief off and on at 48, 20 and 14 degrees. Design: `06-rendering-and-camera.md` §2b, which
+  also records the amendment to §2a's "not a framing ring of hills". **Still wants the owner's eye
+  in `Play.unity`**: this worktree has no Synty packs, so the ground there is untextured flat colour
+  with no grain for a slope to catch, and the board's own roll reads far more weakly than it should.
+  ~~Real terracing (`surfaceRelief = 2`) is deliberately left off.~~ **False since the mining
+  merge**, which made `MakeWooded` a *cover* mode rather than `MakeBarren` with the trees put back,
+  so it stopped zeroing anything: the played board has carried real 3 m terrace risers ever since,
+  and `WoodedMapTests.TheDrySurfaceIsTerracedAndCoveredInGrass` requires them. See the next bullet.
+- **Earth has a surface, and a terrace step has a way up (owner ask, 2026-09-16).** ADR 0002 fixes
+  the layer at 3.0 m and calls it irreversible, so the owner's "can we span this out to half or
+  quarter blocks" is answered in the **mesh**, where a variant costs one instancing *bucket* rather
+  than one instance per cell and four bearings are free. Nothing here is a cell: no save, no hash,
+  no pathing — §2b's "relief is a drawing offset, never a position" holds unchanged.
+  `GroundMesh` is `RockMesh` for earth with one rule stone does not have — **the middle of the top
+  face is pinned exactly**, because everything in the world is drawn standing at `FloorCentre` and a
+  dished meadow would hover every colonist on it. Two meshes, which is a performance decision: only
+  terrace risers, mined faces and outcrops ever show a side, so *Turf* is the cheap common case (32
+  triangles) and the coursed *Face* (80) goes only to cells that show one.
+  **`BankMesh` is the answer to the straight wall:** three treads and three risers drawn in the
+  *empty cell* beside a one-layer step — which the simulation already lets a colonist hop
+  (`MoveCost.JumpUp`), so the board was showing a wall where the game had a path. Stepped rather
+  than smooth, because 3 m over one cell is a fifty-degree ramp however it is drawn and a smooth one
+  reads as a road somebody built. Four conditions, each tested: empty and standing on ground, the
+  step is **earth** (a quarry wall stays sheer), its top is open, and the cell is open to the sky.
+  Water counts as the low side, so every stream bank stops being a 3 m ditch wall.
+  **The landscape is one colour at every height:** the surface spans five layers and only one is
+  ever active, so the depth shade was dimming grass two terraces down to 0.46 and the meadow came
+  out in three greens. `TintCode.DaylitBase` exempts any cell with no slab and no solid cell above
+  it — a tree is not a roof — while rock in a mine still dims, which is where that cue earns its
+  keep. **Figures answer the ground too:** `Footing` leans the root toward the ground normal (a
+  fraction of it, capped — people stand up on a hillside) and plants both feet with `ArmIk`, which
+  was already a general two-bone solve; the hips drop to the deepest foot, which is the one thing
+  that makes it read. Slope is not a cell property, so **nobody walks any slower**.
+  **The black lines between tiles were never holes** (owner report, 2026-09-16). A gap would show
+  the pale blue skybox; these were near-black, so they were geometry receiving no light — where two
+  sheared cells disagree, the taller one's vertical side wall fills the step and a vertical face
+  under a 72° sun with no shadow pass receives almost nothing. `GroundSeamTests` weighed the two
+  sources rather than guessing: the relief field's own parting is **14.7 mm** (the "about 41 mm" on
+  record was conservative) and that is the subtle line that has always been on `main`; a 3.6 cm rim
+  ripple added **72 mm** on top, and that was the obvious one. **So the ripple ships at zero** — five
+  times the artefact for a benefit no photograph could find — and the test asserts the default so
+  turning it back on needs a fresh sheet. The residual 14.7 mm cannot be removed while each cell is
+  its own box and does not need to be, only lit: **side faces carry shading normals tilted 38° up**
+  (`SideNormalTiltDegrees`), which costs no vertex, no triangle and no draw call. Any per-cell rim
+  movement disagrees with the neighbour by *twice* it, so genuinely uneven ground at cell scale wants
+  shader displacement keyed to the **shared corner's world position** — that is the next piece of
+  work, not a bigger number.
+  **The lip of a step is cut back** (`ChamferMetres`, 22 cm), on the sides that are actually open and
+  no others: chamfer all four and every riser cell grooves against the flat ground behind it, which
+  is the ripple's mistake arriving again. Sixteen patterns of exposed sides fold onto **five**,
+  because turning a mesh is free — at the price that a face spends its bearing orienting the pattern
+  and varies by its courses alone.
+  **Measured** (`SlopeCheck`, whole slice, no frustum culling, so compare within the run only):
+  plain 1,061 draw calls / 31,089 instances → earth **1,312 / 31,089** → banks 1,411 / 32,220. Earth
+  geometry costs buckets and **not one extra instance**, 137 of its 251 calls being the pattern
+  split; the chamfer *amount* costs nothing at all (1,312 at 0, 22 and 45 cm), and with it at zero
+  the five patterns collapse to one so that turning the lever off is not the expensive choice.
+  Levers: `ChunkRenderer.EarthGeometry`, `ChunkRenderer.Banks`, `GroundMesh.SideNormalTiltDegrees`,
+  `ChamferMetres`, `MaxRipple` — all off being exactly the old ground. The mesh levers are static and
+  the meshes are held by reference inside a `ModuleLibrary`, so moving one needs an explicit
+  `GroundMesh.Invalidate()` **and a fresh library**, or the ground draws against destroyed meshes and
+  silently disappears. Judge it with **`Odyssey → Presentation → Check the slopes and banks`**
+  (`scripts/unity.sh shot Odyssey.EditorTools.SlopeCheck.Run`), which finds the longest run of
+  one-layer step on the board rather than being told where one is, and sweeps six conditions
+  differing by one thing each. Design: `06-rendering-and-camera.md` §2c. **Frame time still needs
+  `FrameTimeTests`** on a machine with the packs.
+  - **Nothing grows inside a working, and that was a reported bug** (owner, 2026-09-16: *"there is
+    a bug with the new terrain where there is mine sites, the terrain is curved and so when people
+    are mining — you can't see the colonists"*). The bank rule's "the step is earth" reads as
+    though it had already covered a quarry and it does not: grass, bare earth and subsoil are all
+    mineable (60, 60 and 160 ticks to clear), so a hole cut into the meadow has earth walls with
+    open tops, which is every condition a terrace step has. **A bank grew in the cell that had just
+    been cut**, filling it from its floor to the rim, and the miner standing in it was drawn up to
+    the chest in ground. Measured on the played board: a 3 × 3 pit one layer deep grew **8** banks
+    and swallowed **one of the five** colonists whole.
+  - **The mark is `CellFlags.Discovered`, read for its other meaning**, through
+    `WorldRenderModel.IsCutFace`. The two are coextensive rather than merely similar: the flag is
+    set by `CellGrid.RevealAround`, which is called from exactly one place
+    (`MineJobDriver.MineCell`), and worldgen sets it on nothing at all. So no new sim state, no new
+    saved bit, and a loaded game draws the same pit. If a deep scanner ever reveals rock nobody has
+    cut, `IsCutFace` is the one place that changes.
+  - **It has to be asked of the floor, not only of the sides**, and the shortfall is invisible in
+    the obvious case: mining a cell reveals all six of its solid neighbours, so a cut cell's four
+    sides are all cut faces, `StepsAround` comes back empty, and the **hip** branch then looks at
+    the *diagonal* neighbours, which nothing reveals. Guarding only the sides still drew 1 bank for
+    one cut cell and 2 for a four-cell bench. A mined cell's floor is revealed too, so asking the
+    floor catches every shape of working at once.
+  - **A figure now stands on a bank rather than in one**, which is the same fault with the opposite
+    answer: on the hillside the ramp is the picture of a hop and must stay, so the figure comes up
+    to meet it. Measured on the played board: **three of five** colonists at the foot of a terrace,
+    every one 1.500 m through the slope; afterwards 0.000 m. The decision left the mesher into
+    `BankLayout` (where a bank is, which shape, what of, and `RiseAt`), `ChunkMesher` turns that
+    into an instance and `PawnPose` stands a figure on it, so the two cannot drift. The levers went
+    static with it — `BankLayout.Enabled` / `InWorkings` / `LiftFigures` — because a per-renderer
+    lever would let banks be off while colonists hovered 1.5 m over the meadow.
+  - **The tiling is what makes it safe.** `BankMesh`'s three shapes already had tests saying they
+    agree where they meet; those same properties are what make the surface continuous for a walker,
+    so a run of bank, leaving one and walking onto one needed nothing extra. **Going up take the
+    higher of chord and ground, going down fade the lift out** — a hop's chord runs 1.5 m *inside*
+    the block it climbs (true before banks existed), while the drawn ground going down is a step
+    function and following it would teleport the figure. The fade has to be at **both** ends: the
+    first version forgot the cell being entered, which is a metre and a half dropping off a step
+    *into* a bank, and a terrace has banks at the bottom of it by definition.
+    `BankFootingTests` samples 400 points across each step and allows no jump over 5 cm.
+  - **Open: whether the boots need the bank's own gradient.** `Footing` plants both feet off
+    `GroundRelief.SlopeAt`, the rolling field, which is eight degrees where a bank is fifty — a
+    0.3 m stance spans about 0.36 m of slope the feet know nothing about. The sheet could not
+    settle it: the colonist the harness picked wears a full-length skirt. §2b's standing rule
+    predicts the lift alone is enough.
+  - Judge it with **`Odyssey → Presentation → Check a bank underfoot`**
+    (`scripts/unity.sh shot Odyssey.EditorTools.BankCheck.Run`), which **builds** its step (earth
+    laid beside a colonist — a cut one would grow no bank), clears the woodland out of the camera's
+    way, and prints `MeasuredFootGap` for every colonist in a bank rather than only the subject,
+    because a figure sunk into a ramp and one standing behind it look identical from every bearing.
+  - Judge it with **`Odyssey → Presentation → Check a quarry`**
+    (`scripts/unity.sh shot Odyssey.EditorTools.QuarryCheck.Run`), which cuts a 3 × 3 pit **under a
+    colonist's feet** — `MineCell` steps whoever was standing on a cell down onto the floor it just
+    cut — and shoots it with `ChunkRenderer.BanksInWorkings` on and then off. It prints how many
+    colonists are standing in a bank, which is the number the whole thing is about. Five new
+    `BankMeshTests` and 752 EditMode (750 passed, 0 failed) with it.
+- **Colonists swing an axe, and no pack contains the clip, 2026-09-16.** There is no work animation anywhere in the 7,222 imported assets — `AnimationBaseLocomotion` ships idle, walk, run, sprint, crouch, in-air, turns, transitions and additive lean/look, and the character packs ship none — so a colonist felling a tree stood breathing in the idle for ten seconds and then the tree fell over. The pose is therefore **computed rather than authored**: every character is a Humanoid rig, so `WorkSwing` (`Presentation/World/`) turns a stroke phase into shoulder, elbow and spine angles, and `PawnFigureDirector` pitches those five bones **about the figure's own right-hand axis, never the bone's local axis** (local axes belong to whoever rigged the character; the plane an axe swings in is a fact about the figure), laid over whatever the gait mixer wrote. **The signs are not one convention**: an arm hangs down so a negative pitch carries it forward, a spine stands up so a positive one folds it forward, and the director subtracts the spine's pitch back out of the shoulders so the three angles are genuinely independent. The stroke is three unequal parts — long eased raise, short accelerating strike, dwell with the blade in the wood — because a sine reads as a metronome. It eases in and out over `WorkEaseSeconds`, and it **freezes when the game is paused**, inferred from the tick standing still: a paused pawn settles into the idle by itself, so a swinging colonist would otherwise be the only thing moving. The axe is an ordinary catalogue row, `ModuleIds.ToolAxe` (`SM_Gen_Wep_Axe_01`), parented to the right hand only while the work lasts; a clone without the packs fells trees bare-handed. It is **gripped by measurement, not by authored Euler angles**: the haft is the long axis of the combined mesh bounds, the head is the end the mass sits towards, the tool is laid along the forearm with the grip in the palm, and the blade's roll is computed so the bit faces the way the head is travelling — leaving `AxeBladeRoll` as a trim. **Both hands grip it**, the off hand placed by a two-bone IK solve (`ArmIk`), because no pair of angles will ever bring the second fist to a haft held in the first. And `WorkStance` draws a working figure **wherever puts its blade in the wood**, eased in with the swing — solved from the figure's whole measured strike offset, never from a scalar reach, because with the swing tilted over the shoulder 1.12 m of a 1.68 m strike is *sideways* and a figure stood at 1.68 m puts its axe a metre beside the tree. Contact is checked by `MeasuredBladeGap` (0.19 m from the trunk's middle) rather than by eye: a three-quarter photograph puts the woodcutter and her tree at different depths and cannot settle it. Only the drawn figure steps in; the pawn stays in its cell for picking, the cursor and the whole simulation.
+
+  **Chips fly when the blade lands (2026-09-16).** `ChipDirector` (beside `PawnFigureDirector`, disposed with it) throws a few pieces of debris on the frame the stroke crosses the strike, which `WorkSwing.Lands` decides. **One particle system for the whole colony**, world-simulated, and the material is a `ChipRecipe` value — colour, size, speed, life, count and spread are per particle, so wood off an axe and stone off a pick share the system, the material and the draw call; `ChipRecipe.Stone` is written and waiting for mining. Gravity is the one thing a recipe cannot carry (it belongs to the system), so heavier debris leaves faster, smaller and shorter-lived. **It is warmed on construction** — an unwarmed particle material compiles its shader on the first frame it is drawn, which would be the exact frame the first axe lands. Chips are decoration like the grass tufts: no cell, no save, no hash.
+
+  **The pose is the owner's, settled by interview 2026-09-16:** edge angled ~45 degrees down and into the trunk (a felling scarf), the axe travelling up past one shoulder and down diagonally across the body (`SwingTiltDegrees` -30), landing at waist height with the blade just into the bark, both fists together at the butt of the haft, and the **edge horizontal with the poll trailing back over the hands** (`AxeBladeRoll` 270, settled off an eight-roll contact sheet against a photograph of a real felling cut). **Every figure starts its stroke at the beginning** and is desynchronised by stroke *length* rather than by phase (`WorkSwing.StrokeSpread`, plus or minus 9%): shifting the phase meant a colonist took up an axe already half way through a swing, which no length of ease-in could make anything but a snap. With that fixed the ease could go from 0.25 s to 0.45 s, and the step up to the tree rides on the same weight. The simulation's half is one signal: `JobDriver.WorkFocus` (default -1, overridden by `FellJobDriver`) published as `PawnView.Working` and `PawnView.WorkCell` — a *cell*, because a pawn that has stopped walking has no heading left and the figure has to be turned to face what it is swinging at. Mining and building inherit the swing by overriding one expression. Design: `06-rendering-and-camera.md` §6a. Tuned by eye with `Odyssey → Presentation → Check the axe swing` (`scripts/unity.sh shot Odyssey.EditorTools.SwingCheck.Run`), which photographs one stroke of a real colonist at a real marked tree **side on to the line between the two** — in the board camera's three-quarter view they sit at different depths and the gap between blade and trunk reads as anything you like. The levers are `AxeBladeRoll`, `AxeGripFraction`, `WorkStance.StandOff` and the six angle constants in `WorkSwing`. **This stands in for art we do not have**: when real work clips exist they replace it and `WorkSwing` goes.
+- **There is water on the board (owner decision by interview, 2026-09-16; ADR 0009).** `02-world-and-layers.md` §8 had deferred it outright, so this takes the deferral up. Ponds, winding 1–3 cell streams and marsh fringes on most maps, with a wide map-crossing **river** as a rarer variant (`riverChancePerMille` 120). **Shallow water is walkable at exactly a third of walking speed; deep water is impassable** and the pathfinder routes around it; marsh is ordinary ground that is merely slow. Water is three `TerrainDef` rows in `NaturalContent`, **not** a new grid, a save section or a snapshot channel — terrain was already a hashed, saved, chunk-encoded per-cell index.
+  - **Deep water needed a flag of its own**, `CellFlags.ImpassableTerrain`, read only by `CellGrid.IsWalkable` and `NavGrid.RefreshFrom`: solid terrain holds a colonist up on the cell above (walk *across* the lake) and non-solid leaves the cell walkable because the bed is a floor (walk *through* it), so neither existing flag can say "neither stand in nor stand on".
+  - **A channel is cut one layer down**, so a bank is real geometry a bridge will span. Deep water is **not** cut deeper: the bed is the column's surface, so a two-layer core would put neighbouring surface cells two layers apart. Depth is told by colour and opacity, and both depths draw their surface at the same height in the cell because a pond has one level. **Not one generator invariant was relaxed** to let water in — the column rule, one-layer-apart and nothing-floating all pass unmodified, which is the evidence the geometry is honest.
+  - **Two passes, either side of the strata** (`NaturalWaterPasses.cs`; `PassCount` 7 → 9, and every later pass renumbered). Where water goes is a *column* decision that must precede the strata so the one full-grid loop builds a correct column under every bed; what a cell is made of is a *cell* decision that can only follow. Paths are a **noise-displaced straight line** — the cross coordinate is a function of the march step, so a channel cannot self-intersect, leave the map or stall — and depth is one bounded flood in from the shore, which makes a 1–3 cell brook wadeable end to end and gives a river a deep core from a single rule.
+  - **Banks are settled in both directions.** A channel crossing a terrace step leaves a two-layer cliff, and one cut into a slope can leave water perched above lower ground. Both were found by tests, not by reasoning, and both are fixed by lowering whichever end of a disagreeing pair is too high until a bank stands *exactly* one layer over its bed. The relaxation must be **symmetric**: if only the wet end pulls its bank down, a bank lowered by another channel never tells the channel beside it to follow.
+  - **No river ever cuts the colony off.** Fords are cut by construction, water is kept clear of the start (`startWaterClearance`), and a reachability flood forces more fords rather than re-rolling — re-rolling takes unbounded time on a bad seed and quietly uses a seed other than the one it was handed. Measured: **0 of 40** rivers need the backstop; with the fords switched off it fires on **40 of 40** and still leaves 80% of the board reachable, which is how we know it works rather than merely never fails.
+  - **Movement uses the seam that was already there.** `NavGrid.CostClass` / `CostByClass` fed `EnterCost` since the pathfinder was written and **nothing had ever written either**: every step cost 100. Now clear 0, marsh +40, shallow water +200. The trap: **a cost class belongs to the cell *entered*** — wading that is the water cell, crossing a bog it is the air cell above the marsh, and the other way round marsh is free and nothing says so. The table is applied in the `NavGrid` constructor rather than handed down, because a `NavGraph` is built in a dozen places and a missed call is a wrong number, not a crash.
+  - **Nothing is built in water.** `TerrainDef.buildable`/`bridgeable` are written for U26 to inherit; `DesignationGrid.Allows` refuses water (no behaviour change today, but its own doc says validation lives there); and `ColonyScenario.FindStartSpots` was a real bug — shallow water is walkable, so a bed could have been unpacked in a stream. **Bridge building is out**: there is no build pipeline at all.
+  - **Water has a shader, not a tint** (`Odyssey/Water`): ripples, a sun glint, a Fresnel-weighted probe reflection and a shore that dissolves against the depth of the bed. Arithmetic only — no texture, no extra pass, no render target — drawn by the ordinary chunk machinery, so a clone without the packs draws the same water. It casts and receives **no shadows**, which is both the right picture and a third of the cost: the board ran 0.68 ms before water, 1.28 ms with shadowed water, **0.99 ms** without (city 1.56 ms; 5 ms budget). The 0.88 ms city figure on record was not reproducible in the same session and the discrepancy is **unexplained** — the city has no water, so different measurement conditions are the likelier answer.
+  - **Marsh was the thing photographs caught.** With no catalogue row it drew as an untextured dark olive slab, which beside a lifted meadow reads as *shadow*, and there was more marsh than water on the board (427 columns to 382). It now has the bare-earth dirt material, a bright sour tint, one fringe ring instead of two and a threshold that frays it — and it reads as a **sandy bank**, which looks right but is not what "marsh" means. **Open for the owner: re-tint it greener or rename it.**
+  - Judge it with **`Odyssey → Presentation → Check the water`** (`scripts/unity.sh shot Odyssey.EditorTools.WaterCheck.Run`), which shoots a stream and a forced river at three pitches — Fresnel is an angle, so the grazing shot is the only one where the surface shading really shows. Levers: `NaturalMapGenDef.water` (off is **byte-identical** to the pre-water generator, and six baked hashes prove it), `deepShoreDistance`, `marshFringe`, `riverChancePerMille`, `ChunkMesher.WaterSurface`.
+- **Gestures — a figure doing something that is not walking and not a tool stroke (branch `claude/gestures`, 2026-09-16).** Settled by three rounds of interview and designed in `docs/design/13-gestures.md`. **The governing rule: author the angles when the figure aims at something whose position we do not know; solve to a point when it must meet something whose position we do.** The axe is the first kind, which is why every angle in §6a needed a photograph; the lift is the second, and needs none — the hands go to the figure's own feet, so it is right on all 61 rigs and on relief-tilted ground by construction. **A crouch is two angles and one translation**, and the translation is what keeps the boots on the ground: the pelvis drops first, then each leg is solved back to the foot the gait already put down (`TwoBoneIk`, renamed from `ArmIk` — a leg is two bones, and its pole goes in *front* of the knee) and the sole's rotation is restored or the toes point into the floor. Legs, hips and feet are bound at last, which the climb pose had recorded as a known gap. **The contract is two sticky bytes** (`PawnGesture`, `PawnView.Gesture`/`GestureSerial`): a one-tick flag is *unobservable*, because presentation reads one snapshot a frame and the sim runs several ticks between frames at speed 3 — so the report stands until the next gesture and a serial tells two lifts apart, a figure that has never seen a pawn poses nothing, and neither field is saved or hashed (a test asserts the hash does not move when every pawn gestures). The sim's whole part is two assignments in `HaulJobDriver`; the toil stays one tick, so no golden, throughput or balance number moves, and a figure may still be straightening as its pawn walks off — the accepted price of keeping the duration out of the simulation (owner, 2026-09-16). **A third work style, the builder's hammer**, went in ahead of the queue: `WorkStroke.Hammer`, `WorkStyle.Building`, `ChipRecipe.Timber`, `ModuleIds.ToolHammer`. Its own stroke rather than a fast axe because the haft is 0.63 m against 0.74 — a short tool is swung from the elbow, so the shoulder comes back less and the elbow cocks harder. `SM_Wep_Hammer_01` is the only hammer in all 7,222 assets, so it was not chosen on merit; it is the first prop with a butt pivot, which should not matter because the fitting works off mesh bounds, and the contact sheet is what proves that. Nothing in the game builds, so `IndexForJob` can never reach it and `PawnFigureDirector.StyleOverride` is the harness's way in. **Verified: it builds and the arithmetic holds** — fast tier 409 Sim and 29 Hud, and EditMode **639 total, 629 passed, 0 failed** in the worktree, including 8 new `GesturePoseTests`, 6 renamed `TwoBoneIkTests`, 6 on the hammer and 7 on the contract. **Not verified: whether any of it looks like anything.** No test can say that, which is why `GestureCheck` exists (`Odyssey → Presentation → Check the lift` / `Check the set-down`, and `Check the hammer swing` beside the axe's and the pick's). Until those are judged, every angle has the standing the pick's numbers have: an argument. Still open: crouched sustained work and the two-handed gun with recoil (§9 G6, G8), both harness-only because nothing farms and nothing shoots.
+- **`AxeBladeRoll` 270 is a stale line in this file** (found 2026-09-16). The status entry above says the axe's blade roll was "settled off an eight-roll contact sheet" at 270°; the code says 0, and deliberately — commit `eb5371f` moved it there and added `BladeYaw` in the same change, because the roll turns the head about the very line the head is trying to be pointed along. The code is right. Correct this file when somebody next touches that entry.
+- **Taking hold of something is no longer part of the axe (2026-09-16).** `Grasp` is the general
+  solver: a `Hold` is a run of material with a thickness, a `GripArm` is two bones, a wrist and
+  fingers with somewhere to send the elbow, and `One` / `Both` / `Opposed` are the three ways hands
+  meet one — a haft, a rung, a rifle fore-end, a crate between two palms. **It iterates three
+  times**, because palm-on-wood, palm-turned-to-wood and fingers-closed each move the other two
+  (rolling a hand swings the palm right round the wrist the solve actually places); one pass
+  finished 0.13–0.30 m out. A palm seats **half a thickness off the centre line**, or the wood is
+  inside the hand. And the bug underneath all of it, which predated the fists: **a humanoid hand
+  bone is the wrist**, so every tool in this project was seated five to eight centimetres behind the
+  hand from the day there was an axe — `HandGrip.Palm` measures where a held thing really sits, off
+  the knuckles, which only became possible once the fingers were bound. `MeasuredGripGap` and
+  `MeasuredGripOverreach` are printed by `SwingCheck`; the second separates an arm that missed from
+  an arm that could never have reached, which a photograph cannot.
+- **Colonists climb with their legs now (G7, 2026-09-16).** `ClimbPose` puts the boots on the wall:
+  **contralateral** (the right hand reaches with the left foot), **solved rather than authored** per
+  `13-gestures.md` §3, and every number a fraction of the figure's own thigh-plus-shin so it is the
+  same climb on all sixty-one characters. **A wall is a plane and the first version made it a
+  cone** — written as a reach and an angle, the two boots stood at different distances from the rock
+  and one of them thirty centimetres inside it, which no contact sheet of a figure on clear air
+  would ever show; the rock distance is now fixed from `ClimbLean`'s own arithmetic and only the
+  height varies. Judge it with **`Odyssey → Presentation → Check the climb`**
+  (`scripts/unity.sh shot Odyssey.EditorTools.ClimbCheck.Run`), which forces the climb and walks the
+  cycle by hand, shoots at **facing + 90°** (unlike `GestureCheck` — see §11 for why the two differ)
+  and prints `MeasuredFootReach` beside each picture. In that sheet the boots stand in the grass:
+  a forced climber is a colonist on a meadow rather than one half way between two layers, so read
+  each boot against the hip. Levers: `ClimbPose.ExtendedDrop` / `SteppedDrop`. **Not done: the
+  climbing hands are still open fists** — `Grasp` is now exactly what would close them on a hold.
+- **What you can see is decided by how deep you are (owner decision 2026-09-16; ADR 0006 amended,
+  `06-rendering-and-camera.md` §3a).** **At or above the surface: every layer above, drawn SOLID —
+  no cap, no fade. Below the surface: one layer above, x-rayed, and every layer below to the
+  floor.** Solid was a correction: the rule first shipped x-raying the stack and the owner's reply
+  was *"this includes everything buildings, stones, rocks and everything, as I noticed the mining
+  rocks were transparent"*. It resolves to `AboveMode.Full` for opacity only — the active layer
+  stays roofless (`SliceSettings.SuppressCeilingAt`), because ADR 0006's `full` is the exterior
+  view and keeps its lid, while "the active layer is drawn roofless" is a standing decision a
+  default must not reverse silently. The lever is
+  `SliceSettings.followDepth` (on by default) with `surfaceLayer` set from the start cell by the
+  composition root; switching it off obeys the six ADR 0006 modes exactly as before, and the V key's
+  first press does that for you — it pins whatever is on screen, then cycles, then hands the default
+  back. The owner's reason: *"you need to be able to see within the environment — if there was ever
+  digging introduced into the game or underground base."*
+  - **The report was "I couldn't see another person mining above me", and that half was a bug, not a
+    policy.** The terrain above the slice was x-rayed correctly; every *actor* in it was culled
+    outright, by `PawnFigureDirector.Sync` and `ChunkRenderer.RenderActors` alike, both testing
+    `cell.Y > activeLayer` — items too. A colonist working a storey up did not exist on screen. Both
+    now cull against `SliceSettings.HighestVisibleLayer`, so **a figure is drawn on every layer the
+    world is drawn on and on no other**. Solid, at full opacity (owner's call): a figure faded to
+    match its surroundings is invisible within two layers, and being sure *who* is overhead beats
+    being sure how far. Selection is unaffected and needed no guard — `SlicePicker` is clipped
+    analytically to the active layer's slab and `PawnUnderRay` already refused anything above it, so
+    nothing above the slice is a pointer target, as ADR 0006's Lane B amendment requires.
+  - **Solid has no fade to stop the loop, so the top is capped by the geometry.**
+    `ChunkRenderer.BatchFor` *meshes* a chunk when asked and again after every version bump, so an
+    unbounded loop would mesh a dozen layers of empty sky on every edit of a tall map.
+    `WorldRenderModel.HighestOccupiedLayer` is the top of the geometry plus the layer a colonist
+    standing on it occupies — a high-water mark, raised as cells enter the mirror and lowered only
+    by a full refresh, which is the safe direction. (The fade bound still governs an explicitly
+    chosen `xray`: the ramp runs 0.380, 0.274, 0.197, 0.142, 0.102 … and crosses the 0.012 cutoff
+    after eleven layers, the same constant the chunk loop skips on, so the two cannot drift.)
+  - **It costs nothing on the board being played, and that is measured rather than hoped.** On the
+    16-layer board with the surface at L11, "every layer above" is L12–L15 — four layers, exactly
+    what the old `aboveDepth` of 4 drew. Underground at L6 the range was L3–L10 and is now L0–L7:
+    eight layers either way. Deeper it is cheaper (L2: seven layers before, four now). Only a map
+    tall enough for the eleven-layer bound to bite pays anything, which is ADR 0006's new flip
+    condition F4.
+  - **Not measured: frame time.** `FrameTimeTests` runs under the player loop and the owner's editor
+    was holding the project, so the Unity gate did not run. The Presentation and Editor assemblies
+    were compiled headlessly against `Library/ScriptAssemblies` (`docs/lessons.md`, "Compiling the
+    game code while the editor holds the project") and the slice arithmetic was run outside the
+    player to check every number above, but **`scripts/unity.sh test editmode` and the PlayMode
+    frame-time gate are both unrun on this change.**
+- **A click reaches anything drawn solid, at any depth (owner, 2026-09-16; ADR 0006 amended again,
+  `06-rendering-and-camera.md` §3c).** The report: *"on my default depth level I can only select
+  objects/things on my level — I couldn't select the stones for mining, for example, I should be
+  able to click on an object in 3D space"*. This is the second half of the change above: once the
+  whole stack above the surface drew **solid**, `SlicePicker`'s "never above the active layer" rule
+  was handing the player a world they could see and not touch. **The rule is now: solid is
+  clickable, a ghost never is** — which keeps the sentence that was actually carrying the Going
+  Medieval misclick argument, since what makes a misclick a misclick is operating on a depth *cue*.
+  Underground, where the layer overhead is x-rayed, a click still cannot leave the active layer
+  upwards and **nothing about the old behaviour changed**.
+  - **The band is asked of `SliceSettings`, not decided in the picker** —
+    `HighestSelectableLayer` / `LowestSelectableLayer`, beside the methods that decide what is
+    drawn, so "selectable" and "drawn solid" cannot drift apart. It is capped at
+    `WorldRenderModel.HighestOccupiedLayer`, the same cap `ChunkRenderer.Render` uses, or a tall
+    map would march through empty sky on every hover.
+  - **A face belongs to whatever you clicked, or the click misses (owner, second correction the
+    same day: *"I still wanted to select the tile below it or not at all"*).** The first attempt
+    kept the picker's old convention — a floor crossing returns the *air* cell whose floor it
+    crossed — which was never chosen: on one layer the air cell was the only cell on offer. Reaching
+    up and down a stack it reads as clicking a rock and selecting the sky. Now: an occluder is its
+    own cell; a cell holding an **edifice** or a **built floor slab** is its own cell; bare ground
+    resolves to **the block beneath**, whose top face that is; and nothing beneath is nothing
+    picked. A solid cell's top face and the floor of the air cell above it are **one surface at one
+    distance**, so two layers bid at the same ray parameter — and they now resolve to the same
+    block, which is what makes the tie harmless. Where they disagree is a tree, and **a thing beats
+    bare ground**, failing which the layer nearer the slice wins. The occlusion hit's reported
+    distance had to be the **drawn top face** rather than the slab clip, which the relief had
+    opened up by half a metre.
+  - **The edifice rule is not an exception and leaving it out would have broken felling outright.**
+    A tree is an edifice that blocks nothing standing in the walkable cell, so "select the tile
+    below" taken literally hands back the ground under every tree and Fell can never be ordered
+    again. **And the order had to be lifted to match, for a drag**: a click on a tree names the
+    tree, but a fell box begun on open grass anchors a layer too low and every cell of it is
+    refused *in silence* — the tool swept across a wood and nothing happening.
+    `DesignationGrid.Designate` reads a Fell order named at solid ground as the tree on it, and
+    `Cancel` mirrors it. Only felling; mining means the block itself, which is what the click now
+    gives. It is the same relation `CanMine` already knew from the other side.
+  - **A surface that is not drawn is not clickable.** The active layer's ceiling is the slab of the
+    layer above and the renderer meshes it away, so that one layer offers only what occludes: rock
+    over your head stays pickable, the dropped slab does not.
+  - **Colonists follow the same band**, with one extra rule for a ray: a pawn must be at or above
+    the layer of the cell the ray ended on. The pick ray descends, so everything it met before the
+    ground is at or above it — the cheap stand-in for comparing ray distances, and exact for the
+    only camera this game has. It is what keeps a miner eight layers down unclickable while a
+    colonist standing on an outcrop becomes clickable.
+  - **A drag box still cannot climb a wall**: `DesignateDirector` pins every cell to the *anchor's*
+    layer, which used to be a consequence of the picker's clip and is now a rule that class holds
+    on its own.
+  - **The order channel had to go whole-world, or the fix read as doing nothing.** Designations
+    were published as two byte-per-cell arrays of the **active layer**, which was the right shape
+    while a click could not leave it. Mark an outcrop standing over the meadow and the order was
+    accepted, worked and never drawn. `WorldSnapshot.Orders` replaces both: a **sparse counted list
+    of `OrderView`** (whole-world cell index, kind, progress) covering every order anywhere, which
+    is *smaller* than the one layer of mostly nothing it replaces — a layer is 14,400 cells and a
+    colony has tens of orders. `DrawStandingOrders` filters to the drawn band. Two side effects
+    worth knowing: the double-buffer clear the old sparse write needed is gone by construction (a
+    counted list cannot hold a stale byte), and `SliceLayer` no longer decides what is published,
+    only what is drawn.
+
+  - Five new `SlicePickerTests` pin both halves — the outcrop, the ghost, the meadow tie-break, the
+    shaft below, the suppressed ceiling. The seven existing tests call the four-argument `Pick`,
+    which means "the active layer alone" and is unchanged.
+
+- **Work ends with a beat, not a snap (owner, 2026-09-16).** `JobDef.settleTicks` (fell 30, mine 30)
+  holds a colonist still for half a second after the work is done — the tree is already down and
+  the rock already gone — before the job ends. It is a settle *toil*, last in the driver, reached
+  **before** the driver's own guards (by then the designation is cleared, so "is this still a
+  marked tree" would fail the job on the first settle tick) and reporting `WorkFocus = -1`, so the
+  drawn figure eases out of its work stance while standing still.
+  - **It fixes a measured fault, not just a feel.** The figure steps *in* towards its work (about
+    0.8 m for felling) and eases back out over `PawnFigureDirector.WorkEaseSeconds`, 0.45 s. Before
+    the settle, **all 27** work-to-move transitions in 40,000 ticks began gliding within **1 to 3
+    ticks** of the work stopping — so every one was walking and un-stepping at once, and because
+    the gait blend leaves the stance out of the speed it measures, the feet played an ordinary walk
+    while the body covered both. That is the "very quickly walk and then come to a normal pace" the
+    owner reported. Afterwards every gap is 31–33 ticks and none is under the ease.
+  - **So 30 is not taste: the settle must be at least the presentation ease** (27 ticks). A
+    simulation constant chosen to cover a drawing constant is an uncomfortable coupling and it is
+    the lesser one — the alternative is presentation reaching into job timing.
+    `AFelledTreeIsFollowedThroughRatherThanSnappedOutOf` **asserts** that relation rather than
+    assuming it, so zeroing the def fails the tier instead of quietly skipping it.
+- **The game has sound, 2026-09-16** (ADR 0010, research `d-12-audio.md`; plan unit U33 in vertical-slice.md's "After the slice" section — audio playback was in no plan before this). `AudioDirector` (`Presentation/Audio/`) is a presentation **director** in the ChipDirector sense: it owns every AudioSource in the game, reads only the published frame and the render mirror, and no sound is a cell, a save key or a hash bit. **Pooled voices, culled before they are spent:** sixteen AudioSources serve the whole colony — work impacts fire from `PawnFigureDirector.BlowLanded` (the same stroke moment the chips fly, with the style and the edge position), distance-culled by each def's max range, repeat-gated per sound id (five woodcutters near the camera are one rhythm section), stolen only from lower-priority voices, with pitch/amplitude variance because an identical sample is recognisably identical. **Ambience is measured, not placed:** `AmbienceProbe` samples the terrain mirror in a disc around the *camera's focus* (not the camera, which is tens of metres in the air), water cells weighted by proximity, saturating at "clearly full water", the bed's one 3D voice placed at the weighted centroid so a river pans as the camera orbits; layer-aware — water under a descended slice's floor is not heard. **Music and alerts are 2D:** day/night tracks crossfaded from the tick through `GameClock` (two ping-ponged voices, never a gap); the starving alert is raised off the published pawn list by `AlertWatch` with hysteresis (chimes once at a crossing, re-arms past 30%), and every alert ducks the music. **Buses in code, gains in dB:** Master/Music/Ambience/Effects/Alerts, the mixer's concept set with the mixer's math and no mixer asset (no supported API creates one; adopting a real mixer later is per-voice routing plus moving `SetBusDb` — the stored settings keep their meaning). Volume settings are the **B17 stub**, dB faders in PlayerPrefs (`AudioSettingsStore`). **Clips are generated placeholders** (`scripts/unity.sh exec Odyssey.EditorTools.AudioSetup.Build` writes eight synthesised WAVs and the `AudioCatalogue` asset; import classes per the manual — PCM decompressed for impacts, ADPCM for the water bed, Vorbis streamed for music), so a clone without them runs silent and licensed audio drops in as data with zero code change. Tests: EditMode for math/probe/clock/watcher/director (stepped on the director's own clock, so edit and play mode answer identically) plus a PlayMode smoke test. The dev overlay (backtick) carries the audio counters.
+  - **A voice is spatialised from the transform it shares, and they all shared one.** Every
+    AudioSource was a component of a single GameObject, so writing a one-shot's position moved the
+    lot — the axe sounded from wherever the last sound was written, and the water bed dragged every
+    one-shot along as its centroid moved. A GameObject per voice. The test that passed through it
+    played one sound; one sound cannot disagree with itself.
+  - **The water bed was silent on every map the game generates.** The probe sampled terrain at the
+    slice layer, which is the air a colonist stands *in* — terrain belongs to the solid cell under
+    it, and a channel is settled one layer below the dry surface. The fixture agreed with the bug
+    by putting its pond on the layer it probed. It reads the slice layer and the floor underfoot
+    now: two layers, not the column, so a descended player still does not hear the river through
+    rock.
+  - **Two kinds of ambience, because there are two questions.** The water bed answers *how much of
+    this is near me*; the **outdoor bed** answers *where am I*, which is not a quantity — it plays
+    flat above the surface, is silent below it, and changes with the clock rather than the terrain.
+    One loop per phase crossfaded at dawn and dusk, 2D because it is the air itself, on the
+    Ambience bus, under everything as the floor of the mix (day 0.34, night 0.26). Music and the
+    outdoor bed are the same shape of thing, so `PhaseLoop` is one class used twice: the
+    ping-ponged pair, each track's own fade length, and the rule that the incoming voice is the one
+    *not* fading out.
+  - **The id lookup was the whole cost and it grew with the catalogue.** `AudioCostTests` measures
+    the frame: a full `Sync` over the played board is **0.0035 ms**, and forty one-shots offered in
+    one frame — four times the colony the slice will run — went **0.1527 → 0.0050 ms** against 252
+    sounds once the director indexed the catalogue by id, keyed the cooldown by the def rather than
+    its id, and moved the rolloff curve from every play to construction. The price no longer moves
+    with the table's size; a 0.05 ms budget in the tier keeps it that way. The probe was left alone
+    — 225 samples a frame is 0.0035 ms, so throttling it would optimise nothing.
+  - **Real audio arrives as files, and the tool used to eat them.** `AudioSetup.Build` rewrote all
+    the WAVs every run, so sourced audio under the names the catalogue reads would be replaced by
+    the synthesised stand-in; a file that exists is never written now, and wiping the folder is its
+    own menu item that asks first. `forceToMono` was applied to every clip and is now a property of
+    the clip's use, so stereo music keeps its image. A sound takes variants — `chop_01.wav` beside
+    `chop.wav`, up to sixteen, picked at random per blow. **What to source and what to call it is
+    `docs/reference/audio-sourcing.md`**: eight files, lengths, which loop, which are mono, and why
+    WAV rather than OGG or MP3 (the source is re-encoded on import, so a lossy master only stacks
+    artefacts).
+  - **Open: the ears are on the camera, which is 32–160 m from the ground.** The cull and the
+    rolloff are measured from the listener, while the catalogue authors ranges as ground distances
+    (chop at 48 m), so a colonist felling a tree dead-centre in frame plays at about a fifth gain
+    at the default zoom and is culled outright past it. The fix is either to move the listener to
+    the camera's focus — the usual answer, and what makes the authored numbers mean what ADR 0010
+    says — or to re-author the ranges as camera-relative. Owner's call; it changes how the whole
+    game sounds.
+- **The golden-hour look: interviewed and researched 2026-09-16, not yet planned or built.** The
+  owner asked for the lighting, rays, warm sky-into-fog and depth of field of *Station to Station*.
+  Interview in `docs/research/look-interview.md`, references in
+  `docs/reference/screenshots/station-to-station/` (six images, described in that folder's README),
+  five research files (`d-12-urp-post-stack`, `d-13-light-shafts`, `d-14-aerial-perspective`,
+  `b-station-to-station`, `b-low-sun-readability`) summarised in `docs/research/INDEX.md`.
+  **Nothing under `Assets/` has changed and no design or ADR exists yet** — the next phase is a
+  design section, an ADR, execution units and a `Check the light` contact sheet, and it waits for
+  the owner. The grounding headline is that **no volume stack has ever been in effect**: the URP
+  asset's default profile GUID resolves to nothing and `DefaultVolumeProfile.asset` is orphaned, so
+  the project has never had tonemapping, grading, bloom, depth of field, vignette or anti-aliasing.
+  Two recorded decisions are overridden by the owner and must not be re-argued from the old notes:
+  the **72° sun in `PlayScene.BuildLighting` comes down to a raking 25–35°** (the comment there
+  rejecting a 50° sun is superseded — the real fix is Shadow Strength below 1, which that decision
+  never tried), and **bloom is adopted** against `d-09-stylised-rendering.md` §3.4's caution.
+  The load-bearing findings: the rays may be **geometrically impossible at the default framing**
+  (at a 48° pitch the sun can sit behind the camera, where a radial blur has nothing to radiate
+  from), so a framing experiment comes before any shader; the tilt-shift is probably **a screen-Y
+  blur rather than depth of field**, because URP's Gaussian blurs only the far field; the haze is
+  **exp2 fog plus a sky given the fog colour**, not a fullscreen pass, which the camera geometry
+  cannot justify; and the cascade splits are **already wrong for this camera**, spending half the
+  shadow atlas on the empty air in front of it. Budget: about 2 ms more, quality-tiered, and **no
+  measured millisecond figure for any URP post effect exists in any public source**, so every
+  number must come from `FrameTimeTests` under the real player loop.
+- **Escape opens a settings panel, and the graphics levers moved out of the inspector
+  (2026-09-16).** Panel B17's M1 stub: a centred panel with one Graphics section of four
+  switches — shadows, surrounding land, grass tufts, ground relief — thrown while the colony runs.
+  It exists because every graphics lever was an `OdysseyBootstrap` inspector field, so comparing
+  two looks meant stopping play, editing a number and starting a board that is no longer the board
+  you were judging; nearly every look decision on record ended asking for the owner's eye in
+  `Play.unity`. `SettingsDirector` (Unity-free, fast tier) holds what the panel holds and **what
+  Escape means**; `SettingsPresenter` does what it says and turns a boolean into a call on the
+  renderer; `HudShell.BuildSettings` draws it. **Escape is now decided in exactly one place** —
+  it was the designate tool's alone, and two components reading one key would have disarmed the
+  tool and opened the panel on the same keystroke, so `DesignatePresenter` reads no key and
+  exposes `ToolArmed` / `PutToolAway` instead. **Two switches are free and two cost a remesh**:
+  shadows and the surround are read as the frame is submitted, while grass and relief are baked
+  into instance matrices at mesh time, so they are followed by `WorldRenderModel.Remesh()` (bumps
+  the version, nothing else) and a skirt rebuild; the row's tooltip says which it is. **It is not
+  modal, deliberately** — the world runs and the camera orbits while it is open, because watching
+  the board is the entire point; clicks stop at the panel edge through the shell's existing
+  pointer gate, and the price is that the tool keys still work behind it. **Preferences are on the
+  machine, never in the colony save** (`PlayerPrefsSettingsStore`, the only `PlayerPrefs` user in
+  the project, behind `ISettingsStore` because the Hud assembly has no UnityEngine): a graphics
+  setting is presentation like the tufts themselves, with no cell, no save and no hash. **The
+  scene still decides how a session starts** — the panel is seeded from the bootstrap's fields and
+  a stored preference is laid over that, so preference beats scene beats nothing, and a panel
+  cannot change the board merely by existing. Six `ui.settings.*` names are in `icon-keys.csv`
+  with the wiki and `Registry.g.cs` regenerated, and `RegistryTests` now holds the panel to the
+  CSV. Design: `10-ui-panel-catalogue.md` B17, `09-ui-and-input.md` §6 case 6. **Not built and not
+  wanted yet:** a real modal, UI Toolkit `Toggle`/`Slider` controls (the switches are lit chips,
+  the idiom this HUD already uses), audio, interface scale, accessibility and keybindings, all M8.
+  The golden-hour work fills the Graphics section out, since its quality tier is a settings
+  surface by definition.
+- **There are trees on the background hills now (owner request, 2026-09-16).** The surround's wood
+  stopped 90 m past the rim, where the hills have risen about six of their fifty metres, so every
+  hill in the background was bare — and a bare hillside has nothing of known size on it, so the eye
+  cannot place it and it flattens into a green backdrop. `SkirtLayout.BuildFarTrees` runs a second
+  wood from 90 m out to **900 m**, chosen against two numbers that already existed: hills reach full
+  height at 700 m, fog is opaque at 1,100 m. Scattered on a **15 m lattice with a jitter** rather
+  than the cell grid, because the band is four million square metres and cell resolution would be
+  670,000 samples for two thousand trees; the jitter is what stops it reading as an orchard, and a
+  test holds that. **The cost is batches, not triangles**, and it was measured rather than assumed:
+  at the near wood's 80 m sectors with all sixteen tree kinds the meadow drew **1,154 surround
+  batches against 72** before, so the far sector went to 800 m and the far wood is capped to **four
+  kinds** (at 300 m nobody can tell one conifer from another, so variety was a batch multiplier
+  buying nothing). Measured under the real player loop with the city as a control: meadow **1.45 ms
+  off → 1.38 ms on**, +52 draw calls, +2,577 instances, against a 5 ms budget — and since the city
+  moved 1.70 → 1.84 ms between the same runs, ±0.14 ms is noise and **the honest claim is no
+  measurable cost, not a speed-up**. Levers: `OdysseyBootstrap.skirtHillTrees`, and
+  `skirtTreeDensity` scales it with the near wood. Design: `06-rendering-and-camera.md` §2a.
+- **Two traps found while doing it, both in `docs/lessons.md`.** Rebuilding the scene in a worktree
+  **without the Synty packs** rewrites `ModuleCatalogue.asset` with every prefab reference set to
+  `{fileID: 0}` — 501 lines, exit code zero, no message — so a blanket `git add -A` commits a
+  catalogue with no art and no failing test to explain it; the junction from the worktree lesson is
+  the fix, and reading the diff is the guard. Worse, and independent of the packs: **the committed
+  catalogue and `PlayScene.cs` had drifted apart.** The asset held a `terrain.marsh` row the builder
+  no longer emitted, and lacked a `tool.hammer` row it did. Nothing could catch it — the asset is
+  licensed art no test loads, the builder is editor tooling no test runs. The next rebuild for any
+  reason would have dropped marsh to the untextured fallback, undoing the water work's marsh fix
+  weeks later with nothing connecting the two. Marsh is restored in the builder and the catalogue
+  rebuilt. **When a rebuild's diff shows a row disappearing, that is never churn.**
+- **The rest of the look is deferred, not dropped (owner, 2026-09-16).** PR #50 carries the day cycle, the golden hour, the hill wood and the settings stub, with both CI tiers green and awaiting the owner's review. What is left is listed in order with its dependencies in `docs/plans/vertical-slice.md` under **"Deferred: the rest of the look"** — the Low quality tier (committed to in the interview, never built, and the only answer to the laptop budget since every figure on record is an RTX at 640 × 480), the new levers in the settings panel, the sun shafts, the tilt-shift, and marsh's name. **The governing fact is that nobody has pressed Play**: every judgement and every number in that PR comes from contact sheets and `FrameTimeTests`, and a sheet cannot show whether the light steps at speed 3, whether night is playable rather than merely pretty, or whether a seventeen-minute day is too fast. So the first item is not code. **One thing changed while it waited**: the shafts were blocked because a fixed overhead sun sits behind the camera at a 48° pitch, and the cycle now sweeps it east to west and low at both ends of the day, so the framing experiment `d-13` demanded has a real chance of paying.
+- **The day runs: blue at noon, orange at dawn and dusk, dark at night (owner, 2026-09-16, design `06-rendering-and-camera.md` §2d).** The fixed golden hour below landed first and the owner reversed question 2 of the interview on seeing it, which is recorded in `look-interview.md` so that file does not read as stale. **`Daylight`** is a keyed table in the *Presentation* assembly — not the editor one, because a running game must sample it — and `DaylightDirector` applies it every frame from the tick. A table rather than a formula because no sun model can say that dawn should be held orange longer than dusk, which is an art direction. **Midnight is both the first key and the last**, so the wrap needs no special case and a test walks the whole day at five-minute steps failing on any jump. **Night is a readability floor, not realism**: the sun drops below the horizon but is never switched off, because a directional light at zero flattens every face to one value and the board reads as a paper cut-out. **The sky material is copied, never edited** — it is an asset on disk, and writing to it at runtime in the editor would leave the sky wherever the clock stopped, permanently. The ambient probe is the only real cost and is throttled to a tenth of a game hour; the sun, ambient and fog are not, because stepping those shows in the shadows. **Nothing here is simulation** — a pure function of the tick, not saved, not hashed, unreadable from the sim, so a colonist at midnight is not blind. Judge it with `Odyssey → Presentation → Check the daylight`, which shoots eight hours at two pitches. Levers: `OdysseyBootstrap.daylightCycle` and `sun`.
+- **The golden hour is lit, 2026-09-16 (design `06-rendering-and-camera.md` §2d).** The look the
+  owner asked for, as far as it can go without two measurements. **One file owns the palette** —
+  `Assets/Editor/Odyssey/GoldenHour.cs` — because the effect rests on an identity that is invisible
+  if its halves live apart: the colour the distance fades to *is* the colour the sky is at the
+  horizon. **The grounding headline was that there had never been any post-processing**: the
+  pipeline asset pointed its default profile at a GUID resolving to nothing and the one profile in
+  the repo was orphaned, so no tonemapping, grading, bloom, vignette or anti-aliasing had ever run.
+  Now: Neutral tonemapping (never ACES, which skews exactly the warm highlights this needs), HDR
+  grading (in LDR the sun clips before the grade sees it), white balance, bloom above a threshold of
+  1, a light vignette, and **SMAA** — chosen because FXAA destroys our one-pixel post-drawn outline,
+  TAA would jitter it, and MSAA cannot touch it. **Two recorded decisions are overturned and the old
+  comments are rewritten in place, not deleted:** the 72° sun comes down to **30°**, because the old
+  decision blamed the angle for darkness that was really *shadow strength* (0.6 keeps the key
+  light's hue in shadow and costs nothing); and **bloom is adopted** against `d-09` §3.4, which was
+  written for a painted look. **A real shadow bug turned up:** cascade splits are fractions of
+  distance *from the camera*, and this camera never sees ground nearer than 50 m, so the stock
+  splits spent half the atlas on empty air — they now start at 0.30, with distance 50 → 250 m and
+  normal rather than depth bias, which is the grazing-angle lever. **Fog moved onto the board
+  deliberately**: exp2 at a density computed rather than chosen (1% at 50 m, a third at the rim, 97%
+  by 900 m), where the old linear pair started past the far corner and is why the board had no depth
+  in it. **Two faults found by photograph**, one silently true for months: URP keeps post-processing
+  *per camera* and defaults it off, so every contact sheet ever taken here was of an ungraded image;
+  and the first ambient put the woodland in near-silhouette, since a low sun barely reaches a
+  crown. **Not built, and waiting on measurement rather than effort:** the sun shafts, because at a
+  48° pitch the sun can sit behind the camera where a radial blur has nothing to radiate from, so a
+  framing experiment comes first; and the tilt-shift, because URP's cheap depth of field blurs only
+  the far field and cannot make a band at all. **Still wants the owner's eye in `Play.unity`.**
+- **Whatever hides a selected colonist is drawn as a ghost (owner, 2026-09-16; design
+  `06-rendering-and-camera.md` §3d).** The report was trees getting in the way of seeing the
+  colonist: the board is a wood, the camera orbits rather than cuts, and a selected colonist who
+  walks under a canopy is gone until the camera is spun to find a gap — which loses the bearing and
+  has to be done again the moment they move. Now anything standing on the line from the eye to a
+  selected colonist is drawn with the x-ray ghost material at `ChunkRenderer.SightFadeAlpha` (0.22)
+  for as long as it stands there. Nothing else changes: the geometry is still submitted, still
+  occludes what is behind *it*, and is still clickable; no cell, no save, no hash.
+  - **It is a segment against real geometry, not a cell march**, and that is the whole design. A
+    tree's cell is the one its trunk stands in, while what hides a colonist is its crown, six
+    metres up and a cell nearer the camera — so marching cells fades the wrong ones.
+    `SightLines.Blocks` tests the segment against the instance's own world bounds, which gets a
+    tall thing right for the same reason it gets a wall right and needs nothing from the mesher.
+  - **The verdict is taken on the module, not the part**, or a tree's crown fades while its trunk
+    stays solid. A bucket stores `placement * part.Local`, so the placement is recovered once per
+    bucket and the module's own bounds placed by it.
+  - **The line stops at the chest** — the point the bracket is drawn at and the hit-test aims at.
+    Geometry past the colonist hides nothing, and the floor under them is more than a beam radius
+    below the end of the line, so the fade cannot open a hole under the person just selected.
+  - **Two grains keep it cheap:** `Touches` is asked once per chunk and says no to nearly all of
+    them; only inside the survivors does the per-instance test run, and grass is skipped outright
+    (a tuft hides nobody and tufts are most of the instances). **A chunk's bounds are one layer
+    high, so the coarse test needs an allowance for taller geometry** (`TallestModuleMetres`, 12 m)
+    — without it the coarse test rejects the very chunk holding the crown and the feature does
+    nothing at all while every per-instance test still passes. Lines are capped at eight, so a box
+    selection of the whole colony cannot make the cost grow with the selection.
+  - **Measured at the board camera's 48° pitch:** a nine-metre tree occludes only within about
+    eight metres of the colonist, because the sight line rises 1.11 m per metre of ground. That is
+    the geometry, not a shortfall — a tree further back is below the line and never hid anybody.
+  - **Not faded:** other colonists, items and the live animated figures — a skinned figure would
+    mean swapping materials on its renderers rather than partitioning an instance array.
+  - **On by default, said in all three places it can be said.** The field initialiser,
+    `SettingsDirector`'s starting state and the serialised scene: a field absent from the scene
+    YAML falls back to the initialiser, so `Play.unity` was quietly right without saying so, which
+    is the arrangement that breaks silently on the next rebuild. The scene names it and
+    `PlaySceneContentsTests.TheSceneOpensWithTheSeeThroughFadeOn` guards it.
+  - Levers: `OdysseyBootstrap.seeThroughToSelection` / `seeThroughRadius` / `seeThroughAlpha`, and
+    a switch in the settings panel's **Graphics** tab (`ui.settings.seethrough`) — Graphics rather
+    than Interface because the tabs divide on how the HUD is drawn against how the world is. A free
+    lever: read as the frame is submitted, so no remesh. Judge it with **`Odyssey → Presentation → Check the see-through fade`**
+    (`scripts/unity.sh shot Odyssey.EditorTools.SeeThroughCheck.Run`), which *finds* the colonist
+    with the most geometry in the way at four bearings rather than being told where one is.
+  - **Verified: it compiles and the geometry holds.** Fast tier 428 Sim and 51 Hud; the Presentation,
+    Editor and test assemblies compiled headlessly against `Library/ScriptAssemblies` (the owner's
+    editor held the project); and the nineteen sight-line cases were *run* outside the player
+    against the built DLL, all passing. **Not verified: `scripts/unity.sh test editmode`, the
+    PlayMode frame-time gate, and whether any of it looks like anything** — `SeeThroughCheck` is
+    unrun, so the alpha and the radius have the standing of an argument.
+- **Sim vs UI vocabulary is deliberate:** simulation systems are *subsystems*, presentation-side coordinators are *directors* (`01-architecture.md` §3a). Do not unify the two words.
+- **Phase 3 (design): complete 2026-09-15.** `docs/design/` 00, 01, 02, 03, 04, 05, 06, 07, 08; ADRs 0001, 0002, 0005; and the execution plan `docs/plans/vertical-slice.md` (32 units, M0→M3). **The Phase 3 → Phase 4 hard stop was cleared by the owner on 2026-09-15; execution is under way.**
+- **Interface, icons and content naming (the UI line of work), 2026-09-15.** Design `09-ui-and-input.md`, `10-ui-panel-catalogue.md`, `11-icon-library.md`; ADRs 0003 UI framework, 0004 sim-to-UI contract, 0006 layer visibility, 0007 pixel-art icon pipeline; research `g-01`, `g-02`; mockups `hud-v1.html` and `hud-v2.html`, **both historical since the HUD rebuild of 2026-09-16** — the built interface is specified by `docs/design/14-hud-layout.md` and neither mockup was updated to it, so read the design doc and the screenshot rather than either mockup for what the HUD looks like. **Layer visibility decided:** x-ray by default with six modes shipped for playtest, amended by Lane B so that nothing above the active slice is ever a pointer target. **Icons:** 382 keys enumerated, 268 mapped to the owner's eight pixel-art sheets, 114 gaps listed in `11-icon-library.md` — the largest being people, since no sheet contains a human figure. **Names:** all 29 proper nouns proposed and awaiting the owner's veto, in `docs/design/proper-nouns.csv`.
+- **Colonists are drawn from 61 Synty characters** across all four packs, chosen per pawn by id (`ColonistLook`), each with the locomotion clip set matching its name. The cast is the `Colonists` array in `PlayScene.cs` — strike a name and rebuild the catalogue to remove a face. Eight rigged-but-not-people prefabs (scarecrow, skeleton, robots, hologram, the two in underwear) are listed there as deliberately excluded.
+- **Labels, not abbreviations (owner, 2026-09-16).** Until real icon art is in the build, every icon-bearing control draws its **full name** beside the icon; the two-to-four character badge is only a placeholder-tile and sub-32-pixel rendering rule, never the thing that names a control. Icon-only survives as a toggle and may become the default again on an owner screenshot call. Recorded in `09-ui-and-input.md` §7a (which closes open question D1), `10-ui-panel-catalogue.md`, ADR 0007; `hud-v2.html` now opens in *+ label* mode. Layouts are authored against the longest label, not the icon box.
+- **Still needed from the owner for the UI line:** copy the eight icon sheets into `art-source/icons/sheets/` (that folder's README names them), and approve or strike the proposed names.
+- **Cell size: FIXED at 2.5 × 2.5 × 3.0 m** (`docs/adr/0002-cell-size-and-layer-model.md`).
+- **Architecture: FIXED — plain C# structure-of-arrays with Burst on measured hot paths** (`docs/adr/0005-simulation-architecture.md`), decided by a two-candidate benchmark in which both implementations produced the identical state hash. Plain 1.423 ms/tick vs ECS 2.446 ms at 250 × 250 × 40.
+- **Top technical risk: pathfinding cost.** 65% of the measured tick is A-star. The explanation once recorded here — that these were futile searches for unreachable targets — was **falsified by its own follow-up experiment**: only 14% of budget exhaustions were unreachable, and under 1% on a structured map. `05-ai-and-jobs.md` and ADR 0005 were corrected. The fix is hierarchical search plus a better heuristic, with the district-id reachability check (`d-04-pathfinding.md`) measured first thing in M2. At a 3x hardware discount the tick leaves 3.8 ms of a frame for rendering; at 4x it leaves none.
+- **Target: the playable MVP** (vertical slice, M0→M3) per `phase1-answers.md` Q8–Q9. Graphics bar: close to the concept renders (`d-03-rendering.md`). A look-check scene exists: `Assets/Scenes/Spikes/VisualBlock.unity` (regenerate via *Odyssey → Spikes*).
+- Owner reference (2026-09-15): `github.com/RimWorldMods` for understanding RimWorld mechanics — clean-room rules apply, nothing is copied from it (note in `docs/research/INDEX.md`).
+- **The first real icons are in the HUD, and the resting HUD is smaller again (owner, 2026-09-16).**
+  Four of the owner's 32 px drawings now draw themselves instead of an outlined square:
+  `ui.res.wood`, `ui.res.stone`, `ui.res.ironore`, `ui.res.scrap`. **This is the sprite lookup ADR
+  0007 promised, arriving one key at a time** — `IconArt` maps a key to a texture under
+  `Assets/Art/Ui/Resources/odyssey/icons/`, a key with art draws it and a key without still draws
+  the square, so the HUD is correct at every stage between no art and all of it, and a single icon
+  can be judged in the running game before the set is drawn. Each is exported by an **integer 2×
+  nearest-neighbour upscale to 64 × 64**, point-filtered, no mips, uncompressed, sRGB, and
+  `IconArtTests` holds every file in the folder to those rules rather than to an eye, because a
+  bilinear icon costs the second atlas page in silence. Real art is drawn **untinted**: the
+  category colour says what a *placeholder* stands for and a picture says that for itself.
+  - **The `Resources` namespace is flat and shared with every installed package.** A plain
+    `icons/` folder collided at once — `Resources.LoadAll<Texture2D>("icons")` came back with
+    Shader Graph's own `blackboard.png` at 16 px and bilinear, failing the ADR test on somebody
+    else's art. Hence `odyssey/icons/`. A single-key `Load` would never have shown it.
+  - **UI Toolkit's background defaults would have tiled a 64 px drawing inside a 17 px row** and
+    shown the player its top-left corner. `background-size`, `-repeat` and `-position` are all set
+    explicitly in `IconBadge`.
+  - **Open, and the owner's call: the HUD draws icons at 16, 17 and 30 px, and ADR 0007 says not
+    to draw pixel art below 32.** Measured on the real art: 30 px reads, 17 px loses the grooves,
+    16 px goes to noise. And `ui.res.stone`'s ink fills 20 × 15 of its 32 × 32 frame where wood
+    fills 26 × 24, so it reads as a pebble beside a plank. Equalising means scaling each icon's
+    *trimmed* box by its own largest integer factor (what the sheet pipeline's `trim_mode` does),
+    at the price of different pixel sizes between icons in a pixel-art set. Left faithful.
+    Contact sheets: `Logs/icon-sizes.png` and `Logs/icon-rows.png`, made by a scratch script off
+    `tools/icons/icons.py`'s codec.
+  - **`ui.res.alloy`, `ui.res.concrete` and `ui.res.water` are struck out** (owner: "we won't be
+    needing those"). Both CSVs, `HudTheme`'s category table, `LedgerModel.Planned` and one test's
+    example row; wiki and `Registry.g.cs` regenerated — **405 keys, 265 with art, 130 gaps**.
+    `11-icon-library.md`'s header counts are corrected and its §3 and §4 tables are now marked as
+    predating the additions since. Nothing in the sim referenced any of the three; water *terrain*
+    is untouched.
+  - **Nothing selected, no pane** (owner). The inspect pane was a 41 px strip reading "Nothing
+    selected", itself a cut-down of a three-sentence empty state; both were the interface talking
+    about itself. It is `display:none` now — out of the layout, out of the measured region set and
+    unable to take a click — and that is the HUD's default. `HudLayout.InspectHeight(0)` returns
+    **0** and `Solve` gives an empty rect, so the model does not reserve a strip the shell never
+    builds. What the model still cannot say is how tall an *item* or *cell* pane is; that was
+    equally true before, and is only sound because every criterion stated against it assumes
+    nothing selected or a colonist selected.
+  - **The stores panel was 288 px and is 168** (owner: "far too wide"). 288 was never measured.
+    `TheStoresPanelIsWideEnoughForItsRowsAndNoWider` asks the text engine how wide the panel's
+    widest line really draws in the real face at the real size — **128 px**, and it is the
+    *header* ("STORES" against "n / m"), not any commodity row. The extra forty is for figures
+    rather than comfort: a fresh board holds two-digit counts and a stocked one holds five-digit
+    ones, about 32 px more of mono. The test's bounds are two-sided, so a long name fails the
+    lower one with a number attached. **A laid-out width could not have answered this** — a label
+    with `flex-grow: 1` measures back as whatever the row gave it — so each child is asked for its
+    own natural width instead.
+  - **Coverage at rest fell from 10.8–11.0% to 9.0%** at all three resolutions, measured by
+    `HudGeometryTests`. EditMode 916 total, 914 passed, 0 failed; PlayMode 23 total, 21 passed,
+    0 failed; fast tier 428 Sim and 106 Hud.
+  - **Still not judged by eye.** No test can say whether four grey-and-brown lumps read as four
+    different commodities at 17 px. **Press Play in `Play.unity`.**
+- **Colonists are recoloured, and there was never a body to dress (owner question, 2026-09-16; research `e-05-character-customisation.md`).** The question was whether a *generic* Synty model exists that we could make clothes for. It does not: a character is **one skinned mesh from scalp to boots with one material**, 69 of them across four packs, and nothing below the neck is separable anywhere. Synty's **Sidekick** line is the only route to real modular garments (free starter pack, ~£184 a pack or $30/mo) and the owner declined it — no purchases, no new art, *"recolour and retheme as much as we can without creating anything new"*.
+  - **What made recolouring possible is a fact about the art, not a technique.** The pack atlas carries a labelled **`Character Colours`** block of small *flat* swatch cells, and every garment, hair patch and skin region is UV-mapped onto one of them — so **a vertex's cell already is its material identity**. No mask texture, no authored ID channel, no mesh surgery. `SwatchProbe` measured the claim before anything was built: the colour deviation inside every cluster of eight bodies across all four packs is **zero**. So the shader does not sample a different cell, it outputs a colour — no second fetch, no mip or derivative consequence, and the palette is no longer limited to what Synty painted. A *patterned* garment cell is the observation that would send this back to moving UVs.
+  - **`Odyssey/Character`** is hand-written HLSL like the other three shaders here, every property in `UnityPerMaterial` so the SRP Batcher still sees one variant across a colony of materials. Three passes; the shadow pass repeats the forward pass's alpha clip or hair cards cast the shadow of a solid rectangle. **An unused slot is the rectangle `(1,1,0,0)`**, which no UV is inside, so "off" is a value rather than a branch.
+  - **The rectangles are discovered, not measured by hand.** `CharacterSwatches` clusters each body's UVs at catalogue-build time — three of the four character FBXs are `isReadable: 0`, so `Mesh.uv` is unavailable at runtime for 43 of the 61 bodies, while in the editor every mesh is readable. What ships is a handful of coordinates per row in `ModuleCatalogue.asset`. **No import setting under `Assets/Synty` is touched**: that state is gitignored and would not reach CI or another clone.
+  - **Three faults the whole cast found that five bodies had not.** It took the *first* active skinned renderer as the body, and PolygonGeneric ships hair as its own active child — three bodies came back as a hair slot covering the whole figure; it takes the **largest** active mesh now. **Skin is painted in three different places**, not one: the shared column plus Western Frontier's Native Americans at (0.2746, 0.1537) and the Sci-Fi cyborgs at (0.2591, 0.1075) — one column classified fourteen bodies as having no skin, seven of them bare-chested warriors. And the disjointness rule *noticed* overlaps without fixing them, so the catalogue was written with overlapping rectangles and a label saying so; same-slot rectangles are merged now and a genuine cross-slot collision drops the lesser slot.
+  - **Final tally: 55 Full, 5 with no skin showing, 1 with neither skin nor hair — and every one of the 61 recolours its clothing.** The five are a helmeted cop, a masked cyborg ninja, a gowned medic and two aliens, which is correct rather than broken.
+  - **A fresh cast every session, for now (owner, 2026-09-16).** `OdysseyBootstrap.randomCastEachSession` defaults **on**, so faces, hair, skin and clothes are rolled each time you press Play. It is there because the scene pins `seed = 1`: "the same world deals the same people" then means the same twelve people every single run, which is right for a saved colony and useless for judging a palette. Switching it off restores the stable cast exactly, and that is what a real saved game will want; `colonistLookSeed` still pins one cast over either, and the seed used is logged so a cast worth keeping can be copied back.
+  - **Appearance is derived from the world seed and the pawn id**, so the same world deals the same people on every load — replacing a salt rolled at startup, whose recorded reason (a fixed hash made *"a cast of sixty-one read as a cast of five"*) is preserved because the seed still differs between worlds. `colonistLookSeed` remains as the override. Nothing is saved and nothing is hashed; `WorldSnapshot.Seed` is published for the same reason `GameSpeed` is, and the seed was already an input to the hash.
+  - **`ColonistAppearanceBook` is one object both drawers hold**, so "the two drawers deal the same face" is a fact about the object graph rather than a convention two doc comments had to keep. **It fixed a latent bug**: the instanced renderer sized its lottery from every catalogue row while the figure director dropped unusable rows and *compacted the survivors*, so look *i* was not row *i* the moment anything was missing — invisible today because either all four packs are installed or none are, and with three of four every colonist would have changed face on crossing the figure cap.
+  - **Judge it with `Odyssey → Presentation → Check the colonist colours`** (`scripts/unity.sh shot Odyssey.EditorTools.ColourCheck.Run`), which shoots a control with no character material at all, the real palette, and three sheets forcing one slot to magenta across the colony — a judgement about *place* rather than about shade. **Open for the owner: the palette is deliberately muted and the parade sheet differs from the control only slightly.** It may be too subtle to get a feel from; `ColonistPalette` is the one-line lever. **Not measured: frame time** — `FrameTimeTests` has not been run on this change.

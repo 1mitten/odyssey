@@ -1386,7 +1386,7 @@ added in a file it had never heard of.
 
 **So the reserved set is read out of the source.** `HotkeyClashTests` greps the Presentation
 assembly for every `keys.somethingKey`, and allows a command's key only in the one file that reads
-it on that command's behalf — `bKey` in `HudShell.cs` for Build, `escapeKey` in
+it on that command's behalf — `bKey` in `HudShell.Bar.cs` for Build, `escapeKey` in
 `SettingsPresenter.cs` for Menu. Anything else reading one of them is the clash. It also asserts
 that **every hotkey cap is one the test knows how to map**, because a cap it cannot map is a cap it
 silently skips, which is the same failure wearing a different hat.
@@ -1400,3 +1400,12 @@ Two things generalise:
   an explicit failure. Both of this file's earlier entries about silent skipping — the `Assume` that
   hid six dead mining tests, the loose tolerance that made a test prove nothing — are the same
   shape.
+
+**The price, met on 2026-09-16: a guard keyed by filename fails when a file is split.** Cutting
+`HudShell.cs` into partial-class files moved `keys.bKey` into `HudShell.Bar.cs`, and the ownership
+map still named `HudShell.cs`, so the tidy-up broke a test that had nothing to do with hotkeys. That
+is the design working, not failing — the map says *which* file may read a key, so a key that moves
+house must say so — and it is worth knowing before you split anything in the Presentation assembly.
+The fast tier does **not** catch it: `HotkeyClashTests` needs the real directory tree, so it is the
+Unity EditMode run that fails. Split a file, then run `scripts/unity.sh test editmode`, not just
+`scripts/test-fast.sh`.
