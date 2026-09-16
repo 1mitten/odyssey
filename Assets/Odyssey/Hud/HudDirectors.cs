@@ -16,6 +16,7 @@ namespace Odyssey.Hud
         public SelectionDirector Selection { get; } = new SelectionDirector();
         public SliceDirector Slice { get; } = new SliceDirector();
         public CameraDirector Camera { get; } = new CameraDirector();
+        public OverlayDirector Overlays { get; } = new OverlayDirector();
 
         public HudDirectors(int layerCount, int startLayer)
         {
