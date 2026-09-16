@@ -113,10 +113,20 @@ namespace Odyssey.Tests.Sim
             // ordinary day because what it needs is up there. Every colonist, not some: a pawn
             // that stayed on one floor all day either could not get off it or had no reason to,
             // and both are the failure this run exists to catch.
+            //
+            // **Measured as a SPAN, not as a count of storeys**, because unaided vertical movement
+            // is exactly one block: a colonist jumps up onto the block next door or drops off it,
+            // and nothing deeper is possible without a stair or a ladder. On the city's rubble that
+            // is enough to touch two storeys by ordinary wandering — the control below does exactly
+            // that — so two storeys is no longer evidence of anything. A span of two is: it cannot
+            // be reached one hop at a time without something built to climb.
+            //
+            // Measured on this map and seed: the demo's colonists span 3, 2 and 2; the control's
+            // span 1, 1 and 1.
             foreach (var pawn in visited)
-                Assert.That(pawn.Value.Count, Is.GreaterThan(1),
-                    $"colonist {pawn.Key} spent the whole day on storey {string.Join(", ", pawn.Value)}, " +
-                    "with its bed one floor up and its food two");
+                Assert.That(Span(pawn.Value), Is.GreaterThanOrEqualTo(2),
+                    $"colonist {pawn.Key} kept to storeys {string.Join(", ", pawn.Value)}, which a hop " +
+                    "alone could reach, with its bed one floor up and its food two");
 
             // The three behaviours, as the soak asserts them — on the city map this time, which
             // is the part that is new: the same colony on stamped shells and rubble rather than
@@ -155,6 +165,16 @@ namespace Odyssey.Tests.Sim
         /// <para>If this ever starts failing it is good news that still needs looking at — some
         /// other reason to change storey has appeared, and the test above stops being a clean
         /// measurement of this one.</para>
+        ///
+        /// <para><b>It did start failing, and this is the looking at.</b> Hops arrived
+        /// (2026-09-16): a colonist jumps up one block onto the block next door, or drops off it,
+        /// with nothing built. On the city's rubble that is enough to touch a second storey while
+        /// going about its business on one floor, and every colonist here now does — the original
+        /// assertion was that each used exactly one storey, and one used two. What a hop cannot do
+        /// is carry anybody <i>two</i> storeys, because it is one block and a repeat needs a block
+        /// beside it at each step. So the control is now about the span rather than the count, and
+        /// it is a sharper control than it was: the demo above no longer counts a second storey as
+        /// evidence, only a spread that nothing unaided could produce.</para>
         /// </summary>
         [Test, Category("Long")]
         public void ADayOnOneFloorNeverTouchesAStair()
@@ -170,10 +190,24 @@ namespace Odyssey.Tests.Sim
             }
 
             foreach (var pawn in visited)
-                Assert.That(pawn.Value.Count, Is.EqualTo(1),
-                    $"colonist {pawn.Key} used storeys {string.Join(", ", pawn.Value)} with everything " +
-                    "on one floor, so a layer change in the demo run is no longer evidence that the " +
+                Assert.That(Span(pawn.Value), Is.LessThanOrEqualTo(1),
+                    $"colonist {pawn.Key} spanned storeys {string.Join(", ", pawn.Value)} with everything " +
+                    "on one floor, so the spread in the demo run is no longer evidence that the " +
                     "scenario put it there");
+        }
+
+        /// <summary>
+        /// How far apart the highest and lowest storey a colonist stood on are — 0 for a pawn that
+        /// never left its floor, 1 for one that hopped onto the rubble next door and back.
+        ///
+        /// <para>The count of distinct storeys would say two in both of those cases and in the very
+        /// different case of a pawn that climbed two flights, which is why neither test uses it.</para>
+        /// </summary>
+        static int Span(HashSet<int> storeys)
+        {
+            int low = int.MaxValue, high = int.MinValue;
+            foreach (int y in storeys) { if (y < low) low = y; if (y > high) high = y; }
+            return high - low;
         }
 
         static ulong RunForHash(uint seed)

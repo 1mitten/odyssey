@@ -1,4 +1,5 @@
 #nullable enable
+using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Pathing;
 
 namespace Odyssey.Sim.Pawns
@@ -86,23 +87,11 @@ namespace Odyssey.Sim.Pawns
 
             if (!pawn.HasPath)
             {
-                // Nobody hangs on a rock face doing nothing.
-                //
-                // A cell a climb passes through is standable and has no floor — that is what lets a
-                // colonist be half way up a shaft at all — so a pawn whose path ends or fails while
-                // it is on one stays there, idle, in mid-air. Measured over 40,000 ticks: 702
-                // pawn-ticks of it, which is small and is exactly the picture the owner sent.
-                // Letting go is the only honest answer; there is nothing to hold on to.
-                if (_ctx.Nav.Grid.IsClimbOnly(pawn.Cell))
-                {
-                    int landing = _ctx.Cells.FirstFloorAtOrBelow(pawn.Cell);
-                    if (landing != pawn.Cell)
-                    {
-                        pawn.Cell = landing;
-                        pawn.Destination = -1;
-                    }
-                }
-
+                // A pawn with no path stands still, and there is nowhere it can be standing where
+                // that is wrong. This used to have to catch a colonist left hanging on a rock face
+                // — a cell that was standable without a floor — and let it go. Climbing is gone
+                // (owner, 2026-09-16), every cell a pawn can be in has something under it, and the
+                // let-go had nothing left to rescue.
                 return;
             }
 
@@ -148,11 +137,27 @@ namespace Odyssey.Sim.Pawns
             int stride = _ctx.Size.LayerStride;
             if (from / stride != to / stride)
             {
-                // A declared connector is the only thing that can authorise a layer change.
+                // A declared connector is one of the two things that can authorise a layer change.
                 // There is no run-time search for a landing, anywhere, ever.
                 for (int edge = _ctx.Nav.FirstPortalEdge(from); edge != -1; edge = _ctx.Nav.PortalEdgeNext(edge))
                     if (_ctx.Nav.PortalEdgeTarget(edge) == to && TraverseModes.Allows(_ctx.Nav.PortalEdgeMode(edge), mode))
                         return _ctx.Nav.PortalEdgeCost(edge);
+
+                // The other is a hop: one block up or one block down into the column next door,
+                // which needs nothing built and so declares no connector to carry its price.
+                //
+                // **This is what "colonists stick on faces" was.** IsLegalStep let the hop
+                // through and PathFinder planned it at JumpUp or Drop, but the price charged for
+                // actually taking the step was read only off connectors — so a hop fell through
+                // to MoveCost.Fall, which is 100,000 and means "effectively forbidden". The pawn
+                // did not fail and did not re-plan: it stood in the cell before the step with a
+                // legal path in hand, accumulating about one unit of progress a tick against a
+                // bill of a hundred thousand. Measured on the mining fixture: still there, path
+                // intact and next step legal, after 10,000 ticks. A price the planner and the
+                // mover disagree about is worse than a wrong price, because nothing reports it.
+                CellRef a = _ctx.Size.FromIndex(from);
+                CellRef b = _ctx.Size.FromIndex(to);
+                if (NavGraph.IsHop(a, b)) return NavGraph.HopCost(a, b);
 
                 return MoveCost.Fall;
             }

@@ -426,7 +426,28 @@ namespace Odyssey.Tests.Sim
             colony.World.Tick(60_000);
 
             Assert.That(colony.Jobs.CompletedOf(JobIndex.Mine), Is.GreaterThan(0), "not one mining job completed");
-            Assert.That(colony.Designations.Count, Is.Zero, "orders were left standing after a full day");
+
+            // A day is not long enough to finish: three colonists against 65 orders got 56 of them
+            // out, and the rest came out on the second day. So the day's assertion is the one this
+            // test is actually for — that no order has ROTTED — and finishing is asserted after the
+            // second day, where it belongs.
+            //
+            // A rotted order is one nobody can ever take again: its stand was dug away, or the cut
+            // became one the miner could not get out of. It is indistinguishable from unfinished
+            // work by counting, and perfectly distinguishable by asking whether a colonist could
+            // still be given it.
+            foreach (int cell in colony.Designations.Cells)
+            {
+                if (colony.Designations.At(cell) != DesignationKind.Mine) continue;
+                Assert.That(colony.Designations.CanMine(cell), Is.True,
+                    $"the order at {Size.FromIndex(cell)} can no longer be carried out at all");
+                Assert.That(MineWorkGiver.StandToMine(colony.Pawns, first, cell),
+                    Is.GreaterThanOrEqualTo(0),
+                    $"the order at {Size.FromIndex(cell)} has nowhere left to stand: it has rotted");
+            }
+
+            colony.World.Tick(60_000);
+            Assert.That(colony.Designations.Count, Is.Zero, "orders were left standing after two days");
 
             foreach (Pawn pawn in colony.Pawns.Pawns.All)
             {
