@@ -219,6 +219,19 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public ChipDirector? Chips { get; set; }
 
+        /// <summary>
+        /// Raised on the frame a tool's blow lands, with the work style (index into
+        /// <see cref="WorkStyle.All"/>) and where the edge struck, in world space.
+        ///
+        /// The same moment the chips fly, published as an event because audio is not this
+        /// director's business and neither is anything else that wants the instant: the sound of
+        /// an axe and the sound of a pick are the same blow on a different tool, and the one
+        /// place that knows when a blow lands should not have to know everything that follows
+        /// it. Raised whether or not <see cref="Chips"/> exists, because a clone with no usable
+        /// particle shader still has working ears.
+        /// </summary>
+        public event Action<int, Vector3>? BlowLanded;
+
         /// <summary>The tick the last published snapshot carried, and how long ago it changed.</summary>
         int _lastTick = -1;
         float _sinceTick;
@@ -611,7 +624,7 @@ namespace Odyssey.Presentation.World
 
                 if (!figure.Landed) continue;
                 figure.Landed = false;
-                if (Chips == null || figure.Held.Transform == null) continue;
+                if (figure.Held.Transform == null) continue;
 
                 // Out of the cut, which is back towards whoever swung: an edge biting across the
                 // grain throws wood at the woodcutter, not away into the forest.
@@ -632,7 +645,11 @@ namespace Odyssey.Presentation.World
                 // is that the contract needs no change because JobDef is published already. Only
                 // the chips are switched here; a pick in the hands and a stroke of its own are
                 // that piece of work, not this one.
-                Chips.Throw(look.Chips, edge, outward);
+                Chips?.Throw(look.Chips, edge, outward);
+
+                // And the sound of the blow, on the same frame and from the same edge the chips
+                // leave. See <see cref="BlowLanded"/>.
+                BlowLanded?.Invoke(figure.Style, edge);
             }
         }
 

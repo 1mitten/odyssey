@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27674da1a1968dd4ab3a9991b1e1fab2, type: 3}
+  m_Name: AudioCatalogue
+  m_EditorClassIdentifier: Odyssey.Presentation::Odyssey.Presentation.Audio.AudioCatalogue
+  Sounds:
+  - Id: odyssey.sound.work.chop
+    Clips:
+    - {fileID: 8300000, guid: af443463f62e7364bab213eecf56f8a5, type: 3}
+    Bus: 3
+    Volume: 0.85
+    VolumeVariance: 0.15
+    PitchVariance: 0.07
+    SpatialBlend: 1
+    MinDistance: 5
+    MaxDistance: 48
+    Priority: 120
+    Cooldown: 0.15
+  - Id: odyssey.sound.work.pick
+    Clips:
+    - {fileID: 8300000, guid: 55c7d1949d76a8f42882883788f36db6, type: 3}
+    Bus: 3
+    Volume: 0.8
+    VolumeVariance: 0.14
+    PitchVariance: 0.06
+    SpatialBlend: 1
+    MinDistance: 5
+    MaxDistance: 52
+    Priority: 120
+    Cooldown: 0.12
+  - Id: odyssey.sound.alert.starving
+    Clips:
+    - {fileID: 8300000, guid: f7674ef5cf57a0f408f9dd417ac6c26a, type: 3}
+    Bus: 4
+    Volume: 0.9
+    VolumeVariance: 0
+    PitchVariance: 0
+    SpatialBlend: 0
+    MinDistance: 1
+    MaxDistance: 500
+    Priority: 16
+    Cooldown: 2
+  Ambience:
+  - Id: odyssey.ambience.water
+    Clip: {fileID: 8300000, guid: db4ce4b9e2ee68a4eab64bb3fb83a8dc, type: 3}
+    Volume: 0.75
+    FadeSeconds: 2.5
+    MinDistance: 30
+    MaxDistance: 110
+  Music:
+  - Phase: 1
+    Clip: {fileID: 8300000, guid: 47a35dd11235a3f42b2bfafc44899dec, type: 3}
+    Volume: 0.5
+    FadeSeconds: 3
+  - Phase: 2
+    Clip: {fileID: 8300000, guid: 4d3209ed8b9c6ca429fbe2d21e95ebf9, type: 3}
+    Volume: 0.42
+    FadeSeconds: 4
