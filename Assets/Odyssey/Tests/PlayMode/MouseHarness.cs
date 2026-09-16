@@ -54,11 +54,17 @@ namespace Odyssey.Tests.PlayMode
     {
         readonly InputSettings.BackgroundBehavior _behaviourBefore;
         readonly bool _deviceWasAlreadyThere;
+        readonly GameObject _pump;
 
         public MouseHarness()
         {
             _behaviourBefore = InputSystem.settings.backgroundBehavior;
             InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+
+            // See InputPump: queued events have to be processed at the top of a frame, not from
+            // a coroutine that resumes after every Update has already run.
+            _pump = new GameObject("InputPump");
+            _pump.AddComponent<InputPump>();
 
             Mouse? existing = Mouse.current;
             _deviceWasAlreadyThere = existing != null;
@@ -78,47 +84,43 @@ namespace Odyssey.Tests.PlayMode
         /// </summary>
         public IEnumerator Scroll(float notches, Vector2 at)
         {
-            Deliver(new MouseState { position = at, scroll = new Vector2(0f, notches) });
-            Assert.That(Device.scroll.ReadValue().y, Is.EqualTo(notches).Within(0.001f),
-                "the wheel state did not reach the device, so nothing downstream can be tested");
+            InputSystem.QueueStateEvent(Device, new MouseState
+            {
+                position = at,
+                scroll = new Vector2(0f, notches),
+            });
+
+            // The pump processes it at the top of the next frame and the rig reads it in that
+            // same frame; by the time this coroutine resumes, the frame has happened.
             yield return null;
 
-            // Clear the wheel, or it stays turned: nothing else updates input here.
-            Deliver(new MouseState { position = at });
-            yield return null;
+            Assert.That(Device.scroll.ReadValue().y, Is.EqualTo(notches).Within(0.001f),
+                "the wheel state did not survive to the frame the game reads it in, so nothing " +
+                "downstream can be tested. See MouseHarness and InputPump.");
         }
 
         /// <summary>Move the pointer without pressing anything.</summary>
         public IEnumerator MoveTo(Vector2 at)
         {
-            Deliver(new MouseState { position = at });
+            InputSystem.QueueStateEvent(Device, new MouseState { position = at });
+            yield return null;
+
             Assert.That(Device.position.ReadValue().x, Is.EqualTo(at.x).Within(0.5f),
                 "the pointer position did not reach the device");
-            yield return null;
         }
 
-        /// <summary>Press and release the left button at a point, a frame apart.</summary>
+        /// <summary>Press and release the left button at a point, a frame apart each way.</summary>
         public IEnumerator Click(Vector2 at)
         {
-            Deliver(new MouseState { position = at }.WithButton(MouseButton.Left));
+            InputSystem.QueueStateEvent(Device, new MouseState { position = at }.WithButton(MouseButton.Left));
             yield return null;
-            Deliver(new MouseState { position = at });
+            InputSystem.QueueStateEvent(Device, new MouseState { position = at });
             yield return null;
-        }
-
-        /// <summary>
-        /// Queue one state and process it. The <c>Update</c> is the whole trick: without it the
-        /// event sits in the buffer for the rest of the run, because a batch player's loop never
-        /// asks the input system to process anything.
-        /// </summary>
-        void Deliver(MouseState state)
-        {
-            InputSystem.QueueStateEvent(Device, state);
-            InputSystem.Update();
         }
 
         public void Dispose()
         {
+            if (_pump != null) UnityEngine.Object.Destroy(_pump);
             if (!_deviceWasAlreadyThere && Device.added) InputSystem.RemoveDevice(Device);
             InputSystem.settings.backgroundBehavior = _behaviourBefore;
         }
