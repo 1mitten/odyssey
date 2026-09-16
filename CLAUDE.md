@@ -68,7 +68,13 @@ after a rebuild, republish `docs/wiki/artifact.html` and
   planned — colonists walk, chop and have needs, mood and skills; a colony survives ten headless days
   on three seeds; there is a HUD, a naming registry, terrain relief, water and a work-pose system,
   none of which the plan asked for. M3 has started ahead of itself: designations, felling and
-  stockpiles are in and mining is written on `claude/mines`, unmerged. **M2 is closed and
+  stockpiles are in, and **mining merged on 2026-09-16** (PRs #30 and #31) with its Defs and with a
+  28x tick-cost regression fixed on the way in — `DesignationGrid` was publishing its progress
+  channel by walking every cell of the active layer every tick, which took the ten-day soak from
+  one second a seed to thirty-nine; it walks the sparse list of ordered cells now and a guard test
+  fails if it ever walks the layer again. **Neither felling nor mining can be *ordered*:** there is
+  no designate tool anywhere in the HUD or the input layer, so both get their orders from the
+  scenario before the first tick. That is what `OQ-40` unblocks. **M2 is closed and
   reported: `docs/milestones/M2-report.md` (OQ-21, 2026-09-16).** All five parts of the standing
   gate are green — EditMode 494/492, PlayMode 7/7, a 60,000-tick day ending on hash
   `e134005c5408818d` under *both* Mono and CoreCLR, the save round trip on a real world, and three

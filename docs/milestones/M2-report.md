@@ -144,3 +144,26 @@ driven in a PlayMode test at all**, so nothing about pointer behaviour — the s
 drag-to-designate, ADR 0003's F3 — can be tested yet. Three tests written against it passed
 vacuously and were deleted. That harness has to be solved before U25's designate tool is built,
 not after.
+
+## Postscript, later the same day
+
+Everything above describes M2 as it stood at `37bb63d`, and it stands. Three things it recommends
+happened within hours of its being written, so the recommendations in §6 now read as history:
+
+- **OQ-15 and OQ-16 landed** (PRs #28 and #29). The pawn tuning and the world tables are XML under
+  `Assets/Odyssey/Defs/Core/`, with the in-code tables kept as oracles and compared field for field
+  on every run.
+- **Mining merged** (PRs #30 and #31), and the Def seam proved itself on the way in: the merge
+  failed immediately with *"Jobs: expected 7 entries, found 6"* and three more lines, which is the
+  content seam naming what was missing rather than a mystery at runtime weeks later.
+- **A 28x tick-cost regression came with it and was fixed.** `DesignationGrid` published its
+  progress channel by walking every cell of the active layer every tick — 0.057 ms a tick on a
+  board with no orders on it, against 0.002 ms for the whole rest of the simulation, which took the
+  ten-day soak from one second a seed to thirty-nine. It walks the sparse list of ordered cells
+  now, and a guard test fails at the played board size if it ever walks the layer again.
+
+What §5 says is *not* clean is still not clean: OQ-05 remains open, so cross-runtime determinism is
+a measurement rather than a standing test, and the city's frame time is still unexplained (OQ-43).
+§6's remaining recommendation stands: **OQ-40, the input harness**, which now blocks the only
+player-facing gap that matters — felling and mining are both built and neither can be ordered,
+because no designate tool exists.
