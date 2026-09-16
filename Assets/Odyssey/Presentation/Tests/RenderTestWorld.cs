@@ -5,6 +5,7 @@ using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
+using Odyssey.Sim.Worldgen.Natural;
 
 namespace Odyssey.Tests.Presentation
 {
@@ -82,6 +83,30 @@ namespace Odyssey.Tests.Presentation
             Grid.Edifice[index] = _edifices.Count - 1;
             if (blocking) Grid.Flags[index] |= CellFlags.BlockingEdifice;
             return this;
+        }
+
+        /// <summary>
+        /// A board whose <c>x &lt; half</c> is <paramref name="rise"/> layers higher than the rest:
+        /// a straight terrace step running the whole depth of the map, published and ready.
+        ///
+        /// <para>Shared because two fixtures want the same board — what the mesher draws on a
+        /// terrace, and what a figure standing on one is drawn at — and a second copy would drift.
+        /// The low half is at layer 1, so the bank stands in the empty cells at layer 1 with their
+        /// floor at layer 0.</para>
+        /// </summary>
+        public static RenderTestWorld Terrace(int rise, ushort stepTerrain, int n = 6, int layers = 8)
+        {
+            var world = new RenderTestWorld(n, n, layers);
+
+            for (int z = 0; z < n; z++)
+            for (int x = 0; x < n; x++)
+            {
+                int top = x < n / 2 ? 1 + rise : 1;
+                for (int y = 0; y <= top; y++) world.Solid(x, z, y, NaturalContent.TerrainSubsoil);
+                world.Solid(x, z, top, x < n / 2 ? stepTerrain : NaturalContent.TerrainGrass);
+            }
+
+            return world.Publish();
         }
 
         /// <summary>Publish everything into the mirror, as the snapshot contributor would.</summary>

@@ -28,10 +28,20 @@ namespace Odyssey.Tests.Presentation
         const float Tolerance = 1e-4f;
 
         [SetUp]
-        public void Reset() => GroundMesh.ResetLevers();
+        public void Reset() => ResetLevers();
 
         [TearDown]
-        public void Restore() => GroundMesh.ResetLevers();
+        public void Restore() => ResetLevers();
+
+        /// <summary>
+        /// Both sets, because the bank levers became statics when the decision left the mesher and
+        /// a static a test moves is a static the next test inherits.
+        /// </summary>
+        static void ResetLevers()
+        {
+            GroundMesh.ResetLevers();
+            BankLayout.Reset();
+        }
 
         static IEnumerable<BankMesh.Kind> Kinds
         {
@@ -303,25 +313,9 @@ namespace Odyssey.Tests.Presentation
             return n;
         }
 
-        /// <summary>
-        /// A board whose x &lt; half is <paramref name="rise"/> layers higher than the rest: a
-        /// straight terrace step running the whole depth of the map.
-        /// </summary>
-        static RenderTestWorld Step(int rise, ushort stepTerrain)
-        {
-            const int n = 6;
-            var world = new RenderTestWorld(n, n, 8);
-
-            for (int z = 0; z < n; z++)
-            for (int x = 0; x < n; x++)
-            {
-                int top = x < n / 2 ? 1 + rise : 1;
-                for (int y = 0; y <= top; y++) world.Solid(x, z, y, NaturalContent.TerrainSubsoil);
-                world.Solid(x, z, top, x < n / 2 ? stepTerrain : NaturalContent.TerrainGrass);
-            }
-
-            return world.Publish();
-        }
+        /// <summary>The shared terrace board. <see cref="RenderTestWorld.Terrace"/>.</summary>
+        static RenderTestWorld Step(int rise, ushort stepTerrain) =>
+            RenderTestWorld.Terrace(rise, stepTerrain);
 
         [Test]
         public void EveryOneLayerStepGrowsExactlyOneBank()
