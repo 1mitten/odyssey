@@ -128,6 +128,17 @@ namespace Odyssey.Presentation.World
         /// </summary>
         readonly ModuleEntry? _axe;
 
+        /// <summary>
+        /// The chips that come off a cut.
+        ///
+        /// Owned here, and built with this director rather than on the first blow, because this is
+        /// the only thing that knows the instant an axe lands and because a particle system built
+        /// lazily is a particle system whose shader compiles on exactly the frame it is first
+        /// wanted. It is warmed on construction for the same reason. Set to null to switch chips
+        /// off; a clone that cannot find an unlit shader ends up there by itself.
+        /// </summary>
+        public ChipDirector? Chips { get; set; }
+
         /// <summary>The tick the last published snapshot carried, and how long ago it changed.</summary>
         int _lastTick = -1;
         float _sinceTick;
@@ -157,6 +168,18 @@ namespace Odyssey.Presentation.World
 
         /// <summary>How high the edge is when the blow lands, in metres. See <see cref="MeasuredReach"/>.</summary>
         public float MeasuredBladeHeight { get; private set; }
+
+        /// <summary>
+        /// Hold every figure at one point in the stroke instead of letting the clock run.
+        ///
+        /// For tools only, and it earns its place: the blade's roll is a matter of taste, so it is
+        /// chosen off a contact sheet of the same instant at several settings, and the instant has
+        /// to be the same one in every picture. Null lets the clock run, which is the game.
+        /// </summary>
+        public float? HeldPhase { get; set; }
+
+        /// <summary>Where the edge was on the last posed frame. Used to frame a picture on it.</summary>
+        public Vector3 LastBladePosition { get; private set; }
 
         /// <summary>
         /// How far the blade actually finished from the middle of what it was aimed at, in metres,
@@ -202,6 +225,7 @@ namespace Odyssey.Presentation.World
             _layer = layer;
             _looks = LooksFrom(catalogue);
             _axe = catalogue != null ? catalogue.Find(ModuleIds.ToolAxe) : null;
+            Chips = new ChipDirector(parent, layer);
         }
 
         /// <summary>
@@ -330,6 +354,11 @@ namespace Odyssey.Presentation.World
             for (int i = 0; i < _figures.Count; i++)
                 if (_figures[i].Pawn >= 0) _figures[i].Graph.Evaluate(deltaTime);
             ApplyWorkPose();
+            // The chips as well: under the player loop Unity steps them, and in an editor tool
+            // with no player loop nothing does, so a photographed blow would throw wood that
+            // never moved. Stepping them here costs the game nothing, because the game never
+            // calls Evaluate at all.
+            Chips?.Evaluate(deltaTime);
         }
 
         /// <summary>
@@ -358,12 +387,16 @@ namespace Odyssey.Presentation.World
                 if (figure.Pawn < 0 || figure.WorkWeight <= 0.001f) continue;
                 if (figure.RightUpperArm == null) continue;
 
-                WorkSwing swing = WorkSwing.At(WorkSwing.Phase(figure.SwingClock, figure.SwingOffset));
+                WorkSwing swing = WorkSwing.At(
+                    HeldPhase ?? WorkSwing.Phase(figure.SwingClock, figure.SwingOffset));
                 Strike(figure, swing.Scaled(figure.WorkWeight));
 
                 // Check the blade got there, on the frame where it should have. Only at the moment
                 // of the blow: anywhere else in the stroke the axe is over a shoulder and a
                 // distance to the trunk means nothing.
+                if (figure.AxeTransform != null)
+                    LastBladePosition = figure.AxeTransform.TransformPoint(figure.BladeTip);
+
                 if (figure.WorkWeight > 0.99f && figure.AxeTransform != null
                     && swing.Shoulder >= WorkSwing.Struck.Shoulder - 1f)
                 {
@@ -371,6 +404,17 @@ namespace Odyssey.Presentation.World
                     gap.y = 0f;
                     MeasuredBladeGap = gap.magnitude;
                 }
+
+                if (!figure.Landed) continue;
+                figure.Landed = false;
+                if (Chips == null || figure.AxeTransform == null) continue;
+
+                // Out of the cut, which is back towards whoever swung: an edge biting across the
+                // grain throws wood at the woodcutter, not away into the forest.
+                Vector3 edge = figure.AxeTransform.TransformPoint(figure.BladeTip);
+                Vector3 outward = figure.Transform.position - figure.WorkCentre;
+                outward.y = 0f;
+                Chips.Throw(ChipRecipe.Wood, edge, outward);
             }
         }
 
@@ -441,6 +485,19 @@ namespace Odyssey.Presentation.World
             // is a first blow, not whatever part of a stroke the wall clock happened to be in.
             if (pawn.Working && running) figure.SwingClock += deltaTime;
             else if (!pawn.Working && figure.WorkWeight <= 0f) figure.SwingClock = 0f;
+
+            // Did the blow land between last frame and this one? Asked here, where the clock is
+            // advanced, and answered where the axe has been posed — the chips have to come off the
+            // edge, and until the pose is applied the edge is still wherever it was last frame.
+            //
+            // Only at full weight: a colonist easing into the work has an axe on a path of its
+            // own between the idle and the swing, and a chip thrown from that is a chip thrown
+            // from nowhere in particular.
+            float phase = WorkSwing.Phase(figure.SwingClock, figure.SwingOffset);
+            if (pawn.Working && running && figure.WorkWeight > 0.99f
+                && WorkSwing.Lands(figure.LastPhase, phase))
+                figure.Landed = true;
+            figure.LastPhase = phase;
 
             if (figure.Axe != null) figure.Axe.SetActive(figure.WorkWeight > 0.001f);
 
@@ -786,6 +843,30 @@ namespace Odyssey.Presentation.World
         }
 
         /// <summary>
+        /// Take every tool out of every hand and fit it again.
+        ///
+        /// For tuning: the grip is fitted once when a figure is built, so a change to
+        /// <see cref="AxeBladeRoll"/> or <see cref="AxeGripFraction"/> would otherwise only show
+        /// on the next colonist to be given a figure. This makes a contact sheet of several
+        /// settings possible in one run of the editor rather than one run each.
+        /// </summary>
+        public void RegripTools()
+        {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.AxeTransform == null || figure.RightUpperArm == null) continue;
+
+                Transform? hand = figure.AxeTransform.parent;
+                if (hand == null) continue;
+
+                Strike(figure, WorkSwing.Struck);
+                GripAxe(figure, figure.AxeTransform, hand, figure.RightLowerArm);
+                MeasureStrike(figure);
+            }
+        }
+
+        /// <summary>
         /// Which way across the haft the head sticks out.
         ///
         /// Two numbers and a guess: of the two axes that cross the haft, the tool is fatter in one
@@ -887,6 +968,9 @@ namespace Odyssey.Presentation.World
 
         public void Dispose()
         {
+            Chips?.Dispose();
+            Chips = null;
+
             for (int i = 0; i < _figures.Count; i++)
             {
                 if (_figures[i].Graph.IsValid()) _figures[i].Graph.Destroy();
@@ -953,6 +1037,12 @@ namespace Odyssey.Presentation.World
 
             /// <summary>Where in a stroke this figure starts, so two woodcutters are not in step.</summary>
             public float SwingOffset;
+
+            /// <summary>Where in the stroke this figure was last frame. Only the blow needs it.</summary>
+            public float LastPhase;
+
+            /// <summary>Set on the frame the blade reaches the wood, cleared once the chips fly.</summary>
+            public bool Landed;
 
             // The bones the swing pitches, resolved once when the figure is built. Null on
             // anything that is not a Humanoid rig, which simply never gets a work pose.

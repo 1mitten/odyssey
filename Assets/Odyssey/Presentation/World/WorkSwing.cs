@@ -98,6 +98,36 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public const float StrokeSeconds = 1.15f;
 
+        /// <summary>Where in the stroke the axe stops rising and starts to fall.</summary>
+        public const float RaiseEnds = 0.62f;
+
+        /// <summary>
+        /// Where in the stroke the blade reaches the wood. The dwell runs from here to the end.
+        ///
+        /// Public because it is not only the shape of the pose: it is the instant a chip of wood
+        /// should fly, and something outside has to be able to ask when that was.
+        /// </summary>
+        public const float StrikeEnds = 0.78f;
+
+        /// <summary>
+        /// Whether the blow landed between two phases — that is, whether the stroke crossed
+        /// <see cref="StrikeEnds"/> going forwards.
+        ///
+        /// **Why this is arithmetic and not a comparison at the call site.** A phase runs 0 to 1
+        /// and then starts again, so "did it pass 0.78" is three questions, not one: the ordinary
+        /// crossing; the frame where the phase wraps, which must not fire a second time for the
+        /// same blow; and a frame long enough to step over the whole strike, which must still
+        /// fire, because a dropped frame is not a reason for the chips to go missing. Each is one
+        /// line and each was worth a test.
+        /// </summary>
+        public static bool Lands(float previous, float current)
+        {
+            // The dwell is at the end of the stroke, so a wrap means the phase has gone through
+            // everything from `previous` to 1 and then some — it landed if it had not already.
+            if (current < previous) return previous < StrikeEnds;
+            return previous < StrikeEnds && current >= StrikeEnds;
+        }
+
         /// <summary>
         /// Where in the stroke a running clock is, 0 to 1.
         ///
@@ -123,9 +153,6 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public static float Stroke(float phase)
         {
-            const float RaiseEnds = 0.62f;
-            const float StrikeEnds = 0.78f;
-
             if (phase < RaiseEnds)
             {
                 // 1 to 0, eased at both ends: the axe comes up and settles at the top.

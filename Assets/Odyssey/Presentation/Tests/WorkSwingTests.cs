@@ -135,6 +135,49 @@ namespace Odyssey.Tests.Presentation
             Assert.That(full.Scaled(1f).Shoulder, Is.EqualTo(full.Shoulder).Within(1e-4f));
         }
 
+        [Test]
+        public void TheBlowLandsOnceAndOnlyOnce()
+        {
+            // Walking a whole stroke a frame at a time, exactly one frame is the one the chips
+            // fly on. Two would double every burst; none would mean an axe that never connects.
+            int landings = 0;
+            float previous = 0f;
+            for (int step = 1; step <= 600; step++)
+            {
+                float current = WorkSwing.Phase(step * WorkSwing.StrokeSeconds / 200f);
+                if (WorkSwing.Lands(previous, current)) landings++;
+                previous = current;
+            }
+
+            Assert.That(landings, Is.EqualTo(3), "three strokes in, three blows landed");
+        }
+
+        [Test]
+        public void TheWrapDoesNotLandASecondBlow()
+        {
+            // The phase restarts inside the dwell, with the blade already in the wood. Firing
+            // again there would put a second burst of chips a quarter of a second after the first,
+            // for one blow.
+            Assert.That(WorkSwing.Lands(0.9f, 0.05f), Is.False);
+        }
+
+        [Test]
+        public void ADroppedFrameStillLands()
+        {
+            // A frame long enough to step over the whole strike. Rare, but a stutter is not a
+            // reason for an axe to pass through a tree in silence.
+            Assert.That(WorkSwing.Lands(0.5f, 0.95f), Is.True);
+            Assert.That(WorkSwing.Lands(0.3f, 0.2f), Is.True, "and a long frame that also wrapped");
+        }
+
+        [Test]
+        public void NothingLandsWhileTheAxeIsStillGoingUp()
+        {
+            Assert.That(WorkSwing.Lands(0.1f, 0.2f), Is.False);
+            Assert.That(WorkSwing.Lands(0.6f, 0.7f), Is.False);
+            Assert.That(WorkSwing.Lands(0.85f, 0.9f), Is.False, "nor during the dwell after it");
+        }
+
         const int Steps = 20_000;
 
         /// <summary>

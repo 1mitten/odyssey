@@ -168,6 +168,37 @@ The axe itself is `ModuleIds.ToolAxe`, an ordinary catalogue row parented to the
 long as the work lasts. A clone without the packs resolves it to null and colonists fell trees
 bare-handed, which is the same fallback every other piece of pack art has.
 
+### Debris: one director, one system, a recipe per material
+
+A blow with nothing coming off it reads as a colonist waving an axe near a tree, so a few chips fly
+on the frame the blade lands. `ChipDirector` owns that, beside `PawnFigureDirector` and disposed
+with it, and the design is meant to carry mining and everything after it:
+
+- **One particle system for the whole colony**, simulated in world space, so a single emitter
+  throws from wherever a blade happened to be. A system per figure would multiply draw calls by the
+  number of workers for a handful of quads.
+- **The material is a `ChipRecipe`**, not a director. Colour, size, speed, lifetime, count and
+  spread are all settable *per particle* at the moment of emission, so wood off an axe and stone
+  off a pick share the system, the material and the draw call. `ChipRecipe.Stone` is already
+  written. Adding a material costs a preset and a call, nothing else.
+- **Gravity is the one thing a recipe cannot have**, because it belongs to the system and applies
+  to everything in flight. Heavier debris is expressed by leaving the cut faster, smaller and dying
+  sooner, which at board-camera height reads the same.
+- **It is warmed on construction.** The first draw of a particle material compiles its shader
+  variant and allocates the system's buffers; left alone that lands on the frame the first axe
+  hits, which is the one frame anybody is watching. The warm throws eight transparent, zero-size
+  chips far below the board and steps the system once. It is a warm and not a guarantee — a
+  pipeline that defers compilation until a material is genuinely visible still pays once, and
+  doing better means a shader variant collection, which is a build-time job.
+- **The hard part is not the particles, it is knowing when.** For felling that is
+  `WorkSwing.Lands(previous, current)`: whether the stroke phase crossed the strike, which is three
+  questions rather than one — the ordinary crossing, the wrap that must not fire twice for one
+  blow, and a dropped frame that must still fire. It is pure arithmetic with its own tests, and it
+  is the part worth copying for mining rather than the particle setup.
+
+Chips are decoration in the same sense the grass tufts are: not simulation objects, not in a cell,
+not in the save, not in the state hash.
+
 **What this is not.** It is not a substitute for authored clips. When work animations exist — bought,
 or made in Blender against this rig — they replace the computed pose and `WorkSwing` goes. Until
 then this is the cheapest thing that makes the colony look like it is doing something, and it cost

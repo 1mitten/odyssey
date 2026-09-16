@@ -45,6 +45,9 @@ namespace Odyssey.EditorTools
         /// <summary>How many pictures to take across one stroke.</summary>
         const int Samples = 9;
 
+        /// <summary>Blade rolls to photograph side by side, in degrees about the haft.</summary>
+        static readonly float[] BladeRolls = { 0f, 30f, 45f, 60f, 90f };
+
         [MenuItem("Odyssey/Presentation/Check the axe swing")]
         public static void RunFromMenu() => Execute(exitWhenDone: false);
 
@@ -92,7 +95,7 @@ namespace Odyssey.EditorTools
                     .AddColony(pawns, designations, support, nav)
                     .Build();
 
-                ColonyScenario.Place(grid, pawns, result.StartCell, 1u, 5);
+                ColonyScenario.Place(grid, pawns, result.StartCell, 1u, ScenarioDef.Playtest());
                 ColonyScenario.DesignateTreesNear(designations, result.StartCell, 10);
 
                 lightingRoot = new GameObject("SwingRoot");
@@ -173,6 +176,26 @@ namespace Odyssey.EditorTools
                     // whatever you please. Across the line it reads as what it is.
                     PlayScene.Shoot(camera, Waist(now), 12f, SideOn(now), 6.5f, $"Logs/swing-{sample}.png");
                 }
+
+                // A contact sheet of the blade's roll, held at the moment of the blow.
+                //
+                // Which way the edge faces is the one part of the grip that is taste rather than
+                // geometry, so it is chosen by looking at the same instant at several settings
+                // side by side rather than by running the whole harness once per setting.
+                drawn.HeldPhase = 0.9f;
+                foreach (float roll in BladeRolls)
+                {
+                    drawn.AxeBladeRoll = roll;
+                    drawn.RegripTools();
+                    drawn.Sync(Current(), activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                    drawn.Evaluate(FrameSeconds);
+
+                    PlayScene.Shoot(camera, drawn.LastBladePosition, 6f, SideOn(FirstWorker(Current())),
+                        1.5f, $"Logs/blade-{roll:000}.png");
+                }
+                drawn.HeldPhase = null;
+                drawn.AxeBladeRoll = 0f;
+                drawn.RegripTools();
 
                 PawnView last = FirstWorker(Current());
                 if (last.Working)
