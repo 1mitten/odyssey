@@ -45,9 +45,30 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How far from <see cref="Cell"/> to <see cref="NextCell"/>, 0 to 100.</summary>
         public readonly int MovePercent;
 
+        /// <summary>
+        /// True while the pawn is working a toil in place: swinging at a tree, and later mining
+        /// or building. False while it walks, sleeps, eats or idles.
+        ///
+        /// Working is not the same as holding a job. A colonist spends most of a felling job on
+        /// its feet, crossing the map, and a figure that swung an axe the whole way would be
+        /// telling the player something untrue about where the work is happening.
+        /// </summary>
+        public readonly bool Working;
+
+        /// <summary>
+        /// What is being worked on, meaningful only while <see cref="Working"/>.
+        ///
+        /// A cell and not just a flag, because the pose needs a direction: a colonist has to face
+        /// what it is swinging at, and presentation has no other way to learn which of the eight
+        /// neighbours the tree is in. The pawn's own heading is zero the moment it stops walking,
+        /// so by the time the work starts the last thing it could be derived from is gone.
+        /// </summary>
+        public readonly CellRef WorkCell;
+
         public PawnView(
             PawnId id, CellRef cell, int food, int rest, int mood,
-            int jobDef = -1, CellRef nextCell = default, int movePercent = 0)
+            int jobDef = -1, CellRef nextCell = default, int movePercent = 0,
+            bool working = false, CellRef workCell = default)
         {
             Id = id;
             Cell = cell;
@@ -57,6 +78,8 @@ namespace Odyssey.Sim.Contracts
             JobDef = jobDef;
             NextCell = nextCell;
             MovePercent = movePercent;
+            Working = working;
+            WorkCell = workCell;
         }
     }
 

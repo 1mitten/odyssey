@@ -123,6 +123,52 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Pawns.Reservations.ActiveClaims, Is.Zero, "no claim outlives the cancelled job");
         }
 
+        /// <summary>
+        /// The signal the axe animation hangs on: a colonist is *working* only once it has
+        /// arrived and the swings have started, and the snapshot says which cell it is swinging
+        /// at. Without the second half presentation cannot turn the figure to face the tree,
+        /// because a pawn that has stopped walking has no heading left to read.
+        /// </summary>
+        [Test]
+        public void AColonistPublishesWhatItIsWorkingOnOnlyOnceItGetsThere()
+        {
+            ColonyWorld colony = Wooded();
+            int tree = NearestTree(colony);
+            Assume.That(tree, Is.GreaterThanOrEqualTo(0));
+            CellRef cell = Size.FromIndex(tree);
+
+            colony.World.Intents.Submit(new Intent(IntentKind.Designate, cell, (int)DesignationKind.Fell));
+            colony.World.Tick();
+
+            // Somebody has taken the job and is on their way, but nobody is swinging yet.
+            colony.World.Tick(5);
+            Assert.That(AnyoneWorking(colony), Is.False, "a colonist walking to a tree is not working at it");
+
+            PawnView worker = default;
+            for (int tick = 0; tick < 6_000 && !worker.Working; tick++)
+            {
+                colony.World.Tick();
+                foreach (PawnView pawn in colony.World.Views.Current.Pawns)
+                    if (pawn.Working) { worker = pawn; break; }
+            }
+
+            Assert.That(worker.Working, Is.True, "nobody ever started swinging");
+            Assert.That(worker.WorkCell, Is.EqualTo(cell), "the work cell is the tree, which is what the figure turns to face");
+            Assert.That(worker.MovePercent, Is.Zero, "a pawn at work is standing still");
+
+            // And it stops: the tree comes down and the swing has nothing left to land on.
+            colony.World.Tick(6_000);
+            Assert.That(colony.Grid.Edifice[tree], Is.LessThan(0), "the tree came down");
+            Assert.That(AnyoneWorking(colony), Is.False, "the axe is put away when the work ends");
+        }
+
+        static bool AnyoneWorking(ColonyWorld colony)
+        {
+            foreach (PawnView pawn in colony.World.Views.Current.Pawns)
+                if (pawn.Working) return true;
+            return false;
+        }
+
         [Test]
         public void TheDefaultWorkPrioritiesLetAColonistCut()
         {

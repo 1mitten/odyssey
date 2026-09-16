@@ -103,6 +103,11 @@ namespace Odyssey.Sim.Pawns
                     else if (movePercent > 100) movePercent = 100;
                 }
 
+                // What the pawn is working on, if anything. Asked of the driver rather than
+                // derived from the job: only the driver knows whether the walk toil is over,
+                // and a figure that swings an axe while walking is worse than one that glides.
+                int workFocus = pawn.Driver != null ? pawn.Driver.WorkFocus : -1;
+
                 writer.AddPawn(new PawnView(
                     pawn.Id,
                     cell,
@@ -111,7 +116,9 @@ namespace Odyssey.Sim.Pawns
                     pawn.Mood,
                     pawn.CurrentJob != null ? pawn.CurrentJob.DefIndex : -1,
                     nextCell,
-                    movePercent));
+                    movePercent,
+                    workFocus >= 0,
+                    workFocus >= 0 ? size.FromIndex(workFocus) : cell));
             }
 
             var items = _ctx.Items.Items;

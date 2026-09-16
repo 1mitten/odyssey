@@ -833,6 +833,19 @@ namespace Odyssey.EditorTools
                 prefabName = "SM_Gen_Env_Tree_03", centreXZ = true, baseAtY = true,
             });
 
+            // The axe a colonist swings while felling. One row, held by whoever is working: it is
+            // parented to a hand rather than placed in a cell, so it needs no shape, no centring
+            // and no base — the hand decides where it is.
+            //
+            // The Generic pack's, and not the Farm or Western Frontier tool of the same name,
+            // because Generic is already the pack the trees come from and a felling axe wants to
+            // read as a tool rather than as a weapon or as set dressing for a barn.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ToolAxe, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Wep_Axe_01",
+            });
+
             // Colonists. A Synty character is a rigged humanoid with no MeshFilter anywhere on it,
             // so the ordinary prefab path finds no geometry at all and quietly falls back to a
             // grey box; ModuleLibrary.CollectSkinned explains why baking is the way out and what

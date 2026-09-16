@@ -56,6 +56,31 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public float TurnDegreesPerSecond { get; set; } = 540f;
 
+        /// <summary>
+        /// How long a figure takes to ease into a work pose, and out of it again, in seconds.
+        ///
+        /// A colonist that snapped into a full swing on the tick the walk ended would pop, and
+        /// one that kept the last angle after the tree came down would stand there with an arm in
+        /// the air. A quarter of a second is short enough to feel immediate and long enough to
+        /// read as somebody setting themselves.
+        /// </summary>
+        public float WorkEaseSeconds { get; set; } = 0.25f;
+
+        /// <summary>
+        /// How much of the swing the off hand takes, 0 to 1.
+        ///
+        /// An axe is held in two hands, so the left arm has to travel with the right or the
+        /// figure reads as holding it one-handed while the other arm goes on breathing in the
+        /// idle. Not the full amount, because the hands are not in the same place on the haft.
+        /// </summary>
+        public float OffHandShare { get; set; } = 0.82f;
+
+        /// <summary>Where the axe sits in the hand, in the hand bone's own space.</summary>
+        public Vector3 AxeGripOffset { get; set; } = new Vector3(0f, 0.02f, 0.06f);
+
+        /// <summary>How the axe is turned in the hand, in the hand bone's own space.</summary>
+        public Vector3 AxeGripEuler { get; set; } = new Vector3(0f, 90f, 100f);
+
         /// <summary>Pawn ids drawn as live figures this frame. The instanced pass skips these.</summary>
         public HashSet<int> Drawn { get; } = new HashSet<int>();
 
@@ -74,6 +99,15 @@ namespace Odyssey.Presentation.World
         }
 
         readonly Look[] _looks;
+
+        /// <summary>
+        /// The axe row, or null on a clone without the packs. See <see cref="ModuleIds.ToolAxe"/>.
+        /// </summary>
+        readonly ModuleEntry? _axe;
+
+        /// <summary>The tick the last published snapshot carried, and how long ago it changed.</summary>
+        int _lastTick = -1;
+        float _sinceTick;
 
         readonly List<Figure> _figures = new List<Figure>();
         readonly Dictionary<int, Figure> _byPawn = new Dictionary<int, Figure>();
@@ -109,6 +143,7 @@ namespace Odyssey.Presentation.World
             _parent = parent;
             _layer = layer;
             _looks = LooksFrom(catalogue);
+            _axe = catalogue != null ? catalogue.Find(ModuleIds.ToolAxe) : null;
         }
 
         /// <summary>
@@ -201,6 +236,16 @@ namespace Odyssey.Presentation.World
             FastestSpeed = 0f;
             if (!Enabled) return;
 
+            // Is the world actually running? A swing is the only thing on the board that would
+            // otherwise keep moving while the game is paused — a paused pawn stops moving, so its
+            // measured speed falls to zero and it settles into the idle, and a colonist calmly
+            // chopping through a pause would be the one figure still working. There is no pause
+            // signal in the snapshot, so it is inferred from the tick standing still: a quarter
+            // of a second without one is a pause, and at sixty ticks a second nothing else is.
+            _sinceTick = snapshot.Tick == _lastTick ? _sinceTick + deltaTime : 0f;
+            _lastTick = snapshot.Tick;
+            bool running = _sinceTick < 0.25f;
+
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
             var pawns = snapshot.Pawns;
 
@@ -211,12 +256,13 @@ namespace Odyssey.Presentation.World
 
                 Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading);
                 Figure figure = Lease(pawns[i].Id, position);
-                Pose(figure, position, heading, deltaTime);
+                Pose(figure, in pawns[i], position, heading, deltaTime, running);
                 if (figure.Speed > FastestSpeed) FastestSpeed = figure.Speed;
                 Drawn.Add(pawns[i].Id.Value);
             }
 
             Retire();
+            ApplyWorkPose();
         }
 
         /// <summary>Advance every live figure's animation. Separate from posing so an editor
@@ -225,10 +271,88 @@ namespace Odyssey.Presentation.World
         {
             for (int i = 0; i < _figures.Count; i++)
                 if (_figures[i].Pawn >= 0) _figures[i].Graph.Evaluate(deltaTime);
+            ApplyWorkPose();
         }
 
-        void Pose(Figure figure, Vector3 position, Vector3 heading, float deltaTime)
+        /// <summary>
+        /// Lay the work pose over whatever the mixer just wrote.
+        ///
+        /// **Why this runs after everything else, and twice.** Bone rotations written here are
+        /// overwritten by the next animator evaluation, so they have to be the last thing to
+        /// touch the skeleton before it is drawn — and the two ways this director is driven put
+        /// that in two different places. Under the player loop Unity evaluates the graph between
+        /// Update and LateUpdate and nothing calls <see cref="Evaluate"/> at all, so the end of
+        /// <see cref="Sync"/> is the last word. In an editor tool with no player loop the graph
+        /// is stepped by hand *after* Sync, so the end of <see cref="Evaluate"/> is. Applying at
+        /// the end of both is correct in each case and harmless in the other: a second pass
+        /// simply re-derives the same angles from a freshly written pose.
+        ///
+        /// It is also why this is transform work rather than an animation job. The swing is a
+        /// handful of bones on at most a handful of figures, it needs no blending against
+        /// anything, and a job would have to be bound per rig at build time for a pose that is
+        /// six lines of quaternion arithmetic.
+        /// </summary>
+        void ApplyWorkPose()
         {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn < 0 || figure.WorkWeight <= 0.001f) continue;
+                if (figure.RightUpperArm == null) continue;
+
+                WorkSwing swing = WorkSwing.At(WorkSwing.Phase(figure.SwingClock, figure.SwingOffset))
+                    .Scaled(figure.WorkWeight);
+
+                // About the figure's own right-hand axis, not the bone's local axis. Which way a
+                // bone's local axes point is a decision made by whoever rigged the character;
+                // the plane an axe swings in is a fact about the figure, and is the same on every
+                // rig the packs contain or ever will.
+                Vector3 axis = figure.Transform.right;
+
+                // The spine first, because the arms hang off it: turning it afterwards would
+                // drag them along and undo their own pitch.
+                Pitch(figure.Spine, axis, swing.Spine);
+                Pitch(figure.RightUpperArm, axis, swing.Shoulder);
+                Pitch(figure.RightLowerArm, axis, swing.Elbow);
+                Pitch(figure.LeftUpperArm, axis, swing.Shoulder * OffHandShare);
+                Pitch(figure.LeftLowerArm, axis, swing.Elbow * OffHandShare);
+            }
+        }
+
+        /// <summary>Add a world-space pitch to a bone, leaving the rest of its pose alone.</summary>
+        static void Pitch(Transform? bone, Vector3 axis, float degrees)
+        {
+            if (bone == null) return;
+            bone.rotation = Quaternion.AngleAxis(degrees, axis) * bone.rotation;
+        }
+
+        void Pose(Figure figure, in PawnView pawn, Vector3 position, Vector3 heading,
+            float deltaTime, bool running)
+        {
+            // Work eases in and out rather than switching, and the axe is in the hand for exactly
+            // as long as the pose is worth anything. See WorkEaseSeconds.
+            float step = WorkEaseSeconds > 1e-3f ? deltaTime / WorkEaseSeconds : 1f;
+            figure.WorkWeight = Mathf.MoveTowards(figure.WorkWeight, pawn.Working ? 1f : 0f, step);
+
+            // The swing's own clock, which runs only while there is work. Freezing it between
+            // jobs rather than letting it free-run means a colonist's first blow at a new tree
+            // is a first blow, not whatever part of a stroke the wall clock happened to be in.
+            if (pawn.Working && running) figure.SwingClock += deltaTime;
+            else if (!pawn.Working && figure.WorkWeight <= 0f) figure.SwingClock = 0f;
+
+            if (figure.Axe != null) figure.Axe.SetActive(figure.WorkWeight > 0.001f);
+
+            // Face the work. A pawn that has stopped walking has no heading left — that is what
+            // makes PawnPose hand back a zero vector — so without the work cell the figure would
+            // swing at whatever it happened to be facing when it arrived, which is as often as
+            // not straight past the tree.
+            if (pawn.Working)
+            {
+                Vector3 toWork = CellMetrics.FloorCentre(pawn.WorkCell) - position;
+                toWork.y = 0f;
+                if (toWork.sqrMagnitude > 1e-4f) heading = toWork;
+            }
+
             // Speed from displacement, which is right at every game speed and while paused, and
             // needs to know nothing about ticks. A figure that has just been leased has no
             // previous position worth differencing, hence Settled.
@@ -292,6 +416,8 @@ namespace Odyssey.Presentation.World
             figure.Pawn = pawn.Value;
             figure.Settled = false;
             figure.Speed = 0f;
+            figure.WorkWeight = 0f;
+            figure.SwingClock = 0f;
             figure.Transform.position = at;
             figure.GameObject.SetActive(true);
             Desynchronise(figure, pawn);
@@ -313,6 +439,9 @@ namespace Odyssey.Presentation.World
         {
             // The golden ratio, which spreads successive ids about as evenly as anything can.
             float phase = (pawn.Value * 0.6180339887f) % 1f;
+            // The same phase serves the swing, for the same reason and with the same objection
+            // to re-rolling it: two colonists on neighbouring trees must not strike in unison.
+            figure.SwingOffset = phase;
 
             for (int i = 0; i < figure.Clips.Length; i++)
             {
@@ -339,6 +468,10 @@ namespace Odyssey.Presentation.World
             {
                 Figure figure = _byPawn[_retired[i]];
                 figure.Pawn = -1;
+                // Put the axe away on the way into the pool. A figure parked mid-swing and handed
+                // to a colonist who is only walking past would otherwise arrive carrying it.
+                figure.WorkWeight = 0f;
+                if (figure.Axe != null) figure.Axe.SetActive(false);
                 figure.GameObject.SetActive(false);
                 _byPawn.Remove(_retired[i]);
             }
@@ -357,6 +490,20 @@ namespace Odyssey.Presentation.World
             // click meant for the ground.
             var colliders = instance.GetComponentsInChildren<Collider>(includeInactive: true);
             for (int i = 0; i < colliders.Length; i++) colliders[i].enabled = false;
+
+            // Re-skin from the bones as they are at the moment of drawing, not as they were when
+            // the animation system last looked at them.
+            //
+            // This is what makes a computed pose visible at all. A SkinnedMeshRenderer normally
+            // caches its bone matrices from the animation update, and the work swing is written
+            // *after* that update by design — it has to be, or the mixer would overwrite it. The
+            // symptom when this is off is the specific and thoroughly misleading one that cost an
+            // hour here: the axe, which is an ordinary child of the hand bone, swings through a
+            // perfect arc while the colonist holding it stands perfectly still, because a child
+            // transform reads the live bone and a skinned vertex reads the cached matrix. It
+            // looks like the arm pose failing, and the arm pose is fine.
+            var skins = instance.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true);
+            for (int i = 0; i < skins.Length; i++) skins[i].forceMatrixRecalculationPerRender = true;
 
             var animator = instance.GetComponent<Animator>();
             if (animator == null) animator = instance.AddComponent<Animator>();
@@ -381,8 +528,48 @@ namespace Odyssey.Presentation.World
             graph.Play();
 
             var figure = new Figure(instance, animator, graph, mixer, clips) { Look = look };
+            BindWorkBones(figure, animator);
             _figures.Add(figure);
             return figure;
+        }
+
+        /// <summary>
+        /// Find the bones the swing moves, and put an axe in the hand.
+        ///
+        /// Both hang on the rig being <b>Humanoid</b>, which every character in the packs is: the
+        /// bones are asked for by their role rather than by name, so one set of angles drives all
+        /// sixty-one faces and would drive a sixty-second nobody has imported yet. A generic rig,
+        /// or a prefab whose Animator arrived without an avatar, answers null to every one of
+        /// these, and the figure quietly goes on walking and never swings — which is the same
+        /// thing that happens on a clone with no packs at all.
+        /// </summary>
+        void BindWorkBones(Figure figure, Animator animator)
+        {
+            if (!animator.isHuman) return;
+
+            figure.Spine = animator.GetBoneTransform(HumanBodyBones.Spine);
+            figure.RightUpperArm = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+            figure.RightLowerArm = animator.GetBoneTransform(HumanBodyBones.RightLowerArm);
+            figure.LeftUpperArm = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
+            figure.LeftLowerArm = animator.GetBoneTransform(HumanBodyBones.LeftLowerArm);
+
+            Transform? hand = animator.GetBoneTransform(HumanBodyBones.RightHand);
+            GameObject? held = _axe != null ? _axe.prefab : null;
+            if (hand == null || held == null) return;
+
+            GameObject axe = UnityEngine.Object.Instantiate(held, hand);
+            axe.name = "Axe";
+            axe.transform.localPosition = AxeGripOffset;
+            axe.transform.localRotation = Quaternion.Euler(AxeGripEuler);
+            SetLayer(axe.transform, _layer);
+
+            // Same argument as the character's own colliders: picking is a ray against the grid,
+            // so anything with a collider on it can only steal a click meant for the ground.
+            var colliders = axe.GetComponentsInChildren<Collider>(includeInactive: true);
+            for (int i = 0; i < colliders.Length; i++) colliders[i].enabled = false;
+
+            axe.SetActive(false);
+            figure.Axe = axe;
         }
 
         static void SetLayer(Transform transform, int layer)
@@ -443,6 +630,26 @@ namespace Odyssey.Presentation.World
 
             /// <summary>The last real heading. Kept when standing, so a pawn faces where it walked in from.</summary>
             public float TargetYaw;
+
+            /// <summary>How much of the work pose is showing, 0 to 1. Eased, never switched.</summary>
+            public float WorkWeight;
+
+            /// <summary>Seconds of work this figure has done. Only runs while there is work.</summary>
+            public float SwingClock;
+
+            /// <summary>Where in a stroke this figure starts, so two woodcutters are not in step.</summary>
+            public float SwingOffset;
+
+            // The bones the swing pitches, resolved once when the figure is built. Null on
+            // anything that is not a Humanoid rig, which simply never gets a work pose.
+            public Transform? Spine;
+            public Transform? RightUpperArm;
+            public Transform? RightLowerArm;
+            public Transform? LeftUpperArm;
+            public Transform? LeftLowerArm;
+
+            /// <summary>The axe, parented to the right hand. Shown only while working.</summary>
+            public GameObject? Axe;
         }
     }
 }

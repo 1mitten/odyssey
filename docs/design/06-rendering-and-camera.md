@@ -73,6 +73,58 @@ Pawns are `SkinnedMeshRenderer` GameObjects — 50 colonists and a few hundred a
 
 Pawns are visible only on the drawn layers and are culled with the slice, so a colonist three floors down does not draw.
 
+## 6a. Work poses, where no clip exists
+
+None of the packs contains a work animation. `AnimationBaseLocomotion` ships idle, walk, run,
+sprint, crouch, in-air, turns and transitions plus additive lean and look, and the character packs
+ship no clips at all. There is no swing, no strike, no lift and no carry anywhere in 7,222 imported
+assets. A colonist felling a tree therefore stood in the standing idle, breathing, for the ten
+seconds the job takes, and then the tree fell over — the single least readable thing on the board,
+because the one moment the player most wants to see is the moment work happens.
+
+**The decision (2026-09-16): compute the pose rather than author the clip.** Every character in the
+packs is a Humanoid rig, so the arm and torso angles can be asked for by *role* —
+`HumanBodyBones.RightUpperArm` and its four neighbours — and one set of angles drives all 61 faces
+without touching a single character. `WorkSwing` holds the timing and the angles as pure arithmetic
+with a test against it; `PawnFigureDirector` lays the result over whatever the gait mixer produced,
+in the same frame, just before the figure is drawn.
+
+Four things about it are deliberate and each was a way of getting it wrong:
+
+- **The pitch is applied about the *figure's* right-hand axis, not the bone's local axis.** Which
+  way a bone's local axes point is a decision made by whoever rigged the character. The plane an
+  axe swings in is a fact about the figure, and is the same on every rig the packs will ever hold.
+- **The stroke is not a sine.** It is three unequal parts — a long eased raise, a short
+  accelerating strike, and a dwell with the blade in the wood. A symmetric swing reads as a
+  metronome and a swing with no dwell reads as waving; neither reads as work.
+- **The pose is laid over the clip, not in place of it.** The colonist goes on breathing.
+- **It freezes when the game is paused.** There is no pause signal in the snapshot, so the director
+  infers it from the tick standing still. Without that, a swinging colonist would be the only thing
+  moving on a paused board, since a pawn that has stopped moving settles into the idle by itself.
+
+The simulation's half of this is one signal: `PawnView.Working` and `PawnView.WorkCell`, published
+from `JobDriver.WorkFocus`. It is a cell rather than a flag because the pose needs a direction — a
+pawn that has stopped walking has no heading left to read, so without the work cell a colonist
+would swing at whatever they happened to be facing when they arrived. `WorkFocus` defaults to -1,
+so mining and building inherit the swing by overriding one expression.
+
+Two things about it are not obvious and both cost time on the way in. A `SkinnedMeshRenderer`
+caches the bone matrices handed to it by the animation update, so a bone written *after* that update
+moves anything parented to it and leaves the mesh where it was — the axe swung through a perfect arc
+while the colonist stood still. `forceMatrixRecalculationPerRender` on the figure's skinned
+renderers is the fix. And the sign of a limb rotation cannot be reasoned out from the axis name: a
+limb that hangs down travels forward under a *negative* pitch, while a spine, which starts upright,
+does the opposite. Both are in `docs/lessons.md`.
+
+The axe itself is `ModuleIds.ToolAxe`, an ordinary catalogue row parented to the right hand for as
+long as the work lasts. A clone without the packs resolves it to null and colonists fell trees
+bare-handed, which is the same fallback every other piece of pack art has.
+
+**What this is not.** It is not a substitute for authored clips. When work animations exist — bought,
+or made in Blender against this rig — they replace the computed pose and `WorkSwing` goes. Until
+then this is the cheapest thing that makes the colony look like it is doing something, and it cost
+no art.
+
 ## 7. Presentation is a reader
 
 The rule that keeps this document honest, and the one that the architecture benchmark treats as a judged phase: **presentation never reads simulation objects and never mutates them.** It reads the immutable snapshot published by the simulation at tick end, keyed by stable handles, and it sends player actions back as intents on a queue consumed at a tick boundary (`docs/design/ui-plan-reconciliation.md`).

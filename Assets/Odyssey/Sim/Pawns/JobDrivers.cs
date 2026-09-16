@@ -212,6 +212,20 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class FellJobDriver : JobDriver
     {
+        /// <summary>
+        /// The tree, once the walk is over and the swings have started. Presentation turns this
+        /// into an axe in the hands and an arm that comes down on it; before the walk ends it is
+        /// -1, so a colonist crossing the map does it empty-handed.
+        ///
+        /// The destination cell in preference to the target cell, so that this keeps naming the
+        /// tree whichever of the two the job carries it in. A driver that walks *into* the trunk
+        /// has the tree as its target and nothing as its destination; one that stands beside it
+        /// has the stand as its target and the tree as its destination. Both are reasonable, the
+        /// second is better, and the figure has to face the tree under either.
+        /// </summary>
+        public override int WorkFocus =>
+            ToilIndex < 1 ? -1 : Job.DestCell >= 0 ? Job.DestCell : Job.TargetCell;
+
         public override bool TryMakeReservations(PawnContext ctx)
         {
             if (Job.TargetCell < 0) return false;

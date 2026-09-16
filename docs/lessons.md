@@ -36,6 +36,26 @@ What to do: `scripts/unity.sh` treats the **results file, not the process exit c
 
 **A remote container can run the whole fast tier, and the SDK comes from the distribution, not from Microsoft.** The container images used by Claude Code on the web carry python3 but no dotnet, and the official installer is useless there: `dot.net/v1/dotnet-install.sh` redirects to `builds.dotnet.microsoft.com`, which the egress proxy refuses outright (`CONNECT tunnel failed, response 403` — a policy denial, so retrying it only spends the session's time). The Ubuntu archive *is* reachable, and 24.04 packages the SDK, so `apt-get install -y dotnet-sdk-8.0` puts 8.0.131 on the path in about a minute and `scripts/test-fast.sh` then restores from nuget.org and runs every Sim test — 227 passed, 4 s cold, on 2026-09-16. **So "no Unity" does not mean "no gate" for Sim work:** every row in `docs/plans/overnight-queue.md` tagged **C** can be proved in a container, and only the **W** rows genuinely need the Windows machine. Still, **check `dotnet --version` before promising "fast tier green"** rather than assuming it: if an image ever has neither the SDK nor a reachable archive, the only safe rows are the ones whose done-when needs no test run at all. What the container cannot do at all: Unity itself (assembly-definition boundaries, editor tooling, PlayMode, frame time), and web research — `rimworldwiki.com`, `dwarffortresswiki.org`, `steamcommunity.com` and even `en.wikipedia.org` are blocked for both `curl` and `WebFetch`, leaving only the `WebSearch` tool's own extracts, which is thinner than a research row's format asks for.
 
+**The fast tier cannot see a broken build, and a commit can be split across the gate.** On
+2026-09-16 the tip of `main` (`a98dced`) did not compile in Unity: `OdysseyBootstrap.cs` called
+`_renderer.Skirt`, while `TerrainSkirt.cs`, `SkirtLayout.cs` and the `ChunkRenderer.Skirt` property
+were still untracked in the working tree. Everything passed — the fast tier covers `Sim` and
+`Sim.Contracts` only, and the working tree, which had the missing files, compiled perfectly well.
+Nothing was wrong until somebody checked that commit out somewhere else, at which point the whole
+Presentation assembly failed and took the editor tests with it. **Before committing Presentation or
+Editor code, look at what is untracked as well as running the tests**: a new file that was never
+added is invisible to every check this project has, because the only machine that runs Unity is the
+one already holding the file.
+
+**Running Unity in a worktree costs two minutes of setup and saves the reimport.** A second checkout
+has no `Assets/Synty` (gitignored, so it lives only in the main checkout) and no `Library`, so Unity
+would reimport 7,222 pack assets from scratch. Instead: `mklink /J <worktree>\Assets\Synty
+D:\code\odyssey\Assets\Synty` for the packs — the `.meta` files come with them, so every GUID in
+the committed catalogue still resolves — and `robocopy <main>\Library <worktree>\Library /E /MT:16`
+for the artifact database, which is 6.2 GB in 62,220 files and copies in about fifty seconds at
+134 MB/s. Unity then recompiles only the scripts that actually changed. Note that robocopy exits
+**1** on success ("files were copied"), which reads as a failure to anything checking exit codes.
+
 ## Repository layout
 
 **`build/` is gitignored** by the standard Unity rules, and git will not descend into an excluded directory, so a negation pattern inside it does not work. Committed tooling goes in `tools/`.
@@ -129,6 +149,25 @@ Two lessons.
 Handing over `sharedMesh` would not have fixed it either: that is the bind pose in bone space, and `RenderMeshInstanced` takes one mesh and many matrices with no per-instance bone palette, so a skinned mesh cannot go through the instanced path at all. Baking each `SkinnedMeshRenderer` once at load collapses the rig into an ordinary mesh, after which a colonist costs what a wall costs and travels the same path as everything else. The price is that a baked figure glides rather than walks, which at board-camera distance is a far smaller deficit than a grey box, and it composes with a pooled animated `GameObject` later for the handful of pawns actually on screen.
 
 **Bake without posing first and everyone stands in a T-pose.** The bake captures the *current* pose, and with no Animator having evaluated, that is the bind pose: arms straight out. Sampling a standing idle clip onto the instance first is what makes a baked character read as a person. Nothing reports the difference, so it is measured instead: a T-posed figure is about as wide as it is tall, an idle one about half a metre wide. The slice measurement prints the baked figure's box for exactly this reason.
+
+**A procedurally posed bone moves its children and not its skin.** Writing bone rotations after the
+animation update is the ordinary way to lay a computed pose over a clip — it is how the axe swing
+works — but a `SkinnedMeshRenderer` caches the bone matrices it was last handed, so a bone written
+afterwards moves anything *parented* to it and leaves the mesh exactly where it was. The symptom is
+specific and thoroughly misleading: the axe, an ordinary child of the hand bone, swung through a
+perfect arc while the colonist holding it stood perfectly still. That looks like the arm pose
+failing to apply, and the arm pose was fine the whole time. The fix is one line,
+`forceMatrixRecalculationPerRender = true` on the figure's skinned renderers, set where the figure
+is built. Worth suspecting whenever a change to a bone has a visible effect on an attachment and no
+visible effect on the body.
+
+**And the signs of a limb rotation cannot be reasoned out; photograph them.** Pitching a bone about
+the figure's own right-hand axis, a limb that hangs down goes *forward* under a negative angle and
+backward under a positive one, while a spine, which starts upright, does the opposite. Reading
+"positive is forward" off the axis name produced a woodcutter who raised an axe over her head and
+then returned it neatly to her side, and a torso that leaned away from its own blow. Both compiled,
+both ran, both passed every test that existed, and one contact sheet settled them — which is what
+`Odyssey > Presentation > Check the axe swing` exists for.
 
 ## Choosing pack art
 
