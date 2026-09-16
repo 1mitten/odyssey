@@ -1024,3 +1024,47 @@ and nothing in the commit to connect the two.
 rebuilt by whoever changes its generator, in the same commit.** And when a rebuild's diff shows a
 row *disappearing*, that is never churn — a generator emits what it is told to emit, so a missing
 row means the instruction went missing. Read the diff for absences, not just for changes.
+
+## URP keeps post-processing per camera, and a camera built in script has it off
+
+Two days of this project's screenshots were of an ungraded image and nobody could have known. URP
+stores `renderPostProcessing` on the camera's `UniversalAdditionalCameraData`, and a camera created
+with `AddComponent<Camera>()` gets it **false**. Every contact-sheet tool here builds its own camera,
+so every photograph ever taken by one had no volume applied. That was harmless while the project had
+no volume at all, and became actively misleading the moment there was a grade to look at: the first
+golden-hour contact sheet showed the lighting change and none of the warmth, which reads exactly
+like the grade not working.
+
+The same default made a *measurement* lie, which is worse than a picture lying. `FrameTimeTests`
+builds its own camera too, so the first run after the grade landed reported it as costing almost
+nothing. That was a true statement about a frame the player never sees. A perfectly green test tier
+said the effect was free.
+
+Both are fixed at the source — `PlayScene.Shoot` and the frame-time harness now switch post on, and
+the harness attaches the profile and uses the real sun angle, since shadow length is height over the
+tangent of elevation and the old steep sun understated the shadow pass by most of its cost.
+
+**The general rule: when a harness builds its own camera, lights or volumes, list what the real
+scene has that the harness does not.** A harness is a claim that it resembles the game, and every
+default it silently takes is a way for that claim to be false while every test passes.
+
+## A volume profile written from code saves five nulls unless you add the components to the asset
+
+A `VolumeComponent` is a `ScriptableObject` in its own right, and `VolumeProfile.Add<T>()` only
+creates one in memory. Saved without `AssetDatabase.AddObjectToAsset`, the profile serialises its
+`components` list as five entries of `{fileID: 0}` — 571 bytes of an asset that holds nothing. The
+correct file is 4,853 bytes with six `MonoBehaviour` blocks in it, which is the cheapest way to tell
+the two apart without opening Unity.
+
+It is the same fault as a renderer feature appended to a `ScriptableRendererData` without being
+added to its asset, recorded above, and it fails the same way: no error, no warning, the effect
+simply never runs.
+
+**What makes this one nastier is that it hides from its own verification.** The editor command that
+writes the profile also builds the components in memory, so any screenshot taken in that same run
+shows the grade working perfectly. The broken half only appears in a session that did not write the
+file — a later run, a player build, or the owner pressing Play tomorrow. Two contact sheets were
+taken off a profile that was empty on disk, and both looked right.
+
+**So when code writes an asset, check the file, not the picture.** `grep -c "fileID: 0}"` on the
+result costs nothing and answers it exactly.

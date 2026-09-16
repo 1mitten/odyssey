@@ -362,6 +362,101 @@ with banks. **Side on and low is the shot that answers the question**, for the s
 the ground in front of it sit at different depths, and the profile of a bank reads as anything you
 like.
 
+## 2d. The golden hour
+
+Owner request 2026-09-16, against six reference screenshots of *Station to Station* now in
+`docs/reference/screenshots/station-to-station/`. Interview in `docs/research/look-interview.md`;
+five research files behind it (`d-12-urp-post-stack`, `d-13-light-shafts`, `d-14-aerial-perspective`,
+`b-station-to-station`, `b-low-sun-readability`). **One file owns the whole palette**,
+`Assets/Editor/Odyssey/GoldenHour.cs`, because the effect rests on an identity that is invisible if
+its two halves live apart: *the colour the distance fades to is the colour the sky is at the
+horizon*. Split across two files those are two numbers that happen to match, and the next person to
+warm the sky leaves the fog behind.
+
+**The grounding finding was that there was no post-processing at all.** Not "untuned" — absent. The
+pipeline asset pointed its default volume profile at a GUID that resolved to nothing, and the one
+profile in the repository was referenced by nothing and held stray editor-test components. So the
+project had never had tonemapping, colour grading, bloom, a vignette or any anti-aliasing. Most of
+the warmth in the references is exactly that, and none of it is a shader.
+
+**Two recorded decisions are deliberately overturned, and must not be re-derived from the old
+comments**, which are rewritten in place rather than deleted so the reasoning is still legible.
+
+- **The sun comes down from 72 degrees to 30.** The old comment rejected a raking sun for darkening
+  the ground and throwing long shadows across the surface the player reads. It was right about the
+  symptom and wrong about the cause: the darkness was the *shadow strength*, not the angle. A
+  shadowed fragment at full strength falls back to ambient alone and loses the key light's hue, so a
+  board mostly in shadow goes mostly grey. At strength 0.6 it keeps the warmth and only darkens, and
+  that costs nothing. The lost brightness — light on flat ground goes as the sine of elevation, 0.50
+  at 30 degrees against 0.95 at 72 — is made up by intensity and ambient.
+- **Bloom is adopted**, against `d-09-stylised-rendering.md` §3.4. That note was written for a
+  painted look; this is a different target and the references bloom plainly. The threshold sits
+  above 1 so only what the sun has actually blown out blooms, rather than the whole frame.
+
+**Shadows had a real bug, independent of taste.** Cascade splits are fractions of distance *from the
+camera*, and this camera is tens of metres in the air and never sees ground nearer than about 50 m.
+The stock 0.07/0.18/0.42 therefore spent its first two cascades — half the shadow atlas — on empty
+air in front of the lens. Splits now start at 0.30, and the distance goes 50 m to 250 m because at
+30 degrees the shadows are eight cells long and were stopping a third of the way into the view.
+Normal bias, not depth bias, is the grazing-angle lever: acne at a shallow sun is a depth-slope
+problem, and depth bias answers it by sliding the shadow along the light, which at this elevation
+detaches it from the foot of whatever cast it.
+
+**The haze moved onto the board on purpose.** It was linear from 460 m to 1,100 m, deliberately past
+the far corner of a 300 m board, so it never touched the playfield — which is why the board had no
+depth in it. It is now exponential-squared at a density chosen by arithmetic: 1% at 50 m, 20% at
+224 m, about a third at the rim, 97% by 900 m. Warm haze does not obscure the distance, it places
+it. Height fog and a fullscreen fog pass were both considered and rejected in `d-14`: the camera
+geometry suppresses what height fog adds, and the pass costs about a third of the frame to do it.
+
+**Anti-aliasing arrives with it, and it has to be SMAA.** Bloom and a warm grade on an aliased image
+look worse than either alone, since a stair-stepped edge is what a bloom threshold catches. FXAA is
+ruled out by our own outline — it finds edges by luminance contrast and softens them, and a
+one-pixel post-drawn ink line is the exact pattern it destroys. TAA would jitter the same line and
+wants motion vectors we do not produce for instanced geometry; MSAA cannot help, because the outline
+is drawn after the resolve.
+
+**Two faults were found by photograph and fixed, and one of them had been silently true for
+months.** URP keeps post-processing *per camera* and defaults it to false, so a camera built in
+script renders no volume at all — every contact sheet this project has ever taken was of an ungraded
+image. That did not matter while there was nothing to apply and matters entirely now, so `Shoot`
+switches it on for every photograph. And the first ambient values put the woodland in near
+silhouette: a low sun reaches very little of a tree's crown, so out of direct light a tree is lit by
+ambient and nothing else. Ambient is the only lever that reaches the crowns without also blowing out
+the ground the sun is already striking.
+
+**Not built, and deliberately not:** the sun shafts and the tilt-shift blur, which are the two
+effects the owner also asked for. Both wait on measurements rather than on effort. `d-13` found that
+at a 48-degree downward pitch the sun can sit some 120 degrees off the view direction — behind the
+camera, where a radial blur has nothing to radiate from — so a framing experiment comes before a
+line of shader. And `d-12` found that URP's cheap depth-of-field blurs only the far field, so it
+cannot make a band at all; a pass that blurs by screen height is exact, scene-independent and is
+probably what the reference game does.
+
+**Cost, and a measurement that was quietly worthless until it was fixed.** `FrameTimeTests` builds
+its own camera, and URP defaults post-processing to off per camera — so the first run reported the
+golden hour as very nearly free, which was true of the frame it measured and false of the frame the
+player gets. It now switches post on, attaches the profile and uses the raking sun, because shadow
+length is height over the tangent of elevation and measuring a 72-degree sun would understate the
+shadow pass by most of its cost.
+
+| meadow, RTX 5070 Ti, 640 x 480 | mean | worst |
+|---|---|---|
+| before the golden hour | 1.38 ms | 1.81 ms |
+| with it | 1.66 ms | 2.11 ms |
+
+About 0.3 ms for the whole thing — grade, bloom, vignette, SMAA, and shadows reaching five times as
+far — against a 5 ms budget. **That figure is a floor, not the laptop's number, and the reason is
+resolution**: everything in the post stack costs per pixel, and 1080p is nearly seven times the
+pixels this measures at, while the shadow and geometry work is unchanged by resolution. The laptop
+figure has to be taken on a laptop, and the quality tier the interview committed to is what answers
+it if it is bad.
+
+
+Judge it with `Odyssey → Presentation → Check the ground relief` and `Check the meadow at range`,
+both of which now photograph the graded image. **It still wants the owner's eye in `Play.unity`.**
+
+
 ## 3. The camera and the slice
 
 **The camera** is a three-quarter orbit at a constrained pitch, matching the concept renders: pan across x/z, zoom, rotate in 90° steps or freely, and a vertical control that changes the **active layer** rather than the camera height.

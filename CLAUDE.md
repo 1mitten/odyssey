@@ -496,6 +496,33 @@ after a rebuild, republish `docs/wiki/artifact.html` and
   reason would have dropped marsh to the untextured fallback, undoing the water work's marsh fix
   weeks later with nothing connecting the two. Marsh is restored in the builder and the catalogue
   rebuilt. **When a rebuild's diff shows a row disappearing, that is never churn.**
+- **The golden hour is lit, 2026-09-16 (design `06-rendering-and-camera.md` §2d).** The look the
+  owner asked for, as far as it can go without two measurements. **One file owns the palette** —
+  `Assets/Editor/Odyssey/GoldenHour.cs` — because the effect rests on an identity that is invisible
+  if its halves live apart: the colour the distance fades to *is* the colour the sky is at the
+  horizon. **The grounding headline was that there had never been any post-processing**: the
+  pipeline asset pointed its default profile at a GUID resolving to nothing and the one profile in
+  the repo was orphaned, so no tonemapping, grading, bloom, vignette or anti-aliasing had ever run.
+  Now: Neutral tonemapping (never ACES, which skews exactly the warm highlights this needs), HDR
+  grading (in LDR the sun clips before the grade sees it), white balance, bloom above a threshold of
+  1, a light vignette, and **SMAA** — chosen because FXAA destroys our one-pixel post-drawn outline,
+  TAA would jitter it, and MSAA cannot touch it. **Two recorded decisions are overturned and the old
+  comments are rewritten in place, not deleted:** the 72° sun comes down to **30°**, because the old
+  decision blamed the angle for darkness that was really *shadow strength* (0.6 keeps the key
+  light's hue in shadow and costs nothing); and **bloom is adopted** against `d-09` §3.4, which was
+  written for a painted look. **A real shadow bug turned up:** cascade splits are fractions of
+  distance *from the camera*, and this camera never sees ground nearer than 50 m, so the stock
+  splits spent half the atlas on empty air — they now start at 0.30, with distance 50 → 250 m and
+  normal rather than depth bias, which is the grazing-angle lever. **Fog moved onto the board
+  deliberately**: exp2 at a density computed rather than chosen (1% at 50 m, a third at the rim, 97%
+  by 900 m), where the old linear pair started past the far corner and is why the board had no depth
+  in it. **Two faults found by photograph**, one silently true for months: URP keeps post-processing
+  *per camera* and defaults it off, so every contact sheet ever taken here was of an ungraded image;
+  and the first ambient put the woodland in near-silhouette, since a low sun barely reaches a
+  crown. **Not built, and waiting on measurement rather than effort:** the sun shafts, because at a
+  48° pitch the sun can sit behind the camera where a radial blur has nothing to radiate from, so a
+  framing experiment comes first; and the tilt-shift, because URP's cheap depth of field blurs only
+  the far field and cannot make a band at all. **Still wants the owner's eye in `Play.unity`.**
 - **Sim vs UI vocabulary is deliberate:** simulation systems are *subsystems*, presentation-side coordinators are *directors* (`01-architecture.md` §3a). Do not unify the two words.
 - **Phase 3 (design): complete 2026-09-15.** `docs/design/` 00, 01, 02, 03, 04, 05, 06, 07, 08; ADRs 0001, 0002, 0005; and the execution plan `docs/plans/vertical-slice.md` (32 units, M0→M3). **The Phase 3 → Phase 4 hard stop was cleared by the owner on 2026-09-15; execution is under way.**
 - **Interface, icons and content naming (the UI line of work), 2026-09-15.** Design `09-ui-and-input.md`, `10-ui-panel-catalogue.md`, `11-icon-library.md`; ADRs 0003 UI framework, 0004 sim-to-UI contract, 0006 layer visibility, 0007 pixel-art icon pipeline; research `g-01`, `g-02`; mockups `hud-v1.html` (historical) and `hud-v2.html` (current). **Layer visibility decided:** x-ray by default with six modes shipped for playtest, amended by Lane B so that nothing above the active slice is ever a pointer target. **Icons:** 382 keys enumerated, 268 mapped to the owner's eight pixel-art sheets, 114 gaps listed in `11-icon-library.md` — the largest being people, since no sheet contains a human figure. **Names:** all 29 proper nouns proposed and awaiting the owner's veto, in `docs/design/proper-nouns.csv`.
