@@ -1235,7 +1235,7 @@ namespace Odyssey.EditorTools
             var go = new GameObject("Bootstrap");
             go.transform.SetParent(root, false);
             var boot = go.AddComponent<OdysseyBootstrap>();
-            go.AddComponent<SelectionReadout>();   // resolves what a click landed on
+            go.AddComponent<SelectionPresenter>();   // hit-tests a click for the selection director
 
             // The HUD: one UI Toolkit document over the live world (ADR 0003), built in code by
             // the shell and styled by the authored sheet.
