@@ -20,6 +20,41 @@ namespace Odyssey.Tests.Presentation
         static PawnView Pawn(CellRef cell, CellRef next, int movePercent) =>
             new PawnView(new PawnId(1), cell, 100, 100, 50, -1, next, movePercent);
 
+        [SetUp]
+        public void SetUp() => GroundRelief.Reset();
+
+        [TearDown]
+        public void TearDown() => GroundRelief.Reset();
+
+        /// <summary>
+        /// A pawn is drawn on the ground that is drawn, not on the flat grid underneath it — and
+        /// at her own position along the walk, so she follows the slope instead of cutting the
+        /// chord between two cell centres.
+        /// </summary>
+        [Test]
+        public void APawnWalksOnTheDrawnGround()
+        {
+            GroundRelief.Amplitude = GroundRelief.BoardAmplitude;
+
+            var cell = new CellRef(12, 9, 1);
+            Vector3 at = PawnPose.Of(Pawn(cell, cell, 0), 0f, 0, out _);
+            Vector3 flat = CellMetrics.FloorCentre(cell);
+
+            Assert.That(at.x, Is.EqualTo(flat.x).Within(1e-4f), "a lift never moves anyone sideways");
+            Assert.That(at.z, Is.EqualTo(flat.z).Within(1e-4f));
+            Assert.That(at.y - flat.y,
+                Is.EqualTo(GroundRelief.HeightAt(flat.x, flat.z)).Within(1e-4f));
+
+            // Half way between two cells, she stands on the ground half way between them, which is
+            // not the average of the two ends unless the ground happens to be straight there.
+            var from = new CellRef(12, 9, 1);
+            var to = new CellRef(13, 9, 1);
+            Vector3 mid = PawnPose.Of(Pawn(from, to, 50), 0f, 0, out _);
+            Assert.That(mid.y - CellMetrics.FloorCentre(from).y,
+                Is.EqualTo(GroundRelief.HeightAt(mid.x, mid.z)).Within(1e-4f),
+                "the height is taken where she is, not at either end of the step");
+        }
+
         [Test]
         public void AStandingPawnSitsOnItsCellAndHasNoHeading()
         {

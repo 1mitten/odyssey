@@ -26,6 +26,16 @@ What to do: `scripts/unity.sh` treats the **results file, not the process exit c
 
 **Burst compiles asynchronously by default and will pollute a measured window.** In the D1 benchmark it inflated the grid phase from 0.283 ms mean to 0.498 ms with a 3.9 ms maximum. Set `EnableBurstCompileSynchronously` before any run whose numbers you intend to trust, or prewarm with a discarded run.
 
+## Continuous integration
+
+**A self-hosted Windows runner installed as a service has no Git on its `PATH`, and `bash` is then not merely missing — it is worse than missing.** It resolves to `C:\Windows\System32\bash.exe`, the WSL stub, which has no distribution installed and exits 1 before it reads the script. So every `shell: bash` step fails identically and instantly, with no output naming the real problem: the log shows the script you meant to run and an exit code, and nothing about which bash ran it.
+
+**Naming Git Bash by its full path in the shell line does not fix it.** The runner splits the shell line on spaces, so `C:\Program Files\Git\bin\bash.exe` becomes a command that does not exist. Put Git's `bin` on the job's `PATH` in a first step instead — `Add-Content -Path $env:GITHUB_PATH -Value 'C:\Program Files\Git\bin'` — and let every later step say plain `bash`.
+
+**That first step must ask for `powershell`, not `pwsh`.** They are different programs. `powershell` is Windows PowerShell 5.1 and ships with the OS, so it is always there; `pwsh` is PowerShell 7 and is a separate install this machine does not have. A step with `shell: pwsh` dies with `pwsh: command not found` — and, on a job whose whole purpose is to fix the `PATH`, that then fails every step after it and produces a second, louder and misleading error from the test reporter (`No test report files were found`). Read the *first* red step, not the last one.
+
+**Keep `clean: false` on the checkout.** The runner checks the project out into its own folder and the gitignored `Library/` is the import cache. Without it every run re-imports the whole project, which is tens of minutes rather than the 1 m 46 s the first green run took.
+
 ## Testing
 
 **The tests are not the slow part.** The suite executes in about 40 ms. A Unity EditMode cycle takes minutes, and essentially all of it is Unity booting, refreshing the asset database (~7 s) and reloading the script domain (~3 s compile). **Filtering which tests run therefore saves nothing.** The only thing that helps is not starting Unity.
@@ -80,6 +90,17 @@ for the artifact database, which is 6.2 GB in 62,220 files and copies in about f
 
 **The Bash tool mangles apostrophes inside heredocs.** A `cat > file <<'EOF'` block containing ordinary English possessives fails with `unexpected EOF while looking for matching`. Write prose and C# with the file-writing tool; keep heredocs for JSON and other apostrophe-free content.
 
+**`python3` in the Bash tool is not the Python that CLAUDE.md says is installed.** The project note says Python 3.13 sits ahead of `WindowsApps` in PATH, and in PowerShell it does. Inside the Bash tool it does not: `which python3` resolves to the `WindowsApps` alias stub, which prints *"Python was not found; run without arguments to install from the Microsoft Store"* and exits 49 — a failure that looks like Python being absent rather than shadowed. Every wiki, icon and mockup command is affected, and `build_wiki.py --check` is a commit gate. Use the interpreter by path:
+
+```bash
+export PYTHONUTF8=1
+"$LOCALAPPDATA/Programs/Python/Python313/python3.exe" tools/wiki/build_wiki.py --check
+```
+
+`PYTHONUTF8=1` is separately required, for the reason already recorded below: without it Windows Python reads the docs as cp1252 and calls every file stale.
+
+**Editing a generated file's *source* is not enough if the generator also fingerprints the design documents.** `build_wiki.py --check` went stale after an edit to `docs/design/02-world-and-layers.md`, with no CSV touched. Rebuild and re-check after *any* documentation change that a wiki page quotes, not only after a change to `icon-keys.csv`.
+
 **A plausible causal story attached to a real number is still a guess.** The D1 benchmark measured a real fact: pathfinding was 65% of the tick and 1,058 of 1,800 replans exhausted their node budget. The explanation attached to it — that these were searches for unreachable targets — was written into a design document and an ADR as though it were part of the measurement. It was not, and when measured separately it proved wrong: only 14% of those targets were actually unreachable, and under 1% on a structured map. The fix that worked was hierarchical search plus a better heuristic. **Measure the cause, not just the symptom, before designing against it.** The design survived, but for a different and better-stated reason, and the documents had to be corrected.
 
 **Unity Hub opens a project with the newest installed editor, not the pinned one — and the newer editor upgrades the project without asking.** On 2026-09-15 the project was opened with 6000.6.0f1 while pinned to 6000.3.24f1. Unity silently rewrote `ProjectVersion.txt` and bumped URP 17.3 to 17.6, Timeline 1.8 to 6.6, uGUI 2.0 to 2.6 and Burst 1.8 to 2.0, after which the code stopped compiling on obsolete APIs (`Object.GetInstanceID` is obsolete in 6.6 and current in 6.3). The same code had passed 222 tests headless minutes earlier. It recurs on every open, because Hub keeps defaulting to the newest.
@@ -87,6 +108,18 @@ for the artifact database, which is 6.2 GB in 62,220 files and copies in about f
 Guard: `.unity-version` is the committed pin and `scripts/unity.sh` checks `ProjectVersion.txt` against it before doing anything, restoring the pin and the package files if they have drifted. Without that check the wrapper would read the upgraded file and dutifully launch the wrong editor. **Open the project with the pinned entry in Unity Hub, or with `scripts/unity.sh open`, which always resolves the pin.**
 
 The general lesson: **a version pin that only a file records is not a pin, it is a preference.** If a tool can silently rewrite it, something has to check it.
+
+## Water, and two things a design review did not catch
+
+Recorded because both are properties of cutting *anything* into a heightfield, not of water, and the next feature that lowers a column will meet them again.
+
+**Lowering a column by one can leave a step of two.** A channel cut across terraced ground lowers a column that was already a layer below its neighbour, and "neighbouring surface cells are never more than one layer apart" is the invariant that keeps the board walkable without ramps. The design reasoned carefully about the water column and not at all about the column beside it. A test caught it on the first run.
+
+**Lowering a column can also leave the thing in it hanging above its neighbour.** The same channel cut into a slope put water a layer *above* the dry ground next to it — water that would drain. This breaks no invariant, so nothing would have failed; it was caught only because the test asserted the relation it actually wanted (a bank stands *exactly* one layer over its bed) rather than the weaker one that the invariant implies.
+
+**And the fix has to be symmetric.** The first attempt let the wet end pull its bank down. That is half the relation, and it silently fails: a bank lowered by some *other* channel never tells the channel beside it to follow, so a stretch of map keeps its water perched. Stating the relation once, in a `Reconcile(a, b)` that either end can call, is what made it correct — and it is the shape to reach for whenever a constraint holds between two neighbours rather than within one.
+
+The general lesson: **when a change moves the ground, write the test against the relation you want, not against the invariant you are afraid of breaking.** The invariant passed in both cases that were wrong.
 
 ## Generators and their parameters
 
@@ -437,6 +470,44 @@ resolves to the Microsoft Store stub and answers *"Python was not found"* to eve
 `build_wiki.py --check` included. It looks exactly like Python not being installed. Check with
 `which -a python3`, and in a stale session call
 `$LOCALAPPDATA/Programs/Python/Python313/python.exe` directly rather than believing the stub.
+
+## Displacing instanced geometry
+
+Written after giving the flat board a shape (`GroundRelief`, `06-rendering-and-camera.md` §2b).
+Four of these cost more than ten minutes each.
+
+- **A shear belongs in the Y row, and Unity writes matrices row-column.** `y' = y + gx*x + gz*z` is
+  `m10` and `m12`. Setting `m01` and `m21` is its transpose: it leans the cubes sideways and leaves
+  their tops flat, which looks exactly like a rotation bug and sends you hunting in the wrong place.
+- **An object-to-world matrix is handed local coordinates, so the shear acts on them.** The mesh
+  arrives already relative to the cell centre, so the Y row is just the height. Subtracting the
+  centre out of it as well — which is what you would write for a shear expressed in world
+  coordinates — takes it off twice. Neighbouring cells then disagreed by 1.15 m instead of by
+  millimetres, and the seam test is what caught it.
+- **Gentle slopes are invisible, so amplitude has to be chosen against the lighting, not against
+  intuition.** With the sun at 72 degrees over a strong trilight ambient, a 1.7-degree slope moves
+  the lit value by well under one per cent. The prudent-looking 0.35 m amplitude would have shipped
+  the whole system with nothing whatever to see. Sizing a visual effect is a measurement, not a
+  matter of taste, and the cautious number is not the safe one when the failure mode is "no effect".
+- **Tangent-plane displacement scales with the square of the tile.** Two neighbouring tiles drawn as
+  tilted planes part company across their shared edge by roughly `(A/2) * (2*pi*L/P)^2`. At the
+  board's 2.5 m cells that is 41 mm and invisible; at the surround's old 120 m tiles it was twenty
+  metres, and it read as long diagonal cracks scored across the hillsides. The same technique is
+  fine at one scale and useless at another, and the arithmetic tells you which before the screenshot
+  does.
+
+## A loose tolerance can make a test prove nothing
+
+The test for "a click on a slope lands on the cell under the cursor" allowed the answer to be one
+cell out. It passed. It also passed with the bug deliberately put back, because the error a flat
+floor plane produces at that amplitude is *almost exactly one cell* — the tolerance had been sized,
+without anyone meaning to, to admit precisely the failure the test existed to catch.
+
+The negative control is the only thing that showed it, and it took a minute: put the bug back, run
+the test, check it goes red. The general rule is the standing one about re-running after a fix to
+see whether the output means anything, applied to tolerances — **a tolerance chosen for comfort
+rather than derived from the thing being measured is where a vacuous test comes from.** Prefer an
+exact assertion where the quantity is exact, as a cell index is.
 
 ## A pose that adds, and a tool fitted to a doubled arm
 

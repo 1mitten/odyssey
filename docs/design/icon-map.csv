@@ -387,3 +387,13 @@ ui.speed.play,-,,,normal speed,-,gap
 ui.speed.fast,-,,,fast forward,-,gap
 ui.speed.ultra,-,,,very fast,-,gap
 ui.arch.tool.blastdoor,-,,,"a heavy blast door, distinct from a normal door",-,gap
+ui.terrain.grass,-,,,"a tuft of grass on a ground tile",-,gap
+ui.terrain.bareearth,-,,,"a bare soil tile",-,gap
+ui.terrain.gravel,-,,,"a tile of loose stones",-,gap
+ui.terrain.sand,-,,,"a plain sand tile",-,gap
+ui.terrain.marsh,-,,,"a reed or two on wet ground",-,gap
+ui.terrain.water.shallow,-,,,"ripples with the bed showing through",-,gap
+ui.terrain.water.deep,-,,,"flat dark water, no bed visible",-,gap
+ui.terrain.rock,-,,,"a face of natural stone",-,gap
+ui.terrain.subsoil,-,,,"a tile of dug earth",-,gap
+ui.terrain.bedrock,-,,,"a tile of dark, banded stone",-,gap

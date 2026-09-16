@@ -103,9 +103,14 @@ namespace Odyssey.Sim.World
             Flags[index] &= ~CellFlags.BlockingEdifice;
         }
 
+        /// <summary>Terrain a pawn can neither stand in nor stand on top of. Deep water.</summary>
+        public bool IsImpassableTerrain(int index) =>
+            (Flags[index] & CellFlags.ImpassableTerrain) != 0;
+
         /// <summary>Can a pawn stand here? Needs somewhere to stand on and nothing in the way.</summary>
         public bool IsWalkable(int index) =>
-            !IsSolidTerrain(index) && !IsBlockedByEdifice(index) && HasFloor(index);
+            !IsSolidTerrain(index) && !IsBlockedByEdifice(index) && !IsImpassableTerrain(index) &&
+            HasFloor(index);
 
         /// <summary>A cell has something to stand on if it has a slab, or solid ground beneath it.</summary>
         public bool HasFloor(int index)
@@ -181,6 +186,17 @@ namespace Odyssey.Sim.World
         Reserved = 1 << 4,
 
         /// <summary>
+        /// Terrain that cannot be stood in and cannot be stood on: deep water, and nothing else
+        /// yet. It is its own bit because neither of the two that exist can express it. Solid
+        /// terrain holds a colonist up on the cell above, so deep water marked solid would be a
+        /// lake people walk across; non-solid terrain leaves the cell itself walkable, because
+        /// the bed beneath it is a floor, so deep water marked non-solid would be a lake people
+        /// walk *through*. <see cref="Worldgen.TerrainDef.impassable"/> drives it, and
+        /// <see cref="CellGrid.IsWalkable"/> and <c>NavGrid.RefreshFrom</c> are the only readers.
+        /// </summary>
+        ImpassableTerrain = 1 << 5,
+
+        /// <summary>
         /// The colony has seen what this cell is made of. Set on every solid neighbour of a cell
         /// that is mined out, and never cleared.
         ///
@@ -196,8 +212,14 @@ namespace Odyssey.Sim.World
         /// back up is still a seam the colony knows about, and a derived bit would forget it the
         /// moment the wall went up and remember it again when the wall came down. Knowledge is
         /// history, so it is state, so it is hashed and saved like the rest of the flags.</para>
+        ///
+        /// <para><b>Bit six, not bit five, and the reason is a merge.</b> This and
+        /// <see cref="ImpassableTerrain"/> were written on separate branches and both took
+        /// <c>1 &lt;&lt; 5</c>. These flags are hashed and saved, so the numbering is part of the
+        /// save contract and two meanings on one bit is a world that loads as a different world.
+        /// Deep water landed first and keeps the bit it shipped with; this one moves.</para>
         /// </summary>
-        Discovered = 1 << 5,
+        Discovered = 1 << 6,
     }
 
     /// <summary>

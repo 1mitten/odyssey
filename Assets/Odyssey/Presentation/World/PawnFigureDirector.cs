@@ -160,6 +160,33 @@ namespace Odyssey.Presentation.World
         /// <summary>Pawn ids drawn as live figures this frame. The instanced pass skips these.</summary>
         public HashSet<int> Drawn { get; } = new HashSet<int>();
 
+        /// <summary>
+        /// Where a pawn's live figure is actually standing this frame, if it has one.
+        ///
+        /// **Not the same as <see cref="Rendering.PawnPose"/>, and that is the whole point.** A
+        /// working figure is stepped off its cell by <see cref="WorkStance.StandAt"/> so the axe
+        /// reaches the wood, so the person on screen can be the better part of a stride from the
+        /// cell the simulation has them in. Anything that has to agree with what the player can
+        /// see — the click hit-test, the selection bracket — has to ask here rather than recompute
+        /// the pose, because recomputing it disagrees with the screen exactly while a colonist is
+        /// working, which is exactly when the player wants to click them.
+        ///
+        /// Reported from a playtest on 2026-09-16: a colonist chopping a tree could not be
+        /// selected at all. The box was on the cell; the colonist was not.
+        /// </summary>
+        public bool TryGetFeet(PawnId id, out Vector3 feet)
+        {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                if (_figures[i].Pawn != id.Value || _figures[i].Transform == null) continue;
+                feet = _figures[i].Transform.position;
+                return true;
+            }
+
+            feet = default;
+            return false;
+        }
+
         readonly Transform _parent;
         readonly int _layer;
 
@@ -835,7 +862,10 @@ namespace Odyssey.Presentation.World
             // not straight past the tree.
             if (pawn.Working)
             {
-                Vector3 toWork = CellMetrics.FloorCentre(pawn.WorkCell) - position;
+                // Lifted before differencing: position is on the drawn ground, so a flat work
+                // cell would put a spurious rise into the vector. It is flattened straight
+                // afterwards, so this only matters for keeping the two ends in one space.
+                Vector3 toWork = GroundRelief.Lift(CellMetrics.FloorCentre(pawn.WorkCell)) - position;
                 toWork.y = 0f;
                 if (toWork.sqrMagnitude > 1e-4f) heading = toWork;
             }
@@ -882,9 +912,11 @@ namespace Odyssey.Presentation.World
             // feet — and the ease-out, which should have walked her back out of the stand she had
             // stepped into, instead eased her towards a stand solved against herself. Keeping the
             // last one until the weight is gone makes the way out retrace the way in.
+            // On the drawn ground, because the whole stance is solved against it: the step-up to
+            // the tree, the arm IK target and the chips thrown where the blade lands all read this.
             if (pawn.Working)
             {
-                figure.WorkCentre = CellMetrics.FloorCentre(pawn.WorkCell);
+                figure.WorkCentre = GroundRelief.Lift(CellMetrics.FloorCentre(pawn.WorkCell));
 
                 // Work below the feet is struck on its top face, not on its floor, and it is
                 // struck with the stroke aimed down. See WorkStyle.Dip: a miner cutting the layer

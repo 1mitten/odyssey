@@ -73,22 +73,55 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         const float BoundsPadding = 2f;
 
+        /// <summary>
+        /// How far the relief can carry a cell out of its own layer, in metres.
+        ///
+        /// Two parts, and leaving out the second is the easy mistake: the cell is lifted by up to
+        /// the amplitude, and then *tilted*, so its high corner rises a further half-diagonal times
+        /// the steepest slope the field can reach. Derived rather than folded into the existing
+        /// padding on the grounds that 2 m happens to cover it, because the day somebody raises the
+        /// amplitude that coincidence becomes the culling bug this padding already exists to stop.
+        /// Only Y moves: a shear shifts nothing horizontally.
+        /// </summary>
+        static float ReliefReach()
+        {
+            float amplitude = Mathf.Abs(GroundRelief.Amplitude);
+            if (amplitude == 0f) return 0f;
+            return amplitude + GroundRelief.MaxSlope(amplitude) * CellMetrics.SizeXZ;
+        }
+
         static Bounds ChunkWorldBounds(int x0, int z0, int y, int x1, int z1)
         {
+            float relief = ReliefReach();
             var bounds = new Bounds();
             bounds.SetMinMax(
                 new Vector3(
                     x0 * CellMetrics.SizeXZ - BoundsPadding,
-                    y * CellMetrics.SizeY - BoundsPadding,
+                    y * CellMetrics.SizeY - BoundsPadding - relief,
                     z0 * CellMetrics.SizeXZ - BoundsPadding),
                 new Vector3(
                     x1 * CellMetrics.SizeXZ + BoundsPadding,
-                    (y + 1) * CellMetrics.SizeY + BoundsPadding,
+                    (y + 1) * CellMetrics.SizeY + BoundsPadding + relief,
                     z1 * CellMetrics.SizeXZ + BoundsPadding));
             return bounds;
         }
 
         // --------------------------------------------------------------- cells
+
+        /// <summary>
+        /// How far up its own cell a water surface is drawn, as a fraction of the cell height.
+        ///
+        /// Both depths use the same number, and that is the point: a body of water has one
+        /// level. Shallow and deep sit side by side in the same pond, so drawing them at
+        /// different heights would put a step in the middle of the surface. Depth is told by
+        /// colour and opacity instead — which is also why the channel is one cell deep whatever
+        /// the depth, since a two-layer deep core would put neighbouring surface cells two layers
+        /// apart and break the invariant that keeps the board walkable.
+        ///
+        /// Just under a full cell, so the water nearly fills the channel it was cut into and a
+        /// bank reads as a low bank rather than as the lip of a dry ditch.
+        /// </summary>
+        public static float WaterSurface { get; set; } = 0.72f;
 
         void EmitTerrain(ChunkBatch batch, int index, int x, int z, int y)
         {
@@ -98,8 +131,17 @@ namespace Odyssey.Presentation.Rendering
             int module = _model.TerrainModule(index);
             if (module == 0) return;
 
+            if (NaturalContent.IsWater(terrain))
+            {
+                EmitWater(batch, module, terrain, x, z, y);
+                return;
+            }
+
             int tint = TintCode.Terrain(terrain);
-            Matrix4x4 at = Matrix4x4.Translate(CellMetrics.FloorCentre(x, z, y));
+            // Terrain is the ground, so it is the one thing that is draped rather than lifted: the
+            // cell is tilted onto the tangent plane of the relief field so its top face follows
+            // the slope. Everything built or standing on it is lifted instead - see GroundRelief.
+            Matrix4x4 at = GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y));
 
             if (!_model.IsSolid(index))
             {
@@ -128,6 +170,42 @@ namespace Odyssey.Presentation.Rendering
             }
 
             AddBody(batch, module, tint, at);
+        }
+
+        /// <summary>
+        /// A water surface: one tile, draped onto the relief like any other ground so that a pond
+        /// on a rolling board does not cut across it, and raised inside its cell to
+        /// <see cref="WaterSurface"/>.
+        ///
+        /// It goes in the roof list with the rest of the ground, so a storey above the slice
+        /// drops its water along with its floor, and it carries a water tint code so the renderer
+        /// hands it <c>Odyssey/Water</c> rather than tinting a ground tile blue. No catalogue
+        /// entry is wanted and none is looked for: water has a shader of its own, so a clone
+        /// without the licensed packs draws exactly the same water as a machine with them.
+        /// </summary>
+        void EmitWater(ChunkBatch batch, int module, ushort terrain, int x, int z, int y)
+        {
+            Vector3 centre = CellMetrics.FloorCentre(x, z, y) + Vector3.up * (CellMetrics.SizeY * WaterSurface);
+
+            // **Draped, like the ground it lies in** — and this was got wrong twice, so the
+            // reasoning is here rather than in a commit nobody will find.
+            //
+            // Water was first draped, then switched to a plain lift on the argument that a water
+            // surface is level. True of water, false of *tiles*: a lifted tile is flat and takes
+            // its height from its own centre, so two neighbours sit at heights differing by the
+            // first-order slope of the relief across a whole cell. On a low, near-horizontal
+            // camera those little steps open into slivers you can see the riverbed through, which
+            // is what the board looked like after the change.
+            //
+            // A draped tile is sheared onto the tangent plane of the field, so neighbours
+            // disagree only by the *curvature* over a cell — second order, and invisible. It is
+            // the same argument `06-rendering-and-camera.md` makes for the surround, where tiles
+            // had to be halved twice because the disagreement grows as the square of the width.
+            //
+            // The dark grid that prompted the switch was never the shear at all. It was the six
+            // faces of the box this tile is drawn from, blending over each other at every shared
+            // edge, and the shader clips all but the top one.
+            AddRoof(batch, module, TintCode.Water(terrain), GroundRelief.Drape(centre));
         }
 
         // ------------------------------------------------------------- scatter
@@ -188,10 +266,14 @@ namespace Odyssey.Presentation.Rendering
                 int module = _scatterModules[
                     GroundScatter.VariantFor(x, z, slot, _scatterModules.Length)];
 
+                // Lifted at the tuft's own position rather than the cell's, because the cell is
+                // tilted: a tuft near the low corner of a sloping cell would otherwise float, and
+                // one at the high corner would be buried to its neck.
+                Vector3 at = GroundRelief.Lift(
+                    surface + new Vector3(offsetX * CellMetrics.SizeXZ, 0f, offsetZ * CellMetrics.SizeXZ));
+
                 AddBody(batch, module, tint, Matrix4x4.TRS(
-                    surface + new Vector3(offsetX * CellMetrics.SizeXZ, 0f, offsetZ * CellMetrics.SizeXZ),
-                    Quaternion.Euler(0f, yaw, 0f),
-                    new Vector3(scale, scale, scale)));
+                    at, Quaternion.Euler(0f, yaw, 0f), new Vector3(scale, scale, scale)));
             }
         }
 
@@ -252,8 +334,10 @@ namespace Odyssey.Presentation.Rendering
             if (_model.IsSolid(index)) return; // a slab inside rock is not visible
             int module = _model.FloorModule(index);
             if (module == 0) return;
+            // A built floor is man-made and stays flat; it is lifted onto the ground, not laid
+            // along it. Only terrain is draped.
             AddRoof(batch, module, TintCode.Stuff(_model.FloorStuff(index)),
-                Matrix4x4.Translate(CellMetrics.FloorCentre(x, z, y)));
+                Matrix4x4.Translate(GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y))));
         }
 
         void EmitEdifice(ChunkBatch batch, int index, int x, int z, int y)
@@ -280,13 +364,15 @@ namespace Odyssey.Presentation.Rendering
                     return;
                 case CoreContent.EdificePillar:
                 case CoreContent.EdificeUtilityTap:
-                    AddBody(batch, module, tint, Matrix4x4.Translate(CellMetrics.FloorCentre(x, z, y)));
+                    AddBody(batch, module, tint,
+                        Matrix4x4.Translate(GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y))));
                     return;
             }
 
             if (shape != ModuleShape.WallPanel)
             {
-                AddBody(batch, module, tint, Matrix4x4.Translate(CellMetrics.FloorCentre(x, z, y)));
+                AddBody(batch, module, tint,
+                    Matrix4x4.Translate(GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y))));
                 return;
             }
 
@@ -300,8 +386,10 @@ namespace Odyssey.Presentation.Rendering
             {
                 int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
                 if (size.Contains(nx, nz, y) && _model.OccludesFace(size.Index(nx, nz, y))) continue;
+                // Lifted at the face's own centre, not the cell's. Half a cell along a slope is
+                // enough for a panel and the wall it belongs to to visibly disagree.
                 AddBody(batch, module, tint, Matrix4x4.TRS(
-                    CellMetrics.FaceCentre(x, z, y, dir),
+                    GroundRelief.Lift(CellMetrics.FaceCentre(x, z, y, dir)),
                     Quaternion.Euler(0f, Directions.Yaw[dir], 0f),
                     Vector3.one));
             }
@@ -311,7 +399,7 @@ namespace Odyssey.Presentation.Rendering
         {
             int dir = FirstOpenDirection(x, z, y);
             AddBody(batch, module, tint, Matrix4x4.TRS(
-                CellMetrics.FloorCentre(x, z, y),
+                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)),
                 Quaternion.Euler(0f, Directions.Yaw[dir], 0f),
                 Vector3.one));
         }
@@ -329,7 +417,7 @@ namespace Odyssey.Presentation.Rendering
             float rise = def == CoreContent.EdificeStairLower ? 0f : CellMetrics.SizeY * 0.5f;
 
             AddBody(batch, module, tint, Matrix4x4.TRS(
-                CellMetrics.FloorCentre(x, z, y) + Vector3.up * rise,
+                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)) + Vector3.up * rise,
                 Quaternion.Euler(0f, Directions.Yaw[climb], 0f),
                 Vector3.one));
         }
@@ -339,7 +427,7 @@ namespace Odyssey.Presentation.Rendering
             int wall = FirstOccludingDirection(x, z, y);
             int facing = wall >= 0 ? Directions.Opposite(wall) : Directions.North;
             AddBody(batch, module, tint, Matrix4x4.TRS(
-                CellMetrics.FloorCentre(x, z, y),
+                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)),
                 Quaternion.Euler(0f, Directions.Yaw[facing], 0f),
                 Vector3.one));
         }

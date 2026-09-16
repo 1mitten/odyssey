@@ -13,7 +13,7 @@ namespace Odyssey.Hud
     {
         public PawnId Id;
         public string Name;
-        public int Mood;        // 0..100, the simulation's own scale
+        public int Mood;        // 0..1000, the simulation's own scale, as food and rest are
         public int Food;        // 0..1000
         public int Rest;        // 0..1000
         public int JobDef;      // JobHandle value, -1 idle
@@ -59,8 +59,21 @@ namespace Odyssey.Hud
     /// </summary>
     public static class MoodBands
     {
-        public const int Content = 60;
-        public const int Strained = 35;
+        /// <summary>
+        /// Thousandths, like every other need the frame publishes.
+        ///
+        /// These read 60 and 35 until 2026-09-16, against a mood the simulation keeps from 0 to
+        /// 1000 and starts a colonist at 600. Nothing in the interface had ever shown a mood
+        /// correctly as a result: every bar was clamped to a hundred and therefore drawn full,
+        /// every colonist was described as "content" whatever had happened to them, and the
+        /// red low-mood state could not be reached at all, because it wanted a value under 35
+        /// and the lowest a colonist can actually reach is 0 — which is to say it would only
+        /// ever have fired on a colonist already at the very bottom. The fixtures agreed with
+        /// the bug: the model tests passed moods of 80 and 30, which is not a scale the game
+        /// ever produces.
+        /// </summary>
+        public const int Content = 600;
+        public const int Strained = 350;
 
         /// <summary>Content, Strained or Breaking — the band name, for the inspect pane.</summary>
         public static string Band(int mood) =>

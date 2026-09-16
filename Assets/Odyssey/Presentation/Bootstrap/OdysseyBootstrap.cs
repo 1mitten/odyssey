@@ -91,6 +91,14 @@ namespace Odyssey.Presentation.Bootstrap
         [Range(0, 300)]
         public int grassScatter = 60;
 
+        [Tooltip("How far the drawn ground rolls above and below its layer, in metres. Decoration only: the cells stay flat, so nothing here changes pathing, the save or the hash. 0 is the flat board.")]
+        [Range(0f, 3f)]
+        public float groundRelief = GroundRelief.BoardAmplitude;
+
+        [Tooltip("The wavelength of the longest swell, in metres. Shorter is steeper and reads more strongly, at the cost of faceting between cells.")]
+        [Range(40f, 400f)]
+        public float groundReliefPeriod = 150f;
+
         [Header("Tick")]
         [Tooltip("Ticks per second at speed 1. The simulation has no notion of seconds; this is it.")]
         public int ticksPerSecond = 60;
@@ -109,6 +117,24 @@ namespace Odyssey.Presentation.Bootstrap
         MapGenDef? _gen;
         double _accumulator;
         float _tickAlpha;
+
+        /// <summary>
+        /// How far this frame sits between two ticks, 0 to 1.
+        ///
+        /// Exposed because the pick hit-test has to build its box from the same number the figure
+        /// is drawn with. When it did not, the box sat at the tick boundary and the figure had
+        /// moved on, so a walking colonist was not clickable where they appeared.
+        /// </summary>
+        public float TickAlpha => _tickAlpha;
+
+        /// <summary>Cost units a pawn retires in one tick, the other half of that same tween.</summary>
+        public int MovePerTick => PawnContent.Core().Movement.movePerTick;
+
+        /// <summary>
+        /// The live figures, for anything that must agree with where a colonist is actually drawn
+        /// rather than with where the simulation keeps them. See <see cref="PawnFigureDirector.TryGetFeet"/>.
+        /// </summary>
+        public PawnFigureDirector? Figures => _figures;
         readonly Stopwatch _frameTimer = new Stopwatch();
         double _renderMs;
         double _tickMs;
@@ -128,6 +154,14 @@ namespace Odyssey.Presentation.Bootstrap
 
         void Start()
         {
+            // Set before anything is meshed, because the relief is read at mesh time and a chunk
+            // built flat would stay flat until something dirtied it. Statics, like the scatter
+            // density beside them: the field has to be reachable from the mesher, the picker and
+            // the figures alike, and it is a property of how the world is drawn rather than of any
+            // one of them.
+            GroundRelief.Amplitude = groundRelief;
+            GroundRelief.Period = groundReliefPeriod;
+
             var size = new GridSize(sizeX, sizeZ, layers);
             _grid = new CellGrid(size);
             var chunks = new ChunkGrid(size);
@@ -453,7 +487,11 @@ namespace Odyssey.Presentation.Bootstrap
             if (selection != null && selection.HasPawn
                 && snapshot.TryGetPawn(selection.Pawn, out PawnView pawn))
             {
-                Vector3 feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _);
+                // The figure's own position where there is one, for the same reason the hit-test
+                // uses it: a working colonist is stepped off their cell, and a bracket drawn from
+                // the pose would sit on the cell while the person stands beside it.
+                if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _);
                 _renderer.DrawSelectionBracket(
                     feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, colour);
                 return;
@@ -471,7 +509,7 @@ namespace Odyssey.Presentation.Bootstrap
                 {
                     Bounds box = item.Bounds;
                     _renderer.DrawSelectionBracket(
-                        CellMetrics.FloorCentre(cell) + box.center,
+                        GroundRelief.Lift(CellMetrics.FloorCentre(cell)) + box.center,
                         box.size + Vector3.one * ItemCursorMargin, colour);
                     return;
                 }

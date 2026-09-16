@@ -374,6 +374,42 @@ namespace Odyssey.Tests.Presentation
             Assert.That(Vector3.Distance(start, half), Is.LessThan(Vector3.Distance(start, full)));
         }
 
+        /// <summary>
+        /// Why the click hit-test and the selection bracket may not be built from
+        /// <c>PawnPose.Of</c>, and have to ask the figure director where the figure actually is.
+        ///
+        /// A working figure is stepped off its cell so the axe reaches the wood. The colonist
+        /// cursor is 1.15 m across, so a box centred on the cell reaches 0.575 m. The stand-off is
+        /// at least <see cref="WorkStance.MinimumStandOff"/> before the strike offset is counted,
+        /// which puts the person at or past the edge of the box that is supposed to select them.
+        ///
+        /// That is the whole of a playtest report from 2026-09-16: a colonist chopping a tree
+        /// could not be clicked. It read as intermittent because the offset scales with the swing
+        /// weight, so it comes and goes across a stroke.
+        /// </summary>
+        [Test]
+        public void AWorkingFigureStandsOffItsCellFurtherThanTheClickBoxReaches()
+        {
+            // The fell job walks the colonist into the tree's own cell, so both are the same point.
+            var cell = new Vector3(30f, 0f, 30f);
+            var strike = new Vector3(0.45f, 0f, 0.35f);
+
+            // The aim came in with mining, which needed to stop aiming at the middle of a 2.5 m
+            // block of stone. This is a felling case, so it takes felling's.
+            Vector3 stand = WorkStance.StandAt(
+                cell, cell, Vector3.forward, 1f, strike, WorkStyle.Felling.AimFromCentre);
+
+            float offset = Vector3.Distance(Flat(stand), Flat(cell));
+            Assert.That(offset, Is.GreaterThanOrEqualTo(WorkStance.MinimumStandOff),
+                "a fully weighted work stance stands at least the minimum off its work centre");
+
+            const float ClickBoxHalfWidth = 1.15f * 0.5f;
+            Assert.That(offset, Is.GreaterThan(ClickBoxHalfWidth * 0.8f),
+                $"the figure stands {offset:0.00} m off the cell against a click box reaching " +
+                $"{ClickBoxHalfWidth:0.00} m, so a box built from the pose cannot reliably contain " +
+                "the person it is meant to select");
+        }
+
         static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);
     
         [Test]

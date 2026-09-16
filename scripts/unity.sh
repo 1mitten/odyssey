@@ -89,21 +89,32 @@ check_project_lock() {
   # merely stale (a previous batch run that did not exit leaves one behind).
   [[ -f Temp/UnityLockfile ]] || return 0
 
-  # Scoped to *this* project, not to Unity in general.
+  # Scoped to *this* project, not to Unity in general, and matched on the whole path.
   #
-  # The old check counted every Unity.exe on the machine. This machine runs more than one Unity
-  # project at once, so an editor open on an unrelated project made every batch command here fail
-  # with "close the editor" while the lock it was complaining about was in fact stale. Worse, it
-  # failed in the direction that looks like a real conflict, so the obvious next move would have
-  # been to kill an editor belonging to somebody else's work.
+  # The first version counted every Unity.exe on the machine. This machine runs more than one
+  # Unity project at once, so an editor open on an unrelated project made every batch command
+  # here fail with "close the editor" while the lock it was complaining about was in fact stale.
+  # Worse, it failed in the direction that looks like a real conflict, so the obvious next move
+  # would have been to kill an editor belonging to somebody else's work.
+  #
+  # The second version scoped it to the project but matched the path as a **substring**, which is
+  # the same bug wearing a disguise: the sibling checkout `D:\code\odyssey-mines` contains
+  # `D:\code\odyssey`, so a batch run over there blocked every command in here and said the
+  # editor was open when no editor was open anywhere. The argument is now parsed out and compared
+  # whole, case-insensitively and with the separators normalised, so a prefix is not a match.
   local live="" proj_win=""
   proj_win="$(cygpath -w "$ROOT" 2>/dev/null || echo "$ROOT")"
   if command -v powershell.exe >/dev/null 2>&1; then
     live="$(ODY_PROJ="$proj_win" powershell.exe -NoProfile -Command \
-      '@(Get-CimInstance Win32_Process | Where-Object { $_.Name -eq "Unity.exe" -and ($_.CommandLine -replace "/","\") -like "*$($env:ODY_PROJ)*" }).Count' \
+      '$want = ($env:ODY_PROJ -replace "/","\").TrimEnd("\").ToLowerInvariant();
+       @(Get-CimInstance Win32_Process | Where-Object {
+           $_.Name -eq "Unity.exe" -and
+           $_.CommandLine -match "(?i)-projectpath\s+`"?([^`"]+?)`"?(\s|$)" -and
+           (($Matches[1] -replace "/","\").TrimEnd("\").ToLowerInvariant() -eq $want)
+         }).Count' \
       2>/dev/null | tr -d '[:space:]')"
   elif command -v pgrep >/dev/null 2>&1; then
-    live="$(pgrep -c -f -- "-projectPath $ROOT" 2>/dev/null || true)"
+    live="$(pgrep -c -f -- "-projectPath $ROOT\( \|\$\)" 2>/dev/null || true)"
   fi
   [[ "$live" =~ ^[0-9]+$ ]] || live=0
 

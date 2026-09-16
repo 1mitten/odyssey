@@ -26,15 +26,31 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const int FoliageBase = 512;
 
+        /// <summary>
+        /// Bit 10 marks a code as water, which is terrain that is drawn by a different shader.
+        ///
+        /// It is a code rather than a test on the terrain index because the renderer has no
+        /// business knowing which indices happen to be wet. The bucket already carries one
+        /// integer that is the whole of its material identity, and the shader a bucket wants is
+        /// exactly the kind of thing that integer is for — the same argument that gave foliage
+        /// its own bit, arriving at the same answer.
+        /// </summary>
+        public const int WaterBase = 1024;
+
         public static int Stuff(int stuff) => stuff;
 
         public static int Terrain(int terrain) => TerrainBase + terrain;
 
         public static int Foliage(int variant) => FoliageBase + variant;
 
+        /// <summary>Water is terrain as well, so it keeps the terrain bit and its palette entry.</summary>
+        public static int Water(int terrain) => WaterBase + TerrainBase + terrain;
+
         public static bool IsTerrain(int code) => (code & TerrainBase) != 0;
 
         public static bool IsFoliage(int code) => (code & FoliageBase) != 0;
+
+        public static bool IsWater(int code) => (code & WaterBase) != 0;
 
         /// <summary>The material index, with the terrain marker stripped off.</summary>
         public static int Value(int code) => code & 0xFF;

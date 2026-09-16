@@ -607,6 +607,24 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+  - moduleId: odyssey.module.terrain.marsh
+    shape: 3
+    prefab: {fileID: 0}
+    prefabName:
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 2100000, guid: 277550534fdc44c4ca35aff476d9aee3, type: 2}
+    materialName: Mat_Dirt_01
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName:
+    poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.packedgravel
     shape: 3
     prefab: {fileID: 0}

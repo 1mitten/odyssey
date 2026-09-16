@@ -224,7 +224,8 @@ namespace Odyssey.Presentation.Rendering
                 ModulePart part = _model.Library[bucket.Module].Parts[bucket.Part];
                 ResolveColour(bucket.Tint, part.IsFallback, shade, out Color tint, out Color emission);
                 Material material = _materials.Get(part.Material, tint, emission, ghost, alpha,
-                    foliage: TintCode.IsFoliage(bucket.Tint));
+                    foliage: TintCode.IsFoliage(bucket.Tint),
+                    water: TintCode.IsWater(bucket.Tint));
 
                 // Terrain receives shadows but never casts them, and that is not a saving so much
                 // as a correctness fix. Ground is a contiguous mass of cell-sized boxes; letting
@@ -242,6 +243,7 @@ namespace Odyssey.Presentation.Rendering
                 // map to cast a shadow a few centimetres long onto grass of the same colour. The
                 // reference art has no per-tuft shadows either — its ground is evenly lit and the
                 // shadows that matter are the ones people and buildings cast onto it.
+                // Water is terrain, so it already inherits terrain's "receives but never casts".
                 bool terrain = TintCode.IsTerrain(bucket.Tint);
                 bool foliage = TintCode.IsFoliage(bucket.Tint);
 
@@ -282,6 +284,14 @@ namespace Odyssey.Presentation.Rendering
                 tint = StuffPalette.FoliageTint(value);
                 emission = Color.black;
             }
+            else if (TintCode.IsWater(tintCode))
+            {
+                // Always the solid colour, whatever art resolved underneath: water is drawn by
+                // Odyssey/Water and the palette entry *is* its colour. The alpha is carried
+                // through untouched below, because for water it is the opacity.
+                tint = StuffPalette.TerrainSolid(value);
+                emission = Color.black;
+            }
             else if (TintCode.IsTerrain(tintCode))
             {
                 // Over a primitive the tint is the only colour there is. Over a texture it grades
@@ -296,7 +306,10 @@ namespace Odyssey.Presentation.Rendering
                 emission = Color.black;
             }
 
-            tint = new Color(tint.r * shade, tint.g * shade, tint.b * shade, 1f);
+            // Alpha survives the shade for water and for nothing else. Everywhere else it is
+            // meaningless and forcing it to one keeps the material key from splitting on noise.
+            float keepAlpha = TintCode.IsWater(tintCode) ? tint.a : 1f;
+            tint = new Color(tint.r * shade, tint.g * shade, tint.b * shade, keepAlpha);
             emission = new Color(emission.r * shade, emission.g * shade, emission.b * shade, 1f);
         }
 
@@ -348,7 +361,10 @@ namespace Odyssey.Presentation.Rendering
                     // No licensed art: the stand-in is a body and a beacon, both deliberately
                     // larger than life, because a true-to-scale figure is a few pixels once the
                     // camera pulls back. That is how five colonists managed to be invisible.
-                    Vector3 drift = position - CellMetrics.FloorCentre(cell);
+                    // Measured against the lifted centre, because DrawMarker lifts as well.
+                    // Against the flat one the lift would be counted in the drift and again in
+                    // the marker, and the stand-in would float at twice the height of the ground.
+                    Vector3 drift = position - GroundRelief.Lift(CellMetrics.FloorCentre(cell));
                     DrawMarker(material, cell, new Vector3(1.4f, 2.6f, 1.4f), 1.3f, drift);
                     DrawMarker(material, cell, new Vector3(0.7f, 0.7f, 0.7f), 3.6f, drift);
                     continue;
@@ -420,12 +436,24 @@ namespace Odyssey.Presentation.Rendering
                 {
                     int rocks = ItemHeap.Place(things[i].Stack, (uint)things[i].Id.Value,
                         floor, heap, _heapPlacements);
-                    for (int rock = 0; rock < rocks; rock++) AppendItem(def, _heapPlacements[rock]);
+
+                    // Lifted one rock at a time, not once for the cell. The ground is a shallow
+                    // field now rather than a plane, and a heap is spread over most of a metre —
+                    // lift the centre and scatter from it and the outer rocks sit above or below
+                    // the ground they are supposed to be lying on.
+                    for (int rock = 0; rock < rocks; rock++)
+                    {
+                        Matrix4x4 placement = _heapPlacements[rock];
+                        Vector3 at = GroundRelief.Lift(placement.GetColumn(3));
+                        placement.SetColumn(3, new Vector4(at.x, at.y, at.z, 1f));
+                        AppendItem(def, placement);
+                    }
+
                     continue;
                 }
 
                 AppendItem(def, Matrix4x4.TRS(
-                    floor,
+                    GroundRelief.Lift(floor),
                     Quaternion.Euler(0f, YawOf(things[i].Id), 0f),
                     Vector3.one));
             }
@@ -607,7 +635,7 @@ namespace Odyssey.Presentation.Rendering
         {
             var rp = new RenderParams(material) { layer = GameObjectLayer };
             Matrix4x4 m = Matrix4x4.TRS(
-                CellMetrics.FloorCentre(cell) + Vector3.up * height + drift,
+                GroundRelief.Lift(CellMetrics.FloorCentre(cell)) + Vector3.up * height + drift,
                 Quaternion.identity, size);
             Graphics.RenderMesh(rp, PrimitiveMeshes.UnitCube, 0, m);
             DrawCalls++;
@@ -628,15 +656,23 @@ namespace Odyssey.Presentation.Rendering
         ///
         /// The rig's colour is the hue; this is the weight, and it lives with the drawing because
         /// it is a fact about how a cursor should sit on a scene rather than about which colour
-        /// was chosen. Low, by the owner's eye: a cursor is a note on the world, not a thing in it.
+        /// was chosen.
+        ///
+        /// Raised from 0.32 on the owner's eye, 2026-09-16: against the wooded meadow the cursor
+        /// was hard to pick out at a glance, which is the one job it has. Still short of solid,
+        /// because a cursor is a note on the world rather than a thing in it.
         /// </summary>
-        public const float BracketOpacity = 0.32f;
+        public const float BracketOpacity = 0.62f;
 
         /// <summary>
-        /// Emission on the cursor. Kept faint: the earlier value lifted the line so much that a
-        /// translucent material read as solid, which defeated the translucency entirely.
+        /// Emission on the cursor, which is what keeps it the same white in shade as in sun.
+        ///
+        /// Raised with the opacity above. The earlier note here warned that lifting emission made
+        /// a translucent material read as solid — that was a fair objection when the alpha was
+        /// 0.32 and the glow was doing the work of being visible on its own. With the alpha
+        /// carrying it, the emission can go back to holding the colour steady under the light.
         /// </summary>
-        const float BracketGlow = 0.25f;
+        const float BracketGlow = 0.85f;
 
         Material BracketMaterial(Color colour) =>
             _materials.Get(_model.Library.FallbackMaterial, colour, colour * BracketGlow,
@@ -673,7 +709,11 @@ namespace Odyssey.Presentation.Rendering
             {
                 float sx = (corner & 1) == 0 ? -1f : 1f;
                 float sz = (corner & 2) == 0 ? -1f : 1f;
-                var at = new Vector3(centre.x + sx * half, centre.y, centre.z + sz * half);
+                // Each corner at its own height: the cell under the cursor is tilted, so a ring
+                // drawn at one height would sink into the ground on one side and hover on the
+                // other - which is exactly the tell that the cursor and the ground disagree.
+                var at = GroundRelief.Lift(
+                    new Vector3(centre.x + sx * half, centre.y, centre.z + sz * half));
 
                 _floorMatrices[n++] = Matrix4x4.TRS(
                     at - new Vector3(sx * length * 0.5f, 0f, 0f), Quaternion.identity,
@@ -692,7 +732,7 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The bracket cursor around one whole cell.</summary>
         public void DrawCellHighlight(CellRef cell, Color colour) =>
             DrawSelectionBracket(
-                CellMetrics.Centre(cell.X, cell.Z, cell.Y),
+                GroundRelief.Lift(CellMetrics.Centre(cell.X, cell.Z, cell.Y)),
                 new Vector3(CellMetrics.SizeXZ, CellMetrics.SizeY, CellMetrics.SizeXZ),
                 colour);
 

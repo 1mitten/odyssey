@@ -295,37 +295,53 @@ namespace Odyssey.Tests.Sim
             // the fixture's 5, and an outcrop only makes a stack when it is more than one cell
             // tall. On the small board this test could find nothing to examine and skip itself
             // silently, which is worse than failing.
+            //
+            // **Across seeds, not on one.** The shape wanted here is rarer than it used to be:
+            // a cell with solid rock on top of it can only be worked from a stance on its own
+            // layer, because the rim stance refuses a rock whose ceiling is closed and the on-top
+            // stance needs the cell above to be open. Seed 1 of the played board no longer offers
+            // one, which says nothing at all about the rule. Walking a handful of seeds keeps the
+            // test about the invariant rather than about a board.
             var size = new GridSize(120, 120, 16);
             ScenarioDef scenario = ScenarioDef.Bare();
             scenario.colonists = 3;
             scenario.beds = 3;
-            ColonyWorld colony = ColonyWorld.Build(size, 1u, scenario, barren: true, wooded: true);
-            Pawn pawn = colony.Pawns.Pawns.All[0];
 
+            ColonyWorld? colony = null;
             int lower = -1, upper = -1;
-            for (int y = 0; y < size.SizeY - 1 && lower < 0; y++)
-            for (int z = 0; z < size.SizeZ && lower < 0; z++)
-            for (int x = 0; x < size.SizeX && lower < 0; x++)
+            for (uint seed = 1; seed <= 8 && lower < 0; seed++)
             {
-                int cell = size.Index(x, z, y);
-                int above = cell + size.LayerStride;
-                // The shape that matters: a lower cell a colonist can get at *while the cell
-                // above it is still there*. A tapering outcrop never produces one — the ring
-                // below a peak has rock on every side until the peak goes, so a mound is worked
-                // top-down by its own geometry. A terrace step does produce one, and that is the
-                // case where the bottom can be cut out from the side and leave the top hanging.
-                if (!colony.Designations.CanMine(cell)) continue;
-                if (!colony.Grid.IsSolidTerrain(above)) continue;
-                if (!colony.Designations.CanMine(above)) continue;
-                if (MineWorkGiver.StandToMine(colony.Pawns, pawn, cell) < 0) continue;
-                lower = cell;
-                upper = above;
+                ColonyWorld board = ColonyWorld.Build(size, seed, scenario, barren: true, wooded: true);
+                Pawn pawn = board.Pawns.Pawns.All[0];
+
+                for (int y = 0; y < size.SizeY - 1 && lower < 0; y++)
+                for (int z = 0; z < size.SizeZ && lower < 0; z++)
+                for (int x = 0; x < size.SizeX && lower < 0; x++)
+                {
+                    int cell = size.Index(x, z, y);
+                    int above = cell + size.LayerStride;
+                    // The shape that matters: a lower cell a colonist can get at *while the cell
+                    // above it is still there*. A tapering outcrop never produces one — the ring
+                    // below a peak has rock on every side until the peak goes, so a mound is
+                    // worked top-down by its own geometry. A terrace step does produce one, and
+                    // that is the case where the bottom can be cut out from the side and leave
+                    // the top hanging.
+                    if (!board.Designations.CanMine(cell)) continue;
+                    if (!board.Grid.IsSolidTerrain(above)) continue;
+                    if (!board.Designations.CanMine(above)) continue;
+                    if (MineWorkGiver.StandToMine(board.Pawns, pawn, cell) < 0) continue;
+                    lower = cell;
+                    upper = above;
+                    colony = board;
+                }
             }
 
             Assert.That(lower, Is.GreaterThanOrEqualTo(0),
-                "no reachable cell with solid rock directly above it on the played board, so this proved nothing");
+                "no reachable cell with solid rock directly above it on any of eight played boards, " +
+                "so this proved nothing");
+            Assert.That(colony, Is.Not.Null);
 
-            colony.Designations.Designate(size.FromIndex(lower), DesignationKind.Mine);
+            colony!.Designations.Designate(size.FromIndex(lower), DesignationKind.Mine);
             colony.Designations.Designate(size.FromIndex(upper), DesignationKind.Mine);
 
             // The invariant, stated so it holds whether or not the top is ever reachable: the

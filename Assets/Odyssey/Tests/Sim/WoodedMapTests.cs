@@ -9,16 +9,17 @@ namespace Odyssey.Tests.Sim
     /// <summary>
     /// The wooded board is what the scene loads. It gives up the barren board's "anything that is
     /// not grass is a bug", so what it keeps has to be said exactly: grass cover everywhere, a
-    /// terraced surface, woodland, rock outcrops standing on the ground, ore inside the rock, and
-    /// a flat clearing to start in.
+    /// terraced surface, woodland, water, rock outcrops standing on the ground, ore inside the
+    /// rock, and a flat clearing to start in.
     ///
-    /// <para>This file was re-based on 2026-09-16 for the mining MVP. It used to assert the
-    /// opposite of three of these — that the board was dead flat and carried no outcrops and no
-    /// ore — because the wooded board was built as the barren board with its trees put back. The
-    /// change is deliberate and is the whole feature; the mechanism is
-    /// <see cref="NaturalMapGenDef.MakeWooded"/> no longer routing through
-    /// <see cref="NaturalMapGenDef.MakeBarren"/>. <c>BarrenMapTests</c> still holds the flat,
-    /// empty baseline.</para>
+    /// <para>This file was re-based twice on 2026-09-16, once on each side of a merge, and the two
+    /// re-bases disagreed about the board. The mining work stopped
+    /// <see cref="NaturalMapGenDef.MakeWooded"/> routing through
+    /// <see cref="NaturalMapGenDef.MakeBarren"/>, so the board gained terracing, outcrops and ore;
+    /// the water work added ponds, streams and bogs to what it believed was still a flat table.
+    /// Both features are wanted and only the flatness was ever an assumption, so the water
+    /// assertions here are stated <b>per column</b> rather than against one board-wide ground
+    /// level. <c>BarrenMapTests</c> still holds the flat, empty baseline.</para>
     /// </summary>
     public class WoodedMapTests
     {
@@ -49,10 +50,11 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
-        public void TheSurfaceIsTerracedAndCoveredInGrass()
+        public void TheDrySurfaceIsTerracedAndCoveredInGrass()
         {
             var (grid, outcome) = Generate(120, 120, 16);
             var size = grid.Size;
+            var ctx = outcome.Natural!.Context;
             var report = outcome.Natural!.Report;
 
             // Terracing, not hills: more than one step, and never more steps than the relief
@@ -63,6 +65,9 @@ namespace Odyssey.Tests.Sim
             for (int gz = 0; gz < size.SizeZ; gz++)
             for (int gx = 0; gx < size.SizeX; gx++)
             {
+                int column = ctx.Column(gx, gz);
+                if (ctx.Water[column] != (byte)WaterClass.None) continue;
+
                 int top = TopOf(grid, gx, gz);
                 ushort terrain = grid.Terrain[size.Index(gx, gz, top)];
 
@@ -71,6 +76,73 @@ namespace Odyssey.Tests.Sim
                 Assert.That(terrain == NaturalContent.TerrainGrass || terrain == NaturalContent.TerrainRock,
                     Is.True, $"column {gx},{gz} is topped with terrain {terrain}, neither grass nor rock");
             }
+        }
+
+        /// <summary>
+        /// The shape of the water: a channel is cut one layer below the ground it was cut from,
+        /// holds one cell of water over a bed of sand or gravel, and its banks are the ordinary
+        /// board. A bog is not a channel — it is wet ground that was never lowered, so it stays
+        /// level with the grass around it.
+        ///
+        /// <para><b>Per column, not against one board-wide level.</b> This was written when the
+        /// wooded board was a flat table and could compare every wet column against a single dry
+        /// height. The board is terraced now, so that comparison means nothing; what is actually
+        /// claimed — and what the pass actually does — is that a channel sits one step below its
+        /// own dry neighbours.</para>
+        /// </summary>
+        [Test]
+        public void WaterSitsOneStepBelowTheGroundItWasCutFrom()
+        {
+            var (grid, outcome) = Generate(120, 120, 16);
+            var size = grid.Size;
+            var ctx = outcome.Natural!.Context;
+
+            int water = 0, marsh = 0;
+            for (int gz = 0; gz < size.SizeZ; gz++)
+            for (int gx = 0; gx < size.SizeX; gx++)
+            {
+                int column = ctx.Column(gx, gz);
+                var kind = (WaterClass)ctx.Water[column];
+                if (kind == WaterClass.None) continue;
+
+                int surface = ctx.SurfaceY[column];
+                ushort bed = grid.Terrain[size.Index(gx, gz, surface)];
+
+                if (kind == WaterClass.Marsh)
+                {
+                    Assert.That(bed, Is.EqualTo(NaturalContent.TerrainMarsh));
+                    marsh++;
+                    continue;
+                }
+
+                Assert.That(NaturalContent.IsGround(bed), Is.True, $"the bed at {gx},{gz} is not ground");
+
+                ushort here = grid.Terrain[size.Index(gx, gz, surface + 1)];
+                Assert.That(here, Is.EqualTo(kind == WaterClass.Shallow
+                    ? NaturalContent.TerrainShallowWater
+                    : NaturalContent.TerrainDeepWater), $"the cell at {gx},{gz} is not the water it was planned as");
+
+                // One step down from a dry neighbour, wherever this column's own ground sits.
+                // A channel with no dry neighbour at all is the middle of a wide river, which is
+                // allowed; what is not is a channel level with the bank beside it.
+                bool cutIn = true, sawDry = false;
+                foreach (var d in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
+                {
+                    int nx = gx + d.Item1, nz = gz + d.Item2;
+                    if (!size.Contains(nx, nz, 0)) continue;
+                    int neighbour = ctx.Column(nx, nz);
+                    if (ctx.Water[neighbour] != (byte)WaterClass.None) continue;
+                    sawDry = true;
+                    if (ctx.SurfaceY[neighbour] <= surface) cutIn = false;
+                }
+
+                Assert.That(!sawDry || cutIn, Is.True,
+                    $"the channel at {gx},{gz} is level with the dry ground beside it");
+                water++;
+            }
+
+            Assert.That(water, Is.GreaterThan(0), "the wooded board has no water at all");
+            Assert.That(marsh, Is.GreaterThan(0), "water with no bog around it");
         }
 
         [Test]

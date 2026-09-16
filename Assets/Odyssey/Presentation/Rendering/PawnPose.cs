@@ -36,7 +36,7 @@ namespace Odyssey.Presentation.Rendering
             if (pawn.MovePercent <= 0)
             {
                 heading = Vector3.zero;
-                return from;
+                return GroundRelief.Lift(from);
             }
 
             Vector3 to = CellMetrics.FloorCentre(pawn.NextCell);
@@ -47,9 +47,8 @@ namespace Odyssey.Presentation.Rendering
             // A step that only changes layer travels (0, ±3, 0), and the yaw of that is
             // Atan2(0, 0) — which is not "no bearing", it is zero, which is due north. So every
             // colonist entering a shaft turned slowly to face north and turned back on the way
-            // out, for six and a half seconds each way at the cost a ladder used to charge. That
-            // is what the owner saw as the animation jolting about on a descent, and it was never
-            // anything to do with the ladder it happened to be climbing.
+            // out. That is what the owner saw as the animation jolting about on a descent, and it
+            // was never anything to do with what it happened to be climbing.
             //
             // Flattened here rather than in either caller, because both of them want the same
             // thing and a second copy of this arithmetic is how the instanced crowd and the live
@@ -58,7 +57,12 @@ namespace Odyssey.Presentation.Rendering
             heading = new Vector3(travel.x, 0f, travel.z);
 
             float percent = pawn.MovePercent + movePerTick * tickAlpha;
-            return from + travel * (Mathf.Clamp(percent, 0f, 100f) * 0.01f);
+
+            // Along `travel` and not along `heading`: the bearing has had its vertical part taken
+            // out on purpose, and a pawn that moved along it would climb a shaft without going
+            // down. The lift is taken at the interpolated position, not at either end, so a pawn
+            // walks along the drawn ground instead of cutting the chord between two cell centres.
+            return GroundRelief.Lift(from + travel * (Mathf.Clamp(percent, 0f, 100f) * 0.01f));
         }
 
         /// <summary>The yaw a heading implies, in degrees. Zero-length headings give zero.</summary>

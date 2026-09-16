@@ -152,7 +152,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#colonists">Colonists<b>32</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>37</b></a></li>
-<li><a href="#world">World and interface<b>45</b></a></li>
+<li><a href="#world">World and interface<b>56</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>29</b></a></li>
 </ul></nav>
 <main>
@@ -161,9 +161,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>388</b><i>named entries</i></div>
+<div class="stat"><b>399</b><i>named entries</i></div>
 <div class="stat"><b>268</b><i>with icon art</i></div>
-<div class="stat m"><b>120</b><i>no art yet</i></div>
+<div class="stat m"><b>131</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -2319,8 +2319,72 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">45 entries</em></h2>
+<h2>World and interface <em class="count">56 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
+<h3 class="nsh">Terrain</h3>
+<div class="tbl">
+<div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.terrain.grass" data-hay="grass ui.terrain.grass the living surface. trees grow here and nothing else a tuft of grass on a ground tile" data-gap="1">
+<div class="nm">Grass<span class="k">ui.terrain.grass</span></div>
+<div class="dsc">The living surface. Trees grow here and nothing else<span class="need">Needs drawing: a tuft of grass on a ground tile</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M1</div>
+</div>
+<div class="row gap" id="ui.terrain.bareearth" data-hay="bare earth ui.terrain.bareearth soil with the grass worn off it a bare soil tile" data-gap="1">
+<div class="nm">Bare Earth<span class="k">ui.terrain.bareearth</span></div>
+<div class="dsc">Soil with the grass worn off it<span class="need">Needs drawing: a bare soil tile</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M1</div>
+</div>
+<div class="row gap" id="ui.terrain.gravel" data-hay="gravel ui.terrain.gravel stony ground. poor soil, firm footing a tile of loose stones" data-gap="1">
+<div class="nm">Gravel<span class="k">ui.terrain.gravel</span></div>
+<div class="dsc">Stony ground. Poor soil, firm footing<span class="need">Needs drawing: a tile of loose stones</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M1</div>
+</div>
+<div class="row gap" id="ui.terrain.sand" data-hay="sand ui.terrain.sand loose and barren. what a riverbed is made of a plain sand tile" data-gap="1">
+<div class="nm">Sand<span class="k">ui.terrain.sand</span></div>
+<div class="dsc">Loose and barren. What a riverbed is made of<span class="need">Needs drawing: a plain sand tile</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M1</div>
+</div>
+<div class="row gap" id="ui.terrain.marsh" data-hay="marsh ui.terrain.marsh wet ground fringing water. crossed at three quarters pace a reed or two on wet ground" data-gap="1">
+<div class="nm">Marsh<span class="k">ui.terrain.marsh</span></div>
+<div class="dsc">Wet ground fringing water. Crossed at three quarters pace<span class="need">Needs drawing: a reed or two on wet ground</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M1</div>
+</div>
+<div class="row gap" id="ui.terrain.water.shallow" data-hay="shallow water ui.terrain.water.shallow wadeable, at a third of walking pace. nothing can be built on it without a bridge ripples with the bed showing through" data-gap="1">
+<div class="nm">Shallow Water<span class="k">ui.terrain.water.shallow</span></div>
+<div class="dsc">Wadeable, at a third of walking pace. Nothing can be built on it without a bridge<span class="need">Needs drawing: ripples with the bed showing through</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M1</div>
+</div>
+<div class="row gap" id="ui.terrain.water.deep" data-hay="deep water ui.terrain.water.deep out of your depth. colonists will not enter it and paths go round flat dark water, no bed visible" data-gap="1">
+<div class="nm">Deep Water<span class="k">ui.terrain.water.deep</span></div>
+<div class="dsc">Out of your depth. Colonists will not enter it and paths go round<span class="need">Needs drawing: flat dark water, no bed visible</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M1</div>
+</div>
+<div class="row gap" id="ui.terrain.rock" data-hay="rock ui.terrain.rock natural stone. mined, not cleared a face of natural stone" data-gap="1">
+<div class="nm">Rock<span class="k">ui.terrain.rock</span></div>
+<div class="dsc">Natural stone. Mined, not cleared<span class="need">Needs drawing: a face of natural stone</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M1</div>
+</div>
+<div class="row gap" id="ui.terrain.subsoil" data-hay="subsoil ui.terrain.subsoil the band between soil and rock. cheap to dig a tile of dug earth" data-gap="1">
+<div class="nm">Subsoil<span class="k">ui.terrain.subsoil</span></div>
+<div class="dsc">The band between soil and rock. Cheap to dig<span class="need">Needs drawing: a tile of dug earth</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M1</div>
+</div>
+<div class="row gap" id="ui.terrain.bedrock" data-hay="bedrock ui.terrain.bedrock the floor of the world. deliberately punitive to mine a tile of dark, banded stone" data-gap="1">
+<div class="nm">Bedrock<span class="k">ui.terrain.bedrock</span></div>
+<div class="dsc">The floor of the world. Deliberately punitive to mine<span class="need">Needs drawing: a tile of dark, banded stone</span></div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M1</div>
+</div>
+</div>
 <h3 class="nsh">Weather</h3>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
@@ -2516,6 +2580,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <h3 class="nsh">Tabs</h3>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
+<div class="row gap" id="ui.tab.build" data-hay="build ui.tab.build build, dig and zone — the palette of placement tools " data-gap="1">
+<div class="nm">Build<span class="k">ui.tab.build</span></div>
+<div class="dsc">Build, dig and zone — the palette of placement tools</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M1</div>
+</div>
 <div class="row" id="ui.tab.work" data-hay="work ui.tab.work the priority grid " data-gap="0">
 <div class="nm">Work<span class="k">ui.tab.work</span></div>
 <div class="dsc">The priority grid</div>
@@ -2799,7 +2869,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 388, "gaps": 120};</script>
+<script>window.WIKI={"total": 399, "gaps": 131};</script>
 <script>
 (function(){
   var D = window.WIKI;

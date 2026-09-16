@@ -550,6 +550,56 @@ first it counted a connector as a floor, then it only asked about *climbing* whe
 about *walking*. A measurement that agrees with you is worth no more than a screenshot until you
 have checked what it is actually counting.
 
+## 6g. Reconciled with main, 2026-09-16
+
+Main had moved 49 commits under this branch, adding water to the wilderness, ground relief to the
+drawing, and a Build palette to the interface. Nine files conflicted. Three of the resolutions were
+decisions rather than edits and are recorded because getting any of them wrong is silent.
+
+**Two numbering collisions, and both went main's way.** Numbers that are hashed, saved or used to
+seed a random stream cannot be held by two meanings at once, and the branch that landed first keeps
+the number it shipped with:
+
+| collision | main | this branch |
+|---|---|---|
+| `CellFlags` bit 5 | `ImpassableTerrain` (deep water) — **keeps it** | `Discovered` → **bit 6** |
+| `NaturalGenPurpose` 8 | `Water` — **keeps it** | `Caverns` → **9** |
+
+The second is the one that would have hurt: two purposes on one value means two passes drawing from
+the same stream, which is exactly the leak that enum exists to prevent. It is the same mistake as
+the `PawnPurpose.Passion` / `StoneYield` collision caught in §6a, found the same way — by reading the
+conflict rather than by taking either side.
+
+**The pass list is ten passes now**, water at 2 and 4, caverns at 8, ore at 9, start at 10.
+
+**The wooded board changed shape under main's feet.** The mining work stopped `MakeWooded` routing
+through `MakeBarren`, so the board gained terracing, outcrops and ore; the water work was written
+against what it believed was still a flat table, and `WoodedMapTests` carried both beliefs. The
+water *code* is per column and did not care, but its tests compared every wet column against a
+single board-wide dry level. They are stated per column now: a channel sits one step below its own
+dry neighbours, wherever that column's ground happens to be.
+
+**Two goldens re-based, with the mechanism named** (`WaterTests.BeforeWater`). Both the dry and the
+*barren* hashes moved. The dry ones moved because caverns are a new pass that carves rock. The
+barren ones moved because headroom relocated the ground layer on every natural map — and they are
+still seed-invariant, one flat board per size, which is the check that it was the height and not the
+contents that changed.
+
+**One test widened rather than deleted.** `AMarkedStackIsWorkedFromTheTopDown` needs a cell with
+solid rock directly above it *that a colonist can still reach*, and that shape is rarer now: the rim
+stance refuses a rock whose ceiling is closed and the on-top stance needs the cell above to be open,
+so only a same-layer stance will do. Seed 1 of the played board no longer offers one, which says
+nothing about the rule. It walks eight seeds now.
+
+**Measured after the merge**, on the same 40,000-tick probe:
+
+| | before the merge | after |
+|---|---|---|
+| cells mined | 58 | **65** |
+| standing orders that cannot be reached | 16 of 50 | **0 of 0** — the colony finished its work |
+| items with no floor | 0 | 0 |
+| sideways steps onto a floorless cell | 1 of 68,222 | 1 of 66,811 |
+
 ## 7. Risks
 
 1. **Golden tests re-base twice** — once for the raised ground, once for terracing. Both are

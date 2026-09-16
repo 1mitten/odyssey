@@ -173,7 +173,7 @@ body[data-help=1] .doc{display:block;position:absolute;top:50%;left:50%;
 <div class="rail">
   <div class="brand">Odyssey<small>hud-v2 · layer visibility and icons</small></div>
   <div class="ctl"><label>Icons</label><div class="seg" id="m-icon">
-    <button data-v="icon" aria-pressed="true">Icon</button><button data-v="label">+ label</button>
+    <button data-v="icon">Icon</button><button data-v="label" aria-pressed="true">+ label</button>
     <button data-v="keys">Keys</button><button data-v="text">Text</button>
     <button data-v="missing">Missing</button></div></div>
   <div class="ctl"><label>Size</label><div class="seg" id="m-size">
@@ -240,7 +240,7 @@ body[data-help=1] .doc{display:block;position:absolute;top:50%;left:50%;
 <script>
 "use strict";
 /* ============================ state ============================ */
-const S = {z:0, mode:"xray", below:"dim", depth:99, icons:"icon", size:16, cat:"structure",
+const S = {z:0, mode:"xray", below:"dim", depth:99, icons:"label", size:16, cat:"structure",
            overlay:null, sel:0, preset:"default",
            tune:{near:0.34, fall:0.30, ghost:0.85, dim:0.45}};
 const ZMIN = -3, ZMAX = 5, GW = 26, GH = 26;

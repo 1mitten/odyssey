@@ -137,7 +137,7 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void TheStrataStackFromBedrockUpToSoil()
         {
-            var result = Generate(55, throughPass: 2);
+            var result = Generate(55, throughPass: 3);
             var ctx = result.Context;
             var grid = ctx.Grid;
 
@@ -178,7 +178,7 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
-        public void EverySurfaceCellIsWalkable()
+        public void EverySurfaceCellIsWalkableUnlessItIsOutOfOnesDepth()
         {
             var result = Generate(99);
             var ctx = result.Context;
@@ -189,6 +189,17 @@ namespace Odyssey.Tests.Sim
                 int column = ctx.Column(x, z);
                 int stand = ctx.TopSolidY[column] + 1;
                 Assert.That(stand, Is.LessThan(ctx.Size.SizeY), $"column {x},{z} has no air above it");
+
+                // Deep water is the single exception, and it is the point of it: everything else
+                // the generator makes can be stood on. Shallow water still has to be walkable —
+                // wading is slow, not impossible — so this is a narrow exemption, not a licence.
+                if (ctx.Water[column] == (byte)WaterClass.Deep)
+                {
+                    Assert.That(ctx.Grid.IsWalkable(ctx.Index(x, z, stand)), Is.False,
+                        $"deep water at {x},{z} can be walked on");
+                    continue;
+                }
+
                 Assert.That(ctx.Grid.IsWalkable(ctx.Index(x, z, stand)), Is.True,
                     $"the cell above the ground at {x},{z} is not walkable");
             }
@@ -568,8 +579,8 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void PassesCanBeStoppedEarly()
         {
-            var afterStrata = Generate(5, throughPass: 2);
-            Assert.That(afterStrata.Report.PassesRun, Is.EqualTo(2));
+            var afterStrata = Generate(5, throughPass: 3);
+            Assert.That(afterStrata.Report.PassesRun, Is.EqualTo(3));
             Assert.That(afterStrata.Report.Trees, Is.Zero);
             Assert.That(afterStrata.Report.OreCells, Is.Zero);
 
@@ -590,7 +601,7 @@ namespace Odyssey.Tests.Sim
                 Assert.That(seen.Add(id), Is.True, $"duplicate module id {id}");
             }
 
-            Assert.That(NaturalContent.ModuleIds.Count, Is.EqualTo(11));
+            Assert.That(NaturalContent.ModuleIds.Count, Is.EqualTo(14));
         }
 
         [Test]

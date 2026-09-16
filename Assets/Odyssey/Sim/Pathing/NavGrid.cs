@@ -195,17 +195,56 @@ namespace Odyssey.Sim.Pathing
         /// <summary>Additive terrain cost per class. Def-driven in the real game.</summary>
         public readonly int[] CostByClass = new int[256];
 
+        /// <summary>
+        /// Cost class by terrain index — the table <see cref="RefreshFrom"/> reads to fill
+        /// <see cref="CostClass"/>. Sized past any plausible terrain table, so the per-cell
+        /// lookup needs no bounds test and an unknown terrain is simply ordinary ground.
+        /// </summary>
+        public readonly byte[] CostClassByTerrain = new byte[1024];
+
+        /// <summary>
+        /// A nav grid knows what terrain costs the moment it is built.
+        ///
+        /// The tidier arrangement would be for the composition root to hand the table down, and
+        /// it was written that way first. It is wrong: a <see cref="NavGraph"/> is constructed in
+        /// a dozen places and a grid that missed the call would silently price wading at the cost
+        /// of walking — a wrong number, not a crash, in the one part of the simulation where a
+        /// wrong number looks exactly like a right one. So the default is applied here, where it
+        /// cannot be forgotten, and <see cref="SetTerrainCosts"/> remains for anyone who wants a
+        /// different content set. When terrain becomes Defs this moves to the Def loader, which
+        /// is the same argument arriving at a better place.
+        /// </summary>
         public NavGrid(GridSize size)
         {
             Size = size;
             Flags = new NavFlags[size.CellCount];
             CostClass = new byte[size.CellCount];
+
+            for (ushort terrain = 0; terrain < Worldgen.Natural.NaturalContent.TerrainCount; terrain++)
+                CostClassByTerrain[terrain] = Worldgen.Natural.NaturalContent.CostClassOf(terrain);
+            Worldgen.Natural.NaturalContent.ApplyCostClasses(CostByClass);
+        }
+
+        /// <summary>
+        /// Point every terrain at its cost class and every class at its addend, replacing what
+        /// the constructor put there. The per-cell grid follows on the next
+        /// <see cref="RefreshFrom"/>, so a caller changing costs on a live grid must dirty it.
+        /// </summary>
+        public void SetTerrainCosts(byte[] classByTerrain, int[] costByClass)
+        {
+            if (classByTerrain != null)
+                for (int t = 0; t < classByTerrain.Length && t < CostClassByTerrain.Length; t++)
+                    CostClassByTerrain[t] = classByTerrain[t];
+            if (costByClass != null)
+                for (int c = 0; c < costByClass.Length && c < CostByClass.Length; c++)
+                    CostByClass[c] = costByClass[c];
         }
 
         public int ExtraCost(int index) => CostByClass[CostClass[index]];
 
         /// <summary>
-        /// Recompute the terrain-derived bits for one cell, preserving <see cref="NavFlags.Sticky"/>.
+        /// Recompute the terrain-derived bits and the cost class for one cell, preserving
+        /// <see cref="NavFlags.Sticky"/>.
         ///
         /// A door is walkable here whatever its state: the mode decides whether it may pass, and
         /// pushing that decision into the link and the per-cell entry test keeps closed doors
@@ -218,7 +257,13 @@ namespace Odyssey.Sim.Pathing
         /// therefore not walkable, and the portal links at both ends of the ladder have nothing to
         /// join — a shaft laddered from top to bottom that nothing can climb. The rule is stated
         /// here rather than worked around at each end because "can something stand here" is this
-        /// method's one question.</para>
+        /// method's one question. A <em>climb</em> is the one connector that grants standing
+        /// without granting walking — see <see cref="NavFlags.ClimbOnly"/>.</para>
+        ///
+        /// <para>Impassable terrain — deep water — is neither solid nor blocked, so it would
+        /// otherwise read as perfectly walkable: the bed beneath it is a floor. It is excluded here
+        /// and nowhere else, which is what makes <see cref="KindOf"/> call it
+        /// <see cref="RegionKind.Impassable"/> and keeps a lake out of every walkable region.</para>
         /// </summary>
         public void RefreshFrom(CellGrid grid, int index)
         {
@@ -229,12 +274,13 @@ namespace Odyssey.Sim.Pathing
             bool realFloor = grid.HasFloor(index);
             bool floor = realFloor || (sticky & NavFlags.Connector) != 0;
             bool door = (sticky & NavFlags.Door) != 0;
+            bool impassable = grid.IsImpassableTerrain(index);
 
             NavFlags f = sticky;
             if (solid) f |= NavFlags.Solid;
             if (blocked) f |= NavFlags.Blocked;
             if (floor) f |= NavFlags.HasFloor;
-            if (floor && !solid && (!blocked || door)) f |= NavFlags.Walkable;
+            if (floor && !solid && !impassable && (!blocked || door)) f |= NavFlags.Walkable;
 
             // A rock face is somewhere to be, not somewhere to walk to. See NavFlags.ClimbOnly.
             // Only a climb: a stair, a ladder and a lift are built things with a tread under you.
@@ -242,6 +288,27 @@ namespace Odyssey.Sim.Pathing
                 f |= NavFlags.ClimbOnly;
 
             Flags[index] = f;
+            CostClass[index] = ClassAt(grid, index);
+        }
+
+        /// <summary>
+        /// The cost class of *entering* this cell, which is not always the class of its own
+        /// terrain. Wading, the cell entered is the water itself, so the class is the water's.
+        /// Crossing a bog, the cell entered is the air above the marsh, so the class is the one
+        /// below. Own terrain first, the cell beneath second: air and rock are class 0, so a
+        /// non-zero own class can only be something standable-in, and everything else defers
+        /// downwards. Getting this the wrong way round gives free marsh and fails silently.
+        /// </summary>
+        byte ClassAt(CellGrid grid, int index)
+        {
+            ushort here = grid.Terrain[index];
+            byte own = here < CostClassByTerrain.Length ? CostClassByTerrain[here] : (byte)0;
+            if (own != 0) return own;
+
+            int below = index - Size.LayerStride;
+            if (below < 0) return 0;
+            ushort under = grid.Terrain[below];
+            return under < CostClassByTerrain.Length ? CostClassByTerrain[under] : (byte)0;
         }
 
         public RegionKind KindOf(int index)
