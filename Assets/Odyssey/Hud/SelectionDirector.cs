@@ -70,13 +70,24 @@ namespace Odyssey.Hud
         /// </summary>
         public void Pick(CellRef? cell, PawnId pawnUnderPointer, WorldSnapshot snapshot)
         {
-            Cell = cell;
+            // One pick, one subject. A pick that lands on a colonist selects the colonist, and the
+            // cell they happen to be standing in is not part of the selection at all.
+            //
+            // It used to set both. The cursor preferred the pawn and drew the right bracket most
+            // of the time, but the selection was two things at once underneath: anything reading
+            // Cell saw the cell under their feet, and if the pawn lookup missed for any reason the
+            // cursor fell through to the cell tier and bracketed the ground — or the tree — while
+            // the inspect pane went on showing the colonist. Reported from a playtest on
+            // 2026-09-16 as a highlight landing near a colonist who was chopping, and selecting
+            // them anyway. Choose() already cleared the cell for a roster click; this makes a
+            // world click behave the same way, so the fall-through has nothing to fall to.
             Pawn = cell.HasValue ? pawnUnderPointer : PawnId.None;
+            Cell = Pawn.IsValid ? null : cell;
             Thing = ThingId.None;
             ThingDef = -1;
-            if (cell.HasValue && !Pawn.IsValid)
+            if (Cell.HasValue)
             {
-                ThingAt(snapshot, cell.Value, out ThingId thing, out int def);
+                ThingAt(snapshot, Cell.Value, out ThingId thing, out int def);
                 Thing = thing;
                 ThingDef = def;
             }

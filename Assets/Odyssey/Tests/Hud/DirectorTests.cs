@@ -34,8 +34,33 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(director.Pawn, Is.EqualTo(new PawnId(1)));
             Assert.That(director.HasThing, Is.False, "the crate is still there when they walk off it");
-            Assert.That(director.Cell, Is.EqualTo(cell));
+            Assert.That(director.Cell, Is.Null,
+                "a colonist is the whole selection: the cell under their feet is not part of it");
             Assert.That(changes, Is.EqualTo(new[] { SelectionChange.Picked }));
+        }
+
+        /// <summary>
+        /// The line above used to read <c>Is.EqualTo(cell)</c>, so the dual state was deliberate
+        /// and this suite documented it. It came back on 2026-09-16 as a playtest report: clicking
+        /// a colonist chopping a tree put a highlight on a cell near them and selected the colonist
+        /// anyway. Both halves are this — the cursor preferred the pawn and drew the right bracket
+        /// most of the time, but the cell went on being part of the selection underneath, so every
+        /// other reader saw it, and any frame the pawn lookup missed fell through to the cell tier
+        /// and bracketed the tree instead.
+        /// </summary>
+        [Test]
+        public void APickOnAColonistDoesNotAlsoSelectTheCellTheyStandIn()
+        {
+            var cell = new CellRef(3, 3, 1);
+            var snapshot = FrameWith(new PawnId(1), cell, ThingId.None, default);
+            var director = new SelectionDirector();
+
+            director.Pick(cell, new PawnId(1), snapshot);
+
+            Assert.That(director.HasPawn, Is.True);
+            Assert.That(director.Cell, Is.Null,
+                "the cell is still part of the selection, so a cursor can still draw it instead " +
+                "of the colonist and every other reader still sees a cell that was not picked");
         }
 
         [Test]

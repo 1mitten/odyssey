@@ -109,6 +109,18 @@ namespace Odyssey.Presentation.Bootstrap
         MapGenDef? _gen;
         double _accumulator;
         float _tickAlpha;
+
+        /// <summary>
+        /// How far this frame sits between two ticks, 0 to 1.
+        ///
+        /// Exposed because the pick hit-test has to build its box from the same number the figure
+        /// is drawn with. When it did not, the box sat at the tick boundary and the figure had
+        /// moved on, so a walking colonist was not clickable where they appeared.
+        /// </summary>
+        public float TickAlpha => _tickAlpha;
+
+        /// <summary>Cost units a pawn retires in one tick, the other half of that same tween.</summary>
+        public int MovePerTick => PawnContent.Core().Movement.movePerTick;
         readonly Stopwatch _frameTimer = new Stopwatch();
         double _renderMs;
         double _tickMs;
