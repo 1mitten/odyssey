@@ -356,6 +356,14 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const string ToolPickaxe = Prefix + "tool.pickaxe";
 
+        /// <summary>
+        /// The builder's hammer. Unlike the axe and the pick it is <em>not</em> from the Generic
+        /// pack, because there is no hammer in it: <c>SM_Wep_Hammer_01</c> in Western Frontier is
+        /// the only one in all 7,222 imported assets. See the catalogue row in <c>PlayScene</c>
+        /// for what that costs and why it is accepted.
+        /// </summary>
+        public const string ToolHammer = Prefix + "tool.hammer";
+
         // Tufts of grass strewn over the ground. Decoration and nothing else: they block nothing,
         // are not in the save, and the simulation has never heard of them. What they are for is
         // that a field of one flat colour reads as a carpet, and a field with clumps standing up

@@ -230,6 +230,46 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// Take a thing up off the floor, and report the stoop that goes with it.
+        ///
+        /// <para><b>The two belong together, which is why they are one call.</b> Anything a
+        /// colonist lifts — a log, a stack of stone, a basket at the end of a row of crops, a
+        /// carcass — is the same motion, and a job that picked something up without saying so would
+        /// show a colonist acquiring it by magic while standing upright. Today there is exactly one
+        /// pickup in the game and it is wired; tomorrow there is a harvest driver and a butcher's,
+        /// and a seam is the only thing that stops either of them forgetting. This is the
+        /// <c>docs/plans/vertical-slice.md</c> "where the seams are" argument applied to a very
+        /// small thing.</para>
+        ///
+        /// <para>The simulation's whole part is that it happened, here, now: this is one tick and
+        /// stays one tick. The stoop and the rise are presentation's, take about eight-tenths of a
+        /// second of game time and cost the colony nothing, so no throughput, golden or balance
+        /// number moves — which means a figure may still be straightening as its pawn sets off
+        /// walking. That is the accepted price of the owner's decision (2026-09-16) to keep the
+        /// duration out of the simulation.</para>
+        /// </summary>
+        protected void TakeUp(PawnContext ctx, ColonyItem item)
+        {
+            ctx.Items.PickUp(item, Pawn.Id);
+            Pawn.BeginGesture(PawnGesture.Lift);
+        }
+
+        /// <summary>
+        /// Set a carried thing down on purpose, and report the motion that goes with it.
+        ///
+        /// <para><b>On purpose</b> is the whole of the distinction, and it is why this is not
+        /// simply "whenever a carried thing reaches the floor". A job that fails mid-carry also
+        /// puts its load somewhere, and that is a colonist dropping what it is holding rather than
+        /// stowing it — a different motion, and one nothing draws yet. So a failure path calls the
+        /// store directly and says nothing, deliberately.</para>
+        /// </summary>
+        protected void PutDown(PawnContext ctx, ColonyItem item, int cell)
+        {
+            ctx.Items.Drop(item, cell);
+            Pawn.BeginGesture(PawnGesture.Stow);
+        }
+
+        /// <summary>
         /// The walk toil, shared by every driver that goes somewhere.
         ///
         /// Reachability is answered <b>before</b> a path is asked for, never by asking for one:

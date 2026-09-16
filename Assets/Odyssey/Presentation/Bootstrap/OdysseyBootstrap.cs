@@ -264,6 +264,15 @@ namespace Odyssey.Presentation.Bootstrap
             _figures = new PawnFigureDirector(moduleCatalogue, transform, gameObject.layer)
             {
                 LookSalt = lookSalt,
+                // So a climbing figure can find the block it is climbing against. The same mirror
+                // the chunk renderer meshes from, so the rock it is pressed to is the rock drawn.
+                //
+                // **Restored by hand during the merge, and this line is a trap.** Removing
+                // climbing as a MINING mechanic took this with it, and git then auto-merged that
+                // removal without flagging a conflict — leaving the climb pose compiled, correct
+                // and never executed, because `TryWallBeside` needs the mirror and `ApplyClimbPose`
+                // is gated on it having found a face. Ladders are still climbed.
+                World = _model,
             };
 
             Directors = new HudDirectors(size.SizeY, outcome.StartCell.Y);

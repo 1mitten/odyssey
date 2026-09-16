@@ -183,7 +183,8 @@ namespace Odyssey.EditorTools
                 // because a figure's speed is measured from how far it moved since the last frame
                 // and a figure leased this instant has not moved at all — a single frame would
                 // photograph five people standing still and prove nothing about the walk.
-                figures = new Odyssey.Presentation.World.PawnFigureDirector(catalogue, lighting, 0);
+                figures = new Odyssey.Presentation.World.PawnFigureDirector(catalogue, lighting, 0)
+                    { World = model };   // so a climber can find its wall
                 int movePerTick = PawnContent.Core().Movement.movePerTick;
                 const float FrameSeconds = 1f / 60f;
                 for (int frame = 0; frame < 40; frame++)
@@ -545,6 +546,73 @@ namespace Odyssey.EditorTools
                     }
                 }
 
+                // Somebody on a shaft wall, which is the one pose with nothing under it.
+                //
+                // Worth its own frame because every fault it can have is invisible from anywhere
+                // else: a climber drawn in the walk cycle, or turned to face north, or with its
+                // arms at its sides, all look like an ordinary colonist until you notice it is
+                // three metres up a hole. The frame is deliberately side on and close.
+                {
+                    // Waited for rather than hoped for. A drop costs a hundred ticks and a climb
+                    // two hundred and seventy, so on any one frame of a five-colonist board the
+                    // odds of catching somebody on a wall are poor — the first version of this
+                    // shot simply reported that nobody was climbing, which says nothing at all
+                    // about whether the pose works.
+                    PawnView climber = default;
+                    bool found = false;
+                    for (int waited = 0; waited < 4_000 && !found; waited++)
+                    {
+                        world.Tick();
+                        figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                        figures.Evaluate(FrameSeconds);
+
+                        var live = world.Views.Current.Pawns;
+                        for (int i = 0; i < live.Length; i++)
+                        {
+                            PawnView who = live[i];
+                            if (who.MovePercent <= 20 || who.MovePercent >= 80) continue;
+                            if (who.NextCell.Y == who.Cell.Y) continue;
+                            if (who.Cell.Y < 0) continue;
+                            climber = who;
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (found)
+                    {
+                        Vector3 between = (CellMetrics.FloorCentre(climber.Cell)
+                                         + CellMetrics.FloorCentre(climber.NextCell)) * 0.5f;
+
+                        // Looking AT the wall the colonist is on, so the rock is behind it and the
+                        // camera is on the open side. A fixed bearing put the outcrop between the
+                        // camera and the subject as often as not, and a photograph of a rock
+                        // proves nothing about the pose behind it.
+                        CellRef lower = climber.NextCell.Y < climber.Cell.Y
+                            ? climber.NextCell : climber.Cell;
+                        Vector3 toWall = Vector3.zero;
+                        if (lower.X > 0 && grid.IsSolidTerrain(size.Index(lower.X - 1, lower.Z, lower.Y)))
+                            toWall = Vector3.left;
+                        else if (lower.X < size.SizeX - 1
+                                 && grid.IsSolidTerrain(size.Index(lower.X + 1, lower.Z, lower.Y)))
+                            toWall = Vector3.right;
+                        else if (lower.Z > 0 && grid.IsSolidTerrain(size.Index(lower.X, lower.Z - 1, lower.Y)))
+                            toWall = Vector3.back;
+                        else if (lower.Z < size.SizeZ - 1
+                                 && grid.IsSolidTerrain(size.Index(lower.X, lower.Z + 1, lower.Y)))
+                            toWall = Vector3.forward;
+
+                        float bearing = toWall == Vector3.zero ? 35f : PawnPose.YawOf(toWall);
+                        Shoot(camera, between + Vector3.up * 1.4f, 10f, bearing, 11f, "Logs/shot-climb.png");
+                        Debug.Log($"[Shot] a colonist is {climber.MovePercent}% of the way from " +
+                                  $"{climber.Cell} to {climber.NextCell}");
+                        Debug.Log($"[Shot] climbing — {figures.DescribeClimb()}");
+                    }
+                    else
+                    {
+                        Debug.Log("[Shot] nobody was mid-climb, so no climbing shot");
+                    }
+                }
                 // The slice seen from the layer a miner is working on, which is the one view the
                 // whole layer model exists for: what is ABOVE the active layer has to read, or a
                 // player standing in a quarry cannot see the rock still over their head.
@@ -1244,6 +1312,36 @@ namespace Odyssey.EditorTools
             {
                 moduleId = ModuleIds.ToolPickaxe, shape = ModuleShape.Pillar,
                 prefabName = "SM_Gen_Wep_Pickaxe_01",
+            });
+
+            // The builder's hammer, and the first prop in the project that could not be chosen on
+            // merit, because there is no choice: SM_Wep_Hammer_01 is the only hammer in all 7,222
+            // imported assets. The axe and the pick were both picked from Generic over Farm and
+            // Western Frontier alternatives; here Western Frontier is the whole field.
+            //
+            // What that costs, recorded rather than discovered: 768 triangles against the axe's
+            // 172 and the pick's 160, and two materials against their one, from a pack nothing
+            // else in the game draws from. None of it matters much — a tool is one instantiated
+            // prefab parented to a hand while the work lasts, not a chunk-instanced module, so it
+            // adds a material and not a draw-call bucket, and at most one per working colonist.
+            //
+            // Two measurements that bear on the fitting path, both from synty-inventory.csv:
+            //
+            //   Haft ratio 0.63 : 0.21, or 3 : 1. GripTool finds the haft as the long axis of the
+            //   combined bounds, and this is a wider margin than the pick's 1.4 : 1 — so of the
+            //   three tools the hammer is the one least likely to be gripped by its own head.
+            //
+            //   The pivot is at the butt (minY 0.00, maxY 0.63) where the axe and pick sit
+            //   mid-haft (-0.18 to 0.56). 12-work-poses-and-tools.md rejected Western Frontier's
+            //   pickaxe partly for this. It should not in fact matter: the fitting works off the
+            //   mesh bounds and slides the tool until the grip is in the palm, so where the
+            //   modeller put the origin never enters the arithmetic. This is the first prop to
+            //   prove that, which is worth knowing when the contact sheet is judged — a hammer
+            //   held a hand's width out of the fist means the claim is wrong.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ToolHammer, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Hammer_01",
             });
 
             // Colonists. A Synty character is a rigged humanoid with no MeshFilter anywhere on it,
