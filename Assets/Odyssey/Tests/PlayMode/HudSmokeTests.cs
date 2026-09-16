@@ -42,6 +42,11 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(doc, Is.Not.Null, "the HUD document is on the bootstrap object");
                 Assert.That(doc!.rootVisualElement, Is.Not.Null, "the panel has no root: no panel settings?");
 
+                // The panel scales with the screen against the mockup's canvas. At constant pixel
+                // size a 4K monitor showed nine-pixel labels nine pixels tall, which is no HUD.
+                Assert.That(doc.panelSettings.scaleMode, Is.EqualTo(PanelScaleMode.ScaleWithScreenSize));
+                Assert.That(doc.panelSettings.referenceResolution, Is.EqualTo(new Vector2Int(1200, 800)));
+
                 // Every region of the screen map, built once by the shell: ledger, architect,
                 // clock, alerts, ruler, inspect, overlays — seven framed regions.
                 Assert.That(doc.rootVisualElement.Query(className: "region").ToList().Count,

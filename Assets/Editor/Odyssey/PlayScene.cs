@@ -50,6 +50,9 @@ namespace Odyssey.EditorTools
         const string HudThemePath = "Assets/Odyssey/Presentation/Ui/RuntimeTheme.tss";
         const string HudPanelPath = "Assets/Odyssey/Presentation/Ui/HudPanelSettings.asset";
 
+        /// <summary>The mockup's canvas, which the stylesheet's pixel sizes are authored against.</summary>
+        public static readonly Vector2Int HudReferenceResolution = new Vector2Int(1200, 800);
+
         /// <summary>
         /// The world the play scene is built with, and the world "Measure a slice" measures. One
         /// pair of constants so the two cannot drift apart again: a benchmark of a map the game
@@ -1289,7 +1292,18 @@ namespace Odyssey.EditorTools
                 AssetDatabase.CreateAsset(panel, HudPanelPath);
             }
             panel.themeStyleSheet = theme;
-            panel.scaleMode = PanelScaleMode.ConstantPixelSize;
+
+            // Scale with the screen, against the mockup's own 1200 x 800. The sheet is authored in
+            // those pixels, so this is the size it was designed to be read at: 1.35x on a 1080p
+            // monitor, 2.7x at 4K. Constant pixel size was the first setting, and at 4K it made
+            // every nine-pixel label nine pixels tall, which nobody could read. Matching width and
+            // height equally keeps a wide screen and a tall one the same distance from the mockup.
+            // Icons are meant to step at 32 and 64 rather than scale continuously (ADR 0007); the
+            // placeholder badges scale with everything else until the pipeline replaces them.
+            panel.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            panel.referenceResolution = HudReferenceResolution;
+            panel.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
+            panel.match = 0.5f;
             EditorUtility.SetDirty(panel);
             AssetDatabase.SaveAssets();
             return panel;
