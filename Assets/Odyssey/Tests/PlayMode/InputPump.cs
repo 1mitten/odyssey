@@ -60,11 +60,16 @@ namespace Odyssey.Tests.PlayMode
 
         void Update()
         {
-            if (Device == null || _pending.Count == 0) return;
+            if (Device == null) return;
 
             // One state per frame: a wheel notch is a notch, not a stuck wheel.
-            MouseState state = _pending.Dequeue();
-            InputSystem.QueueStateEvent(Device, state);
+            if (_pending.Count > 0)
+                InputSystem.QueueStateEvent(Device, _pending.Dequeue());
+
+            // Every frame, pending or not. In ProcessEventsManually this call *is* the frame's
+            // input update (see MouseHarness, failure four), so skipping it on a quiet frame
+            // would leave the game with no input update at all - and a delta control such as the
+            // wheel would never be cleared, which is the stuck wheel this pump exists to avoid.
             InputSystem.Update();
 
             LastScrollY = Device.scroll.ReadValue().y;

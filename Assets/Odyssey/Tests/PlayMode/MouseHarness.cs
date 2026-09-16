@@ -45,6 +45,22 @@ namespace Odyssey.Tests.PlayMode
     /// camera on every subsequent frame. Each gesture below therefore ends by delivering the
     /// neutral state, so a notch is one notch rather than a stuck wheel.</para>
     ///
+    /// <para><b>Fourth, and the one that hid behind the other three: a manual
+    /// <c>InputSystem.Update()</c> called from inside the Update phase is not counted as the
+    /// frame's input update.</b> The wheel and the pointer worked anyway, because reading a value
+    /// has no frame gate — but every <i>edge</i> does. <c>wasPressedThisFrame</c> is gated on
+    /// <c>InputDevice.wasUpdatedThisFrame</c>, and the measurement read: press edges 0, release
+    /// edges 0, deliveries with the button down 1, deliveries the device counted as this frame
+    /// <b>0</b>. So the button went down and no press ever existed, which means no pick, no
+    /// box-select and no designate could fire however correct the game was. The fix is
+    /// <c>ProcessEventsManually</c>, which makes the pump's call the frame's update; the pump
+    /// then has to run every frame rather than only when it has something to deliver, because it
+    /// is now the only thing updating input at all.</para>
+    ///
+    /// <para>This one is why <c>Click</c> and <c>Drag</c> now assert too. They shipped without
+    /// assertions and nothing called them for a while, so the harness looked finished while half
+    /// of what it claimed to do had never once worked.</para>
+    ///
     /// <para>So this sets <c>IgnoreFocus</c> for the run, enables the device, drives the updates,
     /// and <b>asserts</b> both that the device is enabled and that the state arrived — every
     /// silent failure above becomes a loud one. The settings are put back afterwards, because
@@ -53,6 +69,7 @@ namespace Odyssey.Tests.PlayMode
     public sealed class MouseHarness : IDisposable
     {
         readonly InputSettings.BackgroundBehavior _behaviourBefore;
+        readonly InputSettings.UpdateMode _updateModeBefore;
         readonly bool _deviceWasAlreadyThere;
         readonly GameObject _pump;
 
@@ -60,6 +77,11 @@ namespace Odyssey.Tests.PlayMode
         {
             _behaviourBefore = InputSystem.settings.backgroundBehavior;
             InputSystem.settings.backgroundBehavior = InputSettings.BackgroundBehavior.IgnoreFocus;
+
+            // Failure four: set before the device is made, because changing the update mode
+            // reallocates the state buffers.
+            _updateModeBefore = InputSystem.settings.updateMode;
+            InputSystem.settings.updateMode = InputSettings.UpdateMode.ProcessEventsManually;
 
             // See InputPump: queued events have to be processed at the top of a frame, not from
             // a coroutine that resumes after every Update has already run.
@@ -162,6 +184,7 @@ namespace Odyssey.Tests.PlayMode
             if (_pump != null) UnityEngine.Object.Destroy(_pump);
             if (!_deviceWasAlreadyThere && Device.added) InputSystem.RemoveDevice(Device);
             InputSystem.settings.backgroundBehavior = _behaviourBefore;
+            InputSystem.settings.updateMode = _updateModeBefore;
         }
     }
 }
