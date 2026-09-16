@@ -85,9 +85,15 @@ namespace Odyssey.Presentation.Audio
             public float MaxDistance = 110f;
         }
 
-        /// <summary>One music track, bound to the clock phase it plays in.</summary>
+        /// <summary>
+        /// One looping track bound to the clock phase it plays in.
+        ///
+        /// Used for the music and for the outdoor ambience bed, which are the same shape of
+        /// thing — a loop per phase, crossfaded when the phase turns — differing only in which
+        /// bus they ride and how loud they sit.
+        /// </summary>
         [Serializable]
-        public sealed class MusicDef
+        public sealed class PhaseTrackDef
         {
             public MusicPhase Phase;
             public AudioClip? Clip;
@@ -100,7 +106,11 @@ namespace Odyssey.Presentation.Audio
 
         public List<SoundDef> Sounds = new();
         public List<AmbienceDef> Ambience = new();
-        public List<MusicDef> Music = new();
+        public List<PhaseTrackDef> Music = new();
+
+        /// <summary>The outdoor bed, one track per phase: what the world sounds like when you
+        /// are standing in it, as against the water bed, which is what is near you.</summary>
+        public List<PhaseTrackDef> Outdoor = new();
 
         public SoundDef? Find(string id)
         {
@@ -116,10 +126,14 @@ namespace Odyssey.Presentation.Audio
             return null;
         }
 
-        public MusicDef? FindMusic(MusicPhase phase)
+        public PhaseTrackDef? FindMusic(MusicPhase phase) => Find(Music, phase);
+
+        public PhaseTrackDef? FindOutdoor(MusicPhase phase) => Find(Outdoor, phase);
+
+        static PhaseTrackDef? Find(List<PhaseTrackDef> tracks, MusicPhase phase)
         {
-            for (int i = 0; i < Music.Count; i++)
-                if (Music[i].Phase == phase) return Music[i];
+            for (int i = 0; i < tracks.Count; i++)
+                if (tracks[i].Phase == phase) return tracks[i];
             return null;
         }
     }

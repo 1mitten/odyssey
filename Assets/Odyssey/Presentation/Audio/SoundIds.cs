@@ -45,6 +45,18 @@ namespace Odyssey.Presentation.Audio
         /// <summary>Looping water: ponds, streams and the river, scaled by how much of it is near.</summary>
         public const string AmbienceWater = AmbiencePrefix + "water";
 
+        /// <summary>
+        /// The sound of the world outdoors by day — the bed under everything else, birds and air
+        /// and distance. Unlike the water bed it is not measured from anything: being outdoors is
+        /// not a quantity, it is where you are, so it plays flat whenever the slice is at or
+        /// above the surface and stops when it is not.
+        /// </summary>
+        public const string AmbienceOutdoorDay = AmbiencePrefix + "outdoor.day";
+
+        /// <summary>The same, after dark. A different world rather than a quieter one: the day's
+        /// birds are gone and something else has started.</summary>
+        public const string AmbienceOutdoorNight = AmbiencePrefix + "outdoor.night";
+
         /// <summary>The daytime track.</summary>
         public const string MusicDay = MusicPrefix + "day";
 
@@ -55,7 +67,7 @@ namespace Odyssey.Presentation.Audio
         public static readonly string[] All =
         {
             WorkChop, WorkPick, AlertStarving,
-            AmbienceWater,
+            AmbienceWater, AmbienceOutdoorDay, AmbienceOutdoorNight,
             MusicDay, MusicNight,
         };
 

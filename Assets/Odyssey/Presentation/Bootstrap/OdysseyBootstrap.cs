@@ -282,7 +282,7 @@ namespace Odyssey.Presentation.Bootstrap
             // catalogue — a clone without the audio assets — yields a working, silent game.
             _audio = new AudioDirector(
                 audioCatalogue, _model != null ? new MirrorTerrain(_model) : null,
-                size, transform, gameObject.layer);
+                size, transform, gameObject.layer, outcome.StartCell.Y);
             AudioSettingsStore.Load().ApplyTo(_audio);
             if (_figures != null) _figures.BlowLanded += OnBlowLanded;
 

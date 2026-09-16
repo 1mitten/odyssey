@@ -103,20 +103,22 @@ namespace Odyssey.Presentation.Audio
         // which sits on the same camera.
         Vector3 _listener;
 
-        // Music: two voices, ping-ponged, so a phase change is a crossfade and never a gap.
-        readonly AudioSource _musicA;
-        readonly AudioSource _musicB;
-        AudioSource? _musicCurrent;
-        AudioSource? _musicLeaving;
-        MusicPhase _phase = MusicPhase.None;
-        float _musicVolume;
-        float _musicLeavingVolume;
-        float _musicFadeSeconds = 3f;
-        float _musicElapsed;
-        float _musicLeavingElapsed;
-        float _musicLeavingFadeSeconds = 3f;
+        // The two things the clock changes: the music, and the sound of being outdoors. Both are
+        // a looping track per phase, crossfaded on a pair of ping-ponged voices, so both are one
+        // class used twice rather than the same forty lines written out again.
+        readonly PhaseLoop _music;
+        readonly PhaseLoop _outdoor;
+
         float _duckRemaining;
         float _duckGain = 1f;
+
+        /// <summary>
+        /// The layer at which the world stops being indoors-of-the-earth. The outdoor bed is not
+        /// heard below it: a player who has followed a shaft down is under the sky, not in it,
+        /// and the birds do not come with them. Same rule the water bed follows for its own
+        /// layer, and the reason both exist — an environment is a *place*.
+        /// </summary>
+        readonly int _surfaceLayer;
 
         /// <summary>One looping environment bed. Water is the first; the dictionary keyed by the
         /// def's id is the whole generalisation and costs nothing while there is one.</summary>
@@ -154,11 +156,19 @@ namespace Odyssey.Presentation.Audio
             _beds.TryGetValue(SoundIds.AmbienceWater, out Bed? bed) ? bed.Level : 0f;
 
         /// <summary>The phase whose track is playing, or fading in to play.</summary>
-        public MusicPhase MusicPhase => _phase;
+        public MusicPhase MusicPhase => _music.Phase;
 
         /// <summary>The current track's live volume, after fade, duck and bus: what the mix is
         /// actually doing, for the tests and the developer overlay.</summary>
-        public float MusicVolume => _musicCurrent?.volume ?? 0f;
+        public float MusicVolume => _music.Volume;
+
+        /// <summary>The live volume of the outdoor bed — the day or night sound of the world
+        /// itself, under everything else.</summary>
+        public float OutdoorLevel => _outdoor.Volume;
+
+        /// <summary>The phase the outdoor bed is playing, or <see cref="Audio.MusicPhase.None"/>
+        /// underground, where there is no outdoors to hear.</summary>
+        public MusicPhase OutdoorPhase => _outdoor.Phase;
 
         /// <summary>
         /// Build the pool under <paramref name="parent"/>, on <paramref name="layer"/> so the
@@ -171,11 +181,12 @@ namespace Odyssey.Presentation.Audio
         /// </summary>
         public AudioDirector(
             AudioCatalogue? catalogue, ITerrainLookup? terrain, GridSize size,
-            Transform? parent, int layer)
+            Transform? parent, int layer, int surfaceLayer = 0)
         {
             _catalogue = catalogue;
             _terrain = terrain;
             _size = size;
+            _surfaceLayer = surfaceLayer;
 
             if (catalogue != null)
             {
@@ -195,18 +206,21 @@ namespace Odyssey.Presentation.Audio
                 _voicePriority[i] = int.MaxValue;
             }
 
-            AudioSource Music()
+            // Both loops are 2D. Music is nowhere by nature; the outdoor bed is everywhere,
+            // which comes to the same thing — it is the air, not a thing in the air, and giving
+            // it a position would make the whole sky sound like it was over there.
+            AudioSource Loop(string name, int priority)
             {
-                AudioSource voice = Voice("Music");
+                AudioSource voice = Voice(name);
                 voice.loop = true;
-                voice.spatialBlend = 0f; // music is nowhere; it is weather for the mood
-                voice.priority = 64;
+                voice.spatialBlend = 0f;
+                voice.priority = priority;
                 voice.dopplerLevel = 0f;
                 return voice;
             }
 
-            _musicA = Music();
-            _musicB = Music();
+            _music = new PhaseLoop(Loop("Music A", 64), Loop("Music B", 64));
+            _outdoor = new PhaseLoop(Loop("Outdoor A", 200), Loop("Outdoor B", 200));
         }
 
         /// <summary>
@@ -260,7 +274,7 @@ namespace Odyssey.Presentation.Audio
 
             StepDuck(deltaTime);
             StepAmbience(deltaTime, focus, activeLayer);
-            StepMusic(deltaTime, frame.Tick);
+            StepPhaseLoops(deltaTime, frame.Tick, activeLayer);
 
             AudioAlert fired = _watch.Step(frame.Pawns);
             if ((fired & AudioAlert.Starving) != 0)
@@ -441,74 +455,121 @@ namespace Odyssey.Presentation.Audio
                     (int)field.WaterCentreCell.x, (int)field.WaterCentreCell.y, activeLayer);
         }
 
-        void StepMusic(float deltaTime, long tick)
+        /// <summary>
+        /// The two loops the clock drives: the music, and the sound of the world outdoors.
+        ///
+        /// <para>The catalogue is only consulted when the phase actually turns — twice a day —
+        /// rather than every frame, because a lookup that answers the same thing 60 times a
+        /// second is the cost the id index was added to stop paying.</para>
+        /// </summary>
+        void StepPhaseLoops(float deltaTime, long tick, int activeLayer)
         {
             MusicPhase phase = MusicClock.PhaseOf(tick);
-            if (phase != _phase)
+
+            _music.Step(deltaTime, phase,
+                phase != _music.Phase ? _catalogue?.FindMusic(phase) : null,
+                _duckGain * AudioMath.DbToLinear(GainDb(SoundBus.Music)));
+
+            // Underground there is no outdoors: the phase goes to None, which has no track, and
+            // the bed fades out on the ordinary path rather than through a case of its own.
+            MusicPhase outdoorPhase = activeLayer < _surfaceLayer ? MusicPhase.None : phase;
+
+            _outdoor.Step(deltaTime, outdoorPhase,
+                outdoorPhase != _outdoor.Phase ? _catalogue?.FindOutdoor(outdoorPhase) : null,
+                AudioMath.DbToLinear(GainDb(SoundBus.Ambience)));
+        }
+
+        /// <summary>
+        /// A looping track per clock phase, crossfaded on two ping-ponged voices.
+        ///
+        /// <para>Two voices and not one, so a phase change is a crossfade and never a gap. The
+        /// voice taken for the incoming track is the one that is <b>not</b> fading out: picking
+        /// "the other one from current" aliases them the moment a phase has no track at all, and
+        /// then the fade-out ends by stopping the track that is supposed to be playing.</para>
+        ///
+        /// <para>The leaving track keeps its own fade length. They differ — the shipped music
+        /// fades over three seconds by day and four by night — and a single shared field
+        /// stretched every fade-out to the length of the fade-in that replaced it.</para>
+        /// </summary>
+        sealed class PhaseLoop
+        {
+            readonly AudioSource _a;
+            readonly AudioSource _b;
+
+            AudioSource? _current;
+            AudioSource? _leaving;
+
+            float _volume, _fadeSeconds = 3f, _elapsed;
+            float _leavingVolume, _leavingFadeSeconds = 3f, _leavingElapsed;
+
+            public PhaseLoop(AudioSource a, AudioSource b)
             {
-                _phase = phase;
-                AudioCatalogue.MusicDef? def = _catalogue?.FindMusic(phase);
-
-                // The outgoing voice, if any, fades out on its own gain; the incoming takes the
-                // other slot. Two voices, ping-ponged, so a phase change is a crossfade and
-                // never a gap — and a phase with no track fades whatever was playing to nothing
-                // rather than cutting it off.
-                if (_musicCurrent != null)
-                {
-                    _musicLeaving = _musicCurrent;
-                    _musicLeavingVolume = _musicVolume;
-                    _musicLeavingElapsed = 0f;
-
-                    // Its own fade length and not the incoming track's: the shipped tracks fade
-                    // over three seconds and four, so one shared field stretched every fade-out
-                    // to the length of the fade-in that replaced it and the two halves of the
-                    // crossfade were never the same length.
-                    _musicLeavingFadeSeconds = _musicFadeSeconds;
-                }
-
-                if (def?.Clip != null)
-                {
-                    // The voice that is *not* fading out. Choosing "the other one from current"
-                    // aliased the two the moment a phase had no track at all: current went null
-                    // while leaving still held A, and the next phase then picked A as well —
-                    // both halves of the crossfade writing one voice's volume, and the leaving
-                    // fade stopping the track that was supposed to be playing.
-                    AudioSource next = ReferenceEquals(_musicLeaving, _musicA) ? _musicB : _musicA;
-                    next.clip = def.Clip;
-                    next.volume = 0f;
-                    next.Play();
-                    _musicCurrent = next;
-                    _musicVolume = def.Volume;
-                    _musicFadeSeconds = def.FadeSeconds;
-                    _musicElapsed = 0f;
-                }
-                else
-                {
-                    _musicCurrent = null;
-                }
+                _a = a;
+                _b = b;
             }
 
-            _musicElapsed += deltaTime;
+            /// <summary>The phase whose track is playing, or fading in to play.</summary>
+            public MusicPhase Phase { get; private set; } = MusicPhase.None;
 
-            if (_musicCurrent != null)
-            {
-                float fade = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(_musicElapsed / _musicFadeSeconds));
-                _musicCurrent.volume =
-                    _musicVolume * fade * _duckGain * AudioMath.DbToLinear(GainDb(SoundBus.Music));
-            }
+            /// <summary>What the playing voice's gain actually is, after fade and bus.</summary>
+            public float Volume => _current?.volume ?? 0f;
 
-            if (_musicLeaving != null)
+            /// <param name="def">The track for <paramref name="phase"/> — read only when the
+            /// phase has turned, and null both when it has not and when the phase has no track,
+            /// which are the same thing as far as this class is concerned: nothing new starts.</param>
+            /// <param name="gain">Everything outside the fade: bus, mute and any duck.</param>
+            public void Step(float deltaTime, MusicPhase phase,
+                AudioCatalogue.PhaseTrackDef? def, float gain)
             {
-                _musicLeavingElapsed += deltaTime;
-                float fade = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(_musicLeavingElapsed / _musicLeavingFadeSeconds));
-                _musicLeaving.volume = (1f - fade) * _musicLeavingVolume * _duckGain *
-                                       AudioMath.DbToLinear(GainDb(SoundBus.Music));
-                if (fade >= 1f)
+                if (phase != Phase)
                 {
-                    _musicLeaving.Stop();
-                    _musicLeaving.clip = null;
-                    _musicLeaving = null;
+                    Phase = phase;
+
+                    if (_current != null)
+                    {
+                        _leaving = _current;
+                        _leavingVolume = _volume;
+                        _leavingElapsed = 0f;
+                        _leavingFadeSeconds = _fadeSeconds;
+                    }
+
+                    if (def?.Clip != null)
+                    {
+                        AudioSource next = ReferenceEquals(_leaving, _a) ? _b : _a;
+                        next.clip = def.Clip;
+                        next.volume = 0f;
+                        next.Play();
+                        _current = next;
+                        _volume = def.Volume;
+                        _fadeSeconds = def.FadeSeconds;
+                        _elapsed = 0f;
+                    }
+                    else
+                    {
+                        _current = null;
+                    }
                 }
+
+                _elapsed += deltaTime;
+
+                if (_current != null)
+                {
+                    float fade = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(_elapsed / _fadeSeconds));
+                    _current.volume = _volume * fade * gain;
+                }
+
+                if (_leaving == null) return;
+
+                _leavingElapsed += deltaTime;
+                float out_ = Mathf.SmoothStep(0f, 1f,
+                    Mathf.Clamp01(_leavingElapsed / _leavingFadeSeconds));
+                _leaving.volume = (1f - out_) * _leavingVolume * gain;
+
+                if (out_ < 1f) return;
+
+                _leaving.Stop();
+                _leaving.clip = null;
+                _leaving = null;
             }
         }
 

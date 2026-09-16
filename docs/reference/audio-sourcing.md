@@ -23,6 +23,8 @@ putting a file of the same name in the same folder.
 | `pick.wav` | A pick striking stone — the mining stroke landing. A click and a short ring. | 0.2–0.8 s | no | mono |
 | `alert.wav` | The chime for "a colonist is starving". Heard over the music, which ducks for it. Must read as *attention*, not as alarm — it will fire in a quiet room. | 0.5–1.5 s | no | stereo |
 | `water.wav` | The bed for ponds, streams and the river. Flat and eventless — nothing may *happen* in it, or the event repeats every few seconds and becomes the only thing you hear. | 4–15 s | **yes, seamlessly** | mono |
+| `ambience-day.wav` | The sound of the world outdoors by day, under everything else: air, distance, birds. The floor of the mix — the thing you stop hearing and would notice the absence of. Eventless, like the water. | 10–60 s | **yes, seamlessly** | stereo |
+| `ambience-night.wav` | The same after dark, and a *different world* rather than a quieter one: the day's birds gone, something else started. It plays at a lower level than the day bed. | 10–60 s | **yes, seamlessly** | stereo |
 | `music-day.wav` | The daytime track. Plays from 06:00 to 19:00 game time, crossfading in over 3 s. | any | **yes, seamlessly** | stereo |
 | `music-night.wav` | The night-time track. 19:00 to 06:00, crossfading over 4 s. | any | **yes, seamlessly** | stereo |
 
@@ -42,7 +44,8 @@ times an hour. The game also varies pitch by ±7% and volume by ±14% on every p
 do not need to be dramatically different — different enough that the ear stops recognising the
 sample.
 
-`water`, `alert` and the music tracks do not take variants; one of each is right.
+`water`, `alert`, the two outdoor beds and the music tracks do not take variants; one of each is
+right.
 
 ## Why WAV, and not OGG or MP3
 
@@ -56,7 +59,7 @@ the lossless master.
 | Sound | Imported as | Why |
 |---|---|---|
 | chop, pick, alert | PCM, decompress on load | no decode at all at the instant it plays |
-| water | ADPCM, decompress on load | Unity's own answer for noisy sounds played in quantity — 3.5× smaller than PCM, near-free to decode |
+| water, ambience-day, ambience-night | ADPCM, decompress on load | Unity's own answer for noisy sounds played in quantity — 3.5× smaller than PCM, near-free to decode |
 | music | Vorbis, streamed from disc | decompressed Vorbis costs ~10× its compressed size in memory, and a track is long |
 
 ## Things that will sound wrong if they are not right
@@ -64,7 +67,7 @@ the lossless master.
 - **No leading silence on `chop` and `pick`.** The sound is fired on the exact frame the blade
   enters the wood, matched to the animation and the flying chips. 80 ms of silence at the head of
   the file is 80 ms of the axe visibly landing in silence.
-- **`water` and the music must loop seamlessly.** They play for hours. A click, a gap or a
+- **`water`, both outdoor beds and the music must loop seamlessly.** They play for hours. A click, a gap or a
   swelling at the loop point becomes a metronome. If you can only get a non-looping bed, say so
   and it can be cross-faded into itself in the tool.
 - **Normalise peaks, leave headroom.** Aim for peaks around −3 dBFS and do not master them loud.
@@ -72,7 +75,13 @@ the lossless master.
   already squashed cannot be turned back up.
 - **Mono for anything with a position.** `chop`, `pick` and `water` are placed in the world and a
   stereo file cannot be placed; the importer flattens them, and it flattens them better if they
-  were recorded mono in the first place. `alert` and the music are 2D and keep their stereo image.
+  were recorded mono in the first place. `alert`, the outdoor beds and the music are 2D and keep
+  their stereo image — the outdoor bed is the air itself rather than a thing in the air, and a
+  wide stereo field is most of what makes it read as everywhere rather than as over there.
+
+- **The two outdoor beds want to be the same *place*.** They crossfade into each other at dawn
+  and dusk over six and eight seconds, so a day bed recorded in woodland and a night bed recorded
+  on a moor will read as the map changing underfoot. Same location, twelve hours apart.
 
 ## Licensing
 
@@ -84,7 +93,7 @@ than discovered.
 
 ## Sounds the game does not ask for yet
 
-Only the six above are wired. These are the obvious next ones, and each is a catalogue row plus a
+Only the eight above are wired. These are the obvious next ones, and each is a catalogue row plus a
 file rather than new code — worth knowing if a pack you are buying happens to contain them:
 footsteps (by surface), a tree falling, rock collapsing, hauling and dropping items, a building
 finishing, eating, sleeping, UI clicks and panel opens, and weather.

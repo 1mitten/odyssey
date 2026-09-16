@@ -133,6 +133,10 @@ namespace Odyssey.EditorTools
                 mono: true, loadInBackground: false, Pick),
             new("alert", AudioCompressionFormat.PCM, AudioClipLoadType.DecompressOnLoad,
                 mono: false, loadInBackground: false, Alert),
+            new("ambience-day", AudioCompressionFormat.ADPCM, AudioClipLoadType.DecompressOnLoad,
+                mono: false, loadInBackground: false, () => Outdoor(12f, day: true)),
+            new("ambience-night", AudioCompressionFormat.ADPCM, AudioClipLoadType.DecompressOnLoad,
+                mono: false, loadInBackground: false, () => Outdoor(12f, day: false)),
             new("music-day", AudioCompressionFormat.Vorbis, AudioClipLoadType.Streaming,
                 mono: false, loadInBackground: true,
                 () => Music(24f, 130.81f, 196.00f, 329.63f, 0.11f)),
@@ -211,6 +215,50 @@ namespace Odyssey.EditorTools
             }
 
             return paths;
+        }
+
+        /// <summary>
+        /// The outdoor bed: moving air, and something living in it.
+        ///
+        /// <para>Day is a brighter band of air with a slow swell in it and a sparse, high,
+        /// three-note figure standing in for birds. Night drops the air an octave, takes the
+        /// birds away and puts a dry pulsing band where the insects are. Neither is remotely
+        /// convincing, and neither is meant to be: what they have to establish is that the world
+        /// has a floor of sound, that the floor is different after dark, and that the crossfade
+        /// between them reads — all of which can be judged from a placeholder, and none of which
+        /// can be judged from silence.</para>
+        ///
+        /// <para>Looped by crossfading the tail into the head, the same way the water bed is, so
+        /// there is no seam to hear on a bed that plays for hours.</para>
+        /// </summary>
+        static float[] Outdoor(float seconds, bool day)
+        {
+            int count = (int)(seconds * Rate);
+            var random = new System.Random(day ? 8_112 : 8_113);
+
+            float[] air = NoiseBand(count, random, day ? 900f : 420f, day ? 0.055f : 0.040f);
+            float[] life = NoiseBand(count, random, day ? 2_600f : 5_200f, day ? 0.020f : 0.026f);
+
+            var samples = new float[count];
+            for (int i = 0; i < count; i++)
+            {
+                float t = (float)i / Rate;
+
+                // The air breathes: a long swell, and a second one out of step with it, so the
+                // pattern does not land on the loop point.
+                float breath = 0.72f + 0.28f * Mathf.Sin(2f * Mathf.PI * t / 9.4f)
+                                     * Mathf.Cos(2f * Mathf.PI * t / 5.1f);
+
+                // What is alive in it. By day a sparse chirp that is mostly not there; by night a
+                // steady pulse, because that is exactly the difference between birds and insects.
+                float pulse = day
+                    ? Mathf.Max(0f, Mathf.Sin(2f * Mathf.PI * t / 3.7f) - 0.86f) * 7f
+                    : 0.5f + 0.5f * Mathf.Sin(2f * Mathf.PI * t * 11f);
+
+                samples[i] = air[i] * breath + life[i] * pulse;
+            }
+
+            return CrossfadeTail(samples, 1.2f);
         }
 
         /// <summary>White noise through a one-pole lowpass — the workhorse of every placeholder
@@ -431,17 +479,37 @@ namespace Odyssey.EditorTools
                 Volume = 0.75f, FadeSeconds = 2.5f, MinDistance = 30f, MaxDistance = 110f,
             });
 
+            // The outdoor bed. Quieter than the music by design: it is the floor of the mix,
+            // the thing you stop hearing and would notice the absence of. Night sits lower
+            // still — the world is quieter after dark, and the bed should say so before any
+            // individual sound does.
+            catalogue.Outdoor.Clear();
+            catalogue.Outdoor.AddRange(new[]
+            {
+                new AudioCatalogue.PhaseTrackDef
+                {
+                    Phase = MusicPhase.Day, Clip = Require("ambience-day"),
+                    Volume = 0.34f, FadeSeconds = 6f,
+                },
+                new AudioCatalogue.PhaseTrackDef
+                {
+                    Phase = MusicPhase.Night, Clip = Require("ambience-night"),
+                    Volume = 0.26f, FadeSeconds = 8f,
+                },
+            });
+
             catalogue.Music.Clear();
             catalogue.Music.AddRange(new[]
             {
-                new AudioCatalogue.MusicDef { Phase = MusicPhase.Day, Clip = Require("music-day"), Volume = 0.5f, FadeSeconds = 3f },
-                new AudioCatalogue.MusicDef { Phase = MusicPhase.Night, Clip = Require("music-night"), Volume = 0.42f, FadeSeconds = 4f },
+                new AudioCatalogue.PhaseTrackDef { Phase = MusicPhase.Day, Clip = Require("music-day"), Volume = 0.5f, FadeSeconds = 3f },
+                new AudioCatalogue.PhaseTrackDef { Phase = MusicPhase.Night, Clip = Require("music-night"), Volume = 0.42f, FadeSeconds = 4f },
             });
 
             EditorUtility.SetDirty(catalogue);
             AssetDatabase.SaveAssets();
             Debug.Log($"[AudioSetup] catalogue at {CataloguePath}: {catalogue.Sounds.Count} sounds, " +
-                      $"{catalogue.Ambience.Count} beds, {catalogue.Music.Count} tracks.");
+                      $"{catalogue.Ambience.Count} beds, {catalogue.Outdoor.Count} outdoor, " +
+                      $"{catalogue.Music.Count} tracks.");
         }
 
         // ---- plumbing ----

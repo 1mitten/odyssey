@@ -34,11 +34,12 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(audio, Is.Not.Null,
                     "the composition root builds the audio pool with the world, not on demand");
 
-                // Sixteen voices and the two music channels, warm on construction: a pool built
-                // lazily is a pool whose first sound pays for it. Each sits on a child of its
-                // own, because a source is spatialised from the transform it shares.
+                // Sixteen voices, the two music channels and the two outdoor-bed channels, warm
+                // on construction: a pool built lazily is a pool whose first sound pays for it.
+                // Each sits on a child of its own, because a source is spatialised from the
+                // transform it shares.
                 Assert.That(audio!.GetComponentsInChildren<AudioSource>(includeInactive: true).Length,
-                    Is.EqualTo(18),
+                    Is.EqualTo(20),
                     "the pool exists before anything asks it for a sound");
                 Assert.That(audio.GetComponents<AudioSource>().Length, Is.Zero,
                     "no two voices share a transform, or they would share a position");

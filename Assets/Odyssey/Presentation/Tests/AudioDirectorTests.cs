@@ -28,6 +28,8 @@ namespace Odyssey.Tests.Presentation
         AudioClip _pick = null!;
         AudioClip _chime = null!;
         AudioClip _water = null!;
+        AudioClip _outdoorDay = null!;
+        AudioClip _outdoorNight = null!;
         AudioClip _day = null!;
         AudioClip _night = null!;
 
@@ -47,6 +49,8 @@ namespace Odyssey.Tests.Presentation
             _pick = AudioClip.Create("pick", 4_410, 1, 44_100, false);
             _chime = AudioClip.Create("chime", 22_050, 1, 44_100, false);
             _water = AudioClip.Create("water", 44_100, 1, 44_100, false);
+            _outdoorDay = AudioClip.Create("outdoor-day", 44_100, 1, 44_100, false);
+            _outdoorNight = AudioClip.Create("outdoor-night", 44_100, 1, 44_100, false);
             _day = AudioClip.Create("day", 441_000, 1, 44_100, false);
             _night = AudioClip.Create("night", 441_000, 1, 44_100, false);
 
@@ -76,10 +80,21 @@ namespace Odyssey.Tests.Presentation
             {
                 Id = SoundIds.AmbienceWater, Clip = _water, Volume = 0.75f, FadeSeconds = 0.5f,
             });
+            _catalogue.Outdoor.AddRange(new[]
+            {
+                new AudioCatalogue.PhaseTrackDef
+                {
+                    Phase = MusicPhase.Day, Clip = _outdoorDay, Volume = 0.34f, FadeSeconds = 1f,
+                },
+                new AudioCatalogue.PhaseTrackDef
+                {
+                    Phase = MusicPhase.Night, Clip = _outdoorNight, Volume = 0.26f, FadeSeconds = 1f,
+                },
+            });
             _catalogue.Music.AddRange(new[]
             {
-                new AudioCatalogue.MusicDef { Phase = MusicPhase.Day, Clip = _day, Volume = 0.5f, FadeSeconds = 1f },
-                new AudioCatalogue.MusicDef { Phase = MusicPhase.Night, Clip = _night, Volume = 0.5f, FadeSeconds = 1f },
+                new AudioCatalogue.PhaseTrackDef { Phase = MusicPhase.Day, Clip = _day, Volume = 0.5f, FadeSeconds = 1f },
+                new AudioCatalogue.PhaseTrackDef { Phase = MusicPhase.Night, Clip = _night, Volume = 0.5f, FadeSeconds = 1f },
             });
         }
 
@@ -90,8 +105,12 @@ namespace Odyssey.Tests.Presentation
             Object.DestroyImmediate(_catalogue);
         }
 
+        /// <summary>The surface is layer 1, so layer 0 is underground and the two can be told
+        /// apart. <see cref="Advance"/> drives layer 1 unless a test says otherwise.</summary>
+        const int Surface = 1;
+
         AudioDirector Make(ITerrainLookup? terrain = null) =>
-            new(_catalogue, terrain, new GridSize(48, 48, 2), _root.transform, 0);
+            new(_catalogue, terrain, new GridSize(48, 48, 2), _root.transform, 0, Surface);
 
         static WorldSnapshot Frame(long tick = 0, params PawnView[] pawns)
         {
@@ -102,11 +121,11 @@ namespace Odyssey.Tests.Presentation
         }
 
         static void Advance(AudioDirector audio, float seconds, float step = 0.05f,
-            long tick = 0, Vector3? focus = null)
+            long tick = 0, Vector3? focus = null, int layer = Surface)
         {
             int steps = Mathf.CeilToInt(seconds / step);
             for (int i = 0; i < steps; i++)
-                audio.Sync(step, Frame(tick), Vector3.zero, focus ?? Vector3.zero, 0);
+                audio.Sync(step, Frame(tick), Vector3.zero, focus ?? Vector3.zero, layer);
         }
 
         /// <summary>The voice playing <paramref name="clip"/>, if any: the test's ear.</summary>
@@ -311,6 +330,65 @@ namespace Odyssey.Tests.Presentation
             Assert.That(VoicePlaying(_night), Is.Not.Null,
                 "a second and a half into a four-second fade, the night track is still carrying");
             Assert.That(VoicePlaying(_night)!.volume, Is.GreaterThan(0f));
+        }
+
+        [Test]
+        public void TheWorldHasAFloorOfSoundByDayAndADifferentOneAfterDark()
+        {
+            using var audio = Make();
+
+            Advance(audio, 3f, tick: DayTick);
+            Assert.That(audio.OutdoorPhase, Is.EqualTo(MusicPhase.Day));
+            Assert.That(audio.OutdoorLevel, Is.GreaterThan(0.2f),
+                "standing outdoors in the day is an audible thing");
+            Assert.That(VoicePlaying(_outdoorDay), Is.Not.Null);
+
+            // Dusk. A different world rather than a quieter one, and crossfaded rather than cut.
+            Advance(audio, 0.4f, tick: NightTick);
+            int bedsUp = 0;
+            foreach (AudioSource voice in Playing())
+                if (voice.clip == _outdoorDay || voice.clip == _outdoorNight) bedsUp++;
+            Assert.That(bedsUp, Is.EqualTo(2), "mid-crossfade both beds carry: no gap at dusk");
+
+            Advance(audio, 4f, tick: NightTick);
+            Assert.That(audio.OutdoorPhase, Is.EqualTo(MusicPhase.Night));
+            Assert.That(VoicePlaying(_outdoorDay), Is.Null, "the day has gone and let go of its clip");
+            Assert.That(audio.OutdoorLevel, Is.GreaterThan(0.1f));
+        }
+
+        [Test]
+        public void ThereIsNoOutdoorsUnderground()
+        {
+            using var audio = Make();
+
+            Advance(audio, 3f, tick: DayTick);
+            Assume.That(audio.OutdoorLevel, Is.GreaterThan(0.2f), "the bed is up at the surface");
+
+            // Down the shaft. The sky does not follow.
+            Advance(audio, 4f, tick: DayTick, layer: Surface - 1);
+            Assert.That(audio.OutdoorPhase, Is.EqualTo(MusicPhase.None));
+            Assert.That(audio.OutdoorLevel, Is.EqualTo(0f));
+
+            // And back up into it.
+            Advance(audio, 4f, tick: DayTick);
+            Assert.That(audio.OutdoorPhase, Is.EqualTo(MusicPhase.Day));
+            Assert.That(audio.OutdoorLevel, Is.GreaterThan(0.2f));
+        }
+
+        [Test]
+        public void TheOutdoorBedRidesTheAmbienceFaderAndNotTheMusicOne()
+        {
+            using var audio = Make();
+            Advance(audio, 3f, tick: DayTick);
+            float music = audio.MusicVolume;
+            Assume.That(audio.OutdoorLevel, Is.GreaterThan(0.2f));
+
+            audio.SetBusDb(SoundBus.Ambience, AudioMath.SilenceDb);
+            Advance(audio, 0.1f, tick: DayTick);
+
+            Assert.That(audio.OutdoorLevel, Is.EqualTo(0f), "the ambience fader owns the bed");
+            Assert.That(audio.MusicVolume, Is.EqualTo(music).Within(0.001f),
+                "and the music is not on that fader");
         }
 
         [Test]

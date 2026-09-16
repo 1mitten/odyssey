@@ -65,3 +65,12 @@ MonoBehaviour:
     Clip: {fileID: 8300000, guid: 4d3209ed8b9c6ca429fbe2d21e95ebf9, type: 3}
     Volume: 0.42
     FadeSeconds: 4
+  Outdoor:
+  - Phase: 1
+    Clip: {fileID: 8300000, guid: 146226517b3d5ac4588dee666e9c96fd, type: 3}
+    Volume: 0.34
+    FadeSeconds: 6
+  - Phase: 2
+    Clip: {fileID: 8300000, guid: 087c085ebb2dc43469279a9aab0b7f80, type: 3}
+    Volume: 0.26
+    FadeSeconds: 8

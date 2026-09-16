@@ -55,6 +55,16 @@ the camera orbits it. The probe reads the active layer only — water under the 
 the player has descended into is not heard through the floor. Layer-aware from the first
 commit, per the brief's standing rule.
 
+**Two kinds of ambience, because there are two questions.** The water bed answers *how much of
+this is near me* — measured, positioned, scaled. The outdoor bed answers *where am I*, which is
+not a quantity: it plays flat whenever the slice is at or above the surface, is silent below it,
+and changes with the clock rather than with the terrain. One track per phase, crossfaded at dawn
+and dusk, 2D because it is the air itself and not a thing in the air. It rides the Ambience bus
+with the water and sits under everything as the floor of the mix — day at 0.34, night at 0.26,
+the world being quieter after dark. Music and the outdoor bed are the same shape of thing (a loop
+per phase, ping-ponged across two voices, each track keeping its own fade length), so they are one
+class, `PhaseLoop`, used twice.
+
 **Music and alerts are 2D and ride their own buses.** Music crossfades between day and night
 tracks from the tick, through `GameClock` — the one place ticks become hours — with two
 ping-ponged voices so a phase change is a crossfade and never a gap. Alerts chime 2D (an alert
@@ -101,6 +111,20 @@ gives the same audible result at sixteen voices (research §4).
 **Foley-first (footsteps, UI clicks, everything audible).** Scope. The framework covers the
 three layers the request named — positional one-shots, environmental beds, music and alerts —
 and a new one-shot is a catalogue row plus an id; the rest is content, not architecture.
+
+## What it costs, measured
+
+`AudioCostTests` runs the audio frame on the played board and reports it. A full `Sync` — the
+ambience probe's 225 samples, both phase loops, the duck and the alert watch — costs **0.0035 ms**
+a frame. Forty one-shots offered in a single frame, four times the colony the slice will ever run,
+cost **0.005 ms** against a 5 ms budget.
+
+The second number was **0.15 ms before the director indexed the catalogue by id**, and it grew
+with the size of the table: `AudioCatalogue.Find` walked the list comparing strings, which is
+nothing at three sounds and 3% of a frame at the few hundred real audio brings. The index, a
+cooldown keyed by the def rather than its id, and the rolloff curve moved from every play to
+construction took it to a price that does not move with the catalogue at all. The test holds a
+0.05 ms budget so that cannot quietly come back.
 
 ## Consequences
 
