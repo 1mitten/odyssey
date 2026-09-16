@@ -169,6 +169,26 @@ namespace Odyssey.Presentation.Rendering
                 return;
             }
 
+            if (_model.IsEarth(index))
+            {
+                // Earth is a block with an uneven top, and — only where a side of it can be seen —
+                // coursed walls as well. The two are different meshes and so different buckets, so
+                // the question is asked per cell rather than paid for everywhere: on a flat board
+                // a surface cell's four same-layer neighbours are solid too and nothing but its
+                // top is ever visible. Sides appear at terrace risers and at the walls of a
+                // cutting, which are a small fraction of what is drawn and exactly the places the
+                // ruled 3 m rectangle was the fault.
+                //
+                // The turn is composed on the left of the module's own local transform, for the
+                // reason RockLook.Yaw gives: that local is a vertical shift and a scale equal in x
+                // and z, and a rotation about the vertical commutes with both, so the block turns
+                // about its own axis and still fills its cell exactly.
+                int variant = GroundLook.Variant(x, z, y);
+                Matrix4x4 turned = at * Matrix4x4.Rotate(Quaternion.Euler(0f, GroundLook.Yaw(x, z, y), 0f));
+                AddBody(batch, _model.EarthModule(index, variant, ShowsAVerticalFace(x, z, y)), tint, turned);
+                return;
+            }
+
             AddBody(batch, module, tint, at);
         }
 
@@ -256,6 +276,14 @@ namespace Odyssey.Presentation.Rendering
             // Tufts stand on top of the solid cell, not inside it.
             Vector3 surface = CellMetrics.FloorCentre(x, z, y) + Vector3.up * CellMetrics.SizeY;
 
+            // Which top this cell wears, and which way round, so a tuft can be set on the surface
+            // that is actually drawn rather than on the flat one that used to be. The cell's
+            // ripple is at most 12 cm, which sounds ignorable and is not: a tuft is about half a
+            // metre, so a quarter of one hanging in the air is plainly wrong, and the same again
+            // buried reads as a bald patch.
+            int groundVariant = GroundLook.Variant(x, z, y);
+            Quaternion untwist = Quaternion.Euler(0f, -GroundLook.Yaw(x, z, y), 0f);
+
             // Foliage, not terrain. Tinting a tuft the way the ground beneath it is tinted turned
             // a meadow into dark teal reeds; TintCode.FoliageBase says why.
             //
@@ -275,8 +303,17 @@ namespace Odyssey.Presentation.Rendering
                 // Lifted at the tuft's own position rather than the cell's, because the cell is
                 // tilted: a tuft near the low corner of a sloping cell would otherwise float, and
                 // one at the high corner would be buried to its neck.
+                //
+                // And set on the cell's own ripple as well as on the board's roll — two separate
+                // shapes, asked separately. The offset is turned back through the block's bearing
+                // first, because the mesh is rotated by the instance matrix and its ripple turns
+                // with it; sampling the unturned mesh at a turned position puts the tuft on the
+                // wrong corner of the cell, which is a subtler wrong than being on no corner.
+                Vector3 local = untwist * new Vector3(offsetX, 0f, offsetZ);
+                float ripple = GroundMesh.HeightAtLocal(groundVariant, local.x, local.z) * CellMetrics.SizeY;
+
                 Vector3 at = GroundRelief.Lift(
-                    surface + new Vector3(offsetX * CellMetrics.SizeXZ, 0f, offsetZ * CellMetrics.SizeXZ));
+                    surface + new Vector3(offsetX * CellMetrics.SizeXZ, ripple, offsetZ * CellMetrics.SizeXZ));
 
                 AddBody(batch, module, tint, Matrix4x4.TRS(
                     at, Quaternion.Euler(0f, yaw, 0f), new Vector3(scale, scale, scale)));
@@ -351,7 +388,16 @@ namespace Odyssey.Presentation.Rendering
             return true;
         }
 
-        bool HasExposedFace(int index, int x, int z, int y)
+        /// <summary>
+        /// Can any of this cell's four vertical faces be seen — is it a terrace riser, the wall of
+        /// a cutting, or the side of an outcrop?
+        ///
+        /// <para>The horizontal half of <see cref="HasExposedFace"/>, split out because earth pays
+        /// for coursed walls only where it has a wall to show. The world boundary counts as solid
+        /// here for the same reason it does there: it is not an exposed face, and treating it as
+        /// one drew a cross-section wall round the whole perimeter of the map.</para>
+        /// </summary>
+        bool ShowsAVerticalFace(int x, int z, int y)
         {
             var size = _model.Size;
             for (int dir = 0; dir < Directions.Count; dir++)
@@ -360,6 +406,13 @@ namespace Odyssey.Presentation.Rendering
                 if (!size.Contains(nx, nz, y)) continue;
                 if (!_model.IsSolid(size.Index(nx, nz, y))) return true;
             }
+            return false;
+        }
+
+        bool HasExposedFace(int index, int x, int z, int y)
+        {
+            var size = _model.Size;
+            if (ShowsAVerticalFace(x, z, y)) return true;
             if (y + 1 >= size.SizeY) return true;
             if (!_model.IsSolid(index + size.LayerStride)) return true;
             // Downwards only matters at the very bottom, which nothing can see.
