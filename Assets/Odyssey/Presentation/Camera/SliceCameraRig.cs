@@ -61,6 +61,28 @@ namespace Odyssey.Presentation.CameraRig
         /// <summary>Raised when the player asks for a speed: 0 paused, 1 normal, 2 fast, 3 very fast.</summary>
         public event Action<int>? GameSpeedRequested;
 
+        /// <summary>
+        /// Raised the instant the selection changes — a pick that hit, a pick that missed, or a
+        /// layer change clearing it.
+        ///
+        /// An event and not a value to poll, because polling had a race in it. The readout used to
+        /// read <see cref="Selection"/> in its own <c>Update</c>, and Unity does not order two
+        /// components' Updates: on the click frame it could run first, see last frame's cell, and
+        /// resolve the wrong colonist or item — so the cursor drew one tier, then snapped to the
+        /// right one a frame later. A handler runs inside the pick, so by the time anything draws
+        /// the answer is already known.
+        /// </summary>
+        public event Action<CellRef?>? SelectionChanged;
+
+        void SetSelection(CellRef? cell)
+        {
+            bool same = cell.HasValue == Selection.HasValue
+                        && (!cell.HasValue || cell.Value == Selection!.Value);
+            Selection = cell;
+            // Re-clicking the same cell still announces: the thing standing in it may have moved.
+            if (!same || cell.HasValue) SelectionChanged?.Invoke(cell);
+        }
+
         public void Bind(WorldRenderModel model, ChunkRenderer renderer, int startLayer)
         {
             _model = model;
@@ -178,7 +200,7 @@ namespace Odyssey.Presentation.CameraRig
             int next = Mathf.Clamp(ActiveLayer + delta, 0, _model.Size.SizeY - 1);
             if (next == ActiveLayer) return;
             ActiveLayer = next;
-            Selection = null;
+            SetSelection(null);
             ActiveLayerChanged?.Invoke(ActiveLayer);
         }
 
@@ -217,8 +239,8 @@ namespace Odyssey.Presentation.CameraRig
             if (_model == null) return;
             var camera = GetComponent<UnityEngine.Camera>();
             Ray ray = camera.ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
-            if (SlicePicker.Pick(ray, _model, ActiveLayer, out CellRef cell)) Selection = cell;
-            else Selection = null;
+            if (SlicePicker.Pick(ray, _model, ActiveLayer, out CellRef cell)) SetSelection(cell);
+            else SetSelection(null);
         }
 
         /// <summary>

@@ -69,29 +69,30 @@ namespace Odyssey.Presentation.Bootstrap
         {
             _bootstrap = GetComponent<OdysseyBootstrap>();
             _rig = _bootstrap != null ? _bootstrap.cameraRig : null;
+            if (_rig != null) _rig.SelectionChanged += OnSelectionChanged;
         }
 
-        CellRef? _lastPicked;
-        bool _hasLastPicked;
+        void OnDestroy()
+        {
+            if (_rig != null) _rig.SelectionChanged -= OnSelectionChanged;
+        }
 
-        void Update()
+        /// <summary>
+        /// Resolve what a pick landed on, inside the pick.
+        ///
+        /// Deliberately no input handling here: the camera rig owns picking through the Input
+        /// System, and reading the mouse again from this component meant the legacy Input class,
+        /// which does nothing under the new backend. This used to poll the rig's selection from
+        /// its own Update instead, and that had its own fault — Unity does not order two
+        /// components' Updates, so on the click frame this could run first, resolve against last
+        /// frame's cell, and the cursor would draw one tier and then snap to the right one. A
+        /// handler on the rig's event runs during the pick itself; the answer exists before any
+        /// LateUpdate draws.
+        /// </summary>
+        void OnSelectionChanged(CellRef? picked)
         {
             var world = _bootstrap?.World;
-            if (world == null || _rig == null) return;
-
-            // Deliberately no input handling here. The camera rig owns picking and already does it
-            // through the new Input System; reading the mouse again from this component meant
-            // using the legacy Input class, which does nothing at all when the project is set to
-            // the new backend — clicks appeared to be ignored. Watching the rig's selection
-            // instead removes the input dependency and the frame-ordering race with it.
-            CellRef? picked = _rig.Selection;
-            bool changed = !_hasLastPicked
-                           || picked.HasValue != _lastPicked.HasValue
-                           || (picked.HasValue && _lastPicked.HasValue && picked.Value != _lastPicked.Value);
-            if (!changed) return;
-
-            _lastPicked = picked;
-            _hasLastPicked = true;
+            if (world == null) return;
 
             // The picker cannot return a cell above the active layer, so a colonist upstairs can
             // never be selected through the floor they are standing on.

@@ -191,6 +191,9 @@ namespace Odyssey.Presentation.Bootstrap
                 // above groundLayer, and RenderActors culls anything above the active layer -
                 // which meant every colonist was culled every frame while the terrain drew fine.
                 cameraRig.Bind(_model, _renderer, outcome.StartCell.Y);
+                // The composition root draws every cursor tier; the rig's own cell cube is off from
+                // the first frame, not from the first LateUpdate that happens to say so.
+                cameraRig.SuppressCellCursor = true;
                 cameraRig.ActiveLayerChanged += OnActiveLayerChanged;
                 cameraRig.GameSpeedRequested += OnGameSpeedRequested;
                 // Open on the colony, not on the whole map: see SliceCameraRig.FocusOn.
