@@ -54,6 +54,7 @@ namespace Odyssey.Presentation.Rendering
             {
                 int index = size.Index(x, z, y);
                 EmitTerrain(batch, index, x, z, y);
+                EmitBank(batch, index, x, z, y);
                 EmitScatter(batch, index, x, z, y);
                 EmitFloor(batch, index, x, z, y);
                 EmitEdifice(batch, index, x, z, y);
@@ -73,22 +74,55 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         const float BoundsPadding = 2f;
 
+        /// <summary>
+        /// How far the relief can carry a cell out of its own layer, in metres.
+        ///
+        /// Two parts, and leaving out the second is the easy mistake: the cell is lifted by up to
+        /// the amplitude, and then *tilted*, so its high corner rises a further half-diagonal times
+        /// the steepest slope the field can reach. Derived rather than folded into the existing
+        /// padding on the grounds that 2 m happens to cover it, because the day somebody raises the
+        /// amplitude that coincidence becomes the culling bug this padding already exists to stop.
+        /// Only Y moves: a shear shifts nothing horizontally.
+        /// </summary>
+        static float ReliefReach()
+        {
+            float amplitude = Mathf.Abs(GroundRelief.Amplitude);
+            if (amplitude == 0f) return 0f;
+            return amplitude + GroundRelief.MaxSlope(amplitude) * CellMetrics.SizeXZ;
+        }
+
         static Bounds ChunkWorldBounds(int x0, int z0, int y, int x1, int z1)
         {
+            float relief = ReliefReach();
             var bounds = new Bounds();
             bounds.SetMinMax(
                 new Vector3(
                     x0 * CellMetrics.SizeXZ - BoundsPadding,
-                    y * CellMetrics.SizeY - BoundsPadding,
+                    y * CellMetrics.SizeY - BoundsPadding - relief,
                     z0 * CellMetrics.SizeXZ - BoundsPadding),
                 new Vector3(
                     x1 * CellMetrics.SizeXZ + BoundsPadding,
-                    (y + 1) * CellMetrics.SizeY + BoundsPadding,
+                    (y + 1) * CellMetrics.SizeY + BoundsPadding + relief,
                     z1 * CellMetrics.SizeXZ + BoundsPadding));
             return bounds;
         }
 
         // --------------------------------------------------------------- cells
+
+        /// <summary>
+        /// How far up its own cell a water surface is drawn, as a fraction of the cell height.
+        ///
+        /// Both depths use the same number, and that is the point: a body of water has one
+        /// level. Shallow and deep sit side by side in the same pond, so drawing them at
+        /// different heights would put a step in the middle of the surface. Depth is told by
+        /// colour and opacity instead — which is also why the channel is one cell deep whatever
+        /// the depth, since a two-layer deep core would put neighbouring surface cells two layers
+        /// apart and break the invariant that keeps the board walkable.
+        ///
+        /// Just under a full cell, so the water nearly fills the channel it was cut into and a
+        /// bank reads as a low bank rather than as the lip of a dry ditch.
+        /// </summary>
+        public static float WaterSurface { get; set; } = 0.72f;
 
         void EmitTerrain(ChunkBatch batch, int index, int x, int z, int y)
         {
@@ -98,8 +132,17 @@ namespace Odyssey.Presentation.Rendering
             int module = _model.TerrainModule(index);
             if (module == 0) return;
 
-            int tint = TintCode.Terrain(terrain);
-            Matrix4x4 at = Matrix4x4.Translate(CellMetrics.FloorCentre(x, z, y));
+            if (NaturalContent.IsWater(terrain))
+            {
+                EmitWater(batch, module, terrain, x, z, y);
+                return;
+            }
+
+            int tint = TintCode.Daylit(TintCode.Terrain(terrain), OpenToTheSky(index, y));
+            // Terrain is the ground, so it is the one thing that is draped rather than lifted: the
+            // cell is tilted onto the tangent plane of the relief field so its top face follows
+            // the slope. Everything built or standing on it is lifted instead - see GroundRelief.
+            Matrix4x4 at = GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y));
 
             if (!_model.IsSolid(index))
             {
@@ -110,7 +153,102 @@ namespace Odyssey.Presentation.Rendering
             }
 
             if (!HasExposedFace(index, x, z, y)) return;
+
+            if (_model.IsStone(index))
+            {
+                // Stone is drawn as one of several chipped lumps, turned to one of four bearings.
+                // Both come from a hash of the cell, so a cliff face does not rearrange itself
+                // every time somebody digs a cell in the same chunk — see RockLook.
+                //
+                // The turn is composed on the left of the module's own local transform, which is
+                // a vertical shift and a scale equal in x and z; a rotation about the vertical
+                // commutes with both, so the lump turns about its own axis and still fills its
+                // cell exactly. Three quarters of the variety for no extra mesh and no extra draw.
+                int variant = RockLook.Variant(x, z, y);
+                Matrix4x4 turned = at * Matrix4x4.Rotate(Quaternion.Euler(0f, RockLook.Yaw(x, z, y), 0f));
+                AddBody(batch, _model.StoneModule(index, variant), tint, turned);
+                return;
+            }
+
+            if (Earth && _model.IsEarth(index))
+            {
+                // Earth is a block with an uneven top, and — only where a side of it can be seen —
+                // coursed walls as well. The two are different meshes and so different buckets, so
+                // the question is asked per cell rather than paid for everywhere: on a flat board
+                // a surface cell's four same-layer neighbours are solid too and nothing but its
+                // top is ever visible. Sides appear at terrace risers and at the walls of a
+                // cutting, which are a small fraction of what is drawn and exactly the places the
+                // ruled 3 m rectangle was the fault.
+                //
+                // The turn is composed on the left of the module's own local transform, for the
+                // reason RockLook.Yaw gives: that local is a vertical shift and a scale equal in x
+                // and z, and a rotation about the vertical commutes with both, so the block turns
+                // about its own axis and still fills its cell exactly.
+                int variant = GroundLook.Variant(x, z, y);
+                int exposed = ExposedSides(x, z, y);
+
+                // A cell with nothing to show takes the cheap block and a free bearing; a cell with
+                // a face takes the mesh cut for its own pattern of exposed sides, and spends the
+                // bearing turning that pattern onto the sides that are really open. Five meshes
+                // then cover all sixteen possibilities, which is the whole reason the chamfer is
+                // affordable — see GroundMesh.ExposurePatterns.
+                float yaw;
+                int earth;
+                if (exposed == 0)
+                {
+                    yaw = GroundLook.Yaw(x, z, y);
+                    earth = _model.EarthModule(index, variant, showsAFace: false);
+                }
+                else
+                {
+                    int canonical = GroundMesh.CanonicalExposure(exposed, out int rotation);
+                    yaw = 90f * rotation;
+                    earth = _model.EarthFaceModule(index, variant, canonical);
+                }
+
+                AddBody(batch, earth, tint, at * Matrix4x4.Rotate(Quaternion.Euler(0f, yaw, 0f)));
+                return;
+            }
+
             AddBody(batch, module, tint, at);
+        }
+
+        /// <summary>
+        /// A water surface: one tile, draped onto the relief like any other ground so that a pond
+        /// on a rolling board does not cut across it, and raised inside its cell to
+        /// <see cref="WaterSurface"/>.
+        ///
+        /// It goes in the roof list with the rest of the ground, so a storey above the slice
+        /// drops its water along with its floor, and it carries a water tint code so the renderer
+        /// hands it <c>Odyssey/Water</c> rather than tinting a ground tile blue. No catalogue
+        /// entry is wanted and none is looked for: water has a shader of its own, so a clone
+        /// without the licensed packs draws exactly the same water as a machine with them.
+        /// </summary>
+        void EmitWater(ChunkBatch batch, int module, ushort terrain, int x, int z, int y)
+        {
+            Vector3 centre = CellMetrics.FloorCentre(x, z, y) + Vector3.up * (CellMetrics.SizeY * WaterSurface);
+
+            // **Draped, like the ground it lies in** — and this was got wrong twice, so the
+            // reasoning is here rather than in a commit nobody will find.
+            //
+            // Water was first draped, then switched to a plain lift on the argument that a water
+            // surface is level. True of water, false of *tiles*: a lifted tile is flat and takes
+            // its height from its own centre, so two neighbours sit at heights differing by the
+            // first-order slope of the relief across a whole cell. On a low, near-horizontal
+            // camera those little steps open into slivers you can see the riverbed through, which
+            // is what the board looked like after the change.
+            //
+            // A draped tile is sheared onto the tangent plane of the field, so neighbours
+            // disagree only by the *curvature* over a cell — second order, and invisible. It is
+            // the same argument `06-rendering-and-camera.md` makes for the surround, where tiles
+            // had to be halved twice because the disagreement grows as the square of the width.
+            //
+            // The dark grid that prompted the switch was never the shear at all. It was the six
+            // faces of the box this tile is drawn from, blending over each other at every shared
+            // edge, and the shader clips all but the top one.
+            AddRoof(batch, module,
+                TintCode.Daylit(TintCode.Water(terrain), OpenToTheSky(_model.Index(x, z, y), y)),
+                GroundRelief.Drape(centre));
         }
 
         // ------------------------------------------------------------- scatter
@@ -159,22 +297,55 @@ namespace Odyssey.Presentation.Rendering
             // Tufts stand on top of the solid cell, not inside it.
             Vector3 surface = CellMetrics.FloorCentre(x, z, y) + Vector3.up * CellMetrics.SizeY;
 
+            // Which top this cell wears, and which way round, so a tuft can be set on the surface
+            // that is actually drawn rather than on the flat one that used to be. The cell's
+            // ripple is at most 12 cm, which sounds ignorable and is not: a tuft is about half a
+            // metre, so a quarter of one hanging in the air is plainly wrong, and the same again
+            // buried reads as a bald patch.
+            int groundVariant = GroundLook.Variant(x, z, y);
+            Quaternion untwist = Quaternion.Euler(0f, -GroundLook.Yaw(x, z, y), 0f);
+
             // Foliage, not terrain. Tinting a tuft the way the ground beneath it is tinted turned
             // a meadow into dark teal reeds; TintCode.FoliageBase says why.
-            const int tint = TintCode.FoliageBase;
+            //
+            // Daylit on the same terms as the ground it stands in, and it has to be asked rather
+            // than assumed: a tuft that kept dimming while the terrace under it stopped would be
+            // the same fault, a layer smaller and much harder to see.
+            bool daylit = OpenToTheSky(index, y);
 
             for (int slot = 0; slot < count; slot++)
             {
                 GroundScatter.Placement(x, z, slot,
                     out float offsetX, out float offsetZ, out float yaw, out float scale);
 
-                int module = _scatterModules[
-                    GroundScatter.VariantFor(x, z, slot, _scatterModules.Length)];
+                int which = GroundScatter.VariantFor(x, z, slot, _scatterModules.Length);
+                int module = _scatterModules[which];
+
+                // The tint follows the clump mesh rather than the tuft, and that is what makes a
+                // varied meadow free: a module is already its own instancing bucket, so three
+                // tints across three modules costs exactly what one tint across three modules did.
+                // Choosing per tuft would multiply the buckets by the number of tints, on the
+                // heaviest instanced thing in the world.
+                int tint = TintCode.Daylit(
+                    TintCode.Foliage(which % StuffPalette.FoliageTintCount), daylit);
+
+                // Lifted at the tuft's own position rather than the cell's, because the cell is
+                // tilted: a tuft near the low corner of a sloping cell would otherwise float, and
+                // one at the high corner would be buried to its neck.
+                //
+                // And set on the cell's own ripple as well as on the board's roll — two separate
+                // shapes, asked separately. The offset is turned back through the block's bearing
+                // first, because the mesh is rotated by the instance matrix and its ripple turns
+                // with it; sampling the unturned mesh at a turned position puts the tuft on the
+                // wrong corner of the cell, which is a subtler wrong than being on no corner.
+                Vector3 local = untwist * new Vector3(offsetX, 0f, offsetZ);
+                float ripple = GroundMesh.HeightAtLocal(groundVariant, local.x, local.z) * CellMetrics.SizeY;
+
+                Vector3 at = GroundRelief.Lift(
+                    surface + new Vector3(offsetX * CellMetrics.SizeXZ, ripple, offsetZ * CellMetrics.SizeXZ));
 
                 AddBody(batch, module, tint, Matrix4x4.TRS(
-                    surface + new Vector3(offsetX * CellMetrics.SizeXZ, 0f, offsetZ * CellMetrics.SizeXZ),
-                    Quaternion.Euler(0f, yaw, 0f),
-                    new Vector3(scale, scale, scale)));
+                    at, Quaternion.Euler(0f, yaw, 0f), new Vector3(scale, scale, scale)));
             }
         }
 
@@ -215,15 +386,302 @@ namespace Odyssey.Presentation.Rendering
         /// Nothing interior changes, because a cut into the ground still exposes its neighbours in
         /// the ordinary way — a pit dug against the map edge still shows all four of its walls.
         /// </summary>
-        bool HasExposedFace(int index, int x, int z, int y)
+        /// <summary>
+        /// Draw banks up terrace steps. On by default; the lever is here so the check harness can
+        /// photograph the same board with and without them.
+        /// </summary>
+        public bool Banks { get; set; } = true;
+
+        /// <summary>
+        /// Draw soil as <see cref="GroundMesh"/> rather than as the plain cube. On by default, and
+        /// off is exactly the ground as it was drawn before any of this, which is what makes the
+        /// check harness's first photograph a real comparison rather than a remembered one.
+        /// </summary>
+        public bool Earth { get; set; } = true;
+
+        /// <summary>
+        /// A stepped earth bank in this empty cell, for each one-layer step beside it that a
+        /// colonist could walk up.
+        ///
+        /// <para><b>Why here and not on the step itself.</b> A bank belongs to the empty cell, not
+        /// to the block it climbs: it occupies the air beside the riser, at the same layer as the
+        /// riser, rising from its own floor — the top of the lower terrace — to its own ceiling,
+        /// which is the top of the riser. Everything the decision needs is therefore on one layer
+        /// plus the cell directly below, so a single-layer chunk pass can see all of it.</para>
+        ///
+        /// <para><b>What it is not.</b> Nothing in the simulation knows a bank exists. It is not
+        /// pathable, not selectable, not in the save and not in the state hash — a facade in
+        /// exactly the sense <see cref="GroundRelief"/> and <see cref="GroundScatter"/> are. The
+        /// hop it draws is real (<c>MoveCost.JumpUp</c>); the bank is only the picture of it.</para>
+        ///
+        /// <para><b>Four conditions, and each rules out a thing that would look wrong.</b> The cell
+        /// must be empty and standing on ground, or the bank hangs in the air. The step must be
+        /// earth, so a mined face and a quarry wall stay sheer — a grassy ramp growing out of cut
+        /// rock would be a lie about what was done to it. The top of the step must be open, or
+        /// this is the wall of a tunnel rather than a terrace. And the cell must be open to the
+        /// sky, which confines banks to the outdoor hillside where the fault is and keeps the
+        /// inside of a working sharp-edged.</para>
+        /// </summary>
+        void EmitBank(ChunkBatch batch, int index, int x, int z, int y)
         {
             var size = _model.Size;
+
+            // **One bank to a cell, even at an inside corner where two steps meet.**
+            //
+            // This is a z-fighting fix and the fault is worth recording, because every piece of it
+            // is individually correct. A bank fills its cell in plan, so two banks in one cell are
+            // two boxes turned ninety degrees to each other — and the side wall of the first lands
+            // in the same plane as the *back* wall of the second, facing the same way. Coplanar
+            // surfaces with opposite normals are harmless, because back-face culling removes one of
+            // them from every viewpoint; coplanar surfaces facing the *same* way are two candidates
+            // for the same pixel with nothing to separate them, and the depth buffer picks whichever
+            // rounds higher. That is the flickering the owner saw, and it moves with the camera
+            // because the rounding does.
+            //
+            // A straight run has no such problem: the touching walls of two neighbouring banks face
+            // away from each other, so one is always culled. It is only the corner.
+            //
+            // Drawing one is also the better picture. Two stepped banks crossing at a corner put
+            // their treads at different heights through one another, which reads as rubble rather
+            // than as a path; one bank fills the cell, meets the other riser along its side, and
+            // the corner is still somewhere a colonist can walk up.
+            //
+            // Every condition on whether a bank belongs here lives in BankDirection, because a bank
+            // has to ask the same question of its neighbours and two copies of a rule is one rule
+            // and one bug waiting.
+            if (!CanBank(x, z, y)) return;
+
+            // **Which of the three shapes this cell wants, and which way round.**
+            //
+            // The bearing is what makes three meshes cover every case: local +z and +x are turned
+            // onto the world directions a shape expects its steps to be, exactly as
+            // Directions.Yaw is defined to do. A straight piece wants one step at local +z; a
+            // corner piece wants steps at local +z and +x; a hip wants one on the diagonal between
+            // them. So the rotation is always the lower-numbered direction of the pair.
+            int steps = StepsAround(x, z, y);
+            BankMesh.Kind kind;
+            int rotation;
+
+            if (steps != 0)
+            {
+                // Prefer a corner: a cell with steps on two adjacent sides is in a notch, and the
+                // straight piece would leave one of them bare.
+                rotation = AdjacentPair(steps);
+                if (rotation >= 0)
+                {
+                    kind = BankMesh.Kind.Inner;
+                }
+                else
+                {
+                    kind = BankMesh.Kind.Straight;
+                    rotation = FirstDirection(steps);
+                }
+            }
+            else
+            {
+                // No step orthogonally, but one on a diagonal: the cell wrapping the outside of a
+                // convex corner. It used to get nothing at all, which is why a run of banks had a
+                // square bite taken out of it at every corner.
+                rotation = DiagonalStep(x, z, y);
+                if (rotation < 0) return;
+                kind = BankMesh.Kind.Outer;
+            }
+
+            // Made of the terrain at the top of the step it climbs, because that is the ground it
+            // is spilling from. Always daylit: CanBank required the cell to be open to the sky.
+            ushort terrain = StepTerrain(x, z, y, rotation);
+            if (terrain == CoreContent.TerrainAir) return;
+
+            int module = _model.BankModuleFor(terrain, (int)kind);
+            if (module == 0) return;
+
+            // Draped, so a bank lies along the same rolling field the ground either side of it does.
+            AddBody(batch, module, TintCode.Daylit(TintCode.Terrain(terrain), open: true),
+                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
+                Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[rotation], 0f)));
+        }
+
+        /// <summary>
+        /// Could a bank stand in this cell at all — is it empty, on ground, and under open sky?
+        ///
+        /// <para>Separate from which shape it wants, because the conditions are about the cell and
+        /// the shape is about its neighbours, and mixing the two is what made an earlier version
+        /// answer "no bank" and "a bank facing north" through the same integer.</para>
+        /// </summary>
+        bool CanBank(int x, int z, int y)
+        {
+            if (!Banks || y == 0) return false;
+
+            var size = _model.Size;
+            if (!size.Contains(x, z, y) || y + 1 >= size.SizeY) return false;
+
+            int index = size.Index(x, z, y);
+            if (_model.Terrain(index) != CoreContent.TerrainAir) return false;
+
+            // Something underfoot: the top of the lower terrace. Terrain rather than solidity, so a
+            // bank may also shelve down into the water it stands beside — a channel is cut one
+            // layer down, which makes every stream bank one of these steps.
+            if (_model.Terrain(index - size.LayerStride) == CoreContent.TerrainAir) return false;
+
+            return OpenToTheSky(index, y);
+        }
+
+        /// <summary>Is the cell one step away in this direction a step this bank could climb?</summary>
+        bool IsStep(int x, int z, int y, int dx, int dz)
+        {
+            var size = _model.Size;
+            int nx = x + dx, nz = z + dz;
+            if (!size.Contains(nx, nz, y)) return false;
+
+            int step = size.Index(nx, nz, y);
+            if (!_model.IsSolid(step) || !_model.IsEarth(step)) return false;
+
+            // Its top has to be open, or this is the wall of a tunnel rather than a terrace.
+            return !_model.IsSolid(step + size.LayerStride);
+        }
+
+        /// <summary>Which of the four sides of this cell have a step against them, as a bitmask.</summary>
+        int StepsAround(int x, int z, int y)
+        {
+            int mask = 0;
+            for (int dir = 0; dir < Directions.Count; dir++)
+                if (IsStep(x, z, y, Directions.DeltaX[dir], Directions.DeltaZ[dir])) mask |= 1 << dir;
+            return mask;
+        }
+
+        /// <summary>The first direction in a mask, or -1 when it is empty.</summary>
+        static int FirstDirection(int mask)
+        {
+            for (int dir = 0; dir < Directions.Count; dir++)
+                if ((mask & (1 << dir)) != 0) return dir;
+            return -1;
+        }
+
+        /// <summary>
+        /// The lower direction of a pair of adjacent set bits, or -1 when the mask has no such pair.
+        ///
+        /// A corner piece is turned by this, because its two steps are at local +z and +x, which the
+        /// bearing puts on directions <c>d</c> and <c>d + 1</c>.
+        /// </summary>
+        static int AdjacentPair(int mask)
+        {
+            for (int dir = 0; dir < Directions.Count; dir++)
+                if ((mask & (1 << dir)) != 0 && (mask & (1 << ((dir + 1) & 3))) != 0) return dir;
+            return -1;
+        }
+
+        /// <summary>
+        /// The direction <c>d</c> such that the step lies on the diagonal between <c>d</c> and
+        /// <c>d + 1</c>, or -1 when no diagonal neighbour is a step.
+        /// </summary>
+        int DiagonalStep(int x, int z, int y)
+        {
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int next = (dir + 1) & 3;
+                int dx = Directions.DeltaX[dir] + Directions.DeltaX[next];
+                int dz = Directions.DeltaZ[dir] + Directions.DeltaZ[next];
+                if (IsStep(x, z, y, dx, dz)) return dir;
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// The terrain at the top of the step this bank climbs, which is what it is made of.
+        ///
+        /// A hip has no orthogonal step, so it takes the terrain from the diagonal one it wraps.
+        /// </summary>
+        ushort StepTerrain(int x, int z, int y, int rotation)
+        {
+            var size = _model.Size;
+            int next = (rotation + 1) & 3;
+
+            foreach (int dir in new[] { rotation, next })
+            {
+                int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
+                if (IsStep(x, z, y, Directions.DeltaX[dir], Directions.DeltaZ[dir]))
+                    return _model.Terrain(size.Index(nx, nz, y));
+            }
+
+            int cx = x + Directions.DeltaX[rotation] + Directions.DeltaX[next];
+            int cz = z + Directions.DeltaZ[rotation] + Directions.DeltaZ[next];
+            return size.Contains(cx, cz, y) ? _model.Terrain(size.Index(cx, cz, y)) : CoreContent.TerrainAir;
+        }
+
+        /// <summary>
+        /// Is there nothing at all over this cell — no slab and no solid cell, all the way up?
+        ///
+        /// <para>What earns a cell the daylight bit, and so exemption from the depth shade. See
+        /// <see cref="TintCode.DaylitBase"/> for why the landscape must not dim: the surface is
+        /// terraced across five layers and only one of them is ever the active one.</para>
+        ///
+        /// <para>A slab is stored on the cell <em>above</em> the boundary it occupies, so the roof
+        /// over this cell is the floor of the next one up — which is why the walk starts at
+        /// <c>y + 1</c> and asks about that cell's own floor. A blocking edifice is deliberately
+        /// not consulted: a wall standing beside you is not a roof over you, and neither is a
+        /// tree, so grass in woodland stays lit like the grass beside it.</para>
+        ///
+        /// <para>The loop looks unbounded and is not. A buried cell answers on its first step,
+        /// because the cell above it is solid; a surface cell walks the headroom, which the
+        /// generator holds at three layers. Nothing here walks a full column in practice.</para>
+        /// </summary>
+        bool OpenToTheSky(int index, int y)
+        {
+            var size = _model.Size;
+            int above = index + size.LayerStride;
+
+            for (int layer = y + 1; layer < size.SizeY; layer++, above += size.LayerStride)
+            {
+                if (_model.Floor(above) != 0) return false;
+                if (_model.IsSolid(above)) return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Can any of this cell's four vertical faces be seen — is it a terrace riser, the wall of
+        /// a cutting, or the side of an outcrop?
+        ///
+        /// <para>The horizontal half of <see cref="HasExposedFace"/>, split out because earth pays
+        /// for coursed walls only where it has a wall to show. The world boundary counts as solid
+        /// here for the same reason it does there: it is not an exposed face, and treating it as
+        /// one drew a cross-section wall round the whole perimeter of the map.</para>
+        /// </summary>
+        bool ShowsAVerticalFace(int x, int z, int y) => ExposedSides(x, z, y) != 0;
+
+        /// <summary>
+        /// Which of this cell's four vertical faces can be seen, as a bitmask over
+        /// <see cref="Directions"/>.
+        ///
+        /// <para>The chamfer needs the pattern and not just the count, because it has to go on the
+        /// edges that are actually open and no others. Put it on all four and every riser cell
+        /// opens a groove against the flat ground behind it, which is the same fault the rim ripple
+        /// already made once.</para>
+        ///
+        /// <para>The world boundary counts as solid, for the same reason it does in
+        /// <see cref="HasExposedFace"/>: it is not an exposed face, and treating it as one drew a
+        /// cross-section wall round the whole perimeter of the map.</para>
+        /// </summary>
+        int ExposedSides(int x, int z, int y)
+        {
+            var size = _model.Size;
+            int mask = 0;
+
             for (int dir = 0; dir < Directions.Count; dir++)
             {
                 int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
                 if (!size.Contains(nx, nz, y)) continue;
-                if (!_model.IsSolid(size.Index(nx, nz, y))) return true;
+                if (!_model.IsSolid(size.Index(nx, nz, y))) mask |= 1 << dir;
             }
+
+            return mask;
+        }
+
+        bool HasExposedFace(int index, int x, int z, int y)
+        {
+            var size = _model.Size;
+            if (ShowsAVerticalFace(x, z, y)) return true;
             if (y + 1 >= size.SizeY) return true;
             if (!_model.IsSolid(index + size.LayerStride)) return true;
             // Downwards only matters at the very bottom, which nothing can see.
@@ -235,8 +693,10 @@ namespace Odyssey.Presentation.Rendering
             if (_model.IsSolid(index)) return; // a slab inside rock is not visible
             int module = _model.FloorModule(index);
             if (module == 0) return;
+            // A built floor is man-made and stays flat; it is lifted onto the ground, not laid
+            // along it. Only terrain is draped.
             AddRoof(batch, module, TintCode.Stuff(_model.FloorStuff(index)),
-                Matrix4x4.Translate(CellMetrics.FloorCentre(x, z, y)));
+                Matrix4x4.Translate(GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y))));
         }
 
         void EmitEdifice(ChunkBatch batch, int index, int x, int z, int y)
@@ -263,13 +723,15 @@ namespace Odyssey.Presentation.Rendering
                     return;
                 case CoreContent.EdificePillar:
                 case CoreContent.EdificeUtilityTap:
-                    AddBody(batch, module, tint, Matrix4x4.Translate(CellMetrics.FloorCentre(x, z, y)));
+                    AddBody(batch, module, tint,
+                        Matrix4x4.Translate(GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y))));
                     return;
             }
 
             if (shape != ModuleShape.WallPanel)
             {
-                AddBody(batch, module, tint, Matrix4x4.Translate(CellMetrics.FloorCentre(x, z, y)));
+                AddBody(batch, module, tint,
+                    Matrix4x4.Translate(GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y))));
                 return;
             }
 
@@ -283,8 +745,10 @@ namespace Odyssey.Presentation.Rendering
             {
                 int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
                 if (size.Contains(nx, nz, y) && _model.OccludesFace(size.Index(nx, nz, y))) continue;
+                // Lifted at the face's own centre, not the cell's. Half a cell along a slope is
+                // enough for a panel and the wall it belongs to to visibly disagree.
                 AddBody(batch, module, tint, Matrix4x4.TRS(
-                    CellMetrics.FaceCentre(x, z, y, dir),
+                    GroundRelief.Lift(CellMetrics.FaceCentre(x, z, y, dir)),
                     Quaternion.Euler(0f, Directions.Yaw[dir], 0f),
                     Vector3.one));
             }
@@ -294,7 +758,7 @@ namespace Odyssey.Presentation.Rendering
         {
             int dir = FirstOpenDirection(x, z, y);
             AddBody(batch, module, tint, Matrix4x4.TRS(
-                CellMetrics.FloorCentre(x, z, y),
+                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)),
                 Quaternion.Euler(0f, Directions.Yaw[dir], 0f),
                 Vector3.one));
         }
@@ -312,7 +776,7 @@ namespace Odyssey.Presentation.Rendering
             float rise = def == CoreContent.EdificeStairLower ? 0f : CellMetrics.SizeY * 0.5f;
 
             AddBody(batch, module, tint, Matrix4x4.TRS(
-                CellMetrics.FloorCentre(x, z, y) + Vector3.up * rise,
+                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)) + Vector3.up * rise,
                 Quaternion.Euler(0f, Directions.Yaw[climb], 0f),
                 Vector3.one));
         }
@@ -322,7 +786,7 @@ namespace Odyssey.Presentation.Rendering
             int wall = FirstOccludingDirection(x, z, y);
             int facing = wall >= 0 ? Directions.Opposite(wall) : Directions.North;
             AddBody(batch, module, tint, Matrix4x4.TRS(
-                CellMetrics.FloorCentre(x, z, y),
+                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)),
                 Quaternion.Euler(0f, Directions.Yaw[facing], 0f),
                 Vector3.one));
         }

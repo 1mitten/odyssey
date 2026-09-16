@@ -66,6 +66,38 @@ namespace Odyssey.Sim.Pawns
         public int MoodTarget { get; set; }
 
         /// <summary>
+        /// The last momentary thing this pawn did, for presentation to draw. See
+        /// <see cref="PawnGesture"/>.
+        ///
+        /// <para><b>Deliberately not saved and deliberately not hashed.</b> It is a report about
+        /// something that has already finished, and nothing in the simulation reads it back — so
+        /// it can have no effect on a tick, and a determinism run with it and without it must
+        /// produce the same state hash. A test asserts exactly that, because a field on
+        /// <see cref="Pawn"/> that quietly reached the hash would be a save-format change made by
+        /// accident.</para>
+        ///
+        /// <para>Losing it over a save is correct rather than merely tolerable: a colonist should
+        /// not finish a lift it began before the game was closed.</para>
+        /// </summary>
+        public PawnGesture Gesture { get; set; }
+
+        /// <summary>Bumped on every <see cref="BeginGesture"/>. See <see cref="PawnView.GestureSerial"/>.</summary>
+        public byte GestureSerial { get; set; }
+
+        /// <summary>
+        /// Report that a momentary thing just happened, for whoever is drawing this pawn.
+        ///
+        /// <para>The serial is what distinguishes two of the same gesture in a row, so it advances
+        /// on every call and not only when the kind changes. It wraps, and wrapping is harmless:
+        /// the reader tests for a different value, never a greater one.</para>
+        /// </summary>
+        public virtual void BeginGesture(PawnGesture gesture)
+        {
+            Gesture = gesture;
+            unchecked { GestureSerial++; }
+        }
+
+        /// <summary>
         /// Experience per skill, in thousandths of a point (see <see cref="SkillDef"/>). Levels
         /// are derived by <see cref="SkillLevel"/>, never stored.
         /// </summary>
@@ -145,6 +177,22 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Cost units accumulated toward the next step.</summary>
         public int MoveProgress { get; internal set; }
+
+        /// <summary>
+        /// What the step now in progress costs, in the same units as <see cref="MoveProgress"/>.
+        ///
+        /// <para><b>Derived, and deliberately outside the hash and the save.</b> The movement
+        /// system recomputes it from the graph every tick it advances a pawn, so storing it would
+        /// be storing an answer the world can already give — and a saved copy that disagreed with
+        /// a rebuilt graph would be a divergence nothing could explain.</para>
+        ///
+        /// <para>It exists for presentation. The published move percentage used to be the raw
+        /// progress clamped to 100, which is exact for a flat cell at 100 units and wrong for
+        /// everything dearer: a ladder down costs 400, so the drawn figure completed its whole
+        /// descent in the first quarter of the step and then stood frozen at the bottom for the
+        /// other three — which is most of what "colonists float down slowly" was.</para>
+        /// </summary>
+        public int MoveStepCost { get; internal set; } = Pathing.MoveCost.Orthogonal;
 
         /// <summary>Where the pawn is trying to get to, or -1.</summary>
         public int Destination { get; internal set; } = -1;

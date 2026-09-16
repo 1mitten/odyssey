@@ -150,6 +150,7 @@ namespace Odyssey.Sim.Pathing
         readonly int[] _floodStack = new int[BlockSize * BlockSize];
         readonly Dictionary<long, int> _pairScratch = new Dictionary<long, int>();
         readonly Dictionary<long, int> _fallScratch = new Dictionary<long, int>();
+        readonly Dictionary<long, int> _hopScratch = new Dictionary<long, int>();
         int[] _bfsQueue = new int[64];
 
         /// <summary>Bumped whenever the graph changed, so cached corridors can be invalidated.</summary>
@@ -249,6 +250,12 @@ namespace Odyssey.Sim.Pathing
             MarkBlockDirty(BlockIndexOfCell(x, z, y));
             for (int k = 1; k <= MaxFallLayers; k++)
                 if (y + k < Size.SizeY) MarkBlockDirty(BlockIndexOfCell(x, z, y + k));
+
+            // Nothing below is marked here, although hops out of y-1 land in y and must be
+            // rebuilt. Marking it dirty would work and it would also re-flood a block whose cells
+            // did not change; the hops are links, not regions, so CollectAffectedZones takes the
+            // plate below as an affected zone instead — which relinks it without reflooding, and
+            // covers the neighbouring columns a hop actually comes from rather than this one.
         }
 
         void MarkBlockDirty(int block)
@@ -324,11 +331,27 @@ namespace Odyssey.Sim.Pathing
                 // The block's own interior, and the interiors of its four horizontal neighbours:
                 // a fall edge is owned by the block its source cell sits in, and the hole it
                 // falls through can be one block over.
-                _affectedZoneSet.Add(b);
-                if (bx > 0) _affectedZoneSet.Add(b - 1);
-                if (bx + 1 < BlocksX) _affectedZoneSet.Add(b + 1);
-                if (bz > 0) _affectedZoneSet.Add(b - BlocksX);
-                if (bz + 1 < BlocksZ) _affectedZoneSet.Add(b + BlocksX);
+                AddInteriorAndNeighbours(b, bx, bz);
+
+                // And the same plate one layer down, because a hop is owned by the block holding
+                // its LOWER cell and reaches up into this one.
+                //
+                // <para><b>The bug this fixes, and why the horizontal expansion above could not.</b>
+                // A dirty block is re-flooded, which renumbers its regions; every zone holding a
+                // link into it must therefore be rebuilt, or the link keeps region ids that now
+                // mean something else. Links used to be horizontal or downward only, so expanding
+                // sideways was enough — and a fall edge is covered a second way, because MarkDirty
+                // dirties the MaxFallLayers blocks above an edit, which are exactly the blocks
+                // that own falls through it.</para>
+                //
+                // <para>A hop has neither property. An edit at y dirties y+1 (the fall rule) but
+                // nothing at y-1 in the neighbouring columns, and those are precisely the blocks
+                // that own the hops landing in y+1. Measured: after six edits, a link still
+                // pointing at a recycled region id joined an <i>Impassable</i> region into a
+                // district — the district flood never seeds one, but it will happily absorb one
+                // through a link that should not exist. Nine cells diverged from a rebuild from
+                // scratch on round 2 of the randomised-edit fixture.</para>
+                if (y > 0) AddInteriorAndNeighbours(b - perLayer, bx, bz);
 
                 // The four shared boundaries.
                 if (bx + 1 < BlocksX) _affectedZoneSet.Add(BlockCount + b);
@@ -342,6 +365,15 @@ namespace Odyssey.Sim.Pathing
 
             foreach (int z in _affectedZoneSet) _affectedZones.Add(z);
             _affectedZones.Sort();
+
+            void AddInteriorAndNeighbours(int block, int bx, int bz)
+            {
+                _affectedZoneSet.Add(block);
+                if (bx > 0) _affectedZoneSet.Add(block - 1);
+                if (bx + 1 < BlocksX) _affectedZoneSet.Add(block + 1);
+                if (bz > 0) _affectedZoneSet.Add(block - BlocksX);
+                if (bz + 1 < BlocksZ) _affectedZoneSet.Add(block + BlocksX);
+            }
         }
 
         // ---- regions ----------------------------------------------------------------------
@@ -543,6 +575,7 @@ namespace Odyssey.Sim.Pathing
         {
             _pairScratch.Clear();
             _fallScratch.Clear();
+            _hopScratch.Clear();
             if (zone < BlockCount) BuildInteriorZone(zone);
             else if (zone < 2 * BlockCount) BuildEdgeZone(zone - BlockCount, 1);
             else if (zone < 3 * BlockCount) BuildEdgeZone(zone - 2 * BlockCount, Size.SizeX);
@@ -567,6 +600,10 @@ namespace Odyssey.Sim.Pathing
 
                     if (_regionKind[_cellRegion[c]] != RegionKind.Impassable)
                         TryFallEdges(block, c, x, z, y);
+
+                    // Hops are not gated on the region kind above: the test is on both ends and
+                    // lives in TryHopEdge, because the cell above may be in any region at all.
+                    TryHopEdges(block, c, x, z, y);
                 }
             }
         }
@@ -664,6 +701,56 @@ namespace Odyssey.Sim.Pathing
             if (x + 1 < Size.SizeX) TryFallEdge(zone, c, c + 1, y);
             if (z > 0) TryFallEdge(zone, c, c - strideZ, y);
             if (z + 1 < Size.SizeZ) TryFallEdge(zone, c, c + strideZ, y);
+        }
+
+        /// <summary>
+        /// The region-graph half of a hop: jumping up onto the block next door, and dropping off
+        /// it, join two regions on different layers.
+        ///
+        /// <para>Without this the cell search could plan a hop and every <i>reachability</i>
+        /// question would still answer no — and reachability is what every work-giver scan gates
+        /// on, so a colonist would simply never be offered the job. Only the upward direction is
+        /// walked here: the link is two-way and building it from the lower cell means each pair is
+        /// considered exactly once, by the block that owns the lower cell.</para>
+        /// </summary>
+        void TryHopEdges(int zone, int c, int x, int z, int y)
+        {
+            if (y + 1 >= Size.SizeY) return;
+            if ((Grid.Flags[c] & NavFlags.Walkable) == 0) return;
+
+            int up = c + Size.LayerStride;
+            int strideZ = Size.SizeX;
+            if (x > 0) TryHopEdge(zone, c, up - 1);
+            if (x + 1 < Size.SizeX) TryHopEdge(zone, c, up + 1);
+            if (z > 0) TryHopEdge(zone, c, up - strideZ);
+            if (z + 1 < Size.SizeZ) TryHopEdge(zone, c, up + strideZ);
+        }
+
+        void TryHopEdge(int zone, int lower, int upper)
+        {
+            if ((Grid.Flags[upper] & NavFlags.Walkable) == 0) return;
+            if (!UpperEndIsABlockTop(upper)) return;
+
+            int ra = _cellRegion[lower];
+            int rb = _cellRegion[upper];
+            if (ra == NoRegion || rb == NoRegion || ra == rb) return;
+            if (_regionKind[ra] == RegionKind.Impassable || _regionKind[rb] == RegionKind.Impassable) return;
+
+            long key = ((long)ra << 32) | (uint)rb;
+            if (_hopScratch.ContainsKey(key)) return;
+            _hopScratch[key] = 1;
+
+            int id = AllocLink(zone);
+            _linkA[id] = ra;
+            _linkB[id] = rb;
+            _linkKind[id] = LinkKind.Portal;
+            _linkCellA[id] = lower;
+            _linkCellB[id] = upper;
+            _linkCostAB[id] = MoveCost.JumpUp;
+            _linkCostBA[id] = MoveCost.Drop;
+            _linkOneWay[id] = false;
+            _linkSpan[id] = 1;
+            _linkMode[id] = TraverseModes.AllMask;
         }
 
         void TryFallEdge(int zone, int from, int hole, int y)
@@ -927,6 +1014,7 @@ namespace Odyssey.Sim.Pathing
             return id;
         }
 
+
         void FlagConnectorCell(int cell, NavFlags footprint, int connectorId)
         {
             Grid.Flags[cell] |= footprint;
@@ -1081,7 +1169,7 @@ namespace Odyssey.Sim.Pathing
             return n;
         }
 
-        public int LiveLinkCount()
+                        public int LiveLinkCount()
         {
             int n = 0;
             for (int l = 0; l < _linkCount; l++) if (_linkAlive[l]) n++;
@@ -1135,7 +1223,15 @@ namespace Odyssey.Sim.Pathing
                 int dx = Math.Abs(a.X - b.X);
                 int dz = Math.Abs(a.Z - b.Z);
                 if (dx + dz != 1) return false;
-                return Grid.CanEnter(from, mode) && Grid.CanEnter(to, mode);
+
+                return Grid.CanEnter(from, mode) && Grid.CanWalkInto(to, mode);
+            }
+
+            if (IsHop(a, b))
+            {
+                int upper = a.Y > b.Y ? from : to;
+                if (UpperEndIsABlockTop(upper) && Grid.CanEnter(from, mode) && Grid.CanWalkInto(to, mode))
+                    return true;
             }
 
             for (int e = FirstPortalEdge(from); e != -1; e = _peNext[e])
@@ -1144,6 +1240,48 @@ namespace Odyssey.Sim.Pathing
             if (!allowFalls) return false;
             return IsFallStep(from, to, mode);
         }
+
+        /// <summary>
+        /// A hop: one block up or one block down, into the column next door (owner, 2026-09-16).
+        ///
+        /// <para><b>This is the whole of unaided vertical movement.</b> Up is a jump, down is a
+        /// drop, both exactly one block, both to a cell with a floor in it. Anything deeper needs
+        /// a ladder, which is a built thing and a declared connector.</para>
+        ///
+        /// <para>Not straight up: a hop goes to the <i>neighbouring</i> column, because that is
+        /// what getting onto a block is. Straight up is what a climb did, and the cell it landed
+        /// in had nothing underneath — which is how a colonist ended up hanging in the middle of a
+        /// two-deep shaft, re-planning the same route for ever. There is no such move now.</para>
+        /// </summary>
+        public static bool IsHop(CellRef a, CellRef b)
+        {
+            if (Math.Abs(a.Y - b.Y) != 1) return false;
+            return Math.Abs(a.X - b.X) + Math.Abs(a.Z - b.Z) == 1;
+        }
+
+        /// <summary>
+        /// Is the upper end of this hop the top of a <b>block</b>, rather than a floor?
+        ///
+        /// <para><b>You jump onto ground, not up a storey.</b> Without this test the rule reads
+        /// "one layer up is always allowed", and a layer is a layer: in a building every storey
+        /// would be one hop from the one below it at every cell, stairs would be pointless, and a
+        /// colonist would arrive on the first floor by hopping up the side of the stairwell. The
+        /// test world in <c>PathingTests</c> is floored at every cell, and it caught this
+        /// immediately — a stair removed left its two layers still reachable.</para>
+        ///
+        /// <para>What the owner described is terrain: a block of ground one higher than the one
+        /// you are on, which you hop onto. So the support under the upper cell has to be solid
+        /// terrain. A built floor is something you reach by the way somebody built to reach it.</para>
+        /// </summary>
+        public bool UpperEndIsABlockTop(int upper)
+        {
+            int below = upper - Size.LayerStride;
+            return below >= 0 && _cells.IsSolidTerrain(below);
+        }
+
+        /// <summary>What a hop costs, in the direction it is taken.</summary>
+        public static int HopCost(CellRef from, CellRef to) =>
+            to.Y > from.Y ? MoveCost.JumpUp : MoveCost.Drop;
 
         bool IsFallStep(int from, int to, TraverseMode mode)
         {

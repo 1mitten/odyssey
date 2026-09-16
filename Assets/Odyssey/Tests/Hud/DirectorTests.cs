@@ -34,8 +34,33 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(director.Pawn, Is.EqualTo(new PawnId(1)));
             Assert.That(director.HasThing, Is.False, "the crate is still there when they walk off it");
-            Assert.That(director.Cell, Is.EqualTo(cell));
+            Assert.That(director.Cell, Is.Null,
+                "a colonist is the whole selection: the cell under their feet is not part of it");
             Assert.That(changes, Is.EqualTo(new[] { SelectionChange.Picked }));
+        }
+
+        /// <summary>
+        /// The line above used to read <c>Is.EqualTo(cell)</c>, so the dual state was deliberate
+        /// and this suite documented it. It came back on 2026-09-16 as a playtest report: clicking
+        /// a colonist chopping a tree put a highlight on a cell near them and selected the colonist
+        /// anyway. Both halves are this — the cursor preferred the pawn and drew the right bracket
+        /// most of the time, but the cell went on being part of the selection underneath, so every
+        /// other reader saw it, and any frame the pawn lookup missed fell through to the cell tier
+        /// and bracketed the tree instead.
+        /// </summary>
+        [Test]
+        public void APickOnAColonistDoesNotAlsoSelectTheCellTheyStandIn()
+        {
+            var cell = new CellRef(3, 3, 1);
+            var snapshot = FrameWith(new PawnId(1), cell, ThingId.None, default);
+            var director = new SelectionDirector();
+
+            director.Pick(cell, new PawnId(1), snapshot);
+
+            Assert.That(director.HasPawn, Is.True);
+            Assert.That(director.Cell, Is.Null,
+                "the cell is still part of the selection, so a cursor can still draw it instead " +
+                "of the colonist and every other reader still sees a cell that was not picked");
         }
 
         [Test]
@@ -101,6 +126,101 @@ namespace Odyssey.Tests.Hud
             director.Changed += _ => raised++;
             director.Clear();
             Assert.That(raised, Is.Zero);
+        }
+
+        // ------------------------------------------------------ multi-select (M2)
+
+        static WorldSnapshot FrameWithPawns(params (PawnId id, int layer)[] placed)
+        {
+            var snapshot = Frame.Write();
+            foreach (var (id, layer) in placed)
+                snapshot.AddPawn(new PawnView(id, new CellRef(1, 1, layer), 500, 500, 50, JobHandle.Haul));
+            return snapshot;
+        }
+
+        [Test]
+        public void ABoxSelectsTheSetAndNamesThePrimary()
+        {
+            var director = new SelectionDirector();
+            var boxed = new[] { new PawnId(1), new PawnId(3), new PawnId(2) };
+            SelectionChange? reason = null;
+            director.Changed += r => reason = r;
+
+            director.PickMany(boxed, additive: false, SelectionChange.Boxed);
+
+            Assert.That(director.Pawns, Is.EqualTo(boxed));
+            Assert.That(director.Pawn, Is.EqualTo(new PawnId(1)), "the first in is the primary");
+            Assert.That(director.HasMultiple, Is.True);
+            Assert.That(reason, Is.EqualTo(SelectionChange.Boxed));
+        }
+
+        [Test]
+        public void AShiftBoxJoinsTheSelectionWithoutDuplicatingIt()
+        {
+            var director = new SelectionDirector();
+            director.PickMany(new[] { new PawnId(1) }, additive: false, SelectionChange.Boxed);
+
+            director.PickMany(new[] { new PawnId(2), new PawnId(1) }, additive: true, SelectionChange.Boxed);
+
+            Assert.That(director.Pawns, Is.EqualTo(new[] { new PawnId(1), new PawnId(2) }));
+        }
+
+        [Test]
+        public void AShiftPickTogglesAColonistInTheSet()
+        {
+            var director = new SelectionDirector();
+            var snapshot = FrameWithPawns((new PawnId(1), 0), (new PawnId(2), 0));
+            director.PickMany(new[] { new PawnId(1), new PawnId(2) }, additive: false, SelectionChange.Boxed);
+            SelectionChange? reason = null;
+            director.Changed += r => reason = r;
+
+            var cell = new CellRef(1, 1, 0);
+            director.Pick(cell, new PawnId(1), snapshot, additive: true);
+
+            Assert.That(director.Pawns, Is.EqualTo(new[] { new PawnId(2) }), "out, not replaced");
+            Assert.That(reason, Is.EqualTo(SelectionChange.Toggled));
+
+            director.Pick(cell, new PawnId(1), snapshot, additive: true);
+            Assert.That(director.Pawn, Is.EqualTo(new PawnId(2)), "a toggle back in does not steal primary");
+        }
+
+        [Test]
+        public void OneDeathPrunesOnlyTheDeadHandle()
+        {
+            var director = new SelectionDirector();
+            director.PickMany(new[] { new PawnId(1), new PawnId(2) }, additive: false, SelectionChange.Boxed);
+            var oneAlive = FrameWithPawns((new PawnId(2), 0));
+
+            director.Refresh(oneAlive);
+            Assert.That(director.Pawns.Count, Is.EqualTo(2), "the frame a colonist dies still shows them");
+            director.Refresh(oneAlive);
+            Assert.That(director.Pawns, Is.EqualTo(new[] { new PawnId(2) }));
+            Assert.That(director.HasPawn, Is.True, "one death does not take the living");
+        }
+
+        [Test]
+        public void APlainPickReplacesTheWholeSetWithOneColonist()
+        {
+            var director = new SelectionDirector();
+            var snapshot = FrameWithPawns((new PawnId(1), 0), (new PawnId(2), 0));
+            director.PickMany(new[] { new PawnId(1), new PawnId(2) }, additive: false, SelectionChange.Boxed);
+
+            director.Pick(new CellRef(1, 1, 0), new PawnId(2), snapshot);
+
+            Assert.That(director.Pawns, Is.EqualTo(new[] { new PawnId(2) }));
+        }
+
+        [Test]
+        public void SelectSimilarReplacesUnlessShiftJoins()
+        {
+            var director = new SelectionDirector();
+            director.Choose(new PawnId(1));
+
+            director.PickMany(new[] { new PawnId(1), new PawnId(2), new PawnId(3) }, additive: false, SelectionChange.Similar);
+            Assert.That(director.Pawns.Count, Is.EqualTo(3));
+
+            director.PickMany(new[] { new PawnId(4) }, additive: true, SelectionChange.Similar);
+            Assert.That(director.Pawns.Count, Is.EqualTo(4));
         }
     }
 

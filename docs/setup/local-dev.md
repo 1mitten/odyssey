@@ -14,6 +14,7 @@ Two dev machines exist as of 2026-09-15: the Pop!_OS machine this file was writt
 | Node.js | 18 or newer | Needed by Claude Code and by the Unity-MCP CLI. |
 | Claude Code | current | `npm install -g @anthropic-ai/claude-code`, then `claude` once to log in. |
 | dotnet SDK | optional, 8 or newer | Only for future pure-C# simulation tests outside Unity; not needed for Phase 0–3. |
+| Python | 3.11 or newer | The wiki, icon and mockup tooling under `tools/`; standard library only. Windows needs two extra steps — see §10. |
 | Blender | optional, 4.x | Gap-filling only: a module the Synty pack lacks (for example a ladder or a stair variant at the cell size), UV or atlas fixes, animation retargeting. Synty assets come first; anything made in Blender must match the Synty style and the cell grid, lives under `Assets/Art/Custom/`, and is ours to commit. |
 
 Keep the repository path free of spaces (for example `~/src/odyssey`); Unity-MCP does not support paths with spaces.
@@ -120,6 +121,23 @@ powershell -c "& ([scriptblock]::Create((irm https://dot.net/v1/dotnet-install.p
 ```
 
 The script finds it at `%USERPROFILE%\.dotnet`, on `PATH`, or wherever `DOTNET` points.
+
+**Python, for the wiki, icon and mockup tooling** (`tools/wiki`, `tools/icons`, `tools/mockups` —
+standard library only, no packages to install). On Windows, without admin rights:
+
+```
+winget install --id Python.Python.3.13 --exact --scope user
+copy "%LOCALAPPDATA%\Programs\Python\Python313\python.exe" "%LOCALAPPDATA%\Programs\Python\Python313\python3.exe"
+setx PYTHONUTF8 1
+```
+
+All three lines matter. The installer puts Python ahead of `WindowsApps` in the user PATH, which is
+what stops `python` resolving to the Microsoft Store alias that prints an error and exits 0. CPython
+on Windows ships **no `python3.exe`**, so without the copy every `python3 …` command in this
+repository still reaches that alias. And Windows Python defaults to cp1252 rather than UTF-8, which
+makes `build_wiki.py --check` report all fourteen wiki files stale and would rewrite them in the
+wrong codec — `PYTHONUTF8=1` is not optional here. Open a new shell, then verify with
+`python3 -V` and `python3 tools/wiki/build_wiki.py --check`.
 
 **Known Unity issue, and why the wrapper has a watchdog.** A `-runTests` batch run sometimes writes its results and then never exits, holding `Temp/UnityLockfile`; the next batch command then dies instantly with exit code 1 and a near-empty log. `unity.sh` now says so plainly, clears a genuinely stale lock, and treats the results file rather than the process exit code as the authority, terminating a lingering process after a grace period. `UNITY_TEST_TIMEOUT` and `UNITY_TEST_GRACE` tune it. This matters for CI, which must fail rather than hang.
 

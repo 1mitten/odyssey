@@ -6,18 +6,46 @@ This file is written to be executed by a session with no other context. Read `CL
 
 **Before any of this begins:** Phase 3 ends with a hard stop for the owner's approval (brief §6). No unit below is started until that approval is given.
 
-## Status, 2026-09-15
+## Status, 2026-09-16
 
 | Milestone | State |
 |---|---|
-| **M0** | U01–U07 **done**. Only U08 (CI) remains, and it needs the owner to register a self-hosted runner. |
-| **M1** | U09 cell grid, U10 support solver, U11–U13 worldgen and templates **done**. U14–U16 rendering, camera and inspection **in progress**. |
-| **M2** | U17–U18 reachability and pathfinding **done, and measured**. U19–U24 pawns and characters **in progress**. |
-| **M3** | Not started. |
+| **M0** | **Done.** U08 CI landed today: two tiers on every push, the Unity tier on the owner's machine as a self-hosted runner, and branch protection requiring both. |
+| **M1** | **Done in substance.** Grid, support solver, both worldgen paths, instanced rendering, slice camera, click-to-inspect and a generated play scene all run. The HUD arrived on top of it, which M1 never asked for. |
+| **M2** | **Done, and reported.** Regions, pathfinding, needs, mood, skills, the job pipeline and the first jobs all run; a colony survives ten days headless on three seeds. U23/U24 characters and animation went further than planned — colonists walk, and swing an axe. `OQ-20` built the headless three-pawn demo and `OQ-47` gave it the storeys it needed to prove the layer claim; `docs/milestones/M2-report.md` closes the milestone (OQ-21). |
+| **M3** | **Started ahead of the plan.** Designations, felling and stockpiles are in; mining is built on `claude/mines` and not yet merged. |
 
-142 tests green in the fast tier. Measured: support solve 54 ms for 2.5M cells and 0.003 ms per edit; worldgen 215 ms for a full map; pathfinding 2.4× faster than naive with budget exhaustion down 91%.
+**Gates, 2026-09-16.** Fast tier 329 Sim and 29 Hud, Long tier 9. Unity gate 494 total, 492 passed, 0 failed (two `[Explicit]` benchmarks skipped). PlayMode 7. Wiki and label registries both current.
 
-Two corrections worth carrying forward. The pathfinding premise in §4 of `05-ai-and-jobs.md` was **falsified by its own experiment** and has been rewritten: the win came from hierarchical search, not from the reachability check, which is kept for a different and better reason. And the cell size briefly had a competing "provisional" value from the UI line; the measured 2.5 × 2.5 × 3.0 m stands (ADR 0002).
+**Measured, and worth keeping in one place:** support solve 54 ms for 2.5M cells and 0.003 ms an edit; worldgen 215 ms for a full map; pathfinding 2.4x faster than naive with budget exhaustion down 91%; a ten-day soak about 1.1 s of wall time at 0.002 ms a tick; frame time 0.41 ms on the wooded meadow and 1.48 ms on the city; the dense HUD 0.488 ms against a 1.167 ms budget with zero allocation.
+
+**What the slice now has that this plan never described.** A HUD (ADR 0003's Unity-free assembly plus a UI Toolkit shell), a naming registry generating labels from a CSV, a terrain surround, water, and a work-pose system that puts an axe in a colonist's hands. None of it was in M0-M3 as written; all of it is real and tested. The plan is behind the code rather than ahead of it, which is the honest reading of the table above.
+
+**The order the remaining work actually falls in**, which is not the order below: close M2 with `OQ-20` and `OQ-21`; take the seam work in the section after this one; then merge mining, which is written and waiting.
+
+## Where the seams are, and what the next feature will cost
+
+Written 2026-09-16 from evidence rather than taste: the mining line on `claude/mines` is one feature, 73 files and 6,358 lines, and to add itself it had to edit six files that belong to everybody.
+
+| Chokepoint | Why a feature has to touch it | What it should be |
+|---|---|---|
+| `Sim/Pawns/PawnContent.cs` | every item, job and work type is a C# constant and a table in code | XML Defs. `OQ-15` and `OQ-16` are written and open; the `TODO(content)` markers name the spot |
+| `Sim/Pawns/JobSystem.cs` | `DefaultGivers()` is a hardcoded array, so a new job is an edit to a shared file | givers registered by Def, the way intents are registered by `AddIntentHandler` |
+| `Sim.Contracts/Views.cs` | a new thing a pawn can do needs a new field on the published frame | the snapshot already has `AddSnapshotContributor`; the pawn view has no equivalent |
+| `Presentation/Bootstrap/OdysseyBootstrap.cs` | the composition root wires every system by hand | it already delegates the colony to `ColonyComposition.AddColony`; the same treatment for presentation |
+| `Presentation/Rendering/ChunkMesher.cs` | new terrain needs new meshing, and the file is on the queue's do-not-touch list | a mesh contributor per stuff kind, registered rather than switched on |
+| `docs/design/icon-keys.csv` | a new name | **correct as it is.** This is the one seam that worked: a name added to the CSV reaches the screen with no code change |
+
+The last row is the point. One of the six is a designed seam and cost nothing; the other five are files that grew a new branch of a switch. The work below is to make the other five look like the last one.
+
+**The order to do it in, cheapest and most load-bearing first.**
+
+1. **`OQ-15` and `OQ-16`, content to Defs.** Already specified, already have their acceptance tests written into the rows, and they remove the largest chokepoint. Mining's stone, the pick and its work type all land as data afterwards rather than as edits to `PawnContent`.
+2. **Work givers by registration.** A dozen lines: `JobSystem` takes givers from a list the composition adds to, as `SimWorldBuilder.AddIntentHandler` already does for intents. Mining's `MineWorkGiver` then adds itself.
+3. **A pawn-view contributor**, mirroring `ISnapshotContributor`, so a feature can publish what the interface needs without widening a struct everyone reads.
+4. **Mesh contributors** last, because it is the largest and only the terrain features need it.
+
+**What not to refactor.** The intent bus, the save sections, the snapshot contributors, the Def loader and the naming registry are all working seams that a feature has already gone through without touching shared code. The directors split in the HUD is the same shape and is holding. `NavGraph` and `PawnFigureDirector` are the two largest files in the project and neither is a chokepoint — they are large because the problems are, and nothing is queuing behind them.
 
 ## How to read a unit
 
@@ -98,6 +126,18 @@ At the end of M2, three pawns live in a ruined shell: they walk upstairs, sleep,
 | **U30 Stockpiles** | M | U22, U04 | Zones **per layer** with priority and filter; stacking; haul-to-best by filter → space → priority → distance; named storage groups sharing one settings record across layers. Per `a-14-bills-stockpiles-inventory.md`. |
 | **U31 Support preview** ∥ | S | U29, U15 | The build preview shows support values and highlights cells a deconstruction would orphan. Cheap now, and the thing that stops the collapse rule feeling arbitrary. |
 | **U32 The ten-day run** | M | all of M3 | Five pawns, 600,000 ticks, unattended, headless, zero errors, reproducible from seed. Determinism and resume-equivalence gates pass. `docs/milestones/M3-report.md` written. |
+
+---
+
+## After the slice — additions the plan never scheduled
+
+Units the slice did not ask for, added here when they land so the plan stays the index of what
+exists. Each is presentation-side, self-contained in its own files, and independent of the M3
+critical path.
+
+| Unit | Size | Depends on | Done when |
+|---|---|---|---|
+| **U33 Environmental audio** | M | U23, U24 | The playback layer, per ADR 0010 and `d-12-audio.md`: one pooled-voice director serving the whole colony (work impacts from the stroke clock's `BlowLanded`, with distance culling, per-sound cooldown and pitch variance), camera-anchored ambience (water measured around the camera's focus from the terrain mirror, one bed per environment, layer-aware), day/night music crossfaded from the tick through `GameClock`, alerts with hysteresis off the published pawn list, five code buses in dB with a persisted settings stub (B17) and alert ducking. A generated catalogue and six synthesised placeholder clips (`AudioSetup`), so a clone without it runs silent; EditMode suites for the math, probe, clock, watcher and director, plus a PlayMode smoke test. Nothing in Sim or Hud gains a UnityEngine reference, and no sound enters the save or the hash. |
 
 ---
 

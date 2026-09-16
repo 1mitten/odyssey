@@ -65,6 +65,15 @@ namespace Odyssey.Presentation.Rendering
             new Color(0.20f, 0.20f, 0.22f),            // 15 bedrock
             new Color(0.46f, 0.32f, 0.22f),            // 16 iron ore
             new Color(0.13f, 0.13f, 0.15f),            // 17 coal seam
+
+            // Water carries its opacity in the alpha, which is the one place in this file where
+            // alpha means anything: Odyssey/Water reads _BaseColor.a directly, and it is how the
+            // two depths are told apart. They must stay close in hue — a body of water has one
+            // colour and gets darker, it does not change colour halfway across — so the deep
+            // entry is the shallow one darkened and closed up rather than a different blue.
+            new Color(0.28f, 0.52f, 0.55f, 0.62f),     // 18 shallow water — the bed reads through
+            new Color(0.10f, 0.26f, 0.34f, 0.90f),     // 19 deep water — almost nothing does
+            new Color(0.44f, 0.46f, 0.34f),            // 20 marsh — wet ground, not shadow
         };
 
         /// <summary>
@@ -89,7 +98,13 @@ namespace Odyssey.Presentation.Rendering
             Color.white,                               // soil
             Color.white,                               // gravel
             Color.white,                               // engineered fill
-            Color.white,                               // rock
+            // Rock, pulled cool. The pack's stone texture is a warm grey-brown, which at board
+            // distance reads as earth rather than as stone — the complaint that started this.
+            // _BaseColor is a plain multiply with no clamp, so red comes down and blue goes up
+            // and the brown neutralises into grey. It cannot desaturate (that would need a lerp
+            // towards luminance, which a multiply cannot express), so this is a hue shift, not a
+            // wash: the texture's own mottling survives it.
+            new Color(0.84f, 0.90f, 1.02f),            // rock
             Color.white,                               // buried city seam
             Color.white,                               // salvage
             new Color(1.04f, 1.30f, 1.55f),            // 10 grass — lifted towards the reference
@@ -97,9 +112,20 @@ namespace Odyssey.Presentation.Rendering
             Color.white,                               // 12 packed gravel
             Color.white,                               // 13 sand
             Color.white,                               // 14 subsoil
-            Color.white,                               // 15 bedrock
+            new Color(0.78f, 0.84f, 0.98f),            // 15 bedrock — the same cool pull, darker
             Color.white,                               // 16 iron ore
             Color.white,                               // 17 coal seam
+
+            // Water is never drawn over pack art — it has a shader of its own and the solids
+            // above are what it uses — so these two are placeholders that keep the arrays the
+            // same length, which is the invariant this file's own comment asks for.
+            Color.white,                               // 18 shallow water
+            Color.white,                               // 19 deep water
+            // Over the dirt texture: pulled green and kept bright. The first value tried was
+            // darker, and against a meadow lifted to 1.04/1.30/1.55 it read as shadow rather
+            // than as bog — the eye takes a dark band beside bright grass for a shade before it
+            // takes it for a material.
+            new Color(0.92f, 1.10f, 0.74f),            // 20 marsh
         };
 
         public static Color TerrainTint(int terrain) =>
@@ -115,24 +141,90 @@ namespace Odyssey.Presentation.Rendering
         /// <see cref="TerrainTints"/> precisely so that lifting the ground cannot drag the plants
         /// standing on it somewhere nobody intended.
         /// </summary>
+        /// <summary>
+        /// The tints a tuft of grass can wear — greens, and one straw.
+        ///
+        /// <para><b>Why there is more than one now.</b> Every tuft used to take entry 0, so a
+        /// meadow was one colour of grass however many clump meshes it strewed. The owner asked for
+        /// "all a shade of green and the odd yellow one", and variety here is free in a way variety
+        /// almost never is: the tint is chosen by which of the three clump *modules* a tuft uses,
+        /// and a module is already its own instancing bucket. Three tints across three modules is
+        /// the same number of draw calls as one tint across three modules. Choosing per tuft
+        /// instead would multiply the buckets by the number of tints, on the heaviest instanced
+        /// thing in the world.</para>
+        ///
+        /// <para><b>The clumps read yellow because the ground was moved and they were not.</b> This
+        /// was a decision rather than a fault, and the previous comment here recorded it: the tufts
+        /// were left at a near-neutral <c>(1.06, 1.08, 1.02)</c> on the grounds that "the grass
+        /// clumps are already the bright yellow-green of the reference art, which the ground
+        /// texture is not". True in isolation — the scatter contact sheet, which draws the prefabs
+        /// untouched on an untinted tile, shows perfectly good green clumps. But the board does not
+        /// draw the ground untouched: <see cref="TerrainTint"/> lifts grass by
+        /// <c>(1.04, 1.30, 1.55)</c> to reach the reference green, and against a ground pulled that
+        /// far towards blue a tuft that was not pulled at all is a warm object on a cool field. It
+        /// reads yellow by comparison, which is why two honest pictures of the same asset
+        /// disagreed. The owner looked at the board and called it: greens, with the odd yellow.</para>
+        ///
+        /// <para><b>And until now this table did nothing whatsoever.</b> The tint is written to
+        /// <c>_BaseColor</c>, and <c>Synty/Foliage</c> — the shader the clumps actually use — does
+        /// not declare it. A tint aimed at a property a shader does not have fails silently, so
+        /// every value ever put here was decorative and the tufts always drew in the pack's own
+        /// colour. <c>MaterialCache.GradeSyntyFoliage</c> is what makes it a real lever, and
+        /// <c>TintProbe</c> is the instrument that found it by enumerating what the shader declares
+        /// rather than guessing at names.</para>
+        ///
+        /// <para><b>Red is the lever, not blue.</b> The shader's own
+        /// <c>_Leaf_Noise_Large_Color</c> is <c>(0.50, 0.58, 0.06)</c>, and what makes that read as
+        /// straw is the red sitting almost as high as the green while the blue is nearly nothing.
+        /// Green is a low-blue colour too, so lifting blue is a weak handle — multiplying 0.06 by
+        /// two is still 0.12. Bringing red down is what turns yellow-green into green, and it is
+        /// why these multipliers look lopsided.</para>
+        /// </summary>
         static readonly Color[] FoliageTints =
         {
-            // A touch above white. At board distance a clump's blades are thinner than a pixel and
-            // the shadowed sides win the pixel, so the far meadow drifts dark; a small lift keeps
-            // it in the same key as the lifted ground beneath it without turning it neon.
-            new Color(1.06f, 1.08f, 1.02f),            // 0 grass
+            new Color(0.55f, 1.00f, 2.20f),            // 0 meadow green
+            new Color(0.45f, 0.86f, 1.80f),            // 1 a deeper green, so a field is not one note
+            new Color(1.00f, 1.00f, 1.00f),            // 2 the odd straw clump, exactly as the pack made it
         };
+
+        /// <summary>How many tints a tuft can wear. One per clump module, so variety costs no draws.</summary>
+        public static int FoliageTintCount => FoliageTints.Length;
 
         public static Color FoliageTint(int variant) =>
             variant >= 0 && variant < FoliageTints.Length ? FoliageTints[variant] : Color.white;
 
-        /// <summary>The cyan trim. Black means the material has no emissive contribution.</summary>
+        /// <summary>
+        /// The cyan trim. Black means the material has no emissive contribution.
+        ///
+        /// <para>Ore glows for a reason that is not decoration. Coal sits at 0.13 grey and rock
+        /// at 0.25: down a shaft with no lamp in it they are the same colour, and a seam the
+        /// player cannot pick out of the wall is a seam that may as well not have generated. The
+        /// trim is what separates them, and it is the same cyan the concept renders use for
+        /// salvage — this world's signal for "there is something in there".</para>
+        ///
+        /// <para>It only ever reaches a <em>discovered</em> cell, because an undiscovered seam
+        /// arrives here as plain rock: <c>WorldRenderModel.Seen</c> has already substituted it.
+        /// So this table cannot give ore away, however bright it is.</para>
+        /// </summary>
         static readonly Color[] TerrainEmission =
         {
             Color.black, Color.black, Color.black, Color.black, Color.black,
             Color.black, Color.black, Color.black,
             new Color(0.06f, 0.30f, 0.34f),            // buried city seam
             new Color(0.10f, 0.50f, 0.56f),            // salvage
+
+            // Natural terrain, continuing CoreContent's numbering exactly as the tables above do.
+            Color.black,                               // 10 grass
+            Color.black,                               // 11 bare earth
+            Color.black,                               // 12 packed gravel
+            Color.black,                               // 13 sand
+            Color.black,                               // 14 subsoil
+            Color.black,                               // 15 bedrock
+            // Coal is the brighter of the two, which looks backwards and is not. Iron's rust
+            // brown already separates itself from rock on base colour alone; coal is a near-black
+            // against a dark grey and has nothing but the trim to be seen by.
+            new Color(0.08f, 0.38f, 0.43f),            // 16 iron ore
+            new Color(0.11f, 0.56f, 0.63f),            // 17 coal seam
         };
 
         public static readonly Color TrimEmission = new Color(0.10f, 0.62f, 0.70f);

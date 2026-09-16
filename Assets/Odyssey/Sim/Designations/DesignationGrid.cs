@@ -42,6 +42,7 @@ namespace Odyssey.Sim.Designations
         readonly CellGrid _grid;
         readonly IReadOnlyList<PlacedEdifice> _edifices;
         readonly byte[] _kinds;
+        readonly int[] _work;
         readonly List<int> _cells = new List<int>();
 
         public DesignationGrid(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices)
@@ -49,11 +50,62 @@ namespace Odyssey.Sim.Designations
             _grid = grid ?? throw new ArgumentNullException(nameof(grid));
             _edifices = edifices ?? throw new ArgumentNullException(nameof(edifices));
             _kinds = new byte[grid.Size.CellCount];
+            _work = new int[grid.Size.CellCount];
         }
 
         public GridSize Size => _grid.Size;
 
         public DesignationKind At(int index) => (DesignationKind)_kinds[index];
+
+        /// <summary>
+        /// Ticks of work already done on a cell's order.
+        ///
+        /// <para><b>On the cell, not on the job, and that is the point.</b> It used to live on the
+        /// driver as a toil counter, so a miner who stopped for a meal, a sleep or a mental break
+        /// took the whole morning's work with it and the next colonist started the cell from
+        /// nothing. Nobody would ever have reported that as a bug — the rock does come down
+        /// eventually — but it is hours of work quietly thrown away, and it is why a half-cut face
+        /// could never be drawn as half cut.</para>
+        ///
+        /// <para>Authored state: hashed, saved, and cleared when the order is placed, cancelled or
+        /// carried out.</para>
+        /// </summary>
+        public int WorkDone(int index) => _work[index];
+
+        /// <summary>Add a tick of work and return the new total.</summary>
+        public int AddWork(int index, int ticks)
+        {
+            _work[index] += ticks;
+            return _work[index];
+        }
+
+        /// <summary>
+        /// How far through its order a cell is, 0 to 1, or 0 where nothing is ordered.
+        ///
+        /// Presentation reads this through the snapshot rather than calling it, but it lives here
+        /// because the denominator is content — what the terrain costs to clear — and content is
+        /// the simulation's business.
+        /// </summary>
+        public float Fraction(int index)
+        {
+            if (_kinds[index] == 0) return 0f;
+            int total = WorkFor(index);
+            if (total <= 0) return 0f;
+            float done = (float)_work[index] / total;
+            return done < 0f ? 0f : done > 1f ? 1f : done;
+        }
+
+        /// <summary>What the order on this cell costs in ticks, or 0 if it has none.</summary>
+        public int WorkFor(int index)
+        {
+            switch ((DesignationKind)_kinds[index])
+            {
+                case DesignationKind.Mine:
+                    return NaturalContent.TerrainAt(_grid.Terrain[index]).workToClear;
+                default:
+                    return 0;
+            }
+        }
 
         /// <summary>Every designated cell index, ascending. Stable order is what makes a scan deterministic.</summary>
         public IReadOnlyList<int> Cells => _cells;
@@ -98,10 +150,18 @@ namespace Odyssey.Sim.Designations
         /// <summary>Whether the cell can take this kind of order right now.</summary>
         public bool Allows(int index, DesignationKind kind)
         {
+            // Nothing is ordered in water. Every kind below would refuse it anyway today — mining
+            // wants solid ground, felling wants a tree, deconstructing wants something built —
+            // so this line changes no behaviour and is here for the kind that comes next, which
+            // would otherwise have to rediscover that a river is not a building site. When the
+            // build pipeline lands, the rule it needs is already stated, in the one place this
+            // class's own doc says validation lives.
+            if (IsWater(index)) return false;
+
             switch (kind)
             {
                 case DesignationKind.Mine:
-                    return _grid.IsSolidTerrain(index);
+                    return CanMine(index);
                 case DesignationKind.Deconstruct:
                     return TryEdificeDef(index, out ushort built) && built < NaturalContent.FirstEdifice;
                 case DesignationKind.Fell:
@@ -110,6 +170,90 @@ namespace Odyssey.Sim.Designations
                     return false;
             }
         }
+
+        /// <summary>
+        /// Can this cell be dug out at all?
+        ///
+        /// <para>Solid terrain, and not bedrock. **Bedrock is the floor of the world**, not merely
+        /// an expensive rock: it refuses the order outright rather than quoting the 2,400 ticks it
+        /// would otherwise take — roughly forty trees for one cell of nothing. An order a colonist
+        /// would spend a day on and get no material from is worse than no order, because the
+        /// colonist takes the day.</para>
+        ///
+        /// <para>And not the ground under a standing tree. Digging it away would leave the tree
+        /// rooted in mid-air, and the right answer is to fell it first rather than to invent a
+        /// falling rule here. The order becomes available the moment the tree is gone.</para>
+        /// </summary>
+        public bool CanMine(int index)
+        {
+            if (!_grid.IsSolidTerrain(index)) return false;
+            if (_grid.Terrain[index] == NaturalContent.TerrainBedrock) return false;
+
+            int above = index + _grid.Size.LayerStride;
+            return above >= _grid.Size.CellCount || !IsTree(above);
+        }
+
+        /// <summary>
+        /// Could a colonist get out of this cell once it has been dug out?
+        ///
+        /// <para><b>The rule that replaced climbing</b> (owner, 2026-09-16). Unaided, a colonist
+        /// gets up one block by jumping and no more; deeper than that wants a ladder, which is a
+        /// built thing and nothing builds one yet. So the work giver will not hand out a cut that
+        /// would strand the miner, and a quarry comes out as a flight of benches rather than as a
+        /// shaft with somebody at the bottom of it.</para>
+        ///
+        /// <para>The test is on the four orthogonal columns, at this layer and the one above it:
+        /// somewhere to step out onto, or somewhere to jump up onto. Not the layer below — dropping
+        /// deeper is a way further in, not a way out.</para>
+        ///
+        /// <para><b>Asked when the job is given, not when the order is placed.</b> Marking is the
+        /// player saying what they want; whether it can be done safely depends on the world at the
+        /// moment somebody goes to do it. A cell buried in the middle of a mass of rock fails this
+        /// test today and passes it the moment a tunnel reaches it, and an order that could not be
+        /// marked until then would be an order the player could never give in advance. Putting it
+        /// in <c>CanMine</c> was tried and it made every buried cell unmarkable, which made the
+        /// first cut of a tunnel impossible.</para>
+        /// </summary>
+        public static bool CanBeLeftAfterCutting(CellGrid grid, int index)
+        {
+            GridSize size = grid.Size;
+            CellRef at = size.FromIndex(index);
+
+            for (int i = 0; i < 4; i++)
+            {
+                int x = at.X + (i == 0 ? 1 : i == 1 ? -1 : 0);
+                int z = at.Z + (i == 2 ? 1 : i == 3 ? -1 : 0);
+
+                if (Standable(x, z, at.Y)) return true;
+                if (Standable(x, z, at.Y + 1)) return true;
+            }
+
+            return false;
+
+            bool Standable(int x, int z, int y)
+            {
+                if (!size.Contains(x, z, y)) return false;
+                int n = size.Index(x, z, y);
+                if (grid.IsSolidTerrain(n) || grid.IsBlockedByEdifice(n)) return false;
+                if (NaturalContent.IsWater(grid.Terrain[n])) return false;
+                return grid.HasFloor(n);
+            }
+        }
+
+        /// <summary>Rock or ore that can be dug out — what a scenario means by "an outcrop".</summary>
+        public bool IsMinableStone(int index)
+        {
+            ushort terrain = _grid.Terrain[index];
+            bool stone = terrain == NaturalContent.TerrainRock || NaturalContent.IsOre(terrain);
+            return stone && CanMine(index);
+        }
+
+        /// <summary>
+        /// Water of either depth. Shallow water is walkable, so a colonist may stand in it, and
+        /// that is exactly why the question has to be asked separately from walkability: a cell
+        /// you can wade through is still not one you can put a wall in.
+        /// </summary>
+        public bool IsWater(int index) => NaturalContent.IsWater(_grid.Terrain[index]);
 
         /// <summary>Whether a tree stands in the cell right now.</summary>
         public bool IsTree(int index) => TryEdificeDef(index, out ushort def) && NaturalContent.IsTree(def);
@@ -131,6 +275,8 @@ namespace Odyssey.Sim.Designations
         {
             bool was = _kinds[index] != 0;
             _kinds[index] = (byte)kind;
+            // A new order, a cancelled one and a carried-out one all start the next from nothing.
+            _work[index] = 0;
             bool now = kind != DesignationKind.None;
             if (was == now) return;
 
@@ -174,6 +320,7 @@ namespace Odyssey.Sim.Designations
             {
                 hash.Add(_cells[i]);
                 hash.Add(_kinds[_cells[i]]);
+                hash.Add(_work[_cells[i]]);
             }
         }
 
@@ -188,6 +335,7 @@ namespace Odyssey.Sim.Designations
             {
                 writer.Write(_cells[i]);
                 writer.Write(_kinds[_cells[i]]);
+                writer.Write(_work[_cells[i]]);
             }
         }
 
@@ -200,8 +348,11 @@ namespace Odyssey.Sim.Designations
             {
                 int index = reader.ReadInt();
                 byte kind = reader.ReadByte();
+                int work = reader.ReadInt();
                 if (index < 0 || index >= _kinds.Length || kind == 0) continue;
                 Set(index, (DesignationKind)kind);
+                // After Set, which zeroes it: a half-cut face survives a save.
+                _work[index] = work;
             }
         }
 
@@ -216,6 +367,31 @@ namespace Odyssey.Sim.Designations
 
             var channel = writer.BeginDesignations(size.LayerStride);
             new ReadOnlySpan<byte>(_kinds, layer * size.LayerStride, size.LayerStride).CopyTo(channel);
+
+            // How far along each order is, quantised to a byte. Presentation cannot work this out
+            // for itself: the denominator is the terrain's work-to-clear, which is content.
+            //
+            // **Walked over the orders, not over the layer.** This asked Fraction() for all 14,400
+            // cells of the active layer every tick, which cost 0.055 ms a tick on a board with no
+            // orders on it at all — twenty-eight times the entire rest of the simulation, and it
+            // took the ten-day soak from 1 second a seed to 39. A layer has fourteen thousand
+            // cells and a colony has tens of orders, so the sparse list is the right shape by
+            // three orders of magnitude; the clear is what makes the sparse write correct, since
+            // the snapshot is double-buffered and the buffer still holds the frame before last.
+            var progress = writer.BeginDesignationProgress(size.LayerStride);
+            progress.Clear();
+
+            int first = layer * size.LayerStride;
+            int last = first + size.LayerStride;
+            for (int i = 0; i < _cells.Count; i++)
+            {
+                int index = _cells[i];
+                // _cells is sorted, so the active layer is one contiguous run: skip to it, stop
+                // after it.
+                if (index < first) continue;
+                if (index >= last) break;
+                progress[index - first] = (byte)(Fraction(index) * 255f);
+            }
         }
     }
 }

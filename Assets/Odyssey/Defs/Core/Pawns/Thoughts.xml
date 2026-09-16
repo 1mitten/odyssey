@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Memory thoughts: created by an event, expiring after a duration, stacking up to a limit with a
+  diminishing multiplier per extra copy so a repeated event saturates rather than growing without
+  bound. Mood is the difficulty base plus the sum of these, approached by drift.
+-->
+<Defs>
+
+  <!-- A break is self-limiting: the aftermath lifts mood clear of the threshold. -->
+  <ThoughtDef>
+    <defName>Thought_Catharsis</defName>
+    <moodOffset>150</moodOffset>
+    <durationTicks>30000</durationTicks>
+  </ThoughtDef>
+
+  <ThoughtDef>
+    <defName>Thought_AteMeal</defName>
+    <moodOffset>20</moodOffset>
+    <durationTicks>15000</durationTicks>
+    <stackLimit>2</stackLimit>
+  </ThoughtDef>
+
+  <ThoughtDef>
+    <defName>Thought_SleptOnGround</defName>
+    <moodOffset>-40</moodOffset>
+    <durationTicks>15000</durationTicks>
+  </ThoughtDef>
+
+</Defs>

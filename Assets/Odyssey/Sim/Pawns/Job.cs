@@ -92,6 +92,20 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Ticks accumulated inside the current toil. Saved.</summary>
         public int ToilProgress { get; internal set; }
 
+        /// <summary>
+        /// The cell this driver is working on *right now*, or -1 when it is not working.
+        ///
+        /// Working means a toil turning in place — a swing landing, a wall going up — and not
+        /// merely having a job, which for most of its length is a walk. Presentation reads this
+        /// through the snapshot and it is the only thing that distinguishes a colonist standing
+        /// by a tree with an axe from a colonist standing by a tree.
+        ///
+        /// Default -1, so a driver that has not thought about it animates as it always did. A
+        /// driver that has says which cell, because the figure must face what it is working on
+        /// and by then its heading is zero.
+        /// </summary>
+        public virtual int WorkFocus => -1;
+
         public virtual void Begin(Pawn pawn, Job job)
         {
             Pawn = pawn;
@@ -109,6 +123,65 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Run one tick of the current toil.</summary>
         public abstract JobStatus Tick(PawnContext ctx);
 
+        /// <summary>
+        /// Is the pawn still standing somewhere it could actually do this work?
+        ///
+        /// <para><b>Asked every tick of the working toil, because arriving is not staying.</b> The
+        /// walk toil puts a colonist on a stance its work giver chose, and every driver then
+        /// worked for as long as the job lasted without ever asking again. That held while nothing
+        /// could move a pawn it had not asked to move — and mining ended it: a dig drops anybody
+        /// standing on the cell it cuts, retiring a climb drops whoever was on it, and both are
+        /// deliberate. The owner watched the consequence and reported it as a colonist chopping a
+        /// tree from one block down.</para>
+        ///
+        /// <para>The envelope is given as two numbers because the two directions are different
+        /// questions. <paramref name="layersAbove"/> is how far above the work the pawn may stand
+        /// — nought for felling, one for mining, which is worked from the rim of a hole and from
+        /// directly on top of it as well as from beside it. <paramref name="layersBelow"/> is how
+        /// far under it — nought for felling, because a tree and the colonist cutting it share a
+        /// floor, and one for mining, because a pick goes overhead: a miner standing on the ground
+        /// can cut the rock above its head or the overhang beside it, which is how you undercut a
+        /// face. That second one is the owner's decision, and without it every rock that could
+        /// only be worked from below simply waited — 33 standing orders with nowhere to stand,
+        /// measured.</para>
+        ///
+        /// <para>Within one cell in X and Z, so the eight neighbours and the pawn's own cell. A
+        /// driver that stands its colonist <em>in</em> the work — felling did, once — is covered
+        /// by the same test.</para>
+        /// </summary>
+        /// <summary>
+        /// Send the pawn back to the walk toil: it has been moved off the stance it was given and
+        /// has to go and get back on it.
+        ///
+        /// <para>Walking back rather than failing, and measurement is why. Being displaced is not
+        /// the pawn's fault and usually not permanent — a dig drops whoever is standing on the
+        /// cell it cuts, and the stance is generally a step away afterwards. Failing the job
+        /// instead cost half the colony's mining over 40,000 ticks (65 cells to 32), because
+        /// every displacement threw away a walk as well as the work. If the stance really has
+        /// gone, <see cref="GotoCell"/> fails on the next tick and the job fails with it, which is
+        /// the same answer arrived at honestly.</para>
+        /// </summary>
+        protected void WalkBack()
+        {
+            ToilIndex = 0;
+            ToilProgress = 0;
+        }
+
+        protected static bool StillInReach(
+            PawnContext ctx, Pawn pawn, int work, int layersAbove, int layersBelow)
+        {
+            GridSize size = ctx.Size;
+            if ((uint)work >= (uint)size.CellCount) return false;
+
+            CellRef at = size.FromIndex(pawn.Cell);
+            CellRef target = size.FromIndex(work);
+
+            int up = at.Y - target.Y;
+            if (up > layersAbove || up < -layersBelow) return false;
+
+            return System.Math.Abs(at.X - target.X) <= 1 && System.Math.Abs(at.Z - target.Z) <= 1;
+        }
+
         /// <summary>Anything to undo when the job ends, beyond releasing reservations.</summary>
         public virtual void Cleanup(PawnContext ctx, JobStatus status) { }
 
@@ -116,6 +189,32 @@ namespace Odyssey.Sim.Pawns
         {
             ToilIndex++;
             ToilProgress = 0;
+        }
+
+        /// <summary>
+        /// The toil index a driver uses for its settle, if it has one. Drivers put the settle last,
+        /// so this is a name rather than a rule.
+        /// </summary>
+        public const int SettleToil = 2;
+
+        /// <summary>
+        /// Stand still for a beat now the work is done, then end the job.
+        ///
+        /// <para>Called as the whole of the settle toil, and it must be reached <b>before</b> a
+        /// driver's own guards — by then the tree is felled and the designation cleared, so a
+        /// guard asking "is this still a marked tree" would fail the job on the first settle tick
+        /// and undo the very thing being added.</para>
+        ///
+        /// <para>The work has already happened. Nothing here changes the world, earns experience
+        /// or holds anything up: the pawn simply stays where it is with
+        /// <see cref="WorkFocus"/> reporting nothing, so the drawn figure eases out of its work
+        /// stance while standing still instead of while walking away. See
+        /// <see cref="JobDef.settleTicks"/> for the measurement that made this necessary.</para>
+        /// </summary>
+        protected JobStatus Settle(PawnContext ctx)
+        {
+            if (++ToilProgress < ctx.Content.Jobs[Job.DefIndex].settleTicks) return JobStatus.Ongoing;
+            return JobStatus.Succeeded;
         }
 
         /// <summary>
@@ -128,6 +227,46 @@ namespace Odyssey.Sim.Pawns
             var def = ctx.Content.Jobs[Job.DefIndex];
             if (def.trainsSkill < 0 || def.experiencePerWorkTick <= 0) return;
             Pawn.GainExperience(def.trainsSkill, def.experiencePerWorkTick, ctx.CurrentTick);
+        }
+
+        /// <summary>
+        /// Take a thing up off the floor, and report the stoop that goes with it.
+        ///
+        /// <para><b>The two belong together, which is why they are one call.</b> Anything a
+        /// colonist lifts — a log, a stack of stone, a basket at the end of a row of crops, a
+        /// carcass — is the same motion, and a job that picked something up without saying so would
+        /// show a colonist acquiring it by magic while standing upright. Today there is exactly one
+        /// pickup in the game and it is wired; tomorrow there is a harvest driver and a butcher's,
+        /// and a seam is the only thing that stops either of them forgetting. This is the
+        /// <c>docs/plans/vertical-slice.md</c> "where the seams are" argument applied to a very
+        /// small thing.</para>
+        ///
+        /// <para>The simulation's whole part is that it happened, here, now: this is one tick and
+        /// stays one tick. The stoop and the rise are presentation's, take about eight-tenths of a
+        /// second of game time and cost the colony nothing, so no throughput, golden or balance
+        /// number moves — which means a figure may still be straightening as its pawn sets off
+        /// walking. That is the accepted price of the owner's decision (2026-09-16) to keep the
+        /// duration out of the simulation.</para>
+        /// </summary>
+        protected void TakeUp(PawnContext ctx, ColonyItem item)
+        {
+            ctx.Items.PickUp(item, Pawn.Id);
+            Pawn.BeginGesture(PawnGesture.Lift);
+        }
+
+        /// <summary>
+        /// Set a carried thing down on purpose, and report the motion that goes with it.
+        ///
+        /// <para><b>On purpose</b> is the whole of the distinction, and it is why this is not
+        /// simply "whenever a carried thing reaches the floor". A job that fails mid-carry also
+        /// puts its load somewhere, and that is a colonist dropping what it is holding rather than
+        /// stowing it — a different motion, and one nothing draws yet. So a failure path calls the
+        /// store directly and says nothing, deliberately.</para>
+        /// </summary>
+        protected void PutDown(PawnContext ctx, ColonyItem item, int cell)
+        {
+            ctx.Items.Drop(item, cell);
+            Pawn.BeginGesture(PawnGesture.Stow);
         }
 
         /// <summary>

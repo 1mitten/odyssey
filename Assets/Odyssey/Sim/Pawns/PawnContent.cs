@@ -128,6 +128,7 @@ namespace Odyssey.Sim.Pawns
         public const int Wander = JobHandle.Wander;
         public const int Wait = JobHandle.Wait;
         public const int Fell = JobHandle.Fell;
+        public const int Mine = JobHandle.Mine;
         public const int Count = JobHandle.Count;
     }
 
@@ -145,6 +146,34 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Ticks of work the payload toil takes, where the job has one.</summary>
         public int workTicks;
+
+        /// <summary>
+        /// Ticks a colonist stands still after the work is done, before the job ends. Zero for a
+        /// job that does not want one.
+        ///
+        /// <para><b>Follow-through</b> (owner, 2026-09-16: "should there be a second delay so you
+        /// can motion more naturally instead of snapping?"). The work itself is finished — the
+        /// tree is already down and the rock already gone — and this is the beat afterwards in
+        /// which the colonist straightens up before walking off. Stopping an action dead is the
+        /// thing that reads as mechanical, and a recovery beat is ordinary practice for exactly
+        /// that reason.</para>
+        ///
+        /// <para><b>It also fixes a measured fault, which is why it is here and not a guess.</b>
+        /// The drawn figure steps <i>in</i> towards its work — about 0.8 m for felling — and eases
+        /// back out over <c>PawnFigureDirector.WorkEaseSeconds</c>, 0.45 s. Measured over 40,000
+        /// ticks: all 27 work-to-move transitions began gliding within <b>1 to 3 ticks</b> of the
+        /// work stopping, so every one of them was walking and un-stepping at the same time. The
+        /// gait blend deliberately excludes the stance from the speed it measures, so the feet
+        /// played an ordinary walk while the body covered the walk <i>and</i> the retraction —
+        /// which is the "very quickly walk and then come to a normal pace" the owner saw, lasting
+        /// exactly as long as the ease.</para>
+        ///
+        /// <para><b>So the number is not free taste: it must be at least the presentation ease</b>,
+        /// 27 ticks at sixty a second. 30 is that with a little margin. A simulation constant
+        /// chosen to cover a drawing constant is an uncomfortable coupling and it is the lesser
+        /// one — the alternative is presentation reaching into job timing.</para>
+        /// </summary>
+        public int settleTicks;
 
         /// <summary>
         /// The skill a tick of this job's work trains, as a <see cref="SkillIndex"/> value, or -1
@@ -168,7 +197,8 @@ namespace Odyssey.Sim.Pawns
     {
         public const int Haul = 0;
         public const int Cutting = 1;
-        public const int Count = 2;
+        public const int Mining = 2;
+        public const int Count = 3;
     }
 
     /// <summary>
@@ -179,7 +209,8 @@ namespace Odyssey.Sim.Pawns
     {
         public const int Hauling = 0;
         public const int Cutting = 1;
-        public const int Count = 2;
+        public const int Mining = 2;
+        public const int Count = 3;
     }
 
     /// <summary>
@@ -289,6 +320,9 @@ namespace Odyssey.Sim.Pawns
         public const int Meal = ItemHandle.Meal;
         public const int Salvage = ItemHandle.Salvage;
         public const int Wood = ItemHandle.Wood;
+        public const int Stone = ItemHandle.Stone;
+        public const int IronOre = ItemHandle.IronOre;
+        public const int Coal = ItemHandle.Coal;
         public const int Count = ItemHandle.Count;
     }
 
@@ -361,15 +395,43 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
+    /// The numbers that belong to the pawn simulation as a whole rather than to any one need,
+    /// job or item. They were fields on <see cref="PawnContent"/>, which meant they were the one
+    /// part of the tuning that content could not reach.
+    /// </summary>
+    public class PawnTuningDef : Def
+    {
+        public int needsIntervalTicks = 150;
+        public int dayTicks = 60_000;
+        public int thinkLoopLimit = 10;
+        public int thinkLoopWindowTicks = 60;
+        public int standDownTicks = 120;
+        public int woodPerTree = 27;
+        public int stonePerRock = 8;
+        public int stoneChanceOneIn = 1;
+        public int orePerCell = 15;
+    }
+
+    /// <summary>
     /// Every tunable number the pawn simulation reads, in one frozen record.
     ///
-    /// Built in code for now for the same reason CoreContent is: there is no content pack yet,
-    /// and a clone with no Assets/ content must still run the simulation headless. The
-    /// declaration order below <em>is</em> the handle order, so the eventual XML must declare the
-    /// same names in the same order.
+    /// <para><b>There are two ways to build one, and that is deliberate.</b>
+    /// <see cref="FromDefs"/> reads the content pack at <c>Assets/Odyssey/Defs/Core/Pawns</c>,
+    /// which is where these numbers now live and where a mod or a design change edits them
+    /// (OQ-15). <see cref="Core"/> builds the same content in code and remains the oracle:
+    /// <c>PawnContentDefTests</c> compares the two field for field on every run, so the XML
+    /// cannot drift away from the content every soak hash and tuning decision was measured
+    /// against without a test saying which field moved.</para>
     ///
-    /// TODO(content): move to Defs/Core/Pawns/*.xml, resolve handles by name at world
-    /// construction, and delete <see cref="Core"/>. Nothing that reads these has to change.
+    /// <para>The simulation still constructs with <c>Core()</c>, because a headless world is
+    /// built in a dozen places — tests, the editor harnesses, the bootstrap — and a world that
+    /// needs a path on disk cannot be built from a unit test fixture. TODO(content): give the
+    /// composition root a loaded <see cref="DefDatabase"/>, switch those call sites to
+    /// <see cref="FromDefs"/>, and delete <see cref="Core"/>. Nothing that <i>reads</i> this
+    /// record has to change either way.</para>
+    ///
+    /// <para>The array order below <em>is</em> the handle order, and it is not the order the
+    /// loader stores Defs in: see <see cref="FromDefs"/>.</para>
     /// </summary>
     public sealed class PawnContent
     {
@@ -404,10 +466,116 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public int WoodPerTree = 27;
 
+        /// <summary>Stone a plain rock cell leaves. ASSUMED, like everything else here.</summary>
+        public int StonePerRock = 8;
+
+        /// <summary>
+        /// One rock cell in this many yields stone. **One, meaning every cell does.**
+        ///
+        /// <para>It was four, and four was tuned against the wrong denominator. The reasoning was
+        /// that the played board holds eighty thousand cells of rock and a yield from every one
+        /// would put six hundred thousand stone on the map — true, and irrelevant, because nobody
+        /// mines a board. A player mines what they mark, which is tens of cells, and at one in
+        /// four a dozen orders produced three piles of stone against five hundred and sixty-seven
+        /// wood from the trees beside them. The colony read as getting nothing out of the rock,
+        /// which is what a playtest said in as many words (owner, 2026-09-16).</para>
+        ///
+        /// <para>Kept as a dial rather than deleted, because the machinery behind it is worth
+        /// having: the roll is a pure function of (world seed, cell index), so a partial yield can
+        /// be reintroduced the day something wants one without reopening how it is decided.</para>
+        /// </summary>
+        public int StoneChanceOneIn = 1;
+
+        /// <summary>Ore a seam cell leaves. Always, never rolled. ASSUMED.</summary>
+        public int OrePerCell = 15;
+
         public int ThinkLoopWindowTicks = 60;
 
         /// <summary>How long a pawn tripped by the think-loop trap stands still.</summary>
         public int StandDownTicks = 120;
+
+        /// <summary>
+        /// The Def types this content is made of, registered on a loader in one place so that a
+        /// caller cannot load half of it. Adding a pawn Def type and forgetting to register it
+        /// gives "unknown Def type" at load, which is the right failure but the wrong place to
+        /// have to remember.
+        /// </summary>
+        public static DefLoader Register(DefLoader loader) =>
+            loader.Register<NeedDef>()
+                .Register<ThoughtDef>()
+                .Register<JobDef>()
+                .Register<WorkTypeDef>()
+                .Register<SkillDef>()
+                .Register<ItemDef>()
+                .Register<MoodDef>()
+                .Register<MentalBreakDef>()
+                .Register<MovementDef>()
+                .Register<PawnKindDef>()
+                .Register<PawnTuningDef>();
+
+        /// <summary>
+        /// The same content, read from a loaded <see cref="DefDatabase"/> rather than built in
+        /// code.
+        ///
+        /// <para><b>Every array is filled by name, never by table order.</b> A handle here is a
+        /// compile-time constant — <see cref="NeedIndex.Food"/> is 0 because the published views
+        /// and the save both say so — while <c>DefLoader</c> sorts each table by defName so that
+        /// handles it assigns are stable across machines. Those two orders are not the same one,
+        /// and reading the table in its own order would silently swap food for joy the day a Def
+        /// is renamed. So the names below are the contract: this list <i>is</i> the handle
+        /// order.</para>
+        ///
+        /// <para>A missing or misspelt Def throws here rather than leaving a null in an array for
+        /// the first tick to trip over, and the message names the type and the name it wanted.</para>
+        /// </summary>
+        public static PawnContent FromDefs(DefDatabase defs)
+        {
+            var content = new PawnContent();
+
+            content.Needs = ByName<NeedDef>(defs, "Need_Food", "Need_Rest", "Need_Joy");
+            content.Thoughts = ByName<ThoughtDef>(defs,
+                "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround");
+            content.Jobs = ByName<JobDef>(defs,
+                "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine");
+            content.WorkTypes = ByName<WorkTypeDef>(defs, "Work_Haul", "Work_Cutting", "Work_Mining");
+            content.Skills = ByName<SkillDef>(defs, "Skill_Hauling", "Skill_Cutting", "Skill_Mining");
+            content.Items = ByName<ItemDef>(defs,
+                "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal");
+
+            content.Mood = One<MoodDef>(defs, "Mood_Default");
+            content.Break = One<MentalBreakDef>(defs, "Break_Wander");
+            content.Movement = One<MovementDef>(defs, "Movement_Colonist");
+            content.Kind = One<PawnKindDef>(defs, "PawnKind_Colonist");
+
+            var tuning = One<PawnTuningDef>(defs, "Tuning_Pawns");
+            content.NeedsIntervalTicks = tuning.needsIntervalTicks;
+            content.DayTicks = tuning.dayTicks;
+            content.ThinkLoopLimit = tuning.thinkLoopLimit;
+            content.ThinkLoopWindowTicks = tuning.thinkLoopWindowTicks;
+            content.StandDownTicks = tuning.standDownTicks;
+            content.WoodPerTree = tuning.woodPerTree;
+            content.StonePerRock = tuning.stonePerRock;
+            content.StoneChanceOneIn = tuning.stoneChanceOneIn;
+            content.OrePerCell = tuning.orePerCell;
+
+            return content;
+        }
+
+        static T[] ByName<T>(DefDatabase defs, params string[] names) where T : Def
+        {
+            var array = new T[names.Length];
+            for (int i = 0; i < names.Length; i++) array[i] = One<T>(defs, names[i]);
+            return array;
+        }
+
+        static T One<T>(DefDatabase defs, string defName) where T : Def
+        {
+            if (!defs.HasTable<T>())
+                throw new DefLoadException($"the content has no {typeof(T).Name} at all, and '{defName}' is required.");
+            if (!defs.Table<T>().TryGetHandle(defName, out var handle))
+                throw new DefLoadException($"the content has no {typeof(T).Name} named '{defName}'.");
+            return defs.Table<T>()[handle];
+        }
 
         public static PawnContent Core()
         {
@@ -478,7 +646,19 @@ namespace Odyssey.Sim.Pawns
                 new JobDef
                 {
                     defName = "Job_Fell", driver = JobIndex.Fell, workTicks = 800, expiryTicks = 6_000,
-                    trainsSkill = SkillIndex.Cutting, experiencePerWorkTick = 110,
+                    trainsSkill = SkillIndex.Cutting, experiencePerWorkTick = 110, settleTicks = 30,
+                },
+                // No workTicks: mining is priced per material, and the terrain defs already carry
+                // the number (rock 700, iron 900, coal 760). One constant here would make a seam
+                // cost the same as the stone around it, which is the whole difference between
+                // materials. The driver reads TerrainAt(...).workToClear as it swings.
+                //
+                // The expiry is generous because a shaft can be a long walk from the colony and a
+                // job that expires on the way there is a colonist who never arrives.
+                new JobDef
+                {
+                    defName = "Job_Mine", driver = JobIndex.Mine, expiryTicks = 12_000,
+                    trainsSkill = SkillIndex.Mining, experiencePerWorkTick = 110, settleTicks = 30,
                 },
             };
 
@@ -491,14 +671,17 @@ namespace Odyssey.Sim.Pawns
                 // as ui.work.hauling and ui.work.cutting; nothing displays a skill yet.
                 Skill("Skill_Hauling", "hauling"),
                 Skill("Skill_Cutting", "cutting"),
+                Skill("Skill_Mining", "mining"),
             };
 
             content.WorkTypes = new[]
             {
-                // Cutting scans before hauling at equal priority: felled wood is what there is
-                // to haul, so the order that makes the work exist comes first.
-                new WorkTypeDef { defName = "Work_Haul", label = "hauling", order = 1 },
+                // Cutting and mining scan before hauling at equal priority: the orders that make
+                // work exist come before the order that tidies it up. Cutting is first of the two
+                // because felling is the shorter job and the wood is usually nearer.
+                new WorkTypeDef { defName = "Work_Haul", label = "hauling", order = 2 },
                 new WorkTypeDef { defName = "Work_Cutting", label = "cutting", order = 0 },
+                new WorkTypeDef { defName = "Work_Mining", label = "mining", order = 1 },
             };
 
             content.Items = new[]
@@ -519,6 +702,9 @@ namespace Odyssey.Sim.Pawns
                 new ItemDef { defName = "Item_Salvage", label = "salvage" },
                 // Wood's 75 is the one limit the research states outright (a-14 §4).
                 new ItemDef { defName = "Item_Wood", label = "wood", stackLimit = 75 },
+                new ItemDef { defName = "Item_Stone", label = "stone", stackLimit = 75 },
+                new ItemDef { defName = "Item_IronOre", label = "iron ore", stackLimit = 75 },
+                new ItemDef { defName = "Item_Coal", label = "coal", stackLimit = 75 },
             };
 
             content.Mood = new MoodDef { defName = "Mood_Default" };
@@ -564,5 +750,19 @@ namespace Odyssey.Sim.Pawns
         public const uint MentalBreak = 0x9E37_79B1;
         public const uint Wander = 0x85EB_CA6B;
         public const uint Passion = 0xC2B2_AE35;
+
+        /// <summary>
+        /// Whether a rock cell gives up stone. Drawn from (world seed, <b>cell index</b>) rather
+        /// than from the tick, which is the one thing about it that matters: the answer belongs
+        /// to the cell and not to the moment. A cell mined on tick 900 in one run and tick 40,000
+        /// in another yields the same, so the roll survives a save, a reload and a replay, and no
+        /// amount of re-ordering the colony's work can reroll it.
+        ///
+        /// The number is not 0xC2B2_AE35, which is what it was written as and which
+        /// <see cref="Passion"/> took on the same day on another branch. Two purposes sharing a
+        /// salt is two streams that agree, and a colonist's passion deciding which rocks hold
+        /// stone is the kind of coupling nothing would ever report.
+        /// </summary>
+        public const uint StoneYield = 0x27D4_EB2F;
     }
 }

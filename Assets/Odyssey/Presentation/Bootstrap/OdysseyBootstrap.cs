@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Odyssey.Hud;
+using Odyssey.Presentation.Audio;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
@@ -72,17 +73,41 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("What the colony starts with. Playtest gives it felling work near the start at once; Bare gives the same colony and no orders. The default flips to Bare when the designate tool lands.")]
         public StartingScenario scenario = StartingScenario.Playtest;
 
+        [Tooltip("Carry the land on past the rim of the board, so it does not end in mid-air. Decoration only: nothing out there is a cell.")]
+        public bool terrainSkirt = true;
+
+        [Tooltip("How much of the board's own tree density the surround gets. 100 continues the wood; lower is the lever for a machine that cannot afford it.")]
+        [Range(0, 100)]
+        public int skirtTreeDensity = 100;
+
         [Tooltip("Which faces the colonists get. 0 draws a fresh cast every session; any other value pins one, and the log prints the value each session used so a cast you liked can be kept.")]
         public int colonistLookSeed = 0;
 
+        /// <summary>
+        /// The hour the colony's first day begins, 0 to 23. Noon by default: the board is lit for
+        /// midday and has no day/night lighting, so a clock starting at 00:00 meant a player saw
+        /// noon and heard the night bed. Set it negative to start at tick 0 the way a headless
+        /// run does.
+        /// </summary>
+        [Range(-1, 23)] public int startHour = 12;
+
         [Header("Presentation")]
         public ModuleCatalogue? moduleCatalogue;
+        public AudioCatalogue? audioCatalogue;
         public SliceCameraRig? cameraRig;
         public bool castShadows = true;
 
         [Tooltip("Tufts of grass per hundred grass cells. 0 is bare ground; 60 is a tuft on six cells in ten.")]
         [Range(0, 300)]
         public int grassScatter = 60;
+
+        [Tooltip("How far the drawn ground rolls above and below its layer, in metres. Decoration only: the cells stay flat, so nothing here changes pathing, the save or the hash. 0 is the flat board.")]
+        [Range(0f, 3f)]
+        public float groundRelief = GroundRelief.BoardAmplitude;
+
+        [Tooltip("The wavelength of the longest swell, in metres. Shorter is steeper and reads more strongly, at the cost of faceting between cells.")]
+        [Range(40f, 400f)]
+        public float groundReliefPeriod = 150f;
 
         [Header("Tick")]
         [Tooltip("Ticks per second at speed 1. The simulation has no notion of seconds; this is it.")]
@@ -98,10 +123,29 @@ namespace Odyssey.Presentation.Bootstrap
         ChunkRenderer? _renderer;
         PawnContext? _pawns;
         PawnFigureDirector? _figures;
+        AudioDirector? _audio;
         Material? _actorMaterial;
         MapGenDef? _gen;
         double _accumulator;
         float _tickAlpha;
+
+        /// <summary>
+        /// How far this frame sits between two ticks, 0 to 1.
+        ///
+        /// Exposed because the pick hit-test has to build its box from the same number the figure
+        /// is drawn with. When it did not, the box sat at the tick boundary and the figure had
+        /// moved on, so a walking colonist was not clickable where they appeared.
+        /// </summary>
+        public float TickAlpha => _tickAlpha;
+
+        /// <summary>Cost units a pawn retires in one tick, the other half of that same tween.</summary>
+        public int MovePerTick => PawnContent.Core().Movement.movePerTick;
+
+        /// <summary>
+        /// The live figures, for anything that must agree with where a colonist is actually drawn
+        /// rather than with where the simulation keeps them. See <see cref="PawnFigureDirector.TryGetFeet"/>.
+        /// </summary>
+        public PawnFigureDirector? Figures => _figures;
         readonly Stopwatch _frameTimer = new Stopwatch();
         double _renderMs;
         double _tickMs;
@@ -121,6 +165,16 @@ namespace Odyssey.Presentation.Bootstrap
 
         void Start()
         {
+            WarnIfTheSceneIsStale();
+
+            // Set before anything is meshed, because the relief is read at mesh time and a chunk
+            // built flat would stay flat until something dirtied it. Statics, like the scatter
+            // density beside them: the field has to be reachable from the mesher, the picker and
+            // the figures alike, and it is a property of how the world is drawn rather than of any
+            // one of them.
+            GroundRelief.Amplitude = groundRelief;
+            GroundRelief.Period = groundReliefPeriod;
+
             var size = new GridSize(sizeX, sizeZ, layers);
             _grid = new CellGrid(size);
             var chunks = new ChunkGrid(size);
@@ -172,13 +226,21 @@ namespace Odyssey.Presentation.Bootstrap
                 .AddColony(_pawns, designations, support, nav)
                 .Build();
 
+            // Noon, before the world has ticked once. It has to be here and not further down:
+            // the composition root ticks once during setup to publish a first frame, and
+            // SimWorld.StartAtTick refuses a clock that has already run — which is how this was
+            // caught being in the wrong place rather than quietly starting the day an hour late.
+            if (startHour >= 0) _world.StartAtTick(startHour * GameClock.TicksPerHour);
+
             ScenarioDef scenarioDef = scenario == StartingScenario.Bare ? ScenarioDef.Bare() : ScenarioDef.Playtest();
             var placement = ColonyScenario.Place(_grid, _pawns, outcome.StartCell, seed, scenarioDef);
             if (placement.Colonists == 0)
                 Debug.LogError($"[Odyssey] no colonists were placed near {outcome.StartCell}: {placement}");
             int marked = ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenarioDef);
             if (marked > 0)
-                Debug.Log($"[Odyssey] {scenarioDef}: {marked} trees within {scenarioDef.startingFellRadius} cells of the start are marked for felling");
+                Debug.Log($"[Odyssey] {scenarioDef}: {marked} cells marked for work before the first tick — " +
+                          $"trees within {scenarioDef.startingFellRadius} cells of the start, and the nearest " +
+                          $"outcrop within {scenarioDef.startingMineRadius}");
 
             // One tick primes the mirror: the contributor runs in the publish phase, so until the
             // world has ticked once there is no published frame and nothing to draw.
@@ -202,6 +264,16 @@ namespace Odyssey.Presentation.Bootstrap
                 ScatterDensity = grassScatter,
                 ColonistLookSalt = lookSalt,
             };
+            _renderer.Skirt.Enabled = terrainSkirt;
+            _renderer.Skirt.TreeDensityPercent = skirtTreeDensity;
+            if (terrainSkirt)
+            {
+                _renderer.Skirt.Build();
+                Debug.Log($"[Odyssey] surround: {_renderer.Skirt.GroundInstances} ground tiles, " +
+                          $"{_renderer.Skirt.TreeInstances} trees and {_renderer.Skirt.TuftInstances} tufts " +
+                          $"beyond the rim, at the board's own " +
+                          $"{_renderer.Skirt.MeasuredTreeDensity} trees per thousand cells");
+            }
             _actorMaterial = new Material(library.FallbackMaterial) { name = "Odyssey/Actor" };
             // High-contrast against grass, earth and stone, which tan was not.
             _actorMaterial.SetColor("_BaseColor", new Color(0.98f, 0.36f, 0.20f));
@@ -211,10 +283,30 @@ namespace Odyssey.Presentation.Bootstrap
             _figures = new PawnFigureDirector(moduleCatalogue, transform, gameObject.layer)
             {
                 LookSalt = lookSalt,
+                // So a climbing figure can find the block it is climbing against. The same mirror
+                // the chunk renderer meshes from, so the rock it is pressed to is the rock drawn.
+                //
+                // **Restored by hand during the merge, and this line is a trap.** Removing
+                // climbing as a MINING mechanic took this with it, and git then auto-merged that
+                // removal without flagging a conflict — leaving the climb pose compiled, correct
+                // and never executed, because `TryWallBeside` needs the mirror and `ApplyClimbPose`
+                // is gated on it having found a face. Ladders are still climbed.
+                World = _model,
             };
 
             Directors = new HudDirectors(size.SizeY, outcome.StartCell.Y);
             Directors.Slice.LayerChanged += OnActiveLayerChanged;
+
+            // Sound, built once beside the figures: one director serves the whole colony, reading
+            // the published frame and the render mirror and nothing the simulation owns. The
+            // faders come from the player's stored settings (the B17 stub), so a volume the
+            // player set last session is set again before the first frame is drawn. A null
+            // catalogue — a clone without the audio assets — yields a working, silent game.
+            _audio = new AudioDirector(
+                audioCatalogue, _model != null ? new MirrorTerrain(_model) : null,
+                size, transform, gameObject.layer, outcome.StartCell.Y);
+            AudioSettingsStore.Load().ApplyTo(_audio);
+            if (_figures != null) _figures.BlowLanded += OnBlowLanded;
 
             if (cameraRig != null)
             {
@@ -223,6 +315,13 @@ namespace Odyssey.Presentation.Bootstrap
                 // above groundLayer, and RenderActors culls anything above the active layer -
                 // which meant every colonist was culled every frame while the terrain drew fine.
                 cameraRig.Bind(_model, _renderer, Directors);
+
+                // The depth the game opens at, which is what SliceSettings.followDepth measures
+                // "underground" against. It is the colony's own layer for the same reason the
+                // slice binds to it: the surface is terraced, so the generator's nominal ground
+                // layer is one to three below where anybody is actually standing.
+                if (cameraRig.slice != null) cameraRig.slice.surfaceLayer = outcome.StartCell.Y;
+
                 // The composition root draws every cursor tier; the rig's own cell cube is off from
                 // the first frame, not from the first LateUpdate that happens to say so.
                 cameraRig.SuppressCellCursor = true;                cameraRig.GameSpeedRequested += OnGameSpeedRequested;
@@ -246,6 +345,13 @@ namespace Odyssey.Presentation.Bootstrap
 
         void OnActiveLayerChanged(int layer) =>
             _world?.Intents.Submit(new Intent(IntentKind.SetSliceLayer, default, layer));
+
+        /// <summary>
+        /// A tool landed somewhere: chop or pick by the style the figure already resolved, played
+        /// from the edge the chips left. The director does the rest — distance, cooldown, pitch.
+        /// </summary>
+        void OnBlowLanded(int workStyle, Vector3 edge) =>
+            _audio?.PlayOneShot(SoundIds.ForBlow(workStyle), edge);
 
         void OnGameSpeedRequested(int speed)
         {
@@ -302,6 +408,38 @@ namespace Odyssey.Presentation.Bootstrap
             }
         }
 
+        /// <summary>
+        /// Say so, loudly, when the play scene was built before a presenter existed.
+        ///
+        /// <para><b>A stale scene fails silently, and that is what makes it expensive.</b>
+        /// <c>Assets/Scenes/Play.unity</c> is committed <i>and</i> generated: the generator is
+        /// <c>PlayScene.cs</c> and the scene is its output. Add a component to the generator and
+        /// the committed scene does not have it until somebody runs
+        /// <b>Odyssey → Presentation → Build play scene</b>. Until they do, the feature is simply
+        /// absent — no error, no missing reference, nothing to see. It is indistinguishable from a
+        /// broken feature, and it cost a whole playtest round: designation was reported as "nothing
+        /// happened" when in truth nothing was there.</para>
+        ///
+        /// <para>Checked by name rather than by a generator stamp because a stamp has to be
+        /// remembered and this does not: a presenter the composition root depends on is either on
+        /// the object or it is not. The list is short and it is the list of things whose absence
+        /// is silent — a missing renderer throws, a missing presenter does nothing at all.</para>
+        ///
+        /// <para>It warns rather than adding the component itself. Adding it would paper over a
+        /// scene that may be stale in ways this cannot see — the camera rig, the lighting, the
+        /// module catalogue — and the useful signal is "rebuild the scene", not "one thing has
+        /// been quietly patched".</para>
+        /// </summary>
+        void WarnIfTheSceneIsStale()
+        {
+            if (GetComponent<DesignatePresenter>() != null) return;
+
+            Debug.LogWarning(
+                "[Odyssey] This play scene was built before DesignatePresenter existed, so no tool " +
+                "can be armed and the mining and felling keys (M, C, X) will do nothing. The scene " +
+                "is generated: rebuild it with Odyssey > Presentation > Build play scene.");
+        }
+
         void LateUpdate()
         {
             if (_renderer == null || _model == null || _world == null) return;
@@ -319,10 +457,21 @@ namespace Odyssey.Presentation.Bootstrap
             _figures?.Sync(_world.Views.Current, activeLayer, slice, _tickAlpha, movePerTick,
                 Time.deltaTime);
 
+            // Sound after the figures, so a blow that landed this frame sounds on the same frame
+            // its chips fly. The listener is the camera (where the AudioListener lives) and the
+            // ambience anchor is its focus, which sits down among the water rather than up where
+            // the camera itself is.
+            if (_audio != null)
+                _audio.Sync(Time.deltaTime, _world.Views.Current,
+                    cameraRig != null ? cameraRig.transform.position : transform.position,
+                    cameraRig != null ? cameraRig.Focus : transform.position,
+                    activeLayer);
+
             if (_actorMaterial != null)
                 _renderer.RenderActors(_world.Views.Current, activeLayer, slice, _actorMaterial,
                     _tickAlpha, movePerTick, _figures?.Drawn);
 
+            DrawStandingOrders(_world.Views.Current);
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
@@ -367,6 +516,65 @@ namespace Odyssey.Presentation.Bootstrap
         /// rig deliberately has no access to it; the rig's own cell cursor is switched off for
         /// good rather than negotiated frame by frame.
         /// </summary>
+        /// <summary>
+        /// Every standing order on the drawn layer, and how far through it the colony is.
+        ///
+        /// <para><b>Nothing drew these at all.</b> The designation channel has been published
+        /// since designations existed and no part of presentation ever read it, so a marked cell
+        /// looked exactly like an unmarked one and the only way to know what had been ordered was
+        /// to watch somebody walk to it. A bracket says the order is there; the cut slab says how
+        /// far along it is (owner, 2026-09-16 — "some graphical indication").</para>
+        ///
+        /// <para>Per order rather than per cell of the board: the channel is a layer's worth of
+        /// bytes but the loop only draws the ones that carry an order, which on any real board is
+        /// tens of cells out of sixty thousand.</para>
+        /// </summary>
+        void DrawStandingOrders(WorldSnapshot snapshot)
+        {
+            if (_renderer == null) return;
+
+            System.ReadOnlySpan<byte> orders = snapshot.Designations;
+            System.ReadOnlySpan<byte> progress = snapshot.DesignationProgress;
+            if (orders.Length == 0) return;
+
+            GridSize size = snapshot.Size;
+            int layer = snapshot.SliceLayer;
+
+            for (int i = 0; i < orders.Length; i++)
+            {
+                if (orders[i] == 0) continue;
+
+                int x = i % size.SizeX;
+                int z = i / size.SizeX;
+                var cell = new CellRef(x, z, layer);
+
+                Color tint = orders[i] == (byte)DesignationKind.Mine ? MineOrderColour : FellOrderColour;
+                _renderer.DrawCellMark(cell, tint);
+
+                if (i < progress.Length && progress[i] > 0)
+                    _renderer.DrawCellCut(cell, progress[i] / 255f, CutColour);
+            }
+        }
+
+        /// <summary>Marks a cell ordered dug. Warm, against the cool stone it is drawn over.</summary>
+        static readonly Color MineOrderColour = new Color(0.95f, 0.72f, 0.32f, 0.42f);
+
+        /// <summary>Marks a tree ordered felled.</summary>
+        static readonly Color FellOrderColour = new Color(0.55f, 0.85f, 0.45f, 0.42f);
+
+        /// <summary>
+        /// The non-primary members of a multi-selection: the same shape as the primary's bracket
+        /// at half the presence, so the set reads as one selection with a head rather than as
+        /// several selections that happen to share a screen.
+        /// </summary>
+        static readonly Color SecondarySelectionColour = new Color(1f, 1f, 1f, 0.45f);
+
+        /// <summary>
+        /// The cut itself: pale, so it reads as fresh broken stone rather than as a coloured
+        /// marker, and translucent so the rock is still visible through what has come off it.
+        /// </summary>
+        static readonly Color CutColour = new Color(0.86f, 0.87f, 0.90f, 0.30f);
+
         void DrawSelectionCursor(WorldSnapshot snapshot, int movePerTick)
         {
             if (_renderer == null || _model == null || cameraRig == null) return;
@@ -375,12 +583,23 @@ namespace Odyssey.Presentation.Bootstrap
             Color colour = cameraRig.selectionColour;
             SelectionDirector? selection = Directors?.Selection;
 
-            if (selection != null && selection.HasPawn
-                && snapshot.TryGetPawn(selection.Pawn, out PawnView pawn))
+            if (selection != null && selection.HasPawn)
             {
-                Vector3 feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _);
-                _renderer.DrawSelectionBracket(
-                    feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, colour);
+                // Every selected colonist is bracketed, the primary at full strength and the rest
+                // dimmer, so a box selection reads as a set with one member the pane is about —
+                // not as several coincidental primaries.
+                for (int i = 0; i < selection.Pawns.Count; i++)
+                {
+                    if (!snapshot.TryGetPawn(selection.Pawns[i], out PawnView pawn)) continue;
+                    // The figure's own position where there is one, for the same reason the hit-test
+                    // uses it: a working colonist is stepped off their cell, and a bracket drawn from
+                    // the pose would sit on the cell while the person stands beside it.
+                    if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                        feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _);
+                    _renderer.DrawSelectionBracket(
+                        feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor,
+                        i == 0 ? colour : SecondarySelectionColour);
+                }
                 return;
             }
 
@@ -396,7 +615,7 @@ namespace Odyssey.Presentation.Bootstrap
                 {
                     Bounds box = item.Bounds;
                     _renderer.DrawSelectionBracket(
-                        CellMetrics.FloorCentre(cell) + box.center,
+                        GroundRelief.Lift(CellMetrics.FloorCentre(cell)) + box.center,
                         box.size + Vector3.one * ItemCursorMargin, colour);
                     return;
                 }
@@ -419,16 +638,24 @@ namespace Odyssey.Presentation.Bootstrap
             if (Directors == null || !Directors.Overlays.DeveloperVisible) return;
             if (_renderer == null || _world == null || _model == null) return;
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;
-            AboveMode above = cameraRig != null ? cameraRig.slice.above : AboveMode.Xray;
+            AboveMode above = cameraRig != null
+                ? cameraRig.slice.AboveAt(activeLayer)
+                : AboveMode.Xray;
+            bool underground = cameraRig != null && cameraRig.slice.BelowSurface(activeLayer);
 
             var text =
                 $"tick {_world.CurrentTick}  speed {_world.GameSpeed}   layer {activeLayer}/{_model.Size.SizeY - 1}" +
                 $"  above: {above}\n" +
                 $"draw calls {_renderer.DrawCalls}   instances {_renderer.InstancesDrawn}" +
                 $"   chunks {_renderer.ChunksDrawn}   materials {_renderer.MaterialCount}" +
+                $"   surround {_renderer.Skirt.InstancesDrawn}" +
                 $"   figures {_figures?.FigureCount ?? 0} @ {_figures?.FastestSpeed ?? 0f:0.0} m/s\n" +
                 $"frame {_smoothedFrameMs:0.00} ms ({(_smoothedFrameMs > 0f ? 1000f / _smoothedFrameMs : 0f):0}fps)" +
                 $"   submit {_renderMs:0.00} ms   tick {_tickMs:0.00} ms   remeshed {_renderer.ChunksMeshedThisFrame}\n" +
+                $"sound played {_audio?.OneShotsPlayed ?? 0} culled {_audio?.DistanceCulled ?? 0}" +
+                $" skipped {_audio?.CooldownSkipped ?? 0} starved {_audio?.VoiceStarved ?? 0}" +
+                $" noclip {_audio?.ClipMissing ?? 0}" +
+                $" water {_audio?.WaterLevel ?? 0f:0.00} music {_audio?.MusicPhase.ToString().ToLowerInvariant() ?? "none"}\n" +
                 $"WASD pan - Q/E orbit - wheel zoom - R/F layer - V above-mode - B below-mode - " +
                 $"space pause - 1/2/3 speed - Home frame\n{_catalogueNote}";
 
@@ -436,9 +663,9 @@ namespace Odyssey.Presentation.Bootstrap
             // the one region immediate mode is permitted in, and it must not sit on the HUD's
             // top-left region when both are visible.
             GUI.color = Color.black;
-            GUI.Label(new Rect(11f, 181f, 1400f, 110f), text);
+            GUI.Label(new Rect(11f, 181f, 1400f, 128f), text);
             GUI.color = Color.white;
-            GUI.Label(new Rect(10f, 180f, 1400f, 110f), text);
+            GUI.Label(new Rect(10f, 180f, 1400f, 128f), text);
         }
 
         void OnDestroy()
@@ -448,6 +675,8 @@ namespace Odyssey.Presentation.Bootstrap
                 if (Directors != null) Directors.Slice.LayerChanged -= OnActiveLayerChanged;
                 cameraRig.GameSpeedRequested -= OnGameSpeedRequested;
             }
+            if (_figures != null) _figures.BlowLanded -= OnBlowLanded;
+            _audio?.Dispose();
             _figures?.Dispose();
             _renderer?.Dispose();
             // The library owns every mesh it baked or merged, and a Mesh made in code is a GPU

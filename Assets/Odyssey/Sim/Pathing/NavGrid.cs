@@ -39,6 +39,11 @@ namespace Odyssey.Sim.Pathing
 
         Hazard = 1 << 9,
 
+        // 1 << 10 and 1 << 11 were ConnectorClimb and ClimbOnly, removed with climbing
+        // (owner, 2026-09-16). A colonist jumps up one block or drops down one; anything deeper
+        // needs a ladder, which is a built thing. Nothing grants standing without a floor any
+        // more, which is what makes a cell in mid-air impossible rather than merely discouraged.
+
         /// <summary>Any connector footprint cell.</summary>
         Connector = ConnectorStair | ConnectorLadder | ConnectorLift,
 
@@ -116,8 +121,54 @@ namespace Odyssey.Sim.Pathing
 
         public const int StairUp = 290;
         public const int StairDown = 230;
+
         public const int LadderUp = 540;
         public const int LadderDown = 400;
+
+        /// <summary>
+        /// Hopping up onto a block one higher: the only way up that needs nothing built
+        /// (owner, 2026-09-16 — "a colonist can jump if they need to get up +1 height block").
+        ///
+        /// <para>Dear, because it is effort: a colonist carrying stone should prefer a stair, and
+        /// the pathfinder only learns that from the price. Half a built ladder's, which is the
+        /// right relation — a ladder is a thing somebody made to make this easier — and still
+        /// nearly three times a flat cell.</para>
+        ///
+        /// <para>This replaces a climb, which was a declared edge up a rock face and could end in
+        /// mid-air. A jump cannot: both ends are cells a colonist can stand in.</para>
+        ///
+        /// <para><b>Halved to 135 on the owner's word, 2026-09-16: "it needs to happen quicker
+        /// like a jump up — twice as quick maybe".</b> Cost is duration here — a pawn retires
+        /// <c>movePerTick</c> of it a tick and presentation glides the figure across the whole
+        /// step — so 270 was <b>4.5 seconds</b> to get up one block, against 1.7 for walking a flat
+        /// cell. That is not a jump, it is a haul, and it read as the figure being stuck.</para>
+        ///
+        /// <para>Two relations survive the cut and one does not. It is still dearer than walking a
+        /// flat cell, so nothing stops preferring a ramp; and it is still far dearer than the drop
+        /// back down, which is the asymmetry that matters. It is no longer half a built ladder's
+        /// <see cref="LadderUp"/> but a quarter of it — so a colonist offered both would jump
+        /// rather than climb. That is the right answer anyway (hopping a one-block ledge really is
+        /// quicker than a ladder) and they almost never compete: a ladder spans a shaft nothing
+        /// can hop out of, and a hop needs a block top beside it that a shaft does not have.</para>
+        /// </summary>
+        public const int JumpUp = 135;
+
+        /// <summary>
+        /// Dropping down onto the block below: half of a flat cell, because you mostly let go.
+        ///
+        /// <para>Tuned twice at the owner's word — 400, then 100, then half of that again: about
+        /// five sixths of a second for three metres. The asymmetry against <see cref="JumpUp"/> is
+        /// the point and not a fudge: going down a drop and getting back up it are genuinely not
+        /// the same job, and pricing them alike is what made a colonist take six and a half seconds
+        /// to descend three metres.</para>
+        ///
+        /// <para><b>Left alone when <see cref="JumpUp"/> was halved</b>, and the arithmetic is the
+        /// reason. Cost is duration, so 50 is five sixths of a second to fall one layer — and a
+        /// three-metre free fall takes 0.78 s. The drop is already at the speed of gravity;
+        /// halving it again would have a colonist outrun its own weight, which is a different kind
+        /// of wrong from the one being fixed. Say the word and it goes to 25.</para>
+        /// </summary>
+        public const int Drop = 50;
         public const int LiftUp = 400;
         public const int LiftDown = 400;
 
@@ -157,21 +208,76 @@ namespace Odyssey.Sim.Pathing
         /// <summary>Additive terrain cost per class. Def-driven in the real game.</summary>
         public readonly int[] CostByClass = new int[256];
 
+        /// <summary>
+        /// Cost class by terrain index — the table <see cref="RefreshFrom"/> reads to fill
+        /// <see cref="CostClass"/>. Sized past any plausible terrain table, so the per-cell
+        /// lookup needs no bounds test and an unknown terrain is simply ordinary ground.
+        /// </summary>
+        public readonly byte[] CostClassByTerrain = new byte[1024];
+
+        /// <summary>
+        /// A nav grid knows what terrain costs the moment it is built.
+        ///
+        /// The tidier arrangement would be for the composition root to hand the table down, and
+        /// it was written that way first. It is wrong: a <see cref="NavGraph"/> is constructed in
+        /// a dozen places and a grid that missed the call would silently price wading at the cost
+        /// of walking — a wrong number, not a crash, in the one part of the simulation where a
+        /// wrong number looks exactly like a right one. So the default is applied here, where it
+        /// cannot be forgotten, and <see cref="SetTerrainCosts"/> remains for anyone who wants a
+        /// different content set. When terrain becomes Defs this moves to the Def loader, which
+        /// is the same argument arriving at a better place.
+        /// </summary>
         public NavGrid(GridSize size)
         {
             Size = size;
             Flags = new NavFlags[size.CellCount];
             CostClass = new byte[size.CellCount];
+
+            for (ushort terrain = 0; terrain < Worldgen.Natural.NaturalContent.TerrainCount; terrain++)
+                CostClassByTerrain[terrain] = Worldgen.Natural.NaturalContent.CostClassOf(terrain);
+            Worldgen.Natural.NaturalContent.ApplyCostClasses(CostByClass);
+        }
+
+        /// <summary>
+        /// Point every terrain at its cost class and every class at its addend, replacing what
+        /// the constructor put there. The per-cell grid follows on the next
+        /// <see cref="RefreshFrom"/>, so a caller changing costs on a live grid must dirty it.
+        /// </summary>
+        public void SetTerrainCosts(byte[] classByTerrain, int[] costByClass)
+        {
+            if (classByTerrain != null)
+                for (int t = 0; t < classByTerrain.Length && t < CostClassByTerrain.Length; t++)
+                    CostClassByTerrain[t] = classByTerrain[t];
+            if (costByClass != null)
+                for (int c = 0; c < costByClass.Length && c < CostByClass.Length; c++)
+                    CostByClass[c] = costByClass[c];
         }
 
         public int ExtraCost(int index) => CostByClass[CostClass[index]];
 
         /// <summary>
-        /// Recompute the terrain-derived bits for one cell, preserving <see cref="NavFlags.Sticky"/>.
+        /// Recompute the terrain-derived bits and the cost class for one cell, preserving
+        /// <see cref="NavFlags.Sticky"/>.
         ///
         /// A door is walkable here whatever its state: the mode decides whether it may pass, and
         /// pushing that decision into the link and the per-cell entry test keeps closed doors
         /// from carving the region graph apart every time one shuts.
+        ///
+        /// <para><b>A connector is its own floor.</b> A cell carrying a declared stair, ladder or
+        /// lift footprint has something to stand in whether or not a slab happens to be under it,
+        /// because that is what those things are. Without this a vertical shaft is unusable: only
+        /// its bottom cell rests on anything, so every cell above it fails the floor test, is
+        /// therefore not walkable, and the portal links at both ends of the ladder have nothing to
+        /// join — a shaft laddered from top to bottom that nothing can climb. The rule is stated
+        /// here rather than worked around at each end because "can something stand here" is this
+        /// method's one question. Every connector is a built thing with a tread under you, so
+        /// every cell this grants a floor to is one a colonist can also walk in: climbing, which
+        /// granted standing on a bare rock face without granting walking, is gone.</para>
+        ///
+        /// <para>Impassable terrain — deep water — is neither solid nor blocked, so it would
+        /// otherwise read as perfectly walkable: the bed beneath it is a floor. It is excluded here
+        /// and nowhere else, which is what makes <see cref="KindOf"/> call it
+        /// <see cref="RegionKind.Impassable"/> and keeps a lake out of every walkable region.</para>
         /// </summary>
         public void RefreshFrom(CellGrid grid, int index)
         {
@@ -179,16 +285,39 @@ namespace Odyssey.Sim.Pathing
 
             bool solid = grid.IsSolidTerrain(index);
             bool blocked = grid.IsBlockedByEdifice(index);
-            bool floor = grid.HasFloor(index);
+            bool realFloor = grid.HasFloor(index);
+            bool floor = realFloor || (sticky & NavFlags.Connector) != 0;
             bool door = (sticky & NavFlags.Door) != 0;
+            bool impassable = grid.IsImpassableTerrain(index);
 
             NavFlags f = sticky;
             if (solid) f |= NavFlags.Solid;
             if (blocked) f |= NavFlags.Blocked;
             if (floor) f |= NavFlags.HasFloor;
-            if (floor && !solid && (!blocked || door)) f |= NavFlags.Walkable;
+            if (floor && !solid && !impassable && (!blocked || door)) f |= NavFlags.Walkable;
 
             Flags[index] = f;
+            CostClass[index] = ClassAt(grid, index);
+        }
+
+        /// <summary>
+        /// The cost class of *entering* this cell, which is not always the class of its own
+        /// terrain. Wading, the cell entered is the water itself, so the class is the water's.
+        /// Crossing a bog, the cell entered is the air above the marsh, so the class is the one
+        /// below. Own terrain first, the cell beneath second: air and rock are class 0, so a
+        /// non-zero own class can only be something standable-in, and everything else defers
+        /// downwards. Getting this the wrong way round gives free marsh and fails silently.
+        /// </summary>
+        byte ClassAt(CellGrid grid, int index)
+        {
+            ushort here = grid.Terrain[index];
+            byte own = here < CostClassByTerrain.Length ? CostClassByTerrain[here] : (byte)0;
+            if (own != 0) return own;
+
+            int below = index - Size.LayerStride;
+            if (below < 0) return 0;
+            ushort under = grid.Terrain[below];
+            return under < CostClassByTerrain.Length ? CostClassByTerrain[under] : (byte)0;
         }
 
         public RegionKind KindOf(int index)
@@ -219,6 +348,21 @@ namespace Odyssey.Sim.Pathing
             if ((f & NavFlags.Door) == 0 || (f & NavFlags.DoorOpen) != 0) return true;
             return mode != TraverseMode.Animal;
         }
+
+        /// <summary>
+        /// May a pawn <em>walk</em> into this cell — a step on its own layer?
+        ///
+        /// <para>Identical to <see cref="CanEnter"/> since climbing was removed (owner, 2026-09-16).
+        /// It used to be narrower, because a cell could be standable purely because a climb passed
+        /// through it — a rock face with nothing underneath — and walking into one was walking into
+        /// mid-air. There is no such cell now: every cell a colonist may be in has a floor, so
+        /// "can stand here" and "can walk in here" are the same question again.</para>
+        ///
+        /// <para>Kept as its own name rather than deleted, because the distinction is real the
+        /// moment anything grants standing without a floor — a rope, a scaffold, a ledge — and the
+        /// call sites that mean "walking" should go on saying so.</para>
+        /// </summary>
+        public bool CanWalkInto(int index, TraverseMode mode) => CanEnter(index, mode);
 
         /// <summary>The cost of stepping into this cell, orthogonally, for this mode.</summary>
         public int EnterCost(int index, TraverseMode mode)

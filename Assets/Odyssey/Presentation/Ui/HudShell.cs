@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
@@ -67,6 +68,11 @@ namespace Odyssey.Presentation.Ui
         // ---- element references, resolved once the tree is built
         VisualElement _hud = null!;
         VisualElement _leftColumn = null!;
+        VisualElement _rightColumn = null!;
+        VisualElement _bottomRow = null!;
+        VisualElement _bottomStack = null!;
+        VisualElement _buildPanel = null!;
+        VisualElement _buildButton = null!;
         readonly List<CardView> _cards = new List<CardView>();
         VisualElement _rosterHost = null!;
         VisualElement _rulerRows = null!;
@@ -91,14 +97,22 @@ namespace Odyssey.Presentation.Ui
         NeedViews _mood = new();
         Label _tombReason = null!;
 
+        // the drag-select marquee, and the roster's shift-drag sweep state
+        VisualElement _marquee = null!;
+        bool _sweepingRoster;
+
         struct CardView
         {
             public VisualElement Root;
-            public IconBadge Job;
             public Label Name;
-            public Label Layer;
+
+            /// <summary>Mood, which is the one the card is bordered and coloured by.</summary>
             public VisualElement Fill;
             public VisualElement Bar;
+
+            /// <summary>Food. Nought to a thousand in the frame, unlike mood's nought to a
+            /// hundred, which is why the two are scaled differently where they are bound.</summary>
+            public VisualElement FoodFill;
         }
 
         struct RulerTickView
@@ -138,14 +152,49 @@ namespace Odyssey.Presentation.Ui
             _hud.AddToClassList("hud");
             root.Add(_hud);
 
+            // The drag-select marquee (A2's box in the world): a picture, not a decision, so it
+            // sits here and polls the rig's rect every frame rather than subscribing to anything.
+            // Screen-bottom-left origins become panel-top-left ones in UpdateMarquee.
+            _marquee = new VisualElement { pickingMode = PickingMode.Ignore };
+            _marquee.AddToClassList("marquee");
+            _marquee.style.display = DisplayStyle.None;
+            _hud.Add(_marquee);
+
             // The left edge is one column, not two absolute slots: the ledger and the architect
             // palette stack inside it, so neither can ever sit on top of the other.
             _leftColumn = new VisualElement();
             _leftColumn.AddToClassList("slot-left");
             _hud.Add(_leftColumn);
 
+            // And the right edge, for the same reason and after the same accident. The clock,
+            // the alerts and the ruler were three absolutely positioned slots with hand-picked
+            // offsets, so the alerts panel sat at a fixed 132px from the top whatever height the
+            // clock above it had grown to — and it had grown past it, burying the speed buttons.
+            // A column cannot do that: whatever each region's height turns out to be, the next
+            // one starts below it.
+            _rightColumn = new VisualElement();
+            _rightColumn.AddToClassList("slot-right");
+            _hud.Add(_rightColumn);
+
+            // And the bottom edge, third time. The tab bar, the overlay strip and the cancel
+            // button were three absolute slots along the same line, so the strip sat on top of
+            // the bar's right end and ate the last tab -- which read as the bar being too wide
+            // when it was not. In a row they divide the edge between them: the tabs take what is
+            // left after the other two have taken what they need.
+            // A stack, not a row, and the palette lives in it above the bar. Pinning the
+            // palette to a fixed distance from the bottom is the same mistake this file has
+            // now made three times: the bar wraps to two rows once every tab carries its full
+            // name, and a hand-picked offset put the palette straight through it.
+            _bottomStack = new VisualElement();
+            _bottomStack.AddToClassList("slot-bottom-stack");
+            _hud.Add(_bottomStack);
+
+            _bottomRow = new VisualElement();
+            _bottomRow.AddToClassList("slot-bottom");
+            _bottomStack.Add(_bottomRow);
+
             BuildLedger();
-            BuildArchitect();
+            BuildPalette();
             BuildRoster();
             BuildClock();
             BuildAlerts();
@@ -196,10 +245,37 @@ namespace Odyssey.Presentation.Ui
         /// a click on a panel never reaches the world (input case 2 of design 09 §6); the shell
         /// element itself is non-pickable, so empty screen still belongs to the world.
         /// </summary>
+        /// <summary>
+        /// A pointer position, as the mouse reports it, in this panel's coordinates.
+        ///
+        /// <para><b>The Y axis has to be turned over first, and that is the whole of it.</b>
+        /// <c>Mouse.current.position</c> is screen space with its origin at the <i>bottom</i> left
+        /// and y climbing upward; a UI Toolkit panel has its origin at the <i>top</i> left with y
+        /// climbing downward. <see cref="RuntimePanelUtils.ScreenToPanel"/> resolves the panel's
+        /// own scaling — which is why it cannot simply be divided out by hand — but it does not
+        /// turn the axis over, so handing it a mouse position directly mirrors everything about
+        /// the middle of the screen.</para>
+        ///
+        /// <para>Reported by the owner against the drag marquee: "the selectable box does not come
+        /// from the mouse cursor but actually quite below it some distance... like the exact
+        /// opposite side of the screen". Mirrored is exactly what that describes, and the x axis
+        /// being right is what identifies it.</para>
+        ///
+        /// <para><b><see cref="PointOverUi"/> had the same line and therefore the same fault</b>,
+        /// which is worse because it fails quietly: it decides whether a click belongs to the HUD
+        /// or to the world, so a press near the bottom bar was tested against the top of the
+        /// screen. <c>docs/plans/next-session-prompt.md</c> item 2 already recorded that guard as
+        /// shipping "on inspection only" with no test, and this is what was waiting in it. Both
+        /// call sites go through here now so they cannot disagree again.</para>
+        /// </summary>
+        Vector2 ToPanel(Vector2 screenPosition) =>
+            RuntimePanelUtils.ScreenToPanel(
+                _hud.panel, new Vector2(screenPosition.x, Screen.height - screenPosition.y));
+
         public bool PointOverUi(Vector2 screenPosition)
         {
             if (_hud == null || _hud.panel == null) return false;
-            VisualElement? hit = _hud.panel.Pick(RuntimePanelUtils.ScreenToPanel(_hud.panel, screenPosition));
+            VisualElement? hit = _hud.panel.Pick(ToPanel(screenPosition));
             return hit != null && hit != _hud;
         }
 
@@ -260,6 +336,39 @@ namespace Odyssey.Presentation.Ui
                 RefreshClock();
                 RefreshRuler();
             }
+
+            UpdateMarquee();
+
+            // The roster sweep ends when the button does, wherever the pointer happens to be when
+            // it ends — a card's own PointerUp never arrives if the release landed off the bar.
+            if (_sweepingRoster && UnityEngine.InputSystem.Mouse.current?.leftButton.isPressed != true)
+                _sweepingRoster = false;
+        }
+
+        /// <summary>
+        /// The marquee follows the rig's box every frame — a 15 Hz marquee trails the cursor and
+        /// reads as lag. Screen coordinates grow from the bottom-left; panel coordinates grow
+        /// from the top-left, so the rect is flipped once, here, at the only place that draws it.
+        /// </summary>
+        void UpdateMarquee()
+        {
+            Rect? box = _rig?.DragBox;
+            if (box == null || _hud.panel == null)
+            {
+                _marquee.style.display = DisplayStyle.None;
+                return;
+            }
+
+            // Both corners through the same conversion. Screen min-y is the BOTTOM of the box
+            // and panel min-y is the top, so which corner is which flips with the axis — hence the
+            // Min/Max pair below rather than using min for left/top directly.
+            Vector2 min = ToPanel(box.Value.min);
+            Vector2 max = ToPanel(box.Value.max);
+            _marquee.style.left = Mathf.Min(min.x, max.x);
+            _marquee.style.top = Mathf.Min(min.y, max.y);
+            _marquee.style.width = Mathf.Abs(max.x - min.x);
+            _marquee.style.height = Mathf.Abs(max.y - min.y);
+            _marquee.style.display = DisplayStyle.Flex;
         }
 
         void OnLayerChanged(int layer)
@@ -332,7 +441,7 @@ namespace Odyssey.Presentation.Ui
 
         void BuildLedger()
         {
-            var region = Region(_leftColumn, "A1 · RESOURCES", string.Empty);
+            var region = Region(_leftColumn, "A1 · RESOURCES", "slot-ledger");
             _ledgerRows = new VisualElement();
             _ledgerRows.AddToClassList("ledger");
             region.Add(_ledgerRows);
@@ -379,7 +488,7 @@ namespace Odyssey.Presentation.Ui
         /// a category still answers, by showing that category's shape, so the region reads as a
         /// thing that will work rather than a decoration that ignores you.
         /// </summary>
-        static readonly (string key, string label, string[] tools)[] ArchitectCategories =
+        static readonly (string key, string label, string[] tools)[] BuildCategories =
         {
             ("ui.arch.category.structure", "Structure", new[] { "ui.arch.tool.wall", "ui.arch.tool.door", "ui.arch.tool.stair", "ui.arch.tool.ladder", "ui.arch.tool.roof", "ui.arch.tool.reclaim" }),
             ("ui.arch.category.orders", "Orders", new[] { "ui.arch.tool.mine", "ui.arch.tool.deconstruct", "ui.arch.tool.harvest", "ui.arch.tool.forbid", "ui.arch.tool.clearrubble" }),
@@ -393,38 +502,60 @@ namespace Odyssey.Presentation.Ui
             ("ui.arch.category.recreation", "Recreation", new[] { "ui.arch.tool.gamestable", "ui.arch.tool.viewscreen", "ui.arch.tool.planter" }),
         };
 
-        VisualElement _archPalette = null!;
-        int _archCategory = -1;
+        VisualElement _buildTools = null!;
+        int _buildCategory = -1;
 
-        void BuildArchitect()
+        void BuildPalette()
         {
-            var region = Region(_leftColumn, "A7 · ARCHITECT", "arch");
+            var region = Region(_bottomStack, "A7 · BUILD", "build");
+            _buildPanel = region;
+            region.style.display = DisplayStyle.None;
             var cats = new VisualElement();
-            cats.AddToClassList("arch__cats");
-            for (int i = 0; i < ArchitectCategories.Length; i++)
+            cats.AddToClassList("build__cats");
+
+            // The categories scroll. The left column is not tall enough for the ledger and ten
+            // categories at once -- and USS lengths here are reference pixels, not screen ones,
+            // so the column is about 353 of them however large the monitor is. Left to flex, the
+            // shortfall lands on whichever region yields first: it took the last row off the
+            // palette, and when the palette was told not to yield it crushed the ledger instead.
+            // A list too long for its panel should scroll rather than quietly lose its end.
+            var scroll = new ScrollView(ScrollViewMode.Vertical);
+            scroll.AddToClassList("build__scroll");
+            for (int i = 0; i < BuildCategories.Length; i++)
             {
-                var (key, label, _) = ArchitectCategories[i];
+                var (key, label, _) = BuildCategories[i];
                 var chip = Chip(new IconBadge(key), label);
                 int index = i;
                 chip.tooltip = label + " — placement tools arrive with M3";
-                chip.RegisterCallback<ClickEvent>(_ => SelectArchitectCategory(index));
+                chip.RegisterCallback<ClickEvent>(_ => SelectBuildCategory(index));
                 cats.Add(chip);
             }
-            region.Add(cats);
+            scroll.Add(cats);
+            region.Add(scroll);
 
-            _archPalette = new VisualElement();
-            _archPalette.AddToClassList("arch__tools");
-            region.Add(_archPalette);
+            _buildTools = new VisualElement();
+            _buildTools.AddToClassList("build__tools");
+            region.Add(_buildTools);
         }
 
-        void SelectArchitectCategory(int index)
-        {
-            if (_archCategory == index) return;
-            _archCategory = index;
+        const string BuildTabKey = "ui.tab.build";
 
-            _archPalette.Clear();
-            foreach (string tool in ArchitectCategories[index].tools)
-                _archPalette.Add(Off(Chip(new IconBadge(tool), IconBadge.Abbreviation(tool))));
+        /// <summary>Open or close the placement palette from the bottom bar.</summary>
+        void ToggleBuildPalette()
+        {
+            bool opening = _buildPanel.style.display == DisplayStyle.None;
+            _buildPanel.style.display = opening ? DisplayStyle.Flex : DisplayStyle.None;
+            _buildButton.EnableInClassList("chip--on", opening);
+        }
+
+        void SelectBuildCategory(int index)
+        {
+            if (_buildCategory == index) return;
+            _buildCategory = index;
+
+            _buildTools.Clear();
+            foreach (string tool in BuildCategories[index].tools)
+                _buildTools.Add(Off(Chip(new IconBadge(tool), IconBadge.Abbreviation(tool))));
         }
 
         // ------------------------------------------------------------ A2 roster
@@ -441,39 +572,62 @@ namespace Odyssey.Presentation.Ui
             var world = _boot!.World;
             if (world == null) return;
             _roster.Refresh(world.Views.Current,
-                selected: _directors != null ? _directors.Selection.Pawn : PawnId.None);
+                selected: _directors != null ? _directors.Selection.Pawns : (IReadOnlyList<PawnId>)Array.Empty<PawnId>());
 
             while (_cards.Count < _roster.Cards.Count)
             {
+                // A name and two bars. The placeholder badges and the layer number are gone
+                // (owner, 2026-09-16): the badges named nothing a player could read, and the
+                // layer is on the ruler and in the inspect pane already. What a card is for is
+                // "is this colonist all right", and that is food and mood.
                 var card = new VisualElement();
                 card.AddToClassList("card");
-                var top = new VisualElement();
-                top.AddToClassList("card__top");
-                top.Add(new IconBadge("ui.pawn.colonist"));
-                var job = new IconBadge("ui.status.idle");
-                top.Add(job);
                 var name = Label(string.Empty, "card__name");
-                var layer = Label(string.Empty, "card__layer");
+
+                var foodBar = new VisualElement();
+                foodBar.AddToClassList("bar");
+                foodBar.AddToClassList("bar--food");
+                var foodFill = new VisualElement();
+                foodFill.AddToClassList("bar__fill");
+                foodBar.Add(foodFill);
+
                 var bar = new VisualElement();
                 bar.AddToClassList("bar");
                 var fill = new VisualElement();
                 fill.AddToClassList("bar__fill");
                 bar.Add(fill);
-                card.Add(top);
+
                 card.Add(name);
-                card.Add(layer);
+                card.Add(foodBar);
                 card.Add(bar);
 
                 int index = _cards.Count;
-                card.RegisterCallback<ClickEvent>(_ =>
+
+                // Shift is the roster's toggle, exactly as it is in the world: a shift-press on a
+                // card turns it on or off without moving the camera, and while shift is held a
+                // drag across cards toggles each one it crosses (A2 "drag-select a range"). A
+                // plain press keeps the jump: a card is a way of getting to someone far away.
+                card.RegisterCallback<PointerDownEvent>(evt =>
                 {
-                    if (index < _roster.Cards.Count && _boot!.World != null)
-                        _directors?.ChooseColonist(_roster.Cards[index].Id, _boot.World.Views.Current);
+                    if (index >= _roster.Cards.Count || _boot!.World == null) return;
+                    PawnId id = _roster.Cards[index].Id;
+                    if (evt.shiftKey)
+                    {
+                        _sweepingRoster = true;
+                        _directors?.Selection.Toggle(id);
+                    }
+                    else _directors?.ChooseColonist(id, _boot.World.Views.Current);
                 });
+                card.RegisterCallback<PointerEnterEvent>(_ =>
+                {
+                    if (!_sweepingRoster || index >= _roster.Cards.Count) return;
+                    _directors?.Selection.Toggle(_roster.Cards[index].Id);
+                });
+
                 _rosterHost.Add(card);
                 _cards.Add(new CardView
                 {
-                    Root = card, Job = job, Name = name, Layer = layer, Fill = fill, Bar = bar,
+                    Root = card, Name = name, Fill = fill, Bar = bar, FoodFill = foodFill,
                 });
             }
             while (_cards.Count > _roster.Cards.Count)
@@ -488,9 +642,8 @@ namespace Odyssey.Presentation.Ui
                 CardView view = _cards[i];
 
                 view.Name.text = model.Name;
-                view.Layer.text = "L" + model.Layer;
-                view.Job.SetKey(JobLabels.IconKey(model.JobDef));
-                view.Fill.style.width = Length.Percent(Mathf.Clamp(model.Mood, 0, 100));
+                view.FoodFill.style.width = Length.Percent(Clamp1000(model.Food));
+                view.Fill.style.width = Length.Percent(Clamp1000(model.Mood));
                 view.Bar.EnableInClassList("bar--lo", model.Mood < MoodBands.Strained);
                 view.Root.EnableInClassList("card--sel", model.Selected);
                 view.Root.tooltip = $"{model.Name} — {JobLabels.Label(model.JobDef)}, layer {model.Layer}." +
@@ -502,7 +655,7 @@ namespace Odyssey.Presentation.Ui
 
         void BuildClock()
         {
-            var region = Region(_hud, "A3 · TIME   ·   A4 · SPEED", "slot-clock");
+            var region = Region(_rightColumn, "A3 · TIME   ·   A4 · SPEED", "slot-clock");
             var body = new VisualElement();
             body.AddToClassList("clock");
             _clockTime = Label(string.Empty, "clock__time");
@@ -512,19 +665,20 @@ namespace Odyssey.Presentation.Ui
 
             var speed = new VisualElement();
             speed.AddToClassList("speed");
-            (string key, string label)[] speeds =
+            // Shapes, not words and not placeholder badges: stop, play, double, triple. A
+            // transport control is the one row on this sheet that needs no naming, because the
+            // shapes are older than the game and everyone already reads them (owner, 2026-09-16).
+            (string glyph, string name)[] speeds =
             {
-                ("ui.speed.pause", "pause"), ("ui.speed.play", "1×"),
-                ("ui.speed.fast", "2×"), ("ui.speed.ultra", "3×"),
+                ("■", "Stop"), ("▶", "Play"), ("▶▶", "Double"), ("▶▶▶", "Triple"),
             };
             for (int i = 0; i < speeds.Length; i++)
             {
                 int requested = i; // 0 paused, 1..3 speeds — the rig's own convention
                 var button = new VisualElement();
                 button.AddToClassList("speed__btn");
-                button.Add(new IconBadge(speeds[i].key));
-                button.Add(Label(speeds[i].label, "speed__label"));
-                button.tooltip = speeds[i].label + " — Space pauses, 1/2/3 set speed";
+                button.Add(Label(speeds[i].glyph, "speed__glyph"));
+                button.tooltip = speeds[i].name + " — Space pauses, 1/2/3 set speed";
                 button.RegisterCallback<ClickEvent>(_ => _rig?.RequestGameSpeed(requested));
                 speed.Add(button);
                 _speedButtons.Add(button);
@@ -556,12 +710,12 @@ namespace Odyssey.Presentation.Ui
 
         void BuildAlerts()
         {
-            var region = Region(_hud, "A5 · ALERTS", "slot-alerts");
+            var region = Region(_rightColumn, "A5 · ALERTS", "slot-alerts");
             var body = new VisualElement();
             body.AddToClassList("alerts");
             body.Add(Label("No active alerts.", "alerts__empty"));
             body.Add(Label("Conditions arrive with M2; each will carry its layer and a jump target.",
-                "alerts__empty"));
+                "alerts__note"));
             region.Add(body);
         }
 
@@ -569,7 +723,7 @@ namespace Odyssey.Presentation.Ui
 
         void BuildRuler()
         {
-            var region = Region(_hud, "A11 · DEPTH", "slot-ruler");
+            var region = Region(_rightColumn, "A11 · DEPTH", "slot-ruler");
             _rulerActive = Label(string.Empty, "ruler__active");
             region.Add(_rulerActive);
             _rulerRows = new VisualElement();
@@ -596,7 +750,12 @@ namespace Odyssey.Presentation.Ui
             // and added top layer first so the bar reads downwards like depth does.
             while (_rulerTicks.Count < _ruler.Rows.Count)
             {
-                int layer = _ruler.Rows[_ruler.Rows.Count - 1 - _rulerTicks.Count].Layer;
+                // Rows come out of the model top layer first and the bar is a column, so the
+                // first step built is the top step and tick i is Rows[i]. This used to index
+                // from the far end, which built the bar upside down: the top step was layer 0
+                // and the bottom step the sky. Clicking low on the ruler took you high, which
+                // is how it was reported from a playtest on 2026-09-16.
+                int layer = _ruler.Rows[_rulerTicks.Count].Layer;
                 var tick = new VisualElement();
                 tick.AddToClassList("ruler__tick");
                 var dot = new VisualElement();
@@ -605,6 +764,13 @@ namespace Odyssey.Presentation.Ui
 
                 int clicked = layer;
                 tick.RegisterCallback<ClickEvent>(_ => _directors?.Slice.SetLayer(clicked));
+
+                // The layer this step will actually send, hung on the element so a test can read
+                // it. Without it the only observable is the lit step, and the lit step cannot
+                // tell these two bugs apart: build the bar upside down, read it with a mirrored
+                // index, and the highlight lands correctly while the click still goes elsewhere.
+                // A test written against the highlight passed with the bug restored.
+                tick.userData = clicked;
                 _rulerRows.Add(tick);
                 _rulerTicks.Add(new RulerTickView { Root = tick, Dot = dot, Layer = layer });
             }
@@ -615,7 +781,13 @@ namespace Odyssey.Presentation.Ui
             for (int i = 0; i < _rulerTicks.Count; i++)
             {
                 RulerTickView view = _rulerTicks[i];
-                LayerRow model = _ruler.Rows[view.Layer];
+
+                // By index, not by layer number. Rows[i].Layer is layers-1-i, so indexing the
+                // list with a layer number reads a different row for every layer but the middle
+                // one — which mirrored the lit step, the surface mark, the colonist dot and the
+                // tooltip all at once. The two bugs hid each other: both were mirrored, so the
+                // lit step often looked plausible while the click did something else.
+                LayerRow model = _ruler.Rows[i];
 
                 view.Root.EnableInClassList("ruler__tick--active", model.Active);
                 view.Root.EnableInClassList("ruler__tick--surface", model.Surface);
@@ -670,10 +842,10 @@ namespace Odyssey.Presentation.Ui
             {
                 _food.Value.text = Percent(_inspect.Food);
                 _rest.Value.text = Percent(_inspect.Rest);
-                _mood.Value.text = _inspect.Mood.ToString();
+                _mood.Value.text = Percent(_inspect.Mood);
                 _food.Fill.style.width = Length.Percent(Clamp1000(_inspect.Food));
                 _rest.Fill.style.width = Length.Percent(Clamp1000(_inspect.Rest));
-                _mood.Fill.style.width = Length.Percent(Mathf.Clamp(_inspect.Mood, 0, 100));
+                _mood.Fill.style.width = Length.Percent(Clamp1000(_inspect.Mood));
                 _mood.Bar.EnableInClassList("bar--lo", _inspect.Mood < MoodBands.Strained);
             }
         }
@@ -683,7 +855,15 @@ namespace Odyssey.Presentation.Ui
             switch (_inspect.Subject)
             {
                 case InspectSubject.Colonist:
-                    return $"{_inspect.Job}  ·  {_inspect.Position}  ·  mood {MoodBands.Band(_inspect.Mood)}";
+                    {
+                        // A multi-selection shows the primary colonist in full, with the size of
+                        // the set said out loud: "3 selected" is the whole of what a pane can add
+                        // to several brackets until commands arrive (A9).
+                        string count = _directors != null && _directors.Selection.HasMultiple
+                            ? $"{_directors.Selection.Pawns.Count} selected  ·  "
+                            : string.Empty;
+                        return count + $"{_inspect.Job}  ·  {_inspect.Position}  ·  mood {MoodBands.Band(_inspect.Mood)}";
+                    }
                 case InspectSubject.Item:
                     return _inspect.Position;
                 case InspectSubject.Cell:
@@ -800,14 +980,14 @@ namespace Odyssey.Presentation.Ui
         static readonly string[] TabKeys =
         {
             "ui.tab.work", "ui.tab.schedule", "ui.tab.research", "ui.tab.colonists",
-            "ui.tab.animals", "ui.tab.wildlife", "ui.tab.bills", "ui.tab.trade",
+            "ui.tab.animals", "ui.tab.wildlife", "ui.tab.bills",
             "ui.tab.factions", "ui.tab.archive", "ui.tab.menu",
         };
 
         static readonly string[] TabReasons =
         {
             "the work grid arrives with M7", "M7", "M7", "the roster is the top bar",
-            "M5", "M5", "M5", "M7", "M7", "the archive arrives with M2",
+            "M5", "M5", "M5", "M7", "the archive arrives with M2",
             "save, load and settings arrive with the game menu",
         };
 
@@ -815,13 +995,29 @@ namespace Odyssey.Presentation.Ui
         {
             var bar = new VisualElement();
             bar.AddToClassList("slot-tabs");
+
+            // Build first, left of Work, because it is the one control on this bar that does
+            // something today: it opens the placement palette. It used to be a panel pinned to
+            // the left edge, where it competed with the ledger for a column that could not hold
+            // both, and it used to be called Architect (owner decisions, 2026-09-16). Trade left
+            // the bar in the same breath, so that adding this did not widen the row.
+            _buildButton = Chip(new IconBadge(BuildTabKey), Registry.Label(BuildTabKey));
+            _buildButton.AddToClassList("tab--build");
+            _buildButton.tooltip = "Build, dig and zone — placement tools arrive with M3";
+            _buildButton.RegisterCallback<ClickEvent>(_ => ToggleBuildPalette());
+            bar.Add(_buildButton);
+
             for (int i = 0; i < TabKeys.Length; i++)
             {
-                var chip = Off(Chip(new IconBadge(TabKeys[i]), TabKeys[i][7..].Capitalise()));
+                // The label comes from the naming registry, which is the whole point of the
+                // registry: a name the owner corrects in the CSV reaches the screen without
+                // anyone retyping it. Deriving it from the key spelled ui.tab.archive as
+                // "Archive" while the registry called it "History".
+                var chip = Off(Chip(new IconBadge(TabKeys[i]), Registry.Label(TabKeys[i])));
                 chip.tooltip = TabKeys[i] + " — " + TabReasons[i];
                 bar.Add(chip);
             }
-            _hud.Add(bar);
+            _bottomRow.Add(bar);
         }
 
         static readonly string[] OverlayKeys =
@@ -850,7 +1046,7 @@ namespace Odyssey.Presentation.Ui
                 button.tooltip = key[11..].Capitalise() + " — overlay channels arrive with M4";
                 strip.Add(button);
             }
-            _hud.Add(strip);
+            _bottomRow.Add(strip);
         }
 
         void BuildCancel()
@@ -859,7 +1055,7 @@ namespace Odyssey.Presentation.Ui
             cancel.AddToClassList("cancel");
             cancel.Add(Label("✕", "cancel__x"));
             cancel.tooltip = "Nothing to cancel — tools and panels arrive with M3";
-            _hud.Add(cancel);
+            _bottomRow.Add(cancel);
         }
 
         // ------------------------------------------------------------ formatting

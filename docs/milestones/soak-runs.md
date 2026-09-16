@@ -71,3 +71,30 @@ What the three rows say, read together:
   performance result beyond "the ten-day run costs about a second".
 
 Nothing failed, so no row was added to the overnight queue by this run.
+
+## 2026-09-16 — the M2 report run (OQ-21)
+
+Commit `37bb63d` (`main`, immediately after OQ-47). Same scenario and machine as the entries
+above — `Scenario_Bare`, 120 × 120 × 16 barren natural map, five colonists, twelve piles of meals,
+five beds, nine stockpile cells, eight loose salvage, no standing orders — on the Windows dev
+machine under CoreCLR (dotnet SDK 8.0.425, net8.0). Run **twice**; the three hashes were identical
+both times, and the job counts with them.
+
+| Seed | Ticks | Result | Wall | ms/tick mean | ms/tick p95 | haul | eat | sleep | wander | wait | failed | Meals left | Longest at zero | Final hash |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 600,000 | passed | 1.0 s | 0.002 | 0.002 | 14 | 92 | 53 | 2,595 | 0 | 0 | 52 of 144 | 0 / 0 / 0 | `d037ff3042031430` |
+| 2 | 600,000 | passed | 0.9 s | 0.002 | 0.002 | 15 | 92 | 55 | 2,604 | 0 | 0 | 52 of 144 | 0 / 0 / 0 | `21c8902b93f9f322` |
+| 3 | 600,000 | passed | 0.9 s | 0.002 | 0.002 | 13 | 94 | 55 | 2,602 | 0 | 0 | 50 of 144 | 0 / 0 / 0 | `0c33a2c3a8e94a55` |
+
+**Every hash differs from the `8178b23` entries above, and that is expected, not a regression.**
+Between the two commits the simulation gained water on the generator, felling, designations and
+stockpile stacking, and the ration and the pantry were re-tuned (OQ-29, OQ-24): the meal pile is
+twelve of twelve rather than twelve of twenty, which is why "meals left" reads 52 of 144 here and
+76 of 240 before. A hash is only ever comparable within one commit.
+
+**What moved in behaviour.** Hauls are up (7–10 → 13–15) and meals eaten are down (164 → 92) on
+the same ten days. The meals figure is the ration change doing exactly what OQ-29 said it would:
+five colonists now eat 1.8 meals a day each, the vanilla figure, where before they ate double.
+Nothing sat at zero on any need on any seed, and no job failed.
+
+Nothing failed, so no row was added to the overnight queue by this run.

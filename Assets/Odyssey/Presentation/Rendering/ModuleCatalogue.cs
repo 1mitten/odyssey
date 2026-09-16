@@ -31,6 +31,46 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>A full-layer ladder against one face of the cell.</summary>
         Ladder = 6,
+
+        /// <summary>
+        /// A block filling the whole cell, chipped and faceted: stone rather than masonry.
+        ///
+        /// Fills the cell exactly like <see cref="SolidBlock"/> and is interchangeable with it —
+        /// the difference is only which mesh stands in, and <see cref="RockMesh"/> guarantees the
+        /// lump never shrinks inside the cell, so a run of them still tiles without a crack.
+        /// </summary>
+        RockBlock = 7,
+
+        /// <summary>
+        /// A block filling the whole cell, with an uneven top: earth rather than a cast slab.
+        ///
+        /// Fills the cell exactly like <see cref="SolidBlock"/> and is interchangeable with it.
+        /// <see cref="GroundMesh"/> keeps the middle of the top face pinned at the layer height,
+        /// because that is where everything in the world is drawn standing, and moves nothing in
+        /// plan, so a run of them tiles without a crack.
+        /// </summary>
+        GroundBlock = 8,
+
+        /// <summary>
+        /// The same block where a side of it can be seen: the walls are built in courses so a
+        /// terrace riser is a broken face rather than one ruled 3 m rectangle.
+        ///
+        /// A separate shape rather than a flag on <see cref="GroundBlock"/> because the two are
+        /// different meshes and a mesh is what a bucket is keyed by. Ground is the largest
+        /// instance population in the world and nearly all of it never shows a side, so the
+        /// expensive geometry is worth confining to the cells that do.
+        /// </summary>
+        GroundFace = 9,
+
+        /// <summary>
+        /// A stepped earth bank filling an empty cell beside a terrace step, climbing from the
+        /// floor of its own cell to the top of it.
+        ///
+        /// Occupies the cell exactly, like the block shapes, but it is not a block: it is drawn in
+        /// a cell that is empty, and nothing in the simulation knows it is there. See
+        /// <see cref="BankMesh"/>.
+        /// </summary>
+        Bank = 10,
     }
 
     /// <summary>
@@ -304,6 +344,9 @@ namespace Odyssey.Presentation.Rendering
         public const string ItemMeal = Prefix + "item.meal";
         public const string ItemSalvage = Prefix + "item.salvage";
         public const string ItemWood = Prefix + "item.wood";
+        public const string ItemStone = Prefix + "item.stone";
+        public const string ItemIronOre = Prefix + "item.ironore";
+        public const string ItemCoal = Prefix + "item.coal";
 
         /// <summary>
         /// Module ids for item def indices, in <c>ItemIndex</c> order.
@@ -314,7 +357,10 @@ namespace Odyssey.Presentation.Rendering
         /// stand-in box, which is what made a barren map look like it had been spattered with
         /// paint.
         /// </summary>
-        static readonly string[] ItemModules = { ItemMeal, ItemSalvage, ItemWood };
+        static readonly string[] ItemModules =
+        {
+            ItemMeal, ItemSalvage, ItemWood, ItemStone, ItemIronOre, ItemCoal,
+        };
 
         /// <summary>How many item def indices have a module. Must equal <c>ItemIndex.Count</c>.</summary>
         public static int ItemModuleCount => ItemModules.Length;
@@ -322,6 +368,32 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The module for an item def index, or null when it has none and falls back.</summary>
         public static string? Item(int itemDefIndex) =>
             itemDefIndex >= 0 && itemDefIndex < ItemModules.Length ? ItemModules[itemDefIndex] : null;
+
+        /// <summary>
+        /// The axe a colonist holds while felling. Not placed in a cell and never meshed into a
+        /// chunk: it is parented to a live figure's hand for as long as the work lasts, and there
+        /// is nothing of it in the world the rest of the time.
+        ///
+        /// A catalogue row rather than a path in code, like everything else that comes out of the
+        /// licensed packs, so a clone without them resolves it to null and colonists fell trees
+        /// bare-handed instead of failing to start.
+        /// </summary>
+        public const string ToolAxe = Prefix + "tool.axe";
+
+        /// <summary>
+        /// The pick. Same pack as the axe, same pivot convention and the same haft length to the
+        /// centimetre, which is why it is the one prop in the packs already known to suit the
+        /// fitting path (<c>12-work-poses-and-tools.md</c> §5).
+        /// </summary>
+        public const string ToolPickaxe = Prefix + "tool.pickaxe";
+
+        /// <summary>
+        /// The builder's hammer. Unlike the axe and the pick it is <em>not</em> from the Generic
+        /// pack, because there is no hammer in it: <c>SM_Wep_Hammer_01</c> in Western Frontier is
+        /// the only one in all 7,222 imported assets. See the catalogue row in <c>PlayScene</c>
+        /// for what that costs and why it is accepted.
+        /// </summary>
+        public const string ToolHammer = Prefix + "tool.hammer";
 
         // Tufts of grass strewn over the ground. Decoration and nothing else: they block nothing,
         // are not in the save, and the simulation has never heard of them. What they are for is
@@ -340,5 +412,34 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Terrain is not authored per template, so its ids are derived from the def name.</summary>
         public static string Terrain(string terrainDefName) =>
             Prefix + "terrain." + terrainDefName.ToLowerInvariant();
+
+        /// <summary>
+        /// One of the several lumps a stone terrain is drawn with, suffixed by number.
+        ///
+        /// Variant 0 keeps the unsuffixed id, the way <see cref="Colonist"/> does, so the plain
+        /// terrain id stays meaningful and a catalogue that knows nothing about variants still
+        /// answers for the first one.
+        /// </summary>
+        public static string TerrainVariant(string terrainDefName, int variant) =>
+            variant <= 0 ? Terrain(terrainDefName) : Terrain(terrainDefName) + "." + variant.ToString();
+
+        /// <summary>
+        /// One of the several coursed blocks an earth terrain is drawn with where a side of it
+        /// shows — a terrace riser, the rim of the board, the wall of a cutting.
+        ///
+        /// <para>Unlike <see cref="TerrainVariant"/>, variant 0 does <em>not</em> keep the plain
+        /// id: a face is a different mesh from the turf, so it needs an id of its own at every
+        /// variant or the two would collide in the library's cache and whichever resolved first
+        /// would be drawn for both.</para>
+        /// </summary>
+        public static string TerrainFace(string terrainDefName, int variant) =>
+            Terrain(terrainDefName) + ".face" + variant.ToString();
+
+        /// <summary>
+        /// One of the stepped banks an earth terrace is climbed by. Named after the terrain at the
+        /// <em>top</em> of the step, because that is the ground the bank is made of.
+        /// </summary>
+        public static string TerrainBank(string terrainDefName, int variant) =>
+            Terrain(terrainDefName) + ".bank" + variant.ToString();
     }
 }

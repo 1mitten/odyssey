@@ -6,7 +6,7 @@ using Odyssey.Sim.World;
 namespace Odyssey.Sim.Worldgen.Natural
 {
     /// <summary>
-    /// Pass 4 — rock outcrops.
+    /// Pass 6 — rock outcrops.
     ///
     /// Occasional stone formations standing above the ground: the early mining target, and the
     /// only vertical relief on a map that is otherwise a heightfield. A mound tapers with distance
@@ -18,7 +18,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// </summary>
     public sealed class RockOutcropPass : INaturalGenPass
     {
-        public int Order => 4;
+        public int Order => 6;
         public string Name => "Outcrops";
 
         public void Run(NaturalGenContext ctx)
@@ -38,6 +38,12 @@ namespace Odyssey.Sim.Worldgen.Natural
                 int cz = rng.NextInt(ctx.Size.SizeZ);
                 int radius = rng.NextInt(gen.minOutcropRadius, gen.maxOutcropRadius + 1);
                 int height = rng.NextInt(gen.minOutcropHeight, gen.maxOutcropHeight + 1);
+
+                // A mound rising out of a river would be rock standing in the water, and would
+                // break the fill pass's assumption that a water column's top solid cell is its
+                // bed. Rejecting on the centre rather than per cell keeps a mound from becoming
+                // a ring around a pond.
+                if (ctx.Water[ctx.Column(cx, cz)] != (byte)WaterClass.None) continue;
 
                 int placed = Raise(ctx, cx, cz, radius, height);
                 if (placed <= 0) continue;
@@ -72,6 +78,8 @@ namespace Odyssey.Sim.Worldgen.Natural
                 if (localHeight < 1) continue;
 
                 int column = ctx.Column(x, z);
+                if (ctx.Water[column] != (byte)WaterClass.None) continue;
+
                 int top = ctx.TopSolidY[column] + localHeight;
                 if (top > ceiling) top = ceiling;
                 if (top <= ctx.TopSolidY[column]) continue;
@@ -112,7 +120,128 @@ namespace Odyssey.Sim.Worldgen.Natural
     }
 
     /// <summary>
-    /// Pass 6 — ore deposits.
+    /// Pass 8 — caverns.
+    ///
+    /// Sealed voids in the rock. There is no entrance: nothing connects a chamber to the surface,
+    /// and the only way in is to mine into one, which is what makes digging downward exploration
+    /// rather than bookkeeping (<c>docs/research/mining-interview.md</c>, answer 7).
+    ///
+    /// <para><b>Every chamber keeps a rock shell.</b> A cell is carved only where the terrain is
+    /// already rock and where the cell sits strictly inside its own column's rock band, so a
+    /// chamber can neither undermine the subsoil holding the surface up nor breach the bedrock at
+    /// the bottom of the world. See <see cref="CanHollow"/> for why the band, and not the
+    /// neighbouring terrain, is what the rule reads.</para>
+    ///
+    /// <para>The carve is the same bounded random walk the ore and salvage passes use, extended
+    /// to three dimensions so a chamber has some height to it. Bounded for the same reason: an
+    /// unbounded walk is the one worldgen construct that turns a fast pass slow on an unlucky
+    /// seed.</para>
+    ///
+    /// <para>This runs <em>before</em> the ore pass so that ore can be hung on chamber walls.
+    /// It runs after the outcrops, which only ever add rock above ground and so cannot disturb
+    /// a chamber below it.</para>
+    /// </summary>
+    public sealed class CavernPass : INaturalGenPass
+    {
+        public int Order => 8;
+        public string Name => "Caverns";
+
+        public void Run(NaturalGenContext ctx)
+        {
+            var gen = ctx.Gen;
+            int count = ctx.Columns * gen.cavernsPer10000Columns / 10000;
+            // A rate of zero means zero. The floor exists so rounding on a small map cannot
+            // silently wipe the feature out; it is not a licence to overrule a map that asked
+            // for no caverns at all.
+            if (count < 1) count = gen.cavernsPer10000Columns > 0 ? 1 : 0;
+
+            for (int i = 0; i < count; i++)
+            {
+                var rng = ctx.Random(NaturalGenPurpose.Caverns, i);
+                int x = rng.NextInt(ctx.Size.SizeX);
+                int z = rng.NextInt(ctx.Size.SizeZ);
+                int target = rng.NextInt(gen.minCavernCells, gen.maxCavernCells + 1);
+
+                // Start in the middle of the column's rock band, which is the deepest a chamber
+                // can sit while still keeping rock over its head.
+                int column = ctx.Column(x, z);
+                int highest = ctx.SubsoilBaseY[column] - 2;
+                int lowest = ctx.BedrockTopY[column] + 1;
+                if (highest < lowest) continue;         // no rock band thick enough to hollow out
+                int y = (highest + lowest) / 2;
+
+                int start = ctx.Index(x, z, y);
+                int carved = Hollow(ctx, ref rng, x, z, y, target);
+                if (carved <= 0) continue;
+
+                ctx.Caverns.Add(new CavernChamber(start, carved));
+                ctx.Report.CavernCells += carved;
+                ctx.Report.RockCells -= carved;
+                ctx.Report.SolidCells -= carved;
+                ctx.Report.AirCells += carved;
+            }
+
+            ctx.Report.Caverns = ctx.Caverns.Count;
+        }
+
+        static int Hollow(NaturalGenContext ctx, ref DeterministicRandom rng, int x, int z, int y, int target)
+        {
+            int carved = 0;
+            int steps = target * 4;
+            for (int s = 0; s < steps && carved < target; s++)
+            {
+                if (ctx.Size.Contains(x, z, y) && CanHollow(ctx, x, z, y))
+                {
+                    ctx.Carve(ctx.Index(x, z, y));
+                    carved++;
+                }
+
+                // Six directions, with the two vertical ones drawn half as often as the four
+                // horizontal: a chamber should be wider than it is tall, because a one-cell shaft
+                // of a chamber is indistinguishable from a mining accident.
+                switch (rng.NextInt(6))
+                {
+                    case 0: x++; break;
+                    case 1: x--; break;
+                    case 2: z++; break;
+                    case 3: z--; break;
+                    case 4: y++; break;
+                    default: y--; break;
+                }
+                if (x < 0) x = 0; else if (x >= ctx.Size.SizeX) x = ctx.Size.SizeX - 1;
+                if (z < 0) z = 0; else if (z >= ctx.Size.SizeZ) z = ctx.Size.SizeZ - 1;
+                if (y < 0) y = 0; else if (y >= ctx.Size.SizeY) y = ctx.Size.SizeY - 1;
+            }
+
+            return carved;
+        }
+
+        /// <summary>
+        /// Rock here, and strictly inside this column's rock band so that a layer of rock is left
+        /// under the subsoil and over the bedrock.
+        ///
+        /// <para>The band is read from the column's own stratum boundaries rather than from the
+        /// terrain above and below, and that distinction is the whole method: asking "is the cell
+        /// above still rock?" makes a chamber one cell tall for ever, because the cell above the
+        /// one just carved is now air and refuses its own carve. The boundaries are what the
+        /// strata pass laid down and they do not move, so a shell measured against them survives
+        /// the carve that is measuring it.</para>
+        ///
+        /// <para>It is asked per cell, because the rock band is a different thickness under every
+        /// terrace: a chamber comfortably buried at its centre can be one step from the subsoil at
+        /// its edge.</para>
+        /// </summary>
+        static bool CanHollow(NaturalGenContext ctx, int x, int z, int y)
+        {
+            int column = ctx.Column(x, z);
+            if (y < ctx.BedrockTopY[column] + 1) return false;
+            if (y > ctx.SubsoilBaseY[column] - 2) return false;
+            return ctx.Grid.Terrain[ctx.Index(x, z, y)] == NaturalContent.TerrainRock;
+        }
+    }
+
+    /// <summary>
+    /// Pass 9 — ore deposits.
     ///
     /// Lumps grown by a bounded random walk, the same shape the city generator scatters salvage
     /// with, and bounded for the same reason: an unbounded walk is the one worldgen construct that
@@ -126,7 +255,8 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// </summary>
     public sealed class OrePass : INaturalGenPass
     {
-        public int Order => 6;
+        // Nine, not eight: the water passes took two slots on main and caverns took one here.
+        public int Order => 9;
         public string Name => "Ore";
 
         public void Run(NaturalGenContext ctx)
@@ -157,6 +287,23 @@ namespace Odyssey.Sim.Worldgen.Natural
                 int z = rng.NextInt(ctx.Size.SizeZ);
                 int depth = rng.NextInt(ore.MinDepth, ore.MaxDepth + 1);
                 int target = rng.NextInt(gen.minOreBlob, gen.maxOreBlob + 1);
+                int wall = rng.NextInt(ctx.CavernCells.Count + 1);
+
+                // Every third deposit is hung on a cavern wall, so breaking into a chamber is
+                // worth more than the space it opens. The draw above is made unconditionally,
+                // whether or not this deposit uses it and whether or not the map has caverns at
+                // all, so that switching caverns off shifts no ore: a stream whose length depends
+                // on the map is a stream that reshuffles everything downstream of it.
+                if (i % 3 == 0 && ctx.CavernCells.Count > 0)
+                {
+                    CellRef at = ctx.Size.FromIndex(ctx.CavernCells[wall % ctx.CavernCells.Count]);
+                    if (RockBeside(ctx, at, out int wx, out int wz))
+                    {
+                        x = wx;
+                        z = wz;
+                        depth = ctx.SurfaceY[ctx.Column(x, z)] - at.Y;
+                    }
+                }
 
                 // The kind's depth band is a preference, not a promise: on a map too shallow to
                 // hold it the lump is pulled into the rock that exists rather than dropped. Skip
@@ -181,6 +328,32 @@ namespace Odyssey.Sim.Worldgen.Natural
             }
 
             ctx.Report.OreDeposits = ctx.OreDeposits.Count;
+        }
+
+        /// <summary>
+        /// The first rock cell beside a cavern cell on its own layer, in a fixed compass order.
+        ///
+        /// Starting the blob on the wall rather than inside the chamber matters for more than
+        /// tidiness: <see cref="GrowBlob"/> only ever replaces rock, so a walk that begins in the
+        /// chamber's own air spends its step budget wandering the void and can place nothing at
+        /// all before it runs out.
+        /// </summary>
+        static bool RockBeside(NaturalGenContext ctx, CellRef at, out int x, out int z)
+        {
+            ReadOnlySpan<int> dx = stackalloc int[] { 1, -1, 0, 0 };
+            ReadOnlySpan<int> dz = stackalloc int[] { 0, 0, 1, -1 };
+
+            for (int i = 0; i < 4; i++)
+            {
+                x = at.X + dx[i];
+                z = at.Z + dz[i];
+                if (!ctx.Size.Contains(x, z, at.Y)) continue;
+                if (ctx.Grid.Terrain[ctx.Index(x, z, at.Y)] == NaturalContent.TerrainRock) return true;
+            }
+
+            x = at.X;
+            z = at.Z;
+            return false;
         }
 
         static int GrowBlob(NaturalGenContext ctx, ref DeterministicRandom rng, int x, int z, int y,
@@ -215,7 +388,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     }
 
     /// <summary>
-    /// Pass 7 — the start location, and the consistency check that ends generation.
+    /// Pass 9 — the start location, and the consistency check that ends generation.
     ///
     /// The colony lands in a clearing: a square of ground that is flat, free of outcrops and free
     /// of trees, as near the middle of the map as one can be found. Flatness matters more than
@@ -230,7 +403,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// </summary>
     public sealed class NaturalStartPass : INaturalGenPass
     {
-        public int Order => 7;
+        public int Order => 10;
         public string Name => "Start";
 
         public void Run(NaturalGenContext ctx)
@@ -259,6 +432,7 @@ namespace Odyssey.Sim.Worldgen.Natural
             int z = column / ctx.Size.SizeX;
             ctx.Report.StartCell = new CellRef(x, z, ctx.TopSolidY[column] + 1);
 
+            EnsureReachable(ctx, column);
             AssertConsistent(ctx);
         }
 
@@ -284,6 +458,11 @@ namespace Odyssey.Sim.Worldgen.Natural
 
                 int minY = int.MaxValue, maxY = int.MinValue, trees = 0;
                 bool usable = true;
+
+                // Dry ground, with a margin. Marsh counts as ground — it has to, or a bog column
+                // would fail every surface-kind and walkability invariant — so the ground check
+                // below would happily land the colony in a swamp. This is what does not.
+                if (!DryAround(ctx, x, z, radius + ctx.Gen.startWaterClearance)) continue;
 
                 for (int dz = -radius; dz <= radius && usable; dz++)
                 for (int dx = -radius; dx <= radius; dx++)
@@ -312,6 +491,156 @@ namespace Odyssey.Sim.Worldgen.Natural
             }
 
             return best;
+        }
+
+        /// <summary>Nothing wet inside the square. Off-map cells are not an obstacle.</summary>
+        static bool DryAround(NaturalGenContext ctx, int cx, int cz, int reach)
+        {
+            for (int dz = -reach; dz <= reach; dz++)
+            for (int dx = -reach; dx <= reach; dx++)
+            {
+                int x = cx + dx, z = cz + dz;
+                if ((uint)x >= (uint)ctx.Size.SizeX || (uint)z >= (uint)ctx.Size.SizeZ) continue;
+                if (ctx.Water[ctx.Column(x, z)] != (byte)WaterClass.None) return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// The colony must be able to walk to most of its map. A wide river is the one shape that
+        /// can cut it in two, and with no build pipeline yet a far bank is not merely inconvenient
+        /// but dead, so this floods the surface from the start and cuts another ford wherever the
+        /// river separates the two components.
+        ///
+        /// Forcing a ford rather than re-rolling the map is deliberate. Re-rolling makes
+        /// generation take unbounded time on an unlucky seed, and a generator handed a seed that
+        /// quietly uses a different one is a determinism smell even when it is reproducible.
+        ///
+        /// Failing after <see cref="NaturalMapGenDef.maxForcedFords"/> throws rather than shipping
+        /// a severed map: a pond cannot sever anything, so a river still splitting the board after
+        /// three crossings means the shape code is wrong, which is a bug and not a seed.
+        /// </summary>
+        static void EnsureReachable(NaturalGenContext ctx, int startColumn)
+        {
+            if (!ctx.Gen.water) return;
+
+            var seen = new byte[ctx.Columns];
+            var queue = new int[ctx.Columns];
+
+            for (int attempt = 0; ; attempt++)
+            {
+                int reached = Flood(ctx, startColumn, seen, queue, out int walkable);
+                ctx.Report.ReachableColumns = reached;
+                ctx.Report.WalkableColumns = walkable;
+
+                if (walkable <= 0 || reached * 100 / walkable >= ctx.Gen.minReachablePercent) return;
+                if (attempt >= ctx.Gen.maxForcedFords || ctx.RiverCross == null)
+                    throw new NaturalGenException(
+                        $"The start reaches only {reached} of {walkable} walkable columns after " +
+                        $"{ctx.Report.ForcedFords} forced fords. The water shapes have severed the map.");
+
+                if (!ForceAFord(ctx, seen)) return;   // nothing left to open; the rest is islands
+            }
+        }
+
+        /// <summary>
+        /// Walkable columns reachable from the start, 4-connected, stepping at most one layer at
+        /// a time. Columns rather than cells: the surface is a heightfield, so one bit per column
+        /// answers the only question that matters here.
+        /// </summary>
+        static int Flood(NaturalGenContext ctx, int startColumn, byte[] seen, int[] queue, out int walkable)
+        {
+            Array.Clear(seen, 0, seen.Length);
+
+            walkable = 0;
+            for (int column = 0; column < ctx.Columns; column++)
+                if (Standable(ctx, column)) walkable++;
+
+            if (!Standable(ctx, startColumn)) return 0;
+
+            int head = 0, tail = 0, reached = 0;
+            seen[startColumn] = 1;
+            queue[tail++] = startColumn;
+
+            while (head < tail)
+            {
+                int column = queue[head++];
+                reached++;
+                int x = column % ctx.Size.SizeX, z = column / ctx.Size.SizeX;
+
+                for (int d = 0; d < 4; d++)
+                {
+                    int nx = x + StepX[d], nz = z + StepZ[d];
+                    if ((uint)nx >= (uint)ctx.Size.SizeX || (uint)nz >= (uint)ctx.Size.SizeZ) continue;
+
+                    int n = ctx.Column(nx, nz);
+                    if (seen[n] != 0 || !Standable(ctx, n)) continue;
+                    if (Math.Abs(ctx.SurfaceY[n] - ctx.SurfaceY[column]) > 1) continue;
+
+                    seen[n] = 1;
+                    queue[tail++] = n;
+                }
+            }
+
+            return reached;
+        }
+
+        static readonly int[] StepX = { -1, 1, 0, 0 };
+        static readonly int[] StepZ = { 0, 0, -1, 1 };
+
+        static bool Standable(NaturalGenContext ctx, int column)
+        {
+            if (ctx.Water[column] == (byte)WaterClass.Deep) return false;
+            if (ctx.TopSolidY[column] != ctx.SurfaceY[column]) return false;   // an outcrop
+            return true;
+        }
+
+        /// <summary>
+        /// Cut the river at the first march step whose two banks are on opposite sides of the
+        /// flood, and rewrite the cells the class change touched. False when no such step exists,
+        /// which means what is unreached is islanded by something other than the river.
+        /// </summary>
+        static bool ForceAFord(NaturalGenContext ctx, byte[] seen)
+        {
+            for (int step = 0; step < ctx.RiverSteps; step++)
+            {
+                int cross = ctx.RiverCross![step], half = ctx.RiverHalfWidth![step];
+                int near = BankColumn(ctx, step, cross - half - 1);
+                int far = BankColumn(ctx, step, cross + half + 1);
+                if (near < 0 || far < 0) continue;
+                if ((seen[near] != 0) == (seen[far] != 0)) continue;
+
+                if (ctx.Ford(step, ctx.Gen.fordHalfLength) <= 0) continue;
+                ctx.Report.ForcedFords++;
+                Rewrite(ctx, step);
+                return true;
+            }
+
+            return false;
+        }
+
+        static int BankColumn(NaturalGenContext ctx, int step, int cross)
+        {
+            int x = ctx.RiverAlongX ? step : cross;
+            int z = ctx.RiverAlongX ? cross : step;
+            if ((uint)x >= (uint)ctx.Size.SizeX || (uint)z >= (uint)ctx.Size.SizeZ) return -1;
+            return ctx.Column(x, z);
+        }
+
+        /// <summary>Re-lay the cells of a ford, whose columns just changed depth.</summary>
+        static void Rewrite(NaturalGenContext ctx, int step)
+        {
+            int reach = ctx.Gen.fordHalfLength;
+            for (int s = step - reach; s <= step + reach; s++)
+            {
+                if ((uint)s >= (uint)ctx.RiverSteps) continue;
+                int cross = ctx.RiverCross![s], half = ctx.RiverHalfWidth![s];
+                for (int b = cross - half; b <= cross + half; b++)
+                {
+                    int column = BankColumn(ctx, s, b);
+                    if (column >= 0) WaterFillPass.WriteColumn(ctx, column);
+                }
+            }
         }
 
         static void ClearTrees(NaturalGenContext ctx, int centreColumn, int radius)
@@ -353,7 +682,14 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// The invariants a generation bug would break long before a player noticed. The column
         /// one is the important one and is specific to this generator: a wilderness map is solid
         /// from the bottom of the world up to the surface and air above it, with nothing floating
-        /// and no holes, which is why no support solve is needed at tick zero.
+        /// and — apart from the caverns — no holes, which is why no support solve is needed at
+        /// tick zero.
+        ///
+        /// <para>A cavern is the one hole the rule allows, and it is allowed by name rather than
+        /// by loosening the rule: the cell must be one the cavern pass recorded carving, and it
+        /// must still lie strictly inside its column's rock band. A hole anywhere else is a bug,
+        /// and a cavern that has drifted out of the rock is the specific bug that would leave a
+        /// pit in the ground or a crack into the bedrock.</para>
         /// </summary>
         static void AssertConsistent(NaturalGenContext ctx)
         {
@@ -379,10 +715,18 @@ namespace Odyssey.Sim.Worldgen.Natural
                         throw new NaturalGenException(
                             $"Cell {size.FromIndex(index)} has a solid flag that disagrees with its terrain.");
 
-                    bool shouldBeSolid = y <= ctx.TopSolidY[columnBase + x];
+                    int column = columnBase + x;
+                    bool carved = ctx.IsCavern(index);
+                    bool shouldBeSolid = y <= ctx.TopSolidY[column] && !carved;
                     if (solidFlag != shouldBeSolid)
                         throw new NaturalGenException(
-                            $"Cell {size.FromIndex(index)} breaks the column rule: solid up to the surface, air above.");
+                            $"Cell {size.FromIndex(index)} breaks the column rule: solid up to the surface, " +
+                            "air above, and holes only where a cavern was carved.");
+
+                    if (carved && (y < ctx.BedrockTopY[column] + 1 || y > ctx.SubsoilBaseY[column] - 2))
+                        throw new NaturalGenException(
+                            $"Cell {size.FromIndex(index)} is a cavern outside the rock band: it would " +
+                            "undermine the surface or break into the bedrock.");
 
                     int handle = grid.Edifice[index];
                     if (handle < -1 || handle >= ctx.Edifices.Count)

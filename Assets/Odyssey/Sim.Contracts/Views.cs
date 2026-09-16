@@ -4,6 +4,34 @@ using System;
 namespace Odyssey.Sim.Contracts
 {
     /// <summary>
+    /// A momentary thing a pawn did that presentation may want to draw, as opposed to a state it
+    /// is in.
+    ///
+    /// <para><b>Why the contract needs this at all.</b> <see cref="PawnView.Working"/> is a
+    /// sustained bit: it is true for the ten seconds a tree takes, and a figure can simply look at
+    /// it every frame and pose accordingly. Picking a stack up is not like that. It takes no
+    /// simulation time whatever — one toil, one tick, the item changes hands — so there is no
+    /// state to observe, and the drawn lift is a presentation-side animation over an instant that
+    /// has already happened. Something still has to say the instant occurred.</para>
+    ///
+    /// <para><b>None of these has any effect on the simulation.</b> They are a report, not state:
+    /// not saved, not hashed, and nothing in <c>Sim</c> reads them back. Hashing them would make
+    /// the look of the game part of the determinism contract, which is the wrong thing to promise
+    /// and the wrong thing to be bound by.</para>
+    /// </summary>
+    public enum PawnGesture : byte
+    {
+        /// <summary>Nothing has happened worth drawing.</summary>
+        None = 0,
+
+        /// <summary>Stooping to take something off the ground.</summary>
+        Lift = 1,
+
+        /// <summary>Setting something down.</summary>
+        Stow = 2,
+    }
+
+    /// <summary>
     /// What the presentation layer knows about one pawn. A view is a value: it holds an id, never
     /// a reference to a simulation object.
     ///
@@ -45,10 +73,62 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How far from <see cref="Cell"/> to <see cref="NextCell"/>, 0 to 100.</summary>
         public readonly int MovePercent;
 
+        /// <summary>
+        /// True while the pawn is working a toil in place: swinging at a tree, and later mining
+        /// or building. False while it walks, sleeps, eats or idles.
+        ///
+        /// Working is not the same as holding a job. A colonist spends most of a felling job on
+        /// its feet, crossing the map, and a figure that swung an axe the whole way would be
+        /// telling the player something untrue about where the work is happening.
+        /// </summary>
+        public readonly bool Working;
+
+        /// <summary>
+        /// What is being worked on, meaningful only while <see cref="Working"/>.
+        ///
+        /// A cell and not just a flag, because the pose needs a direction: a colonist has to face
+        /// what it is swinging at, and presentation has no other way to learn which of the eight
+        /// neighbours the tree is in. The pawn's own heading is zero the moment it stops walking,
+        /// so by the time the work starts the last thing it could be derived from is gone.
+        /// </summary>
+        public readonly CellRef WorkCell;
+
+        /// <summary>
+        /// The last momentary thing this pawn did, which stays reported until it does another.
+        ///
+        /// <para><b>Sticky, and that is the whole design.</b> Presentation reads the latest
+        /// snapshot once a frame, and the simulation runs several ticks between frames at speed
+        /// three. A gesture flag set for the single tick it happened on would therefore be missed
+        /// routinely — the lift would play at slow speeds, not play at fast ones, and the bug
+        /// would look like a rendering glitch rather than a contract that cannot be observed.
+        /// Left standing until the next gesture, no snapshot can miss it.</para>
+        /// </summary>
+        public readonly PawnGesture Gesture;
+
+        /// <summary>
+        /// Bumped every time a gesture begins, wrapping through 255 back to 0.
+        ///
+        /// <para>Stickiness alone is not enough: two lifts in a row leave
+        /// <see cref="Gesture"/> reading <c>Lift</c> throughout, and presentation cannot tell one
+        /// from two. The serial is what makes them distinct. Presentation fires when the serial
+        /// differs from the one it last recorded for that pawn, which is correct whether it missed
+        /// no snapshots, one, or forty — the test is <em>different</em>, never <em>greater</em>,
+        /// so the wrap costs nothing.</para>
+        ///
+        /// <para>A figure that has never seen this pawn before must record the serial and pose
+        /// nothing. Otherwise every colonist walking into view, and every colonist at all after a
+        /// load, plays one lift it never made.</para>
+        /// </summary>
+        public readonly byte GestureSerial;
+
         public PawnView(
             PawnId id, CellRef cell, int food, int rest, int mood,
-            int jobDef = -1, CellRef nextCell = default, int movePercent = 0)
+            int jobDef = -1, CellRef nextCell = default, int movePercent = 0,
+            bool working = false, CellRef workCell = default,
+            PawnGesture gesture = PawnGesture.None, byte gestureSerial = 0)
         {
+            Gesture = gesture;
+            GestureSerial = gestureSerial;
             Id = id;
             Cell = cell;
             Food = food;
@@ -57,6 +137,8 @@ namespace Odyssey.Sim.Contracts
             JobDef = jobDef;
             NextCell = nextCell;
             MovePercent = movePercent;
+            Working = working;
+            WorkCell = workCell;
         }
     }
 
@@ -95,10 +177,32 @@ namespace Odyssey.Sim.Contracts
         ThingView[] _things = Array.Empty<ThingView>();
         byte[] _sliceCells = Array.Empty<byte>();
         byte[] _designations = Array.Empty<byte>();
+        byte[] _designationProgress = Array.Empty<byte>();
 
         public int Tick { get; private set; }
         public int SliceLayer { get; private set; }
         public GridSize Size { get; private set; }
+
+        /// <summary>
+        /// The clock the world was running at when this frame was published: 0 paused, 1 normal,
+        /// 2 fast, 3 very fast. Exactly <c>SimWorld.GameSpeed</c>, carried here rather than read
+        /// off the world, because presentation reads the snapshot and nothing else.
+        ///
+        /// <para>It exists because <b>pause is a fact, not something to be guessed at</b>.
+        /// Presentation used to infer it from the tick standing still, which cannot be done
+        /// without a delay: a quarter of a second had to pass before a stopped tick could be told
+        /// from a slow frame, and for those fifteen frames every colonist carried on swinging.
+        /// A paused world publishes exactly one more frame — the tick spent letting the speed
+        /// change through — and that frame says 0, so the lag is one frame.</para>
+        ///
+        /// <para>It defaults to 1 rather than 0 so that a snapshot nobody has written yet reads as
+        /// a running world. A harness that builds one by hand, or an editor tool that poses a
+        /// figure without ticking anything, gets movement rather than a board frozen solid.</para>
+        /// </summary>
+        public int GameSpeed { get; private set; } = 1;
+
+        /// <summary>True while the simulation is advancing. See <see cref="GameSpeed"/>.</summary>
+        public bool Running => GameSpeed > 0;
 
         public int PawnCount { get; private set; }
         public int ThingCount { get; private set; }
@@ -120,6 +224,19 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public ReadOnlySpan<byte> Designations => new ReadOnlySpan<byte>(_designations, 0, DesignationCellCount);
 
+        /// <summary>
+        /// One byte per cell of the active layer: how far through its order that cell is, 0 for
+        /// untouched and 255 for finished. Same length and same indexing as
+        /// <see cref="Designations"/>, and 0 wherever there is no order.
+        ///
+        /// <para>Quantised rather than exact because it is a picture, not a number: what reads on
+        /// screen is whether a face is barely scratched, half cut or nearly through, and a byte
+        /// says that to a tenth of a per cent. The exact tick count stays in the simulation, where
+        /// the arithmetic is done.</para>
+        /// </summary>
+        public ReadOnlySpan<byte> DesignationProgress =>
+            new ReadOnlySpan<byte>(_designationProgress, 0, DesignationCellCount);
+
         /// <summary>Find a pawn by id. Returns false when it is gone, which callers must handle.</summary>
         public bool TryGetPawn(PawnId id, out PawnView view)
         {
@@ -135,11 +252,12 @@ namespace Odyssey.Sim.Contracts
 
         // ---- writing side, used only by the simulation while building the back buffer ----
 
-        internal void BeginWrite(int tick, GridSize size, int sliceLayer)
+        internal void BeginWrite(int tick, GridSize size, int sliceLayer, int gameSpeed = 1)
         {
             Tick = tick;
             Size = size;
             SliceLayer = sliceLayer;
+            GameSpeed = gameSpeed;
             PawnCount = 0;
             ThingCount = 0;
             SliceCellCount = 0;
@@ -170,6 +288,12 @@ namespace Odyssey.Sim.Contracts
             Grow(ref _designations, cellCount);
             DesignationCellCount = cellCount;
             return new Span<byte>(_designations, 0, cellCount);
+        }
+
+        internal Span<byte> BeginDesignationProgress(int cellCount)
+        {
+            Grow(ref _designationProgress, cellCount);
+            return new Span<byte>(_designationProgress, 0, cellCount);
         }
 
         static void Grow<T>(ref T[] array, int needed)

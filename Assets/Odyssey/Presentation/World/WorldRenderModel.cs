@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
@@ -46,6 +47,10 @@ namespace Odyssey.Presentation.World
 
         ModuleGroup[] _groups;
         readonly int[] _terrainModule;
+        readonly int[][] _stoneModule;
+        readonly int[][] _turfModule;
+        readonly int[][] _earthFaceModule;
+        readonly int[][] _bankModule;
         readonly int[] _naturalEdificeModule;
         readonly int _vaultWallModule;
         readonly int _utilityTapModule;
@@ -67,6 +72,10 @@ namespace Odyssey.Presentation.World
 
             _groups = new[] { ResolveGroup(library, new TemplateDef()) };
             _terrainModule = ResolveTerrain(library);
+            _stoneModule = ResolveStone(library);
+            _turfModule = ResolveEarth(library, ModuleShape.GroundBlock);
+            _earthFaceModule = ResolveEarth(library, ModuleShape.GroundFace);
+            _bankModule = ResolveEarth(library, ModuleShape.Bank);
             _naturalEdificeModule = ResolveNaturalEdifices(library);
             _vaultWallModule = library.Resolve(ModuleIds.VaultWall, ModuleShape.WallPanel);
             _utilityTapModule = library.Resolve(ModuleIds.UtilityTap, ModuleShape.Pillar);
@@ -78,6 +87,23 @@ namespace Odyssey.Presentation.World
 
         /// <summary>Bumped whenever any chunk is refreshed, so the renderer can cheaply notice.</summary>
         public int Version { get; private set; }
+
+        /// <summary>
+        /// The highest layer worth drawing: the top of the geometry, plus the one a colonist
+        /// standing on it occupies.
+        ///
+        /// <para><b>Why the renderer needs a ceiling at all.</b> Above the surface the slice draws
+        /// every layer above it solid, with no fade to cut the loop short (owner, 2026-09-16), and
+        /// <c>ChunkRenderer.BatchFor</c> <i>meshes</i> a chunk the first time it is asked for and
+        /// again after every version bump. Without a bound, a 40-layer map would mesh a dozen
+        /// layers of empty sky on every edit and walk them on every frame, for nothing.</para>
+        ///
+        /// <para>It is a high-water mark: raised as cells are copied in, never lowered except by a
+        /// full refresh. That is deliberate and it is the safe direction — the worst it can do is
+        /// draw a few empty layers after something is demolished, where the other way round it
+        /// would hide a roof somebody had just built.</para>
+        /// </summary>
+        public int HighestOccupiedLayer { get; private set; }
 
         /// <summary>Chunks refreshed on the most recent publish. A milestone-report number.</summary>
         public int LastRefreshedChunks { get; private set; }
@@ -149,6 +175,89 @@ namespace Odyssey.Presentation.World
         /// <summary>The module index for the natural material in this cell, or 0 for open air.</summary>
         public int TerrainModule(int index) => _terrainModule[_terrain[index]];
 
+        /// <summary>Is the cell drawn as a chipped lump rather than as a cube?</summary>
+        public bool IsStone(int index) => RockLook.IsStone(_terrain[index]);
+
+        /// <summary>
+        /// The module for one lump of a stone cell. Falls back to the plain terrain module if the
+        /// cell is not stone, so a caller that gets the test wrong draws a cube rather than
+        /// nothing at all.
+        /// </summary>
+        public int StoneModule(int index, int variant)
+        {
+            int[] variants = _stoneModule[_terrain[index]];
+            return variants.Length == 0 ? _terrainModule[_terrain[index]] : variants[variant % variants.Length];
+        }
+        /// <summary>Is this cell one of the natural soils, drawn as earth rather than as a cube?</summary>
+        public bool IsEarth(int index) => GroundLook.IsEarth(_terrain[index]);
+
+        /// <summary>
+        /// The module for a piece of earth: the cheap rippled top when nothing can see its sides,
+        /// the coursed block when something can.
+        ///
+        /// <para>Falls back to the plain terrain module when the cell is not a soil, so a caller
+        /// that gets the test wrong draws a cube rather than nothing at all — the same courtesy
+        /// <see cref="StoneModule"/> extends.</para>
+        /// </summary>
+        public int EarthModule(int index, int variant, bool showsAFace)
+        {
+            if (showsAFace) return EarthFaceModule(index, variant, 0b1111);
+
+            int[] variants = _turfModule[_terrain[index]];
+            return variants.Length == 0 ? _terrainModule[_terrain[index]] : variants[variant % variants.Length];
+        }
+
+        /// <summary>
+        /// The block for a piece of earth that shows a side, cut for one canonical pattern of
+        /// exposed sides so the chamfer lands only on edges that are open.
+        ///
+        /// <para>The family is laid out pattern-major, so the five patterns each carry their own
+        /// run of variants. A terrain with no earth family falls back to the plain terrain module,
+        /// the same courtesy <see cref="StoneModule"/> extends: a caller that gets the test wrong
+        /// draws a cube rather than nothing at all.</para>
+        /// </summary>
+        public int EarthFaceModule(int index, int variant, int canonicalExposure)
+        {
+            int[] family = _earthFaceModule[_terrain[index]];
+            if (family.Length == 0) return _terrainModule[_terrain[index]];
+
+            int pattern = GroundMesh.PatternIndex(canonicalExposure);
+            if (pattern < 0) pattern = GroundMesh.ExposurePatterns.Length - 1;
+
+            // The modulo is what lets the family collapse when there is no lip to cut: with the
+            // chamfer off every pattern builds the same block, the family is one pattern long, and
+            // every pattern folds onto it rather than the mesher having to know that it should.
+            int slot = pattern * GroundMesh.Variants + (variant % GroundMesh.Variants);
+            return family[slot % family.Length];
+        }
+
+        /// <summary>
+        /// The stepped bank a terrace of this terrain is climbed by, or 0 when the terrain is not
+        /// one a bank is ever built out of.
+        ///
+        /// <para>Keyed by terrain rather than by cell, because the cell the bank is drawn in is
+        /// empty: the terrain that decides what it is made of is the one at the <em>top</em> of the
+        /// step, one cell sideways. Returning 0 rather than a substitute is deliberate here — a
+        /// bank is decoration, and drawing a cube where one does not belong would be worse than
+        /// drawing nothing.</para>
+        /// </summary>
+        public int BankModuleFor(ushort terrain, int variant)
+        {
+            if (terrain >= _bankModule.Length) return 0;
+            int[] variants = _bankModule[terrain];
+            return variants.Length == 0 ? 0 : variants[variant % variants.Length];
+        }
+
+        /// <summary>
+        /// The module index a terrain code draws as, without needing a cell of it to hand.
+        ///
+        /// The table is keyed by terrain and nothing else, so this is the same answer
+        /// <see cref="TerrainModule"/> gives for any cell of that terrain. The surround outside
+        /// the board asks it this way because it has no cells at all.
+        /// </summary>
+        public int TerrainModuleFor(ushort terrain) =>
+            terrain < _terrainModule.Length ? _terrainModule[terrain] : 0;
+
         // ------------------------------------------------------------- filling
 
         /// <summary>
@@ -212,6 +321,81 @@ namespace Odyssey.Presentation.World
             return table;
         }
 
+        /// <summary>
+        /// The lumps each stone terrain is drawn with: <c>[terrain][variant]</c>, and empty for
+        /// anything that is not stone.
+        ///
+        /// Resolved once at construction, like everything else here, so the mesher deals only in
+        /// integers. Each variant is its own module and so its own instancing bucket, which is
+        /// the price of the whole effect: six buckets per stone terrain in a chunk instead of one.
+        /// Only *exposed* stone is ever emitted, so on a surface board that is the outcrops and
+        /// the terrace faces rather than the eighty thousand cells underneath them.
+        /// </summary>
+        static int[][] ResolveStone(ModuleLibrary library)
+        {
+            var table = new int[NaturalContent.TerrainCount][];
+            for (int i = 0; i < table.Length; i++)
+            {
+                if (!RockLook.IsStone((ushort)i)) { table[i] = System.Array.Empty<int>(); continue; }
+
+                string name = NaturalContent.TerrainAt((ushort)i).defName;
+                var variants = new int[RockMesh.Variants];
+                for (int v = 0; v < variants.Length; v++)
+                    variants[v] = library.Resolve(
+                        ModuleIds.TerrainVariant(name, v), ModuleShape.RockBlock, v);
+                table[i] = variants;
+            }
+            return table;
+        }
+
+        /// <summary>
+        /// The earth blocks, one family per soil, resolved once like the stone lumps.
+        ///
+        /// <para>Every variant borrows the plain terrain row for its material — see
+        /// <see cref="ModuleLibrary.Resolve(string, string, ModuleShape, int)"/>. The geometry is
+        /// ours and needs no pack; the grass texture lives on exactly one catalogue row and is a
+        /// direct reference into <c>Assets/Synty</c>. Borrowing is what lets the number of
+        /// variants be a constant in code rather than a shape baked into a generated asset that
+        /// can only be rebuilt on a machine holding the licensed packs.</para>
+        ///
+        /// <para>Turf and face are resolved as separate families rather than as one with twice the
+        /// variants, because they are two meshes and the id is what the library caches against.
+        /// </para>
+        /// </summary>
+        static int[][] ResolveEarth(ModuleLibrary library, ModuleShape shape)
+        {
+            var table = new int[NaturalContent.TerrainCount][];
+            // A face family is pattern-major: one run of course variants per pattern of exposed
+            // sides, because the chamfer has to be cut for the sides that are really open. Turf
+            // collapses to one when there is no ripple to vary, and a bank varies only by its own
+            // step jitter.
+            int count =
+                shape == ModuleShape.Bank ? BankMesh.Kinds
+                : shape == ModuleShape.GroundBlock ? GroundMesh.TurfVariants
+                : GroundMesh.FaceSlots;
+            for (int i = 0; i < table.Length; i++)
+            {
+                if (!GroundLook.IsEarth((ushort)i)) { table[i] = System.Array.Empty<int>(); continue; }
+
+                string name = NaturalContent.TerrainAt((ushort)i).defName;
+                string baseId = ModuleIds.Terrain(name);
+                var variants = new int[count];
+                for (int v = 0; v < variants.Length; v++)
+                {
+                    string id;
+                    switch (shape)
+                    {
+                        case ModuleShape.GroundFace: id = ModuleIds.TerrainFace(name, v); break;
+                        case ModuleShape.Bank: id = ModuleIds.TerrainBank(name, v); break;
+                        default: id = ModuleIds.Terrain(name) + ".turf" + v.ToString(); break;
+                    }
+                    variants[v] = library.Resolve(id, baseId, shape, v);
+                }
+                table[i] = variants;
+            }
+            return table;
+        }
+
         static int[] ResolveTerrain(ModuleLibrary library)
         {
             // Sized for the natural table, which continues CoreContent's numbering rather than
@@ -225,7 +409,15 @@ namespace Odyssey.Presentation.World
                 var def = NaturalContent.TerrainAt((ushort)i);
                 table[i] = library.Resolve(
                     ModuleIds.Terrain(def.defName),
-                    def.solid ? ModuleShape.SolidBlock : ModuleShape.FloorSlab);
+                    // Stone asks for a lump even here, where the variant is always the first one.
+                    // The catalogue says RockBlock on every row, so this only decides what a
+                    // library with *no* catalogue does — and if it answered SolidBlock, that
+                    // library would hand back a smooth cube for variant 0 and chipped lumps for
+                    // the other five. One cell in six wrong is the kind of fault that renders
+                    // perfectly and gets blamed on the art.
+                    RockLook.IsStone((ushort)i) ? ModuleShape.RockBlock
+                        : def.solid ? ModuleShape.SolidBlock
+                        : ModuleShape.FloorSlab);
             }
             return table;
         }
@@ -235,6 +427,9 @@ namespace Odyssey.Presentation.World
         /// <summary>Copy every cell. Run once, after generation, before the first frame.</summary>
         public void RefreshAll(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices)
         {
+            // The one place the high-water mark is allowed to fall: everything is being rewritten,
+            // so what comes out is exact rather than accumulated.
+            HighestOccupiedLayer = 0;
             for (int index = 0; index < _terrain.Length; index++) CopyCell(grid, edifices, index);
             LastRefreshedChunks = Chunks.Count;
             Version++;
@@ -273,7 +468,7 @@ namespace Odyssey.Presentation.World
 
         void CopyCell(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices, int index)
         {
-            _terrain[index] = grid.Terrain[index];
+            _terrain[index] = Seen(grid, index);
             _floor[index] = grid.Floor[index];
             _floorStuff[index] = grid.FloorStuff[index];
             _flags[index] = (byte)grid.Flags[index];
@@ -290,6 +485,34 @@ namespace Odyssey.Presentation.World
                 _edifice[index] = CoreContent.EdificeNone;
                 _edificeStuff[index] = CoreContent.StuffNone;
             }
+
+            // Anything at all here means this layer is worth drawing, and so is the one above it —
+            // that is where a colonist standing on this cell is, and where a roof laid on it goes.
+            bool anything = (_flags[index] & (byte)CellFlags.SolidTerrain) != 0
+                         || _floor[index] != 0
+                         || _edifice[index] != CoreContent.EdificeNone;
+            if (!anything) return;
+
+            int layer = index / Size.LayerStride;
+            if (layer + 1 > HighestOccupiedLayer)
+                HighestOccupiedLayer = Math.Min(Size.SizeY - 1, layer + 1);
+        }
+
+        /// <summary>
+        /// The terrain as the colony has seen it: an undiscovered seam is plain rock.
+        ///
+        /// <para>The lie is told once, here, on the way into the mirror — so the module, the
+        /// colour, the emissive trim and the inspect readout all agree about what the cell looks
+        /// like without any of them knowing there is a rule. The simulation is untouched and
+        /// still knows perfectly well that the cell is iron; this is the seam between what is
+        /// true and what has been seen, and presentation is the right side of it
+        /// (<see cref="CellFlags.Discovered"/>).</para>
+        /// </summary>
+        static ushort Seen(CellGrid grid, int index)
+        {
+            ushort terrain = grid.Terrain[index];
+            if (NaturalContent.IsOre(terrain) && !grid.IsDiscovered(index)) return NaturalContent.TerrainRock;
+            return terrain;
         }
 
         /// <summary>Half-open cell bounds of a chunk, and the layer it lives on.</summary>

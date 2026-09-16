@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
@@ -21,6 +22,15 @@ namespace Odyssey.Hud
 
         /// <summary>The subject stopped being published and its grace expired.</summary>
         Died,
+
+        /// <summary>A drag box chose a set of colonists at once.</summary>
+        Boxed,
+
+        /// <summary>Shift toggled colonists in or out of an existing selection.</summary>
+        Toggled,
+
+        /// <summary>A double click asked for everything of the same kind on screen.</summary>
+        Similar,
     }
 
     /// <summary>
@@ -32,6 +42,11 @@ namespace Odyssey.Hud
     /// colonist a ray passes through — is the presenter's job in the Unity assembly; what that
     /// answer *means* is decided here, where it can be tested without a scene.
     ///
+    /// The selection is multi-select of one class: an ordered set of colonists, the first of
+    /// which is the primary that the inspect pane and the cursor show. Items and cells stay
+    /// single-subject, because a box drawn over the ground means "these people", not "this
+    /// dirt and that dirt".
+    ///
     /// A subject that stops being published is dropped after a one-frame grace (§2.3): the frame
     /// in which a colonist dies still shows them, so the pane can tombstone rather than blank.
     /// </summary>
@@ -40,9 +55,15 @@ namespace Odyssey.Hud
         /// <summary>Frames a subject may be absent from the snapshot before the selection drops it.</summary>
         public const int GraceFrames = 1;
 
+        readonly List<PawnId> _pawns = new List<PawnId>();
+
         int _missingFrames;
 
-        public PawnId Pawn { get; private set; } = PawnId.None;
+        /// <summary>The selected colonists in selection order. The first is the primary.</summary>
+        public IReadOnlyList<PawnId> Pawns => _pawns;
+
+        /// <summary>The primary colonist — the one the inspect pane shows and the cursor hugs.</summary>
+        public PawnId Pawn => _pawns.Count > 0 ? _pawns[0] : PawnId.None;
 
         public ThingId Thing { get; private set; } = ThingId.None;
 
@@ -52,8 +73,12 @@ namespace Odyssey.Hud
         /// <summary>The cell the last world pick landed on, or none. Never above the active layer.</summary>
         public CellRef? Cell { get; private set; }
 
-        public bool HasPawn => Pawn.IsValid;
+        public bool HasPawn => _pawns.Count > 0;
         public bool HasThing => Thing.IsValid;
+
+        /// <summary>True when several colonists are selected at once, for panes that summarise.</summary>
+        public bool HasMultiple => _pawns.Count > 1;
+
         public bool IsEmpty => !HasPawn && !HasThing && !Cell.HasValue;
 
         /// <summary>
@@ -68,15 +93,43 @@ namespace Odyssey.Hud
         /// frame. A pick on bare ground selects the ground: an inspect pane that goes blank on a
         /// miss reads as the click being ignored.
         /// </summary>
-        public void Pick(CellRef? cell, PawnId pawnUnderPointer, WorldSnapshot snapshot)
+        /// <param name="additive">Shift held: a colonist pick toggles them in or out instead of
+        /// replacing the selection. A pick that lands on anything else replaces, because there is
+        /// nothing sensible to toggle about a cell.</param>
+        public void Pick(CellRef? cell, PawnId pawnUnderPointer, WorldSnapshot snapshot, bool additive = false)
         {
+            // One pick, one subject. A pick that lands on a colonist selects the colonist, and the
+            // cell they happen to be standing in is not part of the selection at all.
+            //
+            // It used to set both. The cursor preferred the pawn and drew the right bracket most of
+            // the time, but the selection was two things at once underneath: anything reading
+            // Cell saw the cell under their feet, and if the pawn lookup missed for any reason the
+            // cursor fell through to the cell tier and bracketed the ground — or the tree — while
+            // the inspect pane went on showing the colonist. Reported from a playtest on
+            // 2026-09-16 as a highlight landing near a colonist who was chopping, and selecting
+            // them anyway. Choose() already cleared the cell for a roster click; this makes a
+            // world click behave the same way, so the fall-through has nothing to fall to.
+            if (pawnUnderPointer.IsValid)
+            {
+                if (additive) Toggle(pawnUnderPointer);
+                else
+                {
+                    _pawns.Clear();
+                    _pawns.Add(pawnUnderPointer);
+                    ClearCellTier();
+                    _missingFrames = 0;
+                    Changed?.Invoke(SelectionChange.Picked);
+                }
+                return;
+            }
+
+            _pawns.Clear();
             Cell = cell;
-            Pawn = cell.HasValue ? pawnUnderPointer : PawnId.None;
             Thing = ThingId.None;
             ThingDef = -1;
-            if (cell.HasValue && !Pawn.IsValid)
+            if (Cell.HasValue)
             {
-                ThingAt(snapshot, cell.Value, out ThingId thing, out int def);
+                ThingAt(snapshot, Cell.Value, out ThingId thing, out int def);
                 Thing = thing;
                 ThingDef = def;
             }
@@ -84,24 +137,62 @@ namespace Odyssey.Hud
             Changed?.Invoke(SelectionChange.Picked);
         }
 
-        /// <summary>Select a colonist outright, without a pick: the roster, an alert, a jump.</summary>
-        public void Choose(PawnId id)
+        /// <summary>
+        /// A set of colonists chosen by geometry rather than a ray: a drag box, a select-similar.
+        /// Without shift the set replaces the selection; with it, the new colonists join the ones
+        /// already held, because the point of shift is to widen a selection in pieces.
+        /// </summary>
+        public void PickMany(IReadOnlyList<PawnId> pawns, bool additive, SelectionChange reason)
         {
-            Pawn = id;
-            Thing = ThingId.None;
-            ThingDef = -1;
-            Cell = null;
+            if (!additive) _pawns.Clear();
+            for (int i = 0; i < pawns.Count; i++)
+                if (!_pawns.Contains(pawns[i])) _pawns.Add(pawns[i]);
+            ClearCellTier();
+            _missingFrames = 0;
+            Changed?.Invoke(reason);
+        }
+
+        /// <summary>Select a colonist outright, without a pick: the roster, an alert, a jump.</summary>
+        public void Choose(PawnId id, bool additive = false)
+        {
+            if (additive)
+            {
+                Toggle(id);
+                return;
+            }
+            _pawns.Clear();
+            if (id.IsValid) _pawns.Add(id);
+            ClearCellTier();
             _missingFrames = 0;
             Changed?.Invoke(SelectionChange.Chosen);
+        }
+
+        /// <summary>
+        /// Shift-click: the colonist goes in if they were out and out if they were in. Removing
+        /// the last colonist empties the selection — the same click that builds it has to be able
+        /// to take it apart again.
+        /// </summary>
+        public void Toggle(PawnId id)
+        {
+            if (!id.IsValid) return;
+            if (!_pawns.Remove(id)) _pawns.Add(id);
+            ClearCellTier();
+            _missingFrames = 0;
+            Changed?.Invoke(SelectionChange.Toggled);
+        }
+
+        void ClearCellTier()
+        {
+            Cell = null;
+            Thing = ThingId.None;
+            ThingDef = -1;
         }
 
         public void Clear(SelectionChange reason = SelectionChange.Cleared)
         {
             bool was = !IsEmpty;
-            Pawn = PawnId.None;
-            Thing = ThingId.None;
-            ThingDef = -1;
-            Cell = null;
+            _pawns.Clear();
+            ClearCellTier();
             _missingFrames = 0;
             if (was) Changed?.Invoke(reason);
         }
@@ -113,23 +204,48 @@ namespace Odyssey.Hud
         /// Once per interface frame with the current snapshot. A selected subject that the frame
         /// no longer carries survives <see cref="GraceFrames"/> frames, then the selection drops
         /// it with <see cref="SelectionChange.Died"/>, so no listener is ever left holding a
-        /// handle the simulation has forgotten.
+        /// handle the simulation has forgotten. In a multi-selection only the missing handles are
+        /// dropped: one death must not take the living with it.
         /// </summary>
         public void Refresh(WorldSnapshot snapshot)
         {
-            bool present = true;
-            if (HasPawn) present = snapshot.TryGetPawn(Pawn, out _);
-            else if (HasThing) present = ThingPresent(snapshot, Thing);
-            else return;
-
-            if (present)
+            if (HasPawn)
             {
-                _missingFrames = 0;
+                bool anyMissing = false;
+                for (int i = _pawns.Count - 1; i >= 0; i--)
+                {
+                    if (snapshot.TryGetPawn(_pawns[i], out _)) continue;
+                    anyMissing = true;
+                    if (_missingFrames >= GraceFrames) _pawns.RemoveAt(i);
+                }
+
+                if (_pawns.Count == 0)
+                {
+                    if (_missingFrames >= GraceFrames)
+                    {
+                        // Announced by hand rather than through Clear(), which would see an
+                        // already-empty selection and say nothing — the one handle the frame
+                        // carried away took the announcement with it.
+                        _missingFrames = 0;
+                        Changed?.Invoke(SelectionChange.Died);
+                    }
+                    else _missingFrames++;
+                    return;
+                }
+                _missingFrames = anyMissing ? _missingFrames + 1 : 0;
                 return;
             }
 
-            _missingFrames++;
-            if (_missingFrames > GraceFrames) Clear(SelectionChange.Died);
+            if (HasThing)
+            {
+                if (ThingPresent(snapshot, Thing))
+                {
+                    _missingFrames = 0;
+                    return;
+                }
+                _missingFrames++;
+                if (_missingFrames > GraceFrames) Clear(SelectionChange.Died);
+            }
         }
 
         static bool ThingPresent(WorldSnapshot snapshot, ThingId id)

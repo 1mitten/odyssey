@@ -14,6 +14,10 @@ namespace Odyssey.Sim.Pathing
 
         /// <summary>One shaft cell per served layer. Cost is a per-tick snapshot, so every agent in a tick agrees.</summary>
         Lift = 2,
+
+        // 3 was Climb, removed with climbing (owner, 2026-09-16). Getting up one block needs
+        // nothing declared — it is a jump — and getting up more than one needs a ladder, which is
+        // built. The value is not reused: these numbers are part of the save-compatible contract.
     }
 
     /// <summary>

@@ -1,0 +1,252 @@
+#nullable enable
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using NUnit.Framework;
+using Odyssey.Sim;
+using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Designations;
+using Odyssey.Sim.Pathing;
+using Odyssey.Sim.Pawns;
+using Odyssey.Sim.World;
+using Odyssey.Sim.Worldgen;
+
+namespace Odyssey.Tests.Sim
+{
+    /// <summary>
+    /// A giver that lives outside the simulation assembly, which is the case discovery cannot
+    /// cover and <see cref="SimWorldBuilder.AddWorkGiver"/> exists for. It hands out a wait with
+    /// a work length nothing else in the game uses, so the job a pawn ends up holding can be
+    /// attributed to this giver and not to the idle branch, which also gives out waits.
+    /// </summary>
+    sealed class MarkerWorkGiver : WorkGiver
+    {
+        public const int Marker = 4242;
+
+        public int Consulted { get; private set; }
+
+        public override string Name => "Marker";
+
+        public override int WorkType => WorkTypeIndex.Haul;
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            Consulted++;
+            job.Reset(JobIndex.Wait);
+            job.WorkTicks = Marker;
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// The seam OQ-44 opened: a work giver joins the scan without anything editing a file it does
+    /// not own. A giver inside <c>Odyssey.Sim</c> joins by existing; one outside joins through the
+    /// builder, exactly as an intent handler does.
+    ///
+    /// <para>The risk a registration seam carries is that the scan order quietly becomes an
+    /// accident of who registered first. Three of the tests below exist for that one question, and
+    /// they are worth more than the comment in <c>JobSystem</c> saying it matters.</para>
+    /// </summary>
+    public class WorkGiverRegistrationTests
+    {
+        static JobSystem Shipped() => new JobSystem(Context());
+
+        static PawnContext Context()
+        {
+            var size = new GridSize(8, 8, 2);
+            var cells = new CellGrid(size);
+            for (int i = 0; i < size.CellCount; i++) cells.Floor[i] = 1;
+            var nav = new NavGraph(cells);
+            nav.Rebuild();
+            return new PawnContext(cells, nav, new PathService(new PathFinder(nav)), PawnContent.Core());
+        }
+
+        // ---- discovery ---------------------------------------------------------------------
+
+        [Test]
+        public void EveryWorkGiverInTheSimulationAssemblyIsDiscovered()
+        {
+            // Scanned again here, independently of the registry's own filter, so that a filter
+            // which quietly stopped matching something would fail rather than agree with itself.
+            var expected = typeof(JobSystem).Assembly.GetTypes()
+                .Where(t => typeof(WorkGiver).IsAssignableFrom(t) && !t.IsAbstract)
+                .Select(t => t.FullName)
+                .OrderBy(n => n, StringComparer.Ordinal)
+                .ToArray();
+
+            var found = WorkGiverRegistry.Discover()
+                .Select(g => g.GetType().FullName)
+                .OrderBy(n => n, StringComparer.Ordinal)
+                .ToArray();
+
+            Assert.That(found, Is.EqualTo(expected));
+            Assert.That(found.Length, Is.GreaterThan(0), "a colony with no work givers does nothing at all");
+        }
+
+        [Test]
+        public void DiscoveryHandsOutFreshInstancesSoNoTwoWorldsShareAGiver()
+        {
+            var first = WorkGiverRegistry.Discover();
+            var second = WorkGiverRegistry.Discover();
+            for (int i = 0; i < first.Length; i++)
+                Assert.That(ReferenceEquals(first[i], second[i]), Is.False,
+                    $"{first[i].Name} was handed to two worlds as one object");
+        }
+
+        // ---- scan order --------------------------------------------------------------------
+
+        [Test]
+        public void TheShippedColonyScansCuttingThenMiningThenHauling()
+        {
+            // Pinned deliberately. Adding a kind of work is allowed to change this line — it is
+            // the one place in the repository where the scan order is written down — but it must
+            // be a decision somebody made, never something that moved on its own.
+            var names = Shipped().Givers.Select(g => g.Name).ToArray();
+            Assert.That(names, Is.EqualTo(new[] { "Fell", "Mine", "Haul" }));
+        }
+
+        [Test]
+        public void TheScanOrderComesFromTheDefsAndNotFromRegistrationOrder()
+        {
+            var ctx = Context();
+            WorkGiver[] discovered = WorkGiverRegistry.Discover();
+            string[] shipped = new JobSystem(ctx, JobSystem.DefaultTree(), discovered)
+                .Givers.Select(g => g.Name).ToArray();
+
+            foreach (WorkGiver[] permutation in Permutations(WorkGiverRegistry.Discover()))
+            {
+                string[] order = new JobSystem(ctx, JobSystem.DefaultTree(), permutation)
+                    .Givers.Select(g => g.Name).ToArray();
+                Assert.That(order, Is.EqualTo(shipped),
+                    "registered as " + string.Join(", ", permutation.Select(g => g.Name)));
+            }
+        }
+
+        [Test]
+        public void NoTwoGiversCanTieInTheSort()
+        {
+            // The negative control for the test above. If two givers compared equal on every key,
+            // the sort would be free to order them either way and the permutation test would be
+            // asserting that List.Sort is stable rather than that our ordering is total.
+            var content = PawnContent.Core();
+            WorkGiver[] givers = WorkGiverRegistry.Discover();
+
+            for (int i = 0; i < givers.Length; i++)
+                for (int j = i + 1; j < givers.Length; j++)
+                {
+                    var a = givers[i];
+                    var b = givers[j];
+                    bool distinct = a.Emergency != b.Emergency
+                        || content.WorkTypes[a.WorkType].order != content.WorkTypes[b.WorkType].order
+                        || a.IntraPriority != b.IntraPriority
+                        || string.CompareOrdinal(a.Name, b.Name) != 0;
+                    Assert.That(distinct, Is.True,
+                        $"{a.Name} and {b.Name} are indistinguishable to the sort, so their scan " +
+                        "order is whatever the sort felt like");
+                }
+        }
+
+        // ---- the composition seam ----------------------------------------------------------
+
+        [Test]
+        public void AGiverRegisteredOnTheBuilderScansAndAPawnTakesItsJob()
+        {
+            var marker = new MarkerWorkGiver();
+            var colony = Harness.Build(marker);
+
+            Pawn pawn = colony.Pawns.Pawns.Spawn(colony.Cell(4, 4, 0));
+            colony.World.Tick();
+
+            Assert.That(marker.Consulted, Is.GreaterThan(0), "the giver was never scanned");
+            Assert.That(pawn.CurrentJob, Is.Not.Null);
+            Assert.That(pawn.CurrentJob!.WorkTicks, Is.EqualTo(MarkerWorkGiver.Marker),
+                "the pawn is holding some other job, so the marker giver did not win the scan");
+        }
+
+        [Test]
+        public void AGiverRegisteredAfterTheColonyIsStillPickedUp()
+        {
+            // The ordering trap this seam was written to avoid: AddColony reads the builder's
+            // givers inside a factory that runs at Build(), so the two calls may be written in
+            // either order. Without that, AddColony would have to be last and nothing would say so.
+            var marker = new MarkerWorkGiver();
+            var colony = Harness.Build(marker, registerAfterColony: true);
+
+            colony.Pawns.Pawns.Spawn(colony.Cell(4, 4, 0));
+            colony.World.Tick();
+
+            Assert.That(marker.Consulted, Is.GreaterThan(0));
+            Assert.That(colony.Jobs.Givers.Any(g => g is MarkerWorkGiver), Is.True);
+        }
+
+        [Test]
+        public void RegisteringAGiverTheAssemblyAlreadyOwnsIsRefused()
+        {
+            var jobs = Shipped();
+            Assert.Throws<InvalidOperationException>(() => jobs.AddGivers(new WorkGiver[] { new HaulWorkGiver() }));
+        }
+
+        /// <summary>
+        /// A flat board built through <see cref="ColonyComposition.AddColony"/>, which is the one
+        /// place the colony is wired and therefore the only place worth testing the seam in.
+        /// </summary>
+        sealed class Harness
+        {
+            public PawnContext Pawns = null!;
+            public SimWorld World = null!;
+            public JobSystem Jobs = null!;
+            public CellGrid Cells = null!;
+
+            public int Cell(int x, int z, int y) => Cells.Size.Index(x, z, y);
+
+            public static Harness Build(WorkGiver giver, bool registerAfterColony = false)
+            {
+                var size = new GridSize(8, 8, 2);
+                var cells = new CellGrid(size);
+                for (int i = 0; i < size.CellCount; i++) cells.Floor[i] = 1;
+
+                var nav = new NavGraph(cells);
+                nav.Rebuild();
+                var pawns = new PawnContext(cells, nav, new PathService(new PathFinder(nav)), PawnContent.Core());
+                var solver = new SupportSolver(cells);
+                var support = new SupportSystem(cells, solver);
+                var designations = new DesignationGrid(cells, Array.Empty<PlacedEdifice>());
+                var jobs = new JobSystem(pawns);
+
+                var builder = new SimWorldBuilder().WithSeed(11u).WithSize(size);
+                if (!registerAfterColony) builder.AddWorkGiver(giver);
+                builder.AddColony(pawns, designations, support, nav, jobs);
+                if (registerAfterColony) builder.AddWorkGiver(giver);
+
+                return new Harness
+                {
+                    Cells = cells, Pawns = pawns, Jobs = jobs, World = builder.Build(),
+                };
+            }
+        }
+
+        /// <summary>Every ordering of a small set, so "order does not matter" is proved rather than sampled.</summary>
+        static IEnumerable<WorkGiver[]> Permutations(WorkGiver[] givers)
+        {
+            if (givers.Length <= 1)
+            {
+                yield return givers;
+                yield break;
+            }
+
+            for (int i = 0; i < givers.Length; i++)
+            {
+                var rest = new List<WorkGiver>(givers);
+                WorkGiver head = rest[i];
+                rest.RemoveAt(i);
+                foreach (WorkGiver[] tail in Permutations(rest.ToArray()))
+                {
+                    var one = new WorkGiver[givers.Length];
+                    one[0] = head;
+                    Array.Copy(tail, 0, one, 1, tail.Length);
+                    yield return one;
+                }
+            }
+        }
+    }
+}

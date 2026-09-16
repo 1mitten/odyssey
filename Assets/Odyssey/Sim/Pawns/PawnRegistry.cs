@@ -65,6 +65,7 @@ namespace Odyssey.Sim.Pawns
             new WanderJobDriver(),
             new WaitJobDriver(),
             new FellJobDriver(),
+            new MineJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------
@@ -89,19 +90,31 @@ namespace Odyssey.Sim.Pawns
             {
                 var pawn = _pawns[i];
                 // Where the pawn is stepping to, and how far along, so presentation can glide it
-                // between cells instead of snapping. A flat orthogonal crossing costs 100 units,
-                // so progress converts straight to a percentage; it is clamped because a diagonal
-                // or a connector can cost more and would otherwise overshoot.
+                // between cells instead of snapping.
+                //
+                // **A fraction of THIS step, not a count of cost units.** It used to be the raw
+                // progress clamped to 100, which is exact for a flat cell — one costs 100 units —
+                // and wrong for every dearer step there is. A ladder down costs 400: the figure
+                // reached the bottom a quarter of the way through and then stood frozen in the
+                // shaft for the remaining three quarters, which at six and a half seconds a rung
+                // is most of what reads as a colonist hanging in mid-air. Dividing by the step's
+                // own cost makes the glide take exactly as long as the step does, whatever it is.
                 var cell = size.FromIndex(pawn.Cell);
                 var nextCell = cell;
                 int movePercent = 0;
                 if (pawn.HasPath)
                 {
                     nextCell = size.FromIndex(pawn.Path[pawn.PathIndex]);
-                    movePercent = pawn.MoveProgress;
+                    int cost = pawn.MoveStepCost > 0 ? pawn.MoveStepCost : MoveCost.Orthogonal;
+                    movePercent = (int)((long)pawn.MoveProgress * 100 / cost);
                     if (movePercent < 0) movePercent = 0;
                     else if (movePercent > 100) movePercent = 100;
                 }
+
+                // What the pawn is working on, if anything. Asked of the driver rather than
+                // derived from the job: only the driver knows whether the walk toil is over,
+                // and a figure that swings an axe while walking is worse than one that glides.
+                int workFocus = pawn.Driver != null ? pawn.Driver.WorkFocus : -1;
 
                 writer.AddPawn(new PawnView(
                     pawn.Id,
@@ -111,7 +124,11 @@ namespace Odyssey.Sim.Pawns
                     pawn.Mood,
                     pawn.CurrentJob != null ? pawn.CurrentJob.DefIndex : -1,
                     nextCell,
-                    movePercent));
+                    movePercent,
+                    workFocus >= 0,
+                    workFocus >= 0 ? size.FromIndex(workFocus) : cell,
+                    pawn.Gesture,
+                    pawn.GestureSerial));
             }
 
             var items = _ctx.Items.Items;

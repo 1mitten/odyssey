@@ -1,4 +1,5 @@
 #nullable enable
+using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Pathing;
 
 namespace Odyssey.Sim.Pawns
@@ -32,6 +33,20 @@ namespace Odyssey.Sim.Pawns
         public int Order => 30;
 
         public int StepsTaken { get; private set; }
+
+        /// <summary>
+        /// Steps taken along a declared connector — a stair, a ladder or a lift.
+        ///
+        /// <para>Counted because "did anybody use the stairs" is otherwise unanswerable from
+        /// outside. Layers visited used to stand in for it and no longer can: a hop moves a
+        /// colonist a storey with nothing built, so wandering over rubble changes layer all day
+        /// without a stair being touched. See <c>M2DemoTests</c>, whose control run this is
+        /// for.</para>
+        /// </summary>
+        public int ConnectorSteps { get; private set; }
+
+        /// <summary>Steps taken as a hop: one block up or down, with nothing built.</summary>
+        public int HopSteps { get; private set; }
         public int PathsServed { get; private set; }
         public int PathsFailed { get; private set; }
 
@@ -82,7 +97,17 @@ namespace Odyssey.Sim.Pawns
 
         void Advance(Pawn pawn)
         {
-            if (pawn.Asleep || !pawn.HasPath) return;
+            if (pawn.Asleep) return;
+
+            if (!pawn.HasPath)
+            {
+                // A pawn with no path stands still, and there is nowhere it can be standing where
+                // that is wrong. This used to have to catch a colonist left hanging on a rock face
+                // — a cell that was standable without a floor — and let it go. Climbing is gone
+                // (owner, 2026-09-16), every cell a pawn can be in has something under it, and the
+                // let-go had nothing left to rescue.
+                return;
+            }
 
             pawn.MoveProgress += pawn.MovePerTick();
 
@@ -99,9 +124,32 @@ namespace Odyssey.Sim.Pawns
                 }
 
                 int cost = StepCost(pawn.Cell, next, pawn.Mode);
+
+                // Carried so presentation can glide the figure across the WHOLE step rather than
+                // across its first hundred units. See Pawn.MoveStepCost.
+                pawn.MoveStepCost = cost;
                 if (pawn.MoveProgress < cost) return;
 
                 pawn.MoveProgress -= cost;
+
+                // Counted HERE, below the guard and beside StepsTaken, because a step is taken
+                // once and paid for over many ticks.
+                //
+                // The first version of these counters sat above the guard, where they fired on
+                // every tick a pawn spent part way through a vertical step — so they counted
+                // pawn-ticks weighted by the cost of the move, not moves. A jump at 135 counted
+                // 135 times, a drop at 50 counted 50, a stair up at 290 counted 290. That made
+                // the two categories incomparable with each other as well as inflated: stairs are
+                // dearer per traversal than hops, so "hops against connectors" was reading a
+                // price difference as a frequency difference.
+                if (pawn.Cell / _ctx.Size.LayerStride != next / _ctx.Size.LayerStride)
+                {
+                    if (NavGraph.IsHop(_ctx.Size.FromIndex(pawn.Cell), _ctx.Size.FromIndex(next)))
+                        HopSteps++;
+                    else
+                        ConnectorSteps++;
+                }
+
                 pawn.Cell = next;
                 pawn.PathIndex++;
                 StepsTaken++;
@@ -122,11 +170,27 @@ namespace Odyssey.Sim.Pawns
             int stride = _ctx.Size.LayerStride;
             if (from / stride != to / stride)
             {
-                // A declared connector is the only thing that can authorise a layer change.
+                // A declared connector is one of the two things that can authorise a layer change.
                 // There is no run-time search for a landing, anywhere, ever.
                 for (int edge = _ctx.Nav.FirstPortalEdge(from); edge != -1; edge = _ctx.Nav.PortalEdgeNext(edge))
                     if (_ctx.Nav.PortalEdgeTarget(edge) == to && TraverseModes.Allows(_ctx.Nav.PortalEdgeMode(edge), mode))
                         return _ctx.Nav.PortalEdgeCost(edge);
+
+                // The other is a hop: one block up or one block down into the column next door,
+                // which needs nothing built and so declares no connector to carry its price.
+                //
+                // **This is what "colonists stick on faces" was.** IsLegalStep let the hop
+                // through and PathFinder planned it at JumpUp or Drop, but the price charged for
+                // actually taking the step was read only off connectors — so a hop fell through
+                // to MoveCost.Fall, which is 100,000 and means "effectively forbidden". The pawn
+                // did not fail and did not re-plan: it stood in the cell before the step with a
+                // legal path in hand, accumulating about one unit of progress a tick against a
+                // bill of a hundred thousand. Measured on the mining fixture: still there, path
+                // intact and next step legal, after 10,000 ticks. A price the planner and the
+                // mover disagree about is worse than a wrong price, because nothing reports it.
+                CellRef a = _ctx.Size.FromIndex(from);
+                CellRef b = _ctx.Size.FromIndex(to);
+                if (NavGraph.IsHop(a, b)) return NavGraph.HopCost(a, b);
 
                 return MoveCost.Fall;
             }

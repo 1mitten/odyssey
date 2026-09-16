@@ -1,0 +1,617 @@
+#nullable enable
+
+using System;
+using System.Collections.Generic;
+using Odyssey.Presentation.World;
+using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Worldgen.Natural;
+using UnityEngine;
+using UnityEngine.Rendering;
+
+namespace Odyssey.Presentation.Rendering
+{
+    /// <summary>
+    /// Draws the land beyond the board: the ground carried out to the fog, and the wood carried
+    /// out with it.
+    ///
+    /// <see cref="SkirtLayout"/> decides where everything goes; this decides what it is made of,
+    /// and it decides by **looking at the board** rather than by being told. The surface layer,
+    /// the terrain module, its tint, which trees grow and how thickly are all measured off the
+    /// generated map, which is what makes the surround a continuation rather than a second
+    /// opinion: a bare board gets bare ground, a wooded one gets woodland at its own density, and
+    /// the ruined city gets whatever the ruined city has. Nothing here needs changing when a new
+    /// map type is added.
+    ///
+    /// Built once and then submitted unchanged every frame. The skirt has no simulation behind it
+    /// so nothing can dirty it; the instance arrays are filled at startup and the per-frame cost
+    /// is the submission alone.
+    ///
+    /// Culling is by batch bounds. Batches are split by strip for the ground and by a sector grid
+    /// for the trees, so that the half of the surround behind the camera is rejected by Unity
+    /// rather than drawn. That split is the only reason the draw-call count is what it is; one
+    /// batch per material would be fewer calls and far more work.
+    /// </summary>
+    public sealed class TerrainSkirt : IDisposable
+    {
+        /// <summary>Matches <see cref="ChunkRenderer.MaxInstancesPerCall"/>, for the same reason.</summary>
+        public const int MaxInstancesPerCall = ChunkRenderer.MaxInstancesPerCall;
+
+        /// <summary>
+        /// How wide a tree sector is. Trees reach 90 m past the rim, so on the 300 m board this
+        /// cuts the wood into roughly forty batches — small enough that off-screen ones cull, big
+        /// enough that each is still a worthwhile instanced call.
+        /// </summary>
+        public const float TreeSectorMetres = 80f;
+
+        /// <summary>How many kinds of tree the surround picks between, sampled by frequency.</summary>
+        public const int TreeVariantSlots = 16;
+
+        sealed class Batch
+        {
+            public Mesh? Mesh;
+            public int Submesh;
+            public Material? Material;
+            public Matrix4x4[] Matrices = Array.Empty<Matrix4x4>();
+            public int Count;
+            public Bounds Bounds;
+            public bool CastsShadow;
+
+            public void Add(in Matrix4x4 matrix)
+            {
+                if (Count == Matrices.Length)
+                    Array.Resize(ref Matrices, Matrices.Length == 0 ? 64 : Matrices.Length * 2);
+                Matrices[Count++] = matrix;
+            }
+        }
+
+        readonly WorldRenderModel _model;
+        readonly MaterialCache _materials;
+        readonly List<Batch> _ground = new List<Batch>();
+        readonly List<Batch> _trees = new List<Batch>();
+        readonly List<Batch> _tufts = new List<Batch>();
+        readonly List<SkirtLayout.SkirtTile> _tiles = new List<SkirtLayout.SkirtTile>();
+        readonly List<SkirtLayout.SkirtTree> _scattered = new List<SkirtLayout.SkirtTree>();
+
+        /// <summary>
+        /// Which batch an instance belongs in. A tuple rather than a packed integer on purpose:
+        /// the sector index runs into the millions once the tree grid is laid over a board, and a
+        /// hand-packed key that silently overflowed into the shadow flag would merge two batches
+        /// that differ in whether they cast — a fault that renders perfectly and looks like a
+        /// lighting bug.
+        /// </summary>
+        readonly Dictionary<(int Sector, int Mute, int Part, int Tint, bool Shadow, bool Foliage), Batch> _index =
+            new Dictionary<(int, int, int, int, bool, bool), Batch>();
+
+        public TerrainSkirt(WorldRenderModel model, MaterialCache materials)
+        {
+            _model = model;
+            _materials = materials;
+        }
+
+        /// <summary>Off draws nothing at all, and the board ends in mid-air as it used to.</summary>
+        public bool Enabled { get; set; } = true;
+
+        /// <summary>
+        /// How much of the board's own tree density the surround gets, as a percentage. 100 is a
+        /// true continuation; lower is the knob to turn on a machine that cannot afford the wood,
+        /// since the trees are the only part of the skirt with a real vertex cost.
+        /// </summary>
+        public int TreeDensityPercent { get; set; } = 100;
+
+        /// <summary>
+        /// Tufts of grass per hundred cells in the first ring, kept in step with the mesher's own
+        /// density by <see cref="ChunkRenderer.ScatterDensity"/>.
+        ///
+        /// Without this the tufts stopped dead at the rim, which drew precisely the line the
+        /// surround exists to rub out: bare ground meeting a field of grass, straight, for three
+        /// hundred metres. They fade to nothing over the first ring, because a tuft is a
+        /// close-range detail and nobody is inspecting the ground twenty metres past the board.
+        /// </summary>
+        public int TuftDensity { get; set; } = 60;
+
+        public bool SubmitToGpu { get; set; } = true;
+        public int GameObjectLayer { get; set; }
+        public bool CastShadows { get; set; } = true;
+
+        /// <summary>The layer the surround's ground sits in: the board's own commonest surface.</summary>
+        public int SurfaceLayer { get; private set; }
+
+        /// <summary>Trees per thousand cells measured off the board. Zero on a bare map.</summary>
+        public int MeasuredTreeDensity { get; private set; }
+
+        public bool Built { get; private set; }
+
+        public int GroundInstances { get; private set; }
+        public int TreeInstances { get; private set; }
+        public int TuftInstances { get; private set; }
+
+        // ---- last-frame measurements, rolled into the renderer's own readout ----
+
+        public int DrawCalls { get; private set; }
+        public int InstancesDrawn { get; private set; }
+        public int BatchesDrawn { get; private set; }
+
+        /// <summary>
+        /// Measure the board and lay the surround out. Idempotent; call it again after a rebuild
+        /// of the world to pick up a different map.
+        /// </summary>
+        public void Build()
+        {
+            Clear();
+            Built = true;
+
+            if (!Survey(out int surfaceLayer, out ushort terrain, out int treeDensity,
+                    out int[] treeModules, out int[] treeTints))
+                return;
+
+            SurfaceLayer = surfaceLayer;
+            MeasuredTreeDensity = treeDensity;
+
+            BuildGround(terrain);
+            BuildTrees(treeModules, treeTints);
+        }
+
+        // ------------------------------------------------------------- survey
+
+        /// <summary>
+        /// What the board actually is: its commonest surface level, the terrain on it, and the
+        /// trees growing out of it.
+        ///
+        /// Commonest, not highest or lowest. The skirt is one flat sheet — it has no heightfield
+        /// and wants none, since a stepped surround would read as terraces rather than as
+        /// landscape — so the honest choice is the level most of the board is at, which on a flat
+        /// map is every column of it and on a varied one is the level the rim mostly sits at.
+        /// </summary>
+        bool Survey(out int surfaceLayer, out ushort terrain, out int treeDensityPerMille,
+            out int[] treeModules, out int[] treeTints)
+        {
+            surfaceLayer = 0;
+            terrain = 0;
+            treeDensityPerMille = 0;
+            treeModules = Array.Empty<int>();
+            treeTints = Array.Empty<int>();
+
+            GridSize size = _model.Size;
+            if (size.SizeX <= 0 || size.SizeZ <= 0 || size.SizeY <= 0) return false;
+
+            var layerCounts = new int[size.SizeY];
+            int columns = 0;
+
+            for (int z = 0; z < size.SizeZ; z++)
+            for (int x = 0; x < size.SizeX; x++)
+            {
+                int top = TopSolid(x, z);
+                if (top < 0) continue;
+                layerCounts[top]++;
+                columns++;
+            }
+
+            if (columns == 0) return false;
+
+            int best = 0;
+            for (int y = 1; y < layerCounts.Length; y++)
+                if (layerCounts[y] > layerCounts[best]) best = y;
+            surfaceLayer = best;
+
+            // The commonest terrain at that level, and the trees standing on it. Both are counted
+            // over the whole board rather than over its rim: a clearing at the start would
+            // otherwise make the surround bald on the side the colony happens to have landed.
+            var terrainCounts = new Dictionary<ushort, int>();
+            var treeCounts = new Dictionary<long, int>();
+            int surfaceCells = 0, trees = 0;
+
+            for (int z = 0; z < size.SizeZ; z++)
+            for (int x = 0; x < size.SizeX; x++)
+            {
+                if (TopSolid(x, z) != surfaceLayer) continue;
+                surfaceCells++;
+
+                int index = size.Index(x, z, surfaceLayer);
+                ushort code = _model.Terrain(index);
+                terrainCounts.TryGetValue(code, out int seen);
+                terrainCounts[code] = seen + 1;
+
+                if (surfaceLayer + 1 >= size.SizeY) continue;
+                int above = index + size.LayerStride;
+                ushort edifice = _model.EdificeDef(above);
+                if (!NaturalContent.IsTree(edifice)) continue;
+
+                trees++;
+                int module = _model.EdificeModule(above);
+                if (module == 0) continue;
+                long key = ((long)module << 20) | (uint)TintCode.Stuff(_model.EdificeStuff(above));
+                treeCounts.TryGetValue(key, out int count);
+                treeCounts[key] = count + 1;
+            }
+
+            if (surfaceCells == 0) return false;
+
+            int bestCount = -1;
+            foreach (var pair in terrainCounts)
+                if (pair.Value > bestCount)
+                {
+                    bestCount = pair.Value;
+                    terrain = pair.Key;
+                }
+
+            treeDensityPerMille = (int)(trees * 1000L / surfaceCells);
+            SampleTreeVariants(treeCounts, trees, out treeModules, out treeTints);
+            return true;
+        }
+
+        int TopSolid(int x, int z)
+        {
+            GridSize size = _model.Size;
+            for (int y = size.SizeY - 1; y >= 0; y--)
+                if (_model.IsSolid(size.Index(x, z, y))) return y;
+            return -1;
+        }
+
+        /// <summary>
+        /// Turn the tally of trees on the board into a flat table the layout can index into.
+        ///
+        /// Filled by frequency, so a wood that is four parts conifer to one part broadleaf comes
+        /// out of the table in the same proportion and the surround is the same wood rather than
+        /// an even mixture of the kinds that happen to exist.
+        /// </summary>
+        static void SampleTreeVariants(Dictionary<long, int> counts, int total,
+            out int[] modules, out int[] tints)
+        {
+            modules = Array.Empty<int>();
+            tints = Array.Empty<int>();
+            if (counts.Count == 0 || total <= 0) return;
+
+            var slotModules = new List<int>(TreeVariantSlots);
+            var slotTints = new List<int>(TreeVariantSlots);
+
+            foreach (var pair in counts)
+            {
+                int share = Mathf.Max(1, Mathf.RoundToInt(pair.Value / (float)total * TreeVariantSlots));
+                for (int i = 0; i < share && slotModules.Count < TreeVariantSlots; i++)
+                {
+                    slotModules.Add((int)(pair.Key >> 20));
+                    slotTints.Add((int)(pair.Key & 0xFFFFF));
+                }
+            }
+
+            modules = slotModules.ToArray();
+            tints = slotTints.ToArray();
+        }
+
+        // ------------------------------------------------------------- ground
+
+        void BuildGround(ushort terrain)
+        {
+            int module = _model.TerrainModuleFor(terrain);
+            if (module == 0) return;
+
+            ResolvedModule resolved = _model.Library[module];
+            if (resolved.IsEmpty) return;
+
+            int tintCode = TintCode.Terrain(terrain);
+            float surfaceY = SurfaceLayer * CellMetrics.SizeY;
+
+            SkirtLayout.BuildTiles(_model.Size, _tiles);
+
+            SkirtLayout.SkirtRect board = SkirtLayout.Board(_model.Size);
+
+            for (int i = 0; i < _tiles.Count; i++)
+            {
+                SkirtLayout.SkirtTile tile = _tiles[i];
+                float outside = board.DistanceOutside(tile.CentreX, tile.CentreZ);
+
+                // How deep the tile has to be so that it still meets its neighbours.
+                //
+                // This is the one thing the surround needs that the board does not. A board cell is
+                // 2.5 m across and 3 m deep, so a neighbour can never drop far enough to show a gap
+                // beneath it. A surround tile is up to 120 m across, and over that distance the
+                // hills can fall tens of metres - so a 3 m box would leave an open trench to the
+                // sky along every tile boundary. The tile is therefore sunk to reach below whatever
+                // its neighbours can do, which costs nothing at all: it is the same instance with a
+                // different scale, and all of it is underground.
+                float depth = TileDepth(tile, outside);
+
+                // Drape works from the bottom of the box up, so the origin is set so that the TOP
+                // still lands on the field, wherever the bottom ends up.
+                var placement = GroundRelief.DrapeSurround(
+                    new Vector3(tile.CentreX, surfaceY + CellMetrics.SizeY - depth, tile.CentreZ),
+                    outside) *
+                    Matrix4x4.Scale(new Vector3(
+                        tile.SizeX / CellMetrics.SizeXZ,
+                        depth / CellMetrics.SizeY,
+                        tile.SizeZ / CellMetrics.SizeXZ));
+
+                float height = GroundRelief.SurroundHeightAt(tile.CentreX, tile.CentreZ, outside);
+                float reach = GroundRelief.SurroundMaxSlope(outside) *
+                              Mathf.Max(tile.SizeX, tile.SizeZ) * 0.5f;
+                var bounds = new Bounds(
+                    new Vector3(tile.CentreX,
+                        surfaceY + CellMetrics.SizeY + height - depth * 0.5f,
+                        tile.CentreZ),
+                    new Vector3(tile.SizeX, depth + 2f * reach, tile.SizeZ));
+
+                // Terrain never casts: the argument is the one in ChunkRenderer, and it applies
+                // with more force out here, where the ground is a single flat sheet whose only
+                // possible shadow is on itself.
+                int sector = tile.Band * SkirtLayout.StripCount + tile.Strip;
+                Add(_ground, resolved, tintCode, tile.MuteStep, sector,
+                    castsShadow: false, foliage: false, placement, bounds);
+
+                if (tile.Band == 0) EmitTufts(tile, surfaceY);
+            }
+
+            GroundInstances = CountOf(_ground);
+            TuftInstances = CountOf(_tufts);
+        }
+
+        /// <summary>
+        /// How deep a surround tile has to be so that it always reaches below its neighbours.
+        ///
+        /// The full height of the layer, plus however far the land can fall across one tile, plus
+        /// the second-order disagreement between two tangent planes that wide. Generous on purpose:
+        /// every metre of it is below ground and costs nothing, whereas being a metre short is a
+        /// hole through to the sky along a tile edge.
+        /// </summary>
+        static float TileDepth(SkirtLayout.SkirtTile tile, float metresOutsideBoard)
+        {
+            float span = Mathf.Max(tile.SizeX, tile.SizeZ);
+            float slope = GroundRelief.SurroundMaxSlope(metresOutsideBoard);
+            return CellMetrics.SizeY + 2f * slope * span + 1f;
+        }
+
+        /// <summary>
+        /// Strew tufts over one tile of the first ring, which is exactly one cell, by the same
+        /// hash of the same coordinates the mesher uses inside the board.
+        ///
+        /// Same hash, same salts, same placement: the field does not change character at the rim,
+        /// it only thins out. Continuing the cell coordinates past the board is what makes that
+        /// free - the tuft at cell (-1, 40) is the one that cell would have had if the board had
+        /// been one wider.
+        /// </summary>
+        void EmitTufts(SkirtLayout.SkirtTile tile, float surfaceY)
+        {
+            if (TuftDensity <= 0) return;
+
+            int[] modules = TuftModules();
+            if (modules.Length == 0) return;
+
+            int x = Mathf.FloorToInt(tile.CentreX / CellMetrics.SizeXZ);
+            int z = Mathf.FloorToInt(tile.CentreZ / CellMetrics.SizeXZ);
+
+            float distance = SkirtLayout.Board(_model.Size).DistanceOutside(tile.CentreX, tile.CentreZ);
+            int density = Mathf.RoundToInt(TuftDensity * SkirtLayout.TuftDensityScale(distance));
+            int count = GroundScatter.CountFor(x, z, density);
+            if (count == 0) return;
+
+            var surface = new Vector3(tile.CentreX, surfaceY + CellMetrics.SizeY, tile.CentreZ);
+            float tileOutside = SkirtLayout.Board(_model.Size)
+                .DistanceOutside(tile.CentreX, tile.CentreZ);
+
+            for (int slot = 0; slot < count; slot++)
+            {
+                GroundScatter.Placement(x, z, slot,
+                    out float offsetX, out float offsetZ, out float yaw, out float scale);
+
+                int module = modules[GroundScatter.VariantFor(x, z, slot, modules.Length)];
+                ResolvedModule tuft = _model.Library[module];
+                if (tuft.IsEmpty) continue;
+
+                Vector3 at = GroundRelief.LiftSurround(
+                    surface + new Vector3(offsetX * CellMetrics.SizeXZ, 0f, offsetZ * CellMetrics.SizeXZ),
+                    tileOutside);
+                var placement = Matrix4x4.TRS(at, Quaternion.Euler(0f, yaw, 0f),
+                    new Vector3(scale, scale, scale));
+
+                Bounds local = tuft.Bounds;
+                var bounds = new Bounds(at + local.center * scale, local.size * scale);
+
+                Add(_tufts, tuft, TintCode.FoliageBase, tile.MuteStep,
+                    SectorOf(tile.CentreX, tile.CentreZ, modules.Length, 0),
+                    castsShadow: false, foliage: true, placement, bounds);
+            }
+        }
+
+        int[]? _tuftModules;
+
+        /// <summary>
+        /// The tuft meshes, resolved once, keeping only the ones that found real art.
+        ///
+        /// Dropping the rest is the same judgement <c>ChunkMesher</c> makes and for the same
+        /// reason: a box where a wall should be is still a wall, and a box where a tuft of grass
+        /// should be is a strewing of grey cubes. A clone without the packs gets bare ground,
+        /// inside the board and outside it alike.
+        /// </summary>
+        int[] TuftModules()
+        {
+            if (_tuftModules != null) return _tuftModules;
+
+            var usable = new List<int>();
+            for (int variant = 0; variant < ModuleIds.GrassTuftCount; variant++)
+            {
+                int module = _model.Library.Resolve(ModuleIds.GrassTuft(variant), ModuleShape.Pillar);
+                ResolvedModule resolved = _model.Library[module];
+                if (resolved.UsesArt && !resolved.IsEmpty) usable.Add(module);
+            }
+
+            return _tuftModules = usable.ToArray();
+        }
+
+        // -------------------------------------------------------------- trees
+
+        void BuildTrees(int[] treeModules, int[] treeTints)
+        {
+            if (treeModules.Length == 0 || TreeDensityPercent <= 0) return;
+
+            GridSize size = _model.Size;
+            SkirtLayout.BuildTrees(size, MeasuredTreeDensity, treeModules.Length,
+                TreeDensityPercent * 0.01f, _scattered);
+            if (_scattered.Count == 0) return;
+
+            // Trees stand on top of the surface cell, exactly as the mesher stands them on the
+            // board: the layer above the solid one, at its floor.
+            float standY = (SurfaceLayer + 1) * CellMetrics.SizeY;
+            SkirtLayout.SkirtRect board = SkirtLayout.Board(_model.Size);
+
+            for (int i = 0; i < _scattered.Count; i++)
+            {
+                SkirtLayout.SkirtTree tree = _scattered[i];
+                int module = treeModules[tree.Variant];
+                ResolvedModule resolved = _model.Library[module];
+                if (resolved.IsEmpty) continue;
+
+                float x = tree.CellX * CellMetrics.SizeXZ + CellMetrics.HalfXZ;
+                float z = tree.CellZ * CellMetrics.SizeXZ + CellMetrics.HalfXZ;
+
+                // On the hillside rather than through it. A tree is lifted and never draped: a
+                // sheared trunk would lean, and trees on a slope grow up.
+                Vector3 foot = GroundRelief.LiftSurround(
+                    new Vector3(x, standY, z), board.DistanceOutside(x, z));
+                var placement = Matrix4x4.Translate(foot);
+
+                Bounds local = resolved.Bounds;
+                var bounds = new Bounds(foot + local.center, local.size);
+
+                int sector = SectorOf(x, z, treeModules.Length, tree.Variant);
+                Add(_trees, resolved, treeTints[tree.Variant], tree.MuteStep, sector,
+                    castsShadow: tree.CastsShadow, foliage: false, placement, bounds);
+            }
+
+            TreeInstances = CountOf(_trees);
+        }
+
+        static int SectorOf(float x, float z, int variants, int variant)
+        {
+            int sx = Mathf.FloorToInt(x / TreeSectorMetres) + 512;
+            int sz = Mathf.FloorToInt(z / TreeSectorMetres) + 512;
+            return ((sz * 1024 + sx) * Mathf.Max(1, variants)) + variant;
+        }
+
+        // ------------------------------------------------------------ batches
+
+        void Add(List<Batch> into, ResolvedModule resolved, int tintCode, int muteStep, int sector,
+            bool castsShadow, bool foliage, in Matrix4x4 placement, in Bounds bounds)
+        {
+            ModulePart[] parts = resolved.Parts;
+            for (int p = 0; p < parts.Length; p++)
+            {
+                var key = (sector, muteStep, p, tintCode, castsShadow, foliage);
+                if (!_index.TryGetValue(key, out Batch? batch))
+                {
+                    batch = NewBatch(parts[p], tintCode, muteStep, castsShadow, foliage, bounds);
+                    _index.Add(key, batch);
+                    into.Add(batch);
+                }
+                else
+                {
+                    batch.Bounds.Encapsulate(bounds);
+                }
+
+                batch.Add(placement * parts[p].Local);
+            }
+        }
+
+        Batch NewBatch(ModulePart part, int tintCode, int muteStep, bool castsShadow, bool foliage,
+            in Bounds bounds)
+        {
+            ChunkRenderer.ResolveColour(tintCode, part.IsFallback, 1f, out Color tint, out Color emission);
+            tint = SkirtLayout.Mute(tint, muteStep);
+            emission = SkirtLayout.Mute(emission, muteStep);
+
+            return new Batch
+            {
+                Mesh = part.Mesh,
+                Submesh = part.Submesh,
+                Material = _materials.Get(part.Material, tint, emission, ghost: false, alpha: 1f,
+                    foliage: foliage),
+                Bounds = bounds,
+                CastsShadow = castsShadow,
+            };
+        }
+
+        static int CountOf(List<Batch> batches)
+        {
+            int total = 0;
+            for (int i = 0; i < batches.Count; i++) total += batches[i].Count;
+            return total;
+        }
+
+        // ------------------------------------------------------------- render
+
+        /// <summary>
+        /// Submit the surround for one frame.
+        ///
+        /// The slice rule is the board's rule, applied to a thing that has no layers: the ground
+        /// is drawn while the player is looking at the surface or above it, and vanishes the
+        /// moment they slice below it, because a sheet of landscape sitting over an open mine
+        /// would bury exactly the thing they went down to look at. The trees stand a layer higher
+        /// again and follow the same rule one layer up, so they never obscure the layer being
+        /// worked on — which is the one promise the slice makes.
+        /// </summary>
+        public void Render(int activeLayer)
+        {
+            DrawCalls = 0;
+            InstancesDrawn = 0;
+            BatchesDrawn = 0;
+
+            if (!Enabled) return;
+            if (!Built) Build();
+            if (activeLayer < SurfaceLayer) return;
+
+            Submit(_ground);
+            if (activeLayer > SurfaceLayer)
+            {
+                Submit(_trees);
+                Submit(_tufts);
+            }
+        }
+
+        void Submit(List<Batch> batches)
+        {
+            for (int i = 0; i < batches.Count; i++)
+            {
+                Batch batch = batches[i];
+                if (batch.Count == 0 || batch.Mesh == null || batch.Material == null) continue;
+                BatchesDrawn++;
+
+                var rp = new RenderParams(batch.Material)
+                {
+                    worldBounds = batch.Bounds,
+                    layer = GameObjectLayer,
+                    receiveShadows = true,
+                    shadowCastingMode = CastShadows && batch.CastsShadow
+                        ? ShadowCastingMode.On
+                        : ShadowCastingMode.Off,
+                };
+
+                int drawn = 0;
+                while (drawn < batch.Count)
+                {
+                    int n = Mathf.Min(MaxInstancesPerCall, batch.Count - drawn);
+                    if (SubmitToGpu)
+                        Graphics.RenderMeshInstanced(rp, batch.Mesh, batch.Submesh, batch.Matrices, n, drawn);
+                    drawn += n;
+                    DrawCalls++;
+                }
+
+                InstancesDrawn += batch.Count;
+            }
+        }
+
+        void Clear()
+        {
+            _ground.Clear();
+            _trees.Clear();
+            _tufts.Clear();
+            _tiles.Clear();
+            _scattered.Clear();
+            _index.Clear();
+            GroundInstances = 0;
+            TreeInstances = 0;
+            TuftInstances = 0;
+            MeasuredTreeDensity = 0;
+            SurfaceLayer = 0;
+        }
+
+        public void Dispose() => Clear();
+    }
+}

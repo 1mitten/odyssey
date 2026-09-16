@@ -157,6 +157,7 @@ The abstract heuristic is **knowingly inadmissible by a bounded amount** — pat
 | Orthogonal step | 2.5 m | 100 |
 | Diagonal step | 3.54 m | 141 (forbidden when both flanking cells block) |
 | Terrain modifiers | — | additive: rubble +30, mud +60, damaged floor +15 |
+| Terrain modifiers, **as built** (2026-09-16) | — | marsh +40, shallow water +200; deep water is impassable, not priced |
 | Stair, up | 2 cells + 3.0 m rise | ~290 |
 | Stair, down | 2 cells + 3.0 m drop | ~230 |
 | Ladder, up | 1 cell + 3.0 m rise | ~540 (includes a discomfort premium so stairs win when both exist) |

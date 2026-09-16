@@ -179,13 +179,55 @@ namespace Odyssey.Presentation.Rendering
         /// when the catalogue has no row for the id at all, which is what makes a template that
         /// invents a module name render as a box rather than as a hole.
         /// </summary>
-        public int Resolve(string? moduleId, ModuleShape defaultShape)
+        public int Resolve(string? moduleId, ModuleShape defaultShape) =>
+            Resolve(moduleId, defaultShape, meshVariant: 0);
+
+        /// <summary>
+        /// The same, for a shape that has several meshes to choose between.
+        ///
+        /// <paramref name="meshVariant"/> is a resolution-time parameter and not a catalogue
+        /// field on purpose: a clone with no catalogue at all must still get the varied stone,
+        /// because the lumps are ours and owe nothing to the licensed packs. The id already
+        /// carries the number, so a row *may* exist per variant to give each its own material —
+        /// but if none does, the fallback still picks the right mesh.
+        /// </summary>
+        public int Resolve(string? moduleId, ModuleShape defaultShape, int meshVariant) =>
+            Resolve(moduleId, null, defaultShape, meshVariant);
+
+        /// <summary>
+        /// The same, for a variant that may have no row of its own and should borrow one.
+        ///
+        /// <para><b>What this is for.</b> A family of meshes — the six stone lumps, the earth tops
+        /// and their coursed faces — is the same *material* cut several ways. The geometry is ours
+        /// and owes nothing to the licensed packs, but the material is a pack terrain texture that
+        /// lives on exactly one catalogue row. Without this, every variant past the one with a row
+        /// resolved to no entry at all, fell through to the untextured stand-in, and logged itself
+        /// as missing art: a meadow where one cell in two wore grass and the rest wore flat white,
+        /// which renders perfectly and gets blamed on the art.</para>
+        ///
+        /// <para>The alternative was a catalogue row per variant, and it is worse. It puts the
+        /// number of meshes into a generated asset, so changing <see cref="GroundMesh.Variants"/>
+        /// means regenerating the catalogue — which can only be done on a machine that has the
+        /// packs, because the asset holds direct references into <c>Assets/Synty</c> and a rebuild
+        /// without them writes nulls over every one. Borrowing needs no asset change at all.</para>
+        ///
+        /// <para><paramref name="baseId"/> is consulted only for its material, never for its
+        /// shape: the row being borrowed describes a plain block, and the whole point of asking is
+        /// that this variant is not one. So a borrowed row takes <paramref name="defaultShape"/>.</para>
+        /// </summary>
+        public int Resolve(string? moduleId, string? baseId, ModuleShape defaultShape, int meshVariant)
         {
             if (string.IsNullOrEmpty(moduleId)) return 0;
             if (_byId.TryGetValue(moduleId!, out int existing)) return existing;
 
             ModuleEntry? entry = _catalogue != null ? _catalogue.Find(moduleId!) : null;
             ModuleShape shape = entry != null ? entry.shape : defaultShape;
+
+            if (entry == null && !string.IsNullOrEmpty(baseId) && _catalogue != null)
+            {
+                entry = _catalogue.Find(baseId!);
+                shape = defaultShape;
+            }
             if (shape == ModuleShape.None)
             {
                 _byId[moduleId!] = 0;
@@ -198,7 +240,7 @@ namespace Odyssey.Presentation.Rendering
             {
                 // A material straight onto the cell-shaped box: how textured ground is drawn.
                 // Checked before the prefab paths so a row can carry both and prefer the texture.
-                parts = new[] { FallbackPart(shape, entry, DressGround(entry)) };
+                parts = new[] { FallbackPart(shape, entry, DressGround(entry), meshVariant) };
                 usesArt = true;
             }
             else if (entry != null && entry.prefab != null && entry.materialOnly)
@@ -208,7 +250,7 @@ namespace Odyssey.Presentation.Rendering
                 Material? art = MaterialOf(entry.prefab!);
                 if (art != null)
                 {
-                    parts = new[] { FallbackPart(shape, entry, art) };
+                    parts = new[] { FallbackPart(shape, entry, art, meshVariant) };
                     usesArt = true;
                 }
                 else
@@ -228,7 +270,7 @@ namespace Odyssey.Presentation.Rendering
 
             if (parts.Length == 0)
             {
-                parts = new[] { FallbackPart(shape, entry) };
+                parts = new[] { FallbackPart(shape, entry, null, meshVariant) };
                 _missing.Add(moduleId!);
             }
 
@@ -542,14 +584,29 @@ namespace Odyssey.Presentation.Rendering
         // ---------------------------------------------------------- fallbacks
 
         /// <summary>The stand-in box for a shape, sized to the cell. One mesh, many matrices.</summary>
-        ModulePart FallbackPart(ModuleShape shape, ModuleEntry? entry, Material? material = null)
+        ModulePart FallbackPart(ModuleShape shape, ModuleEntry? entry, Material? material = null,
+            int meshVariant = 0)
         {
             GetFallbackBox(shape, out Vector3 size, out Vector3 centre);
             Matrix4x4 local = Matrix4x4.TRS(centre, Quaternion.identity, size);
             if (entry != null)
                 local = Matrix4x4.TRS(entry.offset, Quaternion.Euler(0f, entry.yaw, 0f), SafeScale(entry)) * local;
+
+            // Stone gets a chipped lump, earth gets a rippled top and — where a side of it shows —
+            // coursed walls, and everything else gets the one shared cube. All four span the same
+            // -0.5..0.5 unit box, so the placement maths above is identical for any of them.
+            Mesh mesh;
+            switch (shape)
+            {
+                case ModuleShape.RockBlock: mesh = RockMesh.For(meshVariant); break;
+                case ModuleShape.GroundBlock: mesh = GroundMesh.Turf(meshVariant); break;
+                case ModuleShape.GroundFace: mesh = GroundMesh.FaceBySlot(meshVariant); break;
+                case ModuleShape.Bank: mesh = BankMesh.For(meshVariant); break;
+                default: mesh = PrimitiveMeshes.UnitCube; break;
+            }
+
             return new ModulePart(
-                PrimitiveMeshes.UnitCube, 0, material ?? FallbackMaterial, local,
+                mesh, 0, material ?? FallbackMaterial, local,
                 fallback: material == null);
         }
 
@@ -641,6 +698,15 @@ namespace Odyssey.Presentation.Rendering
                     return;
                 case ModuleShape.Ladder:
                     size = new Vector3(0.6f, CellMetrics.SizeY, 0.14f);
+                    centre = new Vector3(0f, CellMetrics.SizeY * 0.5f, 0f);
+                    return;
+                case ModuleShape.RockBlock:
+                case ModuleShape.GroundBlock:
+                case ModuleShape.GroundFace:
+                case ModuleShape.Bank:
+                    // Exactly a cell, like SolidBlock. The lump varies inside that box and never
+                    // outside it in a direction that could open a seam.
+                    size = new Vector3(CellMetrics.SizeXZ, CellMetrics.SizeY, CellMetrics.SizeXZ);
                     centre = new Vector3(0f, CellMetrics.SizeY * 0.5f, 0f);
                     return;
                 default:

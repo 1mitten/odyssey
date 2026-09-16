@@ -56,8 +56,319 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public float TurnDegreesPerSecond { get; set; } = 540f;
 
+        /// <summary>
+        /// How long a figure takes to ease into a work pose, and out of it again, in seconds.
+        ///
+        /// A colonist that snapped into a full swing on the tick the walk ended would pop, and
+        /// one that kept the last angle after the tree came down would stand there with an arm in
+        /// the air.
+        ///
+        /// Raised from a quarter of a second to nearly a half (owner, 2026-09-16: the work was
+        /// snapping on). A quarter was chosen when it had to carry the figure from a standing idle
+        /// to wherever in the stroke that pawn's offset happened to start it, which no length of
+        /// blend was ever going to make graceful; now that every stroke begins at its own
+        /// beginning — see <see cref="WorkStroke.Phase(float, float)"/> — the ease has only to
+        /// cover the short distance from standing to the end of a blow, and it can afford to take
+        /// its time over it. The step up to the tree rides on the same weight, so the whole
+        /// approach lengthens together.
+        /// </summary>
+        public float WorkEaseSeconds { get; set; } = 0.45f;
+
+        /// <summary>
+        /// How far the swing is tilted out of the straight-up-and-down plane, in degrees.
+        ///
+        /// A woodcutter does not raise an axe over the crown of their head and bring it down in
+        /// front of their nose. It goes up past one shoulder and comes down diagonally across the
+        /// body, which is where the power is and what the motion reads as. Negative takes it over
+        /// the right shoulder, which is the hand the axe is in.
+        /// </summary>
+        /// <summary>
+        /// The styles this director works in, one per kind of work, indexed by
+        /// <see cref="WorkStyle.IndexForJob"/>.
+        ///
+        /// <para><b>These used to be five properties on the director</b> — tilt, grip fraction,
+        /// blade roll, blade yaw and off-hand spacing — which made them properties of the whole
+        /// colony rather than of the work being done. Harmless while felling was the only work;
+        /// wrong the moment there were two, because a pick is not held like an axe and does not
+        /// swing in the same plane.</para>
+        ///
+        /// <para>Mutable on purpose: a contact sheet tunes one number and calls
+        /// <see cref="RegripTools"/>, which is how every settled angle in the project was settled.
+        /// Use <see cref="WorkStyle.With"/> to make the copy.</para>
+        /// </summary>
+        public WorkStyle[] Styles { get; } = (WorkStyle[])WorkStyle.All.Clone();
+
+        /// <summary>
+        /// Work every figure in this style regardless of the job it is doing, or -1 to let the job
+        /// decide. **For contact sheets. The game never sets it.**
+        ///
+        /// <para>It exists because a style can now outrun the simulation. <see cref="WorkStyle"/>
+        /// holds a builder's hammer, and nothing in the game builds — there is no job index for
+        /// <see cref="WorkStyle.IndexForJob"/> to map, so without this the stroke could not be
+        /// photographed at all, and a pose that cannot be photographed cannot be settled. Every
+        /// angle in this project that is right is right because somebody looked at it.</para>
+        ///
+        /// <para>A field rather than a fake job, which was the alternative and is worse: a
+        /// <c>JobHandle.Build</c> that no driver runs would put a lie in the contract, show up in
+        /// the inspect pane as a job a colonist is not doing, and have to be unpicked when
+        /// building is really written. This touches nothing outside presentation and is one
+        /// assignment for the harness to make.</para>
+        /// </summary>
+        public int StyleOverride { get; set; } = -1;
+
+        /// <summary>
+        /// Draw every figure in the middle of this gesture, whatever the snapshot says. **For
+        /// contact sheets. The game never sets it.**
+        ///
+        /// <para>A lift is over in eight-tenths of a second and starts on an instant nothing can
+        /// predict, so waiting for one to photograph it means either catching it by luck or
+        /// slowing the world down — and slowing the world down turns the pause inference on, which
+        /// stops the very clock being photographed.</para>
+        /// </summary>
+        public PawnGesture? ForceGesture { get; set; }
+
+        /// <summary>
+        /// Hold every gesture at this phase rather than letting its clock run. **Harness only**,
+        /// and the exact counterpart of <see cref="HeldPhase"/> for the stroke.
+        ///
+        /// <para>Sampling a clock catches whatever phase the frames happen to land on, which for a
+        /// one-shot means the bottom of the motion — the one moment worth judging — is as likely
+        /// as not to fall between two pictures.</para>
+        /// </summary>
+        public float? HeldGesturePhase { get; set; }
+
+        /// <summary>
+        /// Put every figure on a wall in this direction, whatever the world says. **Harness only.**
+        ///
+        /// <para>A climb happens where a shaft has been dug, which on a wooded board is nowhere
+        /// until somebody has spent a morning mining one, and it lasts under a second when it does.
+        /// Photographing one by waiting for it means generating a map with rock in it, digging a
+        /// hole and following a colonist down — a great deal of apparatus to look at a pose. This
+        /// is <see cref="ForceGesture"/>'s counterpart and the same bargain.</para>
+        ///
+        /// <para>What a forced sheet can settle and what it cannot is worth stating, because the
+        /// difference is not obvious: it settles the <em>figure</em> — boots below the hips and
+        /// apart, knees bent alternately, arm and leg on opposite sides rising together. It cannot
+        /// settle the figure against the rock, because with this set there is no rock. That half
+        /// was settled when the lean landed, against a real shaft.</para>
+        /// </summary>
+        public Vector3? ForceClimbFace { get; set; }
+
+        /// <summary>
+        /// Hold every climb at this point in its cycle rather than reading it off the step's own
+        /// progress. **Harness only**, and the counterpart of <see cref="HeldGesturePhase"/>.
+        /// </summary>
+        public float? HeldClimbPhase { get; set; }
+
+        /// <summary>
+        /// How far the last drawn crouch took the hips below where the animation had them, in
+        /// metres.
+        ///
+        /// <para>The crouch's answer to <see cref="MeasuredBladeGap"/>, and it exists for the same
+        /// reason: a figure photographed from three-quarters can be read as stooping when it is
+        /// barely moving, and the difference between a lift and a nod is a number nobody can
+        /// estimate off a picture. Zero here means the legs never bound and the pose did nothing.</para>
+        /// </summary>
+        public float MeasuredCrouchDrop { get; private set; }
+
+        /// <summary>
+        /// How many figures the crouch actually posed on the last pass, and how many it skipped for
+        /// want of a pelvis. Diagnostic: a rig that is not configured Humanoid binds no bones at
+        /// all, which is silent — that colonist simply goes on standing while the rest stoop.
+        /// </summary>
+        public int CrouchedFigures { get; private set; }
+
+        /// <summary>See <see cref="CrouchedFigures"/>. Non-zero means some rig has no legs.</summary>
+        public int LeglessFigures { get; private set; }
+
+        /// <summary>
+        /// How far the worst-placed boot finished from the foothold it was sent to this pass, in
+        /// metres. Zero is a foot on the rock.
+        ///
+        /// <para>The climb's <see cref="MeasuredBladeGap"/>. <see cref="TwoBoneIk"/> straightens
+        /// towards a target it cannot reach and stops, so a foothold asked for beyond the leg draws
+        /// as a plausible enough pose and is only ever caught by being stated in centimetres.</para>
+        /// </summary>
+        public float MeasuredFootReach { get; private set; }
+
+        /// <summary>
+        /// How far the off forearm sits above the working one at the moment of the blow, in metres.
+        /// Positive is over, negative is under.
+        ///
+        /// <para>The grip's answer to <see cref="MeasuredBladeGap"/>, and needed for the same
+        /// reason. Which arm passes over which cannot be read off the pictures this project takes:
+        /// in profile the two arms are one behind the other, and from the front the tree is in the
+        /// way of the very place they cross. It is a number, so it should be reported as one.</para>
+        ///
+        /// <para>Measured at the forearms rather than the hands because the hands are both on the
+        /// haft within a few centimetres of each other by construction — where they *cross* is the
+        /// forearm, which is also the part whose mesh intersects the other arm's.</para>
+        /// </summary>
+        public float MeasuredOffArmAbove { get; private set; }
+
+        /// <summary>How far apart the two forearms are at all, in metres. Under about 0.15 m they
+        /// intersect whatever their relative height. See <see cref="MeasuredOffArmAbove"/>.</summary>
+        public float MeasuredArmGap { get; private set; }
+
+        /// <summary>
+        /// How far the off hand's palm finished from the line of the haft, in metres. Zero is a
+        /// hand on the wood.
+        ///
+        /// <para>The grip's <see cref="MeasuredBladeGap"/>. A hand seated on the wrist bone — which
+        /// is what every hand in this project did until 2026-09-16 — reads as "near the axe" in any
+        /// photograph and is unmistakable the moment it is stated in centimetres.</para>
+        /// </summary>
+        public float MeasuredGripGap { get; private set; }
+
+        /// <summary>How much further away the haft is than the off arm is long, in metres.
+        /// Positive means no solver can reach it and the stroke must bring the tool nearer.</summary>
+        public float MeasuredGripOverreach { get; private set; }
+
+        /// <summary>
+        /// How far the worst-placed tool had turned in its fist since it was last put right, in
+        /// degrees. **Zero is the only acceptable value**, and it is what "a tool never spins"
+        /// means when it is written as a number rather than as an instruction.
+        /// </summary>
+        public float MeasuredToolDrift { get; private set; }
+
+        /// <summary>Where the working hand is on the haft this frame, 0 butt, 1 head. Diagnostic.</summary>
+        public float MeasuredGripAt { get; private set; }
+
+        /// <summary>How far the off hand's target is from the off shoulder, in metres. Diagnostic.</summary>
+        public float MeasuredGripSpan { get; private set; }
+
+        /// <summary>Where the off hand's target is in the figure's own frame: x right, y up,
+        /// z forward, metres. Diagnostic — a span alone cannot say which way.</summary>
+        public Vector3 MeasuredGripLocal { get; private set; }
+
+        /// <summary>The same for the working hand's palm. Diagnostic.</summary>
+        public Vector3 MeasuredPalmLocal { get; private set; }
+
+        /// <summary>Which style a pawn is worked in, the override first. See <see cref="StyleOverride"/>.</summary>
+        int StyleFor(int jobDef) =>
+            StyleOverride >= 0 && StyleOverride < Styles.Length
+                ? StyleOverride
+                : WorkStyle.IndexForJob(jobDef);
+
+        /// <summary>
+        /// Where the off hand grips, as a fraction of the haft, relative to the main hand.
+        ///
+        /// Both fists at the butt (owner, 2026-09-16), so this is small: just far enough up the
+        /// haft that the hands are side by side rather than in the same place.
+        /// </summary>
+        // ButtFraction and SlideFraction moved to WorkStyle; see Styles above.
+
+        /// <summary>
+        /// How far up the haft the hand grips, 0 at the butt and 1 at the head.
+        ///
+        /// A felling grip is near the butt, which is what gives the blow its leverage. Not *at*
+        /// the butt: an axe held right on the end reads as being dangled rather than held.
+        /// </summary>
+        // AxeGripFraction moved to WorkStyle; see Styles above.
+
+        /// <summary>
+        /// A trim on which way the blade faces, in degrees about the haft.
+        ///
+        /// The roll is *computed* rather than authored: the bit is turned to face the way the head
+        /// is travelling, so the edge bites at whatever angle the haft happens to arrive at. What
+        /// cannot be computed reliably is which way across the haft the bit points, because that
+        /// means telling two axes of somebody else's mesh apart — see <see cref="BitAxis"/>, which
+        /// has been written twice and gets `SM_Gen_Wep_Axe_01` ninety degrees round either way.
+        /// The head of that axe is both widest and heaviest across its cutting edge, which is
+        /// exactly the axis the bit is not.
+        ///
+        /// The photograph of a real felling cut settled what no amount of looking at the renders
+        /// would have: the edge lies **horizontal**, cutting a level notch into the side of the
+        /// trunk, and the poll trails up and back over the hands rather than the head hanging
+        /// straight down off the haft. Ninety hung the head; two hundred and seventy swept it back
+        /// but presented the cheek; nought is a further quarter turn, which puts the edge itself
+        /// into the wood. The whole circle was photographed at one instant to get there
+        /// (`Logs/blade-*.png`, made by the swing check).
+        ///
+        /// This belongs on the *tool* rather than on the director as soon as there is more than
+        /// one — a pickaxe will want its own, and on a double-ended head the geometry cannot even
+        /// guess — which is recorded in `12-work-poses-and-tools.md`.
+        /// </summary>
+        // AxeBladeRoll moved to WorkStyle; see Styles above.
+
+        /// <summary>
+        /// Which way the blade is turned to the work, in degrees about the figure's upright.
+        ///
+        /// The roll turns the head about its own haft, which can put the edge level or stand it on
+        /// end but can never point it *at* anything: the haft lies along the swing, so rolling it
+        /// only ever moves the bit around that line. Facing the edge at the tree is a turn about a
+        /// different axis, and this is it (owner, 2026-09-16).
+        ///
+        /// It takes the haft off the line of the forearm, which is the price, and it is a smaller
+        /// price than it looks: the grip is slid back into the palm afterwards and the whole
+        /// strike offset is re-measured, so where the colonist stands follows the blade rather
+        /// than having to be retuned after it. That is the measured stand paying for itself.
+        /// </summary>
+        /// Left at nought until somebody picks off the sheet. Ninety, tried first, swings the
+        /// haft right across the body and tucks the axe behind the colonist — the lever works,
+        /// that setting does not.
+        // AxeBladeYaw moved to WorkStyle; see Styles above.
+
         /// <summary>Pawn ids drawn as live figures this frame. The instanced pass skips these.</summary>
         public HashSet<int> Drawn { get; } = new HashSet<int>();
+
+        /// <summary>
+        /// Where a pawn's live figure is actually standing this frame, if it has one.
+        ///
+        /// **Not the same as <see cref="Rendering.PawnPose"/>, and that is the whole point.** A
+        /// working figure is stepped off its cell by <see cref="WorkStance.StandAt"/> so the axe
+        /// reaches the wood, so the person on screen can be the better part of a stride from the
+        /// cell the simulation has them in. Anything that has to agree with what the player can
+        /// see — the click hit-test, the selection bracket — has to ask here rather than recompute
+        /// the pose, because recomputing it disagrees with the screen exactly while a colonist is
+        /// working, which is exactly when the player wants to click them.
+        ///
+        /// Reported from a playtest on 2026-09-16: a colonist chopping a tree could not be
+        /// selected at all. The box was on the cell; the colonist was not.
+        /// </summary>
+        public bool TryGetFeet(PawnId id, out Vector3 feet)
+        {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                if (_figures[i].Pawn != id.Value || _figures[i].Transform == null) continue;
+                feet = _figures[i].Transform.position;
+                return true;
+            }
+
+            feet = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Which way a drawn figure is actually facing, in degrees.
+        ///
+        /// <para><b>Not derivable from the snapshot, and that cost a contact sheet.</b> The obvious
+        /// way to find a figure's bearing is the line from its cell to its next cell — which is
+        /// zero for a pawn that is standing still, and a pawn standing still is exactly what a pose
+        /// harness photographs. <c>GestureCheck</c> fell back to a fixed bearing and shot a crouch
+        /// head-on, which is the one view in which a vertical motion cannot be seen at all.</para>
+        ///
+        /// <para>The figure knows, because the yaw it is drawn at is eased and remembered here
+        /// across exactly the frames in which the snapshot has forgotten it.</para>
+        /// </summary>
+        public bool TryGetFacing(PawnId id, out float yaw)
+        {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                if (_figures[i].Pawn != id.Value || _figures[i].Transform == null) continue;
+
+                // The transform's own rotation, not the Yaw field it was derived from. They are
+                // not the same thing and the difference cost two contact sheets: Yaw is the
+                // director's eased bearing, and what a figure is actually drawn facing is that
+                // turned by whatever the gait clip's own root rotation adds. A camera aimed
+                // square across Yaw came out square behind the colonist.
+                yaw = _figures[i].Transform.eulerAngles.y;
+                return true;
+            }
+
+            yaw = 0f;
+            return false;
+        }
 
         readonly Transform _parent;
         readonly int _layer;
@@ -75,6 +386,44 @@ namespace Odyssey.Presentation.World
 
         readonly Look[] _looks;
 
+        /// <summary>
+        /// The catalogue row per style, or null on a clone without the packs.
+        /// </summary>
+        readonly ModuleEntry?[] _toolRows = new ModuleEntry?[WorkStyle.Count];
+
+        /// <summary>
+        /// The chips that come off a cut.
+        ///
+        /// Owned here, and built with this director rather than on the first blow, because this is
+        /// the only thing that knows the instant an axe lands and because a particle system built
+        /// lazily is a particle system whose shader compiles on exactly the frame it is first
+        /// wanted. It is warmed on construction for the same reason. Set to null to switch chips
+        /// off; a clone that cannot find an unlit shader ends up there by itself.
+        /// </summary>
+        public ChipDirector? Chips { get; set; }
+
+        /// <summary>
+        /// Raised on the frame a tool's blow lands, with the work style (index into
+        /// <see cref="WorkStyle.All"/>) and where the edge struck, in world space.
+        ///
+        /// The same moment the chips fly, published as an event because audio is not this
+        /// director's business and neither is anything else that wants the instant: the sound of
+        /// an axe and the sound of a pick are the same blow on a different tool, and the one
+        /// place that knows when a blow lands should not have to know everything that follows
+        /// it. Raised whether or not <see cref="Chips"/> exists, because a clone with no usable
+        /// particle shader still has working ears.
+        /// </summary>
+        public event Action<int, Vector3>? BlowLanded;
+
+        /// <summary>
+        /// Whether the last <see cref="Sync"/> saw a world that was advancing.
+        ///
+        /// Read off the snapshot, never inferred, and public because it is the one bit of state
+        /// that decides whether anything on the board moves at all: a harness that photographs a
+        /// frozen colonist can say which of the two reasons it is looking at.
+        /// </summary>
+        public bool Running { get; private set; } = true;
+
         readonly List<Figure> _figures = new List<Figure>();
         readonly Dictionary<int, Figure> _byPawn = new Dictionary<int, Figure>();
         readonly List<int> _retired = new List<int>();
@@ -86,6 +435,163 @@ namespace Odyssey.Presentation.World
         public int LookCount => _looks.Length;
 
         public int FigureCount => _byPawn.Count;
+
+        /// <summary>
+        /// How many figures actually have a prop fitted for each style, and what the catalogue
+        /// answered for it.
+        ///
+        /// A tool that is missing looks exactly like a tool that is mis-fitted from any distance
+        /// — the hands are empty either way — and the two want completely different fixes. This
+        /// says which, in one line, rather than by staring at a picture.
+        /// </summary>
+        public string DescribeTools()
+        {
+            var report = new System.Text.StringBuilder();
+            for (int style = 0; style < WorkStyle.Count; style++)
+            {
+                int fitted = 0;
+                for (int i = 0; i < _figures.Count; i++)
+                    if (_figures[i].Tools[style].Object != null) fitted++;
+
+                report.Append(style == 0 ? "" : "; ")
+                      .Append(Styles[style].ToolModule).Append(": row ")
+                      .Append(_toolRows[style] == null ? "missing"
+                            : _toolRows[style]!.prefab == null ? "no prefab" : "ok")
+                      .Append(", fitted on ").Append(fitted).Append('/').Append(_figures.Count);
+
+                // The dip's own numbers, per style, because the global Measured* properties only
+                // ever hold whichever style was measured last. Height is the one that matters: it
+                // should be near nought, the face being level with the miner's boots.
+                if (Styles[style].Dip != 0f && _figures.Count > 0)
+                {
+                    FittedTool tool = _figures[_figures.Count - 1].Tools[style];
+                    report.Append(", dip ").Append(Styles[style].Dip.ToString("0"))
+                          .Append("° -> reach ").Append(tool.DippedStrike.magnitude.ToString("0.00"))
+                          .Append(" m, height ").Append(MeasuredDippedBladeHeight.ToString("0.00"))
+                          .Append(" m (level ").Append(MeasuredBladeHeight.ToString("0.00"))
+                          .Append(" m), raise ").Append(Styles[style].Raise.ToString("0"))
+                          .Append("° -> height ").Append(MeasuredRaisedBladeHeight.ToString("0.00"))
+                          .Append(" m");
+                }
+            }
+            return report.ToString();
+        }
+
+        /// <summary>
+        /// The reach measured off the last figure built, in metres, and how high off the ground
+        /// its edge lands.
+        ///
+        /// Diagnostic, and not an idle one: reach is what decides where a woodcutter stands, and a
+        /// reach that is plausible but wrong puts the axe through the trunk or a foot short of it
+        /// with nothing anywhere reporting a problem. A number the harness can print beside a
+        /// photograph is what makes it checkable.
+        /// </summary>
+        public float MeasuredReach { get; private set; }
+
+        /// <summary>How high the edge is when the blow lands, in metres. See <see cref="MeasuredReach"/>.</summary>
+        public float MeasuredBladeHeight { get; private set; }
+
+        /// <summary>
+        /// Hold every figure at one point in the stroke instead of letting the clock run.
+        ///
+        /// For tools only, and it earns its place: the blade's roll is a matter of taste, so it is
+        /// chosen off a contact sheet of the same instant at several settings, and the instant has
+        /// to be the same one in every picture. Null lets the clock run, which is the game.
+        /// </summary>
+        public float? HeldPhase { get; set; }
+
+        /// <summary>
+        /// The mirrored world, when there is one, so a climbing figure can find the block it is
+        /// climbing against.
+        ///
+        /// <para>Optional, and everything degrades to the old behaviour without it: a climber with
+        /// no world to ask stays at the middle of its cell. Read-only here — the director never
+        /// writes to it — and it is the same mirror the chunk renderer meshes from, so the rock a
+        /// colonist is pressed against is the rock that is drawn.</para>
+        /// </summary>
+        public WorldRenderModel? World { get; set; }
+
+        /// <summary>
+        /// What every live figure is doing about climbing, for a harness to print beside a picture.
+        ///
+        /// A climber with its arms at its sides looks exactly like a colonist standing still, and
+        /// the three things that can cause it — no world to ask, no wall found, no weight yet —
+        /// are indistinguishable in a photograph and want different fixes.
+        /// </summary>
+        public string DescribeClimb()
+        {
+            if (World == null) return "no world: a climber cannot find its wall";
+
+            var report = new System.Text.StringBuilder();
+            int climbing = 0;
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn < 0 || figure.ClimbPhase < 0f) continue;
+                climbing++;
+                report.Append(climbing == 1 ? "" : "; ")
+                      .Append("pawn ").Append(figure.Pawn)
+                      .Append(" phase ").Append(figure.ClimbPhase.ToString("0.00"))
+                      .Append(" weight ").Append(figure.ClimbWeight.ToString("0.00"))
+                      .Append(" face ").Append(figure.ClimbFace == Vector3.zero
+                          ? "NONE - nothing to climb"
+                          : figure.ClimbFace.ToString("0.0"))
+                      .Append(" legs ").Append(figure.LegLength <= 0f
+                          ? "NONE - no leg bones bound"
+                          : figure.LegLength.ToString("0.00") + " m");
+            }
+
+            return climbing == 0 ? "nobody is on a wall" : report.ToString();
+        }
+
+        /// <summary>Where the edge was on the last posed frame. Used to frame a picture on it.</summary>
+        public Vector3 LastBladePosition { get; private set; }
+
+        /// <summary>
+        /// How far the blade actually finished from the middle of what it was aimed at, in metres,
+        /// on the last frame anybody was working.
+        ///
+        /// The one number that says whether the axe hits the tree. Everything upstream of it is a
+        /// pose measured at build time and a stand solved from it, and both can be right in
+        /// isolation while the blade still arrives in mid-air; and a three-quarter photograph
+        /// cannot settle it, because the woodcutter and her tree sit at different depths in the
+        /// frame. This is measured where it matters, in the world, on the frame that was drawn.
+        /// </summary>
+        public float MeasuredBladeGap { get; private set; }
+
+        /// <summary>
+        /// How far to the side of straight ahead the edge lands, in metres.
+        ///
+        /// The number that showed reach could not be a scalar: with the swing tilted over the
+        /// shoulder, most of a metre and a half of reach is sideways, and a figure stood at that
+        /// distance puts its axe beside the tree rather than in it.
+        /// </summary>
+        public float MeasuredStrikeSideways { get; private set; }
+
+        /// <summary>
+        /// How high the edge lands above the feet with the stroke aimed down, in metres.
+        ///
+        /// The number that says whether the dip is the right size. It wants to be near zero: the
+        /// face a miner strikes from a rim is level with its own boots, so an edge landing a metre
+        /// up is a pick passing over the rock and one landing below the feet is a pick through the
+        /// floor. Nothing else in the pipeline can tell you this — the stand solve only ever looks
+        /// at the horizontal part.
+        /// </summary>
+        public float MeasuredDippedBladeHeight { get; private set; }
+
+        /// <summary>How far in front the edge lands with the stroke aimed down, in metres.</summary>
+        public float MeasuredDippedReach { get; private set; }
+
+        /// <summary>
+        /// How high the edge lands above the feet with the stroke aimed up, in metres.
+        ///
+        /// The number that says whether a miner can honestly reach the ceiling over its head. It
+        /// cannot reach the bottom face of the cell above — that is three metres up and the arm
+        /// swings about 1.76 m from a pivot a metre off the ground — so what this reports is how
+        /// close it gets, and the pose is judged on looking like full stretch rather than on
+        /// touching.
+        /// </summary>
+        public float MeasuredRaisedBladeHeight { get; private set; }
 
         /// <summary>
         /// The fastest live figure's ground speed, in metres per second.
@@ -109,6 +615,9 @@ namespace Odyssey.Presentation.World
             _parent = parent;
             _layer = layer;
             _looks = LooksFrom(catalogue);
+            for (int i = 0; i < _toolRows.Length; i++)
+                _toolRows[i] = catalogue != null ? catalogue.Find(Styles[i].ToolModule) : null;
+            Chips = new ChipDirector(parent, layer);
         }
 
         /// <summary>
@@ -199,24 +708,56 @@ namespace Odyssey.Presentation.World
         {
             Drawn.Clear();
             FastestSpeed = 0f;
+
+            // Is the world actually running? The snapshot says so — see WorldSnapshot.GameSpeed.
+            //
+            // It used to be inferred from the tick standing still, with a quarter of a second of
+            // grace, and both halves of the owner's report came out of that. The grace is fifteen
+            // frames at sixty, and measured against the axe's 1.15 s stroke it is 24% of a swing
+            // that ran on after the player pressed space — "some even carry on for a moment". And
+            // because the inference only ever gated the *swing*, everything else went on easing:
+            // a walking colonist's gait blend, measured, goes from 73.5% walk to 99% idle in ten
+            // frames (0.167 s), which is what reads as the figures resetting to a default pose.
+            //
+            // Nothing is inferred now, and nothing eases while the world is stopped. Running is
+            // the frame's whole clock: pass it a paused snapshot and every figure holds the pose
+            // it was drawn in until the world moves again. See Pose and Blend.
+            Running = snapshot.Running;
+            bool running = Running;
+
+            // Read before the early return, so a clone with no faces still reports the truth and
+            // a harness looking at a motionless board is not told the world is running.
             if (!Enabled) return;
 
+            // The chips as well, or wood thrown a frame before the pause would go on falling
+            // while everything that threw it stood still. They are world-simulated by Unity, so
+            // nothing here steps them; the speed is what Unity steps them at.
+            if (Chips != null) Chips.Running = running;
+
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
+
+            // And up to the highest layer the world is drawn on. A figure belongs wherever its
+            // surroundings are visible: the owner's report was that a colonist mining one layer up
+            // could not be seen at all, because this cull was against the active layer while the
+            // rock around that colonist was being x-rayed perfectly well.
+            int highest = slice.HighestVisibleLayer(activeLayer, snapshot.Size.SizeY);
             var pawns = snapshot.Pawns;
 
             for (int i = 0; i < pawns.Length && Drawn.Count < MaxFigures; i++)
             {
                 CellRef cell = pawns[i].Cell;
-                if (cell.Y < lowest || cell.Y > activeLayer) continue;
+                if (cell.Y < lowest || cell.Y > highest) continue;
 
                 Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading);
                 Figure figure = Lease(pawns[i].Id, position);
-                Pose(figure, position, heading, deltaTime);
+                Pose(figure, in pawns[i], position, heading, deltaTime, running);
                 if (figure.Speed > FastestSpeed) FastestSpeed = figure.Speed;
                 Drawn.Add(pawns[i].Id.Value);
             }
 
             Retire();
+            ApplyFooting();
+            ApplyWorkPose();
         }
 
         /// <summary>Advance every live figure's animation. Separate from posing so an editor
@@ -225,25 +766,1052 @@ namespace Odyssey.Presentation.World
         {
             for (int i = 0; i < _figures.Count; i++)
                 if (_figures[i].Pawn >= 0) _figures[i].Graph.Evaluate(deltaTime);
+            ApplyFooting();
+            ApplyWorkPose();
+            // The chips as well: under the player loop Unity steps them, and in an editor tool
+            // with no player loop nothing does, so a photographed blow would throw wood that
+            // never moved. Stepping them here costs the game nothing, because the game never
+            // calls Evaluate at all.
+            Chips?.Evaluate(deltaTime);
         }
 
-        void Pose(Figure figure, Vector3 position, Vector3 heading, float deltaTime)
+        /// <summary>
+        /// Lay the work pose over whatever the mixer just wrote.
+        ///
+        /// **Why this runs after everything else, and twice.** Bone rotations written here are
+        /// overwritten by the next animator evaluation, so they have to be the last thing to
+        /// touch the skeleton before it is drawn — and the two ways this director is driven put
+        /// that in two different places. Under the player loop Unity evaluates the graph between
+        /// Update and LateUpdate and nothing calls <see cref="Evaluate"/> at all, so the end of
+        /// <see cref="Sync"/> is the last word. In an editor tool with no player loop the graph
+        /// is stepped by hand *after* Sync, so the end of <see cref="Evaluate"/> is. Applying at
+        /// the end of both is correct in each case and harmless in the other: a second pass
+        /// simply re-derives the same angles from a freshly written pose.
+        ///
+        /// It is also why this is transform work rather than an animation job. The swing is a
+        /// handful of bones on at most a handful of figures, it needs no blending against
+        /// anything, and a job would have to be bound per rig at build time for a pose that is
+        /// six lines of quaternion arithmetic.
+        /// </summary>
+        /// <summary>
+        /// Put both feet on the ground that is actually drawn, and bend the legs to suit.
+        ///
+        /// <para><b>Why it runs before the work pose and not after.</b> The hips are a parent of
+        /// the spine, so dropping them after the arms have been posed translates the arms with
+        /// them — and the left hand is solved onto a world point on the axe haft, so it would come
+        /// away from the haft by exactly the drop. Footing first, then the swing over the top of
+        /// it, and the arms are solved against hips that have stopped moving.</para>
+        ///
+        /// <para><b>Why it is idempotent.</b> Like <see cref="ApplyWorkPose"/>, this runs at the
+        /// end of both <see cref="Sync"/> and <see cref="Evaluate"/> because which of those is the
+        /// last word depends on whether there is a player loop. Running twice is harmless: the
+        /// targets are taken from the foot positions before anything moves, the feet are then
+        /// solved onto them, and a second pass finds the feet already on the ground, corrects by
+        /// nothing and returns before it touches the hips.</para>
+        ///
+        /// <para><b>What it does not do.</b> It never reads the simulation and never changes it.
+        /// A colonist on a slope walks at exactly the speed one on the flat does, because slope is
+        /// not a property of a cell — this is the picture of the ground, not a fact about it.</para>
+        /// </summary>
+        void ApplyFooting()
         {
-            // Speed from displacement, which is right at every game speed and while paused, and
-            // needs to know nothing about ticks. A figure that has just been leased has no
-            // previous position worth differencing, hence Settled.
-            bool settled = figure.Settled;
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn < 0) continue;
 
-            float speed = 0f;
-            if (settled && deltaTime > 1e-5f)
-                speed = Vector3.Distance(position, figure.Transform.position) / deltaTime;
+                // A rig with no legs bound is not an error: a non-Humanoid prefab answers null to
+                // every bone and simply goes on walking, which is what it does for the arms too.
+                if (figure.LeftFoot == null || figure.RightFoot == null) continue;
+                if (figure.LeftUpperLeg == null || figure.RightUpperLeg == null) continue;
+
+                Vector3 leftAt = figure.LeftFoot.position;
+                Vector3 rightAt = figure.RightFoot.position;
+
+                // The ground under each foot separately, not under the figure. That is the whole
+                // point: on a slope the two are at different heights, and asking once at the
+                // body's own position would move both feet by the same amount and leave the
+                // figure standing on one heel exactly as before.
+                float leftGround = figure.GroundY + GroundRelief.HeightAt(leftAt.x, leftAt.z);
+                float rightGround = figure.GroundY + GroundRelief.HeightAt(rightAt.x, rightAt.z);
+
+                float left = Footing.Correction(leftAt.y, leftGround);
+                float right = Footing.Correction(rightAt.y, rightGround);
+                if (left == 0f && right == 0f) continue;
+
+                Vector3 leftTarget = leftAt + Vector3.up * left;
+                Vector3 rightTarget = rightAt + Vector3.up * right;
+
+                // The hips drop before the legs are solved, so each leg is solved against where
+                // the body has actually ended up. Doing it the other way round solves both legs
+                // and then moves them, which is the same as not having done it.
+                float drop = Footing.HipDrop(left, right);
+                if (drop != 0f && figure.Hips != null)
+                    figure.Hips.position += Vector3.up * drop;
+
+                Transform body = figure.Transform;
+                PlantFoot(figure.LeftUpperLeg, figure.LeftLowerLeg, figure.LeftFoot, leftTarget, body, figure.Lean);
+                PlantFoot(figure.RightUpperLeg, figure.RightLowerLeg, figure.RightFoot, rightTarget, body, figure.Lean);
+            }
+        }
+
+        /// <summary>
+        /// Bend one leg so its foot lands on a point, and lay the foot along the ground there.
+        ///
+        /// <para>The solve is <see cref="TwoBoneIk.Reach"/> unchanged — it is a two-bone analytic
+        /// solve written against transforms and its own header says it is not about arms. A leg is
+        /// two bones and a target, which is exactly what it takes.</para>
+        ///
+        /// <para>The pole is ahead of the knee and below it, because a knee bends forward. Sent
+        /// the other way the solve is equally correct and the leg bends backwards, which is a
+        /// perfectly valid pose for a bird.</para>
+        /// </summary>
+        static void PlantFoot(Transform? upper, Transform? lower, Transform? foot, Vector3 target,
+            Transform body, Quaternion lean)
+        {
+            if (upper == null || lower == null || foot == null) return;
+
+            Vector3 pole = upper.position + body.forward * 1.2f - body.up * 0.4f;
+            TwoBoneIk.Reach(upper, lower, foot, target, pole);
+
+            GroundRelief.SlopeAt(target.x, target.z, out float slopeX, out float slopeZ);
+            foot.rotation = Footing.AnkleLevel(Footing.GroundNormal(slopeX, slopeZ), lean) * foot.rotation;
+        }
+
+        void ApplyWorkPose()
+        {
+            // Cleared every pass, because the crouch's own early return — nothing to do at the top
+            // of a motion — would otherwise leave the last non-zero reading standing. The first
+            // contact sheet reported 0.22 m of crouch on a figure that was plainly upright, which
+            // is worse than reporting nothing: a measurement exists to be trusted over the picture,
+            // and one that lies is the only thing on the board with no way of being caught.
+            MeasuredCrouchDrop = 0f;
+            CrouchedFigures = 0;
+            LeglessFigures = 0;
+            MeasuredFootReach = 0f;
+            MeasuredToolDrift = 0f;
+
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn < 0) continue;
+
+                // A colonist cannot be swinging a pick and climbing at the same time, and the two
+                // poses write the same bones, so the climb is applied here rather than in a pass
+                // of its own — one place where an additive pose is laid over the clip, in one
+                // order, for ever.
+                if (figure.WorkWeight <= 0.001f)
+                {
+                    if (figure.ClimbPhase >= 0f && figure.ClimbFace != Vector3.zero)
+                        ApplyClimbPose(figure);
+                    else if (figure.Gesture != PawnGesture.None || ForceGesture.HasValue)
+                        ApplyGesturePose(figure);
+                    continue;
+                }
+
+                if (figure.RightUpperArm == null) continue;
+
+                WorkStyle look = Styles[figure.Style];
+
+                // One phase, read once. The angles and the slide are two views of the same instant
+                // and deriving them separately is an invitation for them to disagree on the frame
+                // the blow lands, which is the one frame anybody is looking at.
+                float strokePhase =
+                    HeldPhase ?? look.Stroke.Phase(figure.SwingClock, figure.SwingOffset);
+                WorkSwing swing = look.Stroke.At(strokePhase);
+
+                // Where the working hand has slid to. Eased with the rest of the pose by the same
+                // weight, so a colonist takes the tool up the haft as it raises it rather than the
+                // axe jumping through its fist on the frame the work starts.
+                float gripAt = Mathf.Lerp(
+                    look.GripFraction,
+                    look.Stroke.GripAt(strokePhase, look.SlideFraction, look.GripFraction),
+                    figure.WorkWeight);
+
+                // Dipped before scaled, so the lean comes on with the rest of the pose rather than
+                // snapping into a bow the frame the work starts.
+                Strike(figure, swing.Dipped(figure.WorkDip).Scaled(figure.WorkWeight), look.Tilt, gripAt);
+
+                // Check the blade got there, on the frame where it should have. Only at the moment
+                // of the blow: anywhere else in the stroke the axe is over a shoulder and a
+                // distance to the trunk means nothing.
+                if (figure.Held.Transform != null)
+                    LastBladePosition = figure.Held.Transform.TransformPoint(figure.Held.BladeTip);
+
+                if (figure.WorkWeight > 0.99f && figure.Held.Transform != null
+                    && swing.Shoulder >= look.Stroke.AtStrike.Shoulder - 1f)
+                {
+                    Vector3 gap = figure.Held.Transform.TransformPoint(figure.Held.BladeTip) - figure.WorkCentre;
+                    gap.y = 0f;
+                    MeasuredBladeGap = gap.magnitude;
+                }
+
+                if (!figure.Landed) continue;
+                figure.Landed = false;
+
+                // Out of the cut, which is back towards whoever swung: an edge biting across the
+                // grain throws wood at the woodcutter, not away into the forest.
+                Vector3 outward = figure.Transform.position - figure.WorkCentre;
+                outward.y = 0f;
+
+                // Where the blow lands: the blade's own tip when there is a blade, and the thing
+                // being struck when there is not.
+                //
+                // **A clone without the art packs fells trees bare-handed**, and an axe that is
+                // not in anyone's hands must not be what decides whether the work can be heard.
+                // This guard used to sit above everything here and take the sound with it, so a
+                // checkout with no Synty made no chopping noise at all, at any zoom — which is
+                // exactly the bargain the chips already refuse to make.
+                Transform? blade = figure.Held.Transform;
+                Vector3 edge = BlowPoint(
+                    blade == null ? null : blade.TransformPoint(figure.Held.BladeTip),
+                    figure.WorkCentre, outward, look.ChipStandOff);
+
+                // Which debris, chosen from the job the snapshot already publishes. This is the
+                // smallest possible version of what docs/design/12-work-poses-and-tools.md calls
+                // a WorkStyle — that note bundles the tool, the stroke, the grip and the chips
+                // into one value selected from PawnView.JobDef, and the whole point of its design
+                // is that the contract needs no change because JobDef is published already. Only
+                // the chips are switched here; a pick in the hands and a stroke of its own are
+                // that piece of work, not this one.
+                if (blade != null) Chips?.Throw(look.Chips, edge, outward);
+
+                // And the sound of the blow, on the same frame and from the same edge the chips
+                // leave. See <see cref="BlowLanded"/>.
+                BlowLanded?.Invoke(figure.Style, edge);
+            }
+        }
+
+        /// <summary>
+        /// Where a blow lands, given the blade's tip if there is one.
+        ///
+        /// <para>Stood off from the face rather than left wherever the head stopped: the head
+        /// finishes <i>inside</i> the thing it struck, which for a 2.5 m block of stone means
+        /// debris born inside solid rock and a sound coming from within it.</para>
+        ///
+        /// <para>Static and public because it is the whole of the decision and none of the
+        /// scene: a test can ask what happens with no blade without building a figure, a rig or
+        /// a character to hang one on.</para>
+        /// </summary>
+        public static Vector3 BlowPoint(Vector3? bladeTip, Vector3 workCentre, Vector3 outward,
+            float standOff)
+        {
+            Vector3 point = bladeTip ?? workCentre;
+            if (standOff > 0f && outward.sqrMagnitude > 1e-6f)
+                point += outward.normalized * standOff;
+            return point;
+        }
+
+        /// <summary>
+        /// Hand over hand: the pose of a colonist going up or down a shaft wall.
+        ///
+        /// <para><b>Arms only, and that is a deliberate limit rather than an oversight.</b> The
+        /// rig's left and right arms are both bound — the off-hand inverse-kinematics solve needed
+        /// them — and no leg is. At the height this game is looked at, two arms reaching alternately
+        /// overhead with the body upright reads as climbing; legs would be better and are not
+        /// available without binding four more bones, which is a piece of work rather than a
+        /// tweak.</para>
+        ///
+        /// <para>One full cycle of reaches per cell climbed, taken from the step's own progress, so
+        /// a colonist that is half way up a shaft has made half a reach. The angles follow
+        /// <see cref="WorkSwing"/>'s convention exactly: an arm hangs down, so a large negative
+        /// pitch carries it forward and then overhead.</para>
+        /// </summary>
+        void ApplyClimbPose(Figure figure)
+        {
+            // Two reaches a cell. One would have a colonist take a whole three metres in a single
+            // grab, which reads as being hauled up rather than as climbing.
+            const float ReachesPerCell = 2f;
+
+            // Overhead and down at the hip. Not as far back as a pick's raise: a climber's hand
+            // goes up the wall in front of it, not over its own crown.
+            const float Reaching = -150f;
+            const float Pulling = -35f;
+            const float ElbowBend = -30f;
+
+            float swing = Mathf.Sin(figure.ClimbPhase * ReachesPerCell * 2f * Mathf.PI);
+
+            if (figure.RightUpperArm != null && figure.LeftUpperArm != null)
+            {
+                float right = Mathf.Lerp(Pulling, Reaching, (swing + 1f) * 0.5f) * figure.ClimbWeight;
+                float left = Mathf.Lerp(Reaching, Pulling, (swing + 1f) * 0.5f) * figure.ClimbWeight;
+
+                // No tilt: a climb is straight up the sagittal plane, where a swing is across the
+                // body.
+                Vector3 axis = SwingAxis(figure.Transform, 0f);
+
+                Pitch(figure.RightUpperArm, axis, right);
+                Pitch(figure.RightLowerArm, axis, ElbowBend * figure.ClimbWeight);
+                Pitch(figure.LeftUpperArm, axis, left);
+                Pitch(figure.LeftLowerArm, axis, ElbowBend * figure.ClimbWeight);
+            }
+
+            ApplyClimbLegs(figure, swing);
+        }
+
+        /// <summary>
+        /// And the boots on the rock, which is the half of a climb this pose did without until the
+        /// legs were bound.
+        ///
+        /// <para>The arms alone read as climbing at this camera height — that was the bargain the
+        /// pose was written under and it was an honest one — but underneath them the gait mixer was
+        /// still playing the idle, because a purely vertical step has no ground speed. So a
+        /// colonist went up a shaft hauling on the wall with its boots together, standing to
+        /// attention. Legs make it a climb.</para>
+        ///
+        /// <para><b>Contralateral, solved, and eased in world space.</b> The first is
+        /// <see cref="ClimbPose.StepsFrom"/>'s business and the second
+        /// <see cref="ClimbPose.Foothold"/>'s. The third is here: at zero weight the target is
+        /// exactly where the animation put the boot, so stepping on to a wall and off it again is
+        /// continuous by construction rather than by a number that has to be kept in step with the
+        /// arms' own ease.</para>
+        ///
+        /// <para><b>The sole is left as the gait wrote it</b>, restored after the solve the same
+        /// way <see cref="SolveLeg"/> restores it. A foot flat against a vertical face wants its
+        /// toes pointing up, and which rotation that is depends on the rig's own convention for a
+        /// foot bone — a thing settled by photographing a figure, which no worktree can do. What
+        /// the gait leaves is toes forward, and the figure is turned to face the wall, so the boots
+        /// address the rock toes-first: a climber edging on small holds, which is a real way to
+        /// stand on rock rather than a placeholder pretending to be one.</para>
+        /// </summary>
+        void ApplyClimbLegs(Figure figure, float swing)
+        {
+            if (figure.LegLength <= 0f) return;
+
+            ClimbPose.StepsFrom(swing, out float left, out float right);
+
+            Vector3 toRock = figure.LastClimbFace;
+            if (toRock == Vector3.zero) toRock = figure.Transform.forward;
+
+            // How far in front of the figure the stone actually is, which is the one number that
+            // puts both boots on one plane rather than on a cone. The face of the cell is half a
+            // cell from its centre and the lean has already carried the body most of the way to it,
+            // so what is left is the gap the legs have to cross — and it is ClimbLean's own
+            // arithmetic rather than a second constant that would drift out of step with it.
+            toRock = toRock.normalized * Mathf.Max(0.05f, CellMetrics.HalfXZ - ClimbLean);
+
+            PlantFoot(figure, figure.LeftUpperLeg, figure.LeftLowerLeg, figure.LeftFoot, toRock, left);
+            PlantFoot(figure, figure.RightUpperLeg, figure.RightLowerLeg, figure.RightFoot, toRock, right);
+        }
+
+        /// <summary>One boot on to its hold, eased out of wherever the gait had it.</summary>
+        void PlantFoot(Figure figure, Transform? upper, Transform? lower, Transform? foot,
+            Vector3 toRock, float step)
+        {
+            if (upper == null || lower == null || foot == null) return;
+
+            Vector3 hold = ClimbPose.Foothold(upper.position, toRock, figure.Transform.up,
+                figure.LegLength, step);
+            Vector3 target = Vector3.Lerp(foot.position, hold, Mathf.Clamp01(figure.ClimbWeight));
+
+            Quaternion sole = foot.rotation;
+
+            // The knee goes towards the rock, which is where a climber's knee goes and is also
+            // simply where a knee goes: it bends forwards. A leg solved with an arm's pole bends
+            // backwards, which does not read as a bad pose, it reads as a broken person.
+            TwoBoneIk.Reach(upper, lower, foot, target, lower.position + toRock.normalized);
+            foot.rotation = sole;
+
+            // How far the boot finished from the hold it was sent to. The climb's own
+            // MeasuredBladeGap: a leg that has run out of reach straightens towards its target and
+            // stops, which in a photograph is indistinguishable from a leg that arrived.
+            float missed = Vector3.Distance(foot.position, target);
+            if (missed > MeasuredFootReach) MeasuredFootReach = missed;
+        }
+
+        /// <summary>Which curve a gesture follows. See <see cref="Gesture"/>.</summary>
+        static Gesture GestureOf(PawnGesture kind) =>
+            kind == PawnGesture.Stow ? Gesture.Stow : Gesture.Lift;
+
+        /// <summary>
+        /// How far down a crouch may take the hips before the legs are asked for more than they
+        /// have. A fraction of the figure's own standing hip height.
+        ///
+        /// <para>Past about half, a two-bone solve with the foot pinned runs out of leg: the knee
+        /// reaches full flexion and the solver straightens towards an unreachable target, which
+        /// draws as a figure kneeling through its own shins. <see cref="Gesture.Lift"/> asks for a
+        /// third, so this is a guard rail for whatever asks for more later and not a number
+        /// anything currently touches.</para>
+        /// </summary>
+        public const float DeepestCrouch = 0.45f;
+
+        /// <summary>
+        /// How far out from the shoulder the off-hand elbow is sent, in metres. Keeps it clear of
+        /// the ribs — a left arm reaching across the body for a haft held in the right hand folds
+        /// its elbow straight through the torso if the pole is anywhere near the midline.
+        /// </summary>
+        public const float OffHandElbowOut = 1.0f;
+
+        /// <summary>
+        /// How far *above* the shoulder the off-hand elbow is sent, in metres, and therefore which
+        /// of the two arms passes over the other.
+        ///
+        /// <para>Positive lifts the off elbow so the forearm crosses above the working arm.
+        /// Negative drops it underneath, which is what this was — the two arms reach the same way
+        /// along one haft, so with a low elbow they lie in the same place and their meshes
+        /// intersect at the wrists.</para>
+        ///
+        /// <para>Modest on purpose: an elbow much above the shoulder is a chicken wing, and reads
+        /// as a person struggling with something heavy rather than gripping it.</para>
+        /// </summary>
+        public const float OffHandElbowLift = 0.35f;
+
+        /// <summary>
+        /// Stoop to the ground and straighten up again: the lift, the stow, and whatever else ends
+        /// up reaching the floor.
+        ///
+        /// <para><b>A crouch is two angles and one translation, and the translation is what keeps
+        /// the boots on the ground.</b> Bend a knee by rotating the leg and the foot swings up off
+        /// the floor — the figure treads air with its pelvis exactly where it always was, which
+        /// reads as sitting on an invisible stool. So the pelvis comes down by the crouch depth
+        /// first, and then each leg is solved back to the foot the gait had already put down.</para>
+        ///
+        /// <para><b>Why the legs are solved and not authored.</b> Every angle in
+        /// <see cref="WorkSwing"/> had to be settled against a photograph, because a stroke aims at
+        /// something whose position the arithmetic does not know. A crouch is the opposite case: we
+        /// know exactly where the feet are, because we just read them. Authored knee angles would
+        /// also have to be authored sixty-one times — the characters differ in proportion and the
+        /// director scales them besides — where one solve is right on all of them.
+        /// <c>13-gestures.md</c> §3 and §4 are the argument.</para>
+        ///
+        /// <para><b>The feet are not solved against the terrain</b>, which is the owner's decision
+        /// (2026-09-16) and not an omission. They are solved against where the walk cycle put them
+        /// this frame, so on a slope they are as right or as wrong as the walk already was — and
+        /// the crouch adds no error of its own.</para>
+        ///
+        /// <para>The hands reach for the ground in front of the boots rather than for the item's
+        /// own drawn position. The item is in the pawn's own cell by construction — the haul's
+        /// pickup toil fails unless it is — so its cell centre and the figure's feet are the same
+        /// place, and asking <c>ItemHeap</c> where it drew the pile would couple the pose to the
+        /// pile's own scatter for a difference of a few centimetres. Hands stay empty besides
+        /// (owner, 2026-09-16), so there is nothing there to meet.</para>
+        /// </summary>
+        void ApplyGesturePose(Figure figure)
+        {
+            if (figure.Hips == null || figure.StandingHipHeight <= 0f)
+            {
+                LeglessFigures++;
+                return;
+            }
+
+            CrouchedFigures++;
+
+            Gesture motion = GestureOf(ForceGesture ?? figure.Gesture);
+            float phase = HeldGesturePhase ?? motion.Phase(figure.GestureClock);
+            float depth = motion.At(phase) * motion.Depth;
+            if (depth <= 1e-4f) return;
+
+            depth = Mathf.Min(depth, DeepestCrouch) * figure.StandingHipHeight;
+
+            // The deepest of the figures drawn this pass, not the last one, so that a colony in
+            // which one colonist is stooping reports that colonist rather than whoever came last
+            // in the list and was standing.
+            if (depth > MeasuredCrouchDrop) MeasuredCrouchDrop = depth;
+
+            // Read the feet BEFORE the pelvis moves. After it, they have already been dragged
+            // down through the skeleton and the solve would be asked to put them back where the
+            // crouch has just carried them, which is an elaborate way of doing nothing.
+            Vector3 leftFoot = figure.LeftFoot != null ? figure.LeftFoot.position : Vector3.zero;
+            Vector3 rightFoot = figure.RightFoot != null ? figure.RightFoot.position : Vector3.zero;
+            Quaternion leftSole = figure.LeftFoot != null ? figure.LeftFoot.rotation : Quaternion.identity;
+            Quaternion rightSole = figure.RightFoot != null ? figure.RightFoot.rotation : Quaternion.identity;
+
+            // Down, and a little back: a person lowering their weight puts their hips behind their
+            // heels, or they fall forward over their own toes. Small, because the figure is drawn
+            // from a long way up and a big shift reads as sitting down.
+            Vector3 back = -figure.Transform.forward * (depth * 0.25f);
+
+            // Added to wherever the animation put the pelvis, exactly as Pitch is added to whatever
+            // rotation the animation gave a bone, and it rests on the same thing: that the graph
+            // rewrites the skeleton between the two places this pass runs. It does — if it did not,
+            // the axe swing would have been drawing at twice its angles since the day it landed.
+            // A translation is the more alarming of the two to get wrong, because a doubled drop
+            // puts the colonist's knees through the floor rather than merely overacting.
+            figure.Hips.position += Vector3.down * depth + back;
+
+            Vector3 knee = figure.Transform.forward;
+            SolveLeg(figure.LeftUpperLeg, figure.LeftLowerLeg, figure.LeftFoot, leftFoot, leftSole, knee);
+            SolveLeg(figure.RightUpperLeg, figure.RightLowerLeg, figure.RightFoot, rightFoot, rightSole, knee);
+
+            // And the rest of the body follows the hips down to the floor. The back folds over the
+            // work — a person picking something up does not keep a parade-ground spine — and both
+            // arms hang towards it rather than being solved at a target, because with nothing in
+            // the hands there is no point in space they have to meet. See 13-gestures.md §1: the
+            // owner took the empty-handed version knowingly, and the reach is what becomes an IK
+            // solve on the day a crate appears in the fists.
+            float reach = motion.Hands(phase);
+            Vector3 axis = SwingAxis(figure.Transform, 0f);
+            Pitch(figure.Spine, axis, 42f * reach);
+            Pitch(figure.RightUpperArm, axis, -34f * reach);
+            Pitch(figure.LeftUpperArm, axis, -34f * reach);
+            Pitch(figure.RightLowerArm, axis, -18f * reach);
+            Pitch(figure.LeftLowerArm, axis, -18f * reach);
+        }
+
+        /// <summary>
+        /// Put one foot back where it was, by bending the leg above it.
+        ///
+        /// <para>The pole goes in front of the knee, which is the one thing that differs from an
+        /// arm: an elbow bends backwards and a knee bends forwards, and a leg solved with an arm's
+        /// pole bends the wrong way — which does not read as a bad pose, it reads as a broken
+        /// person.</para>
+        ///
+        /// <para>The sole's own rotation is restored afterwards. Without that the foot inherits
+        /// whatever the shin ended up doing and the toes point into the floor, which is the visible
+        /// half of the same mistake.</para>
+        /// </summary>
+        static void SolveLeg(Transform? upper, Transform? lower, Transform? foot,
+            Vector3 target, Quaternion sole, Vector3 forward)
+        {
+            if (upper == null || lower == null || foot == null) return;
+            if (target == Vector3.zero) return;
+
+            TwoBoneIk.Reach(upper, lower, foot, target, lower.position + forward);
+            foot.rotation = sole;
+        }
+
+        /// <summary>
+        /// Put one figure into one moment of the stroke.
+        ///
+        /// Separate from the loop because the reach measurement needs exactly this and nothing
+        /// else: strike the pose, look at where the edge ended up.
+        /// </summary>
+        /// <summary>
+        /// Strike the pose and leave every tool where it is.
+        ///
+        /// <para><b>What the measuring paths want, and the distinction is not cosmetic.</b> They
+        /// pose a figure in order to fit a prop or to read where its edge lands, and they do it for
+        /// <em>every</em> style in turn without setting <see cref="Figure.Style"/> — so anything
+        /// here that reached for "the tool in the hands" would take hold of whichever prop happened
+        /// to be selected and move it while measuring a different one. Nothing needs to slide in
+        /// those paths anyway: they all strike <c>AtStrike</c>, where the working hand is at
+        /// <see cref="WorkStyle.GripFraction"/>, which is exactly where <c>GripTool</c> seated
+        /// it.</para>
+        /// </summary>
+        void Strike(Figure figure, WorkSwing swing, float tilt) =>
+            Strike(figure, swing, tilt, null);
+
+        /// <summary>
+        /// Put one figure into one moment of the stroke, with its working hand a given fraction of
+        /// the way up the haft.
+        ///
+        /// <paramref name="gripAt"/> is what makes the hands slide, and null is what says not to —
+        /// see the overload above.
+        /// </summary>
+        void Strike(Figure figure, WorkSwing swing, float tilt, float? gripAt)
+        {
+            // About the figure's own axis, tilted out of the vertical so the stroke goes up past
+            // a shoulder and down across the body. Never the bone's local axis: which way those
+            // point is a decision made by whoever rigged the character, where the plane an axe
+            // swings in is a fact about the figure and the same on every rig the packs contain.
+            Vector3 axis = SwingAxis(figure.Transform, tilt);
+
+            // The spine first, because the arms hang off it.
+            //
+            // And then the spine's own pitch is subtracted from the shoulders, because they have
+            // already inherited it through the skeleton. Without that the three angles are not
+            // three angles at all: folding the torso twenty degrees further into the blow also
+            // swings both arms twenty degrees, so every attempt to tune the bow of the back moved
+            // the axe as well and nothing could be settled. Taking it back out makes Shoulder mean
+            // the upper arm's pitch against the world, which is what a photograph shows.
+            Pitch(figure.Spine, axis, swing.Spine);
+            Pitch(figure.RightUpperArm, axis, swing.Shoulder - swing.Spine);
+            Pitch(figure.RightLowerArm, axis, swing.Elbow);
+
+            TakeHold(figure, axis, swing, gripAt);
+        }
+
+        /// <summary>
+        /// Put the tool in the working fist: rigid in the hand, and a given fraction up the haft.
+        ///
+        /// <para><b>An axe must never spin, and one was</b> (owner, 2026-09-16). The cause was not
+        /// in the fitting or in the swing but in how the tool was kept still while the wrist turned.
+        /// The old code captured the tool's <em>world</em> pose, rotated the hand, and put the world
+        /// pose back. On a child object that last step writes a <em>local</em> rotation worked out
+        /// from the parent's rotation at that instant — so the tool's local transform was being
+        /// integrated, one small correction at a time, rather than recomputed. It had nothing to
+        /// converge to, so it wound.</para>
+        ///
+        /// <para><b>It wound twice per frame, and only in the game.</b> <c>ApplyWorkPose</c> runs
+        /// at the end of both <c>Sync</c> and <c>Evaluate</c>, and only <c>Evaluate</c> re-evaluates
+        /// the animation graph first — so one of the two passes starts from bones the previous frame
+        /// already posed. For a <see cref="Pitch"/> that is harmless, because the second pass
+        /// re-derives the angle from a clean skeleton and the first pass's result is discarded
+        /// unseen. For anything that accumulates it is fatal. And a contact sheet could not have
+        /// caught it: the harnesses step the graph by hand, one pose per picture.</para>
+        ///
+        /// <para>So the tool is <em>placed</em>, never adjusted: its rotation is reset to the seat
+        /// the fitting measured, and it is then slid along its own haft until the grip point is in
+        /// the palm. Both are absolute, so running it twice does nothing the second time and a
+        /// dropped frame leaves no trace. That is the same property <see cref="ClimbPose"/> and the
+        /// crouch rely on, and the rule is worth stating once for all of them: <b>a pose may add to
+        /// a bone, because the graph rewrites bones; it may never add to anything the graph does not
+        /// own.</b> The animation graph has never heard of a prop.</para>
+        ///
+        /// <paramref name="gripAt"/> is where the working hand is on the haft, which is what makes
+        /// the hands slide; null takes the grip the blow is struck with.
+        /// </summary>
+        void PlaceTool(Figure figure, float? gripAt)
+        {
+            // The held one, deliberately and only here: this runs on the drawing path, where the
+            // style in the hands is the style being posed. See the no-slide overload of Strike for
+            // why that is not true of the measuring paths.
+            FittedTool fitted = figure.Held;
+            Transform? tool = fitted.Transform;
+            if (tool == null || !fitted.Seated || fitted.HaftLength <= 0f) return;
+
+            // How far it had wandered since it was last put right. Zero every frame is what "rigid
+            // in the fist" means, and it is worth measuring rather than assuming: this is exactly
+            // the fault that drew as a plausible grip on a tumbling axe, and the number is the only
+            // thing that would notice it coming back.
+            float drift = Quaternion.Angle(tool.localRotation, fitted.Seat);
+            if (drift > MeasuredToolDrift) MeasuredToolDrift = drift;
+
+            tool.localRotation = fitted.Seat;
+
+            float at = Mathf.Clamp01(gripAt ?? Styles[figure.Style].GripFraction);
+            MeasuredGripAt = at;
+            Vector3 grip = fitted.Butt + fitted.Haft * (fitted.HaftLength * at);
+            tool.position += HandGrip.Palm(figure.RightGrip) - tool.TransformPoint(grip);
+        }
+
+        /// <summary>
+        /// Put both fists on the haft of whatever this figure is working with.
+        ///
+        /// <para>All of the hard part is in <see cref="Grasp"/> now, and that is the point: taking
+        /// hold of something arrived here as part of an axe swing, and a ladder rung, a rifle
+        /// fore-end, a carried crate and the other end of a stretcher all want the same thing and
+        /// none of them is a swing. What is left here is the part that really is about this figure
+        /// and this tool — where the haft is, how far apart the hands go on it, and the fact that
+        /// the working hand has an axe hanging off it.</para>
+        ///
+        /// <para><b>The tool is put back where it was.</b> Turning a wrist turns everything
+        /// parented to it, and where that blade points was settled against photographs — the roll,
+        /// the yaw, and the measured strike offset the whole stance is solved from. So the tool's
+        /// place in the world is taken before the hand moves and restored after, and the fist
+        /// rotates inside a stationary axe.</para>
+        ///
+        /// <para>A figure with no tool holds nothing rather than clenching: a clone without the
+        /// packs has colonists chopping bare-handed, and bare hands balled into fists would be a
+        /// worse picture than open ones.</para>
+        /// </summary>
+        void TakeHold(Figure figure, Vector3 axis, WorkSwing swing, float? gripAt)
+        {
+            Transform? tool = figure.Held.Transform;
+            if (tool == null)
+            {
+                // No tool: the off arm swings in sympathy, which is what it did before there was
+                // ever anything to hold and is still the right answer for empty hands.
+                Pitch(figure.LeftUpperArm, axis, swing.Shoulder - swing.Spine);
+                Pitch(figure.LeftLowerArm, axis, swing.Elbow);
+                return;
+            }
+
+            float amount = Mathf.Clamp01(figure.WorkWeight);
+            Transform body = figure.Transform;
+
+            // **The working wrist is not turned to the haft, and that is not an omission.** It was
+            // turned, briefly, and the axe came out facing the wrong way (owner, 2026-09-16) — of
+            // course it did: the tool hangs off this hand, so any roll given to the wrist is a roll
+            // given to the blade, and where the blade points was settled against photographs. The
+            // old code turned the wrist and then undid the damage by pinning the tool's world pose,
+            // which is the integration that made it spin. Both halves of that were wrong. This hand
+            // holds the tool the way the fitting laid it; the stroke's own angles say where it
+            // points; and the only thing the grip does here is close the fingers.
+            //
+            // Fingers first, because curling them turns finger bones and not the hand, so the tool
+            // does not move — and PlaceTool wants the palm already in the shape it will be gripping
+            // in when it seats the haft into it.
+            HandGrip.Close(figure.RightGrip, amount);
+
+            PlaceTool(figure, gripAt);
+
+            // Only now is the haft somewhere. Read after placing, or the off hand is sent to where
+            // the wood was a frame ago — which at the top of a raise is a good half metre out.
+            Vector3 butt = tool.TransformPoint(figure.Held.OffHandGrip);
+            Vector3 head = tool.TransformPoint(figure.Held.BladeTip);
+            Hold haft = Hold.Bar(butt, head);
+
+            // Out to the side and up, so the off elbow leaves the ribs and the off forearm passes
+            // over the working one rather than through it.
+            var offArm = new GripArm(figure.LeftUpperArm, figure.LeftLowerArm, figure.LeftGrip,
+                new Vector3(-OffHandElbowOut, OffHandElbowLift, 0f));
+
+            MeasuredGripGap = Grasp.One(offArm, haft, 0f, body.right, body.up, amount);
+
+            // Can the arm even get there? TwoBoneIk straightens towards a target it cannot reach
+            // and stops, which is the right behaviour and is indistinguishable, in a photograph or
+            // in a distance-to-the-haft measurement, from a solve that simply missed. Positive here
+            // means the haft is further from the shoulder than the arm is long, and no solver will
+            // ever close that gap — the working hand's slide up the haft is what brings it near.
+            if (figure.LeftUpperArm != null && figure.LeftLowerArm != null && figure.LeftHand != null)
+            {
+                float armLength =
+                    Vector3.Distance(figure.LeftUpperArm.position, figure.LeftLowerArm.position)
+                    + Vector3.Distance(figure.LeftLowerArm.position, figure.LeftHand.position);
+                MeasuredGripSpan = Vector3.Distance(figure.LeftUpperArm.position, butt);
+                MeasuredGripLocal = Quaternion.Inverse(body.rotation) * (butt - body.position);
+                MeasuredPalmLocal = Quaternion.Inverse(body.rotation)
+                    * (HandGrip.Palm(figure.RightGrip) - body.position);
+                MeasuredGripOverreach = MeasuredGripSpan - armLength;
+            }
+
+            if (figure.LeftLowerArm != null && figure.RightLowerArm != null)
+            {
+                MeasuredOffArmAbove =
+                    figure.LeftLowerArm.position.y - figure.RightLowerArm.position.y;
+                MeasuredArmGap =
+                    Vector3.Distance(figure.LeftLowerArm.position, figure.RightLowerArm.position);
+            }
+        }
+
+        /// <summary>
+        /// How far from the middle of its cell a climbing figure is drawn, towards the rock.
+        ///
+        /// A cell face is 1.25 m from its centre and a colonist is about half a metre through, so
+        /// this leaves the body against the stone rather than inside it. It is the same kind of
+        /// facade as <see cref="WorkStance"/> — the pawn is still in its cell for picking and for
+        /// every part of the simulation, and only the drawn figure leans in.
+        /// </summary>
+        public const float ClimbLean = 0.95f;
+
+        /// <summary>
+        /// How long a figure takes to reach for the wall and let go of it again, in seconds.
+        ///
+        /// <para>Much quicker than the work pose's ease, and measurement is why. The lean first
+        /// borrowed <see cref="WorkEaseSeconds"/> at 0.44 s, which is right for setting yourself in
+        /// front of a tree and far too slow for this: a drop of one layer takes about five sixths
+        /// of a second, so the reach was still only <b>41%</b> arrived at the moment it was
+        /// photographed and the arms had barely left the figure's sides. Reaching for a hold is a
+        /// grab, not a settling-in.</para>
+        /// </summary>
+        public const float ClimbEaseSeconds = 0.15f;
+
+        /// <summary>
+        /// The direction of the nearest solid face beside a cell, or false when there is none.
+        ///
+        /// <para>Four faces, not the diagonals, and the first one found in a fixed order — a
+        /// colonist wants one wall to climb, and which it picks matters far less than picking the
+        /// same one every frame. A search that preferred the nearest or the biggest would swap
+        /// walls as the world changed and swing the figure round the shaft.</para>
+        /// </summary>
+        bool TryWallBeside(CellRef at, out Vector3 toWall)
+        {
+            toWall = Vector3.zero;
+            WorldRenderModel? world = World;
+            if (world == null) return false;
+
+            GridSize size = world.Size;
+            if (at.X > 0 && world.IsSolid(size.Index(at.X - 1, at.Z, at.Y))) toWall = Vector3.left;
+            else if (at.X < size.SizeX - 1 && world.IsSolid(size.Index(at.X + 1, at.Z, at.Y))) toWall = Vector3.right;
+            else if (at.Z > 0 && world.IsSolid(size.Index(at.X, at.Z - 1, at.Y))) toWall = Vector3.back;
+            else if (at.Z < size.SizeZ - 1 && world.IsSolid(size.Index(at.X, at.Z + 1, at.Y))) toWall = Vector3.forward;
+            else return false;
+
+            return true;
+        }
+
+        /// <summary>Add a world-space pitch to a bone, leaving the rest of its pose alone.</summary>
+        static void Pitch(Transform? bone, Vector3 axis, float degrees)
+        {
+            if (bone == null) return;
+            bone.rotation = Quaternion.AngleAxis(degrees, axis) * bone.rotation;
+        }
+
+        /// <summary>
+        /// How fast a figure is walking, from where the simulation put it last frame and where it
+        /// has put it now.
+        ///
+        /// <para>Pulled out of <see cref="Pose"/> because it is the number that decides which gait
+        /// plays, and because a figure cannot be built outside a running editor — a static over
+        /// two positions can be driven across a pause by an ordinary test, and the pose it feeds
+        /// cannot.</para>
+        ///
+        /// <para><b>Differenced against where the simulation last put the pawn</b>, not against
+        /// where the figure was last drawn. Those parted company the moment a working figure began
+        /// stepping up to its tree: a metre and a half of step over a quarter of a second is six
+        /// metres a second, which would have thrown a standing woodcutter into a sprint cycle on
+        /// the spot.</para>
+        ///
+        /// <para><b>Ground speed, so the vertical part does not count.</b> A colonist climbing out
+        /// of a shaft covers three metres without going anywhere: counted whole, that is a walk
+        /// cycle playing while the figure rises through the air with nothing under its feet.</para>
+        ///
+        /// <para><b>No frame, no answer.</b> A delta of nothing is a frame in which the pawn had
+        /// no opportunity to move, and it says nothing whatever about how fast the figure is
+        /// going — so the last answer stands. That single line is most of the pause fix. It used
+        /// to read the absence of movement as a measurement of nought and smooth towards it, and
+        /// measured against the real gait speeds that carried a walking colonist from 73.5% walk
+        /// weight to 99% idle in ten frames, 0.167 s: a figure that visibly snapped to a standing
+        /// pose the instant the player pressed space. Held instead, it keeps the stride it was
+        /// drawn in and picks the walk straight back up when the world moves again.</para>
+        /// </summary>
+        public static float ObserveSpeed(float previous, Vector3 simPosition, Vector3 position,
+            float deltaTime, bool settled)
+        {
+            if (!settled) return 0f;
+            if (deltaTime <= 1e-5f) return previous;
+
+            Vector3 moved = position - simPosition;
+            moved.y = 0f;
 
             // One frame of a lost path or a slice change can jump a pawn further than any gait
             // covers. Smoothing keeps a single frame from throwing the figure into a sprint.
-            figure.Speed = settled ? Mathf.Lerp(figure.Speed, speed, 0.35f) : 0f;
-            figure.Settled = true;
+            return Mathf.Lerp(previous, moved.magnitude / deltaTime, SpeedSmoothing);
+        }
 
-            figure.Transform.position = position;
+        /// <summary>How much of a frame's measured speed the figure's smoothed speed takes.</summary>
+        public const float SpeedSmoothing = 0.35f;
+
+        void Pose(Figure figure, in PawnView pawn, Vector3 position, Vector3 heading,
+            float frameTime, bool running)
+        {
+            // **The one clock every ease in this method runs on, and it stops when the world
+            // does.** A pause should hold each figure on the frame it is on and then carry on
+            // from there, which is what a delta of exactly nothing gives for free: MoveTowards
+            // with a step of zero is the identity, so the work weight, the climb lean, the swing,
+            // the gesture and the turn all keep the value they had, and the frame after the
+            // player starts the world again continues from it rather than restarting.
+            //
+            // Placement is deliberately *not* on this clock. A figure still has to be put
+            // somewhere — a pawn newly leased because the player scrolled the slice while paused
+            // has no drawn position at all — so everything below that computes a position from
+            // state rather than advancing it is left alone.
+            float deltaTime = running ? frameTime : 0f;
+
+            // Work eases in and out rather than switching, and the axe is in the hand for exactly
+            // as long as the pose is worth anything. See WorkEaseSeconds.
+            float step = WorkEaseSeconds > 1e-3f ? deltaTime / WorkEaseSeconds : running ? 1f : 0f;
+            figure.WorkWeight = Mathf.MoveTowards(figure.WorkWeight, pawn.Working ? 1f : 0f, step);
+
+            // The swing's own clock, which runs only while there is work. Freezing it between
+            // jobs rather than letting it free-run means a colonist's first blow at a new tree
+            // is a first blow, not whatever part of a stroke the wall clock happened to be in.
+            if (pawn.Working && running) figure.SwingClock += deltaTime;
+            else if (!pawn.Working && figure.WorkWeight <= 0f) figure.SwingClock = 0f;
+
+            // The one-shot gestures, started by a serial that has moved rather than by a state
+            // that is true. See PawnView.GestureSerial: the view reports the *last* gesture
+            // permanently, so that a frame cannot miss one, which means "is it Lift?" is never the
+            // question — "is it a Lift I have not already drawn?" is.
+            //
+            // **This is the only place the gesture clock moves.** ApplyWorkPose runs at the end of
+            // both Sync and Evaluate, and is harmless twice only because it re-derives the same
+            // pose from the same state. A clock advanced inside it would run at double speed under
+            // the player loop and single speed in an editor harness that steps the graph by hand —
+            // which is to say, wrong in the game and right in every picture taken of the game.
+            if (pawn.GestureSerial != figure.SeenSerial)
+            {
+                // First sighting records and poses nothing. A figure leased for a colonist who has
+                // been hauling for an hour would otherwise open with a lift it never made, as would
+                // every colonist on the board on the first frame after a load.
+                if (figure.SeenSerial >= 0 && pawn.Gesture != PawnGesture.None)
+                {
+                    figure.Gesture = pawn.Gesture;
+                    figure.GestureClock = 0f;
+                }
+
+                figure.SeenSerial = pawn.GestureSerial;
+            }
+
+            if (figure.Gesture != PawnGesture.None)
+            {
+                // Work wins. Nothing in the game can pick something up and swing an axe at the same
+                // time, but the two poses write the same bones, and a gesture left running under a
+                // work pose would be a fight rather than a blend.
+                if (pawn.Working) figure.Gesture = PawnGesture.None;
+                else if (running)
+                {
+                    figure.GestureClock += deltaTime;
+                    if (GestureOf(figure.Gesture).Finished(figure.GestureClock))
+                        figure.Gesture = PawnGesture.None;
+                }
+            }
+
+            // Did the blow land between last frame and this one? Asked here, where the clock is
+            // advanced, and answered where the axe has been posed — the chips have to come off the
+            // edge, and until the pose is applied the edge is still wherever it was last frame.
+            //
+            // Half weight and not full, and the difference is the whole first blow of every job.
+            //
+            // The swing eases in over a quarter of a second while its clock runs from wherever the
+            // pawn's phase offset put it, and for most colonists the blade reaches the wood before
+            // the pose is fully on. Demanding full weight threw that blow away and then waited a
+            // whole stroke for the next — which, measured, was nine chips a tree short and showed
+            // up as a plain zero rather than as anything visible. Half is enough that the arm is
+            // genuinely travelling on the swing's arc rather than on the path between the idle
+            // and it.
+            WorkStroke stroke = Styles[figure.Style].Stroke;
+            float phase = stroke.Phase(figure.SwingClock, figure.SwingOffset);
+            if (pawn.Working && running && figure.WorkWeight > 0.5f
+                && stroke.Lands(figure.LastPhase, phase))
+                figure.Landed = true;
+            figure.LastPhase = phase;
+
+            ShowHeldTool(figure, figure.WorkWeight > 0.001f);
+
+            // Climbing: a step that changes layer and is part way through.
+            //
+            // A colonist on a shaft wall has no clip to play — no pack we own contains one, the
+            // same reason the work pose is computed rather than animated — and until now it had no
+            // pose either, so it rose through a hole in whatever the mixer produced. With the gait
+            // reading ground speed that is the idle, which is better than a walk cycle in mid-air
+            // and still is not climbing.
+            //
+            // **Strictly vertical, and that test is the whole of it** (owner, 2026-09-16). There
+            // are now two ways to change layer and they want opposite things:
+            //
+            //   * a LADDER joins a cell to the one directly above it — same x and z — and is
+            //     climbed. `SurfacePasses` stamps them one cell to one cell, so the geometry is
+            //     the signal and no new contract is needed.
+            //   * a HOP is a jump up onto the block next door, or a drop off it: one cell across
+            //     as well as one layer up. Posing that as a climb is what the owner reported as
+            //     the animation looking wrong, and it needs no pose at all — a hop has real
+            //     horizontal travel, so the gait already walks the figure up onto the block.
+            //
+            // A stair sorts itself out by the same test: a stairwell moves across as well as up.
+            // If lifts ever land this has to become a question about the connector's KIND rather
+            // than its geometry, because a lift is vertical and you stand in it.
+            bool straightUp = pawn.NextCell.X == pawn.Cell.X && pawn.NextCell.Z == pawn.Cell.Z;
+            figure.ClimbPhase = pawn.MovePercent > 0 && pawn.NextCell.Y != pawn.Cell.Y && straightUp
+                ? HeldClimbPhase ?? Mathf.Clamp01(pawn.MovePercent * 0.01f)
+                : -1f;
+
+            // And WHAT it is climbing. A colonist goes up the edge of the block beside the hole,
+            // not up the middle of the hole: drawn at the cell centre it is a person levitating
+            // through clear air, which is what the owner saw. The simulation now refuses to lay a
+            // connector where there is no block (MineWorkGiver's HasWallBeside), so this should
+            // always find one — and where it does not, the figure simply stays where it was, which
+            // is the behaviour before any of this existed.
+            // Forced first, and completely: a harness that set only the direction would still be
+            // waiting for a real vertical step to give it a phase, and there is never going to be
+            // one on a board with no shaft in it.
+            figure.ClimbFace = Vector3.zero;
+            if (ForceClimbFace.HasValue)
+            {
+                figure.ClimbPhase = HeldClimbPhase ?? 0f;
+                figure.ClimbFace = ForceClimbFace.Value;
+                figure.LastClimbFace = figure.ClimbFace;
+                heading = figure.ClimbFace;
+            }
+            else if (figure.ClimbPhase >= 0f)
+            {
+                CellRef lower = pawn.NextCell.Y < pawn.Cell.Y ? pawn.NextCell : pawn.Cell;
+                if (TryWallBeside(lower, out Vector3 toWall))
+                {
+                    figure.ClimbFace = toWall;
+                    figure.LastClimbFace = toWall;
+
+                    // Face what you are climbing. This is also the only thing that gives a purely
+                    // vertical step a bearing at all: PawnPose hands back none, deliberately, and
+                    // the turn itself is eased by the ordinary yaw rate.
+                    heading = toWall;
+                }
+            }
+
+            // Eased, and not applied to `position`. Two traps, both of which this avoids by being
+            // a weight rather than a jump:
+            //
+            //  * the lean is nearly a metre sideways, and `position` is what the gait blend
+            //    differences for ground speed — moved here, the first frame of every climb would
+            //    read as several metres a second and throw the figure into a sprint;
+            //  * snapped on, a colonist would jump to the wall the instant its step began, which
+            //    is exactly the class of jolt this whole round is about.
+            float leanStep = deltaTime / ClimbEaseSeconds;
+            figure.ClimbWeight = Mathf.MoveTowards(
+                figure.ClimbWeight, figure.ClimbFace != Vector3.zero ? 1f : 0f, leanStep);
+
+            // Face the work. A pawn that has stopped walking has no heading left — that is what
+            // makes PawnPose hand back a zero vector — so without the work cell the figure would
+            // swing at whatever it happened to be facing when it arrived, which is as often as
+            // not straight past the tree.
+            if (pawn.Working)
+            {
+                // Lifted before differencing: position is on the drawn ground, so a flat work
+                // cell would put a spurious rise into the vector. It is flattened straight
+                // afterwards, so this only matters for keeping the two ends in one space.
+                Vector3 toWork = GroundRelief.Lift(CellMetrics.FloorCentre(pawn.WorkCell)) - position;
+                toWork.y = 0f;
+                if (toWork.sqrMagnitude > 1e-4f) heading = toWork;
+            }
+
+            // Speed from displacement, which is right at every game speed and needs to know
+            // nothing about ticks. A figure that has just been leased has no previous position
+            // worth differencing, hence Settled.
+            bool settled = figure.Settled;
+            figure.Speed = ObserveSpeed(figure.Speed, figure.SimPosition, position, deltaTime, settled);
+            figure.Settled = true;
+            figure.SimPosition = position;
+
+            // Step up to the work. See WorkStance for why the drawn place and the simulated place
+            // are allowed to differ, and by how much.
+            // Only while there *is* work.
+            //
+            // This is what made a colonist jump the instant a tree came down. The published work
+            // cell is the pawn's own cell when it is not working, so on the frame the last blow
+            // landed the target the step-up had been solved against moved from the tree to her
+            // feet — and the ease-out, which should have walked her back out of the stand she had
+            // stepped into, instead eased her towards a stand solved against herself. Keeping the
+            // last one until the weight is gone makes the way out retrace the way in.
+            // On the drawn ground, because the whole stance is solved against it: the step-up to
+            // the tree, the arm IK target and the chips thrown where the blade lands all read this.
+            if (pawn.Working)
+            {
+                figure.WorkCentre = GroundRelief.Lift(CellMetrics.FloorCentre(pawn.WorkCell));
+
+                // Work below the feet is struck on its top face, not on its floor, and it is
+                // struck with the stroke aimed down. See WorkStyle.Dip: a miner cutting the layer
+                // below stands on the rim of the hole or on the cell itself, and in both the stone
+                // is level with its boots. Aimed at the floor centre and swung level, the pick
+                // passed over the rock entirely.
+                //
+                // Half a cell is the threshold rather than a whole one so that the test is about
+                // which layer the work is on and not about exactly where in a cell a pawn is drawn.
+                float drop = position.y - figure.WorkCentre.y;
+                WorkStyle style = Styles[StyleFor(pawn.JobDef)];
+
+                if (drop > CellMetrics.SizeY * 0.5f)
+                {
+                    figure.WorkCentre.y += CellMetrics.SizeY;
+                    figure.WorkDip = style.Dip;
+                }
+                else if (drop < -CellMetrics.SizeY * 0.5f)
+                {
+                    // Above the worker: the face it can actually reach is the BOTTOM of that cell,
+                    // not its middle, so the aim comes down by a cell rather than up by one.
+                    figure.WorkCentre.y -= CellMetrics.SizeY;
+                    figure.WorkDip = style.Raise;
+                }
+                else
+                {
+                    figure.WorkDip = 0f;
+                }
+
+                // Carried on the figure because the pose pass runs later, over figures alone,
+                // with no snapshot in scope. It is the job def and not a style, so the one place
+                // that turns a job into a look stays the one place.
+                figure.WorkJob = pawn.JobDef;
+
+                // Swap the tool only while the pose is mostly faded out. A colonist who finishes
+                // felling and walks off to mine eases down to nothing in between, so this costs
+                // nothing real — and without it a pick would appear in a raised hand half way
+                // through an axe stroke.
+                if (figure.WorkWeight <= 0.5f) figure.Style = StyleFor(pawn.JobDef);
+            }
+            Quaternion facing = Quaternion.Euler(0f, figure.Yaw, 0f);
+            Vector3 drawn = figure.WorkWeight > 0.001f
+                ? WorkStance.StandAt(position, figure.WorkCentre,
+                    facing * Vector3.forward, figure.WorkWeight, facing * figure.StrikeNow,
+                    Styles[figure.Style].AimFromCentre)
+                : position;
+
+            // Chest to the rock, after the speed has been taken and after the work stance has had
+            // its say. Kept applied while the weight eases back out, so stepping off the wall
+            // retraces the way on to it rather than snapping to the cell centre.
+            if (figure.ClimbWeight > 0.001f && figure.LastClimbFace != Vector3.zero)
+                drawn += figure.LastClimbFace * (ClimbLean * figure.ClimbWeight);
+
+            figure.Transform.position = drawn;
 
             // Turn towards the heading rather than snapping to it.
             //
@@ -256,9 +1824,31 @@ namespace Odyssey.Presentation.World
             figure.Yaw = settled
                 ? Mathf.MoveTowardsAngle(figure.Yaw, figure.TargetYaw, TurnDegreesPerSecond * deltaTime)
                 : figure.TargetYaw;
-            figure.Transform.rotation = Quaternion.Euler(0f, figure.Yaw, 0f);
 
-            Blend(figure, figure.Speed);
+            // Stand on the ground rather than merely above it.
+            //
+            // GroundRelief lifts everything that stands on the board and shears only the board
+            // itself — "a person standing on a hillside stands up". That is right about a
+            // *position* and was never the whole answer: a figure lifted onto a slope and left
+            // bolt upright meets it on one heel, with the downhill foot in the air and the uphill
+            // one buried. The lift puts the colonist in the right place; the lean puts it in the
+            // right attitude, and Footing decides how much of the slope it takes.
+            //
+            // Composed on the left of the bearing, so the figure yaws in the world and then leans
+            // with the hill. The other order leans it in its own frame, which turns the lean into
+            // a roll as it walks in a circle.
+            //
+            // The swing needs no separate fix and must not be given one: SwingAxis is built from
+            // figure.right and figure.forward, so the plane an axe travels in tilts with the body
+            // for free, which is what a woodcutter on a slope actually does.
+            GroundRelief.SlopeAt(drawn.x, drawn.z, out float slopeX, out float slopeZ);
+            Quaternion wanted = Footing.LeanTo(Footing.GroundNormal(slopeX, slopeZ));
+            figure.Lean = settled ? Footing.Settle(figure.Lean, wanted, deltaTime) : wanted;
+
+            figure.GroundY = drawn.y - GroundRelief.HeightAt(drawn.x, drawn.z);
+            figure.Transform.rotation = figure.Lean * Quaternion.Euler(0f, figure.Yaw, 0f);
+
+            Blend(figure, figure.Speed, running);
         }
 
         /// <summary>
@@ -268,15 +1858,28 @@ namespace Odyssey.Presentation.World
         /// means the blended stride already matches the ground speed, so the clips play at their
         /// authored rate. Only above the fastest gait does the rate have to stretch, and that is
         /// the one case where a figure is genuinely moving faster than any clip was made for.
+        ///
+        /// <para><b>A rate of nothing is how a pause is held.</b> The graph is played with
+        /// <c>DirectorUpdateMode.GameTime</c> and nothing in this game touches
+        /// <c>Time.timeScale</c>, so Unity goes on evaluating every figure's clips on wall-clock
+        /// frames whatever the simulation is doing — a paused colony breathed, shifted its weight
+        /// and swayed. Setting the clip speed to zero is the narrowest possible way to stop that:
+        /// it is the same call that is already made on every clip on every frame, so nothing new
+        /// can go wrong with it, the clip time simply stops advancing, the pose the graph writes
+        /// is the pose it wrote last frame, and the frame the world starts again the rate comes
+        /// back and the clip <em>continues</em> rather than restarting. Stopping the graph or
+        /// unplaying it would also have to be undone, and would not leave the bones written at
+        /// all — the additive work pose is laid over what the graph writes and needs it there.
+        /// </para>
         /// </summary>
-        void Blend(Figure figure, float speed)
+        void Blend(Figure figure, float speed, bool running)
         {
             Look look = _looks[figure.Look];
             GaitBlend blend = GaitBlend.Solve(look.Speeds, speed);
             for (int i = 0; i < look.Gaits.Length; i++)
             {
                 figure.Mixer.SetInputWeight(i, blend.WeightOf(i));
-                figure.Clips[i].SetSpeed(blend.Rate);
+                figure.Clips[i].SetSpeed(running ? blend.Rate : 0f);
             }
         }
 
@@ -292,6 +1895,18 @@ namespace Odyssey.Presentation.World
             figure.Pawn = pawn.Value;
             figure.Settled = false;
             figure.Speed = 0f;
+            figure.WorkWeight = 0f;
+            figure.SwingClock = 0f;
+
+            // A recycled figure has somebody else's gesture history on it. Forgetting it here is
+            // what stops a colonist walking into view playing the last lift the previous tenant of
+            // this body made — and, because -1 is "never seen", stops it playing one at all until
+            // this pawn genuinely begins a new gesture.
+            figure.Gesture = PawnGesture.None;
+            figure.GestureClock = 0f;
+            figure.SeenSerial = -1;
+            figure.WorkCentre = at;
+            figure.SimPosition = at;
             figure.Transform.position = at;
             figure.GameObject.SetActive(true);
             Desynchronise(figure, pawn);
@@ -313,6 +1928,11 @@ namespace Odyssey.Presentation.World
         {
             // The golden ratio, which spreads successive ids about as evenly as anything can.
             float phase = (pawn.Value * 0.6180339887f) % 1f;
+            // The same number serves the swing, for the same reason and with the same objection to
+            // re-rolling it — but there it sets how *long* a colonist's stroke is rather than
+            // where in one they begin, so that taking up an axe is never a jump into the middle
+            // of a swing. Two woodcutters drift apart instead of starting apart.
+            figure.SwingOffset = phase;
 
             for (int i = 0; i < figure.Clips.Length; i++)
             {
@@ -339,6 +1959,10 @@ namespace Odyssey.Presentation.World
             {
                 Figure figure = _byPawn[_retired[i]];
                 figure.Pawn = -1;
+                // Put the axe away on the way into the pool. A figure parked mid-swing and handed
+                // to a colonist who is only walking past would otherwise arrive carrying it.
+                figure.WorkWeight = 0f;
+                ShowHeldTool(figure, working: false);
                 figure.GameObject.SetActive(false);
                 _byPawn.Remove(_retired[i]);
             }
@@ -357,6 +1981,20 @@ namespace Odyssey.Presentation.World
             // click meant for the ground.
             var colliders = instance.GetComponentsInChildren<Collider>(includeInactive: true);
             for (int i = 0; i < colliders.Length; i++) colliders[i].enabled = false;
+
+            // Re-skin from the bones as they are at the moment of drawing, not as they were when
+            // the animation system last looked at them.
+            //
+            // This is what makes a computed pose visible at all. A SkinnedMeshRenderer normally
+            // caches its bone matrices from the animation update, and the work swing is written
+            // *after* that update by design — it has to be, or the mixer would overwrite it. The
+            // symptom when this is off is the specific and thoroughly misleading one that cost an
+            // hour here: the axe, which is an ordinary child of the hand bone, swings through a
+            // perfect arc while the colonist holding it stands perfectly still, because a child
+            // transform reads the live bone and a skinned vertex reads the cached matrix. It
+            // looks like the arm pose failing, and the arm pose is fine.
+            var skins = instance.GetComponentsInChildren<SkinnedMeshRenderer>(includeInactive: true);
+            for (int i = 0; i < skins.Length; i++) skins[i].forceMatrixRecalculationPerRender = true;
 
             var animator = instance.GetComponent<Animator>();
             if (animator == null) animator = instance.AddComponent<Animator>();
@@ -380,9 +2018,476 @@ namespace Odyssey.Presentation.World
             output.SetSourcePlayable(mixer);
             graph.Play();
 
+            // Write the idle before anything measures this figure. A graph that has been played
+            // but never evaluated leaves the skeleton in whatever pose the prefab was saved in,
+            // which for a Synty character is the bind pose with its arms straight out to the
+            // sides; fitting an axe to that hand, and measuring a reach from it, would both be
+            // fitting to a scarecrow.
+            graph.Evaluate(0f);
+
             var figure = new Figure(instance, animator, graph, mixer, clips) { Look = look };
+            BindWorkBones(figure, animator);
             _figures.Add(figure);
             return figure;
+        }
+
+        /// <summary>
+        /// Find the bones the swing moves, and put an axe in the hand.
+        ///
+        /// Both hang on the rig being <b>Humanoid</b>, which every character in the packs is: the
+        /// bones are asked for by their role rather than by name, so one set of angles drives all
+        /// sixty-one faces and would drive a sixty-second nobody has imported yet. A generic rig,
+        /// or a prefab whose Animator arrived without an avatar, answers null to every one of
+        /// these, and the figure quietly goes on walking and never swings — which is the same
+        /// thing that happens on a clone with no packs at all.
+        /// </summary>
+        /// <summary>Gather one hand's grip bones. Any of them may be absent on a given rig.</summary>
+        static HandGrip.Bones GripBones(Animator animator, bool right) => new HandGrip.Bones
+        {
+            Hand = animator.GetBoneTransform(right ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand),
+            ThumbProximal = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightThumbProximal : HumanBodyBones.LeftThumbProximal),
+            ThumbIntermediate = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightThumbIntermediate : HumanBodyBones.LeftThumbIntermediate),
+            ThumbDistal = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightThumbDistal : HumanBodyBones.LeftThumbDistal),
+            IndexProximal = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightIndexProximal : HumanBodyBones.LeftIndexProximal),
+            IndexIntermediate = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightIndexIntermediate : HumanBodyBones.LeftIndexIntermediate),
+            IndexDistal = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightIndexDistal : HumanBodyBones.LeftIndexDistal),
+            MiddleProximal = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightMiddleProximal : HumanBodyBones.LeftMiddleProximal),
+            MiddleIntermediate = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightMiddleIntermediate : HumanBodyBones.LeftMiddleIntermediate),
+            MiddleDistal = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightMiddleDistal : HumanBodyBones.LeftMiddleDistal),
+        };
+
+        void BindWorkBones(Figure figure, Animator animator)
+        {
+            if (!animator.isHuman) return;
+
+            figure.Spine = animator.GetBoneTransform(HumanBodyBones.Spine);
+            figure.RightUpperArm = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+            figure.RightLowerArm = animator.GetBoneTransform(HumanBodyBones.RightLowerArm);
+            figure.LeftUpperArm = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
+            figure.LeftLowerArm = animator.GetBoneTransform(HumanBodyBones.LeftLowerArm);
+            figure.LeftHand = animator.GetBoneTransform(HumanBodyBones.LeftHand);
+            figure.RightHand = animator.GetBoneTransform(HumanBodyBones.RightHand);
+
+            // The legs, which nothing bound until the crouch needed them. ApplyClimbPose's own
+            // comment records their absence as a deliberate limit rather than an oversight —
+            // "legs would be better and are not available without binding four more bones, which
+            // is a piece of work rather than a tweak". This is that piece of work.
+            figure.Hips = animator.GetBoneTransform(HumanBodyBones.Hips);
+            figure.LeftUpperLeg = animator.GetBoneTransform(HumanBodyBones.LeftUpperLeg);
+            figure.LeftLowerLeg = animator.GetBoneTransform(HumanBodyBones.LeftLowerLeg);
+            figure.LeftFoot = animator.GetBoneTransform(HumanBodyBones.LeftFoot);
+            figure.RightUpperLeg = animator.GetBoneTransform(HumanBodyBones.RightUpperLeg);
+            figure.RightLowerLeg = animator.GetBoneTransform(HumanBodyBones.RightLowerLeg);
+            figure.RightFoot = animator.GetBoneTransform(HumanBodyBones.RightFoot);
+
+            // The fingers, so a hand can close on a haft instead of having one pass through it.
+            // The Polygon rig maps thumb, index and middle at three joints each; no ring or little,
+            // which at this camera height is not a difference anybody can see. See HandGrip.
+            figure.RightGrip = GripBones(animator, right: true);
+            figure.LeftGrip = GripBones(animator, right: false);
+
+            // How tall this particular figure's hips stand, measured off its own rig rather than
+            // named as a number. Sixty-one characters have sixty-one sets of proportions and the
+            // director scales them besides, so a crouch expressed in metres is a deep squat on one
+            // colonist and a curtsey on the next. Expressed as a fraction of this, it is the same
+            // crouch on all of them.
+            figure.StandingHipHeight = figure.Hips != null
+                ? Mathf.Max(0.2f, figure.Hips.position.y - figure.Transform.position.y)
+                : 0f;
+
+            // And how long its legs are, for the same reason and measured the same way: a climber's
+            // foothold is a fraction of its own leg, never a number of metres. Thigh plus shin
+            // rather than hip-to-floor, because that is the quantity TwoBoneIk can actually deliver
+            // and hip height includes an ankle and a boot that it cannot.
+            figure.LegLength =
+                figure.LeftUpperLeg != null && figure.LeftLowerLeg != null && figure.LeftFoot != null
+                    ? Vector3.Distance(figure.LeftUpperLeg.position, figure.LeftLowerLeg.position)
+                      + Vector3.Distance(figure.LeftLowerLeg.position, figure.LeftFoot.position)
+                    : 0f;
+
+            Transform? hand = figure.RightHand;
+            if (hand == null) return;
+
+            // One prop per style, each fitted and measured in its own stroke's struck pose. A
+            // colonist who fells in the morning and mines in the afternoon needs both, and the
+            // fitting is far too expensive — and too destructive of the current pose — to redo
+            // when the work changes.
+            for (int style = 0; style < WorkStyle.Count; style++)
+            {
+                GameObject? held = _toolRows[style] != null ? _toolRows[style]!.prefab : null;
+                if (held == null) continue;
+
+                GameObject tool = UnityEngine.Object.Instantiate(held, hand);
+                tool.name = "Tool" + style;
+                SetLayer(tool.transform, _layer);
+
+                FittedTool fitted = figure.Tools[style];
+                fitted.Object = tool;
+                fitted.Transform = tool.transform;
+
+                // Fit the tool in the pose it is judged in, not in the pose it is stored in.
+                //
+                // Where the hand is pointing, which way the head is travelling and how far in
+                // front of herself a colonist can put an edge are all different at the moment of
+                // the blow than they are standing idle, and all three are wanted. So the figure is
+                // struck, here, and the grip and the reach are both taken from that. The pose is
+                // thrown away by the next animation update, before anything is drawn.
+                //
+                // **Back to the clip pose before each one.** Strike ADDS its angles to whatever
+                // the bones are already at, so striking once per style without resetting poses the
+                // second on top of the first: the arm goes half as far again, and the tool is
+                // fitted and measured against a figure reaching somewhere no pose will ever put
+                // it. That is exactly what happened — the pick measured a blade height of 2.39 m,
+                // above the crown of a 1.79 m colonist, and read on screen as a miner swinging at
+                // the sky with empty-looking hands. RegripTools has always done this; the loop
+                // here had to learn it.
+                figure.Graph.Evaluate(0f);
+                Strike(figure, Styles[style].Stroke.AtStrike, Styles[style].Tilt);
+                GripTool(figure, style, tool.transform, hand, figure.RightLowerArm);
+
+                // Same argument as the character's own colliders: picking is a ray against the
+                // grid, so anything with a collider on it can only steal a click meant for the
+                // ground.
+                var colliders = tool.GetComponentsInChildren<Collider>(includeInactive: true);
+                for (int i = 0; i < colliders.Length; i++) colliders[i].enabled = false;
+
+                tool.SetActive(false);
+                MeasureStrike(figure, style);
+                MeasureDippedStrike(figure, style);
+            }
+        }
+
+        /// <summary>Show the tool for the style in use and hide every other, or hide them all.</summary>
+        static void ShowHeldTool(Figure figure, bool working)
+        {
+            for (int i = 0; i < figure.Tools.Length; i++)
+            {
+                GameObject? tool = figure.Tools[i].Object;
+                if (tool != null) tool.SetActive(working && i == figure.Style);
+            }
+        }
+
+        /// <summary>
+        /// Put the axe in the fist the way a person holds one: the haft continuing the line of
+        /// the forearm, the head out at the far end, the hand near the butt.
+        ///
+        /// **Measured off the mesh rather than authored as angles.** Which way a prop's haft runs
+        /// in its own local space is a decision made by whoever modelled it, and three Euler
+        /// numbers tuned by eye against one prefab are wrong for the next one and tell a reader
+        /// nothing about what they mean. So the haft is found — it is the long axis of the
+        /// combined mesh bounds — the head end is found, and the tool is then rotated to lie
+        /// along the forearm and slid so that the grip point sits in the palm. The first version
+        /// of this hung the axe head-down by the hip on a fixed rotation, which looked like a
+        /// woman carrying a hatchet rather than one about to use it.
+        ///
+        /// The forearm gives the direction because it is the one part of a hand's pose that means
+        /// the same thing on every rig: out of the fist is away from the elbow. Any pose will do
+        /// to read it in, including the bind pose, since it is the bone's axis and not its angle
+        /// that is being asked for.
+        /// </summary>
+        void GripTool(Figure figure, int style, Transform axe, Transform hand, Transform? lowerArm)
+        {
+            WorkStyle look = Styles[style];
+            FittedTool fitted = figure.Tools[style];
+
+            axe.localPosition = Vector3.zero;
+            axe.localRotation = Quaternion.identity;
+
+            if (!LocalBounds(axe, out Bounds bounds)) return;
+
+            // The haft is the long axis, and the head is whichever end of it the mass sits
+            // towards — a prop's origin is at the grip on every Synty weapon looked at so far,
+            // so the bounds centre is offset towards the head.
+            Vector3 extents = bounds.extents;
+            Vector3 haft = extents.x >= extents.y && extents.x >= extents.z ? Vector3.right
+                : extents.y >= extents.z ? Vector3.up : Vector3.forward;
+            float half = Vector3.Dot(extents, haft);
+            if (half <= 1e-4f) return;
+            if (Vector3.Dot(bounds.center, haft) < 0f) haft = -haft;
+
+            // The bit is the way the head sticks out across the haft: of the two axes that cross
+            // it, the one the tool is fatter in, signed towards the fat side.
+            Vector3 bit = BitAxis(bounds, haft);
+
+            Vector3 outOfTheFist = lowerArm != null
+                ? (hand.position - lowerArm.position)
+                : hand.forward;
+            if (outOfTheFist.sqrMagnitude < 1e-6f) return;
+            outOfTheFist.Normalize();
+
+            axe.rotation = Quaternion.FromToRotation(axe.TransformDirection(haft), outOfTheFist) * axe.rotation;
+
+            // Turn the bit to face the way the head is travelling.
+            //
+            // This is what makes the edge cut rather than slap. The head moves on an arc about the
+            // swing axis, so at any instant it is going in the direction across both that axis and
+            // the haft; a bit pointed that way meets the wood edge first, at whatever angle the
+            // haft has reached — about forty-five degrees down and into the trunk for this swing,
+            // which is the felling scarf the owner asked for. Computed rather than dialled in, so
+            // that changing the swing's tilt or its end angles cannot silently leave the blade
+            // facing the wrong way.
+            Vector3 haftWorld = axe.TransformDirection(haft);
+            Vector3 travel = Vector3.Cross(SwingAxis(figure.Transform, look.Tilt), haftWorld);
+            Vector3 facing = Vector3.ProjectOnPlane(axe.TransformDirection(bit), haftWorld);
+            Vector3 wanted = Vector3.ProjectOnPlane(travel, haftWorld);
+            if (facing.sqrMagnitude > 1e-6f && wanted.sqrMagnitude > 1e-6f)
+                axe.rotation = Quaternion.AngleAxis(
+                    Vector3.SignedAngle(facing, wanted, haftWorld), haftWorld) * axe.rotation;
+            axe.rotation = Quaternion.AngleAxis(look.BladeRoll, haftWorld) * axe.rotation;
+
+            // And turn the whole tool to face its work. See AxeBladeYaw: the roll cannot do this,
+            // because it turns the head about the very line the head is trying to be pointed
+            // along. Done before the grip is slid home, so the hand still ends up on the haft.
+            axe.rotation = Quaternion.AngleAxis(look.BladeYaw, figure.Transform.up) * axe.rotation;
+
+            // Slide the tool along its own haft until the grip point is in the palm. The grip is
+            // measured from the butt, which is the end of the bounds away from the head.
+            Vector3 butt = bounds.center - haft * half;
+            float length = 2f * half;
+            // Local, so the yaw above does not disturb it: these are points on the mesh, and the
+            // mesh has not moved relative to itself.
+            Vector3 grip = butt + haft * (length * Mathf.Clamp01(look.GripFraction));
+
+            // Into the palm, and *not* onto the hand bone. A humanoid hand bone is the wrist, so
+            // seating the haft on it put the tool behind the hand — every hand in this project has
+            // been holding its axe by the wrist since there was an axe, and the fingers reach past
+            // it rather than round it. HandGrip.Palm says where a held thing really sits, measured
+            // off the knuckles now that the fingers are bound.
+            axe.position += HandGrip.Palm(figure.RightGrip) - axe.TransformPoint(grip);
+
+            // Where the off hand takes hold, and where the edge is. Both are wanted every frame
+            // afterwards — one to put the second fist on the haft, one to know how far this
+            // figure can reach — so they are worked out once, here, in the axe's own space.
+            fitted.OffHandGrip = butt + haft * (length * Mathf.Clamp01(look.ButtFraction));
+            fitted.BladeTip = bounds.center + haft * half;
+
+            // And the haft itself, because the working hand no longer sits in one place on it. The
+            // fit is done once — it strikes a pose, measures the mesh and solves a reach — but
+            // where the fist grips changes every frame, so the three numbers the slide needs are
+            // kept rather than being thrown away with the local variables that held them.
+            fitted.Butt = butt;
+            fitted.Haft = haft;
+            fitted.HaftLength = length;
+
+            // And how the whole thing lies in the hand, which is the answer every later frame
+            // re-derives rather than adjusts. See PlaceTool.
+            fitted.Seat = axe.localRotation;
+            fitted.Seated = true;
+        }
+
+        /// <summary>
+        /// Take every tool out of every hand and fit it again.
+        ///
+        /// For tuning: the grip is fitted once when a figure is built, so a change to
+        /// <see cref="AxeBladeRoll"/> or <see cref="AxeGripFraction"/> would otherwise only show
+        /// on the next colonist to be given a figure. This makes a contact sheet of several
+        /// settings possible in one run of the editor rather than one run each.
+        /// </summary>
+        public void RegripTools()
+        {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Held.Transform == null || figure.RightUpperArm == null) continue;
+
+                Transform? hand = figure.Held.Transform.parent;
+                if (hand == null) continue;
+
+                // Every style, not just the one in the hands: a contact sheet tunes one number and
+                // expects to photograph its effect, and the tool it is tuning may not be the tool
+                // this figure happens to be holding.
+                for (int style = 0; style < WorkStyle.Count; style++)
+                {
+                    FittedTool fitted = figure.Tools[style];
+                    if (fitted.Transform == null) continue;
+
+                    // Back to the clip pose first. Strike *adds* its angles to whatever the bones
+                    // are already at, so refitting a figure that is mid-swing measures a doubled
+                    // pose and a reach to match — which is how a blade that had been landing in
+                    // the wood started reporting itself two thirds of a metre out.
+                    figure.Graph.Evaluate(0f);
+                    Strike(figure, Styles[style].Stroke.AtStrike, Styles[style].Tilt);
+                    GripTool(figure, style, fitted.Transform, hand, figure.RightLowerArm);
+                    MeasureStrike(figure, style);
+                    MeasureDippedStrike(figure, style);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Which way across the haft the head hangs.
+        ///
+        /// **Found by where the mass sits, not by how wide the head is.** The first version took
+        /// the perpendicular axis the tool was fattest in, which sounded reasonable and was wrong
+        /// for every axe: a head is *widest* across its cutting edge, and the edge is exactly the
+        /// axis the bit is not. It came out ninety degrees round, the blade met the tree with its
+        /// cheek, and a contact sheet of the same instant at five rolls is what showed it.
+        ///
+        /// The rule that holds instead: a head is roughly symmetric about the haft along its edge
+        /// and hangs off to one side along its bit, so the bit is whichever perpendicular axis the
+        /// bounds centre is furthest from the haft line on — which also gives the sign for free.
+        /// <see cref="AxeBladeRoll"/> remains for a tool this is wrong about.
+        /// </summary>
+        static Vector3 BitAxis(Bounds bounds, Vector3 haft)
+        {
+            Vector3 first = Mathf.Abs(haft.x) > 0.5f ? Vector3.up : Vector3.right;
+            Vector3 second = Vector3.Cross(haft, first);
+
+            float a = Vector3.Dot(bounds.center, first);
+            float b = Vector3.Dot(bounds.center, second);
+            Vector3 bit = Mathf.Abs(a) >= Mathf.Abs(b) ? first * Mathf.Sign(a) : second * Mathf.Sign(b);
+
+            // A head perfectly centred on its haft in both directions says nothing about which way
+            // it faces. Fall back to the wider axis, which is at least a plane the blade lies in.
+            if (bit.sqrMagnitude < 0.5f)
+                bit = Mathf.Abs(Vector3.Dot(bounds.extents, first))
+                      >= Mathf.Abs(Vector3.Dot(bounds.extents, second)) ? first : second;
+            return bit;
+        }
+
+        /// <summary>
+        /// The plane the axe swings in, given as the axis it turns about.
+        ///
+        /// Tilted out of the figure's own right-hand axis by the style's own tilt, which
+        /// is what takes the stroke up past a shoulder and down across the body instead of
+        /// straight over the crown of the head.
+        /// </summary>
+        static Vector3 SwingAxis(Transform figure, float tilt) =>
+            Quaternion.AngleAxis(tilt, figure.forward) * figure.right;
+
+        /// <summary>
+        /// How far in front of itself this figure can put the edge of its axe when the blow lands,
+        /// found by striking the pose once and looking.
+        ///
+        /// **Why measured and not written down.** Where a woodcutter stands and how far she can
+        /// reach are the same number, and writing it down twice is exactly how the axe came to stop
+        /// a hand's breadth short of the bark. Reach is a product of the figure's scale, the length
+        /// of the tool and six angles that are still being tuned by photograph; every one of them
+        /// changes it and none of them will remember to change a constant.
+        ///
+        /// Called with the figure already struck, by <see cref="BindWorkBones"/>, so that the
+        /// grip and the reach are both read off one pose rather than two.
+        /// </summary>
+        void MeasureStrike(Figure figure, int style)
+        {
+            FittedTool fitted = figure.Tools[style];
+            if (fitted.Transform == null || figure.RightUpperArm == null) return;
+
+            Vector3 edge = fitted.Transform.TransformPoint(fitted.BladeTip) - figure.Transform.position;
+            MeasuredBladeHeight = edge.y;
+            edge.y = 0f;
+
+            // Kept in the figure's own frame, so that turning to face a tree turns the offset with
+            // it. Measured in world and converted rather than read off local axes, because the
+            // axe is several bones deep and its own space says nothing about where the figure is
+            // pointing.
+            fitted.Strike = Quaternion.Inverse(figure.Transform.rotation) * edge;
+            fitted.DippedStrike = fitted.Strike;
+            fitted.RaisedStrike = fitted.Strike;
+            MeasuredReach = edge.magnitude;
+            MeasuredStrikeSideways = fitted.Strike.x;
+        }
+
+        /// <summary>
+        /// The same measurement for the stroke aimed down, and what it costs in reach.
+        ///
+        /// Struck a second time rather than derived from the first: the dip is a rotation of a
+        /// chain of bones about a pivot nobody has written down, so the only honest way to know
+        /// where the edge ends up is to put the figure there and look. Skipped entirely for a
+        /// style with no dip, which leaves <see cref="FittedTool.DippedStrike"/> equal to the
+        /// upright one.
+        /// </summary>
+        void MeasureDippedStrike(Figure figure, int style)
+        {
+            WorkStyle look = Styles[style];
+            FittedTool fitted = figure.Tools[style];
+            if (fitted.Transform == null || figure.RightUpperArm == null) return;
+
+            if (look.Dip != 0f && Aim(figure, style, look.Dip, out Vector3 dipped, out float dippedY))
+            {
+                fitted.DippedStrike = dipped;
+                MeasuredDippedBladeHeight = dippedY;
+                MeasuredDippedReach = dipped.magnitude;
+            }
+
+            if (look.Raise != 0f && Aim(figure, style, look.Raise, out Vector3 raised, out float raisedY))
+            {
+                fitted.RaisedStrike = raised;
+                MeasuredRaisedBladeHeight = raisedY;
+            }
+        }
+
+        /// <summary>
+        /// Strike the pose at an aim and report where the edge ends up, in the figure's own frame.
+        ///
+        /// Struck rather than derived, for both aims and for the same reason: the aim rotates a
+        /// chain of bones about a pivot nobody has written down, so the only honest way to know
+        /// where the edge lands is to put the figure there and look.
+        /// </summary>
+        bool Aim(Figure figure, int style, float degrees, out Vector3 strike, out float height)
+        {
+            strike = Vector3.zero;
+            height = 0f;
+
+            FittedTool fitted = figure.Tools[style];
+            if (fitted.Transform == null) return false;
+
+            WorkStyle look = Styles[style];
+
+            // Back to the clip pose first. Strike ADDS — the same trap that once measured the
+            // pick's blade at 2.39 m, above the crown of the colonist holding it.
+            figure.Graph.Evaluate(0f);
+            Strike(figure, look.Stroke.AtStrike.Dipped(degrees), look.Tilt);
+
+            Vector3 edge = fitted.Transform.TransformPoint(fitted.BladeTip) - figure.Transform.position;
+            height = edge.y;
+            edge.y = 0f;
+            strike = Quaternion.Inverse(figure.Transform.rotation) * edge;
+            return true;
+        }
+
+        /// <summary>
+        /// The bounds of everything under a transform, in that transform's own space.
+        ///
+        /// Renderer bounds are world axis-aligned and so say nothing about which way a mesh runs
+        /// once it is parented to a rotated bone; these are the mesh's own corners brought back
+        /// into the prop's frame, which is the only frame in which "the long axis" means anything.
+        /// </summary>
+        static bool LocalBounds(Transform root, out Bounds bounds)
+        {
+            bounds = default;
+            bool any = false;
+
+            var filters = root.GetComponentsInChildren<MeshFilter>(includeInactive: true);
+            for (int i = 0; i < filters.Length; i++)
+            {
+                Mesh? mesh = filters[i].sharedMesh;
+                if (mesh == null) continue;
+
+                Bounds local = mesh.bounds;
+                Transform from = filters[i].transform;
+                for (int corner = 0; corner < 8; corner++)
+                {
+                    var offset = new Vector3(
+                        (corner & 1) == 0 ? local.min.x : local.max.x,
+                        (corner & 2) == 0 ? local.min.y : local.max.y,
+                        (corner & 4) == 0 ? local.min.z : local.max.z);
+                    Vector3 point = root.InverseTransformPoint(from.TransformPoint(offset));
+                    if (any) bounds.Encapsulate(point);
+                    else { bounds = new Bounds(point, Vector3.zero); any = true; }
+                }
+            }
+
+            return any;
         }
 
         static void SetLayer(Transform transform, int layer)
@@ -393,6 +2498,9 @@ namespace Odyssey.Presentation.World
 
         public void Dispose()
         {
+            Chips?.Dispose();
+            Chips = null;
+
             for (int i = 0; i < _figures.Count; i++)
             {
                 if (_figures[i].Graph.IsValid()) _figures[i].Graph.Destroy();
@@ -436,6 +2544,13 @@ namespace Odyssey.Presentation.World
             /// <summary>False for the first frame after a lease, when there is no previous position.</summary>
             public bool Settled;
 
+            /// <summary>
+            /// Where the simulation put this pawn last frame, which is not where it was drawn once
+            /// it steps up to a tree. Speed is differenced against this and never against the
+            /// drawn position, or the step itself would register as a sprint.
+            /// </summary>
+            public Vector3 SimPosition;
+
             public float Speed;
 
             /// <summary>The bearing the figure is actually drawn at, which chases the target.</summary>
@@ -443,6 +2558,230 @@ namespace Odyssey.Presentation.World
 
             /// <summary>The last real heading. Kept when standing, so a pawn faces where it walked in from.</summary>
             public float TargetYaw;
+
+            /// <summary>How much of the work pose is showing, 0 to 1. Eased, never switched.</summary>
+            public float WorkWeight;
+
+            /// <summary>Seconds of work this figure has done. Only runs while there is work.</summary>
+            public float SwingClock;
+
+            /// <summary>
+            /// How long this figure's stroke runs, as a seed. Two woodcutters set to together and
+            /// drift apart over the following strokes rather than beginning out of step.
+            /// </summary>
+            public float SwingOffset;
+
+            /// <summary>Where in the stroke this figure was last frame. Only the blow needs it.</summary>
+            public float LastPhase;
+
+            /// <summary>Set on the frame the blade reaches the wood, cleared once the chips fly.</summary>
+            public bool Landed;
+
+            /// <summary>The job being worked, as the snapshot published it, or -1.</summary>
+            public int WorkJob = -1;
+
+            // The bones the swing pitches, resolved once when the figure is built. Null on
+            // anything that is not a Humanoid rig, which simply never gets a work pose.
+            public Transform? Spine;
+            public Transform? RightUpperArm;
+            public Transform? RightLowerArm;
+            public Transform? LeftUpperArm;
+            public Transform? LeftLowerArm;
+            public Transform? LeftHand;
+            public Transform? RightHand;
+
+            // The legs. Bound for the crouch; see BindWorkBones.
+            public Transform? Hips;
+            public Transform? LeftUpperLeg;
+            public Transform? LeftLowerLeg;
+            public Transform? LeftFoot;
+            public Transform? RightUpperLeg;
+            public Transform? RightLowerLeg;
+            public Transform? RightFoot;
+
+            /// <summary>This figure's own hip height when it stands, in metres. See BindWorkBones.</summary>
+            public float StandingHipHeight;
+
+            /// <summary>Thigh plus shin, in metres, measured off this figure's own rig. See
+            /// <see cref="ClimbPose"/>: every foothold is a fraction of it.</summary>
+            public float LegLength;
+
+            /// <summary>The fingers, so a fist can close on a haft. See <see cref="HandGrip"/>.</summary>
+            public HandGrip.Bones RightGrip;
+            public HandGrip.Bones LeftGrip;
+
+            /// <summary>
+            /// The one-shot gesture being drawn, or <see cref="PawnGesture.None"/>.
+            ///
+            /// <para>Held on the figure rather than read from the view each frame, because the view
+            /// reports the gesture as <em>sticky</em> — it goes on saying "Lift" long after the
+            /// lift is over, so that no frame can miss it. What the figure is drawing is a
+            /// different question from what the pawn last did.</para>
+            /// </summary>
+            public PawnGesture Gesture;
+
+            /// <summary>Seconds into the gesture. Advanced in Pose, read in ApplyWorkPose.</summary>
+            public float GestureClock;
+
+            /// <summary>
+            /// The serial this figure has already acted on, or -1 if it has never seen this pawn.
+            ///
+            /// <para>-1 rather than 0 is the whole of the first-sighting rule. A figure built for a
+            /// colonist who walks into view, or every figure at all on the first frame after a
+            /// load, would otherwise compare its zero against a pawn's non-zero serial and play one
+            /// lift that never happened.</para>
+            /// </summary>
+            public int SeenSerial = -1;
+
+            // The leg bones the footing pass needs are declared above, with the rest of the rig:
+            // the crouch work bound them first and for its own reasons, and one declaration serves
+            // both. Standing on uneven ground and crouching to climb want exactly the same bones,
+            // which is worth noticing rather than duplicating.
+
+            /// <summary>The lean this figure is drawn at, which eases towards the ground's own.</summary>
+            public Quaternion Lean = Quaternion.identity;
+
+            /// <summary>
+            /// The height of this figure's own cell floor, with the relief taken back out.
+            ///
+            /// Carried because the footing pass runs later, over figures alone, with no snapshot in
+            /// scope — and because by then the drawn position may have stepped in to a tree, so it
+            /// can no longer be asked where the ground under this pawn is.
+            /// </summary>
+            public float GroundY;
+
+            /// <summary>
+            /// One tool per style, fitted once and kept, all hidden but the one in use.
+            ///
+            /// A colonist who fells in the morning and mines in the afternoon needs both, and the
+            /// fitting is not something to redo per frame: it strikes the pose, measures the mesh
+            /// and solves the reach. So every style's tool is built and measured when the figure
+            /// is bound, and switching work is switching which one is visible.
+            /// </summary>
+            public readonly FittedTool[] Tools = NewTools();
+
+            /// <summary>Which style is in the hands, an index into <see cref="WorkStyle.All"/>.</summary>
+            public int Style;
+
+            /// <summary>The tool actually held. Every per-frame reader wants this one.</summary>
+            public FittedTool Held => Tools[Style];
+
+            /// <summary>Where the edge lands this frame, which depends on whether the aim is dipped.</summary>
+            public Vector3 StrikeNow =>
+                WorkDip > 0f ? Held.DippedStrike : WorkDip < 0f ? Held.RaisedStrike : Held.Strike;
+
+            /// <summary>
+            /// The point the blade is aimed at. The middle of the work cell's floor for work on
+            /// the figure's own layer, and the middle of its <em>top face</em> for work below —
+            /// which is the surface a miner on the rim actually strikes.
+            /// </summary>
+            public Vector3 WorkCentre;
+
+            /// <summary>
+            /// Where in a climb this figure is, 0 to 1, or -1 when it is not climbing.
+            ///
+            /// Taken from how far through the vertical step the simulation says the pawn is, not
+            /// from a clock of its own. That means the reach matches the height gained, the pose
+            /// holds still while the game is paused, and two colonists on the same shaft are out
+            /// of step because their steps are — none of which a free-running clock would give.
+            /// </summary>
+            public float ClimbPhase = -1f;
+
+            /// <summary>
+            /// Which way the block being climbed lies, as a unit vector, or zero when there is
+            /// none to find. Zero means the climb pose is not applied at all: arms reaching up a
+            /// wall that is not there is worse than arms at your sides.
+            /// </summary>
+            public Vector3 ClimbFace;
+
+            /// <summary>
+            /// The last wall there was, kept while the lean eases back out. Without it a colonist
+            /// stepping off the top of a climb loses its direction on the same frame the weight
+            /// starts falling, and eases towards nothing instead of away from the rock.
+            /// </summary>
+            public Vector3 LastClimbFace;
+
+            /// <summary>How far into the lean this figure is, 0 to 1. See PawnFigureDirector.ClimbLean.</summary>
+            public float ClimbWeight;
+
+            /// <summary>
+            /// Degrees this figure is aiming its stroke below level, this frame.
+            ///
+            /// The style's <see cref="WorkStyle.Dip"/> when the work is a layer down and zero when
+            /// it is not, so the same mining style covers an adit cut level into a face and a shaft
+            /// cut down from the rim without needing two of them.
+            /// </summary>
+            public float WorkDip;
+
+            static FittedTool[] NewTools()
+            {
+                var tools = new FittedTool[WorkStyle.Count];
+                for (int i = 0; i < tools.Length; i++) tools[i] = new FittedTool();
+                return tools;
+            }
+        }
+
+        /// <summary>One prop, fitted to one figure in one style, with what was measured off it.</summary>
+        internal sealed class FittedTool
+        {
+            /// <summary>The prop, parented to the right hand. Shown only while it is the one in use.</summary>
+            public GameObject? Object;
+
+            /// <summary>Its transform, cached because the pose touches it every frame.</summary>
+            public Transform? Transform;
+
+            /// <summary>Where the off hand grips the haft, in the tool's own space.</summary>
+            public Vector3 OffHandGrip;
+
+            /// <summary>The butt of the haft, in the tool's own space. The end away from the head.</summary>
+            public Vector3 Butt;
+
+            /// <summary>Up the haft from the butt, in the tool's own space, a unit vector.</summary>
+            public Vector3 Haft;
+
+            /// <summary>How long the haft is, in metres. See <see cref="Butt"/>.</summary>
+            public float HaftLength;
+
+            /// <summary>
+            /// How the tool sits in the hand, as a rotation in the <em>hand's</em> own frame.
+            ///
+            /// <para>A tool in a fist is a rigid attachment, and this is what says so. Everything
+            /// the fitting worked out — the haft along the forearm, the bit turned the way the head
+            /// travels, the roll and the yaw — is settled once against the mesh and is thereafter a
+            /// fact about how this prop lies in this hand. Stored local rather than world because
+            /// the hand moves constantly and the grip does not.</para>
+            /// </summary>
+            public Quaternion Seat = Quaternion.identity;
+
+            /// <summary>Whether <see cref="Seat"/> has been measured yet. Nothing places a tool
+            /// that has not been fitted.</summary>
+            public bool Seated;
+
+            /// <summary>The working edge, in the tool's own space. What has to reach the work.</summary>
+            public Vector3 BladeTip;
+
+            /// <summary>
+            /// Where this figure's edge ends up when the blow lands, relative to its feet and in
+            /// its own frame, measured rather than assumed. A whole offset and not a distance,
+            /// because a swing that comes over the shoulder puts the edge to one side as well as
+            /// in front. See <see cref="PawnFigureDirector.MeasureStrike"/>.
+            /// </summary>
+            public Vector3 Strike;
+
+            /// <summary>
+            /// The same offset for the stroke aimed down at work a layer below — see
+            /// <see cref="WorkStyle.Dip"/>. Equal to <see cref="Strike"/> for a style with no dip.
+            ///
+            /// <para>Measured separately because it is a different number and not a small one: a
+            /// figure bent 45° over its work reaches about a quarter of a metre less far in front
+            /// of itself than one standing up. Solve the stand against the upright reach and the
+            /// miner stands that far too far back from the hole, which is the same class of
+            /// mistake as writing the reach down instead of measuring it.</para>
+            /// </summary>
+            public Vector3 DippedStrike;
+
+            /// <summary>The same again for the stroke aimed up at work overhead. See WorkStyle.Raise.</summary>
+            public Vector3 RaisedStrike;
         }
     }
 }

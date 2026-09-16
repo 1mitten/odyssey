@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A job names a driver; the driver runs toils. This is the naming half.
+
+  <driver> and <trainsSkill> are integers because they are JobIndex and SkillIndex values, which
+  the published views and the save both carry. Naming them here instead would need a second table
+  mapping a name to a compile-time constant, which is the sort of indirection that looks tidy and
+  buys nothing until drivers are content — and they are not, because each one is a C# class.
+
+  experiencePerWorkTick is ASSUMED at 110 for every working job. a-01-pawns.md gives the level
+  costs and the passion multipliers but not the base rate per tick; at 110 a colonist who works
+  two thirds of a day earns about 4,400 points, which is where SkillDef.dailySoftCap sits, and
+  that relationship is the point of the cap.
+-->
+<Defs>
+
+  <JobDef>
+    <defName>Job_Haul</defName>
+    <driver>0</driver>
+    <expiryTicks>5000</expiryTicks>
+    <trainsSkill>0</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Eat</defName>
+    <driver>1</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+    <workTicks>300</workTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Sleep</defName>
+    <driver>2</driver>
+    <casuallyInterruptible>false</casuallyInterruptible>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Wander</defName>
+    <driver>3</driver>
+    <expiryTicks>1200</expiryTicks>
+  </JobDef>
+
+  <JobDef>
+    <defName>Job_Wait</defName>
+    <driver>4</driver>
+    <workTicks>120</workTicks>
+  </JobDef>
+
+  <!--
+    800 ticks is the vanilla harvest work of the pine class, the wooded meadow's only species
+    (a-08-plants-growing-food.md section 1). One tree per job, and the swings train cutting.
+  -->
+  <JobDef>
+    <defName>Job_Fell</defName>
+    <driver>5</driver>
+    <workTicks>800</workTicks>
+    <expiryTicks>6000</expiryTicks>
+    <trainsSkill>1</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
+
+  <!--
+    No workTicks: mining is priced per material, and the terrain defs already carry the number
+    (rock 700, iron 900, coal 760). One constant here would make a seam cost the same as the
+    stone around it, which is the whole difference between materials. The driver reads the
+    terrain's workToClear as it swings.
+
+    The expiry is generous because a shaft can be a long walk from the colony, and a job that
+    expires on the way there is a colonist who never arrives.
+  -->
+  <JobDef>
+    <defName>Job_Mine</defName>
+    <driver>6</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>2</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
+</Defs>

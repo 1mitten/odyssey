@@ -39,7 +39,19 @@ namespace Odyssey.Presentation.Rendering
             _model = model;
             _mesher = new ChunkMesher(model);
             _batches = new ChunkBatch?[model.Chunks.Count];
+            Skirt = new TerrainSkirt(model, _materials);
         }
+
+        /// <summary>
+        /// The land outside the board: decoration, drawn from the same materials and measured off
+        /// the same map, so the meadow does not end in mid-air at the rim.
+        ///
+        /// It lives here rather than beside the renderer because it shares the material cache and
+        /// because its draw calls have to be counted with everyone else's. A figure in the readout
+        /// that leaves the surround out is a figure that will be quoted at a milestone and be
+        /// wrong.
+        /// </summary>
+        public TerrainSkirt Skirt { get; }
 
         /// <summary>Unity layer the geometry is drawn on. Set before the first frame.</summary>
         public int GameObjectLayer { get; set; }
@@ -95,7 +107,33 @@ namespace Odyssey.Presentation.Rendering
         public int ScatterDensity
         {
             get => _mesher.ScatterDensity;
-            set => _mesher.ScatterDensity = value;
+            set
+            {
+                _mesher.ScatterDensity = value;
+                // The first ring of the surround is strewn at the same density, fading out. Kept
+                // in step here rather than read across at draw time so there is one setting, not
+                // two that can disagree about how grassy the meadow is.
+                Skirt.TuftDensity = value;
+            }
+        }
+
+        /// <summary>
+        /// Draw banks up terrace steps, and soil with a surface of its own. Both are levers for
+        /// the check harness rather than settings anyone is expected to turn off, and both only
+        /// take effect on chunks meshed after they change — the same rule
+        /// <see cref="ScatterDensity"/> follows, because meshing is where the decision is made.
+        /// </summary>
+        public bool Banks
+        {
+            get => _mesher.Banks;
+            set => _mesher.Banks = value;
+        }
+
+        /// <inheritdoc cref="Banks"/>
+        public bool EarthGeometry
+        {
+            get => _mesher.Earth;
+            set => _mesher.Earth = value;
         }
 
         /// <summary>
@@ -123,18 +161,33 @@ namespace Odyssey.Presentation.Rendering
             ChunksDrawn = 0;
             ChunksMeshedThisFrame = 0;
 
+            // Before the board, not after it: the surround is the furthest thing in the scene, and
+            // submitting it first lets the depth buffer reject it behind the board rather than
+            // shading it and then overdrawing the lot.
+            Skirt.GameObjectLayer = GameObjectLayer;
+            Skirt.CastShadows = CastShadows;
+            Skirt.SubmitToGpu = SubmitToGpu;
+            Skirt.Render(activeLayer);
+            DrawCalls += Skirt.DrawCalls;
+            InstancesDrawn += Skirt.InstancesDrawn;
+
             var size = _model.Size;
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
+            // Capped at the top of the geometry as well as at the policy's own limit. Above the
+            // surface the policy says "every layer, solid", and solid has no fade to cut the loop
+            // short — so without this a tall map would mesh a dozen layers of empty sky on every
+            // edit. See WorldRenderModel.HighestOccupiedLayer.
             int highest = Mathf.Min(size.SizeY - 1, slice.HighestDrawnLayer(activeLayer, size.SizeY));
+            highest = Mathf.Max(activeLayer, Mathf.Min(highest, _model.HighestOccupiedLayer));
             int chunksPerLayer = _model.Chunks.ChunksX * _model.Chunks.ChunksZ;
 
             for (int layer = lowest; layer <= highest; layer++)
             {
                 int steps = layer - activeLayer;
                 bool above = steps > 0;
-                bool ghost = above && slice.GhostsAbove;
-                float alpha = ghost ? slice.AlphaAbove(steps) : 1f;
-                if (ghost && alpha < 0.012f) continue;
+                bool ghost = above && slice.GhostsAbove(activeLayer);
+                float alpha = ghost ? slice.AlphaAbove(activeLayer, steps) : 1f;
+                if (ghost && alpha < SliceSettings.MinVisibleAlpha) continue;
 
                 // The layer immediately below the active one is the floor being stood on, not a
                 // storey beneath it, so it is lit as part of the active layer. Dimming it was
@@ -148,12 +201,10 @@ namespace Odyssey.Presentation.Rendering
                 // The active layer's ceiling is the slab of the layer above it. Dropping it is
                 // what makes interiors visible, and it is also exactly what roofs-off mode wants
                 // for every layer it draws.
+                AboveMode aboveMode = slice.AboveAt(activeLayer);
                 bool drawRoof = true;
-                if (slice.above != AboveMode.Full)
-                {
-                    if (above && slice.above == AboveMode.RoofsOff) drawRoof = false;
-                    else if (steps == 1 && slice.suppressActiveCeiling) drawRoof = false;
-                }
+                if (above && aboveMode == AboveMode.RoofsOff) drawRoof = false;
+                else if (steps == 1 && slice.SuppressCeilingAt(activeLayer)) drawRoof = false;
 
                 int first = layer * chunksPerLayer;
                 for (int i = 0; i < chunksPerLayer; i++)
@@ -195,7 +246,8 @@ namespace Odyssey.Presentation.Rendering
                 ModulePart part = _model.Library[bucket.Module].Parts[bucket.Part];
                 ResolveColour(bucket.Tint, part.IsFallback, shade, out Color tint, out Color emission);
                 Material material = _materials.Get(part.Material, tint, emission, ghost, alpha,
-                    foliage: TintCode.IsFoliage(bucket.Tint));
+                    foliage: TintCode.IsFoliage(bucket.Tint),
+                    water: TintCode.IsWater(bucket.Tint));
 
                 // Terrain receives shadows but never casts them, and that is not a saving so much
                 // as a correctness fix. Ground is a contiguous mass of cell-sized boxes; letting
@@ -213,6 +265,7 @@ namespace Odyssey.Presentation.Rendering
                 // map to cast a shadow a few centimetres long onto grass of the same colour. The
                 // reference art has no per-tuft shadows either — its ground is evenly lit and the
                 // shadows that matter are the ones people and buildings cast onto it.
+                // Water is terrain, so it already inherits terrain's "receives but never casts".
                 bool terrain = TintCode.IsTerrain(bucket.Tint);
                 bool foliage = TintCode.IsFoliage(bucket.Tint);
 
@@ -242,7 +295,7 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
-        static void ResolveColour(int tintCode, bool fallback, float shade, out Color tint, out Color emission)
+        public static void ResolveColour(int tintCode, bool fallback, float shade, out Color tint, out Color emission)
         {
             int value = TintCode.Value(tintCode);
             if (TintCode.IsFoliage(tintCode))
@@ -251,6 +304,14 @@ namespace Odyssey.Presentation.Rendering
                 // resolved to a primitive rather than strewing boxes over a meadow — so there is
                 // no fallback colour to choose between here.
                 tint = StuffPalette.FoliageTint(value);
+                emission = Color.black;
+            }
+            else if (TintCode.IsWater(tintCode))
+            {
+                // Always the solid colour, whatever art resolved underneath: water is drawn by
+                // Odyssey/Water and the palette entry *is* its colour. The alpha is carried
+                // through untouched below, because for water it is the opacity.
+                tint = StuffPalette.TerrainSolid(value);
                 emission = Color.black;
             }
             else if (TintCode.IsTerrain(tintCode))
@@ -267,7 +328,17 @@ namespace Odyssey.Presentation.Rendering
                 emission = Color.black;
             }
 
-            tint = new Color(tint.r * shade, tint.g * shade, tint.b * shade, 1f);
+            // Open to the sky means the depth shade has nothing to say. The shade measures how far
+            // you are peering *through* the world, and there is nothing over an outdoor surface —
+            // so a lower terrace is not dim ground, it is ground. Without this the meadow came out
+            // in one green per terrace, which reads as lighting that no light explains.
+            // TintCode.DaylitBase carries the whole argument.
+            if (TintCode.IsDaylit(tintCode)) shade = 1f;
+
+            // Alpha survives the shade for water and for nothing else. Everywhere else it is
+            // meaningless and forcing it to one keeps the material key from splitting on noise.
+            float keepAlpha = TintCode.IsWater(tintCode) ? tint.a : 1f;
+            tint = new Color(tint.r * shade, tint.g * shade, tint.b * shade, keepAlpha);
             emission = new Color(emission.r * shade, emission.g * shade, emission.b * shade, 1f);
         }
 
@@ -294,6 +365,16 @@ namespace Odyssey.Presentation.Rendering
             if (snapshot.PawnCount == 0 && snapshot.ThingCount == 0) return;
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
 
+            // Up to the highest layer anything is drawn on, NOT up to the active layer.
+            //
+            // **This was the owner's bug** (2026-09-16): "I couldn't see another person mining
+            // above me." The layers above the slice were x-rayed, so the rock was there — but
+            // everything alive in them was culled outright, by this line and by the one in
+            // PawnFigureDirector. A colonist working a storey up simply did not exist on screen.
+            // Actors are drawn solid at full opacity (owner's call), so the cut-off has to be the
+            // fade cutoff rather than the nominal cap, or a figure is drawn in rock that is not.
+            int highest = slice.HighestVisibleLayer(activeLayer, _model.Size.SizeY);
+
             EnsureColonistModules();
             System.Array.Clear(_colonistCounts, 0, _colonistCounts.Length);
 
@@ -301,7 +382,7 @@ namespace Odyssey.Presentation.Rendering
             for (int i = 0; i < pawns.Length; i++)
             {
                 var cell = pawns[i].Cell;
-                if (cell.Y < lowest || cell.Y > activeLayer) continue;
+                if (cell.Y < lowest || cell.Y > highest) continue;
                 if (drawnAsFigures != null && drawnAsFigures.Contains(pawns[i].Id.Value)) continue;
 
                 // Glide between cells rather than snapping. The simulation is discrete and
@@ -319,7 +400,10 @@ namespace Odyssey.Presentation.Rendering
                     // No licensed art: the stand-in is a body and a beacon, both deliberately
                     // larger than life, because a true-to-scale figure is a few pixels once the
                     // camera pulls back. That is how five colonists managed to be invisible.
-                    Vector3 drift = position - CellMetrics.FloorCentre(cell);
+                    // Measured against the lifted centre, because DrawMarker lifts as well.
+                    // Against the flat one the lift would be counted in the drift and again in
+                    // the marker, and the stand-in would float at twice the height of the ground.
+                    Vector3 drift = position - GroundRelief.Lift(CellMetrics.FloorCentre(cell));
                     DrawMarker(material, cell, new Vector3(1.4f, 2.6f, 1.4f), 1.3f, drift);
                     DrawMarker(material, cell, new Vector3(0.7f, 0.7f, 0.7f), 3.6f, drift);
                     continue;
@@ -341,7 +425,7 @@ namespace Odyssey.Presentation.Rendering
                     SubmitInstances(ColonistModule(variant),
                         _colonistPlacements[variant], _colonistCounts[variant], ref _actorMatrices);
 
-            RenderThings(snapshot.Things, lowest, activeLayer, material);
+            RenderThings(snapshot.Things, lowest, highest, material);
         }
 
         // ---- loose items ----------------------------------------------------------------------
@@ -351,6 +435,9 @@ namespace Odyssey.Presentation.Rendering
         int[] _itemCounts = System.Array.Empty<int>();
         Matrix4x4[] _itemMatrices = new Matrix4x4[16];
 
+        /// <summary>Scratch for one heap's worth of rocks. Reused, never grown: ItemHeap caps it.</summary>
+        readonly Matrix4x4[] _heapPlacements = new Matrix4x4[ItemHeap.Most];
+
         /// <summary>
         /// Draw the items lying on the ground, one instanced submission per item kind.
         ///
@@ -358,7 +445,7 @@ namespace Odyssey.Presentation.Rendering
         /// draw per item, which is what the stand-in marker did — costs a call for every ration
         /// crate on a map that will eventually hold thousands of them.
         /// </summary>
-        void RenderThings(System.ReadOnlySpan<ThingView> things, int lowest, int activeLayer, Material fallback)
+        void RenderThings(System.ReadOnlySpan<ThingView> things, int lowest, int highest, Material fallback)
         {
             if (things.Length == 0) return;
             EnsureItemModules();
@@ -367,7 +454,7 @@ namespace Odyssey.Presentation.Rendering
             for (int i = 0; i < things.Length; i++)
             {
                 CellRef cell = things[i].Cell;
-                if (cell.Y < lowest || cell.Y > activeLayer) continue;
+                if (cell.Y < lowest || cell.Y > highest) continue;
 
                 int def = things[i].DefIndex;
                 ResolvedModule? module = ItemModule(def);
@@ -379,8 +466,33 @@ namespace Odyssey.Presentation.Rendering
                     continue;
                 }
 
+                Vector3 floor = CellMetrics.FloorCentre(cell);
+
+                // Rubble is several rocks, and how many says how much. See ItemHeap: everything
+                // else on the floor is one prop, and stone drawn that way was a cairn standing in
+                // the cell rather than spoil lying in it.
+                if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe heap))
+                {
+                    int rocks = ItemHeap.Place(things[i].Stack, (uint)things[i].Id.Value,
+                        floor, heap, _heapPlacements);
+
+                    // Lifted one rock at a time, not once for the cell. The ground is a shallow
+                    // field now rather than a plane, and a heap is spread over most of a metre —
+                    // lift the centre and scatter from it and the outer rocks sit above or below
+                    // the ground they are supposed to be lying on.
+                    for (int rock = 0; rock < rocks; rock++)
+                    {
+                        Matrix4x4 placement = _heapPlacements[rock];
+                        Vector3 at = GroundRelief.Lift(placement.GetColumn(3));
+                        placement.SetColumn(3, new Vector4(at.x, at.y, at.z, 1f));
+                        AppendItem(def, placement);
+                    }
+
+                    continue;
+                }
+
                 AppendItem(def, Matrix4x4.TRS(
-                    CellMetrics.FloorCentre(cell),
+                    GroundRelief.Lift(floor),
                     Quaternion.Euler(0f, YawOf(things[i].Id), 0f),
                     Vector3.one));
             }
@@ -562,7 +674,7 @@ namespace Odyssey.Presentation.Rendering
         {
             var rp = new RenderParams(material) { layer = GameObjectLayer };
             Matrix4x4 m = Matrix4x4.TRS(
-                CellMetrics.FloorCentre(cell) + Vector3.up * height + drift,
+                GroundRelief.Lift(CellMetrics.FloorCentre(cell)) + Vector3.up * height + drift,
                 Quaternion.identity, size);
             Graphics.RenderMesh(rp, PrimitiveMeshes.UnitCube, 0, m);
             DrawCalls++;
@@ -583,15 +695,23 @@ namespace Odyssey.Presentation.Rendering
         ///
         /// The rig's colour is the hue; this is the weight, and it lives with the drawing because
         /// it is a fact about how a cursor should sit on a scene rather than about which colour
-        /// was chosen. Low, by the owner's eye: a cursor is a note on the world, not a thing in it.
+        /// was chosen.
+        ///
+        /// Raised from 0.32 on the owner's eye, 2026-09-16: against the wooded meadow the cursor
+        /// was hard to pick out at a glance, which is the one job it has. Still short of solid,
+        /// because a cursor is a note on the world rather than a thing in it.
         /// </summary>
-        public const float BracketOpacity = 0.32f;
+        public const float BracketOpacity = 0.62f;
 
         /// <summary>
-        /// Emission on the cursor. Kept faint: the earlier value lifted the line so much that a
-        /// translucent material read as solid, which defeated the translucency entirely.
+        /// Emission on the cursor, which is what keeps it the same white in shade as in sun.
+        ///
+        /// Raised with the opacity above. The earlier note here warned that lifting emission made
+        /// a translucent material read as solid — that was a fair objection when the alpha was
+        /// 0.32 and the glow was doing the work of being visible on its own. With the alpha
+        /// carrying it, the emission can go back to holding the colour steady under the light.
         /// </summary>
-        const float BracketGlow = 0.25f;
+        const float BracketGlow = 0.85f;
 
         Material BracketMaterial(Color colour) =>
             _materials.Get(_model.Library.FallbackMaterial, colour, colour * BracketGlow,
@@ -628,7 +748,11 @@ namespace Odyssey.Presentation.Rendering
             {
                 float sx = (corner & 1) == 0 ? -1f : 1f;
                 float sz = (corner & 2) == 0 ? -1f : 1f;
-                var at = new Vector3(centre.x + sx * half, centre.y, centre.z + sz * half);
+                // Each corner at its own height: the cell under the cursor is tilted, so a ring
+                // drawn at one height would sink into the ground on one side and hover on the
+                // other - which is exactly the tell that the cursor and the ground disagree.
+                var at = GroundRelief.Lift(
+                    new Vector3(centre.x + sx * half, centre.y, centre.z + sz * half));
 
                 _floorMatrices[n++] = Matrix4x4.TRS(
                     at - new Vector3(sx * length * 0.5f, 0f, 0f), Quaternion.identity,
@@ -647,7 +771,7 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The bracket cursor around one whole cell.</summary>
         public void DrawCellHighlight(CellRef cell, Color colour) =>
             DrawSelectionBracket(
-                CellMetrics.Centre(cell.X, cell.Z, cell.Y),
+                GroundRelief.Lift(CellMetrics.Centre(cell.X, cell.Z, cell.Y)),
                 new Vector3(CellMetrics.SizeXZ, CellMetrics.SizeY, CellMetrics.SizeXZ),
                 colour);
 
@@ -666,6 +790,96 @@ namespace Odyssey.Presentation.Rendering
         /// in one axis than another. Giving each stub its own matrix makes thickness exact, and it
         /// is still one instanced call because every stub is the same unit cube.
         /// </summary>
+        /// <summary>
+        /// How far a cell has been cut into, drawn as the material already taken out of it: a
+        /// slab eating down from the top of the cell as the work goes on.
+        ///
+        /// <para><b>An overlay, and deliberately not the rock itself.</b> The obvious way to show
+        /// a half-mined cell is to shrink its lump, and that is the one thing that must not
+        /// happen: a cell that pulls in from its neighbours opens daylight at the joint, which is
+        /// precisely the fault the whole solidity rule exists to prevent. The rock keeps filling
+        /// its box for as long as it exists and then goes all at once; what changes is this.</para>
+        ///
+        /// <para>Eating downward rather than filling upward because that is the way a cut reads —
+        /// the missing part is at the top, where a pick would have taken it. At nought nothing is
+        /// drawn at all, so an untouched order is a bracket and no more.</para>
+        /// </summary>
+        /// <summary>
+        /// Marks a cell as carrying a standing order: a thin translucent plate laid on the face a
+        /// worker would come at it from.
+        ///
+        /// <para><b>Not the selection bracket, and that is the whole point of it existing.</b>
+        /// Standing orders used to be drawn with <see cref="DrawCellHighlight"/>, which is the
+        /// corner-stub cursor — so the starting scenario, which marks every tree within ten cells
+        /// and three outcrops of stone, opened the game with a selection cursor around a hundred
+        /// things at once. The owner's words were "there seems to be faint selection over every
+        /// tree and stone". Nothing was broken; the wrong word was being used. A selection is one
+        /// thing the player is looking at and an order is a job on a list, and if they look alike
+        /// then neither means anything.</para>
+        ///
+        /// <para>On top of solid rock and on the floor of anything else, because that is the face
+        /// you see it from: a mine order is read looking down at the stone, and a fell order is
+        /// read on the ground the tree stands in. Inset from the cell edges so a row of marked
+        /// cells reads as a row rather than as one continuous sheet, and flat, so it never
+        /// competes with the thing it is marking.</para>
+        /// </summary>
+        public void DrawCellMark(CellRef cell, Color colour)
+        {
+            Material material = BracketMaterial(colour);
+            var rp = new RenderParams(material)
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+
+            int index = _model.Index(cell.X, cell.Z, cell.Y);
+            bool solid = _model.IsSolid(index);
+
+            Vector3 centre = GroundRelief.Lift(CellMetrics.FloorCentre(cell));
+            centre.y += solid ? CellMetrics.SizeY + MarkLift : MarkLift;
+
+            const float Inset = 0.22f;
+            var size = new Vector3(
+                CellMetrics.SizeXZ - Inset * 2f, MarkThickness, CellMetrics.SizeXZ - Inset * 2f);
+
+            Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
+                Matrix4x4.TRS(centre, Quaternion.identity, size));
+        }
+
+        /// <summary>Clear of the face it is laid on, or it z-fights with it.</summary>
+        const float MarkLift = 0.05f;
+
+        /// <summary>A plate, not a box. Thin enough to read as paint rather than as a thing.</summary>
+        const float MarkThickness = 0.04f;
+
+        public void DrawCellCut(CellRef cell, float fraction, Color colour)
+        {
+            if (fraction <= 0.02f) return;
+            if (fraction > 1f) fraction = 1f;
+
+            Material material = BracketMaterial(colour);
+            var rp = new RenderParams(material)
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+
+            // Inset a little so the slab sits inside the cell rather than z-fighting the faces of
+            // the rock it is drawn over, and of whatever stands beside it.
+            const float Inset = 0.06f;
+            float height = CellMetrics.SizeY * fraction;
+            var size = new Vector3(
+                CellMetrics.SizeXZ - Inset * 2f, height, CellMetrics.SizeXZ - Inset * 2f);
+
+            Vector3 centre = CellMetrics.Centre(cell.X, cell.Z, cell.Y);
+            centre.y += (CellMetrics.SizeY - height) * 0.5f;
+
+            Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
+                Matrix4x4.TRS(centre, Quaternion.identity, size));
+        }
+
         public void DrawSelectionBracket(Vector3 centre, Vector3 size, Color colour)
         {
             // Translucent, and emissive so it does not go dim with the light: a cursor has to be
@@ -720,6 +934,10 @@ namespace Odyssey.Presentation.Rendering
             InstancesDrawn += n;
         }
 
-        public void Dispose() => _materials.Dispose();
+        public void Dispose()
+        {
+            Skirt.Dispose();
+            _materials.Dispose();
+        }
     }
 }

@@ -51,7 +51,9 @@ namespace Odyssey.Sim.Pawns
                 case 1:
                 {
                     if (item.Cell != Pawn.Cell) return JobStatus.Failed;
-                    ctx.Items.PickUp(item, Pawn.Id);
+                    // Taken up rather than merely moved: TakeUp is where the stoop is reported,
+                    // so that every job which ever lifts anything gets it without being asked.
+                    TakeUp(ctx, item);
                     Job.CarriedItem = item.Id.Value;
                     NextToil();
                     return JobStatus.Ongoing;
@@ -73,7 +75,10 @@ namespace Odyssey.Sim.Pawns
                     // Checked again on arrival: something may have been dropped or eaten here
                     // meanwhile, and the cell claim guards against haulers, not against eaters.
                     if (!ctx.Items.CellHasSpace(Job.DestCell, item.DefIndex, item.Stack)) return JobStatus.Failed;
-                    ctx.Items.Drop(item, Job.DestCell);
+                    // The same motion the other way up, and only on a haul that *arrived*: see
+                    // PutDown, and see Cleanup below for the failure path that deliberately says
+                    // nothing.
+                    PutDown(ctx, item, Job.DestCell);
                     Job.CarriedItem = -1;
                     return JobStatus.Succeeded;
                 }
@@ -234,6 +239,22 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class FellJobDriver : JobDriver
     {
+        /// <summary>
+        /// The tree, once the walk is over and the swings have started. Presentation turns this
+        /// into an axe in the hands and an arm that comes down on it; before the walk ends it is
+        /// -1, so a colonist crossing the map does it empty-handed.
+        ///
+        /// The destination cell in preference to the target cell, so that this keeps naming the
+        /// tree whichever of the two the job carries it in. A driver that walks *into* the trunk
+        /// has the tree as its target and nothing as its destination; one that stands beside it
+        /// has the stand as its target and the tree as its destination. Both are reasonable, the
+        /// second is better, and the figure has to face the tree under either.
+        /// </summary>
+        /// <para>Nothing during the settle toil either, which is the point of it: the tree is
+        /// already down and the figure should be easing out of its stance, not still swinging.</para>
+        public override int WorkFocus =>
+            ToilIndex != 1 ? -1 : Job.DestCell >= 0 ? Job.DestCell : Job.TargetCell;
+
         public override bool TryMakeReservations(PawnContext ctx)
         {
             if (Job.TargetCell < 0 || Job.DestCell < 0) return false;
@@ -245,6 +266,10 @@ namespace Odyssey.Sim.Pawns
 
         public override JobStatus Tick(PawnContext ctx)
         {
+            // Before every guard below: by now the tree is down and its order cleared, so asking
+            // whether it is still a marked tree would fail the job on the first settle tick.
+            if (ToilIndex == SettleToil) return Settle(ctx);
+
             var designations = ctx.Designations;
             if (designations == null) return JobStatus.Failed;
 
@@ -260,6 +285,17 @@ namespace Odyssey.Sim.Pawns
                 return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
             }
 
+            // Still beside it, and on its own floor. A colonist that has been moved since it
+            // arrived — dropped by a dig under its feet, or by a climb retired beneath it — is no
+            // longer felling this tree, whatever its job says. Failing rather than walking back:
+            // the stance it was given may not exist any more, and the work giver will choose a
+            // fresh one next tick if there is one to choose.
+            if (!StillInReach(ctx, Pawn, cell, layersAbove: 0, layersBelow: 0))
+            {
+                WalkBack();
+                return JobStatus.Ongoing;
+            }
+
             ToilProgress++;
             Work(ctx);
             if (ToilProgress < ctx.Content.Jobs[Job.DefIndex].workTicks) return JobStatus.Ongoing;
@@ -267,7 +303,10 @@ namespace Odyssey.Sim.Pawns
             designations.Clear(cell);
             int yield = ctx.Content.WoodPerTree;
             ctx.Defer(_ => FellTree(ctx, cell, yield));
-            return JobStatus.Succeeded;
+
+            // The tree falls now; the woodcutter straightens up before walking off.
+            NextToil();
+            return JobStatus.Ongoing;
         }
 
         /// <summary>

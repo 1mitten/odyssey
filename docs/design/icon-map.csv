@@ -30,6 +30,9 @@ ui.res.protein,02,,,carton or tub,med,mapped
 ui.res.meat,07,,,raw meat slab,high,mapped
 ui.res.produce,02,,,carrot and potato,high,mapped
 ui.res.wood,-,,,"a short stack of logs, cut ends showing",-,gap
+ui.res.stone,-,,,"a few angular grey rocks with fresh broken faces",-,gap
+ui.res.ironore,-,,,"dark rock flecked with rust-orange",-,gap
+ui.res.coal,-,,,"glossy black lumps",-,gap
 ui.res.grain,01,,,wheat sheaf,med,mapped
 ui.res.fungus,01,,,cluster of mushrooms,high,mapped
 ui.res.water,08,,,water bottle,high,mapped
@@ -384,3 +387,13 @@ ui.speed.play,-,,,normal speed,-,gap
 ui.speed.fast,-,,,fast forward,-,gap
 ui.speed.ultra,-,,,very fast,-,gap
 ui.arch.tool.blastdoor,-,,,"a heavy blast door, distinct from a normal door",-,gap
+ui.terrain.grass,-,,,"a tuft of grass on a ground tile",-,gap
+ui.terrain.bareearth,-,,,"a bare soil tile",-,gap
+ui.terrain.gravel,-,,,"a tile of loose stones",-,gap
+ui.terrain.sand,-,,,"a plain sand tile",-,gap
+ui.terrain.marsh,-,,,"a reed or two on wet ground",-,gap
+ui.terrain.water.shallow,-,,,"ripples with the bed showing through",-,gap
+ui.terrain.water.deep,-,,,"flat dark water, no bed visible",-,gap
+ui.terrain.rock,-,,,"a face of natural stone",-,gap
+ui.terrain.subsoil,-,,,"a tile of dug earth",-,gap
+ui.terrain.bedrock,-,,,"a tile of dark, banded stone",-,gap

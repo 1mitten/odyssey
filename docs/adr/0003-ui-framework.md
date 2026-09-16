@@ -1,6 +1,6 @@
 # ADR 0003 — UI Toolkit for the runtime interface, behind a Unity-free HUD assembly
 
-- **Status:** accepted, pending one measurement
+- **Status:** accepted; F1 measured 2026-09-16 and does not fire, F2 and F3 still unmeasured
 - **Date:** 2026-09-15
 - **Deciders:** owner, with the research in `docs/research/g-02-unity-ui-framework.md`
 - **Supersedes:** nothing
@@ -91,6 +91,82 @@ markup file on disk without asset bundles. The mitigation is our own `UiLayoutDe
 parsed and validated in a Unity-free assembly, which turns the limitation into an advantage
 because layout definitions become headless-testable. The underlying claim is experiment R11 and
 takes ten minutes to settle on the dev machine.
+
+## Measurement, 2026-09-16 — F1 answered
+
+R1 ran on the dev machine as `Odyssey.Tests.PlayMode.HudStressTests`, under the real player loop,
+which `docs/lessons.md` records as the only place a frame number in this project means anything.
+The dense case is synthetic — the priority grid, the roster bar and the archive do not exist yet —
+and deliberately so: F1 asks about UI Toolkit, and real panels would answer with their own logic
+mixed in. Text is assigned from a pool built during set-up, so nothing measured is our garbage.
+
+| Arm | Elements | Labels retexted per frame | Cost over baseline |
+|---|---|---|---|
+| Priority grid | 1,250 | 25 at 60 Hz | 0.330 ms |
+| Roster bar | 200 | 150 at 60 Hz | 2.368 ms |
+| Archive (`ListView`) | 10,000 rows | 0 | −0.031 ms |
+| All three | 11,450 | 175 at 60 Hz | 2.626 ms |
+| **All three, bucket cadence** | 11,450 | ~11 at 4 Hz a label | **0.488 ms** |
+
+Baseline, the shipped HUD alone, is 0.414 ms. Allocation is **zero bytes a frame with zero
+generation-zero collections in every arm**, which is the half of F1 that mattered most: it is the
+mechanism that disqualified immediate mode, and it survives the dense case intact.
+
+**F1 does not fire.** 0.488 ms against a 1.167 ms budget — the 3.5 ms laptop figure divided by a
+headroom factor of three, the owner's ruling of 2026-09-16 on measuring a laptop budget on a
+desktop. The factor is **ASSUMED**: HUD work is main-thread, so the axis is single-thread speed,
+and a 2022 mid-range laptop part is roughly half a Ryzen 7 9800X3D and throttles under sustained
+load. It stands until a real laptop is measured.
+
+### What the arms actually say
+
+**Cost tracks text churn, not tree size.** The grid holds six times the roster's elements for a
+seventh of its cost, and ten thousand archive rows cost nothing measurable at all. The predictor
+is how many labels change text in a frame, at about **15 microseconds each** on this machine.
+That number is more useful than the verdict: it lets a panel be budgeted before it is built.
+
+**Virtualisation is confirmed.** −0.031 ms for ten thousand rows is noise around zero. That was
+mechanism 2 of the rationale above and a main reason uGUI was set aside; it is now measured
+rather than argued.
+
+**The frequency buckets are load-bearing, not an optimisation.** Driving all 175 labels every
+frame costs 2.626 ms and misses the budget on a machine three times faster than the target. The
+same tree at a four-hertz cadence costs 0.488 ms. Design 09 already binds inside buckets, so the
+design is correct — but it is now clear that it has to, and a future panel that rebinds on every
+frame will break the budget without touching the framework. That is a constraint on us, and it
+belongs beside F1 rather than inside it.
+
+**One prediction in `g-02` was wrong.** Its note that the priority grid might need a single
+element painting itself, added as R1's second arm, is unnecessary: the grid is the cheap part.
+The roster bar carries 90% of the cost, and it does so because of how often it rebinds rather
+than because of what it contains.
+
+### Still open
+
+F2 and F3 are not measured, and the fall-back rule is "if **any** of these hold". R2 (icon atlas
+pages and draw calls) remains. R4's player-loop half is answered by `HudSmokeTests`; whether a
+panel resolves under `-nographics` is still open.
+
+**F3 was attempted on 2026-09-16 and could not be answered, for two reasons worth recording.**
+
+The first is that the thing it tests was never built. Design 09 section 6 resolves all eight
+pointer cases through an `InputRouter` with an explicit capture stack; what exists is a single
+`Func<Vector2, bool>` on the camera rig, which is a one-bit answer. Four of the eight cases —
+a drag begun on the world and released over a panel, the reverse, a modal swallowing everything,
+and a tooltip never capturing — have nothing to test against, because drags, modals and tooltips
+do not exist yet.
+
+The second is that **mouse input cannot currently be driven in a PlayMode test at all**.
+`InputSystem.QueueStateEvent` with a `MouseState` reaches neither the scroll nor the buttons of
+`SliceCameraRig`. That was established the only way it could be: by a negative control, a scroll
+over the world that must zoom the camera and did not. Three versions of a test were written
+before that control existed, and all three produced confident, plausible, meaningless numbers —
+first by sampling the camera while it was still drifting toward its start-up target, then by
+demanding a tolerance tighter than the residue exponential smoothing leaves behind. They were
+deleted rather than kept.
+
+Both are `OQ-40`. Until the harness can be shown to fail when the input is withheld, nothing
+asserted about pointer routing should be believed, and F3 stays open.
 
 ## Flip conditions
 

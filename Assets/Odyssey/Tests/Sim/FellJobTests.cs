@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
@@ -157,6 +158,120 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Grid.Edifice[tree], Is.GreaterThanOrEqualTo(0), "the tree still stands");
             Assert.That(WoodOnTheGround(colony), Is.Zero);
             Assert.That(colony.Pawns.Reservations.ActiveClaims, Is.Zero, "no claim outlives the cancelled job");
+        }
+
+        /// <summary>
+        /// The signal the axe animation hangs on: a colonist is *working* only once it has
+        /// arrived and the swings have started, and the snapshot says which cell it is swinging
+        /// at. Without the second half presentation cannot turn the figure to face the tree,
+        /// because a pawn that has stopped walking has no heading left to read.
+        /// </summary>
+        [Test]
+        public void AColonistPublishesWhatItIsWorkingOnOnlyOnceItGetsThere()
+        {
+            ColonyWorld colony = Wooded();
+            int tree = NearestTree(colony);
+            Assume.That(tree, Is.GreaterThanOrEqualTo(0));
+            CellRef cell = Size.FromIndex(tree);
+
+            colony.World.Intents.Submit(new Intent(IntentKind.Designate, cell, (int)DesignationKind.Fell));
+            colony.World.Tick();
+
+            // Somebody has taken the job and is on their way, but nobody is swinging yet.
+            colony.World.Tick(5);
+            Assert.That(AnyoneWorking(colony), Is.False, "a colonist walking to a tree is not working at it");
+
+            PawnView worker = default;
+            for (int tick = 0; tick < 6_000 && !worker.Working; tick++)
+            {
+                colony.World.Tick();
+                foreach (PawnView pawn in colony.World.Views.Current.Pawns)
+                    if (pawn.Working) { worker = pawn; break; }
+            }
+
+            Assert.That(worker.Working, Is.True, "nobody ever started swinging");
+            Assert.That(worker.WorkCell, Is.EqualTo(cell), "the work cell is the tree, which is what the figure turns to face");
+            Assert.That(worker.MovePercent, Is.Zero, "a pawn at work is standing still");
+
+            // And it stops: the tree comes down and the swing has nothing left to land on.
+            colony.World.Tick(6_000);
+            Assert.That(colony.Grid.Edifice[tree], Is.LessThan(0), "the tree came down");
+            Assert.That(AnyoneWorking(colony), Is.False, "the axe is put away when the work ends");
+        }
+
+        static bool AnyoneWorking(ColonyWorld colony)
+        {
+            foreach (PawnView pawn in colony.World.Views.Current.Pawns)
+                if (pawn.Working) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// The tree comes down, and the woodcutter stands a beat before walking off (owner,
+        /// 2026-09-16: "should there be a second delay so you can motion more naturally instead of
+        /// snapping?").
+        ///
+        /// <para><b>What it is really protecting.</b> The drawn figure steps in towards its work
+        /// and eases back out over <c>PawnFigureDirector.WorkEaseSeconds</c> — 0.45 s, 27 ticks.
+        /// Without the settle, every single work-to-move transition began gliding within 1 to 3
+        /// ticks of the work stopping (27 of 27, measured over 40,000 ticks), so the figure was
+        /// walking and un-stepping at once. The gait blend leaves the stance out of the speed it
+        /// measures, so the feet played an ordinary walk while the body covered both, and it read
+        /// as a colonist skating away from the stump and then settling to a normal pace.</para>
+        ///
+        /// <para>So the assertion is not "there is a pause" but "the pause outlasts the ease", and
+        /// <see cref="JobDef.settleTicks"/> has to keep doing so. Measured afterwards: every gap
+        /// 31 to 33 ticks, none under 27.</para>
+        /// </summary>
+        [Test, Category("Long")]
+        public void AFelledTreeIsFollowedThroughRatherThanSnappedOutOf()
+        {
+            // With work to do: the default fixture marks nothing, and a colony with nothing to
+            // fell finishes no work and so has no transition to measure.
+            ColonyWorld colony = Wooded(fellRadius: 14);
+            // Asserted, not assumed. An Assume here would let somebody set settleTicks to zero
+            // and leave this test reporting "skipped" in a green run for ever — which is the trap
+            // docs/lessons.md records under "An Assume can hide a dead feature".
+            //
+            // 27 ticks is PawnFigureDirector.WorkEaseSeconds (0.45 s) at sixty ticks a second.
+            // The settle has to outlast the ease or it does not do its job.
+            const int EaseTicks = 27;
+            int settle = colony.Pawns.Content.Jobs[JobIndex.Fell].settleTicks;
+            Assert.That(settle, Is.GreaterThanOrEqualTo(EaseTicks),
+                "felling's settle is shorter than the work pose takes to ease out, so a colonist " +
+                "still walks away mid-retraction");
+
+            var stoppedAt = new Dictionary<int, int>();
+            var wasWorking = new Dictionary<int, bool>();
+            var gaps = new List<int>();
+
+            for (int tick = 0; tick < 40_000; tick++)
+            {
+                colony.World.Tick();
+                foreach (Pawn pawn in colony.Pawns.Pawns.All)
+                {
+                    int id = pawn.Id.Value;
+                    bool working = pawn.Driver != null && pawn.Driver.WorkFocus >= 0;
+                    wasWorking.TryGetValue(id, out bool before);
+
+                    if (before && !working) stoppedAt[id] = tick;
+                    else if (!working && stoppedAt.ContainsKey(id) && pawn.HasPath && pawn.MoveProgress > 0)
+                    {
+                        gaps.Add(tick - stoppedAt[id]);
+                        stoppedAt.Remove(id);
+                    }
+
+                    wasWorking[id] = working;
+                }
+            }
+
+            Assume.That(gaps, Is.Not.Empty, "nobody finished a piece of work and then walked away");
+
+            foreach (int gap in gaps)
+                Assert.That(gap, Is.GreaterThanOrEqualTo(settle),
+                    $"a colonist began walking {gap} ticks after its work stopped, inside the " +
+                    $"{settle}-tick settle — it is stepping out of the work stance while walking, " +
+                    "which reads as skating away from the stump");
         }
 
         [Test]

@@ -67,7 +67,7 @@ namespace Odyssey.Hud
         public string JobIconKey = "ui.status.idle";
         public int Food;
         public int Rest;      // 0..1000, the simulation's scale
-        public int Mood;      // 0..100
+        public int Mood;      // 0..1000, like Food and Rest
 
         // ---- no selection: the colony summary
         public int ColonySize;
