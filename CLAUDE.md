@@ -41,10 +41,17 @@ overwritten. Edit the source, then rebuild:
 ```
 python3 tools/wiki/build_wiki.py            # rebuild docs/wiki
 python3 tools/wiki/build_wiki.py --check    # exit 1 if stale; run before committing
+python3 tools/wiki/emit_labels.py           # rebuild Assets/Odyssey/Hud/Registry.g.cs
+python3 tools/wiki/emit_labels.py --check   # exit 1 if stale; run before committing
 ```
 
-`--check` is the gate and belongs in CI beside the test tiers. Two notes before extending it. The
-registry is hand-authored **only until the Def set covers it**: then `icon-keys.csv` is generated
+The HUD reads its labels from the same file: `emit_labels.py` generates `Registry.g.cs`
+(`Registry.Label(key)`), `JobLabels` and `LedgerModel` name nothing themselves, and
+`RegistryTests` fails the fast tier on any key the CSV does not know. A content commit runs both
+checks.
+
+Both `--check`s are the gate and belong in CI beside the test tiers. Two notes before extending
+it. The registry is hand-authored **only until the Def set covers it**: then `icon-keys.csv` is generated
 one way out of the Defs and committed, so the wiki and the build-gating icon tests share one
 source. Do not create a second source of truth meanwhile. And the hosted copies are snapshots:
 after a rebuild, republish `docs/wiki/artifact.html` and
@@ -109,7 +116,7 @@ The two that come up daily:
 - Tests run headless via `scripts/unity.sh test`. Each milestone gate is: tests pass, a headless one-day simulation runs with no errors, `docs/milestones/Mx-report.md` written, stop for review.
 - Commits: small, one concern each, descriptive message. Never commit `Assets/Synty/`, `Library/`, logs or test results.
 - Interface icons are referenced by symbolic key, never by filename, and are 64 px, point-filtered, uncompressed, no mips, displayed at 32 and 64 only (`docs/adr/0007-pixel-art-icon-pipeline.md`).
-- Content changes carry their regenerated wiki: `python3 tools/wiki/build_wiki.py --check` passes before the commit.
+- Content changes carry their regenerated wiki and label registry: `python3 tools/wiki/build_wiki.py --check` and `python3 tools/wiki/emit_labels.py --check` both pass before the commit.
 
 ## Starting a local session
 

@@ -104,7 +104,7 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(pane.Subject, Is.EqualTo(InspectSubject.Colonist));
             Assert.That(pane.Title, Is.EqualTo("Kester"));
-            Assert.That(pane.Job, Is.EqualTo("eating"));
+            Assert.That(pane.Job, Is.EqualTo("Eating"), "the registry's word for ui.status.eating");
             Assert.That(pane.Layer, Is.EqualTo(1));
 
             Assert.That(pane.Tabs.Count, Is.EqualTo(7));
@@ -208,13 +208,16 @@ namespace Odyssey.Tests.Hud
             var ledger = new LedgerModel();
             ledger.Refresh(snapshot);
 
-            var meals = ledger.Rows.Find(r => r.Name == "Meals");
-            Assert.That(meals.Real, Is.True);
+            var meals = ledger.Rows.Find(r => r.Name == "Meal");
+            Assert.That(meals.Real, Is.True, "the row is named as the registry names ui.res.meal");
             Assert.That(meals.Quantity, Is.EqualTo(24));
             Assert.That(ledger.Rows.Find(r => r.Name == "Wood").Quantity, Is.EqualTo(20), "felled wood is a real row");
 
-            Assert.That(ledger.Rows.Find(r => r.Name == "Scrap").Real, Is.False);
-            Assert.That(ledger.Rows.Find(r => r.Name == "Scrap").Quantity, Is.Zero);
+            var scrap = ledger.Rows.FindAll(r => r.IconKey == "ui.res.scrap");
+            Assert.That(scrap.Count, Is.EqualTo(1), "a commodity has one row, never a real and a planned one");
+            Assert.That(scrap[0].Real, Is.True);
+            Assert.That(ledger.Rows.Find(r => r.Name == "Alloy").Real, Is.False);
+            Assert.That(ledger.Rows.Find(r => r.Name == "Alloy").Quantity, Is.Zero);
         }
     }
 }

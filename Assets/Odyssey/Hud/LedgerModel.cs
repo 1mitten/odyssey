@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using System.Linq;
 using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
@@ -25,14 +26,16 @@ namespace Odyssey.Hud
     /// </summary>
     public sealed class LedgerModel
     {
-        static readonly (string key, string name)[] Planned =
-        {
-            ("ui.res.scrap", "Scrap"),
-            ("ui.res.alloy", "Alloy"),
-            ("ui.res.concrete", "Concrete"),
-            ("ui.res.water", "Water"),
-            ("ui.res.medkit", "Medkit"),
-        };
+        const string Meal = "ui.res.meal";
+        const string Wood = "ui.res.wood";
+        const string Scrap = "ui.res.scrap";
+
+        /// <summary>The future economy's rows, shown greyed until it exists. Names come from the
+        /// registry, as every row's does.</summary>
+        static readonly string[] Planned = { Scrap, "ui.res.alloy", "ui.res.concrete", "ui.res.water", "ui.res.medkit" };
+
+        /// <summary>Every key a row can carry, so a test can prove each is a name the registry knows.</summary>
+        public static readonly string[] IconKeys = new[] { Meal, Wood }.Concat(Planned).ToArray();
 
         public readonly List<LedgerRow> Rows = new List<LedgerRow>();
 
@@ -52,15 +55,24 @@ namespace Odyssey.Hud
                 else if (things[i].DefIndex == ItemHandle.Wood) wood += stack;
             }
 
-            if (meals > 0) Rows.Add(new LedgerRow
-                { IconKey = "ui.res.meal", Name = "Meals", Quantity = meals, Real = true });
-            if (wood > 0) Rows.Add(new LedgerRow
-                { IconKey = "ui.res.wood", Name = "Wood", Quantity = wood, Real = true });
-            if (salvage > 0) Rows.Add(new LedgerRow
-                { IconKey = "ui.res.scrap", Name = "Salvage", Quantity = salvage, Real = true });
+            if (meals > 0) Rows.Add(Row(Meal, meals, real: true));
+            if (wood > 0) Rows.Add(Row(Wood, wood, real: true));
+            if (salvage > 0) Rows.Add(Row(Scrap, salvage, real: true));
 
-            foreach (var (key, name) in Planned)
-                Rows.Add(new LedgerRow { IconKey = key, Name = name, Quantity = 0, Real = false });
+            // A commodity has one row. Scrap is planned and, once salvage lies on the ground,
+            // real as well; under one registry name the two rows would read as a duplicate.
+            foreach (string key in Planned)
+                if (!Has(key)) Rows.Add(Row(key, 0, real: false));
+        }
+
+        static LedgerRow Row(string key, int quantity, bool real) =>
+            new LedgerRow { IconKey = key, Name = Registry.Label(key), Quantity = quantity, Real = real };
+
+        bool Has(string key)
+        {
+            for (int i = 0; i < Rows.Count; i++)
+                if (Rows[i].IconKey == key) return true;
+            return false;
         }
     }
 }
