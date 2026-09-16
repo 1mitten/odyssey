@@ -35,7 +35,7 @@
 
 .slot-left {
     position: absolute;
-    left: 10px; top: 10px; bottom: 322px;
+    left: 10px; top: 10px; bottom: 372px;
     width: 214px;
     flex-direction: column;
     overflow: hidden;
@@ -69,13 +69,14 @@
 .slot-ruler {
     position: absolute;
     right: 10px; bottom: 56px;
-    width: 214px;
+    width: 64px;
     top: 292px;
 }
 
 .slot-inspect {
     position: absolute;
-    left: 10px; bottom: 10px;
+    /* Above the tab bar, never under it: the pane is what a click answers with. */
+    left: 10px; bottom: 60px;
     width: 356px;
     height: 302px;
 }
@@ -94,10 +95,30 @@
 }
 
 .slot-overlays {
+    /* A strip of icons beside the cancel affordance, one row, no frame. */
     position: absolute;
     right: 56px; bottom: 10px;
-    width: 178px;
+    height: 36px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 4px;
+    background-color: #141b24e6;
+    border-width: 1px;
+    border-color: #2b3947;
+    border-radius: 6px;
 }
+
+.overlay__btn {
+    width: 22px; height: 22px;
+    margin: 0 2px;
+    border-radius: 4px;
+    justify-content: center;
+    align-items: center;
+}
+
+.overlay__btn:hover { background-color: #22303d; }
+
+.overlay__btn .icon { margin-right: 0; }
 
 .cancel {
     position: absolute;
@@ -525,4 +546,45 @@
     color: #d9a23b;
     font-size: 10px;
     margin-top: 6px;
+}
+
+/* ---------------- depth ruler as one bar (A11) ---------------- */
+
+.ruler {
+    flex-direction: column;
+    padding: 4px 18px 4px 18px;
+}
+
+.ruler__active {
+    font-size: 11px;
+    color: #cdeef5;
+    -unity-text-align: middle-center;
+    padding: 3px 0 1px 0;
+}
+
+.ruler__tick {
+    flex-grow: 1;
+    min-height: 6px;
+    margin: 1px 0;
+    border-radius: 2px;
+    background-color: #1d2833;
+    border-width: 1px;
+    border-color: #2b3947;
+    justify-content: center;
+    align-items: center;
+}
+
+.ruler__tick:hover { background-color: #22303d; }
+
+.ruler__tick--active {
+    background-color: #2b7f8f;
+    border-color: #5ec8dc;
+}
+
+.ruler__tick--surface { border-bottom-width: 2px; border-bottom-color: #93a4b5; }
+
+.ruler__dot {
+    width: 5px; height: 5px;
+    border-radius: 3px;
+    background-color: #f2d16b;
 }
