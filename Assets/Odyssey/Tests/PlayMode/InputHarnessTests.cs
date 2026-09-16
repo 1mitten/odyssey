@@ -28,6 +28,20 @@ namespace Odyssey.Tests.PlayMode
         /// <summary>Frames to let the rig read input and smooth toward its target.</summary>
         const int SettleFrames = 8;
 
+        /// <summary>
+        /// How far the camera may creep on its own over <see cref="SettleFrames"/>, and how far a
+        /// wheel notch must move it to count.
+        ///
+        /// <para>The rig smooths toward its target exponentially, so it approaches and never
+        /// arrives: measured drift after settling is about 0.005 over eight frames. Asserting
+        /// "did not move at all" therefore fails on a camera nobody touched — the control caught
+        /// exactly that. One notch moves it by <c>zoomSpeed</c> scaled by distance, which is
+        /// several units, so there are two orders of magnitude between the signal and the
+        /// creep and the two numbers below sit in the gap.</para>
+        /// </summary>
+        const float DriftAtMost = 0.05f;
+        const float ZoomAtLeast = 0.5f;
+
         Mouse? _mouse;
 
         /// <summary>
@@ -67,8 +81,8 @@ namespace Odyssey.Tests.PlayMode
                 yield return Scroll(+1f);
                 for (int i = 0; i < SettleFrames; i++) yield return null;
 
-                Assert.That(rig.distance, Is.Not.EqualTo(before).Within(0.001f),
-                    $"the wheel did not reach the camera: distance stayed at {before:F3}. " +
+                Assert.That(Mathf.Abs(rig.distance - before), Is.GreaterThan(ZoomAtLeast),
+                    $"the wheel did not reach the camera: distance went {before:F3} -> {rig.distance:F3}. " +
                     "Mouse input is not being delivered to the player loop in this test.");
             }
             finally
@@ -93,8 +107,9 @@ namespace Odyssey.Tests.PlayMode
 
                 for (int i = 0; i < SettleFrames; i++) yield return null;
 
-                Assert.That(rig.distance, Is.EqualTo(before).Within(0.001f),
-                    "the camera moved with no input at all, so any zoom the test above sees is not the wheel");
+                Assert.That(Mathf.Abs(rig.distance - before), Is.LessThan(DriftAtMost),
+                    $"the camera moved {before:F3} -> {rig.distance:F3} with no input at all, " +
+                    "so any zoom the test above sees is not the wheel");
             }
             finally
             {
