@@ -358,6 +358,7 @@ namespace Odyssey.Hud
             { "ui.status.sleeping", "Sleeping" },
             { "ui.status.tending", "Tending" },
             { "ui.tab.animals", "Animals" },
+            { "ui.tab.architect", "Architect" },
             { "ui.tab.archive", "History" },
             { "ui.tab.bills", "Bills" },
             { "ui.tab.colonists", "Colonists" },

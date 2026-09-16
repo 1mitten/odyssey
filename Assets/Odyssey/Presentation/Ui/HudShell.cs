@@ -69,6 +69,9 @@ namespace Odyssey.Presentation.Ui
         VisualElement _leftColumn = null!;
         VisualElement _rightColumn = null!;
         VisualElement _bottomRow = null!;
+        VisualElement _bottomStack = null!;
+        VisualElement _archPanel = null!;
+        VisualElement _archButton = null!;
         readonly List<CardView> _cards = new List<CardView>();
         VisualElement _rosterHost = null!;
         VisualElement _rulerRows = null!;
@@ -161,9 +164,17 @@ namespace Odyssey.Presentation.Ui
             // the bar's right end and ate the last tab -- which read as the bar being too wide
             // when it was not. In a row they divide the edge between them: the tabs take what is
             // left after the other two have taken what they need.
+            // A stack, not a row, and the palette lives in it above the bar. Pinning the
+            // palette to a fixed distance from the bottom is the same mistake this file has
+            // now made three times: the bar wraps to two rows once every tab carries its full
+            // name, and a hand-picked offset put the palette straight through it.
+            _bottomStack = new VisualElement();
+            _bottomStack.AddToClassList("slot-bottom-stack");
+            _hud.Add(_bottomStack);
+
             _bottomRow = new VisualElement();
             _bottomRow.AddToClassList("slot-bottom");
-            _hud.Add(_bottomRow);
+            _bottomStack.Add(_bottomRow);
 
             BuildLedger();
             BuildArchitect();
@@ -419,7 +430,9 @@ namespace Odyssey.Presentation.Ui
 
         void BuildArchitect()
         {
-            var region = Region(_leftColumn, "A7 · ARCHITECT", "arch");
+            var region = Region(_bottomStack, "A7 · ARCHITECT", "arch");
+            _archPanel = region;
+            region.style.display = DisplayStyle.None;
             var cats = new VisualElement();
             cats.AddToClassList("arch__cats");
 
@@ -446,6 +459,16 @@ namespace Odyssey.Presentation.Ui
             _archPalette = new VisualElement();
             _archPalette.AddToClassList("arch__tools");
             region.Add(_archPalette);
+        }
+
+        const string ArchitectKey = "ui.tab.architect";
+
+        /// <summary>Open or close the placement palette from the bottom bar.</summary>
+        void ToggleArchitect()
+        {
+            bool opening = _archPanel.style.display == DisplayStyle.None;
+            _archPanel.style.display = opening ? DisplayStyle.Flex : DisplayStyle.None;
+            _archButton.EnableInClassList("chip--on", opening);
         }
 
         void SelectArchitectCategory(int index)
@@ -864,9 +887,24 @@ namespace Odyssey.Presentation.Ui
         {
             var bar = new VisualElement();
             bar.AddToClassList("slot-tabs");
+
+            // Architect first, left of Work, because it is the one control on this bar that
+            // does something today: it opens the placement palette. It used to be a panel
+            // pinned to the left edge, where it competed with the ledger for a column that
+            // could not hold both (owner decision, 2026-09-16).
+            _archButton = Chip(new IconBadge(ArchitectKey), Registry.Label(ArchitectKey));
+            _archButton.AddToClassList("tab--architect");
+            _archButton.tooltip = "Build, dig and zone — placement tools arrive with M3";
+            _archButton.RegisterCallback<ClickEvent>(_ => ToggleArchitect());
+            bar.Add(_archButton);
+
             for (int i = 0; i < TabKeys.Length; i++)
             {
-                var chip = Off(Chip(new IconBadge(TabKeys[i]), TabKeys[i][7..].Capitalise()));
+                // The label comes from the naming registry, which is the whole point of the
+                // registry: a name the owner corrects in the CSV reaches the screen without
+                // anyone retyping it. Deriving it from the key spelled ui.tab.archive as
+                // "Archive" while the registry called it "History".
+                var chip = Off(Chip(new IconBadge(TabKeys[i]), Registry.Label(TabKeys[i])));
                 chip.tooltip = TabKeys[i] + " — " + TabReasons[i];
                 bar.Add(chip);
             }
