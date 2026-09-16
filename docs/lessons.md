@@ -90,6 +90,17 @@ for the artifact database, which is 6.2 GB in 62,220 files and copies in about f
 
 **The Bash tool mangles apostrophes inside heredocs.** A `cat > file <<'EOF'` block containing ordinary English possessives fails with `unexpected EOF while looking for matching`. Write prose and C# with the file-writing tool; keep heredocs for JSON and other apostrophe-free content.
 
+**`python3` in the Bash tool is not the Python that CLAUDE.md says is installed.** The project note says Python 3.13 sits ahead of `WindowsApps` in PATH, and in PowerShell it does. Inside the Bash tool it does not: `which python3` resolves to the `WindowsApps` alias stub, which prints *"Python was not found; run without arguments to install from the Microsoft Store"* and exits 49 — a failure that looks like Python being absent rather than shadowed. Every wiki, icon and mockup command is affected, and `build_wiki.py --check` is a commit gate. Use the interpreter by path:
+
+```bash
+export PYTHONUTF8=1
+"$LOCALAPPDATA/Programs/Python/Python313/python3.exe" tools/wiki/build_wiki.py --check
+```
+
+`PYTHONUTF8=1` is separately required, for the reason already recorded below: without it Windows Python reads the docs as cp1252 and calls every file stale.
+
+**Editing a generated file's *source* is not enough if the generator also fingerprints the design documents.** `build_wiki.py --check` went stale after an edit to `docs/design/02-world-and-layers.md`, with no CSV touched. Rebuild and re-check after *any* documentation change that a wiki page quotes, not only after a change to `icon-keys.csv`.
+
 **A plausible causal story attached to a real number is still a guess.** The D1 benchmark measured a real fact: pathfinding was 65% of the tick and 1,058 of 1,800 replans exhausted their node budget. The explanation attached to it — that these were searches for unreachable targets — was written into a design document and an ADR as though it were part of the measurement. It was not, and when measured separately it proved wrong: only 14% of those targets were actually unreachable, and under 1% on a structured map. The fix that worked was hierarchical search plus a better heuristic. **Measure the cause, not just the symptom, before designing against it.** The design survived, but for a different and better-stated reason, and the documents had to be corrected.
 
 **Unity Hub opens a project with the newest installed editor, not the pinned one — and the newer editor upgrades the project without asking.** On 2026-09-15 the project was opened with 6000.6.0f1 while pinned to 6000.3.24f1. Unity silently rewrote `ProjectVersion.txt` and bumped URP 17.3 to 17.6, Timeline 1.8 to 6.6, uGUI 2.0 to 2.6 and Burst 1.8 to 2.0, after which the code stopped compiling on obsolete APIs (`Object.GetInstanceID` is obsolete in 6.6 and current in 6.3). The same code had passed 222 tests headless minutes earlier. It recurs on every open, because Hub keeps defaulting to the newest.
@@ -97,6 +108,18 @@ for the artifact database, which is 6.2 GB in 62,220 files and copies in about f
 Guard: `.unity-version` is the committed pin and `scripts/unity.sh` checks `ProjectVersion.txt` against it before doing anything, restoring the pin and the package files if they have drifted. Without that check the wrapper would read the upgraded file and dutifully launch the wrong editor. **Open the project with the pinned entry in Unity Hub, or with `scripts/unity.sh open`, which always resolves the pin.**
 
 The general lesson: **a version pin that only a file records is not a pin, it is a preference.** If a tool can silently rewrite it, something has to check it.
+
+## Water, and two things a design review did not catch
+
+Recorded because both are properties of cutting *anything* into a heightfield, not of water, and the next feature that lowers a column will meet them again.
+
+**Lowering a column by one can leave a step of two.** A channel cut across terraced ground lowers a column that was already a layer below its neighbour, and "neighbouring surface cells are never more than one layer apart" is the invariant that keeps the board walkable without ramps. The design reasoned carefully about the water column and not at all about the column beside it. A test caught it on the first run.
+
+**Lowering a column can also leave the thing in it hanging above its neighbour.** The same channel cut into a slope put water a layer *above* the dry ground next to it — water that would drain. This breaks no invariant, so nothing would have failed; it was caught only because the test asserted the relation it actually wanted (a bank stands *exactly* one layer over its bed) rather than the weaker one that the invariant implies.
+
+**And the fix has to be symmetric.** The first attempt let the wet end pull its bank down. That is half the relation, and it silently fails: a bank lowered by some *other* channel never tells the channel beside it to follow, so a stretch of map keeps its water perched. Stating the relation once, in a `Reconcile(a, b)` that either end can call, is what made it correct — and it is the shape to reach for whenever a constraint holds between two neighbours rather than within one.
+
+The general lesson: **when a change moves the ground, write the test against the relation you want, not against the invariant you are afraid of breaking.** The invariant passed in both cases that were wrong.
 
 ## Generators and their parameters
 
