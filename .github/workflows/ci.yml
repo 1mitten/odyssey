@@ -50,6 +50,9 @@ jobs:
       - name: Content registry is current
         run: python3 tools/wiki/build_wiki.py --check
 
+      - name: HUD labels are generated from the registry
+        run: python3 tools/wiki/emit_labels.py --check
+
       - name: Icon tooling tests
         run: python3 -m unittest discover -s tools/icons -t tools/icons
 
