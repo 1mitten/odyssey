@@ -198,6 +198,75 @@ namespace Odyssey.Presentation.Rendering
         /// a live figure.
         /// </summary>
         public List<LocomotionEntry> locomotion = new List<LocomotionEntry>();
+
+        /// <summary>
+        /// Which parts of this body's atlas are its skin, its hair and its clothes, so a colonist
+        /// can be recoloured. Empty on everything that is not a colonist.
+        /// </summary>
+        public AppearanceCells appearance = new AppearanceCells();
+    }
+
+    /// <summary>How confidently a body was carved into recolourable regions.</summary>
+    public enum AppearanceQuality
+    {
+        /// <summary>Never classified. Draws exactly as the art was painted.</summary>
+        None = 0,
+
+        /// <summary>Skin, hair and clothing all found.</summary>
+        Full = 1,
+
+        /// <summary>No hair region: bald, hooded or helmeted. Skin and clothing still vary.</summary>
+        NoHair = 2,
+
+        /// <summary>
+        /// No skin region. A robot, a full helmet, a body in gloves and a visor. Correct rather
+        /// than broken — the cop really has no skin showing, which the swatch probe confirmed.
+        /// </summary>
+        NoSkin = 3,
+
+        /// <summary>Clothing only: neither skin nor hair could be told apart.</summary>
+        ClothOnly = 4,
+
+        /// <summary>
+        /// Two slots wanted the same swatch cell and the smaller one was dropped. The honest cost
+        /// of recolouring by UV region rather than by an authored per-vertex mask.
+        /// </summary>
+        Shared = 5,
+    }
+
+    /// <summary>
+    /// The rectangles of the pack atlas that one body's skin, hair and clothing are painted from.
+    ///
+    /// <para>These are <b>measurements, not art</b>: UV coordinates read off a licensed mesh, in
+    /// exactly the standing the mesh bounds and gait speeds already committed to this asset have.
+    /// No pixel is copied anywhere, which is what keeps <c>Assets/Synty</c> the only place the
+    /// packs live.</para>
+    ///
+    /// <para>Two rectangles per slot, because a slot is not always one cell — the farmer's skin is
+    /// two clusters and the bandit's hair is two. An unused rectangle is left empty, and the
+    /// shader treats an empty rectangle as one no UV is inside, so an unclassified slot needs no
+    /// special case anywhere.</para>
+    /// </summary>
+    [Serializable]
+    public sealed class AppearanceCells
+    {
+        public Rect[] skin = Array.Empty<Rect>();
+        public Rect[] hair = Array.Empty<Rect>();
+        public Rect[] cloth = Array.Empty<Rect>();
+        public Rect[] cloth2 = Array.Empty<Rect>();
+
+        [Tooltip("Vertices in each slot, and in the body, as the classifier counted them.")]
+        public int skinVerts;
+        public int hairVerts;
+        public int clothVerts;
+        public int cloth2Verts;
+        public int totalVerts;
+
+        public AppearanceQuality quality = AppearanceQuality.None;
+
+        /// <summary>True when this body has anything to recolour at all.</summary>
+        public bool Any => quality != AppearanceQuality.None &&
+                           (skin.Length > 0 || hair.Length > 0 || cloth.Length > 0);
     }
 
     /// <summary>

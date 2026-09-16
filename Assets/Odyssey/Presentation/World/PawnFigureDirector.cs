@@ -386,6 +386,13 @@ namespace Odyssey.Presentation.World
 
         readonly Look?[] _looks;
         readonly int _usableLooks;
+        readonly ModuleCatalogue? _catalogue;
+
+        /// <summary>
+        /// Where a colonist's colours come from. Null draws every figure in the pack's own paint,
+        /// which is what a harness that never set one gets.
+        /// </summary>
+        public ColonistMaterials? Materials { get; set; }
 
         /// <summary>
         /// The catalogue row per style, or null on a clone without the packs.
@@ -625,6 +632,7 @@ namespace Odyssey.Presentation.World
         {
             _parent = parent;
             _layer = layer;
+            _catalogue = catalogue;
             _looks = LooksFrom(catalogue);
             for (int i = 0; i < _looks.Length; i++) if (_looks[i] != null) _usableLooks++;
             for (int i = 0; i < _toolRows.Length; i++)
@@ -1931,6 +1939,46 @@ namespace Odyssey.Presentation.World
             }
         }
 
+        /// <summary>
+        /// Dress a figure in the colours the pawn borrowing it was dealt.
+        ///
+        /// <para>Assigns <c>sharedMaterial</c> and never <c>material</c>. The latter silently
+        /// instantiates a per-renderer copy that Unity then owns and never collects — the same
+        /// class of leak <c>ModuleLibrary.Dispose</c> exists to prevent, arriving once per lease
+        /// rather than once per look.</para>
+        ///
+        /// <para>A body the classifier could not read, or a build with no character shader, gets
+        /// its own art back rather than something approximate. That is what keeps an unclassified
+        /// colonist looking exactly the way the artist painted it.</para>
+        /// </summary>
+        void Repaint(Figure figure, PawnId pawn)
+        {
+            if (Materials == null || figure.Skins.Length == 0) return;
+
+            AppearanceCells? cells = CellsFor(figure.Look);
+            ColonistAppearance look = Appearances.For(pawn.Value);
+
+            for (int i = 0; i < figure.Skins.Length; i++)
+            {
+                SkinnedMeshRenderer skin = figure.Skins[i];
+                if (skin == null) continue;
+
+                Material? art = figure.ArtMaterials[i];
+                Material? painted = Materials.For(art, cells, look);
+                skin.sharedMaterial = painted != null ? painted : art;
+            }
+        }
+
+        /// <summary>Which swatches this face's body uses, or null when it was never classified.</summary>
+        AppearanceCells? CellsFor(int look)
+        {
+            if (_catalogue == null) return null;
+            List<ModuleEntry> rows = _catalogue.FindFamily(ModuleIds.ColonistBase);
+            if ((uint)look >= (uint)rows.Count) return null;
+            AppearanceCells cells = rows[look].appearance;
+            return cells.Any ? cells : null;
+        }
+
         Figure Lease(PawnId pawn, Vector3 at)
         {
             if (_byPawn.TryGetValue(pawn.Value, out Figure? existing)) return existing;
@@ -1940,6 +1988,7 @@ namespace Odyssey.Presentation.World
             // different face would put the wrong person on screen rather than save any work.
             int look = LookFor(pawn);
             Figure figure = Free(look) ?? Create(look);
+            Repaint(figure, pawn);
             figure.Pawn = pawn.Value;
             figure.Settled = false;
             figure.Speed = 0f;
@@ -2074,6 +2123,9 @@ namespace Odyssey.Presentation.World
             graph.Evaluate(0f);
 
             var figure = new Figure(instance, animator, graph, mixer, clips) { Look = look };
+            figure.Skins = skins;
+            figure.ArtMaterials = new Material?[skins.Length];
+            for (int i = 0; i < skins.Length; i++) figure.ArtMaterials[i] = skins[i].sharedMaterial;
             BindWorkBones(figure, animator);
             _figures.Add(figure);
             return figure;
@@ -2582,6 +2634,17 @@ namespace Odyssey.Presentation.World
             public readonly PlayableGraph Graph;
             public readonly AnimationMixerPlayable Mixer;
             public readonly AnimationClipPlayable[] Clips;
+
+            /// <summary>
+            /// The figure's skinned renderers and the material each was built with.
+            ///
+            /// Kept so a lease can repaint the figure for the pawn borrowing it and hand the art
+            /// back when it cannot. The pool is keyed on the face, not on the colours, so the same
+            /// body is lent to colonists wearing different clothes and must be repainted on every
+            /// lease rather than once at construction.
+            /// </summary>
+            public SkinnedMeshRenderer[] Skins = Array.Empty<SkinnedMeshRenderer>();
+            public Material?[] ArtMaterials = Array.Empty<Material?>();
 
             /// <summary>The pawn this figure is lent to, or -1 when it is parked in the pool.</summary>
             public int Pawn;

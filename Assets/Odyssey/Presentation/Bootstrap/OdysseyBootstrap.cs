@@ -135,6 +135,7 @@ namespace Odyssey.Presentation.Bootstrap
         AudioDirector? _audio;
         DaylightDirector? _daylight;
         Material? _actorMaterial;
+        ColonistMaterials? _colonistMaterials;
         MapGenDef? _gen;
         double _accumulator;
         float _tickAlpha;
@@ -269,6 +270,7 @@ namespace Odyssey.Presentation.Bootstrap
             // same inputs are re-derived. See ColonistAppearance.
             uint castSeed = colonistLookSeed != 0 ? (uint)colonistLookSeed : seed;
             var appearances = new ColonistAppearanceBook(castSeed, moduleCatalogue);
+            _colonistMaterials = new ColonistMaterials();
             Debug.Log($"[Odyssey] colonist cast seed {castSeed} over {appearances.LookCount} faces " +
                       "(set colonistLookSeed to override the world seed)");
 
@@ -301,6 +303,7 @@ namespace Odyssey.Presentation.Bootstrap
             _figures = new PawnFigureDirector(moduleCatalogue, transform, gameObject.layer)
             {
                 Appearances = appearances,
+                Materials = _colonistMaterials,
                 // So a climbing figure can find the block it is climbing against. The same mirror
                 // the chunk renderer meshes from, so the rock it is pressed to is the rock drawn.
                 //
@@ -750,6 +753,7 @@ namespace Odyssey.Presentation.Bootstrap
             _audio?.Dispose();
             _daylight?.Dispose();
             _figures?.Dispose();
+            _colonistMaterials?.Dispose();
             _renderer?.Dispose();
             // The library owns every mesh it baked or merged, and a Mesh made in code is a GPU
             // allocation Unity never collects. Leaving Play mode without this leaked the whole
