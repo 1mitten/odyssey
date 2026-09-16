@@ -54,6 +54,7 @@ namespace Odyssey.Presentation.Rendering
             {
                 int index = size.Index(x, z, y);
                 EmitTerrain(batch, index, x, z, y);
+                EmitBank(batch, index, x, z, y);
                 EmitScatter(batch, index, x, z, y);
                 EmitFloor(batch, index, x, z, y);
                 EmitEdifice(batch, index, x, z, y);
@@ -357,6 +358,76 @@ namespace Odyssey.Presentation.Rendering
         /// Nothing interior changes, because a cut into the ground still exposes its neighbours in
         /// the ordinary way — a pit dug against the map edge still shows all four of its walls.
         /// </summary>
+        /// <summary>
+        /// Draw banks up terrace steps. On by default; the lever is here so the check harness can
+        /// photograph the same board with and without them.
+        /// </summary>
+        public bool Banks { get; set; } = true;
+
+        /// <summary>
+        /// A stepped earth bank in this empty cell, for each one-layer step beside it that a
+        /// colonist could walk up.
+        ///
+        /// <para><b>Why here and not on the step itself.</b> A bank belongs to the empty cell, not
+        /// to the block it climbs: it occupies the air beside the riser, at the same layer as the
+        /// riser, rising from its own floor — the top of the lower terrace — to its own ceiling,
+        /// which is the top of the riser. Everything the decision needs is therefore on one layer
+        /// plus the cell directly below, so a single-layer chunk pass can see all of it.</para>
+        ///
+        /// <para><b>What it is not.</b> Nothing in the simulation knows a bank exists. It is not
+        /// pathable, not selectable, not in the save and not in the state hash — a facade in
+        /// exactly the sense <see cref="GroundRelief"/> and <see cref="GroundScatter"/> are. The
+        /// hop it draws is real (<c>MoveCost.JumpUp</c>); the bank is only the picture of it.</para>
+        ///
+        /// <para><b>Four conditions, and each rules out a thing that would look wrong.</b> The cell
+        /// must be empty and standing on ground, or the bank hangs in the air. The step must be
+        /// earth, so a mined face and a quarry wall stay sheer — a grassy ramp growing out of cut
+        /// rock would be a lie about what was done to it. The top of the step must be open, or
+        /// this is the wall of a tunnel rather than a terrace. And the cell must be open to the
+        /// sky, which confines banks to the outdoor hillside where the fault is and keeps the
+        /// inside of a working sharp-edged.</para>
+        /// </summary>
+        void EmitBank(ChunkBatch batch, int index, int x, int z, int y)
+        {
+            if (!Banks || y == 0) return;
+
+            var size = _model.Size;
+            if (y + 1 >= size.SizeY) return;
+            if (_model.Terrain(index) != CoreContent.TerrainAir) return;
+
+            // Something underfoot: the top of the lower terrace. Terrain rather than solidity, so
+            // a bank may also shelve down into the water it stands beside — a channel is cut one
+            // layer down, which makes every stream bank one of these steps.
+            if (_model.Terrain(index - size.LayerStride) == CoreContent.TerrainAir) return;
+
+            if (!OpenToTheSky(index, y)) return;
+
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
+                if (!size.Contains(nx, nz, y)) continue;
+
+                int riser = size.Index(nx, nz, y);
+                if (!_model.IsSolid(riser) || !_model.IsEarth(riser)) continue;
+                if (_model.IsSolid(riser + size.LayerStride)) continue;
+
+                ushort terrain = _model.Terrain(riser);
+                int variant = GroundLook.BankVariant(x, z, y, dir);
+                int module = _model.BankModuleFor(terrain, variant);
+                if (module == 0) continue;
+
+                // Made of the terrain at the top of the step, because that is the ground it is
+                // spilling from. Always daylit: the cell was required to be open to the sky above.
+                //
+                // Turned so its local +z faces the step, which is exactly what Directions.Yaw is
+                // defined to do, and draped so it lies along the same rolling field the ground
+                // either side of it does.
+                AddBody(batch, module, TintCode.Daylit(TintCode.Terrain(terrain), open: true),
+                    GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
+                    Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f)));
+            }
+        }
+
         /// <summary>
         /// Is there nothing at all over this cell — no slab and no solid cell, all the way up?
         ///

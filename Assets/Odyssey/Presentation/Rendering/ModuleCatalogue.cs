@@ -61,6 +61,16 @@ namespace Odyssey.Presentation.Rendering
         /// expensive geometry is worth confining to the cells that do.
         /// </summary>
         GroundFace = 9,
+
+        /// <summary>
+        /// A stepped earth bank filling an empty cell beside a terrace step, climbing from the
+        /// floor of its own cell to the top of it.
+        ///
+        /// Occupies the cell exactly, like the block shapes, but it is not a block: it is drawn in
+        /// a cell that is empty, and nothing in the simulation knows it is there. See
+        /// <see cref="BankMesh"/>.
+        /// </summary>
+        Bank = 10,
     }
 
     /// <summary>
@@ -424,5 +434,12 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static string TerrainFace(string terrainDefName, int variant) =>
             Terrain(terrainDefName) + ".face" + variant.ToString();
+
+        /// <summary>
+        /// One of the stepped banks an earth terrace is climbed by. Named after the terrain at the
+        /// <em>top</em> of the step, because that is the ground the bank is made of.
+        /// </summary>
+        public static string TerrainBank(string terrainDefName, int variant) =>
+            Terrain(terrainDefName) + ".bank" + variant.ToString();
     }
 }

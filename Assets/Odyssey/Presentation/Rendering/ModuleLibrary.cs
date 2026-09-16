@@ -601,6 +601,7 @@ namespace Odyssey.Presentation.Rendering
                 case ModuleShape.RockBlock: mesh = RockMesh.For(meshVariant); break;
                 case ModuleShape.GroundBlock: mesh = GroundMesh.Turf(meshVariant); break;
                 case ModuleShape.GroundFace: mesh = GroundMesh.Face(meshVariant); break;
+                case ModuleShape.Bank: mesh = BankMesh.For(meshVariant); break;
                 default: mesh = PrimitiveMeshes.UnitCube; break;
             }
 
@@ -702,6 +703,7 @@ namespace Odyssey.Presentation.Rendering
                 case ModuleShape.RockBlock:
                 case ModuleShape.GroundBlock:
                 case ModuleShape.GroundFace:
+                case ModuleShape.Bank:
                     // Exactly a cell, like SolidBlock. The lump varies inside that box and never
                     // outside it in a direction that could open a seam.
                     size = new Vector3(CellMetrics.SizeXZ, CellMetrics.SizeY, CellMetrics.SizeXZ);

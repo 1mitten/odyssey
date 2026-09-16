@@ -50,6 +50,7 @@ namespace Odyssey.Presentation.World
         readonly int[][] _stoneModule;
         readonly int[][] _turfModule;
         readonly int[][] _earthFaceModule;
+        readonly int[][] _bankModule;
         readonly int[] _naturalEdificeModule;
         readonly int _vaultWallModule;
         readonly int _utilityTapModule;
@@ -74,6 +75,7 @@ namespace Odyssey.Presentation.World
             _stoneModule = ResolveStone(library);
             _turfModule = ResolveEarth(library, ModuleShape.GroundBlock);
             _earthFaceModule = ResolveEarth(library, ModuleShape.GroundFace);
+            _bankModule = ResolveEarth(library, ModuleShape.Bank);
             _naturalEdificeModule = ResolveNaturalEdifices(library);
             _vaultWallModule = library.Resolve(ModuleIds.VaultWall, ModuleShape.WallPanel);
             _utilityTapModule = library.Resolve(ModuleIds.UtilityTap, ModuleShape.Pillar);
@@ -205,6 +207,23 @@ namespace Odyssey.Presentation.World
         }
 
         /// <summary>
+        /// The stepped bank a terrace of this terrain is climbed by, or 0 when the terrain is not
+        /// one a bank is ever built out of.
+        ///
+        /// <para>Keyed by terrain rather than by cell, because the cell the bank is drawn in is
+        /// empty: the terrain that decides what it is made of is the one at the <em>top</em> of the
+        /// step, one cell sideways. Returning 0 rather than a substitute is deliberate here — a
+        /// bank is decoration, and drawing a cube where one does not belong would be worse than
+        /// drawing nothing.</para>
+        /// </summary>
+        public int BankModuleFor(ushort terrain, int variant)
+        {
+            if (terrain >= _bankModule.Length) return 0;
+            int[] variants = _bankModule[terrain];
+            return variants.Length == 0 ? 0 : variants[variant % variants.Length];
+        }
+
+        /// <summary>
         /// The module index a terrain code draws as, without needing a cell of it to hand.
         ///
         /// The table is keyed by terrain and nothing else, so this is the same answer
@@ -321,18 +340,23 @@ namespace Odyssey.Presentation.World
         static int[][] ResolveEarth(ModuleLibrary library, ModuleShape shape)
         {
             var table = new int[NaturalContent.TerrainCount][];
+            int count = shape == ModuleShape.Bank ? BankMesh.Variants : GroundMesh.Variants;
             for (int i = 0; i < table.Length; i++)
             {
                 if (!GroundLook.IsEarth((ushort)i)) { table[i] = System.Array.Empty<int>(); continue; }
 
                 string name = NaturalContent.TerrainAt((ushort)i).defName;
                 string baseId = ModuleIds.Terrain(name);
-                var variants = new int[GroundMesh.Variants];
+                var variants = new int[count];
                 for (int v = 0; v < variants.Length; v++)
                 {
-                    string id = shape == ModuleShape.GroundFace
-                        ? ModuleIds.TerrainFace(name, v)
-                        : ModuleIds.Terrain(name) + ".turf" + v.ToString();
+                    string id;
+                    switch (shape)
+                    {
+                        case ModuleShape.GroundFace: id = ModuleIds.TerrainFace(name, v); break;
+                        case ModuleShape.Bank: id = ModuleIds.TerrainBank(name, v); break;
+                        default: id = ModuleIds.Terrain(name) + ".turf" + v.ToString(); break;
+                    }
                     variants[v] = library.Resolve(id, baseId, shape, v);
                 }
                 table[i] = variants;
