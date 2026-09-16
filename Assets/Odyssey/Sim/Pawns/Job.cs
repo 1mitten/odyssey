@@ -192,6 +192,32 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// The toil index a driver uses for its settle, if it has one. Drivers put the settle last,
+        /// so this is a name rather than a rule.
+        /// </summary>
+        public const int SettleToil = 2;
+
+        /// <summary>
+        /// Stand still for a beat now the work is done, then end the job.
+        ///
+        /// <para>Called as the whole of the settle toil, and it must be reached <b>before</b> a
+        /// driver's own guards — by then the tree is felled and the designation cleared, so a
+        /// guard asking "is this still a marked tree" would fail the job on the first settle tick
+        /// and undo the very thing being added.</para>
+        ///
+        /// <para>The work has already happened. Nothing here changes the world, earns experience
+        /// or holds anything up: the pawn simply stays where it is with
+        /// <see cref="WorkFocus"/> reporting nothing, so the drawn figure eases out of its work
+        /// stance while standing still instead of while walking away. See
+        /// <see cref="JobDef.settleTicks"/> for the measurement that made this necessary.</para>
+        /// </summary>
+        protected JobStatus Settle(PawnContext ctx)
+        {
+            if (++ToilProgress < ctx.Content.Jobs[Job.DefIndex].settleTicks) return JobStatus.Ongoing;
+            return JobStatus.Succeeded;
+        }
+
+        /// <summary>
         /// Count this tick as work: the pawn earns the job's experience in the skill the job
         /// trains. A driver calls it on the ticks that are the work — the swing, the carry — and
         /// not on the walk to it. A job that trains nothing costs one comparison.

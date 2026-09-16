@@ -84,13 +84,15 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Where a colonist stands to cut this cell out. Three stances, tried in this order:
-        /// beside it, on the rim above it, and only then on top of it.
+        /// Where a colonist stands to cut this cell out. Four stances, tried in this order:
+        /// beside it, on the rim above it, from below it, and only then on top of it — and within
+        /// each, square on to a face before round a corner (see <see cref="NearestOfRing"/>).
         ///
-        /// <para><b>Beside</b> — one of the eight neighbours on the same layer, diagonals
-        /// included, because a colonist can swing round a corner. This is an adit into a terrace
-        /// or an outcrop: the rock is at eye level, the swing is level, and nothing moves under
-        /// the colonist when the cell goes.</para>
+        /// <para><b>Beside</b> — one of the eight neighbours on the same layer. This is an adit
+        /// into a terrace or an outcrop: the rock is at eye level, the swing is level, and nothing
+        /// moves under the colonist when the cell goes. The four faces are taken before the four
+        /// corners, because a miner steps in towards what it cuts and on a diagonal that step goes
+        /// into the block's corner — and into the cells sharing it.</para>
         ///
         /// <para><b>On the rim</b> — one of the eight neighbours a layer up, and only where the
         /// rock's own ceiling is open. The top face is then exactly at the colonist's feet, one
@@ -285,8 +287,10 @@ namespace Odyssey.Sim.Pawns
         /// both ends are wired. The pose, the pickaxe and the stone chips are a separate piece of
         /// work; this is the half the simulation owes it.</para>
         /// </summary>
+        /// <para>Nothing during the settle toil either, which is the point of it: the rock is
+        /// already gone and the figure should be easing out of its stance, not still swinging.</para>
         public override int WorkFocus =>
-            ToilIndex < 1 ? -1 : Job.DestCell >= 0 ? Job.DestCell : Job.TargetCell;
+            ToilIndex != 1 ? -1 : Job.DestCell >= 0 ? Job.DestCell : Job.TargetCell;
 
         public override bool TryMakeReservations(PawnContext ctx)
         {
@@ -299,6 +303,10 @@ namespace Odyssey.Sim.Pawns
 
         public override JobStatus Tick(PawnContext ctx)
         {
+            // Before every guard below: by now the cell is cut and its order cleared, so asking
+            // whether it is still marked would fail the job on the first settle tick.
+            if (ToilIndex == SettleToil) return Settle(ctx);
+
             var designations = ctx.Designations;
             if (designations == null) return JobStatus.Failed;
 
@@ -336,7 +344,10 @@ namespace Odyssey.Sim.Pawns
 
             designations.Clear(cell);
             ctx.Defer(_ => MineCell(ctx, cell, terrain));
-            return JobStatus.Succeeded;
+
+            // The rock goes now; the colonist straightens up before walking off.
+            NextToil();
+            return JobStatus.Ongoing;
         }
 
         /// <summary>

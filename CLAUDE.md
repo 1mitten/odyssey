@@ -249,6 +249,24 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     game code while the editor holds the project") and the slice arithmetic was run outside the
     player to check every number above, but **`scripts/unity.sh test editmode` and the PlayMode
     frame-time gate are both unrun on this change.**
+- **Work ends with a beat, not a snap (owner, 2026-09-16).** `JobDef.settleTicks` (fell 30, mine 30)
+  holds a colonist still for half a second after the work is done — the tree is already down and
+  the rock already gone — before the job ends. It is a settle *toil*, last in the driver, reached
+  **before** the driver's own guards (by then the designation is cleared, so "is this still a
+  marked tree" would fail the job on the first settle tick) and reporting `WorkFocus = -1`, so the
+  drawn figure eases out of its work stance while standing still.
+  - **It fixes a measured fault, not just a feel.** The figure steps *in* towards its work (about
+    0.8 m for felling) and eases back out over `PawnFigureDirector.WorkEaseSeconds`, 0.45 s. Before
+    the settle, **all 27** work-to-move transitions in 40,000 ticks began gliding within **1 to 3
+    ticks** of the work stopping — so every one was walking and un-stepping at once, and because
+    the gait blend leaves the stance out of the speed it measures, the feet played an ordinary walk
+    while the body covered both. That is the "very quickly walk and then come to a normal pace" the
+    owner reported. Afterwards every gap is 31–33 ticks and none is under the ease.
+  - **So 30 is not taste: the settle must be at least the presentation ease** (27 ticks). A
+    simulation constant chosen to cover a drawing constant is an uncomfortable coupling and it is
+    the lesser one — the alternative is presentation reaching into job timing.
+    `AFelledTreeIsFollowedThroughRatherThanSnappedOutOf` **asserts** that relation rather than
+    assuming it, so zeroing the def fails the tier instead of quietly skipping it.
 - **Sim vs UI vocabulary is deliberate:** simulation systems are *subsystems*, presentation-side coordinators are *directors* (`01-architecture.md` §3a). Do not unify the two words.
 - **Phase 3 (design): complete 2026-09-15.** `docs/design/` 00, 01, 02, 03, 04, 05, 06, 07, 08; ADRs 0001, 0002, 0005; and the execution plan `docs/plans/vertical-slice.md` (32 units, M0→M3). **The Phase 3 → Phase 4 hard stop was cleared by the owner on 2026-09-15; execution is under way.**
 - **Interface, icons and content naming (the UI line of work), 2026-09-15.** Design `09-ui-and-input.md`, `10-ui-panel-catalogue.md`, `11-icon-library.md`; ADRs 0003 UI framework, 0004 sim-to-UI contract, 0006 layer visibility, 0007 pixel-art icon pipeline; research `g-01`, `g-02`; mockups `hud-v1.html` (historical) and `hud-v2.html` (current). **Layer visibility decided:** x-ray by default with six modes shipped for playtest, amended by Lane B so that nothing above the active slice is ever a pointer target. **Icons:** 382 keys enumerated, 268 mapped to the owner's eight pixel-art sheets, 114 gaps listed in `11-icon-library.md` — the largest being people, since no sheet contains a human figure. **Names:** all 29 proper nouns proposed and awaiting the owner's veto, in `docs/design/proper-nouns.csv`.
