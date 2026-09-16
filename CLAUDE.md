@@ -311,6 +311,30 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     the lesser one — the alternative is presentation reaching into job timing.
     `AFelledTreeIsFollowedThroughRatherThanSnappedOutOf` **asserts** that relation rather than
     assuming it, so zeroing the def fails the tier instead of quietly skipping it.
+- **The golden-hour look: interviewed and researched 2026-09-16, not yet planned or built.** The
+  owner asked for the lighting, rays, warm sky-into-fog and depth of field of *Station to Station*.
+  Interview in `docs/research/look-interview.md`, references in
+  `docs/reference/screenshots/station-to-station/` (six images, described in that folder's README),
+  five research files (`d-12-urp-post-stack`, `d-13-light-shafts`, `d-14-aerial-perspective`,
+  `b-station-to-station`, `b-low-sun-readability`) summarised in `docs/research/INDEX.md`.
+  **Nothing under `Assets/` has changed and no design or ADR exists yet** — the next phase is a
+  design section, an ADR, execution units and a `Check the light` contact sheet, and it waits for
+  the owner. The grounding headline is that **no volume stack has ever been in effect**: the URP
+  asset's default profile GUID resolves to nothing and `DefaultVolumeProfile.asset` is orphaned, so
+  the project has never had tonemapping, grading, bloom, depth of field, vignette or anti-aliasing.
+  Two recorded decisions are overridden by the owner and must not be re-argued from the old notes:
+  the **72° sun in `PlayScene.BuildLighting` comes down to a raking 25–35°** (the comment there
+  rejecting a 50° sun is superseded — the real fix is Shadow Strength below 1, which that decision
+  never tried), and **bloom is adopted** against `d-09-stylised-rendering.md` §3.4's caution.
+  The load-bearing findings: the rays may be **geometrically impossible at the default framing**
+  (at a 48° pitch the sun can sit behind the camera, where a radial blur has nothing to radiate
+  from), so a framing experiment comes before any shader; the tilt-shift is probably **a screen-Y
+  blur rather than depth of field**, because URP's Gaussian blurs only the far field; the haze is
+  **exp2 fog plus a sky given the fog colour**, not a fullscreen pass, which the camera geometry
+  cannot justify; and the cascade splits are **already wrong for this camera**, spending half the
+  shadow atlas on the empty air in front of it. Budget: about 2 ms more, quality-tiered, and **no
+  measured millisecond figure for any URP post effect exists in any public source**, so every
+  number must come from `FrameTimeTests` under the real player loop.
 - **Sim vs UI vocabulary is deliberate:** simulation systems are *subsystems*, presentation-side coordinators are *directors* (`01-architecture.md` §3a). Do not unify the two words.
 - **Phase 3 (design): complete 2026-09-15.** `docs/design/` 00, 01, 02, 03, 04, 05, 06, 07, 08; ADRs 0001, 0002, 0005; and the execution plan `docs/plans/vertical-slice.md` (32 units, M0→M3). **The Phase 3 → Phase 4 hard stop was cleared by the owner on 2026-09-15; execution is under way.**
 - **Interface, icons and content naming (the UI line of work), 2026-09-15.** Design `09-ui-and-input.md`, `10-ui-panel-catalogue.md`, `11-icon-library.md`; ADRs 0003 UI framework, 0004 sim-to-UI contract, 0006 layer visibility, 0007 pixel-art icon pipeline; research `g-01`, `g-02`; mockups `hud-v1.html` (historical) and `hud-v2.html` (current). **Layer visibility decided:** x-ray by default with six modes shipped for playtest, amended by Lane B so that nothing above the active slice is ever a pointer target. **Icons:** 382 keys enumerated, 268 mapped to the owner's eight pixel-art sheets, 114 gaps listed in `11-icon-library.md` — the largest being people, since no sheet contains a human figure. **Names:** all 29 proper nouns proposed and awaiting the owner's veto, in `docs/design/proper-nouns.csv`.
