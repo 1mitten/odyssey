@@ -596,7 +596,12 @@ namespace Odyssey.Presentation.Ui
             // and added top layer first so the bar reads downwards like depth does.
             while (_rulerTicks.Count < _ruler.Rows.Count)
             {
-                int layer = _ruler.Rows[_ruler.Rows.Count - 1 - _rulerTicks.Count].Layer;
+                // Rows come out of the model top layer first and the bar is a column, so the
+                // first step built is the top step and tick i is Rows[i]. This used to index
+                // from the far end, which built the bar upside down: the top step was layer 0
+                // and the bottom step the sky. Clicking low on the ruler took you high, which
+                // is how it was reported from a playtest on 2026-09-16.
+                int layer = _ruler.Rows[_rulerTicks.Count].Layer;
                 var tick = new VisualElement();
                 tick.AddToClassList("ruler__tick");
                 var dot = new VisualElement();
@@ -605,6 +610,13 @@ namespace Odyssey.Presentation.Ui
 
                 int clicked = layer;
                 tick.RegisterCallback<ClickEvent>(_ => _directors?.Slice.SetLayer(clicked));
+
+                // The layer this step will actually send, hung on the element so a test can read
+                // it. Without it the only observable is the lit step, and the lit step cannot
+                // tell these two bugs apart: build the bar upside down, read it with a mirrored
+                // index, and the highlight lands correctly while the click still goes elsewhere.
+                // A test written against the highlight passed with the bug restored.
+                tick.userData = clicked;
                 _rulerRows.Add(tick);
                 _rulerTicks.Add(new RulerTickView { Root = tick, Dot = dot, Layer = layer });
             }
@@ -615,7 +627,13 @@ namespace Odyssey.Presentation.Ui
             for (int i = 0; i < _rulerTicks.Count; i++)
             {
                 RulerTickView view = _rulerTicks[i];
-                LayerRow model = _ruler.Rows[view.Layer];
+
+                // By index, not by layer number. Rows[i].Layer is layers-1-i, so indexing the
+                // list with a layer number reads a different row for every layer but the middle
+                // one — which mirrored the lit step, the surface mark, the colonist dot and the
+                // tooltip all at once. The two bugs hid each other: both were mirrored, so the
+                // lit step often looked plausible while the click did something else.
+                LayerRow model = _ruler.Rows[i];
 
                 view.Root.EnableInClassList("ruler__tick--active", model.Active);
                 view.Root.EnableInClassList("ruler__tick--surface", model.Surface);
