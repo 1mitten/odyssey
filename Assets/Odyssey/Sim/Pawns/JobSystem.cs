@@ -56,9 +56,15 @@ namespace Odyssey.Sim.Pawns
     {
         readonly PawnContext _ctx;
         readonly ThinkNode[] _tree;
-        readonly WorkGiver[] _givers;
+        WorkGiver[] _givers;
 
-        public JobSystem(PawnContext ctx) : this(ctx, DefaultTree(), DefaultGivers()) { }
+        /// <summary>
+        /// The shipped pipeline: the standard tree, and every work giver the simulation assembly
+        /// contains. There is no list of givers here any more — see <see cref="WorkGiverRegistry"/>
+        /// for why, and <see cref="SimWorldBuilder.AddWorkGiver"/> for how a giver from outside the
+        /// assembly joins in.
+        /// </summary>
+        public JobSystem(PawnContext ctx) : this(ctx, DefaultTree(), WorkGiverRegistry.Discover()) { }
 
         public JobSystem(PawnContext ctx, ThinkNode[] tree, WorkGiver[] givers)
         {
@@ -67,6 +73,42 @@ namespace Odyssey.Sim.Pawns
             _tree = tree;
             _completed = new int[ctx.Content.Jobs.Length];
             _failed = new int[ctx.Content.Jobs.Length];
+            Bind();
+        }
+
+        /// <summary>
+        /// Take on givers the composition registered, which are the ones discovery cannot see:
+        /// a giver living outside the simulation assembly. Order of the calls is irrelevant —
+        /// the whole list is re-sorted, so a giver added last still scans wherever its work type
+        /// says it does.
+        ///
+        /// <para>A duplicate type is refused rather than merged. Two instances of one giver would
+        /// scan the same work twice and reserve against themselves, and the shape of the fault —
+        /// a colonist that starts a job and immediately fails it — points nowhere near the cause.</para>
+        /// </summary>
+        public void AddGivers(IReadOnlyList<WorkGiver> givers)
+        {
+            if (givers == null || givers.Count == 0) return;
+
+            var combined = new List<WorkGiver>(_givers);
+            for (int i = 0; i < givers.Count; i++)
+            {
+                var giver = givers[i];
+                for (int j = 0; j < combined.Count; j++)
+                    if (combined[j].GetType() == giver.GetType())
+                        throw new System.InvalidOperationException(
+                            $"{giver.GetType().FullName} is already in the work scan. A giver inside " +
+                            "the simulation assembly is discovered automatically and must not also " +
+                            "be registered by hand.");
+                combined.Add(giver);
+            }
+
+            _givers = SortGivers(_ctx, combined.ToArray());
+            Bind();
+        }
+
+        void Bind()
+        {
             for (int i = 0; i < _tree.Length; i++)
                 if (_tree[i] is WorkThinkNode work) work.Bind(_givers);
         }
@@ -107,9 +149,15 @@ namespace Odyssey.Sim.Pawns
         readonly int[] _failed;
 
         /// <summary>
-        /// Sorted once at construction by emergency flag, then work-type order, then the giver's
-        /// own intra-type number. The player's 1..4 priority is per pawn and cannot be baked in
-        /// here, so the scan makes one pass per priority level over this list instead.
+        /// Sorted by emergency flag, then work-type order, then the giver's own intra-type number,
+        /// then the name. The player's 1..4 priority is per pawn and cannot be baked in here, so
+        /// the scan makes one pass per priority level over this list instead.
+        ///
+        /// <para>This is the whole of the scan order, and it is the reason givers may introduce
+        /// themselves: the order is a property of the Defs and of each giver's own declared
+        /// numbers, never of the order anything was discovered or registered in. The name is the
+        /// last tie-break so the comparison is total — two givers can never compare equal and
+        /// leave the sort to decide between them.</para>
         /// </summary>
         static WorkGiver[] SortGivers(PawnContext ctx, WorkGiver[] givers)
         {
@@ -133,9 +181,6 @@ namespace Odyssey.Sim.Pawns
             new WorkThinkNode(),
             new IdleThinkNode(),
         };
-
-        public static WorkGiver[] DefaultGivers() =>
-            new WorkGiver[] { new FellWorkGiver(), new MineWorkGiver(), new HaulWorkGiver() };
 
         public void Tick(SimWorld world)
         {

@@ -12,10 +12,10 @@ This file is written to be executed by a session with no other context. Read `CL
 |---|---|
 | **M0** | **Done.** U08 CI landed today: two tiers on every push, the Unity tier on the owner's machine as a self-hosted runner, and branch protection requiring both. |
 | **M1** | **Done in substance.** Grid, support solver, both worldgen paths, instanced rendering, slice camera, click-to-inspect and a generated play scene all run. The HUD arrived on top of it, which M1 never asked for. |
-| **M2** | **Done but for its demo.** Regions, pathfinding, needs, mood, skills, the job pipeline and the first jobs all run; a colony survives ten days headless on three seeds. U23/U24 characters and animation went further than planned — colonists walk, and swing an axe. `OQ-20`, the headless three-pawn demo, is the row that closes it. |
+| **M2** | **Done, and reported.** Regions, pathfinding, needs, mood, skills, the job pipeline and the first jobs all run; a colony survives ten days headless on three seeds. U23/U24 characters and animation went further than planned — colonists walk, and swing an axe. `OQ-20` built the headless three-pawn demo and `OQ-47` gave it the storeys it needed to prove the layer claim; `docs/milestones/M2-report.md` closes the milestone (OQ-21). |
 | **M3** | **Started ahead of the plan.** Designations, felling and stockpiles are in; mining is built on `claude/mines` and not yet merged. |
 
-**Gates, 2026-09-16.** Fast tier 326 Sim and 29 Hud. Unity gate 488 total, 486 passed, 0 failed (two `[Explicit]` benchmarks skipped). PlayMode 7. Wiki and label registries both current.
+**Gates, 2026-09-16.** Fast tier 329 Sim and 29 Hud, Long tier 9. Unity gate 494 total, 492 passed, 0 failed (two `[Explicit]` benchmarks skipped). PlayMode 7. Wiki and label registries both current.
 
 **Measured, and worth keeping in one place:** support solve 54 ms for 2.5M cells and 0.003 ms an edit; worldgen 215 ms for a full map; pathfinding 2.4x faster than naive with budget exhaustion down 91%; a ten-day soak about 1.1 s of wall time at 0.002 ms a tick; frame time 0.41 ms on the wooded meadow and 1.48 ms on the city; the dense HUD 0.488 ms against a 1.167 ms budget with zero allocation.
 
