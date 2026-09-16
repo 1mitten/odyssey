@@ -462,16 +462,16 @@ namespace Odyssey.Hud
                 ? new HudRect(Edge, height - InspectBottom, 0f, 0f)
                 : new HudRect(Edge, height - InspectBottom - inspectHeight, InspectWidth, inspectHeight);
 
-            // ---- command bar, bottom centre
-            float barWidth = HudCommands.BarWidth(HudCommands.ModelWidths(), FittedCommands(width));
-            // Plus its own hairlines, which HudCommands.BarHeight does not carry: that constant is
-            // the bar's content and padding, and it is what the overflow arithmetic works in.
-            float barHeight = HudCommands.BarHeight + Frame;
-            boxes[HudRegion.CommandBar] = new HudRect(
-                (width - barWidth) * 0.5f,
-                height - BarBottom - barHeight,
-                barWidth,
-                barHeight);
+            // ---- command bar, the full width of the screen (owner, 2026-09-17)
+            //
+            // It was a centred pill as wide as its items. Full width for the same reason it is
+            // docked: it is the edge of the screen rather than a panel floating near it, and a
+            // popover raised from a button on it has somewhere definite to sit. Its own top
+            // hairline is the only one left, which BarHeight does not carry — that constant is the
+            // bar's content and padding, and it is what the overflow arithmetic works in.
+            float barHeight = HudCommands.BarHeight + BarFrame;
+            boxes[HudRegion.CommandBar] =
+                new HudRect(0f, height - BarBottom - barHeight, width, barHeight);
 
             return boxes;
         }
@@ -486,6 +486,13 @@ namespace Odyssey.Hud
         /// the PlayMode comparison exists to catch, so it may as well be right.
         /// </summary>
         public const int Frame = 2 * HudTheme.BorderWidth;
+
+        /// <summary>
+        /// The command bar's own hairlines: one, not two. It runs the full width of the screen
+        /// with its left, right and bottom edges off it, so only the top one is drawn — which is
+        /// what a bar that is the edge of the screen looks like rather than a panel near it.
+        /// </summary>
+        public const int BarFrame = HudTheme.BorderWidth;
 
         public static float StoresHeight(int rows) =>
             Frame + Pad + HeaderHeight + HeaderGap + Math.Max(0, rows) * RowHeight + Pad;
@@ -650,9 +657,49 @@ namespace Odyssey.Hud
         public static float StripHeight(int rows) =>
             rows <= 0 ? 0f : rows * CardHeight + (rows - 1) * CardGap;
 
-        /// <summary>How many command-bar items fit at this width, by the modelled widths.</summary>
+        /// <summary>
+        /// How many command-bar items fit at this width, by the modelled widths.
+        ///
+        /// <para>Against the bar's own padding rather than the screen margin, since the bar became
+        /// full width: the room an item has is the screen less what the bar itself takes, and
+        /// measuring against a margin the bar no longer has would put two items into Menu that
+        /// would have fitted.</para>
+        /// </summary>
         public static int FittedCommands(float width) =>
-            HudCommands.Fit(HudCommands.ModelWidths(), width - 2 * Edge);
+            HudCommands.Fit(HudCommands.ModelWidths(), width - 2 * HudCommands.BarPad);
+
+        // ---------------------------------------------------------------- popovers
+
+        /// <summary>
+        /// Where a panel raised from the command bar sits, measured from the bottom of the screen.
+        ///
+        /// <para><b>Flush on the bar, no gap</b> (owner, 2026-09-17: "directly above the build
+        /// button … no spacing and padding to ensure tight space"). A popover with a strip of
+        /// world between it and the button that raised it reads as a separate window that happens
+        /// to be nearby; sitting on the bar it reads as the button having grown upwards, which is
+        /// what it is.</para>
+        /// </summary>
+        public static float PopoverBottom => BarBottom + HudCommands.BarHeight + BarFrame;
+
+        /// <summary>
+        /// Where a popover's left edge goes: under the button that raised it, pushed back on to
+        /// the screen if that would hang it off an edge.
+        ///
+        /// <para>Left-aligned with the button rather than centred on it, because a menu whose
+        /// left edge lines up with the control it belongs to reads as belonging to it, and
+        /// because centring puts a wide popover off the screen for the leftmost button and then
+        /// has to clamp anyway — at which point it is neither centred nor aligned.</para>
+        ///
+        /// <para>The clamp is to the screen, not to a margin: these panels are docked furniture
+        /// like the bar under them, so a popover raised by the last button on the right ends
+        /// flush with the right edge.</para>
+        /// </summary>
+        public static float PopoverLeft(float buttonLeft, float popoverWidth, float screenWidth)
+        {
+            float widest = Math.Max(0f, screenWidth - popoverWidth);
+            if (widest <= 0f) return 0f;
+            return Math.Max(0f, Math.Min(buttonLeft, widest));
+        }
 
         // ---------------------------------------------------------------- acceptance
 

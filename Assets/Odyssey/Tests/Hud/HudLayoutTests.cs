@@ -212,6 +212,60 @@ namespace Odyssey.Tests.Hud
             }
         }
 
+        /// <summary>
+        /// The command bar is the full width of the screen and sits on its bottom edge (owner,
+        /// 2026-09-17), and a popover raised from it lands on top of it with no gap.
+        /// </summary>
+        [Test]
+        public void TheBarSpansTheScreenAndItsPopoversSitOnIt()
+        {
+            foreach ((int width, int height) in Resolutions)
+            foreach (HudContent content in Cases())
+            {
+                var boxes = HudLayout.Solve(width, height, content);
+                HudRect bar = boxes[HudRegion.CommandBar];
+
+                Assert.That(bar.X, Is.EqualTo(0f).Within(0.01f), $"the bar starts inset at {width}x{height}");
+                Assert.That(bar.Width, Is.EqualTo((float)width).Within(0.01f),
+                    $"the bar is {bar.Width:0.#} px on a {width} px screen");
+                Assert.That(bar.Bottom, Is.EqualTo((float)height).Within(0.01f),
+                    "the bar is not on the bottom edge of the screen");
+
+                // A popover's bottom is measured from the bottom of the screen, so it equals the
+                // bar's height exactly when the two are flush.
+                Assert.That(height - HudLayout.PopoverBottom, Is.EqualTo(bar.Y).Within(0.01f),
+                    $"a popover would sit {bar.Y - (height - HudLayout.PopoverBottom):0.#} px " +
+                    "away from the bar it was raised from");
+            }
+        }
+
+        /// <summary>
+        /// A popover lines up with the button that raised it, and is pushed back on to the screen
+        /// rather than hanging off it.
+        /// </summary>
+        [Test]
+        public void APopoverFollowsItsButtonAndStaysOnTheScreen()
+        {
+            const float screen = 1920f;
+            const float popover = 420f;
+
+            Assert.That(HudLayout.PopoverLeft(0f, popover, screen), Is.EqualTo(0f),
+                "a popover raised by the leftmost button starts at the left edge");
+            Assert.That(HudLayout.PopoverLeft(300f, popover, screen), Is.EqualTo(300f),
+                "a popover in the middle of the bar lines up with its button");
+
+            Assert.That(HudLayout.PopoverLeft(1800f, popover, screen), Is.EqualTo(screen - popover),
+                "a popover raised near the right edge is pushed back rather than hanging off");
+            Assert.That(HudLayout.PopoverLeft(1800f, popover, screen) + popover,
+                Is.EqualTo(screen).Within(0.01f),
+                "and lands flush with the right edge, like the bar under it");
+
+            Assert.That(HudLayout.PopoverLeft(200f, 3000f, screen), Is.EqualTo(0f),
+                "a popover wider than the screen starts at the left edge rather than negative");
+            Assert.That(HudLayout.PopoverLeft(-50f, popover, screen), Is.EqualTo(0f),
+                "and never off the left edge either");
+        }
+
         [Test]
         public void TheInspectPaneNeverReachesTheCommandBar()
         {

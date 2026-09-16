@@ -60,10 +60,17 @@ namespace Odyssey.Presentation.Bootstrap
             // without an engine; all that happens here is the doing of it.
             switch (_director.Escape(
                         _designate != null && _designate.ToolArmed,
-                        _shell != null && _shell.BuildPaletteOpen))
+                        _shell != null && _shell.BuildPaletteOpen,
+                        _shell != null && _shell.MenuOpen))
             {
                 case EscapeAction.DisarmTool:
                     _designate?.PutToolAway();
+                    break;
+                case EscapeAction.CloseMenu:
+                    // Every window can be escaped (owner, 2026-09-17). The Menu popover was the
+                    // one that could not: it had no place in this order and no X, so the only way
+                    // to shut it was to press the button that opened it.
+                    _shell?.CloseMenu();
                     break;
                 case EscapeAction.ClosePalette:
                     // The Build palette is a panel opened over the board by the Build command, so

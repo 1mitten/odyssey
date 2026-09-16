@@ -626,6 +626,82 @@ namespace Odyssey.Presentation.Ui
             return row;
         }
 
+        /// <summary>
+        /// The close button every window carries in its top right (owner, 2026-09-17: "all windows
+        /// can be escaped but also should have an X in the top right … like the one used in the
+        /// tile selection").
+        ///
+        /// <para>It is the inspect pane's own control, lifted out rather than reinvented: the
+        /// same glyph, the same 26 px box, the same red hairline on hover. A second close button
+        /// that looked slightly different would be the interface disagreeing with itself about
+        /// what closing means.</para>
+        /// </summary>
+        static VisualElement CloseButton(VisualElement header, string what, Action onClose)
+        {
+            var spacer = new VisualElement { pickingMode = PickingMode.Ignore };
+            spacer.style.flexGrow = 1;
+            header.Add(spacer);
+
+            var close = new VisualElement();
+            close.AddToClassList("inspect__close");
+            close.AddToClassList("panel__close");
+            close.Add(new HudGlyph(HudGlyphKind.Close, 14f, HudTokens.TextDim));
+            close.tooltip = "Close " + what + " — Esc";
+            close.RegisterCallback<ClickEvent>(_ => onClose());
+            header.Add(close);
+            return close;
+        }
+
+        /// <summary>
+        /// A panel raised from the command bar: the one rule, in one place.
+        ///
+        /// <para>Anchored to the button that raised it, flush on the bar with no gap, less
+        /// transparent than a board panel, an X in the header and closed by Escape. Every popover
+        /// is built through here, so "consistent" is a property of the code rather than a
+        /// convention three call sites have to remember.</para>
+        /// </summary>
+        VisualElement Popover(string name, string label, Action onClose, params string[] extraClasses)
+        {
+            VisualElement panel = Window(name, label, onClose, extraClasses);
+            panel.AddToClassList("popover");
+            return panel;
+        }
+
+        /// <summary>
+        /// A panel the player opened and is looking at, as against a board panel read while
+        /// watching the world: the opaque fill and the close X, which are the two halves of the
+        /// owner's rule. Every window is built through here, so "consistent" is a property of the
+        /// code rather than a convention three call sites have to remember.
+        /// </summary>
+        VisualElement Window(string name, string label, Action onClose, params string[] extraClasses)
+        {
+            var panel = Panel(name, extraClasses);
+            panel.AddToClassList("window");
+            VisualElement header = Header(panel, label, out _);
+            CloseButton(header, label, onClose);
+            panel.style.display = DisplayStyle.None;
+            return panel;
+        }
+
+        /// <summary>
+        /// Put a popover over the button that raised it.
+        ///
+        /// <para>Written from code because where it sits is a fact about the bar, and only the
+        /// laid-out bar knows where its buttons are: the reflow moves them as items go into Menu,
+        /// and the interface scale moves them again. The arithmetic itself is
+        /// <see cref="HudLayout.PopoverLeft"/>, in the assembly the fast tier can read.</para>
+        /// </summary>
+        void PlacePopover(VisualElement popover, VisualElement anchor)
+        {
+            float screen = _hud.resolvedStyle.width;
+            float width = popover.resolvedStyle.width;
+            if (float.IsNaN(width) || width <= 1f) width = popover.worldBound.width;
+
+            Rect button = anchor.worldBound;
+            popover.style.left = HudLayout.PopoverLeft(button.xMin, width, screen);
+            popover.style.bottom = HudLayout.PopoverBottom;
+        }
+
         // ============================================================ scrims
 
         /// <summary>
@@ -1705,7 +1781,9 @@ namespace Odyssey.Presentation.Ui
                 _barWidths.Add(menuWidth);
             }
 
-            float available = screenWidth - 2 * HudLayout.Edge;
+            // The bar's own padding, not the screen margin: the bar runs edge to edge now, so the
+            // room an item has is the screen less what the bar itself takes.
+            float available = screenWidth - 2 * HudCommands.BarPad;
             if (Mathf.Approximately(available, _barMeasuredAt)) return;
             _barMeasuredAt = available;
 
@@ -1743,8 +1821,7 @@ namespace Odyssey.Presentation.Ui
 
         void BuildMenuPopup()
         {
-            _menuPopup = Panel("menu", "menu");
-            _menuPopup.style.display = DisplayStyle.None;
+            _menuPopup = Popover("menu", "Menu", () => ToggleMenu(false), "menu");
 
             _menuOverflow = new VisualElement();
             _menuOverflow.AddToClassList("menu__rows");
@@ -1805,9 +1882,18 @@ namespace Odyssey.Presentation.Ui
 
         void ToggleMenu(bool open)
         {
+            if (open) SetBuildPalette(false);
+
             _menuPopup.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
             _menuItem.EnableInClassList("cmd--on", open);
+            if (open && _menuItem != null) PlacePopover(_menuPopup, _menuItem);
         }
+
+        /// <summary>Whether the Menu popover is open, for whoever owns the Escape key.</summary>
+        public bool MenuOpen => _menuPopup != null && _menuPopup.style.display == DisplayStyle.Flex;
+
+        /// <summary>Close the Menu popover. The Escape half, called by <c>SettingsPresenter</c>.</summary>
+        public void CloseMenu() => ToggleMenu(false);
 
         // ============================================================ A7 build palette
 
@@ -1838,9 +1924,7 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void BuildPalette()
         {
-            _buildPanel = Panel("build", "build");
-            Header(_buildPanel, "Build", out _);
-            _buildPanel.style.display = DisplayStyle.None;
+            _buildPanel = Popover("build", "Build", () => SetBuildPalette(false), "build");
 
             var cats = new VisualElement();
             cats.AddToClassList("build__cats");
@@ -1882,8 +1966,17 @@ namespace Odyssey.Presentation.Ui
 
         void SetBuildPalette(bool open)
         {
+            // One popover at a time. Two raised from the same bar would overlap each other over
+            // the buttons that raised them, and the player would have no way to tell which of the
+            // two the Escape they are about to press belongs to.
+            if (open) ToggleMenu(false);
+
             _buildPanel.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
-            if (_barItems.Count > 0) _barItems[0].EnableInClassList("cmd--on", open);
+            if (_barItems.Count > 0)
+            {
+                _barItems[0].EnableInClassList("cmd--on", open);
+                if (open) PlacePopover(_buildPanel, _barItems[0]);
+            }
         }
 
         void SelectBuildCategory(int index)
@@ -1919,9 +2012,10 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void BuildSettings()
         {
-            _settingsPanel = Panel("settings", "settings");
-            Header(_settingsPanel, Registry.Label(SettingsDirector.PanelKey), out _);
-            _settingsPanel.style.display = DisplayStyle.None;
+            // A window but not a popover: it is reached from Menu and from Escape, so there is no
+            // one button it belongs over, and it keeps the centring a settings panel wants.
+            _settingsPanel = Window("settings", Registry.Label(SettingsDirector.PanelKey),
+                () => _directors?.Settings.SetOpen(false), "settings");
 
             // The tab strip, in the same idiom as the inspect pane's: nothing new is invented for
             // a second use of a control the HUD already has.

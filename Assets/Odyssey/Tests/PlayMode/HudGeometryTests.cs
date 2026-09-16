@@ -199,22 +199,28 @@ namespace Odyssey.Tests.PlayMode
                     VisualElement? bar = doc.rootVisualElement.Q(name: "bar");
                     Assert.That(bar, Is.Not.Null, "the shell built no command bar");
 
+                    // The bar spans the screen (owner, 2026-09-17). What "nothing is cut off at
+                    // the right edge" reduces to is therefore about the items, not the bar: the
+                    // bar itself is meant to reach both edges, and the loop below is what holds
+                    // the items to it.
                     Rect box = bar!.worldBound;
-                    Assert.That(box.xMin, Is.GreaterThanOrEqualTo(HudLayout.Edge - slack),
-                        $"the bar starts {box.xMin:0.#} px from the left at {resolution.x}x{resolution.y}");
-                    Assert.That(box.xMax, Is.LessThanOrEqualTo(canvas.width - HudLayout.Edge + slack),
-                        $"the bar runs to {box.xMax:0.#} on a {canvas.width:0} px canvas at " +
-                        $"{resolution.x}x{resolution.y}, so an item is cut off at the right edge");
+                    Assert.That(box.xMin, Is.EqualTo(canvas.xMin).Within(slack + 0.5f),
+                        $"the bar starts {box.xMin - canvas.xMin:0.#} px in from the left at " +
+                        $"{resolution.x}x{resolution.y}");
+                    Assert.That(box.xMax, Is.EqualTo(canvas.xMax).Within(slack + 0.5f),
+                        $"the bar ends {canvas.xMax - box.xMax:0.#} px short of the right edge at " +
+                        $"{resolution.x}x{resolution.y}");
 
                     // The bar may not wrap. One row, whatever fits; the rest go into Menu, which
                     // is what lets the inspect pane above it assume a height for it.
                     Debug.Log($"[HudGeometry] bar at {resolution.x}x{resolution.y}: {box}, {Describe(bar)}");
-                    Assert.That(box.height, Is.LessThanOrEqualTo(HudCommands.BarHeight + HudLayout.Frame + slack),
+                    Assert.That(box.height, Is.LessThanOrEqualTo(HudCommands.BarHeight + HudLayout.BarFrame + slack),
                         $"the bar is {box.height:0.#} px tall against a modelled " +
-                        $"{HudCommands.BarHeight + HudLayout.Frame}, so it has wrapped to a second " +
-                        $"row. {Describe(bar)}");
+                        $"{HudCommands.BarHeight + HudLayout.BarFrame}, so it has wrapped to a " +
+                        $"second row. {Describe(bar)}");
 
-                    // Every item that is on the row shows a hotkey cap with something in it.
+                    // Every item that is on the row shows a hotkey cap with something in it, and
+                    // none of them runs off the end of the bar.
                     int caps = 0;
                     foreach (VisualElement item in doc.rootVisualElement.Query(className: "cmd").ToList())
                     {
@@ -222,6 +228,9 @@ namespace Odyssey.Tests.PlayMode
                         Label? key = item.Q<Label>(className: "cmd__key");
                         Assert.That(key, Is.Not.Null, "a command-bar item has no hotkey cap");
                         Assert.That(key!.text, Is.Not.Empty, "a command-bar item shows a blank hotkey");
+                        Assert.That(item.worldBound.xMax, Is.LessThanOrEqualTo(box.xMax + slack + 0.5f),
+                            $"a command item runs to {item.worldBound.xMax:0.#} past the bar's " +
+                            $"{box.xMax:0.#} at {resolution.x}x{resolution.y}, so it is cut off");
                         caps++;
                     }
                     Assert.That(caps, Is.GreaterThan(1),
@@ -547,6 +556,133 @@ namespace Odyssey.Tests.PlayMode
             {
                 Object.Destroy(root);
             }
+        }
+
+        /// <summary>
+        /// A popover raised from the command bar lands on the button that raised it, flush on the
+        /// bar, and carries a way out (owner, 2026-09-17).
+        ///
+        /// <para><b>Only the player loop can answer this.</b> Where a popover sits is decided from
+        /// the laid-out bar — the reflow moves buttons as items go into Menu, and the interface
+        /// scale moves them again — so the model can state the rule but not that the shell obeys
+        /// it. What is measured here is the realised boxes: the popover's bottom against the
+        /// bar's top, and its left against the button's.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EveryBarPopoverOpensOverItsOwnButtonAndFlushWithTheBar()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                Rect bar = doc.rootVisualElement.Q(name: "bar")!.worldBound;
+                Rect canvas = doc.rootVisualElement.worldBound;
+
+                Assert.That(bar.xMin, Is.EqualTo(canvas.xMin).Within(0.5f), "the bar is inset on the left");
+                Assert.That(bar.xMax, Is.EqualTo(canvas.xMax).Within(0.5f), "the bar is inset on the right");
+                Assert.That(bar.yMax, Is.EqualTo(canvas.yMax).Within(0.5f),
+                    "the bar is not on the bottom edge of the screen");
+
+                foreach (string name in new[] { "build", "menu" })
+                {
+                    VisualElement? item = ButtonFor(doc, name);
+                    Assert.That(item, Is.Not.Null, $"no command-bar button raises the {name} popover");
+
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = item;
+                        item!.SendEvent(click);
+                    }
+                    yield return Settle(doc);
+
+                    VisualElement? popover = doc.rootVisualElement.Q(name: name);
+                    Assert.That(popover, Is.Not.Null, $"the shell built no {name} popover");
+                    Assert.That(popover!.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex),
+                        $"clicking the button did not open the {name} popover");
+
+                    Rect box = popover.worldBound;
+                    Rect button = item.worldBound;
+
+                    Debug.Log($"[HudGeometry] {name} popover: {box}, button at {button.xMin:0.#}, " +
+                              $"bar top {bar.yMin:0.#}");
+
+                    Assert.That(box.yMax, Is.EqualTo(bar.yMin).Within(0.5f),
+                        $"the {name} popover sits {box.yMax - bar.yMin:0.#} px from the bar " +
+                        "rather than flush on it");
+
+                    float wanted = HudLayout.PopoverLeft(
+                        button.xMin - canvas.xMin, box.width, canvas.width) + canvas.xMin;
+                    Assert.That(box.xMin, Is.EqualTo(wanted).Within(0.5f),
+                        $"the {name} popover is not over the button that raised it");
+                    Assert.That(box.xMin, Is.GreaterThanOrEqualTo(canvas.xMin - 0.5f),
+                        $"the {name} popover hangs off the left of the screen");
+                    Assert.That(box.xMax, Is.LessThanOrEqualTo(canvas.xMax + 0.5f),
+                        $"the {name} popover hangs off the right of the screen");
+
+                    // And a way out that is not the keyboard.
+                    VisualElement? close = popover.Q(className: "panel__close");
+                    Assert.That(close, Is.Not.Null, $"the {name} popover has no close button");
+                    Assert.That(close!.worldBound.xMax, Is.GreaterThan(box.center.x),
+                        $"the {name} popover's close button is not in its top right");
+
+                    using (var shut = ClickEvent.GetPooled())
+                    {
+                        shut.target = close;
+                        close.SendEvent(shut);
+                    }
+                    yield return Settle(doc);
+
+                    Assert.That(popover.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                        $"the {name} popover's X did not close it");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Every window carries an X, which is the owner's rule stated as a test rather than as a
+        /// convention each call site has to remember.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EveryWindowHasAWayOutThatIsNotTheKeyboard()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                var windows = doc.rootVisualElement.Query(className: "window").ToList();
+                Assert.That(windows.Count, Is.GreaterThanOrEqualTo(3),
+                    "the Build palette, the Menu popover and the settings panel are all windows");
+
+                foreach (VisualElement window in windows)
+                {
+                    Assert.That(window.Q(className: "panel__close"), Is.Not.Null,
+                        $"the '{window.name}' window has no close button");
+                    Assert.That(window.ClassListContains("panel"), Is.True,
+                        $"the '{window.name}' window is not a panel, so it does not carry the fill");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>The bar button that raises a named popover.</summary>
+        static VisualElement? ButtonFor(UIDocument doc, string popover)
+        {
+            string label = popover == "build" ? "Build" : "Menu";
+            foreach (VisualElement item in doc.rootVisualElement.Query(className: "cmd").ToList())
+            {
+                var text = item.Q<Label>(className: "cmd__label");
+                if (text != null && text.text == label) return item;
+            }
+            return null;
         }
 
         /// <summary>What a string really draws in a label's own face and size.</summary>

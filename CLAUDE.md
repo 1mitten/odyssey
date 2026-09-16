@@ -893,6 +893,38 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     PlayMode **25 total, 23 passed, 0 failed**. Coverage at rest measured on the real panel:
     **7.7–7.8%** at all three resolutions, down from 9.0% before the card shrank and 10.8–11.0%
     before that.
+  - **The bar runs the full width of the screen, and its menus became popovers (owner,
+    2026-09-17).** *"Make the bottom bar the full width of the screen. When I click on build I
+    expect the menu to appear directly above the build button, as I do all the menus. They have no
+    spacing and padding to ensure tight space. All windows can be escaped but also should have an
+    X in the top right. There should be less transparency with these menus. Make this a consistent
+    rule."* The bar was a centred pill as wide as its items; it is now edge to edge on the bottom
+    edge with **no corner rounded and only its top hairline drawn** (`HudTheme.BarRadius` 6 → 0,
+    `HudLayout.BarFrame` one border rather than two), and the overflow arithmetic measures against
+    the bar's own padding rather than the screen margin — which puts **two more items on the bar**
+    before anything goes into Menu.
+  - **The rule is written once, in one helper, not three times in three call sites.** A **window**
+    is a panel you deliberately opened and are looking at: `HudTheme.PopoverFill` (0.96 against a
+    board panel's 0.86) and a close X in the top right, which is the inspect pane's own control
+    lifted out rather than reinvented. **The fill is not taste** — the two scrims carry a board
+    panel's contrast so it can stay light enough to see terrain through, but the board behind a
+    window is not being read, and showing it through a list of rows is noise on the one surface
+    the player is attending to. A **popover** is a window raised from a bar button: additionally
+    anchored to the **left edge** of that button, flush on the bar with **no gap**, bottom corners
+    squared. Left-aligned rather than centred, because centring puts a wide popover off the screen
+    for the leftmost button and has to clamp anyway, at which point it is neither. `Window(...)`
+    and `Popover(...)` in `HudShell` are the two helpers; Build and Menu are popovers, settings is
+    a window but not one (reached from Menu *and* Escape, so there is no button it belongs over).
+  - **Only one popover at a time, and every window can now be escaped.** Two raised from the same
+    bar would overlap each other over the buttons that raised them, and the player could not tell
+    which the next Escape belongs to. `EscapeAction.CloseMenu` is new: **the Menu popover was the
+    one window with no way out but the button that opened it** — no place in the Escape order and
+    no X. The order is tool → bar popover → settings → open settings.
+  - **Where a popover sits is code, not stylesheet**, because it is a fact about the laid-out bar:
+    the reflow moves buttons as items go into Menu and the interface scale moves them again.
+    `HudLayout.PopoverLeft` / `PopoverBottom` hold the arithmetic where the fast tier can read it;
+    `EveryBarPopoverOpensOverItsOwnButtonAndFlushWithTheBar` measures the realised boxes under the
+    player loop and `EveryWindowHasAWayOutThatIsNotTheKeyboard` holds the X rule.
   - **Known drift, and one decision rather than four:** `icon-map.csv` still calls
     `ui.status.felling` a gap and sources mining and building from sheets 05 and 06, so the wiki's
     art-gap count does not know about any of this — exactly as it does not know about wood, stone,

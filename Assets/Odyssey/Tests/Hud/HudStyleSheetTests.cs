@@ -46,6 +46,7 @@ namespace Odyssey.Tests.Hud
             (".card", "border-color", () => HudTheme.PanelBorder, "panel border"),
             (".commandbar", "background-color", () => HudTheme.BarFill, "bar fill"),
             (".commandbar", "border-color", () => HudTheme.PanelBorder, "panel border"),
+            (".window", "background-color", () => HudTheme.PopoverFill, "popover fill"),
 
             (".stores__name", "color", () => HudTheme.TextPrimary, "text primary"),
             (".stores__value", "color", () => HudTheme.TextPrimary, "text primary"),

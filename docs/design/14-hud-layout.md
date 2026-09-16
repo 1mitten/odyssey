@@ -372,6 +372,51 @@ was neither disabled nor labelled.
 
 ---
 
+## 7b. The command bar and its popovers (owner, 2026-09-17)
+
+**The bar is the full width of the screen and sits on its bottom edge.** It was a centred pill as
+wide as its items. Full width for the same reason it is docked: it is the edge of the screen rather
+than a panel floating near it. Three of its four sides are off the screen, so no corner is rounded
+and only the top hairline is drawn (`HudTheme.BarRadius` is 0, `HudLayout.BarFrame` is one border
+rather than two). The overflow arithmetic now measures against the bar's own padding rather than
+the screen margin, since the bar no longer has a margin — which puts two more items on the bar
+before anything goes into Menu.
+
+**One rule for every panel the player opens, rather than three panels each doing their own thing.**
+
+- **A *window*** is a panel you deliberately opened and are looking at, as against a board panel
+  you read while watching the world. Every window is **less transparent** than a board panel
+  (`HudTheme.PopoverFill`, 0.96 against 0.86) and carries a **close X in its top right**, the
+  inspect pane's own control lifted out rather than reinvented. The reason for the fill is not
+  taste: the two scrims carry a board panel's text contrast so it can stay light enough to see
+  terrain through, but the board behind a window is not being read, and showing it through a list
+  of rows is noise on the one surface the player is attending to.
+- **A *popover*** is a window raised from a button on the command bar. It is additionally
+  **anchored to the left edge of that button** and sits **flush on the bar with no gap**, with its
+  bottom corners squared where it meets it. Left-aligned rather than centred, because a menu whose
+  left edge lines up with its control reads as belonging to it — and because centring puts a wide
+  popover off the screen for the leftmost button and has to clamp anyway, at which point it is
+  neither centred nor aligned. The clamp is to the screen rather than to a margin, so a popover
+  raised by the rightmost button ends flush with the right edge, like the bar under it.
+- **Only one popover is open at a time.** Two raised from the same bar would overlap each other
+  over the buttons that raised them, and the player would have no way to tell which of the two the
+  Escape they are about to press belongs to.
+- **Every window can be escaped.** The Menu popover was the one that could not — it had no place
+  in the Escape order and no X, so the only way to shut it was to press the button that opened it.
+  The order is now tool → bar popover → settings → open settings.
+
+Build and Menu are popovers. The settings panel is a window but not a popover: it is reached from
+Menu *and* from Escape, so there is no one button it belongs over, and it keeps the centring a
+settings panel wants.
+
+Where a popover sits is written from code rather than the stylesheet, because it is a fact about
+the laid-out bar — the reflow moves buttons as items go into Menu, and the interface scale moves
+them again. The arithmetic is `HudLayout.PopoverLeft` and `PopoverBottom`, in the assembly the fast
+tier can read; `EveryBarPopoverOpensOverItsOwnButtonAndFlushWithTheBar` measures the realised boxes
+under the player loop, and `EveryWindowHasAWayOutThatIsNotTheKeyboard` holds the X rule.
+
+---
+
 ## 7a. The camera keys that changed with this pass
 
 - **Q and E rotate freely while held** (owner, 2026-09-16), at `rotateSpeed` 90 degrees a second,

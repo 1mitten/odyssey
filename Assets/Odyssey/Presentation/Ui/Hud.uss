@@ -693,19 +693,22 @@
     justify-content: center;
 }
 
-/* Square where it meets the screen edge and round where it does not: a rounded corner against
-   the bottom of the screen shows a notch of world through it, which is what a floating panel
-   looks like and this is no longer one. */
+/* The full width of the screen (owner, 2026-09-17), so no corner is rounded and the only edge
+   drawn is the top one: three of its four sides are off the screen. It is the edge of the screen
+   rather than a panel floating near it, and a popover raised from a button on it has somewhere
+   definite to sit. */
 .commandbar {
     flex-direction: row;
     align-items: center;
+    width: 100%;
     padding: 5px;
     background-color: rgba(12, 16, 20, 0.90);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
-    border-radius: 6px;
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
+    border-radius: 0;
+    border-left-width: 0;
+    border-right-width: 0;
+    border-bottom-width: 0;
 }
 
 .cmd {
@@ -752,9 +755,27 @@
 
 /* ---------------------------------------------------------------- menu popup */
 
+/* ---------------------------------------------------------------- windows and popovers
+
+   A window is a panel you deliberately opened and are looking at, as against a board panel you
+   read while watching the world. One rule for all of them (owner, 2026-09-17): less transparent
+   than a board panel, a close X in the top right, and closed by Escape. The board behind a window
+   is not being read, and showing it through a list of rows is noise on the one surface the player
+   is attending to. */
+.window {
+    background-color: rgba(12, 16, 20, 0.96);
+}
+
+/* A window raised from the command bar, which is additionally anchored to the left edge of the
+   button that raised it and sits flush on the bar with no gap. The left and bottom are written
+   from code, because where a popover sits is a fact about the button that raised it and only the
+   laid-out bar knows where that is. Square at the bottom, because that edge meets the bar. */
+.popover {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
 .menu {
-    right: 20px;
-    bottom: 82px;
     width: 268px;
     max-height: 560px;
 }
@@ -792,9 +813,6 @@
    both. */
 
 .build {
-    left: 50%;
-    translate: -50% 0;
-    bottom: 82px;
     width: 420px;
     max-height: 320px;
 }
