@@ -124,6 +124,11 @@ namespace Odyssey.Tests.Hud
             (".speed", "margin-top", () => HudLayout.ClockGap, "clock to speed"),
             (".speed__btn", "height", () => HudLayout.SpeedButton, "speed button"),
 
+            (".build", "width", () => HudLayout.BuildWidth, "build palette width"),
+            (".build__scroll", "max-height", () => HudLayout.BuildCatHeight, "category group height"),
+            (".chip", "height", () => HudLayout.BuildChip, "a palette chip"),
+            (".chip", "margin", () => HudLayout.BuildChipMargin, "chip margin"),
+
             (".inspect", "left", () => HudLayout.Edge, "screen edge margin"),
             (".inspect", "bottom", () => HudLayout.InspectBottom, "inspect bottom offset"),
             (".inspect", "width", () => HudLayout.InspectWidth, "inspect width"),

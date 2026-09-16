@@ -415,6 +415,37 @@ them again. The arithmetic is `HudLayout.PopoverLeft` and `PopoverBottom`, in th
 tier can read; `EveryBarPopoverOpensOverItsOwnButtonAndFlushWithTheBar` measures the realised boxes
 under the player loop, and `EveryWindowHasAWayOutThatIsNotTheKeyboard` holds the X rule.
 
+### 7b.1 The rest of the HUD docks too (owner, same day)
+
+**`HudLayout.Edge` is 0 where it was 20.** The strip and the bar were docked the day before, so the
+clock sat twenty pixels below a strip beside it that started at zero, and the two read as
+misaligned because they were. Stores, the clock column, the depth rail and the inspect pane all sit
+on their edges now, and **the corners that lie on a screen edge are squared** — the same rule the
+command bar got, for the same reason: a rounded corner against the edge shows a notch of world
+through it.
+
+**The breathing room did not go anywhere; it moved inside.** A panel's `Pad` is still twelve on all
+four sides, so no text is nearer the screen edge than it was. What is gone is the strip of world
+between a panel's border and the edge, which carried no information and cost every corner of the
+screen twenty pixels in both directions. It is also forty pixels of strip room, because
+`StripRoom` measures from the panels either side.
+
+### 7b.2 The Build palette's two groups
+
+**The cap is the fix, not the width.** The category list was `flex-grow: 1`, so it took every pixel
+the panel had and the tools got the remainder — the group the player is actually reaching into
+shrank as the group above it grew. `BuildCatRows` is 2 and `BuildCatHeight` caps the group; anything
+past two rows scrolls, which is what the scroll view was put there for and never reached. A chip has
+an explicit 30 px height, because a count of rows is meaningless if a row's height is
+content-driven.
+
+**Wider is the cheap half.** `BuildWidth` 420 → 560: ten category chips with their full words come
+to about eight hundred pixels of chip, so at 420 they wrapped to five rows. It costs nothing now
+that a popover is anchored to its button rather than centred on the screen.
+
+**And the palette opens on its first category**, rather than on an empty second group that only
+fills once the player has guessed the chips above are clickable.
+
 ---
 
 ## 7a. The camera keys that changed with this pass

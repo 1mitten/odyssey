@@ -114,9 +114,13 @@
 /* The bar under a need in the inspect pane. */
 .bar--need { height: 4px; margin-top: 4px; }
 
+/* An explicit height, because HudLayout.BuildCatRows is a count of these and a row whose height
+   is content-driven cannot be counted. 30 px box plus 2 px of margin each side is the 34 px pitch
+   the model works in. */
 .chip {
     flex-direction: row;
     align-items: center;
+    height: 30px;
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
     border-radius: 3px;
@@ -132,10 +136,18 @@
 
 /* ---------------------------------------------------------------- A1 stores */
 
+/* Docked to the top-left corner (owner, 2026-09-17), so it lines up with the colonist strip
+   beside it, which has been at the very top since the bars were docked. The corners that sit on
+   a screen edge are squared, for the same reason the command bar's are: a rounded corner against
+   the edge shows a notch of world through it. The breathing room moved inside — the panel's own
+   12 px padding is untouched, so no text is nearer the edge than it was. */
 .stores {
-    left: 20px;
-    top: 20px;
+    left: 0;
+    top: 0;
     width: 168px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-bottom-left-radius: 0;
 }
 
 .stores__count {
@@ -288,11 +300,20 @@
    hand-picked tops until the clock grew past the 122 px the alerts panel's fixed top allowed it
    and buried the speed buttons. Heights are content's business; only the order is ours. */
 
+/* Docked to the top edge with the strip and the stores panel (owner, 2026-09-17): the clock sat
+   twenty pixels below a strip beside it that started at zero, and the two read as misaligned
+   because they were. It is not against the right edge — the depth rail is, and this column sits
+   inside it — so only its top corners are squared. */
 .column-right {
     position: absolute;
-    right: 76px;
-    top: 20px;
+    right: 56px;
+    top: 0;
     width: 266px;
+}
+
+.clock.panel {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
 }
 
 .clock { position: relative; width: 100%; }
@@ -392,11 +413,14 @@
    44 px rail and twelve either side would leave twenty. See HudLayout.RailSidePad. */
 
 .rail {
-    right: 20px;
-    top: 20px;
+    right: 0;
+    top: 0;
     width: 44px;
     padding-left: 4px;
     padding-right: 4px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 .rail .panel__hdr {
@@ -454,10 +478,14 @@
 
 /* ---------------------------------------------------------------- A9/A10 inspect */
 
+/* Docked to the left edge with the stores panel above it. Its bottom is not on a screen edge —
+   it clears the command bar — so only the two left corners are squared. */
 .inspect {
-    left: 20px;
+    left: 0;
     bottom: 64px;
     width: 560px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
 }
 
 /* There is no empty state. With nothing selected the pane is display:none and leaves the layout
@@ -813,13 +841,21 @@
    both. */
 
 .build {
-    width: 420px;
+    width: 560px;
     max-height: 320px;
 }
 
+/* The category group is capped at two rows and the tools take what is left (owner, 2026-09-17:
+   "the first group should use the horizontal space … giving more room for the second group — it's
+   using too much vertical space"). It was flex-grow:1, so it took every pixel the panel had and
+   the tools got the remainder — which meant the group the player is actually reaching into shrank
+   as the group above it grew. Anything past two rows scrolls, which is what the scroll view was
+   put here for and never reached. 68px is HudLayout.BuildCatHeight. */
 .build__scroll {
-    flex-grow: 1;
+    flex-grow: 0;
+    flex-shrink: 0;
     min-height: 0;
+    max-height: 68px;
     margin-top: 9px;
 }
 
@@ -859,6 +895,9 @@
 .build__tools {
     flex-direction: row;
     flex-wrap: wrap;
+    align-content: flex-start;
+    flex-grow: 1;
+    min-height: 0;
     margin-top: 9px;
     border-top-width: 1px;
     border-top-color: rgba(255, 255, 255, 0.09);

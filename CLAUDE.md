@@ -925,6 +925,30 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     `HudLayout.PopoverLeft` / `PopoverBottom` hold the arithmetic where the fast tier can read it;
     `EveryBarPopoverOpensOverItsOwnButtonAndFlushWithTheBar` measures the realised boxes under the
     player loop and `EveryWindowHasAWayOutThatIsNotTheKeyboard` holds the X rule.
+  - **And then the rest of the HUD docked too, and the Build palette stopped eating itself
+    (owner, same day).** *"Make the time control align with the top alignment of the rostering so
+    it's closer to the edge of the screen — the same goes to stores — less padding and spacing
+    close to screen edge. Also the first group in building should use the horizontal space, giving
+    more room for the second group; it's using too much vertical space."*
+    - **`HudLayout.Edge` is 0 where it was 20.** The strip and the bar were docked the day before,
+      so the clock sat twenty pixels below a strip beside it that started at zero and the two read
+      as misaligned *because they were*. Stores, the clock column, the depth rail and the inspect
+      pane sit on their edges now, with **the corners that lie on a screen edge squared** — the
+      command bar's rule, for the command bar's reason. **The breathing room moved inside rather
+      than going away**: a panel's `Pad` is still twelve on all four sides, so no text is nearer
+      the edge than it was; what is gone is the strip of world between a border and the edge,
+      which carried no information and cost every corner twenty pixels in both directions. It is
+      also **forty pixels of strip room**, since `StripRoom` measures from the panels either side.
+    - **The Build palette's cap is the fix, not the width.** The category list was `flex-grow: 1`,
+      so it took every pixel the panel had and the tools got the remainder — the group the player
+      is reaching into shrank as the group above it grew. `BuildCatRows` is 2, `BuildCatHeight`
+      caps it, and anything past two rows scrolls, which is what the scroll view was put there for
+      and never reached. A chip has an explicit 30 px height, because **a count of rows is
+      meaningless if a row's height is content-driven**. `BuildWidth` 420 → 560 is the cheap half:
+      ten chips with their full words are about eight hundred pixels of chip, so at 420 they
+      wrapped to five rows, and width costs nothing now a popover is anchored rather than centred.
+      **The palette opens on its first category**, rather than on an empty second group that fills
+      only once the player has guessed the chips above are clickable.
   - **Known drift, and one decision rather than four:** `icon-map.csv` still calls
     `ui.status.felling` a gap and sources mining and building from sheets 05 and 06, so the wiki's
     art-gap count does not know about any of this — exactly as it does not know about wood, stone,

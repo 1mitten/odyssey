@@ -1950,6 +1950,11 @@ namespace Odyssey.Presentation.Ui
             _buildTools.AddToClassList("build__tools");
             _buildPanel.Add(_buildTools);
 
+            // Open on the first category rather than on an empty second group. The palette's whole
+            // shape is two groups, and one of them showing nothing until the player guesses that
+            // the chips above are clickable is a panel that has to be explained.
+            SelectBuildCategory(0);
+
             _hud.Add(_buildPanel);
         }
 

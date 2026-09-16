@@ -644,6 +644,75 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// The Build palette spends its height on the group the player is reaching into (owner,
+        /// 2026-09-17: the first group "is using too much vertical space").
+        ///
+        /// <para><b>What the fast tier cannot say.</b> How many rows ten category chips wrap to is
+        /// a fact about the text engine and the panel's width, not about the model — so the cap is
+        /// stated in <see cref="HudLayout.BuildCatHeight"/> and measured here. The assertion that
+        /// matters is the comparison: the tools group must get at least as much height as the
+        /// categories, which is what "more room for the second group" reduces to.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBuildPaletteGivesItsHeightToTheToolsRatherThanTheCategories()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                VisualElement? button = ButtonFor(doc, "build");
+                Assert.That(button, Is.Not.Null);
+                using (var click = ClickEvent.GetPooled())
+                {
+                    click.target = button;
+                    button!.SendEvent(click);
+                }
+                yield return Settle(doc);
+
+                VisualElement? palette = doc.rootVisualElement.Q(name: "build");
+                VisualElement? cats = palette!.Q(className: "build__scroll");
+                VisualElement? tools = palette.Q(className: "build__tools");
+                Assert.That(cats, Is.Not.Null, "the palette built no category group");
+                Assert.That(tools, Is.Not.Null, "the palette built no tools group");
+
+                // A chip has to be the height the model counts rows in, or the cap is a count of
+                // something else.
+                VisualElement? chip = cats!.Q(className: "chip");
+                Assert.That(chip, Is.Not.Null, "the palette built no category chips");
+                Assert.That(chip!.worldBound.height, Is.EqualTo((float)HudLayout.BuildChip).Within(0.5f),
+                    $"a chip is {chip.worldBound.height:0.#} px against a modelled {HudLayout.BuildChip}");
+
+                float catHeight = cats.worldBound.height;
+                float toolHeight = tools!.worldBound.height;
+                Debug.Log($"[HudGeometry] build palette: categories {catHeight:0.#} px, " +
+                          $"tools {toolHeight:0.#} px, panel {palette.worldBound.height:0.#}");
+
+                Assert.That(catHeight, Is.LessThanOrEqualTo(HudLayout.BuildCatHeight + 0.5f),
+                    $"the category group stands {catHeight:0.#} px against a cap of " +
+                    $"{HudLayout.BuildCatHeight}, so it is still taking the panel's height");
+                Assert.That(catHeight / HudLayout.BuildChipRow,
+                    Is.LessThanOrEqualTo(HudLayout.BuildCatRows + 0.01f),
+                    $"the categories are wrapping to more than {HudLayout.BuildCatRows} rows");
+
+                // The second group has something in it the moment the palette opens, and none of
+                // it is cut off by the panel it sits in. A tools group that only fills once the
+                // player has guessed the chips above are clickable is a panel needing explanation.
+                var toolChips = tools.Query(className: "chip").ToList();
+                Assert.That(toolChips, Is.Not.Empty,
+                    "the palette opened on no category, so the second group is empty");
+                foreach (VisualElement toolChip in toolChips)
+                    Assert.That(toolChip.worldBound.yMax,
+                        Is.LessThanOrEqualTo(palette.worldBound.yMax + 0.5f),
+                        "a tool chip is cut off by the bottom of the palette");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// Every window carries an X, which is the owner's rule stated as a test rather than as a
         /// convention each call site has to remember.
         /// </summary>

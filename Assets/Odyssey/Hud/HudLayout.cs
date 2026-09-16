@@ -161,8 +161,27 @@ namespace Odyssey.Hud
 
         // ------------------------------------------------------------------ space
 
-        /// <summary>Screen edge to panel.</summary>
-        public const int Edge = 20;
+        /// <summary>
+        /// Screen edge to panel: **nothing** (owner, 2026-09-17, "make the time control align
+        /// with the top alignment of the rostering so it's closer to the edge of the screen — the
+        /// same goes to stores — less padding and spacing close to screen edge").
+        ///
+        /// <para>Twenty until then, and the last thing on the screen still holding a margin. The
+        /// colonist strip and the command bar were docked to their edges the day before, so the
+        /// clock sat twenty pixels below a strip beside it that started at zero — the two read as
+        /// misaligned because they were. Docking the rest is what makes the strip's own docking
+        /// look deliberate rather than like one panel that had slipped.</para>
+        ///
+        /// <para><b>The breathing room did not go anywhere; it moved inside.</b> A panel's
+        /// <see cref="Pad"/> is still twelve on all four sides, so text is no nearer the screen
+        /// edge than it was — what is gone is the strip of world between a panel's border and the
+        /// edge, which was carrying no information and cost every corner of the screen twenty
+        /// pixels in both directions.</para>
+        ///
+        /// <para><b>It is also forty pixels of strip room</b>, because <see cref="StripRoom"/>
+        /// measures from the panels either side.</para>
+        /// </summary>
+        public const int Edge = 0;
 
         /// <summary>Between two panels in the same column.</summary>
         public const int Gap = 9;
@@ -367,6 +386,46 @@ namespace Odyssey.Hud
         /// forbid clipped text, and a hairline bleed into padding is not clipping.</para>
         /// </summary>
         public const int RailSidePad = 4;
+
+        // ------------------------------------------------------------------ build palette
+
+        /// <summary>
+        /// How wide the Build popover is.
+        ///
+        /// <para><b>420 until 2026-09-17</b>, when the owner asked the first group to "use the
+        /// horizontal space … giving more room for the second group". Ten category chips with
+        /// their full words come to about eight hundred pixels of chip; at 420 they wrapped to
+        /// five rows and the tools under them got what was left of a 320 px panel, which was
+        /// almost nothing. Wider is the cheap half of the answer, and it costs nothing now that a
+        /// popover is anchored to its button rather than centred on the screen.</para>
+        /// </summary>
+        public const int BuildWidth = 560;
+
+        /// <summary>
+        /// One row of category or tool chips, pitch included: the chip's own height plus the
+        /// margin under it. Written down rather than left to the content, because it is what
+        /// <see cref="BuildCatRows"/> is a count of.
+        /// </summary>
+        public const int BuildChipRow = BuildChip + 2 * BuildChipMargin;
+
+        /// <summary>A chip's own box, without its margins.</summary>
+        public const int BuildChip = 30;
+
+        public const int BuildChipMargin = 2;
+
+        /// <summary>
+        /// How many rows of categories the first group may take before it scrolls.
+        ///
+        /// <para><b>The cap is the real fix, not the width.</b> The category list was
+        /// <c>flex-grow: 1</c>, so it took every pixel the panel had and the tools got the
+        /// remainder — which meant the group the player is actually reaching into shrank as the
+        /// group above it grew. Two rows, and anything past them scrolls: the scroll view was
+        /// already there for exactly this and was never reached.</para>
+        /// </summary>
+        public const int BuildCatRows = 2;
+
+        /// <summary>How tall the category group is allowed to stand.</summary>
+        public const int BuildCatHeight = BuildCatRows * BuildChipRow;
 
         // ------------------------------------------------------------------ inspect
 
