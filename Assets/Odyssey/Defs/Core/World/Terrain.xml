@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Every terrain kind in the game, in one file.
+
+  ORDER IS NOT DECIDED HERE. A terrain index is stored in every cell of every save and folded
+  into every state hash; WorldContent.TerrainOrder is the list that decides which name is which
+  index, and WorldContentDefTests checks it against the constants in CoreContent and
+  NaturalContent. The order below is the same one only so that the file reads as the table does.
+
+  The first ten are the ruined city's, the last eleven the wilderness's. They were two tables in
+  code because the two generators grew separately; they are one here because they are one array
+  at runtime, which is what the TODO in NaturalContent asked for.
+
+  workToClear is ticks to mine or clear one cell. fertility is per cent against ordinary soil,
+  and nothing grows below 1. salvageWeight is the relative chance of scattering salvage, so a
+  buried seam of old city is where the good scrap is.
+-->
+<Defs>
+
+  <!-- 0 must remain "nothing": CellGrid's zero default has to mean an empty cell. -->
+  <TerrainDef>
+    <defName>Air</defName>
+    <label>open air</label>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>Pavement</defName>
+    <label>pavement</label>
+    <workToClear>220</workToClear>
+    <fertility>0</fertility>
+    <salvageWeight>4</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>CrackedPavement</defName>
+    <label>cracked pavement</label>
+    <workToClear>140</workToClear>
+    <fertility>12</fertility>
+    <salvageWeight>4</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>Rubble</defName>
+    <label>rubble</label>
+    <workToClear>90</workToClear>
+    <fertility>20</fertility>
+    <salvageWeight>10</salvageWeight>
+  </TerrainDef>
+
+  <!--
+    Soil and Gravel are NOT solid: they are the dug-out band under a city, and a colonist stands
+    in them rather than on them. That is why a wilderness surface cannot reuse them and has its
+    own Grass and PackedGravel below - reusing these would punch a hole in the ground.
+  -->
+  <TerrainDef>
+    <defName>Soil</defName>
+    <label>soil</label>
+    <workToClear>60</workToClear>
+    <fertility>100</fertility>
+    <salvageWeight>1</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>Gravel</defName>
+    <label>gravel</label>
+    <workToClear>70</workToClear>
+    <fertility>55</fertility>
+    <salvageWeight>1</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>EngineeredFill</defName>
+    <label>engineered fill</label>
+    <solid>true</solid>
+    <workToClear>420</workToClear>
+    <salvageWeight>14</salvageWeight>
+  </TerrainDef>
+
+  <!--
+    Shared by both generators: a wilderness map's stone and a ruined city's bedrock stratum are
+    the same material, and nothing is gained by having two of it.
+  -->
+  <TerrainDef>
+    <defName>Rock</defName>
+    <label>rock</label>
+    <solid>true</solid>
+    <workToClear>700</workToClear>
+    <salvageWeight>2</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>BuriedSeam</defName>
+    <label>buried city</label>
+    <solid>true</solid>
+    <workToClear>520</workToClear>
+    <salvageWeight>60</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>Salvage</defName>
+    <label>salvage</label>
+    <solid>true</solid>
+    <workToClear>480</workToClear>
+    <salvageWeight>0</salvageWeight>
+  </TerrainDef>
+
+  <!--
+    The wilderness set. Everything down to CoalSeam is solid: the surface of a natural map is the
+    ground, and the cell above it is what a colonist stands in.
+  -->
+  <TerrainDef>
+    <defName>Grass</defName>
+    <label>grass</label>
+    <solid>true</solid>
+    <workToClear>60</workToClear>
+    <fertility>100</fertility>
+    <salvageWeight>0</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>BareEarth</defName>
+    <label>bare earth</label>
+    <solid>true</solid>
+    <workToClear>60</workToClear>
+    <fertility>85</fertility>
+    <salvageWeight>0</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>PackedGravel</defName>
+    <label>gravel</label>
+    <solid>true</solid>
+    <workToClear>90</workToClear>
+    <fertility>30</fertility>
+    <salvageWeight>0</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>Sand</defName>
+    <label>sand</label>
+    <solid>true</solid>
+    <workToClear>70</workToClear>
+    <fertility>8</fertility>
+    <salvageWeight>0</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>Subsoil</defName>
+    <label>subsoil</label>
+    <solid>true</solid>
+    <workToClear>160</workToClear>
+    <fertility>12</fertility>
+    <salvageWeight>0</salvageWeight>
+  </TerrainDef>
+
+  <!-- The floor of the world, deliberately punitive to mine. -->
+  <TerrainDef>
+    <defName>Bedrock</defName>
+    <label>bedrock</label>
+    <solid>true</solid>
+    <workToClear>2400</workToClear>
+    <fertility>0</fertility>
+    <salvageWeight>0</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>IronOre</defName>
+    <label>iron ore</label>
+    <solid>true</solid>
+    <workToClear>900</workToClear>
+    <fertility>0</fertility>
+    <salvageWeight>0</salvageWeight>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>CoalSeam</defName>
+    <label>coal seam</label>
+    <solid>true</solid>
+    <workToClear>760</workToClear>
+    <fertility>0</fertility>
+    <salvageWeight>0</salvageWeight>
+  </TerrainDef>
+
+  <!--
+    Water. Neither depth is solid, so the bed below is the floor a wader stands on; deep water
+    adds impassable, which is the only thing that stops a colonist walking on a lake - solid
+    would let them walk OVER it, non-solid alone lets them walk INTO it.
+
+    buildable false with bridgeable true is the whole of "you cannot build on water without a
+    bridge", written where the build pipeline will find it. Nothing constructs anything yet.
+  -->
+  <TerrainDef>
+    <defName>ShallowWater</defName>
+    <label>shallow water</label>
+    <solid>false</solid>
+    <workToClear>0</workToClear>
+    <fertility>0</fertility>
+    <salvageWeight>0</salvageWeight>
+    <buildable>false</buildable>
+    <bridgeable>true</bridgeable>
+  </TerrainDef>
+
+  <TerrainDef>
+    <defName>DeepWater</defName>
+    <label>deep water</label>
+    <solid>false</solid>
+    <impassable>true</impassable>
+    <workToClear>0</workToClear>
+    <fertility>0</fertility>
+    <salvageWeight>0</salvageWeight>
+    <buildable>false</buildable>
+    <bridgeable>true</bridgeable>
+  </TerrainDef>
+
+  <!-- Ordinary solid ground that happens to be slow. A marsh column is never lowered. -->
+  <TerrainDef>
+    <defName>Marsh</defName>
+    <label>marsh</label>
+    <solid>true</solid>
+    <workToClear>70</workToClear>
+    <fertility>40</fertility>
+    <salvageWeight>0</salvageWeight>
+  </TerrainDef>
+
+</Defs>

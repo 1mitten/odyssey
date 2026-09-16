@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The three needs the slice carries. A need is an integer 0..max, never a float, so that band
+  boundaries, fall rates and mood offsets are all exact and hash and save without a rounding
+  question anywhere.
+
+  Declaration order here does not decide the handles: PawnContent.FromDefs fills the array by
+  name, because NeedIndex.Food is 0 in the published views and in the save, while the loader
+  sorts every table by defName. The two orders are not the same one.
+
+  Bands are ascending by upperBound and the first band a value fits in is the active one. Per
+  band rather than flat because a pawn at 20% rest should not drain like one at 80% — a flat
+  rate makes the last fifth of every bar feel wrong. The slackening drain is a-01-pawns.md.
+-->
+<Defs>
+
+  <NeedDef>
+    <defName>Need_Food</defName>
+    <label>food</label>
+    <seekThreshold>300</seekThreshold>
+    <bands>
+      <li><upperBound>0</upperBound>    <fallPerInterval>0</fallPerInterval> <moodOffset>-200</moodOffset></li>
+      <li><upperBound>125</upperBound>  <fallPerInterval>1</fallPerInterval> <moodOffset>-120</moodOffset></li>
+      <li><upperBound>250</upperBound>  <fallPerInterval>2</fallPerInterval> <moodOffset>-60</moodOffset></li>
+      <li><upperBound>1000</upperBound> <fallPerInterval>4</fallPerInterval> <moodOffset>0</moodOffset></li>
+    </bands>
+  </NeedDef>
+
+  <NeedDef>
+    <defName>Need_Rest</defName>
+    <label>rest</label>
+    <seekThreshold>280</seekThreshold>
+    <bands>
+      <li><upperBound>0</upperBound>    <fallPerInterval>0</fallPerInterval> <moodOffset>-180</moodOffset></li>
+      <li><upperBound>100</upperBound>  <fallPerInterval>1</fallPerInterval> <moodOffset>-180</moodOffset></li>
+      <li><upperBound>200</upperBound>  <fallPerInterval>2</fallPerInterval> <moodOffset>-120</moodOffset></li>
+      <li><upperBound>280</upperBound>  <fallPerInterval>3</fallPerInterval> <moodOffset>-60</moodOffset></li>
+      <li><upperBound>1000</upperBound> <fallPerInterval>3</fallPerInterval> <moodOffset>0</moodOffset></li>
+    </bands>
+  </NeedDef>
+
+  <!--
+    Recreation is the one need nothing in the slice provides on purpose: there are no recreation
+    buildings, so idle time is the only source (PawnKindDef.joyGainPerInterval). Its seek
+    threshold is therefore zero — a colonist never drops what it is doing to go and enjoy itself.
+  -->
+  <NeedDef>
+    <defName>Need_Joy</defName>
+    <label>recreation</label>
+    <seekThreshold>0</seekThreshold>
+    <bands>
+      <li><upperBound>0</upperBound>    <fallPerInterval>0</fallPerInterval> <moodOffset>-200</moodOffset></li>
+      <li><upperBound>150</upperBound>  <fallPerInterval>1</fallPerInterval> <moodOffset>-100</moodOffset></li>
+      <li><upperBound>300</upperBound>  <fallPerInterval>1</fallPerInterval> <moodOffset>-50</moodOffset></li>
+      <li><upperBound>700</upperBound>  <fallPerInterval>2</fallPerInterval> <moodOffset>0</moodOffset></li>
+      <li><upperBound>850</upperBound>  <fallPerInterval>2</fallPerInterval> <moodOffset>50</moodOffset></li>
+      <li><upperBound>1000</upperBound> <fallPerInterval>2</fallPerInterval> <moodOffset>100</moodOffset></li>
+    </bands>
+  </NeedDef>
+
+</Defs>

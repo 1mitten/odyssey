@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The one-of-a-kind records: how mood behaves, what a break is, how fast a colonist walks, what
+  it starts life with, and the handful of numbers that belong to the pawn simulation as a whole.
+-->
+<Defs>
+
+  <!--
+    Mood is a difficulty base plus the sum of active thought offsets, approached by drift. The
+    drift is what makes mood read as a mood: snapping to the target turns a single bad moment
+    into an instant mental break, which is worse drama and worse design.
+  -->
+  <MoodDef>
+    <defName>Mood_Default</defName>
+    <baseMood>500</baseMood>
+    <max>1000</max>
+    <risePerInterval>7</risePerInterval>
+    <fallPerInterval>5</fallPerInterval>
+    <breakThreshold>350</breakThreshold>
+    <breakMtbTicks>600000</breakMtbTicks>
+  </MoodDef>
+
+  <!-- The one break behaviour the slice carries. The taxonomy is a later milestone. -->
+  <MentalBreakDef>
+    <defName>Break_Wander</defName>
+    <durationTicks>7500</durationTicks>
+    <wanderRadius>6</wanderRadius>
+    <catharsisThought>0</catharsisThought>
+  </MentalBreakDef>
+
+  <!--
+    One unit of cost is 1/100 of a flat orthogonal cell crossing, so movePerTick 1 is a hundred
+    ticks a cell: at sixty ticks a second that is a 2.5 m cell every 1.67 s, or 1.5 m/s — the top
+    of the range a person walks at, brisk and clearly a walk.
+
+    It used to be 2, which is 3 m/s: a jog, and on screen it was one, because the drawn walk cycle
+    covers about 2 m/s and anything faster blends the run clip in. Before that it was 10, roughly
+    54 km/h, and colonists visibly teleported around the map. A pace between these integers wants
+    the cost scale raised, not a fraction stored.
+  -->
+  <MovementDef>
+    <defName>Movement_Colonist</defName>
+    <movePerTick>1</movePerTick>
+    <layerChangeEstimate>300</layerChangeEstimate>
+  </MovementDef>
+
+  <PawnKindDef>
+    <defName>PawnKind_Colonist</defName>
+    <startingMood>600</startingMood>
+    <startingNeeds>
+      <li>800</li>
+      <li>800</li>
+      <li>800</li>
+    </startingNeeds>
+    <wakeThreshold>950</wakeThreshold>
+    <restGainPerInterval>6</restGainPerInterval>
+    <groundRestEffectiveness>80</groundRestEffectiveness>
+    <!--
+      Recreation gained per interval while idling. The slice has no recreation buildings, so idle
+      time is the only source there is; without one, joy bottoms out on every colonist and a long
+      run measures nothing but mental breaks.
+    -->
+    <joyGainPerInterval>8</joyGainPerInterval>
+    <!--
+      Odds, per cent, that a freshly spawned colonist has a minor or a major passion for any one
+      skill; the rest are none. ASSUMED: nothing in docs/research has measured how the reference
+      distributes passions at generation. 35 and 15 give a colony of five, over two skills, a
+      handful of passions and one or two burning ones.
+    -->
+    <passionMinorPerCent>35</passionMinorPerCent>
+    <passionMajorPerCent>15</passionMajorPerCent>
+  </PawnKindDef>
+
+  <!--
+    dayTicks is 60,000 per a-15-time-and-simulation.md: the skill soft cap resets on it and the
+    decay ladder is written per day. The calendar proper is later content; this is the one number
+    the pawn simulation needs of it.
+
+    needsIntervalTicks 150 is the cadence a-01-pawns.md measured.
+
+    woodPerTree 27 is the pine class's vanilla yield (a-08 section 1; the oak class gives 46).
+    One stack of 75, so a single haul clears a felled tree.
+
+    The think-loop numbers are the trap that catches a pawn starting jobs it cannot finish: more
+    than thinkLoopLimit job starts inside thinkLoopWindowTicks and it stands still for
+    standDownTicks rather than spinning.
+  -->
+  <PawnTuningDef>
+    <defName>Tuning_Pawns</defName>
+    <needsIntervalTicks>150</needsIntervalTicks>
+    <dayTicks>60000</dayTicks>
+    <thinkLoopLimit>10</thinkLoopLimit>
+    <thinkLoopWindowTicks>60</thinkLoopWindowTicks>
+    <standDownTicks>120</standDownTicks>
+    <woodPerTree>27</woodPerTree>
+  </PawnTuningDef>
+
+</Defs>
