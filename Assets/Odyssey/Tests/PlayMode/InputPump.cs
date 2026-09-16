@@ -55,6 +55,13 @@ namespace Odyssey.Tests.PlayMode
 
         public int DeliveriesTheDeviceSawAsThisFrame { get; private set; }
 
+        /// <summary>
+        /// What the input system itself was doing at the last delivery. Recorded because the
+        /// ProcessEventsManually fix changed nothing at all, and the first thing to establish
+        /// about an experiment that did not move is whether the edit it relies on applied.
+        /// </summary>
+        public string StateAtDelivery { get; private set; } = "nothing delivered";
+
         /// <summary>Deliver this state at the top of the next frame.</summary>
         public void Post(MouseState state) => _pending.Enqueue(state);
 
@@ -81,6 +88,14 @@ namespace Odyssey.Tests.PlayMode
             if (Device.leftButton.wasReleasedThisFrame) ReleaseEdgesAtDelivery++;
             if (Device.leftButton.isPressed) DeliveriesWithTheButtonDown++;
             if (Device.wasUpdatedThisFrame) DeliveriesTheDeviceSawAsThisFrame++;
+
+            StateAtDelivery =
+                $"mode={InputSystem.settings.updateMode} " +
+                $"updateType={InputState.currentUpdateType} " +
+                $"updateCount={InputState.updateCount} " +
+                $"deviceLastUpdate={Device.lastUpdateTime:F4} " +
+                $"currentTime={InputState.currentTime:F4} " +
+                $"frame={Time.frameCount}";
         }
     }
 }

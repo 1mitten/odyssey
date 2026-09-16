@@ -133,7 +133,8 @@ namespace Odyssey.Tests.PlayMode
                     $"{_mouse.Pump.DeliveriesWithTheButtonDown}, deliveries the device counted as " +
                     $"this frame {_mouse.Pump.DeliveriesTheDeviceSawAsThisFrame} - which says " +
                     "whether the edge was " +
-                    "never created or created and spent before an ordinary Update could see it.");
+                    "never created or created and spent before an ordinary Update could see it. " +
+                    $"The input system at that moment: {_mouse.Pump.StateAtDelivery}.");
                 Assert.That(probe.Releases, Is.EqualTo(1),
                     $"the press arrived but the release did not ({probe.Releases}), so a gesture " +
                     "would begin and never end");
