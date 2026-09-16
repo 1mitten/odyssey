@@ -48,6 +48,9 @@ namespace Odyssey.Presentation.World
         ModuleGroup[] _groups;
         readonly int[] _terrainModule;
         readonly int[][] _stoneModule;
+        readonly int[][] _turfModule;
+        readonly int[][] _earthFaceModule;
+        readonly int[][] _bankModule;
         readonly int[] _naturalEdificeModule;
         readonly int _vaultWallModule;
         readonly int _utilityTapModule;
@@ -70,6 +73,9 @@ namespace Odyssey.Presentation.World
             _groups = new[] { ResolveGroup(library, new TemplateDef()) };
             _terrainModule = ResolveTerrain(library);
             _stoneModule = ResolveStone(library);
+            _turfModule = ResolveEarth(library, ModuleShape.GroundBlock);
+            _earthFaceModule = ResolveEarth(library, ModuleShape.GroundFace);
+            _bankModule = ResolveEarth(library, ModuleShape.Bank);
             _naturalEdificeModule = ResolveNaturalEdifices(library);
             _vaultWallModule = library.Resolve(ModuleIds.VaultWall, ModuleShape.WallPanel);
             _utilityTapModule = library.Resolve(ModuleIds.UtilityTap, ModuleShape.Pillar);
@@ -182,6 +188,66 @@ namespace Odyssey.Presentation.World
             int[] variants = _stoneModule[_terrain[index]];
             return variants.Length == 0 ? _terrainModule[_terrain[index]] : variants[variant % variants.Length];
         }
+        /// <summary>Is this cell one of the natural soils, drawn as earth rather than as a cube?</summary>
+        public bool IsEarth(int index) => GroundLook.IsEarth(_terrain[index]);
+
+        /// <summary>
+        /// The module for a piece of earth: the cheap rippled top when nothing can see its sides,
+        /// the coursed block when something can.
+        ///
+        /// <para>Falls back to the plain terrain module when the cell is not a soil, so a caller
+        /// that gets the test wrong draws a cube rather than nothing at all — the same courtesy
+        /// <see cref="StoneModule"/> extends.</para>
+        /// </summary>
+        public int EarthModule(int index, int variant, bool showsAFace)
+        {
+            if (showsAFace) return EarthFaceModule(index, variant, 0b1111);
+
+            int[] variants = _turfModule[_terrain[index]];
+            return variants.Length == 0 ? _terrainModule[_terrain[index]] : variants[variant % variants.Length];
+        }
+
+        /// <summary>
+        /// The block for a piece of earth that shows a side, cut for one canonical pattern of
+        /// exposed sides so the chamfer lands only on edges that are open.
+        ///
+        /// <para>The family is laid out pattern-major, so the five patterns each carry their own
+        /// run of variants. A terrain with no earth family falls back to the plain terrain module,
+        /// the same courtesy <see cref="StoneModule"/> extends: a caller that gets the test wrong
+        /// draws a cube rather than nothing at all.</para>
+        /// </summary>
+        public int EarthFaceModule(int index, int variant, int canonicalExposure)
+        {
+            int[] family = _earthFaceModule[_terrain[index]];
+            if (family.Length == 0) return _terrainModule[_terrain[index]];
+
+            int pattern = GroundMesh.PatternIndex(canonicalExposure);
+            if (pattern < 0) pattern = GroundMesh.ExposurePatterns.Length - 1;
+
+            // The modulo is what lets the family collapse when there is no lip to cut: with the
+            // chamfer off every pattern builds the same block, the family is one pattern long, and
+            // every pattern folds onto it rather than the mesher having to know that it should.
+            int slot = pattern * GroundMesh.Variants + (variant % GroundMesh.Variants);
+            return family[slot % family.Length];
+        }
+
+        /// <summary>
+        /// The stepped bank a terrace of this terrain is climbed by, or 0 when the terrain is not
+        /// one a bank is ever built out of.
+        ///
+        /// <para>Keyed by terrain rather than by cell, because the cell the bank is drawn in is
+        /// empty: the terrain that decides what it is made of is the one at the <em>top</em> of the
+        /// step, one cell sideways. Returning 0 rather than a substitute is deliberate here — a
+        /// bank is decoration, and drawing a cube where one does not belong would be worse than
+        /// drawing nothing.</para>
+        /// </summary>
+        public int BankModuleFor(ushort terrain, int variant)
+        {
+            if (terrain >= _bankModule.Length) return 0;
+            int[] variants = _bankModule[terrain];
+            return variants.Length == 0 ? 0 : variants[variant % variants.Length];
+        }
+
         /// <summary>
         /// The module index a terrain code draws as, without needing a cell of it to hand.
         ///
@@ -277,6 +343,54 @@ namespace Odyssey.Presentation.World
                 for (int v = 0; v < variants.Length; v++)
                     variants[v] = library.Resolve(
                         ModuleIds.TerrainVariant(name, v), ModuleShape.RockBlock, v);
+                table[i] = variants;
+            }
+            return table;
+        }
+
+        /// <summary>
+        /// The earth blocks, one family per soil, resolved once like the stone lumps.
+        ///
+        /// <para>Every variant borrows the plain terrain row for its material — see
+        /// <see cref="ModuleLibrary.Resolve(string, string, ModuleShape, int)"/>. The geometry is
+        /// ours and needs no pack; the grass texture lives on exactly one catalogue row and is a
+        /// direct reference into <c>Assets/Synty</c>. Borrowing is what lets the number of
+        /// variants be a constant in code rather than a shape baked into a generated asset that
+        /// can only be rebuilt on a machine holding the licensed packs.</para>
+        ///
+        /// <para>Turf and face are resolved as separate families rather than as one with twice the
+        /// variants, because they are two meshes and the id is what the library caches against.
+        /// </para>
+        /// </summary>
+        static int[][] ResolveEarth(ModuleLibrary library, ModuleShape shape)
+        {
+            var table = new int[NaturalContent.TerrainCount][];
+            // A face family is pattern-major: one run of course variants per pattern of exposed
+            // sides, because the chamfer has to be cut for the sides that are really open. Turf
+            // collapses to one when there is no ripple to vary, and a bank varies only by its own
+            // step jitter.
+            int count =
+                shape == ModuleShape.Bank ? BankMesh.Kinds
+                : shape == ModuleShape.GroundBlock ? GroundMesh.TurfVariants
+                : GroundMesh.FaceSlots;
+            for (int i = 0; i < table.Length; i++)
+            {
+                if (!GroundLook.IsEarth((ushort)i)) { table[i] = System.Array.Empty<int>(); continue; }
+
+                string name = NaturalContent.TerrainAt((ushort)i).defName;
+                string baseId = ModuleIds.Terrain(name);
+                var variants = new int[count];
+                for (int v = 0; v < variants.Length; v++)
+                {
+                    string id;
+                    switch (shape)
+                    {
+                        case ModuleShape.GroundFace: id = ModuleIds.TerrainFace(name, v); break;
+                        case ModuleShape.Bank: id = ModuleIds.TerrainBank(name, v); break;
+                        default: id = ModuleIds.Terrain(name) + ".turf" + v.ToString(); break;
+                    }
+                    variants[v] = library.Resolve(id, baseId, shape, v);
+                }
                 table[i] = variants;
             }
             return table;
