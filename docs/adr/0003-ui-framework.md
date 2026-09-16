@@ -144,9 +144,29 @@ than because of what it contains.
 ### Still open
 
 F2 and F3 are not measured, and the fall-back rule is "if **any** of these hold". R2 (icon atlas
-pages and draw calls) and R3 (pointer partitioning, the one g-02 calls most likely to bite) remain
-to be run before this ADR is closed outright. R4's player-loop half is answered by `HudSmokeTests`;
-whether a panel resolves under `-nographics` is still open.
+pages and draw calls) remains. R4's player-loop half is answered by `HudSmokeTests`; whether a
+panel resolves under `-nographics` is still open.
+
+**F3 was attempted on 2026-09-16 and could not be answered, for two reasons worth recording.**
+
+The first is that the thing it tests was never built. Design 09 section 6 resolves all eight
+pointer cases through an `InputRouter` with an explicit capture stack; what exists is a single
+`Func<Vector2, bool>` on the camera rig, which is a one-bit answer. Four of the eight cases —
+a drag begun on the world and released over a panel, the reverse, a modal swallowing everything,
+and a tooltip never capturing — have nothing to test against, because drags, modals and tooltips
+do not exist yet.
+
+The second is that **mouse input cannot currently be driven in a PlayMode test at all**.
+`InputSystem.QueueStateEvent` with a `MouseState` reaches neither the scroll nor the buttons of
+`SliceCameraRig`. That was established the only way it could be: by a negative control, a scroll
+over the world that must zoom the camera and did not. Three versions of a test were written
+before that control existed, and all three produced confident, plausible, meaningless numbers —
+first by sampling the camera while it was still drifting toward its start-up target, then by
+demanding a tolerance tighter than the residue exponential smoothing leaves behind. They were
+deleted rather than kept.
+
+Both are `OQ-40`. Until the harness can be shown to fail when the input is withheld, nothing
+asserted about pointer routing should be believed, and F3 stays open.
 
 ## Flip conditions
 
