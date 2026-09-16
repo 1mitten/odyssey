@@ -266,6 +266,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Odyssey.Presentation::Odyssey.Presentation.Ui.HudShell
   hudStyles: {fileID: 7433441132597879392, guid: 639fce85b01743244a25e74106f9cbaa, type: 3}
+  uiFont: {fileID: 12800000, guid: 86b9d9267f6028840a96b923c37da753, type: 3}
+  monoFont: {fileID: 12800000, guid: e8dab6e95a0a32746a13327b25eb5ff5, type: 3}
 --- !u!114 &754657458
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,0 +1,234 @@
+#nullable enable
+using System;
+using System.Collections.Generic;
+
+namespace Odyssey.Hud
+{
+    /// <summary>
+    /// One item of the command bar: what it is called, what key reaches it, and whether it is the
+    /// one filled item on the row.
+    ///
+    /// <para>Nothing here is named in C#. <see cref="Label"/> is read out of the naming registry
+    /// by <see cref="HudCommands"/>, which is the whole point of the registry — a name the owner
+    /// corrects in <c>docs/design/icon-keys.csv</c> reaches the screen without anyone retyping
+    /// it.</para>
+    /// </summary>
+    public readonly struct HudCommand
+    {
+        public readonly string Key;
+        public readonly string Label;
+
+        /// <summary>The cap drawn at the right of the item. Never blank: the acceptance criteria
+        /// require every item on the bar to show one.</summary>
+        public readonly string Hotkey;
+
+        public readonly HudCategory Category;
+
+        /// <summary>The single filled item on the row. Exactly one command is primary.</summary>
+        public readonly bool Primary;
+
+        /// <summary>Why this item does nothing yet, or empty when it does.</summary>
+        public readonly string Reason;
+
+        public HudCommand(string key, string label, string hotkey, HudCategory category,
+            bool primary, string reason)
+        {
+            Key = key;
+            Label = label;
+            Hotkey = hotkey;
+            Category = category;
+            Primary = primary;
+            Reason = reason;
+        }
+
+        public bool Live => Reason.Length == 0;
+    }
+
+    /// <summary>
+    /// The command bar's contents and its overflow rule.
+    ///
+    /// <para><b>The overflow rule is an acceptance criterion, not a nicety.</b> "Nothing may run
+    /// off the edge, and no unlabelled colour chips" is how the spec puts it, and the bar this
+    /// replaces did neither: it wrapped to a second row once every tab carried its full name, and
+    /// the inspect pane above it was held clear by a hand-picked offset chosen for a two-row bar.
+    /// <c>Hud.uss</c> carries that coupling in a comment admitting it is one. A bar that cannot
+    /// grow cannot push anything, so the offset stops being a guess.</para>
+    ///
+    /// <para><b>Where an item goes when it does not fit.</b> Into Menu, which is always last and
+    /// never dropped — a player who cannot see History can still reach it. Items leave the row
+    /// from the right, so the order on screen never reshuffles as the window is resized; only its
+    /// tail shortens.</para>
+    ///
+    /// <para><b>Hotkeys avoid the keys the game already uses.</b> M, C and X are the designate
+    /// tools, R and F move the slice, V cycles layer visibility, Space and 1–3 are the clock, and
+    /// Home recentres. So Research takes E rather than R and Colonists takes O rather than C. Two
+    /// of these are live today — B opens the Build palette and Escape opens Menu — and the rest
+    /// are legends on controls that say in their tooltip why they are not.</para>
+    /// </summary>
+    public static class HudCommands
+    {
+        /// <summary>Opens the Build palette. The one command on the bar that does something.</summary>
+        public const string BuildKey = "ui.tab.build";
+
+        /// <summary>Always last, always present, and the home of anything that did not fit.</summary>
+        public const string MenuKey = "ui.tab.menu";
+
+        static readonly (string Key, string Hotkey, string Reason)[] Order =
+        {
+            (BuildKey, "B", ""),
+            ("ui.tab.work", "W", "the work grid arrives with M7"),
+            ("ui.tab.schedule", "S", "schedules arrive with M7"),
+            ("ui.tab.research", "E", "research arrives with M7"),
+            ("ui.tab.colonists", "O", "the roster strip is the colonist list for now"),
+            ("ui.tab.animals", "A", "animals arrive with M5"),
+            ("ui.tab.wildlife", "K", "wildlife arrives with M5"),
+            ("ui.tab.bills", "N", "bills arrive with M5"),
+            ("ui.tab.factions", "T", "factions arrive with M7"),
+            ("ui.tab.archive", "G", "the archive arrives with M2"),
+            (MenuKey, "Esc", ""),
+        };
+
+        /// <summary>Every key the bar can draw, for the registry test.</summary>
+        public static readonly string[] IconKeys = BuildKeys();
+
+        static string[] BuildKeys()
+        {
+            var keys = new string[Order.Length];
+            for (int i = 0; i < Order.Length; i++) keys[i] = Order[i].Key;
+            return keys;
+        }
+
+        /// <summary>The bar, in the order it is drawn, names resolved from the registry.</summary>
+        public static IReadOnlyList<HudCommand> All
+        {
+            get
+            {
+                var items = new List<HudCommand>(Order.Length);
+                foreach ((string key, string hotkey, string reason) in Order)
+                    items.Add(new HudCommand(
+                        key, Registry.Label(key), hotkey, HudTheme.CategoryOf(key),
+                        primary: key == BuildKey, reason));
+                return items;
+            }
+        }
+
+        // ---------------------------------------------------------------- measurement
+
+        /// <summary>Side padding of an ordinary item.</summary>
+        public const int SidePad = 12;
+
+        /// <summary>Side padding of the primary item, which is a touch wider so the filled block
+        /// does not crowd its own label.</summary>
+        public const int PrimarySidePad = 14;
+
+        /// <summary>The icon slot in a command-bar item.</summary>
+        public const int IconSize = 16;
+
+        /// <summary>Icon to label.</summary>
+        public const int IconGap = 9;
+
+        /// <summary>Label to hotkey cap.</summary>
+        public const int HotkeyGap = 8;
+
+        /// <summary>Between two items.</summary>
+        public const int ItemGap = 3;
+
+        /// <summary>Height of an item, and so of the bar's content.</summary>
+        public const int ItemHeight = 38;
+
+        /// <summary>The bar's own padding, all round.</summary>
+        public const int BarPad = 5;
+
+        /// <summary>The hairline before Menu.</summary>
+        public const int DividerWidth = 1;
+
+        public const int DividerHeight = 26;
+
+        /// <summary>Space either side of the divider.</summary>
+        public const int DividerGap = 3;
+
+        /// <summary>
+        /// A rough advance per character, as a fraction of the font size.
+        ///
+        /// <para>Used only by the layout <i>model</i>, which is what the fast tier measures
+        /// coverage against; the shell itself reflows the real bar from the widths UI Toolkit
+        /// actually laid out, so a bad estimate here can make a coverage claim pessimistic and can
+        /// never make the bar overflow. It is deliberately generous for that reason.</para>
+        /// </summary>
+        public const float UiAdvance = 0.50f;
+
+        /// <summary>The same, for the mono face, which is wider per character.</summary>
+        public const float MonoAdvance = 0.60f;
+
+        /// <summary>The modelled width of one item.</summary>
+        public static float Width(HudCommand command)
+        {
+            int pad = command.Primary ? PrimarySidePad : SidePad;
+            float label = command.Label.Length * HudType.Of(HudTextRole.Row).Size * UiAdvance;
+            float hotkey = command.Hotkey.Length * HudType.Of(HudTextRole.Hotkey).Size * MonoAdvance;
+            return pad * 2 + IconSize + IconGap + label + HotkeyGap + hotkey;
+        }
+
+        /// <summary>
+        /// How many of the leading items fit, given the widths of each and the space the bar has.
+        /// Menu is the last item and is never counted out: the returned count always includes it,
+        /// and everything between the cut and Menu belongs in the Menu popup.
+        /// </summary>
+        /// <param name="widths">One width per item, in <see cref="All"/> order, Menu last.</param>
+        /// <param name="available">The width the bar may occupy, inclusive of its own padding.</param>
+        /// <returns>How many leading items are drawn on the row, not counting Menu.</returns>
+        public static int Fit(IReadOnlyList<float> widths, float available)
+        {
+            if (widths.Count == 0) return 0;
+
+            int last = widths.Count - 1;                 // Menu
+            float fixedPart =
+                BarPad * 2 + widths[last] + DividerWidth + DividerGap * 2;
+
+            float room = available - fixedPart;
+            int shown = 0;
+            for (int i = 0; i < last; i++)
+            {
+                float step = widths[i] + (shown > 0 ? ItemGap : 0f);
+                if (room - step < 0f) break;
+                room -= step;
+                shown++;
+            }
+            return shown;
+        }
+
+        /// <summary>
+        /// The width the bar actually takes with <paramref name="shown"/> leading items and Menu.
+        /// Never larger than the space it was given, which is the invariant the acceptance
+        /// criterion "nothing is cut off at the right edge" reduces to.
+        /// </summary>
+        public static float BarWidth(IReadOnlyList<float> widths, int shown)
+        {
+            if (widths.Count == 0) return 0f;
+            int last = widths.Count - 1;
+            float total = BarPad * 2 + widths[last] + DividerWidth + DividerGap * 2;
+            for (int i = 0; i < shown && i < last; i++) total += widths[i] + (i > 0 ? ItemGap : 0f);
+            return total;
+        }
+
+        /// <summary>The modelled widths of the whole bar, in order.</summary>
+        public static List<float> ModelWidths()
+        {
+            var widths = new List<float>();
+            foreach (HudCommand command in All) widths.Add(Width(command));
+            return widths;
+        }
+
+        /// <summary>The height of the bar: its content plus its own padding.</summary>
+        public const int BarHeight = ItemHeight + BarPad * 2;
+
+        static HudCommands()
+        {
+            int primaries = 0;
+            foreach ((string key, string _, string __) in Order)
+                if (key == BuildKey) primaries++;
+            if (primaries != 1)
+                throw new InvalidOperationException("the command bar has exactly one primary item");
+        }
+    }
+}

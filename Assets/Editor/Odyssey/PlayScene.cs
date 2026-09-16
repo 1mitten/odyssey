@@ -53,9 +53,21 @@ namespace Odyssey.EditorTools
         const string HudStylesPath = "Assets/Odyssey/Presentation/Ui/Hud.uss";
         const string HudThemePath = "Assets/Odyssey/Presentation/Ui/RuntimeTheme.tss";
         const string HudPanelPath = "Assets/Odyssey/Presentation/Ui/HudPanelSettings.asset";
+        const string HudUiFontPath = "Assets/Odyssey/Presentation/Ui/Fonts/ArchivoNarrow.ttf";
+        const string HudMonoFontPath = "Assets/Odyssey/Presentation/Ui/Fonts/IBMPlexMono-Medium.ttf";
 
         /// <summary>The mockup's canvas, which the stylesheet's pixel sizes are authored against.</summary>
-        public static readonly Vector2Int HudReferenceResolution = new Vector2Int(1200, 800);
+        /// <summary>
+        /// The canvas the HUD is authored against.
+        ///
+        /// <para>Moved from 1200x800 to 1920x1080 on 2026-09-16 with the interface rebuild. The
+        /// specification gives every anchor, width and row height in 1080p pixels — left:20,
+        /// width:288, rows 29 tall — and a panel scaled against a 1200x800 reference would draw
+        /// every one of them 1.6 times too large. It is also the resolution the acceptance
+        /// criteria are stated at, and two of the three they name (1280x720 and 2560x1440) are the
+        /// same shape, so all three resolve to this one logical canvas.</para>
+        /// </summary>
+        public static readonly Vector2Int HudReferenceResolution = new Vector2Int(1920, 1080);
 
         /// <summary>
         /// The world the play scene is built with, and the world "Measure a slice" measures. One
@@ -1862,6 +1874,16 @@ namespace Odyssey.EditorTools
             if (hud.hudStyles == null)
                 Debug.LogWarning($"[PlayScene] HUD stylesheet missing at {HudStylesPath}; the HUD will draw unstyled.");
 
+            // The two faces, both SIL Open Font Licence and both committed with their licences
+            // beside them. Optional by design: a clone that has not imported them keeps the
+            // panel's own theme font, so the layout is identical and only the letter shapes
+            // differ. That is why this warns rather than throwing.
+            hud.uiFont = AssetDatabase.LoadAssetAtPath<Font>(HudUiFontPath);
+            hud.monoFont = AssetDatabase.LoadAssetAtPath<Font>(HudMonoFontPath);
+            if (hud.uiFont == null || hud.monoFont == null)
+                Debug.LogWarning($"[PlayScene] HUD fonts missing at {HudUiFontPath} / {HudMonoFontPath}; " +
+                                 "the HUD keeps the runtime theme's default face.");
+
             boot.sizeX = PlaySizeXZ;
             boot.sizeZ = PlaySizeXZ;
             boot.layers = PlayLayers;
@@ -1912,13 +1934,14 @@ namespace Odyssey.EditorTools
             }
             panel.themeStyleSheet = theme;
 
-            // Scale with the screen, against the mockup's own 1200 x 800. The sheet is authored in
-            // those pixels, so this is the size it was designed to be read at: 1.35x on a 1080p
-            // monitor, 2.7x at 4K. Constant pixel size was the first setting, and at 4K it made
-            // every nine-pixel label nine pixels tall, which nobody could read. Matching width and
-            // height equally keeps a wide screen and a tall one the same distance from the mockup.
-            // Icons are meant to step at 32 and 64 rather than scale continuously (ADR 0007); the
-            // placeholder badges scale with everything else until the pipeline replaces them.
+            // Scale with the screen, against the 1920 x 1080 canvas the interface is authored in.
+            // The sheet is written in those pixels, so this is the size it was designed to be read
+            // at: 1:1 on a 1080p monitor, 2x at 4K. Constant pixel size was the first setting, and
+            // at 4K it made every eleven-pixel label eleven pixels tall, which nobody could read.
+            // Matching width and height equally keeps a wide screen and a tall one the same
+            // distance from the design. Icons are meant to step at 32 and 64 rather than scale
+            // continuously (ADR 0007); the placeholder squares scale with everything else until
+            // the pipeline replaces them.
             panel.scaleMode = PanelScaleMode.ScaleWithScreenSize;
             panel.referenceResolution = HudReferenceResolution;
             panel.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;

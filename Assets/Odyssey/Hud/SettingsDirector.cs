@@ -26,8 +26,16 @@ namespace Odyssey.Hud
     /// </summary>
     public enum EscapeAction
     {
+        /// <summary>Put down the tool the player is holding.</summary>
         DisarmTool,
+
+        /// <summary>Close the Build palette, which is the one panel that opens over the board.</summary>
+        ClosePalette,
+
+        /// <summary>Close the settings panel.</summary>
         ClosePanel,
+
+        /// <summary>Nothing is open and nothing is held, so Escape is the way into the menu.</summary>
         OpenPanel,
     }
 
@@ -191,9 +199,21 @@ namespace Odyssey.Hud
         /// listener would have disarmed the tool and opened the panel in the same keystroke —
         /// the sort of fault that looks like a flicker and is diagnosed as a rendering bug.</para>
         /// </summary>
-        public EscapeAction Escape(bool toolArmed)
+        public EscapeAction Escape(bool toolArmed) => Escape(toolArmed, paletteOpen: false);
+
+        /// <summary>
+        /// The same rule with the Build palette in it.
+        ///
+        /// <para>The palette used to be a column pinned to the left edge and permanently open, so
+        /// it was never something Escape had to unwind. The interface rebuild makes it a panel
+        /// opened by the Build command and closed by Escape, which puts it in the middle of the
+        /// order: a tool is held in the hand and comes off first, the palette is the panel the
+        /// player just opened over the board, and the menu is the last resort.</para>
+        /// </summary>
+        public EscapeAction Escape(bool toolArmed, bool paletteOpen)
         {
             if (toolArmed) return EscapeAction.DisarmTool;
+            if (paletteOpen) return EscapeAction.ClosePalette;
             return Open ? EscapeAction.ClosePanel : EscapeAction.OpenPanel;
         }
     }

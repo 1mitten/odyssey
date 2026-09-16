@@ -1,201 +1,105 @@
-/* Odyssey HUD first pass — the visual tokens of docs/reference/mockups/hud-v2.html, which is
-   the owner-approved look for the layer HUD. Palette: near-black panels over the world, one
-   cyan accent, monospace-small type, 6 px radii, 1 px #2b3947 hairlines. Colours are hardcoded
-   per class rather than var(--x): the sheet stays legible as plain text and there are no
-   custom-property resolution surprises across panel copies. */
+/* Odyssey HUD — the approved interface specification, 2026-09-16.
+ *
+ * WHAT THIS SHEET IS AND IS NOT ALLOWED TO DO
+ *
+ * It owns colour, space, radius, borders and state. It owns no type at all: every font size,
+ * weight and tracking in the HUD comes from `HudType` through `HudText`, in the Unity-free
+ * Odyssey.Hud assembly, because "six sizes and no others" is an acceptance criterion and a size
+ * written here could only be tested by parsing this file. There is deliberately not one
+ * `font-size` below.
+ *
+ * Nor does it own the position of a region. Regions are anchored to screen edges or centred by
+ * the layout engine, and `HudLayout` is the arithmetic that says where that puts them — which is
+ * how "no two panels overlap at 1280x720, 1920x1080 or 2560x1440" became a test in the fast tier
+ * rather than an opinion in a review. The offsets below are the anchors themselves (left:20,
+ * right:76, bottom:84) and they are the same numbers HudLayout holds; HudStyleSheetTests fails
+ * the tier if the two disagree.
+ *
+ * Colours are literal rather than var(--x), which is the position this sheet has always taken and
+ * is worth restating: the sheet stays legible as plain text and there are no custom-property
+ * resolution surprises across panel copies. What has changed is that the literals are now checked
+ * — HudStyleSheetTests parses the declarations named in its own table and compares them against
+ * HudTheme, so a colour nobody agreed to cannot reach the screen.
+ *
+ * ONE THING IN THE SPEC THIS ENGINE CANNOT DO. The panel fill is specified as
+ * rgba(12,16,20,.86) plus backdrop-filter: blur(6px). UI Toolkit has no backdrop filter and no
+ * way to sample what is behind an element, so the blur is simply absent. The fill is unchanged;
+ * what is lost is the softening of bright terrain seen through a panel. The two scrims carry the
+ * contrast that mattered, so the omission costs legibility nothing — see HudContrast, which
+ * measures it.
+ */
+
+/* Unity's runtime theme gives every Label a small vertical margin of its own. Inside a row of a
+   fixed height that costs nothing, which is why it went unnoticed: the stores rows, the clock line
+   and the inspect header all size their own children. It shows up on a label that is the last
+   thing in a panel — the depth rail's "R / F" hint was adding two pixels to the rail's height, and
+   the empty inspect pane's one line would have done the same. Reset first, so that every margin
+   below is one this sheet asked for. */
+.unity-label {
+    margin: 0;
+}
 
 .hud {
     position: absolute;
     left: 0; top: 0; right: 0; bottom: 0;
-    /* The shell must not catch the pointer anywhere a region does not sit, or the world would
-       be unclickable behind a full-screen element. Set from code (PickingMode.Ignore), where
-       it cannot be lost with a stylesheet swap. */
+    /* The shell must not catch the pointer anywhere a region does not sit, or the world would be
+       unclickable behind a full-screen element. Set from code (PickingMode.Ignore), where it
+       cannot be lost with a stylesheet swap. */
 }
 
-/* ---------------- regions ---------------- */
+/* ---------------------------------------------------------------- scrims
 
-.region {
-    background-color: #141b24e6;
+   Always on, both of them, and never a pointer target. They are the reason the panels could
+   shrink: a panel dark enough to hold 13 px text over bright terrain has to be nearly opaque, and
+   a screen of nearly opaque panels is the coverage this rebuild was asked to halve. The ramp
+   itself is a texture built in HudTokens.VerticalRamp, because USS has no gradient property. */
+
+.scrim {
+    position: absolute;
+    left: 0; right: 0;
+    background-size: 100% 100%;
+}
+
+/* ---------------------------------------------------------------- panels */
+
+.panel {
+    position: absolute;
+    background-color: rgba(12, 16, 20, 0.86);
     border-width: 1px;
-    border-color: #2b3947;
-    border-radius: 6px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 5px;
+    padding: 12px;
 }
 
-.region__hdr {
-    font-size: 9px;
-    letter-spacing: 1px;
-    color: #63758a;
-    border-bottom-width: 1px;
-    border-bottom-color: #2b3947;
-    padding: 4px 7px;
+.panel__hdr {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+/* Every label that shares a column with another declares its height and centres its text in it.
+   Left to itself a label claims a line box of about twice the point size — 26 px for 13 px type —
+   and two of those stacked inside a 38 px header overlap the tabs under them, which is exactly
+   what the first screenshot of this HUD showed. An explicit box with `middle` alignment centres
+   the ink inside it, so the leading falls outside the box instead of pushing the next row down. */
+.panel__label {
+    color: rgba(255, 255, 255, 0.66);
     white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
+    height: 20px;
+    -unity-text-align: middle-left;
 }
 
-.slot-left {
-    position: absolute;
-    left: 10px; top: 10px; bottom: 372px;
-    width: 214px;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.slot-roster {
-    position: absolute;
-    top: 10px;
-    left: 50%;
-    translate: -50% 0;
-    flex-direction: row;
-    padding: 5px;
-    background-color: #141b24e6;
-    border-width: 1px;
-    border-color: #2b3947;
-    border-radius: 6px;
-}
-
-.slot-right {
-    position: absolute;
-    right: 10px; top: 10px; bottom: 56px;
-    width: 214px;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-/* The three right-hand regions stack in the column above. They carried absolute offsets and
-   hand-picked tops until 2026-09-16, when the clock grew taller than the 122px the alerts
-   panel's fixed top allowed it and buried the speed buttons underneath. Heights are content's
-   business; only the order is ours. */
-.slot-clock {
-    width: 100%;
-}
-
-.slot-alerts {
-    width: 100%;
-    margin-top: 10px;
-}
-
-.slot-ruler {
-    /* Narrow, and takes whatever height is left under the two above it. */
-    width: 76px;
-    margin-top: 10px;
-    flex-grow: 1;
-    min-height: 140px;
-}
-
-.slot-inspect {
-    position: absolute;
-    /* Above the tab bar, never under it: the pane is what a click answers with.
-    
-       The offset clears a bar of two rows, which is what it became once every tab carried its
-       full name and the Build button joined them. This is a coupling and worth naming as
-       one: the pane assumes a height for the bar rather than being laid out against it. It
-       holds because the bar cannot exceed two rows at any resolution the panel scales to, and
-       the honest fix is a three-row layout for the whole sheet rather than a fourth
-       hand-picked offset. */
-    left: 10px; bottom: 104px;
-    width: 356px;
-    height: 302px;
-}
-
-/* The bottom edge is a stack: whatever panels are open, then the bar. The bar's height is
-   content's business — it wraps to two rows once every tab carries its full name — so nothing
-   above it may assume a height for it. */
-.slot-bottom-stack {
-    position: absolute;
-    left: 10px; right: 10px; bottom: 10px;
-    /* Reversed, so the bar is the first child and sits at the bottom while panels added later
-       stack upwards above it. Plain column put the palette under the bar, because the regions
-       are built in catalogue order and the palette is built before the tabs. Ordering the
-       stack by build order would make the layout depend on the order of ten method calls. */
-    flex-direction: column-reverse;
-}
-
-/* The bar itself, divided rather than overlapped. The tab bar takes what is left after the
-   overlay strip and the cancel button have taken what they need. */
-.slot-bottom {
-    flex-direction: row;
-    align-items: flex-end;
-}
-
-.slot-tabs {
-    /* Takes the remaining width and wraps inside it. Once every tab carries its full name
-       (09 §7a) the row does not fit at modest resolutions, and wrapping is the honest answer:
-       a bar that cannot fit its contents should get taller, not hide the last of them. */
-    flex-grow: 1;
-    flex-shrink: 1;
-    justify-content: center;
-    flex-wrap: wrap;
-    flex-direction: row;
-    margin-right: 8px;
-    padding: 5px;
-    /* Solid: the bottom bar is always on screen, so nothing behind it needs showing through. */
-    background-color: #141b24;
-    border-width: 1px;
-    border-color: #2b3947;
-    border-radius: 6px;
-}
-
-.slot-overlays {
-    /* A strip of icons beside the cancel affordance, one row, no frame. */
-    height: 36px;
-    flex-shrink: 0;
-    margin-right: 8px;
+.panel__hdrright {
     flex-direction: row;
     align-items: center;
-    padding: 0 4px;
-    background-color: #141b24;
-    border-width: 1px;
-    border-color: #2b3947;
-    border-radius: 6px;
 }
 
-.overlay__btn {
-    width: 22px; height: 22px;
-    margin: 0 2px;
-    border-radius: 4px;
-    justify-content: center;
-    align-items: center;
-}
-
-.overlay__btn:hover { background-color: #22303d; }
-
-.overlay__btn .icon { margin-right: 0; }
-
-.cancel {
-    width: 36px; height: 36px;
-    flex-shrink: 0;
-    border-radius: 6px;
-    border-width: 1px;
-    border-color: #7a3a30;
-    background-color: #2a1a18cc;
-    justify-content: center;
-    align-items: center;
-}
-
-.cancel__x {
-    font-size: 16px;
-    color: #d6604a;
-}
-
-/* ---------------- shared bits ---------------- */
-
-.icon {
-    width: 16px; height: 16px;
-    border-radius: 3px;
-    margin-right: 5px;
-    font-size: 7px;
-    -unity-text-align: middle-center;
-    color: #0c1015;
-    flex-shrink: 0;
-}
-
-.icon--32 { width: 22px; height: 22px; font-size: 9px; }
-.icon--avatar { width: 30px; height: 30px; font-size: 11px; }
+/* ---------------------------------------------------------------- shared bits */
 
 .bar {
-    height: 4px;
-    background-color: #22303d;
+    background-color: rgba(255, 255, 255, 0.09);
     border-radius: 2px;
     overflow: hidden;
     flex-shrink: 0;
@@ -203,310 +107,628 @@
 
 .bar__fill {
     height: 100%;
-    background-color: #6fbf7f;
+    background-color: #7fc98c;
     border-radius: 2px;
 }
 
-.bar--lo .bar__fill { background-color: #d6604a; }
+/* Three need bars stacked on a roster card. */
+.bar--card { height: 3px; margin-top: 3px; }
+
+/* The bar under a need in the inspect pane. */
+.bar--need { height: 4px; margin-top: 4px; }
 
 .chip {
     flex-direction: row;
     align-items: center;
     border-width: 1px;
-    border-color: #3d4f61;
-    border-radius: 4px;
-    padding: 3px 6px;
-    margin: 1px;
-    color: #93a4b5;
-    font-size: 10px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 3px;
+    padding: 4px 8px;
+    margin: 2px;
     white-space: nowrap;
 }
 
-.chip--on {
-    background-color: #2b7f8f;
-    border-color: #5ec8dc;
-    color: #ffffff;
+.chip__label { color: rgba(255, 255, 255, 0.66); }
+.chip:hover { border-color: #6fd3e3; }
+.chip--off { opacity: 0.42; }
+.chip--off:hover { border-color: rgba(255, 255, 255, 0.13); }
+
+/* ---------------------------------------------------------------- A1 stores */
+
+.stores {
+    left: 20px;
+    top: 20px;
+    width: 288px;
 }
 
-.chip--off { opacity: 0.55; }
-
-.tooltipnote { color: #63758a; }
-
-/* ---------------- ledger (A1) ---------------- */
-
-.ledger {
-    padding: 4px 6px 5px 6px;
+.stores__count {
+    color: rgba(255, 255, 255, 0.50);
+    margin-right: 6px;
+    height: 20px;
+    -unity-text-align: middle-right;
 }
 
-.ledger__row {
+.stores__rows { margin-top: 9px; }
+
+.stores__row {
     flex-direction: row;
     align-items: center;
-    margin-top: 2px;
+    height: 29px;
+    border-radius: 3px;
+    padding: 0 4px;
 }
 
-.ledger__name {
+.stores__row:hover { background-color: rgba(255, 255, 255, 0.05); }
+
+.stores__name {
     flex-grow: 1;
-    color: #b9c7d4;
-    font-size: 11px;
+    margin-left: 9px;
+    color: #eef3f6;
     white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-
-    /* The height is load-bearing and must not be tidied away. An ellipsis needs
-       overflow:hidden, and overflow:hidden clips the glyphs to the element's *content* box —
-       which, left to size itself, comes out shorter than the type it is holding. Reported as
-       "A1 resources, cannot read any of the text" on 2026-09-16: the names were shorn while
-       the quantities beside them, which carry no overflow rule, drew in full.
-
-       Padding does not fix it. Raising padding-bottom from 3px to 5px produced a
-       byte-identical picture, because padding extends the padding box and the clip is taken
-       at the content box. Only height moves it. Centring the text in the taller box then
-       keeps the row looking as it did. */
-    height: 18px;
-    -unity-text-align: middle-left;
 }
 
-.ledger__qty {
-    color: #e6eef5;
-    font-size: 11px;
+.stores__value {
+    color: #eef3f6;
+    -unity-text-align: middle-right;
 }
 
-/* Dim enough to read as "not yet", light enough to read at all. The old #63758a was about
-   3.5:1 against the panel, which is under the threshold for text this size; these are about
-   5:1. The distinction from a live row is carried by the gap between them, not by taking the
-   greyed rows down to where they cannot be made out. */
-.ledger__row--planned .ledger__name,
-.ledger__row--planned .ledger__qty { color: #8b9db0; }
+/* A commodity the colony has none of. Folded away behind the disclosure by default; at 0.42 it is
+   still readable when it is shown, which is what the disclosure is for. */
+.stores__row--zero { opacity: 0.42; }
 
-.ledger__note {
-    color: #8b9db0;
-    font-size: 9px;
-    margin-top: 4px;
+/* Falling: an amber down-chevron before the value, and the faintest tint across the row. */
+.stores__row--falling { background-color: rgba(232, 181, 92, 0.09); }
+.stores__falling { margin-right: 5px; }
+
+/* ---------------------------------------------------------------- A2 colonist strip */
+
+.strip {
+    position: absolute;
+    left: 0; right: 0;
+    top: 20px;
+    flex-direction: row;
+    justify-content: center;
 }
-
-/* ---------------- roster (A2) ---------------- */
 
 .card {
-    width: 58px;
-    padding: 4px;
-    margin: 0 2px;
+    width: 132px;
+    height: 86px;
+    margin: 0 3.5px;
+    padding: 8px;
+    background-color: rgba(12, 16, 20, 0.86);
     border-width: 1px;
-    border-color: #2b3947;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 5px;
+}
+
+.card:hover { border-color: rgba(111, 211, 227, 0.55); }
+.card--sel { border-color: #6fd3e3; }
+
+/* The spec's "0 0 0 1px rgba(111,211,227,.35)" outside the accent border. UI Toolkit has no
+   box-shadow, so the ring is an element inset past the card's own edge. */
+.card__ring {
+    position: absolute;
+    left: -2px; top: -2px; right: -2px; bottom: -2px;
+    border-width: 1px;
+    border-color: rgba(111, 211, 227, 0.35);
+    border-radius: 6px;
+}
+
+.card__top {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+}
+
+.card__avatar {
+    width: 26px;
+    height: 26px;
     border-radius: 4px;
-    background-color: #1b242fe6;
+    flex-shrink: 0;
+    justify-content: center;
     align-items: center;
 }
 
-.card:hover { border-color: #5ec8dc; }
-
-.card--sel {
-    border-color: #5ec8dc;
-    background-color: #20303a;
-}
-
-.card__name {
-    font-size: 10px;
-    color: #dde6ee;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    max-width: 50px;
-    /* Height, for the same reason the ledger's names need one: overflow:hidden clips glyphs to
-       the content box, and a name with a descender in it loses its tail without this. */
-    height: 15px;
+.card__initial {
+    color: #0b1116;
+    height: 26px;
     -unity-text-align: middle-center;
 }
 
-.card .bar { margin-top: 3px; align-self: stretch; }
+.card__names {
+    flex-grow: 1;
+    margin-left: 8px;
+    overflow: hidden;
+}
 
-/* Food above mood, and told apart by colour rather than by a label: at this size a word would
-   be most of the card. Mood keeps the green-to-red band it already had, so the card still goes
-   red when a colonist is in trouble. */
-.card .bar--food .bar__fill { background-color: #5ec8dc; }
+/* The one place in the HUD where text is allowed to be cut short: a colonist's own name, which
+   can be any length and belongs on a card of a fixed width. */
+.card__name {
+    color: #eef3f6;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    height: 19px;
+    -unity-text-align: middle-left;
+}
 
-/* ---------------- clock + speed (A3/A4) ---------------- */
+/* Its own line, the full width of the card rather than the strip beside the avatar, and therefore
+   not truncated. The acceptance criteria allow an ellipsis on a colonist's name and on nothing
+   else, so the job label has to actually fit: 116 px holds every job this game has at 12 px, with
+   room for several more. */
+.card__job {
+    color: rgba(255, 255, 255, 0.50);
+    white-space: nowrap;
+    height: 16px;
+    -unity-text-align: middle-left;
+}
 
-.clock {
-    padding: 6px 7px 7px 7px;
+/* ---------------------------------------------------------------- A3/A4 clock and speed,
+                                                                     A5 alerts
+
+   One column, not two corners. The clock and the alerts were absolutely positioned with
+   hand-picked tops until the clock grew past the 122 px the alerts panel's fixed top allowed it
+   and buried the speed buttons. Heights are content's business; only the order is ours. */
+
+.column-right {
+    position: absolute;
+    right: 76px;
+    top: 20px;
+    width: 266px;
+}
+
+.clock { position: relative; width: 100%; }
+
+.clock__line {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    height: 28px;
 }
 
 .clock__time {
-    color: #dde6ee;
-    font-size: 12px;
-    white-space: nowrap;
+    color: #eef3f6;
+    height: 28px;
+    -unity-text-align: middle-left;
 }
 
 .clock__date {
-    color: #93a4b5;
-    font-size: 10px;
-    margin-top: 2px;
+    color: rgba(255, 255, 255, 0.66);
+    height: 28px;
+    -unity-text-align: middle-right;
 }
 
 .speed {
     flex-direction: row;
-    margin-top: 6px;
+    margin-top: 9px;
+    height: 26px;
 }
 
 .speed__btn {
     flex-grow: 1;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    border-width: 1px;
-    border-color: #3d4f61;
-    border-radius: 4px;
+    flex-basis: 0;
     height: 26px;
-    margin-right: 3px;
+    margin-right: 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.16);
+    border-radius: 4px;
+    justify-content: center;
+    align-items: center;
 }
 
-.speed__glyph {
-    font-size: 11px;
-    color: #cdd9e4;
+.speed__btn:hover { border-color: #6fd3e3; }
+
+.speed__btn--on {
+    background-color: #6fd3e3;
+    border-color: #6fd3e3;
+}
+
+.alerts {
+    position: relative;
+    width: 100%;
+    margin-top: 9px;
+}
+
+/* The negative bottom margin cancels the last row's own gap, so the panel is exactly
+   rows * height + (rows - 1) * gap tall — which is what HudLayout models and what the PlayMode
+   gate compares the realised box against. The same trick is used by the needs grid and the
+   depth rail below. */
+.alerts__rows { margin-top: 9px; margin-bottom: -7px; }
+
+/* Two lines of 13 px type at the renderer's own line height, which is nearer 26 px a line than
+   the 17 the point size suggests. A minimum rather than a fixed height: a one-line alert still
+   occupies the modelled row so the panel's height is predictable, and a longer one grows rather
+   than being clipped. The authored leads and details are all one or two lines in a 242 px
+   column. */
+.alert {
+    flex-direction: row;
+    align-items: flex-start;
+    margin-bottom: 7px;
+    min-height: 52px;
+}
+
+.alert__icon { margin-top: 1px; }
+
+.alert__text {
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex-grow: 1;
+    margin-left: 9px;
+}
+
+/* Lead first in full ink, detail trailing dim. A player who reads only the leads should know
+   what to do; the detail is there for the one they stop on. */
+.alert__lead {
+    color: #eef3f6;
+    white-space: normal;
+}
+
+.alert__detail {
+    color: rgba(255, 255, 255, 0.60);
+    white-space: normal;
+}
+
+/* ---------------------------------------------------------------- A11 depth rail
+
+   Four pixels of side padding rather than twelve, because the spec asks for 26 px cells in a
+   44 px rail and twelve either side would leave twenty. See HudLayout.RailSidePad. */
+
+.rail {
+    right: 20px;
+    top: 20px;
+    width: 44px;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.rail .panel__hdr {
+    height: 14px;
+    justify-content: center;
+}
+
+.rail__cells {
+    margin-top: 6px;
+    margin-bottom: -6px;
+    align-items: center;
+}
+
+.rail__cell {
+    width: 26px;
+    height: 16px;
+    margin-bottom: 6px;
+    border-radius: 3px;
+    background-color: rgba(0, 0, 0, 0.35);
+    justify-content: center;
+    align-items: center;
+}
+
+.rail__cell:hover { background-color: rgba(255, 255, 255, 0.18); }
+
+/* Above the surface is sky, and sky is pale. Below it is rock, and rock is dark. That contrast is
+   the one thing a depth readout has to say at a glance. */
+.rail__cell--above { background-color: rgba(255, 255, 255, 0.07); }
+
+.rail__cell--active {
+    background-color: #6fd3e3;
+}
+
+.rail__cell--surface { border-bottom-width: 1px; border-bottom-color: rgba(255, 255, 255, 0.35); }
+
+.rail__number {
+    color: #0b1116;
+    height: 16px;
     -unity-text-align: middle-center;
 }
 
-.speed__btn:hover { background-color: #243140; }
-
-.speed__label {
-    font-size: 8px;
-    color: #93a4b5;
-    margin-top: 2px;
+.rail__dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 2px;
+    background-color: #e8b55c;
 }
 
-/* ---------------- alerts (A5) ---------------- */
-
-.alerts {
-    padding: 5px 6px 6px 6px;
+.rail__hint {
+    color: rgba(255, 255, 255, 0.50);
+    -unity-text-align: middle-center;
+    height: 14px;
+    margin-top: 6px;
 }
 
-.alerts__empty {
-    color: #b9c7d4;
-    font-size: 10px;
-    padding: 3px 2px 2px 2px;
+/* ---------------------------------------------------------------- A9/A10 inspect */
+
+.inspect {
+    left: 20px;
+    bottom: 84px;
+    width: 560px;
 }
 
-/* Wraps. It is a sentence, not a label, and nowrap ran it out through the side of its own
-   panel and off the edge of the screen. */
-.alerts__note {
-    color: #8b9db0;
-    font-size: 9px;
-    padding: 3px 2px 2px 2px;
-    white-space: normal;
+/* An explicit height, because this is the only text in the HUD that is the sole child of a
+   content-sized panel, and a label left to size itself came out 26 px tall for 13 px type — twice
+   the point size, and nine pixels more than the layout model had allowed the whole pane. Nothing
+   is clipped: there is no overflow rule here, so the glyphs draw past a box that is shorter than
+   the renderer's line box. */
+.inspect__empty {
+    color: rgba(255, 255, 255, 0.50);
+    height: 17px;
+    -unity-text-align: middle-left;
 }
 
-/* ---------------- depth ruler (A11) ---------------- */
+.inspect__hdr {
+    flex-direction: row;
+    align-items: flex-start;
+    height: 38px;
+}
 
-.ruler {
+/* No overflow rule: clipping is what the acceptance criteria forbid, and the ellipsis they do
+   allow is for a colonist's name on a 132 px card, not for a 560 px pane. */
+.inspect__titles {
     flex-grow: 1;
-    padding: 3px 4px;
-    overflow: hidden;
+    margin-left: 9px;
 }
 
-.ruler__row {
+.inspect__nameline {
     flex-direction: row;
     align-items: center;
-    padding: 2px 3px;
+    height: 22px;
+}
+
+.inspect__title {
+    color: #eef3f6;
+    white-space: nowrap;
+    height: 22px;
+    -unity-text-align: middle-left;
+}
+
+.inspect__meta {
+    color: rgba(255, 255, 255, 0.66);
+    margin-left: 9px;
+    white-space: nowrap;
+    height: 22px;
+    -unity-text-align: middle-left;
+}
+
+/* Twenty-two and sixteen come to the thirty-eight the layout model gives the header. */
+.inspect__state {
+    color: rgba(255, 255, 255, 0.50);
+    white-space: nowrap;
+    height: 16px;
+    -unity-text-align: middle-left;
+}
+
+.inspect__actions {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.action {
+    flex-direction: row;
+    align-items: center;
+    height: 26px;
+    padding: 0 9px;
+    margin-left: 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+}
+
+.action:hover { border-color: #6fd3e3; }
+.action--off { opacity: 0.42; }
+.action--off:hover { border-color: rgba(255, 255, 255, 0.13); }
+.action__label { color: rgba(255, 255, 255, 0.66); margin-left: 6px; }
+
+.inspect__close {
+    width: 26px;
+    height: 26px;
+    margin-left: 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+    justify-content: center;
+    align-items: center;
+}
+
+.inspect__close:hover { border-color: #e06a5c; }
+
+.inspect__tabs {
+    flex-direction: row;
+    margin-top: 6px;
+    height: 26px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.09);
+}
+
+.tab {
+    height: 24px;
+    padding: 0 10px;
+    color: rgba(255, 255, 255, 0.66);
+    border-radius: 3px 3px 0 0;
+    -unity-text-align: middle-center;
+}
+
+.tab--on {
+    background-color: rgba(111, 211, 227, 0.12);
+    color: #6fd3e3;
+    border-bottom-width: 2px;
+    border-bottom-color: #6fd3e3;
+}
+
+.tab--off { opacity: 0.42; }
+
+/* Two columns, 9 px between rows and 18 px between columns. The old pane stacked them, which is
+   why it was 690 px wide and 302 tall for three numbers. */
+.needs {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 9px;
+
+    /* Eighteen pixels of room borrowed back, so that two 256 px columns and the gap between them
+       fit the pane's 534 px of content with the second column's own trailing margin hanging over
+       the edge rather than forcing a wrap. Flex counts a trailing margin when it decides whether
+       a line has room, which is what made the first version of this grid one column wide. */
+    margin-right: -18px;
+    margin-bottom: -9px;
+}
+
+.need {
+    width: 256px;
+    margin-bottom: 9px;
+    margin-right: 18px;
+}
+
+.need__line {
+    flex-direction: row;
+    align-items: center;
+    height: 17px;
+}
+
+.need__swatch {
+    width: 7px;
+    height: 7px;
+    border-radius: 1px;
+    flex-shrink: 0;
+}
+
+.need__name {
+    flex-grow: 1;
+    margin-left: 8px;
+    color: #eef3f6;
+    height: 17px;
+    -unity-text-align: middle-left;
+}
+
+.need__value {
+    color: rgba(255, 255, 255, 0.66);
+    height: 17px;
+    -unity-text-align: middle-right;
+}
+
+.inspect--tomb { opacity: 0.55; }
+.inspect__reason { color: #e8b55c; margin-top: 6px; }
+
+/* ---------------------------------------------------------------- A8 command bar
+
+   The bar may not wrap and may not overflow. Anything that does not fit goes into Menu, which is
+   what lets the inspect pane above it stop guessing at the bar's height — a coupling the old
+   sheet carried in a comment admitting it was one. */
+
+.bar-row {
+    position: absolute;
+    left: 0; right: 0;
+    bottom: 20px;
+    flex-direction: row;
+    justify-content: center;
+}
+
+.commandbar {
+    flex-direction: row;
+    align-items: center;
+    padding: 5px;
+    background-color: rgba(12, 16, 20, 0.90);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 6px;
+}
+
+.cmd {
+    flex-direction: row;
+    align-items: center;
+    height: 38px;
+    padding: 0 12px;
+    margin-right: 3px;
+    border-radius: 4px;
+}
+
+.cmd:hover { background-color: rgba(255, 255, 255, 0.07); }
+
+.cmd__label {
+    color: rgba(255, 255, 255, 0.82);
+    margin-left: 9px;
+    white-space: nowrap;
+}
+
+.cmd__key {
+    color: rgba(255, 255, 255, 0.35);
+    margin-left: 8px;
+}
+
+/* One filled item on the row, and the ink on it is the dark one. */
+.cmd--primary {
+    background-color: #6fd3e3;
+    padding: 0 14px;
+}
+
+.cmd--primary:hover { background-color: #8adfec; }
+.cmd__label--primary { color: #0b1116; }
+.cmd--primary .cmd__key { color: rgba(11, 17, 22, 0.55); }
+
+.cmd--off { opacity: 0.55; }
+.cmd--on { background-color: rgba(111, 211, 227, 0.18); }
+
+.commandbar__divider {
+    width: 1px;
+    height: 26px;
+    margin: 0 3px;
+    background-color: rgba(255, 255, 255, 0.09);
+}
+
+/* ---------------------------------------------------------------- menu popup */
+
+.menu {
+    right: 20px;
+    bottom: 82px;
+    width: 268px;
+    max-height: 560px;
+}
+
+.menu__section {
+    color: rgba(255, 255, 255, 0.50);
+    margin: 8px 0 4px 0;
+}
+
+.menu__row {
+    flex-direction: row;
+    align-items: center;
+    height: 29px;
+    padding: 0 6px;
     border-radius: 3px;
 }
 
-.ruler__row:hover { background-color: #22303d; }
+.menu__row:hover { background-color: rgba(255, 255, 255, 0.07); }
+.menu__row--off { opacity: 0.42; }
+.menu__row--off:hover { background-color: rgba(0, 0, 0, 0); }
 
-.ruler__row--active {
-    background-color: #2b7f8f;
-}
-
-.ruler__label {
-    width: 26px;
-    color: #63758a;
-    font-size: 10px;
-    -unity-text-align: middle-right;
-    flex-shrink: 0;
-}
-
-.ruler__row--active .ruler__label { color: #cdeef5; }
-
-.ruler__pip {
+.menu__label {
     flex-grow: 1;
-    height: 6px;
-    background-color: #1d2833;
-    border-radius: 2px;
-    overflow: hidden;
-    margin: 0 4px;
+    margin-left: 9px;
+    color: rgba(255, 255, 255, 0.82);
+    white-space: nowrap;
 }
 
-.ruler__pipfill {
-    height: 100%;
-    background-color: #5ec8dc;
-    border-radius: 2px;
-}
+.menu__key { color: rgba(255, 255, 255, 0.35); }
 
-.ruler__count {
-    width: 16px;
-    color: #93a4b5;
-    font-size: 10px;
-    -unity-text-align: middle-right;
-    flex-shrink: 0;
-}
+/* ---------------------------------------------------------------- A7 build palette
 
-.ruler__mark {
-    width: 10px;
-    height: 6px;
-    flex-shrink: 0;
-}
+   Opened by the Build command and closed by Escape. It used to be a column pinned to the left
+   edge and permanently open, competing with the stores panel for a column that could not hold
+   both. */
 
-.ruler__mark--alert {
-    border-radius: 6px;
-    background-color: #d6604a;
-    width: 6px;
-    align-self: center;
-}
-
-.ruler__foot {
-    border-top-width: 1px;
-    border-top-color: #2b3947;
-    padding: 4px 6px 6px 6px;
-    color: #63758a;
-    font-size: 9px;
-    white-space: normal;
-}
-
-/* ---------------- build palette (A7, called Architect until 2026-09-16) ---------------- */
-
-/* The ledger has the left column to itself now that the palette has moved to the bottom bar,
-   so there is nothing left to shrink it. */
-.slot-ledger {
-    flex-shrink: 0;
-}
-
-/* The palette, opened from the bottom bar rather than pinned to the left edge. It sits beside
-   the inspect pane in the space that was empty, and above the bar that opens it. The scroll
-   stays: ten categories and their tools will outgrow any panel that has to share a screen. */
 .build {
-    /* In the stack above the bar, so it can never cross it. Held clear of the inspect pane on
-       its left, whose width is fixed at 356 by .slot-inspect. */
-    align-self: flex-start;
-    margin-left: 366px;
-    margin-bottom: 8px;
-    width: 300px;
-    max-height: 340px;
-}
-
-/* On, when its panel is open. The bar's other tabs are all disabled, so this is the only one
-   that ever lights. */
-.tab--build.chip--on {
-    background-color: #2b7f8f;
-    border-color: #5ec8dc;
-    color: #ffffff;
+    left: 50%;
+    translate: -50% 0;
+    bottom: 82px;
+    width: 420px;
+    max-height: 320px;
 }
 
 .build__scroll {
     flex-grow: 1;
     min-height: 0;
+    margin-top: 9px;
 }
 
-/* The scroller, dressed for this sheet. Unity's default is a light-grey bar with two arrow
-   buttons, which against a near-black panel reads as something broken rather than as a way to
-   see the rest of the list. Thin, dark, no arrows, and the track left invisible. */
+/* Unity's default scroller is a light-grey bar with two arrow buttons, which against a near-black
+   panel reads as something broken rather than as a way to see the rest of the list. */
 .build__scroll .unity-scroller--vertical {
     width: 8px;
     background-color: rgba(0, 0, 0, 0);
@@ -514,9 +736,7 @@
     margin-left: 2px;
 }
 
-.build__scroll .unity-scroller--vertical .unity-repeat-button {
-    display: none;
-}
+.build__scroll .unity-scroller--vertical .unity-repeat-button { display: none; }
 
 .build__scroll .unity-scroller--vertical .unity-base-slider__tracker {
     background-color: rgba(0, 0, 0, 0);
@@ -525,239 +745,92 @@
 
 .build__scroll .unity-scroller--vertical .unity-base-slider__dragger {
     width: 6px;
-    background-color: #3d4f61;
+    background-color: rgba(255, 255, 255, 0.13);
     border-width: 0;
     border-radius: 3px;
     margin-left: 0;
 }
 
 .build__scroll .unity-scroller--vertical .unity-base-slider__dragger:hover {
-    background-color: #5ec8dc;
+    background-color: #6fd3e3;
 }
 
 .build__cats {
     flex-direction: row;
     flex-wrap: wrap;
-    padding: 4px;
-}
-
-.build__tool {
-    flex-direction: row;
-    align-items: center;
-    border-width: 1px;
-    border-color: #2b3947;
-    border-radius: 3px;
-    padding: 2px 5px;
-    margin: 1px;
-    color: #93a4b5;
-    font-size: 10px;
-    white-space: nowrap;
-    opacity: 0.55;
 }
 
 .build__tools {
     flex-direction: row;
     flex-wrap: wrap;
-    padding: 0 4px 4px 4px;
+    margin-top: 9px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.09);
+    padding-top: 9px;
 }
 
-/* ---------------- tabs (A8) + overlays (A12) ---------------- */
+/* ---------------------------------------------------------------- B17 settings
 
-.tabs { flex-direction: row; }
+   Centred, and deliberately narrow: it holds a short list of switches, not a settings tree. Not a
+   modal, so there is no scrim behind it and the board stays visible and running underneath, which
+   is the whole reason to open it. */
 
-.overlays {
+.settings {
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    width: 300px;
+}
+
+.settings__section {
+    color: rgba(255, 255, 255, 0.50);
+    margin: 9px 0 4px 0;
+}
+
+.settings__row {
     flex-direction: row;
-    flex-wrap: wrap;
-    padding: 4px;
+    align-items: center;
+    height: 29px;
+    padding: 0 6px;
+    border-radius: 3px;
 }
 
-/* ---------------- inspect pane (A9/A10) ---------------- */
+.settings__row:hover { background-color: rgba(255, 255, 255, 0.07); }
 
-.inspect {
+.settings__label {
     flex-grow: 1;
-    padding: 6px;
-    overflow: hidden;
-}
-
-.inspect__hdrright {
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-.inspect__hdr {
-    flex-direction: row;
-    align-items: center;
-}
-
-.inspect__title {
-    font-size: 14px;
-    color: #dde6ee;
-    margin-left: 7px;
-}
-
-.inspect__kind {
-    font-size: 10px;
-    color: #63758a;
-    margin-left: 7px;
-}
-
-.inspect__badge {
-    font-size: 10px;
-    color: #5ec8dc;
-    border-width: 1px;
-    border-color: #2b7f8f;
-    border-radius: 8px;
-    padding: 1px 7px;
-    margin-left: 6px;
-}
-
-.inspect__sub {
-    color: #93a4b5;
-    font-size: 10px;
-    margin-top: 4px;
-}
-
-.inspect__tabstrip {
-    flex-direction: row;
-    margin-top: 8px;
-    border-bottom-width: 1px;
-    border-bottom-color: #2b3947;
-}
-
-.inspect__body { margin-top: 7px; }
-
-.need {
-    margin-top: 5px;
-}
-
-.need__line {
-    flex-direction: row;
-    justify-content: space-between;
-}
-
-.need__name { color: #93a4b5; font-size: 10px; }
-.need__value { color: #dde6ee; font-size: 10px; }
-.need .bar { margin-top: 2px; }
-
-.commands {
-    flex-direction: row;
-    flex-wrap: wrap;
-    margin-top: 8px;
-}
-
-.command {
-    flex-direction: column;
-    align-items: center;
-    border-width: 1px;
-    border-color: #2b3947;
-    border-radius: 4px;
-    padding: 5px 7px 4px 7px;
-    margin: 0 4px 4px 0;
-    opacity: 0.55;
-}
-
-.command__label {
-    font-size: 9px;
-    color: #93a4b5;
-    margin-top: 3px;
+    margin-left: 9px;
+    color: rgba(255, 255, 255, 0.82);
     white-space: nowrap;
 }
 
-.summary__row {
-    flex-direction: row;
-    color: #93a4b5;
-    font-size: 11px;
-    margin-top: 3px;
-}
-
-.inspect--tomb { opacity: 0.55; }
-
-.inspect__reason {
-    color: #d9a23b;
-    font-size: 10px;
-    margin-top: 6px;
-}
-
-/* ---------------- depth ruler as one bar (A11) ---------------- */
-
-.ruler {
-    flex-direction: column;
-    padding: 4px 18px 4px 18px;
-}
-
-.ruler__active {
-    font-size: 11px;
-    color: #cdeef5;
-    -unity-text-align: middle-center;
-    padding: 3px 0 1px 0;
-}
-
-.ruler__tick {
-    flex-grow: 1;
-    min-height: 6px;
-    margin: 1px 0;
+/* The switch itself: a hollow pip that fills with the accent when the lever is on. A lit chip is
+   the on-off idiom the rest of this HUD uses, and the first real UI Toolkit control in the
+   project should arrive with an interface pass rather than in a settings panel. */
+.settings__pip {
+    width: 10px;
+    height: 10px;
     border-radius: 2px;
-    background-color: #1d2833;
     border-width: 1px;
-    border-color: #2b3947;
-    justify-content: center;
-    align-items: center;
+    border-color: rgba(255, 255, 255, 0.35);
 }
 
-.ruler__tick:hover { background-color: #22303d; }
-
-.ruler__tick--active {
-    background-color: #2b7f8f;
-    border-color: #5ec8dc;
+.settings__row--on .settings__pip {
+    background-color: #6fd3e3;
+    border-color: #6fd3e3;
 }
 
-.ruler__tick--surface { border-bottom-width: 2px; border-bottom-color: #93a4b5; }
-
-.ruler__dot {
-    width: 5px; height: 5px;
-    border-radius: 3px;
-    background-color: #f2d16b;
+.settings__note {
+    color: rgba(255, 255, 255, 0.50);
+    white-space: normal;
+    margin-top: 9px;
 }
 
-/* The drag-select marquee: the box the player is drawing over the world. */
+/* ---------------------------------------------------------------- the drag-select marquee */
+
 .marquee {
     position: absolute;
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.9);
     background-color: rgba(255, 255, 255, 0.12);
-}
-
-/* ---------------------------------------------------------------- B17 settings */
-
-/* Centred on the screen, and deliberately narrow: it holds a short list of switches, not a
-   settings tree. Not a modal, so there is no scrim behind it and the board stays visible and
-   running underneath, which is the whole reason to open it. */
-.settings {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    translate: -50% -50%;
-    width: 268px;
-    padding-bottom: 6px;
-}
-
-.settings__section {
-    color: #63758a;
-    font-size: 10px;
-    margin: 6px 8px 2px 8px;
-}
-
-/* One switch per line, filling the panel, so the lit state reads as a row rather than as a pill
-   floating in the middle of one. */
-.settings__row {
-    justify-content: flex-start;
-    margin: 2px 8px;
-    padding: 4px 6px;
-}
-
-.settings__note {
-    color: #63758a;
-    font-size: 9px;
-    white-space: normal;
-    margin: 6px 8px 0 8px;
 }

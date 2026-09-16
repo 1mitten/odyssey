@@ -32,6 +32,7 @@ namespace Odyssey.Presentation.Bootstrap
     {
         OdysseyBootstrap? _bootstrap;
         DesignatePresenter? _designate;
+        Ui.HudShell? _shell;
         SettingsDirector? _director;
 
         // What "on" means for the two levers that carry an amount rather than a state. Captured
@@ -44,6 +45,7 @@ namespace Odyssey.Presentation.Bootstrap
         {
             _bootstrap = GetComponent<OdysseyBootstrap>();
             _designate = GetComponent<DesignatePresenter>();
+            _shell = GetComponent<Ui.HudShell>();
         }
 
         void Update()
@@ -56,10 +58,19 @@ namespace Odyssey.Presentation.Bootstrap
 
             // One key, one rule, one place. The order itself is the director's and is tested
             // without an engine; all that happens here is the doing of it.
-            switch (_director.Escape(_designate != null && _designate.ToolArmed))
+            switch (_director.Escape(
+                        _designate != null && _designate.ToolArmed,
+                        _shell != null && _shell.BuildPaletteOpen))
             {
                 case EscapeAction.DisarmTool:
                     _designate?.PutToolAway();
+                    break;
+                case EscapeAction.ClosePalette:
+                    // The Build palette is a panel opened over the board by the Build command, so
+                    // it unwinds before the menu does. It had no place in this order until the
+                    // interface rebuild, because it used to be a column pinned to the left edge
+                    // and permanently open.
+                    _shell?.CloseBuildPalette();
                     break;
                 case EscapeAction.ClosePanel:
                     _director.SetOpen(false);

@@ -16,6 +16,16 @@ comparison and the twelve experiments that have not been run).
 
 **Decisions recorded:** `docs/adr/0003-ui-framework.md`, `docs/adr/0004-sim-ui-contract.md`.
 
+**Built, and measured elsewhere.** The HUD was rebuilt to an approved specification on 2026-09-16
+and `docs/design/14-hud-layout.md` now owns every number on the screen — the type scale, the
+palette, the spacing, where each region is anchored and how much of the viewport it covers. This
+file keeps the architecture, the contract, the budget and the input model, all of which that
+rebuild obeys and none of which it changed. Where the two touch: §7a's "words, not abbreviations"
+stands and is now enforced by a test; §7's two-to-four character placeholder badge is **withdrawn**
+in favour of an outlined square with no text in it (ADR 0007, amended twice); and §9 D4's 1080p
+reference is now literal — the panel scales against 1920 x 1080 rather than the mockup's 1200 x 800,
+because the specification's anchors are 1080p pixels.
+
 ---
 
 ## Why this exists now, ahead of its phase
