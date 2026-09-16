@@ -80,6 +80,48 @@ namespace Odyssey.Tests.Presentation
         static long Hour(int hour) => (long)hour * GameClock.TicksPerHour;
     }
 
+    /// <summary>
+    /// Where a blow lands, and — the part that mattered — that it lands at all when nobody is
+    /// holding anything.
+    /// </summary>
+    public class BlowPointTests
+    {
+        [Test]
+        public void ABladeDecidesWhereTheBlowIs()
+        {
+            Vector3 point = Odyssey.Presentation.World.PawnFigureDirector.BlowPoint(
+                bladeTip: new Vector3(4f, 1f, 0f), workCentre: new Vector3(5f, 1f, 0f),
+                outward: Vector3.left, standOff: 0f);
+
+            Assert.That(point, Is.EqualTo(new Vector3(4f, 1f, 0f)));
+        }
+
+        [Test]
+        public void WithNoBladeTheBlowIsStillWhereTheWorkIs()
+        {
+            // A clone without the art packs fells trees bare-handed. The axe it is not holding
+            // used to decide whether the work made any sound at all.
+            Vector3 point = Odyssey.Presentation.World.PawnFigureDirector.BlowPoint(
+                bladeTip: null, workCentre: new Vector3(5f, 1f, 0f),
+                outward: Vector3.left, standOff: 0f);
+
+            Assert.That(point, Is.EqualTo(new Vector3(5f, 1f, 0f)),
+                "no tool is not no blow");
+        }
+
+        [Test]
+        public void TheBlowStandsOffTheFaceItStruck()
+        {
+            // The head finishes inside what it hit; debris and sound both belong on the face.
+            Vector3 point = Odyssey.Presentation.World.PawnFigureDirector.BlowPoint(
+                bladeTip: null, workCentre: Vector3.zero, outward: new Vector3(2f, 0f, 0f),
+                standOff: 0.4f);
+
+            Assert.That(point, Is.EqualTo(new Vector3(0.4f, 0f, 0f)).Using<Vector3>(
+                (a, b) => (a - b).magnitude < 0.001f ? 0 : 1));
+        }
+    }
+
     public class AlertWatchTests
     {
         static PawnView Fed(int id, int food) =>

@@ -556,12 +556,14 @@ namespace Odyssey.EditorTools
             {
                 Id = SoundIds.AmbienceWater,
                 Clip = Require("water"),
-                Volume = 0.75f, FadeSeconds = 2.5f, MinDistance = 60f, MaxDistance = 300f,
+                Volume = 0.30f, FadeSeconds = 2.5f, MinDistance = 60f, MaxDistance = 300f,
             });
 
-            // The outdoor bed. Quieter than the music by design: it is the floor of the mix,
-            // the thing you stop hearing and would notice the absence of. Night sits lower
-            // still — the world is quieter after dark, and the bed should say so before any
+            // The outdoor bed, and it is *quiet*. It is the floor of the mix — the thing you
+            // stop hearing and would only notice the absence of — so it has to sit under the
+            // work, not beside it. These are about eleven dB down on where they started, which
+            // was loud enough to be the loudest thing in the game. Night sits lower still,
+            // because the world is quieter after dark and the bed should say so before any
             // individual sound does.
             catalogue.Outdoor.Clear();
             catalogue.Outdoor.AddRange(new[]
@@ -569,12 +571,12 @@ namespace Odyssey.EditorTools
                 new AudioCatalogue.PhaseTrackDef
                 {
                     Phase = MusicPhase.Day, Clip = Require("ambience-day"),
-                    Volume = 0.34f, FadeSeconds = 6f, ArrivalFadeSeconds = 10f,
+                    Volume = 0.09f, FadeSeconds = 6f, ArrivalFadeSeconds = 10f,
                 },
                 new AudioCatalogue.PhaseTrackDef
                 {
                     Phase = MusicPhase.Night, Clip = Require("ambience-night"),
-                    Volume = 0.26f, FadeSeconds = 8f, ArrivalFadeSeconds = 10f,
+                    Volume = 0.07f, FadeSeconds = 8f, ArrivalFadeSeconds = 10f,
                 },
             });
 
