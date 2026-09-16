@@ -95,14 +95,20 @@ namespace Odyssey.Presentation.World
         /// <summary>
         /// A trim on which way the blade faces, in degrees about the haft.
         ///
-        /// The roll is *computed*, not authored: the bit is turned to face the way the head is
-        /// travelling, so the edge bites at whatever angle the haft happens to arrive at — which
-        /// for this swing is about forty-five degrees down and into the trunk. This is the
-        /// correction on top, and it exists because finding the bit means telling two axes of a
-        /// mesh apart by their extents, and a head whose edge is longer than its bit is deep
-        /// comes out ninety degrees round. See <see cref="GripAxe"/>.
+        /// The roll is *computed* rather than authored: the bit is turned to face the way the head
+        /// is travelling, so the edge bites at whatever angle the haft happens to arrive at. What
+        /// cannot be computed reliably is which way across the haft the bit points, because that
+        /// means telling two axes of somebody else's mesh apart — see <see cref="BitAxis"/>, which
+        /// has been written twice and gets `SM_Gen_Wep_Axe_01` ninety degrees round either way.
+        /// The head of that axe is both widest and heaviest across its cutting edge, which is
+        /// exactly the axis the bit is not.
+        ///
+        /// So ninety, settled off a contact sheet of one instant at five rolls (owner, 2026-09-16:
+        /// the blade wanted to be more horizontal). This belongs on the *tool* rather than on the
+        /// director as soon as there is more than one — a pickaxe will want its own — and that is
+        /// noted in the work-poses design.
         /// </summary>
-        public float AxeBladeRoll { get; set; } = 0f;
+        public float AxeBladeRoll { get; set; } = 90f;
 
         /// <summary>Pawn ids drawn as live figures this frame. The instanced pass skips these.</summary>
         public HashSet<int> Drawn { get; } = new HashSet<int>();
@@ -490,11 +496,17 @@ namespace Odyssey.Presentation.World
             // advanced, and answered where the axe has been posed — the chips have to come off the
             // edge, and until the pose is applied the edge is still wherever it was last frame.
             //
-            // Only at full weight: a colonist easing into the work has an axe on a path of its
-            // own between the idle and the swing, and a chip thrown from that is a chip thrown
-            // from nowhere in particular.
+            // Half weight and not full, and the difference is the whole first blow of every job.
+            //
+            // The swing eases in over a quarter of a second while its clock runs from wherever the
+            // pawn's phase offset put it, and for most colonists the blade reaches the wood before
+            // the pose is fully on. Demanding full weight threw that blow away and then waited a
+            // whole stroke for the next — which, measured, was nine chips a tree short and showed
+            // up as a plain zero rather than as anything visible. Half is enough that the arm is
+            // genuinely travelling on the swing's arc rather than on the path between the idle
+            // and it.
             float phase = WorkSwing.Phase(figure.SwingClock, figure.SwingOffset);
-            if (pawn.Working && running && figure.WorkWeight > 0.99f
+            if (pawn.Working && running && figure.WorkWeight > 0.5f
                 && WorkSwing.Lands(figure.LastPhase, phase))
                 figure.Landed = true;
             figure.LastPhase = phase;
@@ -860,6 +872,11 @@ namespace Odyssey.Presentation.World
                 Transform? hand = figure.AxeTransform.parent;
                 if (hand == null) continue;
 
+                // Back to the clip pose first. Strike *adds* its angles to whatever the bones are
+                // already at, so refitting a figure that is mid-swing measures a doubled pose and
+                // a reach to match — which is how a blade that had been landing in the wood
+                // started reporting itself two thirds of a metre out.
+                figure.Graph.Evaluate(0f);
                 Strike(figure, WorkSwing.Struck);
                 GripAxe(figure, figure.AxeTransform, hand, figure.RightLowerArm);
                 MeasureStrike(figure);
@@ -867,22 +884,34 @@ namespace Odyssey.Presentation.World
         }
 
         /// <summary>
-        /// Which way across the haft the head sticks out.
+        /// Which way across the haft the head hangs.
         ///
-        /// Two numbers and a guess: of the two axes that cross the haft, the tool is fatter in one
-        /// of them, and that is taken to be the bit. It comes out ninety degrees round on a head
-        /// whose edge is longer than its bit is deep, which is the whole reason
-        /// <see cref="AxeBladeRoll"/> exists.
+        /// **Found by where the mass sits, not by how wide the head is.** The first version took
+        /// the perpendicular axis the tool was fattest in, which sounded reasonable and was wrong
+        /// for every axe: a head is *widest* across its cutting edge, and the edge is exactly the
+        /// axis the bit is not. It came out ninety degrees round, the blade met the tree with its
+        /// cheek, and a contact sheet of the same instant at five rolls is what showed it.
+        ///
+        /// The rule that holds instead: a head is roughly symmetric about the haft along its edge
+        /// and hangs off to one side along its bit, so the bit is whichever perpendicular axis the
+        /// bounds centre is furthest from the haft line on — which also gives the sign for free.
+        /// <see cref="AxeBladeRoll"/> remains for a tool this is wrong about.
         /// </summary>
         static Vector3 BitAxis(Bounds bounds, Vector3 haft)
         {
             Vector3 first = Mathf.Abs(haft.x) > 0.5f ? Vector3.up : Vector3.right;
             Vector3 second = Vector3.Cross(haft, first);
 
-            float a = Mathf.Abs(Vector3.Dot(bounds.extents, first));
-            float b = Mathf.Abs(Vector3.Dot(bounds.extents, second));
-            Vector3 bit = a >= b ? first : second;
-            return Vector3.Dot(bounds.center, bit) < 0f ? -bit : bit;
+            float a = Vector3.Dot(bounds.center, first);
+            float b = Vector3.Dot(bounds.center, second);
+            Vector3 bit = Mathf.Abs(a) >= Mathf.Abs(b) ? first * Mathf.Sign(a) : second * Mathf.Sign(b);
+
+            // A head perfectly centred on its haft in both directions says nothing about which way
+            // it faces. Fall back to the wider axis, which is at least a plane the blade lies in.
+            if (bit.sqrMagnitude < 0.5f)
+                bit = Mathf.Abs(Vector3.Dot(bounds.extents, first))
+                      >= Mathf.Abs(Vector3.Dot(bounds.extents, second)) ? first : second;
+            return bit;
         }
 
         /// <summary>

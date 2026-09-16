@@ -209,7 +209,8 @@ namespace Odyssey.EditorTools
                           $"worker {worker.Id} at {worker.Cell} swinging at {worker.WorkCell}; " +
                           $"strike {figures.MeasuredReach:0.00} m, of which {figures.MeasuredStrikeSideways:0.00} m " +
                           $"sideways; edge lands {figures.MeasuredBladeHeight:0.00} m off the ground, " +
-                          $"{figures.MeasuredBladeGap:0.00} m from the middle of the trunk");
+                          $"{figures.MeasuredBladeGap:0.00} m from the middle of the trunk; " +
+                          $"{figures.Chips?.ChipsThrown ?? 0} chips thrown");
             }
             catch (Exception e)
             {

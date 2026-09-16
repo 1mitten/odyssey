@@ -190,6 +190,19 @@ reaches the trunk was misjudged from photographs twice in a row, in both directi
 reported out of the renderer — how far the edge finished from the middle of what it was aimed at —
 settled it in one run and keeps settling it for free.
 
+**An effect nobody can see is an effect you have to count.** Wood chips fly for half a second and
+are a few centimetres across, so "are they working" cannot be answered by looking at a screenshot —
+and the answer was no. The emitter was built, warmed, wired and tested, and threw exactly zero
+chips, because the blow that lands first in every job lands while the swing is still easing in and
+a gate demanding full weight discarded it. One counter printed beside the picture found it in one
+run. Count what an effect did; do not photograph it and squint.
+
+**A pose applied on top of a pose is twice the pose.** `Strike` adds its angles to whatever the
+bones are already at, which is right once per animation update and wrong the moment anything calls
+it twice. Refitting a tool mid-swing measured a doubled pose, a reach to match, and a blade that
+had been landing in the wood reporting itself two thirds of a metre out. Anything that re-poses
+outside the normal path must first put the clip pose back: `graph.Evaluate(0f)`.
+
 **Judge a distance side on to it, never in three-quarter.** The board camera's 45-degree bearing
 puts a colonist and the tree she is working on at different depths in the frame, and the gap between
 an axe head and a trunk then reads as whatever you please — it was read wrongly twice before the
