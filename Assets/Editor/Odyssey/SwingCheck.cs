@@ -25,8 +25,8 @@ namespace Odyssey.EditorTools
     /// does, and not one of them can be confirmed that way: an arm that passes through the chest,
     /// an axe held by the blade, a stroke that lands short of the trunk and a shoulder that pops
     /// on the first frame all read as perfectly sensible code. This is the loop that closes that
-    /// gap, and the numbers it exists to tune are <c>AxeGripOffset</c>, <c>AxeGripEuler</c> and
-    /// the six angle constants in <see cref="WorkSwing"/>.
+    /// gap, and the numbers it exists to tune are <c>AxeBladeRoll</c>, <c>AxeGripFraction</c>,
+    /// <c>WorkStance.StandOff</c> and the six angle constants in <see cref="WorkSwing"/>.
     ///
     /// It photographs the real thing: the play world, the real generator, a real colonist who
     /// walked to a real marked tree under the job system, and the game's own lighting. Nothing
@@ -166,14 +166,21 @@ namespace Odyssey.EditorTools
                         break;
                     }
 
-                    // Close and low, because what is being judged is a hand, a haft and a
-                    // shoulder. The board camera cannot settle any of those.
-                    PlayScene.Shoot(camera, Waist(now), 12f, 5.5f, $"Logs/swing-{sample}.png");
+                    // Close, low, and **side on to the line between the woodcutter and her
+                    // tree**. The board camera's three-quarter bearing puts the two at different
+                    // depths in the frame, and the one measurement that matters here — whether
+                    // the blade arrives at the trunk with room to have travelled — then reads as
+                    // whatever you please. Across the line it reads as what it is.
+                    PlayScene.Shoot(camera, Waist(now), 12f, SideOn(now), 6.5f, $"Logs/swing-{sample}.png");
                 }
 
                 PawnView last = FirstWorker(Current());
                 if (last.Working)
+                {
+                    // And the board camera's own bearing and height, which is the only one a
+                    // player will ever see this from.
                     PlayScene.Shoot(camera, Waist(last), 30f, 22f, "Logs/swing-wide.png");
+                }
 
                 Debug.Log($"[Swing] wrote Logs/swing-0..{Samples - 1}.png and Logs/swing-wide.png; " +
                           $"worker {worker.Id} at {worker.Cell} swinging at {worker.WorkCell}");
@@ -204,13 +211,27 @@ namespace Odyssey.EditorTools
         }
 
         /// <summary>
-        /// Roughly where a colonist's hands are, which is what the camera should be looking at.
+        /// What the camera should be looking at: the gap between the woodcutter and the tree.
         ///
-        /// Framed on the floor centre the figure's head leaves the top of the picture, and the
-        /// axe at the top of its arc leaves it entirely — which is the half of the stroke most
-        /// worth seeing.
+        /// Halfway between the two cells and raised to about chest height. Framed on the
+        /// colonist's own cell instead, two things go wrong at once — the head leaves the top of
+        /// the picture and the axe leaves it entirely at the top of its arc, and the trunk sits
+        /// off at the edge, so the one thing worth judging, whether the blade arrives at the
+        /// tree with room to have travelled, cannot be seen at all.
         /// </summary>
+        /// <summary>
+        /// A bearing across the line from the woodcutter to her tree, so the camera looks along
+        /// neither of them and the gap between the two is seen at its true size.
+        /// </summary>
+        static float SideOn(in PawnView pawn)
+        {
+            Vector3 toWork = CellMetrics.FloorCentre(pawn.WorkCell) - CellMetrics.FloorCentre(pawn.Cell);
+            toWork.y = 0f;
+            return PawnPose.YawOf(toWork.sqrMagnitude > 1e-4f ? toWork : Vector3.forward) + 90f;
+        }
+
         static Vector3 Waist(in PawnView pawn) =>
-            CellMetrics.FloorCentre(pawn.Cell) + Vector3.up * 1.3f;
+            (CellMetrics.FloorCentre(pawn.Cell) + CellMetrics.FloorCentre(pawn.WorkCell)) * 0.5f
+            + Vector3.up * 1.3f;
     }
 }

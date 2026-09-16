@@ -26,12 +26,19 @@ namespace Odyssey.Presentation.World
     /// not the bone's local axis: local axes are a property of whoever built the skeleton, and
     /// this way the pose is the same on any rig the packs ever add.
     ///
-    /// **The sign is the thing to get right, and the photographs settled it.** A limb at rest
-    /// hangs down, and a *negative* pitch about that axis carries it forward and then up. So both
-    /// ends of the arm's swing are negative — far negative overhead, less negative reaching
-    /// forward at the block — and the first pass, which read "positive is forward" off the axis
-    /// name, produced a colonist who lifted an axe over her head and then returned it neatly to
-    /// her side, and a torso that leaned away from its own blow.
+    /// **The signs are the thing to get right, they are not the same for all three, and only a
+    /// photograph settles them.** One rotation, two opposite results, because the bones point
+    /// opposite ways: an arm hangs *down*, so a negative pitch carries it forward and then up,
+    /// while a spine stands *up*, so the same negative pitch leans it backward and a positive one
+    /// folds it forward into the blow. Reading a single convention off the axis name gets one of
+    /// the two wrong whichever way you read it, and both wrong versions look entirely reasonable
+    /// in source: the first pass had a woodcutter lift an axe over her head and then return it
+    /// neatly to her side, and the second had her lean away from her own swing.
+    ///
+    /// <see cref="Shoulder"/> is the upper arm's pitch **against the world**, not against the
+    /// chest: the director subtracts the spine's own pitch from it, so that folding the back
+    /// further into the blow does not also swing the arms. That is what makes these three numbers
+    /// three independent numbers rather than a chain in which every one moves the others.
     /// </summary>
     public readonly struct WorkSwing
     {
@@ -59,22 +66,28 @@ namespace Odyssey.Presentation.World
         // starts from an idle in which the arm hangs at the side: getting an axe above the head
         // is most of a half-turn back from there, and the blow finishes with the arm reaching
         // forward and down at the foot of the tree rather than back at the woodcutter's side.
+        //
+        // Note that the *forearm* is what the axe follows, and that is Shoulder plus Elbow: the
+        // blade arrives at the sum of the two, which is why the struck shoulder looks so much
+        // smaller than a drawing of the pose would suggest. The idle the swing is laid over also
+        // contributes — a Synty character rests with its arms some way forward of straight down —
+        // so these are photographed values and not derived ones.
         const float ShoulderRaised = -158f;
-        const float ShoulderStruck = -52f;
+        const float ShoulderStruck = -13f;
 
         // The forearm cocks the axe behind the head and all but straightens at the moment of
         // impact, which is what makes the blade arrive fast rather than the whole arm arrive slow.
         // Not fully straight: a locked elbow reads as a mannequin rather than as a person.
         const float ElbowRaised = -74f;
-        const float ElbowStruck = -14f;
+        const float ElbowStruck = -20f;
 
         // The body opens up as the axe goes over the head and folds forward into the blow. Only
         // a little over ten degrees each way — enough to read at board-camera height, not so much
-        // that a colonist appears to be bowing to the tree. Note the signs run the other way from
-        // the arm's: the spine starts from upright rather than from hanging down, so leaning back
-        // is positive and folding forward is negative.
-        const float SpineRaised = 8f;
-        const float SpineStruck = -18f;
+        // that a colonist appears to be bowing to the tree. The signs run the other way from the
+        // arm's, for the reason given above: a spine stands up where an arm hangs down, so here
+        // positive folds forward and negative leans back.
+        const float SpineRaised = -12f;
+        const float SpineStruck = 20f;
 
         /// <summary>
         /// How long one stroke takes, in seconds.
@@ -138,6 +151,64 @@ namespace Odyssey.Presentation.World
                 Mathf.Lerp(ShoulderRaised, ShoulderStruck, stroke),
                 Mathf.Lerp(ElbowRaised, ElbowStruck, stroke),
                 Mathf.Lerp(SpineRaised, SpineStruck, stroke));
+        }
+    }
+
+    /// <summary>
+    /// Where a figure stands to work on something, as opposed to where the simulation says it is.
+    ///
+    /// **Why these are not the same place.** The simulation puts a pawn at the centre of a cell,
+    /// and for felling that cell is the tree's own or a neighbour's. Drawn literally, the first
+    /// puts a colonist inside the trunk and the second puts her shoulder against it — and in
+    /// neither is there room for an axe to travel. Nothing is wrong with the simulation: a cell is
+    /// 2.5 m and a person is half a metre, so where in the cell somebody stands was never its
+    /// business. It is presentation's, exactly as the glide between cells is.
+    ///
+    /// So a working figure steps up to a fixed distance from what it is working on and faces it.
+    /// The step is eased in by the same weight that eases in the swing, so it reads as setting
+    /// oneself rather than as a jump; and it is a *fixed* distance rather than a minimum, so the
+    /// picture is the same whether the pawn is standing in the trunk or a cell away from it.
+    ///
+    /// Nothing else is moved by this. The pawn is still in its cell for picking, for the selection
+    /// cursor and for every part of the simulation; only the figure on screen steps in.
+    /// </summary>
+    public static class WorkStance
+    {
+        /// <summary>
+        /// How far from what it is working on a figure stands, in metres.
+        ///
+        /// Measured against a colonist drawn at 2.5 m tall with about a metre of reach and a
+        /// trunk about half a metre through: far enough that the axe has somewhere to fall,
+        /// near enough that it plainly lands on the tree and not in front of it.
+        /// </summary>
+        public const float StandOff = 1.15f;
+
+        /// <summary>
+        /// Where to draw a figure working on <paramref name="workCentre"/>.
+        ///
+        /// <paramref name="facing"/> is the direction the figure is currently pointed, used only
+        /// when the pawn is standing on the very cell it is working on and there is therefore no
+        /// direction to be had from the positions alone — it backs off the way it came in.
+        /// <paramref name="weight"/> eases the step, 0 leaving the figure exactly where the
+        /// simulation put it.
+        /// </summary>
+        public static Vector3 StandAt(Vector3 position, Vector3 workCentre, Vector3 facing, float weight)
+        {
+            Vector3 away = position - workCentre;
+            away.y = 0f;
+
+            if (away.sqrMagnitude < 1e-4f)
+            {
+                away = -facing;
+                away.y = 0f;
+                // Standing in the trunk and facing nowhere at all. Any direction beats none, and
+                // this one is at least stable from frame to frame.
+                if (away.sqrMagnitude < 1e-4f) away = Vector3.back;
+            }
+
+            Vector3 stand = workCentre + away.normalized * StandOff;
+            stand.y = position.y;
+            return Vector3.Lerp(position, stand, Mathf.Clamp01(weight));
         }
     }
 }

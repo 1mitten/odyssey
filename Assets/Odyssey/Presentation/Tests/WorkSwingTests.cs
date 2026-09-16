@@ -112,11 +112,12 @@ namespace Odyssey.Tests.Presentation
             Assert.That(impact.Shoulder, Is.GreaterThan(top.Shoulder), "the arm comes down out of the raise");
             Assert.That(impact.Elbow, Is.GreaterThan(top.Elbow), "the forearm straightens into the blow");
 
-            // The spine's sign runs the other way from the arm's — it starts upright rather than
-            // hanging — so "with the blow" means a *smaller* angle at impact. This assertion is
-            // here because the first version of the swing had it backwards and the colonist leant
-            // away from her own axe, which no reading of the code would have caught.
-            Assert.That(impact.Spine, Is.LessThan(top.Spine), "the body folds into the blow, not away from it");
+            // The spine's sign runs the other way from the arm's — it stands up where an arm
+            // hangs down — so folding forward into the blow is the *larger* angle at impact. This
+            // assertion exists because the swing has had this backwards in both directions on the
+            // way here, and neither was visible in any reading of the code: once the colonist
+            // raised the axe and put it back at her side, once she leant away from her own blow.
+            Assert.That(impact.Spine, Is.GreaterThan(top.Spine), "the body folds into the blow, not away from it");
         }
 
         [Test]
@@ -178,5 +179,86 @@ namespace Odyssey.Tests.Presentation
             }
             return 1f;
         }
+    }
+
+    /// <summary>
+    /// Where a working figure is drawn, as against where the simulation says the pawn is.
+    ///
+    /// The two are allowed to differ and the difference is the whole point: a cell is 2.5 m and a
+    /// person is half of one, so a colonist drawn on the cell centre is either inside the trunk or
+    /// shoulder to it, and in neither is there room for an axe to travel.
+    /// </summary>
+    public class WorkStanceTests
+    {
+        static readonly Vector3 Tree = new Vector3(10f, 3f, 10f);
+
+        [Test]
+        public void AFigureStepsInToExactlyTheWorkingDistance()
+        {
+            // Far too close, and much too far: both end up at the same distance, so the picture
+            // is the same whichever cell the job happened to send the colonist to.
+            Vector3 close = Tree + new Vector3(0.2f, 0f, 0f);
+            Vector3 far = Tree + new Vector3(3.5f, 0f, 0f);
+
+            foreach (Vector3 start in new[] { close, far })
+            {
+                Vector3 stand = WorkStance.StandAt(start, Tree, Vector3.forward, 1f);
+                Assert.That(Flat(stand - Tree).magnitude, Is.EqualTo(WorkStance.StandOff).Within(1e-3f));
+            }
+        }
+
+        [Test]
+        public void TheFigureStepsStraightInAndKeepsItsHeight()
+        {
+            Vector3 start = Tree + new Vector3(2f, 0.8f, 2f);
+            Vector3 stand = WorkStance.StandAt(start, Tree, Vector3.forward, 1f);
+
+            Assert.That(stand.y, Is.EqualTo(start.y).Within(1e-4f),
+                "the step is across the ground, never up or down it");
+
+            // On the same bearing from the tree as it started: it walks in along its own line
+            // rather than round the trunk to some canonical side.
+            Vector3 before = Flat(start - Tree).normalized;
+            Vector3 after = Flat(stand - Tree).normalized;
+            Assert.That(Vector3.Dot(before, after), Is.EqualTo(1f).Within(1e-3f));
+        }
+
+        [Test]
+        public void AFigureStandingInTheTrunkBacksOffTheWayItCameIn()
+        {
+            // The case the committed fell job actually produces: the colonist walks into the
+            // tree's own cell, so the positions give no direction at all and the only thing left
+            // to go on is which way it is pointed.
+            Vector3 stand = WorkStance.StandAt(Tree, Tree, Vector3.forward, 1f);
+
+            Assert.That(Flat(stand - Tree).magnitude, Is.EqualTo(WorkStance.StandOff).Within(1e-3f));
+            Assert.That(Vector3.Dot(Flat(stand - Tree).normalized, Vector3.forward),
+                Is.EqualTo(-1f).Within(1e-3f), "it backs off, rather than stepping through the trunk");
+        }
+
+        [Test]
+        public void ItNeverReturnsNowhereEvenWithNothingToGoOn()
+        {
+            // Standing in the trunk *and* facing nowhere, which a figure leased this frame is.
+            // Any direction beats a zero vector, which would leave the figure at the tree centre
+            // and, worse, make the stand position depend on floating-point noise.
+            Vector3 stand = WorkStance.StandAt(Tree, Tree, Vector3.zero, 1f);
+            Assert.That(Flat(stand - Tree).magnitude, Is.EqualTo(WorkStance.StandOff).Within(1e-3f));
+        }
+
+        [Test]
+        public void NoWeightMeansNoStep()
+        {
+            // How the step eases in. At zero the figure is exactly where the simulation put it,
+            // which is what makes the walk-in and the step-up join without a seam.
+            Vector3 start = Tree + new Vector3(3f, 0f, 1f);
+            Assert.That(WorkStance.StandAt(start, Tree, Vector3.forward, 0f), Is.EqualTo(start));
+
+            Vector3 half = WorkStance.StandAt(start, Tree, Vector3.forward, 0.5f);
+            Vector3 full = WorkStance.StandAt(start, Tree, Vector3.forward, 1f);
+            Assert.That(Vector3.Distance(start, half), Is.LessThan(Vector3.Distance(start, full)));
+        }
+
+        static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);
     }
 }

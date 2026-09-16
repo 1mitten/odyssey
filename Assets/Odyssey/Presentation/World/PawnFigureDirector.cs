@@ -75,11 +75,23 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public float OffHandShare { get; set; } = 0.82f;
 
-        /// <summary>Where the axe sits in the hand, in the hand bone's own space.</summary>
-        public Vector3 AxeGripOffset { get; set; } = new Vector3(0f, 0.02f, 0.06f);
+        /// <summary>
+        /// How far up the haft the hand grips, 0 at the butt and 1 at the head.
+        ///
+        /// A felling grip is near the butt, which is what gives the blow its leverage. Not *at*
+        /// the butt: an axe held right on the end reads as being dangled rather than held.
+        /// </summary>
+        public float AxeGripFraction { get; set; } = 0.16f;
 
-        /// <summary>How the axe is turned in the hand, in the hand bone's own space.</summary>
-        public Vector3 AxeGripEuler { get; set; } = new Vector3(0f, 90f, 100f);
+        /// <summary>
+        /// Which way the blade faces, in degrees about the haft.
+        ///
+        /// One lever rather than three Euler angles, and it is the only part of the grip that is
+        /// still a matter of taste: everything else — which way the haft runs, which end the head
+        /// is on, where the hand sits along it — is measured off the mesh at build time. See
+        /// <see cref="GripAxe"/>.
+        /// </summary>
+        public float AxeBladeRoll { get; set; } = 0f;
 
         /// <summary>Pawn ids drawn as live figures this frame. The instanced pass skips these.</summary>
         public HashSet<int> Drawn { get; } = new HashSet<int>();
@@ -309,12 +321,19 @@ namespace Odyssey.Presentation.World
                 // rig the packs contain or ever will.
                 Vector3 axis = figure.Transform.right;
 
-                // The spine first, because the arms hang off it: turning it afterwards would
-                // drag them along and undo their own pitch.
+                // The spine first, because the arms hang off it.
+                //
+                // And then the spine's own pitch is *subtracted* from the shoulders, because they
+                // have already inherited it through the skeleton. Without that the three angles
+                // are not three angles at all: folding the torso twenty degrees further into the
+                // blow also swings both arms twenty degrees, so every attempt to tune the bow of
+                // the back moved the axe as well and nothing could be settled. Taking it back out
+                // makes Shoulder mean the upper arm's pitch against the world, which is the thing
+                // anybody looking at a photograph is actually judging.
                 Pitch(figure.Spine, axis, swing.Spine);
-                Pitch(figure.RightUpperArm, axis, swing.Shoulder);
+                Pitch(figure.RightUpperArm, axis, swing.Shoulder - swing.Spine);
                 Pitch(figure.RightLowerArm, axis, swing.Elbow);
-                Pitch(figure.LeftUpperArm, axis, swing.Shoulder * OffHandShare);
+                Pitch(figure.LeftUpperArm, axis, swing.Shoulder * OffHandShare - swing.Spine);
                 Pitch(figure.LeftLowerArm, axis, swing.Elbow * OffHandShare);
             }
         }
@@ -358,16 +377,27 @@ namespace Odyssey.Presentation.World
             // previous position worth differencing, hence Settled.
             bool settled = figure.Settled;
 
+            // Differenced against where the *simulation* last put the pawn, not against where the
+            // figure was last drawn. Those parted company the moment a working figure began
+            // stepping up to its tree: a metre and a half of step over a quarter of a second is
+            // six metres a second, which would have thrown a standing woodcutter into a sprint
+            // cycle on the spot.
             float speed = 0f;
             if (settled && deltaTime > 1e-5f)
-                speed = Vector3.Distance(position, figure.Transform.position) / deltaTime;
+                speed = Vector3.Distance(position, figure.SimPosition) / deltaTime;
 
             // One frame of a lost path or a slice change can jump a pawn further than any gait
             // covers. Smoothing keeps a single frame from throwing the figure into a sprint.
             figure.Speed = settled ? Mathf.Lerp(figure.Speed, speed, 0.35f) : 0f;
             figure.Settled = true;
+            figure.SimPosition = position;
 
-            figure.Transform.position = position;
+            // Step up to the work. See WorkStance for why the drawn place and the simulated place
+            // are allowed to differ, and by how much.
+            figure.Transform.position = figure.WorkWeight > 0.001f
+                ? WorkStance.StandAt(position, CellMetrics.FloorCentre(pawn.WorkCell),
+                    Quaternion.Euler(0f, figure.Yaw, 0f) * Vector3.forward, figure.WorkWeight)
+                : position;
 
             // Turn towards the heading rather than snapping to it.
             //
@@ -418,6 +448,7 @@ namespace Odyssey.Presentation.World
             figure.Speed = 0f;
             figure.WorkWeight = 0f;
             figure.SwingClock = 0f;
+            figure.SimPosition = at;
             figure.Transform.position = at;
             figure.GameObject.SetActive(true);
             Desynchronise(figure, pawn);
@@ -559,8 +590,7 @@ namespace Odyssey.Presentation.World
 
             GameObject axe = UnityEngine.Object.Instantiate(held, hand);
             axe.name = "Axe";
-            axe.transform.localPosition = AxeGripOffset;
-            axe.transform.localRotation = Quaternion.Euler(AxeGripEuler);
+            GripAxe(axe.transform, hand, figure.RightLowerArm);
             SetLayer(axe.transform, _layer);
 
             // Same argument as the character's own colliders: picking is a ray against the grid,
@@ -570,6 +600,92 @@ namespace Odyssey.Presentation.World
 
             axe.SetActive(false);
             figure.Axe = axe;
+        }
+
+        /// <summary>
+        /// Put the axe in the fist the way a person holds one: the haft continuing the line of
+        /// the forearm, the head out at the far end, the hand near the butt.
+        ///
+        /// **Measured off the mesh rather than authored as angles.** Which way a prop's haft runs
+        /// in its own local space is a decision made by whoever modelled it, and three Euler
+        /// numbers tuned by eye against one prefab are wrong for the next one and tell a reader
+        /// nothing about what they mean. So the haft is found — it is the long axis of the
+        /// combined mesh bounds — the head end is found, and the tool is then rotated to lie
+        /// along the forearm and slid so that the grip point sits in the palm. The first version
+        /// of this hung the axe head-down by the hip on a fixed rotation, which looked like a
+        /// woman carrying a hatchet rather than one about to use it.
+        ///
+        /// The forearm gives the direction because it is the one part of a hand's pose that means
+        /// the same thing on every rig: out of the fist is away from the elbow. Any pose will do
+        /// to read it in, including the bind pose, since it is the bone's axis and not its angle
+        /// that is being asked for.
+        /// </summary>
+        void GripAxe(Transform axe, Transform hand, Transform? lowerArm)
+        {
+            axe.localPosition = Vector3.zero;
+            axe.localRotation = Quaternion.identity;
+
+            if (!LocalBounds(axe, out Bounds bounds)) return;
+
+            // The haft is the long axis, and the head is whichever end of it the mass sits
+            // towards — a prop's origin is at the grip on every Synty weapon looked at so far,
+            // so the bounds centre is offset towards the head.
+            Vector3 extents = bounds.extents;
+            Vector3 haft = extents.x >= extents.y && extents.x >= extents.z ? Vector3.right
+                : extents.y >= extents.z ? Vector3.up : Vector3.forward;
+            float half = Vector3.Dot(extents, haft);
+            if (half <= 1e-4f) return;
+            if (Vector3.Dot(bounds.center, haft) < 0f) haft = -haft;
+
+            Vector3 outOfTheFist = lowerArm != null
+                ? (hand.position - lowerArm.position)
+                : hand.forward;
+            if (outOfTheFist.sqrMagnitude < 1e-6f) return;
+            outOfTheFist.Normalize();
+
+            axe.rotation = Quaternion.FromToRotation(axe.TransformDirection(haft), outOfTheFist) * axe.rotation;
+            axe.rotation = Quaternion.AngleAxis(AxeBladeRoll, outOfTheFist) * axe.rotation;
+
+            // Slide the tool along its own haft until the grip point is in the palm. The grip is
+            // measured from the butt, which is the end of the bounds away from the head.
+            Vector3 butt = bounds.center - haft * half;
+            Vector3 grip = butt + haft * (2f * half * Mathf.Clamp01(AxeGripFraction));
+            axe.position += hand.position - axe.TransformPoint(grip);
+        }
+
+        /// <summary>
+        /// The bounds of everything under a transform, in that transform's own space.
+        ///
+        /// Renderer bounds are world axis-aligned and so say nothing about which way a mesh runs
+        /// once it is parented to a rotated bone; these are the mesh's own corners brought back
+        /// into the prop's frame, which is the only frame in which "the long axis" means anything.
+        /// </summary>
+        static bool LocalBounds(Transform root, out Bounds bounds)
+        {
+            bounds = default;
+            bool any = false;
+
+            var filters = root.GetComponentsInChildren<MeshFilter>(includeInactive: true);
+            for (int i = 0; i < filters.Length; i++)
+            {
+                Mesh? mesh = filters[i].sharedMesh;
+                if (mesh == null) continue;
+
+                Bounds local = mesh.bounds;
+                Transform from = filters[i].transform;
+                for (int corner = 0; corner < 8; corner++)
+                {
+                    var offset = new Vector3(
+                        (corner & 1) == 0 ? local.min.x : local.max.x,
+                        (corner & 2) == 0 ? local.min.y : local.max.y,
+                        (corner & 4) == 0 ? local.min.z : local.max.z);
+                    Vector3 point = root.InverseTransformPoint(from.TransformPoint(offset));
+                    if (any) bounds.Encapsulate(point);
+                    else { bounds = new Bounds(point, Vector3.zero); any = true; }
+                }
+            }
+
+            return any;
         }
 
         static void SetLayer(Transform transform, int layer)
@@ -622,6 +738,13 @@ namespace Odyssey.Presentation.World
 
             /// <summary>False for the first frame after a lease, when there is no previous position.</summary>
             public bool Settled;
+
+            /// <summary>
+            /// Where the simulation put this pawn last frame, which is not where it was drawn once
+            /// it steps up to a tree. Speed is differenced against this and never against the
+            /// drawn position, or the step itself would register as a sprint.
+            /// </summary>
+            public Vector3 SimPosition;
 
             public float Speed;
 

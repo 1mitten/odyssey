@@ -306,9 +306,24 @@ namespace Odyssey.EditorTools
             return $"{size.x:0.00} wide x {size.y:0.00} tall x {size.z:0.00} deep, base y {min.y:0.00}";
         }
 
-        internal static void Shoot(Camera camera, Vector3 focus, float pitch, float distance, string path)
+        /// <summary>
+        /// The standard three-quarter shot: the board camera's own bearing, which is the one
+        /// every picture of the world should be judged in unless there is a reason otherwise.
+        /// </summary>
+        internal static void Shoot(Camera camera, Vector3 focus, float pitch, float distance, string path) =>
+            Shoot(camera, focus, pitch, 45f, distance, path);
+
+        /// <summary>
+        /// The same, from a bearing of your choosing.
+        ///
+        /// Worth having because a three-quarter view cannot answer a question about a distance
+        /// along one particular line — a colonist and the tree she is working on sit at different
+        /// depths in it, so the gap between an axe head and a trunk can be read as anything you
+        /// like. Side on to that line, it can only be read as what it is.
+        /// </summary>
+        internal static void Shoot(Camera camera, Vector3 focus, float pitch, float yaw, float distance, string path)
         {
-            var rotation = Quaternion.Euler(pitch, 45f, 0f);
+            var rotation = Quaternion.Euler(pitch, yaw, 0f);
             camera.transform.SetPositionAndRotation(focus - rotation * Vector3.forward * distance, rotation);
 
             var target = new RenderTexture(1600, 900, 24, RenderTextureFormat.ARGB32)

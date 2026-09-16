@@ -163,11 +163,26 @@ visible effect on the body.
 
 **And the signs of a limb rotation cannot be reasoned out; photograph them.** Pitching a bone about
 the figure's own right-hand axis, a limb that hangs down goes *forward* under a negative angle and
-backward under a positive one, while a spine, which starts upright, does the opposite. Reading
-"positive is forward" off the axis name produced a woodcutter who raised an axe over her head and
-then returned it neatly to her side, and a torso that leaned away from its own blow. Both compiled,
-both ran, both passed every test that existed, and one contact sheet settled them — which is what
+backward under a positive one, while a spine, which stands up, does the opposite. There is no single
+convention to read off the axis name: whichever way you read it, one of the two is wrong. The axe
+swing got each of them wrong in turn — once a woodcutter who raised an axe over her head and then
+returned it neatly to her side, once one who leant away from her own blow — and each compiled, ran,
+and passed every test that existed. One contact sheet settled both, which is what
 `Odyssey > Presentation > Check the axe swing` exists for.
+
+**A chain of bones is not a set of independent numbers until you make it one.** The spine carries
+the shoulders, so folding the back twenty degrees further into a blow also swings both arms twenty
+degrees, and every attempt to tune one silently moved the other — three numbers that could not be
+settled in any order. Subtracting the parent's own pitch back out of the child (`Shoulder - Spine`
+on the upper arms) costs one subtraction and turns the pose into what it reads as on the page: an
+angle against the world, which is the thing a photograph shows.
+
+**Judge a distance side on to it, never in three-quarter.** The board camera's 45-degree bearing
+puts a colonist and the tree she is working on at different depths in the frame, and the gap between
+an axe head and a trunk then reads as whatever you please — it was read wrongly twice before the
+harness was changed to shoot across that line instead of along it. `PlayScene.Shoot` takes a bearing
+for exactly this; the default stays the board camera's, because everything else should be judged in
+the view a player will actually have.
 
 ## Choosing pack art
 

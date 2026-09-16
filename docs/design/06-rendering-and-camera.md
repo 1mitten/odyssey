@@ -101,6 +101,23 @@ Four things about it are deliberate and each was a way of getting it wrong:
 - **It freezes when the game is paused.** There is no pause signal in the snapshot, so the director
   infers it from the tick standing still. Without that, a swinging colonist would be the only thing
   moving on a paused board, since a pawn that has stopped moving settles into the idle by itself.
+- **The three angles are independent, which took work.** The spine carries the shoulders through the
+  skeleton, so folding the back further into the blow also swung both arms, and no amount of tuning
+  could settle one without moving the other. The director subtracts the spine's own pitch back out
+  of the shoulders, after which `Shoulder` means the upper arm's pitch against the world — which is
+  what anybody judging a photograph is actually looking at.
+- **The figure steps up to the tree, and that is presentation's business.** A cell is 2.5 m and a
+  person is half of one, so a colonist drawn on the cell centre is either inside the trunk or
+  shoulder against it, and in neither is there room for an axe to travel. `WorkStance` draws a
+  working figure at a fixed distance from what it is working on, eased in by the same weight that
+  eases in the swing, so it reads as setting oneself. Nothing else moves: the pawn is still in its
+  cell for picking, for the cursor and for the whole simulation.
+- **The axe is gripped by measurement, not by three Euler numbers.** Which way a prop's haft runs in
+  its own space is a decision made by whoever modelled it. So the haft is found — the long axis of
+  the combined mesh bounds — the head end is found, and the tool is laid along the forearm with the
+  grip in the palm. One tunable is left, `AxeBladeRoll`, because which way the edge faces is taste.
+  A fixed rotation tuned against one prefab hung the axe head-down by the hip, which reads as
+  carrying a hatchet rather than using one, and would have been wrong again for the next tool.
 
 The simulation's half of this is one signal: `PawnView.Working` and `PawnView.WorkCell`, published
 from `JobDriver.WorkFocus`. It is a cell rather than a flag because the pose needs a direction — a
@@ -114,7 +131,14 @@ moves anything parented to it and leaves the mesh where it was — the axe swung
 while the colonist stood still. `forceMatrixRecalculationPerRender` on the figure's skinned
 renderers is the fix. And the sign of a limb rotation cannot be reasoned out from the axis name: a
 limb that hangs down travels forward under a *negative* pitch, while a spine, which starts upright,
-does the opposite. Both are in `docs/lessons.md`.
+does the opposite, so one convention read off the axis gets one of the two wrong whichever way you
+read it. Both are in `docs/lessons.md`.
+
+A note on the harness itself, because it decides what can be settled. `SwingCheck` shoots **side on
+to the line between the woodcutter and her tree**, not from the board camera's three-quarter
+bearing. In three-quarter the two sit at different depths, and the one measurement that matters —
+whether the blade arrives at the trunk with room to have travelled — can be read as anything you
+like. It was, twice.
 
 The axe itself is `ModuleIds.ToolAxe`, an ordinary catalogue row parented to the right hand for as
 long as the work lasts. A clone without the packs resolves it to null and colonists fell trees
