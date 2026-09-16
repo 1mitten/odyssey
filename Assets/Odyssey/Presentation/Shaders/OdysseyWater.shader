@@ -203,6 +203,18 @@ Shader "Odyssey/Water"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
 
+                // **Top face only.** The tile this shader is given is a box 0.15 m thick, not a
+                // sheet, so it has four sides and an underside. Opaque geometry gets away with
+                // that because a neighbouring tile hides them; translucent geometry with no depth
+                // write does not. Both tiles either side of a shared edge drew their coincident
+                // side faces over the top of each other, each adding its own alpha, and the board
+                // came out ruled into dark squares along every cell boundary.
+                //
+                // Clipping on the *geometric* normal — before the ripple perturbs it — removes
+                // them outright and says the thing that is true: water is a surface, not a slab.
+                // It is one instruction against adding a mesh shape that nothing else would use.
+                clip(input.normalWS.y - 0.5);
+
                 float3 viewWS = normalize(GetWorldSpaceViewDir(input.positionWS));
                 float wave;
                 float3 normalWS = RippleNormal(normalize(input.normalWS), input.positionWS, wave);
