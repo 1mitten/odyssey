@@ -517,12 +517,18 @@ namespace Odyssey.Presentation.World
             bool running = _sinceTick < 0.25f;
 
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
+
+            // And up to the highest layer the world is drawn on. A figure belongs wherever its
+            // surroundings are visible: the owner's report was that a colonist mining one layer up
+            // could not be seen at all, because this cull was against the active layer while the
+            // rock around that colonist was being x-rayed perfectly well.
+            int highest = slice.HighestVisibleLayer(activeLayer, snapshot.Size.SizeY);
             var pawns = snapshot.Pawns;
 
             for (int i = 0; i < pawns.Length && Drawn.Count < MaxFigures; i++)
             {
                 CellRef cell = pawns[i].Cell;
-                if (cell.Y < lowest || cell.Y > activeLayer) continue;
+                if (cell.Y < lowest || cell.Y > highest) continue;
 
                 Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading);
                 Figure figure = Lease(pawns[i].Id, position);

@@ -188,6 +188,39 @@ after a rebuild, republish `docs/wiki/artifact.html` and
   - **Water has a shader, not a tint** (`Odyssey/Water`): ripples, a sun glint, a Fresnel-weighted probe reflection and a shore that dissolves against the depth of the bed. Arithmetic only — no texture, no extra pass, no render target — drawn by the ordinary chunk machinery, so a clone without the packs draws the same water. It casts and receives **no shadows**, which is both the right picture and a third of the cost: the board ran 0.68 ms before water, 1.28 ms with shadowed water, **0.99 ms** without (city 1.56 ms; 5 ms budget). The 0.88 ms city figure on record was not reproducible in the same session and the discrepancy is **unexplained** — the city has no water, so different measurement conditions are the likelier answer.
   - **Marsh was the thing photographs caught.** With no catalogue row it drew as an untextured dark olive slab, which beside a lifted meadow reads as *shadow*, and there was more marsh than water on the board (427 columns to 382). It now has the bare-earth dirt material, a bright sour tint, one fringe ring instead of two and a threshold that frays it — and it reads as a **sandy bank**, which looks right but is not what "marsh" means. **Open for the owner: re-tint it greener or rename it.**
   - Judge it with **`Odyssey → Presentation → Check the water`** (`scripts/unity.sh shot Odyssey.EditorTools.WaterCheck.Run`), which shoots a stream and a forced river at three pitches — Fresnel is an angle, so the grazing shot is the only one where the surface shading really shows. Levers: `NaturalMapGenDef.water` (off is **byte-identical** to the pre-water generator, and six baked hashes prove it), `deepShoreDistance`, `marshFringe`, `riverChancePerMille`, `ChunkMesher.WaterSurface`.
+- **What you can see is decided by how deep you are (owner decision 2026-09-16; ADR 0006 amended,
+  `06-rendering-and-camera.md` §3a).** **At or above the surface: every layer above, x-rayed. Below
+  the surface: one layer above, and every layer below to the floor.** The lever is
+  `SliceSettings.followDepth` (on by default) with `surfaceLayer` set from the start cell by the
+  composition root; switching it off obeys the six ADR 0006 modes exactly as before, and the V key's
+  first press does that for you — it pins whatever is on screen, then cycles, then hands the default
+  back. The owner's reason: *"you need to be able to see within the environment — if there was ever
+  digging introduced into the game or underground base."*
+  - **The report was "I couldn't see another person mining above me", and that half was a bug, not a
+    policy.** The terrain above the slice was x-rayed correctly; every *actor* in it was culled
+    outright, by `PawnFigureDirector.Sync` and `ChunkRenderer.RenderActors` alike, both testing
+    `cell.Y > activeLayer` — items too. A colonist working a storey up did not exist on screen. Both
+    now cull against `SliceSettings.HighestVisibleLayer`, so **a figure is drawn on every layer the
+    world is drawn on and on no other**. Solid, at full opacity (owner's call): a figure faded to
+    match its surroundings is invisible within two layers, and being sure *who* is overhead beats
+    being sure how far. Selection is unaffected and needed no guard — `SlicePicker` is clipped
+    analytically to the active layer's slab and `PawnUnderRay` already refused anything above it, so
+    nothing above the slice is a pointer target, as ADR 0006's Lane B amendment requires.
+  - **"Every layer above" is bounded by the fade, not by a count**, and the bound is the same
+    constant the chunk loop skips on, so the two cannot drift. At the shipped tuning the alpha ramp
+    runs 0.380, 0.274, 0.197, 0.142, 0.102 … and crosses the 0.012 cutoff after eleven layers.
+  - **It costs nothing on the board being played, and that is measured rather than hoped.** On the
+    16-layer board with the surface at L11, "every layer above" is L12–L15 — four layers, exactly
+    what the old `aboveDepth` of 4 drew. Underground at L6 the range was L3–L10 and is now L0–L7:
+    eight layers either way. Deeper it is cheaper (L2: seven layers before, four now). Only a map
+    tall enough for the eleven-layer bound to bite pays anything, which is ADR 0006's new flip
+    condition F4.
+  - **Not measured: frame time.** `FrameTimeTests` runs under the player loop and the owner's editor
+    was holding the project, so the Unity gate did not run. The Presentation and Editor assemblies
+    were compiled headlessly against `Library/ScriptAssemblies` (`docs/lessons.md`, "Compiling the
+    game code while the editor holds the project") and the slice arithmetic was run outside the
+    player to check every number above, but **`scripts/unity.sh test editmode` and the PlayMode
+    frame-time gate are both unrun on this change.**
 - **Sim vs UI vocabulary is deliberate:** simulation systems are *subsystems*, presentation-side coordinators are *directors* (`01-architecture.md` §3a). Do not unify the two words.
 - **Phase 3 (design): complete 2026-09-15.** `docs/design/` 00, 01, 02, 03, 04, 05, 06, 07, 08; ADRs 0001, 0002, 0005; and the execution plan `docs/plans/vertical-slice.md` (32 units, M0→M3). **The Phase 3 → Phase 4 hard stop was cleared by the owner on 2026-09-15; execution is under way.**
 - **Interface, icons and content naming (the UI line of work), 2026-09-15.** Design `09-ui-and-input.md`, `10-ui-panel-catalogue.md`, `11-icon-library.md`; ADRs 0003 UI framework, 0004 sim-to-UI contract, 0006 layer visibility, 0007 pixel-art icon pipeline; research `g-01`, `g-02`; mockups `hud-v1.html` (historical) and `hud-v2.html` (current). **Layer visibility decided:** x-ray by default with six modes shipped for playtest, amended by Lane B so that nothing above the active slice is ever a pointer target. **Icons:** 382 keys enumerated, 268 mapped to the owner's eight pixel-art sheets, 114 gaps listed in `11-icon-library.md` — the largest being people, since no sheet contains a human figure. **Names:** all 29 proper nouns proposed and awaiting the owner's veto, in `docs/design/proper-nouns.csv`.

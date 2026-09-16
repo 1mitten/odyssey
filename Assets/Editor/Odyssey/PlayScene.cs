@@ -124,8 +124,11 @@ namespace Odyssey.EditorTools
                 model.RefreshAll(grid, result.Natural!.Context.Edifices);
 
                 renderer = new ChunkRenderer(model);
-                var slice = new SliceSettings();
                 int activeLayer = result.StartCell.Y;
+                // The depth the picture is "at ground level" relative to, so the x-ray shot below
+                // — which slices at the foot of an outcrop — reports the treatment a player would
+                // actually get there rather than the surface one.
+                var slice = new SliceSettings { surfaceLayer = activeLayer };
 
                 // The scene's own lighting, so the picture matches what the player sees rather
                 // than some convenient studio setup that would hide the very faults being hunted.
@@ -615,10 +618,6 @@ namespace Odyssey.EditorTools
                 // whole layer model exists for: what is ABOVE the active layer has to read, or a
                 // player standing in a quarry cannot see the rock still over their head.
                 {
-                    Debug.Log($"[Shot] x-ray: above={slice.above}, depth={slice.aboveDepth}, " +
-                              $"alpha +1 {slice.AlphaAbove(1):0.00}, +2 {slice.AlphaAbove(2):0.00}, " +
-                              $"+3 {slice.AlphaAbove(3):0.00}, +4 {slice.AlphaAbove(4):0.00}");
-
                     // The tallest outcrop, viewed with the slice set at its foot so every cell of
                     // it above the first is drawn through the x-ray.
                     int tallest = -1, tallestTop = -1;
@@ -637,6 +636,15 @@ namespace Odyssey.EditorTools
                         int foot = Mathf.Max(0, at.Y - 2);
                         Debug.Log($"[Shot] the tallest rock is at {at}; slicing at L{foot} " +
                                   $"puts {at.Y - foot} layer(s) of it above the cut");
+
+                        // Reported from the layer actually being cut at, because the treatment
+                        // above now depends on it: below the surface it is one ceiling layer, at
+                        // or above it every layer above. See SliceSettings.followDepth.
+                        Debug.Log($"[Shot] x-ray at L{foot}: above={slice.AboveAt(foot)}, " +
+                                  $"underground={slice.BelowSurface(foot)}, " +
+                                  $"top visible L{slice.HighestVisibleLayer(foot, size.SizeY)}, " +
+                                  $"alpha +1 {slice.AlphaAbove(foot, 1):0.00}, +2 {slice.AlphaAbove(foot, 2):0.00}, " +
+                                  $"+3 {slice.AlphaAbove(foot, 3):0.00}, +4 {slice.AlphaAbove(foot, 4):0.00}");
 
                         shotLayer[0] = foot;
                         Shoot(camera, CellMetrics.FloorCentre(new CellRef(at.X, at.Z, foot)),
@@ -824,7 +832,9 @@ namespace Odyssey.EditorTools
                 // cost of a slice the player never sees.
                 int activeLayer = result.StartCell.Y;
                 var renderer = new ChunkRenderer(model) { SubmitToGpu = false };
-                var slice = new SliceSettings();
+                // Benched with the player's own policy: at the surface that is every layer above,
+                // not four, and measuring four would understate what the frame really costs.
+                var slice = new SliceSettings { surfaceLayer = activeLayer };
 
                 clock.Restart();
                 renderer.Render(activeLayer, slice);

@@ -279,6 +279,13 @@ namespace Odyssey.Presentation.Bootstrap
                 // above groundLayer, and RenderActors culls anything above the active layer -
                 // which meant every colonist was culled every frame while the terrain drew fine.
                 cameraRig.Bind(_model, _renderer, Directors);
+
+                // The depth the game opens at, which is what SliceSettings.followDepth measures
+                // "underground" against. It is the colony's own layer for the same reason the
+                // slice binds to it: the surface is terraced, so the generator's nominal ground
+                // layer is one to three below where anybody is actually standing.
+                if (cameraRig.slice != null) cameraRig.slice.surfaceLayer = outcome.StartCell.Y;
+
                 // The composition root draws every cursor tier; the rig's own cell cube is off from
                 // the first frame, not from the first LateUpdate that happens to say so.
                 cameraRig.SuppressCellCursor = true;                cameraRig.GameSpeedRequested += OnGameSpeedRequested;
@@ -532,7 +539,10 @@ namespace Odyssey.Presentation.Bootstrap
             if (Directors == null || !Directors.Overlays.DeveloperVisible) return;
             if (_renderer == null || _world == null || _model == null) return;
             int activeLayer = cameraRig != null ? cameraRig.ActiveLayer : _world.Views.SliceLayer;
-            AboveMode above = cameraRig != null ? cameraRig.slice.above : AboveMode.Xray;
+            AboveMode above = cameraRig != null
+                ? cameraRig.slice.AboveAt(activeLayer)
+                : AboveMode.Xray;
+            bool underground = cameraRig != null && cameraRig.slice.BelowSurface(activeLayer);
 
             var text =
                 $"tick {_world.CurrentTick}  speed {_world.GameSpeed}   layer {activeLayer}/{_model.Size.SizeY - 1}" +

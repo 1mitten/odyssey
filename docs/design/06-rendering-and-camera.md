@@ -179,6 +179,51 @@ Three decisions inside that table are deliberate:
 2. **The active layer is drawn roofless.** The ceiling slab of the active layer is suppressed — exactly what the concept renders show, and the only way interiors read at all. The slab is still *there* in the simulation; this is purely a render decision.
 3. **Layers below stay visible and darkened.** This is the depth cue that makes a hole in the floor legible as a hole rather than a black square, and it is what makes building above an occupied room comprehensible. N and the darkening curve are settings, because the right value is a matter of taste and screen size.
 
+### 3a. The depth chooses the treatment (owner, 2026-09-16)
+
+The table above is what a *mode* does. What a player actually gets, before they have chosen a mode,
+now depends on how deep the slice is — `SliceSettings.followDepth`, on by default.
+
+| Where the slice is | Above it | Below it |
+|---|---|---|
+| At or above the surface (the layer the game opens at) | **Every layer**, x-rayed and fading. No depth cap | `belowDepth` layers, dimmed |
+| Below the surface | **One layer**, x-rayed — a ceiling, not a survey | **Every layer, to the floor**, dimmed with depth |
+
+The rule came out of a playtest report with a one-line diagnosis: *"I couldn't see another person
+mining above me."* Two faults, one sentence.
+
+**The first was a bug and not a policy.** The layers above the slice were being x-rayed exactly as
+this section says, so the rock was drawn — but every *actor* in them was culled outright, by
+`PawnFigureDirector.Sync` and `ChunkRenderer.RenderActors` alike, both testing `cell.Y >
+activeLayer`. Items too. A colonist working a storey up did not exist on screen. The cull is now
+against `SliceSettings.HighestVisibleLayer`, so **a figure is drawn on every layer the world is
+drawn on and on no other** — actors solid at full opacity, which is the owner's call: a figure faded
+to match the rock around it is invisible within two layers, and being sure who is overhead beats
+being sure how far overhead they are.
+
+**The second is the policy.** Above ground the player is outside looking in and wants the whole
+stack; underground the question reverses. What is overhead is a ceiling and one layer of it is all
+the context that helps, while what is *under* you is the shape of the working — and a base three
+storeys deep is unreadable through a three-layer cap. So the cap comes off downwards and goes on
+upwards. The owner's reason is worth keeping verbatim: *"you need to be able to see within the
+environment — if there was ever digging introduced into the game or underground base."*
+
+**"Every layer above" is bounded by the fade, not by a count.** At the shipped tuning
+(`ghostAlpha` 0.38, `ghostFalloff` 0.72) the alpha ramp runs 0.380, 0.274, 0.197, 0.142, 0.102 …
+and crosses the 0.012 cutoff after eleven layers. `HighestVisibleLayer` returns that layer, and it
+is the same constant the chunk loop skips on, so the two cannot drift apart.
+
+**Measured cost, which is why the cap could come off at all.** On the 16-layer prototype board with
+the surface at L11, "every layer above" is L12–L15 — four layers, which is exactly what the old
+`aboveDepth` of 4 already drew. Underground at L6 the old range was L3–L10 and the new one is
+L0–L7: eight layers either way. Deeper it gets *cheaper* — at L2 the old range was seven layers and
+the new one is four. The change only costs anything on a map tall enough for the eleven-layer fade
+bound to bite, and nothing on the board being played.
+
+The six ADR 0006 modes are untouched and still ship. Switching `followDepth` off obeys every field
+exactly as before, which is what choosing a mode explicitly does: the V key's first press pins
+whatever is on screen and hands over control, and cycling past the last mode gives the default back.
+
 **Implementation:** per-layer visibility on the instanced batches, not a clipping plane. The renderer simply does not submit buckets outside the drawn range, which is cheaper than submitting and clipping, keeps shadow casters honest, and makes the ghosted layer a different material rather than a shader branch. A clip plane remains the fallback if a single mesh ever needs to be cut mid-cell, which the discrete-cell model is specifically designed to avoid.
 
 ## 4. Overlays

@@ -229,18 +229,111 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void XrayDrawsAboveAndBelowWithinTheirCaps()
         {
-            var slice = new SliceSettings { above = AboveMode.Xray, aboveDepth = 2, belowDepth = 3 };
+            var slice = new SliceSettings
+            {
+                followDepth = false, above = AboveMode.Xray, aboveDepth = 2, belowDepth = 3,
+            };
 
             Assert.That(slice.HighestDrawnLayer(5, 20), Is.EqualTo(7));
             Assert.That(slice.LowestDrawnLayer(5), Is.EqualTo(2));
-            Assert.That(slice.GhostsAbove, Is.True);
+            Assert.That(slice.GhostsAbove(5), Is.True);
         }
 
         [Test]
         public void HideDrawsNothingAboveTheSlice()
         {
-            var slice = new SliceSettings { above = AboveMode.Hide };
+            var slice = new SliceSettings { followDepth = false, above = AboveMode.Hide };
             Assert.That(slice.HighestDrawnLayer(5, 20), Is.EqualTo(5));
+        }
+
+        /// <summary>
+        /// The owner's rule, 2026-09-16: at the depth the game opens at, everything at that level
+        /// and above is drawn — no depth cap — because you have to be able to see somebody working
+        /// over your head.
+        /// </summary>
+        [Test]
+        public void AtTheSurfaceEverythingAboveIsDrawn()
+        {
+            var slice = new SliceSettings { surfaceLayer = 5, aboveDepth = 2 };
+
+            Assert.That(slice.BelowSurface(5), Is.False);
+            Assert.That(slice.HighestDrawnLayer(5, 20), Is.EqualTo(19),
+                "the depth cap still applied at the surface");
+            Assert.That(slice.AboveAt(5), Is.EqualTo(AboveMode.Xray));
+        }
+
+        /// <summary>
+        /// And the other half: underground the question reverses. One layer of ceiling for
+        /// context, and every layer below, because what is under you is the shape of the working.
+        /// </summary>
+        [Test]
+        public void UndergroundDrawsOneLayerAboveAndEveryLayerBelow()
+        {
+            var slice = new SliceSettings { surfaceLayer = 11, belowDepth = 3 };
+
+            Assert.That(slice.BelowSurface(6), Is.True);
+            Assert.That(slice.HighestDrawnLayer(6, 20), Is.EqualTo(7), "more than one ceiling layer");
+            Assert.That(slice.LowestDrawnLayer(6), Is.EqualTo(0), "the depth cap still applied below");
+            Assert.That(slice.AboveAt(6), Is.EqualTo(AboveMode.XrayMin));
+        }
+
+        /// <summary>
+        /// Standing exactly at the surface is not underground, and one layer above it is not
+        /// either. The boundary is worth pinning because the whole rule turns on it.
+        /// </summary>
+        [Test]
+        public void TheSurfaceItselfCountsAsAboveGround()
+        {
+            var slice = new SliceSettings { surfaceLayer = 11 };
+
+            Assert.That(slice.BelowSurface(12), Is.False);
+            Assert.That(slice.BelowSurface(11), Is.False);
+            Assert.That(slice.BelowSurface(10), Is.True);
+        }
+
+        /// <summary>
+        /// Switching the default off hands every field back, which is what choosing a mode
+        /// explicitly will do.
+        /// </summary>
+        [Test]
+        public void TurningTheDefaultOffObeysTheFieldsExactly()
+        {
+            var slice = new SliceSettings
+            {
+                followDepth = false, surfaceLayer = 11, above = AboveMode.Hide, belowDepth = 3,
+            };
+
+            Assert.That(slice.AboveAt(6), Is.EqualTo(AboveMode.Hide));
+            Assert.That(slice.HighestDrawnLayer(6, 20), Is.EqualTo(6));
+            Assert.That(slice.LowestDrawnLayer(6), Is.EqualTo(3), "the cap was ignored below ground");
+        }
+
+        /// <summary>
+        /// A figure is drawn on every layer the world is drawn on, and on no other. "Everything
+        /// above" is bounded by the fade rather than by a count, so the answer has to stop where
+        /// the geometry stops — or a colonist stands in rock that is no longer there.
+        /// </summary>
+        [Test]
+        public void TheHighestVisibleLayerStopsWhereTheFadeDoes()
+        {
+            var slice = new SliceSettings { surfaceLayer = 0 };
+            int visible = slice.HighestVisibleLayer(0, 40);
+
+            Assert.That(visible, Is.LessThan(39), "the fade never cut anything off");
+            Assert.That(slice.AlphaAbove(0, visible - 0),
+                Is.GreaterThanOrEqualTo(SliceSettings.MinVisibleAlpha),
+                "the top visible layer is already invisible");
+            Assert.That(slice.AlphaAbove(0, visible + 1 - 0),
+                Is.LessThan(SliceSettings.MinVisibleAlpha),
+                "the layer above the top visible one would still have been drawn");
+        }
+
+        /// <summary>Hide draws nothing above, so the visible top is the slice itself.</summary>
+        [Test]
+        public void TheHighestVisibleLayerIsTheSliceWhenNothingAboveIsDrawn()
+        {
+            var slice = new SliceSettings { followDepth = false, above = AboveMode.Hide };
+            Assert.That(slice.HighestVisibleLayer(5, 20), Is.EqualTo(5));
         }
 
         [Test]
@@ -258,7 +351,7 @@ namespace Odyssey.Tests.Presentation
         public void LayersAboveFadeWithDistance()
         {
             var slice = new SliceSettings { above = AboveMode.Xray };
-            Assert.That(slice.AlphaAbove(2), Is.LessThan(slice.AlphaAbove(1)));
+            Assert.That(slice.AlphaAbove(5, 2), Is.LessThan(slice.AlphaAbove(5, 1)));
         }
     }
 }
