@@ -399,6 +399,49 @@ materials and no work, and it is now a visible thing in the world rather than an
 which makes the debt easier to see and no smaller. Mined cells, ladders and fallen stacks are still
 not saved (OQ-08).
 
+## 6d. Fourth round: the ladder comes out again, and the jolt is explained
+
+The owner: *"these ladders shouldn't be visible and the animation jolts around when descending by
+them — can we have them just fall/climb down or just make the ladder invisible (and have it
+climbing)."*
+
+**The ladder prop is gone.** It lived for one commit. It was the right diagnosis of the mid-air
+colonist and the wrong fix: a shaft dug with a pick does not come with a ladder in it, so drawing
+one put a free, unbuilt fixture in every pit on the board. The navigation connector stays — it is
+what lets a miner out of its own shaft — and `PawnContext.Edifices`, `MapGenOutcome.EdificeList` and
+`MineJobDriver.PlaceLadder` were all taken out with it rather than left as unused plumbing.
+
+**The jolt had nothing to do with ladders and affected every vertical step in the game.** Two
+separate bugs, both in presentation, both found by reading the code the complaint pointed at:
+
+- `PawnPose.Of` handed back `to - from` as the heading. A step that only changes layer travels
+  `(0, ±3, 0)`, which is not a zero vector, so it was passed on as a bearing — and the yaw of it is
+  `Atan2(0, 0)`, which is not "no bearing", it is **zero, which is due north**. Every colonist
+  entering a shaft turned slowly to face north and turned back on the way out. The heading is now
+  horizontal only; zero length already meant "keep facing wherever you were", which is exactly right
+  for a climb.
+- The gait blend took its speed from the full 3-D displacement, so a colonist covering three metres
+  straight up was walking at the blend's reckoning. It is ground speed now, which leaves a climber
+  at nought and blends to the idle.
+
+**And there is a climb pose**, because an idle rising through a hole is better than a walk cycle and
+still is not climbing. `ApplyClimbPose` lays alternating overhead reaches on both arms, two per cell
+climbed, phased from the step's own progress so the reach matches the height gained and the pose
+holds still while the game is paused. Arms only: the rig's left and right arms are both bound
+already (the off-hand IK solve needed them) and no leg is, so legs are a piece of work rather than a
+tweak. `shot-climb.png` is the frame.
+
+**Vertical movement is repriced, asymmetrically.** `LadderDown` 400 → **100**, the same as walking a
+flat cell, because dropping a layer is letting go. `LadderUp` 540 → **270**, still the dearest
+ordinary step there is, because climbing out of a shaft with a load should make a colonist prefer a
+ramp and the pathfinder only learns that from the price. Measured over the same 40,000 ticks: layer
+steps fell from **25,372 to 9,880** and time spent on a connector from **34,004 to 24,107**
+pawn-ticks.
+
+**Still owed:** legs in the climb pose, and the free connector (§4f) — a colonist still gets its way
+out of a shaft for no materials and no work. Making that a built thing is the building line's job,
+and it will place its own edifice when it comes.
+
 ## 7. Risks
 
 1. **Golden tests re-base twice** — once for the raised ground, once for terracing. Both are

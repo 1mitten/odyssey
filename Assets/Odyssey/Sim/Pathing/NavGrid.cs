@@ -116,8 +116,25 @@ namespace Odyssey.Sim.Pathing
 
         public const int StairUp = 290;
         public const int StairDown = 230;
-        public const int LadderUp = 540;
-        public const int LadderDown = 400;
+
+        /// <summary>
+        /// Climbing a layer. Dear, because it is work: a colonist hauling stone out of a shaft
+        /// should prefer a ramp, and the pathfinder only learns that from the price.
+        ///
+        /// <para>Was 540 — nine seconds a rung at a hundred units to the tick, which the owner
+        /// twice described as floating. Half of that is still three times a flat cell and still
+        /// the dearest ordinary step there is.</para>
+        /// </summary>
+        public const int LadderUp = 270;
+
+        /// <summary>
+        /// Dropping a layer. Priced as a flat cell, because that is what it is: you let go.
+        ///
+        /// <para>Was 400. The asymmetry is the point and it is not a fudge — going down a hole and
+        /// coming back up it are genuinely not the same job, and pricing them alike is what made a
+        /// colonist take six and a half seconds to descend three metres.</para>
+        /// </summary>
+        public const int LadderDown = 100;
         public const int LiftUp = 400;
         public const int LiftDown = 400;
 

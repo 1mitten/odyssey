@@ -75,5 +75,51 @@ namespace Odyssey.Tests.Presentation
             Assert.That(PawnPose.YawOf(Vector3.right), Is.EqualTo(90f).Within(1e-3f));
             Assert.That(PawnPose.YawOf(Vector3.zero), Is.EqualTo(0f).Within(1e-3f));
         }
+
+        [Test]
+        public void AVerticalStepGivesNoBearingAtAll()
+        {
+            // **The jolt the owner reported on a descent, and it was never about the ladder.**
+            //
+            // A step that only changes layer travels (0, ±3, 0). That is not a zero vector, so the
+            // old code handed it on as a heading — and its yaw is Atan2(0, 0), which is not "no
+            // bearing", it is zero, which is due north. Every colonist entering a shaft therefore
+            // turned slowly to face north and turned back on the way out. Callers already treat a
+            // zero heading as "keep facing wherever you were", which is exactly right for a climb.
+            var pawn = Pawn(new CellRef(4, 4, 6), new CellRef(4, 4, 5), 40);
+            PawnPose.Of(pawn, 0f, 0, out Vector3 heading);
+
+            Assert.That(heading, Is.EqualTo(Vector3.zero),
+                "a climb handed back a bearing, and the only one it can hand back is north");
+        }
+
+        [Test]
+        public void AVerticalStepStillCarriesTheFigureDownTheShaft()
+        {
+            // Flattening the BEARING must not flatten the travel: the figure still has to move.
+            var pawn = Pawn(new CellRef(4, 4, 6), new CellRef(4, 4, 5), 50);
+            Vector3 at = PawnPose.Of(pawn, 0f, 0, out _);
+
+            Vector3 top = CellMetrics.FloorCentre(new CellRef(4, 4, 6));
+            Vector3 bottom = CellMetrics.FloorCentre(new CellRef(4, 4, 5));
+
+            Assert.That(at.y, Is.EqualTo((top.y + bottom.y) * 0.5f).Within(1e-3f),
+                "half way down the shaft is half way down the shaft");
+            Assert.That(at.x, Is.EqualTo(top.x).Within(1e-3f));
+            Assert.That(at.z, Is.EqualTo(top.z).Within(1e-3f));
+        }
+
+        [Test]
+        public void ADiagonalDescentKeepsTheHorizontalPartOfItsBearing()
+        {
+            // A step that changes layer AND moves across still has a bearing, and it is the
+            // horizontal one. Flattening must take the vertical part out, not the whole thing.
+            var pawn = Pawn(new CellRef(4, 4, 6), new CellRef(5, 4, 5), 50);
+            PawnPose.Of(pawn, 0f, 0, out Vector3 heading);
+
+            Assert.That(heading.y, Is.EqualTo(0f));
+            Assert.That(heading.x, Is.GreaterThan(0f), "the across-the-map part of the bearing was lost");
+            Assert.That(PawnPose.YawOf(heading), Is.EqualTo(90f).Within(0.01f));
+        }
     }
 }

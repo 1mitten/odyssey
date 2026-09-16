@@ -184,15 +184,16 @@ namespace Odyssey.Tests.Sim
             Assert.That(items.ItemAt(100)!.Stack, Is.EqualTo(8), "the stack merged with itself");
         }
 
-        // ---- the ladder ------------------------------------------------------------------
+        // ---- climbing out --------------------------------------------------------------
 
         [Test]
-        public void ACutShaftHasARealLadderInIt()
+        public void ACutShaftIsStillClimbableWithNothingDrawnInIt()
         {
-            // The reported bug, stated as the thing that was actually missing. Every other part of
-            // the pipeline already existed — the def, the module id, the catalogue row with a real
-            // prop, ModuleShape.Ladder and ChunkMesher.EmitLadder — and none of it was ever
-            // reached, because the connector was only ever a navigation edge.
+            // The connector is what makes a shaft escapable, and it is deliberately all there is.
+            // A ladder edifice was placed here for one commit and taken out again — the owner's
+            // words were "these ladders shouldn't be visible" — so what is left has to be checked
+            // as behaviour rather than as a prop: nothing standing in the cell, and a colonist can
+            // still get out of it.
             ColonyWorld colony = Board();
             CellRef start = colony.Start;
             int surface = Size.Index(start.X, start.Z, start.Y);
@@ -201,75 +202,27 @@ namespace Odyssey.Tests.Sim
 
             Dig(colony, shaft);
 
-            Assert.That(DefAt(colony, shaft), Is.EqualTo(CoreContent.EdificeLadder),
-                "the shaft has a connector a colonist can climb and nothing to draw");
+            Assert.That(colony.Grid.Edifice[shaft], Is.LessThan(0),
+                "something is standing in the shaft; the owner asked for nothing to be");
+            Assert.That(
+                colony.Pawns.Nav.Reachable(shaft, surface, Odyssey.Sim.Pathing.TraverseMode.Colonist),
+                Is.True, "a colonist that cut this shaft cannot get out of it");
         }
 
         [Test]
-        public void TheLadderStandsInTheShaftAndNotOnTheGroundAbove()
+        public void GoingDownCostsLessThanClimbingBackUp()
         {
-            // A ladder fills the hole it is in and you step off at its top. A rung in the upper
-            // cell as well draws a ladder six metres tall with half of it standing proud of flat
-            // grass, which is what the first version did.
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-            int surface = Size.Index(start.X, start.Z, start.Y);
-            int shaft = surface - Size.LayerStride;
-            Assume.That(colony.Designations.CanMine(shaft), Is.True);
-
-            Dig(colony, shaft);
-
-            Assert.That(DefAt(colony, surface), Is.Not.EqualTo(CoreContent.EdificeLadder),
-                "a ladder is standing on the ground above the hole");
-        }
-
-        [Test]
-        public void ALadderDoesNotBlockTheCellItIsIn()
-        {
-            // A ladder nobody can enter is a ladder nobody can climb, and the cell's walkability
-            // is the entire reason the connector was laid.
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-            int shaft = Size.Index(start.X, start.Z, start.Y) - Size.LayerStride;
-            Assume.That(colony.Designations.CanMine(shaft), Is.True);
-
-            Dig(colony, shaft);
-
-            Assert.That(colony.Grid.IsBlockedByEdifice(shaft), Is.False);
-            Assert.That(colony.Grid.Edifice[shaft], Is.GreaterThanOrEqualTo(0));
-        }
-
-        [Test]
-        public void DeepeningAShaftDoesNotStackTwoLaddersInOneCell()
-        {
-            // A shaft three cells deep is two connectors sharing a middle cell, and the dig asks
-            // about both of its vertical neighbours, so the placement is asked for more than once.
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-            int surface = Size.Index(start.X, start.Z, start.Y);
-
-            int first = surface - Size.LayerStride;
-            int second = first - Size.LayerStride;
-            Assume.That(colony.Designations.CanMine(first), Is.True);
-            Dig(colony, first);
-            Assume.That(colony.Designations.CanMine(second), Is.True);
-
-            int before = colony.Pawns.Edifices!.Count;
-            Dig(colony, second);
-            int placed = colony.Pawns.Edifices!.Count - before;
-
-            Assert.That(placed, Is.LessThanOrEqualTo(1),
-                $"deepening the shaft by one cell placed {placed} ladders");
-            Assert.That(DefAt(colony, first), Is.EqualTo(CoreContent.EdificeLadder),
-                "the middle cell lost the ladder it already had");
-        }
-
-        static ushort DefAt(ColonyWorld colony, int cell)
-        {
-            int handle = colony.Grid.Edifice[cell];
-            if (handle < 0 || handle >= colony.Pawns.Edifices!.Count) return CoreContent.EdificeNone;
-            var placed = colony.Pawns.Edifices![handle];
-            return placed.Removed ? CoreContent.EdificeNone : placed.Def;
+            // The asymmetry is the point and it is not a fudge: going down a hole and coming back
+            // up it are not the same job. Priced alike, a descent took six and a half seconds for
+            // three metres, which the owner twice described as floating.
+            Assert.That(Odyssey.Sim.Pathing.MoveCost.LadderDown,
+                Is.LessThan(Odyssey.Sim.Pathing.MoveCost.LadderUp));
+            Assert.That(Odyssey.Sim.Pathing.MoveCost.LadderDown,
+                Is.LessThanOrEqualTo(Odyssey.Sim.Pathing.MoveCost.Orthogonal),
+                "dropping a layer costs more than walking a cell, so it still reads as a climb");
+            Assert.That(Odyssey.Sim.Pathing.MoveCost.LadderUp,
+                Is.GreaterThan(Odyssey.Sim.Pathing.MoveCost.Orthogonal),
+                "climbing became as cheap as walking, so nothing will ever prefer a ramp");
         }
 
         // ---- the glide -------------------------------------------------------------------
@@ -286,12 +239,15 @@ namespace Odyssey.Tests.Sim
             Assert.That(pawn.MoveStepCost, Is.EqualTo(Odyssey.Sim.Pathing.MoveCost.Orthogonal),
                 "a pawn that has never stepped would publish a nonsense fraction");
 
-            // Halfway through a ladder descent is halfway down the ladder, not off the end of it.
-            Assert.That(Percent(200, Odyssey.Sim.Pathing.MoveCost.LadderDown), Is.EqualTo(50));
-            Assert.That(Percent(100, Odyssey.Sim.Pathing.MoveCost.LadderDown), Is.EqualTo(25),
-                "a quarter of the way down a ladder still draws as arrived");
-            Assert.That(Percent(100, Odyssey.Sim.Pathing.MoveCost.Orthogonal), Is.EqualTo(100),
+            // Stated against explicit costs rather than against the content constants: this is
+            // about the arithmetic, and it must keep holding whatever a ladder is repriced to.
+            Assert.That(Percent(200, 400), Is.EqualTo(50),
+                "halfway through a dear step is halfway across it, not off the end");
+            Assert.That(Percent(100, 400), Is.EqualTo(25),
+                "a quarter of the way through still drew as arrived under the old clamp");
+            Assert.That(Percent(100, 100), Is.EqualTo(100),
                 "a flat crossing, which was the one case the old arithmetic got right");
+            Assert.That(Percent(500, 400), Is.EqualTo(100), "overshoot is still clamped");
         }
 
         /// <summary>The arithmetic <c>PawnRegistry</c> publishes, stated once so it can be checked.</summary>

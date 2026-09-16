@@ -148,7 +148,7 @@ namespace Odyssey.EditorTools
                 nav.Rebuild();
                 var pawns = new PawnContext(
                     grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core())
-                    { Chunks = chunks, Edifices = result.EdificeList };
+                    { Chunks = chunks };
                 var support = new SupportSystem(grid, new SupportSolver(grid), chunks);
                 var mirror = new Odyssey.Presentation.World.GridMirrorContributor(
                     grid, result.Edifices, model);
@@ -455,32 +455,50 @@ namespace Odyssey.EditorTools
                     }
                 }
 
-                // A ladder in a shaft, which until now was a navigation edge with no geometry.
+                // Somebody on a shaft wall, which is the one pose with nothing under it.
                 //
-                // Worth a picture of its own because the failure it fixes is invisible from any
-                // other angle: a colonist on a connector cell is correctly placed and was simply
-                // not standing on anything drawn, so it read as a person hanging in mid-air over
-                // a hole. If this frame shows a hole with nothing in it, the edifice is not being
-                // placed and no amount of looking at the colonist will say so.
+                // Worth its own frame because every fault it can have is invisible from anywhere
+                // else: a climber drawn in the walk cycle, or turned to face north, or with its
+                // arms at its sides, all look like an ordinary colonist until you notice it is
+                // three metres up a hole. The frame is deliberately side on and close.
                 {
-                    int laddered = -1;
-                    for (int i = 0; i < size.CellCount && laddered < 0; i++)
+                    // Waited for rather than hoped for. A drop costs a hundred ticks and a climb
+                    // two hundred and seventy, so on any one frame of a five-colonist board the
+                    // odds of catching somebody on a wall are poor — the first version of this
+                    // shot simply reported that nobody was climbing, which says nothing at all
+                    // about whether the pose works.
+                    PawnView climber = default;
+                    bool found = false;
+                    for (int waited = 0; waited < 4_000 && !found; waited++)
                     {
-                        int handle = grid.Edifice[i];
-                        if (handle < 0 || handle >= result.Edifices.Count) continue;
-                        if (result.Edifices[handle].Def == CoreContent.EdificeLadder) laddered = i;
+                        world.Tick();
+                        figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                        figures.Evaluate(FrameSeconds);
+
+                        var live = world.Views.Current.Pawns;
+                        for (int i = 0; i < live.Length; i++)
+                        {
+                            PawnView who = live[i];
+                            if (who.MovePercent <= 20 || who.MovePercent >= 80) continue;
+                            if (who.NextCell.Y == who.Cell.Y) continue;
+                            if (who.Cell.Y < 0) continue;
+                            climber = who;
+                            found = true;
+                            break;
+                        }
                     }
 
-                    if (laddered >= 0)
+                    if (found)
                     {
-                        CellRef at = size.FromIndex(laddered);
-                        Shoot(camera, CellMetrics.FloorCentre(at) + Vector3.up * 1.2f,
-                              50f, 40f, 20f, "Logs/shot-ladder.png");
-                        Debug.Log($"[Shot] a ladder stands in {at}");
+                        Vector3 between = (CellMetrics.FloorCentre(climber.Cell)
+                                         + CellMetrics.FloorCentre(climber.NextCell)) * 0.5f;
+                        Shoot(camera, between + Vector3.up * 1.4f, 10f, 35f, 11f, "Logs/shot-climb.png");
+                        Debug.Log($"[Shot] a colonist is {climber.MovePercent}% of the way from " +
+                                  $"{climber.Cell} to {climber.NextCell}");
                     }
                     else
                     {
-                        Debug.Log("[Shot] no ladder was built, so no ladder shot");
+                        Debug.Log("[Shot] nobody was mid-climb, so no climbing shot");
                     }
                 }
 

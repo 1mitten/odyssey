@@ -491,7 +491,18 @@ namespace Odyssey.Presentation.World
             for (int i = 0; i < _figures.Count; i++)
             {
                 Figure figure = _figures[i];
-                if (figure.Pawn < 0 || figure.WorkWeight <= 0.001f) continue;
+                if (figure.Pawn < 0) continue;
+
+                // A colonist cannot be swinging a pick and climbing at the same time, and the two
+                // poses write the same bones, so the climb is applied here rather than in a pass
+                // of its own — one place where an additive pose is laid over the clip, in one
+                // order, for ever.
+                if (figure.WorkWeight <= 0.001f)
+                {
+                    if (figure.ClimbPhase >= 0f) ApplyClimbPose(figure);
+                    continue;
+                }
+
                 if (figure.RightUpperArm == null) continue;
 
                 WorkStyle look = Styles[figure.Style];
@@ -541,6 +552,48 @@ namespace Odyssey.Presentation.World
                 // that piece of work, not this one.
                 Chips.Throw(look.Chips, edge, outward);
             }
+        }
+
+        /// <summary>
+        /// Hand over hand: the pose of a colonist going up or down a shaft wall.
+        ///
+        /// <para><b>Arms only, and that is a deliberate limit rather than an oversight.</b> The
+        /// rig's left and right arms are both bound — the off-hand inverse-kinematics solve needed
+        /// them — and no leg is. At the height this game is looked at, two arms reaching alternately
+        /// overhead with the body upright reads as climbing; legs would be better and are not
+        /// available without binding four more bones, which is a piece of work rather than a
+        /// tweak.</para>
+        ///
+        /// <para>One full cycle of reaches per cell climbed, taken from the step's own progress, so
+        /// a colonist that is half way up a shaft has made half a reach. The angles follow
+        /// <see cref="WorkSwing"/>'s convention exactly: an arm hangs down, so a large negative
+        /// pitch carries it forward and then overhead.</para>
+        /// </summary>
+        void ApplyClimbPose(Figure figure)
+        {
+            if (figure.RightUpperArm == null || figure.LeftUpperArm == null) return;
+
+            // Two reaches a cell. One would have a colonist take a whole three metres in a single
+            // grab, which reads as being hauled up rather than as climbing.
+            const float ReachesPerCell = 2f;
+
+            // Overhead and down at the hip. Not as far back as a pick's raise: a climber's hand
+            // goes up the wall in front of it, not over its own crown.
+            const float Reaching = -150f;
+            const float Pulling = -35f;
+            const float ElbowBend = -30f;
+
+            float swing = Mathf.Sin(figure.ClimbPhase * ReachesPerCell * 2f * Mathf.PI);
+            float right = Mathf.Lerp(Pulling, Reaching, (swing + 1f) * 0.5f);
+            float left = Mathf.Lerp(Reaching, Pulling, (swing + 1f) * 0.5f);
+
+            // No tilt: a climb is straight up the sagittal plane, where a swing is across the body.
+            Vector3 axis = SwingAxis(figure.Transform, 0f);
+
+            Pitch(figure.RightUpperArm, axis, right);
+            Pitch(figure.RightLowerArm, axis, ElbowBend);
+            Pitch(figure.LeftUpperArm, axis, left);
+            Pitch(figure.LeftLowerArm, axis, ElbowBend);
         }
 
         /// <summary>
@@ -643,6 +696,17 @@ namespace Odyssey.Presentation.World
 
             ShowHeldTool(figure, figure.WorkWeight > 0.001f);
 
+            // Climbing: a step that changes layer and is part way through.
+            //
+            // A colonist on a shaft wall has no clip to play — no pack we own contains one, the
+            // same reason the work pose is computed rather than animated — and until now it had no
+            // pose either, so it rose through a hole in whatever the mixer produced. With the gait
+            // reading ground speed that is the idle, which is better than a walk cycle in mid-air
+            // and still is not climbing.
+            figure.ClimbPhase = pawn.MovePercent > 0 && pawn.NextCell.Y != pawn.Cell.Y
+                ? Mathf.Clamp01(pawn.MovePercent * 0.01f)
+                : -1f;
+
             // Face the work. A pawn that has stopped walking has no heading left — that is what
             // makes PawnPose hand back a zero vector — so without the work cell the figure would
             // swing at whatever it happened to be facing when it arrived, which is as often as
@@ -664,9 +728,21 @@ namespace Odyssey.Presentation.World
             // stepping up to its tree: a metre and a half of step over a quarter of a second is
             // six metres a second, which would have thrown a standing woodcutter into a sprint
             // cycle on the spot.
+            //
+            // **Ground speed, so the vertical part does not count.** The gait blend picks a walk
+            // or a run from this number, and a colonist climbing out of a shaft covers three
+            // metres without going anywhere: counted whole, that is a walk cycle playing while the
+            // figure rises through the air with nothing under its feet. Horizontal distance leaves
+            // a climber at nought, which blends to the idle — still the wrong pose for a climb,
+            // but a still figure going up a hole reads as somebody climbing where a walking one
+            // reads as somebody levitating.
             float speed = 0f;
             if (settled && deltaTime > 1e-5f)
-                speed = Vector3.Distance(position, figure.SimPosition) / deltaTime;
+            {
+                Vector3 moved = position - figure.SimPosition;
+                moved.y = 0f;
+                speed = moved.magnitude / deltaTime;
+            }
 
             // One frame of a lost path or a slice change can jump a pawn further than any gait
             // covers. Smoothing keeps a single frame from throwing the figure into a sprint.
@@ -1373,6 +1449,16 @@ namespace Odyssey.Presentation.World
             /// which is the surface a miner on the rim actually strikes.
             /// </summary>
             public Vector3 WorkCentre;
+
+            /// <summary>
+            /// Where in a climb this figure is, 0 to 1, or -1 when it is not climbing.
+            ///
+            /// Taken from how far through the vertical step the simulation says the pawn is, not
+            /// from a clock of its own. That means the reach matches the height gained, the pose
+            /// holds still while the game is paused, and two colonists on the same shaft are out
+            /// of step because their steps are — none of which a free-running clock would give.
+            /// </summary>
+            public float ClimbPhase = -1f;
 
             /// <summary>
             /// Degrees this figure is aiming its stroke below level, this frame.

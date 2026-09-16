@@ -43,7 +43,7 @@ namespace Odyssey.EditorTools
             nav.Rebuild();
             var pawns = new PawnContext(
                 grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core())
-                { Chunks = chunks, Edifices = result.EdificeList };
+                { Chunks = chunks };
             var support = new SupportSystem(grid, new SupportSolver(grid), chunks);
             var designations = new DesignationGrid(grid, result.Edifices);
 
@@ -71,11 +71,11 @@ namespace Odyssey.EditorTools
                     //    simulation says the pawn is IN.
                     // Two different things, and the whole question is which one the screenshot
                     // showed. A connector cell counts as having a floor to the NAV grid — a pawn
-                    // stands on the ladder — but not to the cell grid. The answer was the second:
-                    // nothing unsupported, and a sixth of all colonist time spent on ladders that
-                    // nothing drew. Mining now places a real EdificeLadder, so the second count is
-                    // no longer a fault; it is kept because it is the number that would go wrong
-                    // again if the placement were ever lost.
+                    // is on the ladder — but not to the cell grid. The answer was the second:
+                    // nothing unsupported, and about a sixth of all colonist time spent on a
+                    // connector. Nothing is drawn in one on purpose (the owner asked for the prop
+                    // to go), so this count is not a fault; it is how much colonist time the climb
+                    // pose has to carry, and it is the number to watch if that starts to matter.
                     bool onLadder = (nav.Grid.Flags[pawn.Cell] & NavFlags.Connector) != 0;
                     bool footed = grid.HasFloor(pawn.Cell) || onLadder;
                     if (!grid.HasFloor(pawn.Cell) && onLadder) ladderStands++;
@@ -158,7 +158,7 @@ namespace Odyssey.EditorTools
                       $"{layerSteps} layer steps seen, {expensiveSteps} of them dearer than a ladder, " +
                       $"worst {worstCost} units; {hangs} hangs, longest {longestHang} ticks, " +
                       $"mean {(hangs > 0 ? totalHang / hangs : 0)} ticks; " +
-                      $"{ladderStands} pawn-ticks spent standing on a ladder");
+                      $"{ladderStands} pawn-ticks spent on a connector");
         }
 
         static int CostOf(NavGraph nav, Pawn pawn, int next)

@@ -152,7 +152,9 @@ namespace Odyssey.Presentation.Bootstrap
             // Shell templates only exist on a city map; natural ground has no stamped buildings.
             if (outcome.City != null) _model.ApplyTemplates(outcome.City, _gen);
 
-            var edifices = outcome.EdificeList;
+            var edifices = outcome.City != null
+                ? outcome.City.Context.Edifices
+                : outcome.Natural!.Context.Edifices;
             var mirror = new GridMirrorContributor(_grid, edifices, _model);
             var solver = new SupportSolver(_grid);
             CellGrid grid = _grid;
@@ -163,13 +165,7 @@ namespace Odyssey.Presentation.Bootstrap
             var nav = new NavGraph(_grid);
             nav.Rebuild();
             var pathService = new PathService(new PathFinder(nav));
-            _pawns = new PawnContext(_grid, nav, pathService, PawnContent.Core())
-            {
-                Chunks = chunks,
-                // The same list the mirror reads, so a ladder a colonist builds is drawn. See
-                // PawnContext.Edifices: a handle is an index into this, and a copy would break it.
-                Edifices = edifices,
-            };
+            _pawns = new PawnContext(_grid, nav, pathService, PawnContent.Core()) { Chunks = chunks };
 
             var support = new SupportSystem(grid, solver, chunks);
             var designations = new DesignationGrid(_grid, edifices);

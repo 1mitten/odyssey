@@ -292,20 +292,12 @@ namespace Odyssey.Sim.Pawns
         /// or an older working from below. Asking the question as "is my vertical neighbour open"
         /// covers the two without caring which happened.</para>
         ///
-        /// <para><b>And the ladder is now a thing, not only an edge.</b> It used to be a
-        /// navigation connector and nothing else: the pathfinder knew a colonist could climb, the
-        /// nav grid counted the cell as having something to stand on, and no geometry was ever
-        /// drawn for any of it. A colonist on a ladder was therefore drawn hanging in mid-air over
-        /// the hole, with no terrain and no rock anywhere near its feet — which is exactly what
-        /// the owner photographed. Measured over 40,000 ticks of the playtest colony: <b>zero</b>
-        /// colonists were ever genuinely unsupported, and <b>34,004 pawn-ticks</b> — about a
-        /// sixth of all colonist time — were spent standing on a ladder nothing drew.</para>
-        ///
-        /// <para>Placing <see cref="CoreContent.EdificeLadder"/> fixes it outright, because every
-        /// other part of that pipeline already existed: the def, the module id, the catalogue row
-        /// with a real prop on it, <c>ModuleShape.Ladder</c> and <c>ChunkMesher.EmitLadder</c>
-        /// were all written and simply never reached. Non-blocking, so the cell stays walkable and
-        /// the nav rebuild is unaffected.</para>
+        /// <para><b>There is deliberately nothing to look at.</b> A ladder edifice was placed
+        /// here for one commit and taken out again: the owner's words were "these ladders
+        /// shouldn't be visible". They were right — a shaft a colonist digs with a pick does not
+        /// come with a ladder in it, and drawing one put a free, unbuilt fixture in every pit on
+        /// the board. What a colonist does instead is climb the rock, and making that read is
+        /// presentation's job (<c>PawnFigureDirector</c>), not a prop's.</para>
         /// </summary>
         static void LadderTheShaft(PawnContext ctx, int cell)
         {
@@ -314,44 +306,11 @@ namespace Odyssey.Sim.Pawns
 
             int above = cell + size.LayerStride;
             if (above < size.CellCount && !grid.IsSolidTerrain(above) && !grid.IsBlockedByEdifice(above))
-                if (ctx.Nav.EnsureLadder(cell, above) >= 0) PlaceLadder(ctx, cell);
+                ctx.Nav.EnsureLadder(cell, above);
 
             int below = cell - size.LayerStride;
             if (below >= 0 && !grid.IsSolidTerrain(below) && !grid.IsBlockedByEdifice(below))
-                if (ctx.Nav.EnsureLadder(below, cell) >= 0) PlaceLadder(ctx, below);
-        }
-
-        /// <summary>
-        /// Put a rung of ladder in a cell, unless something is already there.
-        ///
-        /// <para><b>The lower cell of the connector only.</b> A ladder fills the hole it is in and
-        /// you step off at its top, which is the floor of the cell above — so rungs in both cells
-        /// draw a ladder six metres tall, half of it standing proud of flat grass. That is what the
-        /// first version did, and the photograph of it is unmistakable.</para>
-        ///
-        /// <para>Idempotent because a shaft three cells deep is two ladders sharing a middle cell,
-        /// and because the dig asks about both of its vertical neighbours. Never overwrites an
-        /// existing edifice: whatever is there has a better claim on the cell than this does, and
-        /// clobbering the handle would leave the old record pointing at a cell that no longer
-        /// knows about it.</para>
-        /// </summary>
-        static void PlaceLadder(PawnContext ctx, int cell)
-        {
-            var edifices = ctx.Edifices;
-            if (edifices == null) return;
-            if (ctx.Cells.Edifice[cell] >= 0) return;
-
-            edifices.Add(new PlacedEdifice
-            {
-                CellIndex = cell,
-                Def = CoreContent.EdificeLadder,
-                Stuff = CoreContent.StuffSteel,
-            });
-            ctx.Cells.Edifice[cell] = edifices.Count - 1;
-
-            // Emphatically not blocking. A ladder you cannot enter is a ladder nobody can climb,
-            // and the cell's walkability is the whole reason the connector was laid.
-            ctx.Cells.Flags[cell] &= ~CellFlags.BlockingEdifice;
+                ctx.Nav.EnsureLadder(below, cell);
         }
 
         static void MarkChunksAround(PawnContext ctx, int cell)

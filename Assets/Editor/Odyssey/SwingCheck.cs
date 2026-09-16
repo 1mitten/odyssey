@@ -99,7 +99,7 @@ namespace Odyssey.EditorTools
                 nav.Rebuild();
                 var pawns = new PawnContext(
                     grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core())
-                    { Chunks = chunks, Edifices = result.EdificeList };
+                    { Chunks = chunks };
                 var support = new SupportSystem(grid, new SupportSolver(grid), chunks);
                 var mirror = new GridMirrorContributor(grid, result.Edifices, model);
                 var designations = new Odyssey.Sim.Designations.DesignationGrid(grid, result.Edifices);
