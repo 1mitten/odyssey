@@ -403,6 +403,19 @@ namespace Odyssey.Presentation.World
         public ChipDirector? Chips { get; set; }
 
         /// <summary>
+        /// Raised on the frame a tool's blow lands, with the work style (index into
+        /// <see cref="WorkStyle.All"/>) and where the edge struck, in world space.
+        ///
+        /// The same moment the chips fly, published as an event because audio is not this
+        /// director's business and neither is anything else that wants the instant: the sound of
+        /// an axe and the sound of a pick are the same blow on a different tool, and the one
+        /// place that knows when a blow lands should not have to know everything that follows
+        /// it. Raised whether or not <see cref="Chips"/> exists, because a clone with no usable
+        /// particle shader still has working ears.
+        /// </summary>
+        public event Action<int, Vector3>? BlowLanded;
+
+        /// <summary>
         /// Whether the last <see cref="Sync"/> saw a world that was advancing.
         ///
         /// Read off the snapshot, never inferred, and public because it is the one bit of state
@@ -743,6 +756,7 @@ namespace Odyssey.Presentation.World
             }
 
             Retire();
+            ApplyFooting();
             ApplyWorkPose();
         }
 
@@ -752,6 +766,7 @@ namespace Odyssey.Presentation.World
         {
             for (int i = 0; i < _figures.Count; i++)
                 if (_figures[i].Pawn >= 0) _figures[i].Graph.Evaluate(deltaTime);
+            ApplyFooting();
             ApplyWorkPose();
             // The chips as well: under the player loop Unity steps them, and in an editor tool
             // with no player loop nothing does, so a photographed blow would throw wood that
@@ -778,6 +793,91 @@ namespace Odyssey.Presentation.World
         /// anything, and a job would have to be bound per rig at build time for a pose that is
         /// six lines of quaternion arithmetic.
         /// </summary>
+        /// <summary>
+        /// Put both feet on the ground that is actually drawn, and bend the legs to suit.
+        ///
+        /// <para><b>Why it runs before the work pose and not after.</b> The hips are a parent of
+        /// the spine, so dropping them after the arms have been posed translates the arms with
+        /// them — and the left hand is solved onto a world point on the axe haft, so it would come
+        /// away from the haft by exactly the drop. Footing first, then the swing over the top of
+        /// it, and the arms are solved against hips that have stopped moving.</para>
+        ///
+        /// <para><b>Why it is idempotent.</b> Like <see cref="ApplyWorkPose"/>, this runs at the
+        /// end of both <see cref="Sync"/> and <see cref="Evaluate"/> because which of those is the
+        /// last word depends on whether there is a player loop. Running twice is harmless: the
+        /// targets are taken from the foot positions before anything moves, the feet are then
+        /// solved onto them, and a second pass finds the feet already on the ground, corrects by
+        /// nothing and returns before it touches the hips.</para>
+        ///
+        /// <para><b>What it does not do.</b> It never reads the simulation and never changes it.
+        /// A colonist on a slope walks at exactly the speed one on the flat does, because slope is
+        /// not a property of a cell — this is the picture of the ground, not a fact about it.</para>
+        /// </summary>
+        void ApplyFooting()
+        {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn < 0) continue;
+
+                // A rig with no legs bound is not an error: a non-Humanoid prefab answers null to
+                // every bone and simply goes on walking, which is what it does for the arms too.
+                if (figure.LeftFoot == null || figure.RightFoot == null) continue;
+                if (figure.LeftUpperLeg == null || figure.RightUpperLeg == null) continue;
+
+                Vector3 leftAt = figure.LeftFoot.position;
+                Vector3 rightAt = figure.RightFoot.position;
+
+                // The ground under each foot separately, not under the figure. That is the whole
+                // point: on a slope the two are at different heights, and asking once at the
+                // body's own position would move both feet by the same amount and leave the
+                // figure standing on one heel exactly as before.
+                float leftGround = figure.GroundY + GroundRelief.HeightAt(leftAt.x, leftAt.z);
+                float rightGround = figure.GroundY + GroundRelief.HeightAt(rightAt.x, rightAt.z);
+
+                float left = Footing.Correction(leftAt.y, leftGround);
+                float right = Footing.Correction(rightAt.y, rightGround);
+                if (left == 0f && right == 0f) continue;
+
+                Vector3 leftTarget = leftAt + Vector3.up * left;
+                Vector3 rightTarget = rightAt + Vector3.up * right;
+
+                // The hips drop before the legs are solved, so each leg is solved against where
+                // the body has actually ended up. Doing it the other way round solves both legs
+                // and then moves them, which is the same as not having done it.
+                float drop = Footing.HipDrop(left, right);
+                if (drop != 0f && figure.Hips != null)
+                    figure.Hips.position += Vector3.up * drop;
+
+                Transform body = figure.Transform;
+                PlantFoot(figure.LeftUpperLeg, figure.LeftLowerLeg, figure.LeftFoot, leftTarget, body, figure.Lean);
+                PlantFoot(figure.RightUpperLeg, figure.RightLowerLeg, figure.RightFoot, rightTarget, body, figure.Lean);
+            }
+        }
+
+        /// <summary>
+        /// Bend one leg so its foot lands on a point, and lay the foot along the ground there.
+        ///
+        /// <para>The solve is <see cref="TwoBoneIk.Reach"/> unchanged — it is a two-bone analytic
+        /// solve written against transforms and its own header says it is not about arms. A leg is
+        /// two bones and a target, which is exactly what it takes.</para>
+        ///
+        /// <para>The pole is ahead of the knee and below it, because a knee bends forward. Sent
+        /// the other way the solve is equally correct and the leg bends backwards, which is a
+        /// perfectly valid pose for a bird.</para>
+        /// </summary>
+        static void PlantFoot(Transform? upper, Transform? lower, Transform? foot, Vector3 target,
+            Transform body, Quaternion lean)
+        {
+            if (upper == null || lower == null || foot == null) return;
+
+            Vector3 pole = upper.position + body.forward * 1.2f - body.up * 0.4f;
+            TwoBoneIk.Reach(upper, lower, foot, target, pole);
+
+            GroundRelief.SlopeAt(target.x, target.z, out float slopeX, out float slopeZ);
+            foot.rotation = Footing.AnkleLevel(Footing.GroundNormal(slopeX, slopeZ), lean) * foot.rotation;
+        }
+
         void ApplyWorkPose()
         {
             // Cleared every pass, because the crouch's own early return — nothing to do at the top
@@ -848,19 +948,24 @@ namespace Odyssey.Presentation.World
 
                 if (!figure.Landed) continue;
                 figure.Landed = false;
-                if (Chips == null || figure.Held.Transform == null) continue;
 
                 // Out of the cut, which is back towards whoever swung: an edge biting across the
                 // grain throws wood at the woodcutter, not away into the forest.
-                Vector3 edge = figure.Held.Transform.TransformPoint(figure.Held.BladeTip);
                 Vector3 outward = figure.Transform.position - figure.WorkCentre;
                 outward.y = 0f;
 
-                // Thrown from the face rather than from wherever the head stopped. See
-                // WorkStyle.ChipStandOff: the head finishes inside the thing it struck, which for
-                // a 2.5 m block of stone means the pieces are born inside solid rock.
-                if (look.ChipStandOff > 0f && outward.sqrMagnitude > 1e-6f)
-                    edge += outward.normalized * look.ChipStandOff;
+                // Where the blow lands: the blade's own tip when there is a blade, and the thing
+                // being struck when there is not.
+                //
+                // **A clone without the art packs fells trees bare-handed**, and an axe that is
+                // not in anyone's hands must not be what decides whether the work can be heard.
+                // This guard used to sit above everything here and take the sound with it, so a
+                // checkout with no Synty made no chopping noise at all, at any zoom — which is
+                // exactly the bargain the chips already refuse to make.
+                Transform? blade = figure.Held.Transform;
+                Vector3 edge = BlowPoint(
+                    blade == null ? null : blade.TransformPoint(figure.Held.BladeTip),
+                    figure.WorkCentre, outward, look.ChipStandOff);
 
                 // Which debris, chosen from the job the snapshot already publishes. This is the
                 // smallest possible version of what docs/design/12-work-poses-and-tools.md calls
@@ -869,8 +974,32 @@ namespace Odyssey.Presentation.World
                 // is that the contract needs no change because JobDef is published already. Only
                 // the chips are switched here; a pick in the hands and a stroke of its own are
                 // that piece of work, not this one.
-                Chips.Throw(look.Chips, edge, outward);
+                if (blade != null) Chips?.Throw(look.Chips, edge, outward);
+
+                // And the sound of the blow, on the same frame and from the same edge the chips
+                // leave. See <see cref="BlowLanded"/>.
+                BlowLanded?.Invoke(figure.Style, edge);
             }
+        }
+
+        /// <summary>
+        /// Where a blow lands, given the blade's tip if there is one.
+        ///
+        /// <para>Stood off from the face rather than left wherever the head stopped: the head
+        /// finishes <i>inside</i> the thing it struck, which for a 2.5 m block of stone means
+        /// debris born inside solid rock and a sound coming from within it.</para>
+        ///
+        /// <para>Static and public because it is the whole of the decision and none of the
+        /// scene: a test can ask what happens with no blade without building a figure, a rig or
+        /// a character to hang one on.</para>
+        /// </summary>
+        public static Vector3 BlowPoint(Vector3? bladeTip, Vector3 workCentre, Vector3 outward,
+            float standOff)
+        {
+            Vector3 point = bladeTip ?? workCentre;
+            if (standOff > 0f && outward.sqrMagnitude > 1e-6f)
+                point += outward.normalized * standOff;
+            return point;
         }
 
         /// <summary>
@@ -1695,7 +1824,29 @@ namespace Odyssey.Presentation.World
             figure.Yaw = settled
                 ? Mathf.MoveTowardsAngle(figure.Yaw, figure.TargetYaw, TurnDegreesPerSecond * deltaTime)
                 : figure.TargetYaw;
-            figure.Transform.rotation = Quaternion.Euler(0f, figure.Yaw, 0f);
+
+            // Stand on the ground rather than merely above it.
+            //
+            // GroundRelief lifts everything that stands on the board and shears only the board
+            // itself — "a person standing on a hillside stands up". That is right about a
+            // *position* and was never the whole answer: a figure lifted onto a slope and left
+            // bolt upright meets it on one heel, with the downhill foot in the air and the uphill
+            // one buried. The lift puts the colonist in the right place; the lean puts it in the
+            // right attitude, and Footing decides how much of the slope it takes.
+            //
+            // Composed on the left of the bearing, so the figure yaws in the world and then leans
+            // with the hill. The other order leans it in its own frame, which turns the lean into
+            // a roll as it walks in a circle.
+            //
+            // The swing needs no separate fix and must not be given one: SwingAxis is built from
+            // figure.right and figure.forward, so the plane an axe travels in tilts with the body
+            // for free, which is what a woodcutter on a slope actually does.
+            GroundRelief.SlopeAt(drawn.x, drawn.z, out float slopeX, out float slopeZ);
+            Quaternion wanted = Footing.LeanTo(Footing.GroundNormal(slopeX, slopeZ));
+            figure.Lean = settled ? Footing.Settle(figure.Lean, wanted, deltaTime) : wanted;
+
+            figure.GroundY = drawn.y - GroundRelief.HeightAt(drawn.x, drawn.z);
+            figure.Transform.rotation = figure.Lean * Quaternion.Euler(0f, figure.Yaw, 0f);
 
             Blend(figure, figure.Speed, running);
         }
@@ -2481,6 +2632,23 @@ namespace Odyssey.Presentation.World
             /// lift that never happened.</para>
             /// </summary>
             public int SeenSerial = -1;
+
+            // The leg bones the footing pass needs are declared above, with the rest of the rig:
+            // the crouch work bound them first and for its own reasons, and one declaration serves
+            // both. Standing on uneven ground and crouching to climb want exactly the same bones,
+            // which is worth noticing rather than duplicating.
+
+            /// <summary>The lean this figure is drawn at, which eases towards the ground's own.</summary>
+            public Quaternion Lean = Quaternion.identity;
+
+            /// <summary>
+            /// The height of this figure's own cell floor, with the relief taken back out.
+            ///
+            /// Carried because the footing pass runs later, over figures alone, with no snapshot in
+            /// scope — and because by then the drawn position may have stepped in to a tree, so it
+            /// can no longer be asked where the ground under this pawn is.
+            /// </summary>
+            public float GroundY;
 
             /// <summary>
             /// One tool per style, fitted once and kept, all hidden but the one in use.

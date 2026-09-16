@@ -236,6 +236,30 @@ namespace Odyssey.Sim
         /// <summary>Restore the tick counter when loading a save. Not for any other use.</summary>
         internal void RestoreTick(int tick) => CurrentTick = tick;
 
+        /// <summary>
+        /// Put the clock somewhere other than midnight before the world runs.
+        ///
+        /// <para>A colony that starts at tick 0 starts at 00:00, which is the middle of the
+        /// night. That is fine for a headless run and wrong for a person opening the game: the
+        /// board is lit for midday whatever the clock says, so a player sees noon and hears —
+        /// correctly, and confusingly — the middle of the night.</para>
+        ///
+        /// <para><b>Only before the first tick.</b> <see cref="CurrentTick"/> is in the state
+        /// hash and seeds the per-tick random stream, so moving it later would be moving the
+        /// world under everything that has already happened in it. Tests and the headless day
+        /// leave it alone and still begin at zero, so nothing baked moves.</para>
+        /// </summary>
+        public void StartAtTick(int tick)
+        {
+            if (CurrentTick != 0)
+                throw new InvalidOperationException(
+                    $"the clock has already run to {CurrentTick}; it can only be set before the first tick");
+            if (tick < 0)
+                throw new ArgumentOutOfRangeException(nameof(tick), tick, "a clock does not start before zero");
+
+            CurrentTick = tick;
+        }
+
         /// <summary>The random stream for this tick and a named purpose.</summary>
         public DeterministicRandom RandomForTick(uint purpose) =>
             DeterministicRandom.ForTick(Seed, CurrentTick, purpose);
@@ -253,6 +277,7 @@ namespace Odyssey.Sim
         readonly List<Func<SimWorld, IWorldSystem>> _systemFactories = new List<Func<SimWorld, IWorldSystem>>();
         readonly List<(IntentKind kind, Func<Intent, IntentRejection> handler)> _intentHandlers =
             new List<(IntentKind, Func<Intent, IntentRejection>)>();
+        readonly List<Pawns.WorkGiver> _workGivers = new List<Pawns.WorkGiver>();
         uint _seed = 1;
         GridSize _size = GridSize.ScaleTarget;
 
@@ -305,6 +330,25 @@ namespace Odyssey.Sim
             _intentHandlers.Add((kind, handler ?? throw new ArgumentNullException(nameof(handler))));
             return this;
         }
+
+        /// <summary>
+        /// Let something outside the simulation assembly scan for work. Givers that live *inside*
+        /// it need no call at all: <see cref="Pawns.WorkGiverRegistry"/> finds them, which is the
+        /// point of that class. This is for the rest — a test's giver, an editor tool's, one day a
+        /// mod's.
+        ///
+        /// <para>The call order does not matter. The colony reads this list inside
+        /// <see cref="Build"/>, after every registration has been made, and the job pipeline sorts
+        /// the whole set by work type; a giver added last still scans where the Defs put it.</para>
+        /// </summary>
+        public SimWorldBuilder AddWorkGiver(Pawns.WorkGiver giver)
+        {
+            _workGivers.Add(giver ?? throw new ArgumentNullException(nameof(giver)));
+            return this;
+        }
+
+        /// <summary>The givers registered so far. Read by the colony composition at build time.</summary>
+        public IReadOnlyList<Pawns.WorkGiver> WorkGivers => _workGivers;
 
         public SimWorld Build()
         {

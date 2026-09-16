@@ -46,6 +46,35 @@ namespace Odyssey.Presentation.CameraRig
         public float zoomSpeed = 6f;
         public float smoothing = 12f;
 
+        /// <summary>
+        /// What holding shift multiplies every camera <em>translation</em> by.
+        ///
+        /// <para>The board is 300 m across and the camera pans at a speed chosen for looking at
+        /// one colony, so crossing it takes a while. Shift is the usual answer and costs nothing:
+        /// it scales on top of <see cref="DistanceScale"/> rather than replacing it, so a fast pan
+        /// zoomed out is still faster than a fast pan zoomed in, which is what makes both feel
+        /// like the same control.</para>
+        ///
+        /// <para><b>Translation only — pan, zoom and the slice.</b> Orbiting is deliberately left
+        /// alone: it is already a direct mouse-delta mapping, and three times a mouse delta is not
+        /// a fast orbit but an uncontrollable one.</para>
+        ///
+        /// <para>Below one it becomes a precision modifier instead, which is a legitimate thing to
+        /// want and costs nothing to allow; the field is clamped only against zero and absurdity.</para>
+        /// </summary>
+        [Tooltip("Hold shift to multiply pan, zoom and slice stepping by this. Below 1 makes shift a precision modifier.")]
+        public float fastMultiplier = 3f;
+
+        /// <summary>
+        /// How many layers one slice step covers with shift held.
+        ///
+        /// A storey at a time is right for reading a building and slow for getting from the
+        /// surface to the bottom of a sixteen-layer map, which is the same complaint the pan speed
+        /// answers and deserves the same key.
+        /// </summary>
+        [Tooltip("Layers per slice step with shift held.")]
+        public int fastLayerStep = 4;
+
         [Header("Selection")]
         public Color selectionColour = Color.white;
 
@@ -123,6 +152,35 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         public Rect? DragBox => _boxActive && _dragStart.HasValue ? RectFromTo(_dragStart.Value, _draggedTo) : null;
 
+        /// <summary>
+        /// Set by the interface: true while a designate tool is armed, and then the world gesture
+        /// belongs to designation rather than to selection.
+        ///
+        /// <para><b>Somebody has to own a press, and until now nobody did.</b> `BoxSelected` and
+        /// `Picked` are events, so designation could simply subscribe — and then a drag with the
+        /// mine tool armed would mark the rock <i>and</i> box-select every colonist under it. Two
+        /// consumers of one gesture with no arbiter is the bug, not the merge.</para>
+        ///
+        /// <para>This is deliberately the same shape as <see cref="PointerOverInterface"/>: a
+        /// predicate the rig consults, owned by whoever knows the answer, rather than the rig
+        /// growing an opinion about tools. It is the cheap half of design 09 §6's
+        /// <c>InputRouter</c> — one claim, checked once, at the moment the gesture completes. The
+        /// capture stack and the eight enumerated cases are still that router's to build; this
+        /// settles only the one case that is in the way today.</para>
+        /// </summary>
+        public Func<bool>? WorldToolArmed { get; set; }
+
+        /// <summary>
+        /// A completed world gesture that belongs to a tool: the cell the drag started on and the
+        /// cell it ended on, both on the active layer.
+        ///
+        /// <para>Cells rather than a screen rect, because only the rig can turn a screen point
+        /// into a cell — it holds the render mirror and the picker. A click with no travel raises
+        /// this too, with both cells the same, which is what makes "click to mark one" and "drag
+        /// to mark many" one gesture rather than two.</para>
+        /// </summary>
+        public event Action<CellRef, CellRef>? ToolDrag;
+
         /// <summary>A press must travel this many pixels before it counts as a box and not a click.</summary>
         const float DragThresholdPixels = 6f;
 
@@ -168,13 +226,17 @@ namespace Odyssey.Presentation.CameraRig
             if (keys.sKey.isPressed || keys.downArrowKey.isPressed) move.y -= 1f;
             if (keys.dKey.isPressed || keys.rightArrowKey.isPressed) move.x += 1f;
             if (keys.aKey.isPressed || keys.leftArrowKey.isPressed) move.x -= 1f;
-            if (move.sqrMagnitude > 0f) Pan(move.normalized * (panSpeed * dt * DistanceScale));
+            if (move.sqrMagnitude > 0f) Pan(move.normalized * (panSpeed * dt * DistanceScale * Boost));
 
             if (keys.qKey.wasPressedThisFrame) _targetYaw -= 90f;
             if (keys.eKey.wasPressedThisFrame) _targetYaw += 90f;
 
-            if (keys.pageUpKey.wasPressedThisFrame || keys.rKey.wasPressedThisFrame) _directors!.Slice.Step(1);
-            if (keys.pageDownKey.wasPressedThisFrame || keys.fKey.wasPressedThisFrame) _directors!.Slice.Step(-1);
+            // Shift covers several storeys at once, for the same reason it covers more ground: a
+            // layer at a time is right for reading a building and slow for getting from the
+            // surface to the floor of a sixteen-layer map.
+            int layers = Fast ? Mathf.Max(1, fastLayerStep) : 1;
+            if (keys.pageUpKey.wasPressedThisFrame || keys.rKey.wasPressedThisFrame) _directors!.Slice.Step(layers);
+            if (keys.pageDownKey.wasPressedThisFrame || keys.fKey.wasPressedThisFrame) _directors!.Slice.Step(-layers);
 
             if (keys.spaceKey.wasPressedThisFrame) RequestGameSpeed(0);
             if (keys.digit1Key.wasPressedThisFrame) RequestGameSpeed(1);
@@ -229,7 +291,7 @@ namespace Odyssey.Presentation.CameraRig
             float scroll = mouse.scroll.ReadValue().y;
             if (Mathf.Abs(scroll) > 0.01f && !overInterface)
                 _targetDistance = Mathf.Clamp(
-                    _targetDistance - Mathf.Sign(scroll) * zoomSpeed * DistanceScale,
+                    _targetDistance - Mathf.Sign(scroll) * zoomSpeed * DistanceScale * Boost,
                     minDistance, maxDistance);
             Vector2 delta = pointer - _lastPointer;
             _lastPointer = pointer;
@@ -244,7 +306,7 @@ namespace Odyssey.Presentation.CameraRig
             }
             else if (mouse.middleButton.isPressed)
             {
-                Pan(new Vector2(-delta.x, -delta.y) * (0.02f * DistanceScale));
+                Pan(new Vector2(-delta.x, -delta.y) * (0.02f * DistanceScale * Boost));
             }
             else
             {
@@ -276,15 +338,56 @@ namespace Odyssey.Presentation.CameraRig
                 bool wasBox = _boxActive;
                 _dragStart = null;
                 _boxActive = false;
-                if (wasBox) BoxSelected?.Invoke(RectFromTo(start, _draggedTo), shift);
+                // Who owns this press. Asked once, on release, so arming a tool mid-drag cannot
+                // turn a half-drawn selection box into an order.
+                if (WorldToolArmed != null && WorldToolArmed())
+                {
+                    if (CellAt(start, out CellRef anchor) && CellAt(_draggedTo, out CellRef head))
+                        ToolDrag?.Invoke(anchor, head);
+                }
+                else if (wasBox) BoxSelected?.Invoke(RectFromTo(start, _draggedTo), shift);
                 else PickAt(_draggedTo);
             }
+        }
+
+        /// <summary>
+        /// The one place a screen position becomes a ray. Shared so that a tool drag and a
+        /// selection click cannot resolve the same pixel to different cells.
+        /// </summary>
+        Ray RayAt(Vector2 screenPosition) =>
+            GetComponent<UnityEngine.Camera>()
+                .ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
+
+        /// <summary>The cell under a screen point on the active layer, or false when the ray misses.</summary>
+        bool CellAt(Vector2 screenPosition, out CellRef cell)
+        {
+            cell = default;
+            if (_model == null) return false;
+            return SlicePicker.Pick(RayAt(screenPosition), _model, ActiveLayer, out cell);
         }
 
         static Rect RectFromTo(Vector2 a, Vector2 b) => Rect.MinMaxRect(
             Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
 
         float DistanceScale => Mathf.Clamp(_targetDistance / 40f, 0.35f, 3f);
+
+        /// <summary>Is a shift key down? Read live, so nothing has to be threaded between the input passes.</summary>
+        static bool Fast
+        {
+            get
+            {
+                Keyboard? keys = Keyboard.current;
+                return keys != null && (keys.leftShiftKey.isPressed || keys.rightShiftKey.isPressed);
+            }
+        }
+
+        /// <summary>
+        /// What to multiply a camera translation by this frame. One unless shift is held.
+        ///
+        /// Clamped against zero and absurdity and nothing else: a value below one is a precision
+        /// modifier rather than a mistake. See <see cref="fastMultiplier"/>.
+        /// </summary>
+        float Boost => Fast ? Mathf.Clamp(fastMultiplier, 0.05f, 20f) : 1f;
 
         void Pan(Vector2 amount)
         {
@@ -362,8 +465,7 @@ namespace Odyssey.Presentation.CameraRig
         void PickAt(Vector2 screenPosition)
         {
             if (_model == null) return;
-            var camera = GetComponent<UnityEngine.Camera>();
-            Ray ray = camera.ScreenPointToRay(new Vector3(screenPosition.x, screenPosition.y, 0f));
+            Ray ray = RayAt(screenPosition);
             if (SlicePicker.Pick(ray, _model, ActiveLayer, out CellRef cell)) Picked?.Invoke(cell, ray);
             else Picked?.Invoke(null, ray);
         }
