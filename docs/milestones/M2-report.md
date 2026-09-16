@@ -23,7 +23,7 @@ dimensions, and look right doing it". All seven units exist and are tested.
 | **U20 Skills** | Done (OQ-14). Experience per skill, a passion rolled once from the seed and the pawn id, level 0–20 read off experience by the table and never stored, daily decay. | `SkillTests`, 13 tests |
 | **U21 Job pipeline** | Done. Think tree, work givers on a sorted list, drivers and toils, all-or-nothing reservations released on any job end. | `PawnTests`, `WorldSystemTests`, and the reservation check every 1,000 ticks inside the soak |
 | **U22 The first jobs** | Done, and gone further than the unit asked: haul, eat and sleep, plus **felling** and **stockpile stacking with re-stow** (OQ-24), which belong to M3. | `FellJobTests`, `StockpileTests` |
-| **U23 Characters and animation** | Done in substance, **not as written**. See below. | `PawnPoseTests`, `GaitBlendTests`, `WorkSwingTests`, `ArmIkTests` |
+| **U23 Characters and animation** | Done in substance, **not as written**. See below. | `PawnPoseTests`, `GaitBlendTests`, `WorkSwingTests`, `TwoBoneIkTests` |
 | **U24 Pawn presentation** | Done. Pawns render, animate and are culled with the slice. | `PawnPoseTests`, `FrameTimeTests` (PlayMode) |
 
 **U23 did not happen the way the plan wrote it, and the difference is worth recording.** The plan
@@ -32,7 +32,7 @@ says six clips — carry, mine, build, sleep, eat, downed — are retargeted fro
 anywhere: there is **no work animation in any of the 7,222 imported assets**. A colonist felling a
 tree stood breathing in the idle for ten seconds and then the tree fell over. The answer was to
 **compute the pose rather than author it** — `WorkSwing` turns a stroke phase into shoulder, elbow
-and spine angles on the Humanoid rig, `ArmIk` puts the off hand on the haft, `WorkStance` steps the
+and spine angles on the Humanoid rig, `TwoBoneIk` puts the off hand on the haft (it was `ArmIk` until a crouch needed legs too), `WorkStance` steps the
 drawn figure in to where its blade meets the wood, and `ChipDirector` throws debris on the frame
 the blade lands. It stands in for art we do not have and goes when real clips exist. The design is
 `06-rendering-and-camera.md` §6a.
@@ -74,15 +74,43 @@ That was filed as OQ-47 and fixed rather than asserted-and-weakened. A scenario 
 storey its meals, beds and stockpile go on; the demo puts the store on the start floor, the beds
 one above and the food two above, and asserts that **every** colonist changed storey.
 
-**The control is a test, not a memory.** `ADayOnOneFloorNeverTouchesAStair` runs the same map and
-the same seed with the offsets removed and asserts that nobody changes layer. So the stairs in the
-demo are the consequence of the scenario and not something the generator would have given us
-anyway — and if some other reason to change storey ever appears, that test fails and tells us the
-demo has stopped being a clean measurement.
+**The control is a test, not a memory.** It runs the same map and the same seed with the storey
+offsets removed, so the demo's verticality has to be the consequence of the scenario rather than
+something the generator would have given us anyway — and if some other reason to change storey
+ever appeared, that test would fail and say the demo had stopped being a clean measurement.
 
-M2's layer claim therefore now rests on two independent things: `StampedConnectorTests`, which
-proves a colonist *can* reach an upper storey on the graph, and this run, which shows one *doing*
-it because what it needs is up there.
+**That is exactly what happened, between this report being drafted and being merged, and it is the
+most important thing on this page.** Unaided vertical movement arrived: a colonist jumps up one
+block onto the block next door, or drops off it, with nothing built. Its price was then halved
+(`MoveCost.JumpUp` 270 → 135) because at 270 a hop took four and a half seconds and read as the
+figure being stuck. Hopping a one-block pile now costs 185 against 200 to walk round it, so on a
+city built of one-block rubble colonists go over obstacles rather than around them.
+
+The control could no longer tell the two runs apart. It began as "every colonist used exactly one
+storey", became a span when a hop first let one colonist touch two, and now every colonist spans
+three storeys **on a one-floor map**. So it counts what its name always claimed — stair steps,
+which is the one thing a hop can never be. It is now
+`TheStairsInTheDemoAreTheScenariosDoingAndNotTheMaps`, and it differences the two runs rather than
+asserting an absolute.
+
+Measured over a day, three colonists, connector steps, control against demo, four seeds:
+
+| seed | one floor | across storeys |
+|---|---|---|
+| 1 | 1 | 9 |
+| 2 | 0 | 15 |
+| 3 | 0 | 15 |
+| 4 | 5 | 12 |
+
+**So M2's layer claim is true and it is carried by single figures.** On seed 1 the demo takes 9
+connector steps against 31 hops: most of its verticality is now hops, not stairs. The claim rests
+on two independent things — `StampedConnectorTests`, which proves a colonist *can* reach an upper
+storey on the graph, and this run, which shows one *doing* it because what it needs is up there —
+but the second is a thinner measurement than it was when M2 closed, and widening it again means
+making the map want a stair rather than tuning the test.
+
+Recorded rather than smoothed over, because a milestone report that quotes a claim its own control
+has stopped supporting is worth less than one that says where the evidence went.
 
 ## 4. Measured
 
