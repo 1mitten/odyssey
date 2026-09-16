@@ -29,17 +29,20 @@ namespace Odyssey.Tests.PlayMode
         const int SettleFrames = 8;
 
         /// <summary>
-        /// How far the camera may creep on its own over <see cref="SettleFrames"/>, and how far a
-        /// wheel notch must move it to count.
+        /// How far a wheel notch must move the camera's <b>target</b> to count as delivered.
         ///
-        /// <para>The rig smooths toward its target exponentially, so it approaches and never
-        /// arrives: measured drift after settling is about 0.005 over eight frames. Asserting
-        /// "did not move at all" therefore fails on a camera nobody touched — the control caught
-        /// exactly that. One notch moves it by <c>zoomSpeed</c> scaled by distance, which is
-        /// several units, so there are two orders of magnitude between the signal and the
-        /// creep and the two numbers below sit in the gap.</para>
+        /// <para><b>The target, not the drawn distance, and that took two failures to learn.</b>
+        /// The rig smooths toward its target exponentially, so the drawn value approaches and
+        /// never arrives — and how far it gets in a fixed number of frames depends on the frame
+        /// rate. A batch player runs frames in about a millisecond, so eight of them advance the
+        /// smoothing by a few per cent: a notch that moved the target by six units moved the drawn
+        /// distance by 0.457, which read as "the wheel did not reach the camera" when it plainly
+        /// had. On the owner's machine at sixty frames a second the same test would have passed.
+        /// That is a frame-rate-dependent assertion, which is a flaky test waiting to happen.</para>
+        ///
+        /// <para>The target moves the instant the wheel is read and does not drift afterwards, so
+        /// both the assertion and its control are exact.</para>
         /// </summary>
-        const float DriftAtMost = 0.05f;
         const float ZoomAtLeast = 0.5f;
 
         MouseHarness _mouse = null!;
@@ -60,14 +63,14 @@ namespace Odyssey.Tests.PlayMode
             {
                 yield return RigWorld.WarmUp();
                 yield return RigWorld.SettleCamera(rig);
-                float before = rig.distance;
+                float before = rig.TargetDistance;
 
                 yield return _mouse.Scroll(+1f, new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
                 for (int i = 0; i < SettleFrames; i++) yield return null;
 
-                Assert.That(Mathf.Abs(rig.distance - before), Is.GreaterThan(ZoomAtLeast),
-                    $"the wheel did not reach the camera: distance went {before:F3} -> {rig.distance:F3}. " +
-                    "Mouse input is not being delivered to the player loop in this test.");
+                Assert.That(Mathf.Abs(rig.TargetDistance - before), Is.GreaterThan(ZoomAtLeast),
+                    $"the wheel did not reach the camera: the zoom target went {before:F3} -> " +
+                    $"{rig.TargetDistance:F3}. Mouse input is not reaching the game in this test.");
             }
             finally
             {
@@ -87,13 +90,13 @@ namespace Odyssey.Tests.PlayMode
             {
                 yield return RigWorld.WarmUp();
                 yield return RigWorld.SettleCamera(rig);
-                float before = rig.distance;
+                float before = rig.TargetDistance;
 
                 for (int i = 0; i < SettleFrames; i++) yield return null;
 
-                Assert.That(Mathf.Abs(rig.distance - before), Is.LessThan(DriftAtMost),
-                    $"the camera moved {before:F3} -> {rig.distance:F3} with no input at all, " +
-                    "so any zoom the test above sees is not the wheel");
+                Assert.That(rig.TargetDistance, Is.EqualTo(before).Within(0.0001f),
+                    $"the zoom target moved {before:F3} -> {rig.TargetDistance:F3} with no input at " +
+                    "all, so any zoom the test above sees is not the wheel");
             }
             finally
             {
