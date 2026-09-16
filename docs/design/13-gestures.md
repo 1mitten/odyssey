@@ -5,7 +5,10 @@
 document this one extends. §6a of `06-rendering-and-camera.md` remains the record of the felling
 pose itself.*
 
-**Status: design only. No code ships with this note.** §8 says why, and §9 is the plan.
+**Status, 2026-09-16: designed, then built as far as the lift.** The note was written as design only
+and §8 said why; the owner then asked for the work to proceed on the same day, and §9 records what
+exists. It builds and its arithmetic is tested. Nothing in it has been photographed yet, which for
+a pose is the only evidence that counts.
 
 ---
 
@@ -114,12 +117,13 @@ amount of knowing where the trunk is tells you what the shoulder does eight-tent
 earlier. That is why every angle in §6a had to be settled against photographs, why
 `MeasuredBladeGap` exists, and why the whole apparatus of contact sheets was built.
 
-The lift is the second case. We know precisely where the hands have to go — the item's drawn
-position, which `ItemHeap` already computes, on ground `GroundRelief` has already tilted. A lift
-posed by authored angles would need a photograph per rig, would be wrong on a slope, and would put
-a colonist's hands through the floor on a tall character and a foot above it on a short one. A lift
-posed by IK needs no photograph at all: it needs a target, and it is correct on all sixty-one faces
-and on any ground by construction.
+The lift is the second case. We know precisely where the hands have to go: the ground in front of
+the colonist's own boots, on terrain `GroundRelief` has already tilted, because the item is in the
+pawn's own cell by construction (§5). What is solved is therefore the *body* rather than the hands
+— the pelvis drops and the legs are solved back to the feet the gait put down — and the result is
+right on all sixty-one faces without a photograph. Posed by authored angles instead it would need
+one per rig, would be wrong on a slope, and would put a tall colonist's hands through the floor and
+a short one's a foot above it.
 
 **This is the thing the gesture system buys that a second `WorkStyle` would not.** `WorkStyle` is a
 bundle of authored numbers. Half the queue is not authored numbers.
@@ -360,31 +364,34 @@ look at.
 | # | Step | State |
 |---|---|---|
 | **G0** | Land the mining merge. | **Done** by the owner as `482ff0f` while this note was being written. `12-work-poses-and-tools.md` did *not* come with it and is still on `worktree-agent-a8e0c6ab1138f2fda` alone, cited by five shipping files. |
-| **GH** | **The builder's hammer.** Added ahead of the queue because the owner asked for it and because it is pure data on machinery that already exists: a stroke, a style, a chip recipe, a catalogue row. | **Written, not compiled, not photographed.** |
-| **G1** | Bind `Hips`, both legs, both feet; measure each figure's own standing hip height. Rename `ArmIk` to `TwoBoneIk` — a leg is two bones. | **Written, not compiled.** |
-| **G2** | The crouch: pelvis translation, leg solve to the feet the gait left, sole restored. | **Written, not compiled.** |
-| **G3** | `Gesture` as a value with its own tests; the dispatch in `ApplyWorkPose` grows a third arm. Felling, mining and climbing are untouched. | **Written, not compiled.** |
+| **GH** | **The builder's hammer.** Added ahead of the queue because the owner asked for it and because it is pure data on machinery that already exists: a stroke, a style, a chip recipe, a catalogue row. | **Built, EditMode green, not yet photographed.** |
+| **G1** | Bind `Hips`, both legs, both feet; measure each figure's own standing hip height. Rename `ArmIk` to `TwoBoneIk` — a leg is two bones. | **Built, EditMode green.** |
+| **G2** | The crouch: pelvis translation, leg solve to the feet the gait left, sole restored. | **Built, EditMode green.** |
+| **G3** | `Gesture` as a value with its own tests; the dispatch in `ApplyWorkPose` grows a third arm. Felling, mining and climbing are untouched. | **Built, EditMode green.** |
 | **G4** | The contract: `PawnGesture`, the sticky pair on `PawnView`, the haul driver's two assignments, the first-sighting rule. | **Done and verified** — 7 new tests, 409 green in the fast tier. |
-| **G5** | **The lift**, plus `GestureCheck` and `MeasuredCrouchDrop`. | **Written, not compiled, not photographed. Wants the owner's eye.** |
+| **G5** | **The lift**, plus `GestureCheck` and `MeasuredCrouchDrop`. | **Built, EditMode green. Not yet photographed — wants the owner's eye.** |
 | **G6** | Crouched sustained work. Cyclic, harness only, no job. | Not started. |
 | **G7** | Legs on the climb, now that they are bound. | Not started. |
 | **G8** | The gun: aimed hold, off hand on the foregrip, recoil over the hold. Harness only. | Not started. |
 
-**"Written, not compiled" is not modesty, it is the state of the evidence.** A worktree has no
-`Assets/Synty` and no `Library`, so the whole of `Odyssey.Presentation` — every line of G1, G2, G3,
-G5 and the hammer — has never been through a compiler, and no figure has been drawn. Only G4 is on
-the simulation side, which is why only G4 is verified. What is needed, on the machine that has
-Unity and the packs:
+**What is verified, and what is not.** The fast tier is 409 Sim and 29 Hud; EditMode is **639 total,
+629 passed, 0 failed**, run in the worktree, and the new work is 8 `GesturePoseTests`, 6
+`TwoBoneIkTests` (renamed, not rewritten), 6 on the hammer and 7 on the contract. So it builds and
+the arithmetic is self-consistent.
+
+**None of that says whether it looks like anything**, and the temptation to treat it as though it
+did is the whole reason `MeasuredBladeGap` was written and now `MeasuredCrouchDrop` beside it.
+`GestureCheck` is the loop that closes the gap:
 
 ```
-scripts/unity.sh test editmode                          # the whole Presentation assembly
-Odyssey → Presentation → Check the lift                 # and Check the set-down
-Odyssey → Presentation → Check the hammer swing         # and the axe and the pick, unchanged
+Odyssey → Presentation → Check the lift          # and Check the set-down
+Odyssey → Presentation → Check the hammer swing  # beside the axe's and the pick's
 ```
 
-The first tells us whether it builds. The second and third are the only things that can tell us
-whether any of it looks like anything, and until they are run every angle in G5 and GH has exactly
-the standing the pick's numbers have: an argument, and an argument is not a measurement.
+A worktree has no `Assets/Synty` — the packs are gitignored and belong only to the real checkout —
+so no figure can be drawn in one and the sheets have to be shot where the art is. (Copying the
+1.5 GB in is a legitimate one-off; a junction is not, because the worktree's editor would then write
+`.meta` files into the owner's own checkout while their editor has it open.)
 
 ---
 
