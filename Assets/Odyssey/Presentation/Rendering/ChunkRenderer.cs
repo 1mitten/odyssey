@@ -276,7 +276,7 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
-        internal static void ResolveColour(int tintCode, bool fallback, float shade, out Color tint, out Color emission)
+        public static void ResolveColour(int tintCode, bool fallback, float shade, out Color tint, out Color emission)
         {
             int value = TintCode.Value(tintCode);
             if (TintCode.IsFoliage(tintCode))
@@ -308,6 +308,13 @@ namespace Odyssey.Presentation.Rendering
                 tint = StuffPalette.For(value, overArt: !fallback);
                 emission = Color.black;
             }
+
+            // Open to the sky means the depth shade has nothing to say. The shade measures how far
+            // you are peering *through* the world, and there is nothing over an outdoor surface —
+            // so a lower terrace is not dim ground, it is ground. Without this the meadow came out
+            // in one green per terrace, which reads as lighting that no light explains.
+            // TintCode.DaylitBase carries the whole argument.
+            if (TintCode.IsDaylit(tintCode)) shade = 1f;
 
             // Alpha survives the shade for water and for nothing else. Everywhere else it is
             // meaningless and forcing it to one keeps the material key from splitting on noise.

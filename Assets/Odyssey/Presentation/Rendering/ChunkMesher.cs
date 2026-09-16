@@ -137,7 +137,7 @@ namespace Odyssey.Presentation.Rendering
                 return;
             }
 
-            int tint = TintCode.Terrain(terrain);
+            int tint = TintCode.Daylit(TintCode.Terrain(terrain), OpenToTheSky(index, y));
             // Terrain is the ground, so it is the one thing that is draped rather than lifted: the
             // cell is tilted onto the tangent plane of the relief field so its top face follows
             // the slope. Everything built or standing on it is lifted instead - see GroundRelief.
@@ -205,7 +205,9 @@ namespace Odyssey.Presentation.Rendering
             // The dark grid that prompted the switch was never the shear at all. It was the six
             // faces of the box this tile is drawn from, blending over each other at every shared
             // edge, and the shader clips all but the top one.
-            AddRoof(batch, module, TintCode.Water(terrain), GroundRelief.Drape(centre));
+            AddRoof(batch, module,
+                TintCode.Daylit(TintCode.Water(terrain), OpenToTheSky(_model.Index(x, z, y), y)),
+                GroundRelief.Drape(centre));
         }
 
         // ------------------------------------------------------------- scatter
@@ -256,7 +258,11 @@ namespace Odyssey.Presentation.Rendering
 
             // Foliage, not terrain. Tinting a tuft the way the ground beneath it is tinted turned
             // a meadow into dark teal reeds; TintCode.FoliageBase says why.
-            const int tint = TintCode.FoliageBase;
+            //
+            // Daylit on the same terms as the ground it stands in, and it has to be asked rather
+            // than assumed: a tuft that kept dimming while the terrace under it stopped would be
+            // the same fault, a layer smaller and much harder to see.
+            int tint = TintCode.Daylit(TintCode.FoliageBase, OpenToTheSky(index, y));
 
             for (int slot = 0; slot < count; slot++)
             {
@@ -314,6 +320,37 @@ namespace Odyssey.Presentation.Rendering
         /// Nothing interior changes, because a cut into the ground still exposes its neighbours in
         /// the ordinary way — a pit dug against the map edge still shows all four of its walls.
         /// </summary>
+        /// <summary>
+        /// Is there nothing at all over this cell — no slab and no solid cell, all the way up?
+        ///
+        /// <para>What earns a cell the daylight bit, and so exemption from the depth shade. See
+        /// <see cref="TintCode.DaylitBase"/> for why the landscape must not dim: the surface is
+        /// terraced across five layers and only one of them is ever the active one.</para>
+        ///
+        /// <para>A slab is stored on the cell <em>above</em> the boundary it occupies, so the roof
+        /// over this cell is the floor of the next one up — which is why the walk starts at
+        /// <c>y + 1</c> and asks about that cell's own floor. A blocking edifice is deliberately
+        /// not consulted: a wall standing beside you is not a roof over you, and neither is a
+        /// tree, so grass in woodland stays lit like the grass beside it.</para>
+        ///
+        /// <para>The loop looks unbounded and is not. A buried cell answers on its first step,
+        /// because the cell above it is solid; a surface cell walks the headroom, which the
+        /// generator holds at three layers. Nothing here walks a full column in practice.</para>
+        /// </summary>
+        bool OpenToTheSky(int index, int y)
+        {
+            var size = _model.Size;
+            int above = index + size.LayerStride;
+
+            for (int layer = y + 1; layer < size.SizeY; layer++, above += size.LayerStride)
+            {
+                if (_model.Floor(above) != 0) return false;
+                if (_model.IsSolid(above)) return false;
+            }
+
+            return true;
+        }
+
         bool HasExposedFace(int index, int x, int z, int y)
         {
             var size = _model.Size;
