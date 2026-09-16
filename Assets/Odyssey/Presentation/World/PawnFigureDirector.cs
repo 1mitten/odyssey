@@ -61,10 +61,18 @@ namespace Odyssey.Presentation.World
         ///
         /// A colonist that snapped into a full swing on the tick the walk ended would pop, and
         /// one that kept the last angle after the tree came down would stand there with an arm in
-        /// the air. A quarter of a second is short enough to feel immediate and long enough to
-        /// read as somebody setting themselves.
+        /// the air.
+        ///
+        /// Raised from a quarter of a second to nearly a half (owner, 2026-09-16: the work was
+        /// snapping on). A quarter was chosen when it had to carry the figure from a standing idle
+        /// to wherever in the stroke that pawn's offset happened to start it, which no length of
+        /// blend was ever going to make graceful; now that every stroke begins at its own
+        /// beginning — see <see cref="WorkSwing.Phase(float, float)"/> — the ease has only to
+        /// cover the short distance from standing to the end of a blow, and it can afford to take
+        /// its time over it. The step up to the tree rides on the same weight, so the whole
+        /// approach lengthens together.
         /// </summary>
-        public float WorkEaseSeconds { get; set; } = 0.25f;
+        public float WorkEaseSeconds { get; set; } = 0.45f;
 
         /// <summary>
         /// How far the swing is tilted out of the straight-up-and-down plane, in degrees.
@@ -103,12 +111,19 @@ namespace Odyssey.Presentation.World
         /// The head of that axe is both widest and heaviest across its cutting edge, which is
         /// exactly the axis the bit is not.
         ///
-        /// So ninety, settled off a contact sheet of one instant at five rolls (owner, 2026-09-16:
-        /// the blade wanted to be more horizontal). This belongs on the *tool* rather than on the
-        /// director as soon as there is more than one — a pickaxe will want its own — and that is
-        /// noted in the work-poses design.
+        /// So two hundred and seventy, settled off a contact sheet of one instant at eight rolls
+        /// against a photograph of somebody actually felling a tree (owner, 2026-09-16). What the
+        /// photograph settles, and no amount of looking at the renders would have: the edge lies
+        /// **horizontal**, cutting a level notch into the side of the trunk, and the poll trails
+        /// up and back over the hands rather than the head hanging straight down off the haft.
+        /// Ninety had the flats the right way round and the head hanging; this rolls it round so
+        /// it sweeps back.
+        ///
+        /// This belongs on the *tool* rather than on the director as soon as there is more than
+        /// one — a pickaxe will want its own, and on a double-ended head the geometry cannot even
+        /// guess — which is recorded in `12-work-poses-and-tools.md`.
         /// </summary>
-        public float AxeBladeRoll { get; set; } = 90f;
+        public float AxeBladeRoll { get; set; } = 270f;
 
         /// <summary>Pawn ids drawn as live figures this frame. The instanced pass skips these.</summary>
         public HashSet<int> Drawn { get; } = new HashSet<int>();
@@ -624,8 +639,10 @@ namespace Odyssey.Presentation.World
         {
             // The golden ratio, which spreads successive ids about as evenly as anything can.
             float phase = (pawn.Value * 0.6180339887f) % 1f;
-            // The same phase serves the swing, for the same reason and with the same objection
-            // to re-rolling it: two colonists on neighbouring trees must not strike in unison.
+            // The same number serves the swing, for the same reason and with the same objection to
+            // re-rolling it — but there it sets how *long* a colonist's stroke is rather than
+            // where in one they begin, so that taking up an axe is never a jump into the middle
+            // of a swing. Two woodcutters drift apart instead of starting apart.
             figure.SwingOffset = phase;
 
             for (int i = 0; i < figure.Clips.Length; i++)
@@ -1064,7 +1081,10 @@ namespace Odyssey.Presentation.World
             /// <summary>Seconds of work this figure has done. Only runs while there is work.</summary>
             public float SwingClock;
 
-            /// <summary>Where in a stroke this figure starts, so two woodcutters are not in step.</summary>
+            /// <summary>
+            /// How long this figure's stroke runs, as a seed. Two woodcutters set to together and
+            /// drift apart over the following strokes rather than beginning out of step.
+            /// </summary>
             public float SwingOffset;
 
             /// <summary>Where in the stroke this figure was last frame. Only the blow needs it.</summary>

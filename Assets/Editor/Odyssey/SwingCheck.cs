@@ -46,7 +46,15 @@ namespace Odyssey.EditorTools
         const int Samples = 9;
 
         /// <summary>Blade rolls to photograph side by side, in degrees about the haft.</summary>
-        static readonly float[] BladeRolls = { 0f, 30f, 45f, 60f, 90f };
+        /// <summary>
+        /// Blade rolls to photograph side by side, in degrees about the haft.
+        ///
+        /// The whole circle, because the last sweep covered a quarter of it and the answer was
+        /// outside. Which way a head faces cannot be reasoned out from a mesh whose axes belong to
+        /// somebody else; it can only be looked at, so look at all of it at once.
+        /// </summary>
+        static readonly float[] BladeRolls =
+            { 0f, 45f, 90f, 135f, 180f, 225f, 270f, 315f };
 
         [MenuItem("Odyssey/Presentation/Check the axe swing")]
         public static void RunFromMenu() => Execute(exitWhenDone: false);
@@ -183,6 +191,8 @@ namespace Odyssey.EditorTools
                 // geometry, so it is chosen by looking at the same instant at several settings
                 // side by side rather than by running the whole harness once per setting.
                 drawn.HeldPhase = 0.9f;
+                Debug.Log($"[Swing] blade sheet: {BladeRolls.Length} rolls, " +
+                          $"{drawn.FigureCount} figures live, worker still working: {FirstWorker(Current()).Working}");
                 foreach (float roll in BladeRolls)
                 {
                     drawn.AxeBladeRoll = roll;
@@ -190,8 +200,9 @@ namespace Odyssey.EditorTools
                     drawn.Sync(Current(), activeLayer, slice, 0f, movePerTick, FrameSeconds);
                     drawn.Evaluate(FrameSeconds);
 
-                    PlayScene.Shoot(camera, drawn.LastBladePosition, 6f, SideOn(FirstWorker(Current())),
-                        1.5f, $"Logs/blade-{roll:000}.png");
+                    string path = $"Logs/blade-{roll:000}.png";
+                    PlayScene.Shoot(camera, drawn.LastBladePosition, 6f, SideOn(FirstWorker(Current())), 1.5f, path);
+                    Debug.Log($"[Swing] wrote {path} at blade {drawn.LastBladePosition}");
                 }
                 drawn.HeldPhase = null;
                 drawn.AxeBladeRoll = 0f;

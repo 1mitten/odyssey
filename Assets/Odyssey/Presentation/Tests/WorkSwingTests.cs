@@ -37,11 +37,41 @@ namespace Odyssey.Tests.Presentation
                 float phase = WorkSwing.Phase(step * 0.37f, step * 0.11f);
                 Assert.That(phase, Is.InRange(0f, 1f));
             }
+        }
 
-            // A negative offset is the awkward one: C# gives a negative remainder, and a negative
-            // phase falls through every branch of Stroke to the dwell, so the arm would sit at
-            // the bottom of the swing for as long as the offset lasted.
-            Assert.That(WorkSwing.Phase(0f, -0.25f), Is.EqualTo(0.75f).Within(1e-4f));
+        [Test]
+        public void EveryFigureStartsItsStrokeAtTheBeginning()
+        {
+            // The fix for work that snapped on. The offset used to shift the phase, so a colonist
+            // taking up an axe started wherever its own constant named — arms half raised — and
+            // the ease-in had to carry it there from a standing idle. Whatever the offset, a clock
+            // at nought is now the start of a stroke.
+            foreach (float offset in new[] { 0f, 0.25f, 0.618f, 0.99f })
+                Assert.That(WorkSwing.Phase(0f, offset), Is.EqualTo(0f).Within(1e-5f));
+        }
+
+        [Test]
+        public void TwoColonistsDriftApartRatherThanStartingApart()
+        {
+            // In step at the first blow, plainly out of it a few strokes later, which is how two
+            // people chopping actually fall out of time.
+            const float A = 0.1f, B = 0.9f;
+            Assert.That(WorkSwing.Phase(0f, A), Is.EqualTo(WorkSwing.Phase(0f, B)).Within(1e-5f));
+
+            float apart = Mathf.Abs(WorkSwing.Phase(WorkSwing.StrokeSeconds * 4f, A)
+                                    - WorkSwing.Phase(WorkSwing.StrokeSeconds * 4f, B));
+            Assert.That(Mathf.Min(apart, 1f - apart), Is.GreaterThan(0.15f),
+                "four strokes in and still in unison reads as a machine");
+        }
+
+        [Test]
+        public void ANominalOffsetIsTheNominalStroke()
+        {
+            // The spread is either side of the stated length, not on top of it, or the whole
+            // colony would quietly work faster or slower than the number in the source says.
+            Assert.That(WorkSwing.PeriodFor(0.5f), Is.EqualTo(WorkSwing.StrokeSeconds).Within(1e-4f));
+            Assert.That(WorkSwing.PeriodFor(0f),
+                Is.EqualTo(WorkSwing.StrokeSeconds * (1f - WorkSwing.StrokeSpread * 0.5f)).Within(1e-4f));
         }
 
         [Test]

@@ -197,6 +197,16 @@ chips, because the blow that lands first in every job lands while the swing is s
 a gate demanding full weight discarded it. One counter printed beside the picture found it in one
 run. Count what an effect did; do not photograph it and squint.
 
+**Desynchronise by period, not by phase, or the thing snaps on when it starts.** Figures were
+spread out by shifting each one's phase by a constant, which desynchronises perfectly and at a price
+nobody had counted: a colonist taking up an axe began at whatever point of the stroke her constant
+named — arms half raised, as often as not — so the quarter second of easing in had to carry her from
+a standing idle into the middle of a swing. What that reads as is the pose being switched on, and no
+length of blend fixes it. Give every figure the same starting phase and vary the *length* of its
+stroke instead: they set to together and drift apart over the next few strokes, which is how two
+people chopping actually fall out of time. The ease can then be longer, because it only has to cover
+the short distance from standing to the nearest point of the stroke.
+
 **A pose applied on top of a pose is twice the pose.** `Strike` adds its angles to whatever the
 bones are already at, which is right once per animation update and wrong the moment anything calls
 it twice. Refitting a tool mid-swing measured a doubled pose, a reach to match, and a blade that

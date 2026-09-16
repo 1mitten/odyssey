@@ -129,15 +129,42 @@ namespace Odyssey.Presentation.World
         }
 
         /// <summary>
-        /// Where in the stroke a running clock is, 0 to 1.
+        /// How much longer or shorter than the nominal one colonist's stroke is, either way.
         ///
-        /// <paramref name="offset"/> is a per-pawn constant that keeps two colonists working the
-        /// same clearing from swinging on the same frame, for the same reason the walk cycles are
-        /// desynchronised.
+        /// Nine per cent. Enough that two woodcutters who set to at the same moment are visibly
+        /// out of step within three or four blows, small enough that nobody looks hurried.
         /// </summary>
-        public static float Phase(float seconds, float offset = 0f)
+        public const float StrokeSpread = 0.18f;
+
+        /// <summary>Where in the stroke a clock running at the nominal rate is, 0 to 1.</summary>
+        public static float Phase(float seconds) => Wrap(seconds / StrokeSeconds);
+
+        /// <summary>
+        /// Where in the stroke a particular figure is, 0 to 1.
+        ///
+        /// **<paramref name="offset"/> lengthens the stroke rather than shifting it, and that is
+        /// the whole difference between work that begins and work that snaps on.** It used to be a
+        /// phase shift, which desynchronised two colonists perfectly and at a price nobody had
+        /// counted: a figure taking up an axe started at whatever point of the stroke its own
+        /// constant named — arms half raised, as often as not — so the quarter second of easing in
+        /// had to carry it from a standing idle to the middle of a swing, and what that reads as
+        /// is the pose being switched on.
+        ///
+        /// Starting every stroke at nought instead means the pose eases in towards the one place
+        /// in it that is nearest to standing still, which is the end of the blow. Two colonists
+        /// then set to in step and drift apart over the next few strokes, because each has a
+        /// slightly different stroke to drift with — which is how two people chopping actually
+        /// fall out of time, rather than by beginning out of it.
+        /// </summary>
+        public static float Phase(float seconds, float offset) => Wrap(seconds / PeriodFor(offset));
+
+        /// <summary>How long one stroke takes for a figure with this offset, in seconds.</summary>
+        public static float PeriodFor(float offset) =>
+            StrokeSeconds * (1f + StrokeSpread * (Mathf.Repeat(offset, 1f) - 0.5f));
+
+        static float Wrap(float phase)
         {
-            float phase = (seconds / StrokeSeconds + offset) % 1f;
+            phase %= 1f;
             return phase < 0f ? phase + 1f : phase;
         }
 
