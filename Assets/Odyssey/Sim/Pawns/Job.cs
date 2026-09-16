@@ -119,6 +119,18 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// Count this tick as work: the pawn earns the job's experience in the skill the job
+        /// trains. A driver calls it on the ticks that are the work — the swing, the carry — and
+        /// not on the walk to it. A job that trains nothing costs one comparison.
+        /// </summary>
+        protected void Work(PawnContext ctx)
+        {
+            var def = ctx.Content.Jobs[Job.DefIndex];
+            if (def.trainsSkill < 0 || def.experiencePerWorkTick <= 0) return;
+            Pawn.GainExperience(def.trainsSkill, def.experiencePerWorkTick, ctx.CurrentTick);
+        }
+
+        /// <summary>
         /// The walk toil, shared by every driver that goes somewhere.
         ///
         /// Reachability is answered <b>before</b> a path is asked for, never by asking for one:

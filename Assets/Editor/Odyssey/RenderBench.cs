@@ -87,7 +87,7 @@ namespace Odyssey.EditorTools
 
                 var size = new GridSize(PlaySizeXZ, PlaySizeXZ, PlayLayers);
                 var gen = (NaturalMapGenDef)MapGenerator.DefaultDef(MapType.Natural, size);
-                gen.MakeBarren();
+                gen.MakeWooded();   // the board the game loads, so the number is about the real thing
                 var grid = new CellGrid(size);
                 var chunks = new ChunkGrid(size);
                 MapGenOutcome result = MapGenerator.Generate(grid, 1u, gen);

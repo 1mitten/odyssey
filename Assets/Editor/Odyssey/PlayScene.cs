@@ -25,6 +25,7 @@ using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Presentation.Ui;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
@@ -33,21 +34,32 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.UIElements;
 
 namespace Odyssey.EditorTools
 {
     public static class PlayScene
     {
         const string ScenePath = "Assets/Scenes/Play.unity";
-        const string CataloguePath = "Assets/Odyssey/Presentation/ModuleCatalogue.asset";
+        internal const string CataloguePath = "Assets/Odyssey/Presentation/ModuleCatalogue.asset";
+
+        // The HUD's three assets: an authored stylesheet, plus a theme and panel settings made
+        // once on demand. Real assets rather than in-memory ones because the scene serialises the
+        // panel reference, the same reason the sky material is a real asset.
+        const string HudStylesPath = "Assets/Odyssey/Presentation/Ui/Hud.uss";
+        const string HudThemePath = "Assets/Odyssey/Presentation/Ui/RuntimeTheme.tss";
+        const string HudPanelPath = "Assets/Odyssey/Presentation/Ui/HudPanelSettings.asset";
+
+        /// <summary>The mockup's canvas, which the stylesheet's pixel sizes are authored against.</summary>
+        public static readonly Vector2Int HudReferenceResolution = new Vector2Int(1200, 800);
 
         /// <summary>
         /// The world the play scene is built with, and the world "Measure a slice" measures. One
         /// pair of constants so the two cannot drift apart again: a benchmark of a map the game
         /// does not load is worse than no benchmark, because it still produces a number.
         /// </summary>
-        const int PlaySizeXZ = 120;
-        const int PlayLayers = 16;
+        internal const int PlaySizeXZ = 120;
+        internal const int PlayLayers = 16;
 
         [MenuItem("Odyssey/Presentation/Build play scene")]
         public static void BuildFromMenu() => BuildInternal(exitWhenDone: false);
@@ -102,7 +114,7 @@ namespace Odyssey.EditorTools
                 var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);
                 var size = new GridSize(PlaySizeXZ, PlaySizeXZ, PlayLayers);
                 var gen = (NaturalMapGenDef)MapGenerator.DefaultDef(MapType.Natural, size);
-                gen.MakeBarren();
+                gen.MakeWooded();   // the board the scene loads, trees and all
                 var grid = new CellGrid(size);
                 var chunks = new ChunkGrid(size);
                 MapGenOutcome result = MapGenerator.Generate(grid, 1u, gen);
@@ -135,26 +147,26 @@ namespace Odyssey.EditorTools
                 var nav = new NavGraph(grid);
                 nav.Rebuild();
                 var pawns = new PawnContext(
-                    grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core());
+                    grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core()) { Chunks = chunks };
                 var support = new SupportSystem(grid, new SupportSolver(grid), chunks);
                 var mirror = new Odyssey.Presentation.World.GridMirrorContributor(
-                    grid, result.Natural!.Context.Edifices, model);
+                    grid, result.Edifices, model);
+                var designations = new Odyssey.Sim.Designations.DesignationGrid(grid, result.Edifices);
 
                 SimWorld world = new SimWorldBuilder()
                     .WithSeed(1u)
                     .WithSize(size)
-                    .AddSystem(_ => support)
-                    .AddSystem(_ => new NavigationSystem(nav, support))
-                    .AddSystem(_ => new NeedsSystem(pawns))
-                    .AddSystem(_ => new JobSystem(pawns))
-                    .AddSystem(_ => new MovementSystem(pawns))
-                    .AddTickable(_ => pawns.Pawns)
                     .AddSnapshotContributor(mirror)
-                    .AddSnapshotContributor(pawns.Pawns)
+                    .AddColony(pawns, designations, support, nav)
                     .Build();
 
-                ColonyScenario.Place(grid, pawns, result.StartCell, 1u, 5);
-                for (int i = 0; i < 120; i++) world.Tick();   // let them pick jobs and start walking
+                // The scene's own scenario, orders included, then long enough for the first tree
+                // to come down and its wood to be lying there: the picture has to show the job
+                // line, not just the colonists setting off along it.
+                ScenarioDef scenario = ScenarioDef.Playtest();
+                ColonyScenario.Place(grid, pawns, result.StartCell, 1u, scenario);
+                ColonyScenario.GiveStartingOrders(designations, result.StartCell, scenario);
+                for (int i = 0; i < 2_400; i++) world.Tick();
 
                 var actorMaterial = new Material(library.FallbackMaterial) { name = "Odyssey/Actor" };
                 actorMaterial.SetColor("_BaseColor", new Color(0.98f, 0.36f, 0.20f));
@@ -307,7 +319,7 @@ namespace Odyssey.EditorTools
             return $"{size.x:0.00} wide x {size.y:0.00} tall x {size.z:0.00} deep, base y {min.y:0.00}";
         }
 
-        static void Shoot(Camera camera, Vector3 focus, float pitch, float distance, string path)
+        internal static void Shoot(Camera camera, Vector3 focus, float pitch, float distance, string path)
         {
             var rotation = Quaternion.Euler(pitch, 45f, 0f);
             camera.transform.SetPositionAndRotation(focus - rotation * Vector3.forward * distance, rotation);
@@ -387,7 +399,7 @@ namespace Odyssey.EditorTools
                 // scene moved to a barren 120 x 120 wilderness.
                 var size = new GridSize(PlaySizeXZ, PlaySizeXZ, PlayLayers);
                 MapGenDef gen = MapGenerator.DefaultDef(mapType, size);
-                if (gen is NaturalMapGenDef natural) natural.MakeBarren();
+                if (gen is NaturalMapGenDef natural) natural.MakeWooded();
                 var grid = new CellGrid(size);
                 var chunks = new ChunkGrid(size);
 
@@ -915,6 +927,16 @@ namespace Odyssey.EditorTools
                 centreXZ = true, baseAtY = true,
                 scale = new Vector3(1.5f, 1.5f, 1.5f),
             });
+            // Felled wood. The Western Frontier log pile is 5.71 m long, so at 0.4 it lies 2.3 m
+            // across the cell and half a metre high: a stack of logs on the ground, which is
+            // exactly what a felled tree leaves. The short logs in the same pack are litter.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ItemWood, shape = ModuleShape.Pillar,
+                prefabName = "SM_Prop_LogPile_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(0.4f, 0.4f, 0.4f),
+            });
 
             return rows;
         }
@@ -1190,7 +1212,13 @@ namespace Odyssey.EditorTools
             var camera = go.AddComponent<Camera>();
             camera.fieldOfView = 40f;
             camera.nearClipPlane = 0.3f;
-            camera.farClipPlane = 600f;
+            // Far enough to contain the surround. The board itself needs 600 m and had exactly
+            // that; the land outside it reaches 1,220 m past the rim, and a far plane at 600 cut
+            // it off in a hard arc with sky beyond — which is the board-game edge again, only
+            // moved. It costs nothing: fog is opaque by 1,100 m, so everything the extra range
+            // admits is already the colour of the sky, and reversed-Z leaves the depth precision
+            // where it was.
+            camera.farClipPlane = 1800f;
             camera.clearFlags = CameraClearFlags.Skybox;
             camera.backgroundColor = new Color(0.10f, 0.12f, 0.16f);
             go.AddComponent<AudioListener>();
@@ -1199,7 +1227,7 @@ namespace Odyssey.EditorTools
             // Set here rather than left to the field initialiser, because a serialised value wins
             // over a C# default and the scene would keep whatever the first build wrote for ever.
             // Opaque now: the cursor is corner brackets, not a wash over the thing selected.
-            rig.selectionColour = new Color(0.30f, 0.92f, 1.00f, 1f);
+            rig.selectionColour = Color.white;
             return rig;
         }
 
@@ -1208,7 +1236,18 @@ namespace Odyssey.EditorTools
             var go = new GameObject("Bootstrap");
             go.transform.SetParent(root, false);
             var boot = go.AddComponent<OdysseyBootstrap>();
-            go.AddComponent<SelectionReadout>();   // click a colonist to see what they are doing
+            go.AddComponent<SelectionPresenter>();   // hit-tests a click for the selection director
+
+            // The HUD: one UI Toolkit document over the live world (ADR 0003), built in code by
+            // the shell and styled by the authored sheet.
+            var doc = go.AddComponent<UIDocument>();
+            doc.panelSettings = BuildHudPanelSettings();
+            var hud = go.AddComponent<HudShell>();
+            AssetDatabase.ImportAsset(HudStylesPath);
+            hud.hudStyles = AssetDatabase.LoadAssetAtPath<StyleSheet>(HudStylesPath);
+            if (hud.hudStyles == null)
+                Debug.LogWarning($"[PlayScene] HUD stylesheet missing at {HudStylesPath}; the HUD will draw unstyled.");
+
             boot.sizeX = PlaySizeXZ;
             boot.sizeZ = PlaySizeXZ;
             boot.layers = PlayLayers;
@@ -1220,6 +1259,55 @@ namespace Odyssey.EditorTools
             // ten get a tuft. Zero on the look seed means a fresh cast of colonists every session.
             boot.grassScatter = 60;
             boot.colonistLookSeed = 0;
+        }
+
+        /// <summary>
+        /// The panel settings the HUD renders through, made once and then reused.
+        ///
+        /// Pixel-for-pixel on purpose: the HUD is authored in screen pixels against the mockup,
+        /// and the scale policy (continuous text, stepped icons, per ADR 0007) arrives with the
+        /// settings panel rather than being guessed here.
+        /// </summary>
+        static PanelSettings BuildHudPanelSettings()
+        {
+            // A theme is a text stylesheet that imports Unity's default runtime theme, and it has
+            // to be written as one: a ThemeStyleSheet made with CreateInstance and saved as YAML
+            // under a .tss name is fed to the stylesheet importer as text, comes out empty, and
+            // a panel with no default font draws nothing at all. That is the first HUD build in a
+            // sentence. The file is authored and committed; this only recreates it if it is gone.
+            if (!File.Exists(Path.GetFullPath(HudThemePath)))
+            {
+                Directory.CreateDirectory(Path.GetFullPath(Path.GetDirectoryName(HudThemePath)!));
+                File.WriteAllText(Path.GetFullPath(HudThemePath), "@import url(\"unity-theme://default\");\n");
+                AssetDatabase.ImportAsset(HudThemePath);
+            }
+            var theme = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(HudThemePath);
+            if (theme == null)
+                throw new InvalidOperationException($"the HUD theme at {HudThemePath} did not import as a ThemeStyleSheet");
+
+            var panel = AssetDatabase.LoadAssetAtPath<PanelSettings>(HudPanelPath);
+            if (panel == null)
+            {
+                panel = ScriptableObject.CreateInstance<PanelSettings>();
+                Directory.CreateDirectory(Path.GetFullPath(Path.GetDirectoryName(HudPanelPath)!));
+                AssetDatabase.CreateAsset(panel, HudPanelPath);
+            }
+            panel.themeStyleSheet = theme;
+
+            // Scale with the screen, against the mockup's own 1200 x 800. The sheet is authored in
+            // those pixels, so this is the size it was designed to be read at: 1.35x on a 1080p
+            // monitor, 2.7x at 4K. Constant pixel size was the first setting, and at 4K it made
+            // every nine-pixel label nine pixels tall, which nobody could read. Matching width and
+            // height equally keeps a wide screen and a tall one the same distance from the mockup.
+            // Icons are meant to step at 32 and 64 rather than scale continuously (ADR 0007); the
+            // placeholder badges scale with everything else until the pipeline replaces them.
+            panel.scaleMode = PanelScaleMode.ScaleWithScreenSize;
+            panel.referenceResolution = HudReferenceResolution;
+            panel.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
+            panel.match = 0.5f;
+            EditorUtility.SetDirty(panel);
+            AssetDatabase.SaveAssets();
+            return panel;
         }
     }
 }

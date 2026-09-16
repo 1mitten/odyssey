@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &588384437
+--- !u!1 &430672212
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,8 +127,119 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 588384438}
-  - component: {fileID: 588384439}
+  - component: {fileID: 430672213}
+  - component: {fileID: 430672217}
+  - component: {fileID: 430672216}
+  - component: {fileID: 430672215}
+  - component: {fileID: 430672214}
+  m_Layer: 0
+  m_Name: Bootstrap
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &430672213
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 430672212}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1415059823}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &430672214
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 430672212}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ff4a2ca2c5b361f44a9a3f27559e112d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Odyssey.Presentation::Odyssey.Presentation.Ui.HudShell
+  hudStyles: {fileID: 7433441132597879392, guid: 639fce85b01743244a25e74106f9cbaa, type: 3}
+--- !u!114 &430672215
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 430672212}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 19102, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.dll::UnityEngine.UIElements.UIDocument
+  m_PanelSettings: {fileID: 11400000, guid: c7555f5012d6a624cbd78be9bad8ce54, type: 2}
+  m_ParentUI: {fileID: 0}
+  sourceAsset: {fileID: 0}
+  m_SortingOrder: 0
+  m_Position: 0
+  m_WorldSpaceSizeMode: 1
+  m_WorldSpaceWidth: 1920
+  m_WorldSpaceHeight: 1080
+  m_PivotReferenceSize: 0
+  m_Pivot: 0
+  m_WorldSpaceCollider: {fileID: 0}
+--- !u!114 &430672216
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 430672212}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7525318bad52c37428f0b51ec0ef87a3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Odyssey.Presentation::Odyssey.Presentation.Bootstrap.SelectionPresenter
+--- !u!114 &430672217
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 430672212}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 743b569864c9a314c9cc079c1bf379a2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Odyssey.Presentation::Odyssey.Presentation.Bootstrap.OdysseyBootstrap
+  sizeX: 120
+  sizeZ: 120
+  layers: 16
+  seed: 1
+  mapType: 1
+  barrenMap: 1
+  woodedMap: 1
+  scenario: 0
+  colonistLookSeed: 0
+  moduleCatalogue: {fileID: 11400000, guid: 005221dec165e6a4a80855131ffe9e5e, type: 2}
+  cameraRig: {fileID: 1727447666}
+  castShadows: 1
+  grassScatter: 60
+  ticksPerSecond: 60
+  maxTicksPerFrame: 8
+  colonistCursor: {x: 1.15, y: 2.7, z: 1.15}
+--- !u!1 &1006115610
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1006115611}
+  - component: {fileID: 1006115612}
   m_Layer: 0
   m_Name: Sun
   m_TagString: Untagged
@@ -136,28 +247,28 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &588384438
+--- !u!4 &1006115611
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 588384437}
+  m_GameObject: {fileID: 1006115610}
   serializedVersion: 2
   m_LocalRotation: {x: 0.5605808, y: 0.24327612, z: -0.17675044, w: 0.77157325}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1727370635}
+  m_Father: {fileID: 1415059823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!108 &588384439
+--- !u!108 &1006115612
 Light:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 588384437}
+  m_GameObject: {fileID: 1006115610}
   m_Enabled: 1
   serializedVersion: 12
   m_Type: 1
@@ -216,7 +327,7 @@ Light:
   m_LightUnit: 1
   m_LuxAtDistance: 1
   m_EnableSpotReflector: 1
---- !u!1 &1564832796
+--- !u!1 &1415059822
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -224,72 +335,33 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1564832797}
-  - component: {fileID: 1564832799}
-  - component: {fileID: 1564832798}
+  - component: {fileID: 1415059823}
   m_Layer: 0
-  m_Name: Bootstrap
+  m_Name: Odyssey
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &1564832797
+--- !u!4 &1415059823
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1564832796}
+  m_GameObject: {fileID: 1415059822}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1727370635}
+  m_Children:
+  - {fileID: 1006115611}
+  - {fileID: 1727447669}
+  - {fileID: 430672213}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1564832798
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1564832796}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7525318bad52c37428f0b51ec0ef87a3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Odyssey.Presentation::Odyssey.Presentation.Bootstrap.SelectionReadout
---- !u!114 &1564832799
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1564832796}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 743b569864c9a314c9cc079c1bf379a2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Odyssey.Presentation::Odyssey.Presentation.Bootstrap.OdysseyBootstrap
-  sizeX: 120
-  sizeZ: 120
-  layers: 16
-  seed: 1
-  mapType: 1
-  barrenMap: 1
-  colonistCount: 5
-  colonistLookSeed: 0
-  moduleCatalogue: {fileID: 11400000, guid: 005221dec165e6a4a80855131ffe9e5e, type: 2}
-  cameraRig: {fileID: 1610802166}
-  castShadows: 1
-  grassScatter: 60
-  ticksPerSecond: 60
-  maxTicksPerFrame: 8
-  showReadout: 1
-  colonistCursor: {x: 1.15, y: 2.7, z: 1.15}
---- !u!1 &1610802165
+--- !u!1 &1727447665
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -297,10 +369,10 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 1610802169}
-  - component: {fileID: 1610802168}
-  - component: {fileID: 1610802167}
-  - component: {fileID: 1610802166}
+  - component: {fileID: 1727447669}
+  - component: {fileID: 1727447668}
+  - component: {fileID: 1727447667}
+  - component: {fileID: 1727447666}
   m_Layer: 0
   m_Name: Slice Camera
   m_TagString: MainCamera
@@ -308,13 +380,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1610802166
+--- !u!114 &1727447666
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1610802165}
+  m_GameObject: {fileID: 1727447665}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3831c41b7ac6d1841b9acdfaa931e2f8, type: 3}
@@ -337,22 +409,22 @@ MonoBehaviour:
   panSpeed: 26
   zoomSpeed: 6
   smoothing: 12
-  selectionColour: {r: 0.3, g: 0.92, b: 1, a: 1}
---- !u!81 &1610802167
+  selectionColour: {r: 1, g: 1, b: 1, a: 1}
+--- !u!81 &1727447667
 AudioListener:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1610802165}
+  m_GameObject: {fileID: 1727447665}
   m_Enabled: 1
---- !u!20 &1610802168
+--- !u!20 &1727447668
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1610802165}
+  m_GameObject: {fileID: 1727447665}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 1
@@ -378,7 +450,7 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.3
-  far clip plane: 600
+  far clip plane: 1800
   field of view: 40
   orthographic: 0
   orthographic size: 5
@@ -397,57 +469,23 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &1610802169
+--- !u!4 &1727447669
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1610802165}
+  m_GameObject: {fileID: 1727447665}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1727370635}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1727370634
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1727370635}
-  m_Layer: 0
-  m_Name: Odyssey
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1727370635
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1727370634}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 588384438}
-  - {fileID: 1610802169}
-  - {fileID: 1564832797}
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 1415059823}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 1727370635}
+  - {fileID: 1415059823}

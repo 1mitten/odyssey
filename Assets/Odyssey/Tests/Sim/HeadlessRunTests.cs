@@ -25,7 +25,7 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void ASixthOfADayRunsWithoutThrowing()
         {
-            ColonyWorld colony = ColonyWorld.Build(PlaySize, seed: 1u);
+            ColonyWorld colony = ColonyWorld.Build(PlaySize, seed: 1u, ScenarioDef.Bare());
             Assert.That(colony.Placement.Colonists, Is.EqualTo(5), colony.Placement.ToString());
 
             Assert.DoesNotThrow(() => colony.World.Tick(Ticks));
@@ -44,8 +44,8 @@ namespace Odyssey.Tests.Sim
         [Test]
         public void TheSameSeedGivesTheSameWorldAfterASixthOfADay()
         {
-            ColonyWorld first = ColonyWorld.Build(PlaySize, seed: 7u);
-            ColonyWorld second = ColonyWorld.Build(PlaySize, seed: 7u);
+            ColonyWorld first = ColonyWorld.Build(PlaySize, seed: 7u, ScenarioDef.Bare());
+            ColonyWorld second = ColonyWorld.Build(PlaySize, seed: 7u, ScenarioDef.Bare());
 
             first.World.Tick(Ticks);
             second.World.Tick(Ticks);
@@ -60,8 +60,8 @@ namespace Odyssey.Tests.Sim
         {
             // Guards the test above against passing vacuously: a hash that ignored the world
             // would make any two runs "agree".
-            ColonyWorld first = ColonyWorld.Build(PlaySize, seed: 7u);
-            ColonyWorld second = ColonyWorld.Build(PlaySize, seed: 8u);
+            ColonyWorld first = ColonyWorld.Build(PlaySize, seed: 7u, ScenarioDef.Bare());
+            ColonyWorld second = ColonyWorld.Build(PlaySize, seed: 8u, ScenarioDef.Bare());
             first.World.Tick(600);
             second.World.Tick(600);
 

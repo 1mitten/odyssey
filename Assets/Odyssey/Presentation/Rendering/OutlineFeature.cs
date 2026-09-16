@@ -57,8 +57,11 @@ namespace Odyssey.Presentation.Rendering
         [Tooltip("Metres by which the line has gone entirely.")]
         public float fadeEnd = 300f;
 
-        [Tooltip("When the line is drawn. Before post-processing keeps it out of bloom.")]
-        public RenderPassEvent stage = RenderPassEvent.BeforeRenderingPostProcessing;
+        // Before the transparents, not before post-processing: foliage is drawn in the transparent
+        // range precisely so that it lands after this pass and is never inked
+        // (MaterialCache.FoliageQueue). Still before post-processing, so the ink stays out of bloom.
+        [Tooltip("When the line is drawn. Before transparents, so late-drawn foliage is never inked; still before post-processing.")]
+        public RenderPassEvent stage = RenderPassEvent.BeforeRenderingTransparents;
 
         Material? _material;
         OutlinePass? _pass;
@@ -149,9 +152,10 @@ namespace Odyssey.Presentation.Rendering
                 desc.name = "Odyssey outline";
                 desc.clearBuffer = false;
                 desc.depthBufferBits = DepthBits.None;
-                // The destination inherits the source's sample count, and a resolve we never asked
-                // for is a cost nobody would go looking for. The pass writes one sample per pixel.
-                desc.msaaSamples = MSAASamples.None;
+                // The destination keeps the source's sample count. This pass runs before the
+                // transparents, and what follows it draws into the texture it hands back against
+                // the camera's own depth attachment, so the two have to pair. (It used to drop to
+                // one sample to save a resolve, which was fine while nothing drew after it.)
                 TextureHandle destination = renderGraph.CreateTexture(desc);
 
                 // A raster pass rather than AddBlitPass, for two reasons that cost nothing.

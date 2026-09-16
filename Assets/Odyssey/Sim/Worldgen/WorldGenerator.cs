@@ -52,6 +52,10 @@ namespace Odyssey.Sim.Worldgen
         /// <paramref name="throughPass"/> is the design document's pass number, 1 to 10. Stopping
         /// early is what makes the individual passes testable: run pass 1 and assert the street
         /// network is connected, without a stamped shell or a stratum in sight.
+        ///
+        /// A null <paramref name="structuralCheck"/> means the default
+        /// <see cref="World.SupportConsistencyCheck"/>, not "no check": every generated map is
+        /// proved to stand on the ordinary support rule before it is returned.
         /// </summary>
         public static WorldGenResult Generate(
             CellGrid grid,

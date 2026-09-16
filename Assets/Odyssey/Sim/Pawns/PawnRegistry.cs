@@ -64,6 +64,7 @@ namespace Odyssey.Sim.Pawns
             new SleepJobDriver(),
             new WanderJobDriver(),
             new WaitJobDriver(),
+            new FellJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------
@@ -118,7 +119,7 @@ namespace Odyssey.Sim.Pawns
             {
                 var item = items[i];
                 if (item.Despawned || item.Cell < 0) continue;
-                writer.AddThing(new ThingView(item.Id, size.FromIndex(item.Cell), item.DefIndex, 0));
+                writer.AddThing(new ThingView(item.Id, size.FromIndex(item.Cell), item.DefIndex, 0, item.Stack));
             }
         }
 
@@ -149,6 +150,14 @@ namespace Odyssey.Sim.Pawns
 
                 writer.Write(pawn.Skills.Length);
                 for (int s = 0; s < pawn.Skills.Length; s++) writer.Write(pawn.Skills[s]);
+
+                // Passions as ints, for the same reason the work priorities are below.
+                writer.Write(pawn.Passions.Length);
+                for (int s = 0; s < pawn.Passions.Length; s++) writer.Write((int)pawn.Passions[s]);
+
+                writer.Write(pawn.SkillGainedToday.Length);
+                for (int s = 0; s < pawn.SkillGainedToday.Length; s++) writer.Write(pawn.SkillGainedToday[s]);
+                writer.Write(pawn.SkillDay);
 
                 writer.Write(pawn.WorkPriorities.Length);
                 // Written as an int, not as the byte it is stored in: the reader asks for an int,
@@ -222,6 +231,21 @@ namespace Odyssey.Sim.Pawns
                     int value = reader.ReadInt();
                     if (s < pawn.Skills.Length) pawn.Skills[s] = value;
                 }
+
+                int passionCount = reader.ReadInt();
+                for (int s = 0; s < passionCount; s++)
+                {
+                    int value = reader.ReadInt();
+                    if (s < pawn.Passions.Length) pawn.Passions[s] = (byte)value;
+                }
+
+                int todayCount = reader.ReadInt();
+                for (int s = 0; s < todayCount; s++)
+                {
+                    int value = reader.ReadInt();
+                    if (s < pawn.SkillGainedToday.Length) pawn.SkillGainedToday[s] = value;
+                }
+                pawn.SkillDay = reader.ReadInt();
 
                 int workCount = reader.ReadInt();
                 for (int w = 0; w < workCount; w++)

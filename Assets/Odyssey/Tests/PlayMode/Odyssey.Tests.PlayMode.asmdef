@@ -2,6 +2,7 @@
     "name": "Odyssey.Tests.PlayMode",
     "rootNamespace": "Odyssey.Tests.PlayMode",
     "references": [
+        "Odyssey.Hud",
         "Odyssey.Presentation",
         "Odyssey.Sim",
         "Odyssey.Sim.Contracts",

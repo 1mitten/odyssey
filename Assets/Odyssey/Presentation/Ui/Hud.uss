@@ -1,0 +1,591 @@
+/* Odyssey HUD first pass — the visual tokens of docs/reference/mockups/hud-v2.html, which is
+   the owner-approved look for the layer HUD. Palette: near-black panels over the world, one
+   cyan accent, monospace-small type, 6 px radii, 1 px #2b3947 hairlines. Colours are hardcoded
+   per class rather than var(--x): the sheet stays legible as plain text and there are no
+   custom-property resolution surprises across panel copies. */
+
+.hud {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    /* The shell must not catch the pointer anywhere a region does not sit, or the world would
+       be unclickable behind a full-screen element. Set from code (PickingMode.Ignore), where
+       it cannot be lost with a stylesheet swap. */
+}
+
+/* ---------------- regions ---------------- */
+
+.region {
+    background-color: #141b24e6;
+    border-width: 1px;
+    border-color: #2b3947;
+    border-radius: 6px;
+}
+
+.region__hdr {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: #63758a;
+    border-bottom-width: 1px;
+    border-bottom-color: #2b3947;
+    padding: 4px 7px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.slot-left {
+    position: absolute;
+    left: 10px; top: 10px; bottom: 372px;
+    width: 214px;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.slot-roster {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    translate: -50% 0;
+    flex-direction: row;
+    padding: 5px;
+    background-color: #141b24e6;
+    border-width: 1px;
+    border-color: #2b3947;
+    border-radius: 6px;
+}
+
+.slot-clock {
+    position: absolute;
+    top: 10px; right: 10px;
+    width: 214px;
+}
+
+.slot-alerts {
+    position: absolute;
+    top: 132px; right: 10px;
+    width: 214px;
+}
+
+.slot-ruler {
+    position: absolute;
+    right: 10px; bottom: 56px;
+    width: 64px;
+    top: 292px;
+}
+
+.slot-inspect {
+    position: absolute;
+    /* Above the tab bar, never under it: the pane is what a click answers with. */
+    left: 10px; bottom: 60px;
+    width: 356px;
+    height: 302px;
+}
+
+.slot-tabs {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    translate: -50% 0;
+    flex-direction: row;
+    padding: 5px;
+    /* Solid: the bottom bar is always on screen, so nothing behind it needs showing through. */
+    background-color: #141b24;
+    border-width: 1px;
+    border-color: #2b3947;
+    border-radius: 6px;
+}
+
+.slot-overlays {
+    /* A strip of icons beside the cancel affordance, one row, no frame. */
+    position: absolute;
+    right: 56px; bottom: 10px;
+    height: 36px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 4px;
+    background-color: #141b24;
+    border-width: 1px;
+    border-color: #2b3947;
+    border-radius: 6px;
+}
+
+.overlay__btn {
+    width: 22px; height: 22px;
+    margin: 0 2px;
+    border-radius: 4px;
+    justify-content: center;
+    align-items: center;
+}
+
+.overlay__btn:hover { background-color: #22303d; }
+
+.overlay__btn .icon { margin-right: 0; }
+
+.cancel {
+    position: absolute;
+    right: 10px; bottom: 10px;
+    width: 36px; height: 36px;
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: #7a3a30;
+    background-color: #2a1a18cc;
+    justify-content: center;
+    align-items: center;
+}
+
+.cancel__x {
+    font-size: 16px;
+    color: #d6604a;
+}
+
+/* ---------------- shared bits ---------------- */
+
+.icon {
+    width: 16px; height: 16px;
+    border-radius: 3px;
+    margin-right: 5px;
+    font-size: 7px;
+    -unity-text-align: middle-center;
+    color: #0c1015;
+    flex-shrink: 0;
+}
+
+.icon--32 { width: 22px; height: 22px; font-size: 9px; }
+.icon--avatar { width: 30px; height: 30px; font-size: 11px; }
+
+.bar {
+    height: 4px;
+    background-color: #22303d;
+    border-radius: 2px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.bar__fill {
+    height: 100%;
+    background-color: #6fbf7f;
+    border-radius: 2px;
+}
+
+.bar--lo .bar__fill { background-color: #d6604a; }
+
+.chip {
+    flex-direction: row;
+    align-items: center;
+    border-width: 1px;
+    border-color: #3d4f61;
+    border-radius: 4px;
+    padding: 3px 6px;
+    margin: 1px;
+    color: #93a4b5;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.chip--on {
+    background-color: #2b7f8f;
+    border-color: #5ec8dc;
+    color: #ffffff;
+}
+
+.chip--off { opacity: 0.55; }
+
+.tooltipnote { color: #63758a; }
+
+/* ---------------- ledger (A1) ---------------- */
+
+.ledger {
+    padding: 4px 6px 5px 6px;
+}
+
+.ledger__row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 2px;
+}
+
+.ledger__name {
+    flex-grow: 1;
+    color: #93a4b5;
+    font-size: 11px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.ledger__qty {
+    color: #dde6ee;
+    font-size: 11px;
+}
+
+.ledger__row--planned .ledger__name,
+.ledger__row--planned .ledger__qty { color: #63758a; }
+
+.ledger__note {
+    color: #63758a;
+    font-size: 9px;
+    margin-top: 4px;
+}
+
+/* ---------------- roster (A2) ---------------- */
+
+.card {
+    width: 58px;
+    padding: 4px;
+    margin: 0 2px;
+    border-width: 1px;
+    border-color: #2b3947;
+    border-radius: 4px;
+    background-color: #1b242fe6;
+    align-items: center;
+}
+
+.card:hover { border-color: #5ec8dc; }
+
+.card--sel {
+    border-color: #5ec8dc;
+    background-color: #20303a;
+}
+
+.card__top {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
+.card__name {
+    font-size: 10px;
+    color: #dde6ee;
+    margin-top: 2px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    max-width: 50px;
+}
+
+.card__layer {
+    font-size: 9px;
+    color: #5ec8dc;
+}
+
+.card .bar { margin-top: 2px; align-self: stretch; }
+
+/* ---------------- clock + speed (A3/A4) ---------------- */
+
+.clock {
+    padding: 6px 7px 7px 7px;
+}
+
+.clock__time {
+    color: #dde6ee;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.clock__date {
+    color: #93a4b5;
+    font-size: 10px;
+    margin-top: 2px;
+}
+
+.speed {
+    flex-direction: row;
+    margin-top: 6px;
+}
+
+.speed__btn {
+    flex-grow: 1;
+    flex-direction: column;
+    align-items: center;
+    border-width: 1px;
+    border-color: #3d4f61;
+    border-radius: 4px;
+    padding: 3px 0 2px 0;
+    margin-right: 3px;
+}
+
+.speed__btn:hover { background-color: #243140; }
+
+.speed__label {
+    font-size: 8px;
+    color: #93a4b5;
+    margin-top: 2px;
+}
+
+/* ---------------- alerts (A5) ---------------- */
+
+.alerts {
+    padding: 5px 6px 6px 6px;
+}
+
+.alerts__empty {
+    color: #63758a;
+    font-size: 10px;
+    padding: 3px 2px 2px 2px;
+}
+
+/* ---------------- depth ruler (A11) ---------------- */
+
+.ruler {
+    flex-grow: 1;
+    padding: 3px 4px;
+    overflow: hidden;
+}
+
+.ruler__row {
+    flex-direction: row;
+    align-items: center;
+    padding: 2px 3px;
+    border-radius: 3px;
+}
+
+.ruler__row:hover { background-color: #22303d; }
+
+.ruler__row--active {
+    background-color: #2b7f8f;
+}
+
+.ruler__label {
+    width: 26px;
+    color: #63758a;
+    font-size: 10px;
+    -unity-text-align: middle-right;
+    flex-shrink: 0;
+}
+
+.ruler__row--active .ruler__label { color: #cdeef5; }
+
+.ruler__pip {
+    flex-grow: 1;
+    height: 6px;
+    background-color: #1d2833;
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 0 4px;
+}
+
+.ruler__pipfill {
+    height: 100%;
+    background-color: #5ec8dc;
+    border-radius: 2px;
+}
+
+.ruler__count {
+    width: 16px;
+    color: #93a4b5;
+    font-size: 10px;
+    -unity-text-align: middle-right;
+    flex-shrink: 0;
+}
+
+.ruler__mark {
+    width: 10px;
+    height: 6px;
+    flex-shrink: 0;
+}
+
+.ruler__mark--alert {
+    border-radius: 6px;
+    background-color: #d6604a;
+    width: 6px;
+    align-self: center;
+}
+
+.ruler__foot {
+    border-top-width: 1px;
+    border-top-color: #2b3947;
+    padding: 4px 6px 6px 6px;
+    color: #63758a;
+    font-size: 9px;
+    white-space: normal;
+}
+
+/* ---------------- architect (A7) ---------------- */
+
+.arch {
+    margin-top: 8px;
+}
+
+.arch__cats {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 4px;
+}
+
+.arch__tool {
+    flex-direction: row;
+    align-items: center;
+    border-width: 1px;
+    border-color: #2b3947;
+    border-radius: 3px;
+    padding: 2px 5px;
+    margin: 1px;
+    color: #93a4b5;
+    font-size: 10px;
+    white-space: nowrap;
+    opacity: 0.55;
+}
+
+.arch__tools {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 0 4px 4px 4px;
+}
+
+/* ---------------- tabs (A8) + overlays (A12) ---------------- */
+
+.tabs { flex-direction: row; }
+
+.overlays {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 4px;
+}
+
+/* ---------------- inspect pane (A9/A10) ---------------- */
+
+.inspect {
+    flex-grow: 1;
+    padding: 6px;
+    overflow: hidden;
+}
+
+.inspect__hdrright {
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.inspect__hdr {
+    flex-direction: row;
+    align-items: center;
+}
+
+.inspect__title {
+    font-size: 14px;
+    color: #dde6ee;
+    margin-left: 7px;
+}
+
+.inspect__kind {
+    font-size: 10px;
+    color: #63758a;
+    margin-left: 7px;
+}
+
+.inspect__badge {
+    font-size: 10px;
+    color: #5ec8dc;
+    border-width: 1px;
+    border-color: #2b7f8f;
+    border-radius: 8px;
+    padding: 1px 7px;
+    margin-left: 6px;
+}
+
+.inspect__sub {
+    color: #93a4b5;
+    font-size: 10px;
+    margin-top: 4px;
+}
+
+.inspect__tabstrip {
+    flex-direction: row;
+    margin-top: 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: #2b3947;
+}
+
+.inspect__body { margin-top: 7px; }
+
+.need {
+    margin-top: 5px;
+}
+
+.need__line {
+    flex-direction: row;
+    justify-content: space-between;
+}
+
+.need__name { color: #93a4b5; font-size: 10px; }
+.need__value { color: #dde6ee; font-size: 10px; }
+.need .bar { margin-top: 2px; }
+
+.commands {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.command {
+    flex-direction: column;
+    align-items: center;
+    border-width: 1px;
+    border-color: #2b3947;
+    border-radius: 4px;
+    padding: 5px 7px 4px 7px;
+    margin: 0 4px 4px 0;
+    opacity: 0.55;
+}
+
+.command__label {
+    font-size: 9px;
+    color: #93a4b5;
+    margin-top: 3px;
+    white-space: nowrap;
+}
+
+.summary__row {
+    flex-direction: row;
+    color: #93a4b5;
+    font-size: 11px;
+    margin-top: 3px;
+}
+
+.inspect--tomb { opacity: 0.55; }
+
+.inspect__reason {
+    color: #d9a23b;
+    font-size: 10px;
+    margin-top: 6px;
+}
+
+/* ---------------- depth ruler as one bar (A11) ---------------- */
+
+.ruler {
+    flex-direction: column;
+    padding: 4px 18px 4px 18px;
+}
+
+.ruler__active {
+    font-size: 11px;
+    color: #cdeef5;
+    -unity-text-align: middle-center;
+    padding: 3px 0 1px 0;
+}
+
+.ruler__tick {
+    flex-grow: 1;
+    min-height: 6px;
+    margin: 1px 0;
+    border-radius: 2px;
+    background-color: #1d2833;
+    border-width: 1px;
+    border-color: #2b3947;
+    justify-content: center;
+    align-items: center;
+}
+
+.ruler__tick:hover { background-color: #22303d; }
+
+.ruler__tick--active {
+    background-color: #2b7f8f;
+    border-color: #5ec8dc;
+}
+
+.ruler__tick--surface { border-bottom-width: 2px; border-bottom-color: #93a4b5; }
+
+.ruler__dot {
+    width: 5px; height: 5px;
+    border-radius: 3px;
+    background-color: #f2d16b;
+}

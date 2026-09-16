@@ -68,12 +68,16 @@ namespace Odyssey.Sim.Contracts
         public readonly int DefIndex;
         public readonly int StuffIndex;
 
-        public ThingView(ThingId id, CellRef cell, int defIndex, int stuffIndex)
+        /// <summary>How many are in the pile. A ledger counts these, never the piles.</summary>
+        public readonly int Stack;
+
+        public ThingView(ThingId id, CellRef cell, int defIndex, int stuffIndex, int stack = 1)
         {
             Id = id;
             Cell = cell;
             DefIndex = defIndex;
             StuffIndex = stuffIndex;
+            Stack = stack;
         }
     }
 
@@ -90,6 +94,7 @@ namespace Odyssey.Sim.Contracts
         PawnView[] _pawns = Array.Empty<PawnView>();
         ThingView[] _things = Array.Empty<ThingView>();
         byte[] _sliceCells = Array.Empty<byte>();
+        byte[] _designations = Array.Empty<byte>();
 
         public int Tick { get; private set; }
         public int SliceLayer { get; private set; }
@@ -98,6 +103,7 @@ namespace Odyssey.Sim.Contracts
         public int PawnCount { get; private set; }
         public int ThingCount { get; private set; }
         public int SliceCellCount { get; private set; }
+        public int DesignationCellCount { get; private set; }
 
         public ReadOnlySpan<PawnView> Pawns => new ReadOnlySpan<PawnView>(_pawns, 0, PawnCount);
         public ReadOnlySpan<ThingView> Things => new ReadOnlySpan<ThingView>(_things, 0, ThingCount);
@@ -107,6 +113,12 @@ namespace Odyssey.Sim.Contracts
         /// chunk mesh; it is never one UI element per cell, because a layer is 62,500 cells.
         /// </summary>
         public ReadOnlySpan<byte> SliceCells => new ReadOnlySpan<byte>(_sliceCells, 0, SliceCellCount);
+
+        /// <summary>
+        /// One byte per cell of the active layer: the standing order there, as a
+        /// <c>DesignationKind</c> value, or 0. Empty when the world has no designation grid.
+        /// </summary>
+        public ReadOnlySpan<byte> Designations => new ReadOnlySpan<byte>(_designations, 0, DesignationCellCount);
 
         /// <summary>Find a pawn by id. Returns false when it is gone, which callers must handle.</summary>
         public bool TryGetPawn(PawnId id, out PawnView view)
@@ -131,6 +143,7 @@ namespace Odyssey.Sim.Contracts
             PawnCount = 0;
             ThingCount = 0;
             SliceCellCount = 0;
+            DesignationCellCount = 0;
         }
 
         internal void AddPawn(in PawnView view)
@@ -150,6 +163,13 @@ namespace Odyssey.Sim.Contracts
             Grow(ref _sliceCells, cellCount);
             SliceCellCount = cellCount;
             return new Span<byte>(_sliceCells, 0, cellCount);
+        }
+
+        internal Span<byte> BeginDesignations(int cellCount)
+        {
+            Grow(ref _designations, cellCount);
+            DesignationCellCount = cellCount;
+            return new Span<byte>(_designations, 0, cellCount);
         }
 
         static void Grow<T>(ref T[] array, int needed)

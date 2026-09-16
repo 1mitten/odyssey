@@ -21,6 +21,8 @@ namespace Odyssey.Sim
         readonly List<ITickable> _tickables = new List<ITickable>();
         readonly List<ITickable>[] _byGroup;
         readonly List<Action<SimWorld>> _deferred = new List<Action<SimWorld>>();
+        readonly Dictionary<IntentKind, Func<Intent, IntentRejection>> _intentHandlers =
+            new Dictionary<IntentKind, Func<Intent, IntentRejection>>();
         ISnapshotContributor[] _contributors = Array.Empty<ISnapshotContributor>();
 
         internal SimWorld(uint seed, GridSize size)
@@ -53,6 +55,14 @@ namespace Odyssey.Sim
 
         /// <summary>Ticks elapsed. Starts at 0 and is part of the state hash.</summary>
         public int CurrentTick { get; private set; }
+
+        /// <summary>
+        /// Optional, and null in every ordinary run: something that wants the state hash at every
+        /// tick boundary, for binary-searching the first tick two runs disagree on.
+        /// <see cref="Diagnostics.HashTrace"/> is the implementation. Attaching one costs a full
+        /// <see cref="ComputeStateHash"/> per tick and cannot change what the world does.
+        /// </summary>
+        public Diagnostics.ITickHashSink? HashSink { get; set; }
 
         public IReadOnlyList<ITickable> Tickables => _tickables;
 
@@ -111,6 +121,11 @@ namespace Odyssey.Sim
             // 6. Publish the snapshot, after every system has finished mutating the world.
             Views.Publish(this, _contributors);
 
+            // 7. The hash trace, when one is attached. Recorded before the counter moves, so the
+            // entry is labelled with the tick that produced the state — which is the tick to
+            // re-run when two traces part here.
+            HashSink?.Record(CurrentTick, ComputeStateHash().Value);
+
             CurrentTick++;
         }
 
@@ -121,6 +136,11 @@ namespace Odyssey.Sim
         /// </summary>
         IntentRejection HandleIntent(Intent intent)
         {
+            // A component that owns a kind of command handles it; the switch below is only for
+            // what the world itself owns. One handler per kind, registered at construction, so
+            // two components can never both claim a command and disagree about it.
+            if (_intentHandlers.TryGetValue(intent.Kind, out var handler)) return handler(intent);
+
             switch (intent.Kind)
             {
                 case IntentKind.SetSliceLayer:
@@ -181,10 +201,35 @@ namespace Odyssey.Sim
             for (int i = 0; i < _tickables.Count; i++)
                 if (_tickables[i] is IStateHashable hashable)
                     hashable.ContributeTo(ref hash);
+
+            // Subsystems too, in schedule order. They were left out until a system first had
+            // state worth pinning — the job counters — and the omission was the sort that shows
+            // up as a save that resumes wrongly rather than as anything obvious. Schedule order
+            // is sorted and fixed at construction, so this is as deterministic as the tickables.
+            Contribute(Systems.WorldSystems, ref hash);
+            Contribute(Systems.PawnSystems, ref hash);
             return hash;
         }
 
+        static void Contribute(IReadOnlyList<IWorldSystem> systems, ref StateHash hash)
+        {
+            for (int i = 0; i < systems.Count; i++)
+                if (systems[i] is IStateHashable hashable)
+                    hashable.ContributeTo(ref hash);
+        }
+
         internal void SetSnapshotContributors(ISnapshotContributor[] contributors) => _contributors = contributors;
+
+        internal void SetIntentHandler(IntentKind kind, Func<Intent, IntentRejection> handler)
+        {
+            if (kind == IntentKind.None) throw new ArgumentOutOfRangeException(nameof(kind));
+            if (_intentHandlers.ContainsKey(kind))
+                throw new InvalidOperationException($"Intent {kind} already has a handler.");
+            _intentHandlers[kind] = handler ?? throw new ArgumentNullException(nameof(handler));
+        }
+
+        /// <summary>Whether a component has claimed this kind of command.</summary>
+        public bool HandlesIntent(IntentKind kind) => _intentHandlers.ContainsKey(kind);
 
         internal void SetSystems(WorldSystemSchedule schedule) => Systems = schedule;
 
@@ -206,6 +251,8 @@ namespace Odyssey.Sim
         readonly List<Func<SimWorld, ITickable>> _factories = new List<Func<SimWorld, ITickable>>();
         readonly List<ISnapshotContributor> _contributors = new List<ISnapshotContributor>();
         readonly List<Func<SimWorld, IWorldSystem>> _systemFactories = new List<Func<SimWorld, IWorldSystem>>();
+        readonly List<(IntentKind kind, Func<Intent, IntentRejection> handler)> _intentHandlers =
+            new List<(IntentKind, Func<Intent, IntentRejection>)>();
         uint _seed = 1;
         GridSize _size = GridSize.ScaleTarget;
 
@@ -248,9 +295,21 @@ namespace Odyssey.Sim
             return this;
         }
 
+        /// <summary>
+        /// Let a component own one kind of player command. The handler returns
+        /// <see cref="IntentRejection.None"/> when it applied the intent, or the reason it did not.
+        /// Handlers are consulted before the world's own switch, and a kind may be claimed once.
+        /// </summary>
+        public SimWorldBuilder AddIntentHandler(IntentKind kind, Func<Intent, IntentRejection> handler)
+        {
+            _intentHandlers.Add((kind, handler ?? throw new ArgumentNullException(nameof(handler))));
+            return this;
+        }
+
         public SimWorld Build()
         {
             var world = new SimWorld(_seed, _size);
+            foreach (var (kind, handler) in _intentHandlers) world.SetIntentHandler(kind, handler);
             foreach (var factory in _factories) world.Register(factory(world));
             world.SetSnapshotContributors(_contributors.ToArray());
 

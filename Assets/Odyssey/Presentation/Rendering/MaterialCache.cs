@@ -29,23 +29,28 @@ namespace Odyssey.Presentation.Rendering
             readonly uint _tint;
             readonly uint _emission;
             readonly bool _ghost;
+            readonly bool _foliage;
 
-            public Key(Material baseMaterial, uint tint, uint emission, bool ghost)
+            public Key(Material baseMaterial, uint tint, uint emission, bool ghost, bool foliage)
             {
                 _base = baseMaterial;
                 _tint = tint;
                 _emission = emission;
                 _ghost = ghost;
+                _foliage = foliage;
             }
 
+            // Foliage is part of the key because a foliage clone carries a queue and a cutoff a
+            // plain clone of the same art must not. In the game no material is both, but a key
+            // that only holds by convention is one a test cannot trust.
             public bool Equals(Key other) =>
                 ReferenceEquals(_base, other._base) && _tint == other._tint &&
-                _emission == other._emission && _ghost == other._ghost;
+                _emission == other._emission && _ghost == other._ghost && _foliage == other._foliage;
 
             public override bool Equals(object? obj) => obj is Key other && Equals(other);
 
             public override int GetHashCode() =>
-                unchecked(((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_base) * 397) ^ (int)_tint) * 397 ^ (int)_emission) * 397 ^ (_ghost ? 1 : 0);
+                unchecked(((System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(_base) * 397) ^ (int)_tint) * 397 ^ (int)_emission) * 397 ^ (_ghost ? 1 : 0) ^ (_foliage ? 1 << 30 : 0);
         }
 
         readonly Dictionary<Key, Material> _cache = new Dictionary<Key, Material>();
@@ -67,17 +72,43 @@ namespace Odyssey.Presentation.Rendering
         ///
         /// The pack's grass is a colour cutout imported without alpha-is-transparency, so its
         /// mipmaps blend blade texels with the background behind the alpha: at distance the
-        /// grass goes darker and thinner at once, and the pack's own cutoff of 0.25 then discards
-        /// what is left. Lowering the cutoff keeps the far blades — a tunable, and the first lever
-        /// to pull when the meadow darkens towards the horizon.
+        /// grass goes thinner, and the pack's own cutoff of 0.25 then discards what is left.
+        /// Lowering the cutoff keeps the far blades. It is *not* a lever on the meadow darkening
+        /// towards the horizon: <c>MeadowCheck</c> photographed 0.12 against 0.25 and the two are
+        /// indistinguishable. That darkness was the outline ink, see <see cref="FoliageQueue"/>.
         /// </summary>
         public static float FoliageClipThreshold { get; set; } = 0.12f;
+
+        /// <summary>
+        /// The render queue foliage is drawn in: the first slot past the opaque range, so it is
+        /// drawn after the depth copy and after the outline pass, and before anything ghosted.
+        ///
+        /// **Why foliage is drawn late: grass is never inked.** The outline pass draws on every
+        /// depth step it finds in the camera depth texture, and a clump of grass is nothing but
+        /// depth steps — a fan of cut-out cards at every angle. Inked, a tuft wears a black cap
+        /// and a rim as wide as itself at board distance, and the sliver test in the shader only
+        /// ever reached the narrowest of them. <c>MeadowCheck</c> has the pictures: the
+        /// <c>opaque</c> condition is what the field looks like with the grass under the ink.
+        ///
+        /// Drawing foliage in the transparent range costs nothing and needs no mask: the depth
+        /// texture the outline reads is copied after the opaques, so grass is simply not in it,
+        /// and the tufts are then drawn over the inked picture with their own depth test intact.
+        /// The material keeps its depth write and its alpha clip, so nothing about how a tuft
+        /// looks or occludes changes — only when it is drawn. The queue sits below the ghost
+        /// material's, so a ghosted storey above still blends over the grass beneath it.
+        ///
+        /// Settable only so that a diagnostic can photograph the alternative; the game runs on
+        /// <see cref="DefaultFoliageQueue"/>.
+        /// </summary>
+        public static int FoliageQueue { get; set; } = DefaultFoliageQueue;
+
+        public const int DefaultFoliageQueue = (int)RenderQueue.GeometryLast + 1;
 
         static readonly int AlphaClipThresholdId = Shader.PropertyToID("_Alpha_Clip_Threshold");
         static readonly int CutoffId = Shader.PropertyToID("_Cutoff");
 
-        /// <param name="foliage">Clone with the softer foliage cutoff. Foliage materials are never
-        /// shared with anything else, so the base material's identity keeps the cache key honest.</param>
+        /// <param name="foliage">Clone with the softer foliage cutoff and the late queue. Part of
+        /// the cache key, so the same art asked for plain and as foliage gives two clones.</param>
         public Material Get(Material baseMaterial, Color tint, Color emission, bool ghost, float alpha,
             bool foliage = false)
         {
@@ -85,7 +116,7 @@ namespace Odyssey.Presentation.Rendering
             var colour = new Color(tint.r, tint.g, tint.b, ghost ? alpha : 1f);
             // Keyed on the material reference rather than its instance id: identity is what we
             // actually mean, and it avoids an API whose name changed between Unity versions.
-            var key = new Key(source, Pack(colour), Pack(emission), ghost);
+            var key = new Key(source, Pack(colour), Pack(emission), ghost, foliage);
             if (_cache.TryGetValue(key, out Material cached)) return cached;
 
             var material = new Material(source)
@@ -100,6 +131,7 @@ namespace Odyssey.Presentation.Rendering
             {
                 if (material.HasProperty(AlphaClipThresholdId)) material.SetFloat(AlphaClipThresholdId, FoliageClipThreshold);
                 if (material.HasProperty(CutoffId)) material.SetFloat(CutoffId, FoliageClipThreshold);
+                material.renderQueue = FoliageQueue;
             }
 
             _cache.Add(key, material);

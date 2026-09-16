@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pathing;
 
 namespace Odyssey.Sim.Worldgen
 {
@@ -217,9 +218,68 @@ namespace Odyssey.Sim.Worldgen
                 int z0 = plot.Z0 + (plot.SizeZ - template.SizeZ) / 2;
 
                 Stamp(ctx, template, x0, z0);
+                RecordConnectors(ctx, template, x0, z0);
                 ctx.Shells.Add(new ShellPlacement(plot.TemplateIndex, x0, z0, p));
             }
             ctx.Report.ShellsStamped = ctx.Shells.Count;
+            ctx.Report.ConnectorsStamped = ctx.Connectors.Count;
+        }
+
+        /// <summary>
+        /// Declare the shell's stairs and ladders, both ends, at the moment they are laid.
+        ///
+        /// The upper end is the cells **directly above** the connector's own cells, not the next
+        /// layer's connector cells. That is what the design's table says for both kinds — a stair
+        /// is two adjacent cells on layer y reaching layer y+1, a ladder is one — and it is what
+        /// makes a stacked stairwell work out as a chain of one-layer connectors rather than
+        /// needing the storey above to be marked as well. It is also why a template's top storey
+        /// carries no stair glyph and is still reachable.
+        ///
+        /// Nothing here checks whether the result is usable. Damage has not run yet; the registrar
+        /// is where a connector into a demolished storey is dropped.
+        /// </summary>
+        static void RecordConnectors(WorldGenContext ctx, ShellTemplate template, int x0, int z0)
+        {
+            var stairCells = new List<int>();
+
+            for (int layer = template.BottomLayer; layer <= template.TopLayer; layer++)
+            {
+                int y = ctx.GroundLayer + layer;
+                if (y + 1 >= ctx.Size.SizeY) continue; // Nothing above the top layer to reach.
+
+                stairCells.Clear();
+
+                for (int tz = 0; tz < template.SizeZ; tz++)
+                for (int tx = 0; tx < template.SizeX; tx++)
+                {
+                    var kind = template.Cell(layer, tx, tz);
+                    int index = ctx.Index(x0 + tx, z0 + tz, y);
+
+                    if (kind == ShellCellKind.Ladder)
+                    {
+                        // One cell to one cell, declared on its own: two ladders on one storey are
+                        // two connectors, not one four-celled thing.
+                        ctx.Connectors.Add(new StampedConnector(
+                            ConnectorKind.Ladder,
+                            new[] { index },
+                            new[] { index + ctx.Size.LayerStride }));
+                    }
+                    else if (kind == ShellCellKind.StairLower || kind == ShellCellKind.StairUpper)
+                    {
+                        stairCells.Add(index);
+                    }
+                }
+
+                if (stairCells.Count == 0) continue;
+
+                // One stairwell per storey. The templates author a single run, and a template with
+                // two would need them told apart by adjacency — which is a change to the authoring
+                // format, not something to guess at here.
+                var lower = stairCells.ToArray();
+                var upper = new int[lower.Length];
+                for (int i = 0; i < lower.Length; i++) upper[i] = lower[i] + ctx.Size.LayerStride;
+                ctx.Connectors.Add(new StampedConnector(ConnectorKind.Stair, lower, upper));
+            }
         }
 
         static void Stamp(WorldGenContext ctx, ShellTemplate template, int x0, int z0)

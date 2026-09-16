@@ -51,6 +51,7 @@ namespace Odyssey.Tests.Sim
                 .AddSystem(_ => Needs)
                 .AddSystem(_ => Jobs)
                 .AddSystem(_ => Movement)
+                .AddTickable(_ => new SkillSystem(Ctx))
                 .Build();
 
             RebuildNav();
@@ -89,7 +90,12 @@ namespace Odyssey.Tests.Sim
             return pile;
         }
 
-        public IReadOnlyList<ISaveable> SaveComponents => new ISaveable[] { Ctx.Pawns, Ctx.Items };
+        /// <summary>
+        /// Everything this fixture's world holds that is in its state hash. The job system is
+        /// here because its per-def counters are hashed: a hashed field that is not saved is a
+        /// save that resumes wrongly, and this list is where the two are kept in step.
+        /// </summary>
+        public IReadOnlyList<ISaveable> SaveComponents => new ISaveable[] { Ctx.Pawns, Ctx.Items, Jobs };
     }
 
     public class PawnNeedsTests
@@ -230,6 +236,25 @@ namespace Odyssey.Tests.Sim
 
             Assert.That(colony.Ctx.Items.Get(meal), Is.Null, "the meal should have been eaten");
             Assert.That(pawn.Needs[NeedIndex.Food], Is.GreaterThan(400));
+        }
+
+        [Test]
+        public void EatingTakesOneMealFromThePileNotThePile()
+        {
+            // Despawning the whole pile ate four meals a sitting; the soak found the pantry empty
+            // by the end of day one and blamed the scope. One meal leaves the pile, and the pile
+            // goes only with its last meal.
+            var colony = Colony.Build();
+            var pawn = colony.Ctx.Pawns.Spawn(colony.Cell(2, 2, 0));
+            pawn.Needs[NeedIndex.Food] = 100;
+
+            ThingId pile = colony.Ctx.Items.Spawn(ItemIndex.Meal, colony.Cell(6, 2, 0), stack: 4);
+
+            for (int i = 0; i < 3_000 && pawn.Needs[NeedIndex.Food] < 400; i++) colony.World.Tick();
+
+            var left = colony.Ctx.Items.Get(pile);
+            Assert.That(left, Is.Not.Null, "three meals are still there");
+            Assert.That(left!.Stack, Is.EqualTo(3));
         }
 
         [Test]

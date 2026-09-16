@@ -20,7 +20,7 @@ MonoBehaviour:
   sliverTolerance: 0.02
   fadeStart: 150
   fadeEnd: 300
-  stage: 550
+  stage: 450
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0

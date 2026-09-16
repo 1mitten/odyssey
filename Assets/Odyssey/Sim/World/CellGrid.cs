@@ -37,9 +37,6 @@ namespace Odyssey.Sim.World
         /// <summary>Cached structural support, computed bottom-up. See <see cref="SupportSolver"/>.</summary>
         public readonly byte[] Support;
 
-        /// <summary>Region id for reachability. 0 = unassigned.</summary>
-        public readonly ushort[] Region;
-
         public readonly CellFlags[] Flags;
 
         public CellGrid(GridSize size)
@@ -51,7 +48,6 @@ namespace Odyssey.Sim.World
             FloorStuff = new ushort[count];
             Edifice = new int[count];
             Support = new byte[count];
-            Region = new ushort[count];
             Flags = new CellFlags[count];
             for (int i = 0; i < count; i++) Edifice[i] = -1;
         }
@@ -66,6 +62,18 @@ namespace Odyssey.Sim.World
 
         /// <summary>An edifice that blocks movement, such as a wall or a closed door.</summary>
         public bool IsBlockedByEdifice(int index) => (Flags[index] & CellFlags.BlockingEdifice) != 0;
+
+        /// <summary>
+        /// Take whatever stands in the cell out of the world: the handle goes, and so does the
+        /// blocking flag. The placement list keeps its slot, so other handles stay valid. A caller
+        /// removing something that blocked must mark navigation dirty itself; a tree blocks
+        /// nothing, so felling one changes no path.
+        /// </summary>
+        public void RemoveEdifice(int index)
+        {
+            Edifice[index] = -1;
+            Flags[index] &= ~CellFlags.BlockingEdifice;
+        }
 
         /// <summary>Can a pawn stand here? Needs somewhere to stand on and nothing in the way.</summary>
         public bool IsWalkable(int index) =>
@@ -88,8 +96,10 @@ namespace Odyssey.Sim.World
 
         /// <summary>
         /// Folds the grid into the world state hash. Only authoritative fields contribute:
-        /// support and region are derived and are rebuilt on load, so hashing them would make a
-        /// save/load round trip appear to diverge for no reason.
+        /// support is derived and is rebuilt on load, so hashing it would make a save/load
+        /// round trip appear to diverge for no reason. Reachability is not on the grid at all:
+        /// <see cref="Pathing.NavGraph"/> keeps its own region array, and a per-cell region
+        /// field here was 5 MB at the scale target that nothing ever wrote (OQ-38).
         /// </summary>
         public void ContributeTo(ref StateHash hash)
         {

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Saving;
+using Odyssey.Sim.World;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -69,6 +70,7 @@ namespace Odyssey.Sim.Pawns
         readonly List<ColonyItem> _items = new List<ColonyItem>();
         readonly Dictionary<int, int> _itemAtCell = new Dictionary<int, int>();
         readonly List<int> _loose = new List<int>();
+        readonly List<int> _stored = new List<int>();
         readonly List<Stockpile> _stockpiles = new List<Stockpile>();
         readonly Dictionary<int, int> _stockpileAtCell = new Dictionary<int, int>();
         readonly List<int> _beds = new List<int>();
@@ -89,6 +91,14 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public IReadOnlyList<int> LooseItems => _loose;
 
+        /// <summary>
+        /// The other half of the lister: item indices lying in a stockpile cell, ascending. This
+        /// is what re-stowing scans — a thing in a low-priority pile that a higher one would
+        /// accept — and it is scanned only when there is nothing loose to haul, because tidying
+        /// is the lowest job there is (a-14 §3).
+        /// </summary>
+        public IReadOnlyList<int> StoredItems => _stored;
+
         public IReadOnlyList<Stockpile> Stockpiles => _stockpiles;
 
         /// <summary>Bed cells, ascending.</summary>
@@ -105,13 +115,30 @@ namespace Odyssey.Sim.Pawns
         public ColonyItem? ItemAt(int cell) =>
             _itemAtCell.TryGetValue(cell, out int index) ? _items[index] : null;
 
+        /// <summary>
+        /// Put <paramref name="stack"/> of a def at a cell. A cell holding a stack of the same def
+        /// with room for the load takes it and its id is returned; an empty cell gets a new
+        /// thing. Anything else throws, because a caller that has not checked
+        /// <see cref="CellHasSpace(int, int, int)"/> has a bug, and silently overwriting the
+        /// cell index was how two things came to share a cell.
+        /// </summary>
         public ThingId Spawn(int defIndex, int cell, int stack = 1)
         {
+            if (_itemAtCell.TryGetValue(cell, out int resident))
+            {
+                var here = _items[resident];
+                if (!Fits(here, defIndex, stack))
+                    throw new System.InvalidOperationException(
+                        $"cell {cell} holds {here.Stack} of def {here.DefIndex} and cannot take {stack} of def {defIndex}");
+                here.Stack += stack;
+                return here.Id;
+            }
+
             var item = new ColonyItem { Id = new ThingId(_nextId++), DefIndex = defIndex, Cell = cell, Stack = stack };
             _items.Add(item);
             int index = _items.Count - 1;
             _itemAtCell[cell] = index;
-            if (!IsStockpileCell(cell)) InsertLoose(index);
+            Enlist(cell, index);
             return item.Id;
         }
 
@@ -123,8 +150,12 @@ namespace Odyssey.Sim.Pawns
             {
                 _stockpileAtCell[stockpile.Cells[i]] = index;
 
-                // Anything already lying in the new zone stops being loose.
-                if (_itemAtCell.TryGetValue(stockpile.Cells[i], out int item)) RemoveLoose(item);
+                // Anything already lying in the new zone stops being loose and becomes stored.
+                if (_itemAtCell.TryGetValue(stockpile.Cells[i], out int item))
+                {
+                    RemoveFrom(_loose, item);
+                    InsertInto(_stored, item);
+                }
             }
         }
 
@@ -144,33 +175,107 @@ namespace Odyssey.Sim.Pawns
             if (item.Cell >= 0)
             {
                 _itemAtCell.Remove(item.Cell);
-                RemoveLoose(item.Id.Value - 1);
+                Unlist(item.Id.Value - 1);
             }
             item.Cell = -1;
             item.CarriedBy = carrier.Value;
         }
 
-        public void Drop(ColonyItem item, int cell)
+        /// <summary>
+        /// Put a carried thing down. Onto a stack of the same def with room, it merges: the
+        /// resident stack grows and the carried thing is despawned, because the resident is the
+        /// one something else may hold a claim on. The caller checks
+        /// <see cref="CellHasSpace(int, int, int)"/> first; a cell that cannot take it throws.
+        /// Returns the thing now at the cell.
+        /// </summary>
+        public ColonyItem Drop(ColonyItem item, int cell)
         {
+            if (_itemAtCell.TryGetValue(cell, out int resident))
+            {
+                var here = _items[resident];
+                if (!Fits(here, item.DefIndex, item.Stack))
+                    throw new System.InvalidOperationException(
+                        $"cell {cell} holds {here.Stack} of def {here.DefIndex} and cannot take {item.Stack} of def {item.DefIndex}");
+                here.Stack += item.Stack;
+                item.Stack = 0;
+                Despawn(item);
+                return here;
+            }
+
             item.Cell = cell;
             item.CarriedBy = 0;
             int index = item.Id.Value - 1;
             _itemAtCell[cell] = index;
-            if (IsStockpileCell(cell)) RemoveLoose(index);
-            else InsertLoose(index);
+            Enlist(cell, index);
+            return item;
         }
 
         public void Despawn(ColonyItem item)
         {
             if (item.Cell >= 0) _itemAtCell.Remove(item.Cell);
-            RemoveLoose(item.Id.Value - 1);
+            Unlist(item.Id.Value - 1);
             item.Cell = -1;
             item.CarriedBy = 0;
             item.Despawned = true;
         }
 
-        /// <summary>Is this cell free to take one more item?</summary>
+        /// <summary>Is this cell empty? The question a bed, a spawn or a footprint asks.</summary>
         public bool CellHasSpace(int cell) => !_itemAtCell.ContainsKey(cell);
+
+        /// <summary>
+        /// Can this cell take <paramref name="count"/> of a def? Empty, or holding the same def
+        /// with the whole load's worth of room under its <see cref="ItemDef.stackLimit"/>.
+        ///
+        /// Whole load or nothing. The research leaves partial fits open (a-14, "could not be
+        /// determined"); the strict reading means a hauler never splits a stack or drops a
+        /// surplus, and a cell that is "space" always takes what arrives. A full stack, or a
+        /// stack of anything else, is not space.
+        /// </summary>
+        public bool CellHasSpace(int cell, int defIndex, int count) =>
+            !_itemAtCell.TryGetValue(cell, out int index) || Fits(_items[index], defIndex, count);
+
+        bool Fits(ColonyItem resident, int defIndex, int count) =>
+            resident.DefIndex == defIndex && resident.Stack + count <= Content.Items[defIndex].stackLimit;
+
+        /// <summary>
+        /// The cell itself if it can take the load, else the nearest walkable cell on the same
+        /// layer that can, ring by ring out to <paramref name="maxRadius"/>; -1 when there is
+        /// none. Where felled wood lands and where a failed haul puts its load down.
+        /// </summary>
+        public int NearestCellWithSpace(CellGrid cells, int origin, int defIndex, int count, int maxRadius)
+        {
+            if (CellHasSpace(origin, defIndex, count)) return origin;
+
+            GridSize size = cells.Size;
+            CellRef at = size.FromIndex(origin);
+            for (int radius = 1; radius <= maxRadius; radius++)
+            for (int dz = -radius; dz <= radius; dz++)
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                if (System.Math.Max(System.Math.Abs(dx), System.Math.Abs(dz)) != radius) continue;
+                int x = at.X + dx, z = at.Z + dz;
+                if (!size.Contains(x, z, at.Y)) continue;
+                int candidate = size.Index(x, z, at.Y);
+                if (!cells.IsWalkable(candidate) || !CellHasSpace(candidate, defIndex, count)) continue;
+                return candidate;
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// <c>SetForbidden(A = thing, B = on)</c>. Forbidding is the player taking a thing out of
+        /// every scan without moving it: a hauler ignores a forbidden item and takes it once it is
+        /// allowed again.
+        /// </summary>
+        public IntentRejection HandleSetForbidden(Intent intent)
+        {
+            var item = Get(new ThingId(intent.A));
+            if (item == null) return IntentRejection.OutOfBounds;
+            bool on = intent.B != 0;
+            if (item.Forbidden == on) return IntentRejection.AlreadyInThatState;
+            item.Forbidden = on;
+            return IntentRejection.None;
+        }
 
         /// <summary>
         /// Approximate travel cost between two cells: Manhattan on the layer plus a per-layer
@@ -187,16 +292,25 @@ namespace Odyssey.Sim.Pawns
             return (dx + dz) * 100 + dy * layerCostEstimate;
         }
 
-        void InsertLoose(int itemIndex)
+        /// <summary>A thing at a cell is on exactly one of the two listers, by where the cell is.</summary>
+        void Enlist(int cell, int itemIndex) => InsertInto(IsStockpileCell(cell) ? _stored : _loose, itemIndex);
+
+        void Unlist(int itemIndex)
         {
-            int at = _loose.BinarySearch(itemIndex);
-            if (at < 0) _loose.Insert(~at, itemIndex);
+            RemoveFrom(_loose, itemIndex);
+            RemoveFrom(_stored, itemIndex);
         }
 
-        void RemoveLoose(int itemIndex)
+        static void InsertInto(List<int> lister, int itemIndex)
         {
-            int at = _loose.BinarySearch(itemIndex);
-            if (at >= 0) _loose.RemoveAt(at);
+            int at = lister.BinarySearch(itemIndex);
+            if (at < 0) lister.Insert(~at, itemIndex);
+        }
+
+        static void RemoveFrom(List<int> lister, int itemIndex)
+        {
+            int at = lister.BinarySearch(itemIndex);
+            if (at >= 0) lister.RemoveAt(at);
         }
 
         public void ContributeTo(ref StateHash hash)
@@ -258,6 +372,7 @@ namespace Odyssey.Sim.Pawns
             _items.Clear();
             _itemAtCell.Clear();
             _loose.Clear();
+            _stored.Clear();
             _stockpiles.Clear();
             _stockpileAtCell.Clear();
             _beds.Clear();
@@ -296,13 +411,15 @@ namespace Odyssey.Sim.Pawns
             int bedCount = reader.ReadInt();
             for (int b = 0; b < bedCount; b++) _beds.Add(reader.ReadInt());
 
-            // Re-derive the cell index and the loose lister in id order.
+            // Re-derive the cell index and both listers in id order, which is ascending by
+            // construction, so the appends leave the lists sorted without a search.
             for (int i = 0; i < _items.Count; i++)
             {
                 var item = _items[i];
                 if (item.Despawned || item.Cell < 0) continue;
                 _itemAtCell[item.Cell] = i;
-                if (!IsStockpileCell(item.Cell)) _loose.Add(i);
+                if (IsStockpileCell(item.Cell)) _stored.Add(i);
+                else _loose.Add(i);
             }
         }
     }

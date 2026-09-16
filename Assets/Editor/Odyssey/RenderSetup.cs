@@ -83,7 +83,9 @@ namespace Odyssey.EditorTools
             outline.sliverTolerance = 0.02f;
             outline.fadeStart = 150f;
             outline.fadeEnd = 300f;
-            outline.stage = RenderPassEvent.BeforeRenderingPostProcessing;
+            // Before transparents: foliage is drawn in the transparent range so that it lands
+            // after the ink and is never outlined (MaterialCache.FoliageQueue).
+            outline.stage = RenderPassEvent.BeforeRenderingTransparents;
         }
 
         static bool EnsureFeature<T>(ScriptableRendererData data, string name, Action<T> configure)

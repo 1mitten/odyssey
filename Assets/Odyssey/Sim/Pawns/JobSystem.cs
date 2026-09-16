@@ -1,7 +1,9 @@
 #nullable enable
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
+using Odyssey.Sim.Saving;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -50,7 +52,7 @@ namespace Odyssey.Sim.Pawns
     /// before the next think runs. That single rule is what a reservation leak is the absence of,
     /// and it is the fault a ten-day unattended run surfaces and a two-minute test does not.
     /// </summary>
-    public sealed class JobSystem : IWorldSystem
+    public sealed class JobSystem : IWorldSystem, IStateHashable, ISaveable
     {
         readonly PawnContext _ctx;
         readonly ThinkNode[] _tree;
@@ -63,6 +65,8 @@ namespace Odyssey.Sim.Pawns
             _ctx = ctx;
             _givers = SortGivers(ctx, givers);
             _tree = tree;
+            _completed = new int[ctx.Content.Jobs.Length];
+            _failed = new int[ctx.Content.Jobs.Length];
             for (int i = 0; i < _tree.Length; i++)
                 if (_tree[i] is WorkThinkNode work) work.Bind(_givers);
         }
@@ -82,6 +86,25 @@ namespace Odyssey.Sim.Pawns
 
         public int JobsStarted { get; private set; }
         public int JobsFailed { get; private set; }
+
+        /// <summary>
+        /// Jobs that ended, per job def, split by outcome.
+        ///
+        /// <para>A soak run's only real question is "did the colony keep working", and a total
+        /// job count cannot answer it: five pawns wandering in a mental break for a day start and
+        /// end thousands of jobs. Per def, "at least one haul, one meal and one sleep completed"
+        /// is the assertion that actually distinguishes a living colony from a busy one.</para>
+        ///
+        /// <para>Counted in <see cref="EndJob"/>, which is the single funnel every ending goes
+        /// through, rather than at the call sites — two of which were previously reached without
+        /// incrementing <see cref="JobsFailed"/> at all.</para>
+        /// </summary>
+        public int CompletedOf(int jobDefIndex) => _completed[jobDefIndex];
+
+        public int FailedOf(int jobDefIndex) => _failed[jobDefIndex];
+
+        readonly int[] _completed;
+        readonly int[] _failed;
 
         /// <summary>
         /// Sorted once at construction by emergency flag, then work-type order, then the giver's
@@ -111,7 +134,7 @@ namespace Odyssey.Sim.Pawns
             new IdleThinkNode(),
         };
 
-        public static WorkGiver[] DefaultGivers() => new WorkGiver[] { new HaulWorkGiver() };
+        public static WorkGiver[] DefaultGivers() => new WorkGiver[] { new FellWorkGiver(), new HaulWorkGiver() };
 
         public void Tick(SimWorld world)
         {
@@ -164,6 +187,61 @@ namespace Odyssey.Sim.Pawns
 
         bool IsBreakJob(Pawn pawn, Job job) =>
             _ctx.Content.Jobs[job.DefIndex].driver == JobIndex.Wander;
+
+        // ---- state ------------------------------------------------------------------------
+        //
+        // The counters are hashed, which makes them state rather than statistics: two runs that
+        // reach the same world by different sequences of job outcomes are no longer allowed to
+        // agree. That is the point — a job that silently fails and is silently retried leaves
+        // the world identical and the counters different.
+        //
+        // Hashed therefore means saved. A counter in the hash and not in the file is a save that
+        // resumes wrongly, which is the failure this pairing exists to prevent; the round-trip
+        // test in WorldRoundTripTests is what enforces it.
+
+        public void ContributeTo(ref StateHash hash)
+        {
+            hash.Add(JobsStarted);
+            hash.Add(JobsFailed);
+            for (int i = 0; i < _completed.Length; i++)
+            {
+                hash.Add(_completed[i]);
+                hash.Add(_failed[i]);
+            }
+        }
+
+        public string SaveKey => "odyssey.jobs";
+
+        public void Save(SaveWriter writer)
+        {
+            writer.Write(JobsStarted);
+            writer.Write(JobsFailed);
+            writer.Write(_completed.Length);
+            for (int i = 0; i < _completed.Length; i++)
+            {
+                writer.Write(_completed[i]);
+                writer.Write(_failed[i]);
+            }
+        }
+
+        public void Load(SaveReader reader)
+        {
+            JobsStarted = reader.ReadInt();
+            JobsFailed = reader.ReadInt();
+
+            int count = reader.ReadInt();
+            if (count != _completed.Length)
+                throw new SaveLoadException(
+                    $"The save has {count} job defs and this build has {_completed.Length}. Def " +
+                    "migration is not written yet, and guessing at the mapping would silently " +
+                    "attribute one job's history to another.");
+
+            for (int i = 0; i < count; i++)
+            {
+                _completed[i] = reader.ReadInt();
+                _failed[i] = reader.ReadInt();
+            }
+        }
 
         void Think(Pawn pawn, int tick)
         {
@@ -231,6 +309,9 @@ namespace Odyssey.Sim.Pawns
                 _ctx.Reservations.ReleaseAll(pawn);
                 return;
             }
+
+            if (status == JobStatus.Failed) _failed[pawn.CurrentJob.DefIndex]++;
+            else _completed[pawn.CurrentJob.DefIndex]++;
 
             pawn.Driver?.Cleanup(_ctx, status);
             _ctx.Reservations.ReleaseAll(pawn);
@@ -418,14 +499,21 @@ namespace Odyssey.Sim.Pawns
     // =====================================================================================
 
     /// <summary>
-    /// Take a loose thing to the best stockpile that will have it.
+    /// Take a loose thing to the best stockpile that will have it; failing that, move a stored
+    /// thing to a better pile than the one it is in.
     ///
-    /// Destination choice is, in order: the filter accepts the item, the cell has space, highest
-    /// priority, then nearest. Priority orders the <em>destination</em>, never the haul queue,
-    /// which is what makes re-stowing into a better zone fall out of the same rule.
+    /// Destination choice is, in order: the filter accepts the item, the cell has space for the
+    /// whole load, highest priority, then nearest (a-14 §3). Priority orders the
+    /// <em>destination</em>, never the haul queue, which is what makes re-stowing into a better
+    /// zone fall out of the same rule: a stored thing is a haul candidate whose destination must
+    /// beat the priority of where it lies. Equal priority is not better — two piles at one
+    /// priority are one warehouse in two places, and shuttling between them is the
+    /// up-and-down-the-stairs failure the research warns of.
     ///
-    /// Every candidate is tested for reachability before anything is pathed. That test is two
-    /// array reads. It has to be, because this scan asks it for every loose thing on the map.
+    /// Loose things are scanned first and re-stowing only when there is nothing loose, because
+    /// tidying is the lowest job there is. Every candidate is tested for reachability before
+    /// anything is pathed. That test is two array reads. It has to be, because this scan asks
+    /// it for every loose thing on the map.
     /// </summary>
     public sealed class HaulWorkGiver : WorkGiver
     {
@@ -440,18 +528,21 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         const TraverseMode Mode = TraverseMode.Hauler;
 
-        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job) =>
+            TryHaul(pawn, ctx, job, ctx.Items.LooseItems, restow: false) ||
+            TryHaul(pawn, ctx, job, ctx.Items.StoredItems, restow: true);
+
+        static bool TryHaul(Pawn pawn, PawnContext ctx, Job job, IReadOnlyList<int> lister, bool restow)
         {
-            var loose = ctx.Items.LooseItems;
             var items = ctx.Items.Items;
 
             int bestItem = -1;
             int bestDest = -1;
             int bestDistance = int.MaxValue;
 
-            for (int i = 0; i < loose.Count; i++)
+            for (int i = 0; i < lister.Count; i++)
             {
-                var item = items[loose[i]];
+                var item = items[lister[i]];
                 if (item.Despawned || item.Cell < 0 || item.Forbidden) continue;
                 if (!ctx.Content.Items[item.DefIndex].haulable) continue;
 
@@ -462,11 +553,11 @@ namespace Odyssey.Sim.Pawns
                 if (distance >= bestDistance) continue;
                 if (!ctx.Reachable(pawn, item.Cell, Mode)) continue;
 
-                int dest = BestStorageCell(pawn, ctx, item);
+                int dest = BestStorageCell(pawn, ctx, item, restow ? StoredPriority(ctx, item) : int.MinValue);
                 if (dest < 0) continue;
 
                 bestDistance = distance;
-                bestItem = loose[i];
+                bestItem = lister[i];
                 bestDest = dest;
             }
 
@@ -480,11 +571,27 @@ namespace Odyssey.Sim.Pawns
             return true;
         }
 
-        static int BestStorageCell(Pawn pawn, PawnContext ctx, ColonyItem item)
+        /// <summary>
+        /// The priority a stored thing already enjoys, which a re-stow has to beat. A thing lying
+        /// in a pile whose filter no longer accepts it is not stored at all, only in the way,
+        /// and any pile that does accept it is better: the implicit "unstored" priority below
+        /// every real one that a-14 §1 infers.
+        /// </summary>
+        static int StoredPriority(PawnContext ctx, ColonyItem item)
+        {
+            var pile = ctx.Items.StockpileAt(item.Cell);
+            return pile != null && pile.Accepts(item.DefIndex) ? pile.Priority : int.MinValue;
+        }
+
+        /// <summary>
+        /// The cell the load should go to, or -1: filter, then space for the whole load, then
+        /// the highest priority strictly above <paramref name="abovePriority"/>, then nearest.
+        /// </summary>
+        static int BestStorageCell(Pawn pawn, PawnContext ctx, ColonyItem item, int abovePriority)
         {
             var piles = ctx.Items.Stockpiles;
             int bestCell = -1;
-            int bestPriority = int.MinValue;
+            int bestPriority = abovePriority;
             int bestDistance = int.MaxValue;
 
             for (int s = 0; s < piles.Count; s++)
@@ -492,13 +599,16 @@ namespace Odyssey.Sim.Pawns
                 var pile = piles[s];
                 if (!pile.Accepts(item.DefIndex)) continue;
                 if (pile.Priority < bestPriority) continue;
+                // At the floor itself nothing has been found yet, and the floor is not a find.
+                if (pile.Priority == abovePriority) continue;
+                // At the floor itself nothing has been found yet, and the floor is not a find.
 
                 bool better = pile.Priority > bestPriority;
                 for (int c = 0; c < pile.Cells.Length; c++)
                 {
                     int cell = pile.Cells[c];
                     if (cell == item.Cell) continue;
-                    if (!ctx.Items.CellHasSpace(cell)) continue;
+                    if (!ctx.Items.CellHasSpace(cell, item.DefIndex, item.Stack)) continue;
 
                     long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
                     if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
@@ -516,6 +626,64 @@ namespace Odyssey.Sim.Pawns
             }
 
             return bestCell;
+        }
+    }
+}
+
+namespace Odyssey.Sim.Pawns
+{
+    /// <summary>
+    /// Fell a tree the player has marked.
+    ///
+    /// The scan walks the designation grid's own list of designated cells, never the map, so
+    /// it costs what the orders cost and not what the board costs. A tree that has already gone
+    /// is skipped here and its order left standing; the driver that reaches it clears it.
+    /// </summary>
+    public sealed class FellWorkGiver : WorkGiver
+    {
+        public override string Name => "Fell";
+
+        public override int WorkType => WorkTypeIndex.Cutting;
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            var designations = ctx.Designations;
+            if (designations == null) return false;
+
+            var cells = designations.Cells;
+            int best = -1;
+            int bestStand = -1;
+            int bestDistance = int.MaxValue;
+
+            for (int i = 0; i < cells.Count; i++)
+            {
+                int cell = cells[i];
+                if (designations.At(cell) != DesignationKind.Fell) continue;
+                if (!designations.IsTree(cell)) continue;
+
+                long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
+                if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
+
+                int distance = ctx.Distance(pawn.Cell, cell);
+                if (distance >= bestDistance) continue;
+
+                // Work from beside the tree, never from inside it: a colonist drawn at the cell
+                // centre stood in the trunk. The stand is the nearest walkable neighbour the
+                // pawn can reach; a tree with none is left for a colonist who can.
+                int stand = FellJobDriver.StandBeside(ctx, pawn, cell);
+                if (stand < 0) continue;
+
+                bestDistance = distance;
+                best = cell;
+                bestStand = stand;
+            }
+
+            if (best < 0) return false;
+
+            job.Reset(JobIndex.Fell);
+            job.TargetCell = bestStand;
+            job.DestCell = best;
+            return true;
         }
     }
 }
