@@ -205,8 +205,9 @@ namespace Odyssey.Sim.Pawns
     /// <summary>
     /// Walk to a marked tree, work at it, and leave wood where it stood.
     ///
-    /// A tree blocks nothing, so the colonist walks into its cell rather than to a neighbour.
-    /// The order is cleared the moment the last swing lands, so no other colonist sets off for
+    /// A tree blocks nothing, but the colonist works from a neighbouring cell rather than from
+    /// inside the trunk: <see cref="StandBeside"/> picks the stand, the job carries it as the
+    /// target cell and the tree as the destination. The order is cleared the moment the last swing lands, so no other colonist sets off for
     /// it; the world edit itself (the tree going and the wood appearing) is a structural event
     /// and runs in the deferred phase of the same tick, like every collapse and removal.
     /// </summary>
@@ -214,8 +215,8 @@ namespace Odyssey.Sim.Pawns
     {
         public override bool TryMakeReservations(PawnContext ctx)
         {
-            if (Job.TargetCell < 0) return false;
-            long key = ReservationManager.Key(ReservationTargetKind.Cell, Job.TargetCell);
+            if (Job.TargetCell < 0 || Job.DestCell < 0) return false;
+            long key = ReservationManager.Key(ReservationTargetKind.Cell, Job.DestCell);
             if (!ctx.Reservations.Reserve(Pawn.Id, key)) return false;
             Pawn.HeldReservations.Add(key);
             return true;
@@ -226,14 +227,14 @@ namespace Odyssey.Sim.Pawns
             var designations = ctx.Designations;
             if (designations == null) return JobStatus.Failed;
 
-            int cell = Job.TargetCell;
+            int cell = Job.DestCell;
             // Somebody else felled it, or the player changed their mind: stop, do not swing at air.
             if (designations.At(cell) != DesignationKind.Fell || !designations.IsTree(cell))
                 return JobStatus.Failed;
 
             if (ToilIndex == 0)
             {
-                JobStatus walk = GotoCell(ctx, cell);
+                JobStatus walk = GotoCell(ctx, Job.TargetCell);
                 if (walk == JobStatus.Succeeded) NextToil();
                 return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
             }
@@ -245,6 +246,33 @@ namespace Odyssey.Sim.Pawns
             int yield = ctx.Content.WoodPerTree;
             ctx.Defer(_ => FellTree(ctx, cell, yield));
             return JobStatus.Succeeded;
+        }
+
+        /// <summary>
+        /// The nearest walkable cell beside the tree that the pawn can reach, or -1. Beside means
+        /// one of the eight neighbours on the same layer, so the colonist stands at the trunk's
+        /// side and the wood falls where the tree stood.
+        /// </summary>
+        public static int StandBeside(PawnContext ctx, Pawn pawn, int tree)
+        {
+            GridSize size = ctx.Size;
+            CellRef at = size.FromIndex(tree);
+            int best = -1, bestDistance = int.MaxValue;
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if (dx == 0 && dz == 0) continue;
+                int x = at.X + dx, z = at.Z + dz;
+                if (!size.Contains(x, z, at.Y)) continue;
+                int cell = size.Index(x, z, at.Y);
+                if (!ctx.Cells.IsWalkable(cell)) continue;
+                int distance = ctx.Distance(pawn.Cell, cell);
+                if (distance >= bestDistance) continue;
+                if (!ctx.Reachable(pawn, cell)) continue;
+                bestDistance = distance;
+                best = cell;
+            }
+            return best;
         }
 
         static void FellTree(PawnContext ctx, int cell, int yield)

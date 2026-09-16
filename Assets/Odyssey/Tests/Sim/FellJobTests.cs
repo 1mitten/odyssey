@@ -106,6 +106,36 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
+        public void TheWoodcutterStandsBesideTheTreeNotInIt()
+        {
+            // A colonist is drawn at the cell centre and so is a tree, so working from inside the
+            // cell put the figure in the trunk. The job walks to a neighbouring cell and works the
+            // tree from there.
+            ColonyWorld colony = Wooded();
+            int tree = NearestTree(colony);
+            Assume.That(tree, Is.GreaterThanOrEqualTo(0));
+            CellRef at = Size.FromIndex(tree);
+
+            colony.World.Intents.Submit(new Intent(IntentKind.Designate, at, (int)DesignationKind.Fell));
+            Pawn? cutter = null;
+            for (int tick = 0; tick < 3_000 && cutter == null; tick++)
+            {
+                colony.World.Tick();
+                foreach (Pawn pawn in colony.Pawns.Pawns.All)
+                    if (pawn.CurrentJob != null && pawn.CurrentJob.DefIndex == JobIndex.Fell) cutter = pawn;
+            }
+
+            Assert.That(cutter, Is.Not.Null, "somebody took the order");
+            Job job = cutter!.CurrentJob!;
+            Assert.That(job.DestCell, Is.EqualTo(tree), "the tree is the destination");
+            Assert.That(job.TargetCell, Is.Not.EqualTo(tree), "the stand is not the tree");
+            CellRef stand = Size.FromIndex(job.TargetCell);
+            Assert.That(System.Math.Abs(stand.X - at.X), Is.LessThanOrEqualTo(1));
+            Assert.That(System.Math.Abs(stand.Z - at.Z), Is.LessThanOrEqualTo(1));
+            Assert.That(stand.Y, Is.EqualTo(at.Y));
+        }
+
+        [Test]
         public void ACancelledOrderStopsTheJob()
         {
             ColonyWorld colony = Wooded();
