@@ -114,16 +114,23 @@ namespace Odyssey.Sim.Pawns
         /// owner instruction. False gives the full natural generator with trees, rock and ore.</param>
         /// <param name="chunks">The presentation chunk grid, when a renderer will be attached, so
         /// the support system can mark chunks dirty. Null for a purely headless run.</param>
+        /// <param name="mapType">Natural by owner instruction, which is what the scene loads. The
+        /// ruined city is still generated and still tested (ADR 0008), and is what the M2 demo
+        /// needs, because it is the only map with storeys to climb between.</param>
         public static ColonyWorld Build(GridSize size, uint seed, int colonists = 5, bool barren = true,
-            ChunkGrid? chunks = null)
+            ChunkGrid? chunks = null, MapType mapType = MapType.Natural)
         {
-            var gen = (NaturalMapGenDef)MapGenerator.DefaultDef(MapType.Natural, size);
-            if (barren) gen.MakeBarren();
+            MapGenDef gen = MapGenerator.DefaultDef(mapType, size);
+            if (barren && gen is NaturalMapGenDef natural) natural.MakeBarren();
 
             var grid = new CellGrid(size);
             MapGenOutcome outcome = MapGenerator.Generate(grid, seed, gen);
 
             var nav = new NavGraph(grid);
+
+            // Before the first rebuild, not after: a connector added later needs another one to
+            // appear in the region graph.
+            ConnectorRegistrar.Register(nav, grid, outcome.Connectors);
             nav.Rebuild();
             var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core());
             var solver = new SupportSolver(grid);

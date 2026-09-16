@@ -117,6 +117,17 @@ namespace Odyssey.Sim.Worldgen.Natural
         public ulong GridHash { get; }
         public CellRef StartCell { get; }
 
+        /// <summary>
+        /// Stairs and ladders the generator declared, both ends, for
+        /// <see cref="ConnectorRegistrar"/> to turn into portal edges. Empty for a natural map,
+        /// which has no vertical connectors of its own — its layers are strata, and a colonist
+        /// reaches them by digging, which builds connectors rather than finding them.
+        /// </summary>
+        public IReadOnlyList<StampedConnector> Connectors =>
+            City != null ? City.Context.Connectors : (IReadOnlyList<StampedConnector>)NoConnectors;
+
+        static readonly StampedConnector[] NoConnectors = new StampedConnector[0];
+
         /// <summary>Presentation module ids this map needs in the catalogue. Ids only, never modules.</summary>
         public IReadOnlyList<string> ModuleIds { get; }
 
