@@ -151,8 +151,64 @@ namespace Odyssey.Tests.Hud
 
                 Assert.That(HudLayout.FirstOverlap(boxes), Is.Null,
                     $"a colony of forty overflows the strip at {width}x{height}");
-                Assert.That(HudLayout.VisibleCards(width, 40), Is.GreaterThan(0),
+                Assert.That(HudLayout.VisibleCards(width, height, 40), Is.GreaterThan(0),
                     $"no colonist card fits at all at {width}x{height}");
+            }
+        }
+
+        /// <summary>
+        /// The strip wraps to a second row and stops there (owner, 2026-09-17: dock the bars to
+        /// the screen edges "so many more could fit across 2 rows potentially").
+        ///
+        /// <para>The clamp is the part worth a test. The strip is the one region with no ceiling
+        /// of its own, so a colony of forty over an unbounded number of rows would paper the
+        /// screen and every other guarantee here — no overlap, the coverage ceiling — would be
+        /// true only for the colony sizes somebody happened to try.</para>
+        /// </summary>
+        [Test]
+        public void TheStripGrowsToASecondRowAndNoFurther()
+        {
+            foreach ((int width, int height) in Resolutions)
+            {
+                int perRow = HudLayout.CardsPerRow(width);
+                int allowed = HudLayout.StripRowsAllowed(height);
+                Assert.That(perRow, Is.GreaterThan(0), $"no card fits at all at {width}x{height}");
+
+                Assert.That(HudLayout.StripRowsUsed(width, height, perRow), Is.EqualTo(1),
+                    "a full first row should not have started a second");
+                Assert.That(HudLayout.StripRowsUsed(width, height, perRow + 1), Is.EqualTo(allowed),
+                    "one card past a full row belongs on a second row wherever there is room for one");
+                Assert.That(HudLayout.StripRowsUsed(width, height, perRow * 5), Is.EqualTo(allowed),
+                    "the strip must stop at its row cap however large the colony is");
+
+                Assert.That(HudLayout.VisibleCards(width, height, 500),
+                    Is.EqualTo(perRow * allowed),
+                    "a colony past what the strip holds shows what fits and no more");
+
+                // The box is as wide as the widest row, not as the whole colony laid end to end.
+                var full = new HudContent(colonists: 500, storeRows: AllStoreRows, alerts: 3,
+                    layers: Layers, needRows: 2);
+                var boxes = HudLayout.Solve(width, height, full);
+                HudRect strip = boxes[HudRegion.ColonistStrip];
+
+                Assert.That(strip.Height,
+                    Is.EqualTo(HudLayout.StripHeight(allowed)).Within(0.01f));
+                Assert.That(strip.Height,
+                    Is.LessThanOrEqualTo(height * HudLayout.StripHeightShare + 0.01f),
+                    $"the strip stands in more than its share of a {width}x{height} screen");
+                Assert.That(strip.Width, Is.LessThanOrEqualTo(HudLayout.StripRoom(width) + 0.01f),
+                    $"the strip is wider than the room it may occupy at {width}x{height}");
+                Assert.That(HudLayout.FirstOverlap(boxes), Is.Null,
+                    $"two rows of cards run into another region at {width}x{height}");
+
+                // The ceiling is stated against the resting HUD, as the criteria are — but with
+                // the colony that fills both rows rather than the three the other coverage test
+                // uses, because a region that can double in height is exactly the one that could
+                // spend the budget without anybody selecting anything.
+                var resting = HudContent.NothingSelected(colonists: 500, storeRows: 3, layers: Layers);
+                Assert.That(HudLayout.Coverage(HudLayout.Solve(width, height, resting), width, height),
+                    Is.LessThanOrEqualTo(HudLayout.CoverageCeiling),
+                    $"a full two-row strip puts the resting HUD over its coverage ceiling at {width}x{height}");
             }
         }
 

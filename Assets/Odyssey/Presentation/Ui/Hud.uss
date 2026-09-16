@@ -179,12 +179,18 @@
 
 /* ---------------------------------------------------------------- A2 colonist strip */
 
+/* Docked to the very top (owner, 2026-09-17) and allowed to wrap to a second row. The left and
+   right insets are written from code on every resize, because what the strip may occupy is twice
+   the smaller of its two clearances rather than the whole screen — and a wrap has to happen at
+   that width, not at the screen's. */
 .strip {
     position: absolute;
     left: 0; right: 0;
-    top: 20px;
+    top: 0;
     flex-direction: row;
+    flex-wrap: wrap;
     justify-content: center;
+    align-content: flex-start;
 }
 
 /* Two rows and nothing else: who this is, and what they are doing. The three need bars came off
@@ -194,7 +200,10 @@
 .card {
     width: 106px;
     height: 63px;
-    margin: 0 3.5px;
+    /* Half the gap on each side horizontally, the whole of it below — so the gap between two
+       rows is one CardGap and the first row still starts exactly at the strip's top edge, which
+       is what lets the layout model state the strip's height as rows and gaps and be right. */
+    margin: 0 3.5px 7px 3.5px;
     padding: 8px;
     background-color: rgba(12, 16, 20, 0.86);
     border-width: 1px;
@@ -447,7 +456,7 @@
 
 .inspect {
     left: 20px;
-    bottom: 84px;
+    bottom: 64px;
     width: 560px;
 }
 
@@ -614,14 +623,20 @@
    what lets the inspect pane above it stop guessing at the bar's height — a coupling the old
    sheet carried in a comment admitting it was one. */
 
+/* Docked to the very bottom (owner, 2026-09-17), for the same reason the strip is docked to the
+   very top: a bar with a strip of world under it reads as floating rather than as the edge of
+   the screen, and the twenty pixels are worth more as board. */
 .bar-row {
     position: absolute;
     left: 0; right: 0;
-    bottom: 20px;
+    bottom: 0;
     flex-direction: row;
     justify-content: center;
 }
 
+/* Square where it meets the screen edge and round where it does not: a rounded corner against
+   the bottom of the screen shows a notch of world through it, which is what a floating panel
+   looks like and this is no longer one. */
 .commandbar {
     flex-direction: row;
     align-items: center;
@@ -630,6 +645,8 @@
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
     border-radius: 6px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 .cmd {

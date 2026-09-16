@@ -463,7 +463,20 @@ namespace Odyssey.Presentation.Ui
             float width = _hud.resolvedStyle.width;
             if (width <= 0f) return;
 
-            int capacity = Math.Max(1, HudLayout.VisibleCards(width, int.MaxValue / 2));
+            // The strip wraps to a second row, so its box has to be exactly the room it may
+            // occupy — twice the smaller of its two clearances, not the screen — or the wrap
+            // happens at the wrong width and the second row runs under the clock. The insets are
+            // written here rather than in the sheet because that room is a function of the
+            // viewport and the panels either side of it.
+            float inset = Math.Max(0f, (width - HudLayout.StripRoom(width)) * 0.5f);
+            if (_strip != null)
+            {
+                _strip.style.left = inset;
+                _strip.style.right = inset;
+            }
+
+            float height = _hud.resolvedStyle.height;
+            int capacity = Math.Max(1, HudLayout.VisibleCards(width, height, int.MaxValue / 2));
             if (capacity != _stripCapacity)
             {
                 _stripCapacity = capacity;

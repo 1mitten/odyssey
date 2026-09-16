@@ -356,6 +356,19 @@ was neither disabled nor labelled.
     argument for taking them off the card: three 3 px bars at a glance told you a colonist existed
     and not much else, and the two regions that answer the same question properly were both built
     after the card was.
+  - **And the two bars are docked to the screen edges (owner, same day).** `StripTop` and
+    `BarBottom` are 0 where both were `Edge`: the strip and the command bar *bound* the view where
+    the stores panel, clock and rail sit *in* it, and a bar with a strip of world under it reads as
+    floating rather than as the edge of the screen. The command bar's bottom corners are squared
+    for the same reason. `InspectBottom` is derived from the bar's position now rather than written
+    down, so the pane follows it.
+  - **The strip may run to two rows, where the screen can afford one.** `StripHeightShare` (0.14)
+    caps the strip against the viewport's height: **one row at 720p, two at 1080p and above**, and
+    it drops back to one at a raised interface scale, because that shrinks the logical canvas. The
+    cap is not taste — two full rows are 8.1% of a 720p screen and took the resting HUD to 21.7%,
+    over §4's 18% ceiling. The clamp is the part that matters: the strip is the only region with no
+    ceiling of its own, so unbounded rows would make every other guarantee here true only for the
+    colony sizes somebody happened to try.
 
 ---
 

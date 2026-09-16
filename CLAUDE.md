@@ -861,6 +861,38 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     selected and the alerts panel raises starving and close-to-breaking across the whole colony —
     both built after the card was, and both answer properly what three 3 px bars answered at a
     glance. `HudLayout.CardBar` and the `.bar--card` rule are gone.
+  - **Both bars are docked to the screen edges, and the strip may run to two rows (owner, same
+    day):** *"put the bottom bar directly at the bottom of the screen, no spacing, padding, to
+    maximise viewing space — dock it to the bottom and apply the same to the roster bar so many
+    more could fit across 2 rows potentially."* `HudLayout.StripTop` and `BarBottom` are **0**
+    where both were `Edge`; the command bar's two bottom corners are squared, because a rounded
+    corner against the bottom of the screen shows a notch of world through it and that is what a
+    floating panel looks like. The stores panel, clock and rail keep their margin — they sit *in*
+    the view where these two *bound* it. **`InspectBottom` is derived now** (`BarBottom +
+    BarHeight + Frame + InspectToBar`), because a hand-set 84 would have left the pane hanging
+    twenty pixels over a bar that had moved; the rail's own bottom follows the same constant.
+  - **A second row has to be earned, and the coverage ceiling is what makes it earn it.** Two
+    full rows come to **8.1% of a 1280 x 720 screen** against 6.5% of a 2560 x 1440 one, and at
+    720p that took the resting HUD to **21.7%**, over the approved 18%. So `StripHeightShare`
+    (0.14) caps the strip's height against the viewport's: **one row at 720p, two at 1080p and
+    above**, and at a raised interface scale the logical canvas shrinks and it drops back to one,
+    which is right. `StripRowsAllowed`, `StripRowsUsed`, `CardsPerRow` and `StripHeight` are the
+    model; `TheStripGrowsToASecondRowAndNoFurther` holds the cap, the wrap point, the height
+    share, the overlap and the ceiling at all three resolutions. The clamp matters more than the
+    growth: the strip is the one region with no ceiling of its own, so a colony of forty over
+    unbounded rows would paper the screen and every other guarantee here would be true only for
+    the colony sizes somebody happened to try.
+  - **The wrap happens at the strip's own room, not the screen's** — `StripRoom` is twice the
+    smaller of its two clearances, so the shell writes the strip's left and right insets on every
+    resize. Without that the second row wraps at the screen width and runs under the clock. The
+    card's margin is `0 3.5px 7px` rather than `0 3.5px`: half the gap each side, the whole of it
+    below, so the row gap is one `CardGap` and the first row still starts exactly at the strip's
+    top edge — which is what lets the model state the strip's height as rows and gaps and be
+    right.
+  - **Verified:** fast tier 428 Sim and 107 Hud, EditMode **957 total, 955 passed, 0 failed**,
+    PlayMode **25 total, 23 passed, 0 failed**. Coverage at rest measured on the real panel:
+    **7.7–7.8%** at all three resolutions, down from 9.0% before the card shrank and 10.8–11.0%
+    before that.
   - **Known drift, and one decision rather than four:** `icon-map.csv` still calls
     `ui.status.felling` a gap and sources mining and building from sheets 05 and 06, so the wiki's
     art-gap count does not know about any of this — exactly as it does not know about wood, stone,

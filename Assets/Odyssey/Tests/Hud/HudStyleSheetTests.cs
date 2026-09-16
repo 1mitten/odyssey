@@ -132,7 +132,7 @@ namespace Odyssey.Tests.Hud
             (".alert", "min-height", () => HudLayout.AlertHeight, "an alert row"),
             (".alerts__rows", "margin-top", () => HudLayout.HeaderGap, "header to first alert"),
 
-            (".strip", "top", () => HudLayout.Edge, "screen edge margin"),
+            (".strip", "top", () => HudLayout.StripTop, "the strip docked to the top"),
             (".card", "width", () => HudLayout.CardWidth, "card width"),
             (".card", "height", () => HudLayout.CardHeight, "card height"),
             (".card__avatar", "width", () => HudLayout.CardAvatar, "card avatar"),
@@ -141,7 +141,7 @@ namespace Odyssey.Tests.Hud
             (".card__names", "margin-left", () => HudLayout.CardAvatarGap, "card avatar to name"),
             (".card", "padding", () => HudLayout.CardPad, "card padding"),
 
-            (".bar-row", "bottom", () => HudLayout.Edge, "screen edge margin"),
+            (".bar-row", "bottom", () => HudLayout.BarBottom, "the command bar docked to the bottom"),
             (".commandbar", "padding", () => HudCommands.BarPad, "command bar padding"),
             (".cmd", "height", () => HudCommands.ItemHeight, "command item height"),
             (".cmd", "margin-right", () => HudCommands.ItemGap, "command item gap"),
@@ -199,10 +199,10 @@ namespace Odyssey.Tests.Hud
             // check that matters is that they are still big enough to do their job — carrying text
             // contrast under the panels at the top and bottom of the screen.
             Assert.That(HudTheme.TopScrimHeight, Is.GreaterThanOrEqualTo(
-                HudLayout.Edge + HudLayout.CardHeight),
-                "the top scrim has to reach under the colonist strip");
+                HudLayout.StripTop + HudLayout.StripHeight(HudLayout.StripRows)),
+                "the top scrim has to reach under the colonist strip at its full height");
             Assert.That(HudTheme.BottomScrimHeight, Is.GreaterThanOrEqualTo(
-                HudLayout.Edge + HudCommands.BarHeight),
+                HudLayout.BarBottom + HudCommands.BarHeight),
                 "the bottom scrim has to reach under the command bar");
         }
 
