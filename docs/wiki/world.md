@@ -2,7 +2,22 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-45 entries, 22 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+55 entries, 32 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+
+## Terrain
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Grass** | `ui.terrain.grass` | The living surface. Trees grow here and nothing else <br>**Needs:** a tuft of grass on a ground tile | no art | M1 |
+| **Bare Earth** | `ui.terrain.bareearth` | Soil with the grass worn off it <br>**Needs:** a bare soil tile | no art | M1 |
+| **Gravel** | `ui.terrain.gravel` | Stony ground. Poor soil, firm footing <br>**Needs:** a tile of loose stones | no art | M1 |
+| **Sand** | `ui.terrain.sand` | Loose and barren. What a riverbed is made of <br>**Needs:** a plain sand tile | no art | M1 |
+| **Marsh** | `ui.terrain.marsh` | Wet ground fringing water. Crossed at three quarters pace <br>**Needs:** a reed or two on wet ground | no art | M1 |
+| **Shallow Water** | `ui.terrain.water.shallow` | Wadeable, at a third of walking pace. Nothing can be built on it without a bridge <br>**Needs:** ripples with the bed showing through | no art | M1 |
+| **Deep Water** | `ui.terrain.water.deep` | Out of your depth. Colonists will not enter it and paths go round <br>**Needs:** flat dark water, no bed visible | no art | M1 |
+| **Rock** | `ui.terrain.rock` | Natural stone. Mined, not cleared <br>**Needs:** a face of natural stone | no art | M1 |
+| **Subsoil** | `ui.terrain.subsoil` | The band between soil and rock. Cheap to dig <br>**Needs:** a tile of dug earth | no art | M1 |
+| **Bedrock** | `ui.terrain.bedrock` | The floor of the world. Deliberately punitive to mine <br>**Needs:** a tile of dark, banded stone | no art | M1 |
 
 ## Weather
 

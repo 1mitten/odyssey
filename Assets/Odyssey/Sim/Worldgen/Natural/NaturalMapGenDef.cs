@@ -65,6 +65,12 @@ namespace Odyssey.Sim.Worldgen.Natural
             // validates its own parameters and rejected it immediately, which is the system
             // working.
             barePatchThreshold = 0;
+
+            // No water either. The bare board's whole value is that anything which is not grass
+            // is a bug, and a pond is not grass. With this off the water pass returns before it
+            // draws anything, so a barren map is bit-identical to one generated before water
+            // existed — which is a test.
+            water = false;
             return this;
         }
 
@@ -86,6 +92,12 @@ namespace Odyssey.Sim.Worldgen.Natural
             MakeBarren();
             treeDensityPerMille = trees;
             barren = false;
+
+            // And its water, by owner decision on 2026-09-16: a stream to wade and a pond or two
+            // to walk around, with the start clearing kept clear of both. The board is flat here
+            // (MakeBarren zeroed the relief), which is exactly the ground a pond wants — the
+            // level-footprint rule accepts every one of them.
+            water = true;
             return this;
         }
 
@@ -163,10 +175,102 @@ namespace Odyssey.Sim.Worldgen.Natural
         public int minOreBlob = 5;
         public int maxOreBlob = 20;
 
-        // ---- pass 7, start -------------------------------------------------------------------
+        // ---- pass 2, water -------------------------------------------------------------------
+
+        /// <summary>
+        /// The master switch. With it off the water plan pass returns before drawing anything
+        /// from its random stream, so the map is byte-for-byte the one this generator made before
+        /// water existed. That is what lets the barren board stay the baseline it is.
+        /// </summary>
+        public bool water = true;
+
+        public int pondsPer10000Columns = 9;
+
+        /// <summary>
+        /// A pond is dropped unless the surface is one level terrace across its whole footprint.
+        /// Raising this on relieved ground therefore produces *fewer* ponds, not bigger ones —
+        /// the knob to reach for in that case is this one, never the level rule, which is what
+        /// keeps the water surface level and the banks a single step high.
+        /// </summary>
+        public int maxPondRadius = 8;
+        public int minPondRadius = 3;
+
+        /// <summary>Cells the pond edge may wander in or out, so it is a pond and not a disc.</summary>
+        public int pondEdgeJitter = 2;
+        public int pondEdgePeriod = 7;
+
+        /// <summary>Streams cut when the map has no river. Each is a separate path.</summary>
+        public int streamCount = 2;
+
+        /// <summary>Half-width bound: 1 gives streams of one to three cells, all of them wadeable.</summary>
+        public int streamMaxHalfWidth = 1;
+
+        /// <summary>How far a path wanders from its axis, in thousandths of the crossing size.</summary>
+        public int streamMeanderAmplitudePerMille = 200;
+        public int streamMeanderPeriod = 21;
+        public int streamMeanderOctaves = 2;
+        public int streamWidthPeriod = 9;
+
+        /// <summary>Per mille chance the map gets a river instead of its streams. Rare, by intent.</summary>
+        public int riverChancePerMille = 120;
+
+        /// <summary>Half-widths of 2 to 5 give a river of five to eleven cells.</summary>
+        public int riverMinHalfWidth = 2;
+        public int riverMaxHalfWidth = 5;
+
+        /// <summary>A big river meanders less across a map than a brook does, so this is lower.</summary>
+        public int riverMeanderAmplitudePerMille = 120;
+
+        /// <summary>Wadeable crossings cut across every river, so no bank is ever unreachable.</summary>
+        public int riverFords = 2;
+
+        /// <summary>Steps either side of a ford's centre, so 1 is a three-cell crossing.</summary>
+        public int fordHalfLength = 1;
+
+        /// <summary>
+        /// Rings in from the shore that stay wadeable. Two is the value the whole depth model
+        /// rests on: it makes a stream of up to three cells shallow end to end, and gives a
+        /// five-wide river a single deep cell down the middle. **One is the obvious wrong
+        /// default** — it puts a deep channel in the middle of a three-cell brook.
+        /// </summary>
+        public int deepShoreDistance = 2;
+
+        /// <summary>Rings of wet ground around water. Marsh columns are never lowered.</summary>
+        public int marshFringe = 2;
+
+        /// <summary>
+        /// Cover noise, 0..1023, above which a fringe column is marsh. Zero makes the first ring
+        /// solid; the falloff below then frays the rings beyond it, so the bog has an edge rather
+        /// than a contour line. Set both to zero for a plain ring.
+        /// </summary>
+        public int marshThreshold;
+        public int marshFalloff = 340;
+
+        // ---- pass 9, start -------------------------------------------------------------------
 
         /// <summary>Half-width of the starting clearing, so 2 asks for a flat, clear 5 x 5.</summary>
         public int startClearingRadius = 2;
+
+        /// <summary>
+        /// Columns of dry margin the start clearing keeps from any water or bog. Marsh counts as
+        /// ground, so the ground check alone would happily land the colony in a swamp.
+        /// </summary>
+        public int startWaterClearance = 2;
+
+        /// <summary>
+        /// The share of walkable columns the start must be able to reach. Below it the generator
+        /// cuts another ford rather than re-rolling the map: re-rolling makes generation take
+        /// unbounded time on an unlucky seed, and quietly uses a seed other than the one it was
+        /// handed, which is a determinism smell even when it is technically deterministic. The
+        /// slack below 100 is deliberate — an islanded corner behind a pond is not a severed map.
+        /// </summary>
+        public int minReachablePercent = 80;
+
+        /// <summary>
+        /// Fords the reachability check may force before it gives up and throws. A map still cut
+        /// in two after this many is a bug in the shape code, not an unlucky seed.
+        /// </summary>
+        public int maxForcedFords = 3;
 
         /// <summary>
         /// Parameters scaled to a grid. Unlike a city map, most of a wilderness map is sky: the
@@ -210,6 +314,45 @@ namespace Odyssey.Sim.Worldgen.Natural
             if (minOreBlob < 1 || maxOreBlob < minOreBlob)
                 throw new ArgumentOutOfRangeException(nameof(minOreBlob));
             if (startClearingRadius < 0) throw new ArgumentOutOfRangeException(nameof(startClearingRadius));
+
+            if (pondsPer10000Columns < 0) throw new ArgumentOutOfRangeException(nameof(pondsPer10000Columns));
+            if (minPondRadius < 1 || maxPondRadius < minPondRadius)
+                throw new ArgumentOutOfRangeException(nameof(minPondRadius));
+            if (pondEdgeJitter < 0 || pondEdgeJitter > 8)
+                throw new ArgumentOutOfRangeException(nameof(pondEdgeJitter));
+            if (pondEdgePeriod < 1) throw new ArgumentOutOfRangeException(nameof(pondEdgePeriod));
+            if (streamCount < 0) throw new ArgumentOutOfRangeException(nameof(streamCount));
+            if (streamMaxHalfWidth < 0 || streamMaxHalfWidth > 2)
+                throw new ArgumentOutOfRangeException(nameof(streamMaxHalfWidth));
+            if (streamMeanderAmplitudePerMille < 0 || streamMeanderAmplitudePerMille > 500)
+                throw new ArgumentOutOfRangeException(nameof(streamMeanderAmplitudePerMille));
+            if (streamMeanderPeriod < 2) throw new ArgumentOutOfRangeException(nameof(streamMeanderPeriod));
+            if (streamMeanderOctaves < 1 || streamMeanderOctaves > 4)
+                throw new ArgumentOutOfRangeException(nameof(streamMeanderOctaves));
+            if (streamWidthPeriod < 1) throw new ArgumentOutOfRangeException(nameof(streamWidthPeriod));
+            if (riverChancePerMille < 0 || riverChancePerMille > 1000)
+                throw new ArgumentOutOfRangeException(nameof(riverChancePerMille));
+            if (riverMinHalfWidth < 1 || riverMaxHalfWidth < riverMinHalfWidth)
+                throw new ArgumentOutOfRangeException(nameof(riverMinHalfWidth));
+            if (riverMeanderAmplitudePerMille < 0 || riverMeanderAmplitudePerMille > 500)
+                throw new ArgumentOutOfRangeException(nameof(riverMeanderAmplitudePerMille));
+            if (riverFords < 0) throw new ArgumentOutOfRangeException(nameof(riverFords));
+            if (fordHalfLength < 0) throw new ArgumentOutOfRangeException(nameof(fordHalfLength));
+
+            // One would put a deep channel down the middle of a three-cell stream. The depth
+            // model has exactly one bound and this is it, so the range is checked rather than
+            // left to whoever next tunes the water.
+            if (deepShoreDistance < 1 || deepShoreDistance > 8)
+                throw new ArgumentOutOfRangeException(nameof(deepShoreDistance));
+
+            if (marshFringe < 0 || marshFringe > 6) throw new ArgumentOutOfRangeException(nameof(marshFringe));
+            if (marshThreshold < 0 || marshThreshold > ValueNoise.Scale)
+                throw new ArgumentOutOfRangeException(nameof(marshThreshold));
+            if (marshFalloff < 0) throw new ArgumentOutOfRangeException(nameof(marshFalloff));
+            if (startWaterClearance < 0) throw new ArgumentOutOfRangeException(nameof(startWaterClearance));
+            if (minReachablePercent < 0 || minReachablePercent > 100)
+                throw new ArgumentOutOfRangeException(nameof(minReachablePercent));
+            if (maxForcedFords < 0) throw new ArgumentOutOfRangeException(nameof(maxForcedFords));
         }
     }
 }

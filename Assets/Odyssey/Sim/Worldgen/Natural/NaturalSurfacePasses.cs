@@ -74,7 +74,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     }
 
     /// <summary>
-    /// Pass 2 — strata.
+    /// Pass 3 — strata.
     ///
     /// Bedrock at the bottom, rock above it, a band of subsoil, then the soil surface, then air.
     /// Everything below the surface is solid: a wilderness map has no voids until a colonist digs
@@ -89,7 +89,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// </summary>
     public sealed class NaturalStrataPass : INaturalGenPass
     {
-        public int Order => 2;
+        public int Order => 3;
         public string Name => "Strata";
 
         public void Run(NaturalGenContext ctx)
@@ -156,9 +156,13 @@ namespace Odyssey.Sim.Worldgen.Natural
                     // first slab in the world is one the colony builds.
                     floor[index] = CoreContent.SlabNone;
                     floorStuff[index] = CoreContent.StuffNone;
+                    // Direct flag writes rather than SetTerrain, for the reason in the class
+                    // doc. This pass lays no water, so the impassable bit is only ever cleared
+                    // here — which still matters, because a grid may be regenerated rather than
+                    // freshly allocated and a stale lake would survive.
                     flags[index] = material == NaturalContent.TerrainAir
-                        ? flags[index] & ~CellFlags.SolidTerrain
-                        : flags[index] | CellFlags.SolidTerrain;
+                        ? flags[index] & ~(CellFlags.SolidTerrain | CellFlags.ImpassableTerrain)
+                        : (flags[index] | CellFlags.SolidTerrain) & ~CellFlags.ImpassableTerrain;
                 }
             }
 
@@ -172,7 +176,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     }
 
     /// <summary>
-    /// Pass 3 — surface cover.
+    /// Pass 5 — surface cover.
     ///
     /// Grass over most of the map, with patches of bare earth, gravel and sand where a second,
     /// finer noise field says so. Two fields rather than one: the first decides *whether* a column
@@ -185,7 +189,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// </summary>
     public sealed class SurfaceCoverPass : INaturalGenPass
     {
-        public int Order => 3;
+        public int Order => 5;
         public string Name => "SurfaceCover";
 
         public void Run(NaturalGenContext ctx)
@@ -200,6 +204,12 @@ namespace Odyssey.Sim.Worldgen.Natural
             for (int x = 0; x < ctx.Size.SizeX; x++)
             {
                 int column = ctx.Column(x, z);
+
+                // A channel bed and a bog are already what they are: cover would paint grass on
+                // the bottom of a river. The skip is before the noise, and the pass draws no
+                // randomness at all, so it cannot shift anything downstream.
+                if (ctx.Water[column] != (byte)WaterClass.None) continue;
+
                 int index = ctx.Index(x, z, ctx.SurfaceY[column]);
 
                 int cover = ValueNoise.Fractal2D(coverSeed, x, z, gen.coverPeriod, gen.coverOctaves);
@@ -226,7 +236,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     }
 
     /// <summary>
-    /// Pass 5 — trees.
+    /// Pass 7 — trees.
     ///
     /// Scattered on grass, with a clumping bias so the map has copses and clearings rather than an
     /// even sprinkle. The bias is one noise field squared: squaring pushes the low end down much
@@ -244,7 +254,7 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// </summary>
     public sealed class TreePass : INaturalGenPass
     {
-        public int Order => 5;
+        public int Order => 7;
         public string Name => "Trees";
 
         public void Run(NaturalGenContext ctx)

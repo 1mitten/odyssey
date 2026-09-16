@@ -75,9 +75,14 @@ namespace Odyssey.Sim.World
             Flags[index] &= ~CellFlags.BlockingEdifice;
         }
 
+        /// <summary>Terrain a pawn can neither stand in nor stand on top of. Deep water.</summary>
+        public bool IsImpassableTerrain(int index) =>
+            (Flags[index] & CellFlags.ImpassableTerrain) != 0;
+
         /// <summary>Can a pawn stand here? Needs somewhere to stand on and nothing in the way.</summary>
         public bool IsWalkable(int index) =>
-            !IsSolidTerrain(index) && !IsBlockedByEdifice(index) && HasFloor(index);
+            !IsSolidTerrain(index) && !IsBlockedByEdifice(index) && !IsImpassableTerrain(index) &&
+            HasFloor(index);
 
         /// <summary>A cell has something to stand on if it has a slab, or solid ground beneath it.</summary>
         public bool HasFloor(int index)
@@ -123,6 +128,17 @@ namespace Odyssey.Sim.World
         Forbidden = 1 << 2,
         SupportDirty = 1 << 3,
         Reserved = 1 << 4,
+
+        /// <summary>
+        /// Terrain that cannot be stood in and cannot be stood on: deep water, and nothing else
+        /// yet. It is its own bit because neither of the two that exist can express it. Solid
+        /// terrain holds a colonist up on the cell above, so deep water marked solid would be a
+        /// lake people walk across; non-solid terrain leaves the cell itself walkable, because
+        /// the bed beneath it is a floor, so deep water marked non-solid would be a lake people
+        /// walk *through*. <see cref="Worldgen.TerrainDef.impassable"/> drives it, and
+        /// <see cref="CellGrid.IsWalkable"/> and <c>NavGrid.RefreshFrom</c> are the only readers.
+        /// </summary>
+        ImpassableTerrain = 1 << 5,
     }
 
     /// <summary>

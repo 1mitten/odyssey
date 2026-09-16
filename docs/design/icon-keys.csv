@@ -384,3 +384,13 @@ ui.item.binoculars,Binoculars,ui.item,M3,See further than you can shoot
 ui.item.toolkit,Toolkit,ui.item,M3,"Better work, faster"
 ui.item.canteen,Canteen,ui.item,M3,"Water, carried"
 ui.item.bedroll,Bedroll,ui.item,M3,Sleep away from home
+ui.terrain.grass,Grass,ui.terrain,M1,"The living surface. Trees grow here and nothing else"
+ui.terrain.bareearth,Bare Earth,ui.terrain,M1,"Soil with the grass worn off it"
+ui.terrain.gravel,Gravel,ui.terrain,M1,"Stony ground. Poor soil, firm footing"
+ui.terrain.sand,Sand,ui.terrain,M1,"Loose and barren. What a riverbed is made of"
+ui.terrain.marsh,Marsh,ui.terrain,M1,"Wet ground fringing water. Crossed at three quarters pace"
+ui.terrain.water.shallow,Shallow Water,ui.terrain,M1,"Wadeable, at a third of walking pace. Nothing can be built on it without a bridge"
+ui.terrain.water.deep,Deep Water,ui.terrain,M1,"Out of your depth. Colonists will not enter it and paths go round"
+ui.terrain.rock,Rock,ui.terrain,M1,"Natural stone. Mined, not cleared"
+ui.terrain.subsoil,Subsoil,ui.terrain,M1,"The band between soil and rock. Cheap to dig"
+ui.terrain.bedrock,Bedrock,ui.terrain,M1,"The floor of the world. Deliberately punitive to mine"

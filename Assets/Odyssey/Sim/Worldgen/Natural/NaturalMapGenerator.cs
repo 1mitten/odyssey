@@ -17,28 +17,39 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// and nothing iterates a dictionary. <see cref="NaturalMapResult.GridHash"/> is the single
     /// number a test compares.
     ///
-    /// The seven passes:
+    /// The nine passes:
     ///   1. heightfield — gentle terracing from integer value noise;
-    ///   2. strata — bedrock, rock, subsoil, soil surface, air;
-    ///   3. surface cover — grass, with patches of bare earth, gravel and sand;
-    ///   4. rock outcrops — above-ground stone worth mining;
-    ///   5. trees — clumped on grass, harvestable, non-blocking;
-    ///   6. ore — depth-weighted lumps inside the rock;
-    ///   7. start — a flat, clear landing site, plus the consistency check.
+    ///   2. water plan — where the ponds, streams and rivers go, and the columns they lower;
+    ///   3. strata — bedrock, rock, subsoil, soil surface, air;
+    ///   4. water fill — the beds and the water itself, in the channels pass 2 cut;
+    ///   5. surface cover — grass, with patches of bare earth, gravel and sand;
+    ///   6. rock outcrops — above-ground stone worth mining;
+    ///   7. trees — clumped on grass, harvestable, non-blocking;
+    ///   8. ore — depth-weighted lumps inside the rock;
+    ///   9. start — a flat, clear, dry landing site that can reach the map, plus the checks.
     ///
     /// Each is a separately constructible <see cref="INaturalGenPass"/>, so a test can run the
-    /// first two and assert on the strata rather than on the finished map.
+    /// first three and assert on the strata rather than on the finished map.
+    ///
+    /// Water is two passes rather than one because it is two decisions. Where the water goes is a
+    /// *column* decision and has to be made before the strata are laid, so that the one full-grid
+    /// loop builds a correct column under every bed by construction. What a cell is made of is a
+    /// *cell* decision and can only be made after. They therefore sit either side of pass 3.
     /// </summary>
     public static class NaturalMapGenerator
     {
-        public const int PassCount = 7;
+        public const int PassCount = 9;
 
         /// <summary>The passes in order. A new one is inserted here and nowhere else.</summary>
         public static INaturalGenPass[] CreatePasses() =>
             new INaturalGenPass[]
             {
                 new HeightfieldPass(),
+                // Before the strata, because it lowers the columns the strata are laid down.
+                new WaterPlanPass(),
                 new NaturalStrataPass(),
+                // And after them, because the water itself is a cell the strata would overwrite.
+                new WaterFillPass(),
                 new SurfaceCoverPass(),
                 // Outcrops before trees, deliberately: a mound turns the ground it stands on to
                 // rock, and a tree only grows on grass, so ordering them this way means no tree is
