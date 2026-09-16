@@ -118,6 +118,30 @@ namespace Odyssey.Tests.PlayMode
             yield return null;
         }
 
+        /// <summary>
+        /// Press at one point, travel, release at another — a drag, not two clicks.
+        ///
+        /// <para>The rig only calls it a box once the pointer has travelled past its own
+        /// threshold, and it reads the position on the frames the button is <i>held</i>, so the
+        /// move has to happen between the press and the release rather than either side of them.
+        /// The midpoint is there for the same reason: one jump from end to end is a single frame
+        /// of travel, and a gesture that only exists on one frame is a poor imitation of a hand.</para>
+        /// </summary>
+        public IEnumerator Drag(Vector2 from, Vector2 to)
+        {
+            Pump.Post(new MouseState { position = from }.WithButton(MouseButton.Left));
+            yield return null;
+
+            Pump.Post(new MouseState { position = (from + to) * 0.5f }.WithButton(MouseButton.Left));
+            yield return null;
+
+            Pump.Post(new MouseState { position = to }.WithButton(MouseButton.Left));
+            yield return null;
+
+            Pump.Post(new MouseState { position = to });
+            yield return null;
+        }
+
         public void Dispose()
         {
             if (_pump != null) UnityEngine.Object.Destroy(_pump);

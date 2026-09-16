@@ -54,6 +54,24 @@ namespace Odyssey.Tests.PlayMode
         public static GameObject Build(out OdysseyBootstrap boot, out SliceCameraRig rig) =>
             Build(out boot, out rig, active: true);
 
+        /// <summary>
+        /// The same world, with a chance to set the bootstrap's fields — or add a component to it
+        /// — before <c>Start</c> runs.
+        ///
+        /// <para>Several of them are only read once, at startup: the scenario decides what the
+        /// colony begins with, and setting it afterwards changes nothing that has already
+        /// happened. This is the same reason <see cref="BuildWithHud"/> builds inactive and
+        /// activates last.</para>
+        /// </summary>
+        public static GameObject Build(out OdysseyBootstrap boot, out SliceCameraRig rig,
+            System.Action<OdysseyBootstrap> configure)
+        {
+            GameObject root = Build(out boot, out rig, active: false);
+            configure(boot);
+            boot.gameObject.SetActive(true);
+            return root;
+        }
+
         static GameObject Build(out OdysseyBootstrap boot, out SliceCameraRig rig, bool active)
         {
             var root = new GameObject("RigWorld");
