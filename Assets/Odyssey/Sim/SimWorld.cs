@@ -236,6 +236,30 @@ namespace Odyssey.Sim
         /// <summary>Restore the tick counter when loading a save. Not for any other use.</summary>
         internal void RestoreTick(int tick) => CurrentTick = tick;
 
+        /// <summary>
+        /// Put the clock somewhere other than midnight before the world runs.
+        ///
+        /// <para>A colony that starts at tick 0 starts at 00:00, which is the middle of the
+        /// night. That is fine for a headless run and wrong for a person opening the game: the
+        /// board is lit for midday whatever the clock says, so a player sees noon and hears —
+        /// correctly, and confusingly — the middle of the night.</para>
+        ///
+        /// <para><b>Only before the first tick.</b> <see cref="CurrentTick"/> is in the state
+        /// hash and seeds the per-tick random stream, so moving it later would be moving the
+        /// world under everything that has already happened in it. Tests and the headless day
+        /// leave it alone and still begin at zero, so nothing baked moves.</para>
+        /// </summary>
+        public void StartAtTick(int tick)
+        {
+            if (CurrentTick != 0)
+                throw new InvalidOperationException(
+                    $"the clock has already run to {CurrentTick}; it can only be set before the first tick");
+            if (tick < 0)
+                throw new ArgumentOutOfRangeException(nameof(tick), tick, "a clock does not start before zero");
+
+            CurrentTick = tick;
+        }
+
         /// <summary>The random stream for this tick and a named purpose.</summary>
         public DeterministicRandom RandomForTick(uint purpose) =>
             DeterministicRandom.ForTick(Seed, CurrentTick, purpose);

@@ -141,13 +141,54 @@ namespace Odyssey.Presentation.Rendering
         /// <see cref="TerrainTints"/> precisely so that lifting the ground cannot drag the plants
         /// standing on it somewhere nobody intended.
         /// </summary>
+        /// <summary>
+        /// The tints a tuft of grass can wear — greens, and one straw.
+        ///
+        /// <para><b>Why there is more than one now.</b> Every tuft used to take entry 0, so a
+        /// meadow was one colour of grass however many clump meshes it strewed. The owner asked for
+        /// "all a shade of green and the odd yellow one", and variety here is free in a way variety
+        /// almost never is: the tint is chosen by which of the three clump *modules* a tuft uses,
+        /// and a module is already its own instancing bucket. Three tints across three modules is
+        /// the same number of draw calls as one tint across three modules. Choosing per tuft
+        /// instead would multiply the buckets by the number of tints, on the heaviest instanced
+        /// thing in the world.</para>
+        ///
+        /// <para><b>The clumps read yellow because the ground was moved and they were not.</b> This
+        /// was a decision rather than a fault, and the previous comment here recorded it: the tufts
+        /// were left at a near-neutral <c>(1.06, 1.08, 1.02)</c> on the grounds that "the grass
+        /// clumps are already the bright yellow-green of the reference art, which the ground
+        /// texture is not". True in isolation — the scatter contact sheet, which draws the prefabs
+        /// untouched on an untinted tile, shows perfectly good green clumps. But the board does not
+        /// draw the ground untouched: <see cref="TerrainTint"/> lifts grass by
+        /// <c>(1.04, 1.30, 1.55)</c> to reach the reference green, and against a ground pulled that
+        /// far towards blue a tuft that was not pulled at all is a warm object on a cool field. It
+        /// reads yellow by comparison, which is why two honest pictures of the same asset
+        /// disagreed. The owner looked at the board and called it: greens, with the odd yellow.</para>
+        ///
+        /// <para><b>And until now this table did nothing whatsoever.</b> The tint is written to
+        /// <c>_BaseColor</c>, and <c>Synty/Foliage</c> — the shader the clumps actually use — does
+        /// not declare it. A tint aimed at a property a shader does not have fails silently, so
+        /// every value ever put here was decorative and the tufts always drew in the pack's own
+        /// colour. <c>MaterialCache.GradeSyntyFoliage</c> is what makes it a real lever, and
+        /// <c>TintProbe</c> is the instrument that found it by enumerating what the shader declares
+        /// rather than guessing at names.</para>
+        ///
+        /// <para><b>Red is the lever, not blue.</b> The shader's own
+        /// <c>_Leaf_Noise_Large_Color</c> is <c>(0.50, 0.58, 0.06)</c>, and what makes that read as
+        /// straw is the red sitting almost as high as the green while the blue is nearly nothing.
+        /// Green is a low-blue colour too, so lifting blue is a weak handle — multiplying 0.06 by
+        /// two is still 0.12. Bringing red down is what turns yellow-green into green, and it is
+        /// why these multipliers look lopsided.</para>
+        /// </summary>
         static readonly Color[] FoliageTints =
         {
-            // A touch above white. At board distance a clump's blades are thinner than a pixel and
-            // the shadowed sides win the pixel, so the far meadow drifts dark; a small lift keeps
-            // it in the same key as the lifted ground beneath it without turning it neon.
-            new Color(1.06f, 1.08f, 1.02f),            // 0 grass
+            new Color(0.55f, 1.00f, 2.20f),            // 0 meadow green
+            new Color(0.45f, 0.86f, 1.80f),            // 1 a deeper green, so a field is not one note
+            new Color(1.00f, 1.00f, 1.00f),            // 2 the odd straw clump, exactly as the pack made it
         };
+
+        /// <summary>How many tints a tuft can wear. One per clump module, so variety costs no draws.</summary>
+        public static int FoliageTintCount => FoliageTints.Length;
 
         public static Color FoliageTint(int variant) =>
             variant >= 0 && variant < FoliageTints.Length ? FoliageTints[variant] : Color.white;

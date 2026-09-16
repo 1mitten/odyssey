@@ -118,6 +118,25 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
+        /// Draw banks up terrace steps, and soil with a surface of its own. Both are levers for
+        /// the check harness rather than settings anyone is expected to turn off, and both only
+        /// take effect on chunks meshed after they change — the same rule
+        /// <see cref="ScatterDensity"/> follows, because meshing is where the decision is made.
+        /// </summary>
+        public bool Banks
+        {
+            get => _mesher.Banks;
+            set => _mesher.Banks = value;
+        }
+
+        /// <inheritdoc cref="Banks"/>
+        public bool EarthGeometry
+        {
+            get => _mesher.Earth;
+            set => _mesher.Earth = value;
+        }
+
+        /// <summary>
         /// Off, everything happens except the submission itself. That makes the draw-call and
         /// instance counts measurable in a headless editor run with no graphics device, which is
         /// the only way to get real numbers into a milestone report from CI.
@@ -276,7 +295,7 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
-        internal static void ResolveColour(int tintCode, bool fallback, float shade, out Color tint, out Color emission)
+        public static void ResolveColour(int tintCode, bool fallback, float shade, out Color tint, out Color emission)
         {
             int value = TintCode.Value(tintCode);
             if (TintCode.IsFoliage(tintCode))
@@ -308,6 +327,13 @@ namespace Odyssey.Presentation.Rendering
                 tint = StuffPalette.For(value, overArt: !fallback);
                 emission = Color.black;
             }
+
+            // Open to the sky means the depth shade has nothing to say. The shade measures how far
+            // you are peering *through* the world, and there is nothing over an outdoor surface —
+            // so a lower terrace is not dim ground, it is ground. Without this the meadow came out
+            // in one green per terrace, which reads as lighting that no light explains.
+            // TintCode.DaylitBase carries the whole argument.
+            if (TintCode.IsDaylit(tintCode)) shade = 1f;
 
             // Alpha survives the shade for water and for nothing else. Everywhere else it is
             // meaningless and forcing it to one keeps the material key from splitting on noise.

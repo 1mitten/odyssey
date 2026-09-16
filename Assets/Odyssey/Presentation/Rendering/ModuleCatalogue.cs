@@ -40,6 +40,37 @@ namespace Odyssey.Presentation.Rendering
         /// lump never shrinks inside the cell, so a run of them still tiles without a crack.
         /// </summary>
         RockBlock = 7,
+
+        /// <summary>
+        /// A block filling the whole cell, with an uneven top: earth rather than a cast slab.
+        ///
+        /// Fills the cell exactly like <see cref="SolidBlock"/> and is interchangeable with it.
+        /// <see cref="GroundMesh"/> keeps the middle of the top face pinned at the layer height,
+        /// because that is where everything in the world is drawn standing, and moves nothing in
+        /// plan, so a run of them tiles without a crack.
+        /// </summary>
+        GroundBlock = 8,
+
+        /// <summary>
+        /// The same block where a side of it can be seen: the walls are built in courses so a
+        /// terrace riser is a broken face rather than one ruled 3 m rectangle.
+        ///
+        /// A separate shape rather than a flag on <see cref="GroundBlock"/> because the two are
+        /// different meshes and a mesh is what a bucket is keyed by. Ground is the largest
+        /// instance population in the world and nearly all of it never shows a side, so the
+        /// expensive geometry is worth confining to the cells that do.
+        /// </summary>
+        GroundFace = 9,
+
+        /// <summary>
+        /// A stepped earth bank filling an empty cell beside a terrace step, climbing from the
+        /// floor of its own cell to the top of it.
+        ///
+        /// Occupies the cell exactly, like the block shapes, but it is not a block: it is drawn in
+        /// a cell that is empty, and nothing in the simulation knows it is there. See
+        /// <see cref="BankMesh"/>.
+        /// </summary>
+        Bank = 10,
     }
 
     /// <summary>
@@ -391,5 +422,24 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static string TerrainVariant(string terrainDefName, int variant) =>
             variant <= 0 ? Terrain(terrainDefName) : Terrain(terrainDefName) + "." + variant.ToString();
+
+        /// <summary>
+        /// One of the several coursed blocks an earth terrain is drawn with where a side of it
+        /// shows — a terrace riser, the rim of the board, the wall of a cutting.
+        ///
+        /// <para>Unlike <see cref="TerrainVariant"/>, variant 0 does <em>not</em> keep the plain
+        /// id: a face is a different mesh from the turf, so it needs an id of its own at every
+        /// variant or the two would collide in the library's cache and whichever resolved first
+        /// would be drawn for both.</para>
+        /// </summary>
+        public static string TerrainFace(string terrainDefName, int variant) =>
+            Terrain(terrainDefName) + ".face" + variant.ToString();
+
+        /// <summary>
+        /// One of the stepped banks an earth terrace is climbed by. Named after the terrain at the
+        /// <em>top</em> of the step, because that is the ground the bank is made of.
+        /// </summary>
+        public static string TerrainBank(string terrainDefName, int variant) =>
+            Terrain(terrainDefName) + ".bank" + variant.ToString();
     }
 }
