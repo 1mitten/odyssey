@@ -38,11 +38,20 @@ namespace Odyssey.Presentation.CameraRig
 
             float slabMin = activeLayer * CellMetrics.SizeY;
             float slabMax = slabMin + CellMetrics.SizeY;
+
+            // The relief draws the ground away from its layer, and a click has to land on what the
+            // player can see rather than on the flat grid underneath it. Relief moves nothing
+            // horizontally, so the walk below is untouched -- but the slab the ray is clipped to
+            // has to be opened up by however far the ground can travel, or a ray aimed at a hill
+            // top is discarded before a single cell is visited.
+            float reliefReach = ReliefReach();
+            float clipMin = slabMin - reliefReach;
+            float clipMax = slabMax + reliefReach;
             float worldMaxX = size.SizeX * CellMetrics.SizeXZ;
             float worldMaxZ = size.SizeZ * CellMetrics.SizeXZ;
 
             float tEnter = 0f, tExit = float.MaxValue;
-            if (!Slab(ray.origin.y, ray.direction.y, slabMin, slabMax, ref tEnter, ref tExit)) return false;
+            if (!Slab(ray.origin.y, ray.direction.y, clipMin, clipMax, ref tEnter, ref tExit)) return false;
             if (!Slab(ray.origin.x, ray.direction.x, 0f, worldMaxX, ref tEnter, ref tExit)) return false;
             if (!Slab(ray.origin.z, ray.direction.z, 0f, worldMaxZ, ref tEnter, ref tExit)) return false;
             if (tExit <= tEnter) return false;
@@ -61,7 +70,6 @@ namespace Odyssey.Presentation.CameraRig
             float tDeltaZ = Mathf.Abs(ray.direction.z) > 1e-6f
                 ? CellMetrics.SizeXZ / Mathf.Abs(ray.direction.z) : float.MaxValue;
 
-            float tFloor = FloorCrossing(ray, slabMin);
             float t = tEnter;
             int guard = size.SizeX + size.SizeZ + 4;
 
@@ -75,6 +83,12 @@ namespace Odyssey.Presentation.CameraRig
                     cell = new CellRef(x, z, activeLayer);
                     return true;
                 }
+
+                // Per cell, against that cell's own drawn floor rather than once against the
+                // layer's flat plane. This is the whole of the relief's effect on picking: the
+                // ground the player is aiming at is the tilted one, so that is the surface the ray
+                // has to meet.
+                float tFloor = FloorCrossing(ray, slabMin + FloorHeightAt(x, z));
 
                 if (tFloor >= t - 1e-4f && tFloor <= tCellEnd && HasFloor(model, index, activeLayer))
                 {
@@ -101,6 +115,24 @@ namespace Odyssey.Presentation.CameraRig
             }
 
             return false;
+        }
+
+        /// <summary>How far the relief has carried this cell's floor out of its layer.</summary>
+        static float FloorHeightAt(int x, int z)
+        {
+            Vector3 centre = CellMetrics.FloorCentre(x, z, 0);
+            return GroundRelief.HeightAt(centre.x, centre.z);
+        }
+
+        /// <summary>
+        /// The most the relief can move a cell's floor, in metres. Matches the mesher's own reach:
+        /// the lift, plus the tilt carrying a corner higher still.
+        /// </summary>
+        static float ReliefReach()
+        {
+            float amplitude = Mathf.Abs(GroundRelief.Amplitude);
+            if (amplitude == 0f) return 0f;
+            return amplitude + GroundRelief.MaxSlope(amplitude) * CellMetrics.SizeXZ;
         }
 
         static bool HasFloor(WorldRenderModel model, int index, int layer)
