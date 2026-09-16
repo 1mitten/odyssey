@@ -82,8 +82,12 @@ namespace Odyssey.Presentation.Bootstrap
                 // walking colonist was therefore clickable slightly behind where they appeared,
                 // by up to the distance they cover in one tick, and a click aimed at the figure
                 // fell through to the cell underneath them instead.
-                Vector3 feet = Odyssey.Presentation.Rendering.PawnPose.Of(
-                    pawn, tickAlpha, movePerTick, out _);
+                // The figure's own position when it has one, and the pose only as the fallback for
+                // a pawn drawn by the instanced pass. A working figure is stepped off its cell to
+                // reach the wood, so the pose and the screen disagree by most of a stride exactly
+                // while a colonist is chopping — which is when the player is trying to click them.
+                if (_bootstrap?.Figures == null || !_bootstrap.Figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                    feet = Odyssey.Presentation.Rendering.PawnPose.Of(pawn, tickAlpha, movePerTick, out _);
                 var bounds = new Bounds(feet + Vector3.up * (box.y * 0.5f), box);
                 if (!bounds.IntersectRay(ray, out float distance) || distance >= nearest) continue;
 
