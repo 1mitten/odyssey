@@ -36,6 +36,10 @@ What to do: `scripts/unity.sh` treats the **results file, not the process exit c
 
 **Keep `clean: false` on the checkout.** The runner checks the project out into its own folder and the gitignored `Library/` is the import cache. Without it every run re-imports the whole project, which is tens of minutes rather than the 1 m 46 s the first green run took.
 
+**A pull request that conflicts with `main` reports *no checks at all*, which looks exactly like a broken runner.** `gh pr checks` says "no checks reported on the branch" and `gh run list --branch …` is empty, so the first instinct is to go and read `ci.yml` and check whether the runner is online. Neither is the problem. The workflow triggers `on: pull_request`, and a `pull_request` run is built against the *merge* commit — GitHub cannot compute one for a conflicting PR, so the run is never created. The tell is `gh pr view <n> --json mergeable`, which says `CONFLICTING`; merge `main` in, resolve, push, and the checks appear within seconds. **Check `mergeable` before investigating CI**, and be aware the PR page shows this as an absence rather than as a failure, so nothing is red and nothing says why.
+
+**Verify a green Unity tier actually compiled what only it can compile.** The fast tier builds `Odyssey.Sim`, `Odyssey.Sim.Contracts` and the two test projects through the dotnet mirrors; it does **not** build `Assets/Editor/Odyssey/**` or `Odyssey.Presentation`. A change that touches the editor tools is therefore a third unbuilt until the Unity job runs, and "Unity tests — pass" in the same wall-clock time as the fast tier is worth one look rather than a shrug. `gh run view <run> --log --job <job>` and grepping for `error CS`, for `Odyssey.Editor`, and for the names of the files you changed settles it in one command.
+
 ## Testing
 
 **The tests are not the slow part.** The suite executes in about 40 ms. A Unity EditMode cycle takes minutes, and essentially all of it is Unity booting, refreshing the asset database (~7 s) and reloading the script domain (~3 s compile). **Filtering which tests run therefore saves nothing.** The only thing that helps is not starting Unity.
