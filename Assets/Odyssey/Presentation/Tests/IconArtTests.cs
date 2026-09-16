@@ -20,11 +20,35 @@ namespace Odyssey.Tests.Presentation
     /// </summary>
     public class IconArtTests
     {
-        [Test]
-        public void TheWoodIconIsInTheBuild()
+        /// <summary>The keys the owner has drawn, in the order they arrived.</summary>
+        static readonly string[] Drawn =
         {
-            Assert.That(IconArt.For("ui.res.wood"), Is.Not.Null,
-                "ui.res.wood has no art; the HUD will draw its placeholder square");
+            "ui.res.wood",
+            "ui.res.stone",
+            "ui.res.ironore",
+            "ui.res.scrap",
+        };
+
+        [Test]
+        public void TheDrawnKeysAreInTheBuild()
+        {
+            foreach (string key in Drawn)
+                Assert.That(IconArt.For(key), Is.Not.Null,
+                    $"{key} has no art; the HUD will draw its placeholder square");
+        }
+
+        /// <summary>
+        /// A file named for a key nobody asks for draws nothing and says nothing, which is the
+        /// one failure this whole arrangement cannot see from the screen: the badge falls back to
+        /// its square and looks exactly like a key that was never drawn.
+        /// </summary>
+        [Test]
+        public void EveryIconIsNamedForAKeyTheRegistryKnows()
+        {
+            foreach (Texture2D art in Resources.LoadAll<Texture2D>(IconArt.Folder))
+                Assert.That(Odyssey.Hud.Registry.Labels.ContainsKey(art.name), Is.True,
+                    $"'{art.name}.png' is named for no key in icon-keys.csv, so nothing will " +
+                    "ever ask for it");
         }
 
         [Test]
