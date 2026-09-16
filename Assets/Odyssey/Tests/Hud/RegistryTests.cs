@@ -27,6 +27,16 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
+        public void EverySettingsKeyIsARegisteredName()
+        {
+            foreach (string key in SettingsDirector.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+            foreach (GraphicsOption option in SettingsDirector.All)
+                Assert.That(SettingsDirector.IconKeys, Does.Contain(SettingsDirector.KeyOf(option)),
+                    "an option the panel can draw but the registry test does not cover is a label nobody checks");
+        }
+
+        [Test]
         public void AnUnregisteredKeyShowsItselfRatherThanNothing()
         {
             Assert.That(Registry.Label("ui.status.hauling"), Is.EqualTo("Hauling"));

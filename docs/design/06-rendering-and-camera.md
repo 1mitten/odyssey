@@ -67,6 +67,47 @@ ends than the mid-air edge ever was. The first ring is strewn by the same hash o
 coordinates the mesher uses inside the board, at the same density, fading to nothing 20 m out. A
 clone without the licensed packs gets bare ground out there, exactly as it does on the board.
 
+**There is a second wood, on the hills (owner request, 2026-09-16).** The near wood stops 90 m past
+the rim, and by the amendment below the hills only begin to rise there — the ramp gives them about
+six of their fifty metres at that distance. So every hill in the background was bare ground, and a
+bare hillside is unreadable: there is nothing on it of known size, so the eye cannot tell how far
+away it is or how big it is, and it flattens into a green backdrop. Trees are the cheapest scale
+reference there is, and they are the whole of what makes the distance read as distance.
+
+The far wood runs from the edge of the near wood out to **900 m**, which is chosen against two
+numbers that already exist rather than by eye: the hills reach full height by 700 m, so everything
+inside that is the landform the trees describe, and fog closes at 1,100 m, so a tree past that is
+drawn into an opaque wall. It is scattered on a **15 m lattice with a jitter**, not the 2.5 m cell
+grid — the band is some four million square metres, and walking it at cell resolution would be
+670,000 samples to place a couple of thousand trees. The jitter is what stops a lattice reading as
+an orchard, and a test holds it.
+
+**Its cost is batches, not triangles, and that had to be measured.** A batch key is (sector,
+variant, part). At the near wood's 80 m sectors and all sixteen tree kinds, the meadow drew **1,154
+surround batches against 72** before the hill wood existed. Widening the sector to 800 m and capping
+the far wood to **four kinds** attacks both factors: at 300 m a tree is a few dozen pixels and
+nobody can tell one conifer from another, so the variety was buying nothing and costing a multiple.
+Coarse sectors cull worse, and out here that is the right trade — there are only a few thousand far
+trees, so submitting them all costs less than the draw calls fine culling would take.
+
+Measured under the real player loop, meadow, RTX 5070 Ti at 640 × 480, with the city as a control
+because it has no surround trees at all:
+
+| | hill wood off | hill wood on |
+|---|---|---|
+| mean | 1.45 ms | 1.38 ms |
+| worst | 2.13 ms | 1.81 ms |
+| draw calls | 1,270 | 1,322 |
+| instances | 39,929 | 42,506 |
+| surround batches | 734 | 786 |
+
+So 2,577 trees for 52 draw calls, against a 5 ms budget. The mean moved by less than the run-to-run
+noise: the city, which gains nothing from this change, moved 1.70 → 1.84 ms between the same two
+runs, so ±0.14 ms is the floor of what can be claimed and the hill wood's −0.07 ms is inside it.
+**The honest statement is that it has no measurable cost, not that it made anything faster.**
+`OdysseyBootstrap.skirtHillTrees` switches it off for the comparison, and `skirtTreeDensity` scales
+it along with the near wood.
+
 **The surround measures the board rather than being configured.** The surface level, the terrain and
 its tint, which trees grow and how thickly are all read off the generated map, so a bare board gets
 bare ground, the wooded meadow gets woodland at its own density, and the ruined city gets whatever
@@ -320,6 +361,146 @@ with banks. **Side on and low is the shot that answers the question**, for the s
 `SwingCheck` photographs the axe across the line to the tree: in the three-quarter view a step and
 the ground in front of it sit at different depths, and the profile of a bank reads as anything you
 like.
+
+## 2d. The day
+
+**Amended 2026-09-16, the same day it landed: the fixed golden hour is now a cycle.** The owner saw
+the fixed hour lit and asked for blue by day, orange at dawn and dusk, and dark at night — which
+overturns question 2 of the look interview. That is a change of mind rather than a misreading, and
+it is recorded as one because the interview file will otherwise look wrong to the next session.
+
+**Everything below survives the change.** The identity between fog colour and the sky's horizon, the
+lifted shadows, the haze that crosses the board, the grade, the anti-aliasing, the shadow-cascade
+fix: all of it still holds, and all of it is now twelve numbers per key instead of twelve numbers
+once. What the cycle adds is `Daylight`, a keyed table in the *Presentation* assembly rather than
+the editor one, because a running game has to sample it and editor code cannot be called from a
+player.
+
+- **A table, not a formula.** A physical sun model would give an elevation for an hour and a
+  latitude, and it could not say that dawn should be held orange longer than dusk, or that the sky
+  should stay bright a little past sunset because that is when a colony looks best. Those are art
+  directions, and a table is their honest shape. It is also the thing the owner can edit.
+- **Midnight is both the first key and the last**, so the wrap needs no special case anywhere and
+  cannot be got wrong by a caller. A test walks the whole day at five-minute steps and fails on any
+  jump, including across the seam.
+- **Night is a readability floor, not realism.** The sun goes below the horizon but is not switched
+  off: a directional light at zero flattens every face to one value and the board reads as a paper
+  cut-out. A weak cool key still separates a wall from the ground it stands on, which is the
+  difference between night and nothing. Every reference game cheats this the same way.
+- **The sky material is copied, never edited.** `RenderSettings.skybox` points at an asset on disk,
+  so writing colours into it at runtime in the editor edits the asset — a play session would leave
+  the sky wherever the clock stopped, permanently, and it would surface as an unexplained diff days
+  later.
+- **The ambient probe is the only real cost**, and it is throttled to a tenth of a game hour, which
+  at speed 1 is about one re-integration every four seconds. The sun, the ambient colours and the
+  fog are not throttled, because stepping those is visible in the shadows.
+- **Nothing here is simulation.** The light is a pure function of the tick: not saved, not hashed,
+  and unreadable from the simulation, so a colonist at midnight is not blind. If darkness is ever to
+  matter to work or sight, that is a simulation feature with its own grid and its own tests.
+
+Judge it with **`Odyssey → Presentation → Check the daylight`**
+(`scripts/unity.sh shot Odyssey.EditorTools.DaylightCheck.Run`), which photographs eight hours at
+two pitches — the board pitch, where the day is shadows swinging across the ground, and a low pitch,
+where the sky is, since the default view never shows it. The hours deliberately straddle the keys
+rather than landing on them, so a crease at a key is visible in the sheet.
+
+
+Owner request 2026-09-16, against six reference screenshots of *Station to Station* now in
+`docs/reference/screenshots/station-to-station/`. Interview in `docs/research/look-interview.md`;
+five research files behind it (`d-12-urp-post-stack`, `d-13-light-shafts`, `d-14-aerial-perspective`,
+`b-station-to-station`, `b-low-sun-readability`). **One file owns the whole palette**,
+`Assets/Editor/Odyssey/GoldenHour.cs`, because the effect rests on an identity that is invisible if
+its two halves live apart: *the colour the distance fades to is the colour the sky is at the
+horizon*. Split across two files those are two numbers that happen to match, and the next person to
+warm the sky leaves the fog behind.
+
+**The grounding finding was that there was no post-processing at all.** Not "untuned" — absent. The
+pipeline asset pointed its default volume profile at a GUID that resolved to nothing, and the one
+profile in the repository was referenced by nothing and held stray editor-test components. So the
+project had never had tonemapping, colour grading, bloom, a vignette or any anti-aliasing. Most of
+the warmth in the references is exactly that, and none of it is a shader.
+
+**Two recorded decisions are deliberately overturned, and must not be re-derived from the old
+comments**, which are rewritten in place rather than deleted so the reasoning is still legible.
+
+- **The sun comes down from 72 degrees to 30.** The old comment rejected a raking sun for darkening
+  the ground and throwing long shadows across the surface the player reads. It was right about the
+  symptom and wrong about the cause: the darkness was the *shadow strength*, not the angle. A
+  shadowed fragment at full strength falls back to ambient alone and loses the key light's hue, so a
+  board mostly in shadow goes mostly grey. At strength 0.6 it keeps the warmth and only darkens, and
+  that costs nothing. The lost brightness — light on flat ground goes as the sine of elevation, 0.50
+  at 30 degrees against 0.95 at 72 — is made up by intensity and ambient.
+- **Bloom is adopted**, against `d-09-stylised-rendering.md` §3.4. That note was written for a
+  painted look; this is a different target and the references bloom plainly. The threshold sits
+  above 1 so only what the sun has actually blown out blooms, rather than the whole frame.
+
+**Shadows had a real bug, independent of taste.** Cascade splits are fractions of distance *from the
+camera*, and this camera is tens of metres in the air and never sees ground nearer than about 50 m.
+The stock 0.07/0.18/0.42 therefore spent its first two cascades — half the shadow atlas — on empty
+air in front of the lens. Splits now start at 0.30, and the distance goes 50 m to 250 m because at
+30 degrees the shadows are eight cells long and were stopping a third of the way into the view.
+Normal bias, not depth bias, is the grazing-angle lever: acne at a shallow sun is a depth-slope
+problem, and depth bias answers it by sliding the shadow along the light, which at this elevation
+detaches it from the foot of whatever cast it.
+
+**The haze moved onto the board on purpose.** It was linear from 460 m to 1,100 m, deliberately past
+the far corner of a 300 m board, so it never touched the playfield — which is why the board had no
+depth in it. It is now exponential-squared at a density chosen by arithmetic: 1% at 50 m, 20% at
+224 m, about a third at the rim, 97% by 900 m. Warm haze does not obscure the distance, it places
+it. Height fog and a fullscreen fog pass were both considered and rejected in `d-14`: the camera
+geometry suppresses what height fog adds, and the pass costs about a third of the frame to do it.
+
+**Anti-aliasing arrives with it, and it has to be SMAA.** Bloom and a warm grade on an aliased image
+look worse than either alone, since a stair-stepped edge is what a bloom threshold catches. FXAA is
+ruled out by our own outline — it finds edges by luminance contrast and softens them, and a
+one-pixel post-drawn ink line is the exact pattern it destroys. TAA would jitter the same line and
+wants motion vectors we do not produce for instanced geometry; MSAA cannot help, because the outline
+is drawn after the resolve.
+
+**Two faults were found by photograph and fixed, and one of them had been silently true for
+months.** URP keeps post-processing *per camera* and defaults it to false, so a camera built in
+script renders no volume at all — every contact sheet this project has ever taken was of an ungraded
+image. That did not matter while there was nothing to apply and matters entirely now, so `Shoot`
+switches it on for every photograph. And the first ambient values put the woodland in near
+silhouette: a low sun reaches very little of a tree's crown, so out of direct light a tree is lit by
+ambient and nothing else. Ambient is the only lever that reaches the crowns without also blowing out
+the ground the sun is already striking.
+
+**Not built, and deliberately not:** the sun shafts and the tilt-shift blur, which are the two
+effects the owner also asked for. Both wait on measurements rather than on effort. `d-13` found that
+at a 48-degree downward pitch the sun can sit some 120 degrees off the view direction — behind the
+camera, where a radial blur has nothing to radiate from — so a framing experiment comes before a
+line of shader. And `d-12` found that URP's cheap depth-of-field blurs only the far field, so it
+cannot make a band at all; a pass that blurs by screen height is exact, scene-independent and is
+probably what the reference game does.
+
+**Cost, and a measurement that was quietly worthless until it was fixed.** `FrameTimeTests` builds
+its own camera, and URP defaults post-processing to off per camera — so the first run reported the
+golden hour as very nearly free, which was true of the frame it measured and false of the frame the
+player gets. It now switches post on, attaches the profile and uses the raking sun, because shadow
+length is height over the tangent of elevation and measuring a 72-degree sun would understate the
+shadow pass by most of its cost.
+
+| meadow, RTX 5070 Ti, 640 x 480 | mean | worst |
+|---|---|---|
+| before the golden hour | 1.38 ms | 1.81 ms |
+| with it | 1.66 ms | 2.11 ms |
+| and with the day/night cycle | 1.71 ms | 2.31 ms |
+
+The cycle itself is all but free once it stops writing values that have not changed: driven
+straight from `Update` it cost **0.43 ms a frame** setting `RenderSettings` sixty times a
+second to what it already held, which the frame-time test caught and a guard on the hour
+having moved recovered in full. About 0.3 ms for the whole thing — grade, bloom, vignette, SMAA, and shadows reaching five times as
+far — against a 5 ms budget. **That figure is a floor, not the laptop's number, and the reason is
+resolution**: everything in the post stack costs per pixel, and 1080p is nearly seven times the
+pixels this measures at, while the shadow and geometry work is unchanged by resolution. The laptop
+figure has to be taken on a laptop, and the quality tier the interview committed to is what answers
+it if it is bad.
+
+
+Judge it with `Odyssey → Presentation → Check the ground relief` and `Check the meadow at range`,
+both of which now photograph the graded image. **It still wants the owner's eye in `Play.unity`.**
+
 
 ## 3. The camera and the slice
 

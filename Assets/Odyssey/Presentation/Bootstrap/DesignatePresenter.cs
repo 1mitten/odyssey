@@ -65,14 +65,25 @@ namespace Odyssey.Presentation.Bootstrap
             Keyboard? keys = Keyboard.current;
             if (keys == null) return;
 
-            // M mine, C cut, X cancel, Escape puts the tool away. Pressing the armed tool's own
-            // key again disarms it, so a player who picked one up can always put it down the way
-            // they picked it up.
+            // M mine, C cut, X cancel. Pressing the armed tool's own key again disarms it, so a
+            // player who picked one up can always put it down the way they picked it up.
+            //
+            // **Escape is deliberately not read here any more.** It used to be, and it was the
+            // only consumer in the build; the settings panel made it the second, and two
+            // components reading one key would have disarmed the tool and opened the panel on the
+            // same keystroke. The unwind order is one rule (`09-ui-and-input.md` §6) so it lives
+            // in one place — `SettingsDirector.Escape`, decided in the fast tier — and
+            // `SettingsPresenter` calls `PutToolAway` when the answer is to disarm.
             if (keys.mKey.wasPressedThisFrame) Arm(DesignateTool.Mine);
             if (keys.cKey.wasPressedThisFrame) Arm(DesignateTool.Fell);
             if (keys.xKey.wasPressedThisFrame) Arm(DesignateTool.Cancel);
-            if (keys.escapeKey.wasPressedThisFrame) Director.Tool = DesignateTool.None;
         }
+
+        /// <summary>Whether a tool is armed, for whoever is deciding what Escape means.</summary>
+        public bool ToolArmed => Director.Tool != DesignateTool.None;
+
+        /// <summary>Put the armed tool down. The Escape half of this presenter, called by whoever owns that key.</summary>
+        public void PutToolAway() => Director.Tool = DesignateTool.None;
 
         void Arm(DesignateTool tool) =>
             Director.Tool = Director.Tool == tool ? DesignateTool.None : tool;

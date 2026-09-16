@@ -500,7 +500,14 @@ The eight cases it must get right, each with a test:
 4. A drag begun on a panel and released over the world does not place anything.
 5. A modal swallows every pointer and key event except its own dismissal.
 6. Escape unwinds in order: cancel the active tool, then close the top panel, then open the
-   game menu.
+   game menu. **Built 2026-09-16**, as far as there is anything to unwind: the order is decided
+   by `SettingsDirector.Escape`, in the fast tier, and `SettingsPresenter` does what it says.
+   The rule lives in exactly one place on purpose. Escape was the designate tool's alone until
+   the settings panel wanted it, and two components reading one key would have disarmed the tool
+   and opened the panel on the same keystroke — a fault that looks like a flicker and gets
+   diagnosed as a rendering bug. `DesignatePresenter` now exposes `ToolArmed` and `PutToolAway`
+   and reads no key at all. The last step opens the settings panel rather than a game menu,
+   because there is no game menu yet.
 7. A tooltip never captures the pointer.
 8. Scroll over a panel scrolls the panel; scroll over the world zooms the camera; scroll with
    the layer modifier changes the slice regardless of what is under the cursor.
