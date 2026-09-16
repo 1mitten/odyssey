@@ -51,6 +51,14 @@ namespace Odyssey.Sim
         /// <summary>0 paused, 1 normal, 2 fast, 3 very fast. A tick-rate multiplier, never a delta.</summary>
         public int GameSpeed { get; private set; } = 1;
 
+        /// <summary>
+        /// Optional per-tick hash observer, off by default. Wire a
+        /// <see cref="Diagnostics.HashTrace"/> (or any other sink) here for divergence debugging
+        /// between two runs; when null, which is the normal path, <see cref="ComputeStateHash"/>
+        /// is not even called for it, so attaching nothing costs nothing.
+        /// </summary>
+        public Action<int, StateHash>? HashSink { get; set; }
+
         /// <summary>Ticks elapsed. Starts at 0 and is part of the state hash.</summary>
         public int CurrentTick { get; private set; }
 
@@ -110,6 +118,9 @@ namespace Odyssey.Sim
 
             // 6. Publish the snapshot, after every system has finished mutating the world.
             Views.Publish(this, _contributors);
+
+            // 7. Trace, if a sink is attached. CurrentTick still names the tick just completed.
+            HashSink?.Invoke(CurrentTick, ComputeStateHash());
 
             CurrentTick++;
         }
