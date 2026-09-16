@@ -57,6 +57,30 @@ Editor code, look at what is untracked as well as running the tests**: a new fil
 added is invisible to every check this project has, because the only machine that runs Unity is the
 one already holding the file.
 
+**A partial EditMode run reports zero failures, and the only tell is the test count.** On
+2026-09-16 three runs in a row reported `total="752" passed="750" failed="0"` and were believed;
+the same tree run cleanly reports **827**. Seventy-five tests had not run at all, and nothing in the
+output said so — the results file is written, the summary is green, and a run that never reached an
+assembly cannot report anything about it. The cause was two Unity processes sharing the project:
+`check_project_lock` looks for `Temp/UnityLockfile`, and a run launched in the gap before the
+previous one has written its lockfile walks straight past the guard. **So read the total, not only
+the failures.** The cheap cross-check needs no Unity:
+
+```
+grep -rho "\[Test\]\|\[TestCase" --include=*.cs Assets/Odyssey/Presentation/Tests Assets/Odyssey/Tests | wc -l
+```
+
+817 attributes on that tree against 827 cases, the difference being parameterised expansion. A total
+that has *fallen* since the last run is the signal; it is worth a glance before quoting a number in
+a commit message or a pull request, because a number from a partial run is exactly the plausibly
+wrong result this project's own rule warns about. The same check catches the other direction: a
+count that is far below the attributes means an assembly is missing from the run.
+
+The fast tier moved the same day for a reason that was never established — 412 Sim and 44 Hud early
+on, 425 and 51 later, with no test added to either assembly in between. Whatever the cause, the
+habit is the same: **the count is part of the result, and a tier is only green against a count you
+recognise.**
+
 **Running Unity in a worktree costs two minutes of setup and saves the reimport.** A second checkout
 has no `Assets/Synty` (gitignored, so it lives only in the main checkout) and no `Library`, so Unity
 would reimport 7,222 pack assets from scratch. Instead: `mklink /J <worktree>\Assets\Synty
@@ -85,6 +109,28 @@ for the artifact database, which is 6.2 GB in 62,220 files and copies in about f
 **Cross-implementation agreement is what makes a benchmark comparison real.** Two independent implementations of the D1 workload produced the identical state hash, which is the only reason their timings can be compared at all. It also caught the single genuine ambiguity in the written contract. A benchmark whose implementations are not proven equivalent is measuring two different programs.
 
 **Report partial results rather than nothing, and never invent a number.** Both benchmark agents flagged their own fairness caveats unprompted, and those caveats changed how the result was read.
+
+## An instrument wired to the thing it measures reports a perfect result
+
+`BankCheck` shoots a colonist standing on a slope with the lift off and then on, and prints how far
+her boots are from the surface. The first version read the gap through `BankLayout.RiseAt`, which is
+gated on the very lever the sheet is sweeping — so with the lift off it compared the feet against a
+surface it had just been told was flat, and printed **0.000 m in both conditions**. Two perfect
+scores, no fault anywhere, and the photographs beside them plainly showed a woman buried to the
+shoulders.
+
+The shape of the mistake generalises past this harness: **a measurement must not pass through the
+switch being tested.** `BankLayout` has a second `RiseAt` overload taking a bank already in hand,
+which answers what the geometry is doing regardless of whether anything is being lifted onto it, and
+reading through that gives −1.500 m and 0.000 m as it should. When an A/B harness reports that its
+two conditions agree exactly, suspect the instrument before believing the result — a real
+no-difference is noisy, and an exact one usually means the two sides are the same code.
+
+The other half of the same lesson: **measure everyone, not the subject.** The sheet framed one
+colonist, and a second in the corner of a wide shot still looked sunk. A figure inside a ramp and a
+figure standing behind one are identical from every bearing, because a bank is opaque and nearly as
+tall as a person, so no photograph could settle it. Printing the gap for all five answered it in one
+line: three were in a bank, all three at −1.500 m and then all three at 0.000 m.
 
 ## This harness
 
@@ -1019,6 +1065,65 @@ Two rules follow.
 - **Warn, do not self-heal.** Adding the missing component at runtime would paper over a scene
   that may be stale in ways the check cannot see — the camera rig, the lighting, the module
   catalogue. The useful signal is "rebuild the scene", not "one thing was quietly patched".
+## The owner playtests `main`; a worktree is invisible until it is merged
+
+Four rounds of "it still does not work" were spent on a fix that was **green on every tier and not
+in the code being played**. Work done in `.claude/worktrees/` sits on its own branch. The owner
+opens `D:\code\odyssey`, which is on `main`. Until the branch is merged or pulled, every playtest
+exercises the old behaviour — and reports back a symptom that is a perfect description of the bug
+that was just fixed, which reads exactly like the fix not working.
+
+**Confirm delivery before diagnosing.** One command settles it, and it is cheaper than any
+hypothesis:
+
+```
+git show main:<the file you changed> | grep <the thing you added>
+```
+
+If it is not there, stop. Do not look for a second cause, do not write another test, do not
+theorise about serialised defaults — say where the code is and how to get it. Every minute spent
+diagnosing before that check is spent on a machine state that does not exist.
+
+Three things make this trap worse here:
+
+- **`main` moves under you.** Other sessions land PRs through the day, so the owner may genuinely
+  be pulling fresh code — just not *your* fresh code. "They must have merged by now" is not a
+  check.
+- **A worktree session cannot merge for them.** Git operations outside the worktree are refused, so
+  the only ways across are the owner running `git merge <branch>` or a pushed PR. Offering and
+  waiting is not delivery; ask once, then make it the first line of the reply, not the last.
+- **The symptom is indistinguishable from a real regression**, so every measurement you take comes
+  back consistent with "still broken". That is what makes it burn hours rather than minutes.
+
+Related: a stale `Play.unity` fails the same way for a different reason — see the generated-file
+lesson above. Both end with the owner reporting a working feature as broken.
+
+## A promising hypothesis about serialised defaults, and why it was wrong
+
+Worth recording because it is the obvious wrong idea and it will occur to the next person.
+
+`SliceSettings` is a `[Serializable]` field on `SliceCameraRig`, so **the scene's copy, not the
+field initialiser, is what the game runs**. `Play.unity` was generated before `followDepth` and
+`surfaceLayer` existed and its YAML contains neither, while its `above` is `3` — `Xray`, under
+which nothing above the slice is a pointer target. That is a complete, self-consistent explanation
+for "a click will not leave the active layer", arrived at from reading the YAML.
+
+**It is wrong.** Measured by opening the scene in an EditMode test and printing what loads:
+
+```
+[Scene] slice as loaded: followDepth=True, above=Xray, ... surfaceLayer=0
+[Scene] at L12: above=Full, selectable L9..L15
+```
+
+Unity **keeps the field initialiser** for a field missing from the YAML — it does not zero it. So a
+field added after a scene was generated takes its code default, and only fields actually present in
+the file override. `PlaySceneContentsTests` holds that measurement.
+
+The general rule this belongs to is the one at the top of this file: **reading code and reasoning
+about a framework's behaviour has been wrong every time.** Unity's deserialisation of a missing
+field is a fact to be measured, and measuring it took one test and four minutes against an
+afternoon of a confident wrong answer.
+
 ## The CI runner is the owner's machine, and a timing test cannot tell you apart from a regression
 
 `HudStressTests.Adr0003_F1_TheDenseHudHoldsItsBudgetAndAllocatesNothing` failed on CI —

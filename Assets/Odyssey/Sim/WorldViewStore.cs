@@ -27,11 +27,8 @@ namespace Odyssey.Sim
         /// <summary>Claim the slice buffer and write one byte per cell of the active layer.</summary>
         public Span<byte> BeginSlice(int cellCount) => _target.BeginSlice(cellCount);
 
-        /// <summary>Claim the designation buffer and write one byte per cell of the active layer.</summary>
-        public Span<byte> BeginDesignations(int cellCount) => _target.BeginDesignations(cellCount);
-
-        public Span<byte> BeginDesignationProgress(int cellCount) =>
-            _target.BeginDesignationProgress(cellCount);
+        /// <summary>Publish one standing order, wherever in the world it is.</summary>
+        public void AddOrder(in OrderView view) => _target.AddOrder(view);
     }
 
     /// <summary>

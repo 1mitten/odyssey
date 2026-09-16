@@ -4,18 +4,31 @@ using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Worldgen;
+using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
 
 namespace Odyssey.Tests.Presentation
 {
     /// <summary>
-    /// The one rule the picker exists for: **a click never reaches a layer above the slice.**
+    /// The rule the picker exists for, in the form the owner settled it on 2026-09-16:
+    /// **a click reaches anything drawn solid, and never a ghost.**
     ///
-    /// This is not a nicety. Going Medieval's most-reported complaint is misclicking something on
-    /// another floor, with players reporting buildings deconstructed by accident, and
-    /// 06-rendering-and-camera.md settles it in the renderer's favour: geometry above the slice is
-    /// a depth cue and nothing more. It costs nothing to hold now and is unpleasant to retrofit,
-    /// so it is pinned by a test from the first commit.
+    /// Going Medieval's most-reported complaint is misclicking something on another floor, with
+    /// players reporting buildings deconstructed by accident, and the first answer here was to
+    /// refuse every layer but the slice. That went too far: above the surface every layer is now
+    /// drawn at full opacity, and the owner could see an outcrop and not mark it for mining. So
+    /// the band moved to match the renderer exactly -- solid is clickable, translucent is a depth
+    /// cue and is not -- and both halves are pinned below.
+    ///
+    /// The second rule, settled the same day: **a face belongs to whatever you clicked, or the
+    /// click misses.** The owner again — *"I still wanted to select the tile below it or not at
+    /// all"* — after a first attempt handed back the empty cell standing on a surface, which is
+    /// the convention the picker had always used on one layer because on one layer it was the
+    /// only cell on offer. Carried up and down a stack it reads as clicking a rock and selecting
+    /// the sky above it.
+    ///
+    /// Every test that calls the four-argument <c>Pick</c> is asking for the active layer alone to
+    /// be *searched*; the banded cases pass a <see cref="SliceSettings"/>.
     /// </summary>
     public class SlicePickerTests
     {
@@ -41,8 +54,10 @@ namespace Odyssey.Tests.Presentation
             bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, activeLayer: 1, out CellRef cell);
 
             Assert.That(hit, Is.True, "the floor of the active layer should still be pickable");
-            Assert.That(cell.Y, Is.EqualTo(1), "the pick must not climb to the wall above the slice");
-            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 1)));
+            // The slab is laid in cell 1 and is drawn there, so cell 1 owns it -- see
+            // ABuiltFloorIsPickedInTheCellItIsLaidIn. What matters here is that it is not the wall.
+            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 1)),
+                "the pick must not climb to the wall above the slice");
         }
 
         [Test]
@@ -171,15 +186,188 @@ namespace Odyssey.Tests.Presentation
             Assert.That(SlicePicker.Pick(DownAt(4, 4), world.Model, 1, out _), Is.True);
         }
 
+        /// <summary>
+        /// The owner's rule at its plainest: clicking bare ground selects the ground.
+        ///
+        /// It used to return the air cell above it — cell 1 here, not cell 0 — which was the only
+        /// answer available while the picker was clipped to one layer, and which the owner
+        /// rejected as soon as a click could reach a stack: "I still wanted to select the tile
+        /// below it or not at all".
+        /// </summary>
         [Test]
-        public void SolidGroundBeneathCountsAsAFloor()
+        public void ClickingBareGroundSelectsTheGround()
         {
             var world = new RenderTestWorld(8, 8, 3).Solid(4, 4, 0).Publish();
 
             bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, activeLayer: 1, out CellRef cell);
 
             Assert.That(hit, Is.True);
+            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 0)),
+                "the top face of the ground block belongs to the block, not to the air on it");
+        }
+
+        /// <summary>
+        /// <b>The rule's own counter-example, and it would have broken felling outright.</b>
+        ///
+        /// A tree is an edifice that blocks nothing, standing in the walkable cell — so "select the
+        /// tile below" taken literally hands back the ground under every tree and the Fell order
+        /// can never be given again. The tree is what the player is looking at, so the tree owns
+        /// the face. Same rule, not an exception to it.
+        /// </summary>
+        [Test]
+        public void ATreeIsPickedInItsOwnCellAndNotAsTheGroundUnderIt()
+        {
+            var world = new RenderTestWorld(8, 8, 4)
+                .Solid(4, 4, 0)
+                .Edifice(4, 4, 1, NaturalContent.EdificeTreeConifer, blocking: false)
+                .Publish();
+
+            bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, activeLayer: 1, Depth(1), out CellRef cell);
+
+            Assert.That(hit, Is.True);
+            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 1)),
+                "a click on a tree must give the tree's cell, or nothing can be marked for felling");
+        }
+
+        /// <summary>
+        /// A built floor slab is drawn in its own cell, so it owns its own face. Only bare ground
+        /// resolves downwards, because only bare ground is the top of the block below.
+        /// </summary>
+        [Test]
+        public void ABuiltFloorIsPickedInTheCellItIsLaidIn()
+        {
+            var world = new RenderTestWorld(8, 8, 4).Solid(4, 4, 0).Slab(4, 4, 1).Publish();
+
+            bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, activeLayer: 1, Depth(1), out CellRef cell);
+
+            Assert.That(hit, Is.True);
             Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 1)));
+        }
+        /// <summary>A slice policy of the shape the game ships: depth-following, with a surface.</summary>
+        static SliceSettings Depth(int surface) => new SliceSettings { surfaceLayer = surface, followDepth = true };
+
+        /// <summary>
+        /// The owner's report, as a test: <i>"I couldn't select the stones for mining"</i>.
+        ///
+        /// An outcrop standing two cells proud of the meadow is drawn solid, so it is a rock and
+        /// not a hint of one, and the click must land on the rock the cursor is over rather than
+        /// on the grass two layers below it that the old picker was clipped to.
+        /// </summary>
+        [Test]
+        public void AnOutcropStandingAboveTheSurfaceIsPicked()
+        {
+            var world = new RenderTestWorld(8, 8, 6)
+                .Solid(4, 4, 0)   // ground
+                .Solid(4, 4, 1)   // the outcrop, standing in the layer colonists walk on
+                .Solid(4, 4, 2)   // and one cell proud of it
+                .Publish();
+
+            bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, 1, Depth(1), out CellRef cell);
+
+            Assert.That(hit, Is.True);
+            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 2)),
+                "the topmost rock the ray meets is the one under the cursor");
+        }
+
+        /// <summary>
+        /// The half of the old rule that was really carrying the weight, and it is unchanged.
+        ///
+        /// Underground the layer overhead is x-rayed, because what is over your head is a ceiling
+        /// and seeing through it is the whole point of a cut-away. A translucent hint of a wall is
+        /// a depth cue, and clicking a depth cue is the misclick complaint itself.
+        /// </summary>
+        [Test]
+        public void AGhostedLayerAboveIsStillNeverPicked()
+        {
+            var world = new RenderTestWorld(8, 8, 6)
+                .Solid(4, 4, 0)
+                .Edifice(4, 4, 2, CoreContent.EdificeWall)
+                .Publish();
+
+            // Surface at 4, working at 1: underground, so the layer above is XrayMin.
+            SliceSettings slice = Depth(4);
+            Assert.That(slice.GhostsAbove(1), Is.True, "the fixture must actually be ghosting");
+
+            bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, 1, slice, out CellRef cell);
+
+            Assert.That(hit, Is.True, "the ground under the working layer is still pickable");
+            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 0)),
+                $"the pick must not climb into the x-ray, got {cell}");
+        }
+
+        /// <summary>
+        /// The same rule with the whole band open, which is where it could have gone wrong: a
+        /// solid cell's top face and the floor of the air cell above it are one surface at one
+        /// distance, so two layers bid at the same ray parameter and both must resolve to the same
+        /// block. The meadow gives the ground, from the meadow's own layer and from the one above.
+        /// </summary>
+        [Test]
+        public void ClickingTheMeadowGivesTheGroundWhicheverLayerFoundIt()
+        {
+            var world = new RenderTestWorld(8, 8, 6);
+            for (int z = 0; z < 8; z++)
+            for (int x = 0; x < 8; x++)
+                world.Solid(x, z, 0);
+            world.Publish();
+
+            Assert.That(SlicePicker.Pick(DownAt(4, 4), world.Model, 1, Depth(1), out CellRef cell), Is.True);
+            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 0)));
+
+            // From two layers up, where the floor crossing is found by a different layer's march.
+            Assert.That(SlicePicker.Pick(DownAt(4, 4), world.Model, 2, Depth(2), out CellRef higher), Is.True);
+            Assert.That(higher, Is.EqualTo(new CellRef(4, 4, 0)), "the same face, so the same block");
+        }
+
+        /// <summary>
+        /// Down a shaft, the same way. The floor at the bottom of a pit is reachable by a click
+        /// because nothing drawn is in front of it, and what is returned is the rock the miner
+        /// would be standing on — which is also the cell they would mark to go deeper.
+        /// </summary>
+        [Test]
+        public void TheRockAtTheBottomOfAShaftIsPicked()
+        {
+            var world = new RenderTestWorld(8, 8, 6);
+            for (int z = 0; z < 8; z++)
+            for (int x = 0; x < 8; x++)
+            {
+                world.Solid(x, z, 0);
+                if (x != 4 || z != 4) { world.Solid(x, z, 1); world.Solid(x, z, 2); }
+            }
+            world.Publish();
+
+            bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, 3, Depth(3), out CellRef cell);
+
+            Assert.That(hit, Is.True);
+            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 0)), "the floor of the shaft, three layers down");
+        }
+
+        /// <summary>
+        /// A surface that is not drawn must not be clickable. The active layer's ceiling is the
+        /// slab of the layer above and the renderer meshes it away so the player can see in; a
+        /// click that landed on it would be a click on something invisible.
+        /// </summary>
+        [Test]
+        public void TheSuppressedCeilingIsNotAPointerTarget()
+        {
+            var world = new RenderTestWorld(8, 8, 6)
+                .Solid(4, 4, 0)
+                .Slab(4, 4, 2)
+                .Publish();
+
+            SliceSettings slice = Depth(1);
+            Assert.That(slice.SuppressCeilingAt(1), Is.True, "the fixture must actually be suppressing");
+
+            bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, 1, slice, out CellRef cell);
+
+            Assert.That(hit, Is.True, "the ground below is still there");
+            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 0)),
+                $"the dropped ceiling must not be picked, got {cell}");
+
+            // And with the suppression off the slab is drawn, and is therefore clickable: the two
+            // answers differ only because the picture does.
+            slice.suppressActiveCeiling = false;
+            Assert.That(SlicePicker.Pick(DownAt(4, 4), world.Model, 1, slice, out CellRef roofed), Is.True);
+            Assert.That(roofed, Is.EqualTo(new CellRef(4, 4, 2)));
         }
     }
 }

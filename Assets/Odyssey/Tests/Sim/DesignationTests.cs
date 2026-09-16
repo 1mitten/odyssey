@@ -166,15 +166,18 @@ namespace Odyssey.Tests.Sim
             Assert.That(world.Intents.Rejected[0].Reason, Is.EqualTo(IntentRejection.NotPermitted));
             Assert.That(d.At(grid.Index(3, 3, Layer)), Is.EqualTo(DesignationKind.Fell));
 
+            // The channel is sparse and whole-world: one entry per order, carrying the cell index
+            // it was given at rather than an offset into the published layer. That is what lets an
+            // order given on an outcrop above the slice be drawn at all.
             var snapshot = world.Views.Current;
-            Assert.That(snapshot.Designations.Length, Is.EqualTo(grid.Size.LayerStride));
-            Assert.That(snapshot.Designations[grid.Size.Index(3, 3, 0)], Is.EqualTo((byte)DesignationKind.Fell),
-                "the slice channel is indexed within the layer");
+            Assert.That(snapshot.Orders.Length, Is.EqualTo(1), "one order was accepted, so one is published");
+            Assert.That(snapshot.Orders[0].CellIndex, Is.EqualTo(grid.Index(3, 3, Layer)));
+            Assert.That(snapshot.Orders[0].Kind, Is.EqualTo((byte)DesignationKind.Fell));
 
             world.Intents.Submit(new Intent(IntentKind.CancelDesignation, new CellRef(3, 3, Layer)));
             world.Tick();
             Assert.That(d.Count, Is.Zero);
-            Assert.That(world.Views.Current.Designations[grid.Size.Index(3, 3, 0)], Is.Zero);
+            Assert.That(world.Views.Current.Orders.Length, Is.Zero);
         }
 
         [Test]
@@ -184,6 +187,54 @@ namespace Odyssey.Tests.Sim
             var builder = d.Attach(new SimWorldBuilder().WithSize(grid.Size))
                 .AddIntentHandler(IntentKind.Designate, _ => IntentRejection.None);
             Assert.Throws<System.InvalidOperationException>(() => builder.Build());
+        }
+        /// <summary>
+        /// <b>A fell order named at solid ground means the tree standing on it.</b>
+        ///
+        /// The picker stopped answering a click on bare ground with the air cell above it on
+        /// 2026-09-16 — the owner wanted "the tile below it or not at all" — and a tree is an
+        /// edifice standing in exactly that air cell. A click straight on a tree still names the
+        /// tree; a drag box begun on open grass arrives a layer too low, and without this every
+        /// cell of it is refused in silence. Sweeping the cut tool across a wood would do nothing
+        /// at all, with no error to show for it.
+        /// </summary>
+        [Test]
+        public void AFellOrderOnTheGroundMarksTheTreeStandingOnIt()
+        {
+            var (grid, _, d) = Board();
+            int ground = grid.Index(3, 3, Layer - 1);
+            int tree = grid.Index(3, 3, Layer);
+
+            Assume.That(d.IsTree(tree), Is.True, "the fixture must actually stand a tree there");
+            Assume.That(grid.IsSolidTerrain(ground), Is.True, "and the tree must stand on solid ground");
+
+            Assert.That(d.Designate(new CellRef(3, 3, Layer - 1), DesignationKind.Fell),
+                Is.EqualTo(IntentRejection.None));
+            Assert.That(d.At(tree), Is.EqualTo(DesignationKind.Fell), "the tree, not the ground");
+            Assert.That(d.At(ground), Is.EqualTo(DesignationKind.None));
+
+            // And taking it off again the same way, which is what a cancel drag over grass does.
+            Assert.That(d.Cancel(new CellRef(3, 3, Layer - 1)), Is.EqualTo(IntentRejection.None));
+            Assert.That(d.At(tree), Is.EqualTo(DesignationKind.None));
+        }
+
+        /// <summary>
+        /// The control for the test above: only felling is lifted. Mining means the block the
+        /// player clicked, which is what the picker now hands over, and a mine order on ground
+        /// with a tree on it is still refused outright — <c>CanMine</c>'s own rule, because
+        /// digging it out would leave the tree rooted in mid-air.
+        /// </summary>
+        [Test]
+        public void OnlyFellingIsLiftedOffTheGround()
+        {
+            var (grid, _, d) = Board();
+            int ground = grid.Index(3, 3, Layer - 1);
+
+            Assume.That(d.IsTree(grid.Index(3, 3, Layer)), Is.True);
+
+            Assert.That(d.Designate(new CellRef(3, 3, Layer - 1), DesignationKind.Mine),
+                Is.EqualTo(IntentRejection.NotPermitted), "the ground under a standing tree is not diggable");
+            Assert.That(d.At(ground), Is.EqualTo(DesignationKind.None));
         }
     }
 }

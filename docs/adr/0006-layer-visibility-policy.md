@@ -97,6 +97,41 @@ chose had been half-implemented for M1 and the half that was missing was the hal
 notice first. A mode that draws the storey above is not drawing the storey above if the people in
 it are missing.
 
+## Amendment, 2026-09-16 — solid is clickable, a ghost never is
+
+`06-rendering-and-camera.md` §3 point 1 — carried into this ADR by reference and enforced by
+`SlicePicker` — said that nothing above the slice may be a pointer target, on the strength of Going
+Medieval's misclicking reports. The amendment above made everything above the surface draw *solid*,
+and the two together produced a world the player could see and not touch:
+
+> *"On my default depth level I can only select objects/things on my level — I couldn't select the
+> stones for mining, for example. I should be able to click on an object in 3D space."*
+
+**The rule is now: a click reaches anything drawn at full opacity, and never anything translucent.**
+The band the picker walks is the band the renderer draws solid, and it is asked of the same object.
+Underground, where the layer overhead is x-rayed, a click cannot leave the active layer upwards and
+the old behaviour is unchanged — which is the case the misclicking reports are actually about, since
+what makes a misclick a misclick is operating on a depth *cue*. Layers below, which are dimmed
+rather than ghosted, become reachable where nothing in front of them occludes: down a shaft, over a
+cliff, through a stairwell.
+
+This does not weaken rationale 1 to 3; it completes them. A player who can see what is over their
+head and cannot act on it has been given a picture, and rationale 2's "verticality has to be legible
+or the premise fails" was never only about legibility.
+
+**A second rule fell out of it, and the owner settled that one too: a face belongs to whatever you
+clicked, or the click misses** — *"I still wanted to select the tile below it or not at all."* The
+picker used to answer a floor crossing with the *air* cell above the surface, which was never a
+choice: on one layer it was the only cell on offer. Reaching up and down a stack it reads as
+clicking a rock and selecting the sky. Bare ground now resolves to the block beneath it, an edifice
+and a built floor resolve to their own cell, and a hole resolves to nothing. Details and the
+felling consequence are in `06-rendering-and-camera.md` §3c.
+
+**Flip condition F5.** If playtesting turns up the misclick complaint this rule was guarding against
+— an order landing a storey away from where it was aimed — the answer is not to re-clip the ray but
+to make the depth the click landed on visible before it is committed: the cursor already knows the
+layer, and the Depth Ruler is the place to show it.
+
 **Flip condition F4.** If the uncapped stack above ever costs measurable frame time on a tall map,
 the cap returns above ground only — underground is where the rule earns its keep, and it is the
 cheaper half.

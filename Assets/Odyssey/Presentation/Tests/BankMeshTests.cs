@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
@@ -27,10 +28,20 @@ namespace Odyssey.Tests.Presentation
         const float Tolerance = 1e-4f;
 
         [SetUp]
-        public void Reset() => GroundMesh.ResetLevers();
+        public void Reset() => ResetLevers();
 
         [TearDown]
-        public void Restore() => GroundMesh.ResetLevers();
+        public void Restore() => ResetLevers();
+
+        /// <summary>
+        /// Both sets, because the bank levers became statics when the decision left the mesher and
+        /// a static a test moves is a static the next test inherits.
+        /// </summary>
+        static void ResetLevers()
+        {
+            GroundMesh.ResetLevers();
+            BankLayout.Reset();
+        }
 
         static IEnumerable<BankMesh.Kind> Kinds
         {
@@ -302,25 +313,9 @@ namespace Odyssey.Tests.Presentation
             return n;
         }
 
-        /// <summary>
-        /// A board whose x &lt; half is <paramref name="rise"/> layers higher than the rest: a
-        /// straight terrace step running the whole depth of the map.
-        /// </summary>
-        static RenderTestWorld Step(int rise, ushort stepTerrain)
-        {
-            const int n = 6;
-            var world = new RenderTestWorld(n, n, 8);
-
-            for (int z = 0; z < n; z++)
-            for (int x = 0; x < n; x++)
-            {
-                int top = x < n / 2 ? 1 + rise : 1;
-                for (int y = 0; y <= top; y++) world.Solid(x, z, y, NaturalContent.TerrainSubsoil);
-                world.Solid(x, z, top, x < n / 2 ? stepTerrain : NaturalContent.TerrainGrass);
-            }
-
-            return world.Publish();
-        }
+        /// <summary>The shared terrace board. <see cref="RenderTestWorld.Terrace"/>.</summary>
+        static RenderTestWorld Step(int rise, ushort stepTerrain) =>
+            RenderTestWorld.Terrace(rise, stepTerrain);
 
         [Test]
         public void EveryOneLayerStepGrowsExactlyOneBank()
@@ -361,6 +356,94 @@ namespace Odyssey.Tests.Presentation
             // A grassy ramp growing out of cut rock is a lie about what was done to it.
             RenderTestWorld world = Step(rise: 1, stepTerrain: CoreContent.TerrainRock);
             Assert.That(BanksIn(world, MeshLayer(world, 2)), Is.Zero, "cut rock grew a bank");
+        }
+
+        // ------------------------------------------------- and where one must not, in a working
+
+        /// <summary>
+        /// Open a cell without anybody having cut it: a natural hollow in the ground, which is
+        /// what the quarry below is measured against. Everything <see cref="RenderTestWorld.Mine"/>
+        /// does except leave the mark a miner leaves.
+        /// </summary>
+        static void Hollow(RenderTestWorld world, int x, int z, int y)
+        {
+            int index = world.Index(x, z, y);
+            world.Grid.Terrain[index] = CoreContent.TerrainAir;
+            world.Grid.Flags[index] &= ~CellFlags.SolidTerrain;
+        }
+
+        [Test]
+        public void ANaturalHollowInEarthGrowsItsBank()
+        {
+            // The control for the quarry, and the reason the pair is worth having: a hollow in
+            // soil satisfies every condition a terrace step does — earth on all four sides, each
+            // one solid with an open top, a floor underfoot and open sky overhead. So the bank
+            // rule as written cannot tell this from a dip in a meadow, and does not try to.
+            RenderTestWorld world = Step(rise: 0, stepTerrain: NaturalContent.TerrainGrass);
+            Hollow(world, 2, 2, 1);
+            world.Publish();
+
+            Assert.That(BanksIn(world, MeshLayer(world, 1)), Is.EqualTo(1),
+                "a hollow in soft ground is somewhere to walk down into");
+        }
+
+        [Test]
+        public void AQuarryInEarthKeepsItsSheerFace()
+        {
+            // The reported bug, and it is the same hollow one line different. Grass, bare earth
+            // and subsoil are all mineable, so a quarry sunk into the meadow used to grow a bank
+            // inside the cell that had just been cut — a stepped ramp filling the hole from its
+            // floor to the rim, with the miner who cut it standing in the middle of it. The owner
+            // saw colonists vanish wherever people were mining.
+            RenderTestWorld world = Step(rise: 0, stepTerrain: NaturalContent.TerrainGrass);
+            world.Mine(2, 2, 1).Publish();
+
+            Assert.That(BanksIn(world, MeshLayer(world, 1)), Is.Zero, "a cut cell grew a bank");
+        }
+
+        [Test]
+        public void ABenchCutAcrossAMeadowKeepsEveryFaceSheer()
+        {
+            // A quarry is not one cell: DesignationGrid.CanBeLeftAfterCutting means one comes out
+            // as benches, so the shape to check is a trench with a long face down each side.
+            RenderTestWorld world = Step(rise: 0, stepTerrain: NaturalContent.TerrainGrass);
+            for (int z = 1; z < 5; z++) world.Mine(2, z, 1);
+            world.Publish();
+
+            Assert.That(BanksIn(world, MeshLayer(world, 1)), Is.Zero, "a cut bench grew banks");
+        }
+
+        [Test]
+        public void MiningInOnePlaceLeavesTheTerracesElsewhereAlone()
+        {
+            // The guard is a per-cell fact and must stay one. Reading the mark on the wrong cell —
+            // or clearing banks per chunk once any of it had been dug — would take the ramps off
+            // the whole hillside the first time somebody sank a shaft at the other end of it.
+            RenderTestWorld world = Step(rise: 1, stepTerrain: NaturalContent.TerrainGrass);
+            int before = BanksIn(world, MeshLayer(world, 2));
+            Assert.That(before, Is.EqualTo(6), "the terrace under test");
+
+            // A cell in the low half, two cells clear of the riser, and one layer down from it.
+            world.Mine(5, 0, 1).Publish();
+
+            Assert.That(BanksIn(world, MeshLayer(world, 2)), Is.EqualTo(before),
+                "digging over there took the banks off the terrace over here");
+        }
+
+        [Test]
+        public void TheLeverPutsTheFaultBackForThePhotograph()
+        {
+            // QuarryCheck shoots the same pit twice and differences the pictures, which is only a
+            // comparison if the first one is the fault itself rather than a memory of it.
+            RenderTestWorld world = Step(rise: 0, stepTerrain: NaturalContent.TerrainGrass);
+            world.Mine(2, 2, 1).Publish();
+
+            var batch = new ChunkBatch();
+            var mesher = new ChunkMesher(world.Model) { BanksInWorkings = true };
+            mesher.Mesh(batch, 1 * world.Chunks.ChunksX * world.Chunks.ChunksZ);
+
+            Assert.That(BanksIn(world, batch), Is.EqualTo(1),
+                "the lever does not put the bank back inside the working");
         }
 
         [Test]

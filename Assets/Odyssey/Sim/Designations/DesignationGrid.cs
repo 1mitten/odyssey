@@ -124,7 +124,7 @@ namespace Odyssey.Sim.Designations
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
             if (kind == DesignationKind.None) return IntentRejection.NotPermitted;
 
-            int index = _grid.Index(cell);
+            int index = TreeAbove(_grid.Index(cell), kind);
             if (!Allows(index, kind)) return IntentRejection.NotPermitted;
             if (_kinds[index] == (byte)kind) return IntentRejection.AlreadyInThatState;
 
@@ -136,9 +136,44 @@ namespace Odyssey.Sim.Designations
         {
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
             int index = _grid.Index(cell);
+
+            // The mirror of TreeAbove: the order the player can see over this patch of ground is
+            // the one standing on it, so naming the ground takes it off.
+            if (_kinds[index] == 0)
+            {
+                int above = index + _grid.Size.LayerStride;
+                if (_grid.IsSolidTerrain(index) && above < _grid.Size.CellCount && _kinds[above] != 0)
+                    index = above;
+            }
+
             if (_kinds[index] == 0) return IntentRejection.AlreadyInThatState;
             Set(index, DesignationKind.None);
             return IntentRejection.None;
+        }
+
+        /// <summary>
+        /// A fell order named at solid ground means the tree standing on it.
+        ///
+        /// <para><b>A click names a surface; an order names a cell, and the two stopped being the
+        /// same thing on 2026-09-16.</b> The picker now answers a click on bare ground with the
+        /// ground <i>block</i> rather than the air above it (owner: "I still wanted to select the
+        /// tile below it or not at all") — and a tree is an edifice standing in that air cell. So
+        /// a click straight on a tree still names the tree, but a drag box begun on open grass
+        /// comes through a layer too low, and every cell of it would be refused in silence. The
+        /// player would have swept the tool across a wood and watched nothing happen.</para>
+        ///
+        /// <para>It is the same relation <see cref="CanMine"/> already knows about from the other
+        /// side — that the ground under a standing tree is not diggable while the tree is up — so
+        /// the ground and the tree on it were already two views of one thing here.</para>
+        ///
+        /// <para>Only felling. Mining means the block itself, which is exactly what the click now
+        /// gives, and no other kind is about something standing on the ground.</para>
+        /// </summary>
+        int TreeAbove(int index, DesignationKind kind)
+        {
+            if (kind != DesignationKind.Fell || !_grid.IsSolidTerrain(index)) return index;
+            int above = index + _grid.Size.LayerStride;
+            return above < _grid.Size.CellCount && IsTree(above) ? above : index;
         }
 
         /// <summary>Clear a cell without ceremony: the order was carried out.</summary>
@@ -356,41 +391,35 @@ namespace Odyssey.Sim.Designations
             }
         }
 
-        // ---- ISnapshotContributor: one byte per cell of the active layer ---------------------
+        // ---- ISnapshotContributor: one entry per standing order, anywhere in the world -------
 
+        /// <summary>
+        /// Publish every standing order the colony has, with how far through it is.
+        ///
+        /// <para><b>Walked over the orders, not over the board.</b> The first version asked
+        /// <c>Fraction()</c> for all 14,400 cells of the active layer every tick, which cost
+        /// 0.055 ms on a board with no orders on it at all — twenty-eight times the entire rest of
+        /// the simulation, and it took the ten-day soak from 1 second a seed to 39. A layer has
+        /// fourteen thousand cells and a colony has tens of orders, so sparse is the right shape by
+        /// three orders of magnitude.</para>
+        ///
+        /// <para><b>And every layer, not the active one.</b> It used to copy the active layer's
+        /// slice of <c>_kinds</c>, which was right while a click could not reach another layer.
+        /// Since 2026-09-16 it can, so an order given on an outcrop standing over the meadow was
+        /// accepted, worked and never drawn — the player's reading being that nothing happened.
+        /// Publishing every order costs less than publishing one layer of mostly nothing did, and
+        /// presentation filters to the layers it is drawing.</para>
+        /// </summary>
         public void Contribute(SimWorld world, SnapshotWriter writer)
         {
-            var size = _grid.Size;
-            int layer = world.Views.SliceLayer;
-            if (layer < 0) layer = 0;
-            if (layer >= size.SizeY) layer = size.SizeY - 1;
-
-            var channel = writer.BeginDesignations(size.LayerStride);
-            new ReadOnlySpan<byte>(_kinds, layer * size.LayerStride, size.LayerStride).CopyTo(channel);
-
-            // How far along each order is, quantised to a byte. Presentation cannot work this out
-            // for itself: the denominator is the terrain's work-to-clear, which is content.
-            //
-            // **Walked over the orders, not over the layer.** This asked Fraction() for all 14,400
-            // cells of the active layer every tick, which cost 0.055 ms a tick on a board with no
-            // orders on it at all — twenty-eight times the entire rest of the simulation, and it
-            // took the ten-day soak from 1 second a seed to 39. A layer has fourteen thousand
-            // cells and a colony has tens of orders, so the sparse list is the right shape by
-            // three orders of magnitude; the clear is what makes the sparse write correct, since
-            // the snapshot is double-buffered and the buffer still holds the frame before last.
-            var progress = writer.BeginDesignationProgress(size.LayerStride);
-            progress.Clear();
-
-            int first = layer * size.LayerStride;
-            int last = first + size.LayerStride;
+            // _cells is sorted, so orders arrive in cell-index order and presentation gets a
+            // stable sequence rather than one that reshuffles as orders are given and carried out.
             for (int i = 0; i < _cells.Count; i++)
             {
                 int index = _cells[i];
-                // _cells is sorted, so the active layer is one contiguous run: skip to it, stop
-                // after it.
-                if (index < first) continue;
-                if (index >= last) break;
-                progress[index - first] = (byte)(Fraction(index) * 255f);
+                byte kind = _kinds[index];
+                if (kind == 0) continue;
+                writer.AddOrder(new OrderView(index, kind, (byte)(Fraction(index) * 255f)));
             }
         }
     }

@@ -280,7 +280,7 @@ cheap to decide: it stands at the same layer as the riser, on the top of the low
 the top of the riser. Everything the decision needs is on one layer plus the cell directly below, so
 a single-layer chunk pass sees all of it.
 
-Four conditions, each with a test, each ruling out something that would look wrong:
+Five conditions, each with a test, each ruling out something that would look wrong:
 
 - **Empty, and standing on ground**, or the bank hangs in the air.
 - **The step is earth.** A mined face and a quarry wall stay sheer; a grassy ramp growing out of cut
@@ -288,6 +288,72 @@ Four conditions, each with a test, each ruling out something that would look wro
 - **The top of the step is open**, or this is the wall of a tunnel rather than a terrace.
 - **The cell is open to the sky**, which keeps banks on the outdoor hillside and the inside of a
   working sharp-edged.
+- **Neither the cell's floor nor the step beside it is a face the colony cut.** See below: this one
+  arrived as a reported bug rather than as a condition thought of in advance.
+
+**Nothing grows inside a working (owner report, 2026-09-16: "you can't see the colonists").** The
+"step is earth" rule reads as though it had already covered this, and it does not: grass, bare earth
+and subsoil are all mineable — 60, 60 and 160 ticks to clear — so a quarry sunk into the meadow is a
+hole whose walls are earth with open tops, which is every condition a terrace step has. A bank
+therefore grew **in the cell that had just been cut**, filling it from its floor to the rim, and the
+miner standing in it to cut the next face was drawn up to the chest in ground. Measured on the played
+board: a 3 × 3 pit one layer deep grew 8 banks and swallowed one of the five colonists whole.
+
+The mark presentation reads is `CellFlags.Discovered`, taken for its *other* meaning. The two are
+coextensive rather than merely similar — the flag is set by `CellGrid.RevealAround`, which is called
+from exactly one place, `MineJobDriver.MineCell`, and worldgen sets it on nothing at all — so a solid
+cell carries it if and only if a colonist has taken the cell next to it out of the world. The
+coupling is stated in `WorldRenderModel.IsCutFace`, which is the one place that would change if a
+deep scanner ever revealed rock nobody had touched.
+
+**It has to be asked of the floor and not only of the sides**, and the shortfall is invisible in the
+obvious case. Mining a cell reveals all six of its solid neighbours, so a cut cell's four sides are
+all cut faces — `StepsAround` comes back empty, and the hip branch then went looking at the
+*diagonal* neighbours, which nothing reveals, because a colonist who cuts past the corner of a seam
+has not seen into it. The hole filled with a hip piece instead of a corner one: a single cut cell
+still drew 1 bank and a four-cell bench still drew 2. A mined cell's floor is revealed too, being one
+of the six, so asking the floor catches every shape of working at once.
+
+**A figure stands on a bank, not in one.** A bank fills its cell from the floor to the rim and a
+pawn is drawn at the middle of its cell, so the fault above has a second home on the outdoor
+hillside — where the ramp is the picture of a hop and must stay, so the answer is the opposite one.
+Measured on the played board before the fix: **three of five colonists** standing at the foot of a
+terrace, every one of them 1.500 m through the slope; afterwards, 0.000 m.
+
+The decision therefore left the mesher. `BankLayout` holds all of it — whether a bank stands in a
+cell, which of the three shapes it is, what it is made of, and `RiseAt`, how far its surface stands
+above its own floor at a point. `ChunkMesher` turns that into an instance and `PawnPose` stands a
+figure on it, so the two cannot drift; two copies of this arithmetic would look identical until the
+day they disagreed, and the symptom would be blamed on the animation. The levers went static with
+it (`BankLayout.Enabled`, `InWorkings`, `LiftFigures`), because a per-renderer lever would let banks
+be off while colonists still hovered 1.5 m over the meadow.
+
+**The tiling is what makes it safe.** `BankMesh`'s three shapes were built to agree where they
+meet — a straight piece's open edge sits at its floor, a hip's does too, and neighbouring pieces
+match along the shared edge — and those same tests are what make the surface continuous for a
+walker. Nothing extra was needed for a run of bank, for leaving one onto flat ground, or for walking
+onto one.
+
+**Going up, take the higher of chord and ground; going down, fade the lift out.** The asymmetry is
+two different faults, not untidiness. Climbing, the chord between two cell centres runs *below* the
+ground for the second half of the step — a hop passes a metre and a half inside the block being
+climbed, which it did before banks existed — so the figure is pushed up onto the surface, and the
+surface is continuous so the maximum is too. Descending, the drawn ground is a step function: taking
+the maximum would hold the figure flat to the edge and then drop it 1.5 m in one frame. The rise is
+faded out over the step instead, **at both ends** — the first version faded out only the cell being
+left and forgot the one being entered, which is fine dropping off a bank onto flat ground and a
+metre and a half of teleport dropping off a step *into* one, and a terrace has banks at the bottom
+of it by definition. `BankFootingTests` samples each case 400 times across the step and asserts no
+frame-to-frame jump over 5 cm.
+
+**Open: whether the feet need the bank's own gradient.** `Footing` leans the root toward the ground
+normal and plants both boots with `TwoBoneIk`, off `GroundRelief.SlopeAt` — the rolling field, which
+is eight degrees where a bank is fifty. A stance 0.3 m across therefore spans about 0.36 m of slope
+the feet know nothing about. The sheet could not settle it: the colonist the harness picked wears a
+full-length skirt, so her legs are not in the picture at all. It is a fifth of a metre at the boots,
+usually occluded by the slope itself, and §2b's standing rule — ground lies along the slope, people
+stand up on it — predicts the lift alone is enough. Judge it from `bank-on-boots.png` on a run that
+picks a colonist in trousers.
 
 Two of those carry the argument. *Flat ground grows none* is the cost claim — the meadow is nearly
 all flat, and a bank on flat ground would put an instance on every cell of the board. *A two-layer
@@ -361,6 +427,29 @@ with banks. **Side on and low is the shot that answers the question**, for the s
 `SwingCheck` photographs the axe across the line to the tree: in the three-quarter view a step and
 the ground in front of it sit at different depths, and the profile of a bank reads as anything you
 like.
+
+A quarry has its own instrument, because a terrace and a working are different pictures and
+`SlopeCheck` frames a terrace by construction: *Odyssey → Presentation → Check a quarry*
+(`scripts/unity.sh shot Odyssey.EditorTools.QuarryCheck.Run`) cuts a 3 × 3 pit **under a colonist's
+feet** — `MineJobDriver.MineCell` steps whoever was standing on a cell down onto the floor it just
+cut, so she ends up in the hole exactly as the game puts her there — and shoots it with
+`ChunkRenderer.BanksInWorkings` on and then off. That lever exists only so the fault can be
+photographed rather than remembered. One trap it records: an instance matrix is
+`placement * part.Local` and a module's local transform puts the mesh's origin at the middle of its
+cell, not at its floor, so matching a bank to the cell it stands in by an exact position finds
+nothing and reports a clean board.
+
+And the figure on a bank has its own: *Odyssey → Presentation → Check a bank underfoot*
+(`scripts/unity.sh shot Odyssey.EditorTools.BankCheck.Run`). It **builds** its step rather than
+finding one — a block of earth laid on the columns beside a colonist, which is a natural step and
+not a cut one, so it grows a bank where `SlopeCheck`'s hunt for the longest terrace run would put
+the camera somewhere nobody is standing. It shoots with `BankLayout.LiftFigures` off and then on and
+prints `MeasuredFootGap` for **every** colonist in a bank, not just the subject, because a figure
+sunk into a ramp and a figure standing behind one look the same from every bearing. Two traps it
+records: the first version measured the gap through the same call the lever gates, so it reported a
+perfect 0.000 m in both conditions — an instrument wired to the thing it is measuring — and the
+board is wooded at the generator's own density, so two sheets running put a trunk between the camera
+and the subject and the harness now clears the trees around it.
 
 ## 2d. The day
 
@@ -522,14 +611,14 @@ a precision modifier instead, which is allowed on purpose.
 
 | Layer relative to the slice | Rendered | Interactive |
 |---|---|---|
-| Above the active layer | Ghosted outline, heavily transparent, or hidden entirely (a player setting) | **Never** |
+| Above the active layer | Ghosted outline, heavily transparent, or hidden entirely (a player setting) | **Never** (amended — see §3c: solid is clickable, a ghost never is) |
 | The active layer | Fully, and with its ceiling slab suppressed so interiors are visible | Yes |
-| 1 to N layers below | Fully, progressively darkened with depth | No |
+| 1 to N layers below | Fully, progressively darkened with depth | No (amended — see §3c) |
 | Deeper than N below | Not drawn | No |
 
 Three decisions inside that table are deliberate:
 
-1. **Layers above are never interactive.** Going Medieval's single most-reported complaint is misclicking something on another floor, with players reporting buildings deconstructed by accident (`b-going-medieval.md`). Ghosted geometry is a depth cue and nothing else; selection and designation raycasts stop at the active layer. This costs nothing to decide now and is unpleasant to retrofit.
+1. **Layers above are never interactive.** Going Medieval's single most-reported complaint is misclicking something on another floor, with players reporting buildings deconstructed by accident (`b-going-medieval.md`). Ghosted geometry is a depth cue and nothing else; selection and designation raycasts stop at the active layer. This costs nothing to decide now and is unpleasant to retrofit. **Amended 2026-09-16 by §3c, and the amendment keeps the sentence that was doing the work: a *ghost* is never a pointer target. What changed is that above the surface nothing above the slice is a ghost any more.**
 2. **The active layer is drawn roofless.** The ceiling slab of the active layer is suppressed — exactly what the concept renders show, and the only way interiors read at all. The slab is still *there* in the simulation; this is purely a render decision.
 3. **Layers below stay visible and darkened.** This is the depth cue that makes a hole in the floor legible as a hole rather than a black square, and it is what makes building above an occupied room comprehensible. N and the darkening curve are settings, because the right value is a matter of taste and screen size.
 
@@ -600,6 +689,87 @@ the new one is four. Nothing on the board being played pays anything at all.
 The six ADR 0006 modes are untouched and still ship. Switching `followDepth` off obeys every field
 exactly as before, which is what choosing a mode explicitly does: the V key's first press pins
 whatever is on screen and hands over control, and cycling past the last mode gives the default back.
+
+### 3c. What can be clicked is what is drawn solid (owner, 2026-09-16)
+
+§3 point 1 said selection and designation rays stop at the active layer. Once §3a made the whole
+stack above the surface draw **solid**, that rule started costing the player the world it had just
+been given:
+
+> *"On my default depth level I can only select objects/things on my level — I couldn't select the
+> stones for mining, for example. I should be able to click on an object in 3D space."*
+
+An outcrop standing two cells proud of the meadow is now drawn as a rock, at full opacity, and it
+could be looked at and not marked. So the rule is restated rather than dropped:
+
+| Layer, relative to the slice | Drawn | A pointer target |
+|---|---|---|
+| Above, solid (`full` / `roofs-off`, and the depth-following default above ground) | Yes | **Yes** |
+| Above, translucent (`ghost`, `xray`, `xray-min` — which is what underground gets) | Yes | **No** |
+| Above, hidden (`hide`) | No | No |
+| The active layer | Yes | Yes |
+| Below, within `belowDepth` | Yes, dimmed | **Yes** |
+| Below, beyond `belowDepth` | No | No |
+
+**The misclick complaint is answered by the second row, not by the first.** What makes a misclick a
+misclick is clicking a *cue* — a translucent hint of a wall, drawn to tell you something is there
+rather than to be operated on. Underground, where the layer overhead is x-rayed precisely so you can
+see through it, a click still cannot leave the active layer upwards and the old behaviour is
+unchanged, which is the case the Going Medieval reports are actually about. Dimmed is not ghosted: a
+layer below is opaque, and a ray only reaches one where nothing above it occludes — down a shaft,
+over a cliff, through a stairwell — which is exactly where a player means to click.
+
+**What a click selects: the thing you clicked, or nothing.** The first attempt kept the picker's
+old convention — a floor crossing returns the *air* cell whose floor it crossed — and the owner
+rejected it: *"I still wanted to select the tile below it or not at all."* That convention was never
+chosen; on one layer the air cell was the only cell on offer. Carried up and down a stack it reads
+as clicking a rock and selecting the sky above it. So:
+
+| What the ray meets | What is selected |
+|---|---|
+| An occluding cell — wall, door, pillar, solid strata | that cell |
+| The floor of a cell holding an **edifice** — a tree, and later a bed or a workbench | that cell: the edifice is the thing you clicked |
+| The floor of a cell holding a **built floor slab** | that cell: the slab is drawn in it |
+| The floor of a cell with nothing but solid terrain beneath | **the block beneath**, whose top face that is |
+| The floor of a cell with nothing beneath | nothing. A hole is a hole |
+
+A solid cell's top face and the floor of the air cell above it are one surface at one distance, so
+two layers bid at the same ray parameter — and under this rule they resolve to the same block, which
+is what makes the tie harmless. Where they disagree is a tree: the tree's cell and the ground under
+it offer the same face, and **a thing beats bare ground**, failing which the layer nearer the slice
+wins.
+
+**The edifice row is not an exception, and leaving it out would have broken felling outright.** A
+tree is an edifice that blocks nothing, standing in the walkable cell. "Select the tile below" taken
+literally hands back the ground under every tree and the Fell order can never be given again. What
+the player is looking at there is the tree.
+
+**And the order had to be lifted to match, for a drag.** A click on a tree names the tree, but a
+fell box begun on open grass anchors a layer too low and every cell of it would be refused in
+silence — the tool swept across a wood and nothing happening. `DesignationGrid.Designate` therefore
+reads a Fell order named at solid ground as the tree standing on it, and `Cancel` mirrors it. Only
+felling: mining means the block itself, which is exactly what the click now gives, and it is the
+same relation `CanMine` already knew from the other side — that the ground under a standing tree is
+not diggable while the tree is up.
+
+**A surface that is not drawn is not clickable, and that has a case of its own.** The active layer's
+ceiling is the slab of the layer *above* it, and §3 point 2 meshes it away. So that one layer offers
+only what occludes: the rock over your head stays pickable, the dropped slab does not.
+
+**`SlicePicker` walks the band rather than raycasting the scene.** There are still no colliders —
+the world is instanced geometry with no GameObjects — so it clips the ray analytically to each
+candidate layer's slab and marches it, taking the nearest hit. The band is a `SliceSettings`
+question (`HighestSelectableLayer` / `LowestSelectableLayer`), so "selectable" and "drawn solid"
+come from the same object that decides what is drawn and cannot drift apart. Colonists follow the
+same band: `SelectionPresenter` culls the figure hit-test and the drag box against it, with one
+extra rule for a ray — a pawn must be at or above the layer of the cell the ray ended on, because
+the pick ray descends, so everything it met before the ground is at or above it. That is the cheap
+stand-in for comparing ray distances and it is exact for the only camera this game has.
+
+**Cost:** one cell march per candidate layer, on a click and on the hover that draws the cursor.
+Four layers above and three below on the prototype board is eight marches of at most a few hundred
+array reads. The band is capped at `WorldRenderModel.HighestOccupiedLayer`, the same cap the
+renderer's own loop uses, so a tall map does not march through empty sky.
 
 **Implementation:** per-layer visibility on the instanced batches, not a clipping plane. The renderer simply does not submit buckets outside the drawn range, which is cheaper than submitting and clipping, keeps shadow casters honest, and makes the ghosted layer a different material rather than a shader branch. A clip plane remains the fallback if a single mesh ever needs to be cut mid-cell, which the discrete-cell model is specifically designed to avoid.
 
