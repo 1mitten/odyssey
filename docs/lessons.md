@@ -778,3 +778,32 @@ references in the project were the fresh ones, after `obj/` was cleared, and aft
 and the package assemblies, builds in seconds and answers the only question a handoff needs: do
 *these sources* agree with each other. Assembly-definition boundaries are then unverified, which is
 what `scripts/unity.sh test editmode` is for.
+
+## A scene rebuild in a packless worktree quietly guts the art catalogue
+
+`scripts/unity.sh exec Odyssey.EditorTools.PlayScene.Build` does what it says and also rewrites
+`Assets/Odyssey/Presentation/ModuleCatalogue.asset`. In a worktree with no `Assets/Synty` — which
+is every worktree that has not had the junction from the lesson above — every Synty prefab
+reference in that asset is resolved against nothing and written back as `{fileID: 0}`. On
+2026-09-16 that was 501 lines changed, the whole catalogue reduced to names with no art, and the
+run **exited zero and said nothing**. `git add -A` would have committed it, and the next person to
+open the main checkout would have had a colony of grey boxes with no failing test to explain it.
+
+Three things make this worth a section rather than a footnote.
+
+- **It looks like ordinary Unity churn.** The same run also re-serialises `OdysseySky.mat`,
+  `HudPanelSettings.asset` and `ProjectSettings/ShaderGraphSettings.asset` with no content change
+  at all. Three harmless files and one catastrophic one arrive in `git status` together, and the
+  catastrophic one is not the one with the alarming name.
+- **The tests do not catch it**, and cannot. The catalogue is licensed art, the fast tier never
+  loads it, and the whole point of the clean-room rule is that the simulation runs without it.
+  A green tier here means the code is fine, not that the commit is.
+- **The scene itself is not damaged**, which makes the diff misleading. `Play.unity` keeps its
+  catalogue reference by GUID and only renumbers its fileIDs, so reading the scene diff reassures
+  you about the wrong file.
+
+**So: after any editor command in a worktree, diff the assets it touched before staging anything,
+and never `git add -A` on the strength of an exit code.** If the catalogue is in the list, either
+revert it or make the junction first and rebuild. Reverting is right whenever the catalogue is not
+what you changed — `git checkout -- Assets/Odyssey/Presentation/ModuleCatalogue.asset` — because a
+catalogue rebuilt without the packs can never be more correct than the committed one.

@@ -310,6 +310,20 @@ namespace Odyssey.Presentation.World
 
         // ------------------------------------------------------------ refresh
 
+        /// <summary>
+        /// Draw every chunk again, without a cell having changed.
+        ///
+        /// <para>For the drawing decisions that are baked in as a chunk is meshed rather than read
+        /// as it is submitted — the grass tufts and the ground relief, which end up in the
+        /// instance matrices themselves. Throwing one of those levers at runtime is otherwise
+        /// silent: the setting changes and the board keeps showing what it was meshed with.</para>
+        ///
+        /// <para>It bumps the version and nothing else, so the remesh is lazy and per chunk, and
+        /// costs exactly what the renderer already pays after a world edit. No cell is touched, so
+        /// nothing here reaches the simulation, the save or the hash.</para>
+        /// </summary>
+        public void Remesh() => Version++;
+
         /// <summary>Copy every cell. Run once, after generation, before the first frame.</summary>
         public void RefreshAll(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices)
         {

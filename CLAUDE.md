@@ -335,6 +335,36 @@ after a rebuild, republish `docs/wiki/artifact.html` and
   shadow atlas on the empty air in front of it. Budget: about 2 ms more, quality-tiered, and **no
   measured millisecond figure for any URP post effect exists in any public source**, so every
   number must come from `FrameTimeTests` under the real player loop.
+- **Escape opens a settings panel, and the graphics levers moved out of the inspector
+  (2026-09-16).** Panel B17's M1 stub: a centred panel with one Graphics section of four
+  switches — shadows, surrounding land, grass tufts, ground relief — thrown while the colony runs.
+  It exists because every graphics lever was an `OdysseyBootstrap` inspector field, so comparing
+  two looks meant stopping play, editing a number and starting a board that is no longer the board
+  you were judging; nearly every look decision on record ended asking for the owner's eye in
+  `Play.unity`. `SettingsDirector` (Unity-free, fast tier) holds what the panel holds and **what
+  Escape means**; `SettingsPresenter` does what it says and turns a boolean into a call on the
+  renderer; `HudShell.BuildSettings` draws it. **Escape is now decided in exactly one place** —
+  it was the designate tool's alone, and two components reading one key would have disarmed the
+  tool and opened the panel on the same keystroke, so `DesignatePresenter` reads no key and
+  exposes `ToolArmed` / `PutToolAway` instead. **Two switches are free and two cost a remesh**:
+  shadows and the surround are read as the frame is submitted, while grass and relief are baked
+  into instance matrices at mesh time, so they are followed by `WorldRenderModel.Remesh()` (bumps
+  the version, nothing else) and a skirt rebuild; the row's tooltip says which it is. **It is not
+  modal, deliberately** — the world runs and the camera orbits while it is open, because watching
+  the board is the entire point; clicks stop at the panel edge through the shell's existing
+  pointer gate, and the price is that the tool keys still work behind it. **Preferences are on the
+  machine, never in the colony save** (`PlayerPrefsSettingsStore`, the only `PlayerPrefs` user in
+  the project, behind `ISettingsStore` because the Hud assembly has no UnityEngine): a graphics
+  setting is presentation like the tufts themselves, with no cell, no save and no hash. **The
+  scene still decides how a session starts** — the panel is seeded from the bootstrap's fields and
+  a stored preference is laid over that, so preference beats scene beats nothing, and a panel
+  cannot change the board merely by existing. Six `ui.settings.*` names are in `icon-keys.csv`
+  with the wiki and `Registry.g.cs` regenerated, and `RegistryTests` now holds the panel to the
+  CSV. Design: `10-ui-panel-catalogue.md` B17, `09-ui-and-input.md` §6 case 6. **Not built and not
+  wanted yet:** a real modal, UI Toolkit `Toggle`/`Slider` controls (the switches are lit chips,
+  the idiom this HUD already uses), audio, interface scale, accessibility and keybindings, all M8.
+  The golden-hour work fills the Graphics section out, since its quality tier is a settings
+  surface by definition.
 - **Sim vs UI vocabulary is deliberate:** simulation systems are *subsystems*, presentation-side coordinators are *directors* (`01-architecture.md` §3a). Do not unify the two words.
 - **Phase 3 (design): complete 2026-09-15.** `docs/design/` 00, 01, 02, 03, 04, 05, 06, 07, 08; ADRs 0001, 0002, 0005; and the execution plan `docs/plans/vertical-slice.md` (32 units, M0→M3). **The Phase 3 → Phase 4 hard stop was cleared by the owner on 2026-09-15; execution is under way.**
 - **Interface, icons and content naming (the UI line of work), 2026-09-15.** Design `09-ui-and-input.md`, `10-ui-panel-catalogue.md`, `11-icon-library.md`; ADRs 0003 UI framework, 0004 sim-to-UI contract, 0006 layer visibility, 0007 pixel-art icon pipeline; research `g-01`, `g-02`; mockups `hud-v1.html` (historical) and `hud-v2.html` (current). **Layer visibility decided:** x-ray by default with six modes shipped for playtest, amended by Lane B so that nothing above the active slice is ever a pointer target. **Icons:** 382 keys enumerated, 268 mapped to the owner's eight pixel-art sheets, 114 gaps listed in `11-icon-library.md` — the largest being people, since no sheet contains a human figure. **Names:** all 29 proper nouns proposed and awaiting the owner's veto, in `docs/design/proper-nouns.csv`.

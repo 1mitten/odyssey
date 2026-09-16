@@ -58,7 +58,7 @@ SECTIONS = [
      "carry the layer they occurred on and jump the camera there, which a flat colony sim never "
      "has to think about."),
     ("world", "World and interface", ["ui.terrain", "ui.weather", "ui.overlay", "ui.layer",
-                                      "ui.tab", "ui.speed"],
+                                      "ui.tab", "ui.speed", "ui.settings"],
      "Weather, the data overlays, the layer controls and the rest of the interface furniture. The "
      "six layer visibility modes are decided: see ADR 0006."),
 ]
@@ -71,7 +71,7 @@ NS_TITLES = {
     "ui.status": "Current activity", "ui.health": "Body parts and conditions",
     "ui.alert": "Alerts", "ui.bulletin": "Bulletins", "ui.weather": "Weather",
     "ui.overlay": "Overlays", "ui.layer": "Layer controls", "ui.tab": "Tabs",
-    "ui.speed": "Game speed",
+    "ui.speed": "Game speed", "ui.settings": "Settings",
 }
 SHEET_NAMES = {
     "01": "raw materials", "02": "food", "03": "camp and crafting", "04": "manufactured",
