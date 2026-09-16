@@ -738,9 +738,15 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     the geometry, not a shortfall — a tree further back is below the line and never hid anybody.
   - **Not faded:** other colonists, items and the live animated figures — a skinned figure would
     mean swapping materials on its renderers rather than partitioning an instance array.
+  - **On by default, said in all three places it can be said.** The field initialiser,
+    `SettingsDirector`'s starting state and the serialised scene: a field absent from the scene
+    YAML falls back to the initialiser, so `Play.unity` was quietly right without saying so, which
+    is the arrangement that breaks silently on the next rebuild. The scene names it and
+    `PlaySceneContentsTests.TheSceneOpensWithTheSeeThroughFadeOn` guards it.
   - Levers: `OdysseyBootstrap.seeThroughToSelection` / `seeThroughRadius` / `seeThroughAlpha`, and
-    a switch in the settings panel (`ui.settings.seethrough`) so it can be judged while the colony
-    runs. Judge it with **`Odyssey → Presentation → Check the see-through fade`**
+    a switch in the settings panel's **Graphics** tab (`ui.settings.seethrough`) — Graphics rather
+    than Interface because the tabs divide on how the HUD is drawn against how the world is. A free
+    lever: read as the frame is submitted, so no remesh. Judge it with **`Odyssey → Presentation → Check the see-through fade`**
     (`scripts/unity.sh shot Odyssey.EditorTools.SeeThroughCheck.Run`), which *finds* the colonist
     with the most geometry in the way at four bearings rather than being told where one is.
   - **Verified: it compiles and the geometry holds.** Fast tier 428 Sim and 51 Hud; the Presentation,

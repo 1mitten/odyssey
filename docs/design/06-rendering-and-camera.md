@@ -826,8 +826,17 @@ its bounds.
 swapping materials on its renderers rather than partitioning an instance array, and a person
 standing in front of a person is a much rarer complaint than a wood is.
 
+**On by default** (owner, 2026-09-16), which has three separate homes and needs saying in all
+three: the field initialiser, `SettingsDirector`'s own starting state, and the serialised scene. A
+field absent from the scene YAML falls back to the initialiser, so the scene was quietly right
+without ever saying so — which is the arrangement that breaks silently the next time somebody
+rebuilds it. `Play.unity` names the lever now and `PlaySceneContentsTests` guards it, in the same
+shape as the `followDepth` guard beside it.
+
 **Levers:** `OdysseyBootstrap.seeThroughToSelection`, `seeThroughRadius`, `seeThroughAlpha`, and a
-switch in the settings panel (B17) so it can be judged against itself while the colony runs. Judge
+switch in the settings panel's **Graphics** tab (B17) — Graphics rather than Interface because the
+tabs divide on how the HUD is drawn against how the *world* is, and this is the world. It is a free
+lever, read as the frame is submitted, so it needs no remesh. Judge
 it with **`Odyssey → Presentation → Check the see-through fade`**
 (`scripts/unity.sh shot Odyssey.EditorTools.SeeThroughCheck.Run`), which finds the colonist on the
 board with the most geometry in the way at four bearings rather than being told where one is, and
