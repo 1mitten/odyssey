@@ -57,6 +57,7 @@ namespace Odyssey.Sim.Worldgen.Natural
             treeDensityPerMille = 0;
             outcropsPer10000Columns = 0;
             oreDepositsPer10000Columns = 0;
+            cavernsPer10000Columns = 0;     // the strata stay solid: a hole in them is a bug here
 
             // The cover pass keeps grass when `cover >= barePatchThreshold`, so zero keeps grass
             // everywhere: noise is never negative, so the test always passes. Reaching for a huge
@@ -135,7 +136,7 @@ namespace Odyssey.Sim.Worldgen.Natural
         public int gravelThreshold = 400;
         public int patchPeriod = 9;
 
-        // ---- pass 4, trees -------------------------------------------------------------------
+        // ---- pass 5, trees -------------------------------------------------------------------
 
         /// <summary>
         /// Nominal trees per thousand grass cells, before clumping. The clump field modulates it
@@ -158,7 +159,7 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// <summary>Per mille chance a placed tree is broadleaf rather than conifer.</summary>
         public int broadleafChance = 420;
 
-        // ---- pass 5, rock outcrops -----------------------------------------------------------
+        // ---- pass 4, rock outcrops -----------------------------------------------------------
 
         public int outcropsPer10000Columns = 16;
         public int minOutcropRadius = 1;
@@ -166,13 +167,28 @@ namespace Odyssey.Sim.Worldgen.Natural
         public int minOutcropHeight = 1;
         public int maxOutcropHeight = 3;
 
-        // ---- pass 6, ore ---------------------------------------------------------------------
+        // ---- pass 7, ore ---------------------------------------------------------------------
 
         public int oreDepositsPer10000Columns = 70;
         public int minOreBlob = 5;
         public int maxOreBlob = 20;
 
-        // ---- pass 7, start -------------------------------------------------------------------
+        // ---- pass 6, caverns -------------------------------------------------------------------
+
+        /// <summary>
+        /// Sealed voids in the rock, per ten thousand columns. Three puts four of them on the
+        /// played 120 x 120 board.
+        ///
+        /// A cavern has **no mouth**: it is found by mining into it, which is the whole point of
+        /// it (<c>docs/research/mining-interview.md</c>, answer 7). It is carved strictly inside
+        /// the rock band, so it never undermines the surface and never breaks into the bedrock.
+        /// </summary>
+        public int cavernsPer10000Columns = 3;
+
+        public int minCavernCells = 6;
+        public int maxCavernCells = 20;
+
+        // ---- pass 8, start -------------------------------------------------------------------
 
         /// <summary>Half-width of the starting clearing, so 2 asks for a flat, clear 5 x 5.</summary>
         public int startClearingRadius = 2;
@@ -249,6 +265,8 @@ namespace Odyssey.Sim.Worldgen.Natural
                 throw new ArgumentOutOfRangeException(nameof(minOutcropHeight));
             if (minOreBlob < 1 || maxOreBlob < minOreBlob)
                 throw new ArgumentOutOfRangeException(nameof(minOreBlob));
+            if (minCavernCells < 1 || maxCavernCells < minCavernCells)
+                throw new ArgumentOutOfRangeException(nameof(minCavernCells));
             if (startClearingRadius < 0) throw new ArgumentOutOfRangeException(nameof(startClearingRadius));
         }
     }

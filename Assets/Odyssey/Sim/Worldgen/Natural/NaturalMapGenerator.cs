@@ -17,21 +17,22 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// and nothing iterates a dictionary. <see cref="NaturalMapResult.GridHash"/> is the single
     /// number a test compares.
     ///
-    /// The seven passes:
+    /// The eight passes:
     ///   1. heightfield — gentle terracing from integer value noise;
     ///   2. strata — bedrock, rock, subsoil, soil surface, air;
     ///   3. surface cover — grass, with patches of bare earth, gravel and sand;
     ///   4. rock outcrops — above-ground stone worth mining;
     ///   5. trees — clumped on grass, harvestable, non-blocking;
-    ///   6. ore — depth-weighted lumps inside the rock;
-    ///   7. start — a flat, clear landing site, plus the consistency check.
+    ///   6. caverns — sealed voids in the rock, with no way in but a pick;
+    ///   7. ore — depth-weighted lumps inside the rock, hung on cavern walls where there are any;
+    ///   8. start — a flat, clear landing site, plus the consistency check.
     ///
     /// Each is a separately constructible <see cref="INaturalGenPass"/>, so a test can run the
     /// first two and assert on the strata rather than on the finished map.
     /// </summary>
     public static class NaturalMapGenerator
     {
-        public const int PassCount = 7;
+        public const int PassCount = 8;
 
         /// <summary>The passes in order. A new one is inserted here and nowhere else.</summary>
         public static INaturalGenPass[] CreatePasses() =>
@@ -45,6 +46,9 @@ namespace Odyssey.Sim.Worldgen.Natural
                 // ever buried under a rock that arrived after it.
                 new RockOutcropPass(),
                 new TreePass(),
+                // Caverns before ore, so a deposit can be hung on a chamber wall. Both only ever
+                // touch rock, so neither can disturb anything the surface passes decided.
+                new CavernPass(),
                 new OrePass(),
                 new NaturalStartPass(),
             };
@@ -112,6 +116,7 @@ namespace Odyssey.Sim.Worldgen.Natural
         public IReadOnlyList<TreePlacement> Trees => Context.Trees;
 
         public IReadOnlyList<RockOutcrop> Outcrops => Context.Outcrops;
+        public IReadOnlyList<CavernChamber> Caverns => Context.Caverns;
         public IReadOnlyList<OreDeposit> OreDeposits => Context.OreDeposits;
 
         /// <summary>

@@ -112,10 +112,24 @@ namespace Odyssey.Tests.Sim
                 {
                     int index = ctx.Index(x, z, y);
                     bool solid = grid.IsSolidTerrain(index);
-                    if (y <= top)
-                        Assert.That(solid, Is.True, $"hole at {x},{z},{y}: ground below the surface is not solid");
-                    else
+                    if (y > top)
+                    {
                         Assert.That(solid, Is.False, $"floating solid at {x},{z},{y}: something above the surface");
+                    }
+                    else if (ctx.IsCavern(index))
+                    {
+                        // A cavern is the one hole the column rule allows, and it is allowed by
+                        // name: this cell is one the cavern pass recorded carving, and it has to
+                        // sit strictly inside the column's rock band or it would undermine the
+                        // surface or crack into the bedrock.
+                        Assert.That(solid, Is.False, $"the cavern at {x},{z},{y} was not actually hollowed out");
+                        Assert.That(y, Is.InRange(ctx.BedrockTopY[column] + 1, ctx.SubsoilBaseY[column] - 2),
+                            $"the cavern at {x},{z},{y} has left the rock band");
+                    }
+                    else
+                    {
+                        Assert.That(solid, Is.True, $"hole at {x},{z},{y}: ground below the surface is not solid");
+                    }
                 }
             }
         }
