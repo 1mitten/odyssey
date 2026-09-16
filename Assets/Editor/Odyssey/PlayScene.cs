@@ -39,15 +39,15 @@ namespace Odyssey.EditorTools
     public static class PlayScene
     {
         const string ScenePath = "Assets/Scenes/Play.unity";
-        const string CataloguePath = "Assets/Odyssey/Presentation/ModuleCatalogue.asset";
+        internal const string CataloguePath = "Assets/Odyssey/Presentation/ModuleCatalogue.asset";
 
         /// <summary>
         /// The world the play scene is built with, and the world "Measure a slice" measures. One
         /// pair of constants so the two cannot drift apart again: a benchmark of a map the game
         /// does not load is worse than no benchmark, because it still produces a number.
         /// </summary>
-        const int PlaySizeXZ = 120;
-        const int PlayLayers = 16;
+        internal const int PlaySizeXZ = 120;
+        internal const int PlayLayers = 16;
 
         [MenuItem("Odyssey/Presentation/Build play scene")]
         public static void BuildFromMenu() => BuildInternal(exitWhenDone: false);
@@ -307,7 +307,7 @@ namespace Odyssey.EditorTools
             return $"{size.x:0.00} wide x {size.y:0.00} tall x {size.z:0.00} deep, base y {min.y:0.00}";
         }
 
-        static void Shoot(Camera camera, Vector3 focus, float pitch, float distance, string path)
+        internal static void Shoot(Camera camera, Vector3 focus, float pitch, float distance, string path)
         {
             var rotation = Quaternion.Euler(pitch, 45f, 0f);
             camera.transform.SetPositionAndRotation(focus - rotation * Vector3.forward * distance, rotation);
@@ -1199,7 +1199,7 @@ namespace Odyssey.EditorTools
             // Set here rather than left to the field initialiser, because a serialised value wins
             // over a C# default and the scene would keep whatever the first build wrote for ever.
             // Opaque now: the cursor is corner brackets, not a wash over the thing selected.
-            rig.selectionColour = new Color(0.30f, 0.92f, 1.00f, 1f);
+            rig.selectionColour = Color.white;
             return rig;
         }
 
