@@ -535,24 +535,6 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
-  - moduleId: odyssey.module.terrain.rock
-    shape: 3
-    prefab: {fileID: 0}
-    prefabName: 
-    centreXZ: 1
-    baseAtY: 1
-    offset: {x: 0, y: 0, z: 0}
-    yaw: 0
-    scale: {x: 1, y: 1, z: 1}
-    materialOnly: 0
-    material: {fileID: 2100000, guid: 607d7d0493096e84fabab33c8abe9e8f, type: 2}
-    materialName: Mat_Rock_01
-    materialTilesPerCell: 1
-    flattenNormalMap: 1
-    poseClip: {fileID: 0}
-    poseClipName: 
-    poseClipTime: 0
-    locomotion: []
   - moduleId: odyssey.module.terrain.buriedseam
     shape: 3
     prefab: {fileID: 0}
@@ -661,24 +643,6 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
-  - moduleId: odyssey.module.terrain.bedrock
-    shape: 3
-    prefab: {fileID: 0}
-    prefabName: 
-    centreXZ: 1
-    baseAtY: 1
-    offset: {x: 0, y: 0, z: 0}
-    yaw: 0
-    scale: {x: 1, y: 1, z: 1}
-    materialOnly: 0
-    material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
-    materialName: Mat_Rock_Rough_01
-    materialTilesPerCell: 1
-    flattenNormalMap: 1
-    poseClip: {fileID: 0}
-    poseClipName: 
-    poseClipTime: 0
-    locomotion: []
   - moduleId: odyssey.module.terrain.sand
     shape: 3
     prefab: {fileID: 0}
@@ -697,8 +661,224 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+  - moduleId: odyssey.module.terrain.rock
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
+    materialName: Mat_Rock_Rough_01
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.rock.1
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
+    materialName: Mat_Rock_Rough_01
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.rock.2
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
+    materialName: Mat_Rock_Rough_01
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.rock.3
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
+    materialName: Mat_Rock_Rough_01
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.rock.4
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
+    materialName: Mat_Rock_Rough_01
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.rock.5
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
+    materialName: Mat_Rock_Rough_01
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.bedrock
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
+    materialName: Mat_Rock_Rough_01
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.bedrock.1
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
+    materialName: Mat_Rock_Rough_01
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.bedrock.2
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
+    materialName: Mat_Rock_Rough_01
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.bedrock.3
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
+    materialName: Mat_Rock_Rough_01
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.bedrock.4
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
+    materialName: Mat_Rock_Rough_01
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.bedrock.5
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 2100000, guid: 1393e0f5c12b63446bbe3cca4176a925, type: 2}
+    materialName: Mat_Rock_Rough_01
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
   - moduleId: odyssey.module.terrain.ironore
-    shape: 3
+    shape: 7
     prefab: {fileID: 0}
     prefabName: 
     centreXZ: 1
@@ -709,14 +889,104 @@ MonoBehaviour:
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
-    materialTilesPerCell: 0
-    flattenNormalMap: 0
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.ironore.1
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.ironore.2
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.ironore.3
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.ironore.4
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.ironore.5
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0
     locomotion: []
   - moduleId: odyssey.module.terrain.coalseam
-    shape: 3
+    shape: 7
     prefab: {fileID: 0}
     prefabName: 
     centreXZ: 1
@@ -727,8 +997,98 @@ MonoBehaviour:
     materialOnly: 0
     material: {fileID: 0}
     materialName: 
-    materialTilesPerCell: 0
-    flattenNormalMap: 0
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.coalseam.1
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.coalseam.2
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.coalseam.3
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.coalseam.4
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.terrain.coalseam.5
+    shape: 7
+    prefab: {fileID: 0}
+    prefabName: 
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 1
+    flattenNormalMap: 1
     poseClip: {fileID: 0}
     poseClipName: 
     poseClipTime: 0

@@ -260,6 +260,34 @@ namespace Odyssey.EditorTools
                 // the edge of the world are only checkable from here.
                 Shoot(camera, focus, 9f, 150f, "Logs/shot-horizon.png");
 
+                // An outcrop, close. The start pass deliberately puts the colony on flat ground
+                // clear of rock, so every framing above is guaranteed to have none in it — which
+                // made judging the stone impossible from the pictures that existed. This one goes
+                // and finds some.
+                var natural = result.Natural;
+                if (natural != null && natural.Outcrops.Count > 0)
+                {
+                    int nearestRock = -1;
+                    int bestRock = int.MaxValue;
+                    foreach (RockOutcrop outcrop in natural.Outcrops)
+                    {
+                        CellRef at = size.FromIndex(outcrop.CellIndex);
+                        int d = Mathf.Abs(at.X - result.StartCell.X) + Mathf.Abs(at.Z - result.StartCell.Z);
+                        if (d >= bestRock) continue;
+                        bestRock = d;
+                        nearestRock = outcrop.CellIndex;
+                    }
+
+                    if (nearestRock >= 0)
+                    {
+                        CellRef at = size.FromIndex(nearestRock);
+                        var rockFocus = new Vector3(
+                            at.X * CellMetrics.SizeXZ, at.Y * CellMetrics.SizeY, at.Z * CellMetrics.SizeXZ);
+                        Shoot(camera, rockFocus, 30f, 14f, "Logs/shot-rock.png");
+                        Debug.Log($"[Shot] the nearest outcrop to the start is at {at}");
+                    }
+                }
+
                 // A grass-free twin of the horizon shot was tried here, swapping in a second
                 // renderer with scatter off, and it drew grass anyway — on two consecutive
                 // renders, with the swap plainly in place. Not a one-frame latency, then, and not
@@ -268,7 +296,7 @@ namespace Odyssey.EditorTools
                 // before trusting it to draw nothing.
 
                 Debug.Log("[Shot] wrote Logs/shot-play.png, Logs/shot-close.png, " +
-                          "Logs/shot-down.png, Logs/shot-horizon.png");
+                          "Logs/shot-down.png, Logs/shot-horizon.png, Logs/shot-rock.png");
 
                 // Before the root goes: a playable graph bound to an Animator that has just been
                 // destroyed under it complains, and the complaint would be the picture's epitaph.
@@ -703,6 +731,23 @@ namespace Odyssey.EditorTools
                 materialTilesPerCell = 1f, flattenNormalMap = true,
             });
 
+            // A run of chipped stone lumps sharing one material, one row per variant. Variant 0
+            // keeps the unsuffixed terrain id, so anything that asks for plain "terrain.rock"
+            // still gets an answer.
+            void StoneVariants(string id, string material)
+            {
+                for (int v = 0; v < RockMesh.Variants; v++)
+                {
+                    string variantId = v <= 0 ? id : id + "." + v.ToString();
+                    rows.Add(new ModuleEntry
+                    {
+                        moduleId = variantId, shape = ModuleShape.RockBlock, prefabName = string.Empty,
+                        materialName = material,
+                        materialTilesPerCell = 1f, flattenNormalMap = true,
+                    });
+                }
+            }
+
             // Walls, windows and doors. Several template ids share one piece for now; the point of
             // the catalogue is that giving the tower its own curtain wall is an edit here.
             Wall(ModuleIds.Wall, "SM_Bld_Base_Wall_01");
@@ -763,7 +808,9 @@ namespace Odyssey.EditorTools
             // Strata. Tinted blocks on purpose: no pack has a cubic rock module, and a cut-away of
             // bedrock is a coloured mass, not a prop.
             Block(ModuleIds.Terrain("EngineeredFill"));
-            Ground(ModuleIds.Terrain("Rock"), "Mat_Rock_01");
+            // Rock is shared with the wilderness map and is registered once, below, as a run of
+            // chipped lumps. A second row here would shadow the first variant and leave one cell
+            // in six a smooth cube among five jagged ones.
             Block(ModuleIds.Terrain("BuriedSeam"));
             Block(ModuleIds.Terrain("Salvage"));
 
@@ -800,14 +847,23 @@ namespace Odyssey.EditorTools
             Ground(ModuleIds.Terrain("BareEarth"), "Mat_Dirt_01");
             Ground(ModuleIds.Terrain("PackedGravel"), "Mat_Gravel_01");
             Ground(ModuleIds.Terrain("Subsoil"), "Mat_Mud_01");
-            Ground(ModuleIds.Terrain("Bedrock"), "Mat_Rock_Rough_01");
 
             // No meadow texture reads as these, and a wrong texture is worse than an honest
             // colour: sand would come out as mud, and an ore seam has to stay findable at a
             // glance. They keep their tints until a pack with the right ground arrives.
             Block(ModuleIds.Terrain("Sand"));
-            Block(ModuleIds.Terrain("IronOre"));
-            Block(ModuleIds.Terrain("CoalSeam"));
+
+            // Stone: one row per lump, because each lump is its own module. The material is the
+            // same on all of them — what varies is the geometry, which is ours and needs no pack,
+            // so a clone without the art still gets chipped rock in a flat colour.
+            //
+            // Rock wears the rough face rather than Mat_Rock_01. The smooth one is a warm brown
+            // that reads as earth at board distance, which is what made an outcrop look like a
+            // mud-brick; on the rough one the same tint reads as stone.
+            StoneVariants(ModuleIds.Terrain("Rock"), "Mat_Rock_Rough_01");
+            StoneVariants(ModuleIds.Terrain("Bedrock"), "Mat_Rock_Rough_01");
+            StoneVariants(ModuleIds.Terrain("IronOre"), string.Empty);
+            StoneVariants(ModuleIds.Terrain("CoalSeam"), string.Empty);
 
             // Tufts of grass strewn over the ground. Chosen on triangles per square metre of
             // cover, because there is one of these on nearly every one of fourteen thousand

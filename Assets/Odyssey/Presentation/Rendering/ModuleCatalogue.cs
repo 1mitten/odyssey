@@ -31,6 +31,15 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>A full-layer ladder against one face of the cell.</summary>
         Ladder = 6,
+
+        /// <summary>
+        /// A block filling the whole cell, chipped and faceted: stone rather than masonry.
+        ///
+        /// Fills the cell exactly like <see cref="SolidBlock"/> and is interchangeable with it —
+        /// the difference is only which mesh stands in, and <see cref="RockMesh"/> guarantees the
+        /// lump never shrinks inside the cell, so a run of them still tiles without a crack.
+        /// </summary>
+        RockBlock = 7,
     }
 
     /// <summary>
@@ -346,5 +355,15 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Terrain is not authored per template, so its ids are derived from the def name.</summary>
         public static string Terrain(string terrainDefName) =>
             Prefix + "terrain." + terrainDefName.ToLowerInvariant();
+
+        /// <summary>
+        /// One of the several lumps a stone terrain is drawn with, suffixed by number.
+        ///
+        /// Variant 0 keeps the unsuffixed id, the way <see cref="Colonist"/> does, so the plain
+        /// terrain id stays meaningful and a catalogue that knows nothing about variants still
+        /// answers for the first one.
+        /// </summary>
+        public static string TerrainVariant(string terrainDefName, int variant) =>
+            variant <= 0 ? Terrain(terrainDefName) : Terrain(terrainDefName) + "." + variant.ToString();
     }
 }
