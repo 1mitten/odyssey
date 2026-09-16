@@ -29,6 +29,9 @@ namespace Odyssey.Sim
 
         /// <summary>Claim the designation buffer and write one byte per cell of the active layer.</summary>
         public Span<byte> BeginDesignations(int cellCount) => _target.BeginDesignations(cellCount);
+
+        public Span<byte> BeginDesignationProgress(int cellCount) =>
+            _target.BeginDesignationProgress(cellCount);
     }
 
     /// <summary>

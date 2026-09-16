@@ -82,7 +82,29 @@ namespace Odyssey.Sim.Pawns
 
         void Advance(Pawn pawn)
         {
-            if (pawn.Asleep || !pawn.HasPath) return;
+            if (pawn.Asleep) return;
+
+            if (!pawn.HasPath)
+            {
+                // Nobody hangs on a rock face doing nothing.
+                //
+                // A cell a climb passes through is standable and has no floor — that is what lets a
+                // colonist be half way up a shaft at all — so a pawn whose path ends or fails while
+                // it is on one stays there, idle, in mid-air. Measured over 40,000 ticks: 702
+                // pawn-ticks of it, which is small and is exactly the picture the owner sent.
+                // Letting go is the only honest answer; there is nothing to hold on to.
+                if (_ctx.Nav.Grid.IsClimbOnly(pawn.Cell))
+                {
+                    int landing = _ctx.Cells.FirstFloorAtOrBelow(pawn.Cell);
+                    if (landing != pawn.Cell)
+                    {
+                        pawn.Cell = landing;
+                        pawn.Destination = -1;
+                    }
+                }
+
+                return;
+            }
 
             pawn.MoveProgress += pawn.MovePerTick();
 
@@ -99,6 +121,10 @@ namespace Odyssey.Sim.Pawns
                 }
 
                 int cost = StepCost(pawn.Cell, next, pawn.Mode);
+
+                // Carried so presentation can glide the figure across the WHOLE step rather than
+                // across its first hundred units. See Pawn.MoveStepCost.
+                pawn.MoveStepCost = cost;
                 if (pawn.MoveProgress < cost) return;
 
                 pawn.MoveProgress -= cost;

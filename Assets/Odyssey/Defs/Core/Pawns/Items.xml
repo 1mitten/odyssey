@@ -36,4 +36,28 @@
     <stackLimit>75</stackLimit>
   </ItemDef>
 
+
+  <!--
+    What mining leaves on the floor. All three stack to 75 like wood: a stack is one haul, and a
+    quarry that needed three trips per cell would read as punishment rather than as work.
+    Nothing consumes any of them yet - the build pipeline is what gives stone a purpose.
+  -->
+  <ItemDef>
+    <defName>Item_Stone</defName>
+    <label>stone</label>
+    <stackLimit>75</stackLimit>
+  </ItemDef>
+
+  <ItemDef>
+    <defName>Item_IronOre</defName>
+    <label>iron ore</label>
+    <stackLimit>75</stackLimit>
+  </ItemDef>
+
+  <ItemDef>
+    <defName>Item_Coal</defName>
+    <label>coal</label>
+    <stackLimit>75</stackLimit>
+  </ItemDef>
+
 </Defs>

@@ -39,6 +39,13 @@ namespace Odyssey.EditorTools
     /// </summary>
     public static class SwingCheck
     {
+        /// <summary>
+        /// Which style the sheet is shot in. Felling for now; set it to
+        /// <see cref="WorkStyle.MiningIndex"/> to settle the pick's blade roll the same way the
+        /// axe's was settled, which is the only way either can be settled.
+        /// </summary>
+        const int Style = WorkStyle.FellingIndex;
+
         /// <summary>Frames per second the harness pretends to run at. There is no player loop here.</summary>
         const float FrameSeconds = 1f / 60f;
 
@@ -91,7 +98,8 @@ namespace Odyssey.EditorTools
                 var nav = new NavGraph(grid);
                 nav.Rebuild();
                 var pawns = new PawnContext(
-                    grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core()) { Chunks = chunks };
+                    grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core())
+                    { Chunks = chunks };
                 var support = new SupportSystem(grid, new SupportSolver(grid), chunks);
                 var mirror = new GridMirrorContributor(grid, result.Edifices, model);
                 var designations = new Odyssey.Sim.Designations.DesignationGrid(grid, result.Edifices);
@@ -158,7 +166,7 @@ namespace Odyssey.EditorTools
 
                 // One stroke, sampled evenly. The frames between samples still run, so what is
                 // photographed is a continuous swing rather than nine independent poses.
-                int strokeFrames = Mathf.CeilToInt(WorkSwing.StrokeSeconds / FrameSeconds);
+                int strokeFrames = Mathf.CeilToInt(WorkStroke.Axe.StrokeSeconds / FrameSeconds);
                 int every = Mathf.Max(1, strokeFrames / (Samples - 1));
 
                 for (int sample = 0; sample < Samples; sample++)
@@ -208,7 +216,7 @@ namespace Odyssey.EditorTools
                           $"{drawn.FigureCount} figures live, worker still working: {FirstWorker(Current()).Working}");
                 foreach (float roll in BladeRolls)
                 {
-                    drawn.AxeBladeRoll = roll;
+                    drawn.Styles[Style] = drawn.Styles[Style].With(bladeRoll: roll);
                     drawn.RegripTools();
                     drawn.Sync(Current(), activeLayer, slice, 0f, movePerTick, FrameSeconds);
                     drawn.Evaluate(FrameSeconds);
@@ -217,14 +225,14 @@ namespace Odyssey.EditorTools
                     PlayScene.Shoot(camera, drawn.LastBladePosition, 6f, SideOn(FirstWorker(Current())), 1.5f, path);
                     Debug.Log($"[Swing] wrote {path} at blade {drawn.LastBladePosition}");
                 }
-                drawn.AxeBladeRoll = 270f;
+                drawn.Styles[Style] = drawn.Styles[Style].With(bladeRoll: 270f);
 
                 // And the same again about the upright, which is the turn that points the edge at
                 // the tree rather than moving it around the haft.
-                float yawWas = drawn.AxeBladeYaw;
+                float yawWas = drawn.Styles[Style].BladeYaw;
                 foreach (float yaw in BladeRolls)
                 {
-                    drawn.AxeBladeYaw = yaw;
+                    drawn.Styles[Style] = drawn.Styles[Style].With(bladeYaw: yaw);
                     drawn.RegripTools();
                     drawn.Sync(Current(), activeLayer, slice, 0f, movePerTick, FrameSeconds);
                     drawn.Evaluate(FrameSeconds);
@@ -235,7 +243,7 @@ namespace Odyssey.EditorTools
                 }
 
                 drawn.HeldPhase = null;
-                drawn.AxeBladeYaw = yawWas;
+                drawn.Styles[Style] = drawn.Styles[Style].With(bladeYaw: yawWas);
                 drawn.RegripTools();
 
                 PawnView last = FirstWorker(Current());
