@@ -148,6 +148,31 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
+        public void TwoBlowsAtOnceComeFromTwoPlacesAndNotFromOne()
+        {
+            var terrain = new WaterAt(new GridSize(48, 48, 2), 24, 24, 4);
+            using var audio = Make(terrain);
+            var axe = new Vector3(30f, 0f, 12f);
+            var pick = new Vector3(-8f, 3f, -20f);
+
+            Assert.That(audio.PlayOneShot(SoundIds.WorkChop, axe), Is.True);
+            Assert.That(audio.PlayOneShot(SoundIds.WorkPick, pick), Is.True);
+
+            // A voice is spatialised from the transform of the object it sits on, so voices that
+            // shared one object would both report whichever position was written last.
+            Assert.That(VoicePlaying(_chop)!.transform.position, Is.EqualTo(axe),
+                "the axe still sounds from the tree");
+            Assert.That(VoicePlaying(_pick)!.transform.position, Is.EqualTo(pick),
+                "and the pick from the rock");
+
+            // And the bed, which moves to the water's centroid every frame, drags neither.
+            Advance(audio, 1f, focus: new Vector3(24f * 2.5f, 0f, 24f * 2.5f));
+            Assume.That(audio.WaterLevel, Is.GreaterThan(0.1f), "the bed is up and placed");
+            Assert.That(VoicePlaying(_chop)!.transform.position, Is.EqualTo(axe),
+                "the river does not move the axe");
+        }
+
+        [Test]
         public void ASoundBeyondItsRangeIsCulledBeforeAVoiceIsSpent()
         {
             using var audio = Make();

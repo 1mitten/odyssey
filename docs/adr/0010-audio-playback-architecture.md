@@ -98,7 +98,7 @@ presentation-side. The event ring stays reserved for the discrete events it was 
 which are inaudible under others; the colony-sim pattern of measured beds and pooled one-shots
 gives the same audible result at sixteen voices (research §4).
 
-** Foley-first (footsteps, UI clicks, everything audible).** Scope. The framework covers the
+**Foley-first (footsteps, UI clicks, everything audible).** Scope. The framework covers the
 three layers the request named — positional one-shots, environmental beds, music and alerts —
 and a new one-shot is a catalogue row plus an id; the rest is content, not architecture.
 

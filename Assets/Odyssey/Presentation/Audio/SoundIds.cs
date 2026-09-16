@@ -64,7 +64,8 @@ namespace Odyssey.Presentation.Audio
         /// Mining is the only style with its own impact sound today; everything else swings an
         /// axe, exactly as <c>WorkStyle.IndexForJob</c> decides for the pose.
         /// </summary>
-        public static string ForBlow(int workStyleIndex) => workStyleIndex == 1 ? WorkPick : WorkChop;
+        public static string ForBlow(int workStyleIndex) =>
+            workStyleIndex == World.WorkStyle.MiningIndex ? WorkPick : WorkChop;
     }
 
     /// <summary>

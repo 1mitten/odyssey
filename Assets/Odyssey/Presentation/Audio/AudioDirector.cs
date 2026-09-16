@@ -142,16 +142,14 @@ namespace Odyssey.Presentation.Audio
 
             for (int i = 0; i < VoiceCount; i++)
             {
-                _voices[i] = _root.AddComponent<AudioSource>();
-                _voices[i].playOnAwake = false;
+                _voices[i] = Voice($"Voice {i}");
                 _busyUntil[i] = -1d;
                 _voicePriority[i] = int.MaxValue;
             }
 
             AudioSource Music()
             {
-                AudioSource voice = _root.AddComponent<AudioSource>();
-                voice.playOnAwake = false;
+                AudioSource voice = Voice("Music");
                 voice.loop = true;
                 voice.spatialBlend = 0f; // music is nowhere; it is weather for the mood
                 voice.priority = 64;
@@ -161,6 +159,27 @@ namespace Odyssey.Presentation.Audio
 
             _musicA = Music();
             _musicB = Music();
+        }
+
+        /// <summary>
+        /// One voice, on a child object of its own.
+        ///
+        /// <b>The transform is the whole reason for the child.</b> An <see cref="AudioSource"/>
+        /// is spatialised from the transform of the object it sits on, and a transform is one
+        /// position however many sources share it: sixteen voices on the pool's own object would
+        /// be sixteen sources at whichever place the last one to play wrote — the axe two hundred
+        /// metres away would sound from the pick under the camera, and the water bed would drag
+        /// every one-shot along with it as the river's centroid moved. A GameObject per voice is
+        /// the cost of positional sound; it is paid once, at construction, and never in a frame.
+        /// </summary>
+        AudioSource Voice(string name)
+        {
+            var holder = new GameObject(name);
+            holder.transform.SetParent(_root.transform, worldPositionStays: false);
+            holder.layer = _root.layer;
+            AudioSource voice = holder.AddComponent<AudioSource>();
+            voice.playOnAwake = false;
+            return voice;
         }
 
         /// <summary>
@@ -273,8 +292,11 @@ namespace Odyssey.Presentation.Audio
         /// </summary>
         public void PlayAlert(string id)
         {
-            _duckRemaining = DuckSeconds;
-            PlayOneShot(id, _listener);
+            // The duck follows the chime rather than leading it: an alert that was starved of a
+            // voice or gated by its own cooldown makes no room, because there is nothing to make
+            // room for, and the music dipping for a silence is the one thing a player would hear
+            // as a fault.
+            if (PlayOneShot(id, _listener)) _duckRemaining = DuckSeconds;
         }
 
         /// <summary>Put a bus's fader at a dB value. Applies live to the looping voices at the
@@ -327,8 +349,7 @@ namespace Odyssey.Presentation.Audio
 
             if (bed.Source == null)
             {
-                AudioSource source = _root.AddComponent<AudioSource>();
-                source.playOnAwake = false;
+                AudioSource source = Voice($"Bed {SoundIds.AmbienceWater}");
                 source.loop = true;
                 source.clip = def.Clip;
                 source.spatialBlend = 0.7f; // a place, mostly; a little spread, so it is not a point

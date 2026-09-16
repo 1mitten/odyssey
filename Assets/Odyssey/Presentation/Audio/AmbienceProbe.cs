@@ -92,7 +92,7 @@ namespace Odyssey.Presentation.Audio
             ITerrainLookup terrain, GridSize size, int layer, Vector2 centreCell)
         {
             float radius = RadiusCells;
-            float sum = 0f, weightSum = 0f, centreX = 0f, centreZ = 0f;
+            float weightSum = 0f, centreX = 0f, centreZ = 0f;
 
             int minX = Mathf.Max(0, Mathf.CeilToInt(centreCell.x - radius));
             int maxX = Mathf.Min(size.SizeX - 1, Mathf.FloorToInt(centreCell.x + radius));
@@ -116,7 +116,6 @@ namespace Odyssey.Presentation.Audio
 
                     if (!NaturalContent.IsWater(terrain.TerrainAt(size.Index(x, z, layer)))) continue;
 
-                    sum += weight;
                     weightSum += weight;
                     centreX += x * weight;
                     centreZ += z * weight;
@@ -126,7 +125,7 @@ namespace Odyssey.Presentation.Audio
             if (weightSum <= 0f) return AmbienceField.Silent;
 
             return new AmbienceField(
-                Mathf.Clamp01(sum / SaturateWeight),
+                Mathf.Clamp01(weightSum / SaturateWeight),
                 new Vector2(centreX / weightSum, centreZ / weightSum));
         }
     }

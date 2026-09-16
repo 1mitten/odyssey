@@ -67,7 +67,7 @@ namespace Odyssey.Tests.Presentation
     public class MusicClockTests
     {
         [Test]
-        public void DayRunsFromSixUntilSeven()
+        public void DayRunsFromSixUntilNineteen()
         {
             Assert.That(MusicClock.PhaseOf(Hour(6)), Is.EqualTo(MusicPhase.Day));
             Assert.That(MusicClock.PhaseOf(Hour(18)), Is.EqualTo(MusicPhase.Day));
