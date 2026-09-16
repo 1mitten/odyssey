@@ -418,7 +418,11 @@ namespace Odyssey.Sim.Pathing
         void Relax(int from, int n, int g, int goal, TraverseMode mode, int stamp, int rstamp,
             bool constrained)
         {
-            if (!_grid.CanEnter(n, mode)) return;
+            // The horizontal expansion, and the one place a route over open air was being planned.
+            // CanWalkInto refuses a cell that is standable only because a climb goes through it;
+            // RelaxExplicit below keeps plain CanEnter, because the vertical expansion above it
+            // is exactly how a colonist is supposed to reach one.
+            if (!_grid.CanWalkInto(n, mode)) return;
             RelaxExplicit(from, n, g + _grid.EnterCost(n, mode), goal, mode, stamp, rstamp, constrained);
         }
 

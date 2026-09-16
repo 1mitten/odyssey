@@ -91,11 +91,15 @@ namespace Odyssey.Presentation.World
         /// with a little warmth, because a pure grey against grey rock is invisible.
         /// </summary>
         public static readonly ChipRecipe Stone = new ChipRecipe(
-            count: 12,
-            speed: new Vector2(1.4f, 3.1f),
-            size: new Vector2(0.02f, 0.05f),
-            life: new Vector2(0.25f, 0.5f),
-            spread: 26f,
+            // Fewer and bigger (owner, 2026-09-16). Twelve pieces at two to five centimetres read
+            // as dust at board height — the blow looked like it raised smoke rather than breaking
+            // anything. Eight at seven to sixteen read as lumps knocked off a face, which is what
+            // a pick does, and they last long enough to be seen coming off.
+            count: 8,
+            speed: new Vector2(1.2f, 2.6f),
+            size: new Vector2(0.07f, 0.16f),
+            life: new Vector2(0.4f, 0.8f),
+            spread: 30f,
             colours: new[]
             {
                 new Color(0.55f, 0.54f, 0.52f),

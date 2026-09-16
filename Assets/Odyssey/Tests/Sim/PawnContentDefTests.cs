@@ -108,7 +108,8 @@ namespace Odyssey.Tests.Sim
         {
             DefDatabase defs = LoadCore();
 
-            Assert.That(defs.Table<SkillDef>().Count, Is.EqualTo(2), "the abstract parent reached the game");
+            Assert.That(defs.Table<SkillDef>().Count, Is.EqualTo(SkillIndex.Count),
+                "the abstract parent reached the game, or a skill is missing from the content");
         }
 
         /// <summary>

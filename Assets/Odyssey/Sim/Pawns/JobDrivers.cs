@@ -274,6 +274,17 @@ namespace Odyssey.Sim.Pawns
                 return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
             }
 
+            // Still beside it, and on its own floor. A colonist that has been moved since it
+            // arrived — dropped by a dig under its feet, or by a climb retired beneath it — is no
+            // longer felling this tree, whatever its job says. Failing rather than walking back:
+            // the stance it was given may not exist any more, and the work giver will choose a
+            // fresh one next tick if there is one to choose.
+            if (!StillInReach(ctx, Pawn, cell, layersAbove: 0, layersBelow: 0))
+            {
+                WalkBack();
+                return JobStatus.Ongoing;
+            }
+
             ToilProgress++;
             Work(ctx);
             if (ToilProgress < ctx.Content.Jobs[Job.DefIndex].workTicks) return JobStatus.Ongoing;
