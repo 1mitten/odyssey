@@ -22,6 +22,7 @@ namespace Odyssey.EditorTools
     public static class RenderSetup
     {
         const string RendererPath = "Assets/Settings/PC_Renderer.asset";
+        const string PipelinePath = "Assets/Settings/PC_RPAsset.asset";
 
         [MenuItem("Odyssey/Presentation/Apply render setup")]
         public static void ApplyFromMenu() => Run(exitWhenDone: false);
@@ -38,6 +39,9 @@ namespace Odyssey.EditorTools
                     throw new InvalidOperationException($"no renderer asset at {RendererPath}");
 
                 bool changed = EnsureFeature<OutlineFeature>(data, "Odyssey Outline", Configure);
+
+                ConfigurePipeline();
+                GoldenHour.BuildProfile();
 
                 EditorUtility.SetDirty(data);
                 AssetDatabase.SaveAssets();
@@ -86,6 +90,56 @@ namespace Odyssey.EditorTools
             // Before transparents: foliage is drawn in the transparent range so that it lands
             // after the ink and is never outlined (MaterialCache.FoliageQueue).
             outline.stage = RenderPassEvent.BeforeRenderingTransparents;
+        }
+
+        /// <summary>
+        /// The pipeline asset's half of the golden hour: shadows that reach the visible ground,
+        /// and a grading mode that can hold a sun.
+        ///
+        /// <para>Here rather than in the inspector for the same reason the outline's settings are:
+        /// a value set by hand on one machine is invisible to every clone, and a serialised value
+        /// silently outranks a changed default.</para>
+        /// </summary>
+        static void ConfigurePipeline()
+        {
+            var pipeline = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(PipelinePath);
+            if (pipeline == null)
+            {
+                Debug.LogWarning($"[RenderSetup] no pipeline asset at {PipelinePath}; shadows and grading unchanged.");
+                return;
+            }
+
+            // Several of these are serialised private fields with no public setter, so the asset is
+            // edited the way the inspector edits it. The property names are the serialised names,
+            // which is why they read oddly.
+            var so = new SerializedObject(pipeline);
+
+            // 50 m was chosen for a sun that threw almost nothing. At 30 degrees the shadows are
+            // eight cells long, and the ground the camera can see runs from about 50 m to 224 m at
+            // the default pitch — so shadows stopped a third of the way into the view.
+            so.FindProperty("m_ShadowDistance").floatValue = GoldenHour.ShadowDistance;
+            so.FindProperty("m_ShadowCascadeCount").intValue = 4;
+
+            // **The splits are fractions of distance from the camera, and that is the trap.** This
+            // camera is tens of metres in the air and never sees anything nearer than about 50 m,
+            // so the stock 0.07/0.18/0.42 spent its first two cascades — half the atlas — on empty
+            // air in front of the lens. Starting at 0.30 puts the first split just past where the
+            // ground begins.
+            so.FindProperty("m_Cascade4Split").vector3Value = GoldenHour.CascadeSplits;
+
+            // Normal bias, not depth bias, is the grazing-angle lever: acne at a shallow sun is a
+            // depth-slope problem, and depth bias answers it by sliding the whole shadow along the
+            // light, which at 30 degrees detaches it from the foot of whatever cast it.
+            so.FindProperty("m_ShadowDepthBias").floatValue = GoldenHour.ShadowDepthBias;
+            so.FindProperty("m_ShadowNormalBias").floatValue = GoldenHour.ShadowNormalBias;
+
+            // HDR grading is not optional for this look. In LDR the image is clamped to white
+            // before the grade is applied, so a sunlit roof is already flat white by the time the
+            // tonemapper sees it — and there is nothing above 1 left for bloom to find either.
+            so.FindProperty("m_ColorGradingMode").enumValueIndex = (int)ColorGradingMode.HighDynamicRange;
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(pipeline);
         }
 
         static bool EnsureFeature<T>(ScriptableRendererData data, string name, Action<T> configure)

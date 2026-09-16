@@ -35,6 +35,8 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
+using Odyssey.Presentation.Rendering;
 using UnityEngine.UIElements;
 
 namespace Odyssey.EditorTools
@@ -730,6 +732,14 @@ namespace Odyssey.EditorTools
         /// </summary>
         internal static void Shoot(Camera camera, Vector3 focus, float pitch, float yaw, float distance, string path)
         {
+            // **A camera made in script has post-processing switched off.** URP keeps it per
+            // camera and defaults it to false, so every photograph this project has ever taken
+            // was of an ungraded image — which did not matter while there was no volume to
+            // apply, and matters entirely now that the warmth, the bloom and the vignette are
+            // all in one. A contact sheet that does not show the grade is answering a question
+            // nobody asked.
+            camera.GetUniversalAdditionalCameraData().renderPostProcessing = true;
+
             var rotation = Quaternion.Euler(pitch, yaw, 0f);
             camera.transform.SetPositionAndRotation(focus - rotation * Vector3.forward * distance, rotation);
 
@@ -1231,6 +1241,14 @@ namespace Odyssey.EditorTools
             Ground(ModuleIds.Terrain("PackedGravel"), "Mat_Gravel_01");
             Ground(ModuleIds.Terrain("Subsoil"), "Mat_Mud_01");
 
+            // Marsh, restored 2026-09-16. The committed catalogue carried this row and the
+            // builder had stopped emitting it, so the asset and its generator disagreed and the
+            // next person to rebuild the catalogue would silently have taken marsh's texture away
+            // — which is precisely the fault the water work went and fixed, an untextured dark
+            // olive slab that reads as shadow rather than as ground. Found by rebuilding the
+            // catalogue with the packs present and reading the diff line by line.
+            Ground(ModuleIds.Terrain("Marsh"), "Mat_Dirt_01");
+
             // No meadow texture reads as these, and a wrong texture is worse than an honest
             // colour: sand would come out as mud, and an ore seam has to stay findable at a
             // glance. They keep their tints until a pack with the right ground arrives.
@@ -1647,10 +1665,18 @@ namespace Odyssey.EditorTools
         static void BuildLighting(Transform root)
         {
             var sun = new GameObject("Sun").AddComponent<Light>();
+            // The hour the scene is baked at. The cycle takes over on the first frame; this is
+            // only so that opening the scene shows a lit board rather than whatever the sky
+            // happened to be saved as.
+            DaylightState baked = GoldenHour.Baked;
             sun.type = LightType.Directional;
-            sun.intensity = 1.35f;
-            sun.color = new Color(1.0f, 0.97f, 0.90f);
+            sun.intensity = baked.SunIntensity;
+            sun.color = baked.SunColour;
             sun.shadows = LightShadows.Soft;
+            // The lever the 72-degree decision never pulled. At full strength a shadowed
+            // fragment falls back to ambient alone and loses the key light's hue, so a board
+            // mostly in shadow goes mostly grey; at 0.6 it keeps the warmth and only darkens.
+            sun.shadowStrength = baked.ShadowStrength;
             sun.transform.SetParent(root, false);
             // Steeply overhead, not raking across the board. At 50 degrees the key light struck the
             // ground at a glancing angle, which is how you light a landscape you walk through and
@@ -1658,10 +1684,10 @@ namespace Odyssey.EditorTools
             // brightness and threw long shadows across the very surface the player is reading. A
             // high sun puts the light on the ground, keeps the tiles evenly lit, and leaves just
             // enough offset for a colonist or a wall to cast a short shadow that grounds them.
-            sun.transform.rotation = Quaternion.Euler(72f, 35f, 0f);
+            sun.transform.rotation = Quaternion.Euler(baked.SunElevation, baked.SunAzimuth, 0f);
 
             // Flat-lit low-poly, as the concept renders are: a strong key, a generous cool ambient
-            // so nothing goes black, and no post stylisation. Cel shading was raised and rejected
+            // so nothing goes black. Cel shading was raised and rejected
             // on 2026-09-15 (06-rendering-and-camera.md section 1).
             //
             // Lifted towards the reference art, which is high-key: the ground there is evenly lit
@@ -1669,31 +1695,57 @@ namespace Odyssey.EditorTools
             // onto it. Ambient does most of that work, because it is what fills the parts of a
             // scene the key light does not reach, and a dim ambient is what made the first pass
             // look overcast.
-            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-            RenderSettings.ambientSkyColor = new Color(0.56f, 0.61f, 0.68f);
-            RenderSettings.ambientEquatorColor = new Color(0.46f, 0.48f, 0.52f);
-            RenderSettings.ambientGroundColor = new Color(0.28f, 0.28f, 0.30f);
-            // Fog begins past the far corner of the board, not across it.
             //
-            // A 120-cell map is 300 m on a side and 424 m corner to corner, so fog that started at
-            // 90 m covered essentially the whole playing area the moment the camera pulled back
-            // far enough to see it. That is not atmosphere, it is a blue-grey wash over the thing
-            // the player is trying to read. A colony sim is looked *at*, not walked through, and
-            // the board has to stay legible corner to corner.
+            // **And it is now the shadow colour, which it was not before.** With the key raking at
+            // 30 degrees the board is mostly shadow, and a shadowed fragment is lit by ambient
+            // alone — so this is what the shadows *are*. A cool sky against the warm key is what
+            // puts the blue in them: a large hue gap and a small value gap, as the references have.
+            // Grey ambient would give grey shadows, which is the overcast look this avoids.
+            RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+            RenderSettings.ambientSkyColor = baked.AmbientSky;
+            RenderSettings.ambientEquatorColor = baked.AmbientEquator;
+            RenderSettings.ambientGroundColor = baked.AmbientGround;
+            // **Fog crosses the board now, and the comment this replaces argued the opposite.**
+            //
+            // It was right for a blue-grey daylight wash: fog that started at 90 m covered the
+            // playing area the moment the camera pulled back, and a colony sim is looked at rather
+            // than walked through, so the board must stay legible corner to corner. What changed is
+            // not the reasoning but the colour. Haze the same warm tone as the horizon does not
+            // obscure the distance, it *places* it: the far side of the board reads as further away
+            // instead of merely smaller, and the surround dissolves into a sky it matches exactly.
+            //
+            // Exponential-squared rather than linear, because the curve is the argument. At this
+            // density the air is 1% at 50 m, 20% at 224 m, about a third at the rim and 97% by
+            // 900 m — so the near cells are untouched and nothing is hidden that the player reads.
+            // Plain exponential would put 18% on the nearest cells. The linear 460-to-1,100 pair
+            // this replaces never touched the board at all, which is why the board never had any
+            // depth to it.
             RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogMode = FogMode.ExponentialSquared;
             // The horizon colour of the sky below, so what fades out at the rim of the board fades
             // into the sky rather than into a grey that does not belong to anything.
-            RenderSettings.fogColor = SkyHorizon;
-            RenderSettings.fogStartDistance = 460f;
-            RenderSettings.fogEndDistance = 1100f;
+            RenderSettings.fogColor = baked.Horizon;
+            RenderSettings.fogDensity = baked.FogDensity;
 
             RenderSettings.skybox = SkyMaterial();
+
+            // The grade, as a global volume on the scene rather than the pipeline asset's
+            // default profile. That default is how this project ended up with no post-processing
+            // at all: the asset pointed at a profile GUID that resolved to nothing, and nobody
+            // noticed for months because a missing volume looks exactly like a scene nobody has
+            // graded yet. A volume in the scene is visible in the hierarchy and travels with it.
+            var volume = new GameObject("Golden Hour").AddComponent<Volume>();
+            volume.transform.SetParent(root, false);
+            volume.isGlobal = true;
+            volume.priority = 0f;
+            volume.sharedProfile = GoldenHour.BuildProfile();
             DynamicGI.UpdateEnvironment();
         }
 
-        /// <summary>The pale band the sky meets the ground at, and the colour distance fades into.</summary>
-        static readonly Color SkyHorizon = new Color(0.76f, 0.86f, 0.91f);
+        // The horizon colour lives in GoldenHour, not here. It was a constant in this file and is
+        // not any more, deliberately: the fog takes the same value, and two horizon colours in two
+        // places is exactly how the sky and the haze drift apart — which is the one identity the
+        // whole look rests on.
 
         const string SkyMaterialPath = "Assets/Settings/OdysseySky.mat";
 
@@ -1726,15 +1778,16 @@ namespace Odyssey.EditorTools
                 AssetDatabase.CreateAsset(material, SkyMaterialPath);
             }
 
+            DaylightState baked = GoldenHour.Baked;
             material.shader = shader;
-            material.SetColor("_SkyColour", new Color(0.36f, 0.60f, 0.86f));
-            material.SetColor("_HorizonColour", SkyHorizon);
-            // Below the horizon is haze, not floor. Fog tints the far board towards SkyHorizon,
+            material.SetColor("_SkyColour", baked.Zenith);
+            material.SetColor("_HorizonColour", baked.Horizon);
+            // Below the horizon is haze, not floor. Fog tints the far board towards the horizon
             // so a dark underside put a grey band between the board's rim and the horizon —
             // pale ground, then dark nothing, then pale sky — that read as a darkness in the
             // distance with no cause. A shade under the horizon colour lets the rim fade into
             // distance instead of falling off an edge.
-            material.SetColor("_GroundColour", new Color(0.70f, 0.80f, 0.86f));
+            material.SetColor("_GroundColour", baked.BelowHorizon);
             material.SetFloat("_HorizonFalloff", 2.2f);
             material.SetFloat("_GroundFalloff", 3.0f);
 
@@ -1759,6 +1812,25 @@ namespace Odyssey.EditorTools
             // admits is already the colour of the sky, and reversed-Z leaves the depth precision
             // where it was.
             camera.farClipPlane = 1800f;
+
+            // Anti-aliasing, which this project has never had — no MSAA, no post AA, nothing.
+            // It matters more now than it did: bloom and a warm grade on an aliased image look
+            // worse than either alone, because a stair-stepped edge is exactly what a bloom
+            // threshold catches and smears.
+            //
+            // SMAA rather than FXAA, and the reason is our own outline. FXAA finds edges by
+            // luminance contrast and softens them, and a one-pixel post-drawn ink line is the
+            // precise pattern it destroys. TAA would jitter the same line and wants motion
+            // vectors we do not produce for instanced geometry. MSAA cannot help at all, since
+            // the outline is drawn after the resolve.
+            //
+            // Post-processing is switched on here because URP keeps it per camera and defaults it
+            // to false. A camera built in script therefore renders no volume at all, which is a
+            // silent way to have a grade and not see it.
+            var cameraData = camera.GetUniversalAdditionalCameraData();
+            cameraData.antialiasing =
+                AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+            cameraData.renderPostProcessing = true;
             camera.clearFlags = CameraClearFlags.Skybox;
             camera.backgroundColor = new Color(0.10f, 0.12f, 0.16f);
             go.AddComponent<AudioListener>();
@@ -1778,6 +1850,7 @@ namespace Odyssey.EditorTools
             var boot = go.AddComponent<OdysseyBootstrap>();
             go.AddComponent<SelectionPresenter>();   // hit-tests a click for the selection director
             go.AddComponent<DesignatePresenter>();   // arms a tool and turns a drag into orders
+            go.AddComponent<SettingsPresenter>();    // owns Escape, and throws the graphics levers
 
             // The HUD: one UI Toolkit document over the live world (ADR 0003), built in code by
             // the shell and styled by the authored sheet.

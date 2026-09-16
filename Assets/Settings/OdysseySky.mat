@@ -28,8 +28,8 @@ Material:
     - _GroundFalloff: 3
     - _HorizonFalloff: 2.2
     m_Colors:
-    - _GroundColour: {r: 0.7, g: 0.8, b: 0.86, a: 1}
-    - _HorizonColour: {r: 0.76, g: 0.86, b: 0.91, a: 1}
-    - _SkyColour: {r: 0.36, g: 0.6, b: 0.86, a: 1}
+    - _GroundColour: {r: 0.6748148, g: 0.7822222, b: 0.8896296, a: 1}
+    - _HorizonColour: {r: 0.7348148, g: 0.8522222, b: 0.9522222, a: 1}
+    - _SkyColour: {r: 0.21037038, g: 0.44518518, b: 0.84962964, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

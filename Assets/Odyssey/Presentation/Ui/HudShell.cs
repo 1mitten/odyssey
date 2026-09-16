@@ -73,6 +73,8 @@ namespace Odyssey.Presentation.Ui
         VisualElement _bottomStack = null!;
         VisualElement _buildPanel = null!;
         VisualElement _buildButton = null!;
+        VisualElement _settingsPanel = null!;
+        readonly Dictionary<GraphicsOption, VisualElement> _settingRows = new();
         readonly List<CardView> _cards = new List<CardView>();
         VisualElement _rosterHost = null!;
         VisualElement _rulerRows = null!;
@@ -203,6 +205,7 @@ namespace Odyssey.Presentation.Ui
             BuildTabs();
             BuildOverlays();
             BuildCancel();
+            BuildSettings();
 
         }
 
@@ -218,6 +221,14 @@ namespace Odyssey.Presentation.Ui
             _directors = directors;
             _directors.Selection.Changed += OnSelectionChanged;
             _directors.Slice.LayerChanged += OnLayerChanged;
+            _directors.Settings.Changed += OnSettingsChanged;
+            _directors.Settings.OptionChanged += OnSettingChanged;
+
+            // The panel may already disagree with the director by the time we get here: the
+            // presenter seeds it from the scene and then lays stored preferences over it, and both
+            // happen before the shell has found anything to attach to.
+            OnSettingsChanged();
+            foreach (GraphicsOption option in SettingsDirector.All) OnSettingChanged(option);
         }
 
         void Detach()
@@ -225,6 +236,8 @@ namespace Odyssey.Presentation.Ui
             if (_directors == null) return;
             _directors.Selection.Changed -= OnSelectionChanged;
             _directors.Slice.LayerChanged -= OnLayerChanged;
+            _directors.Settings.Changed -= OnSettingsChanged;
+            _directors.Settings.OptionChanged -= OnSettingChanged;
             _directors = null;
         }
 
@@ -536,6 +549,69 @@ namespace Odyssey.Presentation.Ui
             _buildTools = new VisualElement();
             _buildTools.AddToClassList("build__tools");
             region.Add(_buildTools);
+        }
+
+        // ------------------------------------------------------------ B17 settings
+        /// <summary>
+        /// The settings panel: one section of graphics toggles, opened with Escape.
+        ///
+        /// <para>Built like the Build palette and hidden the same way, but parented to the shell
+        /// root rather than to the bottom stack, because it is centred on the screen rather than
+        /// sitting over the bar.</para>
+        ///
+        /// <para><b>It is not a modal.</b> There is no scrim and nothing is blocked: the world
+        /// runs, the camera orbits and the clock ticks while it is open, because the only reason
+        /// to have the panel is to watch the board change as a lever moves. Clicks that land on it
+        /// already stop at the panel edge through <see cref="PointOverUi"/>, which is the one piece
+        /// of blocking it actually needs.</para>
+        ///
+        /// <para>Rows are chips rather than UI Toolkit <c>Toggle</c> controls, because a chip that
+        /// lights is the on-off idiom the rest of this HUD already uses, and the first real control
+        /// in the project should arrive with the interface pass rather than in a settings panel.
+        /// Every row carries its full name beside the icon, per the labels rule (owner,
+        /// 2026-09-16); nothing here is named in C#, only keyed.</para>
+        /// </summary>
+        void BuildSettings()
+        {
+            var region = Region(_hud, "B17 · " + Registry.Label(SettingsDirector.PanelKey).ToUpperInvariant(),
+                "settings");
+            _settingsPanel = region;
+            region.style.display = DisplayStyle.None;
+
+            region.Add(Label(Registry.Label(SettingsDirector.GraphicsKey), "settings__section"));
+
+            foreach (GraphicsOption option in SettingsDirector.All)
+            {
+                string key = SettingsDirector.KeyOf(option);
+                var chip = Chip(new IconBadge(key), Registry.Label(key));
+                chip.AddToClassList("settings__row");
+
+                // Said in the tooltip rather than on the row, because it is a fact about what the
+                // toggle costs, not about what it does: two of these are read as the frame is
+                // drawn and two send the board back through the mesher.
+                chip.tooltip = SettingsDirector.NeedsRedraw(option)
+                    ? "Redraws the board when it changes"
+                    : "Takes effect on the next frame";
+
+                GraphicsOption captured = option;
+                chip.RegisterCallback<ClickEvent>(_ => _directors?.Settings.Toggle(captured));
+                _settingRows[option] = chip;
+                region.Add(chip);
+            }
+
+            region.Add(Label("Escape closes. Graphics only, and none of it is in the save.",
+                "settings__note"));
+        }
+
+        void OnSettingsChanged() =>
+            _settingsPanel.style.display =
+                _directors != null && _directors.Settings.Open ? DisplayStyle.Flex : DisplayStyle.None;
+
+        void OnSettingChanged(GraphicsOption option)
+        {
+            if (_directors == null) return;
+            if (!_settingRows.TryGetValue(option, out VisualElement? row)) return;
+            row.EnableInClassList("chip--on", _directors.Settings.IsOn(option));
         }
 
         const string BuildTabKey = "ui.tab.build";

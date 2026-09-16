@@ -10,8 +10,10 @@ namespace Odyssey.Presentation.Audio
     /// This is the stub of panel B17 ("Settings and keybindings" in the panel catalogue), which
     /// the design already exempts from the intent queue: user settings are not simulation state,
     /// and the binary save — integers only, by design — is the wrong home for them. PlayerPrefs
-    /// is Unity's store for exactly this, and nothing else in the project uses it, so the audio
-    /// faders are its first and, for now, only tenants.
+    /// is Unity's store for exactly this. The graphics switches landed in the same panel from the
+    /// other direction and keep their own booleans under <c>odyssey.ui.settings.*</c> through
+    /// <c>PlayerPrefsSettingsStore</c>; the two prefixes cannot collide, and the faders belong in
+    /// that panel beside them when B17 grows an audio section.
     ///
     /// Volumes are stored as dB rather than 0-to-1 floats because dB is what the buses keep (see
     /// <see cref="AudioMath"/>): what is stored is what is applied, with no conversion to
