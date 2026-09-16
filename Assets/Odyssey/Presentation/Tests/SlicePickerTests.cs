@@ -77,6 +77,61 @@ namespace Odyssey.Tests.Presentation
             }
         }
 
+        /// <summary>
+        /// The guarantee the whole picker exists to make, now that the ground is not where the
+        /// grid says it is.
+        ///
+        /// Going Medieval's most-reported complaint is misclicking, and relief reintroduces it by
+        /// the back door: the ground is drawn up to two metres off its layer, so a ray tested
+        /// against the flat plane crosses it in the wrong cell. At a shallow pitch that is most of
+        /// a cell out. The picker must meet the tilted floor it actually draws.
+        /// </summary>
+        [Test]
+        public void AClickOnASlopeLandsOnTheCellTheCursorIsOver()
+        {
+            GroundRelief.Reset();
+            GroundRelief.Amplitude = GroundRelief.BoardAmplitude;
+            try
+            {
+                var world = new RenderTestWorld(40, 40, 3);
+                for (int z = 0; z < 40; z++)
+                for (int x = 0; x < 40; x++)
+                    world.Solid(x, z, 0);
+                world.Publish();
+
+                // A shallow, three-quarter ray of the kind the board camera casts - the worst case
+                // for a height error, because a vertical mistake becomes a long horizontal one.
+                var direction = new Vector3(0.6f, -0.5f, 0.6f).normalized;
+
+                int checkedCells = 0;
+                for (int target = 6; target < 30; target += 3)
+                {
+                    Vector3 centre = CellMetrics.FloorCentre(target, target, 1);
+                    // Aim at the point on the DRAWN ground, which is where the player is pointing.
+                    Vector3 aim = GroundRelief.Lift(centre);
+                    var ray = new Ray(aim - direction * 60f, direction);
+
+                    bool hit = SlicePicker.Pick(ray, world.Model, activeLayer: 1, out CellRef cell);
+
+                    // Exactly the cell aimed at, not merely near it. A tolerance of one cell is
+                    // worse than no test at all here: the error a flat floor plane produces at
+                    // this amplitude is almost exactly one cell, so a loose assertion passes just
+                    // as happily with the bug in place. Checked by putting the bug back.
+                    Assert.That(hit, Is.True, $"the ray at {aim} should meet the ground");
+                    Assert.That(cell.X, Is.EqualTo(target),
+                        $"clicked the drawn ground of cell {target} but picked {cell.X}");
+                    Assert.That(cell.Z, Is.EqualTo(target));
+                    checkedCells++;
+                }
+
+                Assert.That(checkedCells, Is.GreaterThan(4), "the case was actually exercised");
+            }
+            finally
+            {
+                GroundRelief.Reset();
+            }
+        }
+
         [Test]
         public void ASlantedRayStopsAtTheFirstWallOnTheActiveLayer()
         {

@@ -91,6 +91,14 @@ namespace Odyssey.Presentation.Bootstrap
         [Range(0, 300)]
         public int grassScatter = 60;
 
+        [Tooltip("How far the drawn ground rolls above and below its layer, in metres. Decoration only: the cells stay flat, so nothing here changes pathing, the save or the hash. 0 is the flat board.")]
+        [Range(0f, 3f)]
+        public float groundRelief = GroundRelief.BoardAmplitude;
+
+        [Tooltip("The wavelength of the longest swell, in metres. Shorter is steeper and reads more strongly, at the cost of faceting between cells.")]
+        [Range(40f, 400f)]
+        public float groundReliefPeriod = 150f;
+
         [Header("Tick")]
         [Tooltip("Ticks per second at speed 1. The simulation has no notion of seconds; this is it.")]
         public int ticksPerSecond = 60;
@@ -146,6 +154,14 @@ namespace Odyssey.Presentation.Bootstrap
 
         void Start()
         {
+            // Set before anything is meshed, because the relief is read at mesh time and a chunk
+            // built flat would stay flat until something dirtied it. Statics, like the scatter
+            // density beside them: the field has to be reachable from the mesher, the picker and
+            // the figures alike, and it is a property of how the world is drawn rather than of any
+            // one of them.
+            GroundRelief.Amplitude = groundRelief;
+            GroundRelief.Period = groundReliefPeriod;
+
             var size = new GridSize(sizeX, sizeZ, layers);
             _grid = new CellGrid(size);
             var chunks = new ChunkGrid(size);
@@ -435,7 +451,7 @@ namespace Odyssey.Presentation.Bootstrap
                 {
                     Bounds box = item.Bounds;
                     _renderer.DrawSelectionBracket(
-                        CellMetrics.FloorCentre(cell) + box.center,
+                        GroundRelief.Lift(CellMetrics.FloorCentre(cell)) + box.center,
                         box.size + Vector3.one * ItemCursorMargin, colour);
                     return;
                 }

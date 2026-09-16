@@ -575,6 +575,40 @@ relaxes.
 applies the same four conditions at load time and logs and down-ranks anything oversized. Otherwise
 one modder's 256-pixel set costs a draw call per icon.
 
+### 7a. Words, not abbreviations, until the art lands (owner decision, 2026-09-16)
+
+This section was written for an icon-only interface with a two-to-four character text badge as its
+fallback. The owner's judgement on reviewing it: with no art in the build, **an abbreviation is
+unreadable — you cannot tell what anything is.** So the interim policy, which overrides the
+icon-only default above wherever the two disagree:
+
+- **Every icon-bearing control draws its full name beside the icon.** The name is the `name` column
+  of `docs/design/icon-keys.csv` — one source, so a rename stays a data change. No control is
+  labelled by a three-letter contraction of its key.
+- **Icon plus label is the default interface mode**, not an accessibility mode. What §7's debug list
+  calls "text fallback" is promoted to the shipping default; icon-only stays as the same toggle, so
+  nothing is rebuilt when it flips back.
+- **The text badge survives in exactly two places**: inside a generated 64-pixel placeholder tile,
+  where no word fits, and as the sub-32-pixel rendering rule in ADR 0007. Neither is ever the only
+  thing naming a control.
+- **B13's exemption is void.** The developer panel was "the one region permitted to use text
+  labels"; every region now is.
+
+**Layout is the cost and it is paid now, not later.** Panel minimum widths, the command bar, the
+tool palette, ledger chips, roster cards and alert rows are authored against the **longest label in
+their set**, not against the icon box, because a layout that only fits while the words are absent
+gets redesigned the first time they appear. Where a full name genuinely cannot fit — a roster card's
+status strip, a dense chip row — the element gets a wider slot or fewer items per row, not a shorter
+word.
+
+**When this reverses.** Once the eight sheets are imported and the mapped keys resolve to real art,
+the default may go back to icon-only with labels as a setting. That is an owner call made on a
+screenshot, not an automatic switch, and it changes one default value.
+
+**Tests.** The existing "does meaning survive without pictures" test stands. Two join it: every icon
+key used by a control resolves to a non-empty name, and every labelled container lays out without
+truncation or overflow at its longest label, at 100 and 150 per cent interface scale.
+
 ---
 
 ## 8. Modding seams
@@ -639,7 +673,7 @@ minutes and should be done first because they shape the design.
 
 | # | Question | Recommendation |
 |---|---|---|
-| D1 | Icon-only forever, or icons plus a micro-label once meaning proves unclear? | Icon-only with mandatory tooltips, and ship the text-fallback mode from M0 as both an accessibility mode and a comprehension check. Hotkey hints on hover only |
+| ~~D1~~ | Icon-only forever, or icons plus a micro-label once meaning proves unclear? | **Answered 2026-09-16: icons plus the full name, now.** The owner reviewed the placeholder interface and could not tell what anything was, so meaning did not prove unclear later — it was unclear immediately. Labels are the default and carry the whole word, not an abbreviation; icon-only remains as a toggle and may become the default again once real art is in the build. Mandatory tooltips and hover-only hotkey hints stand. See §7a |
 | D2 | The concept render duplicates the colonist bar top and bottom. Which survives, and what takes the freed slot? | Keep the **top** roster bar; the top edge is otherwise dead space. Bottom-left is the inspect pane. Give the **right edge** to the Depth Ruler and the alert stack |
 | ~~D3~~ | Above-and-below policy: ghost the storey above, or hide it? | **Answered 2026-09-15: neither.** X-ray by default, with six modes, a depth cap and a below-slice treatment shipped for playtest. See `docs/adr/0006-layer-visibility-policy.md`. The row keeps its number so D4 to D9 keep theirs |
 | D4 | Reference resolution, scale policy, minimum supported resolution | 1080p reference, relative-unit scaling with a user slider from 80 to 150 per cent, minimum 1366 × 768. **Amended by ADR 0007:** text and padding scale continuously, icons step through 32, 64 and 128, because pixel art at a fractional scale either shimmers or smears |

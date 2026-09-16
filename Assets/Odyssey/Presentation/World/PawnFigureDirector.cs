@@ -589,7 +589,10 @@ namespace Odyssey.Presentation.World
             // not straight past the tree.
             if (pawn.Working)
             {
-                Vector3 toWork = CellMetrics.FloorCentre(pawn.WorkCell) - position;
+                // Lifted before differencing: position is on the drawn ground, so a flat work
+                // cell would put a spurious rise into the vector. It is flattened straight
+                // afterwards, so this only matters for keeping the two ends in one space.
+                Vector3 toWork = GroundRelief.Lift(CellMetrics.FloorCentre(pawn.WorkCell)) - position;
                 toWork.y = 0f;
                 if (toWork.sqrMagnitude > 1e-4f) heading = toWork;
             }
@@ -624,7 +627,10 @@ namespace Odyssey.Presentation.World
             // feet — and the ease-out, which should have walked her back out of the stand she had
             // stepped into, instead eased her towards a stand solved against herself. Keeping the
             // last one until the weight is gone makes the way out retrace the way in.
-            if (pawn.Working) figure.WorkCentre = CellMetrics.FloorCentre(pawn.WorkCell);
+            // On the drawn ground, because the whole stance is solved against it: the step-up to
+            // the tree, the arm IK target and the chips thrown where the blade lands all read this.
+            if (pawn.Working)
+                figure.WorkCentre = GroundRelief.Lift(CellMetrics.FloorCentre(pawn.WorkCell));
             Quaternion facing = Quaternion.Euler(0f, figure.Yaw, 0f);
             figure.Transform.position = figure.WorkWeight > 0.001f
                 ? WorkStance.StandAt(position, figure.WorkCentre,

@@ -38,8 +38,14 @@ exist, which is why the surround needs no defence against being clicked.
 
 Four decisions, all taken with the owner on 2026-09-16:
 
-- **The meadow continues, thinning into haze.** Not a framing ring of hills and not a bare plane:
-  the same ground and the same wood carried outwards until linear fog has closed over it.
+- **The meadow continues, thinning into haze.** ~~Not a framing ring of hills~~ and not a bare
+  plane: the same ground and the same wood carried outwards until linear fog has closed over it.
+  **Amended 2026-09-16 by the owner, and the strike-through is deliberate** — the surround *does*
+  carry hills now, and the sentence is left visible so that nobody re-derives the old position from
+  a half-remembered reading of this section. What is unchanged is the reason it was written: the
+  surround must not read as a *ring*, a bowl drawn round the board to frame it. The hills come from
+  the same field the board rolls on, at zero amplitude at the rim, so they are the land continuing
+  rather than a wall built around the garden. See §2b.
 - **A fixed skirt, built once, reaching 1,220 m past the rim.** Concentric rings of instanced
   ground tiles, one cell per tile at the seam and coarsening outwards, so 1.2 km of ground costs
   about 7,900 instances rather than about 200,000. Each ring is covered by four strips, each split
@@ -75,6 +81,84 @@ an 80 m sector grid (trees) so that the half of the surround behind the camera i
 drawn, and only trees within 10 m of the rim are in the shadow pass — the sun is 72 degrees
 overhead, so a tree casts a couple of metres and a generous range would buy a thousand extra casters
 and no visible shadow.
+
+
+## 2b. The ground has a shape, and none of it is a cell
+
+Added 2026-09-16. The board read as a carpet of blocks, for two reasons that compound: the wooded
+board sets the generator's own `surfaceRelief` to zero, and a ground cell is drawn as one instanced
+2.5 x 3.0 x 2.5 cube placed by a bare translate, so every top face is a flat quad at exactly the
+layer height.
+
+**The relief is a facade, in the same sense the grass tufts and the axe chips are.** It is drawn and
+nothing else: no cell knows about it, it is not pathable, not in the save, not in the state hash,
+and `surfaceRelief` is still zero. ADR 0002's "no slopes, no half-heights" is a rule about cells, and
+this adds nothing to a cell. `GroundRelief` holds the whole of it.
+
+**The governing rule: relief is a drawing offset, never a position.** `CellMetrics.FloorCentre` is
+untouched, because it is the one place metres exist and every system agrees through it. The lift is
+applied explicitly at each draw site instead. The single exception is picking, and it is not really
+an exception: a click has to land on what the player can see, so `SlicePicker` tests each cell's own
+tilted floor rather than one flat plane per layer. Without that a click lands most of a cell away at
+a shallow pitch, which is exactly the misclicking complaint the picker's own remarks cite Going
+Medieval for.
+
+**Ground is sheared; everything standing on it is lifted.** A per-cell vertical offset alone would
+give plateaus with little steps, which is still blocky. Each ground cell instead takes the tangent
+plane of the field at its centre, which is affine and so fits in the instance matrix the cell
+already had: no extra instance, no extra draw call, no new mesh, no shader change. Vertical edges
+stay vertical so neighbours cannot gap, the determinant is one so nothing flips to a backface, and
+the top normal tilts under the ordinary inverse-transpose so the lighting is free. A colonist, a
+tuft, a log pile and a cursor are lifted and never sheared — ground lies along a slope, but a person
+standing on a hillside stands up.
+
+**Two layers, one field.** The board rolls 2 m over a 150 m wavelength; the surround adds hills of
+50 m over 1,000 m, ramped from zero at the rim to full height by 700 m out and held. Amplitude and
+wavelength together decide a slope, which is why the hills cannot simply be the board's field turned
+up: 50 m over 150 m stands at sixty degrees. Both layers are continuous, so the join at the rim is
+continuous by construction rather than by tuning.
+
+**Sized to be seen, and only where it can be.** Two measurements drove the numbers more than taste
+did. The lit value barely moves for a gentle slope — the sun is at 72 degrees over a strong trilight
+ambient, so a 1.7-degree roll changes it by under one per cent, and a cautious 0.35 m amplitude
+would have shipped the whole system with nothing visible. And the far land is mostly not on screen:
+fog is opaque at 1,100 m from the camera, and at the default 48-degree pitch only ground between
+roughly 50 m and 220 m is in frame at all, with the horizon appearing only below about 25 degrees.
+So the board's own roll is what improves the default view, and the hills are what reward tilting
+down.
+
+| Pitch | Camera height | Ground visible |
+|---|---|---|
+| 48 (default) | 119 m | 50–224 m |
+| 35 | 92 m | 64–342 m |
+| 25 | 68 m | 68–773 m |
+| 20 (minimum) | 55 m | 65 m to the horizon |
+
+**What the tile size costs.** Each piece of ground is one tilted plane, so two neighbours part
+company across their shared edge as the square of the tile width. On the board, at 2.5 m, that is
+about 41 mm at worst and is filled by the lower neighbour's own side face. On the surround it was
+the deciding constraint: at the old 120 m tiles it came to twenty metres and read as long diagonal
+cracks scored across the hillsides, so the outer bands went to 20 m and 60 m. Surround tiles are
+also sunk deep enough to reach below whatever their neighbours can do, or the join between two of
+them is an open trench to the sky.
+
+**Levers.** `OdysseyBootstrap.groundRelief` and `groundReliefPeriod`; 0 is the old flat board
+exactly. `GroundRelief.HillAmplitude`, `HillPeriod` and `HillRampMetres` for the surround. Judge it
+with *Odyssey → Presentation → Check the ground relief*
+(`scripts/unity.sh shot Odyssey.EditorTools.ReliefCheck.Run`), which photographs the board with the
+relief off and on at all three pitches above — the whole feature is a judgement about how something
+looks, and reasoning about a renderer from its source is guesswork.
+
+**Cost, measured under the real player loop** (`FrameTimeTests`, never `RenderBench`): the wooded
+meadow went from 0.41 ms to 0.68 ms mean, 1.10 ms worst, at 640 x 480 on the RTX 5070 Ti against a
+5 ms submission budget. The shear itself is free — identical draw calls and instances with the
+relief off and on. The 0.27 ms is the finer surround tiles: 30,665 instances against 23,156, at the
+same number of draw calls.
+
+**If the real terracing is ever wanted**, `surfaceRelief` is one line away in `MakeWooded`, and the
+facade would then smooth its 3 m risers into slopes. It is deliberately not taken: it changes
+worldgen output, the goldens, pathing and the start cell, and the look should be judged on the
+change that risks nothing first.
 
 ## 3. The camera and the slice
 

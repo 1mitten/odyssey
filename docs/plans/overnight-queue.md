@@ -105,7 +105,7 @@ Sizes: **S** one focused session, **M** a long one. Nothing here is L. Test-firs
 - **Burst on the cell A-star.** Blocked on the asmdef decision above.
 - **The MemoryPack-under-IL2CPP spike** named in `d-06`: moot, the save container is hand-written binary; what remains is the player-build question listed for the owner.
 - **Hot reload of Defs.** M8 by the plan.
-- **Wiki, icon or mockup tooling changes on the Windows machine.** No Python there.
+- ~~**Wiki, icon or mockup tooling changes on the Windows machine.** No Python there.~~ **Unblocked 2026-09-16:** Python 3.13.15 is installed on the Windows machine, `build_wiki.py --check` and the 30 icon tests both run there. Requires `PYTHONUTF8=1`, now set for the user (`docs/lessons.md`).
 - **Editing `docs/research/INDEX.md` from a research row.** Single-owner file; OQ-35 does it once.
 - **Deleting the ruined-city generator.** ADR 0008 keeps it as a selectable map type, and OQ-10, OQ-18 and OQ-20 use it.
 - **Second-night research backlog**, safe to run unattended but not needed before M4 or later, so kept off tonight's list to keep the night focused: A7 power and networks, A9 animals, A10 combat, A11 storyteller, A13 research/factions/trade; B Oxygen Not Included, B Odd Realm and Songs of Syx; C Luanti, C utility-AI literature, C Unity colony-sim repositories. Same cap and format as OQ-26 when they run.

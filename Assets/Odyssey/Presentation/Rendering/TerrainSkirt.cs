@@ -293,17 +293,42 @@ namespace Odyssey.Presentation.Rendering
 
             SkirtLayout.BuildTiles(_model.Size, _tiles);
 
+            SkirtLayout.SkirtRect board = SkirtLayout.Board(_model.Size);
+
             for (int i = 0; i < _tiles.Count; i++)
             {
                 SkirtLayout.SkirtTile tile = _tiles[i];
-                var placement = Matrix4x4.TRS(
-                    new Vector3(tile.CentreX, surfaceY, tile.CentreZ),
-                    Quaternion.identity,
-                    new Vector3(tile.SizeX / CellMetrics.SizeXZ, 1f, tile.SizeZ / CellMetrics.SizeXZ));
+                float outside = board.DistanceOutside(tile.CentreX, tile.CentreZ);
 
+                // How deep the tile has to be so that it still meets its neighbours.
+                //
+                // This is the one thing the surround needs that the board does not. A board cell is
+                // 2.5 m across and 3 m deep, so a neighbour can never drop far enough to show a gap
+                // beneath it. A surround tile is up to 120 m across, and over that distance the
+                // hills can fall tens of metres - so a 3 m box would leave an open trench to the
+                // sky along every tile boundary. The tile is therefore sunk to reach below whatever
+                // its neighbours can do, which costs nothing at all: it is the same instance with a
+                // different scale, and all of it is underground.
+                float depth = TileDepth(tile, outside);
+
+                // Drape works from the bottom of the box up, so the origin is set so that the TOP
+                // still lands on the field, wherever the bottom ends up.
+                var placement = GroundRelief.DrapeSurround(
+                    new Vector3(tile.CentreX, surfaceY + CellMetrics.SizeY - depth, tile.CentreZ),
+                    outside) *
+                    Matrix4x4.Scale(new Vector3(
+                        tile.SizeX / CellMetrics.SizeXZ,
+                        depth / CellMetrics.SizeY,
+                        tile.SizeZ / CellMetrics.SizeXZ));
+
+                float height = GroundRelief.SurroundHeightAt(tile.CentreX, tile.CentreZ, outside);
+                float reach = GroundRelief.SurroundMaxSlope(outside) *
+                              Mathf.Max(tile.SizeX, tile.SizeZ) * 0.5f;
                 var bounds = new Bounds(
-                    new Vector3(tile.CentreX, surfaceY + CellMetrics.SizeY * 0.5f, tile.CentreZ),
-                    new Vector3(tile.SizeX, CellMetrics.SizeY, tile.SizeZ));
+                    new Vector3(tile.CentreX,
+                        surfaceY + CellMetrics.SizeY + height - depth * 0.5f,
+                        tile.CentreZ),
+                    new Vector3(tile.SizeX, depth + 2f * reach, tile.SizeZ));
 
                 // Terrain never casts: the argument is the one in ChunkRenderer, and it applies
                 // with more force out here, where the ground is a single flat sheet whose only
@@ -317,6 +342,21 @@ namespace Odyssey.Presentation.Rendering
 
             GroundInstances = CountOf(_ground);
             TuftInstances = CountOf(_tufts);
+        }
+
+        /// <summary>
+        /// How deep a surround tile has to be so that it always reaches below its neighbours.
+        ///
+        /// The full height of the layer, plus however far the land can fall across one tile, plus
+        /// the second-order disagreement between two tangent planes that wide. Generous on purpose:
+        /// every metre of it is below ground and costs nothing, whereas being a metre short is a
+        /// hole through to the sky along a tile edge.
+        /// </summary>
+        static float TileDepth(SkirtLayout.SkirtTile tile, float metresOutsideBoard)
+        {
+            float span = Mathf.Max(tile.SizeX, tile.SizeZ);
+            float slope = GroundRelief.SurroundMaxSlope(metresOutsideBoard);
+            return CellMetrics.SizeY + 2f * slope * span + 1f;
         }
 
         /// <summary>
@@ -344,6 +384,8 @@ namespace Odyssey.Presentation.Rendering
             if (count == 0) return;
 
             var surface = new Vector3(tile.CentreX, surfaceY + CellMetrics.SizeY, tile.CentreZ);
+            float tileOutside = SkirtLayout.Board(_model.Size)
+                .DistanceOutside(tile.CentreX, tile.CentreZ);
 
             for (int slot = 0; slot < count; slot++)
             {
@@ -354,8 +396,9 @@ namespace Odyssey.Presentation.Rendering
                 ResolvedModule tuft = _model.Library[module];
                 if (tuft.IsEmpty) continue;
 
-                Vector3 at = surface + new Vector3(
-                    offsetX * CellMetrics.SizeXZ, 0f, offsetZ * CellMetrics.SizeXZ);
+                Vector3 at = GroundRelief.LiftSurround(
+                    surface + new Vector3(offsetX * CellMetrics.SizeXZ, 0f, offsetZ * CellMetrics.SizeXZ),
+                    tileOutside);
                 var placement = Matrix4x4.TRS(at, Quaternion.Euler(0f, yaw, 0f),
                     new Vector3(scale, scale, scale));
 
@@ -407,6 +450,7 @@ namespace Odyssey.Presentation.Rendering
             // Trees stand on top of the surface cell, exactly as the mesher stands them on the
             // board: the layer above the solid one, at its floor.
             float standY = (SurfaceLayer + 1) * CellMetrics.SizeY;
+            SkirtLayout.SkirtRect board = SkirtLayout.Board(_model.Size);
 
             for (int i = 0; i < _scattered.Count; i++)
             {
@@ -417,10 +461,15 @@ namespace Odyssey.Presentation.Rendering
 
                 float x = tree.CellX * CellMetrics.SizeXZ + CellMetrics.HalfXZ;
                 float z = tree.CellZ * CellMetrics.SizeXZ + CellMetrics.HalfXZ;
-                var placement = Matrix4x4.Translate(new Vector3(x, standY, z));
+
+                // On the hillside rather than through it. A tree is lifted and never draped: a
+                // sheared trunk would lean, and trees on a slope grow up.
+                Vector3 foot = GroundRelief.LiftSurround(
+                    new Vector3(x, standY, z), board.DistanceOutside(x, z));
+                var placement = Matrix4x4.Translate(foot);
 
                 Bounds local = resolved.Bounds;
-                var bounds = new Bounds(new Vector3(x, standY, z) + local.center, local.size);
+                var bounds = new Bounds(foot + local.center, local.size);
 
                 int sector = SectorOf(x, z, treeModules.Length, tree.Variant);
                 Add(_trees, resolved, treeTints[tree.Variant], tree.MuteStep, sector,

@@ -392,7 +392,7 @@ double as "clear designation". Adopted.
 | Cadence | 4 Hz |
 | Owner | `UiBudgetMonitor` |
 | Layer | no |
-| Icons | none; this is the one region permitted to use text labels |
+| Icons | none; it was the one region permitted to use text labels, an exemption `09` §7a made moot — every region carries full labels until the art lands |
 | Milestone | **M0**, and it is the first visible interface in the project |
 
 This is also the one place immediate-mode drawing is permitted, because none of its constraints
@@ -643,6 +643,12 @@ fit one atlas page and would cost a draw call each, which is what
 in `docs/design/icon-map.csv`; the remaining 114 are listed as gaps in
 `docs/design/11-icon-library.md`. All are generated as deterministic placeholders per `09` §7,
 so layout and density can be reviewed now and art can arrive at any time without a code change.
+
+Until that art is in the build, **each of those keys is drawn with its full name beside it**
+(`09` §7a, owner decision 2026-09-16), so every panel below is laid out against its longest label
+rather than against the icon box. Panels whose density argument assumed icon-only — the ledger
+chip row, the command bar, the tool palette and the roster card's status strip — take a wider slot
+or fewer items per row, never a shortened word.
 
 | Namespace | Count | First needed |
 |---|---|---|
