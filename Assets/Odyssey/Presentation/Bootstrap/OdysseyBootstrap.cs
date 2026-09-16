@@ -83,7 +83,10 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Scatter trees over the background hills, out to 900 m. They are what gives the distance a scale; off is the old bare hillside. Decoration only, like the rest of the surround.")]
         public bool skirtHillTrees = true;
 
-        [Tooltip("Which cast the colonists get. 0 deals from the world seed, so the same world is the same people every load; any other value overrides it, and the log prints the value used so a cast you liked can be rerolled or kept.")]
+        [Tooltip("Roll a fresh cast every session: different faces, hair, skin and clothes each time you press Play. Off deals from the world seed instead, so a given world is the same people on every load. Either way colonistLookSeed overrides it.")]
+        public bool randomCastEachSession = true;
+
+        [Tooltip("Pin one cast. 0 follows the switch above; any other value deals that cast every time, and the log prints the value used so a cast you liked can be kept.")]
         public int colonistLookSeed = 0;
 
         /// <summary>
@@ -258,21 +261,35 @@ namespace Odyssey.Presentation.Bootstrap
             _world.Intents.Submit(new Intent(IntentKind.SetSliceLayer, default, outcome.StartCell.Y));
             _world.Tick();
 
-            // The cast is dealt from the world seed, and the reasoning here has changed once, so
-            // it is worth restating. It was a number rolled at startup, because a *fixed* hash
-            // dealt the starting five — always pawns 1 to 5 — the same five faces every play, and
-            // a cast of sixty-one read as a cast of five. The world seed answers that just as
-            // well, since it differs from world to world, and it also does what a random number
-            // could not: the same world deals the same people on every load, so a colonist's
-            // appearance is a property of the colonist rather than of the session.
+            // Where the cast comes from, and the reasoning has now changed twice, so it is worth
+            // stating all three positions rather than leaving the file arguing with itself.
             //
-            // It never enters the simulation and is not saved — nothing is stored, because the
-            // same inputs are re-derived. See ColonistAppearance.
-            uint castSeed = colonistLookSeed != 0 ? (uint)colonistLookSeed : seed;
+            // It began as a *fixed* hash of the pawn id, which dealt the starting five — always
+            // pawns 1 to 5 — the same five faces every play, so a cast of sixty-one read as a cast
+            // of five. Then a number rolled at startup, which fixed that at the price of a
+            // colonist who was somebody else after a reload. Then the world seed, which fixes both
+            // — a different world is a different cast, and a given world is the same people every
+            // load, so an appearance is a property of the colonist rather than of the session.
+            //
+            // **And the world seed is pinned in the scene**, which is the part that matters here:
+            // with `seed` fixed at 1, "the same world deals the same people" means the same twelve
+            // people every single time you press Play. That is right for a saved colony and wrong
+            // for looking at what the palette does, which is what the owner is doing now — so the
+            // roll is back, behind a switch, defaulting on while the look is being judged. Turning
+            // it off restores the stable cast exactly, and it is what a real saved game will want.
+            //
+            // None of it enters the simulation and none of it is saved: nothing is stored, because
+            // the same inputs are re-derived. See ColonistAppearance.
+            uint castSeed =
+                colonistLookSeed != 0 ? (uint)colonistLookSeed :
+                randomCastEachSession ? (uint)UnityEngine.Random.Range(1, int.MaxValue) :
+                seed;
             var appearances = new ColonistAppearanceBook(castSeed, moduleCatalogue);
             _colonistMaterials = new ColonistMaterials();
-            Debug.Log($"[Odyssey] colonist cast seed {castSeed} over {appearances.LookCount} faces " +
-                      "(set colonistLookSeed to override the world seed)");
+            Debug.Log($"[Odyssey] colonist cast seed {castSeed} over {appearances.LookCount} faces, " +
+                      (colonistLookSeed != 0 ? "pinned by colonistLookSeed" :
+                       randomCastEachSession ? "rolled for this session — copy it into colonistLookSeed to keep this cast" :
+                       "dealt from the world seed"));
 
             _renderer = new ChunkRenderer(_model)
             {
