@@ -434,10 +434,26 @@ namespace Odyssey.Presentation.Bootstrap
         {
             if (GetComponent<DesignatePresenter>() != null) return;
 
+            // Add it, then say so. **This reverses a decision, and the reversal is the point.**
+            //
+            // The first version of this only warned, on the argument that self-healing would
+            // paper over a scene that might be stale in other ways the check cannot see. That
+            // argument is still true and it was still the wrong call: a presenter is a
+            // composition-root concern, this IS the composition root, and the cost of being
+            // principled about it was that the mining and felling keys did nothing four playtests
+            // running. A warning nobody acts on is not a safeguard, it is a note.
+            //
+            // So the feature works whether or not the scene has been rebuilt, and the staleness
+            // is still reported rather than hidden. Rebuilding remains the right thing to do —
+            // the scene may well be stale in other ways — but it is no longer the difference
+            // between a feature existing and not.
+            gameObject.AddComponent<DesignatePresenter>();
+
             Debug.LogWarning(
-                "[Odyssey] This play scene was built before DesignatePresenter existed, so no tool " +
-                "can be armed and the mining and felling keys (M, C, X) will do nothing. The scene " +
-                "is generated: rebuild it with Odyssey > Presentation > Build play scene.");
+                "[Odyssey] This play scene was built before DesignatePresenter existed. It has " +
+                "been added at runtime so the mining and felling keys (M, C, X) work, but the " +
+                "scene is generated and is out of date: rebuild it with " +
+                "Odyssey > Presentation > Build play scene.");
         }
 
         void LateUpdate()
