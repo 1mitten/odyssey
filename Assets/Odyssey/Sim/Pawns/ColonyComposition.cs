@@ -22,6 +22,12 @@ namespace Odyssey.Sim.Pawns
         /// jobs, because a hungry pawn picks a different job; jobs before movement. Skill decay
         /// on the Long tick group. Then the pawns and the designations as hashed, saved and
         /// published state, and the player commands the colony owns: forbid, designate, cancel.
+        ///
+        /// <para>What is <em>not</em> listed here is the work givers. A giver in the simulation
+        /// assembly joins the scan by existing (<see cref="WorkGiverRegistry"/>); one from outside
+        /// joins through <see cref="SimWorldBuilder.AddWorkGiver"/> and is collected below. Adding
+        /// a kind of work therefore edits no file that anything else owns, which is the whole of
+        /// OQ-44.</para>
         /// </summary>
         /// <param name="jobs">The job pipeline to run, when the caller wants to hold on to it for its
         /// per-def counters; a fresh one otherwise.</param>
@@ -34,7 +40,15 @@ namespace Odyssey.Sim.Pawns
                 .AddSystem(_ => support)
                 .AddSystem(_ => new NavigationSystem(nav, support))
                 .AddSystem(_ => new NeedsSystem(pawns))
-                .AddSystem(_ => pipeline)
+                // Inside the lambda, not before it: the factory runs during Build(), so a giver
+                // registered after this call is still picked up. Outside it, AddColony would have
+                // had to be the last call on the builder, which is precisely the kind of ordering
+                // rule that holds until somebody writes the lines the other way round.
+                .AddSystem(_ =>
+                {
+                    pipeline.AddGivers(builder.WorkGivers);
+                    return pipeline;
+                })
                 .AddSystem(_ => new MovementSystem(pawns))
                 .AddTickable(_ => new SkillSystem(pawns))
                 .AddTickable(_ => pawns.Pawns)

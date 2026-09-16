@@ -277,6 +277,7 @@ namespace Odyssey.Sim
         readonly List<Func<SimWorld, IWorldSystem>> _systemFactories = new List<Func<SimWorld, IWorldSystem>>();
         readonly List<(IntentKind kind, Func<Intent, IntentRejection> handler)> _intentHandlers =
             new List<(IntentKind, Func<Intent, IntentRejection>)>();
+        readonly List<Pawns.WorkGiver> _workGivers = new List<Pawns.WorkGiver>();
         uint _seed = 1;
         GridSize _size = GridSize.ScaleTarget;
 
@@ -329,6 +330,25 @@ namespace Odyssey.Sim
             _intentHandlers.Add((kind, handler ?? throw new ArgumentNullException(nameof(handler))));
             return this;
         }
+
+        /// <summary>
+        /// Let something outside the simulation assembly scan for work. Givers that live *inside*
+        /// it need no call at all: <see cref="Pawns.WorkGiverRegistry"/> finds them, which is the
+        /// point of that class. This is for the rest — a test's giver, an editor tool's, one day a
+        /// mod's.
+        ///
+        /// <para>The call order does not matter. The colony reads this list inside
+        /// <see cref="Build"/>, after every registration has been made, and the job pipeline sorts
+        /// the whole set by work type; a giver added last still scans where the Defs put it.</para>
+        /// </summary>
+        public SimWorldBuilder AddWorkGiver(Pawns.WorkGiver giver)
+        {
+            _workGivers.Add(giver ?? throw new ArgumentNullException(nameof(giver)));
+            return this;
+        }
+
+        /// <summary>The givers registered so far. Read by the colony composition at build time.</summary>
+        public IReadOnlyList<Pawns.WorkGiver> WorkGivers => _workGivers;
 
         public SimWorld Build()
         {

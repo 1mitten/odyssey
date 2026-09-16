@@ -1,0 +1,16 @@
+<!--
+  Managed-code stripping and the work-giver scan.
+
+  WorkGiverRegistry finds every WorkGiver in this assembly by reflection, which is what lets a
+  new kind of work join the job scan without editing a file that belongs to everybody. Nothing
+  references those types by name, so a stripped player build is entitled to delete them and the
+  colony would simply stop mining, with nothing logged. The editor, the tests and the fast-tier
+  mirror projects never strip, so the fault could appear only in a player build - the one place
+  it is most expensive to find.
+
+  The whole assembly is preserved because the whole assembly is the simulation: there is nothing
+  in it that is not used every tick.
+-->
+<linker>
+  <assembly fullname="Odyssey.Sim" preserve="all" />
+</linker>
