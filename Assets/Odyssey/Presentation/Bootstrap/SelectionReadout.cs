@@ -1,31 +1,30 @@
 #nullable enable
-using System.Text;
+using System;
 using Odyssey.Sim.Contracts;
 using UnityEngine;
 
 namespace Odyssey.Presentation.Bootstrap
 {
     /// <summary>
-    /// Says what is under the cursor and what the selected colonist is doing.
+    /// Resolves what a pick landed on: a colonist, an item, or nothing but the cell.
     ///
-    /// This exists because of a specific piece of feedback: the scene rendered a world, but a
-    /// colonist hauling and a colonist wandering because they had broken down looked identical,
-    /// so there was no way to tell a working simulation from a stuck one by looking at it. A
-    /// simulation you cannot read is a simulation you cannot trust.
+    /// This is the InputRouter's one live case so far, and it stays a small, dull class on
+    /// purpose. The camera rig owns picking and raises <c>SelectionChanged</c> with the ray;
+    /// this component is the listener that says what the pick *meant* — the ray passed through
+    /// a colonist's bracket, an item sits in the cell, or it is bare ground — and holds the
+    /// answer for everyone else. The selection cursor (bootstrap) and the inspect pane (HUD)
+    /// both read it, so the thing bracketed on the board is exactly the thing the pane describes.
     ///
-    /// Deliberately minimal, and deliberately not a HUD. The interface proper — panels, the
-    /// inspect pane, the alert stack — belongs to the UI line of work and will replace this. What
-    /// is here is the smallest thing that makes the simulation legible while that is built.
+    /// It exists because of a specific piece of feedback: a colonist hauling and a colonist
+    /// wandering because they had broken down looked identical, so there was no way to tell a
+    /// working simulation from a stuck one by looking at it. The readout that answered it grew
+    /// into the HUD's inspect pane; the display moved there, the resolution stayed here.
     ///
     /// It reads the published snapshot and nothing else, like everything else in presentation.
-    /// Strings are rebuilt only when the selection or the tick changes, not every frame.
     /// </summary>
     [RequireComponent(typeof(OdysseyBootstrap))]
     public sealed class SelectionReadout : MonoBehaviour
     {
-        /// <summary>Job names, indexed by the job handle the snapshot carries. See PawnContent.JobIndex.</summary>
-        static readonly string[] JobNames = { "hauling", "eating", "sleeping", "wandering", "waiting" };
-
         /// <summary>
         /// The colonist the last click landed on, or <see cref="PawnId.None"/>.
         ///
@@ -41,16 +40,19 @@ namespace Odyssey.Presentation.Bootstrap
         /// <summary>The item def of <see cref="SelectedThing"/>, which is what its art is looked up by.</summary>
         public int SelectedThingDef => _selectedThingDef;
 
+        /// <summary>
+        /// Raised after every pick is resolved (and after <see cref="SelectPawn"/>), so the
+        /// inspect pane can answer the click in the same frame. Carries no payload on purpose:
+        /// listeners read the three properties above, which by then are already the answer.
+        /// </summary>
+        public event Action? SelectionResolved;
+
         ThingId _selectedThing = ThingId.None;
         int _selectedThingDef = -1;
+        PawnId _selected = PawnId.None;
 
         OdysseyBootstrap? _bootstrap;
         Odyssey.Presentation.CameraRig.SliceCameraRig? _rig;
-        readonly StringBuilder _text = new StringBuilder(256);
-        PawnId _selected = PawnId.None;
-        int _builtForTick = -1;
-        string _cached = string.Empty;
-        GUIStyle? _style;
 
         void Awake()
         {
@@ -62,6 +64,19 @@ namespace Odyssey.Presentation.Bootstrap
         void OnDestroy()
         {
             if (_rig != null) _rig.SelectionChanged -= OnSelectionChanged;
+        }
+
+        /// <summary>
+        /// Select a colonist outright, without a pick — the roster bar's click path. Resolves
+        /// the same way a world click does, so the cursor, the pane and the roster all agree on
+        /// one selection from one method.
+        /// </summary>
+        public void SelectPawn(PawnId id)
+        {
+            _selected = id;
+            _selectedThing = ThingId.None;
+            _selectedThingDef = -1;
+            SelectionResolved?.Invoke();
         }
 
         /// <summary>
@@ -102,7 +117,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (picked.HasValue && !_selected.IsValid)
                 ThingAt(world.Views.Current, picked.Value, out _selectedThing, out _selectedThingDef);
 
-            _builtForTick = -1;
+            SelectionResolved?.Invoke();
         }
 
         static void ThingAt(WorldSnapshot snapshot, CellRef cell, out ThingId id, out int def)
@@ -145,86 +160,5 @@ namespace Odyssey.Presentation.Bootstrap
             }
             return best;
         }
-
-        void OnGUI()
-        {
-            var world = _bootstrap?.World;
-            if (world == null) return;
-
-            var snapshot = world.Views.Current;
-            if (snapshot.Tick != _builtForTick)
-            {
-                Rebuild(snapshot);
-                _builtForTick = snapshot.Tick;
-            }
-            if (_cached.Length == 0) return;
-
-            _style ??= new GUIStyle(GUI.skin.label)
-            {
-                fontSize = 13,
-                normal = { textColor = Color.white },
-                padding = new RectOffset(10, 10, 8, 8),
-            };
-
-            var size = _style.CalcSize(new GUIContent(_cached));
-            var box = new Rect(12f, Screen.height - size.y - 12f, size.x + 8f, size.y);
-            GUI.color = new Color(0f, 0f, 0f, 0.55f);
-            GUI.DrawTexture(box, Texture2D.whiteTexture);
-            GUI.color = Color.white;
-            GUI.Label(box, _cached, _style);
-        }
-
-        void Rebuild(WorldSnapshot snapshot)
-        {
-            _text.Clear();
-
-            if (_selected.IsValid && snapshot.TryGetPawn(_selected, out PawnView pawn))
-            {
-                _text.Append("Colonist ").Append(_selected.Value);
-                _text.Append("  ").Append(JobName(pawn.JobDef));
-                _text.Append("\nat ").Append(pawn.Cell.X).Append(", ").Append(pawn.Cell.Z)
-                     .Append("  layer ").Append(pawn.Cell.Y);
-                _text.Append("\nfood ").Append(Percent(pawn.Food));
-                _text.Append("   rest ").Append(Percent(pawn.Rest));
-                _text.Append("   mood ").Append(pawn.Mood);
-            }
-            else
-            {
-                // Nothing selected: say what the colony as a whole is doing, which is the next
-                // most useful thing and answers "is anything happening at all".
-                _selected = PawnId.None;
-                _text.Append(snapshot.PawnCount).Append(" colonists");
-                if (snapshot.PawnCount > 0)
-                {
-                    _text.Append("  (");
-                    AppendJobCounts(snapshot);
-                    _text.Append(')');
-                }
-                _text.Append("\nclick a colonist to inspect");
-            }
-
-            _cached = _text.ToString();
-        }
-
-        void AppendJobCounts(WorldSnapshot snapshot)
-        {
-            var pawns = snapshot.Pawns;
-            bool first = true;
-            for (int job = 0; job < JobNames.Length; job++)
-            {
-                int count = 0;
-                for (int i = 0; i < pawns.Length; i++) if (pawns[i].JobDef == job) count++;
-                if (count == 0) continue;
-                if (!first) _text.Append(", ");
-                _text.Append(count).Append(' ').Append(JobNames[job]);
-                first = false;
-            }
-            if (first) _text.Append("idle");
-        }
-
-        static string JobName(int jobDef) =>
-            jobDef >= 0 && jobDef < JobNames.Length ? JobNames[jobDef] : "idle";
-
-        static string Percent(int need) => (need / 10).ToString() + "%";
     }
 }

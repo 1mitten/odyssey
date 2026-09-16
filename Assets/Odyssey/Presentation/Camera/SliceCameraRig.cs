@@ -62,6 +62,38 @@ namespace Odyssey.Presentation.CameraRig
         public event Action<int>? GameSpeedRequested;
 
         /// <summary>
+        /// Set by the interface: returns true when a screen position sits over a HUD region.
+        /// The rig consults it before picking, because the rig reads the mouse directly and a
+        /// UI Toolkit panel does not stop it — without this gate a click on a panel also picks
+        /// the world behind it, which is input case 2 of design 09 §6 and the classic bug of
+        /// the genre. Orbit and pan are deliberately not gated: a drag begun on the world
+        /// completes against the world even if the pointer crosses a panel on the way.
+        /// </summary>
+        public Func<Vector2, bool>? PointerOverInterface { get; set; }
+
+        /// <summary>
+        /// Ask for a game speed from anywhere the keyboard cannot reach — the HUD's speed
+        /// buttons, later a menu. Raises the same event the keys do, so the composition root's
+        /// paused-clock handling stays in one place.
+        /// </summary>
+        public void RequestGameSpeed(int speed) => GameSpeedRequested?.Invoke(speed);
+
+        /// <summary>
+        /// Move the slice to a layer from anywhere the keyboard cannot reach — the Depth Ruler,
+        /// later alerts and bulletins. Same clamping, selection clearing and event as the
+        /// PageUp/PageDown path.
+        /// </summary>
+        public void SetLayer(int layer)
+        {
+            if (_model == null) return;
+            int next = Mathf.Clamp(layer, 0, _model.Size.SizeY - 1);
+            if (next == ActiveLayer) return;
+            ActiveLayer = next;
+            SetSelection(null, default);
+            ActiveLayerChanged?.Invoke(ActiveLayer);
+        }
+
+        /// <summary>
         /// Raised the instant the selection changes — a pick that hit, a pick that missed, or a
         /// layer change clearing it.
         ///
@@ -127,13 +159,13 @@ namespace Odyssey.Presentation.CameraRig
             if (keys.qKey.wasPressedThisFrame) _targetYaw -= 90f;
             if (keys.eKey.wasPressedThisFrame) _targetYaw += 90f;
 
-            if (keys.pageUpKey.wasPressedThisFrame || keys.rKey.wasPressedThisFrame) ChangeLayer(1);
-            if (keys.pageDownKey.wasPressedThisFrame || keys.fKey.wasPressedThisFrame) ChangeLayer(-1);
+            if (keys.pageUpKey.wasPressedThisFrame || keys.rKey.wasPressedThisFrame) SetLayer(ActiveLayer + 1);
+            if (keys.pageDownKey.wasPressedThisFrame || keys.fKey.wasPressedThisFrame) SetLayer(ActiveLayer - 1);
 
-            if (keys.spaceKey.wasPressedThisFrame) GameSpeedRequested?.Invoke(0);
-            if (keys.digit1Key.wasPressedThisFrame) GameSpeedRequested?.Invoke(1);
-            if (keys.digit2Key.wasPressedThisFrame) GameSpeedRequested?.Invoke(2);
-            if (keys.digit3Key.wasPressedThisFrame) GameSpeedRequested?.Invoke(3);
+            if (keys.spaceKey.wasPressedThisFrame) RequestGameSpeed(0);
+            if (keys.digit1Key.wasPressedThisFrame) RequestGameSpeed(1);
+            if (keys.digit2Key.wasPressedThisFrame) RequestGameSpeed(2);
+            if (keys.digit3Key.wasPressedThisFrame) RequestGameSpeed(3);
 
             if (keys.vKey.wasPressedThisFrame)
                 slice.above = (AboveMode)(((int)slice.above + 1) % 6);
@@ -174,7 +206,9 @@ namespace Odyssey.Presentation.CameraRig
                 _orbiting = false;
             }
 
-            if (mouse.leftButton.wasPressedThisFrame && !_orbiting) PickAt(pointer);
+            if (mouse.leftButton.wasPressedThisFrame && !_orbiting
+                && (PointerOverInterface == null || !PointerOverInterface(pointer)))
+                PickAt(pointer);
         }
 
         float DistanceScale => Mathf.Clamp(_targetDistance / 40f, 0.35f, 3f);
@@ -194,16 +228,6 @@ namespace Odyssey.Presentation.CameraRig
             var size = _model.Size;
             _focus.x = Mathf.Clamp(_focus.x, 0f, size.SizeX * CellMetrics.SizeXZ);
             _focus.z = Mathf.Clamp(_focus.z, 0f, size.SizeZ * CellMetrics.SizeXZ);
-        }
-
-        void ChangeLayer(int delta)
-        {
-            if (_model == null) return;
-            int next = Mathf.Clamp(ActiveLayer + delta, 0, _model.Size.SizeY - 1);
-            if (next == ActiveLayer) return;
-            ActiveLayer = next;
-            SetSelection(null, default);
-            ActiveLayerChanged?.Invoke(ActiveLayer);
         }
 
         /// <summary>Pull back to see the whole map at the current layer.</summary>

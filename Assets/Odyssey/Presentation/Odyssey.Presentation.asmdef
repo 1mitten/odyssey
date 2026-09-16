@@ -2,6 +2,7 @@
     "name": "Odyssey.Presentation",
     "rootNamespace": "Odyssey.Presentation",
     "references": [
+        "Odyssey.Hud",
         "Odyssey.Sim",
         "Odyssey.Sim.Contracts",
         "Unity.RenderPipelines.Core.Runtime",

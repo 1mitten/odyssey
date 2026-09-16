@@ -25,6 +25,7 @@ using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Presentation.Ui;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
@@ -33,13 +34,21 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.UIElements;
 
 namespace Odyssey.EditorTools
 {
     public static class PlayScene
     {
-        const string ScenePath = "Assets/Scenes/Play.unity";
-        const string CataloguePath = "Assets/Odyssey/Presentation/ModuleCatalogue.asset";
+    const string ScenePath = "Assets/Scenes/Play.unity";
+    const string CataloguePath = "Assets/Odyssey/Presentation/ModuleCatalogue.asset";
+
+    // The HUD's three assets: an authored stylesheet, plus a theme and panel settings made once
+    // on demand. Real assets rather than in-memory ones because the scene serialises the panel
+    // reference, the same reason the sky material is a real asset.
+    const string HudStylesPath = "Assets/Odyssey/Presentation/Ui/Hud.uss";
+    const string HudThemePath = "Assets/Odyssey/Presentation/Ui/RuntimeTheme.tss";
+    const string HudPanelPath = "Assets/Odyssey/Presentation/Ui/HudPanelSettings.asset";
 
         /// <summary>
         /// The world the play scene is built with, and the world "Measure a slice" measures. One
@@ -1208,7 +1217,18 @@ namespace Odyssey.EditorTools
             var go = new GameObject("Bootstrap");
             go.transform.SetParent(root, false);
             var boot = go.AddComponent<OdysseyBootstrap>();
-            go.AddComponent<SelectionReadout>();   // click a colonist to see what they are doing
+            go.AddComponent<SelectionReadout>();   // resolves what a click landed on
+
+            // The HUD: one UI Toolkit document over the live world (ADR 0003), built in code by
+            // the shell and styled by the authored sheet.
+            var doc = go.AddComponent<UIDocument>();
+            doc.panelSettings = BuildHudPanelSettings();
+            var hud = go.AddComponent<HudShell>();
+            AssetDatabase.ImportAsset(HudStylesPath);
+            hud.hudStyles = AssetDatabase.LoadAssetAtPath<StyleSheet>(HudStylesPath);
+            if (hud.hudStyles == null)
+                Debug.LogWarning($"[PlayScene] HUD stylesheet missing at {HudStylesPath}; the HUD will draw unstyled.");
+
             boot.sizeX = PlaySizeXZ;
             boot.sizeZ = PlaySizeXZ;
             boot.layers = PlayLayers;
@@ -1220,6 +1240,37 @@ namespace Odyssey.EditorTools
             // ten get a tuft. Zero on the look seed means a fresh cast of colonists every session.
             boot.grassScatter = 60;
             boot.colonistLookSeed = 0;
+        }
+
+        /// <summary>
+        /// The panel settings the HUD renders through, made once and then reused.
+        ///
+        /// Pixel-for-pixel on purpose: the HUD is authored in screen pixels against the mockup,
+        /// and the scale policy (continuous text, stepped icons, per ADR 0007) arrives with the
+        /// settings panel rather than being guessed here.
+        /// </summary>
+        static PanelSettings BuildHudPanelSettings()
+        {
+            var theme = AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(HudThemePath);
+            if (theme == null)
+            {
+                theme = ScriptableObject.CreateInstance<ThemeStyleSheet>();
+                Directory.CreateDirectory(Path.GetFullPath(Path.GetDirectoryName(HudThemePath)!));
+                AssetDatabase.CreateAsset(theme, HudThemePath);
+            }
+
+            var panel = AssetDatabase.LoadAssetAtPath<PanelSettings>(HudPanelPath);
+            if (panel == null)
+            {
+                panel = ScriptableObject.CreateInstance<PanelSettings>();
+                Directory.CreateDirectory(Path.GetFullPath(Path.GetDirectoryName(HudPanelPath)!));
+                AssetDatabase.CreateAsset(panel, HudPanelPath);
+            }
+            panel.themeStyleSheet = theme;
+            panel.scaleMode = PanelScaleMode.ConstantPixelSize;
+            EditorUtility.SetDirty(panel);
+            AssetDatabase.SaveAssets();
+            return panel;
         }
     }
 }

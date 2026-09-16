@@ -399,10 +399,13 @@ namespace Odyssey.Presentation.Bootstrap
                 $"WASD pan - Q/E orbit - wheel zoom - R/F layer - V above-mode - B below-mode - " +
                 $"space pause - 1/2/3 speed - Home frame\n{_catalogueNote}";
 
+            // Drawn below the ledger rather than over it: this is the developer overlay (A15),
+            // the one region immediate mode is permitted in, and it must not sit on the HUD's
+            // top-left region when both are visible.
             GUI.color = Color.black;
-            GUI.Label(new Rect(11f, 11f, 1400f, 110f), text);
+            GUI.Label(new Rect(11f, 181f, 1400f, 110f), text);
             GUI.color = Color.white;
-            GUI.Label(new Rect(10f, 10f, 1400f, 110f), text);
+            GUI.Label(new Rect(10f, 180f, 1400f, 110f), text);
         }
 
         void OnDestroy()
