@@ -37,6 +37,47 @@ namespace Odyssey.Sim.Defs
     }
 
     /// <summary>
+    /// A content pack on disk: every <c>.xml</c> under one directory, recursively.
+    ///
+    /// <para><b>Order is sorted, not whatever the filesystem says.</b> Discovery order decides
+    /// which of two duplicate Defs is reported first and, through the loader's pass order, what
+    /// an error message reads like; an NTFS directory and an ext4 one do not agree, and neither
+    /// promises anything. Handle assignment is already independent of this — <c>BuildTables</c>
+    /// sorts by name because handles reach save files — so this is about reproducible
+    /// diagnostics rather than about determinism of the world.</para>
+    ///
+    /// <para>The file recorded in a Def's origin is the path <i>relative to the root</i>, so an
+    /// error names <c>Pawns/Needs.xml</c> rather than a path that differs on every machine.</para>
+    /// </summary>
+    public sealed class DirectoryDefSource : IDefSource
+    {
+        readonly string _root;
+
+        public DirectoryDefSource(string packId, string root)
+        {
+            PackId = packId;
+            _root = root ?? throw new ArgumentNullException(nameof(root));
+            if (!System.IO.Directory.Exists(root))
+                throw new DefLoadException($"content pack '{packId}' has no directory at '{root}'.");
+        }
+
+        public string PackId { get; }
+
+        public string Root => _root;
+
+        public IEnumerable<(string file, string xml)> Documents()
+        {
+            string[] files = System.IO.Directory.GetFiles(_root, "*.xml", System.IO.SearchOption.AllDirectories);
+            Array.Sort(files, StringComparer.Ordinal);
+            foreach (string path in files)
+            {
+                string relative = path.Substring(_root.Length).TrimStart('/', '\\').Replace('\\', '/');
+                yield return (relative, System.IO.File.ReadAllText(path));
+            }
+        }
+    }
+
+    /// <summary>
     /// Loads content into a <see cref="DefDatabase"/>.
     ///
     /// Pass order, from docs/design/04-data-model.md. Patch runs before inherit, which is easy to
@@ -314,6 +355,20 @@ namespace Odyssey.Sim.Defs
                 if (Enum.TryParse(type, text, ignoreCase: true, out object? parsed)) return parsed;
                 throw new DefLoadException(
                     $"{origin}: '{text}' is not a valid {type.Name}. Expected one of: {string.Join(", ", Enum.GetNames(type))}.");
+            }
+
+            // An array, written the same way a list is: one child element per entry, whatever it
+            // is called. The skill tables are arrays of twenty and twenty-one integers and they
+            // are the reason this exists — a table of measured values belongs in content, and
+            // until it could be parsed it could only be a loop in C#.
+            if (type.IsArray && type.GetArrayRank() == 1)
+            {
+                var elementType = type.GetElementType()!;
+                var entries = element.Elements().ToList();
+                var array = Array.CreateInstance(elementType, entries.Count);
+                for (int i = 0; i < entries.Count; i++)
+                    array.SetValue(ParseValue(elementType, entries[i], origin), i);
+                return array;
             }
 
             if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(List<>))

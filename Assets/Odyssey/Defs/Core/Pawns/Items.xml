@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The minimum a thing needs to be hauled or eaten. A real ThingDef belongs to the things line of
+  work; this exists so pawns have something to pick up.
+-->
+<Defs>
+
+  <!--
+    900 units is 0.9 nutrition, the vanilla value of every meal class including the packaged
+    ration this stands for (a-08 section 2). At 450 it was half a meal, which is why five
+    colonists ate fifteen a day. The ration class never rots, which is what lets a pantry be an
+    objective rather than a four-day countdown; spoilage itself is out of the slice.
+
+    Meals stack to 20, so a whole starting pile (ScenarioDef.mealsPerPile, 12) is legal stock in
+    one cell and a hauler moves it in one trip (a-14: one stack per trip). The ItemDef default of
+    1 would make every pile full the moment it was hauled. The 20 is ASSUMED as a number: the
+    research records limits from 1 to 500 and none for a meal.
+  -->
+  <ItemDef>
+    <defName>Item_Meal</defName>
+    <label>ration pack</label>
+    <nutrition>900</nutrition>
+    <stackLimit>20</stackLimit>
+  </ItemDef>
+
+  <!-- A heap in its own right, one to a cell, until the things line decides what it is made of. -->
+  <ItemDef>
+    <defName>Item_Salvage</defName>
+    <label>salvage</label>
+  </ItemDef>
+
+  <!-- Wood's 75 is the one limit the research states outright (a-14 section 4). -->
+  <ItemDef>
+    <defName>Item_Wood</defName>
+    <label>wood</label>
+    <stackLimit>75</stackLimit>
+  </ItemDef>
+
+</Defs>
