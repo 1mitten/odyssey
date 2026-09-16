@@ -42,31 +42,15 @@ namespace Odyssey.Tests.PlayMode
         const float DriftAtMost = 0.05f;
         const float ZoomAtLeast = 0.5f;
 
-        Mouse? _mouse;
+        MouseHarness _mouse = null!;
 
-        /// <summary>
-        /// <b>There is no mouse in a batch PlayMode run.</b> `Mouse.current` is null — the player
-        /// has no window, no operating-system pointer and therefore no device — and that, not the
-        /// queueing, is why the earlier attempt could not drive input: it queued state at a device
-        /// that did not exist, and <c>SliceCameraRig.ReadMouse</c> returns immediately when
-        /// <c>Mouse.current</c> is null, so nothing could ever have arrived.
-        ///
-        /// <para>Adding one makes a real <c>Mouse</c> out of the input system's own layout, with
-        /// no hardware behind it. Events queued at it go through the ordinary player-loop update,
-        /// so what is being tested is the game's real input path rather than a stub of it.</para>
-        /// </summary>
+        /// <summary>See <see cref="MouseHarness"/>: without it there is no device, and with a
+        /// device but no focus there is a device that drops everything.</summary>
         [SetUp]
-        public void AddAMouse()
-        {
-            _mouse = Mouse.current ?? InputSystem.AddDevice<Mouse>();
-        }
+        public void AddAMouse() => _mouse = new MouseHarness();
 
         [TearDown]
-        public void RemoveTheMouse()
-        {
-            if (_mouse != null && _mouse.added) InputSystem.RemoveDevice(_mouse);
-            _mouse = null;
-        }
+        public void RemoveTheMouse() => _mouse.Dispose();
 
         [UnityTest]
         public IEnumerator AWheelNotchZoomsTheCamera()
@@ -78,7 +62,7 @@ namespace Odyssey.Tests.PlayMode
                 yield return RigWorld.SettleCamera(rig);
                 float before = rig.distance;
 
-                yield return Scroll(+1f);
+                yield return _mouse.Scroll(+1f, new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
                 for (int i = 0; i < SettleFrames; i++) yield return null;
 
                 Assert.That(Mathf.Abs(rig.distance - before), Is.GreaterThan(ZoomAtLeast),
@@ -117,21 +101,5 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
-        /// <summary>
-        /// One wheel notch over the world, the way the earlier attempt drove it: queue a mouse
-        /// state and let the player loop pick it up.
-        /// </summary>
-        static IEnumerator Scroll(float notches)
-        {
-            Mouse? mouse = Mouse.current;
-            Assert.That(mouse, Is.Not.Null, "there is no mouse device at all in this test run");
-
-            InputSystem.QueueStateEvent(mouse!, new MouseState
-            {
-                position = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f),
-                scroll = new Vector2(0f, notches),
-            });
-            yield return null;
-        }
     }
 }
