@@ -548,6 +548,54 @@ namespace Odyssey.Presentation.Rendering
 
         readonly Matrix4x4[] _bracketMatrices = new Matrix4x4[24];
 
+        readonly Matrix4x4[] _floorMatrices = new Matrix4x4[8];
+
+        /// <summary>
+        /// The cursor for a cell with nothing in it: four corners on the floor, two stubs each.
+        ///
+        /// Selecting empty ground has to show *something*, because a click with no visible
+        /// answer reads as a click that was ignored — but a three-metre cube over bare grass says
+        /// there is a thing there when there is not. A flat ring says "this square", which is all
+        /// that is true, and it is the natural shape for the build and dig designations that will
+        /// land on empty ground later.
+        /// </summary>
+        public void DrawFloorBracket(CellRef cell, Color colour)
+        {
+            Material material = _materials.Get(_model.Library.FallbackMaterial, colour, colour * 0.75f,
+                ghost: true, alpha: colour.a);
+            var rp = new RenderParams(material)
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+
+            // A few centimetres up, or the ring z-fights with the ground it is drawn on.
+            Vector3 centre = CellMetrics.FloorCentre(cell) + Vector3.up * 0.04f;
+            float half = CellMetrics.SizeXZ * 0.5f;
+            float length = Mathf.Max(CellMetrics.SizeXZ * BracketStub, BracketThickness);
+            int n = 0;
+
+            for (int corner = 0; corner < 4; corner++)
+            {
+                float sx = (corner & 1) == 0 ? -1f : 1f;
+                float sz = (corner & 2) == 0 ? -1f : 1f;
+                var at = new Vector3(centre.x + sx * half, centre.y, centre.z + sz * half);
+
+                _floorMatrices[n++] = Matrix4x4.TRS(
+                    at - new Vector3(sx * length * 0.5f, 0f, 0f), Quaternion.identity,
+                    new Vector3(length, BracketThickness, BracketThickness));
+                _floorMatrices[n++] = Matrix4x4.TRS(
+                    at - new Vector3(0f, 0f, sz * length * 0.5f), Quaternion.identity,
+                    new Vector3(BracketThickness, BracketThickness, length));
+            }
+
+            if (SubmitToGpu)
+                Graphics.RenderMeshInstanced(rp, PrimitiveMeshes.UnitCube, 0, _floorMatrices, n);
+            DrawCalls++;
+            InstancesDrawn += n;
+        }
+
         /// <summary>The bracket cursor around one whole cell.</summary>
         public void DrawCellHighlight(CellRef cell, Color colour) =>
             DrawSelectionBracket(

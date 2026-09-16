@@ -116,10 +116,12 @@ namespace Odyssey.Presentation.Rendering
         // ------------------------------------------------------------- scatter
 
         /// <summary>
-        /// Tufts of grass per hundred grass cells. 120 means every cell gets one and a fifth of
-        /// them get two. Zero turns scatter off entirely and is exactly the old behaviour.
+        /// Tufts of grass per hundred grass cells. 60 means six cells in ten get one tuft and the
+        /// rest are bare — sparse enough that the meadow reads as a field with grass on it rather
+        /// than as grass with a field somewhere underneath, which is what 120 did at board
+        /// distance. Zero turns scatter off entirely.
         /// </summary>
-        public int ScatterDensity { get; set; } = 120;
+        public int ScatterDensity { get; set; } = 60;
 
         int[] _scatterModules = System.Array.Empty<int>();
         bool _scatterResolved;

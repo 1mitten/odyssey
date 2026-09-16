@@ -90,7 +90,13 @@ namespace Odyssey.Presentation.Rendering
         public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
         {
             if (_pass == null || _material == null) return;
-            if (renderingData.cameraData.cameraType == CameraType.Preview) return;
+
+            // Game cameras only. The Scene view, reflection probes and asset previews all run the
+            // same renderer, and none of them wants an ink line — and the Scene view is the one
+            // camera no headless picture has ever exercised, which makes it the one place a
+            // render-graph mistake could be hiding.
+            CameraType type = renderingData.cameraData.cameraType;
+            if (type != CameraType.Game) return;
 
             _material.SetColor(OutlineColourId, outlineColour);
             _material.SetFloat(ThicknessId, thickness);

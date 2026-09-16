@@ -60,9 +60,9 @@ namespace Odyssey.Presentation.Bootstrap
         public SliceCameraRig? cameraRig;
         public bool castShadows = true;
 
-        [Tooltip("Tufts of grass per hundred grass cells. 0 is bare ground; 120 is one each and a fifth doubled.")]
+        [Tooltip("Tufts of grass per hundred grass cells. 0 is bare ground; 60 is a tuft on six cells in ten.")]
         [Range(0, 300)]
-        public int grassScatter = 120;
+        public int grassScatter = 60;
 
         [Header("Tick")]
         [Tooltip("Ticks per second at speed 1. The simulation has no notion of seconds; this is it.")]
@@ -288,7 +288,7 @@ namespace Odyssey.Presentation.Bootstrap
                 _renderer.RenderActors(_world.Views.Current, activeLayer, slice, _actorMaterial,
                     _tickAlpha, movePerTick, _figures?.Drawn);
 
-            DrawColonistCursor(_world.Views.Current, movePerTick);
+            DrawSelectionCursor(_world.Views.Current, movePerTick);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
 
@@ -308,27 +308,73 @@ namespace Odyssey.Presentation.Bootstrap
         public Vector3 colonistCursor = new Vector3(1.15f, 2.7f, 1.15f);
 
         /// <summary>
-        /// Bracket the selected colonist, and tell the rig to leave its cell cursor off.
-        ///
-        /// Placed with the same tween the figure itself uses, so the cursor rides the walk instead
-        /// of hopping cell to cell a fraction of a second out of step with the person inside it.
+        /// Margin the item bracket leaves around the art, in metres, so it frames rather than clips.
         /// </summary>
-        void DrawColonistCursor(WorldSnapshot snapshot, int movePerTick)
+        const float ItemCursorMargin = 0.16f;
+
+        /// <summary>
+        /// The selection cursor, sized to what is actually selected rather than to the cell.
+        ///
+        /// Four tiers, decided in this order from data presentation already reads:
+        ///
+        /// - **A colonist** — the figure bracket, placed with the same tween the figure uses so it
+        ///   rides the walk instead of hopping cell to cell out of step with the person in it.
+        /// - **An item** — a box fitted to the item's own drawn bounds, which the module library
+        ///   already knows because it is what placed the art on the floor. A half-height crate
+        ///   gets a half-height bracket because the art says so, not because anyone typed a
+        ///   number for crates.
+        /// - **A wall or solid cell** — the full cell cube, since the cell really is full.
+        /// - **Empty ground** — a flat ring on the floor. A click has to answer with something or
+        ///   it reads as ignored, but a three-metre cube over bare grass claims a thing is there
+        ///   when it is not.
+        ///
+        /// The composition root draws every tier, because the tiers need the snapshot and the
+        /// rig deliberately has no access to it; the rig's own cell cursor is switched off for
+        /// good rather than negotiated frame by frame.
+        /// </summary>
+        void DrawSelectionCursor(WorldSnapshot snapshot, int movePerTick)
         {
-            if (cameraRig != null) cameraRig.SuppressCellCursor = false;
-            if (_renderer == null) return;
+            if (_renderer == null || _model == null || cameraRig == null) return;
+            cameraRig.SuppressCellCursor = true;
 
+            Color colour = cameraRig.selectionColour;
             var readout = GetComponent<SelectionReadout>();
-            if (readout == null || !readout.SelectedPawn.IsValid) return;
-            if (!snapshot.TryGetPawn(readout.SelectedPawn, out PawnView pawn)) return;
 
-            Vector3 feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _);
-            Color colour = cameraRig != null ? cameraRig.selectionColour : Color.cyan;
+            if (readout != null && readout.SelectedPawn.IsValid
+                && snapshot.TryGetPawn(readout.SelectedPawn, out PawnView pawn))
+            {
+                Vector3 feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _);
+                _renderer.DrawSelectionBracket(
+                    feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, colour);
+                return;
+            }
 
-            _renderer.DrawSelectionBracket(
-                feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, colour);
+            CellRef? picked = cameraRig.Selection;
+            if (picked == null) return;
+            CellRef cell = picked.Value;
 
-            if (cameraRig != null) cameraRig.SuppressCellCursor = true;
+            if (readout != null && readout.SelectedThing.IsValid)
+            {
+                ResolvedModule item = _model.Library[
+                    _model.Library.Resolve(ModuleIds.Item(readout.SelectedThingDef), ModuleShape.Pillar)];
+                if (item.UsesArt && !item.IsEmpty)
+                {
+                    Bounds box = item.Bounds;
+                    _renderer.DrawSelectionBracket(
+                        CellMetrics.FloorCentre(cell) + box.center,
+                        box.size + Vector3.one * ItemCursorMargin, colour);
+                    return;
+                }
+            }
+
+            int index = _model.Size.Index(cell.X, cell.Z, cell.Y);
+            if (_model.IsSolid(index) || _model.EdificeDef(index) != CoreContent.EdificeNone)
+            {
+                _renderer.DrawCellHighlight(cell, colour);
+                return;
+            }
+
+            _renderer.DrawFloorBracket(cell, colour);
         }
 
         void OnGUI()

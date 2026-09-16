@@ -44,11 +44,36 @@ namespace Odyssey.Presentation.Rendering
             Shape = shape;
             Parts = parts;
             UsesArt = usesArt;
+            Bounds = BoundsOf(parts);
         }
 
         public string Id { get; }
         public ModuleShape Shape { get; }
         public ModulePart[] Parts { get; }
+
+        /// <summary>
+        /// The box the module occupies once placed, relative to its placement point — for a
+        /// floor-standing piece, the cell's floor centre. Empty for a module with no parts.
+        ///
+        /// This is what lets a cursor fit the thing selected rather than the cell it sits in: a
+        /// half-height crate gets a half-height bracket because the art says so, not because
+        /// anyone typed a number for crates.
+        /// </summary>
+        public Bounds Bounds { get; }
+
+        static Bounds BoundsOf(ModulePart[] parts)
+        {
+            var bounds = new Bounds();
+            bool any = false;
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (parts[i].Mesh == null) continue;
+                Bounds b = ModuleLibrary.TransformBounds(parts[i].Mesh.bounds, parts[i].Local);
+                if (!any) { bounds = b; any = true; }
+                else bounds.Encapsulate(b);
+            }
+            return bounds;
+        }
 
         /// <summary>False when the module fell back to a primitive because no art was found.</summary>
         public bool UsesArt { get; }
@@ -503,7 +528,7 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
-        static Bounds TransformBounds(Bounds b, Matrix4x4 m)
+        internal static Bounds TransformBounds(Bounds b, Matrix4x4 m)
         {
             Vector3 centre = m.MultiplyPoint3x4(b.center);
             Vector3 e = b.extents;

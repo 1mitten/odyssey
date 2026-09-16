@@ -192,12 +192,27 @@ namespace Odyssey.EditorTools
                     // Both cursors, so a picture can settle whether they look right: the cell
                     // bracket on a patch of empty ground, and the colonist bracket on somebody who
                     // is walking. Neither can be checked by reading the arithmetic.
-                    var cursor = new Color(0.30f, 0.92f, 1.00f, 1f);
-                    drawing.DrawCellHighlight(result.StartCell, cursor);
+                    var cursor = new Color(0.30f, 0.92f, 1.00f, 0.7f);
+                    WorldSnapshot shown = world.Views.Current;
+
+                    // Every tier in one picture: the start cell is empty ground, so it gets the
+                    // floor ring; the first item gets a bracket fitted to its own art; the full
+                    // cube goes on the cell beside the start so the three can be compared by eye.
+                    drawing.DrawFloorBracket(result.StartCell, cursor);
+                    drawing.DrawCellHighlight(
+                        new CellRef(result.StartCell.X + 2, result.StartCell.Z, activeLayer), cursor);
+                    if (shown.ThingCount > 0)
+                    {
+                        ThingView thing = shown.Things[0];
+                        ResolvedModule item = library[library.Resolve(
+                            ModuleIds.Item(thing.DefIndex), ModuleShape.Pillar)];
+                        drawing.DrawSelectionBracket(
+                            CellMetrics.FloorCentre(thing.Cell) + item.Bounds.center,
+                            item.Bounds.size + Vector3.one * 0.16f, cursor);
+                    }
 
                     // Whoever is nearest the start cell, because that is the middle of the frame.
                     // A cursor photographed at the edge of the picture proves nothing.
-                    WorldSnapshot shown = world.Views.Current;
                     int nearest = -1, best = int.MaxValue;
                     for (int p = 0; p < shown.Pawns.Length; p++)
                     {
@@ -340,7 +355,18 @@ namespace Odyssey.EditorTools
             }
         }
 
-        static void MeasureInternal(bool exitWhenDone)
+        /// <summary>
+        /// The same measurement over the ruined city, which is what the renderer was built for.
+        ///
+        /// The barren meadow the scene loads has no walls in it, so every bucket number taken from
+        /// it says nothing about the case the plan's U14 validation asks for — thousands of wall
+        /// panels across several materials. This is the headless half of that validation: draw
+        /// calls and instances for a stamped city slice. The other half, batch counts in the Frame
+        /// Debugger, needs an editor window and an eye, and is listed as owner work.
+        /// </summary>
+        public static void MeasureCity() => MeasureInternal(Application.isBatchMode, MapType.RuinedCity);
+
+        static void MeasureInternal(bool exitWhenDone, MapType mapType = MapType.Natural)
         {
             int exitCode = 0;
             try
@@ -352,8 +378,8 @@ namespace Odyssey.EditorTools
                 // this measurement had quietly gone on describing a 60 x 60 city long after the
                 // scene moved to a barren 120 x 120 wilderness.
                 var size = new GridSize(PlaySizeXZ, PlaySizeXZ, PlayLayers);
-                var gen = (NaturalMapGenDef)MapGenerator.DefaultDef(MapType.Natural, size);
-                gen.MakeBarren();
+                MapGenDef gen = MapGenerator.DefaultDef(mapType, size);
+                if (gen is NaturalMapGenDef natural) natural.MakeBarren();
                 var grid = new CellGrid(size);
                 var chunks = new ChunkGrid(size);
 
@@ -363,7 +389,15 @@ namespace Odyssey.EditorTools
 
                 using var library = new ModuleLibrary(catalogue);
                 var model = new Odyssey.Presentation.World.WorldRenderModel(size, chunks, library);
-                model.RefreshAll(grid, result.Natural!.Context.Edifices);
+                // A city has stamped shells to resolve into modules first; a meadow has none.
+                if (result.City != null) model.ApplyTemplates(result.City, gen);
+                var edifices = result.City != null
+                    ? result.City.Context.Edifices
+                    : result.Natural!.Context.Edifices;
+                string genReport = result.City != null
+                    ? result.City.Report.ToString()
+                    : result.Natural!.Report.ToString();
+                model.RefreshAll(grid, edifices);
 
                 // The layer the scene actually opens on: the air cell a colonist stands in, which
                 // is one above the ground. Measuring the layer below it would quietly report the
@@ -383,14 +417,14 @@ namespace Odyssey.EditorTools
 
                 // A full re-mesh once everything is warm: the honest cost of rebuilding every
                 // chunk of a slice, against the 4 ms budget in 06-rendering-and-camera.md section 4.
-                model.RefreshAll(grid, result.Natural!.Context.Edifices);
+                model.RefreshAll(grid, edifices);
                 clock.Restart();
                 renderer.Render(activeLayer, slice);
                 double remeshMs = clock.Elapsed.TotalMilliseconds;
                 int remeshed = renderer.ChunksMeshedThisFrame;
 
                 var report = new System.Text.StringBuilder();
-                report.AppendLine($"[Measure] {size} seed 1: worldgen {genMs:0.0} ms, {result.Natural!.Report}");
+                report.AppendLine($"[Measure] {mapType} {size} seed 1: worldgen {genMs:0.0} ms, {genReport}");
                 report.AppendLine(
                     $"[Measure] first slice: {firstMs:0.00} ms including {meshed} chunk meshes; " +
                     $"steady submit {steadyMs:0.00} ms/frame; " +
@@ -1164,6 +1198,11 @@ namespace Odyssey.EditorTools
             boot.seed = 1;
             boot.moduleCatalogue = catalogue;
             boot.cameraRig = rig;
+            // Written explicitly, because the scene serialises these and a C# default changes
+            // nothing for a field the scene already holds. Sparse by owner request: six cells in
+            // ten get a tuft. Zero on the look seed means a fresh cast of colonists every session.
+            boot.grassScatter = 60;
+            boot.colonistLookSeed = 0;
         }
     }
 }

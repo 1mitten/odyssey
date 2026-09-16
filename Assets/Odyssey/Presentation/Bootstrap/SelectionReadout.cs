@@ -48,6 +48,15 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         public PawnId SelectedPawn => _selected;
 
+        /// <summary>The item in the clicked cell, when no colonist claimed the click.</summary>
+        public ThingId SelectedThing => _selectedThing;
+
+        /// <summary>The item def of <see cref="SelectedThing"/>, which is what its art is looked up by.</summary>
+        public int SelectedThingDef => _selectedThingDef;
+
+        ThingId _selectedThing = ThingId.None;
+        int _selectedThingDef = -1;
+
         OdysseyBootstrap? _bootstrap;
         Odyssey.Presentation.CameraRig.SliceCameraRig? _rig;
         readonly StringBuilder _text = new StringBuilder(256);
@@ -89,7 +98,29 @@ namespace Odyssey.Presentation.Bootstrap
             _selected = picked.HasValue
                 ? NearestPawn(world.Views.Current, picked.Value, pickRadius)
                 : PawnId.None;
+
+            // A colonist wins over an item, because a colonist standing on a crate is what you
+            // meant to click, and the crate will still be there when they walk off it.
+            _selectedThing = ThingId.None;
+            _selectedThingDef = -1;
+            if (picked.HasValue && !_selected.IsValid)
+                ThingAt(world.Views.Current, picked.Value, out _selectedThing, out _selectedThingDef);
+
             _builtForTick = -1;
+        }
+
+        static void ThingAt(WorldSnapshot snapshot, CellRef cell, out ThingId id, out int def)
+        {
+            var things = snapshot.Things;
+            for (int i = 0; i < things.Length; i++)
+            {
+                if (things[i].Cell != cell) continue;
+                id = things[i].Id;
+                def = things[i].DefIndex;
+                return;
+            }
+            id = ThingId.None;
+            def = -1;
         }
 
         static PawnId NearestPawn(WorldSnapshot snapshot, CellRef cell, int radius)

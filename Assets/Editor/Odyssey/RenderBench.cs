@@ -74,11 +74,12 @@ namespace Odyssey.EditorTools
         static readonly Variant[] Variants =
         {
             // A ladder, each rung one decision away from the last, so every delta is attributable.
+            // 60 is what ships; 120 is the density it shipped at before the owner asked for sparser.
             new Variant("bare ground, no outline",       0,   false, false),
-            new Variant("grass, no grass shadows",       120, false, false),
-            new Variant("grass, grass casts shadows",    120, true,  false),
-            new Variant("grass + outline",               120, false, true),
-            new Variant("dense grass (240) + outline",   240, false, true),
+            new Variant("grass, no grass shadows",       60,  false, false),
+            new Variant("grass, grass casts shadows",    60,  true,  false),
+            new Variant("grass + outline",               60,  false, true),
+            new Variant("dense grass (120) + outline",   120, false, true),
         };
 
         static void Execute(bool exitWhenDone)
