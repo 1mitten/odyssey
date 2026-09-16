@@ -229,7 +229,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(ledger.Total, Is.GreaterThan(ledger.Stocked),
                 "the rest are the economy to come, folded away behind the disclosure");
             Assert.That(Meals(ledger).Zero, Is.False);
-            Assert.That(ledger.Rows.Find(r => r.IconKey == "ui.res.water").Zero, Is.True);
+            Assert.That(ledger.Rows.Find(r => r.IconKey == "ui.res.medkit").Zero, Is.True);
         }
 
         [Test]

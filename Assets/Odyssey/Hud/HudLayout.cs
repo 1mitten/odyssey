@@ -178,7 +178,24 @@ namespace Odyssey.Hud
 
         // ------------------------------------------------------------------ stores
 
-        public const int StoresWidth = 288;
+        /// <summary>
+        /// How wide the stores panel is.
+        ///
+        /// <para><b>288 was never measured</b> (owner, 2026-09-16: "far too wide"). The widest
+        /// line in the panel is its own header — "STORES" against the "n / m" count — and
+        /// <c>TheStoresPanelIsWideEnoughForItsRowsAndNoWider</c> measures it at <b>128 px</b> with
+        /// the real face at the real size, against commodity names of four to six characters. So
+        /// more than half the panel was empty column, and an empty column over bright terrain
+        /// still has to be dark enough to hold text: it was paying the contrast cost of a panel
+        /// while showing nothing.</para>
+        ///
+        /// <para><b>The forty px on top is for figures, not for comfort.</b> The measurement is
+        /// taken against whatever the colony happens to hold, and a fresh board holds two-digit
+        /// counts; a stocked one holds five-digit ones, which is about 32 px more of mono. The
+        /// test's upper bound allows 48 px of headroom over what it measured, so a name long
+        /// enough to need more than this will fail the lower bound and say so with a figure.</para>
+        /// </summary>
+        public const int StoresWidth = 168;
 
         // ------------------------------------------------------------------ colonist strip
 
@@ -276,8 +293,6 @@ namespace Odyssey.Hud
 
         public const int NeedRowGap = 9;
 
-        /// <summary>The single dim line shown when nothing is selected.</summary>
-        public const int InspectEmptyLine = 17;
 
         // ================================================================== solve
 
@@ -318,10 +333,12 @@ namespace Odyssey.Hud
                     new HudRect((width - stripWidth) * 0.5f, Edge, stripWidth, CardHeight);
             }
 
-            // ---- inspect, bottom left, clear of the bar
+            // ---- inspect, bottom left, clear of the bar. Nothing selected, no pane: an empty
+            // rect, which is how every other region says "I am not on screen" here.
             float inspectHeight = InspectHeight(content.NeedRows);
-            boxes[HudRegion.Inspect] =
-                new HudRect(Edge, height - InspectBottom - inspectHeight, InspectWidth, inspectHeight);
+            boxes[HudRegion.Inspect] = inspectHeight <= 0f
+                ? new HudRect(Edge, height - InspectBottom, 0f, 0f)
+                : new HudRect(Edge, height - InspectBottom - inspectHeight, InspectWidth, inspectHeight);
 
             // ---- command bar, bottom centre
             float barWidth = HudCommands.BarWidth(HudCommands.ModelWidths(), FittedCommands(width));
@@ -408,13 +425,25 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// The pane's height. With nothing selected it is one dim line — the acceptance criteria
-        /// replace the old three-sentence empty state, and an empty panel that is still 302 px
-        /// tall is most of why the HUD covered a third of the screen.
+        /// The pane's height, or zero when there is nothing to inspect.
+        ///
+        /// <para><b>With nothing selected there is no pane at all</b> (owner, 2026-09-16), and
+        /// that is the resting state of the HUD. It was a 41 px strip reading "Nothing selected",
+        /// itself a cut-down of a three-sentence empty state; both were the interface talking
+        /// about itself, and a panel whose only job is to say it has no job is worse than the
+        /// gap it fills. Zero here rather than a small number, because the shell takes the pane
+        /// out of the tree entirely and a model that still reserved a strip would be describing
+        /// a screen nobody builds.</para>
+        ///
+        /// <para><b>What the model still cannot say</b> is how tall an <i>item</i> or <i>cell</i>
+        /// pane is: both have no need rows and a full header, so they land in the zero branch.
+        /// That was equally true of the one-line version this replaces, and it is only sound
+        /// because every criterion stated against this model — coverage, overlap, the clearance
+        /// above the bar — is stated with nothing selected or a colonist selected.</para>
         /// </summary>
         public static float InspectHeight(int needRows) =>
             needRows <= 0
-                ? Frame + Pad + InspectEmptyLine + Pad
+                ? 0f
                 : Frame + Pad + InspectHeader + InspectHeaderGap + InspectTabs + InspectTabGap +
                   needRows * NeedRow + (needRows - 1) * NeedRowGap + Pad;
 
@@ -425,11 +454,13 @@ namespace Odyssey.Hud
         ///
         /// <para><b>It is not the gap between the two top corners, and that difference is a
         /// bug this test caught.</b> The strip is centred on the <i>screen</i>, while the panels
-        /// either side of it are different widths — 288 of stores on the left against 322 of rail
-        /// and clock on the right. So the free span's middle sits seventeen pixels left of the
+        /// either side of it are different widths — 168 of stores on the left against 322 of rail
+        /// and clock on the right. So the free span's middle sits seventy-seven pixels left of the
         /// screen's middle at 1920, and a strip sized to the whole span and then centred pokes
-        /// into the clock column by seventeen pixels however careful the arithmetic looked. What
-        /// the strip may actually have is twice the smaller of its two clearances.</para>
+        /// into the clock column by seventy-seven pixels however careful the arithmetic looked.
+        /// What the strip may actually have is twice the smaller of its two clearances. (The
+        /// figure was seventeen while stores was 288 px wide; narrowing the panel widened the
+        /// mismatch rather than fixing it, which is the point of computing it here.)</para>
         /// </summary>
         public static float StripRoom(float width)
         {

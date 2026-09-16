@@ -217,12 +217,9 @@ namespace Odyssey.Hud
             { "ui.res.wood", HudCategory.Organic },
             { "ui.res.fabric", HudCategory.Organic },
             { "ui.res.scrap", HudCategory.Metal },
-            { "ui.res.alloy", HudCategory.Metal },
             { "ui.res.ironore", HudCategory.Metal },
             { "ui.res.stone", HudCategory.Mineral },
-            { "ui.res.concrete", HudCategory.Mineral },
             { "ui.res.coal", HudCategory.Mineral },
-            { "ui.res.water", HudCategory.Fluid },
             { "ui.res.medkit", HudCategory.Medical },
 
             // command bar

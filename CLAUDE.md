@@ -755,6 +755,60 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     against the built DLL, all passing. **Not verified: `scripts/unity.sh test editmode`, the
     PlayMode frame-time gate, and whether any of it looks like anything** — `SeeThroughCheck` is
     unrun, so the alpha and the radius have the standing of an argument.
+- **The first real icons are in the HUD, and the resting HUD is smaller again (owner, 2026-09-16).**
+  Four of the owner's 32 px drawings now draw themselves instead of an outlined square:
+  `ui.res.wood`, `ui.res.stone`, `ui.res.ironore`, `ui.res.scrap`. **This is the sprite lookup ADR
+  0007 promised, arriving one key at a time** — `IconArt` maps a key to a texture under
+  `Assets/Art/Ui/Resources/odyssey/icons/`, a key with art draws it and a key without still draws
+  the square, so the HUD is correct at every stage between no art and all of it, and a single icon
+  can be judged in the running game before the set is drawn. Each is exported by an **integer 2×
+  nearest-neighbour upscale to 64 × 64**, point-filtered, no mips, uncompressed, sRGB, and
+  `IconArtTests` holds every file in the folder to those rules rather than to an eye, because a
+  bilinear icon costs the second atlas page in silence. Real art is drawn **untinted**: the
+  category colour says what a *placeholder* stands for and a picture says that for itself.
+  - **The `Resources` namespace is flat and shared with every installed package.** A plain
+    `icons/` folder collided at once — `Resources.LoadAll<Texture2D>("icons")` came back with
+    Shader Graph's own `blackboard.png` at 16 px and bilinear, failing the ADR test on somebody
+    else's art. Hence `odyssey/icons/`. A single-key `Load` would never have shown it.
+  - **UI Toolkit's background defaults would have tiled a 64 px drawing inside a 17 px row** and
+    shown the player its top-left corner. `background-size`, `-repeat` and `-position` are all set
+    explicitly in `IconBadge`.
+  - **Open, and the owner's call: the HUD draws icons at 16, 17 and 30 px, and ADR 0007 says not
+    to draw pixel art below 32.** Measured on the real art: 30 px reads, 17 px loses the grooves,
+    16 px goes to noise. And `ui.res.stone`'s ink fills 20 × 15 of its 32 × 32 frame where wood
+    fills 26 × 24, so it reads as a pebble beside a plank. Equalising means scaling each icon's
+    *trimmed* box by its own largest integer factor (what the sheet pipeline's `trim_mode` does),
+    at the price of different pixel sizes between icons in a pixel-art set. Left faithful.
+    Contact sheets: `Logs/icon-sizes.png` and `Logs/icon-rows.png`, made by a scratch script off
+    `tools/icons/icons.py`'s codec.
+  - **`ui.res.alloy`, `ui.res.concrete` and `ui.res.water` are struck out** (owner: "we won't be
+    needing those"). Both CSVs, `HudTheme`'s category table, `LedgerModel.Planned` and one test's
+    example row; wiki and `Registry.g.cs` regenerated — **405 keys, 265 with art, 130 gaps**.
+    `11-icon-library.md`'s header counts are corrected and its §3 and §4 tables are now marked as
+    predating the additions since. Nothing in the sim referenced any of the three; water *terrain*
+    is untouched.
+  - **Nothing selected, no pane** (owner). The inspect pane was a 41 px strip reading "Nothing
+    selected", itself a cut-down of a three-sentence empty state; both were the interface talking
+    about itself. It is `display:none` now — out of the layout, out of the measured region set and
+    unable to take a click — and that is the HUD's default. `HudLayout.InspectHeight(0)` returns
+    **0** and `Solve` gives an empty rect, so the model does not reserve a strip the shell never
+    builds. What the model still cannot say is how tall an *item* or *cell* pane is; that was
+    equally true before, and is only sound because every criterion stated against it assumes
+    nothing selected or a colonist selected.
+  - **The stores panel was 288 px and is 168** (owner: "far too wide"). 288 was never measured.
+    `TheStoresPanelIsWideEnoughForItsRowsAndNoWider` asks the text engine how wide the panel's
+    widest line really draws in the real face at the real size — **128 px**, and it is the
+    *header* ("STORES" against "n / m"), not any commodity row. The extra forty is for figures
+    rather than comfort: a fresh board holds two-digit counts and a stocked one holds five-digit
+    ones, about 32 px more of mono. The test's bounds are two-sided, so a long name fails the
+    lower one with a number attached. **A laid-out width could not have answered this** — a label
+    with `flex-grow: 1` measures back as whatever the row gave it — so each child is asked for its
+    own natural width instead.
+  - **Coverage at rest fell from 10.8–11.0% to 9.0%** at all three resolutions, measured by
+    `HudGeometryTests`. EditMode 916 total, 914 passed, 0 failed; PlayMode 23 total, 21 passed,
+    0 failed; fast tier 428 Sim and 106 Hud.
+  - **Still not judged by eye.** No test can say whether four grey-and-brown lumps read as four
+    different commodities at 17 px. **Press Play in `Play.unity`.**
 - **Sim vs UI vocabulary is deliberate:** simulation systems are *subsystems*, presentation-side coordinators are *directors* (`01-architecture.md` §3a). Do not unify the two words.
 - **Phase 3 (design): complete 2026-09-15.** `docs/design/` 00, 01, 02, 03, 04, 05, 06, 07, 08; ADRs 0001, 0002, 0005; and the execution plan `docs/plans/vertical-slice.md` (32 units, M0→M3). **The Phase 3 → Phase 4 hard stop was cleared by the owner on 2026-09-15; execution is under way.**
 - **Interface, icons and content naming (the UI line of work), 2026-09-15.** Design `09-ui-and-input.md`, `10-ui-panel-catalogue.md`, `11-icon-library.md`; ADRs 0003 UI framework, 0004 sim-to-UI contract, 0006 layer visibility, 0007 pixel-art icon pipeline; research `g-01`, `g-02`; mockups `hud-v1.html` and `hud-v2.html`, **both historical since the HUD rebuild of 2026-09-16** — the built interface is specified by `docs/design/14-hud-layout.md` and neither mockup was updated to it, so read the design doc and the screenshot rather than either mockup for what the HUD looks like. **Layer visibility decided:** x-ray by default with six modes shipped for playtest, amended by Lane B so that nothing above the active slice is ever a pointer target. **Icons:** 382 keys enumerated, 268 mapped to the owner's eight pixel-art sheets, 114 gaps listed in `11-icon-library.md` — the largest being people, since no sheet contains a human figure. **Names:** all 29 proper nouns proposed and awaiting the owner's veto, in `docs/design/proper-nouns.csv`.
