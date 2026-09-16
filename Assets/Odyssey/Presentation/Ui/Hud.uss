@@ -133,6 +133,11 @@
 .chip--off { opacity: 0.42; }
 .chip--off:hover { border-color: rgba(255, 255, 255, 0.13); }
 
+/* Armed. The accent the rest of the interface uses for "this is on", so a lit palette chip
+   and a lit command-bar item say the same thing. */
+.chip--on { border-color: #6fd3e3; background-color: rgba(111, 211, 227, 0.12); }
+.chip--on .chip__label { color: #dff6fa; }
+
 /* ---------------------------------------------------------------- A1 stores */
 
 .stores {
@@ -760,6 +765,15 @@
     border-top-width: 1px;
     border-top-color: rgba(255, 255, 255, 0.09);
     padding-top: 9px;
+}
+
+/* The material row, under the tools and shown only while something made of a material is
+   armed: a material is a property of the order being given, not a category of its own. */
+.build__materials {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 6px;
 }
 
 /* ---------------------------------------------------------------- B17 settings

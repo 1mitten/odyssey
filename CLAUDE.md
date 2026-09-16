@@ -819,6 +819,31 @@ after a rebuild, republish `docs/wiki/artifact.html` and
   - **Appearance is derived from the world seed and the pawn id**, so the same world deals the same people on every load — replacing a salt rolled at startup, whose recorded reason (a fixed hash made *"a cast of sixty-one read as a cast of five"*) is preserved because the seed still differs between worlds. `colonistLookSeed` remains as the override. Nothing is saved and nothing is hashed; `WorldSnapshot.Seed` is published for the same reason `GameSpeed` is, and the seed was already an input to the hash.
   - **`ColonistAppearanceBook` is one object both drawers hold**, so "the two drawers deal the same face" is a fact about the object graph rather than a convention two doc comments had to keep. **It fixed a latent bug**: the instanced renderer sized its lottery from every catalogue row while the figure director dropped unusable rows and *compacted the survivors*, so look *i* was not row *i* the moment anything was missing — invisible today because either all four packs are installed or none are, and with three of four every colonist would have changed face on crossing the figure cap.
   - **Judge it with `Odyssey → Presentation → Check the colonist colours`** (`scripts/unity.sh shot Odyssey.EditorTools.ColourCheck.Run`), which shoots a control with no character material at all, the real palette, and three sheets forcing one slot to magenta across the colony — a judgement about *place* rather than about shade. **Open for the owner: the palette is deliberately muted and the parade sheet differs from the control only slightly.** It may be too subtle to get a feel from; `ColonistPalette` is the one-line lever. **Not measured: frame time** — `FrameTimeTests` has not been run on this change.
+- **The colony builds (U26, first slice, 2026-09-17).** Open the Build palette with **B**,
+  click **Wall**, pick wood or stone, and drag a run over the board: colonists carry the
+  material to each site, swing the builder's hammer at it and a wall stands where the order
+  was. **The join that did not exist** was between what a colonist carries and what a
+  building is made of — wood and stone were `ItemDef`s, walls were made of
+  `CoreContent.Stuff*` values the generator stamped, and nothing said a pile of wood could
+  become a wooden wall. `StuffDef` is that bridge and `NaturalContent.StuffStone` joins
+  `StuffWood`, so the two things a colony can dig up are the two it can build with, with no
+  refining step between. Stone is **1.7x the work and 1.5x the hit points** of wood (a-04
+  §3), which is the one number that makes material a decision rather than a colour.
+  **Blueprint and frame are not two records:** a site is a cell with four numbers on it, so
+  the distinction is arithmetic — material not all arrived is a blueprint, all arrived is a
+  frame — and nothing is created or swapped when the last plank lands.
+  `Sim/Construction/ConstructionGrid.cs` is shaped after `DesignationGrid` throughout: per
+  cell, sparse, hashed, saved, published (`WorldSnapshot.Sites`), validation in one place.
+  Construction **scans before cutting, mining and hauling** because a site is work already
+  begun, and delivery is construction work rather than hauling, so the labour trains the
+  builder. `Building_Wall` and six `StuffDef`s are in `Defs/Core/World/Buildings.xml` with
+  the in-code table as the oracle. The **builder's hammer is reached in play at last** —
+  `WorkStyle.Building` existed and `IndexForJob` could not return it. **Not done:** support
+  is deliberately not marked dirty when a wall goes up (the same omission mining makes;
+  U29 wires both), a site is drawn as a mark plus a slab rising from the floor rather than
+  a ghost of the wall (that wants the mesh-contributor seam, OQ-46), deconstruct is still a
+  designation kind nothing acts on, and **nobody has pressed Play** — the palette, the
+  material row and the site marks have never been looked at.
 - **Sim vs UI vocabulary is deliberate:** simulation systems are *subsystems*, presentation-side coordinators are *directors* (`01-architecture.md` §3a). Do not unify the two words.
 - **Phase 3 (design): complete 2026-09-15.** `docs/design/` 00, 01, 02, 03, 04, 05, 06, 07, 08; ADRs 0001, 0002, 0005; and the execution plan `docs/plans/vertical-slice.md` (32 units, M0→M3). **The Phase 3 → Phase 4 hard stop was cleared by the owner on 2026-09-15; execution is under way.**
 - **Interface, icons and content naming (the UI line of work), 2026-09-15.** Design `09-ui-and-input.md`, `10-ui-panel-catalogue.md`, `11-icon-library.md`; ADRs 0003 UI framework, 0004 sim-to-UI contract, 0006 layer visibility, 0007 pixel-art icon pipeline; research `g-01`, `g-02`; mockups `hud-v1.html` and `hud-v2.html`, **both historical since the HUD rebuild of 2026-09-16** — the built interface is specified by `docs/design/14-hud-layout.md` and neither mockup was updated to it, so read the design doc and the screenshot rather than either mockup for what the HUD looks like. **Layer visibility decided:** x-ray by default with six modes shipped for playtest, amended by Lane B so that nothing above the active slice is ever a pointer target. **Icons:** 382 keys enumerated, 268 mapped to the owner's eight pixel-art sheets, 114 gaps listed in `11-icon-library.md` — the largest being people, since no sheet contains a human figure. **Names:** all 29 proper nouns proposed and awaiting the owner's veto, in `docs/design/proper-nouns.csv`.

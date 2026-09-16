@@ -148,6 +148,99 @@ namespace Odyssey.Tests.Hud
             Assert.That(director.Commit(), Is.EqualTo(new[] { At(0, 0), At(1, 0) }));
         }
 
+        // ---- the build tool ---------------------------------------------------------
+
+        /// <summary>
+        /// The one tool that is not fully described by its own name: a build order names a
+        /// thing that is not there yet, so it carries which thing and which material.
+        /// </summary>
+        [Test]
+        public void ArmingTheBuildToolRemembersWhatAndWhatOf()
+        {
+            var director = new DesignateDirector();
+
+            Assert.That(director.Building, Is.EqualTo(BuildingHandle.Wall));
+            Assert.That(director.Stuff, Is.EqualTo(StuffHandle.Wood), "wood is what a colony has first");
+
+            director.ArmBuild(BuildingHandle.Wall);
+
+            Assert.That(director.Tool, Is.EqualTo(DesignateTool.Build));
+            Assert.That(director.Building, Is.EqualTo(BuildingHandle.Wall));
+        }
+
+        [Test]
+        public void ArmingTheSameThingAgainPutsTheToolDown()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+
+            director.ArmBuild(BuildingHandle.Wall);
+
+            Assert.That(director.Tool, Is.EqualTo(DesignateTool.None),
+                "a tool picked up by pressing a button is put down by pressing it again");
+        }
+
+        /// <summary>
+        /// Choosing a material is a statement about the next wall, not an order to place one.
+        /// A material button that also armed a tool would leave the player holding something
+        /// they only meant to configure.
+        /// </summary>
+        [Test]
+        public void ChoosingAMaterialDoesNotArmAnything()
+        {
+            var director = new DesignateDirector();
+
+            director.ChooseStuff(StuffHandle.Stone);
+
+            Assert.That(director.Stuff, Is.EqualTo(StuffHandle.Stone));
+            Assert.That(director.Tool, Is.EqualTo(DesignateTool.None));
+        }
+
+        /// <summary>
+        /// A player who puts the wall tool down and picks it up again wants the wall back,
+        /// in the material they chose. The choice outlives the tool deliberately.
+        /// </summary>
+        [Test]
+        public void TheChoiceSurvivesPuttingTheToolDown()
+        {
+            var director = new DesignateDirector();
+            director.ChooseStuff(StuffHandle.Stone);
+            director.ArmBuild(BuildingHandle.Wall);
+
+            director.Tool = DesignateTool.None;
+            director.ArmBuild(BuildingHandle.Wall);
+
+            Assert.That(director.Stuff, Is.EqualTo(StuffHandle.Stone));
+            Assert.That(director.Tool, Is.EqualTo(DesignateTool.Build));
+        }
+
+        [Test]
+        public void TheBuildChoiceIsAnnouncedSoThePaletteCanMarkIt()
+        {
+            var director = new DesignateDirector();
+            var seen = new List<(int building, int stuff)>();
+            director.BuildChoiceChanged += (b, s) => seen.Add((b, s));
+
+            director.ChooseStuff(StuffHandle.Stone);
+            director.ChooseStuff(StuffHandle.Stone);
+
+            Assert.That(seen, Is.EqualTo(new[] { (BuildingHandle.Wall, StuffHandle.Stone) }),
+                "choosing the material already chosen announced a change");
+        }
+
+        [Test]
+        public void TheBuildToolDrawsABoxLikeAnyOtherTool()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+
+            Assert.That(director.Begin(At(3, 3)), Is.True);
+            director.DragTo(At(5, 3));
+
+            Assert.That(director.Commit(), Is.EqualTo(new[] { At(3, 3), At(4, 3), At(5, 3) }),
+                "a wall is dragged out as a run, which is the whole reason to drag one");
+        }
+
         static List<CellRef> Cover(CellRef from, CellRef to)
         {
             var director = new DesignateDirector { Tool = DesignateTool.Mine };

@@ -19,6 +19,16 @@ namespace Odyssey.Hud
         public OverlayDirector Overlays { get; } = new OverlayDirector();
         public SettingsDirector Settings { get; } = new SettingsDirector();
 
+        /// <summary>
+        /// The standing order the player is about to give.
+        ///
+        /// <para>Here rather than owned by <c>DesignatePresenter</c>, which is where it used to
+        /// live, because two things arm a tool now: the keys the presenter reads, and the Build
+        /// palette. Two directors would be two answers to "what is armed" and the palette would
+        /// light a button the world did not agree with.</para>
+        /// </summary>
+        public DesignateDirector Designate { get; } = new DesignateDirector();
+
         public HudDirectors(int layerCount, int startLayer)
         {
             Slice.Bind(layerCount, startLayer);

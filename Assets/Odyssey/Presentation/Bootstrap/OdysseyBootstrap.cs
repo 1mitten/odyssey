@@ -581,6 +581,7 @@ namespace Odyssey.Presentation.Bootstrap
                     _tickAlpha, movePerTick, _figures?.Drawn);
 
             DrawStandingOrders(_world.Views.Current);
+            DrawBuildingSites(_world.Views.Current);
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
@@ -663,11 +664,64 @@ namespace Odyssey.Presentation.Bootstrap
             }
         }
 
+        /// <summary>
+        /// Every building site on a drawn layer: what was ordered, and how far along it is.
+        ///
+        /// <para><b>Two measures, drawn as two things.</b> The mark says an order is here; the slab
+        /// rising out of the floor says how much of the thing exists. A site that has not been fed
+        /// shows a mark and nothing else, which is the picture the player needs — "nobody has
+        /// brought the wood yet" and "it is half built" are different problems with different
+        /// answers, and one bar would merge them (<c>SiteView</c> says the same thing from the
+        /// simulation's side).</para>
+        ///
+        /// <para>Deliberately a mark and a slab rather than a ghost of the finished wall. A ghost
+        /// wants the mesher to place a module it has not been asked for, which is the mesh
+        /// contributor seam (OQ-46) and a larger change than this; the mark and the fill are the
+        /// precedent standing orders already set, cost one instanced cube each, and read.</para>
+        /// </summary>
+        void DrawBuildingSites(WorldSnapshot snapshot)
+        {
+            if (_renderer == null || cameraRig == null) return;
+
+            System.ReadOnlySpan<SiteView> sites = snapshot.Sites;
+            if (sites.Length == 0) return;
+
+            GridSize size = snapshot.Size;
+            int lowest = System.Math.Max(0, cameraRig.LowestSelectableLayer);
+            int highest = cameraRig.HighestSelectableLayer;
+
+            for (int i = 0; i < sites.Length; i++)
+            {
+                CellRef cell = size.FromIndex(sites[i].CellIndex);
+                if (cell.Y < lowest || cell.Y > highest) continue;
+
+                _renderer.DrawCellMark(cell, BuildOrderColour);
+
+                if (sites[i].Progress > 0)
+                    _renderer.DrawCellFill(cell, sites[i].Progress / 255f, FrameColour);
+            }
+        }
+
         /// <summary>Marks a cell ordered dug. Warm, against the cool stone it is drawn over.</summary>
         static readonly Color MineOrderColour = new Color(0.95f, 0.72f, 0.32f, 0.42f);
 
         /// <summary>Marks a tree ordered felled.</summary>
         static readonly Color FellOrderColour = new Color(0.55f, 0.85f, 0.45f, 0.42f);
+
+        /// <summary>
+        /// Marks a cell ordered built. The interface accent rather than a third warm hue, because
+        /// a build order is the one standing order that is <em>additive</em> — mine and fell take
+        /// something away, and a colour the rest of the interface already uses for "the player
+        /// asked for this" separates the two at a glance.
+        /// </summary>
+        static readonly Color BuildOrderColour = new Color(0.44f, 0.83f, 0.89f, 0.42f);
+
+        /// <summary>
+        /// The thing going up. Pale and translucent like <see cref="CutColour"/> and for the same
+        /// reason — it is material, not a marker — but it fills from the floor rather than eating
+        /// down from the top, because that is the direction a wall is actually built in.
+        /// </summary>
+        static readonly Color FrameColour = new Color(0.82f, 0.78f, 0.66f, 0.38f);
 
         /// <summary>
         /// The non-primary members of a multi-selection: the same shape as the primary's bracket

@@ -983,7 +983,22 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>A plate, not a box. Thin enough to read as paint rather than as a thing.</summary>
         const float MarkThickness = 0.04f;
 
-        public void DrawCellCut(CellRef cell, float fraction, Color colour)
+        public void DrawCellCut(CellRef cell, float fraction, Color colour) =>
+            DrawCellSlab(cell, fraction, colour, fromTheFloor: false);
+
+        /// <summary>
+        /// A slab growing out of the floor, for a thing being built.
+        ///
+        /// <para>The same slab as <see cref="DrawCellCut"/> the other way up, and the direction is
+        /// the whole of the difference: a cut eats down from the top of the rock because that is
+        /// where the pick lands, and a wall rises from the floor because that is how a wall is
+        /// built. Drawn with a cut's downward fill, a wall at nine tenths would read as a wall with
+        /// its bottom missing.</para>
+        /// </summary>
+        public void DrawCellFill(CellRef cell, float fraction, Color colour) =>
+            DrawCellSlab(cell, fraction, colour, fromTheFloor: true);
+
+        void DrawCellSlab(CellRef cell, float fraction, Color colour, bool fromTheFloor)
         {
             if (fraction <= 0.02f) return;
             if (fraction > 1f) fraction = 1f;
@@ -1004,7 +1019,8 @@ namespace Odyssey.Presentation.Rendering
                 CellMetrics.SizeXZ - Inset * 2f, height, CellMetrics.SizeXZ - Inset * 2f);
 
             Vector3 centre = CellMetrics.Centre(cell.X, cell.Z, cell.Y);
-            centre.y += (CellMetrics.SizeY - height) * 0.5f;
+            float offset = (CellMetrics.SizeY - height) * 0.5f;
+            centre.y += fromTheFloor ? -offset : offset;
 
             Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
                 Matrix4x4.TRS(centre, Quaternion.identity, size));

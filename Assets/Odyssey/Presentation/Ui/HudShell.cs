@@ -151,6 +151,7 @@ namespace Odyssey.Presentation.Ui
         // ---- panels over the board
         VisualElement _buildPanel = null!;
         VisualElement _buildTools = null!;
+        VisualElement _buildMaterials = null!;
         int _buildCategory = -1;
         VisualElement _settingsPanel = null!;
         VisualElement _interfaceSection = null!;
@@ -1710,6 +1711,16 @@ namespace Odyssey.Presentation.Ui
             _buildTools.AddToClassList("build__tools");
             _buildPanel.Add(_buildTools);
 
+            // Below the tools, and only while something made of a material is armed.
+            _buildMaterials = new VisualElement();
+            _buildMaterials.AddToClassList("build__materials");
+            _buildMaterials.style.display = DisplayStyle.None;
+            _buildPanel.Add(_buildMaterials);
+
+            // Open on Structure rather than on nothing: the palette exists to be used, and
+            // a first click that only reveals more buttons is a click the player did not need.
+            SelectBuildCategory(0);
+
             _hud.Add(_buildPanel);
         }
 
@@ -1730,6 +1741,32 @@ namespace Odyssey.Presentation.Ui
             if (_barItems.Count > 0) _barItems[0].EnableInClassList("cmd--on", open);
         }
 
+        /// <summary>
+        /// The tools that actually do something, keyed the way everything in this interface is
+        /// keyed. Anything not in here is drawn and disabled, which is the whole palette's state
+        /// until the thing behind a key exists.
+        ///
+        /// <para>A table rather than a switch so that the palette and the simulation agree by
+        /// construction: a key that arms a tool is one line, and a key that does not is absent.</para>
+        /// </summary>
+        static readonly Dictionary<string, Action<DesignateDirector>> LiveTools =
+            new Dictionary<string, Action<DesignateDirector>>
+            {
+                { "ui.arch.tool.wall", d => d.ArmBuild(BuildingHandle.Wall) },
+                { "ui.arch.tool.mine", d => d.Tool = d.Tool == DesignateTool.Mine ? DesignateTool.None : DesignateTool.Mine },
+                { "ui.arch.tool.harvest", d => d.Tool = d.Tool == DesignateTool.Fell ? DesignateTool.None : DesignateTool.Fell },
+            };
+
+        /// <summary>
+        /// What a wall may be made of, in the order the player meets them: wood is what felling
+        /// gives and stone is what mining gives.
+        /// </summary>
+        static readonly (int stuff, string key)[] BuildMaterials =
+        {
+            (StuffHandle.Wood, "ui.res.wood"),
+            (StuffHandle.Stone, "ui.res.stone"),
+        };
+
         void SelectBuildCategory(int index)
         {
             if (_buildCategory == index) return;
@@ -1741,9 +1778,77 @@ namespace Odyssey.Presentation.Ui
                 // The label is the registry's, never a two-letter sigil derived from the key: the
                 // acceptance criteria strike out every three-letter placeholder on the screen.
                 VisualElement chip = PaletteChip(tool, Registry.Label(tool));
-                chip.AddToClassList("chip--off");
-                chip.tooltip = Registry.Label(tool) + " — placement tools arrive with M3";
+                if (LiveTools.TryGetValue(tool, out Action<DesignateDirector> arm))
+                {
+                    string key = tool;
+                    chip.tooltip = Registry.Label(tool) + " — drag a box over the world";
+                    chip.RegisterCallback<ClickEvent>(_ =>
+                    {
+                        if (_directors == null) return;
+                        arm(_directors.Designate);
+                        MarkArmedTool();
+                        if (key == "ui.arch.tool.wall") BuildMaterialRow();
+                    });
+                }
+                else
+                {
+                    chip.AddToClassList("chip--off");
+                    chip.tooltip = Registry.Label(tool) + " — placement tools arrive with M3";
+                }
+
                 _buildTools.Add(chip);
+            }
+
+            BuildMaterialRow();
+            MarkArmedTool();
+        }
+
+        /// <summary>
+        /// The material row, shown only while a thing that is made of something is armed.
+        ///
+        /// <para>Below the tools rather than beside them, and only then, because a material is a
+        /// property of the order being given and not a category of its own. A permanent row would
+        /// be asking the player to choose a material for the mine tool.</para>
+        /// </summary>
+        void BuildMaterialRow()
+        {
+            _buildMaterials.Clear();
+            bool wanted = _directors != null && _directors.Designate.Tool == DesignateTool.Build;
+            _buildMaterials.style.display = wanted ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!wanted) return;
+
+            _buildMaterials.Add(HudText.Make("MADE OF", HudTextRole.Meta));
+            foreach (var (stuff, key) in BuildMaterials)
+            {
+                VisualElement chip = PaletteChip(key, Registry.Label(key));
+                chip.EnableInClassList("chip--on", _directors!.Designate.Stuff == stuff);
+                int choice = stuff;
+                chip.RegisterCallback<ClickEvent>(_ =>
+                {
+                    if (_directors == null) return;
+                    _directors.Designate.ChooseStuff(choice);
+                    BuildMaterialRow();
+                });
+                _buildMaterials.Add(chip);
+            }
+        }
+
+        /// <summary>Light the chip for whatever is armed, so the palette and the world agree.</summary>
+        void MarkArmedTool()
+        {
+            if (_directors == null) return;
+            DesignateDirector armed = _directors.Designate;
+
+            int at = 0;
+            foreach (string tool in BuildCategories[_buildCategory].tools)
+            {
+                bool on = tool == "ui.arch.tool.wall"
+                    ? armed.Tool == DesignateTool.Build && armed.Building == BuildingHandle.Wall
+                    : tool == "ui.arch.tool.mine" ? armed.Tool == DesignateTool.Mine
+                    : tool == "ui.arch.tool.harvest" && armed.Tool == DesignateTool.Fell;
+
+                if (at < _buildTools.childCount) _buildTools[at].EnableInClassList("chip--on", on);
+                at++;
             }
         }
 

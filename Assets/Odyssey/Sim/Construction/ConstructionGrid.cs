@@ -105,7 +105,7 @@ namespace Odyssey.Sim.Construction
             if (!ConstructionContent.IsBuilding(building)) return IntentRejection.NotPermitted;
             if (!ConstructionContent.IsBuildable(stuff)) return IntentRejection.NotPermitted;
 
-            int index = _grid.Index(cell);
+            int index = StandingOn(_grid.Index(cell));
             if (_building[index] == building && _stuff[index] == stuff)
                 return IntentRejection.AlreadyInThatState;
             if (!Allows(index)) return IntentRejection.NotPermitted;
@@ -121,12 +121,38 @@ namespace Odyssey.Sim.Construction
         public IntentRejection Cancel(CellRef cell)
         {
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
+
+            // The mirror of StandingOn: the site the player can see over this patch of ground is
+            // the one standing on it, so naming the ground takes it off.
             int index = _grid.Index(cell);
+            if (_building[index] == 0) index = StandingOn(index);
             if (_building[index] == 0) return IntentRejection.AlreadyInThatState;
 
             Refund(index);
             Set(index, BuildingHandle.None, StuffHandle.None);
             return IntentRejection.None;
+        }
+
+        /// <summary>
+        /// A build order named at solid ground means the cell standing on it.
+        ///
+        /// <para><b>A click names a surface; an order names a cell.</b> Since 2026-09-16 the picker
+        /// answers a click on bare ground with the ground <i>block</i> rather than the air above it
+        /// (owner: "I still wanted to select the tile below it or not at all"), and a wall goes in
+        /// the air. Without this every cell of a wall dragged across the meadow would be refused in
+        /// silence — the player sweeping a tool over open grass and watching nothing happen, which
+        /// is the exact fault the fell tool hit and <c>DesignationGrid.TreeAbove</c> fixed on the
+        /// other side of the same relation.</para>
+        ///
+        /// <para>Only where the cell above can actually take a site, so a click on rock with more
+        /// rock above it is still a refusal rather than an order placed a layer away from where it
+        /// was asked for.</para>
+        /// </summary>
+        int StandingOn(int index)
+        {
+            if (!_grid.IsSolidTerrain(index)) return index;
+            int above = index + _grid.Size.LayerStride;
+            return above < _grid.Size.CellCount && Allows(above) ? above : index;
         }
 
         /// <summary>
