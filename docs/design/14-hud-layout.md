@@ -336,6 +336,13 @@ was neither disabled nor labelled.
   depth readout has to say at a glance, and lights the live layer with its number in it.
 - **The colonist card** lost its L12 label, because the rail states the layer once and the inspect
   pane states it again for whoever is selected. It gained a rest bar, so all three needs are on it.
+  - **Amended 2026-09-17 (owner):** the activity line leads with an icon, so the card answers
+    "what is this one doing" as a picture as well as a word. The line is 17 px rather than 16,
+    because the row is now sized by the icon rather than by the text, and the gap is 6 px rather
+    than a list row's 9, because a card is 132 px wide and the word has to stay a whole word.
+    The slot is occupied whatever the job: a key with no art draws the outlined square, as it does
+    everywhere else in the HUD, and hiding it would move the word sideways every time a colonist
+    changed job.
 
 ---
 

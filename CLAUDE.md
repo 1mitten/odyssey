@@ -809,6 +809,48 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     0 failed; fast tier 428 Sim and 106 Hud.
   - **Still not judged by eye.** No test can say whether four grey-and-brown lumps read as four
     different commodities at 17 px. **Press Play in `Play.unity`.**
+- **A roster card says what a colonist is doing with a picture as well as a word (owner,
+  2026-09-17).** Three more of the owner's 32 px drawings are in the build — an axe for
+  `ui.status.felling`, a pickaxe for `ui.status.mining`, a hammer for `ui.status.building` — and an
+  `IconBadge` leads the activity line on every card in the colonist strip (A2). This is the same
+  sprite lookup arriving three keys at a time, on the same terms as the first four: a key with art
+  draws the art, a key without draws the outlined square, and both are on screen at once.
+  - **The slot is never empty**, and that is the decision, not an oversight. Hauling, eating,
+    sleeping and idle have no art, and hiding the badge for them would move the word sideways
+    every time a colonist changed job — a card that twitches as its subject works. The square is
+    the HUD's standing way of saying a picture belongs here, and it says it in the ink of the word
+    beside it, because the spec gives an icon a colour of its own only in stores and the command
+    bar.
+  - **The hammer is art waiting for a job.** There is no build driver in `JobIndex` on `main`, so
+    nothing can ask for `ui.status.building` yet; it costs nothing sitting there and the build line
+    picks it up with one entry in `JobLabels.IconKeys`.
+  - **Two numbers, both in `HudLayout` and both checked against the sheet.** `CardJobRow` is 17 px
+    rather than the 16 the text line was, because the row is sized by the taller thing in it and
+    that is now the icon; `CardIconGap` is 6 px rather than a list row's `RowIconGap` of 9, because
+    a card is 132 px wide against the stores panel's 168. `HudStyleSheetTests` holds `Hud.uss` to
+    both.
+  - **The word must still be a whole word** — the acceptance criteria allow an ellipsis on a
+    colonist's name and on nothing else — and the icon takes 23 of the card's 116 px of content.
+    `TheActivityLineLeadsWithAnIconAndStillHoldsItsWord` asks the text engine how wide the activity
+    really draws in the real face at the real size and compares it with the room the row gave it,
+    rather than trusting the 93 px left over. It also fails on an icon that is not left of its
+    word, which is the other way a flex row can quietly go wrong. Measured on the real panel at
+    1080p: "Mining" draws 31 px in 34 px of room, "Felling" 30 in 33, against 93 px available — so
+    the longest word this game has today uses a third of the line and the icon cost nothing that
+    was being used.
+  - **Verified:** fast tier 428 Sim and 106 Hud, EditMode **956 total, 954 passed, 0 failed** and
+    PlayMode **24 total, 22 passed, 0 failed** (the `[Explicit]` benchmarks and the two input-harness
+    cases skipped as before), run in the worktree while the owner held the main checkout.
+    **Not judged by eye:** at 17 px the three lose their heads and are told apart by
+    silhouette alone — a bit, a double head, a claw. Contact sheet at
+    `Logs/activity-icon-sizes.png` (64 / 30 / 17 / 16 px, nearest-neighbour, beside wood and stone
+    for scale). **Press Play in `Play.unity`.**
+  - **Known drift, and one decision rather than four:** `icon-map.csv` still calls
+    `ui.status.felling` a gap and sources mining and building from sheets 05 and 06, so the wiki's
+    art-gap count does not know about any of this — exactly as it does not know about wood, stone,
+    iron ore and scrap. That column records what the owner's *sheets* can draw, and these are
+    hand-drawn files; the honest fix is for the wiki to read the icons folder, which is a change to
+    `build_wiki.py` and is deliberately not made here.
 - **Colonists are recoloured, and there was never a body to dress (owner question, 2026-09-16; research `e-05-character-customisation.md`).** The question was whether a *generic* Synty model exists that we could make clothes for. It does not: a character is **one skinned mesh from scalp to boots with one material**, 69 of them across four packs, and nothing below the neck is separable anywhere. Synty's **Sidekick** line is the only route to real modular garments (free starter pack, ~£184 a pack or $30/mo) and the owner declined it — no purchases, no new art, *"recolour and retheme as much as we can without creating anything new"*.
   - **What made recolouring possible is a fact about the art, not a technique.** The pack atlas carries a labelled **`Character Colours`** block of small *flat* swatch cells, and every garment, hair patch and skin region is UV-mapped onto one of them — so **a vertex's cell already is its material identity**. No mask texture, no authored ID channel, no mesh surgery. `SwatchProbe` measured the claim before anything was built: the colour deviation inside every cluster of eight bodies across all four packs is **zero**. So the shader does not sample a different cell, it outputs a colour — no second fetch, no mip or derivative consequence, and the palette is no longer limited to what Synty painted. A *patterned* garment cell is the observation that would send this back to moving UVs.
   - **`Odyssey/Character`** is hand-written HLSL like the other three shaders here, every property in `UnityPerMaterial` so the SRP Batcher still sees one variant across a colony of materials. Three passes; the shadow pass repeats the forward pass's alpha clip or hair cards cast the shadow of a solid rectangle. **An unused slot is the rectangle `(1,1,0,0)`**, which no UV is inside, so "off" is a value rather than a branch.

@@ -328,6 +328,63 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// The activity line on a roster card leads with a picture and still holds its word
+        /// (owner, 2026-09-16).
+        ///
+        /// <para><b>What could go wrong is silent.</b> The icon takes 17 px off a 132 px card, and
+        /// a word that no longer fits does not report itself — UI Toolkit simply lays it past the
+        /// card's edge, where the card's own rounded frame hides the tail. So this measures the
+        /// word the text engine would draw against the room the row actually gave it, on the real
+        /// face at the real size, rather than trusting the arithmetic in the sheet's comment.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheActivityLineLeadsWithAnIconAndStillHoldsItsWord()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                var rows = doc.rootVisualElement.Query(className: "card__jobrow").ToList();
+                Assert.That(rows, Is.Not.Empty, "no card carries an activity line");
+
+                foreach (VisualElement row in rows)
+                {
+                    var icon = row.Q<IconBadge>();
+                    var word = row.Q<Label>(className: "card__job");
+                    Assert.That(icon, Is.Not.Null, "an activity line with no icon in it");
+                    Assert.That(word, Is.Not.Null, "an activity line with no word in it");
+
+                    Rect iconBox = icon!.worldBound;
+                    Rect wordBox = word!.worldBound;
+                    Rect card = row.parent.worldBound;
+
+                    Assert.That(iconBox.xMax, Is.LessThanOrEqualTo(wordBox.xMin + 0.01f),
+                        $"the icon for '{word.text}' is not to the left of the word");
+                    Assert.That(iconBox.xMin, Is.GreaterThanOrEqualTo(card.xMin - 0.01f),
+                        "the icon starts outside its own card");
+
+                    float drawn = word.MeasureTextSize(
+                        word.text, 0f, VisualElement.MeasureMode.Undefined,
+                        0f, VisualElement.MeasureMode.Undefined).x;
+
+                    Debug.Log($"[HudGeometry] activity '{word.text}': icon {iconBox.width:0.#} px, " +
+                              $"word {drawn:0.#} px drawn in {wordBox.width:0.#} px of room");
+
+                    Assert.That(wordBox.width, Is.GreaterThanOrEqualTo(drawn - 0.01f),
+                        $"'{word.text}' needs {drawn:0.#} px and the icon left it " +
+                        $"{wordBox.width:0.#}, so the activity is being clipped by the card edge");
+                    Assert.That(wordBox.xMax, Is.LessThanOrEqualTo(card.xMax + 0.01f),
+                        $"'{word.text}' runs off the right of its card");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// Nothing selected, no pane (owner, 2026-09-16). This is the state the HUD spends most
         /// of its life in, so it is the one worth a test of its own: the pane must be out of the
         /// tree rather than merely transparent, or it still takes clicks and still counts towards

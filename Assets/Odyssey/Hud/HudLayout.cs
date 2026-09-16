@@ -213,6 +213,20 @@ namespace Odyssey.Hud
         /// <summary>One of the three need bars stacked on a card.</summary>
         public const int CardBar = 3;
 
+        /// <summary>
+        /// The activity line on a card: a picture of what this colonist is doing, and the word
+        /// for it. One pixel taller than the 16 px line of text it replaces, because the row is
+        /// sized by the taller of the two things in it and that is now the icon.
+        /// </summary>
+        public const int CardJobRow = RowIcon;
+
+        /// <summary>
+        /// Icon to word on that line, tighter than a list row's <see cref="RowIconGap"/>. A card
+        /// is 132 px wide against the stores panel's 168, and the word beside it has to be a
+        /// whole word: an ellipsis is allowed on a colonist's name and on nothing else.
+        /// </summary>
+        public const int CardIconGap = 6;
+
         // ------------------------------------------------------------------ clock and alerts
 
         public const int ClockWidth = 266;

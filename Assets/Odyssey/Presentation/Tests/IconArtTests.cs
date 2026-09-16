@@ -27,6 +27,9 @@ namespace Odyssey.Tests.Presentation
             "ui.res.stone",
             "ui.res.ironore",
             "ui.res.scrap",
+            "ui.status.felling",
+            "ui.status.mining",
+            "ui.status.building",
         };
 
         [Test]

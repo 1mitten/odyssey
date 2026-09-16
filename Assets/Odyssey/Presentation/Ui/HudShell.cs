@@ -195,6 +195,7 @@ namespace Odyssey.Presentation.Ui
             public VisualElement Ring = null!;
             public Label Initial = null!;
             public Label Name = null!;
+            public IconBadge JobIcon = null!;
             public Label Job = null!;
             public VisualElement FoodFill = null!;
             public VisualElement RestFill = null!;
@@ -786,7 +787,12 @@ namespace Odyssey.Presentation.Ui
                     HudText.Set(view.Initial, Initial(model.Name), HudTextRole.Row);
                 }
                 if (view.LastJob != model.JobDef)
+                {
                     HudText.Set(view.Job, JobLabels.Label(model.JobDef), HudTextRole.Meta);
+                    // A same-key call does nothing, so a colonist moving between two jobs that
+                    // read as idle retargets nothing at all.
+                    view.JobIcon.SetKey(JobLabels.IconKey(model.JobDef));
+                }
 
                 view.FoodFill.style.width = Length.Percent(Percent(model.Food));
                 view.RestFill.style.width = Length.Percent(Percent(model.Rest));
@@ -846,8 +852,22 @@ namespace Odyssey.Presentation.Ui
             // The job goes on its own line under the avatar row, not in the strip beside the
             // avatar. The whole width of the card is what lets it be a full word: an ellipsis is
             // allowed on a colonist's name and on nothing else.
+            //
+            // The icon leads the word rather than replacing it (owner, 2026-09-16). Uncategorised,
+            // because the spec gives a colour of its own only to stores and the command bar; here
+            // it takes the ink of the word beside it, which is what makes the line read as one
+            // thing. It is not hidden where a key has no art: the slot is always occupied, so the
+            // word does not shift sideways as a colonist changes job, and the outlined square
+            // says a picture belongs there — which is true, and is the same thing it says
+            // everywhere else in the HUD.
+            var jobRow = new VisualElement { pickingMode = PickingMode.Ignore };
+            jobRow.AddToClassList("card__jobrow");
+            var jobIcon = new IconBadge(JobLabels.IconKey(-1), IconBadge.RowSize);
+            jobIcon.Inherit(HudTokens.TextDim);
             Label job = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "card__job");
-            card.Add(job);
+            jobRow.Add(jobIcon);
+            jobRow.Add(job);
+            card.Add(jobRow);
 
             VisualElement foodFill = CardBar(card);
             VisualElement restFill = CardBar(card);
@@ -877,7 +897,8 @@ namespace Odyssey.Presentation.Ui
             _strip.Add(card);
             return new CardView
             {
-                Root = card, Ring = ring, Initial = initial, Name = name, Job = job,
+                Root = card, Ring = ring, Initial = initial, Name = name,
+                JobIcon = jobIcon, Job = job,
                 FoodFill = foodFill, RestFill = restFill, MoodFill = moodFill,
             };
         }

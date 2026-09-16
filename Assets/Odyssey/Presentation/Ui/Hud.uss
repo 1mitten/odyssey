@@ -255,11 +255,19 @@
 /* Its own line, the full width of the card rather than the strip beside the avatar, and therefore
    not truncated. The acceptance criteria allow an ellipsis on a colonist's name and on nothing
    else, so the job label has to actually fit: 116 px holds every job this game has at 12 px, with
-   room for several more. */
+   room for several more — 93 px of it since the icon took the left of the line, which still holds
+   the longest word the game has by a wide margin. */
+.card__jobrow {
+    flex-direction: row;
+    align-items: center;
+    height: 17px;
+}
+
 .card__job {
     color: rgba(255, 255, 255, 0.50);
     white-space: nowrap;
-    height: 16px;
+    height: 17px;
+    margin-left: 6px;
     -unity-text-align: middle-left;
 }
 
