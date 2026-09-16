@@ -459,6 +459,19 @@ Pure layout and arithmetic can be *run* the same way: reference the built DLL fr
 ring coverage was checked to be exactly 100.0000% of the area outside the board before anything was
 committed.
 
+Two more, found on 2026-09-16 doing exactly this for a camera change:
+
+- **Exclude `Presentation/Tests/`.** It is its own assembly definition and needs NUnit, so a glob of
+  `Presentation/**/*.cs` fails with a screenful of `CS0246: NUnit could not be found` that has
+  nothing to do with the code being checked. Adding NUnit to compile it is also an option; excluding
+  it is faster when the question is only "does the game code still build".
+- **Glob the references rather than naming them.** `$(UnityManaged)\UnityEngine*.dll` and
+  `Library/ScriptAssemblies/Unity.RenderPipelines*.dll` in one `<Reference Include>` each. The
+  Presentation assembly reaches into particles, physics, animation, the Playables graph and the
+  render pipeline, and naming the modules one at a time is a game of whack-a-mole against an error
+  list that only reveals the next missing one. `Unity.InputSystem.dll` is needed too, and lives in
+  `Library/ScriptAssemblies/` rather than with the engine.
+
 Two traps while doing it. MSBuild reads `<HintPath>` as XML, so a Windows path written with
 backslashes dies on `MSB4025: hexadecimal value 0x0C is an invalid character` — the `` in a path
 segment. **Write every path in a generated csproj with forward slashes**; MSBuild accepts them and
@@ -495,6 +508,166 @@ Four of these cost more than ten minutes each.
   metres, and it read as long diagonal cracks scored across the hillsides. The same technique is
   fine at one scale and useless at another, and the arithmetic tells you which before the screenshot
   does.
+
+## A tint aimed at a property a shader does not declare fails silently
+
+The owner reported the grass clumps drawing yellow when they should be green. It took **three wrong
+explanations reasoned out of the source** before anyone measured, which is the standing lesson in
+this file arriving again, so the method is worth recording as much as the answer.
+
+- **`Material.SetColor` on a property the shader does not declare does nothing and reports
+  nothing.** `MaterialCache` writes `_BaseColor` and `_Color`. The grass clumps use
+  `Synty/Foliage`, which declares neither, so every value ever put in the foliage tint table was
+  decorative — the table looked like a working lever for as long as nobody moved it. Note that the
+  same file reaches emission through `_Emission_Color` and the cutout through
+  `_Alpha_Clip_Threshold`, both Synty Shader Graph names: the evidence that the pack does not use
+  URP naming was already in the file, two lines above the code that assumed it did.
+- **Synty foliage is procedural.** There is no albedo texture to tint. `Synty/Foliage` mixes a leaf
+  from `_Leaf_Base_Color`, `_Leaf_Noise_Color` and `_Leaf_Noise_Large_Color`, and the last of those
+  is `(0.50, 0.58, 0.06)` — the near-zero blue against a red nearly as high as the green is exactly
+  what "straw" is. Those three are the only handles there are.
+- **To turn a yellow-green green, bring red down.** Lifting blue is the instinct and it is a weak
+  handle, because green is a low-blue colour too: multiplying 0.06 by two is still 0.12. The
+  multipliers that work look lopsided (`0.55, 1.00, 2.20`) and that is why.
+- **Two honest pictures of one asset disagreeing is the tell.** `ScatterSheet` instantiates prefabs
+  untouched and showed green clumps; the board drew the same clumps yellow. That difference *is* the
+  bug localised to the draw path, and it was sitting in the logs from the first run. The other half
+  of the answer was that the ground is deliberately lifted by `(1.04, 1.30, 1.55)` while the tufts
+  were not moved at all, so even correct art reads warm on a cooled field.
+- **Enumerate, do not guess at names.** `TintProbe`
+  (`unity.sh exec Odyssey.EditorTools.TintProbe.Run`) prints each module's material, its shader, and
+  every colour property that shader actually declares. A list of eleven plausible names matched
+  none of them; asking the shader took one run and answered it completely. Reach for it whenever a
+  tint, an emission or a cutoff appears to have no effect.
+
+## Variety at cell scale needs a tile set that agrees at its edges, or it reads as noise
+
+Three separate attempts at "make the ground less uniform" failed the same way and it is worth
+stating once. The rim ripple gave every cell its own top and produced cracks. The bank gave every
+cell its own jittered tread positions and produced a ridge of misaligned bars — "these Toblerone
+pieces", in the owner's words. Both were varied, both were individually correct, and both read as
+noise because **neighbouring cells did not agree along the edge they share**.
+
+- **The fix is not less variation, it is variation that is continuous.** The bank ended up as three
+  height functions — `z`, `max(x, z)`, `min(x, z)` — chosen precisely because along any shared edge
+  two of them collapse to the same expression. A run of them is one surface with no seam to find,
+  and the width is matched by construction rather than by tuning.
+- **Rotation is what keeps a tile set small.** Sixteen patterns of exposed sides fold onto five; the
+  three bank shapes cover every corner in both directions. Folding is free because the yaw rides in
+  the instance matrix, so the cost of a tile set is meshes, and meshes are buckets, not instances.
+- **When the answer is a tile set, the per-cell hash goes away entirely.** Every version that kept a
+  hash "for variety" was the version that broke, because a hash cannot know what its neighbour
+  chose. If a shape depends on its surroundings, its surroundings must be the only input.
+- **The instrument has to be pointed at the fault.** All of this was visible in a close shot and
+  invisible at 70 m, and it was reported from close up while the sheet was being judged from far
+  away. `SlopeCheck` shoots a 14 m macro for that reason now.
+
+## Coplanar surfaces flicker only when they face the same way
+
+A bank fills its cell in plan, so an inside corner where two terrace steps meet was drawing two
+banks in one cell, turned ninety degrees to each other. The side wall of one then lands in the same
+plane as the *back* wall of the other, **facing the same way**, and the depth buffer has nothing to
+choose between them — so it picks whichever rounds higher, and the choice changes as the camera
+moves. That is z-fighting, and the owner saw it before any test did.
+
+The distinction is the useful part. Coplanar surfaces with *opposite* normals are harmless, because
+back-face culling removes one of them from every viewpoint — which is why a straight run of banks,
+whose touching walls face away from each other, never flickered. Only the corner did. When hunting a
+flicker, look for same-facing coplanar pairs and ignore back-to-back ones.
+
+It is also worth noting what no test could have caught: every mesh was watertight, every face was
+wound correctly, every instance was in the right place, and the fault was a *relationship between
+two of them*. Geometry tests check one mesh at a time.
+
+## Getting the licensed packs into a worktree without copying or committing them
+
+A git worktree is a fresh checkout, and `Assets/Synty/` is gitignored, so a worktree has no art at
+all. Everything still builds and every test passes — degrading without the packs is a designed path,
+not an error path — but **every screenshot is untextured flat colour**, which makes a worktree the
+wrong place to settle any question about how something looks. That cost a whole contact sheet once.
+
+**Junction the folder rather than copying it.** On Windows, from the worktree:
+
+```
+cmd /c mklink /J "<worktree>\Assets\Synty" "D:\code\odyssey\Assets\Synty"
+copy "D:\code\odyssey\Assets\Synty.meta" "<worktree>\Assets\Synty.meta"
+```
+
+`mklink /J` makes a directory junction and needs no administrator rights, unlike `/D`. Three reasons
+it beats a copy of 1.5 GB and 15,868 files:
+
+- **The `.meta` files are shared, so the GUIDs match.** This is the load-bearing part.
+  `ModuleCatalogue.asset` is committed and refers to prefabs by GUID, so art that imported under
+  different GUIDs would resolve to nothing and the world would draw as boxes *with* the packs
+  present — which looks exactly like not having them and is far more confusing.
+- Nothing is duplicated on disk, and nothing can drift out of step with the main checkout.
+- `Assets/Synty/` is gitignored in every worktree too, so `git status` stays empty and licensed
+  content cannot be staged by accident. Check that before the first commit, not after.
+
+Two things to know. The two projects share the source files, so if one of them rewrites an import
+setting the other sees it — Unity does not rewrite an existing `.meta` during an ordinary import, but
+changing an importer setting in one project changes it for both. And the worktree still builds its
+*own* `Library`, so the first run after junctioning imports the whole pack set and takes many
+minutes and a couple of gigabytes; run it in the background and do something else.
+
+Remove the junction with `rmdir` (not `Remove-Item -Recurse`, which on some shells follows the link
+and would delete the real packs).
+
+## Per-cell geometry cracks where a continuous field does not
+
+Written after giving earth its own mesh (`GroundMesh`, `06-rendering-and-camera.md` §2c). The
+mistake took one screenshot to find and would have taken a long time to reason out.
+
+- **A mesh shared by every cell cannot make neighbours agree at a shared edge.** Each cell picks its
+  own variant, so if the rim moves at all, two neighbours disagree across their boundary by up to
+  *twice* the movement. At 12 cm of rim ripple that is a 24 cm step at every cell edge on the board,
+  and the meadow came out as crazy paving — visibly worse than the flat quads it replaced. There is
+  no amount of tuning that fixes this, only a smaller number that hides it: the ceiling is set by
+  the fact that the rim height is a function of the *cell*, when it needs to be a function of the
+  *shared corner's world position*. That wants vertex displacement in a shader, or per-cell meshes
+  and no instancing.
+- **The same trick at a different scale is the opposite of the same trick.** `GroundRelief` gives
+  the board a rolling surface that never cracks, because it is one smooth field sampled per cell and
+  neighbouring tangent planes part by millimetres. Adding per-cell noise on top looked like more of
+  the same thing and is structurally the reverse of it. Compare with the sibling lesson above:
+  tangent-plane displacement scales with the square of the tile, and this is what happens at the
+  other end of that argument.
+- **Photograph the control, not just the change.** The shot of the change alone showed a textured
+  meadow and could plausibly have been called a success. The shot of the board *without* it showed a
+  clean green surface, and the comparison settled it in one glance. `SlopeCheck` shoots plain, earth
+  and banks for exactly this reason, and the harness paid for itself on its first run.
+- **Frame the instrument before trusting it.** The first side-on shot put the camera 3 m above its
+  focus — one layer — so it sat inside the hillside and all three conditions photographed the same
+  flat green nothing, at identical file sizes. Identical output from conditions that must differ is
+  the instrument telling you it is broken, and it is worth checking the file sizes for that.
+- **Verify which fault you were asked to fix.** The complaint was a terrace riser: "one big block
+  and then a completely straight wall". The top surface was never mentioned and was already fine.
+  Adding geometry to the part that worked, and only then getting to the part that did not, is how a
+  change ends up net negative while every piece of it passes its tests.
+- **A dark line between two surfaces is more often a lighting fault than a hole.** The black lines
+  round every ground tile looked like gaps and were not: a gap would have shown the pale blue
+  skybox, and these were near-black, so they were geometry receiving no light. The fix was to tilt
+  the shading normals of side faces up towards the sky, which costs no vertex, no triangle and no
+  draw call — the measured count was identical with it and without. **Check the colour of the fault
+  before deciding what kind of fault it is**: a hole shows you what is behind the world, and what is
+  behind the world is not black.
+- **"It does not happen on main" is not evidence about a cause when main does not have the
+  feature.** The owner reported the lines against `main`, which has no `GroundMesh` at all. That
+  narrowed nothing by itself, and the temptation was to accept the offered explanation (the missing
+  textures) and move on. Measuring instead settled it in one run: 14.7 mm from the relief field, 72
+  mm from the rim ripple. Both observations turned out to be true — the lines were on main, subtly —
+  and only the measurement said which part to spend on.
+- **When a mesh has to vary by its surroundings, fold the cases with rotation before building them.**
+  A chamfer that may only touch exposed sides needs a mesh per pattern of exposed sides: sixteen.
+  Turning a mesh is free because the yaw rides in the instance matrix, so the sixteen fold onto
+  **five** — one side, two adjacent, two opposite, three, four. The price is that the bearing stops
+  being available for variety, which is worth stating out loud because it silently removes a source
+  of variation somebody else may be relying on.
+- **A lever whose "off" costs more than its "on" is not a lever.** With the chamfer at zero all five
+  exposure patterns build the identical mesh, and five buckets a chunk for five copies of one block
+  would have made turning it off the expensive choice. The family collapses to one when there is
+  nothing to cut. Worth checking for any feature whose cost is paid in *variants* rather than in
+  work per instance.
 
 ## A loose tolerance can make a test prove nothing
 
