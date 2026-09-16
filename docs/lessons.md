@@ -509,3 +509,90 @@ see whether the output means anything, applied to tolerances — **a tolerance c
 rather than derived from the thing being measured is where a vacuous test comes from.** Prefer an
 exact assertion where the quantity is exact, as a cell index is.
 
+## A pose that adds, and a tool fitted to a doubled arm
+
+`PawnFigureDirector.Strike` **adds** its angles to whatever the bones are already at. It does not
+set them. `RegripTools` has always known this and resets with `figure.Graph.Evaluate(0f)` first,
+with a comment saying why: refitting mid-swing "measures a doubled pose and a reach to match".
+
+When `BindWorkBones` grew from fitting one tool to fitting one per `WorkStyle`, the loop struck once
+per style **without** the reset, so the second style was posed on top of the first. The pick was then
+gripped and measured against an arm reaching half as far again, and the result on screen was a
+colonist at a rock face with its arms in the strike and **nothing in its hands** — the tool was
+there, pointing at the sky above the top of the frame.
+
+Two things worth keeping from it:
+
+- **An empty hand in a screenshot is ambiguous and a number is not.** A tool the catalogue never
+  supplied and a tool fitted somewhere absurd look identical at any distance, and they want opposite
+  fixes. `PawnFigureDirector.DescribeTools()` answers the first question in one line (row present?
+  prefab present? fitted on how many figures?), and `MeasuredBladeHeight` answered the second: 2.39 m
+  against a colonist 1.79 m to the crown. The photograph said "empty"; the number said "above her
+  head", and only one of those points anywhere.
+- **The struck pose is the worst frame to judge a tool's head in.** The aim deliberately finishes the
+  head just inside the work, so at the moment of the blow it is buried in the rock where nothing can
+  see it — correct, and useless for deciding which way round the head is. Hold the stroke part way
+  up the raise (`HeldPhase`) and photograph it against the sky. That is why `SwingCheck` shoots its
+  blade sheet at a held phase rather than letting the stroke run.
+
+## SwingCheck exhausts render textures in batch mode
+
+`scripts/unity.sh exec Odyssey.EditorTools.SwingCheck.Run` segfaults inside
+`Camera::CustomRenderWithPipeline`, reproducibly, after about six of its nine sample frames and
+before it writes a single blade sheet. Running it twice — the usual cure for a batch run executing
+the previous assembly — does not help.
+
+The crash is not the first symptom. Further up `Logs/exec.log` is `RenderTexture.Create failed`
+followed by "Failed to set the active render target": it is **resource exhaustion**, not a logic
+fault. `PlayScene.Shoot` takes a render target per call, and `SwingCheck` calls it far more often
+than the screenshot path does — nine samples, then an impact frame, then eight blade rolls, then
+eight yaws. A give-away that it has already begun failing before it dies: every `Logs/swing-*.png`
+comes out at exactly the same byte size, because they are failed captures rather than pictures.
+
+Two consequences. **Do not diagnose this from `Logs/exec.log` after running `shot`** — `shot` writes
+`Logs/shot.log`, and reading the stale `exec.log` from a previous `SwingCheck` run attributes a
+crash to a command that only had a compile error. And until it is fixed, the pick's stroke angles
+cannot be settled the way the axe's were; the workaround is the `shot-miner` and `shot-miner-raised`
+frames in `PlayScene`, which render one setting at a time through the path that does work.
+
+## A snapshot channel costs its whole layer, every tick, whether or not anything uses it
+
+The mining line published a per-cell "how far through its order is this cell" channel by asking
+`Fraction()` for **every cell of the active layer, every tick**. On the 120 x 120 board that is
+14,400 calls a tick, and it cost **0.057 ms a tick on a board with no orders on it at all** —
+against 0.002 ms for the entire rest of the simulation. The ten-day soak went from one second a
+seed to thirty-nine, and the default Long tier from five seconds to two minutes sixteen.
+
+The shape of the measurement is what identified it: **the job counts were identical** to the
+pre-mining run (haul 14, eat 92, sleep 53, wander 2,595) and mean tick cost equalled p95. Same
+work, constant overhead, no spikes — that is a fixed per-tick scan, not a feature doing more.
+
+Three rules come out of it.
+
+- **A channel is written every tick, so its cost is per tick, not per use.** A feature nobody is
+  using should cost nothing. Walk the sparse list of things that have state (`_cells`, already
+  kept sorted for the work-giver scans) rather than the dense grid they live in — tens of orders
+  against fourteen thousand cells.
+- **A sparse write needs an explicit clear.** The snapshot is double-buffered, so a byte written
+  two frames ago is still there. The dense loop zeroed everything by accident; the sparse one has
+  to `Clear()` on purpose, or a cancelled order stays drawn as a half-cut rock face.
+- **A performance guard must run at the size the thing is used at.** The first draft of the
+  regression test used the 60 x 60 board the rest of its file uses and *passed against the
+  unfixed code*: the cost is proportional to the layer, so a quarter of the cells is a quarter of
+  the bug, which sat inside the threshold. It only became evidence when it ran on 120 x 120 and
+  was seen to fail.
+
+## Bisect the measurement, and beware perl against CRLF
+
+Two method notes from the same hunt.
+
+**`git bisect run` with a measurement is fast and exact.** The probe script ran the one-day soak
+(four seconds) and exited non-zero above 0.01 ms/tick; five steps over thirty-two commits named
+the commit. Do it in the sibling checkout (`D:\code\odyssey-ui`) so the owner's editor keeps its
+own working tree.
+
+**A multi-line `perl -0pi -e 's/.../.../s'` silently does nothing against a CRLF file**, because
+the `\n` in the pattern does not match `\r\n`. It exits 0 and reports nothing. This cost a wrong
+conclusion: a stubbing experiment "proved" the suspect loop was innocent when in fact the stub had
+never been applied — the file was unchanged. Read the file back, or use the Edit tool, before
+believing an experiment that depends on an edit.

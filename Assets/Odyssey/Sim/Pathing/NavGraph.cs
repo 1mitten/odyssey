@@ -927,6 +927,68 @@ namespace Odyssey.Sim.Pathing
             return id;
         }
 
+        /// <summary>
+        /// Put a ladder between two vertically adjacent open cells, unless one is already there.
+        /// Returns the connector id, or -1 if nothing was added.
+        ///
+        /// <para><b>Why a dug shaft gets one.</b> A fall edge is one-way and excluded from
+        /// districts, so a colonist who cut its way down a shaft would be in a district of its
+        /// own: unable to climb out, and — because every work-giver scan gates on the district
+        /// comparison — invisible to every job on the surface. It would not even look like a bug
+        /// from outside; the colony would simply stop having a colonist. A declared connector is
+        /// the only vertical edge that can be walked, so cutting a shaft has to declare one.</para>
+        ///
+        /// <para><b>It is a climb, and deliberately not a ladder.</b> Ladders are a built thing —
+        /// the generator puts them in buildings, they cost what a made object costs, and something
+        /// is drawn where one is. A hole cut with a pick has none of that, and modelling it as a
+        /// ladder claimed all three: for one commit the game duly drew a free, unbuilt ladder in
+        /// every pit on the board. <see cref="ConnectorKind.Climb"/> exists so the two cannot be
+        /// confused again — its own cost, its own footprint flag, and nothing to draw.</para>
+        ///
+        /// <para><b>Only where there is something to climb.</b> The caller checks that a solid
+        /// block stands beside the lower cell (<c>MineJobDriver.HasWallBeside</c>). Without that
+        /// test a connector was laid on every cut cell with an open ceiling, which in the middle of
+        /// an open quarry is a colonist going up through clear air — one climbing pawn-tick in five,
+        /// measured, and exactly what the owner reported seeing.</para>
+        ///
+        /// <para>It is still free: a colonist gets its way out of a shaft for no materials and no
+        /// work. That is a real debt and it belongs to the building line, which will declare its
+        /// own connector when it can make one. This is deliberately confined to
+        /// <c>MineJobDriver.MineCell</c> so there is one place to change.</para>
+        ///
+        /// <para>It is also not saved, because a runtime connector is not part of the grid — the
+        /// same gap as OQ-08, which keeps a mined cell out of the save too. A world reloaded
+        /// mid-dig comes back with its shafts unclimbable, and both halves are fixed by the same
+        /// piece of work.</para>
+        /// </summary>
+        public int EnsureClimb(int lowerCell, int upperCell)
+        {
+            if ((uint)lowerCell >= (uint)Size.CellCount) return -1;
+            if ((uint)upperCell >= (uint)Size.CellCount) return -1;
+
+            // One layer up, and not necessarily straight up. **The far end of a climb is normally
+            // the ground BESIDE the hole, not the air above it** — you go up the face of the block
+            // and step off on top of it, which is the only ending that leaves a colonist standing
+            // on something. A strictly vertical climb finishes in a cell with nothing under it,
+            // and a pit whose only way in was such a cell sealed itself the moment walking onto a
+            // rock face was forbidden.
+            CellRef from = Size.FromIndex(lowerCell);
+            CellRef to = Size.FromIndex(upperCell);
+            if (to.Y != from.Y + 1) return -1;
+            if (Math.Abs(to.X - from.X) + Math.Abs(to.Z - from.Z) > 1) return -1;
+
+            // One way out of a cell, not one per direction.
+            //
+            // The guard used to ask whether BOTH ends already carried a climb footprint, which was
+            // sound while a climb could only go straight up and there was one possible pair. Now
+            // that it lands on whichever block is beside the hole there are up to four, and asking
+            // about the pair would let a cell collect a climb in every direction — four connectors
+            // flagging the same cell, all but one of which nothing would ever remove.
+            if (HasClimbFrom(lowerCell)) return -1;
+
+            return AddConnector(ConnectorKind.Climb, new[] { lowerCell }, new[] { upperCell });
+        }
+
         void FlagConnectorCell(int cell, NavFlags footprint, int connectorId)
         {
             Grid.Flags[cell] |= footprint;
@@ -966,6 +1028,58 @@ namespace Odyssey.Sim.Pathing
         }
 
         public Connector? GetConnector(int id) => id >= 0 && id < _connectors.Count ? _connectors[id] : null;
+
+        /// <summary>
+        /// Take out the climb whose lower end is this cell, if there is one.
+        ///
+        /// <para><b>Why a climb can stop being a climb.</b> Every other connector is a built thing
+        /// and lasts until somebody takes it down. A climb is not built — it is the assertion that
+        /// there is a rock face here to go up — and mining is in the business of removing rock
+        /// faces. A climb laid against a wall that is later cut away is a colonist going up through
+        /// clear air, and checking only at the moment it is created does not catch that: measured
+        /// over 40,000 ticks with the creation test in place and nothing to retire them, one
+        /// climbing pawn-tick in five still had no wall beside it.</para>
+        ///
+        /// <para>The scan is over the connectors recorded in this cell's own block, which is a
+        /// handful, and it is guarded by the footprint flag so the common case costs one bit test.</para>
+        /// </summary>
+        /// <summary>Does a climb already lead up out of this cell?</summary>
+        public bool HasClimbFrom(int lowerCell)
+        {
+            if ((uint)lowerCell >= (uint)Size.CellCount) return false;
+            if ((Grid.Flags[lowerCell] & NavFlags.ConnectorClimb) == 0) return false;
+
+            int block = BlockIndexOfCell(lowerCell);
+            if (!_connectorsByBlock.TryGetValue(block, out List<int>? ids)) return false;
+
+            for (int i = 0; i < ids.Count; i++)
+            {
+                Connector? con = _connectors[ids[i]];
+                if (con == null || con.Kind != ConnectorKind.Climb) continue;
+                if (con.LowerCells.Length == 1 && con.LowerCells[0] == lowerCell) return true;
+            }
+
+            return false;
+        }
+
+        public bool RemoveClimbAt(int lowerCell)
+        {
+            if ((uint)lowerCell >= (uint)Size.CellCount) return false;
+            if ((Grid.Flags[lowerCell] & NavFlags.ConnectorClimb) == 0) return false;
+
+            int block = BlockIndexOfCell(lowerCell);
+            if (!_connectorsByBlock.TryGetValue(block, out List<int>? ids)) return false;
+
+            for (int i = 0; i < ids.Count; i++)
+            {
+                Connector? con = _connectors[ids[i]];
+                if (con == null || con.Kind != ConnectorKind.Climb) continue;
+                if (con.LowerCells.Length != 1 || con.LowerCells[0] != lowerCell) continue;
+                return RemoveConnector(ids[i]);
+            }
+
+            return false;
+        }
 
         // =====================================================================================
         // Doors and hazards — the sticky flags
@@ -1135,7 +1249,11 @@ namespace Odyssey.Sim.Pathing
                 int dx = Math.Abs(a.X - b.X);
                 int dz = Math.Abs(a.Z - b.Z);
                 if (dx + dz != 1) return false;
-                return Grid.CanEnter(from, mode) && Grid.CanEnter(to, mode);
+
+                // Out of anywhere you can be, into anywhere you can stand. The asymmetry is the
+                // point: stepping off a rock face onto solid ground is the last move of getting
+                // out of a shaft, and stepping onto one is walking into mid-air.
+                return Grid.CanEnter(from, mode) && Grid.CanWalkInto(to, mode);
             }
 
             for (int e = FirstPortalEdge(from); e != -1; e = _peNext[e])

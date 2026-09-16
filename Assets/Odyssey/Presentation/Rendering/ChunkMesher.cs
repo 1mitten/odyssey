@@ -152,6 +152,23 @@ namespace Odyssey.Presentation.Rendering
             }
 
             if (!HasExposedFace(index, x, z, y)) return;
+
+            if (_model.IsStone(index))
+            {
+                // Stone is drawn as one of several chipped lumps, turned to one of four bearings.
+                // Both come from a hash of the cell, so a cliff face does not rearrange itself
+                // every time somebody digs a cell in the same chunk — see RockLook.
+                //
+                // The turn is composed on the left of the module's own local transform, which is
+                // a vertical shift and a scale equal in x and z; a rotation about the vertical
+                // commutes with both, so the lump turns about its own axis and still fills its
+                // cell exactly. Three quarters of the variety for no extra mesh and no extra draw.
+                int variant = RockLook.Variant(x, z, y);
+                Matrix4x4 turned = at * Matrix4x4.Rotate(Quaternion.Euler(0f, RockLook.Yaw(x, z, y), 0f));
+                AddBody(batch, _model.StoneModule(index, variant), tint, turned);
+                return;
+            }
+
             AddBody(batch, module, tint, at);
         }
 

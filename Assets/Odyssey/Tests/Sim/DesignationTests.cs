@@ -67,6 +67,37 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
+        public void BedrockRefusesTheOrderRatherThanQuotingAPrice()
+        {
+            // Bedrock is the floor of the world. It could be allowed at its 2,400 ticks — forty
+            // trees' work for one cell of nothing — but an order a colonist would spend a day on
+            // and get no material from is worse than no order, because the colonist takes the day.
+            var (grid, edifices, d) = Board();
+            int cell = grid.Size.Index(2, 2, 0);
+            grid.Terrain[cell] = NaturalContent.TerrainBedrock;
+
+            Assert.That(d.Designate(new CellRef(2, 2, 0), DesignationKind.Mine),
+                Is.EqualTo(IntentRejection.NotPermitted), "bedrock accepted a mining order");
+            Assert.That(d.CanMine(cell), Is.False);
+            Assert.That(d.CanMine(grid.Size.Index(1, 1, 0)), Is.True, "ordinary rock stopped being minable");
+        }
+
+        [Test]
+        public void TheGroundUnderAStandingTreeIsNotMinable()
+        {
+            // Digging it away would leave the tree rooted in mid-air. Felling it first is the
+            // answer, and the order becomes available the moment the tree is gone.
+            var (grid, edifices, d) = Board();
+            int under = grid.Size.Index(3, 3, 0);
+
+            Assert.That(d.Designate(new CellRef(3, 3, 0), DesignationKind.Mine),
+                Is.EqualTo(IntentRejection.NotPermitted), "the ground under a tree accepted a mining order");
+
+            grid.RemoveEdifice(grid.Size.Index(3, 3, Layer));
+            Assert.That(d.CanMine(under), Is.True, "felling the tree did not free the ground under it");
+        }
+
+        [Test]
         public void OutOfTheMapAndRepeatsAreRefusedWithTheirReasons()
         {
             var (_, _, d) = Board();

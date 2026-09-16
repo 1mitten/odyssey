@@ -46,6 +46,7 @@ namespace Odyssey.Presentation.World
 
         ModuleGroup[] _groups;
         readonly int[] _terrainModule;
+        readonly int[][] _stoneModule;
         readonly int[] _naturalEdificeModule;
         readonly int _vaultWallModule;
         readonly int _utilityTapModule;
@@ -67,6 +68,7 @@ namespace Odyssey.Presentation.World
 
             _groups = new[] { ResolveGroup(library, new TemplateDef()) };
             _terrainModule = ResolveTerrain(library);
+            _stoneModule = ResolveStone(library);
             _naturalEdificeModule = ResolveNaturalEdifices(library);
             _vaultWallModule = library.Resolve(ModuleIds.VaultWall, ModuleShape.WallPanel);
             _utilityTapModule = library.Resolve(ModuleIds.UtilityTap, ModuleShape.Pillar);
@@ -149,6 +151,19 @@ namespace Odyssey.Presentation.World
         /// <summary>The module index for the natural material in this cell, or 0 for open air.</summary>
         public int TerrainModule(int index) => _terrainModule[_terrain[index]];
 
+        /// <summary>Is the cell drawn as a chipped lump rather than as a cube?</summary>
+        public bool IsStone(int index) => RockLook.IsStone(_terrain[index]);
+
+        /// <summary>
+        /// The module for one lump of a stone cell. Falls back to the plain terrain module if the
+        /// cell is not stone, so a caller that gets the test wrong draws a cube rather than
+        /// nothing at all.
+        /// </summary>
+        public int StoneModule(int index, int variant)
+        {
+            int[] variants = _stoneModule[_terrain[index]];
+            return variants.Length == 0 ? _terrainModule[_terrain[index]] : variants[variant % variants.Length];
+        }
         /// <summary>
         /// The module index a terrain code draws as, without needing a cell of it to hand.
         ///
@@ -222,6 +237,33 @@ namespace Odyssey.Presentation.World
             return table;
         }
 
+        /// <summary>
+        /// The lumps each stone terrain is drawn with: <c>[terrain][variant]</c>, and empty for
+        /// anything that is not stone.
+        ///
+        /// Resolved once at construction, like everything else here, so the mesher deals only in
+        /// integers. Each variant is its own module and so its own instancing bucket, which is
+        /// the price of the whole effect: six buckets per stone terrain in a chunk instead of one.
+        /// Only *exposed* stone is ever emitted, so on a surface board that is the outcrops and
+        /// the terrace faces rather than the eighty thousand cells underneath them.
+        /// </summary>
+        static int[][] ResolveStone(ModuleLibrary library)
+        {
+            var table = new int[NaturalContent.TerrainCount][];
+            for (int i = 0; i < table.Length; i++)
+            {
+                if (!RockLook.IsStone((ushort)i)) { table[i] = System.Array.Empty<int>(); continue; }
+
+                string name = NaturalContent.TerrainAt((ushort)i).defName;
+                var variants = new int[RockMesh.Variants];
+                for (int v = 0; v < variants.Length; v++)
+                    variants[v] = library.Resolve(
+                        ModuleIds.TerrainVariant(name, v), ModuleShape.RockBlock, v);
+                table[i] = variants;
+            }
+            return table;
+        }
+
         static int[] ResolveTerrain(ModuleLibrary library)
         {
             // Sized for the natural table, which continues CoreContent's numbering rather than
@@ -235,7 +277,15 @@ namespace Odyssey.Presentation.World
                 var def = NaturalContent.TerrainAt((ushort)i);
                 table[i] = library.Resolve(
                     ModuleIds.Terrain(def.defName),
-                    def.solid ? ModuleShape.SolidBlock : ModuleShape.FloorSlab);
+                    // Stone asks for a lump even here, where the variant is always the first one.
+                    // The catalogue says RockBlock on every row, so this only decides what a
+                    // library with *no* catalogue does — and if it answered SolidBlock, that
+                    // library would hand back a smooth cube for variant 0 and chipped lumps for
+                    // the other five. One cell in six wrong is the kind of fault that renders
+                    // perfectly and gets blamed on the art.
+                    RockLook.IsStone((ushort)i) ? ModuleShape.RockBlock
+                        : def.solid ? ModuleShape.SolidBlock
+                        : ModuleShape.FloorSlab);
             }
             return table;
         }
@@ -283,7 +333,7 @@ namespace Odyssey.Presentation.World
 
         void CopyCell(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices, int index)
         {
-            _terrain[index] = grid.Terrain[index];
+            _terrain[index] = Seen(grid, index);
             _floor[index] = grid.Floor[index];
             _floorStuff[index] = grid.FloorStuff[index];
             _flags[index] = (byte)grid.Flags[index];
@@ -300,6 +350,23 @@ namespace Odyssey.Presentation.World
                 _edifice[index] = CoreContent.EdificeNone;
                 _edificeStuff[index] = CoreContent.StuffNone;
             }
+        }
+
+        /// <summary>
+        /// The terrain as the colony has seen it: an undiscovered seam is plain rock.
+        ///
+        /// <para>The lie is told once, here, on the way into the mirror — so the module, the
+        /// colour, the emissive trim and the inspect readout all agree about what the cell looks
+        /// like without any of them knowing there is a rule. The simulation is untouched and
+        /// still knows perfectly well that the cell is iron; this is the seam between what is
+        /// true and what has been seen, and presentation is the right side of it
+        /// (<see cref="CellFlags.Discovered"/>).</para>
+        /// </summary>
+        static ushort Seen(CellGrid grid, int index)
+        {
+            ushort terrain = grid.Terrain[index];
+            if (NaturalContent.IsOre(terrain) && !grid.IsDiscovered(index)) return NaturalContent.TerrainRock;
+            return terrain;
         }
 
         /// <summary>Half-open cell bounds of a chunk, and the layer it lives on.</summary>

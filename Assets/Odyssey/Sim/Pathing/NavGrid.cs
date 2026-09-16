@@ -39,8 +39,25 @@ namespace Odyssey.Sim.Pathing
 
         Hazard = 1 << 9,
 
+        /// <summary>A cell a colonist can climb through, hands on rock. Nothing is built there.</summary>
+        ConnectorClimb = 1 << 10,
+
+        /// <summary>
+        /// Standable only because a climb passes through it: a rock face, with nothing underneath.
+        ///
+        /// <para>Derived, never sticky — recomputed from the terrain and the climb footprint on
+        /// every refresh. It exists because <see cref="Walkable"/> was being asked two different
+        /// questions and answering both yes: "may a region form here" and "may somebody walk in
+        /// here". A cell on a rock face has to say yes to the first, or the shaft drops out of the
+        /// region graph and the miner in it becomes unreachable; it must say no to the second, or a
+        /// row of them is a bridge and colonists walk out over the hole. Measured before this
+        /// existed: <b>10,180 of 69,013</b> sideways steps — better than one in seven — went into a
+        /// cell with nothing under it, and every one of them carried a climb footprint.</para>
+        /// </summary>
+        ClimbOnly = 1 << 11,
+
         /// <summary>Any connector footprint cell.</summary>
-        Connector = ConnectorStair | ConnectorLadder | ConnectorLift,
+        Connector = ConnectorStair | ConnectorLadder | ConnectorLift | ConnectorClimb,
 
         /// <summary>
         /// Bits owned by registration rather than by the terrain. A flag rebuild recomputes
@@ -116,8 +133,29 @@ namespace Odyssey.Sim.Pathing
 
         public const int StairUp = 290;
         public const int StairDown = 230;
+
         public const int LadderUp = 540;
         public const int LadderDown = 400;
+
+        /// <summary>
+        /// Hauling yourself up a rock face. Dear, because it is work: a colonist carrying stone out
+        /// of a shaft should prefer a ramp, and the pathfinder only learns that from the price.
+        ///
+        /// <para>Half a built ladder's, which is the right relation — a ladder is a thing somebody
+        /// made to make this easier. It is still nearly three times a flat cell.</para>
+        /// </summary>
+        public const int ClimbUp = 270;
+
+        /// <summary>
+        /// Dropping down a rock face. Half of a flat cell, because you mostly let go.
+        ///
+        /// <para>Tuned twice at the owner's word — 400, then 100, then half of that again: about
+        /// five sixths of a second for three metres. The asymmetry against <see cref="ClimbUp"/> is
+        /// the point and not a fudge: going down a hole and coming back up it are genuinely not the
+        /// same job, and pricing them alike is what made a colonist take six and a half seconds to
+        /// descend three metres.</para>
+        /// </summary>
+        public const int ClimbDown = 50;
         public const int LiftUp = 400;
         public const int LiftDown = 400;
 
@@ -212,10 +250,20 @@ namespace Odyssey.Sim.Pathing
         /// pushing that decision into the link and the per-cell entry test keeps closed doors
         /// from carving the region graph apart every time one shuts.
         ///
-        /// Impassable terrain — deep water — is neither solid nor blocked, so it would otherwise
-        /// read as perfectly walkable: the bed beneath it is a floor. It is excluded here and
-        /// nowhere else, which is what makes <see cref="KindOf"/> call it
-        /// <see cref="RegionKind.Impassable"/> and keeps a lake out of every walkable region.
+        /// <para><b>A connector is its own floor.</b> A cell carrying a declared stair, ladder or
+        /// lift footprint has something to stand in whether or not a slab happens to be under it,
+        /// because that is what those things are. Without this a vertical shaft is unusable: only
+        /// its bottom cell rests on anything, so every cell above it fails the floor test, is
+        /// therefore not walkable, and the portal links at both ends of the ladder have nothing to
+        /// join — a shaft laddered from top to bottom that nothing can climb. The rule is stated
+        /// here rather than worked around at each end because "can something stand here" is this
+        /// method's one question. A <em>climb</em> is the one connector that grants standing
+        /// without granting walking — see <see cref="NavFlags.ClimbOnly"/>.</para>
+        ///
+        /// <para>Impassable terrain — deep water — is neither solid nor blocked, so it would
+        /// otherwise read as perfectly walkable: the bed beneath it is a floor. It is excluded here
+        /// and nowhere else, which is what makes <see cref="KindOf"/> call it
+        /// <see cref="RegionKind.Impassable"/> and keeps a lake out of every walkable region.</para>
         /// </summary>
         public void RefreshFrom(CellGrid grid, int index)
         {
@@ -223,7 +271,8 @@ namespace Odyssey.Sim.Pathing
 
             bool solid = grid.IsSolidTerrain(index);
             bool blocked = grid.IsBlockedByEdifice(index);
-            bool floor = grid.HasFloor(index);
+            bool realFloor = grid.HasFloor(index);
+            bool floor = realFloor || (sticky & NavFlags.Connector) != 0;
             bool door = (sticky & NavFlags.Door) != 0;
             bool impassable = grid.IsImpassableTerrain(index);
 
@@ -232,6 +281,11 @@ namespace Odyssey.Sim.Pathing
             if (blocked) f |= NavFlags.Blocked;
             if (floor) f |= NavFlags.HasFloor;
             if (floor && !solid && !impassable && (!blocked || door)) f |= NavFlags.Walkable;
+
+            // A rock face is somewhere to be, not somewhere to walk to. See NavFlags.ClimbOnly.
+            // Only a climb: a stair, a ladder and a lift are built things with a tread under you.
+            if (!realFloor && !solid && !blocked && (sticky & NavFlags.ConnectorClimb) != 0)
+                f |= NavFlags.ClimbOnly;
 
             Flags[index] = f;
             CostClass[index] = ClassAt(grid, index);
@@ -285,6 +339,26 @@ namespace Odyssey.Sim.Pathing
             if ((f & NavFlags.Door) == 0 || (f & NavFlags.DoorOpen) != 0) return true;
             return mode != TraverseMode.Animal;
         }
+
+        /// <summary>
+        /// May a pawn <em>walk</em> into this cell — a step on its own layer?
+        ///
+        /// <para>Narrower than <see cref="CanEnter"/>, and the difference is a cell that is
+        /// standable only because a climb goes through it. You may step <b>off</b> a rock face onto
+        /// solid ground, which is how anybody gets out of a shaft; you may not step <b>onto</b>
+        /// one, because walking onto a rock face is not a thing a person does — you would have to
+        /// climb to it, and a climb is a declared edge.</para>
+        ///
+        /// <para>The destination is the whole test and the source is deliberately not. Refusing to
+        /// leave a climb cell sideways sounds tidier and strands every colonist that ever climbs
+        /// out of a two-deep shaft: the top of that climb is itself a floorless cell, and stepping
+        /// off it onto the ground beside the hole is the last move of getting out.</para>
+        /// </summary>
+        public bool CanWalkInto(int index, TraverseMode mode) =>
+            (Flags[index] & NavFlags.ClimbOnly) == 0 && CanEnter(index, mode);
+
+        /// <summary>Is this cell standable only because a climb passes through it?</summary>
+        public bool IsClimbOnly(int index) => (Flags[index] & NavFlags.ClimbOnly) != 0;
 
         /// <summary>The cost of stepping into this cell, orthogonally, for this mode.</summary>
         public int EnterCost(int index, TraverseMode mode)
