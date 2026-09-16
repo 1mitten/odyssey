@@ -73,7 +73,7 @@ namespace Odyssey.Presentation.World
         // contributes — a Synty character rests with its arms some way forward of straight down —
         // so these are photographed values and not derived ones.
         const float ShoulderRaised = -158f;
-        const float ShoulderStruck = -13f;
+        const float ShoulderStruck = -55f;
 
         // The forearm cocks the axe behind the head and all but straightens at the moment of
         // impact, which is what makes the blade arrive fast rather than the whole arm arrive slow.
@@ -143,6 +143,14 @@ namespace Odyssey.Presentation.World
             return 1f;
         }
 
+        /// <summary>
+        /// The pose at the moment the blade is in the wood.
+        ///
+        /// The one moment worth measuring anything at: it is where the figure's reach is decided,
+        /// and therefore where it stands. Any phase inside the dwell gives the same answer.
+        /// </summary>
+        public static WorkSwing Struck => At(0.9f);
+
         /// <summary>The pose at a point in the stroke.</summary>
         public static WorkSwing At(float phase)
         {
@@ -175,24 +183,47 @@ namespace Odyssey.Presentation.World
     public static class WorkStance
     {
         /// <summary>
-        /// How far from what it is working on a figure stands, in metres.
+        /// How far past the centre of what it is working on the blade is aimed, in metres.
         ///
-        /// Measured against a colonist drawn at 2.5 m tall with about a metre of reach and a
-        /// trunk about half a metre through: far enough that the axe has somewhere to fall,
-        /// near enough that it plainly lands on the tree and not in front of it.
+        /// Aimed at the centre and the axe is buried to the eye; aimed at the near face and it
+        /// stops exactly on the bark, which at any distance reads as not quite touching. A little
+        /// inside the near face is a blow that has landed. A trunk is about six-tenths of a metre
+        /// through, so this is roughly the middle of the wood.
         /// </summary>
-        public const float StandOff = 1.15f;
+        public const float Bite = 0.15f;
 
         /// <summary>
-        /// Where to draw a figure working on <paramref name="workCentre"/>.
+        /// The closest a figure will ever be put to what it is working on, in metres.
         ///
-        /// <paramref name="facing"/> is the direction the figure is currently pointed, used only
-        /// when the pawn is standing on the very cell it is working on and there is therefore no
-        /// direction to be had from the positions alone — it backs off the way it came in.
-        /// <paramref name="weight"/> eases the step, 0 leaving the figure exactly where the
-        /// simulation put it.
+        /// The stand is solved from a pose that is still being tuned by eye, and a bad set of
+        /// angles could solve to no distance at all and stand a colonist inside the trunk. Half a
+        /// metre is about a person's own width; nearer than that is a bug whatever the arithmetic
+        /// says, and the blow lands short rather than the figure ending up in the tree.
         /// </summary>
-        public static Vector3 StandAt(Vector3 position, Vector3 workCentre, Vector3 facing, float weight)
+        public const float MinimumStandOff = 0.5f;
+
+        /// <summary>
+        /// Where to draw a figure so that its blade lands on <paramref name="workCentre"/>.
+        ///
+        /// **Why this is solved rather than measured off as a distance.** The first version stood
+        /// the figure at its own reach, taken as the length of the line from its feet to the edge
+        /// of its axe at the moment of the blow. That is the right number for a swing that comes
+        /// straight down in front, and the wrong one for a swing that comes over the shoulder: the
+        /// edge ends up a metre and a half away, but a good part of that is *sideways*, so the axe
+        /// arrives beside the tree rather than in it. Reach is not a scalar once the swing is
+        /// diagonal.
+        ///
+        /// <paramref name="strike"/> is therefore the whole offset from the figure's feet to its
+        /// edge, turned to face the way the figure is facing, and the stand is simply wherever
+        /// puts that offset's far end in the wood. It stays right when the swing's tilt changes,
+        /// when the angles are retuned, and for a colonist scaled differently from the rest.
+        ///
+        /// <paramref name="facing"/> is used only when the pawn stands on the very cell it is
+        /// working on and the positions give no direction to approach from. <paramref name="weight"/>
+        /// eases the step, 0 leaving the figure exactly where the simulation put it.
+        /// </summary>
+        public static Vector3 StandAt(Vector3 position, Vector3 workCentre, Vector3 facing,
+            float weight, Vector3 strike)
         {
             Vector3 away = position - workCentre;
             away.y = 0f;
@@ -205,8 +236,18 @@ namespace Odyssey.Presentation.World
                 // this one is at least stable from frame to frame.
                 if (away.sqrMagnitude < 1e-4f) away = Vector3.back;
             }
+            away.Normalize();
 
-            Vector3 stand = workCentre + away.normalized * StandOff;
+            // Aim the edge into the wood, then put the figure wherever its own strike offset
+            // reaches that point from.
+            Vector3 target = workCentre + away * Bite;
+            Vector3 stand = target - new Vector3(strike.x, 0f, strike.z);
+
+            Vector3 gap = stand - workCentre;
+            gap.y = 0f;
+            if (gap.sqrMagnitude < MinimumStandOff * MinimumStandOff)
+                stand = workCentre + away * MinimumStandOff;
+
             stand.y = position.y;
             return Vector3.Lerp(position, stand, Mathf.Clamp01(weight));
         }

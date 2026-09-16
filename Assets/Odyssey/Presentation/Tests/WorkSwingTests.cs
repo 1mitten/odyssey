@@ -192,35 +192,55 @@ namespace Odyssey.Tests.Presentation
     {
         static readonly Vector3 Tree = new Vector3(10f, 3f, 10f);
 
-        [Test]
-        public void AFigureStepsInToExactlyTheWorkingDistance()
-        {
-            // Far too close, and much too far: both end up at the same distance, so the picture
-            // is the same whichever cell the job happened to send the colonist to.
-            Vector3 close = Tree + new Vector3(0.2f, 0f, 0f);
-            Vector3 far = Tree + new Vector3(3.5f, 0f, 0f);
+        /// <summary>
+        /// A stand-in for what a figure measures off its own struck pose: the offset from its feet
+        /// to its blade, in its own frame. Forward and to the left, because the swing comes over
+        /// the shoulder and across the body.
+        /// </summary>
+        static readonly Vector3 Strike = new Vector3(-0.7f, 0f, 1.3f);
 
-            foreach (Vector3 start in new[] { close, far })
+        [Test]
+        public void TheBladeLandsInTheTree()
+        {
+            // The whole contract. Wherever the pawn happens to be standing, the figure is drawn
+            // where its own strike offset puts the edge in the wood — which is what a stand
+            // computed as a *distance* could not do once the swing went diagonal, because most of
+            // a metre and a half of reach was sideways.
+            foreach (Vector3 start in new[]
             {
-                Vector3 stand = WorkStance.StandAt(start, Tree, Vector3.forward, 1f);
-                Assert.That(Flat(stand - Tree).magnitude, Is.EqualTo(WorkStance.StandOff).Within(1e-3f));
+                Tree + new Vector3(0.2f, 0f, 0f),
+                Tree + new Vector3(3.5f, 0f, 0f),
+                Tree + new Vector3(-2f, 0f, 2.5f),
+            })
+            {
+                Vector3 stand = WorkStance.StandAt(start, Tree, Vector3.forward, 1f, Strike);
+                Vector3 edge = stand + Strike;
+                Assert.That(Flat(edge - Tree).magnitude, Is.LessThan(WorkStance.Bite + 1e-3f),
+                    $"the axe missed the tree from {start}");
             }
         }
 
         [Test]
-        public void TheFigureStepsStraightInAndKeepsItsHeight()
+        public void TheEdgeStopsInsideTheWoodRatherThanAtItsCentre()
+        {
+            // Aimed at the centre the axe is buried to the eye; aimed at the near face it stops on
+            // the bark, which reads as not quite touching. The bite is the difference.
+            Vector3 stand = WorkStance.StandAt(Tree + Vector3.right * 2f, Tree, Vector3.forward, 1f, Strike);
+            Vector3 edge = stand + Strike;
+
+            Assert.That(Flat(edge - Tree).magnitude, Is.EqualTo(WorkStance.Bite).Within(1e-3f));
+            Assert.That(Vector3.Dot(Flat(edge - Tree).normalized, Vector3.right), Is.GreaterThan(0.9f),
+                "the edge stops short on the side the colonist is standing, not past the far side");
+        }
+
+        [Test]
+        public void TheFigureKeepsItsHeight()
         {
             Vector3 start = Tree + new Vector3(2f, 0.8f, 2f);
-            Vector3 stand = WorkStance.StandAt(start, Tree, Vector3.forward, 1f);
+            Vector3 stand = WorkStance.StandAt(start, Tree, Vector3.forward, 1f, Strike);
 
             Assert.That(stand.y, Is.EqualTo(start.y).Within(1e-4f),
                 "the step is across the ground, never up or down it");
-
-            // On the same bearing from the tree as it started: it walks in along its own line
-            // rather than round the trunk to some canonical side.
-            Vector3 before = Flat(start - Tree).normalized;
-            Vector3 after = Flat(stand - Tree).normalized;
-            Assert.That(Vector3.Dot(before, after), Is.EqualTo(1f).Within(1e-3f));
         }
 
         [Test]
@@ -229,21 +249,32 @@ namespace Odyssey.Tests.Presentation
             // The case the committed fell job actually produces: the colonist walks into the
             // tree's own cell, so the positions give no direction at all and the only thing left
             // to go on is which way it is pointed.
-            Vector3 stand = WorkStance.StandAt(Tree, Tree, Vector3.forward, 1f);
+            Vector3 stand = WorkStance.StandAt(Tree, Tree, Vector3.forward, 1f, Strike);
 
-            Assert.That(Flat(stand - Tree).magnitude, Is.EqualTo(WorkStance.StandOff).Within(1e-3f));
-            Assert.That(Vector3.Dot(Flat(stand - Tree).normalized, Vector3.forward),
-                Is.EqualTo(-1f).Within(1e-3f), "it backs off, rather than stepping through the trunk");
+            Assert.That(Flat(stand - Tree).magnitude, Is.GreaterThan(0.1f), "it is still in the trunk");
+            Assert.That(Flat(stand + Strike - Tree).magnitude, Is.LessThan(WorkStance.Bite + 1e-3f));
         }
 
         [Test]
         public void ItNeverReturnsNowhereEvenWithNothingToGoOn()
         {
-            // Standing in the trunk *and* facing nowhere, which a figure leased this frame is.
-            // Any direction beats a zero vector, which would leave the figure at the tree centre
-            // and, worse, make the stand position depend on floating-point noise.
-            Vector3 stand = WorkStance.StandAt(Tree, Tree, Vector3.zero, 1f);
-            Assert.That(Flat(stand - Tree).magnitude, Is.EqualTo(WorkStance.StandOff).Within(1e-3f));
+            // Standing in the trunk and facing nowhere, which a figure leased this frame is. Any
+            // direction beats a zero vector, which would make the stand depend on nothing but
+            // floating-point noise.
+            Vector3 stand = WorkStance.StandAt(Tree, Tree, Vector3.zero, 1f, Strike);
+            Assert.That(Flat(stand - Tree).magnitude, Is.GreaterThan(0.1f));
+        }
+
+        [Test]
+        public void NoStrikeOffsetEverPutsAColonistInsideTheTrunk()
+        {
+            // The strike is solved off a pose that is still being tuned by eye, and a bad set of
+            // angles could solve to no offset at all. The floor is what stops that arriving on
+            // screen as a colonist standing in the middle of the tree she is felling; the blow
+            // lands short instead, which is a great deal less wrong.
+            Vector3 stand = WorkStance.StandAt(Tree + Vector3.right, Tree, Vector3.forward, 1f, Vector3.zero);
+            Assert.That(Flat(stand - Tree).magnitude,
+                Is.EqualTo(WorkStance.MinimumStandOff).Within(1e-3f));
         }
 
         [Test]
@@ -252,10 +283,10 @@ namespace Odyssey.Tests.Presentation
             // How the step eases in. At zero the figure is exactly where the simulation put it,
             // which is what makes the walk-in and the step-up join without a seam.
             Vector3 start = Tree + new Vector3(3f, 0f, 1f);
-            Assert.That(WorkStance.StandAt(start, Tree, Vector3.forward, 0f), Is.EqualTo(start));
+            Assert.That(WorkStance.StandAt(start, Tree, Vector3.forward, 0f, Strike), Is.EqualTo(start));
 
-            Vector3 half = WorkStance.StandAt(start, Tree, Vector3.forward, 0.5f);
-            Vector3 full = WorkStance.StandAt(start, Tree, Vector3.forward, 1f);
+            Vector3 half = WorkStance.StandAt(start, Tree, Vector3.forward, 0.5f, Strike);
+            Vector3 full = WorkStance.StandAt(start, Tree, Vector3.forward, 1f, Strike);
             Assert.That(Vector3.Distance(start, half), Is.LessThan(Vector3.Distance(start, full)));
         }
 

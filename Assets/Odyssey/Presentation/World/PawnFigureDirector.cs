@@ -67,13 +67,22 @@ namespace Odyssey.Presentation.World
         public float WorkEaseSeconds { get; set; } = 0.25f;
 
         /// <summary>
-        /// How much of the swing the off hand takes, 0 to 1.
+        /// How far the swing is tilted out of the straight-up-and-down plane, in degrees.
         ///
-        /// An axe is held in two hands, so the left arm has to travel with the right or the
-        /// figure reads as holding it one-handed while the other arm goes on breathing in the
-        /// idle. Not the full amount, because the hands are not in the same place on the haft.
+        /// A woodcutter does not raise an axe over the crown of their head and bring it down in
+        /// front of their nose. It goes up past one shoulder and comes down diagonally across the
+        /// body, which is where the power is and what the motion reads as. Negative takes it over
+        /// the right shoulder, which is the hand the axe is in.
         /// </summary>
-        public float OffHandShare { get; set; } = 0.82f;
+        public float SwingTiltDegrees { get; set; } = -30f;
+
+        /// <summary>
+        /// Where the off hand grips, as a fraction of the haft, relative to the main hand.
+        ///
+        /// Both fists at the butt (owner, 2026-09-16), so this is small: just far enough up the
+        /// haft that the hands are side by side rather than in the same place.
+        /// </summary>
+        public float OffHandSpacing { get; set; } = 0.11f;
 
         /// <summary>
         /// How far up the haft the hand grips, 0 at the butt and 1 at the head.
@@ -84,12 +93,14 @@ namespace Odyssey.Presentation.World
         public float AxeGripFraction { get; set; } = 0.16f;
 
         /// <summary>
-        /// Which way the blade faces, in degrees about the haft.
+        /// A trim on which way the blade faces, in degrees about the haft.
         ///
-        /// One lever rather than three Euler angles, and it is the only part of the grip that is
-        /// still a matter of taste: everything else — which way the haft runs, which end the head
-        /// is on, where the hand sits along it — is measured off the mesh at build time. See
-        /// <see cref="GripAxe"/>.
+        /// The roll is *computed*, not authored: the bit is turned to face the way the head is
+        /// travelling, so the edge bites at whatever angle the haft happens to arrive at — which
+        /// for this swing is about forty-five degrees down and into the trunk. This is the
+        /// correction on top, and it exists because finding the bit means telling two axes of a
+        /// mesh apart by their extents, and a head whose edge is longer than its bit is deep
+        /// comes out ninety degrees round. See <see cref="GripAxe"/>.
         /// </summary>
         public float AxeBladeRoll { get; set; } = 0f;
 
@@ -132,6 +143,41 @@ namespace Odyssey.Presentation.World
         public int LookCount => _looks.Length;
 
         public int FigureCount => _byPawn.Count;
+
+        /// <summary>
+        /// The reach measured off the last figure built, in metres, and how high off the ground
+        /// its edge lands.
+        ///
+        /// Diagnostic, and not an idle one: reach is what decides where a woodcutter stands, and a
+        /// reach that is plausible but wrong puts the axe through the trunk or a foot short of it
+        /// with nothing anywhere reporting a problem. A number the harness can print beside a
+        /// photograph is what makes it checkable.
+        /// </summary>
+        public float MeasuredReach { get; private set; }
+
+        /// <summary>How high the edge is when the blow lands, in metres. See <see cref="MeasuredReach"/>.</summary>
+        public float MeasuredBladeHeight { get; private set; }
+
+        /// <summary>
+        /// How far the blade actually finished from the middle of what it was aimed at, in metres,
+        /// on the last frame anybody was working.
+        ///
+        /// The one number that says whether the axe hits the tree. Everything upstream of it is a
+        /// pose measured at build time and a stand solved from it, and both can be right in
+        /// isolation while the blade still arrives in mid-air; and a three-quarter photograph
+        /// cannot settle it, because the woodcutter and her tree sit at different depths in the
+        /// frame. This is measured where it matters, in the world, on the frame that was drawn.
+        /// </summary>
+        public float MeasuredBladeGap { get; private set; }
+
+        /// <summary>
+        /// How far to the side of straight ahead the edge lands, in metres.
+        ///
+        /// The number that showed reach could not be a scalar: with the swing tilted over the
+        /// shoulder, most of a metre and a half of reach is sideways, and a figure stood at that
+        /// distance puts its axe beside the tree rather than in it.
+        /// </summary>
+        public float MeasuredStrikeSideways { get; private set; }
 
         /// <summary>
         /// The fastest live figure's ground speed, in metres per second.
@@ -312,29 +358,66 @@ namespace Odyssey.Presentation.World
                 if (figure.Pawn < 0 || figure.WorkWeight <= 0.001f) continue;
                 if (figure.RightUpperArm == null) continue;
 
-                WorkSwing swing = WorkSwing.At(WorkSwing.Phase(figure.SwingClock, figure.SwingOffset))
-                    .Scaled(figure.WorkWeight);
+                WorkSwing swing = WorkSwing.At(WorkSwing.Phase(figure.SwingClock, figure.SwingOffset));
+                Strike(figure, swing.Scaled(figure.WorkWeight));
 
-                // About the figure's own right-hand axis, not the bone's local axis. Which way a
-                // bone's local axes point is a decision made by whoever rigged the character;
-                // the plane an axe swings in is a fact about the figure, and is the same on every
-                // rig the packs contain or ever will.
-                Vector3 axis = figure.Transform.right;
+                // Check the blade got there, on the frame where it should have. Only at the moment
+                // of the blow: anywhere else in the stroke the axe is over a shoulder and a
+                // distance to the trunk means nothing.
+                if (figure.WorkWeight > 0.99f && figure.AxeTransform != null
+                    && swing.Shoulder >= WorkSwing.Struck.Shoulder - 1f)
+                {
+                    Vector3 gap = figure.AxeTransform.TransformPoint(figure.BladeTip) - figure.WorkCentre;
+                    gap.y = 0f;
+                    MeasuredBladeGap = gap.magnitude;
+                }
+            }
+        }
 
-                // The spine first, because the arms hang off it.
-                //
-                // And then the spine's own pitch is *subtracted* from the shoulders, because they
-                // have already inherited it through the skeleton. Without that the three angles
-                // are not three angles at all: folding the torso twenty degrees further into the
-                // blow also swings both arms twenty degrees, so every attempt to tune the bow of
-                // the back moved the axe as well and nothing could be settled. Taking it back out
-                // makes Shoulder mean the upper arm's pitch against the world, which is the thing
-                // anybody looking at a photograph is actually judging.
-                Pitch(figure.Spine, axis, swing.Spine);
-                Pitch(figure.RightUpperArm, axis, swing.Shoulder - swing.Spine);
-                Pitch(figure.RightLowerArm, axis, swing.Elbow);
-                Pitch(figure.LeftUpperArm, axis, swing.Shoulder * OffHandShare - swing.Spine);
-                Pitch(figure.LeftLowerArm, axis, swing.Elbow * OffHandShare);
+        /// <summary>
+        /// Put one figure into one moment of the stroke.
+        ///
+        /// Separate from the loop because the reach measurement needs exactly this and nothing
+        /// else: strike the pose, look at where the edge ended up.
+        /// </summary>
+        void Strike(Figure figure, WorkSwing swing)
+        {
+            // About the figure's own axis, tilted out of the vertical so the stroke goes up past
+            // a shoulder and down across the body. Never the bone's local axis: which way those
+            // point is a decision made by whoever rigged the character, where the plane an axe
+            // swings in is a fact about the figure and the same on every rig the packs contain.
+            Vector3 axis = SwingAxis(figure.Transform);
+
+            // The spine first, because the arms hang off it.
+            //
+            // And then the spine's own pitch is subtracted from the shoulders, because they have
+            // already inherited it through the skeleton. Without that the three angles are not
+            // three angles at all: folding the torso twenty degrees further into the blow also
+            // swings both arms twenty degrees, so every attempt to tune the bow of the back moved
+            // the axe as well and nothing could be settled. Taking it back out makes Shoulder mean
+            // the upper arm's pitch against the world, which is what a photograph shows.
+            Pitch(figure.Spine, axis, swing.Spine);
+            Pitch(figure.RightUpperArm, axis, swing.Shoulder - swing.Spine);
+            Pitch(figure.RightLowerArm, axis, swing.Elbow);
+
+            // The off hand goes on the haft rather than being swung in sympathy.
+            //
+            // It used to take a fraction of the same angles, which put it in roughly the right
+            // attitude and about forty centimetres to the side of the axe — two hands doing the
+            // same dance, one of them holding nothing. Shoulders are that far apart, so no pair of
+            // angles will ever bring the second fist to the haft; only reaching for it will. Hence
+            // the small inverse-kinematics solve, which is also what will hold a stretcher, a
+            // crate or the other end of a beam later.
+            if (figure.AxeTransform != null && figure.LeftHand != null)
+            {
+                Vector3 target = figure.AxeTransform.TransformPoint(figure.OffHandGrip);
+                ArmIk.Reach(figure.LeftUpperArm, figure.LeftLowerArm, figure.LeftHand, target,
+                    figure.Transform.position - figure.Transform.forward);
+            }
+            else
+            {
+                Pitch(figure.LeftUpperArm, axis, swing.Shoulder - swing.Spine);
+                Pitch(figure.LeftLowerArm, axis, swing.Elbow);
             }
         }
 
@@ -394,9 +477,11 @@ namespace Odyssey.Presentation.World
 
             // Step up to the work. See WorkStance for why the drawn place and the simulated place
             // are allowed to differ, and by how much.
+            figure.WorkCentre = CellMetrics.FloorCentre(pawn.WorkCell);
+            Quaternion facing = Quaternion.Euler(0f, figure.Yaw, 0f);
             figure.Transform.position = figure.WorkWeight > 0.001f
-                ? WorkStance.StandAt(position, CellMetrics.FloorCentre(pawn.WorkCell),
-                    Quaternion.Euler(0f, figure.Yaw, 0f) * Vector3.forward, figure.WorkWeight)
+                ? WorkStance.StandAt(position, figure.WorkCentre,
+                    facing * Vector3.forward, figure.WorkWeight, facing * figure.Strike)
                 : position;
 
             // Turn towards the heading rather than snapping to it.
@@ -558,6 +643,13 @@ namespace Odyssey.Presentation.World
             output.SetSourcePlayable(mixer);
             graph.Play();
 
+            // Write the idle before anything measures this figure. A graph that has been played
+            // but never evaluated leaves the skeleton in whatever pose the prefab was saved in,
+            // which for a Synty character is the bind pose with its arms straight out to the
+            // sides; fitting an axe to that hand, and measuring a reach from it, would both be
+            // fitting to a scarecrow.
+            graph.Evaluate(0f);
+
             var figure = new Figure(instance, animator, graph, mixer, clips) { Look = look };
             BindWorkBones(figure, animator);
             _figures.Add(figure);
@@ -583,6 +675,7 @@ namespace Odyssey.Presentation.World
             figure.RightLowerArm = animator.GetBoneTransform(HumanBodyBones.RightLowerArm);
             figure.LeftUpperArm = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
             figure.LeftLowerArm = animator.GetBoneTransform(HumanBodyBones.LeftLowerArm);
+            figure.LeftHand = animator.GetBoneTransform(HumanBodyBones.LeftHand);
 
             Transform? hand = animator.GetBoneTransform(HumanBodyBones.RightHand);
             GameObject? held = _axe != null ? _axe.prefab : null;
@@ -590,8 +683,18 @@ namespace Odyssey.Presentation.World
 
             GameObject axe = UnityEngine.Object.Instantiate(held, hand);
             axe.name = "Axe";
-            GripAxe(axe.transform, hand, figure.RightLowerArm);
             SetLayer(axe.transform, _layer);
+
+            // Fit the tool in the pose it is judged in, not in the pose it is stored in.
+            //
+            // Where the hand is pointing, which way the head is travelling and how far in front of
+            // herself a colonist can put an edge are all different at the moment of the blow than
+            // they are standing idle, and all three are wanted. So the figure is struck once, here,
+            // and the grip and the reach are both taken from that. The pose is thrown away by the
+            // next animation update, which happens before anything is drawn.
+            figure.AxeTransform = axe.transform;
+            Strike(figure, WorkSwing.Struck);
+            GripAxe(figure, axe.transform, hand, figure.RightLowerArm);
 
             // Same argument as the character's own colliders: picking is a ray against the grid,
             // so anything with a collider on it can only steal a click meant for the ground.
@@ -600,6 +703,7 @@ namespace Odyssey.Presentation.World
 
             axe.SetActive(false);
             figure.Axe = axe;
+            MeasureStrike(figure);
         }
 
         /// <summary>
@@ -620,7 +724,7 @@ namespace Odyssey.Presentation.World
         /// to read it in, including the bind pose, since it is the bone's axis and not its angle
         /// that is being asked for.
         /// </summary>
-        void GripAxe(Transform axe, Transform hand, Transform? lowerArm)
+        void GripAxe(Figure figure, Transform axe, Transform hand, Transform? lowerArm)
         {
             axe.localPosition = Vector3.zero;
             axe.localRotation = Quaternion.identity;
@@ -637,6 +741,10 @@ namespace Odyssey.Presentation.World
             if (half <= 1e-4f) return;
             if (Vector3.Dot(bounds.center, haft) < 0f) haft = -haft;
 
+            // The bit is the way the head sticks out across the haft: of the two axes that cross
+            // it, the one the tool is fatter in, signed towards the fat side.
+            Vector3 bit = BitAxis(bounds, haft);
+
             Vector3 outOfTheFist = lowerArm != null
                 ? (hand.position - lowerArm.position)
                 : hand.forward;
@@ -644,13 +752,96 @@ namespace Odyssey.Presentation.World
             outOfTheFist.Normalize();
 
             axe.rotation = Quaternion.FromToRotation(axe.TransformDirection(haft), outOfTheFist) * axe.rotation;
-            axe.rotation = Quaternion.AngleAxis(AxeBladeRoll, outOfTheFist) * axe.rotation;
+
+            // Turn the bit to face the way the head is travelling.
+            //
+            // This is what makes the edge cut rather than slap. The head moves on an arc about the
+            // swing axis, so at any instant it is going in the direction across both that axis and
+            // the haft; a bit pointed that way meets the wood edge first, at whatever angle the
+            // haft has reached — about forty-five degrees down and into the trunk for this swing,
+            // which is the felling scarf the owner asked for. Computed rather than dialled in, so
+            // that changing the swing's tilt or its end angles cannot silently leave the blade
+            // facing the wrong way.
+            Vector3 haftWorld = axe.TransformDirection(haft);
+            Vector3 travel = Vector3.Cross(SwingAxis(figure.Transform), haftWorld);
+            Vector3 facing = Vector3.ProjectOnPlane(axe.TransformDirection(bit), haftWorld);
+            Vector3 wanted = Vector3.ProjectOnPlane(travel, haftWorld);
+            if (facing.sqrMagnitude > 1e-6f && wanted.sqrMagnitude > 1e-6f)
+                axe.rotation = Quaternion.AngleAxis(
+                    Vector3.SignedAngle(facing, wanted, haftWorld), haftWorld) * axe.rotation;
+            axe.rotation = Quaternion.AngleAxis(AxeBladeRoll, haftWorld) * axe.rotation;
 
             // Slide the tool along its own haft until the grip point is in the palm. The grip is
             // measured from the butt, which is the end of the bounds away from the head.
             Vector3 butt = bounds.center - haft * half;
-            Vector3 grip = butt + haft * (2f * half * Mathf.Clamp01(AxeGripFraction));
+            float length = 2f * half;
+            Vector3 grip = butt + haft * (length * Mathf.Clamp01(AxeGripFraction));
             axe.position += hand.position - axe.TransformPoint(grip);
+
+            // Where the off hand takes hold, and where the edge is. Both are wanted every frame
+            // afterwards — one to put the second fist on the haft, one to know how far this
+            // figure can reach — so they are worked out once, here, in the axe's own space.
+            figure.OffHandGrip = butt + haft * (length * Mathf.Clamp01(AxeGripFraction + OffHandSpacing));
+            figure.BladeTip = bounds.center + haft * half;
+        }
+
+        /// <summary>
+        /// Which way across the haft the head sticks out.
+        ///
+        /// Two numbers and a guess: of the two axes that cross the haft, the tool is fatter in one
+        /// of them, and that is taken to be the bit. It comes out ninety degrees round on a head
+        /// whose edge is longer than its bit is deep, which is the whole reason
+        /// <see cref="AxeBladeRoll"/> exists.
+        /// </summary>
+        static Vector3 BitAxis(Bounds bounds, Vector3 haft)
+        {
+            Vector3 first = Mathf.Abs(haft.x) > 0.5f ? Vector3.up : Vector3.right;
+            Vector3 second = Vector3.Cross(haft, first);
+
+            float a = Mathf.Abs(Vector3.Dot(bounds.extents, first));
+            float b = Mathf.Abs(Vector3.Dot(bounds.extents, second));
+            Vector3 bit = a >= b ? first : second;
+            return Vector3.Dot(bounds.center, bit) < 0f ? -bit : bit;
+        }
+
+        /// <summary>
+        /// The plane the axe swings in, given as the axis it turns about.
+        ///
+        /// Tilted out of the figure's own right-hand axis by <see cref="SwingTiltDegrees"/>, which
+        /// is what takes the stroke up past a shoulder and down across the body instead of
+        /// straight over the crown of the head.
+        /// </summary>
+        Vector3 SwingAxis(Transform figure) =>
+            Quaternion.AngleAxis(SwingTiltDegrees, figure.forward) * figure.right;
+
+        /// <summary>
+        /// How far in front of itself this figure can put the edge of its axe when the blow lands,
+        /// found by striking the pose once and looking.
+        ///
+        /// **Why measured and not written down.** Where a woodcutter stands and how far she can
+        /// reach are the same number, and writing it down twice is exactly how the axe came to stop
+        /// a hand's breadth short of the bark. Reach is a product of the figure's scale, the length
+        /// of the tool and six angles that are still being tuned by photograph; every one of them
+        /// changes it and none of them will remember to change a constant.
+        ///
+        /// Called with the figure already struck, by <see cref="BindWorkBones"/>, so that the
+        /// grip and the reach are both read off one pose rather than two.
+        /// </summary>
+        void MeasureStrike(Figure figure)
+        {
+            if (figure.AxeTransform == null || figure.RightUpperArm == null) return;
+
+            Vector3 edge = figure.AxeTransform.TransformPoint(figure.BladeTip) - figure.Transform.position;
+            MeasuredBladeHeight = edge.y;
+            edge.y = 0f;
+
+            // Kept in the figure's own frame, so that turning to face a tree turns the offset with
+            // it. Measured in world and converted rather than read off local axes, because the
+            // axe is several bones deep and its own space says nothing about where the figure is
+            // pointing.
+            figure.Strike = Quaternion.Inverse(figure.Transform.rotation) * edge;
+            MeasuredReach = edge.magnitude;
+            MeasuredStrikeSideways = figure.Strike.x;
         }
 
         /// <summary>
@@ -770,9 +961,30 @@ namespace Odyssey.Presentation.World
             public Transform? RightLowerArm;
             public Transform? LeftUpperArm;
             public Transform? LeftLowerArm;
+            public Transform? LeftHand;
 
             /// <summary>The axe, parented to the right hand. Shown only while working.</summary>
             public GameObject? Axe;
+
+            /// <summary>The axe's transform, cached because the pose touches it every frame.</summary>
+            public Transform? AxeTransform;
+
+            /// <summary>Where the off hand grips the haft, in the axe's own space.</summary>
+            public Vector3 OffHandGrip;
+
+            /// <summary>The cutting edge, in the axe's own space. What has to reach the bark.</summary>
+            public Vector3 BladeTip;
+
+            /// <summary>The middle of what this figure is working on. Kept only to check the blade got there.</summary>
+            public Vector3 WorkCentre;
+
+            /// <summary>
+            /// Where this figure's blade ends up when the blow lands, relative to its feet and in
+            /// its own frame, measured rather than assumed. A whole offset and not a distance,
+            /// because a swing that comes over the shoulder puts the edge to one side as well as
+            /// in front. See <see cref="MeasureStrike"/>.
+            /// </summary>
+            public Vector3 Strike;
         }
     }
 }

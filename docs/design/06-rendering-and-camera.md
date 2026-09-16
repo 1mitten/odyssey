@@ -109,9 +109,26 @@ Four things about it are deliberate and each was a way of getting it wrong:
 - **The figure steps up to the tree, and that is presentation's business.** A cell is 2.5 m and a
   person is half of one, so a colonist drawn on the cell centre is either inside the trunk or
   shoulder against it, and in neither is there room for an axe to travel. `WorkStance` draws a
-  working figure at a fixed distance from what it is working on, eased in by the same weight that
-  eases in the swing, so it reads as setting oneself. Nothing else moves: the pawn is still in its
-  cell for picking, for the cursor and for the whole simulation.
+  working figure wherever puts its blade in the wood, eased in by the same weight that eases in the
+  swing, so it reads as setting oneself. Nothing else moves: the pawn is still in its cell for
+  picking, for the cursor and for the whole simulation.
+- **The stand is solved from the whole strike offset, not from a reach.** The first version stood
+  the figure at the length of the line from its feet to its edge. That is right for a swing that
+  comes straight down in front and wrong for one that comes over the shoulder: of 1.68 m of
+  measured strike, **1.12 m is sideways**, so a figure stood at 1.68 m puts its axe a metre beside
+  the tree. Reach is not a scalar once the swing is diagonal. The figure now stores the whole
+  offset in its own frame and the stand is wherever puts that offset's far end in the trunk.
+- **Contact is measured, not photographed.** `PawnFigureDirector.MeasuredBladeGap` reports how far
+  the edge finished from the middle of what it was aimed at, on the frame that was drawn — 0.19 m
+  against a trunk about 0.6 m through, so the blade is in the wood. Twice the swing was judged to
+  be missing from a three-quarter photograph when it was not; the woodcutter and her tree sit at
+  different depths in that view and the gap can be read as anything.
+- **Both hands are on the haft, and the off hand reaches for it.** Angles pose the hand that holds
+  the tool and can never pose the hand that has to meet it: shoulders are the better part of half a
+  metre apart, so a left arm given a fraction of the right arm's angles ends up in a plausible
+  attitude holding nothing. `ArmIk` is the ordinary two-bone analytic solve, run in the same pass
+  as the rest of the work pose, and the same call will hold the other end of a stretcher or a
+  carried crate later.
 - **The axe is gripped by measurement, not by three Euler numbers.** Which way a prop's haft runs in
   its own space is a decision made by whoever modelled it. So the haft is found — the long axis of
   the combined mesh bounds — the head end is found, and the tool is laid along the forearm with the
@@ -139,6 +156,13 @@ to the line between the woodcutter and her tree**, not from the board camera's t
 bearing. In three-quarter the two sit at different depths, and the one measurement that matters —
 whether the blade arrives at the trunk with room to have travelled — can be read as anything you
 like. It was, twice.
+
+**The pose itself is the owner's, settled by interview on 2026-09-16** rather than invented: the
+edge meets the wood angled about forty-five degrees down and in, cutting a felling scarf; the axe
+travels up past one shoulder and down diagonally across the body; it lands at waist height with the
+blade just into the bark; and both fists grip together at the butt of the haft. The roll of the
+blade follows from the first of those and is computed rather than dialled in — the bit is turned to
+face the way the head is travelling, so the edge bites at whatever angle the haft has reached.
 
 The axe itself is `ModuleIds.ToolAxe`, an ordinary catalogue row parented to the right hand for as
 long as the work lasts. A clone without the packs resolves it to null and colonists fell trees

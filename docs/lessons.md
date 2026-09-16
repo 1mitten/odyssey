@@ -177,6 +177,19 @@ settled in any order. Subtracting the parent's own pitch back out of the child (
 on the upper arms) costs one subtraction and turns the pose into what it reads as on the page: an
 angle against the world, which is the thing a photograph shows.
 
+**"Reach" is not a number once a swing is diagonal.** A figure's reach was measured as the length
+of the line from its feet to the edge of its axe at the moment of the blow, and the figure was stood
+at that distance from the tree. It missed, every time, and the arithmetic was right: of 1.68 m of
+strike, 1.12 m was *sideways*, because the swing comes over the shoulder. A distance says where the
+edge is only when the offset is straight ahead. Keep the whole offset, in the figure's own frame, and
+solve the stand from it — which also stays correct when the angles are retuned, when the tilt of the
+swing changes, and for a figure scaled differently.
+
+**And then measure the thing itself, in the world, on the frame that was drawn.** Whether the blade
+reaches the trunk was misjudged from photographs twice in a row, in both directions. One number
+reported out of the renderer — how far the edge finished from the middle of what it was aimed at —
+settled it in one run and keeps settling it for free.
+
 **Judge a distance side on to it, never in three-quarter.** The board camera's 45-degree bearing
 puts a colonist and the tree she is working on at different depths in the frame, and the gap between
 an axe head and a trunk then reads as whatever you please — it was read wrongly twice before the
