@@ -601,7 +601,11 @@ namespace Odyssey.Presentation.Rendering
                 case ModuleShape.RockBlock: mesh = RockMesh.For(meshVariant); break;
                 case ModuleShape.GroundBlock: mesh = GroundMesh.Turf(meshVariant); break;
                 case ModuleShape.GroundFace: mesh = GroundMesh.FaceBySlot(meshVariant); break;
-                case ModuleShape.Bank: mesh = BankMesh.For(meshVariant); break;
+                // The slot packs the course variant and the pattern of open ends into the one
+                // integer a module resolves through. See BankMesh.Slot.
+                case ModuleShape.Bank:
+                    mesh = BankMesh.For(meshVariant % BankMesh.Variants, meshVariant / BankMesh.Variants);
+                    break;
                 default: mesh = PrimitiveMeshes.UnitCube; break;
             }
 

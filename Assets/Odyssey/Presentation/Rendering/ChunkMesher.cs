@@ -424,18 +424,7 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         void EmitBank(ChunkBatch batch, int index, int x, int z, int y)
         {
-            if (!Banks || y == 0) return;
-
             var size = _model.Size;
-            if (y + 1 >= size.SizeY) return;
-            if (_model.Terrain(index) != CoreContent.TerrainAir) return;
-
-            // Something underfoot: the top of the lower terrace. Terrain rather than solidity, so
-            // a bank may also shelve down into the water it stands beside — a channel is cut one
-            // layer down, which makes every stream bank one of these steps.
-            if (_model.Terrain(index - size.LayerStride) == CoreContent.TerrainAir) return;
-
-            if (!OpenToTheSky(index, y)) return;
 
             // **One bank to a cell, even at an inside corner where two steps meet.**
             //
@@ -456,6 +445,74 @@ namespace Odyssey.Presentation.Rendering
             // their treads at different heights through one another, which reads as rubble rather
             // than as a path; one bank fills the cell, meets the other riser along its side, and
             // the corner is still somewhere a colonist can walk up.
+            //
+            // Every condition on whether a bank belongs here lives in BankDirection, because a bank
+            // has to ask the same question of its neighbours and two copies of a rule is one rule
+            // and one bug waiting.
+            int dir = BankDirection(x, z, y);
+            if (dir < 0) return;
+
+            // **Which ends of this bank have nothing beside them.**
+            //
+            // A bank fills its cell in plan, so along a run each one's side wall is buried in the
+            // next and nothing shows. At the end of a run there is no next one, and up to three
+            // metres of side wall stands in open air below the terrace top — the dark green
+            // patches beside the steps. So the mesh is built tapered on whichever side is open,
+            // and the bank fades out instead of stopping dead.
+            //
+            // The question is what the neighbour actually *draws*, not what it could: a cell with
+            // two risers picks one direction and only one, so a neighbour that grows a bank up a
+            // different step is no use at hiding this one's wall.
+            //
+            // Local +z faces the step, so local +x and -x are the world directions a quarter turn
+            // either side of it. See Directions.Yaw, which is what puts them there.
+            int ends = 0;
+            if (BankBeside(x, z, y, (dir + 3) & 3) != dir) ends |= 1;   // local -x
+            if (BankBeside(x, z, y, (dir + 1) & 3) != dir) ends |= 2;   // local +x
+
+            int riser = size.Index(x + Directions.DeltaX[dir], z + Directions.DeltaZ[dir], y);
+            ushort terrain = _model.Terrain(riser);
+            int module = _model.BankModuleFor(
+                terrain, BankMesh.Slot(GroundLook.BankVariant(x, z, y, dir), ends));
+            if (module == 0) return;
+
+            // Made of the terrain at the top of the step, because that is the ground it is
+            // spilling from. Always daylit: the cell was required to be open to the sky above.
+            //
+            // Turned so its local +z faces the step, which is exactly what Directions.Yaw is
+            // defined to do, and draped so it lies along the same rolling field the ground either
+            // side of it does.
+            AddBody(batch, module, TintCode.Daylit(TintCode.Terrain(terrain), open: true),
+                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
+                Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f)));
+        }
+
+        /// <summary>
+        /// Which way the bank in this cell climbs, or -1 for no bank.
+        ///
+        /// <para>One answer per cell, and that is the whole of the "one bank to a cell" rule: two
+        /// banks in one cell put coplanar same-facing walls in the same place, which is a flicker.
+        /// Factored out because a bank also has to ask it of its neighbours, and a neighbour that
+        /// answers a different direction does not abut this one.</para>
+        /// </summary>
+        int BankDirection(int x, int z, int y)
+        {
+            if (!Banks || y == 0) return -1;
+
+            var size = _model.Size;
+            if (!size.Contains(x, z, y)) return -1;
+            if (y + 1 >= size.SizeY) return -1;
+
+            int index = size.Index(x, z, y);
+            if (_model.Terrain(index) != CoreContent.TerrainAir) return -1;
+
+            // Something underfoot: the top of the lower terrace. Terrain rather than solidity, so
+            // a bank may also shelve down into the water it stands beside — a channel is cut one
+            // layer down, which makes every stream bank one of these steps.
+            if (_model.Terrain(index - size.LayerStride) == CoreContent.TerrainAir) return -1;
+
+            if (!OpenToTheSky(index, y)) return -1;
+
             for (int dir = 0; dir < Directions.Count; dir++)
             {
                 int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
@@ -465,23 +522,15 @@ namespace Odyssey.Presentation.Rendering
                 if (!_model.IsSolid(riser) || !_model.IsEarth(riser)) continue;
                 if (_model.IsSolid(riser + size.LayerStride)) continue;
 
-                ushort terrain = _model.Terrain(riser);
-                int variant = GroundLook.BankVariant(x, z, y, dir);
-                int module = _model.BankModuleFor(terrain, variant);
-                if (module == 0) continue;
-
-                // Made of the terrain at the top of the step, because that is the ground it is
-                // spilling from. Always daylit: the cell was required to be open to the sky above.
-                //
-                // Turned so its local +z faces the step, which is exactly what Directions.Yaw is
-                // defined to do, and draped so it lies along the same rolling field the ground
-                // either side of it does.
-                AddBody(batch, module, TintCode.Daylit(TintCode.Terrain(terrain), open: true),
-                    GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
-                    Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f)));
-                return;
+                return dir;
             }
+
+            return -1;
         }
+
+        /// <summary>Which way the bank in the cell one step away in <paramref name="side"/> climbs.</summary>
+        int BankBeside(int x, int z, int y, int side) =>
+            BankDirection(x + Directions.DeltaX[side], z + Directions.DeltaZ[side], y);
 
         /// <summary>
         /// Is there nothing at all over this cell — no slab and no solid cell, all the way up?

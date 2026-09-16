@@ -75,7 +75,32 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static float Sink => GroundMesh.MaxRipple + 0.02f;
 
-        static readonly Mesh?[] Cache = new Mesh?[Variants];
+        /// <summary>
+        /// How far the open end of a bank is drawn in, as a fraction of the cell, by the time it
+        /// reaches the top.
+        ///
+        /// <para><b>This is a bug fix, and the bug was dark green patches beside the steps.</b> A
+        /// bank fills its cell in plan, so along a run each one's side wall is buried in the next
+        /// and nothing shows. At the end of a run there is no next one, and the side wall — up to
+        /// three metres of it — stands in open air below the terrace top. The owner saw them before
+        /// any test did, and no test would have: every bank was a correct closed mesh in the right
+        /// place, and the fault was that nothing stood beside it.</para>
+        ///
+        /// <para>Tapering rather than hiding the wall, because an earth bank does fade out at its
+        /// end; it does not stop dead. Each step is drawn in on the open side as it rises, so the
+        /// stack narrows away and the wall becomes a slope. The insets accumulate — a step starts
+        /// where the step below finished — or every tread would overhang the one under it and the
+        /// taper would come out as a flight of ledges.</para>
+        /// </summary>
+        public const float EndTaper = 0.40f;
+
+        /// <summary>How many ways a bank's two ends can be open: neither, left, right, both.</summary>
+        public const int EndCases = 4;
+
+        /// <summary>One mesh per variant per pattern of open ends.</summary>
+        public static int Slots => Variants * EndCases;
+
+        static readonly Mesh?[] Cache = new Mesh?[Variants * EndCases];
 
         /// <summary>
         /// Throw away the built banks so the next request rebuilds them, for a harness sweeping
@@ -103,12 +128,29 @@ namespace Odyssey.Presentation.Rendering
         /// <c>+z</c> points at the riser, because that is where
         /// <see cref="Directions.Yaw"/> turns a module's local <c>+z</c> to face.</para>
         /// </summary>
-        public static Mesh For(int variant)
+        public static Mesh For(int variant) => For(variant, 0);
+
+        /// <summary>
+        /// A bank, built for one pattern of open ends.
+        ///
+        /// <paramref name="ends"/> is two bits in the bank's own frame: bit 0 is the local -x side
+        /// and bit 1 the local +x side. An open side is one with no bank beside it, whose wall
+        /// would otherwise stand in the air.
+        /// </summary>
+        public static Mesh For(int variant, int ends)
         {
-            int index = ((variant % Variants) + Variants) % Variants;
-            Mesh? mesh = Cache[index];
+            int slot = Slot(variant, ends);
+            Mesh? mesh = Cache[slot];
             if (mesh != null) return mesh;
-            return Cache[index] = Build(index);
+            return Cache[slot] = Build(slot % Variants, slot / Variants);
+        }
+
+        /// <summary>Where a (variant, ends) pair sits in the family. Variant-minor, like the faces.</summary>
+        public static int Slot(int variant, int ends)
+        {
+            int v = ((variant % Variants) + Variants) % Variants;
+            int e = ((ends % EndCases) + EndCases) % EndCases;
+            return e * Variants + v;
         }
 
         /// <summary>
@@ -145,9 +187,12 @@ namespace Odyssey.Presentation.Rendering
             return -0.5f + (step + 1) * (1f / Steps);
         }
 
-        static Mesh Build(int variant)
+        static Mesh Build(int variant, int ends)
         {
             float[] edges = Edges(variant);
+            float perStep = EndTaper / Steps;
+            bool openMinX = (ends & 1) != 0;
+            bool openMaxX = (ends & 2) != 0;
 
             var vertices = new List<Vector3>(128);
             var normals = new List<Vector3>(128);
@@ -166,12 +211,16 @@ namespace Odyssey.Presentation.Rendering
                 float top = TreadHeight(variant, k);
                 float bottom = k == 0 ? below : TreadHeight(variant, k - 1);
 
-                AddBox(vertices, normals, uvs, triangles,
+                // The taper accumulates, so this step starts exactly where the step below finished.
+                // Anything else leaves a ledge at every tread.
+                AddTaperedBox(vertices, normals, uvs, triangles,
                     new Vector3(-0.5f, bottom, front),
-                    new Vector3(0.5f, top, 0.5f));
+                    new Vector3(0.5f, top, 0.5f),
+                    openMinX ? k * perStep : 0f, openMinX ? (k + 1) * perStep : 0f,
+                    openMaxX ? k * perStep : 0f, openMaxX ? (k + 1) * perStep : 0f);
             }
 
-            var mesh = new Mesh { name = "Odyssey/Bank" + variant };
+            var mesh = new Mesh { name = "Odyssey/Bank" + variant + "-" + ends };
             mesh.SetVertices(vertices);
             mesh.SetNormals(normals);
             mesh.SetUVs(0, uvs);
@@ -180,35 +229,53 @@ namespace Odyssey.Presentation.Rendering
             return mesh;
         }
 
-        /// <summary>One axis-aligned box, six flat-shaded quads, every face pointing outward.</summary>
-        static void AddBox(List<Vector3> vertices, List<Vector3> normals, List<Vector2> uvs,
-            List<int> triangles, Vector3 min, Vector3 max)
+        /// <summary>
+        /// One box whose top face may be drawn in along x, so a side becomes a slope rather than a
+        /// wall. Six flat-shaded quads, every face pointing outward, exactly as a plain box.
+        ///
+        /// <para>The insets are given for the bottom and the top of each x side separately, so a
+        /// stack of these forms one continuous slope instead of a flight of ledges: a step takes as
+        /// its bottom inset whatever the step below used at its top. All four zero is an ordinary
+        /// box, which is what a bank with no open end gets.</para>
+        /// </summary>
+        static void AddTaperedBox(List<Vector3> vertices, List<Vector3> normals, List<Vector2> uvs,
+            List<int> triangles, Vector3 min, Vector3 max,
+            float bottomMinX, float topMinX, float bottomMaxX, float topMaxX)
         {
+            float bx0 = min.x + bottomMinX, bx1 = max.x - bottomMaxX;
+            float tx0 = min.x + topMinX, tx1 = max.x - topMaxX;
+
+            // A taper wide enough to cross itself would turn the box inside out. Clamped rather
+            // than asserted, because the caller is arithmetic and not a person, and the sensible
+            // answer to "narrower than nothing" is a ridge.
+            if (tx0 > tx1) { float mid = 0.5f * (tx0 + tx1); tx0 = mid; tx1 = mid; }
+            if (bx0 > bx1) { float mid = 0.5f * (bx0 + bx1); bx0 = mid; bx1 = mid; }
+
             // -z, +z, -x, +x, -y, +y. Corners of each are given anticlockwise about the outward
             // normal, which AddQuad's winding then turns into triangles facing that way.
             AddQuad(vertices, normals, uvs, triangles,
-                new Vector3(min.x, min.y, min.z), new Vector3(max.x, min.y, min.z),
-                new Vector3(max.x, max.y, min.z), new Vector3(min.x, max.y, min.z));
+                new Vector3(bx0, min.y, min.z), new Vector3(bx1, min.y, min.z),
+                new Vector3(tx1, max.y, min.z), new Vector3(tx0, max.y, min.z));
 
             AddQuad(vertices, normals, uvs, triangles,
-                new Vector3(max.x, min.y, max.z), new Vector3(min.x, min.y, max.z),
-                new Vector3(min.x, max.y, max.z), new Vector3(max.x, max.y, max.z));
+                new Vector3(bx1, min.y, max.z), new Vector3(bx0, min.y, max.z),
+                new Vector3(tx0, max.y, max.z), new Vector3(tx1, max.y, max.z));
 
             AddQuad(vertices, normals, uvs, triangles,
-                new Vector3(min.x, min.y, max.z), new Vector3(min.x, min.y, min.z),
-                new Vector3(min.x, max.y, min.z), new Vector3(min.x, max.y, max.z));
+                new Vector3(bx0, min.y, max.z), new Vector3(bx0, min.y, min.z),
+                new Vector3(tx0, max.y, min.z), new Vector3(tx0, max.y, max.z));
 
             AddQuad(vertices, normals, uvs, triangles,
-                new Vector3(max.x, min.y, min.z), new Vector3(max.x, min.y, max.z),
-                new Vector3(max.x, max.y, max.z), new Vector3(max.x, max.y, min.z));
+                new Vector3(bx1, min.y, min.z), new Vector3(bx1, min.y, max.z),
+                new Vector3(tx1, max.y, max.z), new Vector3(tx1, max.y, min.z));
 
             AddQuad(vertices, normals, uvs, triangles,
-                new Vector3(min.x, min.y, max.z), new Vector3(max.x, min.y, max.z),
-                new Vector3(max.x, min.y, min.z), new Vector3(min.x, min.y, min.z));
+                new Vector3(bx0, min.y, max.z), new Vector3(bx1, min.y, max.z),
+                new Vector3(bx1, min.y, min.z), new Vector3(bx0, min.y, min.z));
 
             AddQuad(vertices, normals, uvs, triangles,
-                new Vector3(min.x, max.y, min.z), new Vector3(max.x, max.y, min.z),
-                new Vector3(max.x, max.y, max.z), new Vector3(min.x, max.y, max.z));
+                new Vector3(tx0, max.y, min.z), new Vector3(tx1, max.y, min.z),
+                new Vector3(tx1, max.y, max.z), new Vector3(tx0, max.y, max.z));
         }
 
         /// <summary>
@@ -220,8 +287,29 @@ namespace Odyssey.Presentation.Rendering
         static void AddQuad(List<Vector3> vertices, List<Vector3> normals, List<Vector2> uvs,
             List<int> triangles, Vector3 a, Vector3 b, Vector3 c, Vector3 d)
         {
+            // Fold away corners that have collapsed onto one another before anything else looks at
+            // them. A fully tapered step brings the two ends of a side together, and a quad with
+            // coincident corners carries a zero-length edge and counts a real edge three times, so
+            // the block stops being closed. Same reasoning, and the same fix, as GroundMesh.
+            var given = new[] { a, b, c, d };
+            var corners = new Vector3[4];
+            int count = 0;
+            for (int i = 0; i < 4; i++)
+            {
+                if (count > 0 && (given[i] - corners[count - 1]).sqrMagnitude < 1e-10f) continue;
+                corners[count++] = given[i];
+            }
+            if (count > 1 && (corners[0] - corners[count - 1]).sqrMagnitude < 1e-10f) count--;
+            if (count < 3) return;
+
+            a = corners[0];
+            b = corners[1];
+            c = corners[2];
+            d = count > 3 ? corners[3] : corners[2];
+
             Vector3 normal = Vector3.Cross(c - a, b - a);
-            normal = normal.sqrMagnitude < 1e-12f ? Vector3.up : normal.normalized;
+            if (normal.sqrMagnitude < 1e-12f) return;
+            normal = normal.normalized;
             int start = vertices.Count;
 
             // Shaded like the ground it grows out of, through GroundMesh.SideNormalTiltDegrees.
@@ -230,16 +318,23 @@ namespace Odyssey.Presentation.Rendering
             // black bars laid across the one place the eye is being drawn to.
             Vector3 shaded = GroundMesh.ShadingNormal(normal);
 
-            vertices.Add(a); vertices.Add(b); vertices.Add(c); vertices.Add(d);
-            for (int i = 0; i < 4; i++) normals.Add(shaded);
+            for (int i = 0; i < count; i++)
+            {
+                vertices.Add(corners[i]);
+                normals.Add(shaded);
+                // Planar UVs, one repeat per cell, so the bank wears the same tiling terrain
+                // texture at the same scale as the ground it grows out of.
+                uvs.Add(Uv(corners[i], normal));
+            }
 
-            // Planar UVs, one repeat per cell, so the bank wears the same tiling terrain texture
-            // at the same scale as the ground it grows out of.
-            uvs.Add(Uv(a, normal)); uvs.Add(Uv(b, normal));
-            uvs.Add(Uv(c, normal)); uvs.Add(Uv(d, normal));
-
-            triangles.Add(start); triangles.Add(start + 2); triangles.Add(start + 1);
-            triangles.Add(start); triangles.Add(start + 3); triangles.Add(start + 2);
+            // A fan from the first corner, wound 0-2-1 for the reason PrimitiveMeshes records: the
+            // obvious order builds triangles facing inward, which renders as a hole.
+            for (int i = 2; i < count; i++)
+            {
+                triangles.Add(start);
+                triangles.Add(start + i);
+                triangles.Add(start + i - 1);
+            }
         }
 
         static Vector2 Uv(Vector3 point, Vector3 normal)

@@ -131,6 +131,91 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
+        public void AnOpenEndTapersAwayInsteadOfStandingAsAWall()
+        {
+            // **The dark green patches beside the steps.** A bank fills its cell, so along a run
+            // each one's side wall is buried in the next. At the end of a run there is no next one
+            // and up to three metres of wall stands in open air below the terrace top. Tapering is
+            // the fix because an earth bank fades out at its end rather than stopping dead.
+            foreach (int v in Variants)
+            {
+                float closedWidth = WidthAtTop(BankMesh.For(v, 0));
+                float openMin = WidthAtTop(BankMesh.For(v, 1));
+                float openMax = WidthAtTop(BankMesh.For(v, 2));
+                float openBoth = WidthAtTop(BankMesh.For(v, 3));
+
+                Assert.That(closedWidth, Is.EqualTo(1f).Within(1e-3f),
+                    $"variant {v}: a bank with both neighbours should fill its cell at the top");
+                Assert.That(openMin, Is.LessThan(closedWidth - 0.2f), $"variant {v}: the -x end did not taper");
+                Assert.That(openMax, Is.LessThan(closedWidth - 0.2f), $"variant {v}: the +x end did not taper");
+                Assert.That(openBoth, Is.LessThan(openMin), $"variant {v}: two open ends taper no more than one");
+                Assert.That(openBoth, Is.GreaterThan(0.02f), $"variant {v}: the taper closed the bank to nothing");
+            }
+        }
+
+        /// <summary>How wide the bank is in x at the very top, where the taper has had its full say.</summary>
+        static float WidthAtTop(Mesh mesh)
+        {
+            float low = float.MaxValue, high = float.MinValue;
+            foreach (Vector3 vertex in mesh.vertices)
+            {
+                if (vertex.y < 0.5f - 1e-3f) continue;
+                low = Mathf.Min(low, vertex.x);
+                high = Mathf.Max(high, vertex.x);
+            }
+            return high - low;
+        }
+
+        [Test]
+        public void ATaperedBankStillReachesTheTerraceItClimbsTo()
+        {
+            // The taper is along the sides. It must not shorten the climb, or the top tread stops
+            // meeting the ground above and the bank becomes a lip instead of a way up.
+            foreach (int v in Variants)
+            for (int ends = 0; ends < BankMesh.EndCases; ends++)
+            {
+                float highest = -1f;
+                foreach (Vector3 vertex in BankMesh.For(v, ends).vertices)
+                    highest = Mathf.Max(highest, vertex.y);
+                Assert.That(highest, Is.EqualTo(0.5f).Within(1e-3f),
+                    $"variant {v} ends {ends}: the bank stops at {highest} rather than at the terrace top");
+            }
+        }
+
+        [Test]
+        public void NoEndPatternProducesADegenerateTriangle()
+        {
+            // A fully tapered step brings the two ends of a side together, and a quad with
+            // coincident corners carries a zero-length edge and a triangle with no area — which
+            // renders as nothing, shades from a normal that cannot be computed, and is the fault
+            // the fan-over-distinct-corners guard in AddQuad exists to prevent.
+            //
+            // **Not watertightness**, which a bank deliberately does not have. It is a union of
+            // stacked boxes rather than one carved solid — see the type's own header for why that
+            // was the right trade — so the plane where two boxes meet carries an edge from each of
+            // them and a closed-solid test counts it four times. An earlier version of this test
+            // asserted that and failed, which was the test asserting something the design never
+            // promised rather than the mesh being wrong.
+            foreach (int v in Variants)
+            for (int ends = 0; ends < BankMesh.EndCases; ends++)
+            {
+                Mesh mesh = BankMesh.For(v, ends);
+                Vector3[] vertices = mesh.vertices;
+                int[] triangles = mesh.triangles;
+
+                Assert.That(triangles.Length, Is.GreaterThan(0), $"variant {v} ends {ends} drew nothing");
+
+                for (int t = 0; t < triangles.Length; t += 3)
+                {
+                    Vector3 a = vertices[triangles[t]];
+                    Vector3 wound = Vector3.Cross(vertices[triangles[t + 1]] - a, vertices[triangles[t + 2]] - a);
+                    Assert.That(wound.sqrMagnitude, Is.GreaterThan(1e-12f),
+                        $"variant {v} ends {ends} has a degenerate triangle at {a}");
+                }
+            }
+        }
+
+        [Test]
         public void EveryFacetFacesOutwards()
         {
             foreach (int v in Variants)
@@ -183,9 +268,9 @@ namespace Odyssey.Tests.Presentation
         {
             var banks = new HashSet<int>();
             for (ushort terrain = 0; terrain < NaturalContent.TerrainCount; terrain++)
-            for (int v = 0; v < BankMesh.Variants; v++)
+            for (int slot = 0; slot < BankMesh.Slots; slot++)
             {
-                int module = world.Model.BankModuleFor(terrain, v);
+                int module = world.Model.BankModuleFor(terrain, slot);
                 if (module != 0) banks.Add(module);
             }
 
