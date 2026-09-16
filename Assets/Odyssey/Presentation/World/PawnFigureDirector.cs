@@ -111,13 +111,13 @@ namespace Odyssey.Presentation.World
         /// The head of that axe is both widest and heaviest across its cutting edge, which is
         /// exactly the axis the bit is not.
         ///
-        /// So two hundred and seventy, settled off a contact sheet of one instant at eight rolls
-        /// against a photograph of somebody actually felling a tree (owner, 2026-09-16). What the
-        /// photograph settles, and no amount of looking at the renders would have: the edge lies
-        /// **horizontal**, cutting a level notch into the side of the trunk, and the poll trails
-        /// up and back over the hands rather than the head hanging straight down off the haft.
-        /// Ninety had the flats the right way round and the head hanging; this rolls it round so
-        /// it sweeps back.
+        /// The photograph of a real felling cut settled what no amount of looking at the renders
+        /// would have: the edge lies **horizontal**, cutting a level notch into the side of the
+        /// trunk, and the poll trails up and back over the hands rather than the head hanging
+        /// straight down off the haft. Ninety hung the head; two hundred and seventy swept it back
+        /// but presented the cheek; nought is a further quarter turn, which puts the edge itself
+        /// into the wood. The whole circle was photographed at one instant to get there
+        /// (`Logs/blade-*.png`, made by the swing check).
         ///
         /// This belongs on the *tool* rather than on the director as soon as there is more than
         /// one — a pickaxe will want its own, and on a double-ended head the geometry cannot even
