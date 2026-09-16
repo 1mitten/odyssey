@@ -101,6 +101,26 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         public event Action<CellRef?, Ray>? Picked;
 
+        /// <summary>
+        /// Raised when a left drag that became a box is released, with the screen rect and whether
+        /// shift was held. A press that never crossed the drag threshold raises <see cref="Picked"/>
+        /// instead, so the box and the click cannot both fire off one press.
+        /// </summary>
+        public event Action<Rect, bool>? BoxSelected;
+
+        /// <summary>
+        /// The screen rect of the box being dragged, or none. Polled by the HUD each frame to draw
+        /// the marquee, because a marquee is a picture, not a decision.
+        /// </summary>
+        public Rect? DragBox => _boxActive && _dragStart.HasValue ? RectFromTo(_dragStart.Value, _draggedTo) : null;
+
+        /// <summary>A press must travel this many pixels before it counts as a box and not a click.</summary>
+        const float DragThresholdPixels = 6f;
+
+        Vector2? _dragStart;
+        Vector2 _draggedTo;
+        bool _boxActive;
+
         public void Bind(WorldRenderModel model, ChunkRenderer renderer, HudDirectors directors)
         {
             _model = model;
@@ -222,9 +242,38 @@ namespace Odyssey.Presentation.CameraRig
                 _orbiting = false;
             }
 
+            // A left press on the world is a click until it travels: past the threshold it
+            // becomes a box, and on release the box is completed against the world even if the
+            // pointer ends over a panel (input case 1 of design 09 §6) — a drag begun on the
+            // world belongs to the world. The press itself was gated on the interface, so a
+            // drag begun on a panel never starts (case 2).
             if (mouse.leftButton.wasPressedThisFrame && !_orbiting && !overInterface)
-                PickAt(pointer);
+            {
+                _dragStart = pointer;
+                _draggedTo = pointer;
+                _boxActive = false;
+            }
+            if (_dragStart.HasValue && mouse.leftButton.isPressed)
+            {
+                _draggedTo = pointer;
+                if (!_boxActive && (pointer - _dragStart.Value).sqrMagnitude
+                    >= DragThresholdPixels * DragThresholdPixels)
+                    _boxActive = true;
+            }
+            else if (_dragStart.HasValue)
+            {
+                bool shift = Keyboard.current?.shiftKey.isPressed == true;
+                Vector2 start = _dragStart.Value;
+                bool wasBox = _boxActive;
+                _dragStart = null;
+                _boxActive = false;
+                if (wasBox) BoxSelected?.Invoke(RectFromTo(start, _draggedTo), shift);
+                else PickAt(_draggedTo);
+            }
         }
+
+        static Rect RectFromTo(Vector2 a, Vector2 b) => Rect.MinMaxRect(
+            Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
 
         float DistanceScale => Mathf.Clamp(_targetDistance / 40f, 0.35f, 3f);
 

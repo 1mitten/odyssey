@@ -484,6 +484,13 @@ namespace Odyssey.Presentation.Bootstrap
         static readonly Color FellOrderColour = new Color(0.55f, 0.85f, 0.45f, 0.42f);
 
         /// <summary>
+        /// The non-primary members of a multi-selection: the same shape as the primary's bracket
+        /// at half the presence, so the set reads as one selection with a head rather than as
+        /// several selections that happen to share a screen.
+        /// </summary>
+        static readonly Color SecondarySelectionColour = new Color(1f, 1f, 1f, 0.45f);
+
+        /// <summary>
         /// The cut itself: pale, so it reads as fresh broken stone rather than as a coloured
         /// marker, and translucent so the rock is still visible through what has come off it.
         /// </summary>
@@ -497,16 +504,23 @@ namespace Odyssey.Presentation.Bootstrap
             Color colour = cameraRig.selectionColour;
             SelectionDirector? selection = Directors?.Selection;
 
-            if (selection != null && selection.HasPawn
-                && snapshot.TryGetPawn(selection.Pawn, out PawnView pawn))
+            if (selection != null && selection.HasPawn)
             {
-                // The figure's own position where there is one, for the same reason the hit-test
-                // uses it: a working colonist is stepped off their cell, and a bracket drawn from
-                // the pose would sit on the cell while the person stands beside it.
-                if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _);
-                _renderer.DrawSelectionBracket(
-                    feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, colour);
+                // Every selected colonist is bracketed, the primary at full strength and the rest
+                // dimmer, so a box selection reads as a set with one member the pane is about —
+                // not as several coincidental primaries.
+                for (int i = 0; i < selection.Pawns.Count; i++)
+                {
+                    if (!snapshot.TryGetPawn(selection.Pawns[i], out PawnView pawn)) continue;
+                    // The figure's own position where there is one, for the same reason the hit-test
+                    // uses it: a working colonist is stepped off their cell, and a bracket drawn from
+                    // the pose would sit on the cell while the person stands beside it.
+                    if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                        feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _);
+                    _renderer.DrawSelectionBracket(
+                        feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor,
+                        i == 0 ? colour : SecondarySelectionColour);
+                }
                 return;
             }
 
