@@ -92,6 +92,20 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Ticks accumulated inside the current toil. Saved.</summary>
         public int ToilProgress { get; internal set; }
 
+        /// <summary>
+        /// The cell this driver is working on *right now*, or -1 when it is not working.
+        ///
+        /// Working means a toil turning in place — a swing landing, a wall going up — and not
+        /// merely having a job, which for most of its length is a walk. Presentation reads this
+        /// through the snapshot and it is the only thing that distinguishes a colonist standing
+        /// by a tree with an axe from a colonist standing by a tree.
+        ///
+        /// Default -1, so a driver that has not thought about it animates as it always did. A
+        /// driver that has says which cell, because the figure must face what it is working on
+        /// and by then its heading is zero.
+        /// </summary>
+        public virtual int WorkFocus => -1;
+
         public virtual void Begin(Pawn pawn, Job job)
         {
             Pawn = pawn;
@@ -116,6 +130,18 @@ namespace Odyssey.Sim.Pawns
         {
             ToilIndex++;
             ToilProgress = 0;
+        }
+
+        /// <summary>
+        /// Count this tick as work: the pawn earns the job's experience in the skill the job
+        /// trains. A driver calls it on the ticks that are the work — the swing, the carry — and
+        /// not on the walk to it. A job that trains nothing costs one comparison.
+        /// </summary>
+        protected void Work(PawnContext ctx)
+        {
+            var def = ctx.Content.Jobs[Job.DefIndex];
+            if (def.trainsSkill < 0 || def.experiencePerWorkTick <= 0) return;
+            Pawn.GainExperience(def.trainsSkill, def.experiencePerWorkTick, ctx.CurrentTick);
         }
 
         /// <summary>

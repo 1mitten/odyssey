@@ -24,15 +24,15 @@ namespace Odyssey.Sim.Pawns
         public int mealPiles = 12;
 
         /// <summary>
-        /// Meals in each starting pile. Twelve piles of twenty is 240 meals. Measured, not
-        /// estimated: five colonists ate 120 meals in about 7.8 days on the ten-day soak (seed 1),
-        /// which is 15 a day, so ten days is about 155 and this leaves a good half in hand. The
-        /// arithmetic from the Defs said 9 a day and was wrong, which is why the number comes
-        /// from the run. The ten-day run proves the simulation is stable unattended, not that a
-        /// food economy balances, and nothing in the slice makes food (OQ-39); the pantry is sized
-        /// so the gate measures the simulation.
+        /// Meals in each starting pile. Twelve piles of twelve is 144 meals. Measured on the
+        /// ten-day soak (seed 1) with a ration worth a full vanilla meal of 900 units: five
+        /// colonists ate 92 meals in ten days, 1.8 a day each, which is the vanilla figure
+        /// (docs/research/a-08-plants-growing-food.md §2), so 144 leaves a third in hand. It
+        /// was 240 when the ration restored 450 and the burn was double. The ten-day run proves
+        /// the simulation is stable unattended, not that a food economy balances, and nothing in
+        /// the slice makes food (OQ-39); the pantry is sized so the gate measures the simulation.
         /// </summary>
-        public int mealsPerPile = 20;
+        public int mealsPerPile = 12;
 
         /// <summary>
         /// One per colonist is what the placement always gave. A number of its own so that a
@@ -65,6 +65,13 @@ namespace Odyssey.Sim.Pawns
         public int startingMineRadius = 30;
 
         /// <summary>
+        /// How many of the starting colonists take mining as their first call, the rest taking
+        /// cutting. Zero leaves every colonist on the default priority, which sends them all to
+        /// the trees together.
+        /// </summary>
+        public int miners = 2;
+
+        /// <summary>
         /// The scene's scenario: the colony has felling work the moment it exists, because there
         /// is no tool to give the order with yet. When the UI line's designate tool lands, the
         /// scene moves to <see cref="Bare"/> and the player gives the first order.
@@ -81,7 +88,7 @@ namespace Odyssey.Sim.Pawns
             new ScenarioDef
             {
                 defName = "Scenario_Bare", label = "bare",
-                startingFellRadius = 0, startingMineRadius = 0,
+                startingFellRadius = 0, startingMineRadius = 0, miners = 0,
             };
     }
 
@@ -192,6 +199,31 @@ namespace Odyssey.Sim.Pawns
             return marked;
         }
 
+
+        /// <summary>
+        /// Give a colonist a trade: the first <see cref="ScenarioDef.miners"/> of them favour
+        /// mining, the rest favour cutting.
+        ///
+        /// <para><b>Why this exists at all.</b> Every work priority starts at 3, and the givers are
+        /// scanned in work-type order — cutting, then mining, then hauling. So a colony of five
+        /// identical colonists all go to the trees, and the stone is not touched until the last
+        /// tree within reach is down. Watching both happen at once is the whole point of having
+        /// two kinds of work, and until the player can set priorities from the interface the
+        /// scenario has to do it, exactly as it has to give the first orders.</para>
+        ///
+        /// <para>The trade is a priority, not a restriction: a miner with no reachable rock left
+        /// still fells, hauls and eats. Priority 1 is scanned before 2, so the split decides what
+        /// a colonist reaches for first and nothing else.</para>
+        /// </summary>
+        static void AssignTrade(Pawn colonist, int index, ScenarioDef scenario)
+        {
+            if (scenario.miners <= 0) return;
+
+            bool miner = index < scenario.miners;
+            colonist.WorkPriorities[WorkTypeIndex.Mining] = (byte)(miner ? 1 : 3);
+            colonist.WorkPriorities[WorkTypeIndex.Cutting] = (byte)(miner ? 3 : 1);
+        }
+
         /// <summary>What a placement actually managed to do, so a caller can check rather than hope.</summary>
         public readonly struct Result
         {
@@ -273,7 +305,13 @@ namespace Odyssey.Sim.Pawns
 
             int placedColonists = 0;
             for (int i = 0; i < scenario.colonists && take < spots.Count; i++, take++, placedColonists++)
-                pawns.Pawns.Spawn(spots[take]);
+            {
+                // Passions come from the seed and the pawn's own id, not from this placement
+                // stream, so rolling them does not move the salvage that is scattered below.
+                Pawn colonist = pawns.Pawns.Spawn(spots[take]);
+                colonist.RollPassions(seed);
+                AssignTrade(colonist, i, scenario);
+            }
 
             int placedMeals = 0;
             for (int i = 0; i < scenario.mealPiles && take < spots.Count; i++, take++, placedMeals++)
@@ -292,10 +330,22 @@ namespace Odyssey.Sim.Pawns
                 pawns.Items.AddStockpile(new Stockpile(priority: 2, stockpile.ToArray(), allow));
             }
 
-            // Loose salvage so hauling has work from the first tick.
+            // Loose salvage so hauling has work from the first tick. A draw that lands on a
+            // cell already holding something — a meal pile, or an earlier piece of salvage,
+            // which does not stack — is drawn again, because two things cannot share a cell.
+            // It used to spawn straight onto whatever was there and corrupt the cell index.
             int placedSalvage = 0;
-            for (int i = 0; i < scenario.salvage; i++, placedSalvage++)
-                pawns.Items.Spawn(ItemIndex.Salvage, spots[rng.NextInt(spots.Count)]);
+            for (int i = 0; i < scenario.salvage; i++)
+            {
+                for (int attempt = 0; attempt < spots.Count; attempt++)
+                {
+                    int spot = spots[rng.NextInt(spots.Count)];
+                    if (!pawns.Items.CellHasSpace(spot, ItemIndex.Salvage, 1)) continue;
+                    pawns.Items.Spawn(ItemIndex.Salvage, spot);
+                    placedSalvage++;
+                    break;
+                }
+            }
 
             return new Result(placedColonists, placedMeals, placedBeds, stockpile.Count, placedSalvage, spots.Count);
         }

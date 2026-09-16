@@ -95,7 +95,7 @@ namespace Odyssey.Tests.Presentation
 
                 foreach (Vector3 vertex in mesh.vertices)
                 {
-                    if (vertex.y > -0.5f + Tolerance) continue;
+                    if (vertex.y > -0.5f - RockMesh.Skirt + Tolerance) continue;
 
                     Assert.That(Mathf.Abs(vertex.x), Is.LessThanOrEqualTo(0.5f + Tolerance),
                         $"variant {variant}: base vertex {vertex} overhangs the cell in x");
@@ -169,6 +169,75 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
+        public void TheSkirtIsDeeperThanAnyTopCanDrop()
+        {
+            // THE rule for a solid stack, and the one the first two attempts did not have. A
+            // dished top means a cell does not fill its own box, so a column of rock had a
+            // horizontal void at every layer boundary; wherever the neighbours' rims had dropped
+            // too, that void was open sideways and you could see clean through the stack. The
+            // skirt of the cell above fills the dish of the cell below — but only while it is
+            // deeper than the deepest possible dish, which is what this pins.
+            Assert.That(RockMesh.Skirt, Is.GreaterThan(RockMesh.MaxDrop + RockMesh.MaxTilt),
+                "a top can be chipped deeper than the cell above hangs down, so a stack has a slot in it");
+
+            // Measured on the meshes as well as on the constants, in case the drop ever stops
+            // being the sum of those two numbers.
+            for (int variant = 0; variant < RockMesh.Variants; variant++)
+            {
+                float lowestTop = 0.5f;
+                foreach (Vector3 point in RockMesh.Top(variant)) lowestTop = Mathf.Min(lowestTop, point.y);
+
+                float foot = 0.5f;
+                foreach (Vector3 vertex in RockMesh.For(variant).vertices) foot = Mathf.Min(foot, vertex.y);
+
+                Assert.That(foot, Is.LessThan(lowestTop - 1f + Tolerance),
+                    $"variant {variant}: its foot at {foot} does not reach under a top dished to {lowestTop} " +
+                    "one cell below");
+            }
+        }
+
+        [Test]
+        public void TheSkirtStaysInsideTheFootprint()
+        {
+            // It hangs into the cell below, so a lip poking out sideways would be visible wherever
+            // the cell beside *that* one is open — a rock with a flange round its ankles.
+            for (int variant = 0; variant < RockMesh.Variants; variant++)
+            {
+                foreach (Vector3 vertex in RockMesh.For(variant).vertices)
+                {
+                    if (vertex.y > -0.5f + Tolerance) continue;
+                    Assert.That(Mathf.Abs(vertex.x), Is.LessThanOrEqualTo(0.5f + Tolerance),
+                        $"variant {variant}: the skirt flares out to {vertex}");
+                    Assert.That(Mathf.Abs(vertex.z), Is.LessThanOrEqualTo(0.5f + Tolerance),
+                        $"variant {variant}: the skirt flares out to {vertex}");
+                }
+            }
+        }
+
+        [Test]
+        public void AVerticalCornerIsABrokenLine()
+        {
+            // Straight corners are the tell of a cut block. Every course steps its corner in and
+            // out by its own amount, so the edge from foot to rim is a broken line.
+            for (int variant = 0; variant < RockMesh.Variants; variant++)
+            {
+                Vector3[] first = RockMesh.Course(variant, 0);
+                Vector3[] second = RockMesh.Course(variant, 1);
+
+                int stepped = 0;
+                foreach (int corner in new[] { 0, 2, 6, 8 })
+                {
+                    float a = Mathf.Abs(first[corner].x) + Mathf.Abs(first[corner].z);
+                    float b = Mathf.Abs(second[corner].x) + Mathf.Abs(second[corner].z);
+                    if (Mathf.Abs(a - b) > 0.01f) stepped++;
+                }
+
+                Assert.That(stepped, Is.GreaterThan(0),
+                    $"variant {variant} has the same corner offset at every course, so its edges are ruled");
+            }
+        }
+
+        [Test]
         public void TheLumpIsWatertight()
         {
             // Every edge shared by exactly two facets. This is the test that would have caught
@@ -218,7 +287,7 @@ namespace Odyssey.Tests.Presentation
             // to the plan position, not to whichever wall is asking about it.
             for (int variant = 0; variant < RockMesh.Variants; variant++)
             {
-                Vector3[] mid = RockMesh.Mid(variant);
+                Vector3[] mid = RockMesh.Course(variant, 0);
 
                 foreach (int corner in new[] { 0, 2, 6, 8 })
                 {

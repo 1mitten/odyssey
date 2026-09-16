@@ -37,9 +37,6 @@ namespace Odyssey.Sim.World
         /// <summary>Cached structural support, computed bottom-up. See <see cref="SupportSolver"/>.</summary>
         public readonly byte[] Support;
 
-        /// <summary>Region id for reachability. 0 = unassigned.</summary>
-        public readonly ushort[] Region;
-
         public readonly CellFlags[] Flags;
 
         public CellGrid(GridSize size)
@@ -51,7 +48,6 @@ namespace Odyssey.Sim.World
             FloorStuff = new ushort[count];
             Edifice = new int[count];
             Support = new byte[count];
-            Region = new ushort[count];
             Flags = new CellFlags[count];
             for (int i = 0; i < count; i++) Edifice[i] = -1;
         }
@@ -128,8 +124,10 @@ namespace Odyssey.Sim.World
 
         /// <summary>
         /// Folds the grid into the world state hash. Only authoritative fields contribute:
-        /// support and region are derived and are rebuilt on load, so hashing them would make a
-        /// save/load round trip appear to diverge for no reason.
+        /// support is derived and is rebuilt on load, so hashing it would make a save/load
+        /// round trip appear to diverge for no reason. Reachability is not on the grid at all:
+        /// <see cref="Pathing.NavGraph"/> keeps its own region array, and a per-cell region
+        /// field here was 5 MB at the scale target that nothing ever wrote (OQ-38).
         /// </summary>
         public void ContributeTo(ref StateHash hash)
         {

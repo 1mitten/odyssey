@@ -104,6 +104,11 @@ namespace Odyssey.Sim.Pawns
                     else if (movePercent > 100) movePercent = 100;
                 }
 
+                // What the pawn is working on, if anything. Asked of the driver rather than
+                // derived from the job: only the driver knows whether the walk toil is over,
+                // and a figure that swings an axe while walking is worse than one that glides.
+                int workFocus = pawn.Driver != null ? pawn.Driver.WorkFocus : -1;
+
                 writer.AddPawn(new PawnView(
                     pawn.Id,
                     cell,
@@ -112,7 +117,9 @@ namespace Odyssey.Sim.Pawns
                     pawn.Mood,
                     pawn.CurrentJob != null ? pawn.CurrentJob.DefIndex : -1,
                     nextCell,
-                    movePercent));
+                    movePercent,
+                    workFocus >= 0,
+                    workFocus >= 0 ? size.FromIndex(workFocus) : cell));
             }
 
             var items = _ctx.Items.Items;
@@ -151,6 +158,14 @@ namespace Odyssey.Sim.Pawns
 
                 writer.Write(pawn.Skills.Length);
                 for (int s = 0; s < pawn.Skills.Length; s++) writer.Write(pawn.Skills[s]);
+
+                // Passions as ints, for the same reason the work priorities are below.
+                writer.Write(pawn.Passions.Length);
+                for (int s = 0; s < pawn.Passions.Length; s++) writer.Write((int)pawn.Passions[s]);
+
+                writer.Write(pawn.SkillGainedToday.Length);
+                for (int s = 0; s < pawn.SkillGainedToday.Length; s++) writer.Write(pawn.SkillGainedToday[s]);
+                writer.Write(pawn.SkillDay);
 
                 writer.Write(pawn.WorkPriorities.Length);
                 // Written as an int, not as the byte it is stored in: the reader asks for an int,
@@ -224,6 +239,21 @@ namespace Odyssey.Sim.Pawns
                     int value = reader.ReadInt();
                     if (s < pawn.Skills.Length) pawn.Skills[s] = value;
                 }
+
+                int passionCount = reader.ReadInt();
+                for (int s = 0; s < passionCount; s++)
+                {
+                    int value = reader.ReadInt();
+                    if (s < pawn.Passions.Length) pawn.Passions[s] = (byte)value;
+                }
+
+                int todayCount = reader.ReadInt();
+                for (int s = 0; s < todayCount; s++)
+                {
+                    int value = reader.ReadInt();
+                    if (s < pawn.SkillGainedToday.Length) pawn.SkillGainedToday[s] = value;
+                }
+                pawn.SkillDay = reader.ReadInt();
 
                 int workCount = reader.ReadInt();
                 for (int w = 0; w < workCount; w++)

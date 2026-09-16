@@ -88,8 +88,9 @@ namespace Odyssey.Tests.Sim
             // which is most of the map. The guard is what keeps that true if the map ever
             // changes underneath this test.
             //
-            // CellGrid.Region is deliberately not asserted on: nothing writes it. NavGraph keeps
-            // its own region array and the field on the grid is dead (OQ-38).
+            // Reachability is not compared here because it is not on the grid: NavGraph keeps
+            // its own region array, and the resume half of this test is what proves it was
+            // rebuilt. (A per-cell region field that nothing wrote was removed by OQ-38.)
             var original = Fresh();
             original.World.Tick(1_000);
 

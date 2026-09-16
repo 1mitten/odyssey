@@ -288,10 +288,13 @@ namespace Odyssey.Sim.Pawns
         {
             if (!Yield(ctx, cell, terrain, out int item, out int count)) return;
 
-            int at = FellJobDriver.FreeCellNear(ctx, cell);
-            // Nowhere within three cells to put it is a board packed solid with things, which
-            // nothing in the game can produce yet; losing the stone then is the least bad answer,
-            // because spawning onto an occupied cell would corrupt the item index.
+            // The cell just dug, or the nearest that can take the load — which includes a pile of
+            // the same stuff from the cell next door with room on it, so a worked seam comes out
+            // as a few stacks rather than a scatter of small ones. Nowhere within three cells is a
+            // board packed solid with things, which nothing in the game can produce yet; losing
+            // the stone then is the least bad answer, because spawning onto a cell that cannot
+            // take it would corrupt the cell index.
+            int at = ctx.Items.NearestCellWithSpace(ctx.Cells, cell, item, count, maxRadius: 3);
             if (at >= 0) ctx.Items.Spawn(item, at, count);
         }
 

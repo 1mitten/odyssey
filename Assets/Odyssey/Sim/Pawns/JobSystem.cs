@@ -500,14 +500,21 @@ namespace Odyssey.Sim.Pawns
     // =====================================================================================
 
     /// <summary>
-    /// Take a loose thing to the best stockpile that will have it.
+    /// Take a loose thing to the best stockpile that will have it; failing that, move a stored
+    /// thing to a better pile than the one it is in.
     ///
-    /// Destination choice is, in order: the filter accepts the item, the cell has space, highest
-    /// priority, then nearest. Priority orders the <em>destination</em>, never the haul queue,
-    /// which is what makes re-stowing into a better zone fall out of the same rule.
+    /// Destination choice is, in order: the filter accepts the item, the cell has space for the
+    /// whole load, highest priority, then nearest (a-14 §3). Priority orders the
+    /// <em>destination</em>, never the haul queue, which is what makes re-stowing into a better
+    /// zone fall out of the same rule: a stored thing is a haul candidate whose destination must
+    /// beat the priority of where it lies. Equal priority is not better — two piles at one
+    /// priority are one warehouse in two places, and shuttling between them is the
+    /// up-and-down-the-stairs failure the research warns of.
     ///
-    /// Every candidate is tested for reachability before anything is pathed. That test is two
-    /// array reads. It has to be, because this scan asks it for every loose thing on the map.
+    /// Loose things are scanned first and re-stowing only when there is nothing loose, because
+    /// tidying is the lowest job there is. Every candidate is tested for reachability before
+    /// anything is pathed. That test is two array reads. It has to be, because this scan asks
+    /// it for every loose thing on the map.
     /// </summary>
     public sealed class HaulWorkGiver : WorkGiver
     {
@@ -522,18 +529,21 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         const TraverseMode Mode = TraverseMode.Hauler;
 
-        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job) =>
+            TryHaul(pawn, ctx, job, ctx.Items.LooseItems, restow: false) ||
+            TryHaul(pawn, ctx, job, ctx.Items.StoredItems, restow: true);
+
+        static bool TryHaul(Pawn pawn, PawnContext ctx, Job job, IReadOnlyList<int> lister, bool restow)
         {
-            var loose = ctx.Items.LooseItems;
             var items = ctx.Items.Items;
 
             int bestItem = -1;
             int bestDest = -1;
             int bestDistance = int.MaxValue;
 
-            for (int i = 0; i < loose.Count; i++)
+            for (int i = 0; i < lister.Count; i++)
             {
-                var item = items[loose[i]];
+                var item = items[lister[i]];
                 if (item.Despawned || item.Cell < 0 || item.Forbidden) continue;
                 if (!ctx.Content.Items[item.DefIndex].haulable) continue;
 
@@ -544,11 +554,11 @@ namespace Odyssey.Sim.Pawns
                 if (distance >= bestDistance) continue;
                 if (!ctx.Reachable(pawn, item.Cell, Mode)) continue;
 
-                int dest = BestStorageCell(pawn, ctx, item);
+                int dest = BestStorageCell(pawn, ctx, item, restow ? StoredPriority(ctx, item) : int.MinValue);
                 if (dest < 0) continue;
 
                 bestDistance = distance;
-                bestItem = loose[i];
+                bestItem = lister[i];
                 bestDest = dest;
             }
 
@@ -562,11 +572,27 @@ namespace Odyssey.Sim.Pawns
             return true;
         }
 
-        static int BestStorageCell(Pawn pawn, PawnContext ctx, ColonyItem item)
+        /// <summary>
+        /// The priority a stored thing already enjoys, which a re-stow has to beat. A thing lying
+        /// in a pile whose filter no longer accepts it is not stored at all, only in the way,
+        /// and any pile that does accept it is better: the implicit "unstored" priority below
+        /// every real one that a-14 §1 infers.
+        /// </summary>
+        static int StoredPriority(PawnContext ctx, ColonyItem item)
+        {
+            var pile = ctx.Items.StockpileAt(item.Cell);
+            return pile != null && pile.Accepts(item.DefIndex) ? pile.Priority : int.MinValue;
+        }
+
+        /// <summary>
+        /// The cell the load should go to, or -1: filter, then space for the whole load, then
+        /// the highest priority strictly above <paramref name="abovePriority"/>, then nearest.
+        /// </summary>
+        static int BestStorageCell(Pawn pawn, PawnContext ctx, ColonyItem item, int abovePriority)
         {
             var piles = ctx.Items.Stockpiles;
             int bestCell = -1;
-            int bestPriority = int.MinValue;
+            int bestPriority = abovePriority;
             int bestDistance = int.MaxValue;
 
             for (int s = 0; s < piles.Count; s++)
@@ -574,13 +600,16 @@ namespace Odyssey.Sim.Pawns
                 var pile = piles[s];
                 if (!pile.Accepts(item.DefIndex)) continue;
                 if (pile.Priority < bestPriority) continue;
+                // At the floor itself nothing has been found yet, and the floor is not a find.
+                if (pile.Priority == abovePriority) continue;
+                // At the floor itself nothing has been found yet, and the floor is not a find.
 
                 bool better = pile.Priority > bestPriority;
                 for (int c = 0; c < pile.Cells.Length; c++)
                 {
                     int cell = pile.Cells[c];
                     if (cell == item.Cell) continue;
-                    if (!ctx.Items.CellHasSpace(cell)) continue;
+                    if (!ctx.Items.CellHasSpace(cell, item.DefIndex, item.Stack)) continue;
 
                     long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
                     if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;

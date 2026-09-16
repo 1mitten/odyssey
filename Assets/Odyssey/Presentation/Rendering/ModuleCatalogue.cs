@@ -338,6 +338,17 @@ namespace Odyssey.Presentation.Rendering
         public static string? Item(int itemDefIndex) =>
             itemDefIndex >= 0 && itemDefIndex < ItemModules.Length ? ItemModules[itemDefIndex] : null;
 
+        /// <summary>
+        /// The axe a colonist holds while felling. Not placed in a cell and never meshed into a
+        /// chunk: it is parented to a live figure's hand for as long as the work lasts, and there
+        /// is nothing of it in the world the rest of the time.
+        ///
+        /// A catalogue row rather than a path in code, like everything else that comes out of the
+        /// licensed packs, so a clone without them resolves it to null and colonists fell trees
+        /// bare-handed instead of failing to start.
+        /// </summary>
+        public const string ToolAxe = Prefix + "tool.axe";
+
         // Tufts of grass strewn over the ground. Decoration and nothing else: they block nothing,
         // are not in the save, and the simulation has never heard of them. What they are for is
         // that a field of one flat colour reads as a carpet, and a field with clumps standing up

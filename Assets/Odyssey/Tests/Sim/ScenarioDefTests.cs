@@ -92,6 +92,60 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
+        public void ThePlaytestColonySplitsBetweenStoneAndTrees()
+        {
+            // Five identical colonists all walk to the trees, because every priority starts at 3
+            // and cutting is scanned before mining. Watching both kinds of work happen at once is
+            // the point of having two, so the scenario gives some of them a trade until the
+            // player can set priorities from the interface.
+            ScenarioDef scenario = ScenarioDef.Playtest();
+            ColonyWorld colony = Wooded(scenario);
+
+            int miners = 0, cutters = 0;
+            foreach (Pawn pawn in colony.Pawns.Pawns.All)
+            {
+                bool favoursMining = pawn.WorkPriority(WorkTypeIndex.Mining) <
+                                     pawn.WorkPriority(WorkTypeIndex.Cutting);
+                if (favoursMining) miners++; else cutters++;
+            }
+
+            Assert.That(miners, Is.EqualTo(scenario.miners), "the wrong number of colonists took up mining");
+            Assert.That(cutters, Is.GreaterThan(0), "nobody is left on the trees");
+
+            // A trade is a priority, not a restriction: a miner with no rock left still fells and
+            // hauls. Nothing may be switched off.
+            foreach (Pawn pawn in colony.Pawns.Pawns.All)
+            for (int work = 0; work < WorkTypeIndex.Count; work++)
+                Assert.That(pawn.WorkPriority(work), Is.GreaterThan(0),
+                    $"colonist {pawn.Id.Value} has work type {work} disabled outright");
+        }
+
+        [Test]
+        public void BothTradesFindTheirOwnWorkOnThePlayedBoard()
+        {
+            // The behaviour rather than the priorities: within a few thousand ticks somebody is
+            // mining and somebody else is felling, on the board the scene loads.
+            var playSize = new GridSize(120, 120, 16);
+            ColonyWorld colony = ColonyWorld.Build(playSize, 1u, ScenarioDef.Playtest(),
+                barren: true, wooded: true);
+
+            bool sawMining = false, sawFelling = false;
+            for (int tick = 0; tick < 8_000 && !(sawMining && sawFelling); tick++)
+            {
+                colony.World.Tick();
+                foreach (Pawn pawn in colony.Pawns.Pawns.All)
+                {
+                    if (pawn.CurrentJob == null) continue;
+                    if (pawn.CurrentJob.DefIndex == JobIndex.Mine) sawMining = true;
+                    if (pawn.CurrentJob.DefIndex == JobIndex.Fell) sawFelling = true;
+                }
+            }
+
+            Assert.That(sawFelling, Is.True, "nobody went to the trees");
+            Assert.That(sawMining, Is.True, "nobody went to the stone");
+        }
+
+        [Test]
         public void BareGivesTheSameColonyAndNoOrders()
         {
             ColonyWorld bare = Wooded(ScenarioDef.Bare());

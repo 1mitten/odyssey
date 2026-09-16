@@ -146,6 +146,23 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Ticks of work the payload toil takes, where the job has one.</summary>
         public int workTicks;
+
+        /// <summary>
+        /// The skill a tick of this job's work trains, as a <see cref="SkillIndex"/> value, or -1
+        /// for a job that trains nothing (eating, sleeping, wandering). One hop from the job to
+        /// the skill rather than two through the work type, because a job is the thing that
+        /// knows which of its ticks are work.
+        /// </summary>
+        public int trainsSkill = -1;
+
+        /// <summary>
+        /// Experience one tick of work is worth before passion, in thousandths of a point. Zero
+        /// trains nothing. ASSUMED at 110 for every working job: a-01-pawns.md gives the level
+        /// costs and the passion multipliers but not the base rate per tick. At 110 a colonist
+        /// who works two thirds of a day earns about 4,400 points, so the daily soft cap is
+        /// where a full working day lands, which is the relationship the cap exists to have.
+        /// </summary>
+        public int experiencePerWorkTick;
     }
 
     public static class WorkTypeIndex
@@ -154,6 +171,113 @@ namespace Odyssey.Sim.Pawns
         public const int Cutting = 1;
         public const int Mining = 2;
         public const int Count = 3;
+    }
+
+    /// <summary>
+    /// The skills the slice carries: one per kind of work there is to do. Handles are integer
+    /// indices into <see cref="PawnContent.Skills"/> and into every per-skill array on a pawn.
+    /// </summary>
+    public static class SkillIndex
+    {
+        public const int Hauling = 0;
+        public const int Cutting = 1;
+        public const int Mining = 2;
+        public const int Count = 3;
+    }
+
+    /// <summary>
+    /// How much a colonist cares about a skill. Stored on the pawn as a byte, rolled once at
+    /// spawn, and the one thing about a skill that work does not change.
+    /// </summary>
+    public enum Passion : byte
+    {
+        None = 0,
+        Minor = 1,
+        Major = 2,
+    }
+
+    /// <summary>
+    /// A skill: the experience curve, what passion makes a tick of work worth, the daily soft cap
+    /// and the decay ladder. Every figure that is not marked ASSUMED is from a-01-pawns.md,
+    /// "Skills, passions, learning".
+    ///
+    /// <para><b>Experience is in thousandths of a point.</b> The reference measures a level in
+    /// points (1,000 to leave level 0, 265,000 to reach 20) and a tick of work in fractions of
+    /// one, and a passion multiplier of 0.35 applied to a fraction rounds to nothing in integers.
+    /// So a point is 1,000 here, the way a need's bar is 1,000, and every rate in this Def is in
+    /// the same units. Nothing here is a float, so it all hashes and saves without a rounding
+    /// question.</para>
+    ///
+    /// <para><b>The level is never stored.</b> <see cref="Level"/> reads it off the experience
+    /// by this table, so there is no second field to fall out of step with the first. The cost
+    /// of that is one thing the reference has and this does not: the 1,000-point grace below a
+    /// level's floor before the level is lost. That needs a stored level, and the slice does
+    /// without it; a level is lost the moment experience drops below its floor.</para>
+    /// </summary>
+    public class SkillDef : Def
+    {
+        public int maxLevel = 20;
+
+        /// <summary>
+        /// Experience to go from level L to L + 1, indexed by L. a-01: 1,000 × (L + 1) points to
+        /// level 10, then 2,000 more a step, cumulative 265,000 to reach 20. Filled by
+        /// <see cref="PawnContent.Core"/>, which says where the second slope comes from.
+        /// </summary>
+        public int[] experienceToAdvance = System.Array.Empty<int>();
+
+        /// <summary>Gain multiplier per <see cref="Passion"/>, per mille. a-01: ×0.35, ×1.0, ×1.5.</summary>
+        public int[] gainPerMilleByPassion = { 350, 1_000, 1_500 };
+
+        /// <summary>Points a skill may gain in one day before the cap bites. a-01: 4,000.</summary>
+        public int dailySoftCap = 4_000_000;
+
+        /// <summary>Gains beyond the cap are scaled by this, per mille. a-01: ×0.2.</summary>
+        public int overCapGainPerMille = 200;
+
+        /// <summary>The first level that decays. a-01: level 10 and up.</summary>
+        public int decayFromLevel = 10;
+
+        /// <summary>
+        /// Experience lost per day at each level, indexed by level. a-01 measured the two ends:
+        /// about 30 points a day at 10 and about 3,600 at 20. The nine values between are
+        /// ASSUMED, a geometric ladder from one end to the other (×1.61 per level), until the
+        /// full table is fetched. Filled by <see cref="PawnContent.Core"/>.
+        /// </summary>
+        public int[] decayPerDay = System.Array.Empty<int>();
+
+        /// <summary>The level an amount of experience is, 0..<see cref="maxLevel"/>. An ordered scan over twenty entries.</summary>
+        public int Level(int experience)
+        {
+            int floor = 0;
+            for (int level = 0; level < maxLevel; level++)
+            {
+                floor += experienceToAdvance[level];
+                if (experience < floor) return level;
+            }
+            return maxLevel;
+        }
+
+        /// <summary>The experience at which a level begins. Level 0 begins at nothing.</summary>
+        public int ExperienceForLevel(int level)
+        {
+            int floor = 0;
+            for (int l = 0; l < level && l < maxLevel; l++) floor += experienceToAdvance[l];
+            return floor;
+        }
+
+        /// <summary>The ceiling: the floor of the top level, past which experience is not gained.</summary>
+        public int MaxExperience => ExperienceForLevel(maxLevel);
+
+        /// <summary>
+        /// Decay for one tick of the decay cadence at a level, or zero below
+        /// <see cref="decayFromLevel"/>. The per-day figure is divided down to the cadence, so
+        /// thirty Long ticks lose a day's worth, give or take the integer remainder.
+        /// </summary>
+        public int DecayPerInterval(int level, int intervalTicks, int dayTicks)
+        {
+            if (level < decayFromLevel || level >= decayPerDay.Length) return 0;
+            return decayPerDay[level] / (dayTicks / intervalTicks);
+        }
     }
 
     /// <summary>A container for work givers, carrying the natural order they scan in.</summary>
@@ -230,6 +354,16 @@ namespace Odyssey.Sim.Pawns
         /// colonist and a long run measures nothing but mental breaks.
         /// </summary>
         public int joyGainPerInterval = 8;
+
+        /// <summary>
+        /// Odds, per cent, that a freshly spawned colonist of this kind has a minor or a major
+        /// passion for any one skill; the rest are none. ASSUMED: nothing in docs/research/ has
+        /// measured how the reference distributes passions at generation. 35 and 15 give a
+        /// colony of five, over two skills, a handful of passions and one or two burning ones.
+        /// </summary>
+        public int passionMinorPerCent = 35;
+
+        public int passionMajorPerCent = 15;
     }
 
     /// <summary>
@@ -249,6 +383,7 @@ namespace Odyssey.Sim.Pawns
         public ThoughtDef[] Thoughts = System.Array.Empty<ThoughtDef>();
         public JobDef[] Jobs = System.Array.Empty<JobDef>();
         public WorkTypeDef[] WorkTypes = System.Array.Empty<WorkTypeDef>();
+        public SkillDef[] Skills = System.Array.Empty<SkillDef>();
         public ItemDef[] Items = System.Array.Empty<ItemDef>();
         public MoodDef Mood = new MoodDef();
         public MentalBreakDef Break = new MentalBreakDef();
@@ -258,14 +393,22 @@ namespace Odyssey.Sim.Pawns
         /// <summary>The needs interval, in ticks. 150 is the cadence a-01-pawns.md measured.</summary>
         public int NeedsIntervalTicks = 150;
 
+        /// <summary>
+        /// Ticks in a day: 60,000, per a-15-time-and-simulation.md. The skill soft cap resets on
+        /// it and the decay ladder is written per day. The calendar proper is later content; this
+        /// is the one number the pawn simulation needs of it.
+        /// </summary>
+        public int DayTicks = 60_000;
+
         /// <summary>Job starts allowed inside <see cref="ThinkLoopWindowTicks"/> before a stand-down.</summary>
         public int ThinkLoopLimit = 10;
 
         /// <summary>
-        /// Wood a felled tree leaves on the ground. ASSUMED: nothing in docs/research/ has
-        /// measured it; A8 (plants) is still an open row. One stack, so a single haul clears it.
+        /// Wood a felled tree leaves on the ground: 27, the pine class's vanilla yield
+        /// (docs/research/a-08-plants-growing-food.md §1; the oak class gives 46). One stack of
+        /// 75, so a single haul clears it.
         /// </summary>
-        public int WoodPerTree = 20;
+        public int WoodPerTree = 27;
 
         /// <summary>
         /// Stone a plain rock cell leaves, when it leaves any. ASSUMED, like everything else here.
@@ -349,15 +492,23 @@ namespace Odyssey.Sim.Pawns
 
             content.Jobs = new[]
             {
-                new JobDef { defName = "Job_Haul", driver = JobIndex.Haul, expiryTicks = 5_000 },
+                new JobDef
+                {
+                    defName = "Job_Haul", driver = JobIndex.Haul, expiryTicks = 5_000,
+                    trainsSkill = SkillIndex.Hauling, experiencePerWorkTick = 110,
+                },
                 new JobDef { defName = "Job_Eat", driver = JobIndex.Eat, casuallyInterruptible = false, workTicks = 300 },
                 new JobDef { defName = "Job_Sleep", driver = JobIndex.Sleep, casuallyInterruptible = false },
                 new JobDef { defName = "Job_Wander", driver = JobIndex.Wander, expiryTicks = 1_200 },
                 new JobDef { defName = "Job_Wait", driver = JobIndex.Wait, workTicks = 120 },
-                // ASSUMED: ten seconds of work at normal speed, and one tree per job. Nothing in
-                // docs/research/ has measured what a tree should take; A8 (plants) is still open.
-                new JobDef { defName = "Job_Fell", driver = JobIndex.Fell, workTicks = 600, expiryTicks = 6_000 },
-
+                // 800 ticks is the vanilla harvest work of the pine class, the wooded meadow's only
+                // species (docs/research/a-08-plants-growing-food.md §1). One tree per job, and the
+                // swings train cutting.
+                new JobDef
+                {
+                    defName = "Job_Fell", driver = JobIndex.Fell, workTicks = 800, expiryTicks = 6_000,
+                    trainsSkill = SkillIndex.Cutting, experiencePerWorkTick = 110,
+                },
                 // No workTicks: mining is priced per material, and the terrain defs already carry
                 // the number (rock 700, iron 900, coal 760). One constant here would make a seam
                 // cost the same as the stone around it, which is the whole difference between
@@ -365,7 +516,23 @@ namespace Odyssey.Sim.Pawns
                 //
                 // The expiry is generous because a shaft can be a long walk from the colony and a
                 // job that expires on the way there is a colonist who never arrives.
-                new JobDef { defName = "Job_Mine", driver = JobIndex.Mine, expiryTicks = 12_000 },
+                new JobDef
+                {
+                    defName = "Job_Mine", driver = JobIndex.Mine, expiryTicks = 12_000,
+                    trainsSkill = SkillIndex.Mining, experiencePerWorkTick = 110,
+                },
+            };
+
+            // Both skills share one curve, one cap and one ladder, because the reference does
+            // (a-01: twelve skills, one formula). Two Defs rather than one shared record so that
+            // the XML can give a skill its own numbers the day a design wants that.
+            content.Skills = new[]
+            {
+                // The labels are the work types' own words, which the registry already carries
+                // as ui.work.hauling and ui.work.cutting; nothing displays a skill yet.
+                Skill("Skill_Hauling", "hauling"),
+                Skill("Skill_Cutting", "cutting"),
+                Skill("Skill_Mining", "mining"),
             };
 
             content.WorkTypes = new[]
@@ -380,8 +547,21 @@ namespace Odyssey.Sim.Pawns
 
             content.Items = new[]
             {
-                new ItemDef { defName = "Item_Meal", label = "ration pack", nutrition = 450 },
+                // 900 units is 0.9 nutrition, the vanilla value of every meal class including the
+                // packaged ration this stands for (a-08 §2). At 450 it was half a meal, which is
+                // why five colonists ate fifteen a day. The ration class never rots, which is what
+                // lets a pantry be an objective rather than a four-day countdown; spoilage itself
+                // is out of the slice.
+                // Meals stack to 20, so a whole starting pile (ScenarioDef.mealsPerPile, 12) is
+                // legal stock in one cell and a hauler moves it in one trip (a-14: one stack per
+                // trip). The ItemDef default of 1 would make every pile "full" the moment it was
+                // hauled and no meal could ever be stowed beside another. The 20 is ASSUMED as a
+                // number: the research records limits from 1 to 500 and none for a meal.
+                new ItemDef { defName = "Item_Meal", label = "ration pack", nutrition = 900, stackLimit = 20 },
+                // Salvage is a heap in its own right, one to a cell, until the things line
+                // decides what it is made of.
                 new ItemDef { defName = "Item_Salvage", label = "salvage" },
+                // Wood's 75 is the one limit the research states outright (a-14 §4).
                 new ItemDef { defName = "Item_Wood", label = "wood", stackLimit = 75 },
                 new ItemDef { defName = "Item_Stone", label = "stone", stackLimit = 75 },
                 new ItemDef { defName = "Item_IronOre", label = "iron ore", stackLimit = 75 },
@@ -394,6 +574,32 @@ namespace Odyssey.Sim.Pawns
             content.Kind = new PawnKindDef { defName = "PawnKind_Colonist" };
             return content;
         }
+
+        static SkillDef Skill(string defName, string label)
+        {
+            var def = new SkillDef { defName = defName, label = label };
+
+            // a-01 gives 1,000 × (L + 1) points from L to L + 1 and a cumulative 265,000 to reach
+            // 20, and those two only agree if the slope doubles from level 10: the first ten
+            // steps sum to 55,000, so the last ten must sum to 210,000, which 12,000 rising by
+            // 2,000 a step to 30,000 does exactly (and 30,000 is where a-01's ladder ends). The
+            // second slope is therefore ASSUMED from the two figures, not read from a table.
+            // A table, not a formula, so that OQ-15 moves it to XML unchanged. In thousandths.
+            def.experienceToAdvance = new int[def.maxLevel];
+            for (int level = 0; level < def.maxLevel; level++)
+            {
+                int points = level < 10 ? 1_000 * (level + 1) : 10_000 + 2_000 * (level - 9);
+                def.experienceToAdvance[level] = points * 1_000;
+            }
+
+            // a-01 measured 30 a day at 10 and 3,600 at 20; the nine between are ASSUMED, a
+            // geometric ladder (see SkillDef.decayPerDay). Points, in thousandths.
+            def.decayPerDay = new int[def.maxLevel + 1];
+            int[] ladder = { 30, 48, 78, 126, 203, 328, 530, 855, 1_380, 2_230, 3_600 };
+            for (int i = 0; i < ladder.Length; i++)
+                def.decayPerDay[def.decayFromLevel + i] = ladder[i] * 1_000;
+            return def;
+        }
     }
 
     /// <summary>
@@ -404,6 +610,7 @@ namespace Odyssey.Sim.Pawns
     {
         public const uint MentalBreak = 0x9E37_79B1;
         public const uint Wander = 0x85EB_CA6B;
+        public const uint Passion = 0xC2B2_AE35;
 
         /// <summary>
         /// Whether a rock cell gives up stone. Drawn from (world seed, <b>cell index</b>) rather
@@ -411,7 +618,12 @@ namespace Odyssey.Sim.Pawns
         /// to the cell and not to the moment. A cell mined on tick 900 in one run and tick 40,000
         /// in another yields the same, so the roll survives a save, a reload and a replay, and no
         /// amount of re-ordering the colony's work can reroll it.
+        ///
+        /// The number is not 0xC2B2_AE35, which is what it was written as and which
+        /// <see cref="Passion"/> took on the same day on another branch. Two purposes sharing a
+        /// salt is two streams that agree, and a colonist's passion deciding which rocks hold
+        /// stone is the kind of coupling nothing would ever report.
         /// </summary>
-        public const uint StoneYield = 0xC2B2_AE35;
+        public const uint StoneYield = 0x27D4_EB2F;
     }
 }

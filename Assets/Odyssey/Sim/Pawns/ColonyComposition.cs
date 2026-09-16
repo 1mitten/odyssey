@@ -19,9 +19,9 @@ namespace Odyssey.Sim.Pawns
     {
         /// <summary>
         /// Support before navigation, because a collapse changes what is walkable; needs before
-        /// jobs, because a hungry pawn picks a different job; jobs before movement. Then the
-        /// pawns and the designations as hashed, saved and published state, and the player
-        /// commands the colony owns: forbid, designate, cancel.
+        /// jobs, because a hungry pawn picks a different job; jobs before movement. Skill decay
+        /// on the Long tick group. Then the pawns and the designations as hashed, saved and
+        /// published state, and the player commands the colony owns: forbid, designate, cancel.
         /// </summary>
         /// <param name="jobs">The job pipeline to run, when the caller wants to hold on to it for its
         /// per-def counters; a fresh one otherwise.</param>
@@ -36,6 +36,7 @@ namespace Odyssey.Sim.Pawns
                 .AddSystem(_ => new NeedsSystem(pawns))
                 .AddSystem(_ => pipeline)
                 .AddSystem(_ => new MovementSystem(pawns))
+                .AddTickable(_ => new SkillSystem(pawns))
                 .AddTickable(_ => pawns.Pawns)
                 .AddSnapshotContributor(pawns.Pawns)
                 .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden);

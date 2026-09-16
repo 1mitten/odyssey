@@ -89,7 +89,13 @@ namespace Odyssey.Presentation.Rendering
             Color.white,                               // soil
             Color.white,                               // gravel
             Color.white,                               // engineered fill
-            Color.white,                               // rock
+            // Rock, pulled cool. The pack's stone texture is a warm grey-brown, which at board
+            // distance reads as earth rather than as stone — the complaint that started this.
+            // _BaseColor is a plain multiply with no clamp, so red comes down and blue goes up
+            // and the brown neutralises into grey. It cannot desaturate (that would need a lerp
+            // towards luminance, which a multiply cannot express), so this is a hue shift, not a
+            // wash: the texture's own mottling survives it.
+            new Color(0.84f, 0.90f, 1.02f),            // rock
             Color.white,                               // buried city seam
             Color.white,                               // salvage
             new Color(1.04f, 1.30f, 1.55f),            // 10 grass — lifted towards the reference
@@ -97,7 +103,7 @@ namespace Odyssey.Presentation.Rendering
             Color.white,                               // 12 packed gravel
             Color.white,                               // 13 sand
             Color.white,                               // 14 subsoil
-            Color.white,                               // 15 bedrock
+            new Color(0.78f, 0.84f, 0.98f),            // 15 bedrock — the same cool pull, darker
             Color.white,                               // 16 iron ore
             Color.white,                               // 17 coal seam
         };

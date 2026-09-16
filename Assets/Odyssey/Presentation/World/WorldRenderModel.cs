@@ -164,6 +164,15 @@ namespace Odyssey.Presentation.World
             int[] variants = _stoneModule[_terrain[index]];
             return variants.Length == 0 ? _terrainModule[_terrain[index]] : variants[variant % variants.Length];
         }
+        /// <summary>
+        /// The module index a terrain code draws as, without needing a cell of it to hand.
+        ///
+        /// The table is keyed by terrain and nothing else, so this is the same answer
+        /// <see cref="TerrainModule"/> gives for any cell of that terrain. The surround outside
+        /// the board asks it this way because it has no cells at all.
+        /// </summary>
+        public int TerrainModuleFor(ushort terrain) =>
+            terrain < _terrainModule.Length ? _terrainModule[terrain] : 0;
 
         // ------------------------------------------------------------- filling
 
