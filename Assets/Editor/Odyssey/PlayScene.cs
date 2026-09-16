@@ -1775,6 +1775,7 @@ namespace Odyssey.EditorTools
             go.transform.SetParent(root, false);
             var boot = go.AddComponent<OdysseyBootstrap>();
             go.AddComponent<SelectionPresenter>();   // hit-tests a click for the selection director
+            go.AddComponent<DesignatePresenter>();   // arms a tool and turns a drag into orders
 
             // The HUD: one UI Toolkit document over the live world (ADR 0003), built in code by
             // the shell and styled by the authored sheet.
