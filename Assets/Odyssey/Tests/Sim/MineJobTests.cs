@@ -245,6 +245,62 @@ namespace Odyssey.Tests.Sim
             Assert.That(first.Grid.IsSolidTerrain(rock), Is.False, "nothing was actually mined");
         }
 
+        [Test]
+        public void AMarkedStackIsWorkedFromTheTopDown()
+        {
+            // Mining the bottom of a marked stack first leaves the rock above it hanging in the
+            // air: the generator's column check runs at generation only, and collapse is U29's
+            // work. The starting order marks a whole outcrop, so this is the first thing a
+            // playtest would see, not an edge case.
+            // The played board rather than the 60-cell fixture: it carries 23 outcrops against
+            // the fixture's 5, and an outcrop only makes a stack when it is more than one cell
+            // tall. On the small board this test could find nothing to examine and skip itself
+            // silently, which is worse than failing.
+            var size = new GridSize(120, 120, 16);
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 3;
+            scenario.beds = 3;
+            ColonyWorld colony = ColonyWorld.Build(size, 1u, scenario, barren: true, wooded: true);
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+
+            int lower = -1, upper = -1;
+            for (int y = 0; y < size.SizeY - 1 && lower < 0; y++)
+            for (int z = 0; z < size.SizeZ && lower < 0; z++)
+            for (int x = 0; x < size.SizeX && lower < 0; x++)
+            {
+                int cell = size.Index(x, z, y);
+                int above = cell + size.LayerStride;
+                // The shape that matters: a lower cell a colonist can get at *while the cell
+                // above it is still there*. A tapering outcrop never produces one — the ring
+                // below a peak has rock on every side until the peak goes, so a mound is worked
+                // top-down by its own geometry. A terrace step does produce one, and that is the
+                // case where the bottom can be cut out from the side and leave the top hanging.
+                if (!colony.Designations.CanMine(cell)) continue;
+                if (!colony.Grid.IsSolidTerrain(above)) continue;
+                if (!colony.Designations.CanMine(above)) continue;
+                if (MineWorkGiver.StandToMine(colony.Pawns, pawn, cell) < 0) continue;
+                lower = cell;
+                upper = above;
+            }
+
+            Assert.That(lower, Is.GreaterThanOrEqualTo(0),
+                "no reachable cell with solid rock directly above it on the played board, so this proved nothing");
+
+            colony.Designations.Designate(size.FromIndex(lower), DesignationKind.Mine);
+            colony.Designations.Designate(size.FromIndex(upper), DesignationKind.Mine);
+
+            // The invariant, stated so it holds whether or not the top is ever reachable: the
+            // bottom is never cut out while the top is still standing on it. If the top cannot be
+            // got at, both orders simply wait, which is the right answer and not a floating rock.
+            for (int tick = 0; tick < 12_000; tick++)
+            {
+                colony.World.Tick();
+                if (!colony.Grid.IsSolidTerrain(lower) && colony.Grid.IsSolidTerrain(upper))
+                    Assert.Fail($"the cell under {size.FromIndex(upper)} was cut away while it was still there");
+                if (!colony.Grid.IsSolidTerrain(upper)) break;
+            }
+        }
+
         [Test, Category("Long")]
         public void ADayOfMiningLeavesAWorkingColony()
         {

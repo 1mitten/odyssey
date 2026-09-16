@@ -2707,3 +2707,57 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+  - moduleId: odyssey.module.item.stone
+    shape: 4
+    prefab: {fileID: 3621875773770697450, guid: 8ccba9dd8ca4fa049936ac69cb28f89f, type: 3}
+    prefabName: SM_Prop_StonePile_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 0.9, y: 0.9, z: 0.9}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.item.ironore
+    shape: 4
+    prefab: {fileID: 7211606713778384998, guid: cc46b771562eb3e4793292607fc3f72b, type: 3}
+    prefabName: SM_Gen_Env_Rock_03
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 0.8, y: 0.8, z: 0.8}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+  - moduleId: odyssey.module.item.coal
+    shape: 4
+    prefab: {fileID: 315675889818940899, guid: 256212dab9cb9d040bdae30d4f256a44, type: 3}
+    prefabName: SM_Gen_Env_Rock_Pebbles_05
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []

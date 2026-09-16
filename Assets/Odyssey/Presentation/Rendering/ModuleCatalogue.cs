@@ -304,6 +304,9 @@ namespace Odyssey.Presentation.Rendering
         public const string ItemMeal = Prefix + "item.meal";
         public const string ItemSalvage = Prefix + "item.salvage";
         public const string ItemWood = Prefix + "item.wood";
+        public const string ItemStone = Prefix + "item.stone";
+        public const string ItemIronOre = Prefix + "item.ironore";
+        public const string ItemCoal = Prefix + "item.coal";
 
         /// <summary>
         /// Module ids for item def indices, in <c>ItemIndex</c> order.
@@ -314,7 +317,10 @@ namespace Odyssey.Presentation.Rendering
         /// stand-in box, which is what made a barren map look like it had been spattered with
         /// paint.
         /// </summary>
-        static readonly string[] ItemModules = { ItemMeal, ItemSalvage, ItemWood };
+        static readonly string[] ItemModules =
+        {
+            ItemMeal, ItemSalvage, ItemWood, ItemStone, ItemIronOre, ItemCoal,
+        };
 
         /// <summary>How many item def indices have a module. Must equal <c>ItemIndex.Count</c>.</summary>
         public static int ItemModuleCount => ItemModules.Length;

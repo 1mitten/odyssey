@@ -938,6 +938,40 @@ namespace Odyssey.EditorTools
                 scale = new Vector3(0.4f, 0.4f, 0.4f),
             });
 
+            // What a mine leaves. No pack contains ore, so all three are rock, and the job these
+            // rows do is to make them three *different* rocks: a cairn, a boulder and a scatter,
+            // chosen for silhouette because that is the only axis available — items are drawn by
+            // the actor pass with no per-item tint, so colour cannot tell them apart. All three
+            // are recorded as art gaps in the registry and want real tiles eventually; three
+            // distinguishable shapes beats three identical orange stand-in markers meanwhile.
+            rows.Add(new ModuleEntry
+            {
+                // 0.88 x 1.48 x 0.73 at source: a heap tall enough to read as stacked rather than
+                // dropped, and well clear of the 2.5 m cell at 0.9.
+                moduleId = ModuleIds.ItemStone, shape = ModuleShape.Pillar,
+                prefabName = "SM_Prop_StonePile_01",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(0.9f, 0.9f, 0.9f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                // A single boulder, 1.37 x 1.04 x 1.14, so ore reads as lumps hewn out of a face
+                // rather than as sweepings.
+                moduleId = ModuleIds.ItemIronOre, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Env_Rock_03",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(0.8f, 0.8f, 0.8f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                // Flat scatter, 1.75 x 0.22 x 1.59: coal in lumps on the ground, and the lowest
+                // silhouette of the three so a coal pile is not mistaken for a stone one.
+                moduleId = ModuleIds.ItemCoal, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Env_Rock_Pebbles_05",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(1.0f, 1.0f, 1.0f),
+            });
+
             return rows;
         }
 

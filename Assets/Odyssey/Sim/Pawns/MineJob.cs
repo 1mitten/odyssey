@@ -34,6 +34,7 @@ namespace Odyssey.Sim.Pawns
                 int cell = cells[i];
                 if (designations.At(cell) != DesignationKind.Mine) continue;
                 if (!designations.CanMine(cell)) continue;
+                if (IsBuriedUnderAnotherOrder(designations, cell)) continue;
 
                 long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
                 if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
@@ -55,6 +56,30 @@ namespace Odyssey.Sim.Pawns
             job.TargetCell = bestStand;
             job.DestCell = best;
             return true;
+        }
+
+        /// <summary>
+        /// Is there another standing order directly above this cell?
+        ///
+        /// <para>A marked stack is worked from the top down, because cutting out the bottom of one
+        /// first leaves the rock above it hanging in the air. Nothing catches that yet — the
+        /// generator's column check runs at generation only, and collapse is U29's work — so a
+        /// quarry dug bottom-first would simply leave boulders floating over the hole.</para>
+        ///
+        /// <para>A tapering outcrop is safe from this by its own geometry: the ring below a peak
+        /// has rock on every side until the peak goes, so nobody can reach the lower cell anyway.
+        /// A **terrace step** is not, and that is the case this exists for — a vertical face two
+        /// cells tall whose bottom can be cut out from the side while the top is still there.</para>
+        ///
+        /// <para>It asks only about <em>designated</em> cells, which is what keeps it from blocking
+        /// ordinary work: cutting an adit into a cliff has undug rock above it too, and that is
+        /// not a stack being worked in the wrong order — it is the cliff.</para>
+        /// </summary>
+        static bool IsBuriedUnderAnotherOrder(DesignationGrid designations, int cell)
+        {
+            int above = cell + designations.Size.LayerStride;
+            if (above >= designations.Size.CellCount) return false;
+            return designations.At(above) == DesignationKind.Mine && designations.CanMine(above);
         }
 
         /// <summary>
