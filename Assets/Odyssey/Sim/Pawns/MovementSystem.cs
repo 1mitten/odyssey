@@ -124,6 +124,24 @@ namespace Odyssey.Sim.Pawns
                 }
 
                 int cost = StepCost(pawn.Cell, next, pawn.Mode);
+
+                // Carried so presentation can glide the figure across the WHOLE step rather than
+                // across its first hundred units. See Pawn.MoveStepCost.
+                pawn.MoveStepCost = cost;
+                if (pawn.MoveProgress < cost) return;
+
+                pawn.MoveProgress -= cost;
+
+                // Counted HERE, below the guard and beside StepsTaken, because a step is taken
+                // once and paid for over many ticks.
+                //
+                // The first version of these counters sat above the guard, where they fired on
+                // every tick a pawn spent part way through a vertical step — so they counted
+                // pawn-ticks weighted by the cost of the move, not moves. A jump at 135 counted
+                // 135 times, a drop at 50 counted 50, a stair up at 290 counted 290. That made
+                // the two categories incomparable with each other as well as inflated: stairs are
+                // dearer per traversal than hops, so "hops against connectors" was reading a
+                // price difference as a frequency difference.
                 if (pawn.Cell / _ctx.Size.LayerStride != next / _ctx.Size.LayerStride)
                 {
                     if (NavGraph.IsHop(_ctx.Size.FromIndex(pawn.Cell), _ctx.Size.FromIndex(next)))
@@ -132,12 +150,6 @@ namespace Odyssey.Sim.Pawns
                         ConnectorSteps++;
                 }
 
-                // Carried so presentation can glide the figure across the WHOLE step rather than
-                // across its first hundred units. See Pawn.MoveStepCost.
-                pawn.MoveStepCost = cost;
-                if (pawn.MoveProgress < cost) return;
-
-                pawn.MoveProgress -= cost;
                 pawn.Cell = next;
                 pawn.PathIndex++;
                 StepsTaken++;
