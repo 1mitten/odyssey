@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Worldgen;
+using UnityEngine;
 
 namespace Odyssey.Tests.Presentation
 {
@@ -26,6 +27,54 @@ namespace Odyssey.Tests.Presentation
             int n = 0;
             for (int i = 0; i < buckets.Count; i++) n += buckets[i].Count;
             return n;
+        }
+
+        /// <summary>
+        /// The culling box has to contain the geometry, and when it does not the symptom is whole
+        /// chunks vanishing at the edge of the screen while every matrix in them is provably
+        /// correct. The relief makes that easy to reintroduce, because it pushes cells out of the
+        /// layer the box was built from in two ways at once: it lifts them, and then it tilts them
+        /// so a corner reaches higher still.
+        /// </summary>
+        [Test]
+        public void TheChunkBoxContainsEveryCornerOfEveryShearedCell()
+        {
+            GroundRelief.Reset();
+            GroundRelief.Amplitude = GroundRelief.BoardAmplitude;
+            try
+            {
+                var world = new RenderTestWorld(8, 8, 3);
+                for (int z = 0; z < 8; z++)
+                for (int x = 0; x < 8; x++)
+                    world.Solid(x, z, 1);
+                world.Publish();
+
+                ChunkBatch batch = MeshLayer(world, 1);
+                Assert.That(Instances(batch.Body), Is.GreaterThan(0), "there is ground to check");
+
+                foreach (InstanceBucket bucket in batch.Body)
+                for (int i = 0; i < bucket.Count; i++)
+                {
+                    Matrix4x4 m = bucket.Matrices[i];
+                    // The bucket matrix already carries the module's own scale and offset, so
+                    // the corners to test are the unit cube's.
+                    for (int corner = 0; corner < 8; corner++)
+                    {
+                        var local = new Vector3(
+                            (corner & 1) == 0 ? -0.5f : 0.5f,
+                            (corner & 2) == 0 ? -0.5f : 0.5f,
+                            (corner & 4) == 0 ? -0.5f : 0.5f);
+
+                        Vector3 world3 = m.MultiplyPoint3x4(local);
+                        Assert.That(batch.Bounds.Contains(world3), Is.True,
+                            $"corner {world3} escapes the chunk box {batch.Bounds}");
+                    }
+                }
+            }
+            finally
+            {
+                GroundRelief.Reset();
+            }
         }
 
         [Test]

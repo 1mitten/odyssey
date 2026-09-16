@@ -36,13 +36,20 @@ namespace Odyssey.Presentation.Rendering
             if (pawn.MovePercent <= 0)
             {
                 heading = Vector3.zero;
-                return from;
+                return GroundRelief.Lift(from);
             }
 
             Vector3 to = CellMetrics.FloorCentre(pawn.NextCell);
+
+            // The heading is taken between the flat cell centres and stays horizontal, which is
+            // what every caller already assumes: it is a facing, and a pawn walking uphill faces
+            // along the ground rather than up into the air.
             heading = to - from;
             float percent = pawn.MovePercent + movePerTick * tickAlpha;
-            return from + heading * (Mathf.Clamp(percent, 0f, 100f) * 0.01f);
+
+            // The lift is taken at the interpolated position, not at either end, so a pawn walks
+            // along the drawn ground instead of cutting the chord between two cell centres.
+            return GroundRelief.Lift(from + heading * (Mathf.Clamp(percent, 0f, 100f) * 0.01f));
         }
 
         /// <summary>The yaw a heading implies, in degrees. Zero-length headings give zero.</summary>

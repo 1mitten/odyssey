@@ -348,7 +348,10 @@ namespace Odyssey.Presentation.Rendering
                     // No licensed art: the stand-in is a body and a beacon, both deliberately
                     // larger than life, because a true-to-scale figure is a few pixels once the
                     // camera pulls back. That is how five colonists managed to be invisible.
-                    Vector3 drift = position - CellMetrics.FloorCentre(cell);
+                    // Measured against the lifted centre, because DrawMarker lifts as well.
+                    // Against the flat one the lift would be counted in the drift and again in
+                    // the marker, and the stand-in would float at twice the height of the ground.
+                    Vector3 drift = position - GroundRelief.Lift(CellMetrics.FloorCentre(cell));
                     DrawMarker(material, cell, new Vector3(1.4f, 2.6f, 1.4f), 1.3f, drift);
                     DrawMarker(material, cell, new Vector3(0.7f, 0.7f, 0.7f), 3.6f, drift);
                     continue;
@@ -409,7 +412,7 @@ namespace Odyssey.Presentation.Rendering
                 }
 
                 AppendItem(def, Matrix4x4.TRS(
-                    CellMetrics.FloorCentre(cell),
+                    GroundRelief.Lift(CellMetrics.FloorCentre(cell)),
                     Quaternion.Euler(0f, YawOf(things[i].Id), 0f),
                     Vector3.one));
             }
@@ -591,7 +594,7 @@ namespace Odyssey.Presentation.Rendering
         {
             var rp = new RenderParams(material) { layer = GameObjectLayer };
             Matrix4x4 m = Matrix4x4.TRS(
-                CellMetrics.FloorCentre(cell) + Vector3.up * height + drift,
+                GroundRelief.Lift(CellMetrics.FloorCentre(cell)) + Vector3.up * height + drift,
                 Quaternion.identity, size);
             Graphics.RenderMesh(rp, PrimitiveMeshes.UnitCube, 0, m);
             DrawCalls++;
@@ -657,7 +660,11 @@ namespace Odyssey.Presentation.Rendering
             {
                 float sx = (corner & 1) == 0 ? -1f : 1f;
                 float sz = (corner & 2) == 0 ? -1f : 1f;
-                var at = new Vector3(centre.x + sx * half, centre.y, centre.z + sz * half);
+                // Each corner at its own height: the cell under the cursor is tilted, so a ring
+                // drawn at one height would sink into the ground on one side and hover on the
+                // other - which is exactly the tell that the cursor and the ground disagree.
+                var at = GroundRelief.Lift(
+                    new Vector3(centre.x + sx * half, centre.y, centre.z + sz * half));
 
                 _floorMatrices[n++] = Matrix4x4.TRS(
                     at - new Vector3(sx * length * 0.5f, 0f, 0f), Quaternion.identity,
@@ -676,7 +683,7 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The bracket cursor around one whole cell.</summary>
         public void DrawCellHighlight(CellRef cell, Color colour) =>
             DrawSelectionBracket(
-                CellMetrics.Centre(cell.X, cell.Z, cell.Y),
+                GroundRelief.Lift(CellMetrics.Centre(cell.X, cell.Z, cell.Y)),
                 new Vector3(CellMetrics.SizeXZ, CellMetrics.SizeY, CellMetrics.SizeXZ),
                 colour);
 

@@ -62,7 +62,15 @@ namespace Odyssey.Presentation.Rendering
         /// The rings, innermost first.
         ///
         /// The first is exactly one cell per tile (ADR 0002 fixes a cell at 2.5 m), which is what
-        /// makes the seam invisible. The outermost reaches 1,220 m beyond the rim, comfortably
+        /// makes the seam invisible.
+        ///
+        /// The outer two were once 40 m and 120 m, which was right while the surround was one flat
+        /// sheet and wrong the moment it grew hills. Each tile is drawn as a single tilted plane,
+        /// and two neighbouring planes part company across their shared edge by roughly
+        /// <c>(A/2) * (2*pi*L/P)^2</c> - which at 120 m tiles is twenty metres, and reads as long
+        /// diagonal cracks scored across the hillsides. Halving the far tiles costs a few thousand
+        /// instances out of twenty-five thousand and no extra draw call at all, because they batch
+        /// exactly as they did before. The outermost reaches 1,220 m beyond the rim, comfortably
         /// past the 1,100 m at which linear fog has faded everything into the sky, so the skirt
         /// ends where nothing can see it end rather than at a visible edge.
         /// </summary>
@@ -70,8 +78,8 @@ namespace Odyssey.Presentation.Rendering
         {
             new Band(CellMetrics.SizeXZ, 20f),
             new Band(10f, 120f),
-            new Band(40f, 480f),
-            new Band(120f, 600f),
+            new Band(20f, 480f),
+            new Band(60f, 600f),
         };
 
         /// <summary>How far the skirt reaches beyond the board, in metres.</summary>
