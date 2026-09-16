@@ -43,6 +43,33 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const float TreeSectorMetres = 80f;
 
+        /// <summary>
+        /// How wide a sector of the far wood is.
+        ///
+        /// <para>Ten times the near one, and the number was measured rather than chosen. A batch
+        /// key is (sector, variant, part), and the far band covers some four million square
+        /// metres: at 400 m sectors with the full sixteen tree kinds the meadow drew <b>1,154
+        /// surround batches</b>, against 72 before the hill wood existed. That is a great many
+        /// draw calls for decoration nobody inspects. Widening the sector and capping the kinds
+        /// below attacks both factors of the same product.</para>
+        ///
+        /// <para>Coarse sectors cull worse: a sector this wide is nearly always partly on screen,
+        /// so its instances are submitted whether or not they can be seen. That is the right trade
+        /// out here and the wrong one at the rim. There are only a few thousand far trees in all,
+        /// so submitting them costs less than the draw calls that culling them finely would.</para>
+        /// </summary>
+        public const float FarTreeSectorMetres = 800f;
+
+        /// <summary>
+        /// How many kinds of tree the far wood picks between.
+        ///
+        /// <para>Fewer than the near wood, because variety is part of a batch key and at 300 m
+        /// and beyond a tree is a few dozen pixels: nobody can tell one conifer from another,
+        /// and every extra kind multiplies the batch count for a difference that cannot be
+        /// seen. Four is enough that a silhouette does not visibly repeat along a ridge.</para>
+        /// </summary>
+        public const int FarTreeVariants = 4;
+
         /// <summary>How many kinds of tree the surround picks between, sampled by frequency.</summary>
         public const int TreeVariantSlots = 16;
 
@@ -71,6 +98,7 @@ namespace Odyssey.Presentation.Rendering
         readonly List<Batch> _tufts = new List<Batch>();
         readonly List<SkirtLayout.SkirtTile> _tiles = new List<SkirtLayout.SkirtTile>();
         readonly List<SkirtLayout.SkirtTree> _scattered = new List<SkirtLayout.SkirtTree>();
+        readonly List<SkirtLayout.FarTree> _farScattered = new List<SkirtLayout.FarTree>();
 
         /// <summary>
         /// Which batch an instance belongs in. A tuple rather than a packed integer on purpose:
@@ -99,6 +127,15 @@ namespace Odyssey.Presentation.Rendering
         public int TreeDensityPercent { get; set; } = 100;
 
         /// <summary>
+        /// Whether the wood carries on over the background hills.
+        ///
+        /// <para>Off gives the bare hillsides the surround had before, which is the comparison
+        /// this switch exists to make: the far wood is the only thing out there with a known
+        /// size, so it is the only thing telling the eye how far away a hill is.</para>
+        /// </summary>
+        public bool HillTrees { get; set; } = true;
+
+        /// <summary>
         /// Tufts of grass per hundred cells in the first ring, kept in step with the mesher's own
         /// density by <see cref="ChunkRenderer.ScatterDensity"/>.
         ///
@@ -123,6 +160,10 @@ namespace Odyssey.Presentation.Rendering
 
         public int GroundInstances { get; private set; }
         public int TreeInstances { get; private set; }
+
+        /// <summary>The wood on the hills, counted apart from the near wood so the two costs
+        /// can be told apart in a log or a milestone report.</summary>
+        public int FarTreeInstances { get; private set; }
         public int TuftInstances { get; private set; }
 
         // ---- last-frame measurements, rolled into the renderer's own readout ----
@@ -476,7 +517,61 @@ namespace Odyssey.Presentation.Rendering
                     castsShadow: tree.CastsShadow, foliage: false, placement, bounds);
             }
 
+            // Counted before the far wood is added, so the two numbers are separable in the log
+            // and in a milestone report. Order matters: the far count is the difference.
             TreeInstances = CountOf(_trees);
+            BuildFarTrees(treeModules, treeTints, standY, board);
+            FarTreeInstances = CountOf(_trees) - TreeInstances;
+        }
+
+        /// <summary>
+        /// The wood on the hills, from the edge of the near wood out to
+        /// <see cref="SkirtLayout.FarTreeRangeMetres"/>.
+        ///
+        /// <para>The near wood stops 90 m out, where the hills have risen about six of their fifty
+        /// metres, so every hill in the background was bare. A bare hillside has nothing of known
+        /// size on it, and without that the eye cannot place it: it reads as a green backdrop
+        /// rather than as land a long way off. These trees are the scale reference, and they are
+        /// the whole of what makes the distance read as distance.</para>
+        ///
+        /// <para>Three things keep it cheap, and all three matter more out here than near the rim.
+        /// They are batched on a much coarser sector, because 80 m sectors over four million
+        /// square metres would be several hundred draw calls to no purpose when the whole far wood
+        /// is one distant thing. They take the deepest mute step outright, which collapses a batch
+        /// key and is what the desaturation ramp would have given them anyway. And they cast no
+        /// shadow at all, which they could not do regardless with a 50 m shadow distance.</para>
+        /// </summary>
+        void BuildFarTrees(int[] treeModules, int[] treeTints, float standY,
+            SkirtLayout.SkirtRect board)
+        {
+            if (!HillTrees) return;
+
+            int variants = Mathf.Min(treeModules.Length, FarTreeVariants);
+            SkirtLayout.BuildFarTrees(_model.Size, variants,
+                TreeDensityPercent * 0.01f, _farScattered);
+            if (_farScattered.Count == 0) return;
+
+            for (int i = 0; i < _farScattered.Count; i++)
+            {
+                SkirtLayout.FarTree tree = _farScattered[i];
+                int module = treeModules[tree.Variant];
+                ResolvedModule resolved = _model.Library[module];
+                if (resolved.IsEmpty) continue;
+
+                // Lifted onto the hill, never draped along it, exactly as the near wood is: a
+                // sheared trunk leans, and trees on a slope grow up.
+                Vector3 foot = GroundRelief.LiftSurround(
+                    new Vector3(tree.X, standY, tree.Z), board.DistanceOutside(tree.X, tree.Z));
+                var placement = Matrix4x4.Translate(foot);
+
+                Bounds local = resolved.Bounds;
+                var bounds = new Bounds(foot + local.center, local.size);
+
+                int sector = FarSectorOf(tree.X, tree.Z, variants, tree.Variant);
+                Add(_trees, resolved, treeTints[tree.Variant], SkirtLayout.MuteSteps, sector,
+                    castsShadow: false, foliage: false, placement, bounds);
+            }
+
         }
 
         static int SectorOf(float x, float z, int variants, int variant)
@@ -484,6 +579,17 @@ namespace Odyssey.Presentation.Rendering
             int sx = Mathf.FloorToInt(x / TreeSectorMetres) + 512;
             int sz = Mathf.FloorToInt(z / TreeSectorMetres) + 512;
             return ((sz * 1024 + sx) * Mathf.Max(1, variants)) + variant;
+        }
+
+        /// <summary>
+        /// The far wood's own sectors, offset out of the near wood's numbering so the two can
+        /// never share a batch and quietly undo the coarser grouping.
+        /// </summary>
+        static int FarSectorOf(float x, float z, int variants, int variant)
+        {
+            int sx = Mathf.FloorToInt(x / FarTreeSectorMetres) + 512;
+            int sz = Mathf.FloorToInt(z / FarTreeSectorMetres) + 512;
+            return -1 - (((sz * 1024 + sx) * Mathf.Max(1, variants)) + variant);
         }
 
         // ------------------------------------------------------------ batches
@@ -607,6 +713,7 @@ namespace Odyssey.Presentation.Rendering
             _index.Clear();
             GroundInstances = 0;
             TreeInstances = 0;
+            FarTreeInstances = 0;
             TuftInstances = 0;
             MeasuredTreeDensity = 0;
             SurfaceLayer = 0;

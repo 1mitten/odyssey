@@ -5,6 +5,8 @@ using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.TestTools;
 
 namespace Odyssey.Tests.PlayMode
@@ -50,6 +52,7 @@ namespace Odyssey.Tests.PlayMode
         IEnumerator Measure(Odyssey.Sim.Worldgen.Natural.MapType mapType, bool barren, string label)
         {
             GameObject root = Build(mapType, barren, out OdysseyBootstrap boot);
+
             try
             {
                 for (int i = 0; i < WarmupFrames; i++) yield return null;
@@ -69,7 +72,15 @@ namespace Odyssey.Tests.PlayMode
                 // and the batch game view is not the player's monitor.
                 Debug.Log($"[FrameTime] {label}: mean {mean:0.00} ms, worst {worst:0.00} ms over {TimedFrames} frames; " +
                           $"{renderer?.DrawCalls ?? 0} draw calls, {renderer?.InstancesDrawn ?? 0} instances, " +
-                          $"{renderer?.ChunksDrawn ?? 0} chunks; {Screen.width}x{Screen.height}, " +
+                          $"{renderer?.ChunksDrawn ?? 0} chunks; " +
+                          // The surround is built once and submitted whole, so its own counts are
+                          // the only way to attribute a frame-time change to it rather than to the
+                          // board. The hill wood in particular is a switch somebody will want to
+                          // weigh, and a number beats an opinion about it.
+                          $"surround {renderer?.Skirt.TreeInstances ?? 0} trees + " +
+                          $"{renderer?.Skirt.FarTreeInstances ?? 0} on the hills, " +
+                          $"{renderer?.Skirt.BatchesDrawn ?? 0} batches; " +
+                          $"{Screen.width}x{Screen.height}, " +
                           $"{SystemInfo.graphicsDeviceName}");
 
                 Assert.That(mean, Is.LessThan(CeilingMs),
@@ -95,12 +106,27 @@ namespace Odyssey.Tests.PlayMode
             camera.farClipPlane = 1800f; // as the play scene, so the surround is measured too
             var rig = cameraObject.AddComponent<SliceCameraRig>();
 
+            // The grade and the anti-aliasing, as the play scene has them. **URP keeps post
+            // per camera and defaults it to false**, so without these two lines this test
+            // measures a frame the player never sees — and would have reported the golden hour
+            // as free, which is the most misleading answer available. Post cost also scales with
+            // pixels, and this runs at 640x480, so the figure is a floor and not the laptop's.
+            var cameraData = camera.GetUniversalAdditionalCameraData();
+            cameraData.renderPostProcessing = true;
+            cameraData.antialiasing = AntialiasingMode.SubpixelMorphologicalAntiAliasing;
+
             var sun = new GameObject("Sun").AddComponent<Light>();
             sun.transform.SetParent(root.transform, false);
             sun.type = LightType.Directional;
-            sun.intensity = 1.35f;
+            // The golden hour's own numbers, and they are copied rather than referenced because
+            // GoldenHour is editor tooling and this assembly is not. The duplication is deliberate
+            // and it is load-bearing: a shadow's length is height over the tangent of the
+            // elevation, so at 30 degrees the shadow volume is several times what it was at 72.
+            // Measuring the old sun would understate the shadow pass by most of its cost.
+            sun.intensity = 2.0f;
             sun.shadows = LightShadows.Soft;
-            sun.transform.rotation = Quaternion.Euler(72f, 35f, 0f);
+            sun.shadowStrength = 0.6f;
+            sun.transform.rotation = Quaternion.Euler(30f, 135f, 0f);
 
             var bootObject = new GameObject("Bootstrap");
             bootObject.transform.SetParent(root.transform, false);
@@ -121,6 +147,17 @@ namespace Odyssey.Tests.PlayMode
                 "Assets/Odyssey/Presentation/ModuleCatalogue.asset");
 #endif
             bootObject.SetActive(true);
+
+            // The harness builds its own objects, so the scene's global volume is not here and
+            // must be made. Without it the camera would render post-processing over an empty
+            // stack, which costs almost nothing and proves almost nothing.
+            var volume = new GameObject("Golden Hour").AddComponent<Volume>();
+            volume.transform.SetParent(root.transform, false);
+            volume.isGlobal = true;
+#if UNITY_EDITOR
+            volume.sharedProfile = UnityEditor.AssetDatabase.LoadAssetAtPath<VolumeProfile>(
+                "Assets/Settings/OdysseyGoldenHour.asset");
+#endif
             return root;
         }
     }

@@ -51,3 +51,27 @@ Same HUD grammar in all four quadrants, at night, with a right-edge stack of red
 - Confirms the target look is Synty POLYGON Sci-Fi City plus a RimWorld-style HUD; no new asset requirement.
 - Adds a UI requirement to the design phase: a layer control and a depth cue that the concept omits. **Resolved 2026-09-15** in `docs/design/10-ui-panel-catalogue.md` as region A11, the Depth Ruler, and in `docs/design/09-ui-and-input.md` as `SliceDirector`. `06-rendering-and-camera.md` keeps the camera and rendering half; the HUD half moved to `09` and `10`, which the Phase 3 manifest had no slot for.
 - Flags that the concept shows the outskirts map, not the ruined city; the prototype map stays the ruined city as agreed.
+
+## Station to Station — the lighting reference (added 2026-09-16)
+
+Six press and store screenshots of *Station to Station* (Galaxy Grove, 2023), in
+`station-to-station/`, supplied by the owner as the target for the golden-hour look
+(`docs/research/look-interview.md`). Reference only, for lighting and post-processing: the voxel
+art, the buildings and the trains are not our subject and nothing is traced or copied. Every image
+shares a low sun of roughly 25–35°, long soft shadows, lifted cool shadow tones, bloom on lit faces,
+a warm amber haze that rises to a horizon the same colour as the sky, and a horizontal band of
+focus with blur above and below.
+
+| File | What it shows about the lighting |
+|---|---|
+| `s2s-01-village-golden.jpg` | The fullest statement. Sun low from the upper left, warm on every roof and tree crown, long shadows lying across the grass without hiding it. Pale rock terraces at the top bloom into the haze. Focus band through the village; the near roofs and the far terraces soften. |
+| `s2s-02-locomotive-tiltshift.jpg` | Low camera, the sky in frame: pale warm blue fading to near-white at the horizon, matching the fog. Tilt-shift is strongest here — the foreground barn and the far hill are both blurred, the locomotive sharp. Smoke reads as a lit volume. |
+| `s2s-03-amber-haze.jpg` | The whole frame is amber. Fog is dense enough that the far town is a silhouette and the sky is the fog colour; the near ground still reads. Proof that the haze is a mood, not a limit of view. |
+| `s2s-04-light-shafts.jpg` | In-game HUD shot with the sun near the top of frame: crisp radial light shafts through the tree line, a bright bloomed sky, and the ground under the shafts still readable. The shafts are screen-space streaks radiating from the sun's position. |
+| `s2s-05-cathedral-overview.jpg` | Higher pitch, closer to our default view. Warmth arrives through the grading and the lit faces alone, with the horizon only a pale band at the very top. Shows what the default 48° view must achieve without the sky. |
+| `s2s-06-desert-tiltshift.jpg` | Different palette, same rig: the focus band is narrow and everything else is blurred, which is more than we want in play but shows the range. The sky again goes pale warm at the horizon. |
+
+**What these change in the plan.** The sun comes down from 72° to the raking angle, bloom is
+adopted, fog moves onto the board as a warm haze that agrees with the sky's horizon, a light-shaft
+pass is written, and a subtle always-on tilt-shift is added. All of it is post-processing and light
+rig; none of it is a cell, a save field or a hash.
