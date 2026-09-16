@@ -64,11 +64,7 @@ jobs:
     timeout-minutes: 60
     defaults:
       run:
-        # Git Bash by its full path. A self-hosted runner installed as a service has no Git on
-        # its PATH, and "bash" then resolves to the Windows WSL stub in system32, which has no
-        # distribution and exits 1 before the script runs. scripts/unity.sh expects Git Bash.
-        # If Git is installed elsewhere on the runner, change this one line.
-        shell: C:\Program Files\Git\bin\bash.exe --noprofile --norc -eo pipefail {0}
+        shell: bash    # Git Bash, once the step below has put it on the PATH.
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -77,6 +73,15 @@ jobs:
           # without it every run re-imports the whole project (tens of minutes).
           clean: false
           lfs: false
+
+      # A runner installed as a service has no Git on its PATH, so "bash" resolved to the
+      # Windows WSL stub in system32, which has no distribution and exits 1 before a script
+      # runs. Naming Git Bash by its path in the shell line fails too: the runner cannot parse a
+      # shell path with a space in it. So Git's bin goes first on the PATH for the rest of the
+      # job, from the one shell that is always present.
+      - name: Put Git Bash on the PATH
+        shell: pwsh
+        run: Add-Content -Path $env:GITHUB_PATH -Value 'C:\Program Files\Git\bin'
 
       - name: Which editor
         run: scripts/unity.sh which
