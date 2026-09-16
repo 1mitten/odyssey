@@ -193,7 +193,11 @@ namespace Odyssey.Sim.Pawns
 
             int placedColonists = 0;
             for (int i = 0; i < scenario.colonists && take < spots.Count; i++, take++, placedColonists++)
-                pawns.Pawns.Spawn(spots[take]);
+            {
+                // Passions come from the seed and the pawn's own id, not from this placement
+                // stream, so rolling them does not move the salvage that is scattered below.
+                pawns.Pawns.Spawn(spots[take]).RollPassions(seed);
+            }
 
             int placedMeals = 0;
             for (int i = 0; i < scenario.mealPiles && take < spots.Count; i++, take++, placedMeals++)

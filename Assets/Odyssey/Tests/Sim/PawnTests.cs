@@ -51,6 +51,7 @@ namespace Odyssey.Tests.Sim
                 .AddSystem(_ => Needs)
                 .AddSystem(_ => Jobs)
                 .AddSystem(_ => Movement)
+                .AddTickable(_ => new SkillSystem(Ctx))
                 .Build();
 
             RebuildNav();

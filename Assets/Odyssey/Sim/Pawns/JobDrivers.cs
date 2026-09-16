@@ -56,6 +56,10 @@ namespace Odyssey.Sim.Pawns
 
                 case 2:
                 {
+                    // The carry is the work of a haul. The walk to the thing is not counted,
+                    // because the pawn is not hauling yet; the drop is one tick and is not
+                    // counted either, so the experience is bounded by the carry alone.
+                    Work(ctx);
                     JobStatus walk = GotoCell(ctx, Job.DestCell);
                     if (walk == JobStatus.Succeeded) NextToil();
                     return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
@@ -240,6 +244,7 @@ namespace Odyssey.Sim.Pawns
             }
 
             ToilProgress++;
+            Work(ctx);
             if (ToilProgress < ctx.Content.Jobs[Job.DefIndex].workTicks) return JobStatus.Ongoing;
 
             designations.Clear(cell);

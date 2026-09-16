@@ -44,7 +44,9 @@ namespace Odyssey.Sim.Pawns
             MoodTarget = content.Kind.startingMood;
             WorkPriorities = new byte[WorkTypeIndex.Count];
             for (int i = 0; i < WorkPriorities.Length; i++) WorkPriorities[i] = 3;
-            Skills = new int[WorkTypeIndex.Count];
+            Skills = new int[SkillIndex.Count];
+            Passions = new byte[SkillIndex.Count];
+            SkillGainedToday = new int[SkillIndex.Count];
         }
 
         public PawnId Id { get; }
@@ -63,8 +65,25 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Base plus the sum of active thought offsets, recomputed on the needs interval.</summary>
         public int MoodTarget { get; set; }
 
-        /// <summary>Experience per work type. Levels are derived, never stored.</summary>
+        /// <summary>
+        /// Experience per skill, in thousandths of a point (see <see cref="SkillDef"/>). Levels
+        /// are derived by <see cref="SkillLevel"/>, never stored.
+        /// </summary>
         public int[] Skills { get; }
+
+        /// <summary><see cref="Passion"/> per skill, as the byte it is saved as. Rolled once at spawn.</summary>
+        public byte[] Passions { get; }
+
+        /// <summary>
+        /// Experience gained per skill since the day began, for the soft cap. Reset lazily by
+        /// <see cref="GainExperience"/> when the day it belongs to (<see cref="SkillDay"/>) has
+        /// passed, so the cap needs no cadence of its own and costs nothing on a tick nobody
+        /// works.
+        /// </summary>
+        public int[] SkillGainedToday { get; }
+
+        /// <summary>The day <see cref="SkillGainedToday"/> counts. Hashed and saved with it.</summary>
+        public int SkillDay { get; internal set; }
 
         /// <summary>Player priority per work type: 0 disabled, 1 highest, 4 lowest.</summary>
         public byte[] WorkPriorities { get; }
@@ -172,6 +191,80 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Player priority for a work type, 0 meaning disabled.</summary>
         public virtual int WorkPriority(int workType) => WorkPriorities[workType];
 
+        // ---- skills ----------------------------------------------------------------------
+
+        /// <summary>The level of a skill, 0..20, read off its experience by the Def table.</summary>
+        public int SkillLevel(int skill) => Content.Skills[skill].Level(Skills[skill]);
+
+        public Passion PassionFor(int skill) => (Passion)Passions[skill];
+
+        /// <summary>
+        /// The global learning factor, per mille. 1,000 until traits exist; the reference adds
+        /// trait and implant offsets here, which is why it is a seam and not a constant.
+        /// </summary>
+        public virtual int LearningFactorPerMille() => 1_000;
+
+        /// <summary>
+        /// Earn experience in a skill: the base amount, scaled by the learning factor and the
+        /// passion, then by the over-cap factor once the day's gains have passed the soft cap,
+        /// and never past the top level. Called once per tick of work by the job drivers.
+        ///
+        /// <para>The day counter is reset here rather than at midnight by a system, so a pawn
+        /// that does not work costs nothing and the cap cannot drift from the counter.</para>
+        /// </summary>
+        public virtual void GainExperience(int skill, int baseExperience, int currentTick)
+        {
+            var def = Content.Skills[skill];
+            int day = currentTick / Content.DayTicks;
+            if (day != SkillDay)
+            {
+                for (int i = 0; i < SkillGainedToday.Length; i++) SkillGainedToday[i] = 0;
+                SkillDay = day;
+            }
+
+            int gain = baseExperience * LearningFactorPerMille() / 1_000;
+            gain = gain * def.gainPerMilleByPassion[Passions[skill]] / 1_000;
+            if (SkillGainedToday[skill] >= def.dailySoftCap) gain = gain * def.overCapGainPerMille / 1_000;
+
+            int ceiling = def.MaxExperience;
+            if (Skills[skill] + gain > ceiling) gain = ceiling - Skills[skill];
+            if (gain <= 0) return;
+
+            Skills[skill] += gain;
+            SkillGainedToday[skill] += gain;
+        }
+
+        /// <summary>
+        /// Lose experience in a skill through disuse, floored at the first decaying level: decay
+        /// is a property of the levels from <see cref="SkillDef.decayFromLevel"/> up, so it is
+        /// never what drops a pawn out of them.
+        /// </summary>
+        public virtual void DecayExperience(int skill, int amount)
+        {
+            var def = Content.Skills[skill];
+            int floor = def.ExperienceForLevel(def.decayFromLevel);
+            int value = Skills[skill] - amount;
+            Skills[skill] = value < floor ? floor : value;
+        }
+
+        /// <summary>
+        /// Roll this pawn's passions from the world seed and its own id, so that the same seed
+        /// gives the same colonists and adding a roll elsewhere cannot shift them. Called once,
+        /// at placement; a load reads the saved bytes instead.
+        /// </summary>
+        public virtual void RollPassions(uint seed)
+        {
+            var kind = Content.Kind;
+            var rng = DeterministicRandom.ForTick(seed, Id.Value, PawnPurpose.Passion);
+            for (int skill = 0; skill < Passions.Length; skill++)
+            {
+                int roll = rng.NextInt(100);
+                if (roll < kind.passionMajorPerCent) Passions[skill] = (byte)Passion.Major;
+                else if (roll < kind.passionMajorPerCent + kind.passionMinorPerCent) Passions[skill] = (byte)Passion.Minor;
+                else Passions[skill] = (byte)Passion.None;
+            }
+        }
+
         // ---- thoughts --------------------------------------------------------------------
 
         /// <summary>
@@ -259,6 +352,9 @@ namespace Odyssey.Sim.Pawns
             hash.Add(Mood);
             hash.Add(MoodTarget);
             for (int i = 0; i < Skills.Length; i++) hash.Add(Skills[i]);
+            for (int i = 0; i < Passions.Length; i++) hash.Add(Passions[i]);
+            for (int i = 0; i < SkillGainedToday.Length; i++) hash.Add(SkillGainedToday[i]);
+            hash.Add(SkillDay);
             for (int i = 0; i < WorkPriorities.Length; i++) hash.Add(WorkPriorities[i]);
             hash.Add(BreakTicksLeft);
             hash.Add(Asleep);
