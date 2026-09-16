@@ -12,20 +12,25 @@ namespace Odyssey.Presentation.Rendering
     /// cap or the camera moved — which would look like a bug in the simulation rather than in the
     /// renderer, and would be hunted there.
     ///
-    /// Keyed on the pawn's id and nothing else, so a face survives a save, a slice change and a
-    /// trip through the figure pool.
+    /// Keyed on the pawn's id and the world seed, so a face survives a save, a slice change, a
+    /// trip through the figure pool and a restart.
+    ///
+    /// <para>Callers do not use this directly any more: <see cref="ColonistAppearanceBook"/> is
+    /// the thing both drawers hold, and it calls this for the body. The split is kept because the
+    /// body lottery and the colour draw want different mixing and are tested separately.</para>
     /// </summary>
     public static class ColonistLook
     {
         /// <summary>
         /// The face index for a pawn, or 0 when there is only one to choose from.
         ///
-        /// <paramref name="salt"/> is what makes a fresh session a fresh cast. Without it the
-        /// starting colony is always pawns 1 to 5, and a pure hash of the id deals those five the
-        /// same five faces every single time — so a cast of sixty-one looked like a cast of five.
-        /// The salt is chosen once per session by whoever owns the session and handed to every
-        /// drawer of colonists, so the same pawn still gets the same face everywhere *within* a
-        /// session; only between sessions does it change.
+        /// <paramref name="salt"/> is what makes one world's cast different from another's.
+        /// Without it the starting colony is always pawns 1 to 5, and a pure hash of the id deals
+        /// those five the same five faces every single time — so a cast of sixty-one looked like a
+        /// cast of five. It is the <b>world seed</b> (see <see cref="ColonistAppearance"/>), which
+        /// is why a given world deals itself the same people on every load while a new world deals
+        /// new ones. It was a number rolled at startup once, which bought the variety at the price
+        /// of a colonist who was somebody else after a reload.
         /// </summary>
         public static int For(int pawnId, int variants, uint salt = 0u)
         {

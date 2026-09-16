@@ -384,7 +384,15 @@ namespace Odyssey.Presentation.World
             public float[] Speeds = Array.Empty<float>();
         }
 
-        readonly Look[] _looks;
+        readonly Look?[] _looks;
+        readonly int _usableLooks;
+        readonly ModuleCatalogue? _catalogue;
+
+        /// <summary>
+        /// Where a colonist's colours come from. Null draws every figure in the pack's own paint,
+        /// which is what a harness that never set one gets.
+        /// </summary>
+        public ColonistMaterials? Materials { get; set; }
 
         /// <summary>
         /// The catalogue row per style, or null on a clone without the packs.
@@ -429,10 +437,20 @@ namespace Odyssey.Presentation.World
         readonly List<int> _retired = new List<int>();
 
         /// <summary>True when there is at least one usable face, so figures can be made at all.</summary>
-        public bool Enabled => _looks.Length > 0;
+        public bool Enabled => _usableLooks > 0;
 
-        /// <summary>How many different faces a colonist can be drawn with.</summary>
+        /// <summary>
+        /// The size of the face lottery: every colonist row the catalogue has, holes included.
+        ///
+        /// Not the number of *usable* faces. This is the index space the appearance book deals in
+        /// and the instanced renderer buckets by, and the three must be the same number or a
+        /// colonist changes identity on crossing the figure cap. See
+        /// <see cref="ColonistAppearanceBook"/>, which explains how they used to differ.
+        /// </summary>
         public int LookCount => _looks.Length;
+
+        /// <summary>How many of those rows actually resolved to art this session.</summary>
+        public int UsableLookCount => _usableLooks;
 
         public int FigureCount => _byPawn.Count;
 
@@ -614,7 +632,9 @@ namespace Odyssey.Presentation.World
         {
             _parent = parent;
             _layer = layer;
+            _catalogue = catalogue;
             _looks = LooksFrom(catalogue);
+            for (int i = 0; i < _looks.Length; i++) if (_looks[i] != null) _usableLooks++;
             for (int i = 0; i < _toolRows.Length; i++)
                 _toolRows[i] = catalogue != null ? catalogue.Find(Styles[i].ToolModule) : null;
             Chips = new ChipDirector(parent, layer);
@@ -627,43 +647,168 @@ namespace Odyssey.Presentation.World
         /// one pack still gets every face the packs it does have can provide, and a colony on a
         /// machine with no packs at all simply falls through to the baked instanced path.
         /// </summary>
-        static Look[] LooksFrom(ModuleCatalogue? catalogue)
+        /// <summary>
+        /// One slot per colonist row of the catalogue, in the catalogue's own order, with
+        /// <c>null</c> where the art did not resolve.
+        ///
+        /// <para><b>The holes are the point.</b> This used to skip unusable rows and compact the
+        /// survivors, which quietly made look <c>i</c> mean a different body here than it meant to
+        /// the instanced renderer — so with three packs of four installed, every colonist would
+        /// change face on crossing the figure cap, and the fault would be hunted in the
+        /// simulation. Keeping the slot preserves the index space; a pawn whose face is a hole is
+        /// simply not drawn as a figure and takes the baked path instead, which degrades that one
+        /// colonist rather than re-dealing the colony.</para>
+        /// </summary>
+        static Look?[] LooksFrom(ModuleCatalogue? catalogue)
         {
-            if (catalogue == null) return Array.Empty<Look>();
+            if (catalogue == null) return Array.Empty<Look?>();
 
-            var looks = new List<Look>();
-            foreach (ModuleEntry row in catalogue.FindFamily(ModuleIds.ColonistBase))
+            List<ModuleEntry> rows = catalogue.FindFamily(ModuleIds.ColonistBase);
+            var looks = new Look?[rows.Count];
+            for (int i = 0; i < rows.Count; i++)
             {
+                ModuleEntry row = rows[i];
                 if (row.prefab == null) continue;
                 LocomotionEntry[] gaits = Gaits(row);
                 if (gaits.Length == 0) continue;
 
-                looks.Add(new Look
+                looks[i] = new Look
                 {
                     Prefab = row.prefab,
                     Scale = row.scale,
                     Gaits = gaits,
                     Speeds = GroundSpeeds(gaits, row.scale),
-                });
+                };
             }
-            return looks.ToArray();
+            return looks;
         }
 
         /// <summary>
-        /// Which face a pawn wears, fixed by its id.
+        /// Who every colonist is: which face, and what colour their skin, hair and clothes are.
         ///
-        /// By id and not by draw order, because a figure is leased and returned as a pawn crosses
-        /// the drawn layers, and a colonist who came back from a trip downstairs as somebody else
-        /// would be worse than a colony of identical twins.
+        /// <para>Set before the first <see cref="Sync"/> and then left alone. It must be the
+        /// <b>same object</b> the instanced renderer holds, not an equal one — that is the whole
+        /// reason the book exists, and a test asserts the identity. Two drawers that computed the
+        /// answer separately would put a different person on screen the moment a colonist crossed
+        /// the figure cap, and the fault would be hunted in the simulation.</para>
+        ///
+        /// <para>A harness that never sets one gets a book dealt from seed 0 over the same number
+        /// of faces, so an editor tool still draws a varied cast without having to know this type
+        /// exists. That is safe precisely because the derivation is pure: two books with the same
+        /// seed and the same face count give the same answers, object identity or not. Identity
+        /// still matters once overrides exist, which is why the game hands one object to both.</para>
         /// </summary>
-        /// <summary>
-        /// Per-session salt for the face lottery. Set before the first <see cref="Sync"/> and then
-        /// left alone, and set to the *same* value on the instanced renderer, or a colonist will
-        /// change face on crossing the figure cap.
-        /// </summary>
-        public uint LookSalt { get; set; }
+        public ColonistAppearanceBook Appearances
+        {
+            get => _appearances ??= new ColonistAppearanceBook(0u, _looks.Length);
+            set => _appearances = value;
+        }
 
-        int LookFor(PawnId pawn) => ColonistLook.For(pawn.Value, _looks.Length, LookSalt);
+        ColonistAppearanceBook? _appearances;
+
+        int LookFor(PawnId pawn) => Appearances.LookFor(pawn.Value);
+
+        /// <summary>
+        /// How far the sole sits below the ankle, on the figure whose boot is thickest.
+        ///
+        /// Printed by the contact sheets. A rig that answers zero is one whose feet are not bound,
+        /// and a number far from a tenth of a metre is one worth looking at rather than trusting.
+        /// </summary>
+        public float MeasuredSoleOffset { get; private set; }
+
+        /// <summary>
+        /// The height of a figure's ankle above the ground it is standing on, in the idle pose.
+        ///
+        /// <para>The figure is placed with its root on the cell floor and the graph has just been
+        /// evaluated into the idle, so both feet are down and the root is where the soles are.
+        /// The ankle bone above it is therefore exactly the thickness of the boot, at whatever
+        /// scale this face is drawn.</para>
+        ///
+        /// <para>Measured here rather than written down as a constant because the cast is
+        /// sixty-one characters from four packs, drawn at 1.4, and a cowboy boot is not a
+        /// trainer.</para>
+        /// </summary>
+        static float MeasureSole(Figure figure)
+        {
+            if (figure.LeftFoot == null || figure.RightFoot == null) return 0f;
+
+            float ankle = Mathf.Min(figure.LeftFoot.position.y, figure.RightFoot.position.y);
+
+            // Measured from the *posed mesh*, not from the root and not from the bounds.
+            //
+            // The first version took the root as the sole, which is true of a booted character and
+            // not of a barefoot one: those kept sinking, because the root sits where a boot would
+            // have been and a bare heel is higher. The second asked the renderer for its bounds
+            // and got 0.394 m, because a SkinnedMeshRenderer's bounds are the loose precomputed
+            // volume rather than the posed mesh. Baking the pose and reading the lowest vertex is
+            // the only one of the three that answers the question actually being asked, and it
+            // gets right whatever the next pack does -- the cast is sixty-one characters from four
+            // packs and nothing says their rigs were built to one convention.
+            float lowest = LowestDrawnPoint(figure);
+
+            float sole = lowest < float.MaxValue
+                ? ankle - lowest
+                : ankle - figure.Transform.position.y;   // nothing bakeable: the old assumption
+
+            // And a little more, so nothing grazes. A sole measured exactly right still leaves the
+            // foot touching the ground at a single plane, and the drawn ground is not a plane --
+            // GroundRelief shears every cell and the turf mesh is not flat inside one. A couple of
+            // centimetres is below the threshold at which a figure reads as floating and above the
+            // one at which the toe of a bare foot catches on the grass.
+            sole += Footing.SoleClearance;
+
+            // An absurd answer means the rig is not built the way this assumes, or the pose was
+            // never evaluated. Better to correct nothing than to lift a colonist into the air on a
+            // bad measurement.
+            // A quarter of a metre is already a tall boot at this scale. Anything past it means
+            // the rig is not built the way this assumes, and correcting nothing beats lifting a
+            // colonist into the air on a bad measurement -- which is exactly what the bounds
+            // version would have done.
+            return sole > 0f && sole < 0.25f ? sole : 0f;
+        }
+
+        /// <summary>
+        /// The world height of the lowest vertex this figure actually draws, in its current pose.
+        ///
+        /// <para>Baked rather than read off the renderer: <c>SkinnedMeshRenderer.bounds</c> is a
+        /// conservative volume, not the posed mesh, and using it measured a sole of 0.394 m on a
+        /// figure whose real one is a tenth of that. The bake is a script-created mesh, so it is
+        /// readable whatever the source model's import settings say, and it happens once per
+        /// figure at bind rather than per frame.</para>
+        /// </summary>
+        static float LowestDrawnPoint(Figure figure)
+        {
+            float lowest = float.MaxValue;
+            Mesh? baked = null;
+
+            for (int i = 0; i < figure.Skins.Length; i++)
+            {
+                SkinnedMeshRenderer skin = figure.Skins[i];
+                if (skin == null || !skin.enabled || skin.sharedMesh == null) continue;
+
+                baked ??= new Mesh { name = "Odyssey/SoleProbe" };
+                skin.BakeMesh(baked, useScale: true);
+
+                Vector3[] vertices = baked.vertices;
+                Transform at = skin.transform;
+                for (int v = 0; v < vertices.Length; v++)
+                {
+                    float y = at.TransformPoint(vertices[v]).y;
+                    if (y < lowest) lowest = y;
+                }
+            }
+
+            if (baked != null) UnityEngine.Object.DestroyImmediate(baked);
+            return lowest;
+        }
+
+        /// <summary>True when this pawn's face resolved to art and a figure can be built for it.</summary>
+        bool CanDraw(PawnId pawn)
+        {
+            if (_looks.Length == 0) return false;
+            int look = LookFor(pawn);
+            return (uint)look < (uint)_looks.Length && _looks[look] != null;
+        }
 
         /// <summary>Gaits with a live clip, slowest first. Order is what makes the blend a blend.</summary>
         static LocomotionEntry[] Gaits(ModuleEntry? row)
@@ -747,6 +892,11 @@ namespace Odyssey.Presentation.World
             {
                 CellRef cell = pawns[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
+
+                // A face that did not resolve is not drawn here at all: the pawn falls through to
+                // the baked path, which will draw whatever that row does resolve to (a marker, if
+                // nothing). Skipping is what keeps a missing row a one-colonist problem.
+                if (!CanDraw(pawns[i].Id)) continue;
 
                 Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading, World);
                 Figure figure = Lease(pawns[i].Id, position);
@@ -832,8 +982,11 @@ namespace Odyssey.Presentation.World
                 // point: on a slope the two are at different heights, and asking once at the
                 // body's own position would move both feet by the same amount and leave the
                 // figure standing on one heel exactly as before.
-                float leftGround = figure.GroundY + GroundRelief.HeightAt(leftAt.x, leftAt.z);
-                float rightGround = figure.GroundY + GroundRelief.HeightAt(rightAt.x, rightAt.z);
+                // The ankle goes a sole's height *above* the ground, not on it. Without the
+                // offset the boot is buried to the ankle, which is what this pass was doing to
+                // every colonist it corrected.
+                float leftGround = figure.GroundY + GroundRelief.HeightAt(leftAt.x, leftAt.z) + figure.SoleOffset;
+                float rightGround = figure.GroundY + GroundRelief.HeightAt(rightAt.x, rightAt.z) + figure.SoleOffset;
 
                 float left = Footing.Correction(leftAt.y, leftGround);
                 float right = Footing.Correction(rightAt.y, rightGround);
@@ -1874,13 +2027,72 @@ namespace Odyssey.Presentation.World
         /// </summary>
         void Blend(Figure figure, float speed, bool running)
         {
-            Look look = _looks[figure.Look];
+            Look look = _looks[figure.Look]!;
             GaitBlend blend = GaitBlend.Solve(look.Speeds, speed);
             for (int i = 0; i < look.Gaits.Length; i++)
             {
                 figure.Mixer.SetInputWeight(i, blend.WeightOf(i));
                 figure.Clips[i].SetSpeed(running ? blend.Rate : 0f);
             }
+        }
+
+        /// <summary>
+        /// Dress a figure in the colours the pawn borrowing it was dealt.
+        ///
+        /// <para>Assigns <c>sharedMaterial</c> and never <c>material</c>. The latter silently
+        /// instantiates a per-renderer copy that Unity then owns and never collects — the same
+        /// class of leak <c>ModuleLibrary.Dispose</c> exists to prevent, arriving once per lease
+        /// rather than once per look.</para>
+        ///
+        /// <para>A body the classifier could not read, or a build with no character shader, gets
+        /// its own art back rather than something approximate. That is what keeps an unclassified
+        /// colonist looking exactly the way the artist painted it.</para>
+        /// </summary>
+        void Repaint(Figure figure, PawnId pawn)
+        {
+            if (Materials == null || figure.Skins.Length == 0) return;
+
+            AppearanceCells? cells = CellsFor(figure.Look);
+            ColonistAppearance look = Appearances.For(pawn.Value);
+
+            for (int i = 0; i < figure.Skins.Length; i++)
+            {
+                SkinnedMeshRenderer skin = figure.Skins[i];
+                if (skin == null) continue;
+
+                Material? art = figure.ArtMaterials[i];
+                Material? painted = Materials.For(art, cells, look);
+                skin.sharedMaterial = painted != null ? painted : art;
+            }
+        }
+
+        /// <summary>
+        /// Dress every live figure again, for when the colours themselves have changed.
+        ///
+        /// A figure is normally painted once, as it is leased, because its colours are a function
+        /// of the pawn wearing it and neither changes while it is on screen. Two things break that
+        /// assumption: the contact sheet, which forces a slot to a signal colour and shoots the
+        /// same colony again, and — later — an appearance panel, where the player picks a colour
+        /// for somebody already standing in front of them.
+        /// </summary>
+        public void RepaintAll()
+        {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn < 0) continue;
+                Repaint(figure, new PawnId(figure.Pawn));
+            }
+        }
+
+        /// <summary>Which swatches this face's body uses, or null when it was never classified.</summary>
+        AppearanceCells? CellsFor(int look)
+        {
+            if (_catalogue == null) return null;
+            List<ModuleEntry> rows = _catalogue.FindFamily(ModuleIds.ColonistBase);
+            if ((uint)look >= (uint)rows.Count) return null;
+            AppearanceCells cells = rows[look].appearance;
+            return cells.Any ? cells : null;
         }
 
         Figure Lease(PawnId pawn, Vector3 at)
@@ -1892,6 +2104,7 @@ namespace Odyssey.Presentation.World
             // different face would put the wrong person on screen rather than save any work.
             int look = LookFor(pawn);
             Figure figure = Free(look) ?? Create(look);
+            Repaint(figure, pawn);
             figure.Pawn = pawn.Value;
             figure.Settled = false;
             figure.Speed = 0f;
@@ -1970,7 +2183,7 @@ namespace Odyssey.Presentation.World
 
         Figure Create(int look)
         {
-            Look face = _looks[look];
+            Look face = _looks[look]!;
             GameObject instance = UnityEngine.Object.Instantiate(face.Prefab, _parent);
             instance.name = $"Colonist figure {_figures.Count} ({face.Prefab.name})";
             instance.transform.localScale = face.Scale;
@@ -2026,7 +2239,12 @@ namespace Odyssey.Presentation.World
             graph.Evaluate(0f);
 
             var figure = new Figure(instance, animator, graph, mixer, clips) { Look = look };
+            figure.Skins = skins;
+            figure.ArtMaterials = new Material?[skins.Length];
+            for (int i = 0; i < skins.Length; i++) figure.ArtMaterials[i] = skins[i].sharedMaterial;
             BindWorkBones(figure, animator);
+            figure.SoleOffset = MeasureSole(figure);
+            if (figure.SoleOffset > MeasuredSoleOffset) MeasuredSoleOffset = figure.SoleOffset;
             _figures.Add(figure);
             return figure;
         }
@@ -2535,6 +2753,17 @@ namespace Odyssey.Presentation.World
             public readonly AnimationMixerPlayable Mixer;
             public readonly AnimationClipPlayable[] Clips;
 
+            /// <summary>
+            /// The figure's skinned renderers and the material each was built with.
+            ///
+            /// Kept so a lease can repaint the figure for the pawn borrowing it and hand the art
+            /// back when it cannot. The pool is keyed on the face, not on the colours, so the same
+            /// body is lent to colonists wearing different clothes and must be repainted on every
+            /// lease rather than once at construction.
+            /// </summary>
+            public SkinnedMeshRenderer[] Skins = Array.Empty<SkinnedMeshRenderer>();
+            public Material?[] ArtMaterials = Array.Empty<Material?>();
+
             /// <summary>The pawn this figure is lent to, or -1 when it is parked in the pool.</summary>
             public int Pawn;
 
@@ -2649,6 +2878,23 @@ namespace Odyssey.Presentation.World
             /// can no longer be asked where the ground under this pawn is.
             /// </summary>
             public float GroundY;
+
+            /// <summary>
+            /// How far this figure's sole sits below its ankle bone, measured off its own rig.
+            ///
+            /// <para><b>A humanoid foot bone is the ankle, not the sole</b> — the same fact about
+            /// Mecanim that had every tool in this project seated behind the hand until
+            /// <c>HandGrip.Palm</c> measured where a held thing really sits. Planting the ankle on
+            /// the ground therefore buries the boot by the height of the ankle above it, which at
+            /// the figure's 1.4 scale is a good ten centimetres, and it reads exactly as the
+            /// owner described: feet sinking into the terrain while walking.</para>
+            ///
+            /// <para>Measured rather than guessed, and per figure rather than once, because the
+            /// cast is sixty-one characters from four packs and a boot is not the same height on
+            /// all of them. Taken in the idle pose at bind time, where the figure stands at its
+            /// own root and both feet are down.</para>
+            /// </summary>
+            public float SoleOffset;
 
             /// <summary>
             /// One tool per style, fitted once and kept, all hidden but the one in use.
