@@ -1061,6 +1061,50 @@ namespace Odyssey.Presentation.World
                 Pitch(figure.LeftUpperArm, axis, swing.Shoulder - swing.Spine);
                 Pitch(figure.LeftLowerArm, axis, swing.Elbow);
             }
+
+            // And close both fists on the haft.
+            //
+            // **Last, and after the off hand has reached**, because curling a finger rotates it
+            // about the hand it hangs off: close the hand first and the reach then carries a fist
+            // somewhere else, which is a fist in the air rather than a fist on the axe.
+            //
+            // Both hands were on the haft long before this and neither of them held it. The
+            // working hand got there by having the tool parented to it and the off hand by an
+            // inverse-kinematics reach, and in both cases the fingers stayed in whatever the idle
+            // clip left them — open, flat, with the haft passing through the palm. It reads as
+            // balancing an axe rather than holding one (owner, 2026-09-16).
+            //
+            // Scaled by the same weight as the rest of the pose, so a colonist takes hold as it
+            // lifts the tool rather than snapping into a fist on one frame. A figure with no tool
+            // fitted — a clone without the packs — closes nothing, because there is nothing there
+            // to hold and a colony of people walking about with clenched fists is worse than a
+            // colony chopping bare-handed.
+            Transform? tool = figure.Held.Transform;
+            if (tool != null)
+            {
+                float grip = Mathf.Clamp01(figure.WorkWeight);
+
+                // The haft as a line in the world: a point on it, and the way it runs.
+                Vector3 haftPoint = tool.TransformPoint(figure.Held.OffHandGrip);
+                Vector3 haftDirection = tool.TransformPoint(figure.Held.BladeTip) - haftPoint;
+
+                // The off hand first, and freely: nothing hangs off it.
+                HandGrip.FaceHaft(figure.LeftGrip, haftPoint, haftDirection, grip);
+                HandGrip.Close(figure.LeftGrip, grip);
+
+                // The working hand carries the axe, so turning it turns the axe. Everything about
+                // where the blade points was settled against photographs — the roll, the yaw, the
+                // measured strike offset the whole stance is solved from — and none of that may
+                // move because a wrist did. So the tool's place in the world is taken before the
+                // hand turns and put back afterwards, and the fist rotates inside a stationary axe.
+                Vector3 toolPosition = tool.position;
+                Quaternion toolRotation = tool.rotation;
+
+                HandGrip.FaceHaft(figure.RightGrip, haftPoint, haftDirection, grip);
+                HandGrip.Close(figure.RightGrip, grip);
+
+                tool.SetPositionAndRotation(toolPosition, toolRotation);
+            }
         }
 
         /// <summary>
@@ -1544,6 +1588,30 @@ namespace Odyssey.Presentation.World
         /// these, and the figure quietly goes on walking and never swings — which is the same
         /// thing that happens on a clone with no packs at all.
         /// </summary>
+        /// <summary>Gather one hand's grip bones. Any of them may be absent on a given rig.</summary>
+        static HandGrip.Bones GripBones(Animator animator, bool right) => new HandGrip.Bones
+        {
+            Hand = animator.GetBoneTransform(right ? HumanBodyBones.RightHand : HumanBodyBones.LeftHand),
+            ThumbProximal = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightThumbProximal : HumanBodyBones.LeftThumbProximal),
+            ThumbIntermediate = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightThumbIntermediate : HumanBodyBones.LeftThumbIntermediate),
+            ThumbDistal = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightThumbDistal : HumanBodyBones.LeftThumbDistal),
+            IndexProximal = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightIndexProximal : HumanBodyBones.LeftIndexProximal),
+            IndexIntermediate = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightIndexIntermediate : HumanBodyBones.LeftIndexIntermediate),
+            IndexDistal = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightIndexDistal : HumanBodyBones.LeftIndexDistal),
+            MiddleProximal = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightMiddleProximal : HumanBodyBones.LeftMiddleProximal),
+            MiddleIntermediate = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightMiddleIntermediate : HumanBodyBones.LeftMiddleIntermediate),
+            MiddleDistal = animator.GetBoneTransform(
+                right ? HumanBodyBones.RightMiddleDistal : HumanBodyBones.LeftMiddleDistal),
+        };
+
         void BindWorkBones(Figure figure, Animator animator)
         {
             if (!animator.isHuman) return;
@@ -1567,6 +1635,12 @@ namespace Odyssey.Presentation.World
             figure.RightUpperLeg = animator.GetBoneTransform(HumanBodyBones.RightUpperLeg);
             figure.RightLowerLeg = animator.GetBoneTransform(HumanBodyBones.RightLowerLeg);
             figure.RightFoot = animator.GetBoneTransform(HumanBodyBones.RightFoot);
+
+            // The fingers, so a hand can close on a haft instead of having one pass through it.
+            // The Polygon rig maps thumb, index and middle at three joints each; no ring or little,
+            // which at this camera height is not a difference anybody can see. See HandGrip.
+            figure.RightGrip = GripBones(animator, right: true);
+            figure.LeftGrip = GripBones(animator, right: false);
 
             // How tall this particular figure's hips stand, measured off its own rig rather than
             // named as a number. Sixty-one characters have sixty-one sets of proportions and the
@@ -2045,6 +2119,10 @@ namespace Odyssey.Presentation.World
 
             /// <summary>This figure's own hip height when it stands, in metres. See BindWorkBones.</summary>
             public float StandingHipHeight;
+
+            /// <summary>The fingers, so a fist can close on a haft. See <see cref="HandGrip"/>.</summary>
+            public HandGrip.Bones RightGrip;
+            public HandGrip.Bones LeftGrip;
 
             /// <summary>
             /// The one-shot gesture being drawn, or <see cref="PawnGesture.None"/>.
