@@ -566,10 +566,11 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public void DrawSelectionBracket(Vector3 centre, Vector3 size, Color colour)
         {
-            // Opaque and lightly emissive rather than ghosted: a cursor that dims with the light
-            // is one you lose against dark ground, and this one has to be findable at a glance.
-            Material material = _materials.Get(_model.Library.FallbackMaterial, colour, colour * 0.9f,
-                ghost: false, alpha: 1f);
+            // Translucent, and emissive so it does not go dim with the light: a cursor has to be
+            // findable at a glance without becoming the brightest thing on the board. The alpha
+            // rides on the colour, so the one dial on the camera rig sets both.
+            Material material = _materials.Get(_model.Library.FallbackMaterial, colour, colour * 0.75f,
+                ghost: true, alpha: colour.a);
 
             var rp = new RenderParams(material)
             {

@@ -113,7 +113,7 @@ namespace Odyssey.EditorTools
                 camera.fieldOfView = 40f;
                 camera.nearClipPlane = 0.3f;
                 camera.farClipPlane = 2000f;
-                camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.clearFlags = CameraClearFlags.Skybox;
                 camera.backgroundColor = new Color(0.16f, 0.19f, 0.24f);
                 camera.enabled = false;
 

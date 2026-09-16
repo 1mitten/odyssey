@@ -125,7 +125,7 @@ namespace Odyssey.EditorTools
                 camera.fieldOfView = 40f;
                 camera.nearClipPlane = 0.3f;
                 camera.farClipPlane = 2000f;
-                camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.clearFlags = CameraClearFlags.Skybox;
                 camera.backgroundColor = new Color(0.16f, 0.19f, 0.24f);
 
                 // Colonists too, and through the real simulation rather than a few poses dropped
@@ -227,7 +227,13 @@ namespace Odyssey.EditorTools
                 Shoot(camera, focus, 42f, 18f, "Logs/shot-close.png");
                 Shoot(camera, focus, 70f, 26f, "Logs/shot-down.png");
 
-                Debug.Log("[Shot] wrote Logs/shot-play.png, Logs/shot-close.png, Logs/shot-down.png");
+                // Low and far, which is the only framing that shows the rim of the board and the
+                // sky above it. The play camera never looks this flat, but the sky, the fog and
+                // the edge of the world are only checkable from here.
+                Shoot(camera, focus, 9f, 150f, "Logs/shot-horizon.png");
+
+                Debug.Log("[Shot] wrote Logs/shot-play.png, Logs/shot-close.png, " +
+                          "Logs/shot-down.png, Logs/shot-horizon.png");
 
                 // Before the root goes: a playable graph bound to an Animator that has just been
                 // destroyed under it complains, and the complaint would be the picture's epitaph.
@@ -324,7 +330,7 @@ namespace Odyssey.EditorTools
                 camera.fieldOfView = 40f;
                 camera.nearClipPlane = 0.3f;
                 camera.farClipPlane = 2000f;
-                camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.clearFlags = CameraClearFlags.Skybox;
                 camera.backgroundColor = new Color(0.16f, 0.19f, 0.24f);
                 Shoot(camera, focus, 38f, span * 1.6f, path);
             }
@@ -1068,9 +1074,60 @@ namespace Odyssey.EditorTools
             // the board has to stay legible corner to corner.
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.30f, 0.34f, 0.40f);
+            // The horizon colour of the sky below, so what fades out at the rim of the board fades
+            // into the sky rather than into a grey that does not belong to anything.
+            RenderSettings.fogColor = SkyHorizon;
             RenderSettings.fogStartDistance = 460f;
             RenderSettings.fogEndDistance = 1100f;
+
+            RenderSettings.skybox = SkyMaterial();
+            DynamicGI.UpdateEnvironment();
+        }
+
+        /// <summary>The pale band the sky meets the ground at, and the colour distance fades into.</summary>
+        static readonly Color SkyHorizon = new Color(0.76f, 0.86f, 0.91f);
+
+        const string SkyMaterialPath = "Assets/Settings/OdysseySky.mat";
+
+        /// <summary>
+        /// The sky material, made once and then reused.
+        ///
+        /// A real asset rather than one built in memory, because <c>RenderSettings.skybox</c> is
+        /// serialised into the scene: a material created at build time would be a reference to
+        /// nothing the moment the scene was reopened. Created here rather than by hand for the
+        /// usual reason — a step done once on one machine is invisible to every clone afterwards.
+        ///
+        /// The colours are written on every call, so retuning the sky is an edit here and a
+        /// rebuild, not a hunt through an inspector. A serialised value would otherwise win over
+        /// anything changed in code, silently.
+        /// </summary>
+        public static Material? SkyMaterial()
+        {
+            Shader shader = Shader.Find("Odyssey/GradientSky");
+            if (shader == null)
+            {
+                Debug.LogWarning("[Odyssey] shader Odyssey/GradientSky not found; no sky.");
+                return null;
+            }
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(SkyMaterialPath);
+            if (material == null)
+            {
+                material = new Material(shader) { name = "OdysseySky" };
+                Directory.CreateDirectory(Path.GetFullPath(Path.GetDirectoryName(SkyMaterialPath)!));
+                AssetDatabase.CreateAsset(material, SkyMaterialPath);
+            }
+
+            material.shader = shader;
+            material.SetColor("_SkyColour", new Color(0.36f, 0.60f, 0.86f));
+            material.SetColor("_HorizonColour", SkyHorizon);
+            material.SetColor("_GroundColour", new Color(0.34f, 0.37f, 0.39f));
+            material.SetFloat("_HorizonFalloff", 2.2f);
+            material.SetFloat("_GroundFalloff", 3.0f);
+
+            EditorUtility.SetDirty(material);
+            AssetDatabase.SaveAssets();
+            return material;
         }
 
         static SliceCameraRig BuildCamera(Transform root)
@@ -1083,7 +1140,7 @@ namespace Odyssey.EditorTools
             camera.fieldOfView = 40f;
             camera.nearClipPlane = 0.3f;
             camera.farClipPlane = 600f;
-            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.clearFlags = CameraClearFlags.Skybox;
             camera.backgroundColor = new Color(0.10f, 0.12f, 0.16f);
             go.AddComponent<AudioListener>();
 
