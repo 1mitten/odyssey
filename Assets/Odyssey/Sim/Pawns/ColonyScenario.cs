@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
 using Odyssey.Sim.World;
+using Odyssey.Sim.Worldgen.Natural;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -175,6 +176,12 @@ namespace Odyssey.Sim.Pawns
             if (!size.Contains(x, z, y)) return false;
             int index = size.Index(x, z, y);
             if (!grid.IsWalkable(index)) return false;
+
+            // Walkable is not enough. Shallow water can be waded, so it passes the test above,
+            // and a bed or a stockpile would be placed standing in a stream. Deep water is
+            // already excluded by walkability; this is the half that is not obvious.
+            if (NaturalContent.IsWater(grid.Terrain[index])) return false;
+
             spots.Add(index);
             return true;
         }

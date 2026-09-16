@@ -3,7 +3,9 @@ using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
+using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen.Natural;
 
@@ -435,6 +437,107 @@ namespace Odyssey.Tests.Sim
             else grid.Flags[index] &= ~CellFlags.SolidTerrain;
             if (NaturalContent.IsImpassable(terrain)) grid.Flags[index] |= CellFlags.ImpassableTerrain;
             else grid.Flags[index] &= ~CellFlags.ImpassableTerrain;
+        }
+
+        /// <summary>
+        /// The hand-built board above proves the arithmetic. This proves the wiring: a nav grid
+        /// built the way the game builds one, over a map the generator actually made, charges
+        /// three times as much to enter the water as to cross the grass beside it. Nothing here
+        /// passes a cost table in — if the default had to be handed down by a caller, this is the
+        /// test that would fail.
+        /// </summary>
+        [Test]
+        public void ARealMapChargesThreeTimesToWadeThroughIt()
+        {
+            var result = Generate(5);
+            var ctx = result.Context;
+            var nav = new NavGraph(ctx.Grid);
+            nav.Rebuild();   // the rebuild is what fills the per-cell classes, as in ColonyWorld.Build
+
+            int waded = 0;
+            for (int column = 0; column < ctx.Columns; column++)
+            {
+                if (ctx.Water[column] != (byte)WaterClass.Shallow) continue;
+                int x = column % ctx.Size.SizeX, z = column / ctx.Size.SizeX;
+
+                int cell = ctx.Index(x, z, ctx.SurfaceY[column] + 1);
+                Assert.That(nav.Grid.EnterCost(cell, TraverseMode.Colonist),
+                    Is.EqualTo(3 * MoveCost.Orthogonal), $"wading at {x},{z} is not a third of walking");
+                waded++;
+            }
+
+            Assert.That(waded, Is.GreaterThan(0), "the map has no water to wade");
+
+            // And the grass is still the unit it always was, which is the other half of the
+            // claim: water is slow, not everything.
+            var start = result.StartCell;
+            Assert.That(nav.Grid.EnterCost(ctx.Index(start.X, start.Z, start.Y), TraverseMode.Colonist),
+                Is.EqualTo(MoveCost.Orthogonal));
+        }
+
+        /// <summary>
+        /// The reachability check is a backstop, and a backstop that never fires is indistinguishable
+        /// from one that does not work. Measured, no river in forty needs it — so it is provoked
+        /// here by taking away the fords cut by construction, which is the only way to find out
+        /// whether it would catch a map that really was cut in two.
+        /// </summary>
+        [Test]
+        public void TheBackstopReconnectsAMapThatWasGenuinelySevered()
+        {
+            int rescued = 0;
+            for (uint seed = 1; seed <= 40; seed++)
+            {
+                var result = Generate(seed, g =>
+                {
+                    g.riverChancePerMille = 1000;
+                    g.riverFords = 0;         // no crossing by construction: sink or swim
+                    g.riverMinHalfWidth = 4;  // and a river far too wide to be an accident
+                    g.riverMaxHalfWidth = 6;
+                });
+
+                var report = result.Report;
+                int percent = report.ReachableColumns * 100 / report.WalkableColumns;
+                Assert.That(percent, Is.GreaterThanOrEqualTo(80),
+                    $"seed {seed}: a fordless river left the colony {percent}% of the board");
+                if (report.ForcedFords > 0) rescued++;
+            }
+
+            Assert.That(rescued, Is.GreaterThan(0),
+                "no map needed rescuing even with the fords switched off, so this proves nothing");
+            TestContext.WriteLine($"{rescued} of 40 fordless rivers were reconnected by the backstop");
+        }
+
+        /// <summary>Nothing is ordered in water, and the colony is not unpacked in it either.</summary>
+        [Test]
+        public void NothingIsPutInTheWater()
+        {
+            var result = Generate(5);
+            var ctx = result.Context;
+            var designations = new DesignationGrid(ctx.Grid, ctx.Edifices);
+
+            int refused = 0;
+            for (int column = 0; column < ctx.Columns; column++)
+            {
+                if (!IsChannel(ctx, column)) continue;
+                int x = column % ctx.Size.SizeX, z = column / ctx.Size.SizeX;
+                int cell = ctx.Index(x, z, ctx.SurfaceY[column] + 1);
+
+                Assert.That(designations.IsWater(cell), Is.True);
+                foreach (DesignationKind kind in Enum.GetValues(typeof(DesignationKind)))
+                    Assert.That(designations.Allows(cell, kind), Is.False,
+                        $"{kind} was allowed in the water at {x},{z}");
+                refused++;
+            }
+
+            Assert.That(refused, Is.GreaterThan(0));
+
+            // The colony's own gear goes on dry land. Shallow water is walkable, so this is the
+            // case that would otherwise slip through: a bed standing in a stream.
+            var spots = ColonyScenario.FindStartSpots(ctx.Grid, result.StartCell, 64);
+            Assert.That(spots, Is.Not.Empty);
+            foreach (int spot in spots)
+                Assert.That(NaturalContent.IsWater(ctx.Grid.Terrain[spot]), Is.False,
+                    "the colony was unpacked in the water");
         }
 
         // ---------------------------------------------------------------- helpers

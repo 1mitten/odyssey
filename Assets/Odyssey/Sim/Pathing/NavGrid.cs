@@ -159,24 +159,38 @@ namespace Odyssey.Sim.Pathing
 
         /// <summary>
         /// Cost class by terrain index — the table <see cref="RefreshFrom"/> reads to fill
-        /// <see cref="CostClass"/>. It lives here, rather than this class calling into worldgen,
-        /// so that pathfinding keeps no dependency on the content that happens to be slow: the
-        /// composition root fills it (<c>NaturalContent.CostClassOf</c>) and everything left at
-        /// zero is ordinary ground. Sized past any plausible terrain table so a lookup needs no
-        /// bounds test in the per-cell path.
+        /// <see cref="CostClass"/>. Sized past any plausible terrain table, so the per-cell
+        /// lookup needs no bounds test and an unknown terrain is simply ordinary ground.
         /// </summary>
         public readonly byte[] CostClassByTerrain = new byte[1024];
 
+        /// <summary>
+        /// A nav grid knows what terrain costs the moment it is built.
+        ///
+        /// The tidier arrangement would be for the composition root to hand the table down, and
+        /// it was written that way first. It is wrong: a <see cref="NavGraph"/> is constructed in
+        /// a dozen places and a grid that missed the call would silently price wading at the cost
+        /// of walking — a wrong number, not a crash, in the one part of the simulation where a
+        /// wrong number looks exactly like a right one. So the default is applied here, where it
+        /// cannot be forgotten, and <see cref="SetTerrainCosts"/> remains for anyone who wants a
+        /// different content set. When terrain becomes Defs this moves to the Def loader, which
+        /// is the same argument arriving at a better place.
+        /// </summary>
         public NavGrid(GridSize size)
         {
             Size = size;
             Flags = new NavFlags[size.CellCount];
             CostClass = new byte[size.CellCount];
+
+            for (ushort terrain = 0; terrain < Worldgen.Natural.NaturalContent.TerrainCount; terrain++)
+                CostClassByTerrain[terrain] = Worldgen.Natural.NaturalContent.CostClassOf(terrain);
+            Worldgen.Natural.NaturalContent.ApplyCostClasses(CostByClass);
         }
 
         /// <summary>
-        /// Points every terrain at its cost class and every class at its addend, then leaves the
-        /// per-cell grid to <see cref="RefreshFrom"/>. Called once, from the composition root.
+        /// Point every terrain at its cost class and every class at its addend, replacing what
+        /// the constructor put there. The per-cell grid follows on the next
+        /// <see cref="RefreshFrom"/>, so a caller changing costs on a live grid must dirty it.
         /// </summary>
         public void SetTerrainCosts(byte[] classByTerrain, int[] costByClass)
         {
