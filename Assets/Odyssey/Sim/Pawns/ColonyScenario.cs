@@ -212,10 +212,22 @@ namespace Odyssey.Sim.Pawns
                 pawns.Items.AddStockpile(new Stockpile(priority: 2, stockpile.ToArray(), allow));
             }
 
-            // Loose salvage so hauling has work from the first tick.
+            // Loose salvage so hauling has work from the first tick. A draw that lands on a
+            // cell already holding something — a meal pile, or an earlier piece of salvage,
+            // which does not stack — is drawn again, because two things cannot share a cell.
+            // It used to spawn straight onto whatever was there and corrupt the cell index.
             int placedSalvage = 0;
-            for (int i = 0; i < scenario.salvage; i++, placedSalvage++)
-                pawns.Items.Spawn(ItemIndex.Salvage, spots[rng.NextInt(spots.Count)]);
+            for (int i = 0; i < scenario.salvage; i++)
+            {
+                for (int attempt = 0; attempt < spots.Count; attempt++)
+                {
+                    int spot = spots[rng.NextInt(spots.Count)];
+                    if (!pawns.Items.CellHasSpace(spot, ItemIndex.Salvage, 1)) continue;
+                    pawns.Items.Spawn(ItemIndex.Salvage, spot);
+                    placedSalvage++;
+                    break;
+                }
+            }
 
             return new Result(placedColonists, placedMeals, placedBeds, stockpile.Count, placedSalvage, spots.Count);
         }

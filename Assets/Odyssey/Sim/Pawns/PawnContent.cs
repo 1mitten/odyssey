@@ -341,8 +341,17 @@ namespace Odyssey.Sim.Pawns
 
             content.Items = new[]
             {
-                new ItemDef { defName = "Item_Meal", label = "ration pack", nutrition = 450 },
+                // Meals stack to a whole starting pile (ScenarioDef.mealsPerPile, 20), so the
+                // pantry a scenario lays out is legal stock, a stockpile cell holds what a
+                // starting pile holds, and a hauler moves a pile in one trip (a-14: one stack
+                // per trip). The ItemDef default of 1 would make every pile "full" the moment
+                // it was hauled and no meal could ever be stowed beside another. ASSUMED as a
+                // number: the research records limits from 1 to 500 and none for a meal.
+                new ItemDef { defName = "Item_Meal", label = "ration pack", nutrition = 450, stackLimit = 20 },
+                // Salvage is a heap in its own right, one to a cell, until the things line
+                // decides what it is made of.
                 new ItemDef { defName = "Item_Salvage", label = "salvage" },
+                // Wood's 75 is the one limit the research states outright (a-14 §4).
                 new ItemDef { defName = "Item_Wood", label = "wood", stackLimit = 75 },
             };
 
