@@ -34,6 +34,8 @@ What to do: `scripts/unity.sh` treats the **results file, not the process exit c
 
 **Unity ships a .NET *runtime*, not an SDK.** `dotnet --list-sdks` against a runtime-only install prints an error to stdout and still exits 0, so the exit code cannot be trusted; check for an actual version line. Install a real SDK without admin rights with the official script, which lands in `%USERPROFILE%\.dotnet`.
 
+**A container tagged C is not guaranteed to have the dotnet SDK, and the official install script's host can be blocked by the session's own egress policy.** One overnight container had neither `dotnet` on PATH nor `builds.dotnet.microsoft.com` reachable (403 from the agent proxy), so `dotnet-install.sh` could not run. `apt-get update && apt-get install -y dotnet-sdk-8.0` worked — Ubuntu 24.04's own repositories carry .NET 8 — and is the fallback worth trying first in a container before treating the row as blocked.
+
 ## Repository layout
 
 **`build/` is gitignored** by the standard Unity rules, and git will not descend into an excluded directory, so a negation pattern inside it does not work. Committed tooling goes in `tools/`.
