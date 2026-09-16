@@ -1,0 +1,521 @@
+#nullable enable
+using System;
+using System.Collections.Generic;
+using Odyssey.Hud;
+using Odyssey.Presentation.Bootstrap;
+using Odyssey.Presentation.CameraRig;
+using Odyssey.Sim.Contracts;
+using UnityEngine;
+using UnityEngine.UIElements;
+
+namespace Odyssey.Presentation.Ui
+{
+    /// <summary>
+    /// <see cref="HudShell"/>: the shared furniture and the panels down the left and right.
+    ///
+    /// <para>The <c>Panel</c>/<c>Header</c>/<c>Scrim</c> builders every region uses, then A1
+    /// stores, A2 the colonist strip, and the right-hand column (clock, speed, A6 alerts). Split
+    /// out of the shell on 2026-09-16 because the one file had reached 1,947 lines; it is the same
+    /// class and the same behaviour.</para>
+    ///
+    /// <para>Contrast comes from the two always-on scrims, not from the panels — which is what
+    /// lets the panels stay light enough to sit at 11% of the viewport. See
+    /// <c>14-hud-layout.md</c>.</para>
+    /// </summary>
+    public sealed partial class HudShell
+    {
+        // ============================================================ shared furniture
+
+        /// <summary>
+        /// A panel: the fill, the hairline, the radius and the padding, anchored by the caller.
+        /// Every framed region on the screen is one of these, and <c>HudSmokeTests</c> counts
+        /// them by name.
+        /// </summary>
+        static VisualElement Panel(string name, params string[] extraClasses)
+        {
+            var panel = new VisualElement { name = name };
+            panel.AddToClassList("panel");
+            panel.AddToClassList("region");   // the smoke test's name for a framed region
+            foreach (string extra in extraClasses) panel.AddToClassList(extra);
+            return panel;
+        }
+
+        /// <summary>A panel's label row: the 11 px tracked capitals, and whatever sits opposite.</summary>
+        static VisualElement Header(VisualElement panel, string label, out Label title)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("panel__hdr");
+            title = HudText.Make(label, HudTextRole.PanelLabel, ussClass: "panel__label");
+            row.Add(title);
+            panel.Add(row);
+            return row;
+        }
+
+        // ============================================================ scrims
+
+        /// <summary>
+        /// The two gradients that carry the HUD's text contrast.
+        ///
+        /// <para><b>They are the reason the panels could shrink.</b> A panel dark enough to hold
+        /// 13 px text over bright terrain has to be nearly opaque, and a screen of nearly opaque
+        /// panels is the 31% coverage this rebuild was asked to halve. A scrim costs no panel area
+        /// at all: it is a transparent ramp, it is never a pointer target, and with it the fill
+        /// can drop to 86% and the panels can stop being walls.</para>
+        ///
+        /// <para>USS has no gradient property, so each is a one-pixel-wide ramp texture stretched
+        /// over its element — one 1x64 texture apiece for the whole HUD, no shader and no pass.</para>
+        /// </summary>
+        void BuildScrims()
+        {
+            Color ink = HudTokens.ScrimInk;
+            Color clear = new Color(ink.r, ink.g, ink.b, 0f);
+
+            _topRamp = HudTokens.VerticalRamp(clear, new Color(ink.r, ink.g, ink.b, HudTheme.TopScrimAlpha));
+            _bottomRamp = HudTokens.VerticalRamp(new Color(ink.r, ink.g, ink.b, HudTheme.BottomScrimAlpha), clear);
+
+            _hud.Add(Scrim("scrim-top", _topRamp, top: true, HudTheme.TopScrimHeight));
+            _hud.Add(Scrim("scrim-bottom", _bottomRamp, top: false, HudTheme.BottomScrimHeight));
+        }
+
+        static VisualElement Scrim(string name, Texture2D ramp, bool top, int height)
+        {
+            // Never a pointer target. A pickable scrim would eat every click in the top 170 and
+            // bottom 200 rows of the screen, which is a third of the board, silently.
+            var scrim = new VisualElement { name = name, pickingMode = PickingMode.Ignore };
+            scrim.AddToClassList("scrim");
+            scrim.style.height = height;
+            if (top) scrim.style.top = 0;
+            else scrim.style.bottom = 0;
+            scrim.style.backgroundImage = new StyleBackground(ramp);
+            return scrim;
+        }
+
+        // ============================================================ A1 stores
+
+        void BuildStores()
+        {
+            _storesPanel = Panel("stores", "stores");
+            Header(_storesPanel, "Stores", out _);
+
+            // The header's right-hand side: how many rows have anything in them, and the
+            // disclosure that shows the ones that do not.
+            VisualElement header = _storesPanel.Q(className: "panel__hdr");
+            var right = new VisualElement();
+            right.AddToClassList("panel__hdrright");
+            _storesCount = HudText.Make(string.Empty, HudTextRole.Meta, numeric: true, "stores__count");
+            _storesChevron = new HudGlyph(HudGlyphKind.ChevronDown, 14f, HudTokens.TextDim);
+            right.Add(_storesCount);
+            right.Add(_storesChevron);
+            header.Add(right);
+            header.RegisterCallback<ClickEvent>(_ => ToggleStores());
+            header.tooltip = "Show or hide the commodities the colony has none of";
+
+            _storesRows = new VisualElement();
+            _storesRows.AddToClassList("stores__rows");
+            _storesPanel.Add(_storesRows);
+            _hud.Add(_storesPanel);
+        }
+
+        void ToggleStores()
+        {
+            _storesExpanded = !_storesExpanded;
+            _storesChevron.Kind = _storesExpanded ? HudGlyphKind.ChevronUp : HudGlyphKind.ChevronDown;
+            RefreshStores();
+        }
+
+        void RefreshStores()
+        {
+            var world = _boot!.World;
+            if (world == null) return;
+            _ledger.Refresh(world.Views.Current, Time.unscaledTimeAsDouble);
+
+            while (_storeRows.Count < _ledger.Rows.Count) _storeRows.Add(NewStoreRow());
+            while (_storeRows.Count > _ledger.Rows.Count)
+            {
+                _storeRows[^1].Root.RemoveFromHierarchy();
+                _storeRows.RemoveAt(_storeRows.Count - 1);
+            }
+
+            for (int i = 0; i < _ledger.Rows.Count; i++)
+            {
+                LedgerRow model = _ledger.Rows[i];
+                StoreRowView view = _storeRows[i];
+
+                if (view.Icon.Key != model.IconKey)
+                {
+                    view.Icon.SetKey(model.IconKey);
+                    HudText.Set(view.Name, model.Name, HudTextRole.Row);
+                    view.SteadyTip = model.Real
+                        ? model.Name + " — counted from the published frame"
+                        : model.Name + " — arrives with the economy (M4)";
+                    view.FallingTip = model.Name + " — counted from the published frame, and falling";
+                }
+
+                if (view.LastQuantity != model.Quantity)
+                {
+                    view.LastQuantity = model.Quantity;
+                    HudText.Set(view.Value, model.Quantity.ToString(), HudTextRole.Row);
+                }
+
+                bool falling = model.Trend == StockTrend.Falling;
+                view.Falling.style.display = falling ? DisplayStyle.Flex : DisplayStyle.None;
+                view.Root.EnableInClassList("stores__row--falling", falling);
+                view.Root.EnableInClassList("stores__row--zero", model.Zero);
+                view.Root.tooltip = falling && model.Real ? view.FallingTip : view.SteadyTip;
+
+                // Zero rows are folded away by default. Not deleted: the disclosure is how a
+                // player finds out what the economy will eventually hold, and a row that vanishes
+                // when its last item is hauled away is a row that reads as a bug.
+                view.Root.style.display = model.Zero && !_storesExpanded
+                    ? DisplayStyle.None
+                    : DisplayStyle.Flex;
+            }
+
+            if (_storesStocked != _ledger.Stocked || _storesTotal != _ledger.Total)
+            {
+                _storesStocked = _ledger.Stocked;
+                _storesTotal = _ledger.Total;
+                HudText.Set(_storesCount, $"{_storesStocked} / {_storesTotal}", HudTextRole.Meta);
+            }
+        }
+
+        StoreRowView NewStoreRow()
+        {
+            var row = new VisualElement();
+            row.AddToClassList("stores__row");
+
+            // Categorised: stores is one of the two places the spec allows an icon to carry a
+            // colour of its own, and it is a stroke colour, never a filled tile behind the value.
+            var icon = new IconBadge(string.Empty, IconBadge.RowSize, categorised: true);
+            var name = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "stores__name");
+            var falling = new HudGlyph(HudGlyphKind.ChevronDown, 12f, HudTokens.Warn);
+            falling.AddToClassList("stores__falling");
+            var value = HudText.Make(string.Empty, HudTextRole.Row, numeric: true, "stores__value");
+
+            row.Add(icon);
+            row.Add(name);
+            row.Add(falling);
+            row.Add(value);
+            _storesRows.Add(row);
+
+            return new StoreRowView
+            {
+                Root = row, Icon = icon, Name = name, Value = value, Falling = falling,
+            };
+        }
+
+        // ============================================================ A2 colonist strip
+
+        void BuildStrip()
+        {
+            // A full-width row that centres its cards, rather than a panel placed at a computed x.
+            // Centring is what the layout engine is for, and the model's own centring arithmetic
+            // then describes what the engine will do rather than competing with it.
+            _strip = new VisualElement { name = "strip", pickingMode = PickingMode.Ignore };
+            _strip.AddToClassList("strip");
+            _hud.Add(_strip);
+        }
+
+        void RefreshStrip()
+        {
+            var world = _boot!.World;
+            if (world == null) return;
+            _roster.Refresh(world.Views.Current,
+                selected: _directors != null ? _directors.Selection.Pawns : (IReadOnlyList<PawnId>)Array.Empty<PawnId>());
+
+            int shown = Math.Min(_roster.Cards.Count, _stripCapacity);
+
+            while (_cards.Count < shown) _cards.Add(NewCard(_cards.Count));
+            while (_cards.Count > shown)
+            {
+                _cards[^1].Root.RemoveFromHierarchy();
+                _cards.RemoveAt(_cards.Count - 1);
+            }
+
+            for (int i = 0; i < shown; i++)
+            {
+                RosterCard model = _roster.Cards[i];
+                CardView view = _cards[i];
+
+                if (view.LastId != model.Id)
+                {
+                    view.LastId = model.Id;
+                    HudText.Set(view.Name, model.Name, HudTextRole.Row);
+                    HudText.Set(view.Initial, Initial(model.Name), HudTextRole.Row);
+                }
+                if (view.LastJob != model.JobDef)
+                    HudText.Set(view.Job, JobLabels.Label(model.JobDef), HudTextRole.Meta);
+
+                view.FoodFill.style.width = Length.Percent(Percent(model.Food));
+                view.RestFill.style.width = Length.Percent(Percent(model.Rest));
+                view.MoodFill.style.width = Length.Percent(Percent(model.Mood));
+                Band(view.FoodFill, model.Food);
+                Band(view.RestFill, model.Rest);
+                Band(view.MoodFill, model.Mood);
+
+                view.Root.EnableInClassList("card--sel", model.Selected);
+                view.Ring.style.display = model.Selected ? DisplayStyle.Flex : DisplayStyle.None;
+
+                // The layer is deliberately not on the card any more (spec): the depth rail states
+                // it once and the inspect pane states it again for whoever is selected. It stays
+                // in the tooltip, where it costs no pixels — and is rebuilt only when it would
+                // read differently, because building a string every refresh is what ADR 0003's
+                // flip condition F1 forbids.
+                if (view.LastJob != model.JobDef || view.LastLayer != model.Layer)
+                {
+                    view.LastJob = model.JobDef;
+                    view.LastLayer = model.Layer;
+                    view.Root.tooltip =
+                        $"{model.Name} — {JobLabels.Label(model.JobDef)}, layer {model.Layer}. Click to select.";
+                }
+            }
+        }
+
+        CardView NewCard(int index)
+        {
+            var card = new VisualElement();
+            card.AddToClassList("card");
+
+            // The selection ring: UI Toolkit has no box-shadow, so the spec's
+            // "0 0 0 1px rgba(111,211,227,.35)" outside the accent border is an inset element.
+            var ring = new VisualElement { pickingMode = PickingMode.Ignore };
+            ring.AddToClassList("card__ring");
+            ring.style.display = DisplayStyle.None;
+            card.Add(ring);
+
+            var top = new VisualElement();
+            top.AddToClassList("card__top");
+
+            var avatar = new VisualElement();
+            avatar.AddToClassList("card__avatar");
+            avatar.style.backgroundColor = HudTokens.Category(HudCategory.People);
+            Label initial = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "card__initial");
+            avatar.Add(initial);
+
+            var names = new VisualElement();
+            names.AddToClassList("card__names");
+            Label name = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "card__name");
+            names.Add(name);
+
+            top.Add(avatar);
+            top.Add(names);
+            card.Add(top);
+
+            // The job goes on its own line under the avatar row, not in the strip beside the
+            // avatar. The whole width of the card is what lets it be a full word: an ellipsis is
+            // allowed on a colonist's name and on nothing else.
+            Label job = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "card__job");
+            card.Add(job);
+
+            VisualElement foodFill = CardBar(card);
+            VisualElement restFill = CardBar(card);
+            VisualElement moodFill = CardBar(card);
+
+            // Shift is the strip's toggle, exactly as it is in the world: a shift-press on a card
+            // turns it on or off without moving the camera, and while shift is held a drag across
+            // cards toggles each one it crosses (A2 "drag-select a range"). A plain press keeps the
+            // jump: a card is a way of getting to someone far away.
+            card.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                if (index >= _roster.Cards.Count || _boot!.World == null) return;
+                PawnId id = _roster.Cards[index].Id;
+                if (evt.shiftKey)
+                {
+                    _sweepingRoster = true;
+                    _directors?.Selection.Toggle(id);
+                }
+                else _directors?.ChooseColonist(id, _boot.World.Views.Current);
+            });
+            card.RegisterCallback<PointerEnterEvent>(_ =>
+            {
+                if (!_sweepingRoster || index >= _roster.Cards.Count) return;
+                _directors?.Selection.Toggle(_roster.Cards[index].Id);
+            });
+
+            _strip.Add(card);
+            return new CardView
+            {
+                Root = card, Ring = ring, Initial = initial, Name = name, Job = job,
+                FoodFill = foodFill, RestFill = restFill, MoodFill = moodFill,
+            };
+        }
+
+        static VisualElement CardBar(VisualElement card)
+        {
+            var bar = new VisualElement();
+            bar.AddToClassList("bar");
+            bar.AddToClassList("bar--card");
+            var fill = new VisualElement();
+            fill.AddToClassList("bar__fill");
+            bar.Add(fill);
+            card.Add(bar);
+            return fill;
+        }
+
+        static string Initial(string name) =>
+            string.IsNullOrEmpty(name) ? "?" : name.Substring(0, 1).ToUpperInvariant();
+
+        // ============================================================ A3/A4 clock and speed, A5 alerts
+
+        /// <summary>
+        /// The right-hand column: the clock with the speed buttons under it, then the alerts.
+        ///
+        /// <para><b>This merge is the fix for a specific accident.</b> The clock and the alerts
+        /// were two absolutely positioned panels in the same corner with hand-picked tops, and the
+        /// clock grew past the 122 px the alerts panel's fixed top allowed it, burying the speed
+        /// buttons underneath. In a column, whatever height each region turns out to be, the next
+        /// one starts below it — and the spec's instruction is blunter still: never stack two
+        /// panels in the same corner again.</para>
+        /// </summary>
+        void BuildRightColumn()
+        {
+            var column = new VisualElement { name = "right-column", pickingMode = PickingMode.Ignore };
+            column.AddToClassList("column-right");
+            _hud.Add(column);
+
+            // ---- clock and speed, one panel
+            VisualElement clock = Panel("clock", "clock");
+
+            var line = new VisualElement();
+            line.AddToClassList("clock__line");
+            _clockTime = HudText.Make(string.Empty, HudTextRole.Clock, numeric: true, "clock__time");
+            _clockDate = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "clock__date");
+            line.Add(_clockTime);
+            line.Add(_clockDate);
+            clock.Add(line);
+
+            var speed = new VisualElement();
+            speed.AddToClassList("speed");
+            (HudGlyphKind glyph, string name)[] speeds =
+            {
+                (HudGlyphKind.Pause, "Pause"),
+                (HudGlyphKind.Play, "Play"),
+                (HudGlyphKind.Forward, "Double speed"),
+                (HudGlyphKind.FastForward, "Triple speed"),
+            };
+            for (int i = 0; i < speeds.Length; i++)
+            {
+                int requested = i;      // 0 paused, 1..3 speeds — the rig's own convention
+                var button = new VisualElement();
+                button.AddToClassList("speed__btn");
+                var glyph = new HudGlyph(speeds[i].glyph, 14f, HudTokens.TextPrimary);
+                glyph.AddToClassList("speed__glyph");
+                button.Add(glyph);
+                button.tooltip = speeds[i].name + " — Space pauses, 1/2/3 set speed";
+                button.RegisterCallback<ClickEvent>(_ => _rig?.RequestGameSpeed(requested));
+                speed.Add(button);
+                _speedButtons.Add(button);
+            }
+            clock.Add(speed);
+            column.Add(clock);
+
+            // ---- alerts, under it in the same column
+            _alertsPanel = Panel("alerts", "alerts");
+            Header(_alertsPanel, "Alerts", out _);
+            _alertRows = new VisualElement();
+            _alertRows.AddToClassList("alerts__rows");
+            _alertsPanel.Add(_alertRows);
+
+            // Hidden outright when there is nothing to say. The panel it replaces printed "No
+            // active alerts." above a sentence explaining that conditions arrive with M2, which is
+            // a development note sitting in a player-facing region.
+            _alertsPanel.style.display = DisplayStyle.None;
+            column.Add(_alertsPanel);
+        }
+
+        void RefreshClock()
+        {
+            var world = _boot!.World;
+            if (world == null) return;
+            long tick = world.CurrentTick;
+            HudText.Set(_clockTime, $"{GameClock.HourOfDay(tick):00}:00", HudTextRole.Clock);
+            HudText.Set(_clockDate,
+                $"Day {GameClock.DayOfMonth(tick)} · {GameClock.MonthName(tick)} · {GameClock.SeasonName(tick)}",
+                HudTextRole.Body);
+        }
+
+        void RefreshSpeed()
+        {
+            var world = _boot!.World;
+            if (world == null) return;
+            int current = world.GameSpeed;
+            for (int i = 0; i < _speedButtons.Count; i++)
+            {
+                bool on = i == current;
+                _speedButtons[i].EnableInClassList("speed__btn--on", on);
+                if (_speedButtons[i].Q<HudGlyph>() is { } glyph)
+                    glyph.Tint = on ? HudTokens.OnAccent : HudTokens.TextPrimary;
+            }
+        }
+
+        void RefreshAlerts()
+        {
+            var world = _boot!.World;
+            if (world == null) return;
+            _alerts.Refresh(world.Views.Current, Time.unscaledTimeAsDouble);
+
+            while (_alertViews.Count < _alerts.Rows.Count) _alertViews.Add(NewAlertRow());
+            while (_alertViews.Count > _alerts.Rows.Count)
+            {
+                _alertViews[^1].Root.RemoveFromHierarchy();
+                _alertViews.RemoveAt(_alertViews.Count - 1);
+            }
+
+            for (int i = 0; i < _alerts.Rows.Count; i++)
+            {
+                AlertRow model = _alerts.Rows[i];
+                AlertRowView view = _alertViews[i];
+
+                Color ink = model.Severity switch
+                {
+                    AlertSeverity.Danger => HudTokens.Bad,
+                    AlertSeverity.Warning => HudTokens.Warn,
+                    _ => HudTokens.Info,
+                };
+                view.Icon.Kind = model.Severity == AlertSeverity.Notice
+                    ? HudGlyphKind.Info
+                    : HudGlyphKind.AlertTriangle;
+                view.Icon.Tint = ink;
+
+                // The actionable clause in full ink, the detail trailing in meta. A player who
+                // reads only the leads should know what to do.
+                //
+                // The model hands back the same string instance while the alert stands, so the
+                // reference comparison is exact and the two strings below are built once per
+                // change of state rather than four times a second.
+                if (!ReferenceEquals(view.LastLead, model.Lead))
+                {
+                    view.LastLead = model.Lead;
+                    HudText.Set(view.Lead, model.Lead, HudTextRole.Body);
+                    HudText.Set(view.Detail, " — " + model.Detail, HudTextRole.Body);
+                    view.Root.tooltip = $"{model.Lead} — {model.Detail} ({model.Count})";
+                }
+            }
+
+            _alertsPanel.style.display =
+                _alerts.Rows.Count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        AlertRowView NewAlertRow()
+        {
+            var row = new VisualElement();
+            row.AddToClassList("alert");
+
+            var icon = new HudGlyph(HudGlyphKind.AlertTriangle, IconBadge.BarSize, HudTokens.Warn);
+            icon.AddToClassList("alert__icon");
+
+            var text = new VisualElement();
+            text.AddToClassList("alert__text");
+            Label lead = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "alert__lead");
+            Label detail = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "alert__detail");
+            text.Add(lead);
+            text.Add(detail);
+
+            row.Add(icon);
+            row.Add(text);
+            _alertRows.Add(row);
+
+            return new AlertRowView { Root = row, Icon = icon, Lead = lead, Detail = detail };
+        }
+    }
+}
