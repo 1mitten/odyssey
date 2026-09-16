@@ -56,16 +56,15 @@ namespace Odyssey.Tests.PlayMode
                     "cannot tell its own drag from the scenario's");
 
                 Camera camera = Camera.main!;
-                Assume.That(TryFindATreeOnScreen(boot, camera, out Vector2 tree), Is.True,
-                    "no tree is visible on this board, so a felling order has nothing to aim at");
+                Assume.That(TryFindATreeOnScreen(boot, rig, camera, out Vector2 tree, out CellRef treeCell), Is.True,
+                    "no tree on the active layer is visible, so a felling order has nothing to aim at");
 
                 designate.Director.Tool = DesignateTool.Fell;
                 yield return _mouse.Drag(tree - new Vector2(60f, 60f), tree + new Vector2(60f, 60f));
                 for (int i = 0; i < SettleFrames; i++) yield return null;
 
                 Assert.That(MarkedCells(boot), Is.GreaterThan(0),
-                    "a drag with the cutting tool armed left no order anywhere. The gesture never " +
-                    "reached DesignatePresenter, or the cells it resolved to were all refused.");
+                    $"a drag boxing the tree at {treeCell} left no order. " + Diagnosis(boot, rig));
             }
             finally
             {
@@ -97,17 +96,15 @@ namespace Odyssey.Tests.PlayMode
                 Assume.That(MarkedCells(boot), Is.Zero);
 
                 Camera camera = Camera.main!;
-                Assume.That(TryFindATreeOnScreen(boot, camera, out Vector2 tree), Is.True,
-                    "no tree is visible on this board, so a felling order has nothing to aim at");
+                Assume.That(TryFindATreeOnScreen(boot, rig, camera, out Vector2 tree, out CellRef treeCell), Is.True,
+                    "no tree on the active layer is visible, so a felling order has nothing to aim at");
 
                 designate.Director.Tool = DesignateTool.Fell;
                 yield return _mouse.Click(tree);
                 for (int i = 0; i < SettleFrames; i++) yield return null;
 
                 Assert.That(MarkedCells(boot), Is.GreaterThan(0),
-                    "a click with the cutting tool armed left no order. If the drag test fails " +
-                    "too then this oracle is what is broken, not designation: MarkedCells reads " +
-                    "the snapshot's designation channel, and an unpublished channel reads as zero.");
+                    $"a click on the tree at {treeCell} with the cutting tool armed left no order. " + Diagnosis(boot, rig));
             }
             finally
             {
@@ -132,7 +129,7 @@ namespace Odyssey.Tests.PlayMode
                 Assume.That(designate.Director.Tool, Is.EqualTo(DesignateTool.None));
 
                 Camera camera = Camera.main!;
-                Assume.That(TryFindATreeOnScreen(boot, camera, out Vector2 tree), Is.True);
+                Assume.That(TryFindATreeOnScreen(boot, rig, camera, out Vector2 tree, out CellRef _), Is.True);
 
                 yield return _mouse.Drag(tree - new Vector2(60f, 60f), tree + new Vector2(60f, 60f));
                 for (int i = 0; i < SettleFrames; i++) yield return null;
@@ -197,9 +194,11 @@ namespace Odyssey.Tests.PlayMode
         /// projecting its floor centre gives a point the ray will meet. Cells behind the camera or
         /// off the screen are skipped: the board is bigger than the view.</para>
         /// </summary>
-        static bool TryFindATreeOnScreen(OdysseyBootstrap boot, Camera camera, out Vector2 at)
+        static bool TryFindATreeOnScreen(OdysseyBootstrap boot, SliceCameraRig rig, Camera camera,
+            out Vector2 at, out CellRef cell)
         {
             at = default;
+            cell = default;
             WorldRenderModel? model = boot.Model;
             if (model == null) return false;
 
@@ -208,7 +207,15 @@ namespace Odyssey.Tests.PlayMode
             {
                 if (!NaturalContent.IsTree(model.EdificeDef(i))) continue;
 
-                Vector3 point = camera.WorldToScreenPoint(CellMetrics.FloorCentre(size.FromIndex(i)));
+                // On the ACTIVE layer and no other. The picker resolves a screen point to a cell
+                // on the slice and nowhere else, so aiming at a tree two storeys down puts the
+                // order on whatever grass happens to be under the cursor at the slice — which is
+                // refused, silently, and reads as designation being broken. That is what the last
+                // two runs were actually measuring.
+                cell = size.FromIndex(i);
+                if (cell.Y != rig.ActiveLayer) continue;
+
+                Vector3 point = camera.WorldToScreenPoint(CellMetrics.FloorCentre(cell));
                 if (point.z <= 0f) continue;
                 if (point.x < 0f || point.y < 0f || point.x > Screen.width || point.y > Screen.height) continue;
 
@@ -217,6 +224,18 @@ namespace Odyssey.Tests.PlayMode
             }
 
             return false;
+        }
+
+        /// <summary>What the world looked like when an assertion failed, so one run answers the
+        /// next question rather than costing another round.</summary>
+        static string Diagnosis(OdysseyBootstrap boot, SliceCameraRig rig)
+        {
+            WorldSnapshot? snap = boot.World?.Views.Current;
+            return snap == null
+                ? "there is no published frame at all."
+                : $"Active layer {rig.ActiveLayer}, snapshot slice layer {snap.SliceLayer}, " +
+                  $"designation channel {snap.DesignationCellCount} cells. If the two layers " +
+                  "differ, the channel is a slice through somewhere else and this oracle is blind.";
         }
 
         static Vector2 Near(float x, float y) => new Vector2(Screen.width * x, Screen.height * y);
