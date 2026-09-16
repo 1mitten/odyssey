@@ -111,9 +111,6 @@
     border-radius: 2px;
 }
 
-/* Three need bars stacked on a roster card. */
-.bar--card { height: 3px; margin-top: 3px; }
-
 /* The bar under a need in the inspect pane. */
 .bar--need { height: 4px; margin-top: 4px; }
 
@@ -190,9 +187,13 @@
     justify-content: center;
 }
 
+/* Two rows and nothing else: who this is, and what they are doing. The three need bars came off
+   on 2026-09-17 (owner), and with them went most of the card's height — a card is a way of
+   finding somebody and saying what they are at, and the strip is the densest region on the
+   screen, so every pixel it does not spend buys another colonist on the bar. */
 .card {
-    width: 132px;
-    height: 86px;
+    width: 106px;
+    height: 63px;
     margin: 0 3.5px;
     padding: 8px;
     background-color: rgba(12, 16, 20, 0.86);

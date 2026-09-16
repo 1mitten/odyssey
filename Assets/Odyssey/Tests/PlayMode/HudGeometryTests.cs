@@ -6,6 +6,7 @@ using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Ui;
+using Odyssey.Sim.Contracts;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
@@ -383,6 +384,96 @@ namespace Odyssey.Tests.PlayMode
                 Object.Destroy(root);
             }
         }
+
+        /// <summary>
+        /// A card is as wide as its two rows need and no wider (owner, 2026-09-17: the need bars
+        /// came off so the strip could carry many more colonists).
+        ///
+        /// <para><b>Why the text engine and not arithmetic.</b> A card's width is decided by two
+        /// strings — the longest name the pool can deal and the longest word in <c>ui.status</c> —
+        /// and neither can be predicted from its character count in a narrow face. This asks what
+        /// they really draw, at the real size, and bounds the constant on both sides: too narrow
+        /// and a name is cut short, too wide and every card on the bar is paying for space no
+        /// string uses. The stores panel's own width test is the same idea and found 288 px was
+        /// never measured.</para>
+        ///
+        /// <para>Names are measured off the pool rather than off the colony, because a five-pawn
+        /// scenario never reaches the eighth name, let alone the cycle suffix that a colony of
+        /// fifty will.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCardIsWideEnoughForItsRowsAndNoWider()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                VisualElement? card = doc.rootVisualElement.Q(className: "card");
+                Assert.That(card, Is.Not.Null, "the shell built no roster card");
+
+                var nameLabel = card!.Q<Label>(className: "card__name");
+                var jobLabel = card.Q<Label>(className: "card__job");
+                Assert.That(nameLabel, Is.Not.Null);
+                Assert.That(jobLabel, Is.Not.Null);
+
+                // Twelve cycles of the eight-name pool, which is a colony of ninety-six. The
+                // interesting names are not the pool's own — they are the ones carrying the
+                // cycle number the model appends once the pool is exhausted, and a two-digit
+                // suffix is wider than a one-digit one. Stopping at the pool, or at one cycle,
+                // would size the card for a colony that never grows.
+                float widestName = 0f;
+                string longestName = string.Empty;
+                for (int id = 1; id <= 96; id++)
+                {
+                    string name = ColonistNames.Of(new PawnId(id));
+                    float w = Draws(nameLabel!, name);
+                    if (w <= widestName) continue;
+                    widestName = w;
+                    longestName = name;
+                }
+
+                float widestJob = 0f;
+                string longestJob = string.Empty;
+                foreach (string key in JobLabels.IconKeys)
+                {
+                    float w = Draws(jobLabel!, Registry.Label(key));
+                    if (w <= widestJob) continue;
+                    widestJob = w;
+                    longestJob = Registry.Label(key);
+                }
+
+                float nameRow = 2 * HudLayout.CardPad + HudLayout.CardAvatar +
+                                HudLayout.CardAvatarGap + widestName;
+                float jobRow = 2 * HudLayout.CardPad + IconBadge.RowSize +
+                               HudLayout.CardIconGap + widestJob;
+                float needed = Mathf.Max(nameRow, jobRow);
+
+                Debug.Log($"[HudGeometry] card rows: name '{longestName}' {widestName:0.#} px " +
+                          $"-> {nameRow:0.#}, activity '{longestJob}' {widestJob:0.#} px " +
+                          $"-> {jobRow:0.#}; card is {HudLayout.CardWidth}");
+
+                Assert.That(HudLayout.CardWidth, Is.GreaterThanOrEqualTo(needed),
+                    $"a card is {HudLayout.CardWidth} px and its widest row needs {needed:0.#} " +
+                    $"('{longestName}' / '{longestJob}'), so something is being cut short");
+
+                // Headroom, not comfort: a name is allowed to grow a little before the constant
+                // has to be revisited. More than this and the strip is carrying fewer colonists
+                // than it could for no reason anybody chose.
+                Assert.That(HudLayout.CardWidth, Is.LessThanOrEqualTo(needed + 16f),
+                    $"a card is {HudLayout.CardWidth} px where {needed:0.#} would do, and the " +
+                    "strip is the densest region on the screen");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>What a string really draws in a label's own face and size.</summary>
+        static float Draws(Label label, string text) =>
+            label.MeasureTextSize(text, 0f, VisualElement.MeasureMode.Undefined,
+                                  0f, VisualElement.MeasureMode.Undefined).x;
 
         /// <summary>
         /// Nothing selected, no pane (owner, 2026-09-16). This is the state the HUD spends most

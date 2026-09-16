@@ -138,7 +138,8 @@ namespace Odyssey.Tests.Hud
             (".card__avatar", "width", () => HudLayout.CardAvatar, "card avatar"),
             (".card__jobrow", "height", () => HudLayout.CardJobRow, "card activity line"),
             (".card__job", "margin-left", () => HudLayout.CardIconGap, "card icon to word"),
-            (".bar--card", "height", () => HudLayout.CardBar, "card need bar"),
+            (".card__names", "margin-left", () => HudLayout.CardAvatarGap, "card avatar to name"),
+            (".card", "padding", () => HudLayout.CardPad, "card padding"),
 
             (".bar-row", "bottom", () => HudLayout.Edge, "screen edge margin"),
             (".commandbar", "padding", () => HudCommands.BarPad, "command bar padding"),

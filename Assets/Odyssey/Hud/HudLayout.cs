@@ -199,8 +199,34 @@ namespace Odyssey.Hud
 
         // ------------------------------------------------------------------ colonist strip
 
-        public const int CardWidth = 132;
-        public const int CardHeight = 86;
+        /// <summary>
+        /// How wide a roster card is.
+        ///
+        /// <para><b>132 x 86 until 2026-09-17</b>, when the owner took the three need bars off it
+        /// and asked for it tightened so the bar carries many more colonists. What is left is two
+        /// rows — who this is, and what they are at — so the card is sized by the longer of them
+        /// rather than by a number somebody liked.</para>
+        ///
+        /// <para>Widest name row: the avatar (26) plus its gap (8) plus the longest name the pool
+        /// can produce. Widest activity row: the icon (17) plus its gap (6) plus the longest word
+        /// in <c>ui.status</c>. Both plus padding on each side. The figures are not taken on
+        /// trust — <c>TheCardIsWideEnoughForItsRowsAndNoWider</c> asks the text engine what those
+        /// strings really draw in the real face at the real size, and fails on either side with a
+        /// number attached, exactly as the stores panel's own width test does.</para>
+        ///
+        /// <para>The name is the one thing on this screen allowed an ellipsis, so a future name
+        /// longer than the pool's does not break the card — but it does mean a card whose name is
+        /// cut short, which is why the test's lower bound exists rather than only its upper.</para>
+        /// </summary>
+        public const int CardWidth = 106;
+
+        /// <summary>
+        /// How tall a roster card is: padding, the avatar row, the activity line, padding. The
+        /// avatar row takes the slack, so the gap between the two rows is what is left rather
+        /// than a fourth number to keep in step.
+        /// </summary>
+        public const int CardHeight = 63;
+
         public const int CardGap = 7;
 
         /// <summary>The avatar tile on a card, and the selected-thing avatar in the inspect
@@ -210,8 +236,11 @@ namespace Odyssey.Hud
         /// <summary>The avatar tile on a roster card, which is smaller than the inspect one.</summary>
         public const int CardAvatar = 26;
 
-        /// <summary>One of the three need bars stacked on a card.</summary>
-        public const int CardBar = 3;
+        /// <summary>Avatar to name on a card's identity row.</summary>
+        public const int CardAvatarGap = 8;
+
+        /// <summary>Inside a card, all four sides. Tighter than a panel's <see cref="Pad"/>.</summary>
+        public const int CardPad = 8;
 
         /// <summary>
         /// The activity line on a card: a picture of what this colonist is doing, and the word

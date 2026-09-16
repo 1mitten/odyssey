@@ -845,6 +845,22 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     silhouette alone — a bit, a double head, a claw. Contact sheet at
     `Logs/activity-icon-sizes.png` (64 / 30 / 17 / 16 px, nearest-neighbour, beside wood and stone
     for scale). **Press Play in `Play.unity`.**
+  - **And then the bars came off and the card was tightened (owner, same day):** *"remove the bars
+    from the roster icons and then we can shorten and tighten them so we can carry many more —
+    accommodate the longest name possible."* A card is two rows now, identity and activity, at
+    **106 x 63** against 132 x 86 — **1.24x as many colonists on the same bar** (4→5 at 720p, 8→10
+    at 1080p, 13→16 at 1440p) and the HUD at rest fell from **9.0% to 7.8%** of the viewport at all
+    three resolutions. **The width is measured, not chosen.**
+    `TheCardIsWideEnoughForItsRowsAndNoWider` asks the text engine what the longest name the pool
+    can deal and the longest `ui.status` word really draw, in the real face at the real size:
+    `Wrenn 10` at 50 px makes a 100 px identity row and `Sleeping` at 39 px a 78 px activity row,
+    against a 106 px card. It sweeps **twelve cycles of the eight-name pool**, because the wide
+    names are not the pool's own but the ones carrying a two-digit cycle suffix, and a colony of
+    fifty reaches them. Both bounds fail with a figure attached, the stores panel's idiom.
+    **Where the three needs went:** the inspect pane shows food, rest and mood for whoever is
+    selected and the alerts panel raises starving and close-to-breaking across the whole colony —
+    both built after the card was, and both answer properly what three 3 px bars answered at a
+    glance. `HudLayout.CardBar` and the `.bar--card` rule are gone.
   - **Known drift, and one decision rather than four:** `icon-map.csv` still calls
     `ui.status.felling` a gap and sources mining and building from sheets 05 and 06, so the wiki's
     art-gap count does not know about any of this — exactly as it does not know about wood, stone,

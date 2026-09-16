@@ -197,9 +197,6 @@ namespace Odyssey.Presentation.Ui
             public Label Name = null!;
             public IconBadge JobIcon = null!;
             public Label Job = null!;
-            public VisualElement FoodFill = null!;
-            public VisualElement RestFill = null!;
-            public VisualElement MoodFill = null!;
 
             public PawnId LastId;
             public int LastJob = int.MinValue;
@@ -794,13 +791,6 @@ namespace Odyssey.Presentation.Ui
                     view.JobIcon.SetKey(JobLabels.IconKey(model.JobDef));
                 }
 
-                view.FoodFill.style.width = Length.Percent(Percent(model.Food));
-                view.RestFill.style.width = Length.Percent(Percent(model.Rest));
-                view.MoodFill.style.width = Length.Percent(Percent(model.Mood));
-                Band(view.FoodFill, model.Food);
-                Band(view.RestFill, model.Rest);
-                Band(view.MoodFill, model.Mood);
-
                 view.Root.EnableInClassList("card--sel", model.Selected);
                 view.Ring.style.display = model.Selected ? DisplayStyle.Flex : DisplayStyle.None;
 
@@ -869,10 +859,6 @@ namespace Odyssey.Presentation.Ui
             jobRow.Add(job);
             card.Add(jobRow);
 
-            VisualElement foodFill = CardBar(card);
-            VisualElement restFill = CardBar(card);
-            VisualElement moodFill = CardBar(card);
-
             // Shift is the strip's toggle, exactly as it is in the world: a shift-press on a card
             // turns it on or off without moving the camera, and while shift is held a drag across
             // cards toggles each one it crosses (A2 "drag-select a range"). A plain press keeps the
@@ -899,20 +885,7 @@ namespace Odyssey.Presentation.Ui
             {
                 Root = card, Ring = ring, Initial = initial, Name = name,
                 JobIcon = jobIcon, Job = job,
-                FoodFill = foodFill, RestFill = restFill, MoodFill = moodFill,
             };
-        }
-
-        static VisualElement CardBar(VisualElement card)
-        {
-            var bar = new VisualElement();
-            bar.AddToClassList("bar");
-            bar.AddToClassList("bar--card");
-            var fill = new VisualElement();
-            fill.AddToClassList("bar__fill");
-            bar.Add(fill);
-            card.Add(bar);
-            return fill;
         }
 
         static string Initial(string name) =>
@@ -1968,8 +1941,5 @@ namespace Odyssey.Presentation.Ui
 
         /// <summary>Thousandths to a percentage of a bar's width.</summary>
         static float Percent(int thousandths) => Mathf.Clamp(thousandths, 0, 1000) / 10f;
-
-        static void Band(VisualElement fill, int thousandths) =>
-            fill.style.backgroundColor = HudTokens.NeedBand(thousandths);
     }
 }

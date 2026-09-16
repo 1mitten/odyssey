@@ -195,7 +195,7 @@ anchored to a screen edge or centred; nothing is placed at a computed offset.
 | region | anchor | notes |
 |---|---|---|
 | **Stores** | `left 20, top 20, w 288` | header carries `n / total` and a disclosure; zero-stock rows folded away |
-| **Colonist strip** | centred, `top 20` | 132 × 86 cards, 7 px apart; clamped to what fits between the two corners |
+| **Colonist strip** | centred, `top 20` | 106 × 63 cards (132 × 86 until 2026-09-17), 7 px apart; clamped to what fits between the two corners |
 | **Clock + speed** | `right 76, top 20, w 266` | one panel — the merge *is* the fix for A3/A4 overlapping |
 | **Alerts** | under the clock in the same column, 9 px gap | hidden outright when empty |
 | **Depth rail** | `right 20, top 20, w 44` | one 26 × 16 cell a layer; shrinks rather than overflowing |
@@ -339,10 +339,23 @@ was neither disabled nor labelled.
   - **Amended 2026-09-17 (owner):** the activity line leads with an icon, so the card answers
     "what is this one doing" as a picture as well as a word. The line is 17 px rather than 16,
     because the row is now sized by the icon rather than by the text, and the gap is 6 px rather
-    than a list row's 9, because a card is 132 px wide and the word has to stay a whole word.
+    than a list row's 9, because the card is narrow and the word has to stay a whole word.
     The slot is occupied whatever the job: a key with no art draws the outlined square, as it does
     everywhere else in the HUD, and hiding it would move the word sideways every time a colonist
     changed job.
+  - **Amended again the same day (owner): the three need bars come off, and the card is sized by
+    what is left.** "Remove the bars from the roster icons and then we can shorten and tighten
+    them so we can carry many more — accommodate the longest name possible." A card is now two
+    rows, identity and activity, at **106 × 63** against 132 × 86: **1.24× as many colonists on
+    the same bar**, and the strip's footprint falls by 47%. The width is not chosen — it is the
+    wider of the two rows, measured. `TheCardIsWideEnoughForItsRowsAndNoWider` asks the text
+    engine what the longest name the pool can deal and the longest `ui.status` word really draw,
+    in the real face at the real size, and bounds the constant on both sides with a figure
+    attached. Food, rest and mood are still on the inspect pane for whoever is selected, and the
+    alerts panel still raises starving and close-to-breaking off the whole colony — which is the
+    argument for taking them off the card: three 3 px bars at a glance told you a colonist existed
+    and not much else, and the two regions that answer the same question properly were both built
+    after the card was.
 
 ---
 
