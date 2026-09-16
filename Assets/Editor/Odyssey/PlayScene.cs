@@ -196,12 +196,18 @@ namespace Odyssey.EditorTools
 
                 ChunkRenderer active = renderer;
                 Odyssey.Presentation.World.PawnFigureDirector walking = figures;
+
+                // Which layer the hook cuts at. A frame is drawn by Shoot calling camera.Render,
+                // which runs this hook — so rendering a different slice before shooting achieves
+                // nothing, and the layer has to be something the hook itself reads.
+                int[] shotLayer = { activeLayer };
+
                 hook = (context, rendering) =>
                 {
                     if (rendering != camera) return;
                     active.ViewerPosition = rendering.transform.position;
-                    active.Render(activeLayer, slice);
-                    active.RenderActors(world.Views.Current, activeLayer, slice, actorMaterial,
+                    active.Render(shotLayer[0], slice);
+                    active.RenderActors(world.Views.Current, shotLayer[0], slice, actorMaterial,
                         drawnAsFigures: walking.Drawn);
 
                     // Both cursors, so a picture can settle whether they look right: the cell
@@ -521,6 +527,40 @@ namespace Odyssey.EditorTools
                     else
                     {
                         Debug.Log("[Shot] nobody was mid-climb, so no climbing shot");
+                    }
+                }
+
+                // The slice seen from the layer a miner is working on, which is the one view the
+                // whole layer model exists for: what is ABOVE the active layer has to read, or a
+                // player standing in a quarry cannot see the rock still over their head.
+                {
+                    Debug.Log($"[Shot] x-ray: above={slice.above}, depth={slice.aboveDepth}, " +
+                              $"alpha +1 {slice.AlphaAbove(1):0.00}, +2 {slice.AlphaAbove(2):0.00}, " +
+                              $"+3 {slice.AlphaAbove(3):0.00}, +4 {slice.AlphaAbove(4):0.00}");
+
+                    // The tallest outcrop, viewed with the slice set at its foot so every cell of
+                    // it above the first is drawn through the x-ray.
+                    int tallest = -1, tallestTop = -1;
+                    for (int z = 0; z < size.SizeZ; z++)
+                    for (int x = 0; x < size.SizeX; x++)
+                    {
+                        int top = -1;
+                        for (int y = size.SizeY - 1; y >= 0; y--)
+                            if (grid.Terrain[size.Index(x, z, y)] == NaturalContent.TerrainRock) { top = y; break; }
+                        if (top > tallestTop) { tallestTop = top; tallest = size.Index(x, z, top); }
+                    }
+
+                    if (tallest >= 0)
+                    {
+                        CellRef at = size.FromIndex(tallest);
+                        int foot = Mathf.Max(0, at.Y - 2);
+                        Debug.Log($"[Shot] the tallest rock is at {at}; slicing at L{foot} " +
+                                  $"puts {at.Y - foot} layer(s) of it above the cut");
+
+                        shotLayer[0] = foot;
+                        Shoot(camera, CellMetrics.FloorCentre(new CellRef(at.X, at.Z, foot)),
+                              22f, 40f, 24f, "Logs/shot-xray.png");
+                        shotLayer[0] = activeLayer;
                     }
                 }
 

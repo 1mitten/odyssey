@@ -457,7 +457,7 @@ namespace Odyssey.Presentation.Bootstrap
                 var cell = new CellRef(x, z, layer);
 
                 Color tint = orders[i] == (byte)DesignationKind.Mine ? MineOrderColour : FellOrderColour;
-                _renderer.DrawCellHighlight(cell, tint);
+                _renderer.DrawCellMark(cell, tint);
 
                 if (i < progress.Length && progress[i] > 0)
                     _renderer.DrawCellCut(cell, progress[i] / 255f, CutColour);
@@ -465,10 +465,10 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         /// <summary>Marks a cell ordered dug. Warm, against the cool stone it is drawn over.</summary>
-        static readonly Color MineOrderColour = new Color(0.95f, 0.72f, 0.32f, 0.55f);
+        static readonly Color MineOrderColour = new Color(0.95f, 0.72f, 0.32f, 0.42f);
 
         /// <summary>Marks a tree ordered felled.</summary>
-        static readonly Color FellOrderColour = new Color(0.55f, 0.85f, 0.45f, 0.55f);
+        static readonly Color FellOrderColour = new Color(0.55f, 0.85f, 0.45f, 0.42f);
 
         /// <summary>
         /// The cut itself: pale, so it reads as fresh broken stone rather than as a coloured

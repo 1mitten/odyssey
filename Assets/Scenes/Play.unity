@@ -190,8 +190,8 @@ MonoBehaviour:
     below: 0
     belowDepth: 3
     belowFalloff: 0.68
-    ghostAlpha: 0.2
-    ghostFalloff: 0.55
+    ghostAlpha: 0.38
+    ghostFalloff: 0.72
     suppressActiveCeiling: 1
   pitch: 48
   yaw: 45

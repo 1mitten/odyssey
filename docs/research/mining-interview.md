@@ -600,6 +600,42 @@ nothing about the rule. It walks eight seeds now.
 | items with no floor | 0 | 0 |
 | sideways steps onto a floorless cell | 1 of 68,222 | 1 of 66,811 |
 
+## 6h. Two things the owner saw in the merged build
+
+**"There seems to be faint selection over every tree and stone — is there any reason for this now?"**
+
+Yes, and it was the wrong reason. Standing orders were drawn with `ChunkRenderer.DrawCellHighlight`,
+which is the **selection cursor**: the corner-stub bracket. The starting scenario marks every tree
+within ten cells (`startingFellRadius = 10`) and three outcrops of stone, so the game opened with a
+selection cursor around something like a hundred things at once. Nothing was broken; the wrong word
+was being used. A selection is the one thing the player is looking at and an order is a job on a
+list, and if the two look alike then neither means anything.
+
+Orders now have `DrawCellMark` — a thin translucent plate laid on the face the order is read from:
+the top of solid rock for a mine order, the floor for a fell order. Inset from the cell edges so a
+run of marked cells reads as a run rather than one sheet, flat so it never competes with the thing
+it marks, and at 0.42 alpha rather than the bracket's 0.55.
+
+**"If you are set at the height of the current stone you should be able to see the stones above it."**
+
+The mechanism was already there and the numbers made it useless. `AboveMode.Xray` is the default and
+`aboveDepth` is 4, but `ghostAlpha` was 0.20 with a falloff of 0.55, so the four layers it draws
+came out at **0.20, 0.11, 0.06, 0.03** — the last within a whisker of the 0.012 cutoff that drops a
+layer entirely. The cut-away exists so a player can see what is over their head; at those numbers it
+only proved that something was. Now 0.38 and 0.72, giving **0.38, 0.27, 0.20, 0.14**, each still
+plainly subordinate to the solid layer being worked.
+
+`SliceSettings` is serialised into `Play.unity`, so the scene carried its own copy of both numbers
+and a class default alone would never have reached the game. Both were changed.
+
+**Owed: neither of these has been photographed.** The editor was open, so no batch command could run
+— `scripts/unity.sh` refuses to share a project. The simulation gate is green (381/381) and both the
+presentation and editor assemblies compile against the Unity assemblies offline, but the Unity
+EditMode gate and the pictures are owed. `PlayScene` now has the shot that takes them
+(`shot-xray.png`, the tallest rock viewed from two layers below its top) and the hook it needed:
+the slice layer is a variable the render hook reads, because `Shoot` calls `camera.Render`, which
+re-runs the hook — so rendering a different slice before shooting achieved nothing.
+
 ## 7. Risks
 
 1. **Golden tests re-base twice** — once for the raised ground, once for terracing. Both are
