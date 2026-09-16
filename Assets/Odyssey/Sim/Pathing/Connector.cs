@@ -14,6 +14,23 @@ namespace Odyssey.Sim.Pathing
 
         /// <summary>One shaft cell per served layer. Cost is a per-tick snapshot, so every agent in a tick agrees.</summary>
         Lift = 2,
+
+        /// <summary>
+        /// Hands and feet on rock: one cell and one cell, and nothing built.
+        ///
+        /// <para><b>Why this is not a ladder.</b> A mined shaft used to declare a
+        /// <see cref="Ladder"/>, which quietly claimed three things that are not true of a hole cut
+        /// with a pick — that somebody built it, that it costs what a built ladder costs, and that
+        /// it is a fixture with geometry. The third one reached the screen: drawing the ladder that
+        /// the connector said was there put a free, unbuilt fixture in every pit on the board, and
+        /// <em>not</em> drawing it put colonists in mid-air. The owner's answer to both was to
+        /// eliminate the ladder and have them climb, which needs the distinction to exist here
+        /// rather than in a comment.</para>
+        ///
+        /// <para>Appended rather than inserted: these values are part of the save-compatible
+        /// contract and no existing one may be renumbered.</para>
+        /// </summary>
+        Climb = 3,
     }
 
     /// <summary>
@@ -84,6 +101,13 @@ namespace Odyssey.Sim.Pathing
                     ModeMask = (byte)(TraverseModes.Mask(TraverseMode.Colonist) |
                                       TraverseModes.Mask(TraverseMode.IgnoreDoors));
                     break;
+                case ConnectorKind.Climb:
+                    CostUp = MoveCost.ClimbUp;
+                    CostDown = MoveCost.ClimbDown;
+                    // The same hands a ladder needs, and rather more of them.
+                    ModeMask = (byte)(TraverseModes.Mask(TraverseMode.Colonist) |
+                                      TraverseModes.Mask(TraverseMode.IgnoreDoors));
+                    break;
                 default:
                     CostUp = MoveCost.LiftUp;
                     CostDown = MoveCost.LiftDown;
@@ -96,6 +120,7 @@ namespace Odyssey.Sim.Pathing
         {
             ConnectorKind.Stair => NavFlags.ConnectorStair,
             ConnectorKind.Ladder => NavFlags.ConnectorLadder,
+            ConnectorKind.Climb => NavFlags.ConnectorClimb,
             _ => NavFlags.ConnectorLift,
         };
     }

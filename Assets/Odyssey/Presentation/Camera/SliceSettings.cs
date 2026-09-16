@@ -65,13 +65,31 @@ namespace Odyssey.Presentation.CameraRig
         [Tooltip("Brightness multiplier applied for each layer of depth below the slice.")]
         public float belowFalloff = 0.68f;
 
+        /// <summary>
+        /// Opacity of the first layer above the slice.
+        ///
+        /// <para>Raised from 0.20 to 0.38 on the owner's report that rock above the working layer
+        /// could not be seen at all. The arithmetic says why: at 0.20 with a falloff of 0.55 a
+        /// stone one layer up drew at a fifth, two up at a ninth and three up at a sixteenth, and
+        /// the fourth layer — the last <see cref="aboveDepth"/> allows — was within a whisker of
+        /// the 0.012 cutoff that drops it entirely. The cut-away exists so a player can see what is
+        /// over their head; at those numbers it was only proving that something was.</para>
+        /// </summary>
         [Range(0.02f, 0.6f)]
         [Tooltip("Opacity of the first layer above the slice.")]
-        public float ghostAlpha = 0.20f;
+        public float ghostAlpha = 0.38f;
 
+        /// <summary>
+        /// Opacity multiplier applied for each further layer above.
+        ///
+        /// <para>0.72 rather than 0.55, so the four layers <see cref="aboveDepth"/> draws run
+        /// 0.38, 0.27, 0.20, 0.14 instead of 0.20, 0.11, 0.06, 0.03. Each is still plainly
+        /// subordinate to the solid layer being worked, which is the thing the cut-away must not
+        /// give up.</para>
+        /// </summary>
         [Range(0.1f, 1f)]
         [Tooltip("Opacity multiplier applied for each further layer above.")]
-        public float ghostFalloff = 0.55f;
+        public float ghostFalloff = 0.72f;
 
         /// <summary>
         /// Suppress the active layer's ceiling slab, which is stored on the layer above.

@@ -93,6 +93,27 @@
     <thinkLoopWindowTicks>60</thinkLoopWindowTicks>
     <standDownTicks>120</standDownTicks>
     <woodPerTree>27</woodPerTree>
+
+    <!--
+      What mining leaves. Both yields are ASSUMED, like the felling numbers beside them.
+
+      stoneChanceOneIn is 1, meaning every rock cell yields. It was 4, and 4 was tuned against
+      the wrong denominator: the played board holds eighty thousand cells of rock, so a yield
+      from every one would put six hundred thousand stone on the map - true, and irrelevant,
+      because nobody mines a board. A player mines what they mark, which is tens of cells, and at
+      one in four a dozen orders produced three piles of stone against five hundred and
+      sixty-seven wood from the trees beside them. The colony read as getting nothing out of the
+      rock, which is what a playtest said in as many words (owner, 2026-09-16).
+
+      It is kept as a dial rather than deleted because the machinery behind it is worth having:
+      the roll is a pure function of world seed and cell index, so a partial yield can be
+      reintroduced the day something wants one, without reopening how it is decided.
+
+      Ore is never rolled: a seam cell always yields.
+    -->
+    <stonePerRock>8</stonePerRock>
+    <stoneChanceOneIn>1</stoneChanceOneIn>
+    <orePerCell>15</orePerCell>
   </PawnTuningDef>
 
 </Defs>

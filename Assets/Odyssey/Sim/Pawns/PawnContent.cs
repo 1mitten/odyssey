@@ -128,6 +128,7 @@ namespace Odyssey.Sim.Pawns
         public const int Wander = JobHandle.Wander;
         public const int Wait = JobHandle.Wait;
         public const int Fell = JobHandle.Fell;
+        public const int Mine = JobHandle.Mine;
         public const int Count = JobHandle.Count;
     }
 
@@ -168,7 +169,8 @@ namespace Odyssey.Sim.Pawns
     {
         public const int Haul = 0;
         public const int Cutting = 1;
-        public const int Count = 2;
+        public const int Mining = 2;
+        public const int Count = 3;
     }
 
     /// <summary>
@@ -179,7 +181,8 @@ namespace Odyssey.Sim.Pawns
     {
         public const int Hauling = 0;
         public const int Cutting = 1;
-        public const int Count = 2;
+        public const int Mining = 2;
+        public const int Count = 3;
     }
 
     /// <summary>
@@ -289,6 +292,9 @@ namespace Odyssey.Sim.Pawns
         public const int Meal = ItemHandle.Meal;
         public const int Salvage = ItemHandle.Salvage;
         public const int Wood = ItemHandle.Wood;
+        public const int Stone = ItemHandle.Stone;
+        public const int IronOre = ItemHandle.IronOre;
+        public const int Coal = ItemHandle.Coal;
         public const int Count = ItemHandle.Count;
     }
 
@@ -373,6 +379,9 @@ namespace Odyssey.Sim.Pawns
         public int thinkLoopWindowTicks = 60;
         public int standDownTicks = 120;
         public int woodPerTree = 27;
+        public int stonePerRock = 8;
+        public int stoneChanceOneIn = 1;
+        public int orePerCell = 15;
     }
 
     /// <summary>
@@ -429,6 +438,29 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public int WoodPerTree = 27;
 
+        /// <summary>Stone a plain rock cell leaves. ASSUMED, like everything else here.</summary>
+        public int StonePerRock = 8;
+
+        /// <summary>
+        /// One rock cell in this many yields stone. **One, meaning every cell does.**
+        ///
+        /// <para>It was four, and four was tuned against the wrong denominator. The reasoning was
+        /// that the played board holds eighty thousand cells of rock and a yield from every one
+        /// would put six hundred thousand stone on the map — true, and irrelevant, because nobody
+        /// mines a board. A player mines what they mark, which is tens of cells, and at one in
+        /// four a dozen orders produced three piles of stone against five hundred and sixty-seven
+        /// wood from the trees beside them. The colony read as getting nothing out of the rock,
+        /// which is what a playtest said in as many words (owner, 2026-09-16).</para>
+        ///
+        /// <para>Kept as a dial rather than deleted, because the machinery behind it is worth
+        /// having: the roll is a pure function of (world seed, cell index), so a partial yield can
+        /// be reintroduced the day something wants one without reopening how it is decided.</para>
+        /// </summary>
+        public int StoneChanceOneIn = 1;
+
+        /// <summary>Ore a seam cell leaves. Always, never rolled. ASSUMED.</summary>
+        public int OrePerCell = 15;
+
         public int ThinkLoopWindowTicks = 60;
 
         /// <summary>How long a pawn tripped by the think-loop trap stands still.</summary>
@@ -476,10 +508,11 @@ namespace Odyssey.Sim.Pawns
             content.Thoughts = ByName<ThoughtDef>(defs,
                 "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround");
             content.Jobs = ByName<JobDef>(defs,
-                "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell");
-            content.WorkTypes = ByName<WorkTypeDef>(defs, "Work_Haul", "Work_Cutting");
-            content.Skills = ByName<SkillDef>(defs, "Skill_Hauling", "Skill_Cutting");
-            content.Items = ByName<ItemDef>(defs, "Item_Meal", "Item_Salvage", "Item_Wood");
+                "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine");
+            content.WorkTypes = ByName<WorkTypeDef>(defs, "Work_Haul", "Work_Cutting", "Work_Mining");
+            content.Skills = ByName<SkillDef>(defs, "Skill_Hauling", "Skill_Cutting", "Skill_Mining");
+            content.Items = ByName<ItemDef>(defs,
+                "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal");
 
             content.Mood = One<MoodDef>(defs, "Mood_Default");
             content.Break = One<MentalBreakDef>(defs, "Break_Wander");
@@ -493,6 +526,9 @@ namespace Odyssey.Sim.Pawns
             content.ThinkLoopWindowTicks = tuning.thinkLoopWindowTicks;
             content.StandDownTicks = tuning.standDownTicks;
             content.WoodPerTree = tuning.woodPerTree;
+            content.StonePerRock = tuning.stonePerRock;
+            content.StoneChanceOneIn = tuning.stoneChanceOneIn;
+            content.OrePerCell = tuning.orePerCell;
 
             return content;
         }
@@ -584,6 +620,18 @@ namespace Odyssey.Sim.Pawns
                     defName = "Job_Fell", driver = JobIndex.Fell, workTicks = 800, expiryTicks = 6_000,
                     trainsSkill = SkillIndex.Cutting, experiencePerWorkTick = 110,
                 },
+                // No workTicks: mining is priced per material, and the terrain defs already carry
+                // the number (rock 700, iron 900, coal 760). One constant here would make a seam
+                // cost the same as the stone around it, which is the whole difference between
+                // materials. The driver reads TerrainAt(...).workToClear as it swings.
+                //
+                // The expiry is generous because a shaft can be a long walk from the colony and a
+                // job that expires on the way there is a colonist who never arrives.
+                new JobDef
+                {
+                    defName = "Job_Mine", driver = JobIndex.Mine, expiryTicks = 12_000,
+                    trainsSkill = SkillIndex.Mining, experiencePerWorkTick = 110,
+                },
             };
 
             // Both skills share one curve, one cap and one ladder, because the reference does
@@ -595,14 +643,17 @@ namespace Odyssey.Sim.Pawns
                 // as ui.work.hauling and ui.work.cutting; nothing displays a skill yet.
                 Skill("Skill_Hauling", "hauling"),
                 Skill("Skill_Cutting", "cutting"),
+                Skill("Skill_Mining", "mining"),
             };
 
             content.WorkTypes = new[]
             {
-                // Cutting scans before hauling at equal priority: felled wood is what there is
-                // to haul, so the order that makes the work exist comes first.
-                new WorkTypeDef { defName = "Work_Haul", label = "hauling", order = 1 },
+                // Cutting and mining scan before hauling at equal priority: the orders that make
+                // work exist come before the order that tidies it up. Cutting is first of the two
+                // because felling is the shorter job and the wood is usually nearer.
+                new WorkTypeDef { defName = "Work_Haul", label = "hauling", order = 2 },
                 new WorkTypeDef { defName = "Work_Cutting", label = "cutting", order = 0 },
+                new WorkTypeDef { defName = "Work_Mining", label = "mining", order = 1 },
             };
 
             content.Items = new[]
@@ -623,6 +674,9 @@ namespace Odyssey.Sim.Pawns
                 new ItemDef { defName = "Item_Salvage", label = "salvage" },
                 // Wood's 75 is the one limit the research states outright (a-14 §4).
                 new ItemDef { defName = "Item_Wood", label = "wood", stackLimit = 75 },
+                new ItemDef { defName = "Item_Stone", label = "stone", stackLimit = 75 },
+                new ItemDef { defName = "Item_IronOre", label = "iron ore", stackLimit = 75 },
+                new ItemDef { defName = "Item_Coal", label = "coal", stackLimit = 75 },
             };
 
             content.Mood = new MoodDef { defName = "Mood_Default" };
@@ -668,5 +722,19 @@ namespace Odyssey.Sim.Pawns
         public const uint MentalBreak = 0x9E37_79B1;
         public const uint Wander = 0x85EB_CA6B;
         public const uint Passion = 0xC2B2_AE35;
+
+        /// <summary>
+        /// Whether a rock cell gives up stone. Drawn from (world seed, <b>cell index</b>) rather
+        /// than from the tick, which is the one thing about it that matters: the answer belongs
+        /// to the cell and not to the moment. A cell mined on tick 900 in one run and tick 40,000
+        /// in another yields the same, so the roll survives a save, a reload and a replay, and no
+        /// amount of re-ordering the colony's work can reroll it.
+        ///
+        /// The number is not 0xC2B2_AE35, which is what it was written as and which
+        /// <see cref="Passion"/> took on the same day on another branch. Two purposes sharing a
+        /// salt is two streams that agree, and a colonist's passion deciding which rocks hold
+        /// stone is the kind of coupling nothing would ever report.
+        /// </summary>
+        public const uint StoneYield = 0x27D4_EB2F;
     }
 }

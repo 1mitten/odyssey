@@ -97,4 +97,10 @@
     <label>cutting</label>
   </SkillDef>
 
+
+  <SkillDef ParentName="SkillBase">
+    <defName>Skill_Mining</defName>
+    <label>mining</label>
+  </SkillDef>
+
 </Defs>

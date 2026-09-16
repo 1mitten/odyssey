@@ -147,7 +147,8 @@ namespace Odyssey.EditorTools
                 var nav = new NavGraph(grid);
                 nav.Rebuild();
                 var pawns = new PawnContext(
-                    grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core()) { Chunks = chunks };
+                    grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core())
+                    { Chunks = chunks };
                 var support = new SupportSystem(grid, new SupportSolver(grid), chunks);
                 var mirror = new Odyssey.Presentation.World.GridMirrorContributor(
                     grid, result.Edifices, model);
@@ -179,7 +180,8 @@ namespace Odyssey.EditorTools
                 // because a figure's speed is measured from how far it moved since the last frame
                 // and a figure leased this instant has not moved at all — a single frame would
                 // photograph five people standing still and prove nothing about the walk.
-                figures = new Odyssey.Presentation.World.PawnFigureDirector(catalogue, lighting, 0);
+                figures = new Odyssey.Presentation.World.PawnFigureDirector(catalogue, lighting, 0)
+                    { World = model };   // so a climber can find its wall
                 int movePerTick = PawnContent.Core().Movement.movePerTick;
                 const float FrameSeconds = 1f / 60f;
                 for (int frame = 0; frame < 40; frame++)
@@ -194,12 +196,18 @@ namespace Odyssey.EditorTools
 
                 ChunkRenderer active = renderer;
                 Odyssey.Presentation.World.PawnFigureDirector walking = figures;
+
+                // Which layer the hook cuts at. A frame is drawn by Shoot calling camera.Render,
+                // which runs this hook — so rendering a different slice before shooting achieves
+                // nothing, and the layer has to be something the hook itself reads.
+                int[] shotLayer = { activeLayer };
+
                 hook = (context, rendering) =>
                 {
                     if (rendering != camera) return;
                     active.ViewerPosition = rendering.transform.position;
-                    active.Render(activeLayer, slice);
-                    active.RenderActors(world.Views.Current, activeLayer, slice, actorMaterial,
+                    active.Render(shotLayer[0], slice);
+                    active.RenderActors(world.Views.Current, shotLayer[0], slice, actorMaterial,
                         drawnAsFigures: walking.Drawn);
 
                     // Both cursors, so a picture can settle whether they look right: the cell
@@ -260,6 +268,383 @@ namespace Odyssey.EditorTools
                 // the edge of the world are only checkable from here.
                 Shoot(camera, focus, 9f, 150f, "Logs/shot-horizon.png");
 
+                // An outcrop, close. The start pass deliberately puts the colony on flat ground
+                // clear of rock, so every framing above is guaranteed to have none in it — which
+                // made judging the stone impossible from the pictures that existed. This one goes
+                // and finds some.
+                var natural = result.Natural;
+                if (natural != null && natural.Outcrops.Count > 0)
+                {
+                    // The TALLEST outcrop, not the nearest, and shot from low down. A stack is
+                    // the only thing that can show the fault this framing exists to catch: a
+                    // one-cell lump has no layer boundary to open a slot at, and a boundary seen
+                    // from above is edge-on to nothing. Height breaks ties towards the near one.
+                    int nearestRock = -1;
+                    int bestRock = int.MinValue;
+                    foreach (RockOutcrop outcrop in natural.Outcrops)
+                    {
+                        CellRef at = size.FromIndex(outcrop.CellIndex);
+                        int d = Mathf.Abs(at.X - result.StartCell.X) + Mathf.Abs(at.Z - result.StartCell.Z);
+                        int score = outcrop.Height * 1000 - d;
+                        if (score <= bestRock) continue;
+                        bestRock = score;
+                        nearestRock = outcrop.CellIndex;
+                    }
+
+                    if (nearestRock >= 0)
+                    {
+                        // Aimed at the middle of the mass, not at the ground it stands on, and far
+                        // enough back to hold the whole stack: a frame that cuts the top off
+                        // cannot answer whether the top is right.
+                        CellRef at = size.FromIndex(nearestRock);
+                        var rockFocus = new Vector3(
+                            at.X * CellMetrics.SizeXZ,
+                            (at.Y + 1.2f) * CellMetrics.SizeY,
+                            at.Z * CellMetrics.SizeXZ);
+                        Shoot(camera, rockFocus, 20f, 26f, "Logs/shot-rock.png");
+                        Debug.Log($"[Shot] the tallest outcrop near the start is at {at}");
+                    }
+                }
+
+                // Whoever is swinging at rock, close and side on.
+                //
+                // SwingCheck is the harness meant for this and it segfaults inside the render
+                // pipeline in batchmode — twice, on a settled assembly, after six of its nine
+                // samples. That is worth its own fix and is not worth blocking a picture on: the
+                // ordinary screenshot path renders this same world reliably, and what is wanted
+                // here is only whether a miner has a pick in its hands and is facing the stone.
+                //
+                // The colony has already run 2,400 ticks by this point, which is long enough for
+                // the miners the scenario appoints to have reached the outcrop it marks.
+                WorldSnapshot published = world.Views.Current;
+                PawnView miner = default;
+                bool foundMiner = false;
+
+                // Prefer a miner cutting SIDEWAYS. One cutting the cell under its own feet is
+                // doing the same work, but the line from worker to work is straight down, so
+                // there is no side-on bearing to be had from it at all — the horizontal component
+                // is zero and any bearing derived from it is arbitrary. The first attempt at this
+                // put the camera inside the outcrop for exactly that reason.
+                for (int i = 0; i < published.Pawns.Length; i++)
+                {
+                    PawnView worker = published.Pawns[i];
+                    if (!worker.Working || worker.JobDef != JobHandle.Mine) continue;
+
+                    bool sideways = worker.WorkCell.Y == worker.Cell.Y;
+                    if (!foundMiner || sideways) { miner = worker; foundMiner = true; }
+                    if (sideways) break;
+                }
+
+                if (foundMiner)
+                {
+                    // Side on to the line between the miner and the rock, and midway along it.
+                    //
+                    // Not a taste in framing. A three-quarter view puts the two at different
+                    // depths and the one thing worth seeing — whether the head is in the stone,
+                    // short of it or buried past it — then reads as whatever you please. Across
+                    // the line it reads as what it is, which is why SwingCheck shoots this way and
+                    // why this borrows its bearing rather than inventing one.
+                    Vector3 toWork = CellMetrics.FloorCentre(miner.WorkCell)
+                                   - CellMetrics.FloorCentre(miner.Cell);
+                    toWork.y = 0f;
+
+                    // Straight up or down leaves nothing to be side-on to. Quarter past the
+                    // figure's own facing is at least a stable choice rather than a silent
+                    // fallback to world forward, which is what pointed the camera into the rock.
+                    float sideOn = toWork.sqrMagnitude > 1e-4f
+                        ? PawnPose.YawOf(toWork) + 90f
+                        : 45f;
+
+                    Vector3 waist = (CellMetrics.FloorCentre(miner.Cell)
+                                   + CellMetrics.FloorCentre(miner.WorkCell)) * 0.5f + Vector3.up * 1.3f;
+                    Shoot(camera, waist, 12f, sideOn, 6.5f, "Logs/shot-miner.png");
+
+                    // And again with the pick in the air.
+                    //
+                    // The struck pose is the one worth measuring and the WORST one to judge a
+                    // tool's head by: the aim puts the head just inside the rock, so at the
+                    // moment of the blow it is buried in the stone where nothing can see it —
+                    // which is correct, and tells you nothing about which way round it is.
+                    // Held part way up the raise, the head is against the sky.
+                    //
+                    // This is what the blade roll has to be settled from, and BitAxis cannot
+                    // settle it: it signs the head towards its fat side, and a pick sticks out
+                    // both ways — point one side, adze the other — so the sign is whichever end
+                    // the modeller made heavier rather than anything anybody chose.
+                    figures.HeldPhase = 0.30f;
+                    figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                    figures.Evaluate(FrameSeconds);
+                    Shoot(camera, waist, 12f, sideOn, 5.5f, "Logs/shot-miner-raised.png");
+                    figures.HeldPhase = null;
+                    figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                    figures.Evaluate(FrameSeconds);
+                    Debug.Log($"[Shot] a miner at {miner.Cell} is cutting {miner.WorkCell}" +
+                              (toWork.sqrMagnitude > 1e-4f ? " sideways" : " under its own feet"));
+
+                    // Measured, not squinted at. An empty hand in a photograph is either a tool
+                    // the catalogue never gave us or a tool fitted somewhere absurd, and those
+                    // want different fixes.
+                    Debug.Log($"[Shot] tools — {figures.DescribeTools()}");
+                    Debug.Log($"[Shot] reach {figures.MeasuredReach:F2} m, " +
+                              $"blade gap {figures.MeasuredBladeGap:F2} m, " +
+                              $"blade height {figures.MeasuredBladeHeight:F2} m, " +
+                              $"sideways {figures.MeasuredStrikeSideways:F2} m");
+                }
+
+                // And a miner cutting the layer BELOW itself, which is the case the downward aim
+                // was built for and the only one that can show whether it works.
+                //
+                // Kept separate from the shot above rather than folded into its preference order:
+                // that one deliberately wants a SIDEWAYS cut, because a level swing is what its
+                // measurements are about. These are two different poses and they want two
+                // pictures, not one picture of whichever happened to be running.
+                PawnView digger = default;
+                bool foundDigger = false;
+                for (int i = 0; i < published.Pawns.Length; i++)
+                {
+                    PawnView worker = published.Pawns[i];
+                    if (!worker.Working || worker.JobDef != JobHandle.Mine) continue;
+                    if (worker.WorkCell.Y >= worker.Cell.Y) continue;
+                    digger = worker;
+                    foundDigger = true;
+                    break;
+                }
+
+                if (foundDigger)
+                {
+                    Vector3 toWork = CellMetrics.FloorCentre(digger.WorkCell)
+                                   - CellMetrics.FloorCentre(digger.Cell);
+                    toWork.y = 0f;
+                    float sideOn = toWork.sqrMagnitude > 1e-4f
+                        ? PawnPose.YawOf(toWork) + 90f
+                        : 45f;
+
+                    // Framed on the stone's own top face rather than on a waist height between
+                    // the two: the whole question is whether the head reaches that face, and a
+                    // frame centred a cell above it puts the answer at the bottom of the picture.
+                    Vector3 face = CellMetrics.FloorCentre(digger.WorkCell)
+                                 + Vector3.up * CellMetrics.SizeY;
+                    Shoot(camera, face + Vector3.up * 0.9f, 8f, sideOn, 6.0f, "Logs/shot-miner-down.png");
+
+                    Debug.Log($"[Shot] a miner at {digger.Cell} is cutting {digger.WorkCell}, " +
+                              (toWork.sqrMagnitude > 1e-4f ? "from the rim" : "from directly on top"));
+                }
+                else
+                {
+                    Debug.Log("[Shot] no miner was cutting a layer below itself, so no downward shot");
+                }
+
+                // And a miner cutting the layer ABOVE itself, which is the owner's decision that
+                // a pick goes overhead. Waited for rather than hoped for, like the climb: the
+                // stance is one of four and it is not the common one.
+                {
+                    // Made rather than waited for. Four stances share the work and this is not the
+                    // common one, so 6,000 ticks of an ordinary colony went by without a single
+                    // colonist happening to cut a ceiling. Marking a cell that can ONLY be reached
+                    // from underneath is the honest way to photograph the stance that handles it.
+                    for (int gz = 0; gz < size.SizeZ; gz++)
+                    for (int gx = 0; gx < size.SizeX; gx++)
+                    for (int gy = 1; gy < size.SizeY - 1; gy++)
+                    {
+                        int under = size.Index(gx, gz, gy);
+                        int rock = under + size.LayerStride;
+                        if (!grid.IsWalkable(under)) continue;
+                        if (!designations.CanMine(rock)) continue;
+
+                        // Only from below, which means none of the three stances the giver
+                        // prefers: nothing walkable beside the rock on its own layer (beside),
+                        // nothing walkable on the layer above it (the rim, and standing on top).
+                        bool onlyFromUnder = true;
+                        for (int dy = 1; dy <= 2 && onlyFromUnder; dy++)
+                        for (int dz = -1; dz <= 1 && onlyFromUnder; dz++)
+                        for (int dx = -1; dx <= 1 && onlyFromUnder; dx++)
+                        {
+                            if (dy == 1 && dx == 0 && dz == 0) continue;   // the rock itself
+                            if (!size.Contains(gx + dx, gz + dz, gy + dy)) continue;
+                            if (grid.IsWalkable(size.Index(gx + dx, gz + dz, gy + dy)))
+                                onlyFromUnder = false;
+                        }
+
+                        if (!onlyFromUnder) continue;
+                        designations.Designate(size.FromIndex(rock), Odyssey.Sim.Designations.DesignationKind.Mine);
+                        Debug.Log($"[Shot] marked {size.FromIndex(rock)} which can only be cut " +
+                                  $"from {size.FromIndex(under)} underneath it");
+                        gz = size.SizeZ; gx = size.SizeX; break;
+                    }
+
+                    PawnView reacher = default;
+                    bool foundReacher = false;
+                    for (int waited = 0; waited < 12_000 && !foundReacher; waited++)
+                    {
+                        world.Tick();
+                        figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                        figures.Evaluate(FrameSeconds);
+
+                        var live = world.Views.Current.Pawns;
+                        for (int i = 0; i < live.Length; i++)
+                        {
+                            PawnView who = live[i];
+                            if (!who.Working || who.JobDef != JobHandle.Mine) continue;
+                            if (who.WorkCell.Y <= who.Cell.Y) continue;
+                            reacher = who;
+                            foundReacher = true;
+                            break;
+                        }
+                    }
+
+                    if (foundReacher)
+                    {
+                        Vector3 toWork = CellMetrics.FloorCentre(reacher.WorkCell)
+                                       - CellMetrics.FloorCentre(reacher.Cell);
+                        toWork.y = 0f;
+                        float sideOn = toWork.sqrMagnitude > 1e-4f
+                            ? PawnPose.YawOf(toWork) + 90f
+                            : 45f;
+
+                        // Framed on the face it is reaching for: the BOTTOM of the cell above,
+                        // which is the only part of it a person could ever touch.
+                        Vector3 face = CellMetrics.FloorCentre(reacher.WorkCell);
+                        Shoot(camera, face, 4f, sideOn, 7f, "Logs/shot-miner-up.png");
+                        Debug.Log($"[Shot] a miner at {reacher.Cell} is cutting {reacher.WorkCell} " +
+                                  "overhead");
+                        Debug.Log($"[Shot] tools (raise) — {figures.DescribeTools()}");
+                    }
+                    else
+                    {
+                        Debug.Log("[Shot] no miner was cutting a layer above itself, so no reach shot");
+                    }
+                }
+
+                // Spoil on the floor: what a dug-out cell actually leaves to look at.
+                {
+                    CellRef spoil = default;
+                    int most = 0;
+                    for (int i = 0; i < published.Things.Length; i++)
+                    {
+                        ThingView thing = published.Things[i];
+                        if (thing.DefIndex != ItemIndex.Stone || thing.Stack <= most) continue;
+                        most = thing.Stack;
+                        spoil = thing.Cell;
+                    }
+
+                    if (most > 0)
+                    {
+                        // Steeply down and well back. The first attempt shot it from 4.5 m at 30
+                        // degrees and spent most of the frame inside the rock face beside it:
+                        // spoil lies at the foot of a wall, so anything near the horizontal is
+                        // looking through the wall.
+                        Shoot(camera, CellMetrics.FloorCentre(spoil) + Vector3.up * 0.3f,
+                              55f, 35f, 9f, "Logs/shot-spoil.png");
+                        Debug.Log($"[Shot] the biggest heap of stone is {most} at {spoil}");
+                    }
+                    else
+                    {
+                        Debug.Log("[Shot] no stone on the ground yet, so no spoil shot");
+                    }
+                }
+
+                // Somebody on a shaft wall, which is the one pose with nothing under it.
+                //
+                // Worth its own frame because every fault it can have is invisible from anywhere
+                // else: a climber drawn in the walk cycle, or turned to face north, or with its
+                // arms at its sides, all look like an ordinary colonist until you notice it is
+                // three metres up a hole. The frame is deliberately side on and close.
+                {
+                    // Waited for rather than hoped for. A drop costs a hundred ticks and a climb
+                    // two hundred and seventy, so on any one frame of a five-colonist board the
+                    // odds of catching somebody on a wall are poor — the first version of this
+                    // shot simply reported that nobody was climbing, which says nothing at all
+                    // about whether the pose works.
+                    PawnView climber = default;
+                    bool found = false;
+                    for (int waited = 0; waited < 4_000 && !found; waited++)
+                    {
+                        world.Tick();
+                        figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                        figures.Evaluate(FrameSeconds);
+
+                        var live = world.Views.Current.Pawns;
+                        for (int i = 0; i < live.Length; i++)
+                        {
+                            PawnView who = live[i];
+                            if (who.MovePercent <= 20 || who.MovePercent >= 80) continue;
+                            if (who.NextCell.Y == who.Cell.Y) continue;
+                            if (who.Cell.Y < 0) continue;
+                            climber = who;
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (found)
+                    {
+                        Vector3 between = (CellMetrics.FloorCentre(climber.Cell)
+                                         + CellMetrics.FloorCentre(climber.NextCell)) * 0.5f;
+
+                        // Looking AT the wall the colonist is on, so the rock is behind it and the
+                        // camera is on the open side. A fixed bearing put the outcrop between the
+                        // camera and the subject as often as not, and a photograph of a rock
+                        // proves nothing about the pose behind it.
+                        CellRef lower = climber.NextCell.Y < climber.Cell.Y
+                            ? climber.NextCell : climber.Cell;
+                        Vector3 toWall = Vector3.zero;
+                        if (lower.X > 0 && grid.IsSolidTerrain(size.Index(lower.X - 1, lower.Z, lower.Y)))
+                            toWall = Vector3.left;
+                        else if (lower.X < size.SizeX - 1
+                                 && grid.IsSolidTerrain(size.Index(lower.X + 1, lower.Z, lower.Y)))
+                            toWall = Vector3.right;
+                        else if (lower.Z > 0 && grid.IsSolidTerrain(size.Index(lower.X, lower.Z - 1, lower.Y)))
+                            toWall = Vector3.back;
+                        else if (lower.Z < size.SizeZ - 1
+                                 && grid.IsSolidTerrain(size.Index(lower.X, lower.Z + 1, lower.Y)))
+                            toWall = Vector3.forward;
+
+                        float bearing = toWall == Vector3.zero ? 35f : PawnPose.YawOf(toWall);
+                        Shoot(camera, between + Vector3.up * 1.4f, 10f, bearing, 11f, "Logs/shot-climb.png");
+                        Debug.Log($"[Shot] a colonist is {climber.MovePercent}% of the way from " +
+                                  $"{climber.Cell} to {climber.NextCell}");
+                        Debug.Log($"[Shot] climbing — {figures.DescribeClimb()}");
+                    }
+                    else
+                    {
+                        Debug.Log("[Shot] nobody was mid-climb, so no climbing shot");
+                    }
+                }
+
+                // The slice seen from the layer a miner is working on, which is the one view the
+                // whole layer model exists for: what is ABOVE the active layer has to read, or a
+                // player standing in a quarry cannot see the rock still over their head.
+                {
+                    Debug.Log($"[Shot] x-ray: above={slice.above}, depth={slice.aboveDepth}, " +
+                              $"alpha +1 {slice.AlphaAbove(1):0.00}, +2 {slice.AlphaAbove(2):0.00}, " +
+                              $"+3 {slice.AlphaAbove(3):0.00}, +4 {slice.AlphaAbove(4):0.00}");
+
+                    // The tallest outcrop, viewed with the slice set at its foot so every cell of
+                    // it above the first is drawn through the x-ray.
+                    int tallest = -1, tallestTop = -1;
+                    for (int z = 0; z < size.SizeZ; z++)
+                    for (int x = 0; x < size.SizeX; x++)
+                    {
+                        int top = -1;
+                        for (int y = size.SizeY - 1; y >= 0; y--)
+                            if (grid.Terrain[size.Index(x, z, y)] == NaturalContent.TerrainRock) { top = y; break; }
+                        if (top > tallestTop) { tallestTop = top; tallest = size.Index(x, z, top); }
+                    }
+
+                    if (tallest >= 0)
+                    {
+                        CellRef at = size.FromIndex(tallest);
+                        int foot = Mathf.Max(0, at.Y - 2);
+                        Debug.Log($"[Shot] the tallest rock is at {at}; slicing at L{foot} " +
+                                  $"puts {at.Y - foot} layer(s) of it above the cut");
+
+                        shotLayer[0] = foot;
+                        Shoot(camera, CellMetrics.FloorCentre(new CellRef(at.X, at.Z, foot)),
+                              22f, 40f, 24f, "Logs/shot-xray.png");
+                        shotLayer[0] = activeLayer;
+                    }
+                }
+
                 // A grass-free twin of the horizon shot was tried here, swapping in a second
                 // renderer with scatter off, and it drew grass anyway — on two consecutive
                 // renders, with the swap plainly in place. Not a one-frame latency, then, and not
@@ -268,7 +653,7 @@ namespace Odyssey.EditorTools
                 // before trusting it to draw nothing.
 
                 Debug.Log("[Shot] wrote Logs/shot-play.png, Logs/shot-close.png, " +
-                          "Logs/shot-down.png, Logs/shot-horizon.png");
+                          "Logs/shot-down.png, Logs/shot-horizon.png, Logs/shot-rock.png, Logs/shot-miner.png");
 
                 // Before the root goes: a playable graph bound to an Animator that has just been
                 // destroyed under it complains, and the complaint would be the picture's epitaph.
@@ -718,6 +1103,23 @@ namespace Odyssey.EditorTools
                 materialTilesPerCell = 1f, flattenNormalMap = true,
             });
 
+            // A run of chipped stone lumps sharing one material, one row per variant. Variant 0
+            // keeps the unsuffixed terrain id, so anything that asks for plain "terrain.rock"
+            // still gets an answer.
+            void StoneVariants(string id, string material)
+            {
+                for (int v = 0; v < RockMesh.Variants; v++)
+                {
+                    string variantId = v <= 0 ? id : id + "." + v.ToString();
+                    rows.Add(new ModuleEntry
+                    {
+                        moduleId = variantId, shape = ModuleShape.RockBlock, prefabName = string.Empty,
+                        materialName = material,
+                        materialTilesPerCell = 1f, flattenNormalMap = true,
+                    });
+                }
+            }
+
             // Walls, windows and doors. Several template ids share one piece for now; the point of
             // the catalogue is that giving the tower its own curtain wall is an edit here.
             Wall(ModuleIds.Wall, "SM_Bld_Base_Wall_01");
@@ -778,7 +1180,9 @@ namespace Odyssey.EditorTools
             // Strata. Tinted blocks on purpose: no pack has a cubic rock module, and a cut-away of
             // bedrock is a coloured mass, not a prop.
             Block(ModuleIds.Terrain("EngineeredFill"));
-            Ground(ModuleIds.Terrain("Rock"), "Mat_Rock_01");
+            // Rock is shared with the wilderness map and is registered once, below, as a run of
+            // chipped lumps. A second row here would shadow the first variant and leave one cell
+            // in six a smooth cube among five jagged ones.
             Block(ModuleIds.Terrain("BuriedSeam"));
             Block(ModuleIds.Terrain("Salvage"));
 
@@ -815,14 +1219,23 @@ namespace Odyssey.EditorTools
             Ground(ModuleIds.Terrain("BareEarth"), "Mat_Dirt_01");
             Ground(ModuleIds.Terrain("PackedGravel"), "Mat_Gravel_01");
             Ground(ModuleIds.Terrain("Subsoil"), "Mat_Mud_01");
-            Ground(ModuleIds.Terrain("Bedrock"), "Mat_Rock_Rough_01");
 
             // No meadow texture reads as these, and a wrong texture is worse than an honest
             // colour: sand would come out as mud, and an ore seam has to stay findable at a
             // glance. They keep their tints until a pack with the right ground arrives.
             Block(ModuleIds.Terrain("Sand"));
-            Block(ModuleIds.Terrain("IronOre"));
-            Block(ModuleIds.Terrain("CoalSeam"));
+
+            // Stone: one row per lump, because each lump is its own module. The material is the
+            // same on all of them — what varies is the geometry, which is ours and needs no pack,
+            // so a clone without the art still gets chipped rock in a flat colour.
+            //
+            // Rock wears the rough face rather than Mat_Rock_01. The smooth one is a warm brown
+            // that reads as earth at board distance, which is what made an outcrop look like a
+            // mud-brick; on the rough one the same tint reads as stone.
+            StoneVariants(ModuleIds.Terrain("Rock"), "Mat_Rock_Rough_01");
+            StoneVariants(ModuleIds.Terrain("Bedrock"), "Mat_Rock_Rough_01");
+            StoneVariants(ModuleIds.Terrain("IronOre"), string.Empty);
+            StoneVariants(ModuleIds.Terrain("CoalSeam"), string.Empty);
 
             // Tufts of grass strewn over the ground. Chosen on triangles per square metre of
             // cover, because there is one of these on nearly every one of fourteen thousand
@@ -872,6 +1285,24 @@ namespace Odyssey.EditorTools
             {
                 moduleId = ModuleIds.ToolAxe, shape = ModuleShape.Pillar,
                 prefabName = "SM_Gen_Wep_Axe_01",
+            });
+
+            // The pick, from the same pack for the same reasons, and chosen over two alternatives
+            // on measurements rather than taste (12-work-poses-and-tools.md §5): 0.53 x 0.74 x
+            // 0.09 against the axe's 0.27 x 0.74 x 0.08 — the same haft length to the centimetre
+            // and the same pivot convention, so it is the one pick in the packs already known to
+            // suit the fitting path. Western Frontier's is 0.98 m of haft, which reads as a sledge
+            // at board height, pivots at the butt rather than mid-haft, and has its filename
+            // misspelt in the pack, which is a permanent trap for anyone grepping.
+            //
+            // One caution recorded where it will be read: GripTool finds the haft as the long axis
+            // of the bounds, and the pick's margin is 0.74 against 0.53 — 1.4 : 1, against the
+            // axe's 2.7 : 1. The right axis still wins, but a pick modelled a hand longer in the
+            // head would be gripped by its own point, and it would look deliberate.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ToolPickaxe, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Wep_Pickaxe_01",
             });
 
             // Colonists. A Synty character is a rigged humanoid with no MeshFilter anywhere on it,
@@ -964,6 +1395,46 @@ namespace Odyssey.EditorTools
                 prefabName = "SM_Prop_LogPile_01",
                 centreXZ = true, baseAtY = true,
                 scale = new Vector3(0.4f, 0.4f, 0.4f),
+            });
+
+            // What a mine leaves. No pack contains ore, so all three are rock, and the job these
+            // rows do is to make them three *different* rocks, chosen for silhouette because that
+            // is the only axis available — items are drawn by the actor pass with no per-item
+            // tint, so colour cannot tell them apart. All three are recorded as art gaps in the
+            // registry and want real tiles eventually.
+            //
+            // **One row is one rock, not one pile.** These three are drawn several times over by
+            // ItemHeap, scattered across the cell floor, with the count reading the stack size —
+            // so every scale here is the size of a single lump you could carry, and a full
+            // stockpile square is seven of them rather than one enormous one. The first version
+            // used SM_Prop_StonePile_01, a 1.48 m cairn, which is the shape of a monument and not
+            // of eight stone knocked off a rock face.
+            rows.Add(new ModuleEntry
+            {
+                // 1.37 x 1.04 x 1.14 at source; 0.48 x 0.36 x 0.40 at this scale. A squat lump
+                // about shin high — the plainest "grey rock" in any pack we own.
+                moduleId = ModuleIds.ItemStone, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Env_Rock_03",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(0.35f, 0.35f, 0.35f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                // 2.12 x 3.38 x 2.82 at source; 0.34 x 0.54 x 0.45 here. Taller than it is wide,
+                // where stone is wider than it is tall: ore reads as shards split off a seam.
+                moduleId = ModuleIds.ItemIronOre, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Env_Rock_08",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(0.16f, 0.16f, 0.16f),
+            });
+            rows.Add(new ModuleEntry
+            {
+                // 1.11 x 0.30 x 0.89 at source; 0.55 x 0.15 x 0.45 here. Low rubble, and the
+                // flattest of the three, so a coal pile is never mistaken for a stone one.
+                moduleId = ModuleIds.ItemCoal, shape = ModuleShape.Pillar,
+                prefabName = "SM_Gen_Env_Rock_Pebbles_02",
+                centreXZ = true, baseAtY = true,
+                scale = new Vector3(0.5f, 0.5f, 0.5f),
             });
 
             return rows;

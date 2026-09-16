@@ -396,6 +396,9 @@ namespace Odyssey.Presentation.Rendering
         int[] _itemCounts = System.Array.Empty<int>();
         Matrix4x4[] _itemMatrices = new Matrix4x4[16];
 
+        /// <summary>Scratch for one heap's worth of rocks. Reused, never grown: ItemHeap caps it.</summary>
+        readonly Matrix4x4[] _heapPlacements = new Matrix4x4[ItemHeap.Most];
+
         /// <summary>
         /// Draw the items lying on the ground, one instanced submission per item kind.
         ///
@@ -424,8 +427,33 @@ namespace Odyssey.Presentation.Rendering
                     continue;
                 }
 
+                Vector3 floor = CellMetrics.FloorCentre(cell);
+
+                // Rubble is several rocks, and how many says how much. See ItemHeap: everything
+                // else on the floor is one prop, and stone drawn that way was a cairn standing in
+                // the cell rather than spoil lying in it.
+                if (ItemHeap.TryRecipe(def, out ItemHeap.Recipe heap))
+                {
+                    int rocks = ItemHeap.Place(things[i].Stack, (uint)things[i].Id.Value,
+                        floor, heap, _heapPlacements);
+
+                    // Lifted one rock at a time, not once for the cell. The ground is a shallow
+                    // field now rather than a plane, and a heap is spread over most of a metre —
+                    // lift the centre and scatter from it and the outer rocks sit above or below
+                    // the ground they are supposed to be lying on.
+                    for (int rock = 0; rock < rocks; rock++)
+                    {
+                        Matrix4x4 placement = _heapPlacements[rock];
+                        Vector3 at = GroundRelief.Lift(placement.GetColumn(3));
+                        placement.SetColumn(3, new Vector4(at.x, at.y, at.z, 1f));
+                        AppendItem(def, placement);
+                    }
+
+                    continue;
+                }
+
                 AppendItem(def, Matrix4x4.TRS(
-                    GroundRelief.Lift(CellMetrics.FloorCentre(cell)),
+                    GroundRelief.Lift(floor),
                     Quaternion.Euler(0f, YawOf(things[i].Id), 0f),
                     Vector3.one));
             }
@@ -723,6 +751,96 @@ namespace Odyssey.Presentation.Rendering
         /// in one axis than another. Giving each stub its own matrix makes thickness exact, and it
         /// is still one instanced call because every stub is the same unit cube.
         /// </summary>
+        /// <summary>
+        /// How far a cell has been cut into, drawn as the material already taken out of it: a
+        /// slab eating down from the top of the cell as the work goes on.
+        ///
+        /// <para><b>An overlay, and deliberately not the rock itself.</b> The obvious way to show
+        /// a half-mined cell is to shrink its lump, and that is the one thing that must not
+        /// happen: a cell that pulls in from its neighbours opens daylight at the joint, which is
+        /// precisely the fault the whole solidity rule exists to prevent. The rock keeps filling
+        /// its box for as long as it exists and then goes all at once; what changes is this.</para>
+        ///
+        /// <para>Eating downward rather than filling upward because that is the way a cut reads —
+        /// the missing part is at the top, where a pick would have taken it. At nought nothing is
+        /// drawn at all, so an untouched order is a bracket and no more.</para>
+        /// </summary>
+        /// <summary>
+        /// Marks a cell as carrying a standing order: a thin translucent plate laid on the face a
+        /// worker would come at it from.
+        ///
+        /// <para><b>Not the selection bracket, and that is the whole point of it existing.</b>
+        /// Standing orders used to be drawn with <see cref="DrawCellHighlight"/>, which is the
+        /// corner-stub cursor — so the starting scenario, which marks every tree within ten cells
+        /// and three outcrops of stone, opened the game with a selection cursor around a hundred
+        /// things at once. The owner's words were "there seems to be faint selection over every
+        /// tree and stone". Nothing was broken; the wrong word was being used. A selection is one
+        /// thing the player is looking at and an order is a job on a list, and if they look alike
+        /// then neither means anything.</para>
+        ///
+        /// <para>On top of solid rock and on the floor of anything else, because that is the face
+        /// you see it from: a mine order is read looking down at the stone, and a fell order is
+        /// read on the ground the tree stands in. Inset from the cell edges so a row of marked
+        /// cells reads as a row rather than as one continuous sheet, and flat, so it never
+        /// competes with the thing it is marking.</para>
+        /// </summary>
+        public void DrawCellMark(CellRef cell, Color colour)
+        {
+            Material material = BracketMaterial(colour);
+            var rp = new RenderParams(material)
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+
+            int index = _model.Index(cell.X, cell.Z, cell.Y);
+            bool solid = _model.IsSolid(index);
+
+            Vector3 centre = GroundRelief.Lift(CellMetrics.FloorCentre(cell));
+            centre.y += solid ? CellMetrics.SizeY + MarkLift : MarkLift;
+
+            const float Inset = 0.22f;
+            var size = new Vector3(
+                CellMetrics.SizeXZ - Inset * 2f, MarkThickness, CellMetrics.SizeXZ - Inset * 2f);
+
+            Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
+                Matrix4x4.TRS(centre, Quaternion.identity, size));
+        }
+
+        /// <summary>Clear of the face it is laid on, or it z-fights with it.</summary>
+        const float MarkLift = 0.05f;
+
+        /// <summary>A plate, not a box. Thin enough to read as paint rather than as a thing.</summary>
+        const float MarkThickness = 0.04f;
+
+        public void DrawCellCut(CellRef cell, float fraction, Color colour)
+        {
+            if (fraction <= 0.02f) return;
+            if (fraction > 1f) fraction = 1f;
+
+            Material material = BracketMaterial(colour);
+            var rp = new RenderParams(material)
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+
+            // Inset a little so the slab sits inside the cell rather than z-fighting the faces of
+            // the rock it is drawn over, and of whatever stands beside it.
+            const float Inset = 0.06f;
+            float height = CellMetrics.SizeY * fraction;
+            var size = new Vector3(
+                CellMetrics.SizeXZ - Inset * 2f, height, CellMetrics.SizeXZ - Inset * 2f);
+
+            Vector3 centre = CellMetrics.Centre(cell.X, cell.Z, cell.Y);
+            centre.y += (CellMetrics.SizeY - height) * 0.5f;
+
+            Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
+                Matrix4x4.TRS(centre, Quaternion.identity, size));
+        }
+
         public void DrawSelectionBracket(Vector3 centre, Vector3 size, Color colour)
         {
             // Translucent, and emissive so it does not go dim with the light: a cursor has to be

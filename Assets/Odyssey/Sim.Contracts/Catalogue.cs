@@ -17,7 +17,8 @@ namespace Odyssey.Sim.Contracts
         public const int Wander = 3;
         public const int Wait = 4;
         public const int Fell = 5;
-        public const int Count = 6;
+        public const int Mine = 6;
+        public const int Count = 7;
     }
 
     /// <summary>See <see cref="JobHandle"/>: item def indices as <see cref="ThingView"/> carries them.</summary>
@@ -26,6 +27,12 @@ namespace Odyssey.Sim.Contracts
         public const int Meal = 0;
         public const int Salvage = 1;
         public const int Wood = 2;
-        public const int Count = 3;
+
+        /// <summary>Broken rock. Plentiful, heavy, and not yet good for anything but a pile.</summary>
+        public const int Stone = 3;
+
+        public const int IronOre = 4;
+        public const int Coal = 5;
+        public const int Count = 6;
     }
 }
