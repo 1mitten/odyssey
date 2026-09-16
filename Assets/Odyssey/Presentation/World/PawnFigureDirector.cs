@@ -224,6 +224,26 @@ namespace Odyssey.Presentation.World
         /// Positive means no solver can reach it and the stroke must bring the tool nearer.</summary>
         public float MeasuredGripOverreach { get; private set; }
 
+        /// <summary>
+        /// How far the worst-placed tool had turned in its fist since it was last put right, in
+        /// degrees. **Zero is the only acceptable value**, and it is what "a tool never spins"
+        /// means when it is written as a number rather than as an instruction.
+        /// </summary>
+        public float MeasuredToolDrift { get; private set; }
+
+        /// <summary>Where the working hand is on the haft this frame, 0 butt, 1 head. Diagnostic.</summary>
+        public float MeasuredGripAt { get; private set; }
+
+        /// <summary>How far the off hand's target is from the off shoulder, in metres. Diagnostic.</summary>
+        public float MeasuredGripSpan { get; private set; }
+
+        /// <summary>Where the off hand's target is in the figure's own frame: x right, y up,
+        /// z forward, metres. Diagnostic — a span alone cannot say which way.</summary>
+        public Vector3 MeasuredGripLocal { get; private set; }
+
+        /// <summary>The same for the working hand's palm. Diagnostic.</summary>
+        public Vector3 MeasuredPalmLocal { get; private set; }
+
         /// <summary>Which style a pawn is worked in, the override first. See <see cref="StyleOverride"/>.</summary>
         int StyleFor(int jobDef) =>
             StyleOverride >= 0 && StyleOverride < Styles.Length
@@ -236,7 +256,7 @@ namespace Odyssey.Presentation.World
         /// Both fists at the butt (owner, 2026-09-16), so this is small: just far enough up the
         /// haft that the hands are side by side rather than in the same place.
         /// </summary>
-        // OffHandSpacing moved to WorkStyle; see Styles above.
+        // ButtFraction and SlideFraction moved to WorkStyle; see Styles above.
 
         /// <summary>
         /// How far up the haft the hand grips, 0 at the butt and 1 at the head.
@@ -744,6 +764,7 @@ namespace Odyssey.Presentation.World
             CrouchedFigures = 0;
             LeglessFigures = 0;
             MeasuredFootReach = 0f;
+            MeasuredToolDrift = 0f;
 
             for (int i = 0; i < _figures.Count; i++)
             {
@@ -766,12 +787,25 @@ namespace Odyssey.Presentation.World
                 if (figure.RightUpperArm == null) continue;
 
                 WorkStyle look = Styles[figure.Style];
-                WorkSwing swing = look.Stroke.At(
-                    HeldPhase ?? look.Stroke.Phase(figure.SwingClock, figure.SwingOffset));
+
+                // One phase, read once. The angles and the slide are two views of the same instant
+                // and deriving them separately is an invitation for them to disagree on the frame
+                // the blow lands, which is the one frame anybody is looking at.
+                float strokePhase =
+                    HeldPhase ?? look.Stroke.Phase(figure.SwingClock, figure.SwingOffset);
+                WorkSwing swing = look.Stroke.At(strokePhase);
+
+                // Where the working hand has slid to. Eased with the rest of the pose by the same
+                // weight, so a colonist takes the tool up the haft as it raises it rather than the
+                // axe jumping through its fist on the frame the work starts.
+                float gripAt = Mathf.Lerp(
+                    look.GripFraction,
+                    look.Stroke.GripAt(strokePhase, look.SlideFraction, look.GripFraction),
+                    figure.WorkWeight);
 
                 // Dipped before scaled, so the lean comes on with the rest of the pose rather than
                 // snapping into a bow the frame the work starts.
-                Strike(figure, swing.Dipped(figure.WorkDip).Scaled(figure.WorkWeight), look.Tilt);
+                Strike(figure, swing.Dipped(figure.WorkDip).Scaled(figure.WorkWeight), look.Tilt, gripAt);
 
                 // Check the blade got there, on the frame where it should have. Only at the moment
                 // of the blow: anywhere else in the stroke the axe is over a shoulder and a
@@ -1088,7 +1122,29 @@ namespace Odyssey.Presentation.World
         /// Separate from the loop because the reach measurement needs exactly this and nothing
         /// else: strike the pose, look at where the edge ended up.
         /// </summary>
-        void Strike(Figure figure, WorkSwing swing, float tilt)
+        /// <summary>
+        /// Strike the pose and leave every tool where it is.
+        ///
+        /// <para><b>What the measuring paths want, and the distinction is not cosmetic.</b> They
+        /// pose a figure in order to fit a prop or to read where its edge lands, and they do it for
+        /// <em>every</em> style in turn without setting <see cref="Figure.Style"/> — so anything
+        /// here that reached for "the tool in the hands" would take hold of whichever prop happened
+        /// to be selected and move it while measuring a different one. Nothing needs to slide in
+        /// those paths anyway: they all strike <c>AtStrike</c>, where the working hand is at
+        /// <see cref="WorkStyle.GripFraction"/>, which is exactly where <c>GripTool</c> seated
+        /// it.</para>
+        /// </summary>
+        void Strike(Figure figure, WorkSwing swing, float tilt) =>
+            Strike(figure, swing, tilt, null);
+
+        /// <summary>
+        /// Put one figure into one moment of the stroke, with its working hand a given fraction of
+        /// the way up the haft.
+        ///
+        /// <paramref name="gripAt"/> is what makes the hands slide, and null is what says not to —
+        /// see the overload above.
+        /// </summary>
+        void Strike(Figure figure, WorkSwing swing, float tilt, float? gripAt)
         {
             // About the figure's own axis, tilted out of the vertical so the stroke goes up past
             // a shoulder and down across the body. Never the bone's local axis: which way those
@@ -1108,7 +1164,61 @@ namespace Odyssey.Presentation.World
             Pitch(figure.RightUpperArm, axis, swing.Shoulder - swing.Spine);
             Pitch(figure.RightLowerArm, axis, swing.Elbow);
 
-            TakeHold(figure, axis, swing);
+            TakeHold(figure, axis, swing, gripAt);
+        }
+
+        /// <summary>
+        /// Put the tool in the working fist: rigid in the hand, and a given fraction up the haft.
+        ///
+        /// <para><b>An axe must never spin, and one was</b> (owner, 2026-09-16). The cause was not
+        /// in the fitting or in the swing but in how the tool was kept still while the wrist turned.
+        /// The old code captured the tool's <em>world</em> pose, rotated the hand, and put the world
+        /// pose back. On a child object that last step writes a <em>local</em> rotation worked out
+        /// from the parent's rotation at that instant — so the tool's local transform was being
+        /// integrated, one small correction at a time, rather than recomputed. It had nothing to
+        /// converge to, so it wound.</para>
+        ///
+        /// <para><b>It wound twice per frame, and only in the game.</b> <c>ApplyWorkPose</c> runs
+        /// at the end of both <c>Sync</c> and <c>Evaluate</c>, and only <c>Evaluate</c> re-evaluates
+        /// the animation graph first — so one of the two passes starts from bones the previous frame
+        /// already posed. For a <see cref="Pitch"/> that is harmless, because the second pass
+        /// re-derives the angle from a clean skeleton and the first pass's result is discarded
+        /// unseen. For anything that accumulates it is fatal. And a contact sheet could not have
+        /// caught it: the harnesses step the graph by hand, one pose per picture.</para>
+        ///
+        /// <para>So the tool is <em>placed</em>, never adjusted: its rotation is reset to the seat
+        /// the fitting measured, and it is then slid along its own haft until the grip point is in
+        /// the palm. Both are absolute, so running it twice does nothing the second time and a
+        /// dropped frame leaves no trace. That is the same property <see cref="ClimbPose"/> and the
+        /// crouch rely on, and the rule is worth stating once for all of them: <b>a pose may add to
+        /// a bone, because the graph rewrites bones; it may never add to anything the graph does not
+        /// own.</b> The animation graph has never heard of a prop.</para>
+        ///
+        /// <paramref name="gripAt"/> is where the working hand is on the haft, which is what makes
+        /// the hands slide; null takes the grip the blow is struck with.
+        /// </summary>
+        void PlaceTool(Figure figure, float? gripAt)
+        {
+            // The held one, deliberately and only here: this runs on the drawing path, where the
+            // style in the hands is the style being posed. See the no-slide overload of Strike for
+            // why that is not true of the measuring paths.
+            FittedTool fitted = figure.Held;
+            Transform? tool = fitted.Transform;
+            if (tool == null || !fitted.Seated || fitted.HaftLength <= 0f) return;
+
+            // How far it had wandered since it was last put right. Zero every frame is what "rigid
+            // in the fist" means, and it is worth measuring rather than assuming: this is exactly
+            // the fault that drew as a plausible grip on a tumbling axe, and the number is the only
+            // thing that would notice it coming back.
+            float drift = Quaternion.Angle(tool.localRotation, fitted.Seat);
+            if (drift > MeasuredToolDrift) MeasuredToolDrift = drift;
+
+            tool.localRotation = fitted.Seat;
+
+            float at = Mathf.Clamp01(gripAt ?? Styles[figure.Style].GripFraction);
+            MeasuredGripAt = at;
+            Vector3 grip = fitted.Butt + fitted.Haft * (fitted.HaftLength * at);
+            tool.position += HandGrip.Palm(figure.RightGrip) - tool.TransformPoint(grip);
         }
 
         /// <summary>
@@ -1131,7 +1241,7 @@ namespace Odyssey.Presentation.World
         /// packs has colonists chopping bare-handed, and bare hands balled into fists would be a
         /// worse picture than open ones.</para>
         /// </summary>
-        void TakeHold(Figure figure, Vector3 axis, WorkSwing swing)
+        void TakeHold(Figure figure, Vector3 axis, WorkSwing swing, float? gripAt)
         {
             Transform? tool = figure.Held.Transform;
             if (tool == null)
@@ -1146,8 +1256,20 @@ namespace Odyssey.Presentation.World
             float amount = Mathf.Clamp01(figure.WorkWeight);
             Transform body = figure.Transform;
 
-            // The haft as a hold: from the working fist to the head, which is the length of it a
-            // hand can be put on.
+            // **The working hand first, and then the tool into it.** The order is the fix for the
+            // spin as much as PlaceTool is: this hand carries the axe, so where the haft lies in
+            // the world is not settled until the wrist has finished turning. Turn the wrist after
+            // the tool is placed and the tool has to be pinned against its own parent, which is the
+            // integration that wound it. Turn it first and there is nothing to pin.
+            HandGrip.FaceHaft(figure.RightGrip, tool.TransformPoint(figure.Held.OffHandGrip),
+                tool.TransformPoint(figure.Held.BladeTip) - tool.TransformPoint(figure.Held.OffHandGrip),
+                amount);
+            HandGrip.Close(figure.RightGrip, amount);
+
+            PlaceTool(figure, gripAt);
+
+            // Only now is the haft somewhere. Read after placing, or the off hand is sent to where
+            // the wood was a frame ago — which at the top of a raise is a good half metre out.
             Vector3 butt = tool.TransformPoint(figure.Held.OffHandGrip);
             Vector3 head = tool.TransformPoint(figure.Held.BladeTip);
             Hold haft = Hold.Bar(butt, head);
@@ -1156,8 +1278,6 @@ namespace Odyssey.Presentation.World
             // over the working one rather than through it.
             var offArm = new GripArm(figure.LeftUpperArm, figure.LeftLowerArm, figure.LeftGrip,
                 new Vector3(-OffHandElbowOut, OffHandElbowLift, 0f));
-            var workArm = new GripArm(figure.RightUpperArm, figure.RightLowerArm, figure.RightGrip,
-                new Vector3(OffHandElbowOut, OffHandElbowLift, 0f));
 
             MeasuredGripGap = Grasp.One(offArm, haft, 0f, body.right, body.up, amount);
 
@@ -1165,26 +1285,18 @@ namespace Odyssey.Presentation.World
             // and stops, which is the right behaviour and is indistinguishable, in a photograph or
             // in a distance-to-the-haft measurement, from a solve that simply missed. Positive here
             // means the haft is further from the shoulder than the arm is long, and no solver will
-            // ever close that gap — the stroke's own angles have to bring the tool nearer.
+            // ever close that gap — the working hand's slide up the haft is what brings it near.
             if (figure.LeftUpperArm != null && figure.LeftLowerArm != null && figure.LeftHand != null)
             {
                 float armLength =
                     Vector3.Distance(figure.LeftUpperArm.position, figure.LeftLowerArm.position)
                     + Vector3.Distance(figure.LeftLowerArm.position, figure.LeftHand.position);
-                MeasuredGripOverreach =
-                    Vector3.Distance(figure.LeftUpperArm.position, butt) - armLength;
+                MeasuredGripSpan = Vector3.Distance(figure.LeftUpperArm.position, butt);
+                MeasuredGripLocal = Quaternion.Inverse(body.rotation) * (butt - body.position);
+                MeasuredPalmLocal = Quaternion.Inverse(body.rotation)
+                    * (HandGrip.Palm(figure.RightGrip) - body.position);
+                MeasuredGripOverreach = MeasuredGripSpan - armLength;
             }
-
-            // The working hand last, and inside a tool pinned in place.
-            Vector3 toolPosition = tool.position;
-            Quaternion toolRotation = tool.rotation;
-
-            // Its wrist is not solved — the arm's angles put it where the stroke wants it and the
-            // tool was fitted to that. Only the palm turns and the fingers close.
-            HandGrip.FaceHaft(figure.RightGrip, butt, head - butt, amount);
-            HandGrip.Close(figure.RightGrip, amount);
-
-            tool.SetPositionAndRotation(toolPosition, toolRotation);
 
             if (figure.LeftLowerArm != null && figure.RightLowerArm != null)
             {
@@ -1912,8 +2024,21 @@ namespace Odyssey.Presentation.World
             // Where the off hand takes hold, and where the edge is. Both are wanted every frame
             // afterwards — one to put the second fist on the haft, one to know how far this
             // figure can reach — so they are worked out once, here, in the axe's own space.
-            fitted.OffHandGrip = butt + haft * (length * Mathf.Clamp01(look.GripFraction + look.OffHandSpacing));
+            fitted.OffHandGrip = butt + haft * (length * Mathf.Clamp01(look.ButtFraction));
             fitted.BladeTip = bounds.center + haft * half;
+
+            // And the haft itself, because the working hand no longer sits in one place on it. The
+            // fit is done once — it strikes a pose, measures the mesh and solves a reach — but
+            // where the fist grips changes every frame, so the three numbers the slide needs are
+            // kept rather than being thrown away with the local variables that held them.
+            fitted.Butt = butt;
+            fitted.Haft = haft;
+            fitted.HaftLength = length;
+
+            // And how the whole thing lies in the hand, which is the answer every later frame
+            // re-derives rather than adjusts. See PlaceTool.
+            fitted.Seat = axe.localRotation;
+            fitted.Seated = true;
         }
 
         /// <summary>
@@ -2347,6 +2472,30 @@ namespace Odyssey.Presentation.World
 
             /// <summary>Where the off hand grips the haft, in the tool's own space.</summary>
             public Vector3 OffHandGrip;
+
+            /// <summary>The butt of the haft, in the tool's own space. The end away from the head.</summary>
+            public Vector3 Butt;
+
+            /// <summary>Up the haft from the butt, in the tool's own space, a unit vector.</summary>
+            public Vector3 Haft;
+
+            /// <summary>How long the haft is, in metres. See <see cref="Butt"/>.</summary>
+            public float HaftLength;
+
+            /// <summary>
+            /// How the tool sits in the hand, as a rotation in the <em>hand's</em> own frame.
+            ///
+            /// <para>A tool in a fist is a rigid attachment, and this is what says so. Everything
+            /// the fitting worked out — the haft along the forearm, the bit turned the way the head
+            /// travels, the roll and the yaw — is settled once against the mesh and is thereafter a
+            /// fact about how this prop lies in this hand. Stored local rather than world because
+            /// the hand moves constantly and the grip does not.</para>
+            /// </summary>
+            public Quaternion Seat = Quaternion.identity;
+
+            /// <summary>Whether <see cref="Seat"/> has been measured yet. Nothing places a tool
+            /// that has not been fitted.</summary>
+            public bool Seated;
 
             /// <summary>The working edge, in the tool's own space. What has to reach the work.</summary>
             public Vector3 BladeTip;

@@ -247,7 +247,7 @@ namespace Odyssey.EditorTools
                     // the same place however far "above" the number says the off arm is — and the
                     // arms are closest together somewhere in the raise, not at the strike.
                     Debug.Log($"[Swing] sample {sample}: off forearm " +
-                              $"{drawn.MeasuredOffArmAbove:+0.000;-0.000} m above the working one, {drawn.MeasuredArmGap:0.000} m apart; off palm {drawn.MeasuredGripGap:0.000} m off the haft, overreach {drawn.MeasuredGripOverreach:+0.000;-0.000} m");
+                              $"{drawn.MeasuredOffArmAbove:+0.000;-0.000} m above the working one, {drawn.MeasuredArmGap:0.000} m apart; off palm {drawn.MeasuredGripGap:0.000} m off the haft, overreach {drawn.MeasuredGripOverreach:+0.000;-0.000} m, tool drift {drawn.MeasuredToolDrift:0.000} deg, hand at {drawn.MeasuredGripAt:0.00} of the haft, butt {drawn.MeasuredGripSpan:0.000} m from the off shoulder; butt at {drawn.MeasuredGripLocal.ToString("0.00")}, palm at {drawn.MeasuredPalmLocal.ToString("0.00")}");
                 }
 
                 // The blow itself, pinned rather than hoped for.

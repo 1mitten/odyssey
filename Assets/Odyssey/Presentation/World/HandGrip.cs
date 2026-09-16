@@ -169,31 +169,97 @@ namespace Odyssey.Presentation.World
             if (tip == null) return Quaternion.identity;
 
             Vector3 axis = haftDirection.normalized;
-            Quaternion was = hand.rotation;
 
-            float bestRoll = 0f;
-            float bestDistance = float.MaxValue;
-
-            // Sixteen samples round the circle. Finer buys nothing: the hand is then slerped
-            // towards the answer by the grip weight, and a twenty-degree error in a fist at this
-            // camera height is not a thing anybody can see.
-            for (int step = 0; step < 16; step++)
+            // Which side of the wood the hand is coming from. **A position, and that is the whole
+            // point**: the seat below is built out of this and the haft, and out of nothing that
+            // depends on how the hand is currently turned. Positions here come from the inverse
+            // kinematics, which solves to a target rather than adding to a pose, so the answer is
+            // the same however many times it is asked for.
+            Vector3 outward = hand.position - haftPoint;
+            outward -= axis * Vector3.Dot(outward, axis);
+            if (outward.sqrMagnitude < 1e-8f)
             {
-                float roll = step * (360f / 16f);
-                hand.rotation = Quaternion.AngleAxis(roll, axis) * was;
-
-                float distance = DistanceToLine(tip.position, haftPoint, axis);
-                if (distance >= bestDistance) continue;
-                bestDistance = distance;
-                bestRoll = roll;
+                outward = Vector3.Cross(axis, Vector3.up);
+                if (outward.sqrMagnitude < 1e-8f) outward = Vector3.Cross(axis, Vector3.right);
             }
 
-            hand.rotation = was;
-            Quaternion turn = Quaternion.AngleAxis(bestRoll, axis);
-            Quaternion eased = Quaternion.Slerp(Quaternion.identity, turn, Mathf.Clamp01(amount));
-            hand.rotation = eased * was;
-            return eased;
+            Quaternion was = hand.rotation;
+            Quaternion seat = Seat(hand, tip, haftPoint, axis, outward.normalized);
+
+            // Set, not eased. An ease would have to blend from the hand's current rotation, and
+            // the current rotation is the previous answer — which is the loop this whole change
+            // exists to cut. The grip is only asked for once the hand is at the wood anyway, and
+            // the arm's own reach still eases, so what is lost is a fraction of a second of wrist
+            // and what is gained is a hand that holds still.
+            hand.rotation = seat;
+            return seat * Quaternion.Inverse(was);
         }
+
+        /// <summary>
+        /// The one orientation in which this hand grips a haft: palm on the wood, fingers round it.
+        ///
+        /// <para><b>Absolute, and that is the entire difference from what this used to be.</b> The
+        /// old version searched for the best roll <em>starting from wherever the hand happened to
+        /// be</em> and then turned it partway there. Three passes of <see cref="Grasp"/> and two
+        /// pose passes a frame meant six partial turns, each quantised to the sample spacing, none
+        /// of them converging on anything — so the fist hunted round the haft and sometimes flipped
+        /// to the far side of it, because "fingertips nearest the wood" is equally true of a palm on
+        /// either side. The owner saw it as the left hand twisting strangely (2026-09-16), which is
+        /// exactly what it was.</para>
+        ///
+        /// <para>Now the answer is a function of the haft and of which side the hand approaches
+        /// from, and of nothing else. Ask twice, get the same rotation; ask six times, still the
+        /// same. It is the same rule the tool's own <c>Seat</c> obeys, and the same rule the whole
+        /// pose system rests on: <b>a pose may add to a bone, because the animation graph rewrites
+        /// bones; it may never add to its own previous answer.</b></para>
+        ///
+        /// <para><b>The search is still a search</b>, because which way a hand bone's local axes
+        /// point belongs to whoever rigged the character, and this project has been wrong every
+        /// single time it has reasoned an axis out of a name. What changed is where it starts: from
+        /// a frame built out of the haft rather than from the hand's own history. The refinement
+        /// pass is there because a coarse sweep alone quantises the answer, and a grip that jumps
+        /// twenty degrees as the haft turns past a sample boundary reads as a flinch.</para>
+        /// </summary>
+        static Quaternion Seat(Transform hand, Transform tip,
+            Vector3 haftPoint, Vector3 axis, Vector3 outward)
+        {
+            Quaternion was = hand.rotation;
+
+            // Along the wood, with the back of the hand outwards. Every candidate is this turned
+            // about the haft, so none of them can be on the far side of it.
+            Quaternion baseline = Quaternion.LookRotation(axis, outward);
+
+            float best = 0f, bestDistance = float.MaxValue;
+            for (int step = 0; step < Samples; step++)
+                Consider(step * (360f / Samples), ref best, ref bestDistance);
+
+            // And once more either side of the winner, so the answer moves smoothly with the haft
+            // instead of stepping between samples. Off the coarse winner held still, not off the
+            // running one: refining around a value the refinement is editing walks the search away
+            // from where it meant to look.
+            float coarse = best;
+            float span = 360f / Samples;
+            for (int step = -Refinements; step <= Refinements; step++)
+                Consider(coarse + step * (span / (Refinements + 1)), ref best, ref bestDistance);
+
+            hand.rotation = was;
+            return Quaternion.AngleAxis(best, axis) * baseline;
+
+            void Consider(float roll, ref float keptRoll, ref float keptDistance)
+            {
+                hand.rotation = Quaternion.AngleAxis(roll, axis) * baseline;
+                float distance = DistanceToLine(tip.position, haftPoint, axis);
+                if (distance >= keptDistance) return;
+                keptDistance = distance;
+                keptRoll = roll;
+            }
+        }
+
+        /// <summary>How many rolls round the haft the coarse sweep tries.</summary>
+        const int Samples = 16;
+
+        /// <summary>How many finer steps either side of the coarse winner. See <see cref="Seat"/>.</summary>
+        const int Refinements = 3;
 
         static float DistanceToLine(Vector3 point, Vector3 origin, Vector3 direction)
         {

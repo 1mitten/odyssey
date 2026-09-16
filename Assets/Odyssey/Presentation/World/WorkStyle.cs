@@ -175,6 +175,21 @@ namespace Odyssey.Presentation.World
         /// in which nothing happens — take it out and the motion reads as a metronome rather than
         /// as work, which is exactly what a plain sine wave gives you.
         /// </summary>
+        /// <summary>
+        /// Where the working hand is on the haft at this point in the stroke, given the two ends
+        /// of its slide: <paramref name="raised"/> at the top and <paramref name="struck"/> at the
+        /// blow.
+        ///
+        /// <para>It is <see cref="Stroke"/> and nothing else, which is the whole reason the slide
+        /// costs so little. That curve is already the tool's own progress — long eased raise, short
+        /// accelerating fall, dwell at the bottom — so a hand carried along it slides up
+        /// deliberately, snaps down as the head accelerates, and is still at the butt through the
+        /// dwell with the blade in the wood. A separate curve would have to be kept in step with
+        /// this one by hand, and the frame it drifted on would be the frame the blow lands.</para>
+        /// </summary>
+        public float GripAt(float phase, float raised, float struck) =>
+            Mathf.Lerp(raised, struck, Stroke(phase));
+
         public float Stroke(float phase)
         {
             if (phase < RaiseEnds)
@@ -264,8 +279,40 @@ namespace Odyssey.Presentation.World
         /// <summary>Degrees the whole tool is turned about the figure's up axis.</summary>
         public readonly float BladeYaw;
 
-        /// <summary>How far up the haft from the fist the off hand sits, as a fraction.</summary>
-        public readonly float OffHandSpacing;
+        /// <summary>
+        /// Where the <em>off</em> hand takes hold, as a fraction of the haft from the butt.
+        ///
+        /// <para><b>An absolute place on the haft, and it used to be a gap.</b> It was the distance
+        /// the off hand sat <em>above</em> the working one, which put the two fists in the wrong
+        /// order: the off hand up the haft and the working hand below it. A woodcutter holds an axe
+        /// the other way round, and the owner's account of the technique is unambiguous — the
+        /// non-dominant hand goes at the very butt and stays there, because it is the pivot the
+        /// whole swing turns about. So this is now a place and not a gap, and the number that
+        /// varies is the working hand's, which slides.</para>
+        ///
+        /// <para>Not quite zero. The butt of a haft is the end of the wood, and a fist wrapped
+        /// round the end of a stick has the stick's end somewhere inside it.</para>
+        /// </summary>
+        public readonly float ButtFraction;
+
+        /// <summary>
+        /// Where the working hand starts the stroke, as a fraction of the haft from the butt, at
+        /// the top of the raise.
+        ///
+        /// <para><b>The hands slide, and that is what the grip was missing.</b> Both fists were
+        /// pinned to the haft for the whole stroke, which is the one thing a woodcutter's hands
+        /// never do (owner, 2026-09-16): the dominant hand starts up near the head where it can
+        /// carry the weight of the tool, and slides down the haft to meet the other at the butt as
+        /// the blow falls. That slide is where the head speed comes from, and it is also why the
+        /// off arm could reach at all — with the working hand high, the butt end swings back
+        /// towards the body, which is exactly where the other hand is waiting.</para>
+        ///
+        /// <para>The observed fault it fixes is "the left arm is too far away". It was: with both
+        /// hands pinned low, the butt of a raised axe is out at the end of an extended right arm
+        /// and the left shoulder is half a body away from it. No solver reaches that, and
+        /// <c>MeasuredGripOverreach</c> exists to say so in centimetres.</para>
+        /// </summary>
+        public readonly float SlideFraction;
 
         /// <summary>
         /// How far back out of the work, towards the worker, the debris is thrown from, in metres.
@@ -323,7 +370,8 @@ namespace Odyssey.Presentation.World
         public readonly float Raise;
 
         public WorkStyle(WorkStroke stroke, string toolModule, ChipRecipe chips, float aimFromCentre,
-            float tilt, float gripFraction, float bladeRoll, float bladeYaw, float offHandSpacing,
+            float tilt, float gripFraction, float bladeRoll, float bladeYaw, float buttFraction,
+            float slideFraction,
             float chipStandOff = 0f, float dip = 0f, float raise = 0f)
         {
             ChipStandOff = chipStandOff;
@@ -337,7 +385,8 @@ namespace Odyssey.Presentation.World
             GripFraction = gripFraction;
             BladeRoll = bladeRoll;
             BladeYaw = bladeYaw;
-            OffHandSpacing = offHandSpacing;
+            ButtFraction = buttFraction;
+            SlideFraction = slideFraction;
         }
 
         /// <summary>Felling: the settled one. Every number came off a contact sheet.</summary>
@@ -345,14 +394,15 @@ namespace Odyssey.Presentation.World
             WorkStroke.Axe, ModuleIds.ToolAxe, ChipRecipe.Wood,
             aimFromCentre: 0.15f,
             // Nothing: an axe bites a few centimetres into a trunk and the chips already read.
-            // The off hand sits a quarter of the haft above the working one rather than 0.11, and
-            // this is a correction rather than a preference. At 0.11 the two fists were about 8 cm
-            // apart on a 0.74 m haft and a hand is about 9 cm across, so the hand meshes occupied
-            // the same space and the grip read as one arm passing through the other (owner,
-            // 2026-09-16). Measured, the *forearms* were never the problem: they are 0.35 to 0.51 m
-            // apart across the whole stroke and could not intersect if they tried. It was always
-            // the hands, and no amount of routing one elbow over the other could have fixed it.
-            tilt: -30f, gripFraction: 0.16f, bladeRoll: 0f, bladeYaw: 0f, offHandSpacing: 0.26f,
+            //
+            // The off hand at the butt and the working hand sliding 0.62 -> 0.21 down to meet it.
+            // Two constraints decide the pair and they pull against each other. The technique says
+            // the hands finish together; the meshes say two fists closer than about 9 cm are one
+            // fist, which is what the older 0.11 spacing drew and what the owner saw as one arm
+            // passing through the other (2026-09-16). 0.05 and 0.21 of a 0.74 m haft leave 0.12 m
+            // between the palms, which is a hand's breadth — as together as two hands get.
+            tilt: -30f, gripFraction: 0.21f, bladeRoll: 0f, bladeYaw: 0f, buttFraction: 0.05f,
+            slideFraction: 0.62f,
             chipStandOff: 0f);
 
         /// <summary>
@@ -370,7 +420,9 @@ namespace Odyssey.Presentation.World
             // Just inside the near face of a 2.5 m cell, rather than 1.1 m into the rock.
             aimFromCentre: CellMetrics.SizeXZ * 0.5f - 0.12f,
             // A pick goes over the crown and down the midline, so much less tilt than an axe.
-            tilt: -8f, gripFraction: 0.16f, bladeRoll: 180f, bladeYaw: 0f, offHandSpacing: 0.11f,
+            // A pick slides less than an axe: the head is heavy and is never let go of.
+            tilt: -8f, gripFraction: 0.21f, bladeRoll: 180f, bladeYaw: 0f, buttFraction: 0.05f,
+            slideFraction: 0.44f,
             // Out past the face and a little clear of it, so the lumps are seen leaving the rock
             // rather than appearing in mid-air once they have already cleared it.
             // 12 cm back out to the face the head went in through, and 10 cm clear of it.
@@ -411,7 +463,9 @@ namespace Odyssey.Presentation.World
             aimFromCentre: CellMetrics.SizeXZ * 0.5f - 0.12f,
             // Between the axe's -30 and the pick's -8: across the body, but a short haft cannot
             // travel as far round as a long one without the elbow leaving the plane.
-            tilt: -20f, gripFraction: 0.16f, bladeRoll: 0f, bladeYaw: 0f, offHandSpacing: 0.11f,
+            // A 0.63 m haft has little to slide along, and a hammer is swung from the elbow.
+            tilt: -20f, gripFraction: 0.24f, bladeRoll: 0f, bladeYaw: 0f, buttFraction: 0.06f,
+            slideFraction: 0.40f,
             // Less than mining's 0.22: a timber frame is open work rather than an opaque block, so
             // the head does not disappear into it and the burst needs backing out much less far.
             chipStandOff: 0.1f,
@@ -451,9 +505,11 @@ namespace Odyssey.Presentation.World
 
         /// <summary>A copy with one fitting number changed, for tuning off a contact sheet.</summary>
         public WorkStyle With(float? tilt = null, float? gripFraction = null,
-            float? bladeRoll = null, float? bladeYaw = null, float? offHandSpacing = null) =>
+            float? bladeRoll = null, float? bladeYaw = null, float? buttFraction = null,
+            float? slideFraction = null) =>
             new WorkStyle(Stroke, ToolModule, Chips, AimFromCentre,
                 tilt ?? Tilt, gripFraction ?? GripFraction, bladeRoll ?? BladeRoll,
-                bladeYaw ?? BladeYaw, offHandSpacing ?? OffHandSpacing, ChipStandOff, Dip, Raise);
+                bladeYaw ?? BladeYaw, buttFraction ?? ButtFraction, slideFraction ?? SlideFraction,
+                ChipStandOff, Dip, Raise);
     }
 }
