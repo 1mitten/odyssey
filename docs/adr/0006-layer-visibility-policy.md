@@ -69,8 +69,14 @@ default at all.
 
 | Where the slice is | Above it | Below it |
 |---|---|---|
-| At or above the surface | every layer, x-rayed and fading | `belowDepth` layers, dimmed |
-| Below the surface | one layer, x-rayed | every layer to the floor, dimmed |
+| At or above the surface | every layer, **solid** (`full`) | `belowDepth` layers, dimmed |
+| Below the surface | one layer, x-rayed (`xray-min`) | every layer to the floor, dimmed |
+
+Above ground it resolves to `full` and not to `xray`, which is a correction: the rule first shipped
+x-raying the stack and the owner's reply was *"this includes everything buildings, stones, rocks and
+everything, as I noticed the mining rocks were transparent"*. It is `full` for opacity only — the
+active layer stays roofless, because that is its own decision and a default must not reverse it
+silently. An explicitly chosen `full`, the exterior and control view, keeps its lid as documented.
 
 The owner asked for it after a playtest, and the reason is the one this ADR already argues from:
 *"you need to be able to see within the environment — if there was ever digging introduced into the

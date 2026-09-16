@@ -183,8 +183,7 @@ namespace Odyssey.EditorTools
                 // because a figure's speed is measured from how far it moved since the last frame
                 // and a figure leased this instant has not moved at all — a single frame would
                 // photograph five people standing still and prove nothing about the walk.
-                figures = new Odyssey.Presentation.World.PawnFigureDirector(catalogue, lighting, 0)
-                    { World = model };   // so a climber can find its wall
+                figures = new Odyssey.Presentation.World.PawnFigureDirector(catalogue, lighting, 0);
                 int movePerTick = PawnContent.Core().Movement.movePerTick;
                 const float FrameSeconds = 1f / 60f;
                 for (int frame = 0; frame < 40; frame++)
@@ -438,8 +437,8 @@ namespace Odyssey.EditorTools
                 }
 
                 // And a miner cutting the layer ABOVE itself, which is the owner's decision that
-                // a pick goes overhead. Waited for rather than hoped for, like the climb: the
-                // stance is one of four and it is not the common one.
+                // a pick goes overhead. Waited for rather than hoped for: the stance is one of
+                // four and it is not the common one.
                 {
                     // Made rather than waited for. Four stances share the work and this is not the
                     // common one, so 6,000 ticks of an ordinary colony went by without a single
@@ -543,74 +542,6 @@ namespace Odyssey.EditorTools
                     else
                     {
                         Debug.Log("[Shot] no stone on the ground yet, so no spoil shot");
-                    }
-                }
-
-                // Somebody on a shaft wall, which is the one pose with nothing under it.
-                //
-                // Worth its own frame because every fault it can have is invisible from anywhere
-                // else: a climber drawn in the walk cycle, or turned to face north, or with its
-                // arms at its sides, all look like an ordinary colonist until you notice it is
-                // three metres up a hole. The frame is deliberately side on and close.
-                {
-                    // Waited for rather than hoped for. A drop costs a hundred ticks and a climb
-                    // two hundred and seventy, so on any one frame of a five-colonist board the
-                    // odds of catching somebody on a wall are poor — the first version of this
-                    // shot simply reported that nobody was climbing, which says nothing at all
-                    // about whether the pose works.
-                    PawnView climber = default;
-                    bool found = false;
-                    for (int waited = 0; waited < 4_000 && !found; waited++)
-                    {
-                        world.Tick();
-                        figures.Sync(world.Views.Current, activeLayer, slice, 0f, movePerTick, FrameSeconds);
-                        figures.Evaluate(FrameSeconds);
-
-                        var live = world.Views.Current.Pawns;
-                        for (int i = 0; i < live.Length; i++)
-                        {
-                            PawnView who = live[i];
-                            if (who.MovePercent <= 20 || who.MovePercent >= 80) continue;
-                            if (who.NextCell.Y == who.Cell.Y) continue;
-                            if (who.Cell.Y < 0) continue;
-                            climber = who;
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    if (found)
-                    {
-                        Vector3 between = (CellMetrics.FloorCentre(climber.Cell)
-                                         + CellMetrics.FloorCentre(climber.NextCell)) * 0.5f;
-
-                        // Looking AT the wall the colonist is on, so the rock is behind it and the
-                        // camera is on the open side. A fixed bearing put the outcrop between the
-                        // camera and the subject as often as not, and a photograph of a rock
-                        // proves nothing about the pose behind it.
-                        CellRef lower = climber.NextCell.Y < climber.Cell.Y
-                            ? climber.NextCell : climber.Cell;
-                        Vector3 toWall = Vector3.zero;
-                        if (lower.X > 0 && grid.IsSolidTerrain(size.Index(lower.X - 1, lower.Z, lower.Y)))
-                            toWall = Vector3.left;
-                        else if (lower.X < size.SizeX - 1
-                                 && grid.IsSolidTerrain(size.Index(lower.X + 1, lower.Z, lower.Y)))
-                            toWall = Vector3.right;
-                        else if (lower.Z > 0 && grid.IsSolidTerrain(size.Index(lower.X, lower.Z - 1, lower.Y)))
-                            toWall = Vector3.back;
-                        else if (lower.Z < size.SizeZ - 1
-                                 && grid.IsSolidTerrain(size.Index(lower.X, lower.Z + 1, lower.Y)))
-                            toWall = Vector3.forward;
-
-                        float bearing = toWall == Vector3.zero ? 35f : PawnPose.YawOf(toWall);
-                        Shoot(camera, between + Vector3.up * 1.4f, 10f, bearing, 11f, "Logs/shot-climb.png");
-                        Debug.Log($"[Shot] a colonist is {climber.MovePercent}% of the way from " +
-                                  $"{climber.Cell} to {climber.NextCell}");
-                        Debug.Log($"[Shot] climbing — {figures.DescribeClimb()}");
-                    }
-                    else
-                    {
-                        Debug.Log("[Shot] nobody was mid-climb, so no climbing shot");
                     }
                 }
 

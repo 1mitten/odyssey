@@ -136,8 +136,22 @@ namespace Odyssey.Sim.Pathing
         ///
         /// <para>This replaces a climb, which was a declared edge up a rock face and could end in
         /// mid-air. A jump cannot: both ends are cells a colonist can stand in.</para>
+        ///
+        /// <para><b>Halved to 135 on the owner's word, 2026-09-16: "it needs to happen quicker
+        /// like a jump up — twice as quick maybe".</b> Cost is duration here — a pawn retires
+        /// <c>movePerTick</c> of it a tick and presentation glides the figure across the whole
+        /// step — so 270 was <b>4.5 seconds</b> to get up one block, against 1.7 for walking a flat
+        /// cell. That is not a jump, it is a haul, and it read as the figure being stuck.</para>
+        ///
+        /// <para>Two relations survive the cut and one does not. It is still dearer than walking a
+        /// flat cell, so nothing stops preferring a ramp; and it is still far dearer than the drop
+        /// back down, which is the asymmetry that matters. It is no longer half a built ladder's
+        /// <see cref="LadderUp"/> but a quarter of it — so a colonist offered both would jump
+        /// rather than climb. That is the right answer anyway (hopping a one-block ledge really is
+        /// quicker than a ladder) and they almost never compete: a ladder spans a shaft nothing
+        /// can hop out of, and a hop needs a block top beside it that a shaft does not have.</para>
         /// </summary>
-        public const int JumpUp = 270;
+        public const int JumpUp = 135;
 
         /// <summary>
         /// Dropping down onto the block below: half of a flat cell, because you mostly let go.
@@ -147,6 +161,12 @@ namespace Odyssey.Sim.Pathing
         /// the point and not a fudge: going down a drop and getting back up it are genuinely not
         /// the same job, and pricing them alike is what made a colonist take six and a half seconds
         /// to descend three metres.</para>
+        ///
+        /// <para><b>Left alone when <see cref="JumpUp"/> was halved</b>, and the arithmetic is the
+        /// reason. Cost is duration, so 50 is five sixths of a second to fall one layer — and a
+        /// three-metre free fall takes 0.78 s. The drop is already at the speed of gravity;
+        /// halving it again would have a colonist outrun its own weight, which is a different kind
+        /// of wrong from the one being fixed. Say the word and it goes to 25.</para>
         /// </summary>
         public const int Drop = 50;
         public const int LiftUp = 400;

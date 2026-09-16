@@ -117,11 +117,28 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     carries the method note. `ADayOnOneFloorNeverTouchesAStair` measures a **span** rather than a
     count of storeys, because a hop is worth one storey on city rubble and only a stair is worth two
     (measured: control spans 1, 1, 1; demo 3, 2, 2).
-  - **Open for the owner:** `PawnFigureDirector` still draws the two-handed overhead reaching
-    *climb* pose on every layer change (`ApplyClimbPose`, keyed off the snapshot rather than off the
-    removed connector, so it compiles and runs). A jump and a drop should not look like climbing a
-    wall. What they should look like is a call that needs eyes in `Play.unity`, and this worktree
-    has no Synty packs.
+  - **The climb animation is gone and a jump is half as dear (owner, 2026-09-16: "the animation
+    going up and down heights is bad and looks bad … it looks buggy so remove it").** All of
+    `ApplyClimbPose`, `ClimbPhase`/`ClimbFace`/`ClimbWeight`, `ClimbLean`, `ClimbEaseSeconds`,
+    `TryWallBeside`, `DescribeClimb`, the director's `World` mirror and PlayScene's climbing shot
+    are deleted; a hop now plays whatever the gait mixer gives it. That reads far better than it
+    did, because a hop moves one cell *sideways* as well as one layer up — so ground speed is an
+    ordinary step and the figure walks up onto the block, where the straight-up climb it replaced
+    differenced to nought and blended to the idle. **`MoveCost.JumpUp` 270 → 135**: cost *is*
+    duration here (a pawn retires `movePerTick` of it a tick and presentation glides across the
+    whole step), so 270 was **4.5 s** to get up one block against 1.7 s for a flat cell — not a
+    jump, a haul, and it read as the figure being stuck. `Drop` stays at 50, deliberately: that is
+    0.83 s for three metres and a three-metre free fall takes 0.78 s, so halving it again would
+    have a colonist outrun gravity. **Side effect, measured and worth watching:** hopping a
+    one-block pile now costs 185 against 200 to walk round it, where it used to cost 320 — so
+    colonists go over obstacles rather than around them. On the ruined city that is 6,302 hops a
+    day for three colonists. Plausible (a person steps over a low rock) but it is a real change in
+    how they move, and the lever is the one constant.
+  - **A real proof that stairs are used had to be built**, because storeys-visited stopped meaning
+    anything once hops were cheap: `MovementSystem.ConnectorSteps` and `HopSteps` count the two
+    kinds of layer change. `M2DemoTests`'s control now runs both configurations and differences
+    them — **231** connector steps on a one-floor colony against **2,439** when its beds and food
+    are upstairs, better than ten to one, where every colonist spans three storeys either way.
 - **The HUD's first pass landed 2026-09-16,** the first built interface since the design docs: the Unity-free `Odyssey.Hud` assembly (roster, inspect, depth-ruler, ledger and calendar models behind ADR 0003's split, tested in `Odyssey.Tests.Hud` in both tiers) and a UI Toolkit shell `HudShell` styled by `Hud.uss` after the hud-v2 mockup, with every HUD region of the catalogue's screen map in place. **Live:** the colonist inspect pane (world click or roster card — needs, mood, tabs, commands), the roster bar, the clock, the speed buttons, Depth Ruler layer clicks, and the ledger's real rows. **Displayed for the look, disabled with a reason:** main tabs, overlay toggles, alerts, cancel. **The Build palette (A7, called Architect until the owner renamed it on 2026-09-16) is a button on the bottom bar, left of Work**, opening a panel above the bar; Trade was removed from the bar in the same change so the row did not grow. Icons are deterministic placeholder badges keyed by icon key; the ADR 0007 pipeline replaces them when the sheets land. Clicks on HUD regions are gated from the world by `SliceCameraRig.PointerOverInterface`. **Directors (2026-09-16):** `HudDirectors` in the Hud assembly holds `SelectionDirector`, `SliceDirector` and `CameraDirector` per 09 §3; the composition root makes them with the world, the rig, `SelectionPresenter` and the shell only realise them, and a new region arrives as a director plus a presenter, not as more shell. **View-level behaviour is proven in the playmode gate** by `HudSmokeTests` — every region built, roster bound to the frame, selection answered by name, the player-loop half of experiment R4 in `g-02`; whether a panel also resolves under `-nographics` is still open. **The look itself still needs eyes: press Play in `Play.unity`** (regenerated with the HUD).
 - **The board no longer ends in mid-air (owner decision 2026-09-16).** A decorative surround carries
   the ground and the wood 1,220 m past the rim into the fog, so the map reads as a clearing in a
@@ -189,8 +206,14 @@ after a rebuild, republish `docs/wiki/artifact.html` and
   - **Marsh was the thing photographs caught.** With no catalogue row it drew as an untextured dark olive slab, which beside a lifted meadow reads as *shadow*, and there was more marsh than water on the board (427 columns to 382). It now has the bare-earth dirt material, a bright sour tint, one fringe ring instead of two and a threshold that frays it — and it reads as a **sandy bank**, which looks right but is not what "marsh" means. **Open for the owner: re-tint it greener or rename it.**
   - Judge it with **`Odyssey → Presentation → Check the water`** (`scripts/unity.sh shot Odyssey.EditorTools.WaterCheck.Run`), which shoots a stream and a forced river at three pitches — Fresnel is an angle, so the grazing shot is the only one where the surface shading really shows. Levers: `NaturalMapGenDef.water` (off is **byte-identical** to the pre-water generator, and six baked hashes prove it), `deepShoreDistance`, `marshFringe`, `riverChancePerMille`, `ChunkMesher.WaterSurface`.
 - **What you can see is decided by how deep you are (owner decision 2026-09-16; ADR 0006 amended,
-  `06-rendering-and-camera.md` §3a).** **At or above the surface: every layer above, x-rayed. Below
-  the surface: one layer above, and every layer below to the floor.** The lever is
+  `06-rendering-and-camera.md` §3a).** **At or above the surface: every layer above, drawn SOLID —
+  no cap, no fade. Below the surface: one layer above, x-rayed, and every layer below to the
+  floor.** Solid was a correction: the rule first shipped x-raying the stack and the owner's reply
+  was *"this includes everything buildings, stones, rocks and everything, as I noticed the mining
+  rocks were transparent"*. It resolves to `AboveMode.Full` for opacity only — the active layer
+  stays roofless (`SliceSettings.SuppressCeilingAt`), because ADR 0006's `full` is the exterior
+  view and keeps its lid, while "the active layer is drawn roofless" is a standing decision a
+  default must not reverse silently. The lever is
   `SliceSettings.followDepth` (on by default) with `surfaceLayer` set from the start cell by the
   composition root; switching it off obeys the six ADR 0006 modes exactly as before, and the V key's
   first press does that for you — it pins whatever is on screen, then cycles, then hands the default
@@ -206,9 +229,14 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     being sure how far. Selection is unaffected and needed no guard — `SlicePicker` is clipped
     analytically to the active layer's slab and `PawnUnderRay` already refused anything above it, so
     nothing above the slice is a pointer target, as ADR 0006's Lane B amendment requires.
-  - **"Every layer above" is bounded by the fade, not by a count**, and the bound is the same
-    constant the chunk loop skips on, so the two cannot drift. At the shipped tuning the alpha ramp
-    runs 0.380, 0.274, 0.197, 0.142, 0.102 … and crosses the 0.012 cutoff after eleven layers.
+  - **Solid has no fade to stop the loop, so the top is capped by the geometry.**
+    `ChunkRenderer.BatchFor` *meshes* a chunk when asked and again after every version bump, so an
+    unbounded loop would mesh a dozen layers of empty sky on every edit of a tall map.
+    `WorldRenderModel.HighestOccupiedLayer` is the top of the geometry plus the layer a colonist
+    standing on it occupies — a high-water mark, raised as cells enter the mirror and lowered only
+    by a full refresh, which is the safe direction. (The fade bound still governs an explicitly
+    chosen `xray`: the ramp runs 0.380, 0.274, 0.197, 0.142, 0.102 … and crosses the 0.012 cutoff
+    after eleven layers, the same constant the chunk loop skips on, so the two cannot drift.)
   - **It costs nothing on the board being played, and that is measured rather than hoped.** On the
     16-layer board with the surface at L11, "every layer above" is L12–L15 — four layers, exactly
     what the old `aboveDepth` of 4 drew. Underground at L6 the range was L3–L10 and is now L0–L7:

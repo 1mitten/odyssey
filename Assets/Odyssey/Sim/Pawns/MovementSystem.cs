@@ -33,6 +33,20 @@ namespace Odyssey.Sim.Pawns
         public int Order => 30;
 
         public int StepsTaken { get; private set; }
+
+        /// <summary>
+        /// Steps taken along a declared connector — a stair, a ladder or a lift.
+        ///
+        /// <para>Counted because "did anybody use the stairs" is otherwise unanswerable from
+        /// outside. Layers visited used to stand in for it and no longer can: a hop moves a
+        /// colonist a storey with nothing built, so wandering over rubble changes layer all day
+        /// without a stair being touched. See <c>M2DemoTests</c>, whose control run this is
+        /// for.</para>
+        /// </summary>
+        public int ConnectorSteps { get; private set; }
+
+        /// <summary>Steps taken as a hop: one block up or down, with nothing built.</summary>
+        public int HopSteps { get; private set; }
         public int PathsServed { get; private set; }
         public int PathsFailed { get; private set; }
 
@@ -110,6 +124,13 @@ namespace Odyssey.Sim.Pawns
                 }
 
                 int cost = StepCost(pawn.Cell, next, pawn.Mode);
+                if (pawn.Cell / _ctx.Size.LayerStride != next / _ctx.Size.LayerStride)
+                {
+                    if (NavGraph.IsHop(_ctx.Size.FromIndex(pawn.Cell), _ctx.Size.FromIndex(next)))
+                        HopSteps++;
+                    else
+                        ConnectorSteps++;
+                }
 
                 // Carried so presentation can glide the figure across the WHOLE step rather than
                 // across its first hundred units. See Pawn.MoveStepCost.

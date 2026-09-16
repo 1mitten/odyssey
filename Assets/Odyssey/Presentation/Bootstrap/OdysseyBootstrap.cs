@@ -264,9 +264,6 @@ namespace Odyssey.Presentation.Bootstrap
             _figures = new PawnFigureDirector(moduleCatalogue, transform, gameObject.layer)
             {
                 LookSalt = lookSalt,
-                // So a climbing figure can find the block it is climbing against. The same mirror
-                // the chunk renderer meshes from, so the rock it is pressed to is the rock drawn.
-                World = _model,
             };
 
             Directors = new HudDirectors(size.SizeY, outcome.StartCell.Y);

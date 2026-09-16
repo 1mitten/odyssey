@@ -250,16 +250,40 @@ namespace Odyssey.Tests.Presentation
         /// The owner's rule, 2026-09-16: at the depth the game opens at, everything at that level
         /// and above is drawn — no depth cap — because you have to be able to see somebody working
         /// over your head.
+        ///
+        /// <para>And drawn <b>solid</b>, which was the correction after the first attempt x-rayed
+        /// it: "this includes everything buildings, stones, rocks and everything, as I noticed the
+        /// mining rocks were transparent". An outcrop standing above the surface is a rock.</para>
         /// </summary>
         [Test]
-        public void AtTheSurfaceEverythingAboveIsDrawn()
+        public void AtTheSurfaceEverythingAboveIsDrawnSolid()
         {
             var slice = new SliceSettings { surfaceLayer = 5, aboveDepth = 2 };
 
             Assert.That(slice.BelowSurface(5), Is.False);
             Assert.That(slice.HighestDrawnLayer(5, 20), Is.EqualTo(19),
                 "the depth cap still applied at the surface");
-            Assert.That(slice.AboveAt(5), Is.EqualTo(AboveMode.Xray));
+            Assert.That(slice.AboveAt(5), Is.EqualTo(AboveMode.Full));
+            Assert.That(slice.GhostsAbove(5), Is.False, "rock above the surface is still see-through");
+            Assert.That(slice.HighestVisibleLayer(5, 20), Is.EqualTo(19),
+                "solid geometry was cut off by a fade that does not apply to it");
+        }
+
+        /// <summary>
+        /// Solid above is not the same as the `full` mode, although it draws the same. The active
+        /// layer stays roofless, because that is its own decision and the default has no business
+        /// reversing it — while an explicit `full`, the exterior view, keeps its lid.
+        /// </summary>
+        [Test]
+        public void TheDefaultKeepsTheActiveLayerRooflessAndExplicitFullDoesNot()
+        {
+            var byDepth = new SliceSettings { surfaceLayer = 5 };
+            Assert.That(byDepth.AboveAt(5), Is.EqualTo(AboveMode.Full));
+            Assert.That(byDepth.SuppressCeilingAt(5), Is.True, "the default lidded the active layer");
+
+            var chosen = new SliceSettings { followDepth = false, above = AboveMode.Full };
+            Assert.That(chosen.SuppressCeilingAt(5), Is.False,
+                "the exterior view cut away the storey above, which is the one thing it must not");
         }
 
         /// <summary>
@@ -316,7 +340,8 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void TheHighestVisibleLayerStopsWhereTheFadeDoes()
         {
-            var slice = new SliceSettings { surfaceLayer = 0 };
+            // Underground, where the treatment above is translucent and the fade therefore bites.
+            var slice = new SliceSettings { followDepth = false, above = AboveMode.Xray, aboveDepth = 40 };
             int visible = slice.HighestVisibleLayer(0, 40);
 
             Assert.That(visible, Is.LessThan(39), "the fade never cut anything off");

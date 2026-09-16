@@ -186,7 +186,7 @@ now depends on how deep the slice is — `SliceSettings.followDepth`, on by defa
 
 | Where the slice is | Above it | Below it |
 |---|---|---|
-| At or above the surface (the layer the game opens at) | **Every layer**, x-rayed and fading. No depth cap | `belowDepth` layers, dimmed |
+| At or above the surface (the layer the game opens at) | **Every layer, drawn solid.** No depth cap, no fade | `belowDepth` layers, dimmed |
 | Below the surface | **One layer**, x-rayed — a ceiling, not a survey | **Every layer, to the floor**, dimmed with depth |
 
 The rule came out of a playtest report with a one-line diagnosis: *"I couldn't see another person
@@ -208,17 +208,40 @@ storeys deep is unreadable through a three-layer cap. So the cap comes off downw
 upwards. The owner's reason is worth keeping verbatim: *"you need to be able to see within the
 environment — if there was ever digging introduced into the game or underground base."*
 
-**"Every layer above" is bounded by the fade, not by a count.** At the shipped tuning
-(`ghostAlpha` 0.38, `ghostFalloff` 0.72) the alpha ramp runs 0.380, 0.274, 0.197, 0.142, 0.102 …
-and crosses the 0.012 cutoff after eleven layers. `HighestVisibleLayer` returns that layer, and it
-is the same constant the chunk loop skips on, so the two cannot drift apart.
+**Solid above the surface, and that was a correction.** The rule first shipped drawing everything
+above x-rayed, which is what `xray` had always done — and the owner's reply was *"this includes
+everything buildings, stones, rocks and everything, as I noticed the mining rocks were
+transparent"*. An outcrop standing two cells above the surface is a rock, not a hint of one. So
+above ground the treatment is `full`: solid, no fade, no cap.
+
+**It is `full` for opacity and not for the lid.** `full` is documented as the exterior and
+screenshot view, the control case with no cut-away anywhere — and §3 point 2 above says the active
+layer is drawn roofless, which is a separate standing decision that a default has no business
+quietly reversing. `SliceSettings.SuppressCeilingAt` splits them: the depth-following default keeps
+the active layer roofless, an explicitly chosen `full` keeps its lid. Nothing differs outdoors,
+where there is no slab overhead; it differs the moment anything is built, which is why it is
+settled now rather than discovered then.
+
+**Underground, where the treatment is translucent, "every layer above" would be bounded by the fade
+rather than by a count** — except that underground is capped at one layer anyway. The bound still
+exists and still matters for any explicitly chosen `xray`: at the shipped tuning (`ghostAlpha` 0.38,
+`ghostFalloff` 0.72) the alpha ramp runs 0.380, 0.274, 0.197, 0.142, 0.102 … and crosses the 0.012
+cutoff after eleven layers. `HighestVisibleLayer` returns that layer, and it is the same constant
+the chunk loop skips on, so the two cannot drift apart.
+
+**Solid has no fade to stop it, so the top is capped by the geometry instead.**
+`ChunkRenderer.BatchFor` *meshes* a chunk the first time it is asked for and again after every
+version bump, so an unbounded loop would mesh a dozen layers of empty sky on every edit of a tall
+map, for nothing. `WorldRenderModel.HighestOccupiedLayer` is the top of the geometry plus the layer
+a colonist standing on it occupies, raised as cells are copied into the mirror and lowered only by a
+full refresh. A high-water mark is the safe direction: the worst it does is draw a few empty layers
+after a demolition, where the other way round it would hide a roof somebody had just built.
 
 **Measured cost, which is why the cap could come off at all.** On the 16-layer prototype board with
 the surface at L11, "every layer above" is L12–L15 — four layers, which is exactly what the old
 `aboveDepth` of 4 already drew. Underground at L6 the old range was L3–L10 and the new one is
 L0–L7: eight layers either way. Deeper it gets *cheaper* — at L2 the old range was seven layers and
-the new one is four. The change only costs anything on a map tall enough for the eleven-layer fade
-bound to bite, and nothing on the board being played.
+the new one is four. Nothing on the board being played pays anything at all.
 
 The six ADR 0006 modes are untouched and still ship. Switching `followDepth` off obeys every field
 exactly as before, which is what choosing a mode explicitly does: the V key's first press pins

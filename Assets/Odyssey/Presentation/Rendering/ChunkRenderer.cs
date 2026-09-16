@@ -154,7 +154,12 @@ namespace Odyssey.Presentation.Rendering
 
             var size = _model.Size;
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
+            // Capped at the top of the geometry as well as at the policy's own limit. Above the
+            // surface the policy says "every layer, solid", and solid has no fade to cut the loop
+            // short — so without this a tall map would mesh a dozen layers of empty sky on every
+            // edit. See WorldRenderModel.HighestOccupiedLayer.
             int highest = Mathf.Min(size.SizeY - 1, slice.HighestDrawnLayer(activeLayer, size.SizeY));
+            highest = Mathf.Max(activeLayer, Mathf.Min(highest, _model.HighestOccupiedLayer));
             int chunksPerLayer = _model.Chunks.ChunksX * _model.Chunks.ChunksZ;
 
             for (int layer = lowest; layer <= highest; layer++)
@@ -179,11 +184,8 @@ namespace Odyssey.Presentation.Rendering
                 // for every layer it draws.
                 AboveMode aboveMode = slice.AboveAt(activeLayer);
                 bool drawRoof = true;
-                if (aboveMode != AboveMode.Full)
-                {
-                    if (above && aboveMode == AboveMode.RoofsOff) drawRoof = false;
-                    else if (steps == 1 && slice.suppressActiveCeiling) drawRoof = false;
-                }
+                if (above && aboveMode == AboveMode.RoofsOff) drawRoof = false;
+                else if (steps == 1 && slice.SuppressCeilingAt(activeLayer)) drawRoof = false;
 
                 int first = layer * chunksPerLayer;
                 for (int i = 0; i < chunksPerLayer; i++)

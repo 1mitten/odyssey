@@ -59,9 +59,12 @@ namespace Odyssey.Presentation.CameraRig
         /// Let the depth of the slice choose the treatment, rather than the fields below
         /// (owner, 2026-09-16). **This is the default and it is what a player meets.**
         ///
-        /// <para><b>At or above the surface: everything above is drawn.</b> The player is looking
-        /// at the world from outside and wants to see all of it, including anybody working on a
-        /// roof or a floor over their head. The depth cap does not apply.</para>
+        /// <para><b>At or above the surface: everything above is drawn, and drawn SOLID.</b> The
+        /// player is looking at the world from outside and wants to see all of it — the owner's
+        /// words, after the first attempt left it x-rayed: "this includes everything buildings,
+        /// stones, rocks and everything, as I noticed the mining rocks were transparent". An
+        /// outcrop rising two cells above the surface is a rock, not a hint of one. The depth cap
+        /// does not apply and neither does the fade.</para>
         ///
         /// <para><b>Below the surface: one layer above, and every layer below.</b> Underground the
         /// question reverses. What is overhead is a ceiling and one layer of it is all the context
@@ -150,7 +153,7 @@ namespace Odyssey.Presentation.CameraRig
         public AboveMode AboveAt(int activeLayer) =>
             !followDepth ? above
             : BelowSurface(activeLayer) ? AboveMode.XrayMin
-            : AboveMode.Xray;
+            : AboveMode.Full;
 
         /// <summary>The lowest layer that is drawn at all.</summary>
         public int LowestDrawnLayer(int activeLayer)
@@ -199,6 +202,23 @@ namespace Odyssey.Presentation.CameraRig
 
             return highest;
         }
+
+        /// <summary>
+        /// Should the active layer's ceiling — the slab stored on the layer above — be dropped?
+        ///
+        /// <para><b>`Full` normally keeps its lid and the depth-following default does not,
+        /// although both draw everything above solid.</b> They mean different things. `Full` is the
+        /// exterior and screenshot view, deliberately the control case with no cut-away anywhere;
+        /// the default is "let me see the world", and "the active layer is drawn roofless" is a
+        /// separate standing decision (<c>06-rendering-and-camera.md</c> §3 point 2) that it has no
+        /// business quietly reversing.</para>
+        ///
+        /// <para>Nothing changes outdoors either way, because open ground has no slab over it.
+        /// It changes as soon as anything is built, which is why it is settled now rather than
+        /// discovered then.</para>
+        /// </summary>
+        public bool SuppressCeilingAt(int activeLayer) =>
+            suppressActiveCeiling && (followDepth || AboveAt(activeLayer) != AboveMode.Full);
 
         /// <summary>Is a layer above the slice drawn translucent rather than solid?</summary>
         public bool GhostsAbove(int activeLayer)
