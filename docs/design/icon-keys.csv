@@ -3,9 +3,7 @@ ui.res.scrap,Scrap,ui.res,M1,Mixed unsorted salvage. Feeds the reclaimer
 ui.res.rubble,Rubble,ui.res,M1,"Broken concrete and masonry. Cleared, not mined"
 ui.res.girder,Girder,ui.res,M1,"Structural steel cut from a shell. Heavy, valuable"
 ui.res.panel,Hull panel,ui.res,M1,Flat salvaged plating. The cheapest wall material
-ui.res.alloy,Alloy,ui.res,M1,Refined structural metal. The default build material
 ui.res.composite,Composite,ui.res,M1,"Light high-strength laminate. Scarce, from deep salvage"
-ui.res.concrete,Concrete,ui.res,M1,"Poured floors and heavy walls. Bulky, cheap"
 ui.res.glass,Glass,ui.res,M1,"Windows, screens and hydroponic covers"
 ui.res.polymer,Polymer,ui.res,M1,"Moulded plastics. Light, flammable"
 ui.res.ceramic,Ceramic,ui.res,M1,Heat-resistant tile and insulator stock
@@ -35,7 +33,6 @@ ui.res.ironore,Iron ore,ui.res,M3,Raw ore. Worthless until something smelts it
 ui.res.coal,Coal,ui.res,M3,"Burns hot. Found deeper than iron, and for that reason"
 ui.res.grain,Grain,ui.res,M1,"Bulk staple. Stores well, needs cooking"
 ui.res.fungus,Fungus,ui.res,M1,Grows without light. The underground staple
-ui.res.water,Water,ui.res,M1,Drinking and hydroponics
 ui.res.stimulant,Stimulant,ui.res,M1,Buys an hour of wakefulness at a cost
 ui.res.alcohol,Alcohol,ui.res,M1,"Recreation, and a problem for some"
 ui.res.medkit,Medkit,ui.res,M1,Field tending. Consumed per treatment

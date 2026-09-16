@@ -1201,13 +1201,6 @@ window.ICON_MAP = {
   "r": null,
   "s": "02"
  },
- "ui.res.alloy": {
-  "c": null,
-  "d": "metal ingot",
-  "q": "high",
-  "r": null,
-  "s": "04"
- },
  "ui.res.ammo": {
   "c": null,
   "d": "ammunition box",
@@ -1256,13 +1249,6 @@ window.ICON_MAP = {
   "q": "med",
   "r": null,
   "s": "04"
- },
- "ui.res.concrete": {
-  "c": null,
-  "d": "grey breeze block",
-  "q": "med",
-  "r": null,
-  "s": "08"
  },
  "ui.res.coolant": {
   "c": null,
@@ -1515,13 +1501,6 @@ window.ICON_MAP = {
   "q": "med",
   "r": null,
   "s": "07"
- },
- "ui.res.water": {
-  "c": null,
-  "d": "water bottle",
-  "q": "high",
-  "r": null,
-  "s": "08"
  },
  "ui.res.wire": {
   "c": null,

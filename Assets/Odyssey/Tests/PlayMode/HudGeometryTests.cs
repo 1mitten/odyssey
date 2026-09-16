@@ -149,12 +149,13 @@ namespace Odyssey.Tests.PlayMode
 
                 Dictionary<HudRegion, HudRect> model = HudLayout.Solve(canvas.width, canvas.height, content);
 
+                // The inspect pane is deliberately not in this list: with nothing selected there
+                // is no pane, which is what TheInspectPaneIsAbsentUntilSomethingIsSelected holds.
                 (string Name, HudRegion Region)[] pairs =
                 {
                     ("stores", HudRegion.Stores),
                     ("clock", HudRegion.Clock),
                     ("rail", HudRegion.DepthRail),
-                    ("inspect", HudRegion.Inspect),
                 };
 
                 foreach ((string name, HudRegion region) in pairs)
@@ -324,6 +325,144 @@ namespace Odyssey.Tests.PlayMode
             {
                 Object.Destroy(root);
             }
+        }
+
+        /// <summary>
+        /// Nothing selected, no pane (owner, 2026-09-16). This is the state the HUD spends most
+        /// of its life in, so it is the one worth a test of its own: the pane must be out of the
+        /// tree rather than merely transparent, or it still takes clicks and still counts towards
+        /// coverage.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheInspectPaneIsAbsentUntilSomethingIsSelected()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                VisualElement? pane = doc.rootVisualElement.Q(name: "inspect");
+                Assert.That(pane, Is.Not.Null, "the shell built no inspect pane at all");
+                Assert.That(pane!.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                    "with nothing selected the inspect pane is still on screen");
+
+                Assert.That(Regions(doc), Does.Not.ContainKey("inspect"),
+                    "a hidden pane is still being counted as covered screen");
+
+                Rect canvas = doc.rootVisualElement.worldBound;
+                var content = new HudContent(
+                    colonists: doc.rootVisualElement.Query(className: "card").ToList().Count,
+                    storeRows: Visible(doc, "stores__row"),
+                    alerts: Visible(doc, "alert"),
+                    layers: doc.rootVisualElement.Query(className: "ruler__tick").ToList().Count,
+                    needRows: 0);
+
+                HudRect modelled = HudLayout.Solve(canvas.width, canvas.height, content)[HudRegion.Inspect];
+                Assert.That(modelled.Height, Is.EqualTo(0f),
+                    "the model still reserves a strip for a pane the shell does not build");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// The stores panel is as wide as its widest row needs and no wider.
+        ///
+        /// <para><b>Why this is measured rather than chosen.</b> The width is a constant in
+        /// <see cref="HudLayout"/> and a matching literal in the stylesheet, and the only way to
+        /// know what it should be is to ask the text engine how wide the longest commodity name
+        /// actually draws in the face and size the HUD uses. The panel was 288 px for rows whose
+        /// longest label is six characters, which is the owner's report. This logs the figure it
+        /// needs, so the next person to add a commodity with a long name gets a number rather
+        /// than an opinion.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheStoresPanelIsWideEnoughForItsRowsAndNoWider()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                VisualElement stores = doc.rootVisualElement.Q(name: "stores")!;
+                float needed = 0f;
+                string widest = string.Empty;
+
+                foreach (VisualElement line in Lines(stores))
+                {
+                    float width = NaturalWidth(line);
+                    if (width <= needed) continue;
+                    needed = width;
+                    widest = string.Join(" / ", Texts(line));
+                }
+
+                // The panel's own frame and padding, which no row carries.
+                float chrome = 2f * (HudTheme.BorderWidth + HudLayout.Pad);
+                needed += chrome;
+
+                Debug.Log($"[HudGeometry] stores needs {needed:0.#} px for '{widest}' " +
+                          $"(chrome {chrome:0.#}); the model says {HudLayout.StoresWidth}");
+
+                Assert.That(HudLayout.StoresWidth, Is.GreaterThanOrEqualTo(needed),
+                    $"the stores panel is {HudLayout.StoresWidth} px and its widest line " +
+                    $"('{widest}') needs {needed:0.#}, so something is clipped or wrapped");
+
+                Assert.That(HudLayout.StoresWidth, Is.LessThanOrEqualTo(needed + 48f),
+                    $"the stores panel is {HudLayout.StoresWidth} px for a widest line of " +
+                    $"{needed:0.#} px, which is more empty column than the owner asked for");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>The panel's header and its visible rows: everything that decides its width.</summary>
+        static IEnumerable<VisualElement> Lines(VisualElement stores)
+        {
+            foreach (VisualElement line in stores.Query(className: "panel__hdr").ToList())
+                yield return line;
+            foreach (VisualElement line in stores.Query(className: "stores__row").ToList())
+                if (line.resolvedStyle.display != DisplayStyle.None)
+                    yield return line;
+        }
+
+        static IEnumerable<string> Texts(VisualElement line)
+        {
+            foreach (Label label in line.Query<Label>().ToList())
+                if (!string.IsNullOrEmpty(label.text))
+                    yield return label.text;
+        }
+
+        /// <summary>
+        /// How wide a row wants to be, which is not how wide it is: a label with
+        /// <c>flex-grow: 1</c> measures back as whatever space the row gave it, so the laid-out
+        /// width says nothing about the text. Each child is asked for its own natural width
+        /// instead — the text engine's answer for a label, the resolved box for anything else —
+        /// and the row's padding and each child's margins are added on top.
+        /// </summary>
+        static float NaturalWidth(VisualElement line)
+        {
+            float total = line.resolvedStyle.paddingLeft + line.resolvedStyle.paddingRight;
+
+            foreach (VisualElement child in line.Children())
+            {
+                if (child.resolvedStyle.display == DisplayStyle.None) continue;
+
+                float own = child is Label label && !string.IsNullOrEmpty(label.text)
+                    ? label.MeasureTextSize(label.text, 0f, VisualElement.MeasureMode.Undefined,
+                                            0f, VisualElement.MeasureMode.Undefined).x
+                    : child.resolvedStyle.width;
+
+                // A nested row — the header's right-hand group — carries its own children.
+                if (child.childCount > 0 && child is not Label) own = Mathf.Max(own, NaturalWidth(child));
+
+                total += own + child.resolvedStyle.marginLeft + child.resolvedStyle.marginRight;
+            }
+
+            return total;
         }
 
         // ---------------------------------------------------------------- fixture

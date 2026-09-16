@@ -138,7 +138,7 @@
 .stores {
     left: 20px;
     top: 20px;
-    width: 288px;
+    width: 168px;
 }
 
 .stores__count {
@@ -442,16 +442,9 @@
     width: 560px;
 }
 
-/* An explicit height, because this is the only text in the HUD that is the sole child of a
-   content-sized panel, and a label left to size itself came out 26 px tall for 13 px type — twice
-   the point size, and nine pixels more than the layout model had allowed the whole pane. Nothing
-   is clipped: there is no overflow rule here, so the glyphs draw past a box that is shorter than
-   the renderer's line box. */
-.inspect__empty {
-    color: rgba(255, 255, 255, 0.50);
-    height: 17px;
-    -unity-text-align: middle-left;
-}
+/* There is no empty state. With nothing selected the pane is display:none and leaves the layout
+   (owner, 2026-09-16); the ".inspect__empty" rule that used to sit here styled a line reading
+   "Nothing selected", which is the interface talking about itself. */
 
 .inspect__hdr {
     flex-direction: row;
