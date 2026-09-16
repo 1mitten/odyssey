@@ -67,6 +67,34 @@ namespace Odyssey.Sim.World
         /// <summary>An edifice that blocks movement, such as a wall or a closed door.</summary>
         public bool IsBlockedByEdifice(int index) => (Flags[index] & CellFlags.BlockingEdifice) != 0;
 
+        /// <summary>Has the colony seen what this cell is made of? See <see cref="CellFlags.Discovered"/>.</summary>
+        public bool IsDiscovered(int index) => (Flags[index] & CellFlags.Discovered) != 0;
+
+        /// <summary>
+        /// Open a cell up: everything solid that touches it face to face is now known.
+        ///
+        /// Six neighbours, not twenty-six. A colonist who cuts a shaft past the corner of a seam
+        /// has not seen into it, and counting diagonals would reveal ore through an edge that no
+        /// face was ever cut in.
+        /// </summary>
+        public void RevealAround(int index)
+        {
+            int stride = Size.LayerStride;
+            CellRef at = FromIndex(index);
+
+            if (at.X > 0) Reveal(index - 1);
+            if (at.X < Size.SizeX - 1) Reveal(index + 1);
+            if (at.Z > 0) Reveal(index - Size.SizeX);
+            if (at.Z < Size.SizeZ - 1) Reveal(index + Size.SizeX);
+            if (at.Y > 0) Reveal(index - stride);
+            if (at.Y < Size.SizeY - 1) Reveal(index + stride);
+        }
+
+        void Reveal(int index)
+        {
+            if (IsSolidTerrain(index)) Flags[index] |= CellFlags.Discovered;
+        }
+
         /// <summary>
         /// Take whatever stands in the cell out of the world: the handle goes, and so does the
         /// blocking flag. The placement list keeps its slot, so other handles stay valid. A caller
@@ -125,6 +153,25 @@ namespace Odyssey.Sim.World
         Forbidden = 1 << 2,
         SupportDirty = 1 << 3,
         Reserved = 1 << 4,
+
+        /// <summary>
+        /// The colony has seen what this cell is made of. Set on every solid neighbour of a cell
+        /// that is mined out, and never cleared.
+        ///
+        /// <para>It exists for ore: a seam is drawn as plain rock until a face of it is exposed,
+        /// so finding one is worth something and a tunnel is a free look at a lot of rock
+        /// (<c>docs/research/mining-interview.md</c>, answer 8). Nothing is discovered when the
+        /// map is generated — not even the ore lining a cavern wall, which nobody has been in.</para>
+        ///
+        /// <para><b>Authored, not derived, and that is the deliberate part.</b> It would be
+        /// tempting to compute it — "an ore cell with an open neighbour" — and keep it out of the
+        /// save and the hash the way <see cref="CellGrid.Support"/> and <see cref="CellGrid.Region"/>
+        /// are kept out. But it is a one-way latch: a seam the colony has seen and then walled
+        /// back up is still a seam the colony knows about, and a derived bit would forget it the
+        /// moment the wall went up and remember it again when the wall came down. Knowledge is
+        /// history, so it is state, so it is hashed and saved like the rest of the flags.</para>
+        /// </summary>
+        Discovered = 1 << 5,
     }
 
     /// <summary>

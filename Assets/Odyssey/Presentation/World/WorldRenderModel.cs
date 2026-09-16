@@ -273,7 +273,7 @@ namespace Odyssey.Presentation.World
 
         void CopyCell(CellGrid grid, IReadOnlyList<PlacedEdifice> edifices, int index)
         {
-            _terrain[index] = grid.Terrain[index];
+            _terrain[index] = Seen(grid, index);
             _floor[index] = grid.Floor[index];
             _floorStuff[index] = grid.FloorStuff[index];
             _flags[index] = (byte)grid.Flags[index];
@@ -290,6 +290,23 @@ namespace Odyssey.Presentation.World
                 _edifice[index] = CoreContent.EdificeNone;
                 _edificeStuff[index] = CoreContent.StuffNone;
             }
+        }
+
+        /// <summary>
+        /// The terrain as the colony has seen it: an undiscovered seam is plain rock.
+        ///
+        /// <para>The lie is told once, here, on the way into the mirror — so the module, the
+        /// colour, the emissive trim and the inspect readout all agree about what the cell looks
+        /// like without any of them knowing there is a rule. The simulation is untouched and
+        /// still knows perfectly well that the cell is iron; this is the seam between what is
+        /// true and what has been seen, and presentation is the right side of it
+        /// (<see cref="CellFlags.Discovered"/>).</para>
+        /// </summary>
+        static ushort Seen(CellGrid grid, int index)
+        {
+            ushort terrain = grid.Terrain[index];
+            if (NaturalContent.IsOre(terrain) && !grid.IsDiscovered(index)) return NaturalContent.TerrainRock;
+            return terrain;
         }
 
         /// <summary>Half-open cell bounds of a chunk, and the layer it lives on.</summary>
