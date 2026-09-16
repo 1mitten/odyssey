@@ -33,9 +33,22 @@ namespace Odyssey.Tests.PlayMode
     /// works four times in five is worse than one that never works, because it teaches you to
     /// trust it.</para>
     ///
-    /// <para>So this sets <c>IgnoreFocus</c> for the run, enables the device, and <b>asserts</b>
-    /// that it is enabled — a silent drop becomes a loud failure. The settings are put back
-    /// afterwards, because they are global and the rest of the PlayMode suite shares them.</para>
+    /// <para>Third, and only visible once the first two were fixed: <b>the player loop never runs
+    /// an input update in a batch run</b>. With the device present and enabled a queued event
+    /// still did nothing — <c>scroll=0.00 pos=0</c> on every frame after every event — and one
+    /// manual <c>InputSystem.Update()</c> delivered it instantly (<c>scroll=1.00 pos=320</c>).
+    /// Events queue and are never processed, because nothing in a windowless player asks for
+    /// them. So the harness pumps the update itself.</para>
+    ///
+    /// <para>That has a consequence worth knowing: since nothing else updates input, a delta
+    /// control is never cleared either. A scroll delivered once would stay applied and zoom the
+    /// camera on every subsequent frame. Each gesture below therefore ends by delivering the
+    /// neutral state, so a notch is one notch rather than a stuck wheel.</para>
+    ///
+    /// <para>So this sets <c>IgnoreFocus</c> for the run, enables the device, drives the updates,
+    /// and <b>asserts</b> both that the device is enabled and that the state arrived — every
+    /// silent failure above becomes a loud one. The settings are put back afterwards, because
+    /// they are global and the rest of the PlayMode suite shares them.</para>
     /// </summary>
     public sealed class MouseHarness : IDisposable
     {
@@ -60,34 +73,48 @@ namespace Odyssey.Tests.PlayMode
 
         public Mouse Device { get; }
 
-        /// <summary>Turn the wheel over a point, and let the player loop deliver it.</summary>
+        /// <summary>
+        /// Turn the wheel over a point: one notch, delivered for exactly one frame.
+        /// </summary>
         public IEnumerator Scroll(float notches, Vector2 at)
         {
-            Queue(new MouseState { position = at, scroll = new Vector2(0f, notches) });
+            Deliver(new MouseState { position = at, scroll = new Vector2(0f, notches) });
+            Assert.That(Device.scroll.ReadValue().y, Is.EqualTo(notches).Within(0.001f),
+                "the wheel state did not reach the device, so nothing downstream can be tested");
+            yield return null;
+
+            // Clear the wheel, or it stays turned: nothing else updates input here.
+            Deliver(new MouseState { position = at });
             yield return null;
         }
 
         /// <summary>Move the pointer without pressing anything.</summary>
         public IEnumerator MoveTo(Vector2 at)
         {
-            Queue(new MouseState { position = at });
+            Deliver(new MouseState { position = at });
+            Assert.That(Device.position.ReadValue().x, Is.EqualTo(at.x).Within(0.5f),
+                "the pointer position did not reach the device");
             yield return null;
         }
 
         /// <summary>Press and release the left button at a point, a frame apart.</summary>
         public IEnumerator Click(Vector2 at)
         {
-            Queue(new MouseState { position = at }.WithButton(MouseButton.Left));
+            Deliver(new MouseState { position = at }.WithButton(MouseButton.Left));
             yield return null;
-            Queue(new MouseState { position = at });
+            Deliver(new MouseState { position = at });
             yield return null;
         }
 
-        void Queue(MouseState state)
+        /// <summary>
+        /// Queue one state and process it. The <c>Update</c> is the whole trick: without it the
+        /// event sits in the buffer for the rest of the run, because a batch player's loop never
+        /// asks the input system to process anything.
+        /// </summary>
+        void Deliver(MouseState state)
         {
-            // The event carries the device's own id and goes through the ordinary dynamic update,
-            // so what a test drives is the game's real input path rather than a stub beside it.
             InputSystem.QueueStateEvent(Device, state);
+            InputSystem.Update();
         }
 
         public void Dispose()
