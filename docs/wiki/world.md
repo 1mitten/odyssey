@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-56 entries, 33 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+62 entries, 39 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -89,6 +89,17 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Normal speed** | `ui.speed.play` | One tick per tick <br>**Needs:** normal speed | no art | M1 |
 | **Fast** | `ui.speed.fast` | Three times speed <br>**Needs:** fast forward | no art | M1 |
 | **Very fast** | `ui.speed.ultra` | As fast as the simulation will go <br>**Needs:** very fast | no art | M1 |
+
+## Settings
+
+| Name | Key | What it is | Art | Milestone |
+|---|---|---|---|---|
+| **Settings** | `ui.settings.panel` | What the game does, not what the colony does | no art | M1 |
+| **Graphics** | `ui.settings.graphics` | How the world is drawn. None of it reaches the simulation | no art | M1 |
+| **Shadows** | `ui.settings.shadows` | Whether people and buildings cast shadows on the ground | no art | M1 |
+| **Surrounding land** | `ui.settings.surround` | The land carried past the rim so the board does not end in mid-air | no art | M1 |
+| **Grass tufts** | `ui.settings.grass` | Tufts strewn over the meadow. Decoration, in no cell and no save | no art | M1 |
+| **Ground relief** | `ui.settings.relief` | The roll of the drawn ground. The cells underneath stay flat | no art | M1 |
 
 ---
 

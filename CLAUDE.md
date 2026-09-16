@@ -68,7 +68,23 @@ after a rebuild, republish `docs/wiki/artifact.html` and
   planned — colonists walk, chop and have needs, mood and skills; a colony survives ten headless days
   on three seeds; there is a HUD, a naming registry, terrain relief, water and a work-pose system,
   none of which the plan asked for. M3 has started ahead of itself: designations, felling and
-  stockpiles are in and mining is written on `claude/mines`, unmerged. **`OQ-20` closes M2.**
+  stockpiles are in, and **mining merged on 2026-09-16** (PRs #30 and #31) with its Defs and with a
+  28x tick-cost regression fixed on the way in — `DesignationGrid` was publishing its progress
+  channel by walking every cell of the active layer every tick, which took the ten-day soak from
+  one second a seed to thirty-nine; it walks the sparse list of ordered cells now and a guard test
+  fails if it ever walks the layer again. **Neither felling nor mining can be *ordered*:** there is
+  no designate tool anywhere in the HUD or the input layer, so both get their orders from the
+  scenario before the first tick. That is what `OQ-40` unblocks. **M2 is closed and
+  reported: `docs/milestones/M2-report.md` (OQ-21, 2026-09-16).** All five parts of the standing
+  gate are green — EditMode 494/492, PlayMode 7/7, a 60,000-tick day ending on hash
+  `e134005c5408818d` under *both* Mono and CoreCLR, the save round trip on a real world, and three
+  ten-day seeds clean. The demo asserts the milestone's own claim at last: with `OQ-47` a scenario
+  names the storey a thing goes on, so the beds are a floor up and the food two, every colonist
+  changes storey across the day, and **the control is a test** —
+  `ADayOnOneFloorNeverTouchesAStair` runs the same day with the offsets removed and asserts nobody
+  moves. Two things are green but not clean, both in §5 of the report: `OQ-05` is open, so
+  cross-runtime determinism is a measurement rather than a standing test, and the city's frame time
+  moved from 0.88 ms to 1.56 ms unexplained (`OQ-43`).
   **Before more features, `OQ-44` to `OQ-46` open the seams** — the mining line is 73 files and had
   to edit six shared files to add itself, five of which should have been extension points. The
   reasoning and the order are in `docs/plans/vertical-slice.md` under "Where the seams are".
@@ -402,6 +418,159 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     the lesser one — the alternative is presentation reaching into job timing.
     `AFelledTreeIsFollowedThroughRatherThanSnappedOutOf` **asserts** that relation rather than
     assuming it, so zeroing the def fails the tier instead of quietly skipping it.
+- **The game has sound, 2026-09-16** (ADR 0010, research `d-12-audio.md`; plan unit U33 in vertical-slice.md's "After the slice" section — audio playback was in no plan before this). `AudioDirector` (`Presentation/Audio/`) is a presentation **director** in the ChipDirector sense: it owns every AudioSource in the game, reads only the published frame and the render mirror, and no sound is a cell, a save key or a hash bit. **Pooled voices, culled before they are spent:** sixteen AudioSources serve the whole colony — work impacts fire from `PawnFigureDirector.BlowLanded` (the same stroke moment the chips fly, with the style and the edge position), distance-culled by each def's max range, repeat-gated per sound id (five woodcutters near the camera are one rhythm section), stolen only from lower-priority voices, with pitch/amplitude variance because an identical sample is recognisably identical. **Ambience is measured, not placed:** `AmbienceProbe` samples the terrain mirror in a disc around the *camera's focus* (not the camera, which is tens of metres in the air), water cells weighted by proximity, saturating at "clearly full water", the bed's one 3D voice placed at the weighted centroid so a river pans as the camera orbits; layer-aware — water under a descended slice's floor is not heard. **Music and alerts are 2D:** day/night tracks crossfaded from the tick through `GameClock` (two ping-ponged voices, never a gap); the starving alert is raised off the published pawn list by `AlertWatch` with hysteresis (chimes once at a crossing, re-arms past 30%), and every alert ducks the music. **Buses in code, gains in dB:** Master/Music/Ambience/Effects/Alerts, the mixer's concept set with the mixer's math and no mixer asset (no supported API creates one; adopting a real mixer later is per-voice routing plus moving `SetBusDb` — the stored settings keep their meaning). Volume settings are the **B17 stub**, dB faders in PlayerPrefs (`AudioSettingsStore`). **Clips are generated placeholders** (`scripts/unity.sh exec Odyssey.EditorTools.AudioSetup.Build` writes eight synthesised WAVs and the `AudioCatalogue` asset; import classes per the manual — PCM decompressed for impacts, ADPCM for the water bed, Vorbis streamed for music), so a clone without them runs silent and licensed audio drops in as data with zero code change. Tests: EditMode for math/probe/clock/watcher/director (stepped on the director's own clock, so edit and play mode answer identically) plus a PlayMode smoke test. The dev overlay (backtick) carries the audio counters.
+  - **A voice is spatialised from the transform it shares, and they all shared one.** Every
+    AudioSource was a component of a single GameObject, so writing a one-shot's position moved the
+    lot — the axe sounded from wherever the last sound was written, and the water bed dragged every
+    one-shot along as its centroid moved. A GameObject per voice. The test that passed through it
+    played one sound; one sound cannot disagree with itself.
+  - **The water bed was silent on every map the game generates.** The probe sampled terrain at the
+    slice layer, which is the air a colonist stands *in* — terrain belongs to the solid cell under
+    it, and a channel is settled one layer below the dry surface. The fixture agreed with the bug
+    by putting its pond on the layer it probed. It reads the slice layer and the floor underfoot
+    now: two layers, not the column, so a descended player still does not hear the river through
+    rock.
+  - **Two kinds of ambience, because there are two questions.** The water bed answers *how much of
+    this is near me*; the **outdoor bed** answers *where am I*, which is not a quantity — it plays
+    flat above the surface, is silent below it, and changes with the clock rather than the terrain.
+    One loop per phase crossfaded at dawn and dusk, 2D because it is the air itself, on the
+    Ambience bus, under everything as the floor of the mix (day 0.34, night 0.26). Music and the
+    outdoor bed are the same shape of thing, so `PhaseLoop` is one class used twice: the
+    ping-ponged pair, each track's own fade length, and the rule that the incoming voice is the one
+    *not* fading out.
+  - **The id lookup was the whole cost and it grew with the catalogue.** `AudioCostTests` measures
+    the frame: a full `Sync` over the played board is **0.0035 ms**, and forty one-shots offered in
+    one frame — four times the colony the slice will run — went **0.1527 → 0.0050 ms** against 252
+    sounds once the director indexed the catalogue by id, keyed the cooldown by the def rather than
+    its id, and moved the rolloff curve from every play to construction. The price no longer moves
+    with the table's size; a 0.05 ms budget in the tier keeps it that way. The probe was left alone
+    — 225 samples a frame is 0.0035 ms, so throttling it would optimise nothing.
+  - **Real audio arrives as files, and the tool used to eat them.** `AudioSetup.Build` rewrote all
+    the WAVs every run, so sourced audio under the names the catalogue reads would be replaced by
+    the synthesised stand-in; a file that exists is never written now, and wiping the folder is its
+    own menu item that asks first. `forceToMono` was applied to every clip and is now a property of
+    the clip's use, so stereo music keeps its image. A sound takes variants — `chop_01.wav` beside
+    `chop.wav`, up to sixteen, picked at random per blow. **What to source and what to call it is
+    `docs/reference/audio-sourcing.md`**: eight files, lengths, which loop, which are mono, and why
+    WAV rather than OGG or MP3 (the source is re-encoded on import, so a lossy master only stacks
+    artefacts).
+  - **Open: the ears are on the camera, which is 32–160 m from the ground.** The cull and the
+    rolloff are measured from the listener, while the catalogue authors ranges as ground distances
+    (chop at 48 m), so a colonist felling a tree dead-centre in frame plays at about a fifth gain
+    at the default zoom and is culled outright past it. The fix is either to move the listener to
+    the camera's focus — the usual answer, and what makes the authored numbers mean what ADR 0010
+    says — or to re-author the ranges as camera-relative. Owner's call; it changes how the whole
+    game sounds.
+- **The golden-hour look: interviewed and researched 2026-09-16, not yet planned or built.** The
+  owner asked for the lighting, rays, warm sky-into-fog and depth of field of *Station to Station*.
+  Interview in `docs/research/look-interview.md`, references in
+  `docs/reference/screenshots/station-to-station/` (six images, described in that folder's README),
+  five research files (`d-12-urp-post-stack`, `d-13-light-shafts`, `d-14-aerial-perspective`,
+  `b-station-to-station`, `b-low-sun-readability`) summarised in `docs/research/INDEX.md`.
+  **Nothing under `Assets/` has changed and no design or ADR exists yet** — the next phase is a
+  design section, an ADR, execution units and a `Check the light` contact sheet, and it waits for
+  the owner. The grounding headline is that **no volume stack has ever been in effect**: the URP
+  asset's default profile GUID resolves to nothing and `DefaultVolumeProfile.asset` is orphaned, so
+  the project has never had tonemapping, grading, bloom, depth of field, vignette or anti-aliasing.
+  Two recorded decisions are overridden by the owner and must not be re-argued from the old notes:
+  the **72° sun in `PlayScene.BuildLighting` comes down to a raking 25–35°** (the comment there
+  rejecting a 50° sun is superseded — the real fix is Shadow Strength below 1, which that decision
+  never tried), and **bloom is adopted** against `d-09-stylised-rendering.md` §3.4's caution.
+  The load-bearing findings: the rays may be **geometrically impossible at the default framing**
+  (at a 48° pitch the sun can sit behind the camera, where a radial blur has nothing to radiate
+  from), so a framing experiment comes before any shader; the tilt-shift is probably **a screen-Y
+  blur rather than depth of field**, because URP's Gaussian blurs only the far field; the haze is
+  **exp2 fog plus a sky given the fog colour**, not a fullscreen pass, which the camera geometry
+  cannot justify; and the cascade splits are **already wrong for this camera**, spending half the
+  shadow atlas on the empty air in front of it. Budget: about 2 ms more, quality-tiered, and **no
+  measured millisecond figure for any URP post effect exists in any public source**, so every
+  number must come from `FrameTimeTests` under the real player loop.
+- **Escape opens a settings panel, and the graphics levers moved out of the inspector
+  (2026-09-16).** Panel B17's M1 stub: a centred panel with one Graphics section of four
+  switches — shadows, surrounding land, grass tufts, ground relief — thrown while the colony runs.
+  It exists because every graphics lever was an `OdysseyBootstrap` inspector field, so comparing
+  two looks meant stopping play, editing a number and starting a board that is no longer the board
+  you were judging; nearly every look decision on record ended asking for the owner's eye in
+  `Play.unity`. `SettingsDirector` (Unity-free, fast tier) holds what the panel holds and **what
+  Escape means**; `SettingsPresenter` does what it says and turns a boolean into a call on the
+  renderer; `HudShell.BuildSettings` draws it. **Escape is now decided in exactly one place** —
+  it was the designate tool's alone, and two components reading one key would have disarmed the
+  tool and opened the panel on the same keystroke, so `DesignatePresenter` reads no key and
+  exposes `ToolArmed` / `PutToolAway` instead. **Two switches are free and two cost a remesh**:
+  shadows and the surround are read as the frame is submitted, while grass and relief are baked
+  into instance matrices at mesh time, so they are followed by `WorldRenderModel.Remesh()` (bumps
+  the version, nothing else) and a skirt rebuild; the row's tooltip says which it is. **It is not
+  modal, deliberately** — the world runs and the camera orbits while it is open, because watching
+  the board is the entire point; clicks stop at the panel edge through the shell's existing
+  pointer gate, and the price is that the tool keys still work behind it. **Preferences are on the
+  machine, never in the colony save** (`PlayerPrefsSettingsStore`, the only `PlayerPrefs` user in
+  the project, behind `ISettingsStore` because the Hud assembly has no UnityEngine): a graphics
+  setting is presentation like the tufts themselves, with no cell, no save and no hash. **The
+  scene still decides how a session starts** — the panel is seeded from the bootstrap's fields and
+  a stored preference is laid over that, so preference beats scene beats nothing, and a panel
+  cannot change the board merely by existing. Six `ui.settings.*` names are in `icon-keys.csv`
+  with the wiki and `Registry.g.cs` regenerated, and `RegistryTests` now holds the panel to the
+  CSV. Design: `10-ui-panel-catalogue.md` B17, `09-ui-and-input.md` §6 case 6. **Not built and not
+  wanted yet:** a real modal, UI Toolkit `Toggle`/`Slider` controls (the switches are lit chips,
+  the idiom this HUD already uses), audio, interface scale, accessibility and keybindings, all M8.
+  The golden-hour work fills the Graphics section out, since its quality tier is a settings
+  surface by definition.
+- **There are trees on the background hills now (owner request, 2026-09-16).** The surround's wood
+  stopped 90 m past the rim, where the hills have risen about six of their fifty metres, so every
+  hill in the background was bare — and a bare hillside has nothing of known size on it, so the eye
+  cannot place it and it flattens into a green backdrop. `SkirtLayout.BuildFarTrees` runs a second
+  wood from 90 m out to **900 m**, chosen against two numbers that already existed: hills reach full
+  height at 700 m, fog is opaque at 1,100 m. Scattered on a **15 m lattice with a jitter** rather
+  than the cell grid, because the band is four million square metres and cell resolution would be
+  670,000 samples for two thousand trees; the jitter is what stops it reading as an orchard, and a
+  test holds that. **The cost is batches, not triangles**, and it was measured rather than assumed:
+  at the near wood's 80 m sectors with all sixteen tree kinds the meadow drew **1,154 surround
+  batches against 72** before, so the far sector went to 800 m and the far wood is capped to **four
+  kinds** (at 300 m nobody can tell one conifer from another, so variety was a batch multiplier
+  buying nothing). Measured under the real player loop with the city as a control: meadow **1.45 ms
+  off → 1.38 ms on**, +52 draw calls, +2,577 instances, against a 5 ms budget — and since the city
+  moved 1.70 → 1.84 ms between the same runs, ±0.14 ms is noise and **the honest claim is no
+  measurable cost, not a speed-up**. Levers: `OdysseyBootstrap.skirtHillTrees`, and
+  `skirtTreeDensity` scales it with the near wood. Design: `06-rendering-and-camera.md` §2a.
+- **Two traps found while doing it, both in `docs/lessons.md`.** Rebuilding the scene in a worktree
+  **without the Synty packs** rewrites `ModuleCatalogue.asset` with every prefab reference set to
+  `{fileID: 0}` — 501 lines, exit code zero, no message — so a blanket `git add -A` commits a
+  catalogue with no art and no failing test to explain it; the junction from the worktree lesson is
+  the fix, and reading the diff is the guard. Worse, and independent of the packs: **the committed
+  catalogue and `PlayScene.cs` had drifted apart.** The asset held a `terrain.marsh` row the builder
+  no longer emitted, and lacked a `tool.hammer` row it did. Nothing could catch it — the asset is
+  licensed art no test loads, the builder is editor tooling no test runs. The next rebuild for any
+  reason would have dropped marsh to the untextured fallback, undoing the water work's marsh fix
+  weeks later with nothing connecting the two. Marsh is restored in the builder and the catalogue
+  rebuilt. **When a rebuild's diff shows a row disappearing, that is never churn.**
+- **The day runs: blue at noon, orange at dawn and dusk, dark at night (owner, 2026-09-16, design `06-rendering-and-camera.md` §2d).** The fixed golden hour below landed first and the owner reversed question 2 of the interview on seeing it, which is recorded in `look-interview.md` so that file does not read as stale. **`Daylight`** is a keyed table in the *Presentation* assembly — not the editor one, because a running game must sample it — and `DaylightDirector` applies it every frame from the tick. A table rather than a formula because no sun model can say that dawn should be held orange longer than dusk, which is an art direction. **Midnight is both the first key and the last**, so the wrap needs no special case and a test walks the whole day at five-minute steps failing on any jump. **Night is a readability floor, not realism**: the sun drops below the horizon but is never switched off, because a directional light at zero flattens every face to one value and the board reads as a paper cut-out. **The sky material is copied, never edited** — it is an asset on disk, and writing to it at runtime in the editor would leave the sky wherever the clock stopped, permanently. The ambient probe is the only real cost and is throttled to a tenth of a game hour; the sun, ambient and fog are not, because stepping those shows in the shadows. **Nothing here is simulation** — a pure function of the tick, not saved, not hashed, unreadable from the sim, so a colonist at midnight is not blind. Judge it with `Odyssey → Presentation → Check the daylight`, which shoots eight hours at two pitches. Levers: `OdysseyBootstrap.daylightCycle` and `sun`.
+- **The golden hour is lit, 2026-09-16 (design `06-rendering-and-camera.md` §2d).** The look the
+  owner asked for, as far as it can go without two measurements. **One file owns the palette** —
+  `Assets/Editor/Odyssey/GoldenHour.cs` — because the effect rests on an identity that is invisible
+  if its halves live apart: the colour the distance fades to *is* the colour the sky is at the
+  horizon. **The grounding headline was that there had never been any post-processing**: the
+  pipeline asset pointed its default profile at a GUID resolving to nothing and the one profile in
+  the repo was orphaned, so no tonemapping, grading, bloom, vignette or anti-aliasing had ever run.
+  Now: Neutral tonemapping (never ACES, which skews exactly the warm highlights this needs), HDR
+  grading (in LDR the sun clips before the grade sees it), white balance, bloom above a threshold of
+  1, a light vignette, and **SMAA** — chosen because FXAA destroys our one-pixel post-drawn outline,
+  TAA would jitter it, and MSAA cannot touch it. **Two recorded decisions are overturned and the old
+  comments are rewritten in place, not deleted:** the 72° sun comes down to **30°**, because the old
+  decision blamed the angle for darkness that was really *shadow strength* (0.6 keeps the key
+  light's hue in shadow and costs nothing); and **bloom is adopted** against `d-09` §3.4, which was
+  written for a painted look. **A real shadow bug turned up:** cascade splits are fractions of
+  distance *from the camera*, and this camera never sees ground nearer than 50 m, so the stock
+  splits spent half the atlas on empty air — they now start at 0.30, with distance 50 → 250 m and
+  normal rather than depth bias, which is the grazing-angle lever. **Fog moved onto the board
+  deliberately**: exp2 at a density computed rather than chosen (1% at 50 m, a third at the rim, 97%
+  by 900 m), where the old linear pair started past the far corner and is why the board had no depth
+  in it. **Two faults found by photograph**, one silently true for months: URP keeps post-processing
+  *per camera* and defaults it off, so every contact sheet ever taken here was of an ungraded image;
+  and the first ambient put the woodland in near-silhouette, since a low sun barely reaches a
+  crown. **Not built, and waiting on measurement rather than effort:** the sun shafts, because at a
+  48° pitch the sun can sit behind the camera where a radial blur has nothing to radiate from, so a
+  framing experiment comes first; and the tilt-shift, because URP's cheap depth of field blurs only
+  the far field and cannot make a band at all. **Still wants the owner's eye in `Play.unity`.**
 - **Sim vs UI vocabulary is deliberate:** simulation systems are *subsystems*, presentation-side coordinators are *directors* (`01-architecture.md` §3a). Do not unify the two words.
 - **Phase 3 (design): complete 2026-09-15.** `docs/design/` 00, 01, 02, 03, 04, 05, 06, 07, 08; ADRs 0001, 0002, 0005; and the execution plan `docs/plans/vertical-slice.md` (32 units, M0→M3). **The Phase 3 → Phase 4 hard stop was cleared by the owner on 2026-09-15; execution is under way.**
 - **Interface, icons and content naming (the UI line of work), 2026-09-15.** Design `09-ui-and-input.md`, `10-ui-panel-catalogue.md`, `11-icon-library.md`; ADRs 0003 UI framework, 0004 sim-to-UI contract, 0006 layer visibility, 0007 pixel-art icon pipeline; research `g-01`, `g-02`; mockups `hud-v1.html` (historical) and `hud-v2.html` (current). **Layer visibility decided:** x-ray by default with six modes shipped for playtest, amended by Lane B so that nothing above the active slice is ever a pointer target. **Icons:** 382 keys enumerated, 268 mapped to the owner's eight pixel-art sheets, 114 gaps listed in `11-icon-library.md` — the largest being people, since no sheet contains a human figure. **Names:** all 29 proper nouns proposed and awaiting the owner's veto, in `docs/design/proper-nouns.csv`.

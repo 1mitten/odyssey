@@ -1,0 +1,111 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27674da1a1968dd4ab3a9991b1e1fab2, type: 3}
+  m_Name: AudioCatalogue
+  m_EditorClassIdentifier: Odyssey.Presentation::Odyssey.Presentation.Audio.AudioCatalogue
+  Sounds:
+  - Id: odyssey.sound.work.chop
+    Clips:
+    - {fileID: 8300000, guid: af443463f62e7364bab213eecf56f8a5, type: 3}
+    - {fileID: 8300000, guid: 6a4f450a4409efd439666aeb21dcc5e4, type: 3}
+    - {fileID: 8300000, guid: 143fa426e28fc6d4e867d79acee7c0fd, type: 3}
+    - {fileID: 8300000, guid: e01dfcada44060c488da19d8f5302a05, type: 3}
+    - {fileID: 8300000, guid: 22d788292d2856141bc8b35a8d59f3f7, type: 3}
+    - {fileID: 8300000, guid: bff89de8a3c40cf4080681f7591c9f7e, type: 3}
+    - {fileID: 8300000, guid: 37b1b25c1ac157d409ec63ac98b3a053, type: 3}
+    - {fileID: 8300000, guid: 59cffcc252ccf8e41801412e78eb5485, type: 3}
+    - {fileID: 8300000, guid: ba99ae707fd37a04d9e05f1625e05d2e, type: 3}
+    - {fileID: 8300000, guid: b3564945c79f75647b1a8d6ed871a9c3, type: 3}
+    - {fileID: 8300000, guid: c1caf86f357b34c45b3f61311f17c8f8, type: 3}
+    - {fileID: 8300000, guid: ba5c570abef583148b33ffd9d236f839, type: 3}
+    - {fileID: 8300000, guid: f95079e81e6268243bab13f94c746c15, type: 3}
+    - {fileID: 8300000, guid: 5820c393bb99fc045ab744756a17f1ae, type: 3}
+    - {fileID: 8300000, guid: 633c33a42e0d77b4c829f39ef0c938c9, type: 3}
+    - {fileID: 8300000, guid: 4bbda8e289bfe4d449771d92fc03eddb, type: 3}
+    - {fileID: 8300000, guid: 4d9bd6a9418e02249a74c7a280e7eab5, type: 3}
+    - {fileID: 8300000, guid: 7cbc3063dff3b2a4a8ea5e300bb94fb6, type: 3}
+    - {fileID: 8300000, guid: 59af43b3828d2ad4295501b9476456d1, type: 3}
+    - {fileID: 8300000, guid: 197559ac51a40ef4b9a1396df31945b3, type: 3}
+    - {fileID: 8300000, guid: 4ee37edb463f5e745a7d8e2366c16479, type: 3}
+    - {fileID: 8300000, guid: d169cb263f3ef9a4d8717080f67c2a08, type: 3}
+    - {fileID: 8300000, guid: 0b21eec824ac49747a5a19d5b87eefd1, type: 3}
+    - {fileID: 8300000, guid: c82c95c4bbc9cf34d946f4f15010442b, type: 3}
+    Bus: 3
+    Volume: 0.85
+    VolumeVariance: 0.15
+    PitchVariance: 0.07
+    SpatialBlend: 1
+    MinDistance: 20
+    MaxDistance: 200
+    Priority: 120
+    Cooldown: 0.15
+  - Id: odyssey.sound.work.pick
+    Clips:
+    - {fileID: 8300000, guid: 55c7d1949d76a8f42882883788f36db6, type: 3}
+    - {fileID: 8300000, guid: 20b48f9682e40104d8146cd9e9a38a2a, type: 3}
+    - {fileID: 8300000, guid: 6ce94acea65514a43a254ae2e5ded324, type: 3}
+    - {fileID: 8300000, guid: 96a758342d59e96479055455ccd30602, type: 3}
+    - {fileID: 8300000, guid: 268a99aa4329fd549a3317badd2807d6, type: 3}
+    - {fileID: 8300000, guid: d02c26af1c995724a97cdaf915fc947c, type: 3}
+    - {fileID: 8300000, guid: 4ec6cdc752b5f92419df368c38aad6c8, type: 3}
+    Bus: 3
+    Volume: 0.8
+    VolumeVariance: 0.18
+    PitchVariance: 0.1
+    SpatialBlend: 1
+    MinDistance: 20
+    MaxDistance: 210
+    Priority: 120
+    Cooldown: 0.12
+  - Id: odyssey.sound.alert.starving
+    Clips:
+    - {fileID: 8300000, guid: f7674ef5cf57a0f408f9dd417ac6c26a, type: 3}
+    Bus: 4
+    Volume: 0.9
+    VolumeVariance: 0
+    PitchVariance: 0
+    SpatialBlend: 0
+    MinDistance: 1
+    MaxDistance: 500
+    Priority: 16
+    Cooldown: 2
+  - Id: odyssey.sound.campfire
+    Clips:
+    - {fileID: 8300000, guid: a97e41f278ac2b14b94ec85c94a90269, type: 3}
+    Bus: 2
+    Volume: 0.55
+    VolumeVariance: 0
+    PitchVariance: 0
+    SpatialBlend: 1
+    MinDistance: 15
+    MaxDistance: 110
+    Priority: 180
+    Cooldown: 0
+  Ambience:
+  - Id: odyssey.ambience.water
+    Clip: {fileID: 8300000, guid: db4ce4b9e2ee68a4eab64bb3fb83a8dc, type: 3}
+    Volume: 0.2
+    FadeSeconds: 2.5
+    MinDistance: 60
+    MaxDistance: 300
+  Music: []
+  Outdoor:
+  - Phase: 1
+    Clip: {fileID: 8300000, guid: 146226517b3d5ac4588dee666e9c96fd, type: 3}
+    Volume: 0.09
+    FadeSeconds: 6
+    ArrivalFadeSeconds: 10
+  - Phase: 2
+    Clip: {fileID: 8300000, guid: 087c085ebb2dc43469279a9aab0b7f80, type: 3}
+    Volume: 0.07
+    FadeSeconds: 8
+    ArrivalFadeSeconds: 10

@@ -403,6 +403,19 @@ namespace Odyssey.Presentation.World
         public ChipDirector? Chips { get; set; }
 
         /// <summary>
+        /// Raised on the frame a tool's blow lands, with the work style (index into
+        /// <see cref="WorkStyle.All"/>) and where the edge struck, in world space.
+        ///
+        /// The same moment the chips fly, published as an event because audio is not this
+        /// director's business and neither is anything else that wants the instant: the sound of
+        /// an axe and the sound of a pick are the same blow on a different tool, and the one
+        /// place that knows when a blow lands should not have to know everything that follows
+        /// it. Raised whether or not <see cref="Chips"/> exists, because a clone with no usable
+        /// particle shader still has working ears.
+        /// </summary>
+        public event Action<int, Vector3>? BlowLanded;
+
+        /// <summary>
         /// Whether the last <see cref="Sync"/> saw a world that was advancing.
         ///
         /// Read off the snapshot, never inferred, and public because it is the one bit of state
@@ -935,19 +948,24 @@ namespace Odyssey.Presentation.World
 
                 if (!figure.Landed) continue;
                 figure.Landed = false;
-                if (Chips == null || figure.Held.Transform == null) continue;
 
                 // Out of the cut, which is back towards whoever swung: an edge biting across the
                 // grain throws wood at the woodcutter, not away into the forest.
-                Vector3 edge = figure.Held.Transform.TransformPoint(figure.Held.BladeTip);
                 Vector3 outward = figure.Transform.position - figure.WorkCentre;
                 outward.y = 0f;
 
-                // Thrown from the face rather than from wherever the head stopped. See
-                // WorkStyle.ChipStandOff: the head finishes inside the thing it struck, which for
-                // a 2.5 m block of stone means the pieces are born inside solid rock.
-                if (look.ChipStandOff > 0f && outward.sqrMagnitude > 1e-6f)
-                    edge += outward.normalized * look.ChipStandOff;
+                // Where the blow lands: the blade's own tip when there is a blade, and the thing
+                // being struck when there is not.
+                //
+                // **A clone without the art packs fells trees bare-handed**, and an axe that is
+                // not in anyone's hands must not be what decides whether the work can be heard.
+                // This guard used to sit above everything here and take the sound with it, so a
+                // checkout with no Synty made no chopping noise at all, at any zoom — which is
+                // exactly the bargain the chips already refuse to make.
+                Transform? blade = figure.Held.Transform;
+                Vector3 edge = BlowPoint(
+                    blade == null ? null : blade.TransformPoint(figure.Held.BladeTip),
+                    figure.WorkCentre, outward, look.ChipStandOff);
 
                 // Which debris, chosen from the job the snapshot already publishes. This is the
                 // smallest possible version of what docs/design/12-work-poses-and-tools.md calls
@@ -956,8 +974,32 @@ namespace Odyssey.Presentation.World
                 // is that the contract needs no change because JobDef is published already. Only
                 // the chips are switched here; a pick in the hands and a stroke of its own are
                 // that piece of work, not this one.
-                Chips.Throw(look.Chips, edge, outward);
+                if (blade != null) Chips?.Throw(look.Chips, edge, outward);
+
+                // And the sound of the blow, on the same frame and from the same edge the chips
+                // leave. See <see cref="BlowLanded"/>.
+                BlowLanded?.Invoke(figure.Style, edge);
             }
+        }
+
+        /// <summary>
+        /// Where a blow lands, given the blade's tip if there is one.
+        ///
+        /// <para>Stood off from the face rather than left wherever the head stopped: the head
+        /// finishes <i>inside</i> the thing it struck, which for a 2.5 m block of stone means
+        /// debris born inside solid rock and a sound coming from within it.</para>
+        ///
+        /// <para>Static and public because it is the whole of the decision and none of the
+        /// scene: a test can ask what happens with no blade without building a figure, a rig or
+        /// a character to hang one on.</para>
+        /// </summary>
+        public static Vector3 BlowPoint(Vector3? bladeTip, Vector3 workCentre, Vector3 outward,
+            float standOff)
+        {
+            Vector3 point = bladeTip ?? workCentre;
+            if (standOff > 0f && outward.sqrMagnitude > 1e-6f)
+                point += outward.normalized * standOff;
+            return point;
         }
 
         /// <summary>

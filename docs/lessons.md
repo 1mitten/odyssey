@@ -770,6 +770,41 @@ conclusion: a stubbing experiment "proved" the suspect loop was innocent when in
 never been applied — the file was unchanged. Read the file back, or use the Edit tool, before
 believing an experiment that depends on an edit.
 
+## Driving the mouse in a PlayMode test: three silent failures, in order
+
+`OQ-40` was blocked for a week on "mouse input cannot be driven in a PlayMode test". It can. Three
+separate things stop it, each of which looks exactly like the others from outside, and none of
+which reports anything:
+
+1. **There is no mouse.** `Mouse.current` is null in a batch run: no window, no pointer, no device.
+   Queueing state at it does nothing, and `SliceCameraRig.ReadMouse` returns immediately when the
+   device is null, so nothing downstream can be reached. `InputSystem.AddDevice<Mouse>()` fixes it.
+2. **The device you add is disabled.** `backgroundBehavior` defaults to
+   `ResetAndDisableNonBackgroundDevices` and a batch player is never focused, so the device is
+   disabled and every event is dropped. Set `InputSettings.BackgroundBehavior.IgnoreFocus` and
+   enable the device. This one is also why an early attempt looked like it worked: between adding
+   a device and focus being applied there is a window where events do land, so the same test passed
+   when it ran first and failed when it ran second.
+3. **Nothing processes the queue, and a queued event does not survive the frame.** The player loop
+   never calls `InputSystem.Update()` in a batch run, and queueing in one frame and updating in the
+   next delivers nothing — queue and update have to be one act.
+
+Then there is the observation problem on top: **a test coroutine resumes after every `Update` has
+run**, so it is always too late to see a delta control, which is spent within the frame. A
+coroutine reading `mouse.scroll` therefore cannot tell "delivered and consumed by the game" from
+"never delivered at all". That is what made the earlier three tests pass vacuously.
+
+The answer is `MouseHarness` plus `InputPump` in `Tests/PlayMode`: a component at
+`DefaultExecutionOrder(-10000)` that takes posted state, queues **and** updates at the top of the
+frame, and records what the device read immediately afterwards. The game then reads it through its
+ordinary path later in the same frame, and the recording is what lets the harness fail loudly.
+
+**Assert the intent, not the smoothed value.** The first working version still failed: a notch
+moved the camera's *target* by six units but its drawn `distance` by 0.457, because the rig smooths
+exponentially and a batch player runs frames in about a millisecond. The same test would have
+passed on a machine running at sixty frames a second. `SliceCameraRig.TargetDistance` exists for
+this: it moves the instant input is read and does not drift, so the assertion and its control are
+both exact. Any frame-rate-dependent assertion is a flaky test waiting for a faster machine.
 ## Photographing a figure: the mesh is not square to its own root
 
 Three traps, all found in one afternoon building `GestureCheck`, and all three produced pictures
@@ -951,3 +986,220 @@ references in the project were the fresh ones, after `obj/` was cleared, and aft
 and the package assemblies, builds in seconds and answers the only question a handoff needs: do
 *these sources* agree with each other. Assembly-definition boundaries are then unverified, which is
 what `scripts/unity.sh test editmode` is for.
+
+## A generated file that is also committed fails silently when it goes stale
+
+`Assets/Scenes/Play.unity` is committed *and* generated — `PlayScene.cs` is the generator and the
+scene is its output. Add a component to the generator and the committed scene does not have it
+until somebody runs **Odyssey → Presentation → Build play scene**.
+
+Until they do, the feature is simply **absent**. No error, no missing reference, nothing in the
+console. It is indistinguishable from a broken feature, and that is exactly how it was read: the
+designate tool was reported as "nothing happened" and "I couldn't mark anything", when in truth
+nothing was there to respond. A playtest round was spent on it.
+
+The same trap caught the same session twice over, in two forms:
+
+- **The owner's checkout was 22 commits behind** and the build under test predated every change
+  being tested. Three further observations — a pause that reset a walker to standing, colonists
+  repeating a bad move, animations "a mess" — were all faithful reports of bugs that had already
+  been fixed on `main`. **Before reading a playtest report, confirm the commit it was taken
+  against.** `git log --oneline -1` in their checkout costs nothing and reframes everything.
+- **"git pull" was written as one bullet in a list of steps**, and the whole exercise depended on
+  it. A step that everything hinges on is not a bullet; and handing over instructions in the same
+  message as the merge they depend on guarantees a race.
+
+Two rules follow.
+
+- **A generated artefact under version control needs a staleness check, not a convention.** The
+  wiki and the label registry already have one — `build_wiki.py --check` and `emit_labels.py
+  --check` exit 1 when the output does not match the source, and both are CI gates. The play scene
+  has no equivalent. Until it does, `OdysseyBootstrap.WarnIfTheSceneIsStale` at least turns silence
+  into a console line naming the menu item.
+- **Warn, do not self-heal.** Adding the missing component at runtime would paper over a scene
+  that may be stale in ways the check cannot see — the camera rig, the lighting, the module
+  catalogue. The useful signal is "rebuild the scene", not "one thing was quietly patched".
+## The CI runner is the owner's machine, and a timing test cannot tell you apart from a regression
+
+`HudStressTests.Adr0003_F1_TheDenseHudHoldsItsBudgetAndAllocatesNothing` failed on CI —
+**expected under 1.167 ms, measured 2.000 ms** — on a commit whose PlayMode tier had passed 8/8
+in a worktree minutes earlier. Nothing in the change touched the HUD. Re-running the same job on
+the same commit was green.
+
+The cause is that the Unity tier's self-hosted runner **is the Windows dev machine**, so
+`scripts/unity.sh test` in a worktree and the CI job are two Unity instances competing for one
+CPU and one GPU. A frame-budget assertion cannot distinguish "the code got slower" from "somebody
+else was compiling shaders", and it fails in the direction that looks like a regression.
+
+- **Before pushing, stop running Unity locally**, or expect to re-run the job. The window that
+  matters is the minute or two after the push, which is exactly when it is tempting to keep
+  working.
+- **A timing failure on CI that passes locally on the same commit is contention until proved
+  otherwise**, and the proof is one `gh run rerun --failed`. Do not start bisecting a performance
+  regression that the next run will not reproduce.
+- **Read the whole report before believing the headline.** The run that failed also carried
+  `EditMode 696 total, 694 passed, 0 failed`, identical to the local run — which already said the
+  change was innocent and narrowed it to one timing assertion.
+## A scene rebuild in a packless worktree quietly guts the art catalogue
+
+`scripts/unity.sh exec Odyssey.EditorTools.PlayScene.Build` does what it says and also rewrites
+`Assets/Odyssey/Presentation/ModuleCatalogue.asset`. In a worktree with no `Assets/Synty` — which
+is every worktree that has not had the junction from the lesson above — every Synty prefab
+reference in that asset is resolved against nothing and written back as `{fileID: 0}`. On
+2026-09-16 that was 501 lines changed, the whole catalogue reduced to names with no art, and the
+run **exited zero and said nothing**. `git add -A` would have committed it, and the next person to
+open the main checkout would have had a colony of grey boxes with no failing test to explain it.
+
+Three things make this worth a section rather than a footnote.
+
+- **It looks like ordinary Unity churn.** The same run also re-serialises `OdysseySky.mat`,
+  `HudPanelSettings.asset` and `ProjectSettings/ShaderGraphSettings.asset` with no content change
+  at all. Three harmless files and one catastrophic one arrive in `git status` together, and the
+  catastrophic one is not the one with the alarming name.
+- **The tests do not catch it**, and cannot. The catalogue is licensed art, the fast tier never
+  loads it, and the whole point of the clean-room rule is that the simulation runs without it.
+  A green tier here means the code is fine, not that the commit is.
+- **The scene itself is not damaged**, which makes the diff misleading. `Play.unity` keeps its
+  catalogue reference by GUID and only renumbers its fileIDs, so reading the scene diff reassures
+  you about the wrong file.
+
+**So: after any editor command in a worktree, diff the assets it touched before staging anything,
+and never `git add -A` on the strength of an exit code.** If the catalogue is in the list, either
+revert it or make the junction first and rebuild. Reverting is right whenever the catalogue is not
+what you changed — `git checkout -- Assets/Odyssey/Presentation/ModuleCatalogue.asset` — because a
+catalogue rebuilt without the packs can never be more correct than the committed one.
+
+## A generated asset and its generator had drifted apart, and only a rebuild said so
+
+Worse than the packless rebuild above, because it survives having the packs. On 2026-09-16 the
+committed `ModuleCatalogue.asset` held a `terrain.marsh` row with the bare-earth material, and
+`PlayScene.cs` — the only thing that writes that asset — had stopped emitting it. It also emitted a
+`tool.hammer` row the asset did not have. So the asset was simultaneously ahead of and behind its
+own generator, and had been for as long as nobody rebuilt it.
+
+Nothing could have caught this. The asset is licensed art, so no test loads it; the generator is
+editor tooling, so no test runs it; and both sides were individually valid. The only symptom
+available was a diff, and only if somebody rebuilt and then read it rather than staging it.
+
+The damage it was holding: marsh terrain resolves `odyssey.module.terrain.marsh` through
+`NaturalContent`, so the next rebuild would have dropped marsh to the untextured fallback — the
+dark olive slab that reads as shadow, which is exactly the fault the water work had gone and fixed.
+A rebuild for an unrelated reason would have quietly undone it, weeks later, with no failing test
+and nothing in the commit to connect the two.
+
+**The rule this suggests is narrow and worth keeping: a generated asset that is committed must be
+rebuilt by whoever changes its generator, in the same commit.** And when a rebuild's diff shows a
+row *disappearing*, that is never churn — a generator emits what it is told to emit, so a missing
+row means the instruction went missing. Read the diff for absences, not just for changes.
+
+## URP keeps post-processing per camera, and a camera built in script has it off
+
+Two days of this project's screenshots were of an ungraded image and nobody could have known. URP
+stores `renderPostProcessing` on the camera's `UniversalAdditionalCameraData`, and a camera created
+with `AddComponent<Camera>()` gets it **false**. Every contact-sheet tool here builds its own camera,
+so every photograph ever taken by one had no volume applied. That was harmless while the project had
+no volume at all, and became actively misleading the moment there was a grade to look at: the first
+golden-hour contact sheet showed the lighting change and none of the warmth, which reads exactly
+like the grade not working.
+
+The same default made a *measurement* lie, which is worse than a picture lying. `FrameTimeTests`
+builds its own camera too, so the first run after the grade landed reported it as costing almost
+nothing. That was a true statement about a frame the player never sees. A perfectly green test tier
+said the effect was free.
+
+Both are fixed at the source — `PlayScene.Shoot` and the frame-time harness now switch post on, and
+the harness attaches the profile and uses the real sun angle, since shadow length is height over the
+tangent of elevation and the old steep sun understated the shadow pass by most of its cost.
+
+**The general rule: when a harness builds its own camera, lights or volumes, list what the real
+scene has that the harness does not.** A harness is a claim that it resembles the game, and every
+default it silently takes is a way for that claim to be false while every test passes.
+
+## A volume profile written from code saves five nulls unless you add the components to the asset
+
+A `VolumeComponent` is a `ScriptableObject` in its own right, and `VolumeProfile.Add<T>()` only
+creates one in memory. Saved without `AssetDatabase.AddObjectToAsset`, the profile serialises its
+`components` list as five entries of `{fileID: 0}` — 571 bytes of an asset that holds nothing. The
+correct file is 4,853 bytes with six `MonoBehaviour` blocks in it, which is the cheapest way to tell
+the two apart without opening Unity.
+
+It is the same fault as a renderer feature appended to a `ScriptableRendererData` without being
+added to its asset, recorded above, and it fails the same way: no error, no warning, the effect
+simply never runs.
+
+**What makes this one nastier is that it hides from its own verification.** The editor command that
+writes the profile also builds the components in memory, so any screenshot taken in that same run
+shows the grade working perfectly. The broken half only appears in a session that did not write the
+file — a later run, a player build, or the owner pressing Play tomorrow. Two contact sheets were
+taken off a profile that was empty on disk, and both looked right.
+
+**So when code writes an asset, check the file, not the picture.** `grep -c "fileID: 0}"` on the
+result costs nothing and answers it exactly.
+
+## Writing RenderSettings every frame costs half a millisecond, even when nothing changed
+
+The day/night cycle sets the sun, the ambient colours and the fog from the tick. Driven from
+`Update` that is sixty writes a second, and at speed 1 a frame advances the clock by one tick —
+four ten-thousandths of an hour, a change no colour channel can even hold. So almost every write
+was setting a value to what it already was.
+
+It was not free. The frame-time test put the meadow at **2.14 ms with the cycle against 1.66 ms
+without**, and a guard that skips the whole apply unless the hour has moved by a fiftieth of that
+step took it to **1.71 ms**. Roughly **0.43 ms a frame** for writes that changed nothing.
+`RenderSettings.ambientSkyColor` and friends are not plain fields; they are engine state with work
+behind them, and assigning the same value is not free.
+
+Two things generalise:
+
+- **A per-frame write of a value derived from game time is almost always redundant**, because game
+  time moves far more slowly than frames do. Guard on the input having changed, not on the output
+  looking different — comparing colours is more work than comparing one float.
+- **It was only found because a test measures the real frame.** Nothing was wrong: no error, no
+  visual fault, every test green, and the cycle looked perfect in every screenshot. The only
+  symptom available was a number that had moved, which is the entire argument for having the number
+  in the first place.
+
+## A PlayMode test cannot press a mouse button, and the suite said it could
+
+`MouseHarness` carries three documented failure modes, each measured, each fixed, each guarded by
+an assertion so it can never come back in silence. It looked like a finished piece of work. It was
+not: **no PlayMode test in this project has ever delivered a mouse press**, so every world gesture —
+click-to-inspect, box-select, drag-to-designate — has been untestable since the rig was written.
+
+**Why it stayed hidden.** The three fixed failures were all about state *arriving*, and the two
+gestures that had callers, `Scroll` and `MoveTo`, read plain values. **Reading a value has no frame
+gate; every edge property does.** `wasPressedThisFrame` is gated on
+`InputDevice.wasUpdatedThisFrame`, and that asks whether the device was updated in a *player*
+update. A PlayMode test runs inside the editor, where the update type is `Editor`. So the button
+goes down, `isPressed` reads true, and the press edge the game reads never exists at all.
+
+The measurement, which is the only reason any of this is known rather than argued:
+
+```
+press edges 0, release edges 0, deliveries with the button down 1,
+deliveries the device counted as this frame 0
+mode=ProcessEventsManually updateType=Editor
+```
+
+**Three method notes, in the order they cost time.**
+
+- **An unexercised helper is not code, it is a plan.** `Click` had shipped with no assertion and no
+  caller. The first test to call it failed, and four rounds of debugging went into the *product*
+  before anyone asked whether the harness worked — during which the real finding, that the rig
+  raised no gesture at all while the picker resolved the same point perfectly, read as an
+  impossible result rather than as the obvious symptom of a press that never happened.
+- **Assert what the helper claims, not what is convenient to check.** `Scroll` and `MoveTo` assert;
+  `Click` did not, and it is the one that was broken. A gesture helper should verify the thing the
+  game actually reads. `Click` now asserts the button went down, which is genuinely not enough —
+  it passes today while the edge never fires — and the docstring says so, because an assertion that
+  covers a third of a helper's claim is worth having only if nobody mistakes it for the whole.
+- **`[Ignore]`, never `Assume`.** `AClickIsSeenAsAPressAndARelease` is ignored with the reason in
+  the attribute, so it is visible in every run. An `Assume` would skip it in silence, which is
+  precisely how six `MineJobTests` sat dead on main — the trap this file already documents, walked
+  into again the same day by the person who wrote it down.
+
+**Still open, with one untried lead.** Setting `ProcessEventsManually` applied and changed nothing,
+because the mode is not what decides the update type. The next thing to try is asking for a player
+update explicitly — `InputSystem.Update(InputUpdateType.Dynamic)` in `InputPump` rather than the
+bare `InputSystem.Update()`, which resolves to `Editor` in this context. Un-ignore that test to find
+out.

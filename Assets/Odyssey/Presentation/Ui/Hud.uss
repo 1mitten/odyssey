@@ -726,3 +726,38 @@
     border-color: rgba(255, 255, 255, 0.9);
     background-color: rgba(255, 255, 255, 0.12);
 }
+
+/* ---------------------------------------------------------------- B17 settings */
+
+/* Centred on the screen, and deliberately narrow: it holds a short list of switches, not a
+   settings tree. Not a modal, so there is no scrim behind it and the board stays visible and
+   running underneath, which is the whole reason to open it. */
+.settings {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    width: 268px;
+    padding-bottom: 6px;
+}
+
+.settings__section {
+    color: #63758a;
+    font-size: 10px;
+    margin: 6px 8px 2px 8px;
+}
+
+/* One switch per line, filling the panel, so the lit state reads as a row rather than as a pill
+   floating in the middle of one. */
+.settings__row {
+    justify-content: flex-start;
+    margin: 2px 8px;
+    padding: 4px 6px;
+}
+
+.settings__note {
+    color: #63758a;
+    font-size: 9px;
+    white-space: normal;
+    margin: 6px 8px 0 8px;
+}
