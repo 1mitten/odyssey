@@ -18,7 +18,8 @@ namespace Odyssey.Tests.PlayMode
         public IEnumerator Trace()
         {
             var log = new StringBuilder();
-            Mouse mouse = Mouse.current ?? InputSystem.AddDevice<Mouse>();
+            using var harness = new MouseHarness();
+            Mouse mouse = harness.Device;
             log.Append($"focused={Application.isFocused} batch={Application.isBatchMode} ");
             log.Append($"device={mouse.name} enabled={mouse.enabled} added={mouse.added} ");
             log.Append($"bg={InputSystem.settings.backgroundBehavior} update={InputSystem.settings.updateMode}; ");
@@ -42,7 +43,8 @@ namespace Odyssey.Tests.PlayMode
                     for (int frame = 0; frame < 4; frame++)
                     {
                         yield return null;
-                        log.Append($"f{frame}: scroll={mouse.scroll.ReadValue().y:F2} d={rig.distance:F3}; ");
+                        log.Append($"f{frame}: on={mouse.enabled} scroll={mouse.scroll.ReadValue().y:F2} " +
+                                   $"pos={mouse.position.ReadValue().x:F0} d={rig.distance:F3}; ");
                     }
                 }
 
