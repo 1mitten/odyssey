@@ -984,3 +984,24 @@ Two rules follow.
 - **Warn, do not self-heal.** Adding the missing component at runtime would paper over a scene
   that may be stale in ways the check cannot see — the camera rig, the lighting, the module
   catalogue. The useful signal is "rebuild the scene", not "one thing was quietly patched".
+## The CI runner is the owner's machine, and a timing test cannot tell you apart from a regression
+
+`HudStressTests.Adr0003_F1_TheDenseHudHoldsItsBudgetAndAllocatesNothing` failed on CI —
+**expected under 1.167 ms, measured 2.000 ms** — on a commit whose PlayMode tier had passed 8/8
+in a worktree minutes earlier. Nothing in the change touched the HUD. Re-running the same job on
+the same commit was green.
+
+The cause is that the Unity tier's self-hosted runner **is the Windows dev machine**, so
+`scripts/unity.sh test` in a worktree and the CI job are two Unity instances competing for one
+CPU and one GPU. A frame-budget assertion cannot distinguish "the code got slower" from "somebody
+else was compiling shaders", and it fails in the direction that looks like a regression.
+
+- **Before pushing, stop running Unity locally**, or expect to re-run the job. The window that
+  matters is the minute or two after the push, which is exactly when it is tempting to keep
+  working.
+- **A timing failure on CI that passes locally on the same commit is contention until proved
+  otherwise**, and the proof is one `gh run rerun --failed`. Do not start bisecting a performance
+  regression that the next run will not reproduce.
+- **Read the whole report before believing the headline.** The run that failed also carried
+  `EditMode 696 total, 694 passed, 0 failed`, identical to the local run — which already said the
+  change was innocent and narrowed it to one timing assertion.

@@ -371,6 +371,49 @@ after a rebuild, republish `docs/wiki/artifact.html` and
     the lesser one — the alternative is presentation reaching into job timing.
     `AFelledTreeIsFollowedThroughRatherThanSnappedOutOf` **asserts** that relation rather than
     assuming it, so zeroing the def fails the tier instead of quietly skipping it.
+- **The game has sound, 2026-09-16** (ADR 0010, research `d-12-audio.md`; plan unit U33 in vertical-slice.md's "After the slice" section — audio playback was in no plan before this). `AudioDirector` (`Presentation/Audio/`) is a presentation **director** in the ChipDirector sense: it owns every AudioSource in the game, reads only the published frame and the render mirror, and no sound is a cell, a save key or a hash bit. **Pooled voices, culled before they are spent:** sixteen AudioSources serve the whole colony — work impacts fire from `PawnFigureDirector.BlowLanded` (the same stroke moment the chips fly, with the style and the edge position), distance-culled by each def's max range, repeat-gated per sound id (five woodcutters near the camera are one rhythm section), stolen only from lower-priority voices, with pitch/amplitude variance because an identical sample is recognisably identical. **Ambience is measured, not placed:** `AmbienceProbe` samples the terrain mirror in a disc around the *camera's focus* (not the camera, which is tens of metres in the air), water cells weighted by proximity, saturating at "clearly full water", the bed's one 3D voice placed at the weighted centroid so a river pans as the camera orbits; layer-aware — water under a descended slice's floor is not heard. **Music and alerts are 2D:** day/night tracks crossfaded from the tick through `GameClock` (two ping-ponged voices, never a gap); the starving alert is raised off the published pawn list by `AlertWatch` with hysteresis (chimes once at a crossing, re-arms past 30%), and every alert ducks the music. **Buses in code, gains in dB:** Master/Music/Ambience/Effects/Alerts, the mixer's concept set with the mixer's math and no mixer asset (no supported API creates one; adopting a real mixer later is per-voice routing plus moving `SetBusDb` — the stored settings keep their meaning). Volume settings are the **B17 stub**, dB faders in PlayerPrefs (`AudioSettingsStore`). **Clips are generated placeholders** (`scripts/unity.sh exec Odyssey.EditorTools.AudioSetup.Build` writes eight synthesised WAVs and the `AudioCatalogue` asset; import classes per the manual — PCM decompressed for impacts, ADPCM for the water bed, Vorbis streamed for music), so a clone without them runs silent and licensed audio drops in as data with zero code change. Tests: EditMode for math/probe/clock/watcher/director (stepped on the director's own clock, so edit and play mode answer identically) plus a PlayMode smoke test. The dev overlay (backtick) carries the audio counters.
+  - **A voice is spatialised from the transform it shares, and they all shared one.** Every
+    AudioSource was a component of a single GameObject, so writing a one-shot's position moved the
+    lot — the axe sounded from wherever the last sound was written, and the water bed dragged every
+    one-shot along as its centroid moved. A GameObject per voice. The test that passed through it
+    played one sound; one sound cannot disagree with itself.
+  - **The water bed was silent on every map the game generates.** The probe sampled terrain at the
+    slice layer, which is the air a colonist stands *in* — terrain belongs to the solid cell under
+    it, and a channel is settled one layer below the dry surface. The fixture agreed with the bug
+    by putting its pond on the layer it probed. It reads the slice layer and the floor underfoot
+    now: two layers, not the column, so a descended player still does not hear the river through
+    rock.
+  - **Two kinds of ambience, because there are two questions.** The water bed answers *how much of
+    this is near me*; the **outdoor bed** answers *where am I*, which is not a quantity — it plays
+    flat above the surface, is silent below it, and changes with the clock rather than the terrain.
+    One loop per phase crossfaded at dawn and dusk, 2D because it is the air itself, on the
+    Ambience bus, under everything as the floor of the mix (day 0.34, night 0.26). Music and the
+    outdoor bed are the same shape of thing, so `PhaseLoop` is one class used twice: the
+    ping-ponged pair, each track's own fade length, and the rule that the incoming voice is the one
+    *not* fading out.
+  - **The id lookup was the whole cost and it grew with the catalogue.** `AudioCostTests` measures
+    the frame: a full `Sync` over the played board is **0.0035 ms**, and forty one-shots offered in
+    one frame — four times the colony the slice will run — went **0.1527 → 0.0050 ms** against 252
+    sounds once the director indexed the catalogue by id, keyed the cooldown by the def rather than
+    its id, and moved the rolloff curve from every play to construction. The price no longer moves
+    with the table's size; a 0.05 ms budget in the tier keeps it that way. The probe was left alone
+    — 225 samples a frame is 0.0035 ms, so throttling it would optimise nothing.
+  - **Real audio arrives as files, and the tool used to eat them.** `AudioSetup.Build` rewrote all
+    the WAVs every run, so sourced audio under the names the catalogue reads would be replaced by
+    the synthesised stand-in; a file that exists is never written now, and wiping the folder is its
+    own menu item that asks first. `forceToMono` was applied to every clip and is now a property of
+    the clip's use, so stereo music keeps its image. A sound takes variants — `chop_01.wav` beside
+    `chop.wav`, up to sixteen, picked at random per blow. **What to source and what to call it is
+    `docs/reference/audio-sourcing.md`**: eight files, lengths, which loop, which are mono, and why
+    WAV rather than OGG or MP3 (the source is re-encoded on import, so a lossy master only stacks
+    artefacts).
+  - **Open: the ears are on the camera, which is 32–160 m from the ground.** The cull and the
+    rolloff are measured from the listener, while the catalogue authors ranges as ground distances
+    (chop at 48 m), so a colonist felling a tree dead-centre in frame plays at about a fifth gain
+    at the default zoom and is culled outright past it. The fix is either to move the listener to
+    the camera's focus — the usual answer, and what makes the authored numbers mean what ADR 0010
+    says — or to re-author the ranges as camera-relative. Owner's call; it changes how the whole
+    game sounds.
 - **Sim vs UI vocabulary is deliberate:** simulation systems are *subsystems*, presentation-side coordinators are *directors* (`01-architecture.md` §3a). Do not unify the two words.
 - **Phase 3 (design): complete 2026-09-15.** `docs/design/` 00, 01, 02, 03, 04, 05, 06, 07, 08; ADRs 0001, 0002, 0005; and the execution plan `docs/plans/vertical-slice.md` (32 units, M0→M3). **The Phase 3 → Phase 4 hard stop was cleared by the owner on 2026-09-15; execution is under way.**
 - **Interface, icons and content naming (the UI line of work), 2026-09-15.** Design `09-ui-and-input.md`, `10-ui-panel-catalogue.md`, `11-icon-library.md`; ADRs 0003 UI framework, 0004 sim-to-UI contract, 0006 layer visibility, 0007 pixel-art icon pipeline; research `g-01`, `g-02`; mockups `hud-v1.html` (historical) and `hud-v2.html` (current). **Layer visibility decided:** x-ray by default with six modes shipped for playtest, amended by Lane B so that nothing above the active slice is ever a pointer target. **Icons:** 382 keys enumerated, 268 mapped to the owner's eight pixel-art sheets, 114 gaps listed in `11-icon-library.md` — the largest being people, since no sheet contains a human figure. **Names:** all 29 proper nouns proposed and awaiting the owner's veto, in `docs/design/proper-nouns.csv`.
