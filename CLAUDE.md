@@ -68,7 +68,17 @@ after a rebuild, republish `docs/wiki/artifact.html` and
   planned — colonists walk, chop and have needs, mood and skills; a colony survives ten headless days
   on three seeds; there is a HUD, a naming registry, terrain relief, water and a work-pose system,
   none of which the plan asked for. M3 has started ahead of itself: designations, felling and
-  stockpiles are in and mining is written on `claude/mines`, unmerged. **`OQ-20` closes M2.**
+  stockpiles are in and mining is written on `claude/mines`, unmerged. **M2 is closed and
+  reported: `docs/milestones/M2-report.md` (OQ-21, 2026-09-16).** All five parts of the standing
+  gate are green — EditMode 494/492, PlayMode 7/7, a 60,000-tick day ending on hash
+  `e134005c5408818d` under *both* Mono and CoreCLR, the save round trip on a real world, and three
+  ten-day seeds clean. The demo asserts the milestone's own claim at last: with `OQ-47` a scenario
+  names the storey a thing goes on, so the beds are a floor up and the food two, every colonist
+  changes storey across the day, and **the control is a test** —
+  `ADayOnOneFloorNeverTouchesAStair` runs the same day with the offsets removed and asserts nobody
+  moves. Two things are green but not clean, both in §5 of the report: `OQ-05` is open, so
+  cross-runtime determinism is a measurement rather than a standing test, and the city's frame time
+  moved from 0.88 ms to 1.56 ms unexplained (`OQ-43`).
   **Before more features, `OQ-44` to `OQ-46` open the seams** — the mining line is 73 files and had
   to edit six shared files to add itself, five of which should have been extension points. The
   reasoning and the order are in `docs/plans/vertical-slice.md` under "Where the seams are".
