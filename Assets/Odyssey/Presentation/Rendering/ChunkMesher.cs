@@ -400,6 +400,12 @@ namespace Odyssey.Presentation.Rendering
         public bool Earth { get; set; } = true;
 
         /// <summary>
+        /// Let banks grow inside a working, as they did before the cut-face rule. Off, and it
+        /// exists so the check harness can photograph the fault rather than describe it.
+        /// </summary>
+        public bool BanksInWorkings { get; set; }
+
+        /// <summary>
         /// A stepped earth bank in this empty cell, for each one-layer step beside it that a
         /// colonist could walk up.
         ///
@@ -521,7 +527,23 @@ namespace Odyssey.Presentation.Rendering
             // Something underfoot: the top of the lower terrace. Terrain rather than solidity, so a
             // bank may also shelve down into the water it stands beside — a channel is cut one
             // layer down, which makes every stream bank one of these steps.
-            if (_model.Terrain(index - size.LayerStride) == CoreContent.TerrainAir) return false;
+            int floor = index - size.LayerStride;
+            if (_model.Terrain(floor) == CoreContent.TerrainAir) return false;
+
+            // **Nothing grows inside a hole the colony cut**, and the floor is what says so: a
+            // mined cell reveals all six of its solid neighbours, and the one below it is the
+            // floor the miner is left standing on. So a cut floor is the mark of an excavation on
+            // the very cell a bank would fill.
+            //
+            // The same test on the sides (see IsStep) is not enough on its own, and the shortfall
+            // is worth recording because it is invisible in the obvious case. A cell cut out of
+            // flat ground has all four of its sides revealed, so StepsAround comes back empty —
+            // and the hip branch then went looking at the *diagonal* neighbours, which nothing
+            // reveals, because a colonist who cuts past the corner of a seam has not seen into
+            // it. So the hole filled with a hip piece instead of a corner one: measured, a single
+            // cut cell still drew 1 bank and a four-cell bench still drew 2. Asking the floor
+            // catches every shape of working at once, whatever its sides happen to say.
+            if (!BanksInWorkings && _model.IsCutFace(floor)) return false;
 
             return OpenToTheSky(index, y);
         }
@@ -535,6 +557,23 @@ namespace Odyssey.Presentation.Rendering
 
             int step = size.Index(nx, nz, y);
             if (!_model.IsSolid(step) || !_model.IsEarth(step)) return false;
+
+            // **A face somebody cut stays sheer, even in soil.**
+            //
+            // The terrain test above is not enough, and the gap was a reported bug: grass, bare
+            // earth and subsoil are all mineable (60, 60 and 160 ticks to clear), so a quarry sunk
+            // into the meadow is a hole whose walls are earth with open tops — every condition a
+            // terrace step has. A bank therefore grew in the cut cell itself, filling it from its
+            // floor to the rim with a stepped ramp, and the miner standing in it to cut the next
+            // face was drawn up to the chest in ground. The owner's report was that colonists
+            // disappear where people are mining.
+            //
+            // Refusing it here rather than in CanBank covers the whole of it with one test,
+            // because mining a cell reveals all six of its solid neighbours: whichever side of a
+            // cut cell you ask about, the step is a cut face. It also refuses the smaller lie on
+            // its own terms — a grassy ramp spilling down a quarry wall is exactly the same claim
+            // about cut rock that the terrain test already rejects.
+            if (!BanksInWorkings && _model.IsCutFace(step)) return false;
 
             // Its top has to be open, or this is the wall of a tunnel rather than a terrace.
             return !_model.IsSolid(step + size.LayerStride);

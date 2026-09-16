@@ -57,6 +57,24 @@ namespace Odyssey.Tests.Presentation
             return this;
         }
 
+        /// <summary>
+        /// Take a cell out of the world the way a miner does: the terrain goes, the solid flag
+        /// goes, and everything solid touching it is now a face the colony has cut.
+        ///
+        /// <para>The reveal is <c>CellGrid.RevealAround</c> itself rather than a hand-set flag,
+        /// because the thing being tested is precisely that presentation reads the mark mining
+        /// leaves. Nothing else <c>MineJob.MineCell</c> does — the yield, the nav dirtying, the
+        /// people and items that fall down the hole — has any bearing on what the mesher draws.</para>
+        /// </summary>
+        public RenderTestWorld Mine(int x, int z, int y)
+        {
+            int index = Index(x, z, y);
+            Grid.Terrain[index] = CoreContent.TerrainAir;
+            Grid.Flags[index] &= ~CellFlags.SolidTerrain;
+            Grid.RevealAround(index);
+            return this;
+        }
+
         public RenderTestWorld Edifice(int x, int z, int y, ushort def, bool blocking = true)
         {
             int index = Index(x, z, y);

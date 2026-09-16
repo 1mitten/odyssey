@@ -136,6 +136,13 @@ namespace Odyssey.Presentation.Rendering
             set => _mesher.Earth = value;
         }
 
+        /// <inheritdoc cref="Banks"/>
+        public bool BanksInWorkings
+        {
+            get => _mesher.BanksInWorkings;
+            set => _mesher.BanksInWorkings = value;
+        }
+
         /// <summary>
         /// Off, everything happens except the submission itself. That makes the draw-call and
         /// instance counts measurable in a headless editor run with no graphics device, which is

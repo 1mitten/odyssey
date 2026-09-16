@@ -119,6 +119,25 @@ namespace Odyssey.Presentation.World
         public bool IsBlocking(int index) => (_flags[index] & (byte)CellFlags.BlockingEdifice) != 0;
 
         /// <summary>
+        /// Has the colony cut into this cell — is what you can see of it a face somebody made?
+        ///
+        /// <para>This is <see cref="CellFlags.Discovered"/> read for its other meaning, and the
+        /// two are coextensive rather than merely similar: the flag is set by
+        /// <c>CellGrid.RevealAround</c>, <c>RevealAround</c> is called from exactly one place
+        /// (<c>MineJob.MineCell</c>), and worldgen sets it on nothing at all — not even the ore
+        /// lining a cavern nobody has been in. So a solid cell carries it if and only if a
+        /// colonist has taken the cell next to it out of the world.</para>
+        ///
+        /// <para><b>The coupling is worth stating because it could be broken from a distance.</b>
+        /// A deep scanner, or any future way of learning what rock is made of without cutting it,
+        /// would set the flag on ground nobody has touched and this would quietly start calling
+        /// hillsides quarries. If that day comes, the cut face wants a bit of its own and this
+        /// method is the one place that changes. <c>BankMeshTests.AQuarryInEarthKeepsItsSheerFace</c>
+        /// is what fails.</para>
+        /// </summary>
+        public bool IsCutFace(int index) => (_flags[index] & (byte)CellFlags.Discovered) != 0;
+
+        /// <summary>
         /// Does this cell hide the face towards it, so no panel need be drawn there?
         ///
         /// Doors count, which is not obvious and matters: a door is deliberately *not* blocking

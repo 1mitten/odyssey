@@ -264,6 +264,37 @@ after a rebuild, republish `docs/wiki/artifact.html` and
   one-layer step on the board rather than being told where one is, and sweeps six conditions
   differing by one thing each. Design: `06-rendering-and-camera.md` §2c. **Frame time still needs
   `FrameTimeTests`** on a machine with the packs.
+  - **Nothing grows inside a working, and that was a reported bug** (owner, 2026-09-16: *"there is
+    a bug with the new terrain where there is mine sites, the terrain is curved and so when people
+    are mining — you can't see the colonists"*). The bank rule's "the step is earth" reads as
+    though it had already covered a quarry and it does not: grass, bare earth and subsoil are all
+    mineable (60, 60 and 160 ticks to clear), so a hole cut into the meadow has earth walls with
+    open tops, which is every condition a terrace step has. **A bank grew in the cell that had just
+    been cut**, filling it from its floor to the rim, and the miner standing in it was drawn up to
+    the chest in ground. Measured on the played board: a 3 × 3 pit one layer deep grew **8** banks
+    and swallowed **one of the five** colonists whole.
+  - **The mark is `CellFlags.Discovered`, read for its other meaning**, through
+    `WorldRenderModel.IsCutFace`. The two are coextensive rather than merely similar: the flag is
+    set by `CellGrid.RevealAround`, which is called from exactly one place
+    (`MineJobDriver.MineCell`), and worldgen sets it on nothing at all. So no new sim state, no new
+    saved bit, and a loaded game draws the same pit. If a deep scanner ever reveals rock nobody has
+    cut, `IsCutFace` is the one place that changes.
+  - **It has to be asked of the floor, not only of the sides**, and the shortfall is invisible in
+    the obvious case: mining a cell reveals all six of its solid neighbours, so a cut cell's four
+    sides are all cut faces, `StepsAround` comes back empty, and the **hip** branch then looks at
+    the *diagonal* neighbours, which nothing reveals. Guarding only the sides still drew 1 bank for
+    one cut cell and 2 for a four-cell bench. A mined cell's floor is revealed too, so asking the
+    floor catches every shape of working at once.
+  - **Still open: a colonist standing on a *natural* bank is waist-deep in it**, because a bank
+    fills its cell and a pawn is drawn at the middle of its cell. There the ramp is the picture of a
+    hop and must stay; the answer is to lift the drawn figure onto `BankMesh.HeightAt` the way
+    `GroundRelief` already lifts it onto the rolling field, and it is not done.
+  - Judge it with **`Odyssey → Presentation → Check a quarry`**
+    (`scripts/unity.sh shot Odyssey.EditorTools.QuarryCheck.Run`), which cuts a 3 × 3 pit **under a
+    colonist's feet** — `MineCell` steps whoever was standing on a cell down onto the floor it just
+    cut — and shoots it with `ChunkRenderer.BanksInWorkings` on and then off. It prints how many
+    colonists are standing in a bank, which is the number the whole thing is about. Five new
+    `BankMeshTests` and 752 EditMode (750 passed, 0 failed) with it.
 - **Colonists swing an axe, and no pack contains the clip, 2026-09-16.** There is no work animation anywhere in the 7,222 imported assets — `AnimationBaseLocomotion` ships idle, walk, run, sprint, crouch, in-air, turns, transitions and additive lean/look, and the character packs ship none — so a colonist felling a tree stood breathing in the idle for ten seconds and then the tree fell over. The pose is therefore **computed rather than authored**: every character is a Humanoid rig, so `WorkSwing` (`Presentation/World/`) turns a stroke phase into shoulder, elbow and spine angles, and `PawnFigureDirector` pitches those five bones **about the figure's own right-hand axis, never the bone's local axis** (local axes belong to whoever rigged the character; the plane an axe swings in is a fact about the figure), laid over whatever the gait mixer wrote. **The signs are not one convention**: an arm hangs down so a negative pitch carries it forward, a spine stands up so a positive one folds it forward, and the director subtracts the spine's pitch back out of the shoulders so the three angles are genuinely independent. The stroke is three unequal parts — long eased raise, short accelerating strike, dwell with the blade in the wood — because a sine reads as a metronome. It eases in and out over `WorkEaseSeconds`, and it **freezes when the game is paused**, inferred from the tick standing still: a paused pawn settles into the idle by itself, so a swinging colonist would otherwise be the only thing moving. The axe is an ordinary catalogue row, `ModuleIds.ToolAxe` (`SM_Gen_Wep_Axe_01`), parented to the right hand only while the work lasts; a clone without the packs fells trees bare-handed. It is **gripped by measurement, not by authored Euler angles**: the haft is the long axis of the combined mesh bounds, the head is the end the mass sits towards, the tool is laid along the forearm with the grip in the palm, and the blade's roll is computed so the bit faces the way the head is travelling — leaving `AxeBladeRoll` as a trim. **Both hands grip it**, the off hand placed by a two-bone IK solve (`ArmIk`), because no pair of angles will ever bring the second fist to a haft held in the first. And `WorkStance` draws a working figure **wherever puts its blade in the wood**, eased in with the swing — solved from the figure's whole measured strike offset, never from a scalar reach, because with the swing tilted over the shoulder 1.12 m of a 1.68 m strike is *sideways* and a figure stood at 1.68 m puts its axe a metre beside the tree. Contact is checked by `MeasuredBladeGap` (0.19 m from the trunk's middle) rather than by eye: a three-quarter photograph puts the woodcutter and her tree at different depths and cannot settle it. Only the drawn figure steps in; the pawn stays in its cell for picking, the cursor and the whole simulation.
 
   **Chips fly when the blade lands (2026-09-16).** `ChipDirector` (beside `PawnFigureDirector`, disposed with it) throws a few pieces of debris on the frame the stroke crosses the strike, which `WorkSwing.Lands` decides. **One particle system for the whole colony**, world-simulated, and the material is a `ChipRecipe` value — colour, size, speed, life, count and spread are per particle, so wood off an axe and stone off a pick share the system, the material and the draw call; `ChipRecipe.Stone` is written and waiting for mining. Gravity is the one thing a recipe cannot carry (it belongs to the system), so heavier debris leaves faster, smaller and shorter-lived. **It is warmed on construction** — an unwarmed particle material compiles its shader on the first frame it is drawn, which would be the exact frame the first axe lands. Chips are decoration like the grass tufts: no cell, no save, no hash.

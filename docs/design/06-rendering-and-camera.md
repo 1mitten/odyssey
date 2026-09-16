@@ -239,7 +239,7 @@ cheap to decide: it stands at the same layer as the riser, on the top of the low
 the top of the riser. Everything the decision needs is on one layer plus the cell directly below, so
 a single-layer chunk pass sees all of it.
 
-Four conditions, each with a test, each ruling out something that would look wrong:
+Five conditions, each with a test, each ruling out something that would look wrong:
 
 - **Empty, and standing on ground**, or the bank hangs in the air.
 - **The step is earth.** A mined face and a quarry wall stay sheer; a grassy ramp growing out of cut
@@ -247,6 +247,38 @@ Four conditions, each with a test, each ruling out something that would look wro
 - **The top of the step is open**, or this is the wall of a tunnel rather than a terrace.
 - **The cell is open to the sky**, which keeps banks on the outdoor hillside and the inside of a
   working sharp-edged.
+- **Neither the cell's floor nor the step beside it is a face the colony cut.** See below: this one
+  arrived as a reported bug rather than as a condition thought of in advance.
+
+**Nothing grows inside a working (owner report, 2026-09-16: "you can't see the colonists").** The
+"step is earth" rule reads as though it had already covered this, and it does not: grass, bare earth
+and subsoil are all mineable — 60, 60 and 160 ticks to clear — so a quarry sunk into the meadow is a
+hole whose walls are earth with open tops, which is every condition a terrace step has. A bank
+therefore grew **in the cell that had just been cut**, filling it from its floor to the rim, and the
+miner standing in it to cut the next face was drawn up to the chest in ground. Measured on the played
+board: a 3 × 3 pit one layer deep grew 8 banks and swallowed one of the five colonists whole.
+
+The mark presentation reads is `CellFlags.Discovered`, taken for its *other* meaning. The two are
+coextensive rather than merely similar — the flag is set by `CellGrid.RevealAround`, which is called
+from exactly one place, `MineJobDriver.MineCell`, and worldgen sets it on nothing at all — so a solid
+cell carries it if and only if a colonist has taken the cell next to it out of the world. The
+coupling is stated in `WorldRenderModel.IsCutFace`, which is the one place that would change if a
+deep scanner ever revealed rock nobody had touched.
+
+**It has to be asked of the floor and not only of the sides**, and the shortfall is invisible in the
+obvious case. Mining a cell reveals all six of its solid neighbours, so a cut cell's four sides are
+all cut faces — `StepsAround` comes back empty, and the hip branch then went looking at the
+*diagonal* neighbours, which nothing reveals, because a colonist who cuts past the corner of a seam
+has not seen into it. The hole filled with a hip piece instead of a corner one: a single cut cell
+still drew 1 bank and a four-cell bench still drew 2. A mined cell's floor is revealed too, being one
+of the six, so asking the floor catches every shape of working at once.
+
+**Still open: a colonist standing on a natural bank is waist-deep in it.** A bank fills its cell from
+the floor to the rim and a pawn is drawn at the middle of its cell, so the fault above has a second
+home on the outdoor hillside, where the ramp is the picture of a hop and should not be removed. The
+answer there is the opposite one — lift the drawn figure onto `BankMesh.HeightAt` as `GroundRelief`
+already lifts it onto the rolling field — and it is not done. `QuarryCheck` counts it
+("*N* of 5 colonists standing in one") so the day it starts happening is a number and not a report.
 
 Two of those carry the argument. *Flat ground grows none* is the cost claim — the meadow is nearly
 all flat, and a bank on flat ground would put an instance on every cell of the board. *A two-layer
@@ -320,6 +352,17 @@ with banks. **Side on and low is the shot that answers the question**, for the s
 `SwingCheck` photographs the axe across the line to the tree: in the three-quarter view a step and
 the ground in front of it sit at different depths, and the profile of a bank reads as anything you
 like.
+
+A quarry has its own instrument, because a terrace and a working are different pictures and
+`SlopeCheck` frames a terrace by construction: *Odyssey → Presentation → Check a quarry*
+(`scripts/unity.sh shot Odyssey.EditorTools.QuarryCheck.Run`) cuts a 3 × 3 pit **under a colonist's
+feet** — `MineJobDriver.MineCell` steps whoever was standing on a cell down onto the floor it just
+cut, so she ends up in the hole exactly as the game puts her there — and shoots it with
+`ChunkRenderer.BanksInWorkings` on and then off. That lever exists only so the fault can be
+photographed rather than remembered. One trap it records: an instance matrix is
+`placement * part.Local` and a module's local transform puts the mesh's origin at the middle of its
+cell, not at its floor, so matching a bank to the cell it stands in by an exact position finds
+nothing and reports a clean board.
 
 ## 3. The camera and the slice
 
