@@ -50,6 +50,22 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public ChunkGrid? Chunks { get; set; }
 
+        /// <summary>
+        /// The world's edifice records, so a job can put a thing into the world rather than only
+        /// take things out of it.
+        ///
+        /// <para>It is the <em>same list</em> the generator filled and the mirror reads, not a
+        /// copy: a handle is an index into it, and a second list would make every handle mean two
+        /// different things. Appending is all anything does here; nothing is ever removed, because
+        /// a removed edifice keeps its slot so that handles stay stable.</para>
+        ///
+        /// <para>Null in a bare pawn fixture that has no generated world, in which case a job that
+        /// wants to place something quietly does not. Mining is the only caller today: a shaft
+        /// needs a ladder in it, and until this existed the ladder was a navigation edge with
+        /// nothing to look at — a colonist climbing one hung in mid-air over the hole.</para>
+        /// </summary>
+        public System.Collections.Generic.List<Worldgen.PlacedEdifice>? Edifices { get; set; }
+
         /// <summary>The world being ticked, valid inside a pawn system's tick.</summary>
         public SimWorld? World { get; private set; }
 

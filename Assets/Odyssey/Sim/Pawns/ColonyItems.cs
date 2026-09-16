@@ -210,6 +210,34 @@ namespace Odyssey.Sim.Pawns
             return item;
         }
 
+        /// <summary>
+        /// Move a thing that is already on the ground to another cell, merging if something of the
+        /// same kind with room is already there.
+        ///
+        /// <para>The same landing rules as <see cref="Drop"/>, which is deliberate: a stack that
+        /// falls down a shaft and a stack a colonist carries down it should end up in the same
+        /// state, and two code paths for that would drift. The difference is only that this one
+        /// has to take the thing off its old cell first — <see cref="Drop"/> starts from a pair of
+        /// hands, which occupy no cell at all.</para>
+        ///
+        /// <para>The caller checks <see cref="CellHasSpace(int, int, int)"/>, exactly as it does
+        /// for a drop. Returns the thing now at the cell, which is <em>not</em> the one passed in
+        /// when a merge happened.</para>
+        /// </summary>
+        public ColonyItem MoveTo(ColonyItem item, int cell)
+        {
+            if (item.Cell == cell || item.Despawned) return item;
+
+            if (item.Cell >= 0)
+            {
+                _itemAtCell.Remove(item.Cell);
+                Unlist(item.Id.Value - 1);
+                item.Cell = -1;
+            }
+
+            return Drop(item, cell);
+        }
+
         public void Despawn(ColonyItem item)
         {
             if (item.Cell >= 0) _itemAtCell.Remove(item.Cell);

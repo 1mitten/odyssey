@@ -160,6 +160,8 @@ namespace Odyssey.Sim.Pawns
             var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core())
             {
                 Chunks = chunks,
+                // So a dig can put a ladder into the shaft it cuts. See PawnContext.Edifices.
+                Edifices = outcome.EdificeList,
             };
             var solver = new SupportSolver(grid);
             var support = new SupportSystem(grid, solver, chunks);

@@ -147,7 +147,8 @@ namespace Odyssey.EditorTools
                 var nav = new NavGraph(grid);
                 nav.Rebuild();
                 var pawns = new PawnContext(
-                    grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core()) { Chunks = chunks };
+                    grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core())
+                    { Chunks = chunks, Edifices = result.EdificeList };
                 var support = new SupportSystem(grid, new SupportSolver(grid), chunks);
                 var mirror = new Odyssey.Presentation.World.GridMirrorContributor(
                     grid, result.Edifices, model);
@@ -451,6 +452,35 @@ namespace Odyssey.EditorTools
                     else
                     {
                         Debug.Log("[Shot] no stone on the ground yet, so no spoil shot");
+                    }
+                }
+
+                // A ladder in a shaft, which until now was a navigation edge with no geometry.
+                //
+                // Worth a picture of its own because the failure it fixes is invisible from any
+                // other angle: a colonist on a connector cell is correctly placed and was simply
+                // not standing on anything drawn, so it read as a person hanging in mid-air over
+                // a hole. If this frame shows a hole with nothing in it, the edifice is not being
+                // placed and no amount of looking at the colonist will say so.
+                {
+                    int laddered = -1;
+                    for (int i = 0; i < size.CellCount && laddered < 0; i++)
+                    {
+                        int handle = grid.Edifice[i];
+                        if (handle < 0 || handle >= result.Edifices.Count) continue;
+                        if (result.Edifices[handle].Def == CoreContent.EdificeLadder) laddered = i;
+                    }
+
+                    if (laddered >= 0)
+                    {
+                        CellRef at = size.FromIndex(laddered);
+                        Shoot(camera, CellMetrics.FloorCentre(at) + Vector3.up * 1.2f,
+                              50f, 40f, 20f, "Logs/shot-ladder.png");
+                        Debug.Log($"[Shot] a ladder stands in {at}");
+                    }
+                    else
+                    {
+                        Debug.Log("[Shot] no ladder was built, so no ladder shot");
                     }
                 }
 

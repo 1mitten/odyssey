@@ -115,6 +115,34 @@ namespace Odyssey.Sim.World
             return below >= 0 && IsSolidTerrain(below);
         }
 
+        /// <summary>
+        /// The cell itself if it has something to stand on, else the first one below it that does.
+        ///
+        /// <para>Where a thing ends up when whatever it was resting on is taken away. It is the
+        /// bottom of the fall and not the length of it: a drop of three layers and a drop of one
+        /// both finish on the first real floor, because nothing in this game bounces.</para>
+        ///
+        /// <para>Falls out of the bottom of the world onto the lowest cell of the column rather
+        /// than returning -1. There is no floor below layer nought and never will be, so a caller
+        /// asking "where does this land" wants an answer it can put something in; the alternative
+        /// is every caller writing the same guard and one of them forgetting.</para>
+        ///
+        /// <para>Note that this asks the <em>cell</em> grid, which knows about slabs and solid
+        /// ground and nothing else. A ladder makes a cell standable to navigation but is not a
+        /// floor, and a stack of stone left on a rung would be resting on air.</para>
+        /// </summary>
+        public int FirstFloorAtOrBelow(int index)
+        {
+            int at = index;
+            while (!HasFloor(at))
+            {
+                int below = at - Size.LayerStride;
+                if (below < 0) return at;
+                at = below;
+            }
+            return at;
+        }
+
         /// <summary>Is this cell covered? A slab one layer up is what makes it roofed.</summary>
         public bool IsRoofed(int index)
         {

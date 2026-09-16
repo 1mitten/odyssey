@@ -109,7 +109,18 @@ namespace Odyssey.Sim.Worldgen.Natural
         public MapType Type { get; }
 
         /// <summary>Everything standing in a cell, whichever generator placed it. Handles in <c>CellGrid.Edifice</c> index this list.</summary>
-        public System.Collections.Generic.IReadOnlyList<PlacedEdifice> Edifices =>
+        public System.Collections.Generic.IReadOnlyList<PlacedEdifice> Edifices => EdificeList;
+
+        /// <summary>
+        /// The same list, writable, for the composition root to hand to the simulation.
+        ///
+        /// <para>Separate from <see cref="Edifices"/> so that read-only stays what a caller gets
+        /// by asking. Appending is the only thing anything does to it after generation — a
+        /// colonist building a ladder into a shaft — and it has to be the very same list, because
+        /// a handle in <c>CellGrid.Edifice</c> is an index into it and a copy would make every
+        /// handle ambiguous.</para>
+        /// </summary>
+        public System.Collections.Generic.List<PlacedEdifice> EdificeList =>
             City != null ? City.Context.Edifices : Natural!.Context.Edifices;
 
         /// <summary>Set when <see cref="Type"/> is <see cref="MapType.Natural"/>.</summary>

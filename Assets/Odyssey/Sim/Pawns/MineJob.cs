@@ -2,6 +2,7 @@
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.World;
+using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 
 namespace Odyssey.Sim.Pawns
@@ -274,6 +275,11 @@ namespace Odyssey.Sim.Pawns
             // 4. Anybody standing on this cell is now standing on nothing.
             StepDownOntoTheFloorJustCut(ctx, cell);
 
+            // 4a. And anything LYING on it. The cell above has just lost its floor, so whatever
+            //     was resting there goes down the hole — which is also how a quarry ends up with
+            //     its spoil in one place at the bottom rather than shelved up its sides.
+            DropWhatWasRestingOnIt(ctx, cell);
+
             // 5. What the cell was made of, if it left anything.
             SpawnYield(ctx, cell, terrain);
         }
@@ -286,8 +292,20 @@ namespace Odyssey.Sim.Pawns
         /// or an older working from below. Asking the question as "is my vertical neighbour open"
         /// covers the two without caring which happened.</para>
         ///
-        /// <para>The ladder itself is a placeholder, and <see cref="NavGraph.EnsureLadder"/> says
-        /// what for.</para>
+        /// <para><b>And the ladder is now a thing, not only an edge.</b> It used to be a
+        /// navigation connector and nothing else: the pathfinder knew a colonist could climb, the
+        /// nav grid counted the cell as having something to stand on, and no geometry was ever
+        /// drawn for any of it. A colonist on a ladder was therefore drawn hanging in mid-air over
+        /// the hole, with no terrain and no rock anywhere near its feet — which is exactly what
+        /// the owner photographed. Measured over 40,000 ticks of the playtest colony: <b>zero</b>
+        /// colonists were ever genuinely unsupported, and <b>34,004 pawn-ticks</b> — about a
+        /// sixth of all colonist time — were spent standing on a ladder nothing drew.</para>
+        ///
+        /// <para>Placing <see cref="CoreContent.EdificeLadder"/> fixes it outright, because every
+        /// other part of that pipeline already existed: the def, the module id, the catalogue row
+        /// with a real prop on it, <c>ModuleShape.Ladder</c> and <c>ChunkMesher.EmitLadder</c>
+        /// were all written and simply never reached. Non-blocking, so the cell stays walkable and
+        /// the nav rebuild is unaffected.</para>
         /// </summary>
         static void LadderTheShaft(PawnContext ctx, int cell)
         {
@@ -296,11 +314,44 @@ namespace Odyssey.Sim.Pawns
 
             int above = cell + size.LayerStride;
             if (above < size.CellCount && !grid.IsSolidTerrain(above) && !grid.IsBlockedByEdifice(above))
-                ctx.Nav.EnsureLadder(cell, above);
+                if (ctx.Nav.EnsureLadder(cell, above) >= 0) PlaceLadder(ctx, cell);
 
             int below = cell - size.LayerStride;
             if (below >= 0 && !grid.IsSolidTerrain(below) && !grid.IsBlockedByEdifice(below))
-                ctx.Nav.EnsureLadder(below, cell);
+                if (ctx.Nav.EnsureLadder(below, cell) >= 0) PlaceLadder(ctx, below);
+        }
+
+        /// <summary>
+        /// Put a rung of ladder in a cell, unless something is already there.
+        ///
+        /// <para><b>The lower cell of the connector only.</b> A ladder fills the hole it is in and
+        /// you step off at its top, which is the floor of the cell above — so rungs in both cells
+        /// draw a ladder six metres tall, half of it standing proud of flat grass. That is what the
+        /// first version did, and the photograph of it is unmistakable.</para>
+        ///
+        /// <para>Idempotent because a shaft three cells deep is two ladders sharing a middle cell,
+        /// and because the dig asks about both of its vertical neighbours. Never overwrites an
+        /// existing edifice: whatever is there has a better claim on the cell than this does, and
+        /// clobbering the handle would leave the old record pointing at a cell that no longer
+        /// knows about it.</para>
+        /// </summary>
+        static void PlaceLadder(PawnContext ctx, int cell)
+        {
+            var edifices = ctx.Edifices;
+            if (edifices == null) return;
+            if (ctx.Cells.Edifice[cell] >= 0) return;
+
+            edifices.Add(new PlacedEdifice
+            {
+                CellIndex = cell,
+                Def = CoreContent.EdificeLadder,
+                Stuff = CoreContent.StuffSteel,
+            });
+            ctx.Cells.Edifice[cell] = edifices.Count - 1;
+
+            // Emphatically not blocking. A ladder you cannot enter is a ladder nobody can climb,
+            // and the cell's walkability is the whole reason the connector was laid.
+            ctx.Cells.Flags[cell] &= ~CellFlags.BlockingEdifice;
         }
 
         static void MarkChunksAround(PawnContext ctx, int cell)
@@ -347,9 +398,45 @@ namespace Odyssey.Sim.Pawns
             }
         }
 
+        /// <summary>
+        /// Anything resting on the cell just cut falls to the first real floor below.
+        ///
+        /// <para>The item half of <see cref="StepDownOntoTheFloorJustCut"/>, and it had no half at
+        /// all before: items have never had a support rule, so a stack simply stayed where it was
+        /// spawned however much was dug out from under it.</para>
+        ///
+        /// <para>It <em>merges</em> where it lands, up to the ordinary stack limit, because
+        /// <see cref="ColonyItems.MoveTo"/> merges — which is the owner's decision and the point of
+        /// the exercise: two loads that fall into the same hole become one load, and one hauler
+        /// trip carries what took two. A load that will not fit goes to the nearest cell that can
+        /// take it rather than being lost.</para>
+        /// </summary>
+        static void DropWhatWasRestingOnIt(PawnContext ctx, int cell)
+        {
+            int above = cell + ctx.Size.LayerStride;
+            if (above >= ctx.Size.CellCount) return;
+
+            ColonyItem? resting = ctx.Items.ItemAt(above);
+            if (resting == null || resting.Despawned) return;
+            if (ctx.Cells.HasFloor(above)) return;
+
+            int landing = ctx.Cells.FirstFloorAtOrBelow(above);
+            if (landing == above) return;
+
+            int room = ctx.Items.NearestCellWithSpace(
+                ctx.Cells, landing, resting.DefIndex, resting.Stack, maxRadius: 3);
+            if (room >= 0) ctx.Items.MoveTo(resting, room);
+        }
+
         static void SpawnYield(PawnContext ctx, int cell, ushort terrain)
         {
             if (!Yield(ctx, cell, terrain, out int item, out int count)) return;
+
+            // Spoil lands on the floor, not in the hole it came out of. A cell cut over open space
+            // has nothing under it, and the first version dropped the stone into it regardless: a
+            // quarter of all the spoil on a worked board — 26 stacks of 107, measured — hung in
+            // mid-air a layer or two above the ground.
+            cell = ctx.Cells.FirstFloorAtOrBelow(cell);
 
             // The cell just dug, or the nearest that can take the load — which includes a pile of
             // the same stuff from the cell next door with room on it, so a worked seam comes out

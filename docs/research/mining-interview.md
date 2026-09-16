@@ -340,6 +340,65 @@ stone."** The miner was standing on top of the cell it was cutting and swinging 
   that settles it is `MeasuredDippedBladeHeight`, which wants to be near nought, and `SwingCheck`
   is still exhausting render textures in batch mode.
 
+## 6c. Third interview: mid-air colonists, drop speed, and things that fall
+
+The owner photographed a colonist standing in mid-air over a worked face, asked for drops to be
+quicker, and asked whether spoil could fall into the layer below so that more of it could be picked
+up at once.
+
+**The first diagnosis was wrong, and the measurement is why it did not ship.** A photograph cannot
+tell a pawn left unsupported by a dig from a pawn drawn part way through a very expensive step from
+a pawn standing on a ladder nothing draws. `Assets/Editor/Odyssey/FootingProbe.cs` was written to
+settle it and ran the playtest colony for 40,000 ticks:
+
+| | before | after |
+|---|---|---|
+| colonists ever standing on nothing | **0** | 0 |
+| pawn-ticks spent standing on a ladder | 34,004 (~1/6 of all colonist time) | unchanged, now drawn |
+| stacks of spoil on the ground with no floor | **26 of 107** | **0 of 81** |
+
+So there was never a gravity bug for colonists. There were three other things.
+
+- **The ladder was never drawn.** `EnsureLadder` laid a navigation connector and flagged the cells,
+  and that was all: the def (`CoreContent.EdificeLadder`), the module id, the catalogue row with a
+  real prop on it, `ModuleShape.Ladder` and `ChunkMesher.EmitLadder` all existed already and were
+  never reached. A colonist climbing one therefore hung in mid-air over the hole with no terrain and
+  no rock under it, which is exactly the photograph. Mining now places the edifice. **In the shaft
+  cell only** — a ladder fills the hole it is in and you step off at its top, so a rung in the upper
+  cell as well draws a ladder six metres tall with half of it standing proud of flat grass. That was
+  the first attempt and the picture of it is unmistakable.
+- **The drawn glide finished a quarter of the way through a ladder step.** The published move
+  percentage was the raw progress clamped to 100, which is exact for a flat cell at 100 units and
+  wrong for everything dearer. A ladder down costs 400, so the figure reached the bottom in the
+  first quarter of the step and then stood frozen for the other three — six and a half seconds a
+  rung. It is now a true fraction of the step's own cost (`Pawn.MoveStepCost`), so the glide takes
+  exactly as long as the step does.
+- **Items had no support rule at all.** `NearestCellWithSpace` only ever searched the miner's own
+  layer, so spoil was dropped into the cut cell whether or not that cell had a floor.
+
+**Decisions (owner):**
+
+- *Never leave a colonist on nothing, and catch any that slip.* The causes are fixed. The safety net
+  was **not** built, and this is a deliberate departure: the probe shows nothing is ever unsupported,
+  so a per-tick pass over every pawn would be a system that does nothing. The net is a test instead —
+  `FallingTests` pins the landing rule, and the probe re-measures the claim on demand.
+- *A fall is near-instant; a climb stays deliberate.* `LadderDown` stays at 400 ticks, now glided
+  across properly and with a ladder to climb. An item's fall is instantaneous, resolved in the same
+  deferred phase as the dig. If a 6.7 s climb still reads slowly once it is played, `MoveCost.LadderDown`
+  is the one number to change.
+- *Items fall to the first solid floor.* `CellGrid.FirstFloorAtOrBelow` is the bottom of the fall and
+  not the length of it — three layers and one layer finish in the same place, because nothing bounces.
+  It clamps at layer nought rather than returning -1, so no caller has to guard it.
+- *Merge up to the normal stack, spill the rest nearby.* `ColonyItems.MoveTo` reuses `Drop`'s landing
+  rules exactly, so a stack that falls down a shaft and a stack a colonist carries down it end up in
+  the same state. Measured effect: the same stone came out as **81 stacks where it had been 107**,
+  which is 26 fewer hauling trips.
+
+**Still owed:** `EnsureLadder` remains free (§4f) — a colonist gets a ladder for nothing, it costs no
+materials and no work, and it is now a visible thing in the world rather than an invisible edge,
+which makes the debt easier to see and no smaller. Mined cells, ladders and fallen stacks are still
+not saved (OQ-08).
+
 ## 7. Risks
 
 1. **Golden tests re-base twice** — once for the raised ground, once for terracing. Both are

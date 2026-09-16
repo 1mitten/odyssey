@@ -99,6 +99,10 @@ namespace Odyssey.Sim.Pawns
                 }
 
                 int cost = StepCost(pawn.Cell, next, pawn.Mode);
+
+                // Carried so presentation can glide the figure across the WHOLE step rather than
+                // across its first hundred units. See Pawn.MoveStepCost.
+                pawn.MoveStepCost = cost;
                 if (pawn.MoveProgress < cost) return;
 
                 pawn.MoveProgress -= cost;
