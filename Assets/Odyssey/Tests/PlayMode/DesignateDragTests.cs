@@ -67,6 +67,44 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// The discriminator, and it comes straight from the owner's playtest: "C only works if
+        /// you push C and click on a tree. No dragging or dropping works."
+        ///
+        /// <para>A click and a drag go through the same branch of the rig and the same presenter;
+        /// the only difference is whether the two ends of the gesture are the same point. So if
+        /// this passes while the drag fails, the fault is in the drag and the oracle below is
+        /// sound. If <b>both</b> fail, the oracle is the fault — <c>MarkedCells</c> reads the
+        /// snapshot's designation channel, and a channel that is never published reads as zero
+        /// orders however well the feature works, which the no-tool control could never reveal
+        /// because zero is what it asserts.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AClickWithAToolArmedGivesOneOrder()
+        {
+            GameObject root = BuildBareWorld(out OdysseyBootstrap boot, out SliceCameraRig rig,
+                out DesignatePresenter designate);
+            try
+            {
+                yield return RigWorld.WarmUp();
+                yield return RigWorld.SettleCamera(rig);
+                Assume.That(MarkedCells(boot), Is.Zero);
+
+                designate.Director.Tool = DesignateTool.Fell;
+                yield return _mouse.Click(Near(0.5f, 0.45f));
+                for (int i = 0; i < SettleFrames; i++) yield return null;
+
+                Assert.That(MarkedCells(boot), Is.GreaterThan(0),
+                    "a click with the cutting tool armed left no order. If the drag test fails " +
+                    "too then this oracle is what is broken, not designation: MarkedCells reads " +
+                    "the snapshot's designation channel, and an unpublished channel reads as zero.");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// The control. The same drag, the same world, no tool: the world must be untouched,
         /// because the gesture belongs to selection when nothing is armed.
         /// </summary>
