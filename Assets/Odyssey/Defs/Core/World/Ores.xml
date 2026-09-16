@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Minable deposits: what each is made of, how often it is chosen against the others, and the band
+  of depths below the local surface it is found in.
+
+  The depth bands are the point. Coal sits below iron and overlaps it only in the middle, so
+  digging deeper is worth doing and the two are not interchangeable. Weights are relative rather
+  than percentages: the draw sums them.
+
+  <terrain> names a TerrainDef and is validated at load, so a typo is a load error naming this
+  file rather than a stratum of nothing, seeds later.
+-->
+<Defs>
+
+  <OreKindDef>
+    <defName>Ore_Iron</defName>
+    <label>iron ore</label>
+    <terrain>IronOre</terrain>
+    <weight>60</weight>
+    <minDepth>3</minDepth>
+    <maxDepth>13</maxDepth>
+    <moduleId>odyssey.module.terrain.ironore</moduleId>
+  </OreKindDef>
+
+  <OreKindDef>
+    <defName>Ore_Coal</defName>
+    <label>coal seam</label>
+    <terrain>CoalSeam</terrain>
+    <weight>40</weight>
+    <minDepth>7</minDepth>
+    <maxDepth>22</maxDepth>
+    <moduleId>odyssey.module.terrain.coalseam</moduleId>
+  </OreKindDef>
+
+</Defs>

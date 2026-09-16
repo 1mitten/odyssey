@@ -361,15 +361,40 @@ namespace Odyssey.Sim.Pawns
     }
 
     /// <summary>
+    /// The numbers that belong to the pawn simulation as a whole rather than to any one need,
+    /// job or item. They were fields on <see cref="PawnContent"/>, which meant they were the one
+    /// part of the tuning that content could not reach.
+    /// </summary>
+    public class PawnTuningDef : Def
+    {
+        public int needsIntervalTicks = 150;
+        public int dayTicks = 60_000;
+        public int thinkLoopLimit = 10;
+        public int thinkLoopWindowTicks = 60;
+        public int standDownTicks = 120;
+        public int woodPerTree = 27;
+    }
+
+    /// <summary>
     /// Every tunable number the pawn simulation reads, in one frozen record.
     ///
-    /// Built in code for now for the same reason CoreContent is: there is no content pack yet,
-    /// and a clone with no Assets/ content must still run the simulation headless. The
-    /// declaration order below <em>is</em> the handle order, so the eventual XML must declare the
-    /// same names in the same order.
+    /// <para><b>There are two ways to build one, and that is deliberate.</b>
+    /// <see cref="FromDefs"/> reads the content pack at <c>Assets/Odyssey/Defs/Core/Pawns</c>,
+    /// which is where these numbers now live and where a mod or a design change edits them
+    /// (OQ-15). <see cref="Core"/> builds the same content in code and remains the oracle:
+    /// <c>PawnContentDefTests</c> compares the two field for field on every run, so the XML
+    /// cannot drift away from the content every soak hash and tuning decision was measured
+    /// against without a test saying which field moved.</para>
     ///
-    /// TODO(content): move to Defs/Core/Pawns/*.xml, resolve handles by name at world
-    /// construction, and delete <see cref="Core"/>. Nothing that reads these has to change.
+    /// <para>The simulation still constructs with <c>Core()</c>, because a headless world is
+    /// built in a dozen places — tests, the editor harnesses, the bootstrap — and a world that
+    /// needs a path on disk cannot be built from a unit test fixture. TODO(content): give the
+    /// composition root a loaded <see cref="DefDatabase"/>, switch those call sites to
+    /// <see cref="FromDefs"/>, and delete <see cref="Core"/>. Nothing that <i>reads</i> this
+    /// record has to change either way.</para>
+    ///
+    /// <para>The array order below <em>is</em> the handle order, and it is not the order the
+    /// loader stores Defs in: see <see cref="FromDefs"/>.</para>
     /// </summary>
     public sealed class PawnContent
     {
@@ -408,6 +433,85 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>How long a pawn tripped by the think-loop trap stands still.</summary>
         public int StandDownTicks = 120;
+
+        /// <summary>
+        /// The Def types this content is made of, registered on a loader in one place so that a
+        /// caller cannot load half of it. Adding a pawn Def type and forgetting to register it
+        /// gives "unknown Def type" at load, which is the right failure but the wrong place to
+        /// have to remember.
+        /// </summary>
+        public static DefLoader Register(DefLoader loader) =>
+            loader.Register<NeedDef>()
+                .Register<ThoughtDef>()
+                .Register<JobDef>()
+                .Register<WorkTypeDef>()
+                .Register<SkillDef>()
+                .Register<ItemDef>()
+                .Register<MoodDef>()
+                .Register<MentalBreakDef>()
+                .Register<MovementDef>()
+                .Register<PawnKindDef>()
+                .Register<PawnTuningDef>();
+
+        /// <summary>
+        /// The same content, read from a loaded <see cref="DefDatabase"/> rather than built in
+        /// code.
+        ///
+        /// <para><b>Every array is filled by name, never by table order.</b> A handle here is a
+        /// compile-time constant — <see cref="NeedIndex.Food"/> is 0 because the published views
+        /// and the save both say so — while <c>DefLoader</c> sorts each table by defName so that
+        /// handles it assigns are stable across machines. Those two orders are not the same one,
+        /// and reading the table in its own order would silently swap food for joy the day a Def
+        /// is renamed. So the names below are the contract: this list <i>is</i> the handle
+        /// order.</para>
+        ///
+        /// <para>A missing or misspelt Def throws here rather than leaving a null in an array for
+        /// the first tick to trip over, and the message names the type and the name it wanted.</para>
+        /// </summary>
+        public static PawnContent FromDefs(DefDatabase defs)
+        {
+            var content = new PawnContent();
+
+            content.Needs = ByName<NeedDef>(defs, "Need_Food", "Need_Rest", "Need_Joy");
+            content.Thoughts = ByName<ThoughtDef>(defs,
+                "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround");
+            content.Jobs = ByName<JobDef>(defs,
+                "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell");
+            content.WorkTypes = ByName<WorkTypeDef>(defs, "Work_Haul", "Work_Cutting");
+            content.Skills = ByName<SkillDef>(defs, "Skill_Hauling", "Skill_Cutting");
+            content.Items = ByName<ItemDef>(defs, "Item_Meal", "Item_Salvage", "Item_Wood");
+
+            content.Mood = One<MoodDef>(defs, "Mood_Default");
+            content.Break = One<MentalBreakDef>(defs, "Break_Wander");
+            content.Movement = One<MovementDef>(defs, "Movement_Colonist");
+            content.Kind = One<PawnKindDef>(defs, "PawnKind_Colonist");
+
+            var tuning = One<PawnTuningDef>(defs, "Tuning_Pawns");
+            content.NeedsIntervalTicks = tuning.needsIntervalTicks;
+            content.DayTicks = tuning.dayTicks;
+            content.ThinkLoopLimit = tuning.thinkLoopLimit;
+            content.ThinkLoopWindowTicks = tuning.thinkLoopWindowTicks;
+            content.StandDownTicks = tuning.standDownTicks;
+            content.WoodPerTree = tuning.woodPerTree;
+
+            return content;
+        }
+
+        static T[] ByName<T>(DefDatabase defs, params string[] names) where T : Def
+        {
+            var array = new T[names.Length];
+            for (int i = 0; i < names.Length; i++) array[i] = One<T>(defs, names[i]);
+            return array;
+        }
+
+        static T One<T>(DefDatabase defs, string defName) where T : Def
+        {
+            if (!defs.HasTable<T>())
+                throw new DefLoadException($"the content has no {typeof(T).Name} at all, and '{defName}' is required.");
+            if (!defs.Table<T>().TryGetHandle(defName, out var handle))
+                throw new DefLoadException($"the content has no {typeof(T).Name} named '{defName}'.");
+            return defs.Table<T>()[handle];
+        }
 
         public static PawnContent Core()
         {

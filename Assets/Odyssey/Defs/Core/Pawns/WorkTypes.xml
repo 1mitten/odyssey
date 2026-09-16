@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Containers for work givers, carrying the natural order they scan in. Cutting scans before
+  hauling at equal priority: felled wood is what there is to haul, so the order that makes the
+  work exist comes first.
+-->
+<Defs>
+
+  <WorkTypeDef>
+    <defName>Work_Haul</defName>
+    <label>hauling</label>
+    <order>1</order>
+  </WorkTypeDef>
+
+  <WorkTypeDef>
+    <defName>Work_Cutting</defName>
+    <label>cutting</label>
+    <order>0</order>
+  </WorkTypeDef>
+
+</Defs>
