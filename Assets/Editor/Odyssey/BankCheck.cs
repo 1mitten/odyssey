@@ -107,7 +107,7 @@ namespace Odyssey.EditorTools
                     .WithSeed(1u)
                     .WithSize(size)
                     .AddSnapshotContributor(mirror)
-                    .AddColony(pawns, designations, support, nav)
+                    .AddColony(pawns, designations, support, nav, result.Placements, out _)
                     .Build();
 
                 ColonyScenario.Place(grid, pawns, result.StartCell, 1u, ScenarioDef.Bare());

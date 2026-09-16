@@ -101,7 +101,7 @@ namespace Odyssey.EditorTools
                     .WithSeed(1u)
                     .WithSize(size)
                     .AddSnapshotContributor(mirror)
-                    .AddColony(pawns, designations, support, nav)
+                    .AddColony(pawns, designations, support, nav, result.Placements, out _)
                     .Build();
 
                 // Bare, and a bigger colony than the scenario's five: the question is what a crowd

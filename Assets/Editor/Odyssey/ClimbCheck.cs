@@ -118,7 +118,7 @@ namespace Odyssey.EditorTools
                     .WithSeed(1u)
                     .WithSize(size)
                     .AddSnapshotContributor(mirror)
-                    .AddColony(pawns, designations, support, nav)
+                    .AddColony(pawns, designations, support, nav, result.Placements, out _)
                     .Build();
 
                 // Bare, for the same reason the lift's sheet is: a working figure is posed by its

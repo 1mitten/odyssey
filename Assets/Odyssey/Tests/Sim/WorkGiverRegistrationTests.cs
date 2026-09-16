@@ -219,7 +219,7 @@ namespace Odyssey.Tests.Sim
 
                 var builder = new SimWorldBuilder().WithSeed(11u).WithSize(size);
                 if (!registerAfterColony) builder.AddWorkGiver(giver);
-                builder.AddColony(pawns, designations, support, nav, jobs);
+                builder.AddColony(pawns, designations, support, nav, new List<PlacedEdifice>(), out _, jobs);
                 if (registerAfterColony) builder.AddWorkGiver(giver);
 
                 return new Harness

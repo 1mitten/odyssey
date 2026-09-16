@@ -249,7 +249,7 @@ namespace Odyssey.Presentation.Bootstrap
                 .WithSeed(seed)
                 .WithSize(size)
                 .AddSnapshotContributor(mirror)
-                .AddColony(_pawns, designations, support, nav)
+                .AddColony(_pawns, designations, support, nav, edifices, out _)
                 .Build();
 
             // Noon, before the world has ticked once. It has to be here and not further down:

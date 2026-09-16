@@ -171,13 +171,13 @@ namespace Odyssey.Sim.Pawns
             var solver = new SupportSolver(grid);
             var support = new SupportSystem(grid, solver, chunks);
             var designations = new DesignationGrid(grid, outcome.Edifices);
-            var construction = new ConstructionGrid(grid, outcome.Placements, pawns.Items);
             var jobs = new JobSystem(pawns);
 
             SimWorld world = new SimWorldBuilder()
                 .WithSeed(seed)
                 .WithSize(size)
-                .AddColony(pawns, designations, support, nav, jobs, construction)
+                .AddColony(pawns, designations, support, nav, outcome.Placements,
+                    out ConstructionGrid construction, jobs)
                 .Build();
 
             ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed, scenario);

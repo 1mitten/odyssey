@@ -171,7 +171,20 @@ namespace Odyssey.Presentation.CameraRig
         /// The screen rect of the box being dragged, or none. Polled by the HUD each frame to draw
         /// the marquee, because a marquee is a picture, not a decision.
         /// </summary>
-        public Rect? DragBox => _boxActive && _dragStart.HasValue ? RectFromTo(_dragStart.Value, _draggedTo) : null;
+        ///
+        /// <para><b>None while a tool is armed.</b> The release already decides that a press belongs
+        /// to the tool rather than to selection, so the selection marquee was drawing a box over a
+        /// gesture it would never receive — two rectangles on one drag, one of them a lie about
+        /// what was going to happen. Reported by the owner as the build tool conflicting with
+        /// drag-and-drop (2026-09-17).</para>
+        ///
+        /// <para>Asked here rather than in the HUD because this is where the same question is
+        /// already asked on release: one answer, one place, and the picture cannot promise
+        /// something the release will not do.</para>
+        public Rect? DragBox =>
+            _boxActive && _dragStart.HasValue && !(WorldToolArmed != null && WorldToolArmed())
+                ? RectFromTo(_dragStart.Value, _draggedTo)
+                : (Rect?)null;
 
         /// <summary>
         /// Set by the interface: true while a designate tool is armed, and then the world gesture

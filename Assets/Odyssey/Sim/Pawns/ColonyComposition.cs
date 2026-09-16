@@ -1,9 +1,11 @@
 #nullable enable
+using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Construction;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.World;
+using Odyssey.Sim.Worldgen;
 
 namespace Odyssey.Sim.Pawns
 {
@@ -30,12 +32,36 @@ namespace Odyssey.Sim.Pawns
         /// a kind of work therefore edits no file that anything else owns, which is the whole of
         /// OQ-44.</para>
         /// </summary>
+        /// <param name="edifices">Everything standing in a cell, writable, because finishing a
+        /// building appends to it. The same list the designation grid reads.</param>
+        /// <param name="construction">Handed back rather than taken, so that a caller cannot forget
+        /// to supply one. See the remarks below — this is a fix for exactly that.</param>
         /// <param name="jobs">The job pipeline to run, when the caller wants to hold on to it for its
         /// per-def counters; a fresh one otherwise.</param>
+        ///
+        /// <remarks>
+        /// <para><b>The construction grid is built here rather than passed in, and that is a
+        /// correction.</b> It arrived as an optional argument defaulting to null, which meant every
+        /// one of the twelve existing call sites went on compiling and silently built a colony that
+        /// could not be given a build order: no intent handler for <c>PlaceBuilding</c>, no sites,
+        /// and both work givers answering no for ever. The play scene was one of the twelve, so the
+        /// feature worked in every test and in nothing a player could touch — the owner dragged a
+        /// wall across the meadow, watched the preview draw, and watched nothing be built
+        /// (2026-09-17).</para>
+        ///
+        /// <para>This file's own summary predicted it in as many words: <i>"a designation grid that
+        /// one of them forgot to attach would be a player command that silently did nothing in that
+        /// build"</i>. An optional parameter is how a caller forgets. Building the grid here means
+        /// there is nothing to forget, and it is what "the list lives here, once" has to mean to be
+        /// worth anything.</para>
+        /// </remarks>
         public static SimWorldBuilder AddColony(this SimWorldBuilder builder, PawnContext pawns,
-            DesignationGrid designations, SupportSystem support, NavGraph nav, JobSystem? jobs = null,
-            ConstructionGrid? construction = null)
+            DesignationGrid designations, SupportSystem support, NavGraph nav,
+            List<PlacedEdifice> edifices, out ConstructionGrid construction, JobSystem? jobs = null)
         {
+            // pawns.Cells, not a grid of its own: the context already carries the one cell grid the
+            // colony is about, and taking a second would be an invitation to hand in two.
+            construction = new ConstructionGrid(pawns.Cells, edifices, pawns.Items);
             pawns.Designations = designations;
             pawns.Construction = construction;
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
@@ -58,10 +84,7 @@ namespace Odyssey.Sim.Pawns
                 .AddSnapshotContributor(pawns.Pawns)
                 .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden);
             designations.Attach(builder);
-            // Optional, and null in a fixture that never means to build anything, exactly as
-            // PawnContext.Construction is. A world without one rejects PlaceBuilding with
-            // UnknownIntent rather than silently accepting an order nobody will ever carry out.
-            construction?.Attach(builder);
+            construction.Attach(builder);
             return builder;
         }
     }

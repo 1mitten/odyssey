@@ -70,6 +70,61 @@ namespace Odyssey.Tests.Sim
             return rejected.Count == 0 ? IntentRejection.None : rejected[0].Reason;
         }
 
+        // ---- the composition --------------------------------------------------------------
+
+        /// <summary>
+        /// Every command the interface can send is answered by the colony the game builds.
+        ///
+        /// <para><b>This is the test that was missing when the build pipeline shipped unreachable.</b>
+        /// The construction grid arrived as an optional argument to <c>AddColony</c> defaulting to
+        /// null, so all twelve call sites went on compiling and the play scene — one of the twelve
+        /// — built a colony with no handler for <c>PlaceBuilding</c>, no sites and both work givers
+        /// answering no for ever. Every test passed, because every test goes through
+        /// <see cref="ColonyWorld"/>. The owner dragged a wall across the meadow, watched the
+        /// preview draw and watched nothing be built.</para>
+        ///
+        /// <para>The signature is the real fix — a required parameter cannot be forgotten — and
+        /// this is the standing guard for the next command, which will arrive the same way: as an
+        /// enum value somebody adds and a handler somebody means to attach.</para>
+        /// </summary>
+        [Test]
+        public void EveryIntentTheInterfaceCanSendIsAnsweredByTheColony()
+        {
+            ColonyWorld colony = Board();
+
+            foreach (IntentKind kind in System.Enum.GetValues(typeof(IntentKind)))
+            {
+                // The two the world answers out of its own switch rather than through a registered
+                // component: they are about the view of the world, not about anything in it.
+                if (kind == IntentKind.None
+                    || kind == IntentKind.SetGameSpeed
+                    || kind == IntentKind.SetSliceLayer) continue;
+
+                Assert.That(colony.World.HandlesIntent(kind), Is.True,
+                    $"nothing in the colony handles {kind}, so a player sending it gets silence");
+            }
+        }
+
+        /// <summary>
+        /// The negative control for the guard above: a rejected command really does come back as
+        /// <see cref="IntentRejection.UnknownIntent"/>, which is the silence being guarded against.
+        /// Without this the guard could be asserting that a method returns true.
+        /// </summary>
+        [Test]
+        public void AnIntentNobodyHandlesIsRejectedAsUnknown()
+        {
+            ColonyWorld colony = Board();
+            var stranger = (IntentKind)9999;
+
+            Assert.That(colony.World.HandlesIntent(stranger), Is.False);
+
+            colony.World.Intents.Submit(new Intent(stranger, colony.Start));
+            colony.World.Tick();
+
+            Assert.That(colony.World.Intents.Rejected.Count, Is.EqualTo(1));
+            Assert.That(colony.World.Intents.Rejected[0].Reason, Is.EqualTo(IntentRejection.UnknownIntent));
+        }
+
         // ---- the tables ---------------------------------------------------------------------
 
         [Test]
