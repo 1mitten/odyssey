@@ -68,6 +68,15 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>The most a vertex leans out, as a fraction of the cell's width (2.5 m): 22 cm.</summary>
         public const float MaxBulge = 0.09f;
 
+        /// <summary>
+        /// How much further a corner may lean out than the middle of an edge.
+        ///
+        /// Corners carry the silhouette: they are where two faces meet and where the eye reads
+        /// the outline against the sky, so they get the larger swing. The middle of an edge is
+        /// mostly seen flat-on and a big bulge there only makes the face look inflated.
+        /// </summary>
+        public const float CornerReach = 1.7f;
+
         /// <summary>How far the one interior top vertex may wander. It is on no seam, so it is free.</summary>
         public const float MaxDrift = 0.06f;
 
@@ -157,7 +166,9 @@ namespace Odyssey.Presentation.Rendering
                 if (outward.sqrMagnitude > 0f)
                 {
                     uint salt = (uint)(variant * 613 + course * 271 + j * 29 + i) + 1u;
-                    point += outward.normalized * (Unit(salt, 0x8888u) * MaxBulge);
+                    bool corner = outward.sqrMagnitude > 1.5f;
+                    float reach = corner ? MaxBulge * CornerReach : MaxBulge;
+                    point += outward.normalized * (Step(salt) * reach);
                 }
 
                 points[j * 3 + i] = point;
@@ -186,6 +197,22 @@ namespace Odyssey.Presentation.Rendering
         /// through somebody's feet, just the other way up.</para>
         /// </summary>
         static float DropWeight(int i, int j) => i == 1 && j == 1 ? 0.1f : 1f;
+
+        /// <summary>
+        /// A bulge in one of three discrete sizes rather than anywhere in the range.
+        ///
+        /// <para>A smooth draw is the wrong distribution for this. Two consecutive courses each
+        /// drawing uniformly from 0 to the maximum differ by about a third of it on average — a
+        /// few centimetres on a two-and-a-half metre cell — so the corner between them came out
+        /// very nearly a straight line, which is the silhouette of a cut block and the thing the
+        /// courses exist to destroy. Three sizes force the steps to be visible: a corner that goes
+        /// slight, full, slight up its height is unmistakably broken.</para>
+        /// </summary>
+        static float Step(uint salt)
+        {
+            float u = Unit(salt, 0x8888u);
+            return u < 0.34f ? 0.15f : u < 0.67f ? 0.55f : 1f;
+        }
 
         /// <summary>The nine plan positions at one height, at the exact cell footprint.</summary>
         static Vector3[] Ring(float y)

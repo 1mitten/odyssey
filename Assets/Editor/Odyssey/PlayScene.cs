@@ -267,24 +267,34 @@ namespace Odyssey.EditorTools
                 var natural = result.Natural;
                 if (natural != null && natural.Outcrops.Count > 0)
                 {
+                    // The TALLEST outcrop, not the nearest, and shot from low down. A stack is
+                    // the only thing that can show the fault this framing exists to catch: a
+                    // one-cell lump has no layer boundary to open a slot at, and a boundary seen
+                    // from above is edge-on to nothing. Height breaks ties towards the near one.
                     int nearestRock = -1;
-                    int bestRock = int.MaxValue;
+                    int bestRock = int.MinValue;
                     foreach (RockOutcrop outcrop in natural.Outcrops)
                     {
                         CellRef at = size.FromIndex(outcrop.CellIndex);
                         int d = Mathf.Abs(at.X - result.StartCell.X) + Mathf.Abs(at.Z - result.StartCell.Z);
-                        if (d >= bestRock) continue;
-                        bestRock = d;
+                        int score = outcrop.Height * 1000 - d;
+                        if (score <= bestRock) continue;
+                        bestRock = score;
                         nearestRock = outcrop.CellIndex;
                     }
 
                     if (nearestRock >= 0)
                     {
+                        // Aimed at the middle of the mass, not at the ground it stands on, and far
+                        // enough back to hold the whole stack: a frame that cuts the top off
+                        // cannot answer whether the top is right.
                         CellRef at = size.FromIndex(nearestRock);
                         var rockFocus = new Vector3(
-                            at.X * CellMetrics.SizeXZ, at.Y * CellMetrics.SizeY, at.Z * CellMetrics.SizeXZ);
-                        Shoot(camera, rockFocus, 30f, 14f, "Logs/shot-rock.png");
-                        Debug.Log($"[Shot] the nearest outcrop to the start is at {at}");
+                            at.X * CellMetrics.SizeXZ,
+                            (at.Y + 1.2f) * CellMetrics.SizeY,
+                            at.Z * CellMetrics.SizeXZ);
+                        Shoot(camera, rockFocus, 20f, 26f, "Logs/shot-rock.png");
+                        Debug.Log($"[Shot] the tallest outcrop near the start is at {at}");
                     }
                 }
 
