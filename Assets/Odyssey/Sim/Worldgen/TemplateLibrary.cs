@@ -49,19 +49,21 @@ namespace Odyssey.Sim.Worldgen
             slabModuleId = "odyssey.module.slab.concrete",
             rows = new List<string>
             {
-                // layer 0 — street level, one door onto the plot frontage
+                // layer 0 — street level, one door onto the plot frontage, four corner pillars
+                // load-bearing enough that the upper storey stands even with every wall panel
+                // gone (docs/design/02-world-and-layers.md section 4; SupportConsistencyCheck).
                 "######",
-                "#....#",
+                "#I..I#",
                 "#..L.#",
                 "#....#",
-                "#....#",
+                "#I..I#",
                 "##+###",
-                // layer 1 — upper storey, a partition and two windows
+                // layer 1 — upper storey, a partition, two windows, the same four pillars
                 "#oo###",
-                "#....#",
+                "#I..I#",
                 "#....#",
                 "#.##.#",
-                "#....#",
+                "#I..I#",
                 "###o##",
             },
         };
@@ -89,42 +91,46 @@ namespace Odyssey.Sim.Worldgen
             slabModuleId = "odyssey.module.slab.concrete",
             rows = new List<string>
             {
-                // layer -1 — basement, reached by the stairwell only
-                "##########",
+                // layer -1 — basement, reached by the stairwell only. Six permanent pillars (near
+                // each corner, plus the offset pair that clears the partition below) carry every
+                // floor above regardless of which wall panels damage strips
+                // (docs/design/02-world-and-layers.md section 4; SupportConsistencyCheck).
+                "##I##I####",
+                "#I..I...I#",
                 "#........#",
+                "#I..<>I.I#",
+                "#.I......#",
                 "#........#",
-                "#...<>...#",
+                "#I...I..I#",
+                "##I##I####",
+                // layer 0 — street level, double doors on the frontage, the same pillar columns,
+                // and the two boundary pillars flanking the doors
+                "###I++I###",
+                "#I..I...I#",
                 "#........#",
-                "#........#",
-                "#........#",
-                "##########",
-                // layer 0 — street level, double doors on the frontage
-                "####++####",
-                "#........#",
-                "#........#",
-                "#...<>...#",
-                "#..##.##.#",
-                "#...#....#",
-                "#...#....#",
-                "##########",
+                "#I..<>I.I#",
+                "#.III.II.#",
+                "#...I....#",
+                "#I..#I..I#",
+                "##I##I####",
                 // layer 1
-                "#oo####oo#",
+                "#ooI##Ioo#",
+                "#I..I...I#",
                 "#........#",
+                "#I..<>I.I#",
+                "#.IIIII..#",
                 "#........#",
-                "#...<>...#",
-                "#..####..#",
-                "#........#",
-                "#........#",
-                "##########",
+                "#I...I..I#",
+                "##I##I####",
                 // layer 2 — top storey, no stair above it
-                "#oo####oo#",
+                "#ooI##Ioo#",
+                "#I..I...I#",
                 "#........#",
+                "#I....I.I#",
+                "#.I......#",
                 "#........#",
-                "#........#",
-                "#........#",
-                "#........#",
-                "#........#",
-                "##########",
+                "#I...I..I#",
+                "##I##I####",
             },
         };
 
@@ -137,75 +143,80 @@ namespace Odyssey.Sim.Worldgen
         {
             var rows = new List<string>(84);
 
-            // layer -1 — basement
+            // layer -1 — basement. A 4x4 grid of permanent pillars (every three cells, the same
+            // columns on every floor including the roof) carries the tower even with every wall
+            // panel and window gone (docs/design/02-world-and-layers.md section 4;
+            // SupportConsistencyCheck) — a footprint this wide has no other way to reach its own
+            // centre once the curtain wall stops being trustworthy.
             rows.AddRange(new[]
             {
                 "############",
+                "#I..I..I..I#",
                 "#..........#",
                 "#..........#",
-                "#..........#",
-                "#....<>....#",
-                "#..........#",
+                "#I..I<>I..I#",
                 "#..........#",
                 "#..........#",
+                "#I..I..I..I#",
                 "#..........#",
                 "#..........#",
-                "#..........#",
+                "#I..I..I..I#",
                 "############",
             });
 
-            // layer 0 — lobby
+            // layer 0 — lobby, the same pillar grid
             rows.AddRange(new[]
             {
                 "####o++o####",
+                "#I..I..I..I#",
                 "#..........#",
                 "#..........#",
-                "#..........#",
-                "#....<>....#",
+                "#I..I<>I..I#",
                 "#....##....#",
                 "#..........#",
+                "#I..I..I..I#",
                 "#..........#",
                 "#..........#",
-                "#..........#",
-                "#..........#",
+                "#I..I..I..I#",
                 "####oooo####",
             });
 
-            // layers 1..4 — the repeated storey. A template is data, so a repeated floor is a
-            // repeated block of rows, not a loop the generator has to understand.
+            // layers 1..4 — the repeated storey, the same pillar grid. A template is data, so a
+            // repeated floor is a repeated block of rows, not a loop the generator has to
+            // understand.
             for (int storey = 1; storey <= 4; storey++)
             {
                 rows.AddRange(new[]
                 {
                     "#oo#oooo#oo#",
+                    "#I..I..I..I#",
                     "#..........#",
                     "#..........#",
-                    "#..........#",
-                    "#....<>....#",
+                    "#I..I<>I..I#",
                     "#....##....#",
                     "#..........#",
+                    "#I..I..I..I#",
                     "#..........#",
                     "#..........#",
-                    "#..........#",
-                    "#..........#",
+                    "#I..I..I..I#",
                     "#oo#oooo#oo#",
                 });
             }
 
-            // layer 5 — top storey, no stair above it
+            // layer 5 — top storey, no stair above it, the same pillar grid so the roof inherits it
             rows.AddRange(new[]
             {
                 "#oo#oooo#oo#",
+                "#I..I..I..I#",
                 "#..........#",
                 "#..........#",
+                "#I..I..I..I#",
                 "#..........#",
                 "#..........#",
+                "#I..I..I..I#",
                 "#..........#",
                 "#..........#",
-                "#..........#",
-                "#..........#",
-                "#..........#",
-                "#..........#",
+                "#I..I..I..I#",
                 "#oo#oooo#oo#",
             });
 

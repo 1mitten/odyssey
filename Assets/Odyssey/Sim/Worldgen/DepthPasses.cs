@@ -81,8 +81,13 @@ namespace Odyssey.Sim.Worldgen
                     if (depth == 1)
                     {
                         // Service stratum: solid fill, cut by utility tunnels that follow the
-                        // streets above, because that is where a city puts its services.
-                        bool tunnel = ctx.IsStreet[column] &&
+                        // streets above, because that is where a city puts its services. Never
+                        // where the metro already runs one layer down: two engineered voids
+                        // stacked with nothing solid between them leaves the upper one's floor
+                        // resting on the lower one's floor, which SupportConsistencyCheck rightly
+                        // calls a collapse — the metro's own tube is deep enough infrastructure
+                        // that a utility line would not be re-dug directly above it anyway.
+                        bool tunnel = ctx.IsStreet[column] && !OnMetro(ctx, x, z) &&
                                       ValueNoise.Fractal2D(tunnelSeed, x, z, TunnelPeriod, 2) > gen.tunnelThreshold;
                         if (tunnel)
                         {
@@ -414,10 +419,11 @@ namespace Odyssey.Sim.Worldgen
     /// The start is the walkable street cell nearest the middle of the map: streets are the
     /// circulation, so starting on one guarantees the colony can reach something.
     ///
-    /// The pass then asserts the map is internally consistent. What it does **not** yet do is the
-    /// full support solve the design document requires — see <see cref="IStructuralConsistencyCheck"/>
-    /// and the TODO there. The hook is called if one is supplied, so the day SupportSolver lands,
-    /// wiring it in is one line at the call site and every existing test starts checking it.
+    /// The pass then asserts the map is internally consistent and, via
+    /// <see cref="IStructuralConsistencyCheck"/>, runs the full support solve: does every stamped
+    /// shell stand up with no credit for having been stamped that way?
+    /// <see cref="WorldGenerator.CreatePasses"/> supplies <see cref="World.SupportConsistencyCheck"/>
+    /// by default; a caller only ever passes its own to substitute a test probe.
     /// </summary>
     public sealed class StartPass : IWorldGenPass
     {
@@ -436,12 +442,8 @@ namespace Odyssey.Sim.Worldgen
             ctx.Report.StartCell = ChooseStart(ctx);
             AssertConsistent(ctx);
 
-            // TODO(SupportSolver): replace this with an unconditional full solve over the grid
-            // once Assets/Odyssey/Sim/World/SupportSolver.cs exists, per
-            // docs/design/02-world-and-layers.md section 4 ("worldgen must also guarantee that
-            // every stamped shell is initially consistent, or the first tick collapses the map")
-            // and section 6 pass 10. Until then the assertion below is structural bookkeeping
-            // only and does not prove that anything stands up.
+            // Always non-null via WorldGenerator.CreatePasses; the check is only ever skipped by
+            // a test that constructs this pass directly.
             if (_structuralCheck != null)
             {
                 _structuralCheck.Verify(ctx.Grid, ctx);

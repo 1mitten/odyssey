@@ -565,6 +565,52 @@ namespace Odyssey.Tests.Sim
             public void Verify(CellGrid grid, WorldGenContext context) => Calls++;
         }
 
+        /// <summary>
+        /// The default structural check runs unasked (<see cref="WorldGenerator.CreatePasses"/>)
+        /// and every shipped template has to earn its footing under it: with no construction
+        /// trust, does the ordinary support rule alone hold the slice map up? If a template fails
+        /// this, the fix is a pillar in <see cref="TemplateLibrary"/>, never a change to the
+        /// solver — see <c>SupportSolverTests.IncrementalSolveMatchesFullSolveOverRandomEdits</c>
+        /// for what proves the solver.
+        /// </summary>
+        [Test]
+        public void EveryShippedTemplateStandsAtEveryDamageSetting()
+        {
+            foreach (var gen in DamageSettings())
+            {
+                for (uint seed = 1; seed <= 10; seed++)
+                {
+                    var grid = new CellGrid(SliceSize);
+                    WorldGenResult result;
+                    try
+                    {
+                        result = WorldGenerator.Generate(grid, seed, gen, TemplateLibrary.Slice());
+                    }
+                    catch (WorldGenException ex)
+                    {
+                        Assert.Fail($"{gen.defName}, seed {seed}: {ex.Message}");
+                        return;
+                    }
+
+                    Assert.That(result.Report.StructuralCheckRan, Is.True, $"{gen.defName}, seed {seed}");
+                }
+            }
+        }
+
+        /// <summary>Every damage setting the row asks for: the default, and damage switched off.</summary>
+        static IEnumerable<MapGenDef> DamageSettings()
+        {
+            yield return MapGenDef.For(SliceSize);
+            yield return new MapGenDef
+            {
+                defName = "MapGen_DamageOff",
+                groundLayer = MapGenDef.For(SliceSize).groundLayer,
+                minDamageIntensity = 0,
+                maxDamageIntensity = 0,
+                toppleChance = 0,
+            };
+        }
+
         [Test]
         public void EveryPassRunsAndTheConsistencyAssertionPasses()
         {

@@ -22,16 +22,11 @@ namespace Odyssey.Sim.Worldgen
     }
 
     /// <summary>
-    /// A hook for the structural solve that ends generation (section 6, pass 10).
-    ///
-    /// TODO(SupportSolver): pass 10 must run a **full support solve** over the finished map and
-    /// assert that every stamped slab stands, so that a template which cannot hold itself up is a
-    /// failing test rather than a map that collapses on tick one. That solver is
-    /// <c>Assets/Odyssey/Sim/World/SupportSolver.cs</c>, which is being written in parallel;
-    /// worldgen deliberately does not implement its own. Once it lands, the default
-    /// implementation of this interface becomes "run SupportSolver over the whole grid and throw
-    /// on any cell whose support is zero", and <see cref="WorldGenReport.StructuralCheckRan"/>
-    /// stops being an interesting field.
+    /// A hook for the structural solve that ends generation (section 6, pass 10): run a full
+    /// support solve over the finished map and throw if anything is left standing on nothing.
+    /// <see cref="World.SupportConsistencyCheck"/> is the real implementation and is what
+    /// <see cref="WorldGenerator.CreatePasses"/> supplies whenever a caller does not pass its own
+    /// — the interface stays so a test can still substitute a probe.
     /// </summary>
     public interface IStructuralConsistencyCheck
     {
@@ -207,6 +202,26 @@ namespace Odyssey.Sim.Worldgen
 
         public int Column(int x, int z) => z * Size.SizeX + x;
         public int Index(int x, int z, int y) => Size.Index(x, z, y);
+
+        /// <summary>
+        /// Which stamped shell covers this cell, or -1. Linear over <see cref="Shells"/>, which is
+        /// tens of entries even on the scale-target map, so this is for error messages and tests,
+        /// never a per-cell or per-tick query.
+        /// </summary>
+        public int ShellIndexAt(int x, int z, int y)
+        {
+            int relativeLayer = y - GroundLayer;
+            for (int s = 0; s < Shells.Count; s++)
+            {
+                var shell = Shells[s];
+                var template = Templates[shell.TemplateIndex];
+                if (x < shell.X0 || x >= shell.X0 + template.SizeX) continue;
+                if (z < shell.Z0 || z >= shell.Z0 + template.SizeZ) continue;
+                if (relativeLayer < template.BottomLayer || relativeLayer > template.HighestLayer) continue;
+                return s;
+            }
+            return -1;
+        }
 
         /// <summary>
         /// The random stream for one pass. Purposes are separated the way the tick streams are, so

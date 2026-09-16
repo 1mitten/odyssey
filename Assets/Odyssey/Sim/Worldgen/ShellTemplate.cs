@@ -103,6 +103,16 @@ namespace Odyssey.Sim.Worldgen
         public static bool Blocks(ShellCellKind kind) =>
             kind == ShellCellKind.Wall || kind == ShellCellKind.Window || kind == ShellCellKind.Pillar;
 
+        /// <summary>
+        /// Wall panels and windows are what a ruin loses piecemeal; a pillar is the load-bearing
+        /// member a template author placed specifically so the floors above it keep standing once
+        /// the panels around it are gone (docs/design/02-world-and-layers.md section 4). The
+        /// per-cell damage roll (<see cref="DamagePass"/>) only ever touches the former — a pillar
+        /// comes down exactly once, with everything else, when the whole storey topples.
+        /// </summary>
+        public static bool Damageable(ShellCellKind kind) =>
+            kind == ShellCellKind.Wall || kind == ShellCellKind.Window;
+
         /// <summary>The edifice def index this kind places, or <c>EdificeNone</c> for open space.</summary>
         public static ushort EdificeFor(ShellCellKind kind)
         {

@@ -23,7 +23,13 @@ namespace Odyssey.Sim.Worldgen
     {
         public const int PassCount = 10;
 
-        /// <summary>The passes in order. A new one is inserted here and nowhere else.</summary>
+        /// <summary>
+        /// The passes in order. A new one is inserted here and nowhere else.
+        ///
+        /// A null <paramref name="structuralCheck"/> gets <see cref="SupportConsistencyCheck"/>,
+        /// the real full-support gate; a caller only ever passes its own to substitute a test
+        /// probe (see <c>WorldgenTests.TheStructuralHookIsCalledWhenOneIsSupplied</c>).
+        /// </summary>
         public static IWorldGenPass[] CreatePasses(IStructuralConsistencyCheck? structuralCheck = null) =>
             new IWorldGenPass[]
             {
@@ -36,7 +42,7 @@ namespace Odyssey.Sim.Worldgen
                 new SalvagePass(),
                 new UtilityTapPass(),
                 new SealedVaultPass(),
-                new StartPass(structuralCheck),
+                new StartPass(structuralCheck ?? new SupportConsistencyCheck()),
             };
 
         /// <summary>Generate a full map with the slice template set.</summary>

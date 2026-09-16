@@ -346,7 +346,7 @@ namespace Odyssey.Sim.Worldgen
                     }
 
                     bool changed = false;
-                    if (ShellTemplate.Blocks(kind) && rng.NextInt(1000) < chance)
+                    if (ShellTemplate.Damageable(kind) && rng.NextInt(1000) < chance)
                     {
                         ctx.RemoveEdifice(index);
                         ctx.Report.RemovedEdifices++;
@@ -358,7 +358,12 @@ namespace Odyssey.Sim.Worldgen
                         }
                     }
 
-                    if (ctx.Grid.Floor[index] != CoreContent.SlabNone && rng.NextInt(1000) < slabChance)
+                    // A pillar's own floor patch, and the doorstep around it, are part of the
+                    // column rather than panels to lose on their own — otherwise a slab hole could
+                    // moat a pillar off from everything it was placed to hold up, even though the
+                    // pillar's edifice never moved.
+                    if (!IsPillarOrAdjacent(template, layer, tx, tz) &&
+                        ctx.Grid.Floor[index] != CoreContent.SlabNone && rng.NextInt(1000) < slabChance)
                     {
                         ctx.SetSlab(index, CoreContent.SlabNone, CoreContent.StuffNone);
                         ctx.Report.SlabHoles++;
@@ -378,9 +383,14 @@ namespace Odyssey.Sim.Worldgen
             for (int tz = 0; tz < template.SizeZ; tz++)
             for (int tx = 0; tx < template.SizeX; tx++)
             {
-                if (template.Cell(template.TopLayer, tx, tz) == ShellCellKind.Void) continue;
+                var roofKind = template.Cell(template.TopLayer, tx, tz);
+                if (roofKind == ShellCellKind.Void) continue;
                 int index = ctx.Index(shell.X0 + tx, shell.Z0 + tz, roofY);
-                if (roofToppled || rng.NextInt(1000) < roofChance)
+                // Same exemption as the per-floor loop above: a full topple still takes the deck
+                // over a pillar with it, but the per-cell roll never punches a hole in it or its
+                // doorstep alone.
+                bool roofExempt = IsPillarOrAdjacent(template, template.TopLayer, tx, tz);
+                if (roofToppled || (!roofExempt && rng.NextInt(1000) < roofChance))
                 {
                     if (ctx.Grid.Floor[index] == CoreContent.SlabNone) continue;
                     ctx.SetSlab(index, CoreContent.SlabNone, CoreContent.StuffNone);
@@ -388,6 +398,21 @@ namespace Odyssey.Sim.Worldgen
                     ctx.Report.DamagedCells++;
                 }
             }
+        }
+
+        /// <summary>
+        /// Is this cell a pillar, or does it touch one? Four neighbours only — a pillar's own
+        /// diagonal is not its doorstep — checked against the template's authored plan rather
+        /// than the grid, so it costs nothing more than the plan lookups the caller already does.
+        /// </summary>
+        static bool IsPillarOrAdjacent(ShellTemplate template, int layer, int tx, int tz)
+        {
+            if (template.Cell(layer, tx, tz) == ShellCellKind.Pillar) return true;
+            if (tx > 0 && template.Cell(layer, tx - 1, tz) == ShellCellKind.Pillar) return true;
+            if (tx < template.SizeX - 1 && template.Cell(layer, tx + 1, tz) == ShellCellKind.Pillar) return true;
+            if (tz > 0 && template.Cell(layer, tx, tz - 1) == ShellCellKind.Pillar) return true;
+            if (tz < template.SizeZ - 1 && template.Cell(layer, tx, tz + 1) == ShellCellKind.Pillar) return true;
+            return false;
         }
 
         /// <summary>Everything in the cell goes: the slab, the wall, the lot.</summary>
