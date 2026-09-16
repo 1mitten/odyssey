@@ -1,6 +1,6 @@
 # ADR 0006 — X-ray by default, with the full mode set shipped for playtest
 
-- **Status:** accepted; the default is deliberately revisable by play, not by argument
+- **Status:** accepted; amended 2026-09-16, when play duly revised it (see the amendment below)
 - **Date:** 2026-09-15
 - **Deciders:** owner, after judging the policies live in `docs/reference/mockups/hud-v1.html`
 - **Supersedes:** the provisional recommendation in `docs/design/09-ui-and-input.md` §9 row D3 and in `docs/design/10-ui-panel-catalogue.md` region A11
@@ -59,6 +59,47 @@ Architect. One binding cycles them, replacing A11's "cycle above-and-below polic
 `roofs-off` is new to the list and deserves a note: it is what the owner's concept renders actually
 depict, and it was never among the three candidates. The concept art was read for its HUD and its
 palette, and the thing it was showing about layering went unnoticed until the mode set was widened.
+
+## Amendment, 2026-09-16 — the default follows the depth
+
+The decision above stands: x-ray by default, six modes, two further axes. What changes is that
+**the default is no longer one fixed setting of those axes.** It is chosen by how deep the slice
+is, and the depth cap — "1, 2, 3, 4 or all layers" in the table below — is no longer part of the
+default at all.
+
+| Where the slice is | Above it | Below it |
+|---|---|---|
+| At or above the surface | every layer, **solid** (`full`) | `belowDepth` layers, dimmed |
+| Below the surface | one layer, x-rayed (`xray-min`) | every layer to the floor, dimmed |
+
+Above ground it resolves to `full` and not to `xray`, which is a correction: the rule first shipped
+x-raying the stack and the owner's reply was *"this includes everything buildings, stones, rocks and
+everything, as I noticed the mining rocks were transparent"*. It is `full` for opacity only — the
+active layer stays roofless, because that is its own decision and a default must not reverse it
+silently. An explicitly chosen `full`, the exterior and control view, keeps its lid as documented.
+
+The owner asked for it after a playtest, and the reason is the one this ADR already argues from:
+*"you need to be able to see within the environment — if there was ever digging introduced into the
+game or underground base."* Rationale 2 says verticality has to be legible or the premise fails; a
+three-layer cap under an underground base is that failure in the one direction the project is most
+about. Rationale 1 says x-ray answers "what is above me, and is it about to fall on me" — which is
+the surface question, and above ground it now gets the whole stack rather than four layers of it.
+
+It cost nothing. On the prototype board "every layer above" is four layers, which is what the cap
+already drew; underground the range is the same eight layers, shifted down; deeper it is fewer.
+See `06-rendering-and-camera.md` §3a for the measurements and for the fade bound that makes
+"every layer" finite.
+
+**The trigger was a bug, not a preference, and it is worth recording because the ADR could not have
+caught it.** Nothing alive was drawn above the slice — pawns and items were culled at the active
+layer by both renderers while the terrain around them was x-rayed correctly. So the policy this ADR
+chose had been half-implemented for M1 and the half that was missing was the half a player would
+notice first. A mode that draws the storey above is not drawing the storey above if the people in
+it are missing.
+
+**Flip condition F4.** If the uncapped stack above ever costs measurable frame time on a tall map,
+the cap returns above ground only — underground is where the rule earns its keep, and it is the
+cheaper half.
 
 ## Rationale
 

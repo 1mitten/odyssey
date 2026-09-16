@@ -40,11 +40,25 @@ namespace Odyssey.EditorTools
     public static class SwingCheck
     {
         /// <summary>
-        /// Which style the sheet is shot in. Felling for now; set it to
-        /// <see cref="WorkStyle.MiningIndex"/> to settle the pick's blade roll the same way the
-        /// axe's was settled, which is the only way either can be settled.
+        /// Which style the sheet is shot in, set by whichever menu item was used.
+        ///
+        /// <para>It used to be a <c>const</c>, which meant settling the pick meant editing the
+        /// harness and rebuilding. It is a field now for a stronger reason than convenience:
+        /// <see cref="WorkStyle.Building"/> has no job to be caught doing, so the only way it can
+        /// ever be photographed is <c>StyleOverride</c>, and the only way that can be reached is
+        /// from here.</para>
         /// </summary>
-        const int Style = WorkStyle.FellingIndex;
+        static int Style = WorkStyle.FellingIndex;
+
+        /// <summary>
+        /// What this style's pictures are called, so that three sheets can sit in <c>Logs/</c> at
+        /// once and be compared. They all wrote <c>swing-N.png</c> before, which meant shooting
+        /// the pick silently destroyed the axe's sheet — and the one thing a contact sheet is for
+        /// is putting two answers side by side.
+        /// </summary>
+        static string Tag => Style == WorkStyle.MiningIndex ? "pick"
+            : Style == WorkStyle.BuildingIndex ? "hammer"
+            : "swing";
 
         /// <summary>Frames per second the harness pretends to run at. There is no player loop here.</summary>
         const float FrameSeconds = 1f / 60f;
@@ -64,9 +78,36 @@ namespace Odyssey.EditorTools
             { 0f, 45f, 90f, 135f, 180f, 225f, 270f, 315f };
 
         [MenuItem("Odyssey/Presentation/Check the axe swing")]
-        public static void RunFromMenu() => Execute(exitWhenDone: false);
+        public static void RunFromMenu() => Shoot(WorkStyle.FellingIndex, exitWhenDone: false);
 
-        public static void Run() => Execute(Application.isBatchMode);
+        [MenuItem("Odyssey/Presentation/Check the pick swing")]
+        public static void RunPickFromMenu() => Shoot(WorkStyle.MiningIndex, exitWhenDone: false);
+
+        [MenuItem("Odyssey/Presentation/Check the hammer swing")]
+        public static void RunHammerFromMenu() => Shoot(WorkStyle.BuildingIndex, exitWhenDone: false);
+
+        public static void Run() => Shoot(WorkStyle.FellingIndex, Application.isBatchMode);
+
+        public static void RunPick() => Shoot(WorkStyle.MiningIndex, Application.isBatchMode);
+
+        public static void RunHammer() => Shoot(WorkStyle.BuildingIndex, Application.isBatchMode);
+
+        /// <summary>
+        /// Shoot one style's sheet.
+        ///
+        /// <para>The colonist photographed is always felling a tree, whatever style is asked for:
+        /// felling is the only work the playtest scenario hands out at the start, and the harness's
+        /// whole worth is that it photographs a real worker who really walked there. What the style
+        /// changes is the tool in the hand and the arc it travels, which is the part being judged.
+        /// A miner photographed cutting a tree is telling the truth about the stroke and a lie
+        /// about the subject, and only the first is on trial here.</para>
+        /// </summary>
+        static void Shoot(int style, bool exitWhenDone)
+        {
+            Style = style;
+            Execute(exitWhenDone);
+            if (!exitWhenDone) ShotFolder.Reveal($"{Tag}-*.png");
+        }
 
         static void Execute(bool exitWhenDone)
         {
@@ -118,6 +159,11 @@ namespace Odyssey.EditorTools
                 PlayScene.BuildSheetLighting(lightingRoot.transform);
 
                 figures = new PawnFigureDirector(catalogue, lightingRoot.transform, 0);
+
+                // Work in the style asked for rather than the style the job implies. For felling
+                // and mining these agree; for building there is no job to imply anything, which is
+                // the whole reason the override exists.
+                figures.StyleOverride = Style;
                 if (!figures.Enabled)
                     Debug.LogWarning("[Swing] no live figures: no character art or no gait clips. " +
                                      "The pictures will show the baked meshes and prove nothing.");
@@ -166,7 +212,11 @@ namespace Odyssey.EditorTools
 
                 // One stroke, sampled evenly. The frames between samples still run, so what is
                 // photographed is a continuous swing rather than nine independent poses.
-                int strokeFrames = Mathf.CeilToInt(WorkStroke.Axe.StrokeSeconds / FrameSeconds);
+                // The style's own period, not the axe's. A hammer at 0.7 s sampled across the axe's
+                // 1.15 s walks past the end of its stroke and into the next one, so the sheet shows
+                // a blow and a half and the samples no longer divide a stroke evenly.
+                int strokeFrames = Mathf.CeilToInt(
+                    WorkStyle.All[Style].Stroke.StrokeSeconds / FrameSeconds);
                 int every = Mathf.Max(1, strokeFrames / (Samples - 1));
 
                 for (int sample = 0; sample < Samples; sample++)
@@ -190,7 +240,14 @@ namespace Odyssey.EditorTools
                     // depths in the frame, and the one measurement that matters here — whether
                     // the blade arrives at the trunk with room to have travelled — then reads as
                     // whatever you please. Across the line it reads as what it is.
-                    PlayScene.Shoot(camera, Waist(now), 12f, SideOn(now), 6.5f, $"Logs/swing-{sample}.png");
+                    PlayScene.Shoot(camera, Waist(now), 12f, SideOn(now), 6.5f, $"Logs/{Tag}-{sample}.png");
+
+                    // Across the whole stroke, not only at the blow. Two forearms on one haft are
+                    // about a hand thick each, so anything under about 0.2 m apart is two meshes in
+                    // the same place however far "above" the number says the off arm is — and the
+                    // arms are closest together somewhere in the raise, not at the strike.
+                    Debug.Log($"[Swing] sample {sample}: off forearm " +
+                              $"{drawn.MeasuredOffArmAbove:+0.000;-0.000} m above the working one, {drawn.MeasuredArmGap:0.000} m apart; off palm {drawn.MeasuredGripGap:0.000} m off the haft, overreach {drawn.MeasuredGripOverreach:+0.000;-0.000} m, tool drift {drawn.MeasuredToolDrift:0.000} deg, hand at {drawn.MeasuredGripAt:0.00} of the haft, butt {drawn.MeasuredGripSpan:0.000} m from the off shoulder; butt at {drawn.MeasuredGripLocal.ToString("0.00")}, palm at {drawn.MeasuredPalmLocal.ToString("0.00")}");
                 }
 
                 // The blow itself, pinned rather than hoped for.
@@ -204,7 +261,7 @@ namespace Odyssey.EditorTools
                 drawn.Evaluate(FrameSeconds);
                 PawnView struck = FirstWorker(Current());
                 if (struck.Working)
-                    PlayScene.Shoot(camera, Waist(struck), 12f, SideOn(struck), 6.5f, "Logs/swing-impact.png");
+                    PlayScene.Shoot(camera, Waist(struck), 12f, SideOn(struck), 6.5f, $"Logs/{Tag}-impact.png");
 
                 // A contact sheet of the blade's roll, held at the moment of the blow.
                 //
@@ -221,11 +278,21 @@ namespace Odyssey.EditorTools
                     drawn.Sync(Current(), activeLayer, slice, 0f, movePerTick, FrameSeconds);
                     drawn.Evaluate(FrameSeconds);
 
-                    string path = $"Logs/blade-{roll:000}.png";
+                    string path = $"Logs/{Tag}-blade-{roll:000}.png";
                     PlayScene.Shoot(camera, drawn.LastBladePosition, 6f, SideOn(FirstWorker(Current())), 1.5f, path);
                     Debug.Log($"[Swing] wrote {path} at blade {drawn.LastBladePosition}");
                 }
-                drawn.Styles[Style] = drawn.Styles[Style].With(bladeRoll: 270f);
+                // Put the roll back to what the style actually ships with before sweeping the yaw,
+                // so the yaw sheet is shot at the head's real orientation and not at the last one
+                // the loop happened to leave behind.
+                //
+                // This line used to read `bladeRoll: 270f` unconditionally, which was a fossil: the
+                // axe's roll *was* 270 until eb5371f, where it went to 0 and BladeYaw was added to
+                // do the job the roll could not — "the roll turns the head about the very line the
+                // head is trying to be pointed along". The harness kept re-applying the superseded
+                // answer, and would have applied the axe's superseded answer to the pick and the
+                // hammer as well.
+                drawn.Styles[Style] = drawn.Styles[Style].With(bladeRoll: WorkStyle.All[Style].BladeRoll);
 
                 // And the same again about the upright, which is the turn that points the edge at
                 // the tree rather than moving it around the haft.
@@ -237,9 +304,40 @@ namespace Odyssey.EditorTools
                     drawn.Sync(Current(), activeLayer, slice, 0f, movePerTick, FrameSeconds);
                     drawn.Evaluate(FrameSeconds);
 
-                    string path = $"Logs/yaw-{yaw:000}.png";
+                    string path = $"Logs/{Tag}-yaw-{yaw:000}.png";
                     PlayScene.Shoot(camera, drawn.LastBladePosition, 6f, SideOn(FirstWorker(Current())), 1.5f, path);
                     Debug.Log($"[Swing] wrote {path}");
+                }
+
+                // The hands, from in front of the worker and from over its shoulder.
+                //
+                // **The side-on shot cannot answer this and never could.** In profile the two arms
+                // are one behind the other, so which of them passes over the other — the thing the
+                // owner is looking at — is precisely what is hidden. The grip is the one part of
+                // this pose where the useful camera is the one square to the chest.
+                //
+                // The bearings are figure-relative, and the offsets are not the obvious ones: the
+                // mesh inside a Synty character prefab is turned ninety degrees from its root, so
+                // the transform's own yaw is a *profile* view and the front is a further 270.
+                // docs/lessons.md, "Photographing a figure".
+                // All the way round, at the blow, because a bearing that is "the front" for one
+                // harness is not for another: the figure here is turned to face its tree, so the
+                // offset that gave a profile in GestureCheck gives something else again. Shooting
+                // the circle costs four pictures and settles it without an argument.
+                drawn.HeldPhase = 0.9f;
+                foreach (float turn in new[] { 0f, 90f, 180f, 270f })
+                {
+                    drawn.Sync(Current(), activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                    drawn.Evaluate(FrameSeconds);
+
+                    PawnView who = FirstWorker(Current());
+                    if (!who.Working) break;
+                    drawn.TryGetFacing(who.Id, out float about);
+
+                    PlayScene.Shoot(camera, Chest(drawn, who), 8f, about + turn, 4.5f,
+                        $"Logs/{Tag}-arms-{turn:000}.png");
+                    PlayScene.Shoot(camera, Chest(drawn, who), 40f, about + turn, 4.5f,
+                        $"Logs/{Tag}-arms-over-{turn:000}.png");
                 }
 
                 drawn.HeldPhase = null;
@@ -251,15 +349,15 @@ namespace Odyssey.EditorTools
                 {
                     // And the board camera's own bearing and height, which is the only one a
                     // player will ever see this from.
-                    PlayScene.Shoot(camera, Waist(last), 30f, 22f, "Logs/swing-wide.png");
+                    PlayScene.Shoot(camera, Waist(last), 30f, 22f, $"Logs/{Tag}-wide.png");
                 }
 
-                Debug.Log($"[Swing] wrote Logs/swing-0..{Samples - 1}.png and Logs/swing-wide.png; " +
+                Debug.Log($"[Swing] {Tag}: wrote Logs/{Tag}-0..{Samples - 1}.png and Logs/{Tag}-wide.png; " +
                           $"worker {worker.Id} at {worker.Cell} swinging at {worker.WorkCell}; " +
                           $"strike {figures.MeasuredReach:0.00} m, of which {figures.MeasuredStrikeSideways:0.00} m " +
                           $"sideways; edge lands {figures.MeasuredBladeHeight:0.00} m off the ground, " +
                           $"{figures.MeasuredBladeGap:0.00} m from the middle of the trunk; " +
-                          $"{figures.Chips?.ChipsThrown ?? 0} chips thrown");
+                          $"{figures.Chips?.ChipsThrown ?? 0} chips thrown; off forearm {figures.MeasuredOffArmAbove:+0.000;-0.000} m above the working one");
             }
             catch (Exception e)
             {
@@ -305,6 +403,17 @@ namespace Odyssey.EditorTools
             toWork.y = 0f;
             return PawnPose.YawOf(toWork.sqrMagnitude > 1e-4f ? toWork : Vector3.forward) + 90f;
         }
+
+        /// <summary>
+        /// The drawn figure's chest, for the grip shots. The figure's own position and not the
+        /// pawn's cell, because <c>WorkStance</c> steps a working colonist off its cell to put its
+        /// blade in the wood — up to a metre and a half, which at four metres' range is most of
+        /// the frame.
+        /// </summary>
+        static Vector3 Chest(PawnFigureDirector figures, in PawnView pawn) =>
+            (figures.TryGetFeet(pawn.Id, out Vector3 feet)
+                ? feet
+                : CellMetrics.FloorCentre(pawn.Cell)) + Vector3.up * 1.5f;
 
         static Vector3 Waist(in PawnView pawn) =>
             (CellMetrics.FloorCentre(pawn.Cell) + CellMetrics.FloorCentre(pawn.WorkCell)) * 0.5f

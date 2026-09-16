@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
+using Odyssey.Sim.Contracts;
 using UnityEngine;
 
 namespace Odyssey.Tests.Presentation
@@ -446,6 +447,113 @@ namespace Odyssey.Tests.Presentation
                 Assert.That(style.AimFromCentre, Is.LessThan(halfDiagonal),
                     "the aim leaves the cell when the worker stands on the diagonal");
             }
+        }
+
+        // ---- the builder's hammer ----------------------------------------------------------
+
+        [Test]
+        public void EveryStyleNamesAToolAndSomethingToThrow()
+        {
+            // A typo'd module id degrades in silence into bare-handed work, which is exactly what a
+            // clone without the packs looks like, so nobody would ever suspect the id. An empty
+            // chip recipe degrades into a blow with nothing coming off it, which reads as a
+            // colonist waving a tool near a thing. Both are invisible in review.
+            Assert.That(WorkStyle.All.Length, Is.EqualTo(WorkStyle.Count),
+                "Count sizes the per-figure tool table; a style missing from it is never fitted");
+
+            foreach (WorkStyle style in WorkStyle.All)
+            {
+                Assert.That(style.ToolModule, Is.Not.Null.And.Not.Empty);
+                Assert.That(style.Chips.IsSomething, Is.True,
+                    $"{style.ToolModule} lands with nothing coming off it");
+            }
+        }
+
+        [Test]
+        public void HammerIsSwungFromTheElbowWhereAnAxeIsSwungFromTheShoulder()
+        {
+            // The whole argument for the hammer being its own stroke rather than a fast axe, and
+            // the one thing about it that is a measurement rather than taste: its haft is 0.63 m
+            // against the axe's 0.74 (synty-inventory.csv). A short tool is swung from the elbow.
+            //
+            // So the shoulder comes back LESS (a smaller magnitude, and the angles are negative
+            // because an arm hangs down) while the elbow cocks MORE. Copying the axe and merely
+            // shortening the period would keep the long arc, and the figure would read as swinging
+            // a hammer it wished were an axe.
+            WorkStroke hammer = WorkStroke.Hammer;
+            WorkStroke axe = WorkStroke.Axe;
+
+            Assert.That(hammer.Raised.Shoulder, Is.GreaterThan(axe.Raised.Shoulder),
+                "the hammer is brought back beside the ear, not behind the back");
+            Assert.That(hammer.Raised.Elbow, Is.LessThan(axe.Raised.Elbow),
+                "a short haft is cocked harder at the elbow to make up the arc");
+        }
+
+        [Test]
+        public void HammerBeatsFasterAndRestsLessThanEitherOtherTool()
+        {
+            // Driving a frame together is a quick repeated tap; felling is an unhurried rhythm.
+            Assert.That(WorkStroke.Hammer.StrokeSeconds, Is.LessThan(WorkStroke.Pick.StrokeSeconds));
+            Assert.That(WorkStroke.Pick.StrokeSeconds, Is.LessThan(WorkStroke.Axe.StrokeSeconds));
+
+            // A later StrikeEnds is a shorter dwell, because the dwell runs from there to the end.
+            // An axe buries itself in the wood and rests; a pick bites and rebounds; a hammer
+            // bounces off hardest of all. Until a stroke can recoil, spending almost no time at the
+            // bottom is the only honest way to say so.
+            Assert.That(WorkStroke.Hammer.StrikeEnds, Is.GreaterThan(WorkStroke.Pick.StrikeEnds));
+            Assert.That(WorkStroke.Pick.StrikeEnds, Is.GreaterThan(WorkStroke.Axe.StrikeEnds));
+        }
+
+        [Test]
+        public void HammerSwingsNearerTheAxesPlaneThanThePicks()
+        {
+            // The owner's brief was "akin to chopping rather than to mining" (2026-09-16), and this
+            // is the number that carries it: an axe comes across the body at -30, a pick goes down
+            // the midline at -8. The hammer belongs between them and on the axe's side of the gap.
+            Assert.That(WorkStyle.Building.Tilt, Is.LessThan(WorkStyle.Mining.Tilt),
+                "a hammer travels across the body; it does not come down the midline like a pick");
+            Assert.That(WorkStyle.Building.Tilt, Is.GreaterThan(WorkStyle.Felling.Tilt),
+                "a short haft cannot travel as far round as a felling axe without leaving the plane");
+        }
+
+        [Test]
+        public void HammerAimsAtTheNearFaceLikeMiningAndNotAtTheCentreLikeFelling()
+        {
+            // The AimFromCentre bug, which would have been made a second time by copying the wrong
+            // one of the two existing styles. A tree is 0.6 m through and its cell is mostly air,
+            // so felling aims just past the middle. A wall under construction fills its cell, as
+            // rock does, so an aim past the middle finishes a metre inside the timber and the head
+            // — and the chips with it — are never seen.
+            Assert.That(WorkStyle.Building.AimFromCentre,
+                Is.EqualTo(WorkStyle.Mining.AimFromCentre).Within(0.001f));
+            Assert.That(WorkStyle.Building.AimFromCentre,
+                Is.GreaterThan(WorkStyle.Felling.AimFromCentre));
+        }
+
+        [Test]
+        public void BuildingCanBeReachedOnlyByOverridingTheStyle()
+        {
+            // Nothing in the simulation builds: there is no JobHandle.Build, so no job maps to this
+            // style and no colonist will be seen in it during play. It is reached from SwingCheck
+            // through PawnFigureDirector.StyleOverride and nowhere else.
+            //
+            // **This test is a tripwire, not a rule.** The day building becomes a real job, add the
+            // row to IndexForJob and delete this.
+            for (int job = 0; job < JobHandle.Count; job++)
+            {
+                Assert.That(WorkStyle.IndexForJob(job), Is.Not.EqualTo(WorkStyle.BuildingIndex),
+                    $"job {job} now maps to building; give it a row in IndexForJob and drop this test");
+            }
+        }
+
+        [Test]
+        public void TimberIsItsOwnRecipeAndNotFellingChips()
+        {
+            // A hammer driving a joint together is not cutting anything, so what comes off is a
+            // little dry splintering rather than the shavings an axe peels across the grain.
+            Assert.That(ChipRecipe.Timber.Count, Is.LessThan(ChipRecipe.Wood.Count));
+            Assert.That(ChipRecipe.Timber.Life.y, Is.LessThan(ChipRecipe.Wood.Life.y));
+            Assert.That(ChipRecipe.Timber.Spread, Is.LessThan(ChipRecipe.Wood.Spread));
         }
 
         // ---- aiming the stroke downward ----------------------------------------------------

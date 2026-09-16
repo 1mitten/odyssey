@@ -66,6 +66,38 @@ namespace Odyssey.Sim.Pawns
         public int MoodTarget { get; set; }
 
         /// <summary>
+        /// The last momentary thing this pawn did, for presentation to draw. See
+        /// <see cref="PawnGesture"/>.
+        ///
+        /// <para><b>Deliberately not saved and deliberately not hashed.</b> It is a report about
+        /// something that has already finished, and nothing in the simulation reads it back — so
+        /// it can have no effect on a tick, and a determinism run with it and without it must
+        /// produce the same state hash. A test asserts exactly that, because a field on
+        /// <see cref="Pawn"/> that quietly reached the hash would be a save-format change made by
+        /// accident.</para>
+        ///
+        /// <para>Losing it over a save is correct rather than merely tolerable: a colonist should
+        /// not finish a lift it began before the game was closed.</para>
+        /// </summary>
+        public PawnGesture Gesture { get; set; }
+
+        /// <summary>Bumped on every <see cref="BeginGesture"/>. See <see cref="PawnView.GestureSerial"/>.</summary>
+        public byte GestureSerial { get; set; }
+
+        /// <summary>
+        /// Report that a momentary thing just happened, for whoever is drawing this pawn.
+        ///
+        /// <para>The serial is what distinguishes two of the same gesture in a row, so it advances
+        /// on every call and not only when the kind changes. It wraps, and wrapping is harmless:
+        /// the reader tests for a different value, never a greater one.</para>
+        /// </summary>
+        public virtual void BeginGesture(PawnGesture gesture)
+        {
+            Gesture = gesture;
+            unchecked { GestureSerial++; }
+        }
+
+        /// <summary>
         /// Experience per skill, in thousandths of a point (see <see cref="SkillDef"/>). Levels
         /// are derived by <see cref="SkillLevel"/>, never stored.
         /// </summary>

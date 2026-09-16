@@ -60,121 +60,6 @@ namespace Odyssey.Tests.Sim
             colony.World.Tick();
         }
 
-        [Test]
-        public void ADugShaftIsClimbable()
-        {
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-            int surface = Size.Index(start.X, start.Z, start.Y);
-
-            // Three cells straight down from the cell the colony stands in.
-            int first = surface - Size.LayerStride;
-            Dig(colony, first);
-            Dig(colony, first - Size.LayerStride);
-            Dig(colony, first - 2 * Size.LayerStride);
-
-            int bottom = first - 2 * Size.LayerStride;
-            Assert.That(colony.Grid.IsWalkable(bottom), Is.True, "the bottom of the shaft cannot be stood in");
-
-            // From the ground BESIDE the hole, not from over it: the cell over it is the one whose
-            // floor was just dug away. See GroundBeside.
-            int ground = GroundBeside(colony, start);
-            Assume.That(ground, Is.GreaterThanOrEqualTo(0), "no ground beside the shaft on this board");
-
-            // Reachable both ways. Down is the easy direction and proves little; up is the one a
-            // fall edge would fail, because falls are one-way and are left out of the districts.
-            Assert.That(colony.Pawns.Nav.Reachable(ground, bottom, TraverseMode.Colonist), Is.True,
-                "the bottom of the shaft cannot be walked to");
-            Assert.That(colony.Pawns.Nav.Reachable(bottom, ground, TraverseMode.Colonist), Is.True,
-                "a colonist at the bottom of the shaft cannot get out");
-        }
-
-        [Test]
-        public void ADiggerComesBackUpAndGoesOnWorking()
-        {
-            // The whole point, stated as behaviour rather than as graph structure: a colonist that
-            // cuts its way down is still a working member of the colony afterwards.
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-            int surface = Size.Index(start.X, start.Z, start.Y);
-
-            for (int depth = 1; depth <= 3; depth++)
-            {
-                int cell = surface - depth * Size.LayerStride;
-                if (!colony.Designations.CanMine(cell)) continue;
-                colony.Designations.Designate(Size.FromIndex(cell), DesignationKind.Mine);
-                colony.World.Tick(4_000);
-            }
-
-            colony.World.Tick(4_000);
-
-            int ground = GroundBeside(colony, start);
-            Assume.That(ground, Is.GreaterThanOrEqualTo(0), "no ground beside the shaft on this board");
-
-            foreach (Pawn pawn in colony.Pawns.Pawns.All)
-            {
-                Assert.That(colony.Grid.IsWalkable(pawn.Cell), Is.True,
-                    $"a colonist is standing in {Size.FromIndex(pawn.Cell)}, which cannot be stood in");
-                Assert.That(colony.Pawns.Nav.Reachable(pawn.Cell, ground, TraverseMode.Colonist), Is.True,
-                    $"the colonist at {Size.FromIndex(pawn.Cell)} cannot get back to the surface");
-            }
-        }
-
-        [Test]
-        public void ASecondDigDoesNotStackASecondClimb()
-        {
-            // EnsureClimb is asked on both sides of every dig, so a shaft cut downward asks for
-            // the same pair twice. Flagging one cell's footprint twice would leave a connector
-            // nothing can take away again.
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-            int lower = Size.Index(start.X, start.Z, start.Y) - Size.LayerStride;
-
-            Dig(colony, lower);
-
-            // Asked for the very climb the dig declared: onto the ground beside the hole, which is
-            // where a climb lands now. Asking for the vertical pair would be asking for a climb
-            // that was never made and would say nothing about stacking.
-            int landing = GroundBeside(colony, start);
-            Assume.That(landing, Is.GreaterThanOrEqualTo(0), "no ground beside the hole on this board");
-
-            int again = colony.Pawns.Nav.EnsureClimb(lower, landing);
-            Assert.That(again, Is.EqualTo(-1), "a second climb was stacked on the first");
-        }
-
-        [Test]
-        public void AClimbJoinsOnlyCellsOneLayerApart()
-        {
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-            int cell = Size.Index(start.X, start.Z, start.Y);
-
-            Assert.That(colony.Pawns.Nav.EnsureClimb(cell, cell + 2 * Size.LayerStride), Is.EqualTo(-1),
-                "a climb skipped a layer");
-            Assert.That(colony.Pawns.Nav.EnsureClimb(cell, cell + 1), Is.EqualTo(-1),
-                "a climb was laid sideways");
-            Assert.That(colony.Pawns.Nav.EnsureClimb(-1, cell), Is.EqualTo(-1));
-        }
-
-        [Test]
-        public void BreakingIntoAChamberFromBelowIsAlsoClimbable()
-        {
-            // The upward case: a dig that opens into something already hollow. Asking "is my
-            // vertical neighbour open" covers both directions without caring which happened.
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-            int top = Size.Index(start.X, start.Z, start.Y - 1);
-            int middle = top - Size.LayerStride;
-            int bottom = middle - Size.LayerStride;
-
-            Dig(colony, top);
-            Dig(colony, bottom);     // an isolated pocket, not yet joined to the shaft above
-            Dig(colony, middle);     // breaks through: laddered to the pocket below and the shaft above
-
-            Assert.That(colony.Pawns.Nav.Reachable(bottom, top, TraverseMode.Colonist), Is.True,
-                "the pocket below never joined the shaft above it");
-        }
-
         // ---- where a colonist stands to dig downward ---------------------------------------
 
         [Test]
@@ -205,27 +90,31 @@ namespace Odyssey.Tests.Sim
             Assert.That(System.Math.Abs(at.Z - start.Z), Is.LessThanOrEqualTo(1));
         }
 
+        /// <summary>
+        /// A one-wide shaft cannot be deepened past one block, because nothing could get out of it
+        /// (owner, 2026-09-16: a colonist jumps up one block, and a ladder is wanted for more).
+        ///
+        /// <para>This test used to assert the opposite — that such a shaft <i>is</i> deepened, from
+        /// the only stance available, its own floor. That was true and it was the mechanism behind
+        /// three playtest reports at once: the colonist that cut the second cell was then at the
+        /// bottom of a two-block hole, and the only way out was a climb that ended in mid-air.
+        /// Refusing the cut is what makes a quarry come out as benches.</para>
+        /// </summary>
         [Test]
-        public void AOneWideShaftIsDeepenedFromDirectlyAboveBecauseThereIsNowhereElse()
+        public void AOneWideShaftIsNotDeepenedPastOneBlock()
         {
-            // The stance that could not be designed away, and the reason the step down into the
-            // hole still exists. Sunk one cell across, a shaft has solid rock on all eight sides of
-            // its bottom and on all eight sides of the cell below that: the only floor within
-            // reach of the next cell down is the one standing on it.
             ColonyWorld colony = Board();
             CellRef start = colony.Start;
-            Pawn pawn = colony.Pawns.Pawns.All[0];
 
             int surface = Size.Index(start.X, start.Z, start.Y);
             int bottom = surface - Size.LayerStride;
             Dig(colony, bottom);
 
-            int target = bottom - Size.LayerStride;
-            Assume.That(colony.Designations.CanMine(target), Is.True,
-                "the board has no second layer of rock under the landing site");
-
-            Assert.That(MineWorkGiver.StandToMine(colony.Pawns, pawn, target), Is.EqualTo(bottom),
-                "a shaft was deepened from somewhere other than its own floor");
+            Assert.That(
+                Odyssey.Sim.Designations.DesignationGrid.CanBeLeftAfterCutting(
+                    colony.Grid, bottom - Size.LayerStride),
+                Is.False,
+                "a one-wide shaft was deepened to two blocks, stranding whoever dug it");
         }
 
         [Test]

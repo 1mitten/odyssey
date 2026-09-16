@@ -72,7 +72,7 @@ namespace Odyssey.Sim
         public void Publish(SimWorld world, ISnapshotContributor[] contributors)
         {
             var back = Back;
-            back.BeginWrite(world.CurrentTick, world.Size, SliceLayer);
+            back.BeginWrite(world.CurrentTick, world.Size, SliceLayer, world.GameSpeed);
             _writer.Retarget(back);
 
             for (int i = 0; i < contributors.Length; i++) contributors[i].Contribute(world, _writer);

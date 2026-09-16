@@ -193,6 +193,53 @@ namespace Odyssey.Sim.Designations
             return above >= _grid.Size.CellCount || !IsTree(above);
         }
 
+        /// <summary>
+        /// Could a colonist get out of this cell once it has been dug out?
+        ///
+        /// <para><b>The rule that replaced climbing</b> (owner, 2026-09-16). Unaided, a colonist
+        /// gets up one block by jumping and no more; deeper than that wants a ladder, which is a
+        /// built thing and nothing builds one yet. So the work giver will not hand out a cut that
+        /// would strand the miner, and a quarry comes out as a flight of benches rather than as a
+        /// shaft with somebody at the bottom of it.</para>
+        ///
+        /// <para>The test is on the four orthogonal columns, at this layer and the one above it:
+        /// somewhere to step out onto, or somewhere to jump up onto. Not the layer below — dropping
+        /// deeper is a way further in, not a way out.</para>
+        ///
+        /// <para><b>Asked when the job is given, not when the order is placed.</b> Marking is the
+        /// player saying what they want; whether it can be done safely depends on the world at the
+        /// moment somebody goes to do it. A cell buried in the middle of a mass of rock fails this
+        /// test today and passes it the moment a tunnel reaches it, and an order that could not be
+        /// marked until then would be an order the player could never give in advance. Putting it
+        /// in <c>CanMine</c> was tried and it made every buried cell unmarkable, which made the
+        /// first cut of a tunnel impossible.</para>
+        /// </summary>
+        public static bool CanBeLeftAfterCutting(CellGrid grid, int index)
+        {
+            GridSize size = grid.Size;
+            CellRef at = size.FromIndex(index);
+
+            for (int i = 0; i < 4; i++)
+            {
+                int x = at.X + (i == 0 ? 1 : i == 1 ? -1 : 0);
+                int z = at.Z + (i == 2 ? 1 : i == 3 ? -1 : 0);
+
+                if (Standable(x, z, at.Y)) return true;
+                if (Standable(x, z, at.Y + 1)) return true;
+            }
+
+            return false;
+
+            bool Standable(int x, int z, int y)
+            {
+                if (!size.Contains(x, z, y)) return false;
+                int n = size.Index(x, z, y);
+                if (grid.IsSolidTerrain(n) || grid.IsBlockedByEdifice(n)) return false;
+                if (NaturalContent.IsWater(grid.Terrain[n])) return false;
+                return grid.HasFloor(n);
+            }
+        }
+
         /// <summary>Rock or ore that can be dug out — what a scenario means by "an outcrop".</summary>
         public bool IsMinableStone(int index)
         {

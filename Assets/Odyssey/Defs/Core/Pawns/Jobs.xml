@@ -58,6 +58,7 @@
     <expiryTicks>6000</expiryTicks>
     <trainsSkill>1</trainsSkill>
     <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
   </JobDef>
 
 
@@ -76,6 +77,7 @@
     <expiryTicks>12000</expiryTicks>
     <trainsSkill>2</trainsSkill>
     <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
   </JobDef>
 
 </Defs>

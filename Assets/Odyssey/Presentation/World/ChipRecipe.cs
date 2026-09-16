@@ -106,5 +106,32 @@ namespace Odyssey.Presentation.World
                 new Color(0.40f, 0.39f, 0.38f),
                 new Color(0.68f, 0.66f, 0.62f),
             });
+
+        /// <summary>
+        /// Worked timber under a builder's hammer. **Proposed, not settled.**
+        ///
+        /// Not <see cref="Wood"/>, and the difference is the whole reason recipes are per material
+        /// rather than per system. A felling axe is cutting *across* the grain of a standing tree
+        /// and peels shavings off it; a hammer driving a frame together is not cutting anything at
+        /// all, and what comes off is a little dry splintering and dust shaken loose at the joint.
+        /// So: half as many pieces, smaller, slower, gone sooner, and in a tight cone rather than
+        /// a fan.
+        ///
+        /// The colours are the pale end of <see cref="Wood"/>'s, because sawn structural timber is
+        /// dressed and dry where a fresh cut is dark and wet. Against a wall of the same stuff a
+        /// burst the colour of the wall is invisible, which is the trap <see cref="Stone"/> names.
+        /// </summary>
+        public static readonly ChipRecipe Timber = new ChipRecipe(
+            count: 5,
+            speed: new Vector2(0.6f, 1.6f),
+            size: new Vector2(0.025f, 0.06f),
+            life: new Vector2(0.25f, 0.5f),
+            spread: 24f,
+            colours: new[]
+            {
+                new Color(0.78f, 0.66f, 0.46f),
+                new Color(0.66f, 0.54f, 0.35f),
+                new Color(0.86f, 0.78f, 0.62f),
+            });
     }
 }

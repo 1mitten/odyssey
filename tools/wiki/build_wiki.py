@@ -600,8 +600,15 @@ def main(argv=None):
                 stale.append(f"{name}: missing")
             else:
                 with open(path, encoding="utf-8", newline="") as f:
-                    if f.read() != body:
-                        stale.append(f"{name}: out of date")
+                    on_disk = f.read()
+                # Compare the text, not the bytes. The generator emits LF; a Windows checkout
+                # holds these files with CRLF, because git translates on checkout. Comparing raw
+                # meant --check failed on every Windows clone with a wiki that was in fact
+                # byte-identical to the committed one, and the only way to "fix" it was to commit
+                # a rebuild that changed nothing but line endings. CI runs the fast tier on Linux,
+                # so this failed only on the machine the owner works on.
+                if on_disk.replace("\r\n", "\n") != body.replace("\r\n", "\n"):
+                    stale.append(f"{name}: out of date")
         if stale:
             print("The wiki is stale. Run: python3 tools/wiki/build_wiki.py")
             for s in stale:
