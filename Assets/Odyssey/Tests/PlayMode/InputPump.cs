@@ -43,7 +43,7 @@ namespace Odyssey.Tests.PlayMode
         public int LastScrollFrame { get; private set; } = -1;
 
         /// <summary>Deliver this state at the top of the next frame.</summary>
-        public void Post(MouseState state) => _pending.Enqueue(state);
+        public void Post(MouseState state) { /* CONTROL: deliver nothing */ }
 
         void Update()
         {
