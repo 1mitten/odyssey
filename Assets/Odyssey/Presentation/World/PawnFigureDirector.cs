@@ -1969,6 +1969,25 @@ namespace Odyssey.Presentation.World
             }
         }
 
+        /// <summary>
+        /// Dress every live figure again, for when the colours themselves have changed.
+        ///
+        /// A figure is normally painted once, as it is leased, because its colours are a function
+        /// of the pawn wearing it and neither changes while it is on screen. Two things break that
+        /// assumption: the contact sheet, which forces a slot to a signal colour and shoots the
+        /// same colony again, and — later — an appearance panel, where the player picks a colour
+        /// for somebody already standing in front of them.
+        /// </summary>
+        public void RepaintAll()
+        {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn < 0) continue;
+                Repaint(figure, new PawnId(figure.Pawn));
+            }
+        }
+
         /// <summary>Which swatches this face's body uses, or null when it was never classified.</summary>
         AppearanceCells? CellsFor(int look)
         {
