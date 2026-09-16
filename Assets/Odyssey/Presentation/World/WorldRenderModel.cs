@@ -105,6 +105,33 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public int HighestOccupiedLayer { get; private set; }
 
+        /// <summary>
+        /// The lowest layer the open landscape reaches: over every column, the layer its topmost
+        /// solid cell or floor slab sits on, taking the lowest of those.
+        ///
+        /// <para><b>Why a floor is needed at all.</b> The board is terraced, so the outdoor surface
+        /// spans <c>surfaceRelief * 2 + 1</c> layers and only one of them is ever the active one.
+        /// <c>SliceSettings.LowestDrawnLayer</c> cuts the drawn band off <c>belowDepth</c> layers
+        /// under the slice, which is right for looking down a shaft and wrong for looking at a
+        /// hillside: on the played board (120 x 120 x 16, seed 1) the ground runs L8 to L12, and a
+        /// slice one layer above the colony's own cut 6,140 of 14,400 columns away, leaving their
+        /// trees hanging over the skybox. That is the owner's report of 2026-09-16 — ground with no
+        /// texture and no grass under the low-lying trees — and it is the same argument
+        /// <see cref="Odyssey.Presentation.Rendering.TintCode.DaylitBase"/> already makes about the
+        /// depth <em>shade</em>, arriving one step earlier: a lower terrace is not ground you are
+        /// peering through something at, it is ground.</para>
+        ///
+        /// <para><b>It is measured once and never moves.</b> The landscape's span is a fact about
+        /// the generated board; a hole somebody digs afterwards is exactly the case the depth
+        /// budget is for, so a quarry floor five layers down still fades out rather than forcing
+        /// every cavern in the map to be drawn while the player stands in a meadow. That is why
+        /// this is set by <see cref="RefreshAll"/> alone and is not maintained by
+        /// <see cref="RefreshDirty"/>, which is the opposite choice to
+        /// <see cref="HighestOccupiedLayer"/> and for the opposite reason: a roof somebody builds
+        /// has to appear, a pit somebody digs is already governed.</para>
+        /// </summary>
+        public int LowestOutdoorLayer { get; private set; }
+
         /// <summary>Chunks refreshed on the most recent publish. A milestone-report number.</summary>
         public int LastRefreshedChunks { get; private set; }
 
@@ -497,8 +524,38 @@ namespace Odyssey.Presentation.World
             // so what comes out is exact rather than accumulated.
             HighestOccupiedLayer = 0;
             for (int index = 0; index < _terrain.Length; index++) CopyCell(grid, edifices, index);
+            MeasureTheLandscape();
             LastRefreshedChunks = Chunks.Count;
             Version++;
+        }
+
+        /// <summary>
+        /// Walk every column from the sky down to the first thing in it, and keep the lowest
+        /// answer. See <see cref="LowestOutdoorLayer"/> for what it is for and why it is taken
+        /// here and nowhere else.
+        ///
+        /// <para>A slab counts as the top of its column as readily as solid ground does, which
+        /// only ever raises a column's answer: a roofed cell is not open landscape and the ground
+        /// under it does not need drawing on a hillside's account. A column of pure air
+        /// contributes nothing rather than contributing zero.</para>
+        ///
+        /// <para>It costs the depth of the air above the ground, not the depth of the map — four
+        /// or five reads a column on the played board, taken once before the first frame.</para>
+        /// </summary>
+        void MeasureTheLandscape()
+        {
+            int lowest = Size.SizeY - 1;
+            for (int z = 0; z < Size.SizeZ; z++)
+            for (int x = 0; x < Size.SizeX; x++)
+            for (int y = Size.SizeY - 1; y >= 0; y--)
+            {
+                int index = Size.Index(x, z, y);
+                if (!IsSolid(index) && _floor[index] == CoreContent.SlabNone) continue;
+                if (y < lowest) lowest = y;
+                break;
+            }
+
+            LowestOutdoorLayer = lowest;
         }
 
         /// <summary>

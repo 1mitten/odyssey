@@ -1,5 +1,11 @@
 # Prompt for scheduled agents working the overnight queue
 
+> **Superseded where it talks about branching (2026-09-16).** Steps 1, 2, 4 and the merge step
+> below name `claude/m1-world`; that branch is 342 commits behind `main`. **Branch from `main`,
+> name it `claude/<slug>`, and land it with a pull request** — both CI tiers green, one approving
+> review. Agents never push to `main` directly, and branch protection enforces it. Fix this prompt
+> before running a queue from it again.
+
 Paste everything below the line into each scheduled agent's prompt. It is written for an agent
 that starts cold, with no memory of any earlier session, and it is the same prompt for every
 agent: the queue file is what stops them colliding, not the prompt.

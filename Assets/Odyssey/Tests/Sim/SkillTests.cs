@@ -27,6 +27,76 @@ namespace Odyssey.Tests.Sim
 
         static Pawn Lone(Colony colony) => colony.Ctx.Pawns.Spawn(colony.Cell(8, 8, 0));
 
+        // ------------------------------------------------------------------ the published names
+
+        /// <summary>
+        /// Skills reach the interface as pawn aspects, and the aspect's <i>name</i> is the whole
+        /// of the contract — <c>Odyssey.Tests.Hud</c> cannot reference this assembly at all, so it
+        /// mints its keys from the same literals and the two halves can only agree by agreeing on
+        /// the spelling.
+        ///
+        /// <para>The literals are written out here rather than taken from <c>SkillAspects</c>,
+        /// because a test that asks the thing under test what it is called agrees with itself
+        /// whatever it has been renamed to. Renaming a skill is a change to the interface's copy
+        /// too, and this is what says so.</para>
+        /// </summary>
+        [Test]
+        public void SkillsArePublishedUnderTheNamesTheInterfaceReads()
+        {
+            Assert.That(SkillIndex.Names.Length, Is.EqualTo(SkillIndex.Count),
+                "a skill with no name cannot be published at all");
+
+            Assert.That(SkillAspects.Name("mining", "level"),
+                Is.EqualTo("odyssey.pawn.skill.mining.level"));
+            Assert.That(SkillAspects.Name("cutting", "passion"),
+                Is.EqualTo("odyssey.pawn.skill.cutting.passion"));
+            Assert.That(SkillAspects.Name("hauling", "experience"),
+                Is.EqualTo("odyssey.pawn.skill.hauling.experience"));
+
+            Assert.That(SkillAspects.Level[SkillIndex.Mining],
+                Is.EqualTo(AspectKey.Of("odyssey.pawn.skill.mining.level")));
+            Assert.That(SkillAspects.Passion[SkillIndex.Cutting],
+                Is.EqualTo(AspectKey.Of("odyssey.pawn.skill.cutting.passion")));
+            Assert.That(SkillAspects.Experience[SkillIndex.Hauling],
+                Is.EqualTo(AspectKey.Of("odyssey.pawn.skill.hauling.experience")));
+        }
+
+        /// <summary>
+        /// A colonist's skills are on the published frame, under those names, with the level
+        /// derived rather than left for the reader to work out — the ladder that derives it is
+        /// simulation content and is not published.
+        /// </summary>
+        [Test]
+        public void ThePublishedFrameCarriesEveryColonistsSkills()
+        {
+            var size = new GridSize(40, 40, 8);
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 1;
+            scenario.beds = 1;
+            ColonyWorld colony = ColonyWorld.Build(size, 1u, scenario, barren: true);
+
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            pawn.Skills[SkillIndex.Mining] = 6 * Point;
+            pawn.Passions[SkillIndex.Mining] = (byte)Passion.Major;
+
+            colony.World.Tick();
+            WorldSnapshot frame = colony.World.Views.Current;
+
+            Assert.That(frame.TryGetPawnAspect(
+                pawn.Id, AspectKey.Of("odyssey.pawn.skill.mining.experience"), out int experience),
+                Is.True, "no skill experience reached the frame");
+            Assert.That(experience, Is.EqualTo(6 * Point));
+
+            Assert.That(frame.TryGetPawnAspect(
+                pawn.Id, AspectKey.Of("odyssey.pawn.skill.mining.level"), out int level), Is.True);
+            Assert.That(level, Is.EqualTo(pawn.SkillLevel(SkillIndex.Mining)),
+                "the level is derived by the simulation, which owns the ladder");
+
+            Assert.That(frame.TryGetPawnAspect(
+                pawn.Id, AspectKey.Of("odyssey.pawn.skill.mining.passion"), out int passion), Is.True);
+            Assert.That(passion, Is.EqualTo((int)Passion.Major));
+        }
+
         // ------------------------------------------------------------------ levels
 
         [Test]

@@ -24,16 +24,27 @@ namespace Odyssey.Hud
     /// </summary>
     public static class SkillCatalogue
     {
-        /// <summary>No simulation skill trains this one yet.</summary>
-        public const int NotSimulated = -1;
+        /// <summary>Nothing in the simulation trains this one yet.</summary>
+        public const string NotSimulated = "";
+
+        /// <summary>
+        /// The prefix every skill aspect is published under. It is a string and not a shared
+        /// constant on purpose: this assembly cannot reference <c>Odyssey.Sim</c> at all, which is
+        /// the architectural point of <see cref="PawnAspect"/> — a name is provably enough, and a
+        /// constant they both imported would be the shared file the mechanism exists to avoid.
+        /// </summary>
+        const string Prefix = "odyssey.pawn.skill.";
 
         public readonly struct Entry
         {
             /// <summary>The registry key, which is also the icon key.</summary>
             public readonly string Key;
 
-            /// <summary>A <see cref="SkillHandle"/> value, or <see cref="NotSimulated"/>.</summary>
-            public readonly int Handle;
+            /// <summary>
+            /// The simulation's own name for the skill that trains this one, or
+            /// <see cref="NotSimulated"/>. The keys below are minted from it.
+            /// </summary>
+            public readonly string Skill;
 
             /// <summary>Why it is not live, shown beside the row. Empty when it is.</summary>
             public readonly string Reason;
@@ -41,15 +52,23 @@ namespace Odyssey.Hud
             /// <summary>What the row says about itself beyond its name, or empty.</summary>
             public readonly string Note;
 
-            public Entry(string key, int handle, string reason, string note = "")
+            /// <summary>The three names this skill's numbers arrive under.</summary>
+            public readonly AspectKey Level;
+            public readonly AspectKey Passion;
+            public readonly AspectKey Experience;
+
+            public Entry(string key, string skill, string reason, string note = "")
             {
                 Key = key;
-                Handle = handle;
+                Skill = skill;
                 Reason = reason;
                 Note = note;
+                Level = skill.Length == 0 ? default : AspectKey.Of(Prefix + skill + ".level");
+                Passion = skill.Length == 0 ? default : AspectKey.Of(Prefix + skill + ".passion");
+                Experience = skill.Length == 0 ? default : AspectKey.Of(Prefix + skill + ".experience");
             }
 
-            public bool Live => Handle != NotSimulated;
+            public bool Live => Skill.Length != 0;
         }
 
         /// <summary>
@@ -60,10 +79,10 @@ namespace Odyssey.Hud
         public static readonly Entry[] All =
         {
             new Entry("ui.skill.construction", NotSimulated, "nothing is built yet"),
-            new Entry("ui.skill.mining", SkillHandle.Mining, string.Empty),
+            new Entry("ui.skill.mining", "mining", string.Empty),
             new Entry("ui.skill.salvage", NotSimulated, "salvage is hauled, not stripped"),
             new Entry("ui.skill.cooking", NotSimulated, "meals are found, not made"),
-            new Entry("ui.skill.growing", SkillHandle.Cutting, string.Empty,
+            new Entry("ui.skill.growing", "cutting", string.Empty,
                       "trained by felling, which is plant work"),
             new Entry("ui.skill.animals", NotSimulated, "no creature simulation"),
             new Entry("ui.skill.crafting", NotSimulated, "no bench work"),

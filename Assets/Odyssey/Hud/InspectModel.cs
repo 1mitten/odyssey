@@ -302,18 +302,25 @@ namespace Odyssey.Hud
 
             if (Tombstoned) return;
 
-            var published = snapshot.Skills;
+            // One walk of the published aspects rather than three lookups per row, which is what
+            // TryGetPawnAspect's own remarks recommend for a reader that wants every aspect of a
+            // pawn: the lookup is a scan, so calling it thirty-nine times would be thirty-nine
+            // scans of the same span.
+            var published = snapshot.PawnAspects;
             for (int i = 0; i < published.Length; i++)
             {
-                SkillView view = published[i];
-                if (view.Pawn != Pawn) continue;
+                PawnAspect aspect = published[i];
+                if (aspect.Pawn != Pawn) continue;
                 for (int r = 0; r < SkillCatalogue.All.Length; r++)
                 {
-                    if (SkillCatalogue.All[r].Handle != view.Skill) continue;
+                    SkillCatalogue.Entry entry = SkillCatalogue.All[r];
+                    if (!entry.Live) continue;
+
                     SkillRow row = Skills[r];
-                    row.Level = view.Level;
-                    row.Passion = view.Passion;
-                    row.Experience = view.Experience;
+                    if (aspect.Key == entry.Level) row.Level = aspect.Value;
+                    else if (aspect.Key == entry.Passion) row.Passion = aspect.Value;
+                    else if (aspect.Key == entry.Experience) row.Experience = aspect.Value;
+                    else continue;
                     Skills[r] = row;
                 }
             }

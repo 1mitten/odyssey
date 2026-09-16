@@ -226,7 +226,11 @@ namespace Odyssey.Presentation.Rendering
             InstancesDrawn += Skirt.InstancesDrawn;
 
             var size = _model.Size;
-            int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
+            // Floored at the bottom of the landscape as well as at the policy's own limit. The
+            // surface is terraced and spans several layers, so the depth budget alone deletes the
+            // low ground and leaves its trees over the skybox. See
+            // WorldRenderModel.LowestOutdoorLayer.
+            int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model.LowestOutdoorLayer));
             // Capped at the top of the geometry as well as at the policy's own limit. Above the
             // surface the policy says "every layer, solid", and solid has no fade to cut the loop
             // short — so without this a tall map would mesh a dozen layers of empty sky on every
@@ -491,7 +495,11 @@ namespace Odyssey.Presentation.Rendering
             System.Collections.Generic.HashSet<int>? drawnAsFigures = null)
         {
             if (snapshot.PawnCount == 0 && snapshot.ThingCount == 0) return;
-            int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
+
+            // Down to the bottom of the landscape, not merely to the depth budget — the same
+            // band Render draws, because a colonist on a low terrace was being culled along with
+            // the terrace. See WorldRenderModel.LowestOutdoorLayer.
+            int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer, _model.LowestOutdoorLayer));
 
             // Up to the highest layer anything is drawn on, NOT up to the active layer.
             //

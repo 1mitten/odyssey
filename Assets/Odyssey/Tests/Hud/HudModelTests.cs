@@ -163,9 +163,14 @@ namespace Odyssey.Tests.Hud
             var snapshot = Frame.Write();
             var id = new PawnId(3);
             snapshot.AddPawn(new PawnView(id, new CellRef(4, 5, 1), 620, 710, 720, JobHandle.Mine));
-            snapshot.AddSkill(new SkillView(id, SkillHandle.Mining, level: 7, passion: 2, experience: 9_500));
-            snapshot.AddSkill(new SkillView(id, SkillHandle.Cutting, level: 4, passion: 1, experience: 3_100));
-            snapshot.AddSkill(new SkillView(id, SkillHandle.Hauling, level: 2, passion: 0, experience: 1_400));
+
+            // Published by the name the simulation publishes it under, spelled out in full rather
+            // than taken from SkillCatalogue. Reading the key from the thing under test would make
+            // this agree with itself whatever either side had been renamed to, and the name is the
+            // whole contract: this assembly cannot reference Odyssey.Sim at all.
+            Skill(snapshot, id, "mining", level: 7, passion: 2, experience: 9_500);
+            Skill(snapshot, id, "cutting", level: 4, passion: 1, experience: 3_100);
+            Skill(snapshot, id, "hauling", level: 2, passion: 0, experience: 1_400);
 
             var pane = new InspectModel();
             pane.SetColonist(id);
@@ -192,6 +197,21 @@ namespace Odyssey.Tests.Hud
                 Assert.That(row.Reason, Is.Not.Empty,
                     $"{row.IconKey} is disabled without saying why, which the catalogue forbids");
             }
+        }
+
+        /// <summary>
+        /// Publish one colonist's standing in one skill, under the names
+        /// <c>Odyssey.Sim.Pawns.SkillAspects</c> uses. The literals are the contract.
+        /// </summary>
+        static void Skill(WorldSnapshot snapshot, PawnId pawn, string skill,
+                          int level, int passion, int experience)
+        {
+            snapshot.AddPawnAspect(new PawnAspect(
+                pawn, AspectKey.Of("odyssey.pawn.skill." + skill + ".level"), level));
+            snapshot.AddPawnAspect(new PawnAspect(
+                pawn, AspectKey.Of("odyssey.pawn.skill." + skill + ".passion"), passion));
+            snapshot.AddPawnAspect(new PawnAspect(
+                pawn, AspectKey.Of("odyssey.pawn.skill." + skill + ".experience"), experience));
         }
 
         /// <summary>

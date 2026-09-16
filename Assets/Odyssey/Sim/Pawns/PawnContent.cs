@@ -207,13 +207,24 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public static class SkillIndex
     {
-        // Aliases of Odyssey.Sim.Contracts.SkillHandle, for the same reason JobIndex aliases
-        // JobHandle: the published SkillView carries these indices, so both sides of the seam
-        // must count the same way, and the simulation's own code keeps the short names.
-        public const int Hauling = SkillHandle.Hauling;
-        public const int Cutting = SkillHandle.Cutting;
-        public const int Mining = SkillHandle.Mining;
-        public const int Count = SkillHandle.Count;
+        // Unlike JobIndex, these are not aliases of anything in Sim.Contracts, and deliberately:
+        // skills reach the interface as pawn aspects, keyed by name, so the index never crosses
+        // the seam and the shared assembly does not have to know that skills exist. Adding one is
+        // a change to this file and the Defs beside it.
+        public const int Hauling = 0;
+        public const int Cutting = 1;
+        public const int Mining = 2;
+        public const int Count = 3;
+
+        /// <summary>
+        /// The names skills are published under, parallel to the indices above.
+        ///
+        /// <para>A name rather than a number, because that is the whole point of an aspect: the
+        /// interface reads <c>odyssey.pawn.skill.mining.level</c> without referencing this
+        /// assembly or sharing an enum with it. The prefix is the project's, the middle is this
+        /// feature's, and the leaf is the value — the same shape as an icon key.</para>
+        /// </summary>
+        public static readonly string[] Names = { "hauling", "cutting", "mining" };
     }
 
     /// <summary>
