@@ -284,6 +284,72 @@ namespace Odyssey.Tests.Presentation
                 "relief must never rise far enough to be mistaken for a step up a layer");
         }
 
+        /// <summary>
+        /// The join between the board and the land outside it.
+        ///
+        /// The surround's first ring is drawn from the very cells the board's rim is drawn from, so
+        /// if the hills did not start at nothing there would be a step all the way round the board
+        /// -- which is the exact tell the whole surround exists to remove. At the rim the hill term
+        /// must be identically zero and the surround must agree with the board to the last float.
+        /// </summary>
+        [Test]
+        public void TheSurroundMeetsTheBoardExactlyAtTheRim()
+        {
+            GroundRelief.Amplitude = GroundRelief.BoardAmplitude;
+
+            for (int i = 0; i < 200; i++)
+            {
+                float x = i * 3.1f;
+                float z = i * 5.7f;
+
+                Assert.That(GroundRelief.HillAmplitudeAt(0f), Is.Zero,
+                    "the hills start at nothing, or the join is a step");
+                Assert.That(GroundRelief.SurroundHeightAt(x, z, 0f),
+                    Is.EqualTo(GroundRelief.HeightAt(x, z)).Within(1e-5f),
+                    "at the rim the surround is the board");
+            }
+
+            // And it climbs from there rather than jumping.
+            float previous = 0f;
+            for (float d = 0f; d <= 900f; d += 25f)
+            {
+                float amplitude = GroundRelief.HillAmplitudeAt(d);
+                Assert.That(amplitude, Is.GreaterThanOrEqualTo(previous - 1e-4f),
+                    "the hills only ever grow outwards");
+                Assert.That(amplitude - previous, Is.LessThan(5f),
+                    "and never by a jump the eye would read as a wall");
+                previous = amplitude;
+            }
+        }
+
+        /// <summary>
+        /// A surround tile is drawn as one tilted box, and over 60 m the hills can fall a long way.
+        /// If the box is not deep enough to reach below its neighbours, the join between two tiles
+        /// is an open trench through to the sky. The depth rule has to beat the worst drop.
+        /// </summary>
+        [Test]
+        public void ASurroundTileIsDeepEnoughToReachItsNeighbours()
+        {
+            GroundRelief.Amplitude = GroundRelief.BoardAmplitude;
+
+            foreach (SkirtLayout.Band band in SkirtLayout.Bands)
+            {
+                for (float distance = 0f; distance <= SkirtLayout.TotalDepthMetres; distance += 40f)
+                {
+                    float span = band.TileMetres;
+                    float slope = GroundRelief.SurroundMaxSlope(distance);
+
+                    // What TerrainSkirt gives the tile, and the worst a neighbour can be below it.
+                    float depth = CellMetrics.SizeY + 2f * slope * span + 1f;
+                    float worstDrop = slope * span;
+
+                    Assert.That(depth, Is.GreaterThan(worstDrop + CellMetrics.SizeY),
+                        $"a {span} m tile {distance} m out can drop {worstDrop:0.0} m to its " +
+                        $"neighbour but is only {depth:0.0} m deep: that is a hole to the sky");
+                }
+            }
+        }
+
         [Test]
         public void TheSurroundCanRiseFurtherThanTheBoardWithoutBecomingADifferentField()
         {

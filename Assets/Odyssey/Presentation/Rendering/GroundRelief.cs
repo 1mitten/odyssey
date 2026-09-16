@@ -72,6 +72,9 @@ namespace Odyssey.Presentation.Rendering
         {
             Amplitude = 0f;
             Period = 150f;
+            HillAmplitude = 50f;
+            HillPeriod = 1000f;
+            HillRampMetres = 700f;
         }
 
         /// <summary>
@@ -130,11 +133,24 @@ namespace Odyssey.Presentation.Rendering
         /// The same field at an explicit amplitude, which is how the surround grows into hills
         /// without becoming a second field with its own shape.
         /// </summary>
-        public static float HeightAt(float worldX, float worldZ, float amplitude)
+        public static float HeightAt(float worldX, float worldZ, float amplitude) =>
+            FieldAt(worldX, worldZ, amplitude, Period);
+
+        /// <summary>
+        /// The field itself, at an explicit amplitude and wavelength.
+        ///
+        /// Taking the wavelength as an argument is what lets the surround carry hills without
+        /// becoming a different shape: the same four waves at a long wavelength and a large
+        /// amplitude are hills, and at a short one and a small amplitude are the roll across the
+        /// board. A single global wavelength could not do both - raising the amplitude to hill
+        /// height at the board's own wavelength gives slopes of sixty degrees and spikes, not
+        /// country.
+        /// </summary>
+        public static float FieldAt(float worldX, float worldZ, float amplitude, float period)
         {
             if (amplitude == 0f) return 0f;
 
-            float k = 2f * Mathf.PI / Mathf.Max(1f, Period);
+            float k = 2f * Mathf.PI / Mathf.Max(1f, period);
             float sum = 0f;
             for (int i = 0; i < Waves.Length; i++)
             {
@@ -157,13 +173,18 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>The slope of the field at an explicit amplitude.</summary>
         public static void SlopeAt(float worldX, float worldZ, float amplitude,
+            out float slopeX, out float slopeZ) =>
+            FieldSlopeAt(worldX, worldZ, amplitude, Period, out slopeX, out slopeZ);
+
+        /// <summary>The exact gradient of <see cref="FieldAt"/>.</summary>
+        public static void FieldSlopeAt(float worldX, float worldZ, float amplitude, float period,
             out float slopeX, out float slopeZ)
         {
             slopeX = 0f;
             slopeZ = 0f;
             if (amplitude == 0f) return;
 
-            float k = 2f * Mathf.PI / Mathf.Max(1f, Period);
+            float k = 2f * Mathf.PI / Mathf.Max(1f, period);
             for (int i = 0; i < Waves.Length; i++)
             {
                 Wave w = Waves[i];
@@ -184,9 +205,12 @@ namespace Odyssey.Presentation.Rendering
         /// sheared cell reaches half a cell times this above its own centre, and a box that does
         /// not allow for it gets culled while it is still on screen.
         /// </summary>
-        public static float MaxSlope(float amplitude)
+        public static float MaxSlope(float amplitude) => MaxSlope(amplitude, Period);
+
+        /// <summary>The steepest the field can be at an explicit amplitude and wavelength.</summary>
+        public static float MaxSlope(float amplitude, float period)
         {
-            float k = 2f * Mathf.PI / Mathf.Max(1f, Period);
+            float k = 2f * Mathf.PI / Mathf.Max(1f, period);
             float sum = 0f;
             for (int i = 0; i < Waves.Length; i++)
             {
@@ -196,6 +220,98 @@ namespace Odyssey.Presentation.Rendering
 
             return sum * Mathf.Abs(amplitude);
         }
+
+        // ---------------------------------------------------------------- the surround
+
+        /// <summary>
+        /// The wavelength of the hills outside the board, in metres.
+        ///
+        /// Long, because amplitude and wavelength together are what decide a slope, and hills are
+        /// tall. Thirty-five metres of rise over the board's own 150 m wavelength would stand at
+        /// sixty degrees; over 700 m it stands at seventeen, which is a hillside.
+        /// </summary>
+        public static float HillPeriod { get; set; } = 1000f;
+
+        /// <summary>How tall the hills are allowed to get, in metres, once far enough out.</summary>
+        public static float HillAmplitude { get; set; } = 50f;
+
+        /// <summary>
+        /// How far out the hills reach their full height, in metres beyond the board's rim.
+        ///
+        /// Early, and then held. The temptation is to grow the land all the way to the far edge of
+        /// the surround, but fog is opaque by 1,100 m from the camera and the board's own rim is
+        /// already 150 m or so away, so anything past about 900 m is drawn in exactly the colour of
+        /// the sky. Worse, at the camera's default 48-degree pitch the horizon is not in frame at
+        /// all; the far land only appears below about 25 degrees. So the height is spent where it
+        /// can be seen and not beyond it.
+        /// </summary>
+        public static float HillRampMetres { get; set; } = 700f;
+
+        /// <summary>
+        /// The hills' amplitude at a distance outside the board.
+        ///
+        /// Zero at the rim, and that is the load-bearing part: the surround's first ring is drawn
+        /// from the same cells the board's own rim is, so if the hills did not start at nothing
+        /// there would be a step at the join - which is the exact tell the whole surround exists
+        /// to remove. Smoothstepped rather than linear so there is no crease where they begin.
+        /// </summary>
+        public static float HillAmplitudeAt(float metresOutsideBoard)
+        {
+            if (metresOutsideBoard <= 0f) return 0f;
+            float t = Mathf.Clamp01(metresOutsideBoard / Mathf.Max(1f, HillRampMetres));
+            return HillAmplitude * (t * t * (3f - 2f * t));
+        }
+
+        /// <summary>
+        /// The height of the drawn ground outside the board: the same roll the board has, with the
+        /// hills laid over it.
+        ///
+        /// Both layers are continuous everywhere, so the surround cannot disagree with the board at
+        /// the seam - at the rim the hill term is zero and this is exactly <see cref="HeightAt"/>.
+        /// </summary>
+        public static float SurroundHeightAt(float worldX, float worldZ, float metresOutsideBoard) =>
+            HeightAt(worldX, worldZ) +
+            FieldAt(worldX, worldZ, HillAmplitudeAt(metresOutsideBoard), HillPeriod);
+
+        /// <summary>The gradient of <see cref="SurroundHeightAt"/>, both layers summed.</summary>
+        public static void SurroundSlopeAt(float worldX, float worldZ, float metresOutsideBoard,
+            out float slopeX, out float slopeZ)
+        {
+            SlopeAt(worldX, worldZ, Amplitude, out slopeX, out slopeZ);
+            FieldSlopeAt(worldX, worldZ, HillAmplitudeAt(metresOutsideBoard), HillPeriod,
+                out float hillX, out float hillZ);
+            slopeX += hillX;
+            slopeZ += hillZ;
+        }
+
+        /// <summary>The steepest the surround can be at a distance, for sizing its boxes and bounds.</summary>
+        public static float SurroundMaxSlope(float metresOutsideBoard) =>
+            MaxSlope(Amplitude, Period) +
+            MaxSlope(HillAmplitudeAt(metresOutsideBoard), HillPeriod);
+
+        /// <summary>
+        /// The placement for a piece of surround: draped on the board's roll and its hills together.
+        /// </summary>
+        public static Matrix4x4 DrapeSurround(Vector3 centre, float metresOutsideBoard)
+        {
+            float height = SurroundHeightAt(centre.x, centre.z, metresOutsideBoard);
+            SurroundSlopeAt(centre.x, centre.z, metresOutsideBoard,
+                out float slopeX, out float slopeZ);
+
+            var m = Matrix4x4.identity;
+            m.m10 = slopeX;
+            m.m12 = slopeZ;
+            m.m03 = centre.x;
+            m.m13 = centre.y + height;
+            m.m23 = centre.z;
+            return m;
+        }
+
+        /// <summary>A point lifted onto the surround's ground.</summary>
+        public static Vector3 LiftSurround(Vector3 at, float metresOutsideBoard) =>
+            new Vector3(at.x, at.y + SurroundHeightAt(at.x, at.z, metresOutsideBoard), at.z);
+
+        // ---------------------------------------------------------------- the board
 
         /// <summary>
         /// The placement for a piece of ground: lifted onto the field and tilted to lie along it.
