@@ -119,6 +119,58 @@ namespace Odyssey.Presentation.World
         public bool IsBlocking(int index) => (_flags[index] & (byte)CellFlags.BlockingEdifice) != 0;
 
         /// <summary>
+        /// Has the colony cut into this cell — is what you can see of it a face somebody made?
+        ///
+        /// <para>This is <see cref="CellFlags.Discovered"/> read for its other meaning, and the
+        /// two are coextensive rather than merely similar: the flag is set by
+        /// <c>CellGrid.RevealAround</c>, <c>RevealAround</c> is called from exactly one place
+        /// (<c>MineJob.MineCell</c>), and worldgen sets it on nothing at all — not even the ore
+        /// lining a cavern nobody has been in. So a solid cell carries it if and only if a
+        /// colonist has taken the cell next to it out of the world.</para>
+        ///
+        /// <para><b>The coupling is worth stating because it could be broken from a distance.</b>
+        /// A deep scanner, or any future way of learning what rock is made of without cutting it,
+        /// would set the flag on ground nobody has touched and this would quietly start calling
+        /// hillsides quarries. If that day comes, the cut face wants a bit of its own and this
+        /// method is the one place that changes. <c>BankMeshTests.AQuarryInEarthKeepsItsSheerFace</c>
+        /// is what fails.</para>
+        /// </summary>
+        public bool IsCutFace(int index) => (_flags[index] & (byte)CellFlags.Discovered) != 0;
+
+        /// <summary>
+        /// Is there nothing at all over this cell — no slab and no solid cell, all the way up?
+        ///
+        /// <para>What earns a cell the daylight bit, and so exemption from the depth shade. See
+        /// <c>TintCode.DaylitBase</c> for why the landscape must not dim: the surface is terraced
+        /// across five layers and only one of them is ever the active one.</para>
+        ///
+        /// <para>A slab is stored on the cell <em>above</em> the boundary it occupies, so the roof
+        /// over this cell is the floor of the next one up — which is why the walk starts at
+        /// <c>y + 1</c> and asks about that cell's own floor. A blocking edifice is deliberately
+        /// not consulted: a wall standing beside you is not a roof over you, and neither is a
+        /// tree, so grass in woodland stays lit like the grass beside it.</para>
+        ///
+        /// <para>The loop looks unbounded and is not. A buried cell answers on its first step,
+        /// because the cell above it is solid; a surface cell walks the headroom, which the
+        /// generator holds at three layers. Nothing here walks a full column in practice.</para>
+        ///
+        /// <para>On the model rather than in the mesher because <see cref="Rendering.BankLayout"/>
+        /// asks it too, and it is a question about the world and not about a batch.</para>
+        /// </summary>
+        public bool OpenToTheSky(int index, int y)
+        {
+            int above = index + Size.LayerStride;
+
+            for (int layer = y + 1; layer < Size.SizeY; layer++, above += Size.LayerStride)
+            {
+                if (_floor[above] != 0) return false;
+                if (IsSolid(above)) return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Does this cell hide the face towards it, so no panel need be drawn there?
         ///
         /// Doors count, which is not obvious and matters: a door is deliberately *not* blocking

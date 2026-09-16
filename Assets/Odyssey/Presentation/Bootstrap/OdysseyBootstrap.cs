@@ -661,7 +661,7 @@ namespace Odyssey.Presentation.Bootstrap
                     // uses it: a working colonist is stepped off their cell, and a bracket drawn from
                     // the pose would sit on the cell while the person stands beside it.
                     if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                        feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _);
+                        feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _, _model);
                     _renderer.DrawSelectionBracket(
                         feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor,
                         i == 0 ? colour : SecondarySelectionColour);

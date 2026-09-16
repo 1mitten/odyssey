@@ -144,6 +144,13 @@ namespace Odyssey.Presentation.Rendering
             set => _mesher.Earth = value;
         }
 
+        /// <inheritdoc cref="Banks"/>
+        public bool BanksInWorkings
+        {
+            get => _mesher.BanksInWorkings;
+            set => _mesher.BanksInWorkings = value;
+        }
+
         /// <summary>
         /// Off, everything happens except the submission itself. That makes the draw-call and
         /// instance counts measurable in a headless editor run with no graphics device, which is
@@ -396,7 +403,7 @@ namespace Odyssey.Presentation.Rendering
                 // Glide between cells rather than snapping. The simulation is discrete and
                 // integer, which determinism requires; this is a presentation facade over it,
                 // and it is shared with the animated figures so the two cannot disagree.
-                Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading);
+                Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading, _model);
 
                 // The same face the live figures would have given this pawn, so a colonist does
                 // not change identity on crossing the figure cap. Same object, same answer.

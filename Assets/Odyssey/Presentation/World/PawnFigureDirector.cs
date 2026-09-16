@@ -796,7 +796,7 @@ namespace Odyssey.Presentation.World
                 // nothing). Skipping is what keeps a missing row a one-colonist problem.
                 if (!CanDraw(pawns[i].Id)) continue;
 
-                Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading);
+                Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading, World);
                 Figure figure = Lease(pawns[i].Id, position);
                 Pose(figure, in pawns[i], position, heading, deltaTime, running);
                 if (figure.Speed > FastestSpeed) FastestSpeed = figure.Speed;
