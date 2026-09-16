@@ -180,12 +180,18 @@ namespace Odyssey.Sim.Pawns
     public class MovementDef : Def
     {
         /// <summary>
-        /// Cost units retired per tick. A flat cell costs 100, so 2 gives fifty ticks per cell:
-        /// at sixty ticks a second that is a cell every 0.83 s, about 3 m/s, which reads as a
-        /// brisk walk. The previous 10 meant ten ticks a cell, roughly 54 km/h, and colonists
-        /// visibly teleported around the map.
+        /// Cost units retired per tick. A flat cell costs 100, so 1 gives a hundred ticks per
+        /// cell: at sixty ticks a second that is a 2.5 m cell every 1.67 s, or 1.5 m/s, the top
+        /// of the range a person walks at (about 1.3 to 1.5 m/s) — brisk, and clearly a walk.
+        ///
+        /// It used to be 2, which is 3 m/s: a jog, and on screen it was one, because the drawn
+        /// walk cycle covers about 2 m/s and anything faster blends the run clip in. Before that
+        /// it was 10, roughly 54 km/h, and colonists visibly teleported around the map.
+        ///
+        /// A movement-speed modifier belongs in <see cref="Pawn.MovePerTick"/>, not here; and a
+        /// pace between these integers wants the cost scale raised, not a fraction stored.
         /// </summary>
-        public int movePerTick = 2;
+        public int movePerTick = 1;
 
         /// <summary>Estimated cost of a layer change, used to order candidates before pathing.</summary>
         public int layerChangeEstimate = 300;
