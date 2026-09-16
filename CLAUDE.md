@@ -658,6 +658,48 @@ after a rebuild, republish `docs/wiki/artifact.html` and
   48° pitch the sun can sit behind the camera where a radial blur has nothing to radiate from, so a
   framing experiment comes first; and the tilt-shift, because URP's cheap depth of field blurs only
   the far field and cannot make a band at all. **Still wants the owner's eye in `Play.unity`.**
+- **Whatever hides a selected colonist is drawn as a ghost (owner, 2026-09-16; design
+  `06-rendering-and-camera.md` §3d).** The report was trees getting in the way of seeing the
+  colonist: the board is a wood, the camera orbits rather than cuts, and a selected colonist who
+  walks under a canopy is gone until the camera is spun to find a gap — which loses the bearing and
+  has to be done again the moment they move. Now anything standing on the line from the eye to a
+  selected colonist is drawn with the x-ray ghost material at `ChunkRenderer.SightFadeAlpha` (0.22)
+  for as long as it stands there. Nothing else changes: the geometry is still submitted, still
+  occludes what is behind *it*, and is still clickable; no cell, no save, no hash.
+  - **It is a segment against real geometry, not a cell march**, and that is the whole design. A
+    tree's cell is the one its trunk stands in, while what hides a colonist is its crown, six
+    metres up and a cell nearer the camera — so marching cells fades the wrong ones.
+    `SightLines.Blocks` tests the segment against the instance's own world bounds, which gets a
+    tall thing right for the same reason it gets a wall right and needs nothing from the mesher.
+  - **The verdict is taken on the module, not the part**, or a tree's crown fades while its trunk
+    stays solid. A bucket stores `placement * part.Local`, so the placement is recovered once per
+    bucket and the module's own bounds placed by it.
+  - **The line stops at the chest** — the point the bracket is drawn at and the hit-test aims at.
+    Geometry past the colonist hides nothing, and the floor under them is more than a beam radius
+    below the end of the line, so the fade cannot open a hole under the person just selected.
+  - **Two grains keep it cheap:** `Touches` is asked once per chunk and says no to nearly all of
+    them; only inside the survivors does the per-instance test run, and grass is skipped outright
+    (a tuft hides nobody and tufts are most of the instances). **A chunk's bounds are one layer
+    high, so the coarse test needs an allowance for taller geometry** (`TallestModuleMetres`, 12 m)
+    — without it the coarse test rejects the very chunk holding the crown and the feature does
+    nothing at all while every per-instance test still passes. Lines are capped at eight, so a box
+    selection of the whole colony cannot make the cost grow with the selection.
+  - **Measured at the board camera's 48° pitch:** a nine-metre tree occludes only within about
+    eight metres of the colonist, because the sight line rises 1.11 m per metre of ground. That is
+    the geometry, not a shortfall — a tree further back is below the line and never hid anybody.
+  - **Not faded:** other colonists, items and the live animated figures — a skinned figure would
+    mean swapping materials on its renderers rather than partitioning an instance array.
+  - Levers: `OdysseyBootstrap.seeThroughToSelection` / `seeThroughRadius` / `seeThroughAlpha`, and
+    a switch in the settings panel (`ui.settings.seethrough`) so it can be judged while the colony
+    runs. Judge it with **`Odyssey → Presentation → Check the see-through fade`**
+    (`scripts/unity.sh shot Odyssey.EditorTools.SeeThroughCheck.Run`), which *finds* the colonist
+    with the most geometry in the way at four bearings rather than being told where one is.
+  - **Verified: it compiles and the geometry holds.** Fast tier 428 Sim and 51 Hud; the Presentation,
+    Editor and test assemblies compiled headlessly against `Library/ScriptAssemblies` (the owner's
+    editor held the project); and the nineteen sight-line cases were *run* outside the player
+    against the built DLL, all passing. **Not verified: `scripts/unity.sh test editmode`, the
+    PlayMode frame-time gate, and whether any of it looks like anything** — `SeeThroughCheck` is
+    unrun, so the alpha and the radius have the standing of an argument.
 - **Sim vs UI vocabulary is deliberate:** simulation systems are *subsystems*, presentation-side coordinators are *directors* (`01-architecture.md` §3a). Do not unify the two words.
 - **Phase 3 (design): complete 2026-09-15.** `docs/design/` 00, 01, 02, 03, 04, 05, 06, 07, 08; ADRs 0001, 0002, 0005; and the execution plan `docs/plans/vertical-slice.md` (32 units, M0→M3). **The Phase 3 → Phase 4 hard stop was cleared by the owner on 2026-09-15; execution is under way.**
 - **Interface, icons and content naming (the UI line of work), 2026-09-15.** Design `09-ui-and-input.md`, `10-ui-panel-catalogue.md`, `11-icon-library.md`; ADRs 0003 UI framework, 0004 sim-to-UI contract, 0006 layer visibility, 0007 pixel-art icon pipeline; research `g-01`, `g-02`; mockups `hud-v1.html` (historical) and `hud-v2.html` (current). **Layer visibility decided:** x-ray by default with six modes shipped for playtest, amended by Lane B so that nothing above the active slice is ever a pointer target. **Icons:** 382 keys enumerated, 268 mapped to the owner's eight pixel-art sheets, 114 gaps listed in `11-icon-library.md` — the largest being people, since no sheet contains a human figure. **Names:** all 29 proper nouns proposed and awaiting the owner's veto, in `docs/design/proper-nouns.csv`.

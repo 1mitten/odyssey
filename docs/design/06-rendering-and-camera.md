@@ -773,6 +773,66 @@ renderer's own loop uses, so a tall map does not march through empty sky.
 
 **Implementation:** per-layer visibility on the instanced batches, not a clipping plane. The renderer simply does not submit buckets outside the drawn range, which is cheaper than submitting and clipping, keeps shadow casters honest, and makes the ghosted layer a different material rather than a shader branch. A clip plane remains the fallback if a single mesh ever needs to be cut mid-cell, which the discrete-cell model is specifically designed to avoid.
 
+### 3d. Whatever hides a selected colonist is drawn as a ghost (owner, 2026-09-16)
+
+The report: trees getting in the way of being able to see the colonist. The board is a wood, the
+camera orbits rather than cuts, and a selected colonist who walks under a canopy is simply gone —
+the only remedy was to spin the camera until a gap opened, which loses the bearing the player had
+and has to be done again the moment they move.
+
+**The rule.** Anything standing on the line from the eye to a selected colonist is drawn ghosted
+instead of solid, for as long as it stands there. Nothing else changes: the geometry is still
+submitted, still occludes what is behind *it*, and is still clickable. It is the ghost material
+§3a already uses for an x-rayed storey, at a lower alpha (`ChunkRenderer.SightFadeAlpha`, 0.22),
+which is deliberate — a hint of what is there reads better than a hole, and it is one idiom for
+"you are seeing through this" rather than two.
+
+**It is a segment test against real geometry, not a cell march, and that is the load-bearing
+decision.** A tree's cell is the one its trunk stands in, while what actually hides a colonist is
+its crown, six metres up and a cell or two nearer the camera. Asking which cells the line passes
+through fades the wrong ones. Asking whether the line passes through an instance's own world
+bounds gets a tall thing right for the same reason it gets a wall right, and it needs nothing from
+the mesher: the bounds come from the module and the placement from the matrix that was going to be
+drawn anyway.
+
+**The verdict is taken on the module, not on the part.** A tree is a trunk bucket and a crown
+bucket; asked separately, the crown fades and the trunk stays, which reads as a rendering fault
+rather than as a courtesy. A bucket stores `placement * part.Local`, so the placement is recovered
+once per bucket and the module's own bounds — the same bounds the selection cursor fits to a thing
+— is placed by it.
+
+**The line stops at the chest**, which is the point the bracket is drawn at and the point the
+hit-test aims at. Two things follow and both are the reason for it: geometry beyond the colonist
+hides nothing, and the floor they are standing on is more than a beam-radius below the end of the
+line, so the fade cannot open a hole under the person the player just selected.
+
+**Cost is confined by two grains.** `SightLines.Touches` is asked once per chunk and answers no for
+all but a handful; only inside those does the per-instance test run. Grass is skipped outright: a
+tuft hides nobody and tufts are most of the instances on the board. A chunk's bounds are one layer
+high, so the coarse test is given an allowance for geometry taller than its own layer
+(`ChunkRenderer.TallestModuleMetres`, 12 m) — without it the coarse test rejects the very chunk
+holding the crown that is doing the hiding and the whole feature silently does nothing while every
+per-instance test still passes. The number of lines is capped at eight, because a box selection can
+hold the whole colony and the cost of this must not grow with the size of the selection.
+
+**Measured, at the board camera's own 48° pitch:** a nine-metre tree occludes a colonist only
+within about eight metres of them, because the sight line rises 1.11 m for every metre of ground.
+That is not a limitation, it is the geometry — a tree twenty metres further back is twenty-two
+metres below the line and never hid anybody. The beam radius (0.9 m) stands for the width of the
+person, not the thickness of the line; the occluder's own size is already accounted for by testing
+its bounds.
+
+**Not faded:** other colonists, items and the live animated figures. Fading a skinned figure means
+swapping materials on its renderers rather than partitioning an instance array, and a person
+standing in front of a person is a much rarer complaint than a wood is.
+
+**Levers:** `OdysseyBootstrap.seeThroughToSelection`, `seeThroughRadius`, `seeThroughAlpha`, and a
+switch in the settings panel (B17) so it can be judged against itself while the colony runs. Judge
+it with **`Odyssey → Presentation → Check the see-through fade`**
+(`scripts/unity.sh shot Odyssey.EditorTools.SeeThroughCheck.Run`), which finds the colonist on the
+board with the most geometry in the way at four bearings rather than being told where one is, and
+shoots the pair off and on.
+
 ## 4. Overlays
 
 Zone, roof, power, temperature, beauty, light and salvage overlays are **chunk meshes, never UI elements**. One procedural mesh per chunk per layer, with per-cell colour in a vertex stream, drawn instanced, for the active slice plus at most one ghosted neighbour.

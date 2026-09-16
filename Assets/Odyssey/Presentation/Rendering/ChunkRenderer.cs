@@ -150,6 +150,37 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public bool SubmitToGpu { get; set; } = true;
 
+        /// <summary>
+        /// The lines from the eye to each selected colonist. Anything standing on one of them is
+        /// drawn ghosted instead of solid, so a selected colonist is never hidden behind a tree.
+        ///
+        /// <para>Null or empty is the ordinary case and costs a single null test per chunk: the
+        /// buckets are submitted exactly as they were before this existed, from the arrays the
+        /// mesher filled, with no copying and no extra call.</para>
+        /// </summary>
+        public SightLines? Sight { get; set; }
+
+        /// <summary>How solid an occluder in the way is left. Zero would be invisible; this is a
+        /// hint of what is there, in the same idiom as a ghosted storey above the slice.</summary>
+        public float SightFadeAlpha { get; set; } = DefaultSightFadeAlpha;
+
+        public const float DefaultSightFadeAlpha = 0.22f;
+
+        /// <summary>
+        /// How far above its own layer a chunk may hold geometry, in metres.
+        ///
+        /// <para>A chunk's bounds are one layer high, and the tallest thing rooted in a layer is a
+        /// tree — which is precisely what the sight line is for. Without this allowance the coarse
+        /// test would reject the very chunk holding the crown that is doing the hiding, and the
+        /// feature would do nothing at all while every per-instance test still passed.</para>
+        /// </summary>
+        public const float TallestModuleMetres = 12f;
+
+        /// <summary>Scratch, reused every frame: the instances of one bucket that are in the way,
+        /// and the ones that are not. Partitioning in place would corrupt the mesher's array.</summary>
+        Matrix4x4[] _solid = new Matrix4x4[64];
+        Matrix4x4[] _faded = new Matrix4x4[64];
+
         // ---- last-frame measurements, for the milestone report and the on-screen readout ----
 
         public int DrawCalls { get; private set; }
@@ -157,6 +188,12 @@ namespace Odyssey.Presentation.Rendering
         public int ChunksDrawn { get; private set; }
         public int ChunksMeshedThisFrame { get; private set; }
         public int MaterialCount => _materials.MaterialCount;
+
+        /// <summary>Instances drawn ghosted last frame because they stood in a line of sight.</summary>
+        public int InstancesFaded { get; private set; }
+
+        /// <summary>Chunks the coarse sight test admitted last frame, and so tested per instance.</summary>
+        public int ChunksSightTested { get; private set; }
 
         /// <summary>Total chunks meshed since start. A large number in steady state is a bug.</summary>
         public int TotalChunksMeshed { get; private set; }
@@ -167,6 +204,8 @@ namespace Odyssey.Presentation.Rendering
             InstancesDrawn = 0;
             ChunksDrawn = 0;
             ChunksMeshedThisFrame = 0;
+            InstancesFaded = 0;
+            ChunksSightTested = 0;
 
             // Before the board, not after it: the surround is the furthest thing in the scene, and
             // submitting it first lets the depth buffer reject it behind the board rather than
@@ -219,8 +258,16 @@ namespace Odyssey.Presentation.Rendering
                     ChunkBatch batch = BatchFor(first + i);
                     if (batch.InstanceCount == 0) continue;
                     ChunksDrawn++;
-                    DrawBuckets(batch, batch.Body, shade, ghost, alpha);
-                    if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha);
+
+                    // The coarse half of the sight test, asked once for the whole chunk. A layer
+                    // already ghosted is left alone: it is translucent, so nothing in it is in
+                    // anybody's way, and splitting its buckets would buy nothing.
+                    bool sight = !ghost && Sight != null && Sight.Any
+                                 && Sight.Touches(batch.Bounds, TallestModuleMetres);
+                    if (sight) ChunksSightTested++;
+
+                    DrawBuckets(batch, batch.Body, shade, ghost, alpha, sight);
+                    if (drawRoof) DrawBuckets(batch, batch.Roof, shade, ghost, alpha, sight);
                 }
             }
         }
@@ -243,7 +290,7 @@ namespace Odyssey.Presentation.Rendering
         }
 
         void DrawBuckets(ChunkBatch batch, System.Collections.Generic.List<InstanceBucket> buckets,
-            float shade, bool ghost, float alpha)
+            float shade, bool ghost, float alpha, bool sight = false)
         {
             for (int b = 0; b < buckets.Count; b++)
             {
@@ -289,16 +336,82 @@ namespace Odyssey.Presentation.Rendering
                     shadowCastingMode = casts ? ShadowCastingMode.On : ShadowCastingMode.Off,
                 };
 
-                int drawn = 0;
-                while (drawn < bucket.Count)
+                // Grass is never in the way, and it is nearly every instance on the board. Leaving
+                // foliage out of the partition is what keeps the cost of this feature confined to
+                // the things that can actually hide a person.
+                int faded = sight && !foliage ? Partition(bucket) : 0;
+                if (faded == 0)
                 {
-                    int n = Mathf.Min(MaxInstancesPerCall, bucket.Count - drawn);
-                    if (SubmitToGpu)
-                        Graphics.RenderMeshInstanced(rp, part.Mesh, part.Submesh, bucket.Matrices, n, drawn);
-                    drawn += n;
-                    DrawCalls++;
+                    Submit(rp, part, bucket.Matrices, bucket.Count);
+                    InstancesDrawn += bucket.Count;
+                    continue;
                 }
+
+                // Ghosted with the same tint the solid draw would have had, so what shows through
+                // still reads as the tree or the wall it is, rather than as a grey pane. The
+                // ghost material is the translucent stand-in the x-rayed storeys use; the pack's
+                // own shaders are alpha-clipped and cannot be turned transparent from script.
+                var ghostParams = new RenderParams(
+                    _materials.Get(part.Material, tint, emission, ghost: true, SightFadeAlpha))
+                {
+                    worldBounds = batch.Bounds,
+                    layer = GameObjectLayer,
+                    receiveShadows = false,
+                    shadowCastingMode = ShadowCastingMode.Off,
+                };
+                Submit(ghostParams, part, _faded, faded);
+                Submit(rp, part, _solid, bucket.Count - faded);
                 InstancesDrawn += bucket.Count;
+                InstancesFaded += faded;
+            }
+        }
+
+        /// <summary>
+        /// Split one bucket's instances into the ones standing in a line of sight and the rest,
+        /// into the reused scratch arrays. Returns how many are in the way.
+        ///
+        /// <para>The verdict is taken on the <em>module</em>, not on the part: a tree is a trunk
+        /// bucket and a crown bucket, and asking each separately would fade the crown while
+        /// leaving the trunk solid. The bucket stores <c>placement * part.Local</c>, so the
+        /// placement is recovered once per bucket and the module's own bounds — which is what the
+        /// selection cursor already fits to a thing — is placed by it.</para>
+        /// </summary>
+        int Partition(InstanceBucket bucket)
+        {
+            ResolvedModule module = _model.Library[bucket.Module];
+            if (module.IsEmpty || Sight == null) return 0;
+
+            Matrix4x4 unplace = module.Parts[bucket.Part].Local.inverse;
+            Bounds local = module.Bounds;
+
+            if (_faded.Length < bucket.Count)
+            {
+                int size = Mathf.NextPowerOfTwo(bucket.Count);
+                _faded = new Matrix4x4[size];
+                _solid = new Matrix4x4[size];
+            }
+
+            int fadedCount = 0;
+            int solidCount = 0;
+            for (int i = 0; i < bucket.Count; i++)
+            {
+                Matrix4x4 m = bucket.Matrices[i];
+                if (Sight.Blocks(SightLines.Place(local, m * unplace))) _faded[fadedCount++] = m;
+                else _solid[solidCount++] = m;
+            }
+            return fadedCount;
+        }
+
+        void Submit(in RenderParams rp, ModulePart part, Matrix4x4[] matrices, int count)
+        {
+            int drawn = 0;
+            while (drawn < count)
+            {
+                int n = Mathf.Min(MaxInstancesPerCall, count - drawn);
+                if (SubmitToGpu)
+                    Graphics.RenderMeshInstanced(rp, part.Mesh, part.Submesh, matrices, n, drawn);
+                drawn += n;
+                DrawCalls++;
             }
         }
 

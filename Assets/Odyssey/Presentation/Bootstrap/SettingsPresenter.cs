@@ -98,6 +98,7 @@ namespace Odyssey.Presentation.Bootstrap
                 director.Seed(GraphicsOption.Surround, _bootstrap.terrainSkirt);
                 director.Seed(GraphicsOption.GrassTufts, _bootstrap.grassScatter > 0);
                 director.Seed(GraphicsOption.GroundRelief, _bootstrap.groundRelief > 0f);
+                director.Seed(GraphicsOption.SeeThrough, _bootstrap.seeThroughToSelection);
             }
 
             director.OptionChanged += Apply;
@@ -150,6 +151,12 @@ namespace Odyssey.Presentation.Bootstrap
                     // live, so clicking follows the ground without anything further here.
                     GroundRelief.Amplitude = on ? _reliefAmplitude : 0f;
                     Redraw(renderer);
+                    break;
+
+                case GraphicsOption.SeeThrough:
+                    // Read once a frame while the sight lines are rebuilt, so this is the whole
+                    // change and it takes effect on the next frame with no remesh.
+                    if (_bootstrap != null) _bootstrap.seeThroughToSelection = on;
                     break;
             }
         }

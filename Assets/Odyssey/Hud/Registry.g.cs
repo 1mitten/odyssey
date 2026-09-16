@@ -334,6 +334,7 @@ namespace Odyssey.Hud
             { "ui.settings.grass", "Grass tufts" },
             { "ui.settings.panel", "Settings" },
             { "ui.settings.relief", "Ground relief" },
+            { "ui.settings.seethrough", "See through to selection" },
             { "ui.settings.shadows", "Shadows" },
             { "ui.settings.surround", "Surrounding land" },
             { "ui.skill.animals", "Animals" },
