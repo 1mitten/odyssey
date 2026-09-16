@@ -193,6 +193,10 @@ namespace Odyssey.EditorTools
                     // 150 m, so the board camera is well inside it, but a colonist is small and a
                     // line that reads at seven metres may not read at forty.
                     PlayScene.Shoot(camera, centre, 48f, 30f, 45f, $"Logs/colour-{tag}-board.png");
+                    // Low and close, because whether a boot is standing on the grass or buried in
+                    // it is a question only a near-ground camera can answer.
+                    PlayScene.Shoot(camera, centre + new Vector3(0f, -0.85f, 0f), 3f, 30f, 3.2f,
+                                    $"Logs/colour-{tag}-boots.png");
                 }
                 // Is the sliver test what keeps colonists out of the ink? It suppresses the line
                 // on anything narrower than the line itself, which is what stops a meadow reading
@@ -263,7 +267,8 @@ namespace Odyssey.EditorTools
                     PlayScene.Shoot(camera, centre, 25f, 30f, 16f, $"Logs/colour-{name}.png");
                     PlayScene.Shoot(camera, centre, 12f, 30f, 7f, $"Logs/colour-{name}-close.png");
                     Debug.Log($"[Colour] Logs/colour-{name}.png and -close.png " +
-                              $"({figures.Drawn.Count} figures, {materials.MaterialCount} materials)");
+                              $"({figures.Drawn.Count} figures, {materials.MaterialCount} materials, " +
+                              $"thickest sole {figures.MeasuredSoleOffset:0.000} m)");
                 }
             }
             catch (Exception e)

@@ -708,6 +708,39 @@ namespace Odyssey.Presentation.World
 
         int LookFor(PawnId pawn) => Appearances.LookFor(pawn.Value);
 
+        /// <summary>
+        /// How far the sole sits below the ankle, on the figure whose boot is thickest.
+        ///
+        /// Printed by the contact sheets. A rig that answers zero is one whose feet are not bound,
+        /// and a number far from a tenth of a metre is one worth looking at rather than trusting.
+        /// </summary>
+        public float MeasuredSoleOffset { get; private set; }
+
+        /// <summary>
+        /// The height of a figure's ankle above the ground it is standing on, in the idle pose.
+        ///
+        /// <para>The figure is placed with its root on the cell floor and the graph has just been
+        /// evaluated into the idle, so both feet are down and the root is where the soles are.
+        /// The ankle bone above it is therefore exactly the thickness of the boot, at whatever
+        /// scale this face is drawn.</para>
+        ///
+        /// <para>Measured here rather than written down as a constant because the cast is
+        /// sixty-one characters from four packs, drawn at 1.4, and a cowboy boot is not a
+        /// trainer.</para>
+        /// </summary>
+        static float MeasureSole(Figure figure)
+        {
+            if (figure.LeftFoot == null || figure.RightFoot == null) return 0f;
+
+            float ankle = Mathf.Min(figure.LeftFoot.position.y, figure.RightFoot.position.y);
+            float sole = ankle - figure.Transform.position.y;
+
+            // A negative or absurd answer means the rig is not built the way this assumes -- the
+            // root somewhere other than the feet, or the pose never evaluated. Better to correct
+            // nothing than to lift a colonist into the air on a bad measurement.
+            return sole > 0f && sole < 0.5f ? sole : 0f;
+        }
+
         /// <summary>True when this pawn's face resolved to art and a figure can be built for it.</summary>
         bool CanDraw(PawnId pawn)
         {
@@ -888,8 +921,11 @@ namespace Odyssey.Presentation.World
                 // point: on a slope the two are at different heights, and asking once at the
                 // body's own position would move both feet by the same amount and leave the
                 // figure standing on one heel exactly as before.
-                float leftGround = figure.GroundY + GroundRelief.HeightAt(leftAt.x, leftAt.z);
-                float rightGround = figure.GroundY + GroundRelief.HeightAt(rightAt.x, rightAt.z);
+                // The ankle goes a sole's height *above* the ground, not on it. Without the
+                // offset the boot is buried to the ankle, which is what this pass was doing to
+                // every colonist it corrected.
+                float leftGround = figure.GroundY + GroundRelief.HeightAt(leftAt.x, leftAt.z) + figure.SoleOffset;
+                float rightGround = figure.GroundY + GroundRelief.HeightAt(rightAt.x, rightAt.z) + figure.SoleOffset;
 
                 float left = Footing.Correction(leftAt.y, leftGround);
                 float right = Footing.Correction(rightAt.y, rightGround);
@@ -2146,6 +2182,8 @@ namespace Odyssey.Presentation.World
             figure.ArtMaterials = new Material?[skins.Length];
             for (int i = 0; i < skins.Length; i++) figure.ArtMaterials[i] = skins[i].sharedMaterial;
             BindWorkBones(figure, animator);
+            figure.SoleOffset = MeasureSole(figure);
+            if (figure.SoleOffset > MeasuredSoleOffset) MeasuredSoleOffset = figure.SoleOffset;
             _figures.Add(figure);
             return figure;
         }
@@ -2779,6 +2817,23 @@ namespace Odyssey.Presentation.World
             /// can no longer be asked where the ground under this pawn is.
             /// </summary>
             public float GroundY;
+
+            /// <summary>
+            /// How far this figure's sole sits below its ankle bone, measured off its own rig.
+            ///
+            /// <para><b>A humanoid foot bone is the ankle, not the sole</b> — the same fact about
+            /// Mecanim that had every tool in this project seated behind the hand until
+            /// <c>HandGrip.Palm</c> measured where a held thing really sits. Planting the ankle on
+            /// the ground therefore buries the boot by the height of the ankle above it, which at
+            /// the figure's 1.4 scale is a good ten centimetres, and it reads exactly as the
+            /// owner described: feet sinking into the terrain while walking.</para>
+            ///
+            /// <para>Measured rather than guessed, and per figure rather than once, because the
+            /// cast is sixty-one characters from four packs and a boot is not the same height on
+            /// all of them. Taken in the idle pose at bind time, where the figure stands at its
+            /// own root and both feet are down.</para>
+            /// </summary>
+            public float SoleOffset;
 
             /// <summary>
             /// One tool per style, fitted once and kept, all hidden but the one in use.
