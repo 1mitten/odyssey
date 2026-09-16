@@ -29,6 +29,20 @@ namespace Odyssey.Sim
 
         /// <summary>Publish one standing order, wherever in the world it is.</summary>
         public void AddOrder(in OrderView view) => _target.AddOrder(view);
+
+        /// <summary>
+        /// Publish one number about one pawn, under a name the feature owns. See
+        /// <see cref="PawnAspect"/> for why this exists rather than another field on
+        /// <see cref="PawnView"/>.
+        ///
+        /// <para>The pawn need not have been added to this frame by anyone, and the contributor
+        /// that adds pawns need not have run yet: an aspect is a row keyed by id, not a field on a
+        /// row. A row naming a pawn that is no longer published is simply never read, because a
+        /// reader looks aspects up for a pawn it already holds — the same reason a view carries an
+        /// id and never a reference.</para>
+        /// </summary>
+        public void AddPawnAspect(PawnId pawn, AspectKey key, int value) =>
+            _target.AddPawnAspect(new PawnAspect(pawn, key, value));
     }
 
     /// <summary>

@@ -81,7 +81,13 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 
 **Before more features, open the seams.** The mining line was 73 files and had to edit six shared
 files to add itself, five of which should have been extension points. The table and the order are in
-`docs/plans/vertical-slice.md`, "Where the seams are".
+`docs/plans/vertical-slice.md`, "Where the seams are" — **audited against the code on 2026-09-17,
+because it had gone stale and misled a session.** Three of the five are now open: work givers
+register themselves (OQ-44), the content tables are XML (OQ-15/OQ-16), and a feature can publish
+about a pawn without widening `PawnView` (OQ-45, ADR 0004 amended). **Two are left, and the cheaper
+one is not the one with a queue row:** `PawnContent.Core()` still exists and the bootstrap and
+`ColonyWorld` still build from it, so the XML is a checked mirror rather than the source and every
+new item is still written twice. Then mesh contributors (OQ-46).
 
 ### What runs today
 
@@ -134,7 +140,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~10 s, no Unity): **428 Sim + 106 Hud**.
+- **Fast tier** (`scripts/test-fast.sh`, ~10 s, no Unity): **444 Sim + 110 Hud**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
