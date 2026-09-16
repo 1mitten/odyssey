@@ -185,6 +185,19 @@ namespace Odyssey.EditorTools
                     PlayScene.Shoot(camera, Waist(now), 12f, SideOn(now), 6.5f, $"Logs/swing-{sample}.png");
                 }
 
+                // The blow itself, pinned rather than hoped for.
+                //
+                // The nine samples walk the stroke at a fixed number of frames apart, so which of
+                // them lands on the moment of impact depends on the stroke's length — and the
+                // moment the stroke's length became a per-figure thing, none of them reliably did.
+                // This one is held at the dwell, so every run photographs the blow.
+                drawn.HeldPhase = 0.9f;
+                drawn.Sync(Current(), activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                drawn.Evaluate(FrameSeconds);
+                PawnView struck = FirstWorker(Current());
+                if (struck.Working)
+                    PlayScene.Shoot(camera, Waist(struck), 12f, SideOn(struck), 6.5f, "Logs/swing-impact.png");
+
                 // A contact sheet of the blade's roll, held at the moment of the blow.
                 //
                 // Which way the edge faces is the one part of the grip that is taste rather than
@@ -204,8 +217,25 @@ namespace Odyssey.EditorTools
                     PlayScene.Shoot(camera, drawn.LastBladePosition, 6f, SideOn(FirstWorker(Current())), 1.5f, path);
                     Debug.Log($"[Swing] wrote {path} at blade {drawn.LastBladePosition}");
                 }
+                drawn.AxeBladeRoll = 270f;
+
+                // And the same again about the upright, which is the turn that points the edge at
+                // the tree rather than moving it around the haft.
+                float yawWas = drawn.AxeBladeYaw;
+                foreach (float yaw in BladeRolls)
+                {
+                    drawn.AxeBladeYaw = yaw;
+                    drawn.RegripTools();
+                    drawn.Sync(Current(), activeLayer, slice, 0f, movePerTick, FrameSeconds);
+                    drawn.Evaluate(FrameSeconds);
+
+                    string path = $"Logs/yaw-{yaw:000}.png";
+                    PlayScene.Shoot(camera, drawn.LastBladePosition, 6f, SideOn(FirstWorker(Current())), 1.5f, path);
+                    Debug.Log($"[Swing] wrote {path}");
+                }
+
                 drawn.HeldPhase = null;
-                drawn.AxeBladeRoll = 0f;
+                drawn.AxeBladeYaw = yawWas;
                 drawn.RegripTools();
 
                 PawnView last = FirstWorker(Current());

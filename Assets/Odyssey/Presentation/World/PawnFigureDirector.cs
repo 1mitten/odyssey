@@ -123,7 +123,25 @@ namespace Odyssey.Presentation.World
         /// one — a pickaxe will want its own, and on a double-ended head the geometry cannot even
         /// guess — which is recorded in `12-work-poses-and-tools.md`.
         /// </summary>
-        public float AxeBladeRoll { get; set; } = 270f;
+        public float AxeBladeRoll { get; set; } = 0f;
+
+        /// <summary>
+        /// Which way the blade is turned to the work, in degrees about the figure's upright.
+        ///
+        /// The roll turns the head about its own haft, which can put the edge level or stand it on
+        /// end but can never point it *at* anything: the haft lies along the swing, so rolling it
+        /// only ever moves the bit around that line. Facing the edge at the tree is a turn about a
+        /// different axis, and this is it (owner, 2026-09-16).
+        ///
+        /// It takes the haft off the line of the forearm, which is the price, and it is a smaller
+        /// price than it looks: the grip is slid back into the palm afterwards and the whole
+        /// strike offset is re-measured, so where the colonist stands follows the blade rather
+        /// than having to be retuned after it. That is the measured stand paying for itself.
+        /// </summary>
+        /// Left at nought until somebody picks off the sheet. Ninety, tried first, swings the
+        /// haft right across the body and tucks the axe behind the colonist — the lever works,
+        /// that setting does not.
+        public float AxeBladeYaw { get; set; } = 0f;
 
         /// <summary>Pawn ids drawn as live figures this frame. The instanced pass skips these.</summary>
         public HashSet<int> Drawn { get; } = new HashSet<int>();
@@ -476,8 +494,18 @@ namespace Odyssey.Presentation.World
             if (figure.AxeTransform != null && figure.LeftHand != null)
             {
                 Vector3 target = figure.AxeTransform.TransformPoint(figure.OffHandGrip);
-                ArmIk.Reach(figure.LeftUpperArm, figure.LeftLowerArm, figure.LeftHand, target,
-                    figure.Transform.position - figure.Transform.forward);
+
+                // The elbow goes out to the left and down, which is where a left elbow goes.
+                //
+                // It used to be sent to a point behind the figure's feet, and the left arm
+                // reaching across the body for a haft held in the right hand duly folded its
+                // elbow straight through the ribs and out the other side. A pole beside the
+                // shoulder on the arm's own side cannot do that: the elbow has to leave the torso
+                // to get there.
+                Transform body = figure.Transform;
+                Vector3 pole = (figure.LeftUpperArm != null ? figure.LeftUpperArm.position : body.position)
+                               - body.right * 1.0f - body.up * 0.7f;
+                ArmIk.Reach(figure.LeftUpperArm, figure.LeftLowerArm, figure.LeftHand, target, pole);
             }
             else
             {
@@ -561,7 +589,15 @@ namespace Odyssey.Presentation.World
 
             // Step up to the work. See WorkStance for why the drawn place and the simulated place
             // are allowed to differ, and by how much.
-            figure.WorkCentre = CellMetrics.FloorCentre(pawn.WorkCell);
+            // Only while there *is* work.
+            //
+            // This is what made a colonist jump the instant a tree came down. The published work
+            // cell is the pawn's own cell when it is not working, so on the frame the last blow
+            // landed the target the step-up had been solved against moved from the tree to her
+            // feet — and the ease-out, which should have walked her back out of the stand she had
+            // stepped into, instead eased her towards a stand solved against herself. Keeping the
+            // last one until the weight is gone makes the way out retrace the way in.
+            if (pawn.Working) figure.WorkCentre = CellMetrics.FloorCentre(pawn.WorkCell);
             Quaternion facing = Quaternion.Euler(0f, figure.Yaw, 0f);
             figure.Transform.position = figure.WorkWeight > 0.001f
                 ? WorkStance.StandAt(position, figure.WorkCentre,
@@ -617,6 +653,7 @@ namespace Odyssey.Presentation.World
             figure.Speed = 0f;
             figure.WorkWeight = 0f;
             figure.SwingClock = 0f;
+            figure.WorkCentre = at;
             figure.SimPosition = at;
             figure.Transform.position = at;
             figure.GameObject.SetActive(true);
@@ -857,10 +894,17 @@ namespace Odyssey.Presentation.World
                     Vector3.SignedAngle(facing, wanted, haftWorld), haftWorld) * axe.rotation;
             axe.rotation = Quaternion.AngleAxis(AxeBladeRoll, haftWorld) * axe.rotation;
 
+            // And turn the whole tool to face its work. See AxeBladeYaw: the roll cannot do this,
+            // because it turns the head about the very line the head is trying to be pointed
+            // along. Done before the grip is slid home, so the hand still ends up on the haft.
+            axe.rotation = Quaternion.AngleAxis(AxeBladeYaw, figure.Transform.up) * axe.rotation;
+
             // Slide the tool along its own haft until the grip point is in the palm. The grip is
             // measured from the butt, which is the end of the bounds away from the head.
             Vector3 butt = bounds.center - haft * half;
             float length = 2f * half;
+            // Local, so the yaw above does not disturb it: these are points on the mesh, and the
+            // mesh has not moved relative to itself.
             Vector3 grip = butt + haft * (length * Mathf.Clamp01(AxeGripFraction));
             axe.position += hand.position - axe.TransformPoint(grip);
 

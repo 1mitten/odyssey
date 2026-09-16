@@ -213,6 +213,20 @@ it twice. Refitting a tool mid-swing measured a doubled pose, a reach to match, 
 had been landing in the wood reporting itself two thirds of a metre out. Anything that re-poses
 outside the normal path must first put the clip pose back: `graph.Evaluate(0f)`.
 
+**The first batch run after a script edit executes the previous assembly.** Edit a file, run
+`unity.sh shot`, and what runs is the build from before the edit — the new code compiles during that
+run and is live on the next one. It cost three runs and a wrong diagnosis before the pattern was
+plain: a sweep that had been extended from five settings to eight wrote five files, twice. Run it
+twice after an edit, or delete `Library/ScriptAssemblies` first and take the slower compile. And
+whenever a harness produces output that looks like the *previous* version of the code, suspect this
+before suspecting the code.
+
+**Photograph the moment on purpose, never on the sample grid.** The stroke was sampled at a fixed
+number of frames apart, so which picture caught the blow depended on how long the stroke was — and
+the moment the stroke's length became a per-figure thing, none of them reliably did. A pose that was
+measurably correct looked wrong in every frame, because every frame was of something else. Pin the
+instant that matters and shoot that as well.
+
 **Judge a distance side on to it, never in three-quarter.** The board camera's 45-degree bearing
 puts a colonist and the tree she is working on at different depths in the frame, and the gap between
 an axe head and a trunk then reads as whatever you please — it was read wrongly twice before the

@@ -103,6 +103,27 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
+        public void TheElbowGoesTowardsThePoleAndNotThroughTheChest()
+        {
+            // The fault this solve shipped with. Reaching across the body, the elbow was sent to
+            // the far side of the shoulder-to-target line and folded through the ribs; which side
+            // that is depends on a handedness convention, so the solve now tries both and keeps
+            // whichever is actually nearer the pole. Stated as a property, it is simply: the elbow
+            // ends up on the pole's side of the line.
+            var target = new Vector3(0.3f, 1.3f, 0.25f);
+            var pole = _shoulder.position + new Vector3(-0.9f, -0.7f, 0f);
+
+            ArmIk.Reach(_shoulder, _elbow, _hand, target, pole);
+
+            Vector3 line = (target - _shoulder.position).normalized;
+            Vector3 toElbow = Vector3.ProjectOnPlane(_elbow.position - _shoulder.position, line);
+            Vector3 toPole = Vector3.ProjectOnPlane(pole - _shoulder.position, line);
+
+            Assert.That(Vector3.Dot(toElbow.normalized, toPole.normalized), Is.GreaterThan(0f),
+                "the elbow came out on the far side from its pole, which is through the body");
+        }
+
+        [Test]
         public void ThePoleHintDecidesWhichWayTheElbowPoints()
         {
             // The one degree of freedom the law of cosines leaves open. Without a hint the arm

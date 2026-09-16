@@ -30,18 +30,24 @@ namespace Odyssey.Presentation.World
         /// Bend <paramref name="upper"/> and <paramref name="lower"/> so that
         /// <paramref name="hand"/> lands on <paramref name="target"/>.
         ///
-        /// <paramref name="poleHint"/> is a point the elbow is turned away from, which settles the
-        /// one degree of freedom the law of cosines leaves open: the whole arm can spin about the
-        /// line from shoulder to target, and without a hint it spins to wherever the previous pose
-        /// happened to leave it, so a figure's elbow flicks inside out between frames. Passing a
-        /// point behind the figure keeps elbows pointing outward and down, as elbows do.
+        /// <paramref name="pole"/> is a point the elbow is sent **towards**, which settles the one
+        /// degree of freedom the law of cosines leaves open: the whole arm can spin about the line
+        /// from shoulder to target, and every position on that spin is an equally correct answer
+        /// to "put the hand here". Without a pole it lands wherever the previous pose left it.
+        ///
+        /// It is a pole *target* and not a hint, and which of those two it is turned out to matter
+        /// a great deal: sent the wrong way the elbow does not merely look odd, it goes through
+        /// the ribs, and the whole forearm with it. Which way round the rotation runs depends on
+        /// the handedness of the axis convention, so rather than reason about that — twice today
+        /// a sign reasoned out that way has been wrong — the solve tries both and keeps whichever
+        /// actually puts the elbow nearer the pole.
         ///
         /// A target further away than the arm is long is not an error and is not reported as one:
         /// the arm straightens towards it and stops, which is what an arm does. Any missing bone
         /// leaves the pose untouched.
         /// </summary>
         public static void Reach(Transform? upper, Transform? lower, Transform? hand,
-            Vector3 target, Vector3 poleHint)
+            Vector3 target, Vector3 pole)
         {
             if (upper == null || lower == null || hand == null) return;
 
@@ -60,15 +66,15 @@ namespace Odyssey.Presentation.World
                 Mathf.Abs(armLength - forearmLength) + 0.01f,
                 armLength + forearmLength - 0.01f);
 
-            // The bend plane: through the shoulder, the target and the hint, so the elbow stays on
-            // the far side from the hint however the arm is turned.
+            // The bend plane: through the shoulder, the target and the pole.
             Vector3 toTarget = target - shoulder;
             if (toTarget.sqrMagnitude < 1e-6f) return;
 
-            Vector3 bend = Vector3.Cross(toTarget, poleHint - shoulder);
+            Vector3 toPole = pole - shoulder;
+            Vector3 bend = Vector3.Cross(toTarget, toPole);
             if (bend.sqrMagnitude < 1e-6f)
             {
-                // Target, shoulder and hint in a line. Any plane will do; take one that is at
+                // Target, shoulder and pole in a line. Any plane will do; take one that is at
                 // least stable, from the current elbow.
                 bend = Vector3.Cross(toTarget, elbow - shoulder);
                 if (bend.sqrMagnitude < 1e-6f) return;
@@ -85,10 +91,22 @@ namespace Odyssey.Presentation.World
                 (armLength * armLength + span * span - forearmLength * forearmLength)
                 / (2f * armLength * span), -1f, 1f)) * Mathf.Rad2Deg;
 
-            // Straighten the whole arm at the target, then open it to the solved angle.
+            // Straighten the whole arm at the target, then open it to the solved angle — on
+            // whichever side of the line actually puts the elbow towards the pole. Measured rather
+            // than reasoned: the two candidates are one line apart and the wrong one buries the
+            // elbow in the chest.
             Vector3 direction = toTarget.normalized;
+            Vector3 acrossPole = Vector3.ProjectOnPlane(toPole, direction);
+            float sign = 1f;
+            if (acrossPole.sqrMagnitude > 1e-6f)
+            {
+                Vector3 one = Quaternion.AngleAxis(atShoulder, bend) * direction;
+                Vector3 other = Quaternion.AngleAxis(-atShoulder, bend) * direction;
+                sign = Vector3.Dot(one, acrossPole) >= Vector3.Dot(other, acrossPole) ? 1f : -1f;
+            }
+
             upper.rotation = Quaternion.FromToRotation(elbow - shoulder, direction) * upper.rotation;
-            upper.rotation = Quaternion.AngleAxis(atShoulder, bend) * upper.rotation;
+            upper.rotation = Quaternion.AngleAxis(atShoulder * sign, bend) * upper.rotation;
 
             lower.rotation = Quaternion.FromToRotation(
                 hand.position - lower.position, target - lower.position) * lower.rotation;
