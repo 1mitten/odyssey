@@ -61,19 +61,26 @@ namespace Odyssey.EditorTools
             public readonly int Scatter;
             public readonly bool FoliageShadows;
             public readonly bool Outline;
+            public readonly bool Submit;
 
-            public Variant(string name, int scatter, bool foliageShadows, bool outline)
+            public Variant(string name, int scatter, bool foliageShadows, bool outline, bool submit = true)
             {
                 Name = name;
                 Scatter = scatter;
                 FoliageShadows = foliageShadows;
                 Outline = outline;
+                Submit = submit;
             }
         }
 
         static readonly Variant[] Variants =
         {
             // A ladder, each rung one decision away from the last, so every delta is attributable.
+            // The floor: the world is meshed and walked exactly as usual but nothing is handed to
+            // the GPU, so what remains is the harness itself — clear, sky, the read-back sync and
+            // whatever the editor does around a camera.Render(). Every other row is measured
+            // against this one; without it a slow harness reads as a slow renderer.
+            new Variant("nothing submitted (floor)",     0,   false, false, submit: false),
             // 60 is what ships; 120 is the density it shipped at before the owner asked for sparser.
             new Variant("bare ground, no outline",       0,   false, false),
             new Variant("grass, no grass shadows",       60,  false, false),
@@ -161,6 +168,7 @@ namespace Odyssey.EditorTools
                         {
                             ScatterDensity = variant.Scatter,
                             FoliageCastsShadows = variant.FoliageShadows,
+                            SubmitToGpu = variant.Submit,
                         };
 
                         double ms = TimeFrames(camera, renderer, target, focus, pitch, distance,

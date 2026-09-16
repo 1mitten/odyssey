@@ -16,6 +16,13 @@ Take the top row whose status is `open` and whose **depends on** rows are all `d
 
 **Every C row** commits on the fast tier. The next **W** row (and OQ-13 and OQ-21 in particular) begins by running the Unity gate on the merged `claude/m1-world`; if it is red, the row that turned it red is reopened with the failure message before any new work starts.
 
+## Read first — added 2026-09-16, after the queue was written
+
+- **The parallel-session note above is stale:** `ColonyWorld.cs`, `HeadlessRunTests.cs`, `OneDay.cs` and the bootstrap changes are committed (`d493955`), so OQ-04 and OQ-11 are unblocked; check `git status` anyway.
+- **The renderer is over budget and it is the top priority for the Windows machine.** `RenderBench` shows 14,400 instanced cubes costing 16 ms on an RTX 5070 Ti and grass growing superlinearly (see `docs/milestones/M1-report.md` §4). This needs the Frame Debugger, so it is **W and owner-visible**, not a container row. Nobody should tune grass density, outlines or scatter in the dark — measure the bare-ground reproducer first: is each instance becoming its own draw?
+- The queue's merge target stays `claude/m1-world`. `main` was fast-forwarded to it by the owner on 2026-09-16 and will be again after review; agents never push to `main`.
+- The prompt to give scheduled agents is `docs/plans/overnight-prompt.md`.
+
 ## Queue
 
 Sizes: **S** one focused session, **M** a long one. Nothing here is L. Test-first for every Sim change: the test named in **done when** is written before the code it proves.
