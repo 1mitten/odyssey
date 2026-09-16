@@ -671,3 +671,47 @@ Applying the off hand's fix to both hands was a regression, and the owner caught
 **Measure it rather than trusting it.** `MeasuredToolDrift` is how far the worst tool had turned in
 its fist since it was last put right. Zero is the only acceptable value, and it is "a tool never
 spins" written as something a log can print.
+
+## A state that is inferred is a state that is late, and a state that is partial
+
+The owner reported that pausing "resets" every figure and that some "carry on for a moment". Two
+symptoms, one cause: presentation was *guessing* at the pause instead of being told.
+
+**The guess had to be late, by construction.** A stopped tick cannot be told from a slow frame
+without waiting, so the director waited a quarter of a second before calling it a pause. That is
+fifteen frames at sixty, and against the axe's 1.15 s stroke it is 24% of a swing that ran on after
+the player pressed space. No tuning fixes this; only a real signal does. `WorldSnapshot.GameSpeed`
+is now published with every frame, and the tick the bootstrap already spends letting a speed change
+through is the frame that carries it, so the lag is one frame.
+
+**And the guess was only ever wired to one thing.** It gated the swing, because the swing was what
+somebody had noticed. Everything else in the pose pass went on easing, and the one that shows is
+the gait: a paused pawn stops moving, so the measured speed is nought, so the figure's smoothed
+speed is carried to nought at 0.35 a frame — **ten frames, 0.167 s, from 73.5% walk weight to 99%
+idle**. Nobody wrote a line that resets a figure; the reset is what a blend to idle looks like at
+sixty frames a second, and it was reported as a reset because from outside it is one. **When a flag
+means "the world is stopped", every clock in the file is its business, not just the clock that was
+in the bug report.** Running the whole pass on one delta that is zero while paused is the shape
+that cannot be half-applied.
+
+**Absence of movement is not a measurement of nought.** The general form, and the line that is most
+of the fix: a frame in which the pawn had no opportunity to move says nothing whatever about how
+fast the figure is going, so the last answer must stand. Reading it as a measured zero and
+smoothing towards it is what made the figures snap.
+
+**Unity's own clocks are not on the simulation's clock.** A `PlayableGraph` played with
+`DirectorUpdateMode.GameTime` and a world-simulated `ParticleSystem` both advance on wall-clock
+frames, and nothing in this project touches `Time.timeScale`, so both went on running through a
+pause. The narrow fixes are a clip speed of zero (the same `SetSpeed` call `Blend` already makes
+every frame, and it *continues* rather than restarting when the rate comes back) and
+`main.simulationSpeed = 0`. Stopping the graph outright would leave the bones unwritten, which the
+additive work pose needs.
+
+**Measuring this with the editor open.** None of it can be run: a `PawnFigureDirector` cannot be
+constructed outside a running editor, because its constructor builds a `ChipDirector` and
+`Shader.Find` is a native call. What *can* be run is the arithmetic, and it is worth extracting for
+that reason alone — pulling the speed smoothing out as a static over two positions
+(`PawnFigureDirector.ObserveSpeed`) made the whole pause behaviour testable by an ordinary test, and
+the test file itself was then executed headlessly by compiling it against the rebuilt
+`Odyssey.Presentation.dll` with the NuGet NUnit and invoking every `[Test]` by reflection. Three of
+the five went red against the old behaviour, which is the only reason they are worth anything.

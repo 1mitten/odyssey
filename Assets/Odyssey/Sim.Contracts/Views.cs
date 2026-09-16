@@ -183,6 +183,27 @@ namespace Odyssey.Sim.Contracts
         public int SliceLayer { get; private set; }
         public GridSize Size { get; private set; }
 
+        /// <summary>
+        /// The clock the world was running at when this frame was published: 0 paused, 1 normal,
+        /// 2 fast, 3 very fast. Exactly <c>SimWorld.GameSpeed</c>, carried here rather than read
+        /// off the world, because presentation reads the snapshot and nothing else.
+        ///
+        /// <para>It exists because <b>pause is a fact, not something to be guessed at</b>.
+        /// Presentation used to infer it from the tick standing still, which cannot be done
+        /// without a delay: a quarter of a second had to pass before a stopped tick could be told
+        /// from a slow frame, and for those fifteen frames every colonist carried on swinging.
+        /// A paused world publishes exactly one more frame — the tick spent letting the speed
+        /// change through — and that frame says 0, so the lag is one frame.</para>
+        ///
+        /// <para>It defaults to 1 rather than 0 so that a snapshot nobody has written yet reads as
+        /// a running world. A harness that builds one by hand, or an editor tool that poses a
+        /// figure without ticking anything, gets movement rather than a board frozen solid.</para>
+        /// </summary>
+        public int GameSpeed { get; private set; } = 1;
+
+        /// <summary>True while the simulation is advancing. See <see cref="GameSpeed"/>.</summary>
+        public bool Running => GameSpeed > 0;
+
         public int PawnCount { get; private set; }
         public int ThingCount { get; private set; }
         public int SliceCellCount { get; private set; }
@@ -231,11 +252,12 @@ namespace Odyssey.Sim.Contracts
 
         // ---- writing side, used only by the simulation while building the back buffer ----
 
-        internal void BeginWrite(int tick, GridSize size, int sliceLayer)
+        internal void BeginWrite(int tick, GridSize size, int sliceLayer, int gameSpeed = 1)
         {
             Tick = tick;
             Size = size;
             SliceLayer = sliceLayer;
+            GameSpeed = gameSpeed;
             PawnCount = 0;
             ThingCount = 0;
             SliceCellCount = 0;

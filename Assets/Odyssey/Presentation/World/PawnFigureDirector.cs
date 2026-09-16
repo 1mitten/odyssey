@@ -402,9 +402,14 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public ChipDirector? Chips { get; set; }
 
-        /// <summary>The tick the last published snapshot carried, and how long ago it changed.</summary>
-        int _lastTick = -1;
-        float _sinceTick;
+        /// <summary>
+        /// Whether the last <see cref="Sync"/> saw a world that was advancing.
+        ///
+        /// Read off the snapshot, never inferred, and public because it is the one bit of state
+        /// that decides whether anything on the board moves at all: a harness that photographs a
+        /// frozen colonist can say which of the two reasons it is looking at.
+        /// </summary>
+        public bool Running { get; private set; } = true;
 
         readonly List<Figure> _figures = new List<Figure>();
         readonly Dictionary<int, Figure> _byPawn = new Dictionary<int, Figure>();
@@ -690,17 +695,31 @@ namespace Odyssey.Presentation.World
         {
             Drawn.Clear();
             FastestSpeed = 0f;
+
+            // Is the world actually running? The snapshot says so — see WorldSnapshot.GameSpeed.
+            //
+            // It used to be inferred from the tick standing still, with a quarter of a second of
+            // grace, and both halves of the owner's report came out of that. The grace is fifteen
+            // frames at sixty, and measured against the axe's 1.15 s stroke it is 24% of a swing
+            // that ran on after the player pressed space — "some even carry on for a moment". And
+            // because the inference only ever gated the *swing*, everything else went on easing:
+            // a walking colonist's gait blend, measured, goes from 73.5% walk to 99% idle in ten
+            // frames (0.167 s), which is what reads as the figures resetting to a default pose.
+            //
+            // Nothing is inferred now, and nothing eases while the world is stopped. Running is
+            // the frame's whole clock: pass it a paused snapshot and every figure holds the pose
+            // it was drawn in until the world moves again. See Pose and Blend.
+            Running = snapshot.Running;
+            bool running = Running;
+
+            // Read before the early return, so a clone with no faces still reports the truth and
+            // a harness looking at a motionless board is not told the world is running.
             if (!Enabled) return;
 
-            // Is the world actually running? A swing is the only thing on the board that would
-            // otherwise keep moving while the game is paused — a paused pawn stops moving, so its
-            // measured speed falls to zero and it settles into the idle, and a colonist calmly
-            // chopping through a pause would be the one figure still working. There is no pause
-            // signal in the snapshot, so it is inferred from the tick standing still: a quarter
-            // of a second without one is a pause, and at sixty ticks a second nothing else is.
-            _sinceTick = snapshot.Tick == _lastTick ? _sinceTick + deltaTime : 0f;
-            _lastTick = snapshot.Tick;
-            bool running = _sinceTick < 0.25f;
+            // The chips as well, or wood thrown a frame before the pause would go on falling
+            // while everything that threw it stood still. They are world-simulated by Unity, so
+            // nothing here steps them; the speed is what Unity steps them at.
+            if (Chips != null) Chips.Running = running;
 
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
             var pawns = snapshot.Pawns;
@@ -1364,12 +1383,70 @@ namespace Odyssey.Presentation.World
             bone.rotation = Quaternion.AngleAxis(degrees, axis) * bone.rotation;
         }
 
-        void Pose(Figure figure, in PawnView pawn, Vector3 position, Vector3 heading,
-            float deltaTime, bool running)
+        /// <summary>
+        /// How fast a figure is walking, from where the simulation put it last frame and where it
+        /// has put it now.
+        ///
+        /// <para>Pulled out of <see cref="Pose"/> because it is the number that decides which gait
+        /// plays, and because a figure cannot be built outside a running editor — a static over
+        /// two positions can be driven across a pause by an ordinary test, and the pose it feeds
+        /// cannot.</para>
+        ///
+        /// <para><b>Differenced against where the simulation last put the pawn</b>, not against
+        /// where the figure was last drawn. Those parted company the moment a working figure began
+        /// stepping up to its tree: a metre and a half of step over a quarter of a second is six
+        /// metres a second, which would have thrown a standing woodcutter into a sprint cycle on
+        /// the spot.</para>
+        ///
+        /// <para><b>Ground speed, so the vertical part does not count.</b> A colonist climbing out
+        /// of a shaft covers three metres without going anywhere: counted whole, that is a walk
+        /// cycle playing while the figure rises through the air with nothing under its feet.</para>
+        ///
+        /// <para><b>No frame, no answer.</b> A delta of nothing is a frame in which the pawn had
+        /// no opportunity to move, and it says nothing whatever about how fast the figure is
+        /// going — so the last answer stands. That single line is most of the pause fix. It used
+        /// to read the absence of movement as a measurement of nought and smooth towards it, and
+        /// measured against the real gait speeds that carried a walking colonist from 73.5% walk
+        /// weight to 99% idle in ten frames, 0.167 s: a figure that visibly snapped to a standing
+        /// pose the instant the player pressed space. Held instead, it keeps the stride it was
+        /// drawn in and picks the walk straight back up when the world moves again.</para>
+        /// </summary>
+        public static float ObserveSpeed(float previous, Vector3 simPosition, Vector3 position,
+            float deltaTime, bool settled)
         {
+            if (!settled) return 0f;
+            if (deltaTime <= 1e-5f) return previous;
+
+            Vector3 moved = position - simPosition;
+            moved.y = 0f;
+
+            // One frame of a lost path or a slice change can jump a pawn further than any gait
+            // covers. Smoothing keeps a single frame from throwing the figure into a sprint.
+            return Mathf.Lerp(previous, moved.magnitude / deltaTime, SpeedSmoothing);
+        }
+
+        /// <summary>How much of a frame's measured speed the figure's smoothed speed takes.</summary>
+        public const float SpeedSmoothing = 0.35f;
+
+        void Pose(Figure figure, in PawnView pawn, Vector3 position, Vector3 heading,
+            float frameTime, bool running)
+        {
+            // **The one clock every ease in this method runs on, and it stops when the world
+            // does.** A pause should hold each figure on the frame it is on and then carry on
+            // from there, which is what a delta of exactly nothing gives for free: MoveTowards
+            // with a step of zero is the identity, so the work weight, the climb lean, the swing,
+            // the gesture and the turn all keep the value they had, and the frame after the
+            // player starts the world again continues from it rather than restarting.
+            //
+            // Placement is deliberately *not* on this clock. A figure still has to be put
+            // somewhere — a pawn newly leased because the player scrolled the slice while paused
+            // has no drawn position at all — so everything below that computes a position from
+            // state rather than advancing it is left alone.
+            float deltaTime = running ? frameTime : 0f;
+
             // Work eases in and out rather than switching, and the axe is in the hand for exactly
             // as long as the pose is worth anything. See WorkEaseSeconds.
-            float step = WorkEaseSeconds > 1e-3f ? deltaTime / WorkEaseSeconds : 1f;
+            float step = WorkEaseSeconds > 1e-3f ? deltaTime / WorkEaseSeconds : running ? 1f : 0f;
             figure.WorkWeight = Mathf.MoveTowards(figure.WorkWeight, pawn.Working ? 1f : 0f, step);
 
             // The swing's own clock, which runs only while there is work. Freezing it between
@@ -1507,35 +1584,11 @@ namespace Odyssey.Presentation.World
                 if (toWork.sqrMagnitude > 1e-4f) heading = toWork;
             }
 
-            // Speed from displacement, which is right at every game speed and while paused, and
-            // needs to know nothing about ticks. A figure that has just been leased has no
-            // previous position worth differencing, hence Settled.
+            // Speed from displacement, which is right at every game speed and needs to know
+            // nothing about ticks. A figure that has just been leased has no previous position
+            // worth differencing, hence Settled.
             bool settled = figure.Settled;
-
-            // Differenced against where the *simulation* last put the pawn, not against where the
-            // figure was last drawn. Those parted company the moment a working figure began
-            // stepping up to its tree: a metre and a half of step over a quarter of a second is
-            // six metres a second, which would have thrown a standing woodcutter into a sprint
-            // cycle on the spot.
-            //
-            // **Ground speed, so the vertical part does not count.** The gait blend picks a walk
-            // or a run from this number, and a colonist climbing out of a shaft covers three
-            // metres without going anywhere: counted whole, that is a walk cycle playing while the
-            // figure rises through the air with nothing under its feet. Horizontal distance leaves
-            // a climber at nought, which blends to the idle — still the wrong pose for a climb,
-            // but a still figure going up a hole reads as somebody climbing where a walking one
-            // reads as somebody levitating.
-            float speed = 0f;
-            if (settled && deltaTime > 1e-5f)
-            {
-                Vector3 moved = position - figure.SimPosition;
-                moved.y = 0f;
-                speed = moved.magnitude / deltaTime;
-            }
-
-            // One frame of a lost path or a slice change can jump a pawn further than any gait
-            // covers. Smoothing keeps a single frame from throwing the figure into a sprint.
-            figure.Speed = settled ? Mathf.Lerp(figure.Speed, speed, 0.35f) : 0f;
+            figure.Speed = ObserveSpeed(figure.Speed, figure.SimPosition, position, deltaTime, settled);
             figure.Settled = true;
             figure.SimPosition = position;
 
@@ -1622,7 +1675,7 @@ namespace Odyssey.Presentation.World
                 : figure.TargetYaw;
             figure.Transform.rotation = Quaternion.Euler(0f, figure.Yaw, 0f);
 
-            Blend(figure, figure.Speed);
+            Blend(figure, figure.Speed, running);
         }
 
         /// <summary>
@@ -1632,15 +1685,28 @@ namespace Odyssey.Presentation.World
         /// means the blended stride already matches the ground speed, so the clips play at their
         /// authored rate. Only above the fastest gait does the rate have to stretch, and that is
         /// the one case where a figure is genuinely moving faster than any clip was made for.
+        ///
+        /// <para><b>A rate of nothing is how a pause is held.</b> The graph is played with
+        /// <c>DirectorUpdateMode.GameTime</c> and nothing in this game touches
+        /// <c>Time.timeScale</c>, so Unity goes on evaluating every figure's clips on wall-clock
+        /// frames whatever the simulation is doing — a paused colony breathed, shifted its weight
+        /// and swayed. Setting the clip speed to zero is the narrowest possible way to stop that:
+        /// it is the same call that is already made on every clip on every frame, so nothing new
+        /// can go wrong with it, the clip time simply stops advancing, the pose the graph writes
+        /// is the pose it wrote last frame, and the frame the world starts again the rate comes
+        /// back and the clip <em>continues</em> rather than restarting. Stopping the graph or
+        /// unplaying it would also have to be undone, and would not leave the bones written at
+        /// all — the additive work pose is laid over what the graph writes and needs it there.
+        /// </para>
         /// </summary>
-        void Blend(Figure figure, float speed)
+        void Blend(Figure figure, float speed, bool running)
         {
             Look look = _looks[figure.Look];
             GaitBlend blend = GaitBlend.Solve(look.Speeds, speed);
             for (int i = 0; i < look.Gaits.Length; i++)
             {
                 figure.Mixer.SetInputWeight(i, blend.WeightOf(i));
-                figure.Clips[i].SetSpeed(blend.Rate);
+                figure.Clips[i].SetSpeed(running ? blend.Rate : 0f);
             }
         }
 

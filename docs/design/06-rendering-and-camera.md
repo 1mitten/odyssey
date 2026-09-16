@@ -232,10 +232,8 @@ Four things about it are deliberate and each was a way of getting it wrong:
 - **The stroke is not a sine.** It is three unequal parts — a long eased raise, a short
   accelerating strike, and a dwell with the blade in the wood. A symmetric swing reads as a
   metronome and a swing with no dwell reads as waving; neither reads as work.
-- **The pose is laid over the clip, not in place of it.** The colonist goes on breathing.
-- **It freezes when the game is paused.** There is no pause signal in the snapshot, so the director
-  infers it from the tick standing still. Without that, a swinging colonist would be the only thing
-  moving on a paused board, since a pawn that has stopped moving settles into the idle by itself.
+- **The pose is laid over the clip, not in place of it.** The colonist goes on breathing — except
+  while the game is paused, for which see §6b.
 - **The three angles are independent, which took work.** The spine carries the shoulders through the
   skeleton, so folding the back further into the blow also swung both arms, and no amount of tuning
   could settle one without moving the other. The director subtracts the spine's own pitch back out
@@ -343,6 +341,44 @@ not in the save, not in the state hash.
 or made in Blender against this rig — they replace the computed pose and `WorkSwing` goes. Until
 then this is the cheapest thing that makes the colony look like it is doing something, and it cost
 no art.
+
+## 6b. A pause holds the frame it is on
+
+Pausing should stop the board dead and starting again should carry on from there. It did neither,
+and the owner reported both halves: figures reset to a standing pose, and some carried on for a
+moment first.
+
+**Pause is now a fact the snapshot carries** — `WorldSnapshot.GameSpeed`, exactly
+`SimWorld.GameSpeed`, with `Running` beside it. It used to be inferred from the tick standing
+still, which cannot be done without a delay: a quarter of a second had to pass before a stopped
+tick could be told from a slow frame. Measured against the axe's 1.15 s stroke that grace is 24% of
+a swing running on after the player pressed space, and it is exactly what "some even carry on for a
+moment" describes. A paused world publishes one more frame — the tick `OdysseyBootstrap` spends
+letting the speed change through — and that frame already says paused, so the lag is one frame
+instead of fifteen. It defaults to 1, so a snapshot nobody has written reads as a running world and
+every pose harness keeps working.
+
+**Nothing eases while the world is stopped.** The inference had only ever gated the swing, so every
+other ease in `PawnFigureDirector.Pose` went on running. The one that shows is the gait: the pawn
+stops moving, the measured speed is nought, and the figure's own speed is smoothed towards it at
+0.35 a frame — which against the real gait speeds carries a walking colonist from 73.5% walk weight
+to 99% idle in **ten frames, 0.167 s**. That is not a reset and is indistinguishable from one.
+`Pose` now runs every ease on one clock that is real frame time while the world runs and exactly
+nothing while it does not, so `MoveTowards` with a step of zero holds the value it had; and
+`ObserveSpeed` treats a frame with no time in it as *no answer* rather than as a measured nought,
+so the stride is still there when the world moves again. Placement is deliberately not on that
+clock: a figure leased because the player scrolled the slice while paused still has to be put
+somewhere.
+
+**And the clips themselves stop.** The graph is played with `DirectorUpdateMode.GameTime` and
+nothing in this game touches `Time.timeScale`, so Unity went on evaluating every figure on
+wall-clock frames whatever the simulation was doing — a paused colony breathed and shifted its
+weight. `Blend` sets the clip rate to zero, which is the same call it already makes on every clip
+on every frame: the clip time stops, the pose the graph writes is the pose it wrote last frame, and
+when the rate comes back the clip *continues* rather than restarting. Stopping the graph would also
+have left the bones unwritten, and the work pose is laid over what the graph writes. The chips stop
+the same way, at `simulationSpeed` zero, since they are simulated in world space by Unity and know
+nothing about the tick.
 
 ## 7. Presentation is a reader
 
