@@ -34,6 +34,8 @@ What to do: `scripts/unity.sh` treats the **results file, not the process exit c
 
 **Unity ships a .NET *runtime*, not an SDK.** `dotnet --list-sdks` against a runtime-only install prints an error to stdout and still exits 0, so the exit code cannot be trusted; check for an actual version line. Install a real SDK without admin rights with the official script, which lands in `%USERPROFILE%\.dotnet`.
 
+**A container's egress proxy can block the official dotnet installer, with no SDK already on disk to fall back to.** `dot.net/v1/dotnet-install.sh` redirects to `builds.dotnet.microsoft.com`, and at least one scheduled remote container denied that host outright (`CONNECT tunnel failed, response 403`) while allowing plenty else. Unlike the runtime-only trap above, this fails loudly, so the fix is procedural rather than diagnostic: **check for `dotnet` before promising "fast tier green"** on any queue row, and if it is missing and cannot be installed, only take a row whose done-when needs no test run at all (a doc or comment correction, a Web research file). Do not spend the session's time budget retrying the download.
+
 ## Repository layout
 
 **`build/` is gitignored** by the standard Unity rules, and git will not descend into an excluded directory, so a negation pattern inside it does not work. Committed tooling goes in `tools/`.
