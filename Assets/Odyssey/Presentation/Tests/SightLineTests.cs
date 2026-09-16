@@ -191,10 +191,12 @@ namespace Odyssey.Tests.Presentation
     public class SightFadeRenderTests
     {
         /// <summary>
-        /// Bare ground with two blocks of rock standing on it, one in the way of the colonist at
-        /// <c>(6, 4)</c> and one two rows of z clear of them. The board is a single chunk, so the
-        /// two rocks share a bucket — which is the point: a bucket the sight line splits has to
-        /// come out as two draws of the same mesh in two materials.
+        /// Bare ground with two blocks of rock standing on it, two rows of z apart, and a colonist
+        /// to the east of each. Each rock is in the way of its own colonist and of nobody else,
+        /// which is what lets the partition be measured rather than merely observed.
+        ///
+        /// <para>They are two cells apart rather than adjacent so that neither changes how the
+        /// other is meshed, and the board is one chunk so both are reached in one pass.</para>
         /// </summary>
         static RenderTestWorld Outcrop()
         {
@@ -219,29 +221,57 @@ namespace Odyssey.Tests.Presentation
         static Vector3 ChestAt(int x, int z) =>
             CellMetrics.FloorCentre(x, z, 1) + Vector3.up * 1.35f;
 
+        /// <summary>The eye that looks at the colonist east of the rock in row <paramref name="z"/>.</summary>
+        static Vector3 EyeFor(int z) => new Vector3(-20f, 8f, CellMetrics.FloorCentre(2, z, 1).z);
+
+        /// <summary>How many instances these beams ghost between them.</summary>
+        static int FadedBy(ChunkRenderer renderer, params int[] rows)
+        {
+            var sight = new SightLines();
+            foreach (int z in rows) sight.Add(EyeFor(z), ChestAt(6, z));
+            renderer.Sight = sight;
+            renderer.Render(1, new SliceSettings());
+            return renderer.InstancesFaded;
+        }
+
+        /// <summary>
+        /// An outcrop between the eye and a colonist is ghosted, and the outcrop two rows over is
+        /// not.
+        ///
+        /// <para><b>Asked as arithmetic on the counts rather than on the draw calls, and that is a
+        /// correction.</b> The first version asserted that splitting a bucket costs a second call,
+        /// which CI falsified: it stayed at three, because the two rocks are not in one bucket to
+        /// begin with. How the mesher buckets a board is its own business — a decision that can
+        /// change for reasons having nothing to do with this feature — so a test that leans on it
+        /// is testing the wrong thing. What the partition actually promises is that each beam
+        /// ghosts what stands in it and nothing else, so two beams together ghost the sum of what
+        /// each ghosts alone. That holds however the geometry is bucketed.</para>
+        /// </summary>
         [Test]
         public void AnOutcropBetweenTheEyeAndAColonistIsGhosted()
         {
             var world = Outcrop();
             ChunkRenderer renderer = RendererFor(world);
-            var slice = new SliceSettings();
 
-            renderer.Render(1, slice);
-            int solidCalls = renderer.DrawCalls;
+            renderer.Render(1, new SliceSettings());
             int instances = renderer.InstancesDrawn;
             Assert.That(renderer.InstancesFaded, Is.Zero, "something faded with nobody selected");
 
-            var sight = new SightLines();
-            sight.Add(new Vector3(-20f, 8f, CellMetrics.FloorCentre(2, 4, 1).z), ChestAt(6, 4));
-            renderer.Sight = sight;
-            renderer.Render(1, slice);
-
+            int near = FadedBy(renderer, 4);
             Assert.That(renderer.ChunksSightTested, Is.GreaterThan(0), "no chunk was even tested");
-            Assert.That(renderer.InstancesFaded, Is.GreaterThan(0), "the outcrop stayed solid");
-            Assert.That(renderer.InstancesDrawn, Is.EqualTo(instances),
-                "the partition lost geometry");
-            Assert.That(renderer.DrawCalls, Is.GreaterThan(solidCalls),
-                "a split bucket must cost a second call");
+            Assert.That(near, Is.GreaterThan(0), "the outcrop stayed solid");
+            Assert.That(renderer.InstancesDrawn, Is.EqualTo(instances), "the partition lost geometry");
+
+            int far = FadedBy(renderer, 6);
+            Assert.That(far, Is.EqualTo(near),
+                "the two outcrops are the same geometry, so a beam through either ghosts as much");
+
+            // The whole of the claim: neither beam reaches the other's rock, so together they
+            // ghost exactly twice what one does. A beam spilling sideways onto the far rock, or
+            // down onto the ground, comes out over the sum; one that stopped discriminating per
+            // instance and ghosted whole buckets comes out over it too.
+            Assert.That(FadedBy(renderer, 4, 6), Is.EqualTo(near + far),
+                "a beam ghosted something that was not standing in it");
         }
 
         [Test]
