@@ -51,18 +51,10 @@ namespace Odyssey.Sim.Pawns
                 case 1:
                 {
                     if (item.Cell != Pawn.Cell) return JobStatus.Failed;
-                    ctx.Items.PickUp(item, Pawn.Id);
+                    // Taken up rather than merely moved: TakeUp is where the stoop is reported,
+                    // so that every job which ever lifts anything gets it without being asked.
+                    TakeUp(ctx, item);
                     Job.CarriedItem = item.Id.Value;
-
-                    // The whole of the simulation's part in the lift: it happened, here, now.
-                    // The stoop and the rise are presentation's, take about eight-tenths of a
-                    // second of game time, and cost the colony nothing — this toil is one tick
-                    // and stays one tick, so no throughput, golden or balance number moves.
-                    //
-                    // Which means the figure will sometimes still be straightening as its pawn
-                    // sets off walking. That is the accepted price of the owner's decision
-                    // (2026-09-16) to keep the duration out of the simulation.
-                    Pawn.BeginGesture(PawnGesture.Lift);
                     NextToil();
                     return JobStatus.Ongoing;
                 }
@@ -83,14 +75,11 @@ namespace Odyssey.Sim.Pawns
                     // Checked again on arrival: something may have been dropped or eaten here
                     // meanwhile, and the cell claim guards against haulers, not against eaters.
                     if (!ctx.Items.CellHasSpace(Job.DestCell, item.DefIndex, item.Stack)) return JobStatus.Failed;
-                    ctx.Items.Drop(item, Job.DestCell);
+                    // The same motion the other way up, and only on a haul that *arrived*: see
+                    // PutDown, and see Cleanup below for the failure path that deliberately says
+                    // nothing.
+                    PutDown(ctx, item, Job.DestCell);
                     Job.CarriedItem = -1;
-
-                    // The same motion the other way up, and it is reported here rather than in
-                    // Cleanup so that only a haul that *arrived* is drawn setting its load down.
-                    // A job that fails mid-carry also puts the thing somewhere, but that is a
-                    // colonist dropping what it is holding, which is not this gesture.
-                    Pawn.BeginGesture(PawnGesture.Stow);
                     return JobStatus.Succeeded;
                 }
             }

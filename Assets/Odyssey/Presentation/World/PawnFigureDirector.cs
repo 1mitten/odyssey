@@ -1256,14 +1256,18 @@ namespace Odyssey.Presentation.World
             float amount = Mathf.Clamp01(figure.WorkWeight);
             Transform body = figure.Transform;
 
-            // **The working hand first, and then the tool into it.** The order is the fix for the
-            // spin as much as PlaceTool is: this hand carries the axe, so where the haft lies in
-            // the world is not settled until the wrist has finished turning. Turn the wrist after
-            // the tool is placed and the tool has to be pinned against its own parent, which is the
-            // integration that wound it. Turn it first and there is nothing to pin.
-            HandGrip.FaceHaft(figure.RightGrip, tool.TransformPoint(figure.Held.OffHandGrip),
-                tool.TransformPoint(figure.Held.BladeTip) - tool.TransformPoint(figure.Held.OffHandGrip),
-                amount);
+            // **The working wrist is not turned to the haft, and that is not an omission.** It was
+            // turned, briefly, and the axe came out facing the wrong way (owner, 2026-09-16) — of
+            // course it did: the tool hangs off this hand, so any roll given to the wrist is a roll
+            // given to the blade, and where the blade points was settled against photographs. The
+            // old code turned the wrist and then undid the damage by pinning the tool's world pose,
+            // which is the integration that made it spin. Both halves of that were wrong. This hand
+            // holds the tool the way the fitting laid it; the stroke's own angles say where it
+            // points; and the only thing the grip does here is close the fingers.
+            //
+            // Fingers first, because curling them turns finger bones and not the hand, so the tool
+            // does not move — and PlaceTool wants the palm already in the shape it will be gripping
+            // in when it seats the haft into it.
             HandGrip.Close(figure.RightGrip, amount);
 
             PlaceTool(figure, gripAt);

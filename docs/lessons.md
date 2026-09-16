@@ -633,3 +633,41 @@ magenta, so it does not read as a missing shader: the whole colonist is one flat
 the ground and trees around it are correct, and it settles a frame or two later. Same class of thing
 `ChipDirector` warms its particle material for, and the same fix — take a few throwaway pictures
 first, where nobody is looking.
+
+## The pose runs twice a frame, and only one of them starts from clean bones
+
+`PawnFigureDirector.ApplyWorkPose` is called at the end of **both** `Sync` and `Evaluate`, and only
+`Evaluate` evaluates the animation graph first. So every pose operation happens twice per frame:
+once on a freshly written skeleton, and once on whatever the previous frame left behind.
+
+For a **bone** that is harmless, and the file has always said so. Unity rewrites every bone on each
+graph evaluation, so an additive `Pitch` is re-derived from scratch on the pass that is actually
+drawn, and the stale pass's result is discarded unseen. This has been true and invisible since the
+swing landed.
+
+For **anything the graph does not own it is fatal**, because nothing ever resets it. Two things bit
+on the same day (2026-09-16), both reported by the owner as visible faults and neither catchable by
+a contact sheet, since the harnesses step the graph by hand, one pose per picture:
+
+- **The axe span, fast.** The tool was kept still while the wrist turned by capturing its *world*
+  pose and putting it back. On a child object, that writes a **local** rotation worked out from the
+  parent's rotation at that instant — it never sets the tool to a known orientation, it only nudges
+  it by the inverse of whatever the wrist just did. Two unbounded nudges a frame and it winds.
+- **The off hand hunted round the haft and sometimes flipped across it.** `HandGrip.FaceHaft`
+  searched for the best roll *starting from the hand's current rotation*. Three `Grasp` passes times
+  two pose passes is six partial, quantised turns a frame, converging on nothing.
+
+**The rule: a pose may add to a bone, because the graph rewrites bones; it may never add to
+anything the graph does not own.** Props, search results and anything else outside the skeleton are
+*placed* — computed absolutely from the fitting and the current state — so that running the pass
+twice does nothing the second time and a dropped frame leaves no trace.
+
+**And a corollary that cost an extra round.** The two hands are not the same problem. The off hand
+is *reaching for* wood whose position is known, so seating it to the haft is right. The working hand
+*carries the tool*, so its orientation belongs to the stroke and the tool's to the fitting: turning
+that wrist to face the haft turns the blade with it, and the axe comes out facing the wrong way.
+Applying the off hand's fix to both hands was a regression, and the owner caught it in one look.
+
+**Measure it rather than trusting it.** `MeasuredToolDrift` is how far the worst tool had turned in
+its fist since it was last put right. Zero is the only acceptable value, and it is "a tool never
+spins" written as something a log can print.
