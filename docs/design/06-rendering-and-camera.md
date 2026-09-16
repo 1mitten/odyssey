@@ -242,8 +242,51 @@ for one. A tree is not a roof, so grass in woodland is lit like the grass beside
 and tufts all ask; a tuft that kept dimming while the terrace under it stopped would be the same
 fault, a layer smaller and much harder to see.
 
+### The black lines between tiles, and the lip of a step
+
+The owner reported black lines where the ground tiles are not flush — subtle on `main`, obvious with
+the rim ripple on. **They were never holes.** A gap would show the skybox and the skybox is pale
+blue. Every cell is its own box sheared onto the tangent plane of the relief field, so where two
+tangent planes disagree the taller cell's own side wall fills the step; that wall is vertical, the
+sun is at 72° and terrain casts no shadows, so it receives almost nothing.
+
+`GroundSeamTests` weighed the two contributions rather than guessing between them:
+
+| Source | Worst step between neighbours |
+|---|---|
+| The relief field's own second-order parting | **14.7 mm** (the earlier "about 41 mm" was conservative) |
+| The rim ripple at 3.6 cm | **72 mm** on top of it |
+
+So the ripple was five times the artefact, and **it ships at zero**. It survives as a lever, and
+`GroundSeamTests` asserts the default so that turning it back on has to come with a fresh sheet. The
+top surface was never the complaint; adding per-cell noise to the part that was working traded a
+good surface for a bad one while every test passed.
+
+What is left is the 14.7 mm the relief cannot avoid while each cell is its own box — and it does not
+have to be avoided, only lit. **Side faces carry shading normals tilted up towards the sky**
+(`SideNormalTiltDegrees`, 38°), so the sliver that fills a seam shades like the ground it sits
+between. It costs nothing: no vertex, no triangle, no draw call, no shader change, and 1,312 draw
+calls measured with it and without. It is a lever because it trades against readability — the same
+tilt lifts a riser towards the colour of the ground either side of it.
+
+**The lip is cut back** (`ChamferMetres`, 22 cm), answering "round off the edges of these steps on
+the corner". The rule that makes it affordable is that the chamfer goes on the sides that are
+actually open and no others: cut all four and every riser cell opens a groove against the flat
+ground behind it, which is the rim ripple's mistake again. So there is a mesh per pattern of exposed
+sides — **five**, because turning one is free and sixteen patterns fold onto five — and the cell
+spends its bearing orienting the pattern instead of varying the look. A corner drops if either side
+meeting there is open, since a corner is one point and cannot be at two heights.
+
+**The cost is buckets, not triangles.** On the wooded board, earth geometry takes 1,061 draw calls
+to 1,312 with instances unchanged, and 137 of that 251 is the pattern split. With the chamfer at
+zero all five patterns build the identical mesh, so the family collapses to one — otherwise turning
+the lever off would cost more than leaving it on.
+
 **Levers and the instrument.** `ChunkRenderer.EarthGeometry` and `ChunkRenderer.Banks`, both off
-being exactly the ground as it was drawn before. Judge it with *Odyssey → Presentation → Check the
+being exactly the ground as it was drawn before; `GroundMesh.SideNormalTiltDegrees`,
+`GroundMesh.ChamferMetres` and `GroundMesh.MaxRipple`. The mesh levers are static and the meshes are
+held by reference inside a `ModuleLibrary`, so moving one needs an explicit `GroundMesh.Invalidate()`
+and a fresh library, or the ground draws against destroyed meshes and silently disappears. Judge it with *Odyssey → Presentation → Check the
 slopes and banks* (`scripts/unity.sh shot Odyssey.EditorTools.SlopeCheck.Run`), which finds the
 longest run of one-layer step on the board rather than being told where one is — a hardcoded
 position is a terrace on one seed and open meadow on the next — and shoots it plain, with earth and

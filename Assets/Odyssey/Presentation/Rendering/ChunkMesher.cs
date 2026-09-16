@@ -185,8 +185,28 @@ namespace Odyssey.Presentation.Rendering
                 // and z, and a rotation about the vertical commutes with both, so the block turns
                 // about its own axis and still fills its cell exactly.
                 int variant = GroundLook.Variant(x, z, y);
-                Matrix4x4 turned = at * Matrix4x4.Rotate(Quaternion.Euler(0f, GroundLook.Yaw(x, z, y), 0f));
-                AddBody(batch, _model.EarthModule(index, variant, ShowsAVerticalFace(x, z, y)), tint, turned);
+                int exposed = ExposedSides(x, z, y);
+
+                // A cell with nothing to show takes the cheap block and a free bearing; a cell with
+                // a face takes the mesh cut for its own pattern of exposed sides, and spends the
+                // bearing turning that pattern onto the sides that are really open. Five meshes
+                // then cover all sixteen possibilities, which is the whole reason the chamfer is
+                // affordable — see GroundMesh.ExposurePatterns.
+                float yaw;
+                int earth;
+                if (exposed == 0)
+                {
+                    yaw = GroundLook.Yaw(x, z, y);
+                    earth = _model.EarthModule(index, variant, showsAFace: false);
+                }
+                else
+                {
+                    int canonical = GroundMesh.CanonicalExposure(exposed, out int rotation);
+                    yaw = 90f * rotation;
+                    earth = _model.EarthFaceModule(index, variant, canonical);
+                }
+
+                AddBody(batch, earth, tint, at * Matrix4x4.Rotate(Quaternion.Euler(0f, yaw, 0f)));
                 return;
             }
 
@@ -475,16 +495,34 @@ namespace Odyssey.Presentation.Rendering
         /// here for the same reason it does there: it is not an exposed face, and treating it as
         /// one drew a cross-section wall round the whole perimeter of the map.</para>
         /// </summary>
-        bool ShowsAVerticalFace(int x, int z, int y)
+        bool ShowsAVerticalFace(int x, int z, int y) => ExposedSides(x, z, y) != 0;
+
+        /// <summary>
+        /// Which of this cell's four vertical faces can be seen, as a bitmask over
+        /// <see cref="Directions"/>.
+        ///
+        /// <para>The chamfer needs the pattern and not just the count, because it has to go on the
+        /// edges that are actually open and no others. Put it on all four and every riser cell
+        /// opens a groove against the flat ground behind it, which is the same fault the rim ripple
+        /// already made once.</para>
+        ///
+        /// <para>The world boundary counts as solid, for the same reason it does in
+        /// <see cref="HasExposedFace"/>: it is not an exposed face, and treating it as one drew a
+        /// cross-section wall round the whole perimeter of the map.</para>
+        /// </summary>
+        int ExposedSides(int x, int z, int y)
         {
             var size = _model.Size;
+            int mask = 0;
+
             for (int dir = 0; dir < Directions.Count; dir++)
             {
                 int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
                 if (!size.Contains(nx, nz, y)) continue;
-                if (!_model.IsSolid(size.Index(nx, nz, y))) return true;
+                if (!_model.IsSolid(size.Index(nx, nz, y))) mask |= 1 << dir;
             }
-            return false;
+
+            return mask;
         }
 
         bool HasExposedFace(int index, int x, int z, int y)

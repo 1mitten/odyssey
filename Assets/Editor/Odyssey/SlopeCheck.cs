@@ -47,13 +47,15 @@ namespace Odyssey.EditorTools
 
         readonly struct Condition
         {
-            public Condition(string name, bool earth, bool banks, float tilt, float ripple = 0f)
+            public Condition(string name, bool earth, bool banks, float tilt,
+                float ripple = 0f, float chamfer = 0f)
             {
                 Name = name;
                 Earth = earth;
                 Banks = banks;
                 Tilt = tilt;
                 Ripple = ripple;
+                Chamfer = chamfer;
             }
 
             public readonly string Name;
@@ -65,6 +67,9 @@ namespace Odyssey.EditorTools
 
             /// <summary>Rim ripple, as a fraction of cell height. See GroundMesh.MaxRipple.</summary>
             public readonly float Ripple;
+
+            /// <summary>How far the lip of an exposed face is cut back, in metres.</summary>
+            public readonly float Chamfer;
         }
 
         static void Execute(bool exitWhenDone)
@@ -80,6 +85,7 @@ namespace Odyssey.EditorTools
             float periodWas = GroundRelief.Period;
             float rippleWas = GroundMesh.MaxRipple;
             float tiltWas = GroundMesh.SideNormalTiltDegrees;
+            float chamferWas = GroundMesh.ChamferMetres;
 
             try
             {
@@ -137,14 +143,17 @@ namespace Odyssey.EditorTools
                 {
                     // What main draws today, for a control that is not a memory.
                     new Condition("plain", earth: false, banks: false, tilt: 0f),
-                    // The riser geometry on its own: coursed walls, flat tops, true normals.
-                    new Condition("flat", earth: true, banks: false, ripple: 0f, tilt: 0f),
-                    // Add the rim ripple. This is the one the owner saw as dark cell boundaries.
-                    new Condition("ripple", earth: true, banks: false, ripple: 0.012f, tilt: 0f),
-                    // Drop the ripple again and light the side faces like ground instead.
-                    new Condition("tilt", earth: true, banks: false, ripple: 0f, tilt: 38f),
+                    // The riser geometry on its own: coursed walls, square lip, true normals.
+                    new Condition("flat", earth: true, banks: false, tilt: 0f),
+                    // Light the side faces like ground rather than like a wall. This is the one
+                    // that answers the black lines, and it costs no geometry at all.
+                    new Condition("tilt", earth: true, banks: false, tilt: 38f),
+                    // Round the lip off. Two amounts, because whether a terrace still reads as a
+                    // terrace is a judgement and the owner asked to be shown rather than told.
+                    new Condition("round", earth: true, banks: false, tilt: 38f, chamfer: 0.22f),
+                    new Condition("rounder", earth: true, banks: false, tilt: 38f, chamfer: 0.45f),
                     // Everything, banks included.
-                    new Condition("banks", earth: true, banks: true, ripple: 0f, tilt: 38f),
+                    new Condition("banks", earth: true, banks: true, tilt: 38f, chamfer: 0.22f),
                 };
 
                 foreach (Condition condition in conditions)
@@ -154,6 +163,7 @@ namespace Odyssey.EditorTools
                     // destroyed meshes and the ground silently stops drawing.
                     GroundMesh.MaxRipple = condition.Ripple;
                     GroundMesh.SideNormalTiltDegrees = condition.Tilt;
+                    GroundMesh.ChamferMetres = condition.Chamfer;
                     GroundMesh.Invalidate();
                     BankMesh.Invalidate();
 
@@ -205,7 +215,8 @@ namespace Odyssey.EditorTools
                     // instance count moves between the first two conditions, something is emitting
                     // geometry per cell that was meant to be a choice of mesh.
                     Debug.Log($"[Slope] {condition.Name}: earth {condition.Earth}, banks {condition.Banks}, " +
-                              $"ripple {condition.Ripple * CellMetrics.SizeY * 100f:F1} cm, tilt {condition.Tilt} deg — " +
+                              $"ripple {condition.Ripple * CellMetrics.SizeY * 100f:F1} cm, " +
+                              $"tilt {condition.Tilt} deg, chamfer {condition.Chamfer * 100f:F0} cm — " +
                               $"{renderer.DrawCalls} draw calls, {renderer.InstancesDrawn} instances, " +
                               $"{renderer.ChunksDrawn} chunks");
 
@@ -235,6 +246,7 @@ namespace Odyssey.EditorTools
                 // happened to be, which is a confusing thing to inherit from a screenshot tool.
                 GroundMesh.MaxRipple = rippleWas;
                 GroundMesh.SideNormalTiltDegrees = tiltWas;
+                GroundMesh.ChamferMetres = chamferWas;
                 GroundMesh.Invalidate();
                 BankMesh.Invalidate();
                 if (cameraObject != null) UnityEngine.Object.DestroyImmediate(cameraObject);

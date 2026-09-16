@@ -600,7 +600,7 @@ namespace Odyssey.Presentation.Rendering
             {
                 case ModuleShape.RockBlock: mesh = RockMesh.For(meshVariant); break;
                 case ModuleShape.GroundBlock: mesh = GroundMesh.Turf(meshVariant); break;
-                case ModuleShape.GroundFace: mesh = GroundMesh.Face(meshVariant); break;
+                case ModuleShape.GroundFace: mesh = GroundMesh.FaceBySlot(meshVariant); break;
                 case ModuleShape.Bank: mesh = BankMesh.For(meshVariant); break;
                 default: mesh = PrimitiveMeshes.UnitCube; break;
             }

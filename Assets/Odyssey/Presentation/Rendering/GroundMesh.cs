@@ -244,7 +244,7 @@ namespace Odyssey.Presentation.Rendering
         public static int CourseCount => CourseHeights.Length;
 
         static readonly Mesh?[] TurfCache = new Mesh?[Variants];
-        static readonly Mesh?[] FaceCache = new Mesh?[Variants];
+        static readonly Mesh?[] FaceCache = new Mesh?[Variants * 5];
 
         /// <summary>
         /// Ground whose sides are never seen: a rippled top on plain vertical walls.
@@ -259,14 +259,61 @@ namespace Odyssey.Presentation.Rendering
         /// Ground that shows a side: the same top, over walls built in courses that step out, so a
         /// 3 m riser is a broken face rather than one ruled rectangle.
         /// </summary>
-        public static Mesh Face(int variant) => Cached(FaceCache, variant, coursed: true);
+        public static Mesh Face(int variant) => Face(variant, 0b1111);
+
+        /// <summary>
+        /// Ground that shows a side, built for one pattern of exposed sides.
+        ///
+        /// <paramref name="exposure"/> is a canonical pattern from
+        /// <see cref="ExposurePatterns"/>; anything else is folded onto one by
+        /// <see cref="CanonicalExposure"/>, which also says how far to turn it.
+        /// </summary>
+        public static Mesh Face(int variant, int exposure)
+        {
+            int pattern = PatternIndex(exposure);
+            if (pattern < 0) pattern = PatternIndex(CanonicalExposure(exposure, out int _));
+            if (pattern < 0) pattern = ExposurePatterns.Length - 1;
+
+            int slot = pattern * Variants + Wrap(variant);
+            Mesh? mesh = FaceCache[slot];
+            if (mesh != null) return mesh;
+            return FaceCache[slot] = Build(Wrap(variant), coursed: true, ExposurePatterns[pattern]);
+        }
+
+        /// <summary>
+        /// A face by its slot in the family: <c>pattern * Variants + variant</c>.
+        ///
+        /// <para>The library resolves a module to a mesh through one integer, so the pattern of
+        /// exposed sides and the course variant have to travel together inside it. Packing them is
+        /// what lets a face stay an ordinary catalogue lookup instead of needing a second
+        /// dimension threaded through <see cref="ModuleLibrary"/> for one caller.</para>
+        /// </summary>
+        public static Mesh FaceBySlot(int slot)
+        {
+            int total = FaceSlots;
+            int wrapped = ((slot % total) + total) % total;
+            return Face(wrapped % Variants, ExposurePatterns[wrapped / Variants]);
+        }
+
+        /// <summary>
+        /// How many face meshes there are: one per pattern of exposed sides, per variant — and one
+        /// pattern only, when there is no lip to cut.
+        ///
+        /// <para>The pattern of exposed sides is needed <em>because</em> of the chamfer, and for no
+        /// other reason: the courses are the same on every side. So at <see cref="ChamferMetres"/>
+        /// zero all five patterns build the identical mesh, and paying five buckets a chunk for
+        /// five copies of one block would make turning the chamfer off cost more than leaving it
+        /// on. Measured on the wooded board, the split is 137 draw calls of the 251 that earth
+        /// geometry costs at all.</para>
+        /// </summary>
+        public static int FaceSlots => (ChamferMetres > 0f ? ExposurePatterns.Length : 1) * Variants;
 
         static Mesh Cached(Mesh?[] cache, int variant, bool coursed)
         {
             int index = Wrap(variant);
             Mesh? mesh = cache[index];
             if (mesh != null) return mesh;
-            return cache[index] = Build(index, coursed);
+            return cache[index] = Build(index, coursed, 0b1111);
         }
 
         static int Wrap(int variant) => ((variant % Variants) + Variants) % Variants;
@@ -383,15 +430,168 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>Every ring of the block, bottom to top. A wall is stitched between two.</summary>
-        public static Vector3[][] Rings(int variant, bool coursed)
+        /// <summary>
+        /// How far the top edge of an exposed face is rounded off, in metres.
+        ///
+        /// <para><b>What the owner asked for</b>: "round off the edges of these steps on the corner
+        /// to make it more terrain like". A terrace lip is the one edge of a riser that is on the
+        /// silhouette from the play camera, and a dead-straight one is the tell of a cast block.
+        /// Cutting it back turns the lip into a shoulder, which is what weather does to earth.</para>
+        ///
+        /// <para><b>And there is a cost, which is the other half of the question.</b> It is not
+        /// triangles — a riser cell is a small fraction of what is drawn. It is <em>buckets</em>.
+        /// The chamfer has to go on the edges that are actually exposed and no others: put it on
+        /// all four and every riser cell opens a groove against the flat ground behind it, which is
+        /// the same mistake the rim ripple made. So there is a mesh per pattern of exposed sides —
+        /// five of them, after the four bearings are used to rotate a pattern into place rather
+        /// than to vary the look — and a chunk pays a bucket for each pattern it contains. Chunks
+        /// with no terrace in them pay nothing at all.</para>
+        ///
+        /// <para>22 cm is a shoulder you can see at the play camera and still far less than the
+        /// 1.25 m from a cell edge to where anything stands. Zero is a square lip exactly as
+        /// before, and the owner picks off the contact sheet.</para>
+        /// </summary>
+        public static float ChamferMetres { get; set; } = 0.22f;
+
+        /// <summary>The chamfer as a fraction of the cell, in plan and in height.</summary>
+        static float ChamferInset => Mathf.Clamp(ChamferMetres, 0f, 0.8f) / CellMetrics.SizeXZ;
+
+        static float ChamferDrop => Mathf.Clamp(ChamferMetres, 0f, 0.8f) / CellMetrics.SizeY;
+
+        /// <summary>
+        /// The patterns of exposed sides a face mesh is built for, as bitmasks over
+        /// <see cref="Directions"/>: one side, two adjacent, two opposite, three, four.
+        ///
+        /// <para>Every other pattern is one of these turned, and turning is free — it rides in the
+        /// instance matrix the cell already had. That is what keeps sixteen possibilities down to
+        /// five meshes. The cost is that a face no longer takes its variety from its bearing, since
+        /// the bearing now means something; faces vary by their courses instead.</para>
+        /// </summary>
+        public static readonly int[] ExposurePatterns = { 0b0001, 0b0011, 0b0101, 0b0111, 0b1111 };
+
+        /// <summary>
+        /// The canonical form of a pattern of exposed sides, and how far to turn the mesh so that
+        /// the canonical form lands on the sides that are really exposed.
+        ///
+        /// <para>Local direction <c>d</c> is drawn facing world direction <c>(d + rotation) % 4</c>
+        /// once the instance is yawed by <c>90 * rotation</c>, which is exactly what
+        /// <see cref="Directions.Yaw"/> is defined to do. So the local mask is the world mask
+        /// rotated, and the canonical form is the smallest rotation of it — smallest rather than
+        /// first so that the answer does not depend on which direction happens to be numbered
+        /// zero.</para>
+        /// </summary>
+        public static int CanonicalExposure(int worldMask, out int rotation)
+        {
+            int best = worldMask & 0xF;
+            rotation = 0;
+
+            for (int r = 1; r < 4; r++)
+            {
+                int local = 0;
+                for (int d = 0; d < 4; d++)
+                    if ((worldMask & (1 << ((d + r) & 3))) != 0) local |= 1 << d;
+
+                if (local >= best) continue;
+                best = local;
+                rotation = r;
+            }
+
+            return best;
+        }
+
+        /// <summary>Where a canonical pattern sits in <see cref="ExposurePatterns"/>, or -1.</summary>
+        public static int PatternIndex(int canonical)
+        {
+            for (int i = 0; i < ExposurePatterns.Length; i++)
+                if (ExposurePatterns[i] == canonical) return i;
+            return -1;
+        }
+
+        public static Vector3[][] Rings(int variant, bool coursed) => Rings(variant, coursed, 0b1111);
+
+        /// <summary>
+        /// Every ring of the block, bottom to top, for a given pattern of exposed sides.
+        ///
+        /// <para>The chamfer needs no special case in the builder at all, and that is the whole
+        /// reason it is shaped this way: it is simply one more ring. The walls are already stitched
+        /// band by band between consecutive rings, so putting a <see cref="Crown"/> above the
+        /// <see cref="Shoulder"/> makes the last band the chamfer strip, with its own honest 45
+        /// degree normal, and the top surface is drawn over the crown exactly as it used to be
+        /// drawn over the rim.</para>
+        /// </summary>
+        public static Vector3[][] Rings(int variant, bool coursed, int exposure)
         {
             Vector3[] foot = Ring(-0.5f - Skirt);
-            Vector3[] top = Top(variant);
 
-            if (!coursed) return new[] { foot, top };
+            if (!coursed) return new[] { foot, Top(variant) };
 
-            return new[] { foot, Ring(-0.5f), Course(variant, 0), Course(variant, 1), top };
+            return new[]
+            {
+                foot, Ring(-0.5f), Course(variant, 0), Course(variant, 1),
+                Shoulder(exposure), Crown(exposure),
+            };
         }
+
+        /// <summary>
+        /// The rim of a face at the cell boundary, dropped wherever the chamfer cuts into it.
+        ///
+        /// <para>A corner drops if <em>either</em> of the sides meeting there is exposed, because a
+        /// corner is one point and cannot be at two heights. That leaves an unexposed edge sloping
+        /// gently from a dropped corner up to the full height in the middle, which is a couple of
+        /// centimetres of dip against the flat ground behind the riser — far less than chamfering
+        /// that edge outright, which would groove the whole length of every terrace.</para>
+        /// </summary>
+        public static Vector3[] Shoulder(int exposure)
+        {
+            var points = new Vector3[9];
+            float drop = ChamferDrop;
+
+            for (int j = 0; j < 3; j++)
+            for (int i = 0; i < 3; i++)
+            {
+                bool cut =
+                    (i == 0 && Exposed(exposure, Directions.West)) ||
+                    (i == 2 && Exposed(exposure, Directions.East)) ||
+                    (j == 0 && Exposed(exposure, Directions.South)) ||
+                    (j == 2 && Exposed(exposure, Directions.North));
+
+                points[j * 3 + i] = new Vector3(
+                    -0.5f + 0.5f * i, cut ? 0.5f - drop : 0.5f, -0.5f + 0.5f * j);
+            }
+
+            return points;
+        }
+
+        /// <summary>
+        /// The flat top of a face, pulled back from each exposed edge by the chamfer.
+        ///
+        /// Pulled back in plan only — the crown is all at the cell's own height, so a colonist and
+        /// a dropped log still stand on the layer they are meant to. Only the last few centimetres
+        /// before the drop are cut away.
+        /// </summary>
+        public static Vector3[] Crown(int exposure)
+        {
+            var points = new Vector3[9];
+            float inset = ChamferInset;
+
+            for (int j = 0; j < 3; j++)
+            for (int i = 0; i < 3; i++)
+            {
+                float x = -0.5f + 0.5f * i;
+                float z = -0.5f + 0.5f * j;
+
+                if (i == 0 && Exposed(exposure, Directions.West)) x += inset;
+                if (i == 2 && Exposed(exposure, Directions.East)) x -= inset;
+                if (j == 0 && Exposed(exposure, Directions.South)) z += inset;
+                if (j == 2 && Exposed(exposure, Directions.North)) z -= inset;
+
+                points[j * 3 + i] = new Vector3(x, 0.5f, z);
+            }
+
+            return points;
+        }
+
+        static bool Exposed(int mask, int direction) => (mask & (1 << direction)) != 0;
 
         /// <summary>The nine plan positions at one height, at the exact cell footprint.</summary>
         static Vector3[] Ring(float y)
@@ -403,9 +603,9 @@ namespace Odyssey.Presentation.Rendering
             return points;
         }
 
-        static Mesh Build(int variant, bool coursed)
+        static Mesh Build(int variant, bool coursed, int exposure)
         {
-            Vector3[][] rings = Rings(variant, coursed);
+            Vector3[][] rings = Rings(variant, coursed, exposure);
 
             var vertices = new List<Vector3>(256);
             var normals = new List<Vector3>(256);
@@ -466,7 +666,12 @@ namespace Odyssey.Presentation.Rendering
                     PlanarTop);
             }
 
-            var mesh = new Mesh { name = (coursed ? "Odyssey/GroundFace" : "Odyssey/GroundTurf") + variant };
+            var mesh = new Mesh
+            {
+                name = coursed
+                    ? "Odyssey/GroundFace" + variant + "-" + exposure.ToString("X1")
+                    : "Odyssey/GroundTurf" + variant,
+            };
             mesh.SetVertices(vertices);
             mesh.SetNormals(normals);
             mesh.SetUVs(0, uvs);
@@ -488,21 +693,51 @@ namespace Odyssey.Presentation.Rendering
             List<int> triangles, Vector3 a, Vector3 b, Vector3 c, Vector3 d,
             System.Func<Vector3, Vector3, Vector2> uv)
         {
-            Vector3 normal = Vector3.Cross(c - a, b - a);
-            normal = normal.sqrMagnitude < 1e-12f ? Vector3.up : normal.normalized;
-            int start = vertices.Count;
+            // Drop corners that have collapsed onto one another before anything else looks at them,
+            // and this is not tidiness. The chamfer band is stitched between the shoulder and the
+            // crown, and on an *unexposed* side those two rings are the same points — so the band
+            // there is a quad of zero width, and at a corner where one side is chamfered and its
+            // neighbour is not it is a quad with exactly two coincident corners, which is a
+            // triangle. Emitting either as a four-sided face leaves zero-length edges and counts a
+            // real edge three times, so the block stops being closed and TheBlockIsWatertight says
+            // so. A fan over the distinct corners is right in all three cases.
+            var corners = new Vector3[4];
+            var given = new[] { a, b, c, d };
+            int count = 0;
+            for (int i = 0; i < 4; i++)
+            {
+                if (count > 0 && (given[i] - corners[count - 1]).sqrMagnitude < 1e-10f) continue;
+                corners[count++] = given[i];
+            }
+            if (count > 1 && (corners[0] - corners[count - 1]).sqrMagnitude < 1e-10f) count--;
+            if (count < 3) return;
+
+            Vector3 normal = Vector3.Cross(corners[2] - corners[0], corners[1] - corners[0]);
+            if (normal.sqrMagnitude < 1e-12f) return;
+            normal = normal.normalized;
 
             // The UVs are laid out from the face's own geometry and the shading normal is written
             // to the buffer, which is the whole trick: how a face is lit stops being how it is
             // placed. See SideNormalTiltDegrees.
             Vector3 shaded = ShadingNormal(normal);
+            int start = vertices.Count;
 
-            vertices.Add(a); vertices.Add(b); vertices.Add(c); vertices.Add(d);
-            for (int i = 0; i < 4; i++) normals.Add(shaded);
-            uvs.Add(uv(a, normal)); uvs.Add(uv(b, normal)); uvs.Add(uv(c, normal)); uvs.Add(uv(d, normal));
+            for (int i = 0; i < count; i++)
+            {
+                vertices.Add(corners[i]);
+                normals.Add(shaded);
+                uvs.Add(uv(corners[i], normal));
+            }
 
-            triangles.Add(start); triangles.Add(start + 2); triangles.Add(start + 1);
-            triangles.Add(start); triangles.Add(start + 3); triangles.Add(start + 2);
+            // A fan from the first corner, wound 0-2-1 rather than 0-1-2 for the reason
+            // PrimitiveMeshes records at length: the obvious order builds triangles facing inward,
+            // which is valid geometry that renders as a hole.
+            for (int i = 2; i < count; i++)
+            {
+                triangles.Add(start);
+                triangles.Add(start + i);
+                triangles.Add(start + i - 1);
+            }
         }
 
         /// <summary>

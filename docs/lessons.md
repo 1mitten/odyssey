@@ -527,6 +527,30 @@ mistake took one screenshot to find and would have taken a long time to reason o
   and then a completely straight wall". The top surface was never mentioned and was already fine.
   Adding geometry to the part that worked, and only then getting to the part that did not, is how a
   change ends up net negative while every piece of it passes its tests.
+- **A dark line between two surfaces is more often a lighting fault than a hole.** The black lines
+  round every ground tile looked like gaps and were not: a gap would have shown the pale blue
+  skybox, and these were near-black, so they were geometry receiving no light. The fix was to tilt
+  the shading normals of side faces up towards the sky, which costs no vertex, no triangle and no
+  draw call — the measured count was identical with it and without. **Check the colour of the fault
+  before deciding what kind of fault it is**: a hole shows you what is behind the world, and what is
+  behind the world is not black.
+- **"It does not happen on main" is not evidence about a cause when main does not have the
+  feature.** The owner reported the lines against `main`, which has no `GroundMesh` at all. That
+  narrowed nothing by itself, and the temptation was to accept the offered explanation (the missing
+  textures) and move on. Measuring instead settled it in one run: 14.7 mm from the relief field, 72
+  mm from the rim ripple. Both observations turned out to be true — the lines were on main, subtly —
+  and only the measurement said which part to spend on.
+- **When a mesh has to vary by its surroundings, fold the cases with rotation before building them.**
+  A chamfer that may only touch exposed sides needs a mesh per pattern of exposed sides: sixteen.
+  Turning a mesh is free because the yaw rides in the instance matrix, so the sixteen fold onto
+  **five** — one side, two adjacent, two opposite, three, four. The price is that the bearing stops
+  being available for variety, which is worth stating out loud because it silently removes a source
+  of variation somebody else may be relying on.
+- **A lever whose "off" costs more than its "on" is not a lever.** With the chamfer at zero all five
+  exposure patterns build the identical mesh, and five buckets a chunk for five copies of one block
+  would have made turning it off the expensive choice. The family collapses to one when there is
+  nothing to cut. Worth checking for any feature whose cost is paid in *variants* rather than in
+  work per instance.
 
 ## A loose tolerance can make a test prove nothing
 

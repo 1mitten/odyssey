@@ -201,9 +201,34 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public int EarthModule(int index, int variant, bool showsAFace)
         {
-            int[][] table = showsAFace ? _earthFaceModule : _turfModule;
-            int[] variants = table[_terrain[index]];
+            if (showsAFace) return EarthFaceModule(index, variant, 0b1111);
+
+            int[] variants = _turfModule[_terrain[index]];
             return variants.Length == 0 ? _terrainModule[_terrain[index]] : variants[variant % variants.Length];
+        }
+
+        /// <summary>
+        /// The block for a piece of earth that shows a side, cut for one canonical pattern of
+        /// exposed sides so the chamfer lands only on edges that are open.
+        ///
+        /// <para>The family is laid out pattern-major, so the five patterns each carry their own
+        /// run of variants. A terrain with no earth family falls back to the plain terrain module,
+        /// the same courtesy <see cref="StoneModule"/> extends: a caller that gets the test wrong
+        /// draws a cube rather than nothing at all.</para>
+        /// </summary>
+        public int EarthFaceModule(int index, int variant, int canonicalExposure)
+        {
+            int[] family = _earthFaceModule[_terrain[index]];
+            if (family.Length == 0) return _terrainModule[_terrain[index]];
+
+            int pattern = GroundMesh.PatternIndex(canonicalExposure);
+            if (pattern < 0) pattern = GroundMesh.ExposurePatterns.Length - 1;
+
+            // The modulo is what lets the family collapse when there is no lip to cut: with the
+            // chamfer off every pattern builds the same block, the family is one pattern long, and
+            // every pattern folds onto it rather than the mesher having to know that it should.
+            int slot = pattern * GroundMesh.Variants + (variant % GroundMesh.Variants);
+            return family[slot % family.Length];
         }
 
         /// <summary>
@@ -340,10 +365,14 @@ namespace Odyssey.Presentation.World
         static int[][] ResolveEarth(ModuleLibrary library, ModuleShape shape)
         {
             var table = new int[NaturalContent.TerrainCount][];
+            // A face family is pattern-major: one run of course variants per pattern of exposed
+            // sides, because the chamfer has to be cut for the sides that are really open. Turf
+            // collapses to one when there is no ripple to vary, and a bank varies only by its own
+            // step jitter.
             int count =
                 shape == ModuleShape.Bank ? BankMesh.Variants
                 : shape == ModuleShape.GroundBlock ? GroundMesh.TurfVariants
-                : GroundMesh.Variants;
+                : GroundMesh.FaceSlots;
             for (int i = 0; i < table.Length; i++)
             {
                 if (!GroundLook.IsEarth((ushort)i)) { table[i] = System.Array.Empty<int>(); continue; }
