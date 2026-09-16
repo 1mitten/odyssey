@@ -126,8 +126,11 @@ namespace Odyssey.EditorTools
                 model.RefreshAll(grid, result.Natural!.Context.Edifices);
 
                 renderer = new ChunkRenderer(model);
-                var slice = new SliceSettings();
                 int activeLayer = result.StartCell.Y;
+                // The depth the picture is "at ground level" relative to, so the x-ray shot below
+                // — which slices at the foot of an outcrop — reports the treatment a player would
+                // actually get there rather than the surface one.
+                var slice = new SliceSettings { surfaceLayer = activeLayer };
 
                 // The scene's own lighting, so the picture matches what the player sees rather
                 // than some convenient studio setup that would hide the very faults being hunted.
@@ -437,8 +440,8 @@ namespace Odyssey.EditorTools
                 }
 
                 // And a miner cutting the layer ABOVE itself, which is the owner's decision that
-                // a pick goes overhead. Waited for rather than hoped for, like the climb: the
-                // stance is one of four and it is not the common one.
+                // a pick goes overhead. Waited for rather than hoped for: the stance is one of
+                // four and it is not the common one.
                 {
                     // Made rather than waited for. Four stances share the work and this is not the
                     // common one, so 6,000 ticks of an ordinary colony went by without a single
@@ -612,15 +615,10 @@ namespace Odyssey.EditorTools
                         Debug.Log("[Shot] nobody was mid-climb, so no climbing shot");
                     }
                 }
-
                 // The slice seen from the layer a miner is working on, which is the one view the
                 // whole layer model exists for: what is ABOVE the active layer has to read, or a
                 // player standing in a quarry cannot see the rock still over their head.
                 {
-                    Debug.Log($"[Shot] x-ray: above={slice.above}, depth={slice.aboveDepth}, " +
-                              $"alpha +1 {slice.AlphaAbove(1):0.00}, +2 {slice.AlphaAbove(2):0.00}, " +
-                              $"+3 {slice.AlphaAbove(3):0.00}, +4 {slice.AlphaAbove(4):0.00}");
-
                     // The tallest outcrop, viewed with the slice set at its foot so every cell of
                     // it above the first is drawn through the x-ray.
                     int tallest = -1, tallestTop = -1;
@@ -639,6 +637,15 @@ namespace Odyssey.EditorTools
                         int foot = Mathf.Max(0, at.Y - 2);
                         Debug.Log($"[Shot] the tallest rock is at {at}; slicing at L{foot} " +
                                   $"puts {at.Y - foot} layer(s) of it above the cut");
+
+                        // Reported from the layer actually being cut at, because the treatment
+                        // above now depends on it: below the surface it is one ceiling layer, at
+                        // or above it every layer above. See SliceSettings.followDepth.
+                        Debug.Log($"[Shot] x-ray at L{foot}: above={slice.AboveAt(foot)}, " +
+                                  $"underground={slice.BelowSurface(foot)}, " +
+                                  $"top visible L{slice.HighestVisibleLayer(foot, size.SizeY)}, " +
+                                  $"alpha +1 {slice.AlphaAbove(foot, 1):0.00}, +2 {slice.AlphaAbove(foot, 2):0.00}, " +
+                                  $"+3 {slice.AlphaAbove(foot, 3):0.00}, +4 {slice.AlphaAbove(foot, 4):0.00}");
 
                         shotLayer[0] = foot;
                         Shoot(camera, CellMetrics.FloorCentre(new CellRef(at.X, at.Z, foot)),
@@ -826,7 +833,9 @@ namespace Odyssey.EditorTools
                 // cost of a slice the player never sees.
                 int activeLayer = result.StartCell.Y;
                 var renderer = new ChunkRenderer(model) { SubmitToGpu = false };
-                var slice = new SliceSettings();
+                // Benched with the player's own policy: at the surface that is every layer above,
+                // not four, and measuring four would understate what the frame really costs.
+                var slice = new SliceSettings { surfaceLayer = activeLayer };
 
                 clock.Restart();
                 renderer.Render(activeLayer, slice);
@@ -1305,6 +1314,36 @@ namespace Odyssey.EditorTools
             {
                 moduleId = ModuleIds.ToolPickaxe, shape = ModuleShape.Pillar,
                 prefabName = "SM_Gen_Wep_Pickaxe_01",
+            });
+
+            // The builder's hammer, and the first prop in the project that could not be chosen on
+            // merit, because there is no choice: SM_Wep_Hammer_01 is the only hammer in all 7,222
+            // imported assets. The axe and the pick were both picked from Generic over Farm and
+            // Western Frontier alternatives; here Western Frontier is the whole field.
+            //
+            // What that costs, recorded rather than discovered: 768 triangles against the axe's
+            // 172 and the pick's 160, and two materials against their one, from a pack nothing
+            // else in the game draws from. None of it matters much — a tool is one instantiated
+            // prefab parented to a hand while the work lasts, not a chunk-instanced module, so it
+            // adds a material and not a draw-call bucket, and at most one per working colonist.
+            //
+            // Two measurements that bear on the fitting path, both from synty-inventory.csv:
+            //
+            //   Haft ratio 0.63 : 0.21, or 3 : 1. GripTool finds the haft as the long axis of the
+            //   combined bounds, and this is a wider margin than the pick's 1.4 : 1 — so of the
+            //   three tools the hammer is the one least likely to be gripped by its own head.
+            //
+            //   The pivot is at the butt (minY 0.00, maxY 0.63) where the axe and pick sit
+            //   mid-haft (-0.18 to 0.56). 12-work-poses-and-tools.md rejected Western Frontier's
+            //   pickaxe partly for this. It should not in fact matter: the fitting works off the
+            //   mesh bounds and slides the tool until the grip is in the palm, so where the
+            //   modeller put the origin never enters the arithmetic. This is the first prop to
+            //   prove that, which is worth knowing when the contact sheet is judged — a hammer
+            //   held a hand's width out of the fist means the claim is wrong.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ToolHammer, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Hammer_01",
             });
 
             // Colonists. A Synty character is a rigged humanoid with no MeshFilter anywhere on it,

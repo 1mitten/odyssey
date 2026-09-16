@@ -162,6 +162,39 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
+        public void ThePublishedFrameCarriesTheClockItWasPublishedAt()
+        {
+            // Presentation must be able to tell a paused world from a slow one without guessing.
+            // It used to guess, from the tick standing still, and had to wait a quarter of a
+            // second before it dared call it a pause — fifteen frames in which every colonist
+            // went on swinging after the player pressed space. One tick is spent letting a speed
+            // change through (OdysseyBootstrap.Update), and this is the frame it publishes.
+            var world = Build();
+            world.Tick();
+            Assert.That(world.Views.Current.GameSpeed, Is.EqualTo(1));
+            Assert.That(world.Views.Current.Running, Is.True);
+
+            world.Intents.Submit(new Intent(IntentKind.SetGameSpeed, a: 0));
+            world.Tick();
+            Assert.That(world.Views.Current.GameSpeed, Is.Zero);
+            Assert.That(world.Views.Current.Running, Is.False,
+                "the frame published by the tick that took the pause must already say paused");
+
+            world.Intents.Submit(new Intent(IntentKind.SetGameSpeed, a: 3));
+            world.Tick();
+            Assert.That(world.Views.Current.GameSpeed, Is.EqualTo(3));
+            Assert.That(world.Views.Current.Running, Is.True);
+        }
+
+        [Test]
+        public void AnUnwrittenFrameReadsAsARunningWorld()
+        {
+            // The default matters: an editor harness that poses a figure without ticking anything
+            // would otherwise be handed a board frozen solid, and read as a rendering fault.
+            Assert.That(new WorldSnapshot().Running, Is.True);
+        }
+
+        [Test]
         public void TheQueueIsBoundedAndSaysSo()
         {
             var bus = new IntentBus(capacity: 2);

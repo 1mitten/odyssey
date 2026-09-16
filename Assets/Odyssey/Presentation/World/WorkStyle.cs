@@ -101,6 +101,36 @@ namespace Odyssey.Presentation.World
             // a recoil in the curve the shortest honest thing is to spend less time at the bottom.
             strikeEnds: 0.84f);
 
+        /// <summary>
+        /// The builder's stroke. **Every number is a proposal**, on the same footing as the pick's.
+        ///
+        /// <para>The owner's brief was "like chopping rather than like mining", and that settles
+        /// the one thing that most distinguishes the three: where the arc lives. An axe comes past
+        /// a shoulder and across the body; a pick goes over the crown and down the midline; a
+        /// hammer is the axe's plane with a good deal less of it.</para>
+        ///
+        /// <para>What makes it its own stroke rather than a fast axe is the <em>haft</em>. The
+        /// hammer is 0.63 m against the axe's 0.74, and a short haft is swung from the elbow where
+        /// a long one is swung from the shoulder. So the shoulder comes back much less (−128°
+        /// against −158°) while the elbow cocks <em>harder</em> (−86° against −74°): the tool is
+        /// brought back beside the ear rather than behind the back. Get that the wrong way round —
+        /// a short tool on a long arc — and the figure reads as swinging a hammer it wishes were
+        /// an axe, which is exactly what copying <see cref="Axe"/> and shortening the period
+        /// would produce.</para>
+        ///
+        /// <para>Faster and flatter besides: 0.7 s a blow, because driving a frame together is a
+        /// quick repeated tap and not a woodcutter's rhythm, and <see cref="StrikeEnds"/> at 0.88
+        /// because a hammer rebounds off what it hits harder than a pick does and far harder than
+        /// an axe, which buries itself and rests. Until a stroke can recoil, the only honest way to
+        /// say "it bounces" is to spend almost no time at the bottom.</para>
+        /// </summary>
+        public static readonly WorkStroke Hammer = new WorkStroke(
+            raised: new WorkSwing(-128f, -86f, -8f),
+            struck: new WorkSwing(-58f, -14f, 16f),
+            strokeSeconds: 0.7f,
+            raiseEnds: 0.6f,
+            strikeEnds: 0.88f);
+
         /// <summary>The pose at the moment the head is in the work. Any phase in the dwell agrees.</summary>
         public WorkSwing AtStrike => At(0.9f);
 
@@ -145,6 +175,21 @@ namespace Odyssey.Presentation.World
         /// in which nothing happens — take it out and the motion reads as a metronome rather than
         /// as work, which is exactly what a plain sine wave gives you.
         /// </summary>
+        /// <summary>
+        /// Where the working hand is on the haft at this point in the stroke, given the two ends
+        /// of its slide: <paramref name="raised"/> at the top and <paramref name="struck"/> at the
+        /// blow.
+        ///
+        /// <para>It is <see cref="Stroke"/> and nothing else, which is the whole reason the slide
+        /// costs so little. That curve is already the tool's own progress — long eased raise, short
+        /// accelerating fall, dwell at the bottom — so a hand carried along it slides up
+        /// deliberately, snaps down as the head accelerates, and is still at the butt through the
+        /// dwell with the blade in the wood. A separate curve would have to be kept in step with
+        /// this one by hand, and the frame it drifted on would be the frame the blow lands.</para>
+        /// </summary>
+        public float GripAt(float phase, float raised, float struck) =>
+            Mathf.Lerp(raised, struck, Stroke(phase));
+
         public float Stroke(float phase)
         {
             if (phase < RaiseEnds)
@@ -234,8 +279,40 @@ namespace Odyssey.Presentation.World
         /// <summary>Degrees the whole tool is turned about the figure's up axis.</summary>
         public readonly float BladeYaw;
 
-        /// <summary>How far up the haft from the fist the off hand sits, as a fraction.</summary>
-        public readonly float OffHandSpacing;
+        /// <summary>
+        /// Where the <em>off</em> hand takes hold, as a fraction of the haft from the butt.
+        ///
+        /// <para><b>An absolute place on the haft, and it used to be a gap.</b> It was the distance
+        /// the off hand sat <em>above</em> the working one, which put the two fists in the wrong
+        /// order: the off hand up the haft and the working hand below it. A woodcutter holds an axe
+        /// the other way round, and the owner's account of the technique is unambiguous — the
+        /// non-dominant hand goes at the very butt and stays there, because it is the pivot the
+        /// whole swing turns about. So this is now a place and not a gap, and the number that
+        /// varies is the working hand's, which slides.</para>
+        ///
+        /// <para>Not quite zero. The butt of a haft is the end of the wood, and a fist wrapped
+        /// round the end of a stick has the stick's end somewhere inside it.</para>
+        /// </summary>
+        public readonly float ButtFraction;
+
+        /// <summary>
+        /// Where the working hand starts the stroke, as a fraction of the haft from the butt, at
+        /// the top of the raise.
+        ///
+        /// <para><b>The hands slide, and that is what the grip was missing.</b> Both fists were
+        /// pinned to the haft for the whole stroke, which is the one thing a woodcutter's hands
+        /// never do (owner, 2026-09-16): the dominant hand starts up near the head where it can
+        /// carry the weight of the tool, and slides down the haft to meet the other at the butt as
+        /// the blow falls. That slide is where the head speed comes from, and it is also why the
+        /// off arm could reach at all — with the working hand high, the butt end swings back
+        /// towards the body, which is exactly where the other hand is waiting.</para>
+        ///
+        /// <para>The observed fault it fixes is "the left arm is too far away". It was: with both
+        /// hands pinned low, the butt of a raised axe is out at the end of an extended right arm
+        /// and the left shoulder is half a body away from it. No solver reaches that, and
+        /// <c>MeasuredGripOverreach</c> exists to say so in centimetres.</para>
+        /// </summary>
+        public readonly float SlideFraction;
 
         /// <summary>
         /// How far back out of the work, towards the worker, the debris is thrown from, in metres.
@@ -293,7 +370,8 @@ namespace Odyssey.Presentation.World
         public readonly float Raise;
 
         public WorkStyle(WorkStroke stroke, string toolModule, ChipRecipe chips, float aimFromCentre,
-            float tilt, float gripFraction, float bladeRoll, float bladeYaw, float offHandSpacing,
+            float tilt, float gripFraction, float bladeRoll, float bladeYaw, float buttFraction,
+            float slideFraction,
             float chipStandOff = 0f, float dip = 0f, float raise = 0f)
         {
             ChipStandOff = chipStandOff;
@@ -307,7 +385,8 @@ namespace Odyssey.Presentation.World
             GripFraction = gripFraction;
             BladeRoll = bladeRoll;
             BladeYaw = bladeYaw;
-            OffHandSpacing = offHandSpacing;
+            ButtFraction = buttFraction;
+            SlideFraction = slideFraction;
         }
 
         /// <summary>Felling: the settled one. Every number came off a contact sheet.</summary>
@@ -315,7 +394,15 @@ namespace Odyssey.Presentation.World
             WorkStroke.Axe, ModuleIds.ToolAxe, ChipRecipe.Wood,
             aimFromCentre: 0.15f,
             // Nothing: an axe bites a few centimetres into a trunk and the chips already read.
-            tilt: -30f, gripFraction: 0.16f, bladeRoll: 0f, bladeYaw: 0f, offHandSpacing: 0.11f,
+            //
+            // The off hand at the butt and the working hand sliding 0.62 -> 0.21 down to meet it.
+            // Two constraints decide the pair and they pull against each other. The technique says
+            // the hands finish together; the meshes say two fists closer than about 9 cm are one
+            // fist, which is what the older 0.11 spacing drew and what the owner saw as one arm
+            // passing through the other (2026-09-16). 0.05 and 0.21 of a 0.74 m haft leave 0.12 m
+            // between the palms, which is a hand's breadth — as together as two hands get.
+            tilt: -30f, gripFraction: 0.21f, bladeRoll: 0f, bladeYaw: 0f, buttFraction: 0.05f,
+            slideFraction: 0.62f,
             chipStandOff: 0f);
 
         /// <summary>
@@ -333,7 +420,9 @@ namespace Odyssey.Presentation.World
             // Just inside the near face of a 2.5 m cell, rather than 1.1 m into the rock.
             aimFromCentre: CellMetrics.SizeXZ * 0.5f - 0.12f,
             // A pick goes over the crown and down the midline, so much less tilt than an axe.
-            tilt: -8f, gripFraction: 0.16f, bladeRoll: 180f, bladeYaw: 0f, offHandSpacing: 0.11f,
+            // A pick slides less than an axe: the head is heavy and is never let go of.
+            tilt: -8f, gripFraction: 0.21f, bladeRoll: 180f, bladeYaw: 0f, buttFraction: 0.05f,
+            slideFraction: 0.44f,
             // Out past the face and a little clear of it, so the lumps are seen leaving the rock
             // rather than appearing in mid-air once they have already cleared it.
             // 12 cm back out to the face the head went in through, and 10 cm clear of it.
@@ -341,14 +430,58 @@ namespace Odyssey.Presentation.World
             // Bent over the hole when the rock is below, and at full stretch when it is above.
             dip: 45f, raise: -55f);
 
+        /// <summary>
+        /// Building. **Proposed, and with less standing than even mining had**, because mining at
+        /// least had a job to be photographed doing and this has none.
+        ///
+        /// <para><b>Nothing in the simulation builds anything.</b> There is no build pipeline, no
+        /// <c>JobHandle.Build</c>, no construction designation that anything acts on — so
+        /// <see cref="IndexForJob"/> can never return this index, and no colonist will ever be
+        /// seen in it during play. It exists because the owner asked for the motion (2026-09-16)
+        /// and because a hammer is the cheapest possible test of the claim this file makes: that a
+        /// third kind of work should cost "a new static here and a row in
+        /// <see cref="IndexForJob"/>, and nothing else". It cost a static, a recipe and a
+        /// catalogue row. The claim holds.</para>
+        ///
+        /// <para>It is reached only through <c>PawnFigureDirector.StyleOverride</c>, which is the
+        /// harness's way in and is not used by the game.</para>
+        ///
+        /// <para><b>Two-handed, on the owner's "akin to chopping".</b> A framing hammer swung at a
+        /// wall with both fists is the axe's motion with a shorter tool, and it reuses every part
+        /// of the fitting path unchanged. A one-handed hammer — the other hand steadying a nail —
+        /// is a different thing and would be the first tool in the project to need a
+        /// <c>TwoHanded</c> flag, because <c>TwoBoneIk</c> currently puts the off hand on the haft
+        /// unconditionally. §10 of <c>13-gestures.md</c> keeps that question.</para>
+        ///
+        /// <para>Aimed at the near face like mining and not at the cell centre like felling: a
+        /// wall under construction fills its cell, so a stroke aimed 0.15 m past the middle of it
+        /// finishes a metre inside the timber. That is the <see cref="AimFromCentre"/> bug, and it
+        /// would have been made a second time here by copying the wrong one of the two.</para>
+        /// </summary>
+        public static readonly WorkStyle Building = new WorkStyle(
+            WorkStroke.Hammer, ModuleIds.ToolHammer, ChipRecipe.Timber,
+            aimFromCentre: CellMetrics.SizeXZ * 0.5f - 0.12f,
+            // Between the axe's -30 and the pick's -8: across the body, but a short haft cannot
+            // travel as far round as a long one without the elbow leaving the plane.
+            // A 0.63 m haft has little to slide along, and a hammer is swung from the elbow.
+            tilt: -20f, gripFraction: 0.24f, bladeRoll: 0f, bladeYaw: 0f, buttFraction: 0.06f,
+            slideFraction: 0.40f,
+            // Less than mining's 0.22: a timber frame is open work rather than an opaque block, so
+            // the head does not disappear into it and the burst needs backing out much less far.
+            chipStandOff: 0.1f,
+            // A builder works the joists under its feet and the plate over its head, exactly as a
+            // miner works the layer below and the ceiling above, so both aims are wanted.
+            dip: 45f, raise: -55f);
+
         /// <summary>How many styles there are. Sizes the per-figure tool table.</summary>
-        public const int Count = 2;
+        public const int Count = 3;
 
         public const int FellingIndex = 0;
         public const int MiningIndex = 1;
+        public const int BuildingIndex = 2;
 
         /// <summary>The styles, by index. Mutable so a contact sheet can tune one and re-fit.</summary>
-        public static readonly WorkStyle[] All = { Felling, Mining };
+        public static readonly WorkStyle[] All = { Felling, Mining, Building };
 
         /// <summary>
         /// Which style a job is worked in, from the job def the snapshot already publishes.
@@ -372,9 +505,11 @@ namespace Odyssey.Presentation.World
 
         /// <summary>A copy with one fitting number changed, for tuning off a contact sheet.</summary>
         public WorkStyle With(float? tilt = null, float? gripFraction = null,
-            float? bladeRoll = null, float? bladeYaw = null, float? offHandSpacing = null) =>
+            float? bladeRoll = null, float? bladeYaw = null, float? buttFraction = null,
+            float? slideFraction = null) =>
             new WorkStyle(Stroke, ToolModule, Chips, AimFromCentre,
                 tilt ?? Tilt, gripFraction ?? GripFraction, bladeRoll ?? BladeRoll,
-                bladeYaw ?? BladeYaw, offHandSpacing ?? OffHandSpacing, ChipStandOff, Dip, Raise);
+                bladeYaw ?? BladeYaw, buttFraction ?? ButtFraction, slideFraction ?? SlideFraction,
+                ChipStandOff, Dip, Raise);
     }
 }

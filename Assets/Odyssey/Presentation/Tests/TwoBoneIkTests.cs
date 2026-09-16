@@ -16,7 +16,7 @@ namespace Odyssey.Tests.Presentation
     /// first is invisible until somebody zooms in, by which time the numbers it was tuned against
     /// have moved on.
     /// </summary>
-    public class ArmIkTests
+    public class TwoBoneIkTests
     {
         GameObject _root = null!;
         Transform _shoulder = null!;
@@ -50,7 +50,7 @@ namespace Odyssey.Tests.Presentation
         public void TheHandArrivesOnTheTarget()
         {
             var target = new Vector3(0.25f, 1.25f, 0.35f);
-            ArmIk.Reach(_shoulder, _elbow, _hand, target, _shoulder.position - Vector3.forward);
+            TwoBoneIk.Reach(_shoulder, _elbow, _hand, target, _shoulder.position - Vector3.forward);
 
             Assert.That(Vector3.Distance(_hand.position, target), Is.LessThan(0.01f));
         }
@@ -62,7 +62,7 @@ namespace Odyssey.Tests.Presentation
             // it. An arm that arrives straight has had its shoulder angle solved as zero, which is
             // what a law-of-cosines term with the wrong sign produces.
             var target = _shoulder.position + new Vector3(0.2f, 0f, 0.1f);
-            ArmIk.Reach(_shoulder, _elbow, _hand, target, _shoulder.position - Vector3.forward);
+            TwoBoneIk.Reach(_shoulder, _elbow, _hand, target, _shoulder.position - Vector3.forward);
 
             float straightness = Vector3.Angle(_elbow.position - _shoulder.position,
                 _hand.position - _elbow.position);
@@ -76,7 +76,7 @@ namespace Odyssey.Tests.Presentation
             // stops, which is what an arm does. Throwing, or refusing to pose, would leave the
             // off hand in whatever the idle had it doing.
             Vector3 target = _shoulder.position + Vector3.forward * (Span * 3f);
-            ArmIk.Reach(_shoulder, _elbow, _hand, target, _shoulder.position - Vector3.up);
+            TwoBoneIk.Reach(_shoulder, _elbow, _hand, target, _shoulder.position - Vector3.up);
 
             Vector3 arm = _hand.position - _shoulder.position;
             Assert.That(Vector3.Angle(arm, target - _shoulder.position), Is.LessThan(5f));
@@ -92,11 +92,11 @@ namespace Odyssey.Tests.Presentation
             var target = new Vector3(0.2f, 1.3f, 0.3f);
             var hint = _shoulder.position - Vector3.forward;
 
-            ArmIk.Reach(_shoulder, _elbow, _hand, target, hint);
+            TwoBoneIk.Reach(_shoulder, _elbow, _hand, target, hint);
             Vector3 once = _hand.position;
             Quaternion elbowOnce = _elbow.rotation;
 
-            ArmIk.Reach(_shoulder, _elbow, _hand, target, hint);
+            TwoBoneIk.Reach(_shoulder, _elbow, _hand, target, hint);
 
             Assert.That(Vector3.Distance(_hand.position, once), Is.LessThan(0.005f));
             Assert.That(Quaternion.Angle(_elbow.rotation, elbowOnce), Is.LessThan(2f));
@@ -113,7 +113,7 @@ namespace Odyssey.Tests.Presentation
             var target = new Vector3(0.3f, 1.3f, 0.25f);
             var pole = _shoulder.position + new Vector3(-0.9f, -0.7f, 0f);
 
-            ArmIk.Reach(_shoulder, _elbow, _hand, target, pole);
+            TwoBoneIk.Reach(_shoulder, _elbow, _hand, target, pole);
 
             Vector3 line = (target - _shoulder.position).normalized;
             Vector3 toElbow = Vector3.ProjectOnPlane(_elbow.position - _shoulder.position, line);
@@ -132,11 +132,11 @@ namespace Odyssey.Tests.Presentation
             // thing a figure can do.
             var target = new Vector3(0f, 1.3f, 0.3f);
 
-            ArmIk.Reach(_shoulder, _elbow, _hand, target, _shoulder.position + Vector3.right);
+            TwoBoneIk.Reach(_shoulder, _elbow, _hand, target, _shoulder.position + Vector3.right);
             Vector3 fromOneSide = _elbow.position;
 
             BuildAgain();
-            ArmIk.Reach(_shoulder, _elbow, _hand, target, _shoulder.position - Vector3.right);
+            TwoBoneIk.Reach(_shoulder, _elbow, _hand, target, _shoulder.position - Vector3.right);
             Vector3 fromTheOther = _elbow.position;
 
             Assert.That(Vector3.Distance(fromOneSide, fromTheOther), Is.GreaterThan(0.05f));

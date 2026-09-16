@@ -179,6 +179,74 @@ Three decisions inside that table are deliberate:
 2. **The active layer is drawn roofless.** The ceiling slab of the active layer is suppressed — exactly what the concept renders show, and the only way interiors read at all. The slab is still *there* in the simulation; this is purely a render decision.
 3. **Layers below stay visible and darkened.** This is the depth cue that makes a hole in the floor legible as a hole rather than a black square, and it is what makes building above an occupied room comprehensible. N and the darkening curve are settings, because the right value is a matter of taste and screen size.
 
+### 3a. The depth chooses the treatment (owner, 2026-09-16)
+
+The table above is what a *mode* does. What a player actually gets, before they have chosen a mode,
+now depends on how deep the slice is — `SliceSettings.followDepth`, on by default.
+
+| Where the slice is | Above it | Below it |
+|---|---|---|
+| At or above the surface (the layer the game opens at) | **Every layer, drawn solid.** No depth cap, no fade | `belowDepth` layers, dimmed |
+| Below the surface | **One layer**, x-rayed — a ceiling, not a survey | **Every layer, to the floor**, dimmed with depth |
+
+The rule came out of a playtest report with a one-line diagnosis: *"I couldn't see another person
+mining above me."* Two faults, one sentence.
+
+**The first was a bug and not a policy.** The layers above the slice were being x-rayed exactly as
+this section says, so the rock was drawn — but every *actor* in them was culled outright, by
+`PawnFigureDirector.Sync` and `ChunkRenderer.RenderActors` alike, both testing `cell.Y >
+activeLayer`. Items too. A colonist working a storey up did not exist on screen. The cull is now
+against `SliceSettings.HighestVisibleLayer`, so **a figure is drawn on every layer the world is
+drawn on and on no other** — actors solid at full opacity, which is the owner's call: a figure faded
+to match the rock around it is invisible within two layers, and being sure who is overhead beats
+being sure how far overhead they are.
+
+**The second is the policy.** Above ground the player is outside looking in and wants the whole
+stack; underground the question reverses. What is overhead is a ceiling and one layer of it is all
+the context that helps, while what is *under* you is the shape of the working — and a base three
+storeys deep is unreadable through a three-layer cap. So the cap comes off downwards and goes on
+upwards. The owner's reason is worth keeping verbatim: *"you need to be able to see within the
+environment — if there was ever digging introduced into the game or underground base."*
+
+**Solid above the surface, and that was a correction.** The rule first shipped drawing everything
+above x-rayed, which is what `xray` had always done — and the owner's reply was *"this includes
+everything buildings, stones, rocks and everything, as I noticed the mining rocks were
+transparent"*. An outcrop standing two cells above the surface is a rock, not a hint of one. So
+above ground the treatment is `full`: solid, no fade, no cap.
+
+**It is `full` for opacity and not for the lid.** `full` is documented as the exterior and
+screenshot view, the control case with no cut-away anywhere — and §3 point 2 above says the active
+layer is drawn roofless, which is a separate standing decision that a default has no business
+quietly reversing. `SliceSettings.SuppressCeilingAt` splits them: the depth-following default keeps
+the active layer roofless, an explicitly chosen `full` keeps its lid. Nothing differs outdoors,
+where there is no slab overhead; it differs the moment anything is built, which is why it is
+settled now rather than discovered then.
+
+**Underground, where the treatment is translucent, "every layer above" would be bounded by the fade
+rather than by a count** — except that underground is capped at one layer anyway. The bound still
+exists and still matters for any explicitly chosen `xray`: at the shipped tuning (`ghostAlpha` 0.38,
+`ghostFalloff` 0.72) the alpha ramp runs 0.380, 0.274, 0.197, 0.142, 0.102 … and crosses the 0.012
+cutoff after eleven layers. `HighestVisibleLayer` returns that layer, and it is the same constant
+the chunk loop skips on, so the two cannot drift apart.
+
+**Solid has no fade to stop it, so the top is capped by the geometry instead.**
+`ChunkRenderer.BatchFor` *meshes* a chunk the first time it is asked for and again after every
+version bump, so an unbounded loop would mesh a dozen layers of empty sky on every edit of a tall
+map, for nothing. `WorldRenderModel.HighestOccupiedLayer` is the top of the geometry plus the layer
+a colonist standing on it occupies, raised as cells are copied into the mirror and lowered only by a
+full refresh. A high-water mark is the safe direction: the worst it does is draw a few empty layers
+after a demolition, where the other way round it would hide a roof somebody had just built.
+
+**Measured cost, which is why the cap could come off at all.** On the 16-layer prototype board with
+the surface at L11, "every layer above" is L12–L15 — four layers, which is exactly what the old
+`aboveDepth` of 4 already drew. Underground at L6 the old range was L3–L10 and the new one is
+L0–L7: eight layers either way. Deeper it gets *cheaper* — at L2 the old range was seven layers and
+the new one is four. Nothing on the board being played pays anything at all.
+
+The six ADR 0006 modes are untouched and still ship. Switching `followDepth` off obeys every field
+exactly as before, which is what choosing a mode explicitly does: the V key's first press pins
+whatever is on screen and hands over control, and cycling past the last mode gives the default back.
+
 **Implementation:** per-layer visibility on the instanced batches, not a clipping plane. The renderer simply does not submit buckets outside the drawn range, which is cheaper than submitting and clipping, keeps shadow casters honest, and makes the ghosted layer a different material rather than a shader branch. A clip plane remains the fallback if a single mesh ever needs to be cut mid-cell, which the discrete-cell model is specifically designed to avoid.
 
 ## 4. Overlays
@@ -232,10 +300,8 @@ Four things about it are deliberate and each was a way of getting it wrong:
 - **The stroke is not a sine.** It is three unequal parts — a long eased raise, a short
   accelerating strike, and a dwell with the blade in the wood. A symmetric swing reads as a
   metronome and a swing with no dwell reads as waving; neither reads as work.
-- **The pose is laid over the clip, not in place of it.** The colonist goes on breathing.
-- **It freezes when the game is paused.** There is no pause signal in the snapshot, so the director
-  infers it from the tick standing still. Without that, a swinging colonist would be the only thing
-  moving on a paused board, since a pawn that has stopped moving settles into the idle by itself.
+- **The pose is laid over the clip, not in place of it.** The colonist goes on breathing — except
+  while the game is paused, for which see §6b.
 - **The three angles are independent, which took work.** The spine carries the shoulders through the
   skeleton, so folding the back further into the blow also swung both arms, and no amount of tuning
   could settle one without moving the other. The director subtracts the spine's own pitch back out
@@ -303,6 +369,11 @@ The axe itself is `ModuleIds.ToolAxe`, an ordinary catalogue row parented to the
 long as the work lasts. A clone without the packs resolves it to null and colonists fell trees
 bare-handed, which is the same fallback every other piece of pack art has.
 
+**Everything a figure does that is not walking and not a tool stroke** — the lift, a crouch, the
+climb, an aimed weapon — is designed in `13-gestures.md`, which generalises this section's two
+hard-coded pose branches into a small vocabulary and adds the legs the climb pose does without.
+This section stays the record of the felling pose itself.
+
 ### Debris: one director, one system, a recipe per material
 
 A blow with nothing coming off it reads as a colonist waving an axe near a tree, so a few chips fly
@@ -338,6 +409,44 @@ not in the save, not in the state hash.
 or made in Blender against this rig — they replace the computed pose and `WorkSwing` goes. Until
 then this is the cheapest thing that makes the colony look like it is doing something, and it cost
 no art.
+
+## 6b. A pause holds the frame it is on
+
+Pausing should stop the board dead and starting again should carry on from there. It did neither,
+and the owner reported both halves: figures reset to a standing pose, and some carried on for a
+moment first.
+
+**Pause is now a fact the snapshot carries** — `WorldSnapshot.GameSpeed`, exactly
+`SimWorld.GameSpeed`, with `Running` beside it. It used to be inferred from the tick standing
+still, which cannot be done without a delay: a quarter of a second had to pass before a stopped
+tick could be told from a slow frame. Measured against the axe's 1.15 s stroke that grace is 24% of
+a swing running on after the player pressed space, and it is exactly what "some even carry on for a
+moment" describes. A paused world publishes one more frame — the tick `OdysseyBootstrap` spends
+letting the speed change through — and that frame already says paused, so the lag is one frame
+instead of fifteen. It defaults to 1, so a snapshot nobody has written reads as a running world and
+every pose harness keeps working.
+
+**Nothing eases while the world is stopped.** The inference had only ever gated the swing, so every
+other ease in `PawnFigureDirector.Pose` went on running. The one that shows is the gait: the pawn
+stops moving, the measured speed is nought, and the figure's own speed is smoothed towards it at
+0.35 a frame — which against the real gait speeds carries a walking colonist from 73.5% walk weight
+to 99% idle in **ten frames, 0.167 s**. That is not a reset and is indistinguishable from one.
+`Pose` now runs every ease on one clock that is real frame time while the world runs and exactly
+nothing while it does not, so `MoveTowards` with a step of zero holds the value it had; and
+`ObserveSpeed` treats a frame with no time in it as *no answer* rather than as a measured nought,
+so the stride is still there when the world moves again. Placement is deliberately not on that
+clock: a figure leased because the player scrolled the slice while paused still has to be put
+somewhere.
+
+**And the clips themselves stop.** The graph is played with `DirectorUpdateMode.GameTime` and
+nothing in this game touches `Time.timeScale`, so Unity went on evaluating every figure on
+wall-clock frames whatever the simulation was doing — a paused colony breathed and shifted its
+weight. `Blend` sets the clip rate to zero, which is the same call it already makes on every clip
+on every frame: the clip time stops, the pose the graph writes is the pose it wrote last frame, and
+when the rate comes back the clip *continues* rather than restarting. Stopping the graph would also
+have left the bones unwritten, and the work pose is laid over what the graph writes. The chips stop
+the same way, at `simulationSpeed` zero, since they are simulated in world space by Unity and know
+nothing about the tick.
 
 ## 7. Presentation is a reader
 
