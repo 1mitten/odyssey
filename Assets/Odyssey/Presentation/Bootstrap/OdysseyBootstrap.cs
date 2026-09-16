@@ -346,6 +346,10 @@ namespace Odyssey.Presentation.Bootstrap
             }
             _figures?.Dispose();
             _renderer?.Dispose();
+            // The library owns every mesh it baked or merged, and a Mesh made in code is a GPU
+            // allocation Unity never collects. Leaving Play mode without this leaked the whole
+            // cast, every session, until the graphics device was reset out from under the editor.
+            _model?.Library.Dispose();
             if (_actorMaterial != null) Destroy(_actorMaterial);
         }
     }

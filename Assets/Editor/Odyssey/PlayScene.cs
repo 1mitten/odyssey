@@ -107,7 +107,7 @@ namespace Odyssey.EditorTools
                 var chunks = new ChunkGrid(size);
                 MapGenOutcome result = MapGenerator.Generate(grid, 1u, gen);
 
-                var library = new ModuleLibrary(catalogue);
+                using var library = new ModuleLibrary(catalogue);
                 var model = new Odyssey.Presentation.World.WorldRenderModel(size, chunks, library);
                 model.RefreshAll(grid, result.Natural!.Context.Edifices);
 
@@ -361,7 +361,7 @@ namespace Odyssey.EditorTools
                 MapGenOutcome result = MapGenerator.Generate(grid, 1u, gen);
                 double genMs = clock.Elapsed.TotalMilliseconds;
 
-                var library = new ModuleLibrary(catalogue);
+                using var library = new ModuleLibrary(catalogue);
                 var model = new Odyssey.Presentation.World.WorldRenderModel(size, chunks, library);
                 model.RefreshAll(grid, result.Natural!.Context.Edifices);
 

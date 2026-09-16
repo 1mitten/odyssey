@@ -68,7 +68,7 @@ namespace Odyssey.Presentation.Rendering
     /// primitive stand-in for the module's shape. The world draws, the camera works and the only
     /// consequence is that it is made of boxes.
     /// </summary>
-    public sealed class ModuleLibrary
+    public sealed class ModuleLibrary : System.IDisposable
     {
         readonly ModuleCatalogue? _catalogue;
         readonly List<ResolvedModule> _modules = new List<ResolvedModule>();
@@ -78,10 +78,44 @@ namespace Odyssey.Presentation.Rendering
         Material? _fallbackMaterial;
 
         /// <summary>
-        /// Meshes baked from rigged art, which the library created and therefore owns. Unity will
-        /// not collect them, so a caller that tears the library down destroys these.
+        /// Meshes the library created and therefore owns: baked from rigged art, or merged from a
+        /// prefab's parts. Unity does not garbage-collect either, so <see cref="Dispose"/> is what
+        /// frees them.
         /// </summary>
         public IReadOnlyList<Mesh> BakedMeshes => _baked;
+
+        /// <summary>
+        /// Free the meshes and the material this library made.
+        ///
+        /// **This is a leak fix and the leak was a crash.** A `Mesh` created in code is a GPU
+        /// allocation that Unity never collects — the comment above said so and nothing acted on
+        /// it. Every Play session builds a fresh library and bakes a mesh for every character it
+        /// resolves, so entering and leaving Play mode in the editor accumulated them until the
+        /// graphics device gave out: Windows detects the GPU has stopped responding, resets it,
+        /// and Unity reports `DXGI_ERROR_DEVICE_REMOVED` (0x887A0005) and shuts down. It gets
+        /// worse the more characters are in the cast, which is why it only started biting once
+        /// colonists could be any of sixty-one people.
+        ///
+        /// Safe to call twice, and safe on a library that never resolved anything.
+        /// </summary>
+        public void Dispose()
+        {
+            for (int i = 0; i < _baked.Count; i++)
+            {
+                Mesh mesh = _baked[i];
+                if (mesh == null) continue;
+                if (Application.isPlaying) Object.Destroy(mesh);
+                else Object.DestroyImmediate(mesh);
+            }
+            _baked.Clear();
+
+            if (_fallbackMaterial != null)
+            {
+                if (Application.isPlaying) Object.Destroy(_fallbackMaterial);
+                else Object.DestroyImmediate(_fallbackMaterial);
+                _fallbackMaterial = null;
+            }
+        }
 
         public ModuleLibrary(ModuleCatalogue? catalogue)
         {
@@ -182,11 +216,57 @@ namespace Odyssey.Presentation.Rendering
 
         // ---------------------------------------------------------------- art
 
+        /// <summary>
+        /// The renderers to take from a prefab that ships level-of-detail meshes: LOD0, plus
+        /// anything the LOD group does not mention at all. Null when there is no LOD group.
+        ///
+        /// **This is a bug fix, and the bug was invisible.** A pack prefab with an
+        /// <see cref="LODGroup"/> carries the same object three times over — LOD0, LOD1, LOD2 —
+        /// and a Unity scene shows one of them because the group switches between them by screen
+        /// size. Nothing here is a scene: the flattener walked every <c>MeshFilter</c> under the
+        /// prefab and took them all, so every tuft of grass was drawn three times, as three
+        /// slightly different meshes occupying the same space. It cost triple the geometry and
+        /// triple the instances, and it looked *almost* right, which is why it survived a
+        /// measurement pass: the extra copies are the same shape, just coarser.
+        ///
+        /// Taking LOD0 always is not the same as supporting LODs — a distant tuft still draws its
+        /// finest mesh — but drawing one mesh is correct where drawing three was not, and picking
+        /// a level per chunk distance is a separate piece of work with its own measurement.
+        /// </summary>
+        static HashSet<Renderer>? HighestDetail(GameObject prefab)
+        {
+            var groups = prefab.GetComponentsInChildren<LODGroup>(includeInactive: true);
+            if (groups.Length == 0) return null;
+
+            var keep = new HashSet<Renderer>();
+            var mentioned = new HashSet<Renderer>();
+
+            foreach (LODGroup group in groups)
+            {
+                LOD[] levels = group.GetLODs();
+                for (int level = 0; level < levels.Length; level++)
+                foreach (Renderer renderer in levels[level].renderers)
+                {
+                    if (renderer == null) continue;
+                    mentioned.Add(renderer);
+                    if (level == 0) keep.Add(renderer);
+                }
+            }
+
+            // A renderer no LOD level claims is not a level of detail, it is just part of the
+            // prefab, and dropping it would quietly delete geometry.
+            foreach (Renderer renderer in prefab.GetComponentsInChildren<Renderer>(includeInactive: false))
+                if (!mentioned.Contains(renderer)) keep.Add(renderer);
+
+            return keep;
+        }
+
         ModulePart[] FlattenPrefab(GameObject prefab, ModuleEntry entry, ModuleShape shape)
         {
             var filters = prefab.GetComponentsInChildren<MeshFilter>(includeInactive: false);
             var raw = new List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)>();
             Matrix4x4 rootInverse = prefab.transform.worldToLocalMatrix;
+            HashSet<Renderer>? detail = HighestDetail(prefab);
 
             var bounds = new Bounds();
             bool hasBounds = false;
@@ -196,6 +276,7 @@ namespace Odyssey.Presentation.Rendering
                 Mesh? mesh = filters[i].sharedMesh;
                 var renderer = filters[i].GetComponent<MeshRenderer>();
                 if (mesh == null || renderer == null || !renderer.enabled) continue;
+                if (detail != null && !detail.Contains(renderer)) continue;
 
                 Matrix4x4 local = rootInverse * filters[i].transform.localToWorldMatrix;
                 Material[] materials = renderer.sharedMaterials;
@@ -272,6 +353,23 @@ namespace Odyssey.Presentation.Rendering
         /// Grouping is by material and by nothing else, since a material is what forces a separate
         /// draw. Single-part modules, which is most of them, take the cheap path and are untouched.
         /// </summary>
+        /// <summary>
+        /// Whether every mesh in a group can legally be combined.
+        ///
+        /// <see cref="Mesh.CombineMeshes"/> needs CPU-side vertex data, and an imported mesh only
+        /// has it when the importer's Read/Write flag is on — which it is not, for the licensed
+        /// packs. Calling it anyway does not throw: it logs a stack trace and returns an **empty**
+        /// mesh, so the module silently draws nothing while the console fills up once per module
+        /// per library. Asking first costs a field read.
+        /// </summary>
+        static bool Mergeable(
+            List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)> raw, List<int> group)
+        {
+            for (int i = 0; i < group.Count; i++)
+                if (!raw[group[i]].mesh.isReadable) return false;
+            return true;
+        }
+
         List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)> Merge(
             List<(Mesh mesh, int submesh, Material material, Matrix4x4 local)> raw)
         {
@@ -294,9 +392,12 @@ namespace Odyssey.Presentation.Rendering
             foreach (Material material in order)
             {
                 List<int> group = byMaterial[material];
-                if (group.Count == 1)
+                if (group.Count == 1 || !Mergeable(raw, group))
                 {
-                    parts.Add(raw[group[0]]);
+                    // Kept separate. One draw each is the cost of not merging; the alternative is
+                    // CombineMeshes refusing and handing back an empty mesh, which draws nothing
+                    // at all and does it silently apart from a stack trace per module.
+                    for (int i = 0; i < group.Count; i++) parts.Add(raw[group[i]]);
                     continue;
                 }
 

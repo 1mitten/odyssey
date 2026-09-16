@@ -101,7 +101,7 @@ namespace Odyssey.EditorTools
 
                 var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(
                     "Assets/Odyssey/Presentation/ModuleCatalogue.asset");
-                var library = new ModuleLibrary(catalogue);
+                using var library = new ModuleLibrary(catalogue);
                 var model = new Odyssey.Presentation.World.WorldRenderModel(size, chunks, library);
                 model.RefreshAll(grid, result.Natural!.Context.Edifices);
 
