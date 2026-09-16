@@ -1,6 +1,7 @@
 # ADR 0004 — Snapshot-read, intent-write: the contract between simulation and interface
 
-- **Status:** accepted, and stated as a **constraint on the not-yet-written architecture ADR**
+- **Status:** accepted, and stated as a **constraint on the not-yet-written architecture ADR**;
+  amended 2026-09-17, when the per-pawn half of the read contract was opened (see the amendment below)
 - **Date:** 2026-09-15
 - **Deciders:** owner, with the design in `docs/design/09-ui-and-input.md` §2
 - **Related:** `docs/adr/0003-ui-framework.md`; brief §5 Lane D1 and Lane D5
@@ -40,6 +41,61 @@ becomes an immutable, serialisable intent pushed onto a queue, drained by the si
 tick boundary before systems run, and applied or rejected with a machine-readable reason.
 Intents flush while the clock is paused. Intents are logged, so an intent log plus a world seed
 is a replayable test case.
+
+## Amendment, 2026-09-17 — a feature may publish about a pawn without widening the contract
+
+This ADR fixed the read contract as a published view that both sides reference. It did not say how
+a *new* feature adds to it, and the answer in practice turned out to be "edit the struct everybody
+reads". Felling added `Working` and `WorkCell` to `PawnView`; hauling added `Gesture` and its
+serial; mining widened it again. Hauling water, sleeping in a bed and being injured would each do
+the same. That is five features into a prototype and the contract file is already the busiest seam
+in the project — `docs/plans/vertical-slice.md` counted it among six shared files that one feature
+had to edit to add itself, of which five should have been extension points.
+
+**So there is a second channel in the published frame: a sparse `PawnAspect` row, `(PawnId, key,
+int)`, written through `SnapshotWriter.AddPawnAspect` and read back with
+`WorldSnapshot.TryGetPawnAspect`.** A feature publishes what the interface needs to know about a
+pawn without `PawnView`, `Sim.Contracts` or the composition root changing at all. No new
+registration mechanism was added: the contributor seam that already existed for the frame
+(`AddSnapshotContributor`) now reaches pawns, which is why this amendment is about sixty lines of
+contract and not a subsystem.
+
+**The key is a name, hashed, and not an enum.** An enum of aspect kinds would live in the contracts
+assembly, which is the file we are trying to stop editing — the mechanism would recreate the
+problem it exists to solve. A 64-bit FNV-1a of a symbolic name is the only form that lets a feature
+mint its own vocabulary against no shared file, and it is the reasoning that already made interface
+icons symbolic keys rather than filenames (ADR 0007). Sixty-four bits rather than thirty-two
+because a collision here is not a crash but one feature silently reading another's number, and at
+thirty-two that is roughly a one-in-two-hundred-thousand event across a few hundred keys — cheaper
+to design out than to detect, and detecting it would have needed the central registry again.
+
+**Where the line falls.** `PawnView` carries what every pawn always has and what the renderer needs
+for every pawn every frame: where it is, where it is stepping, whether it is working and at what.
+An aspect carries what one feature knows about some pawns sometimes. The test is whether the field
+would be meaningfully populated for every pawn in every build; if not, it is an aspect. Moving the
+existing fields out is explicitly *not* part of this — they pass that test, and a contract churned
+for symmetry is worse than one that grew for a reason.
+
+**Aspects are not state.** They are not saved and not hashed, exactly as `PawnGesture` is not. What
+a feature publishes is a report derived from state it holds itself; that state is what belongs in
+the save and the hash, and the feature is what owns it. `PawnViewContributorTests` proves the whole
+loop on a fixture feature that lives outside both `Sim.Contracts` and `Sim.Pawns`: its numbers
+enter the state hash and the save, its report does not, and a control that stops it publishing
+leaves the hash identical.
+
+**This is the unscoped form of something this ADR already specified and nobody built.** "Expensive
+detail is subscription-scoped: the interface declares interest when a panel opens and the
+simulation fills only what is subscribed" — there is no subscription mechanism in the code, and
+there never was. Every installed feature publishes for every pawn it tracks, every frame. At the
+prototype's scale that is tens of rows against a 62,500-cell slice already in the same buffer, so
+it does not register; the honest statement is that the cheap thing was built and the specified
+thing was deferred, not that the specification was met.
+
+**Flip condition F1.** When the published set stops being sparse — a colony where aspect rows run
+into the thousands per frame, or an interface doing a lookup per pawn per name in a roster redraw —
+the retreat is in this order: sort the rows by pawn and hand a reader the span for one pawn, and
+only then build the subscription scoping this ADR asked for. The measurement that triggers it is
+the publish budget above: 0.8 ms per tick, against 0.186 ms measured for a full slice.
 
 ## Rationale
 
