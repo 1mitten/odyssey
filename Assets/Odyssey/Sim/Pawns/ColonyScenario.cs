@@ -1,13 +1,77 @@
 #nullable enable
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.World;
 
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
+    /// What a colony starts with: how many colonists, what lies on the ground beside them, and
+    /// which standing orders are already given when the first tick runs.
+    ///
+    /// A Def rather than a set of parameters because these numbers are content (04-data-model.md:
+    /// content is data from day one), and a set of parameters is where content hides. The felling
+    /// radius lived on the bootstrap as a public field, which meant a presentation component
+    /// decided what the colonists did first and nothing that ran headless could see the
+    /// decision. Built in code for the reason <see cref="PawnContent.Core"/> is: there is no
+    /// content pack yet, and a clone without one must still run.
+    /// </summary>
+    public class ScenarioDef : Def
+    {
+        public int colonists = 5;
+
+        public int mealPiles = 12;
+
+        /// <summary>
+        /// Meals in each starting pile. Twelve piles of twenty is 240 meals. Measured, not
+        /// estimated: five colonists ate 120 meals in about 7.8 days on the ten-day soak (seed 1),
+        /// which is 15 a day, so ten days is about 155 and this leaves a good half in hand. The
+        /// arithmetic from the Defs said 9 a day and was wrong, which is why the number comes
+        /// from the run. The ten-day run proves the simulation is stable unattended, not that a
+        /// food economy balances, and nothing in the slice makes food (OQ-39); the pantry is sized
+        /// so the gate measures the simulation.
+        /// </summary>
+        public int mealsPerPile = 20;
+
+        /// <summary>
+        /// One per colonist is what the placement always gave. A number of its own so that a
+        /// scenario can short the colony of beds on purpose, which is the first thing a
+        /// difficulty setting would do.
+        /// </summary>
+        public int beds = 5;
+
+        public int stockpileCells = 9;
+
+        /// <summary>Loose salvage scattered about, so hauling has work from the first tick.</summary>
+        public int salvage = 8;
+
+        /// <summary>
+        /// Every tree within this many cells of the start is marked for felling before the first
+        /// tick, on the start layer. Zero marks nothing.
+        /// </summary>
+        public int startingFellRadius = 10;
+
+        /// <summary>
+        /// The scene's scenario: the colony has felling work the moment it exists, because there
+        /// is no tool to give the order with yet. When the UI line's designate tool lands, the
+        /// scene moves to <see cref="Bare"/> and the player gives the first order.
+        /// </summary>
+        public static ScenarioDef Playtest() =>
+            new ScenarioDef { defName = "Scenario_Playtest", label = "playtest" };
+
+        /// <summary>
+        /// The same colony with no standing orders. Bare of orders, not of trees: the terrain is
+        /// the map generator's business. What the headless runs and the tests measure, since an
+        /// order nobody gave is not part of the simulation they are proving.
+        /// </summary>
+        public static ScenarioDef Bare() =>
+            new ScenarioDef { defName = "Scenario_Bare", label = "bare", startingFellRadius = 0 };
+    }
+
+    /// <summary>
     /// Places a starting colony: colonists, a food store, beds and a stockpile near the map's
-    /// start location.
+    /// start location, as a <see cref="ScenarioDef"/> describes it.
     ///
     /// This is scenario setup rather than world generation, because it is a choice about *this*
     /// prototype and a different scenario would choose differently. It lives in the simulation
@@ -19,20 +83,17 @@ namespace Odyssey.Sim.Pawns
     public static class ColonyScenario
     {
         /// <summary>
-        /// Meals in each starting pile. Twelve piles of twenty is 240 meals. Measured, not
-        /// estimated: five colonists ate 120 meals in about 7.8 days on the ten-day soak (seed 1),
-        /// which is 15 a day, so ten days is about 155 and this leaves a good half in hand. The
-        /// arithmetic from the Defs said 9 a day and was wrong, which is why the number comes
-        /// from the run. The ten-day run proves the simulation is stable unattended, not that a
-        /// food economy balances, and nothing in the slice makes food (OQ-39); the pantry is sized
-        /// so the gate measures the simulation.
+        /// The standing orders a scenario starts with, given before the first tick. Returns how
+        /// many trees were marked; zero when the scenario gives none.
         /// </summary>
-        public const int MealsPerPile = 20;
+        public static int GiveStartingOrders(Designations.DesignationGrid designations, CellRef start, ScenarioDef scenario) =>
+            scenario.startingFellRadius > 0
+                ? DesignateTreesNear(designations, start, scenario.startingFellRadius)
+                : 0;
 
         /// <summary>
         /// Mark every tree within <paramref name="radius"/> cells of the start for felling, on the
-        /// start layer. The scene does this before its first tick so the colony has work from the
-        /// moment it exists; a scenario choice, not a player command, so it writes the grid
+        /// start layer. A scenario choice rather than a player command, so it writes the grid
         /// directly rather than queueing intents. Returns how many trees were marked.
         /// </summary>
         public static int DesignateTreesNear(Designations.DesignationGrid designations, CellRef start, int radius)
@@ -121,36 +182,29 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// Place the colony. Returns what it managed, so the caller can assert rather than assume.
         /// </summary>
-        public static Result Place(
-            CellGrid grid,
-            PawnContext pawns,
-            CellRef start,
-            uint seed,
-            int colonistCount = 5,
-            int meals = 12,
-            int stockpileCells = 9,
-            int salvage = 8)
+        public static Result Place(CellGrid grid, PawnContext pawns, CellRef start, uint seed, ScenarioDef scenario)
         {
-            var spots = FindStartSpots(grid, start, wanted: colonistCount + meals + colonistCount + stockpileCells + 4);
+            int wanted = scenario.colonists + scenario.mealPiles + scenario.beds + scenario.stockpileCells + 4;
+            var spots = FindStartSpots(grid, start, wanted);
             if (spots.Count == 0) return new Result(0, 0, 0, 0, 0, 0);
 
             var rng = DeterministicRandom.ForTick(seed, 0, purpose: 0xC0101);
             int take = 0;
 
             int placedColonists = 0;
-            for (int i = 0; i < colonistCount && take < spots.Count; i++, take++, placedColonists++)
+            for (int i = 0; i < scenario.colonists && take < spots.Count; i++, take++, placedColonists++)
                 pawns.Pawns.Spawn(spots[take]);
 
             int placedMeals = 0;
-            for (int i = 0; i < meals && take < spots.Count; i++, take++, placedMeals++)
-                pawns.Items.Spawn(ItemIndex.Meal, spots[take], stack: MealsPerPile);
+            for (int i = 0; i < scenario.mealPiles && take < spots.Count; i++, take++, placedMeals++)
+                pawns.Items.Spawn(ItemIndex.Meal, spots[take], stack: scenario.mealsPerPile);
 
             int placedBeds = 0;
-            for (int i = 0; i < colonistCount && take < spots.Count; i++, take++, placedBeds++)
+            for (int i = 0; i < scenario.beds && take < spots.Count; i++, take++, placedBeds++)
                 pawns.Items.AddBed(spots[take]);
 
-            var stockpile = new List<int>(stockpileCells);
-            for (int i = 0; i < stockpileCells && take < spots.Count; i++, take++) stockpile.Add(spots[take]);
+            var stockpile = new List<int>(scenario.stockpileCells);
+            for (int i = 0; i < scenario.stockpileCells && take < spots.Count; i++, take++) stockpile.Add(spots[take]);
             if (stockpile.Count > 0)
             {
                 var allow = new bool[ItemIndex.Count];
@@ -160,7 +214,7 @@ namespace Odyssey.Sim.Pawns
 
             // Loose salvage so hauling has work from the first tick.
             int placedSalvage = 0;
-            for (int i = 0; i < salvage; i++, placedSalvage++)
+            for (int i = 0; i < scenario.salvage; i++, placedSalvage++)
                 pawns.Items.Spawn(ItemIndex.Salvage, spots[rng.NextInt(spots.Count)]);
 
             return new Result(placedColonists, placedMeals, placedBeds, stockpile.Count, placedSalvage, spots.Count);

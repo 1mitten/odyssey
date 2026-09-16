@@ -15,8 +15,14 @@ namespace Odyssey.Tests.Sim
     {
         static readonly GridSize Size = new GridSize(60, 60, 8);
 
-        static ColonyWorld Wooded(uint seed = 1u, int fellRadius = 0) =>
-            ColonyWorld.Build(Size, seed, colonists: 3, barren: true, wooded: true, fellRadius: fellRadius);
+        static ColonyWorld Wooded(uint seed = 1u, int fellRadius = 0)
+        {
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 3;
+            scenario.beds = 3;
+            scenario.startingFellRadius = fellRadius;
+            return ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: true);
+        }
 
         /// <summary>The nearest tree to the start on the start layer, as a cell index, or -1.</summary>
         static int NearestTree(ColonyWorld colony)
@@ -103,6 +109,36 @@ namespace Odyssey.Tests.Sim
             second.World.Tick(12_000);
             Assert.That(first.World.ComputeStateHash().Value, Is.EqualTo(second.World.ComputeStateHash().Value));
             Assert.That(WoodOnTheGround(first), Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void TheWoodcutterStandsBesideTheTreeNotInIt()
+        {
+            // A colonist is drawn at the cell centre and so is a tree, so working from inside the
+            // cell put the figure in the trunk. The job walks to a neighbouring cell and works the
+            // tree from there.
+            ColonyWorld colony = Wooded();
+            int tree = NearestTree(colony);
+            Assume.That(tree, Is.GreaterThanOrEqualTo(0));
+            CellRef at = Size.FromIndex(tree);
+
+            colony.World.Intents.Submit(new Intent(IntentKind.Designate, at, (int)DesignationKind.Fell));
+            Pawn? cutter = null;
+            for (int tick = 0; tick < 3_000 && cutter == null; tick++)
+            {
+                colony.World.Tick();
+                foreach (Pawn pawn in colony.Pawns.Pawns.All)
+                    if (pawn.CurrentJob != null && pawn.CurrentJob.DefIndex == JobIndex.Fell) cutter = pawn;
+            }
+
+            Assert.That(cutter, Is.Not.Null, "somebody took the order");
+            Job job = cutter!.CurrentJob!;
+            Assert.That(job.DestCell, Is.EqualTo(tree), "the tree is the destination");
+            Assert.That(job.TargetCell, Is.Not.EqualTo(tree), "the stand is not the tree");
+            CellRef stand = Size.FromIndex(job.TargetCell);
+            Assert.That(System.Math.Abs(stand.X - at.X), Is.LessThanOrEqualTo(1));
+            Assert.That(System.Math.Abs(stand.Z - at.Z), Is.LessThanOrEqualTo(1));
+            Assert.That(stand.Y, Is.EqualTo(at.Y));
         }
 
         [Test]

@@ -78,7 +78,7 @@ SHEET_NAMES = {
 
 
 def load(name):
-    with open(os.path.join(DESIGN, name), newline="") as f:
+    with open(os.path.join(DESIGN, name), newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 
 
@@ -597,7 +597,7 @@ def main(argv=None):
             if not os.path.exists(path):
                 stale.append(f"{name}: missing")
             else:
-                with open(path) as f:
+                with open(path, encoding="utf-8", newline="") as f:
                     if f.read() != body:
                         stale.append(f"{name}: out of date")
         if stale:
@@ -610,7 +610,9 @@ def main(argv=None):
 
     os.makedirs(OUT, exist_ok=True)
     for name, body in sorted(files.items()):
-        with open(os.path.join(OUT, name), "w") as f:
+        # UTF-8 and LF whatever the machine, so a wiki built on Windows and checked on Linux
+        # compare equal byte for byte: the CI gate found them disagreeing on exactly this.
+        with open(os.path.join(OUT, name), "w", encoding="utf-8", newline="\n") as f:
             f.write(body)
     gaps = sum(1 for e in entries if e["art"] == "none")
     print(f"ok: wrote {len(files)} files to docs/wiki")

@@ -623,6 +623,7 @@ namespace Odyssey.Sim.Pawns
 
             var cells = designations.Cells;
             int best = -1;
+            int bestStand = -1;
             int bestDistance = int.MaxValue;
 
             for (int i = 0; i < cells.Count; i++)
@@ -636,16 +637,23 @@ namespace Odyssey.Sim.Pawns
 
                 int distance = ctx.Distance(pawn.Cell, cell);
                 if (distance >= bestDistance) continue;
-                if (!ctx.Reachable(pawn, cell)) continue;
+
+                // Work from beside the tree, never from inside it: a colonist drawn at the cell
+                // centre stood in the trunk. The stand is the nearest walkable neighbour the
+                // pawn can reach; a tree with none is left for a colonist who can.
+                int stand = FellJobDriver.StandBeside(ctx, pawn, cell);
+                if (stand < 0) continue;
 
                 bestDistance = distance;
                 best = cell;
+                bestStand = stand;
             }
 
             if (best < 0) return false;
 
             job.Reset(JobIndex.Fell);
-            job.TargetCell = best;
+            job.TargetCell = bestStand;
+            job.DestCell = best;
             return true;
         }
     }

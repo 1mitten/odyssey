@@ -91,12 +91,16 @@ namespace Odyssey.Sim.Contracts
         public readonly int DefIndex;
         public readonly int StuffIndex;
 
-        public ThingView(ThingId id, CellRef cell, int defIndex, int stuffIndex)
+        /// <summary>How many are in the pile. A ledger counts these, never the piles.</summary>
+        public readonly int Stack;
+
+        public ThingView(ThingId id, CellRef cell, int defIndex, int stuffIndex, int stack = 1)
         {
             Id = id;
             Cell = cell;
             DefIndex = defIndex;
             StuffIndex = stuffIndex;
+            Stack = stack;
         }
     }
 

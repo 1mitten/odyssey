@@ -6,3 +6,6 @@ using System.Runtime.CompilerServices;
 // granted explicitly here rather than by making the methods public to everyone.
 [assembly: InternalsVisibleTo("Odyssey.Sim")]
 [assembly: InternalsVisibleTo("Odyssey.Tests.Sim")]
+// The HUD model tests are in the position the seam tests are: they must be able to write a
+// frame to feed the models, while the HUD assembly itself keeps read-only access.
+[assembly: InternalsVisibleTo("Odyssey.Tests.Hud")]

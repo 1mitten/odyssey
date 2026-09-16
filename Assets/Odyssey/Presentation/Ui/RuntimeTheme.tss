@@ -1,0 +1,6 @@
+/* The HUD's runtime theme. A theme file is a stylesheet whose one job is to pull in Unity's
+   default runtime theme, which is where every element's font, cursor and base metrics come
+   from. Without this import a panel has no font at all and draws nothing, which is what an
+   empty theme asset produced the first time this scene was built. Hud.uss carries the look;
+   this carries the defaults it sits on. */
+@import url("unity-theme://default");

@@ -28,7 +28,7 @@ namespace Odyssey.Tests.Sim
             public CellRef Start;
         }
 
-        static Harness Build(int x, int z, int y, uint seed = 1u, int colonists = 5)
+        static Harness Build(int x, int z, int y, uint seed = 1u)
         {
             var size = new GridSize(x, z, y);
             var grid = new CellGrid(size);
@@ -52,7 +52,7 @@ namespace Odyssey.Tests.Sim
                 .AddSnapshotContributor(pawns.Pawns)
                 .Build();
 
-            var placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed, colonists);
+            var placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed, ScenarioDef.Bare());
             return new Harness
             {
                 Grid = grid, Pawns = pawns, World = world,

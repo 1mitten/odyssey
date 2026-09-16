@@ -23,9 +23,7 @@ namespace Odyssey.Tests.Sim
     {
         static readonly GridSize Size = new GridSize(60, 60, 16);
         const uint Seed = 4242;
-        const int Colonists = 5;
-
-        static ColonyWorld Fresh() => ColonyWorld.Build(Size, Seed, Colonists);
+        static ColonyWorld Fresh() => ColonyWorld.Build(Size, Seed, ScenarioDef.Bare());
 
         static ulong Hash(ColonyWorld world) => world.World.ComputeStateHash().Value;
 
@@ -179,10 +177,10 @@ namespace Odyssey.Tests.Sim
             original.World.Tick(100);
             byte[] bytes = original.Save();
 
-            var otherSeed = ColonyWorld.Build(Size, Seed + 1, Colonists);
+            var otherSeed = ColonyWorld.Build(Size, Seed + 1, ScenarioDef.Bare());
             Assert.Throws<SaveLoadException>(() => otherSeed.Load(bytes), "a foreign seed was accepted");
 
-            var otherSize = ColonyWorld.Build(new GridSize(40, 40, 16), Seed, Colonists);
+            var otherSize = ColonyWorld.Build(new GridSize(40, 40, 16), Seed, ScenarioDef.Bare());
             Assert.Throws<SaveLoadException>(() => otherSize.Load(bytes), "a different map size was accepted");
         }
     }

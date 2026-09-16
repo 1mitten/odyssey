@@ -149,7 +149,7 @@ namespace Odyssey.Tests.Sim
             // and the colony is the figure that matters.
             Measure("8x8x4, one tickable", 20_000, _ => Build());
             Measure("60x60x16 colony, 5 colonists", 2_000,
-                _ => ColonyWorld.Build(new GridSize(60, 60, 16), 4242, colonists: 5).World);
+                _ => ColonyWorld.Build(new GridSize(60, 60, 16), 4242, ScenarioDef.Bare()).World);
         }
 
         static void Measure(string label, int ticks, System.Func<int, SimWorld> build)

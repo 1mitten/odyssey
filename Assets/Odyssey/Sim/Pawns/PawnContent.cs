@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
 
 namespace Odyssey.Sim.Pawns
@@ -116,15 +117,18 @@ namespace Odyssey.Sim.Pawns
         public int catharsisThought = ThoughtIndex.Catharsis;
     }
 
+    // The values live in Odyssey.Sim.Contracts (JobHandle/ItemHandle): the published views carry
+    // these indices, so both sides of the seam must count the same way. These aliases keep the
+    // simulation's own code reading the short historical names.
     public static class JobIndex
     {
-        public const int Haul = 0;
-        public const int Eat = 1;
-        public const int Sleep = 2;
-        public const int Wander = 3;
-        public const int Wait = 4;
-        public const int Fell = 5;
-        public const int Count = 6;
+        public const int Haul = JobHandle.Haul;
+        public const int Eat = JobHandle.Eat;
+        public const int Sleep = JobHandle.Sleep;
+        public const int Wander = JobHandle.Wander;
+        public const int Wait = JobHandle.Wait;
+        public const int Fell = JobHandle.Fell;
+        public const int Count = JobHandle.Count;
     }
 
     /// <summary>A job names a driver; the driver runs toils. This is the naming half.</summary>
@@ -159,10 +163,10 @@ namespace Odyssey.Sim.Pawns
 
     public static class ItemIndex
     {
-        public const int Meal = 0;
-        public const int Salvage = 1;
-        public const int Wood = 2;
-        public const int Count = 3;
+        public const int Meal = ItemHandle.Meal;
+        public const int Salvage = ItemHandle.Salvage;
+        public const int Wood = ItemHandle.Wood;
+        public const int Count = ItemHandle.Count;
     }
 
     /// <summary>

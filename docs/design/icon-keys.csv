@@ -83,6 +83,7 @@ ui.pawn.corpse,Corpse,ui.pawn,M2,"Rots, upsets people, can be buried or worse"
 ui.status.hauling,Hauling,ui.status,M2,Carrying something to storage
 ui.status.building,Building,ui.status,M2,Working a frame or blueprint
 ui.status.mining,Mining,ui.status,M2,"Cutting into rubble, concrete or rock"
+ui.status.felling,Felling,ui.status,M3,Cutting a tree down for wood
 ui.status.sleeping,Sleeping,ui.status,M2,"Asleep, and should stay that way"
 ui.status.eating,Eating,ui.status,M2,Taking a meal
 ui.status.idle,Idle,ui.status,M2,Nothing to do. Usually a priorities problem

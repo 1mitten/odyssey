@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Compiles exactly the same source files Unity compiles into the Odyssey.Hud assembly
+    definition, for the fast test tier. netstandard2.1 on purpose: it matches Unity's API
+    surface, so a .NET 8 API that Unity could not compile fails here immediately.
+  -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Odyssey.Hud</AssemblyName>
+    <RootNamespace>Odyssey.Hud</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../../Assets/Odyssey/Hud/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Odyssey.Sim.Contracts/Odyssey.Sim.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

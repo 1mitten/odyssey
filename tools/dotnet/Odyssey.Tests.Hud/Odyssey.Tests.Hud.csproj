@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The fast test tier for the HUD models: same test sources Unity runs, no editor, no asset
+    database. NUnit is pinned to 3.x to match the version Unity ships.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Odyssey.Tests.Hud</AssemblyName>
+    <RootNamespace>Odyssey.Tests.Hud</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../../../Assets/Odyssey/Tests/Hud/**/*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Odyssey.Hud/Odyssey.Hud.csproj" />
+    <ProjectReference Include="../Odyssey.Sim.Contracts/Odyssey.Sim.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+
+</Project>

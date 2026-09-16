@@ -126,7 +126,7 @@ namespace Odyssey.Sim.Pawns
             {
                 var item = items[i];
                 if (item.Despawned || item.Cell < 0) continue;
-                writer.AddThing(new ThingView(item.Id, size.FromIndex(item.Cell), item.DefIndex, 0));
+                writer.AddThing(new ThingView(item.Id, size.FromIndex(item.Cell), item.DefIndex, 0, item.Stack));
             }
         }
 
