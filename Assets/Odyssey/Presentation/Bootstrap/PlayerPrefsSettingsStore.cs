@@ -43,5 +43,18 @@ namespace Odyssey.Presentation.Bootstrap
             // to end a play session is to press Stop, which is not a clean quit.
             PlayerPrefs.Save();
         }
+
+        public int? ReadInt(string key)
+        {
+            string name = Prefix + key;
+            if (!PlayerPrefs.HasKey(name)) return null;
+            return PlayerPrefs.GetInt(name);
+        }
+
+        public void WriteInt(string key, int value)
+        {
+            PlayerPrefs.SetInt(Prefix + key, value);
+            PlayerPrefs.Save();
+        }
     }
 }

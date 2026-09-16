@@ -16,6 +16,16 @@ comparison and the twelve experiments that have not been run).
 
 **Decisions recorded:** `docs/adr/0003-ui-framework.md`, `docs/adr/0004-sim-ui-contract.md`.
 
+**Built, and measured elsewhere.** The HUD was rebuilt to an approved specification on 2026-09-16
+and `docs/design/14-hud-layout.md` now owns every number on the screen — the type scale, the
+palette, the spacing, where each region is anchored and how much of the viewport it covers. This
+file keeps the architecture, the contract, the budget and the input model, all of which that
+rebuild obeys and none of which it changed. Where the two touch: §7a's "words, not abbreviations"
+stands and is now enforced by a test; §7's two-to-four character placeholder badge is **withdrawn**
+in favour of an outlined square with no text in it (ADR 0007, amended twice); and §9 D4's 1080p
+reference is now literal — the panel scales against 1920 x 1080 rather than the mockup's 1200 x 800,
+because the specification's anchors are 1080p pixels.
+
 ---
 
 ## Why this exists now, ahead of its phase
@@ -484,6 +494,20 @@ the consequence already recorded in `docs/research/phase0-ground.md`.
 **Mouse and keyboard only.** No gamepad, no touch, no controller. Stated as an assumption so
 it can be challenged rather than discovered.
 
+**Two bindings changed on 2026-09-16, both owner decisions, both recorded in
+`14-hud-layout.md` §7a.** Q and E **rotate freely while held** rather than snapping ninety degrees
+a press: this board is layered and its slice is cut at an angle, so the clearest view is rarely one
+of four. And the below-slice mode cycle moved from B to **shift-V**, freeing B for the Build
+command and pairing the two visibility cycles on one key.
+
+**Hotkey clashes are now caught by a test that reads the source**, not by a list somebody
+maintains. The rebuilt command bar shipped with five of its eleven hotkeys already bound to camera
+keys, and the guard written to prevent that passed, because its reserved list was written from
+memory. `HotkeyClashTests` greps the Presentation assembly for every `keys.somethingKey` and
+allows a command's key only in the file that reads it on the command's behalf. Until
+`HotkeyDirector` exists and bindings are data, this is the only thing standing between two
+features and one key.
+
 `HotkeyDirector` holds bindings as **actions, not keys**, with Def-supplied defaults and user
 rebinds. Action-based bindings cost nothing now and leave the gamepad door unnailed, which is
 the only concession made to a decision the brief has not taken.
@@ -683,7 +707,7 @@ minutes and should be done first because they shape the design.
 | ~~D1~~ | Icon-only forever, or icons plus a micro-label once meaning proves unclear? | **Answered 2026-09-16: icons plus the full name, now.** The owner reviewed the placeholder interface and could not tell what anything was, so meaning did not prove unclear later — it was unclear immediately. Labels are the default and carry the whole word, not an abbreviation; icon-only remains as a toggle and may become the default again once real art is in the build. Mandatory tooltips and hover-only hotkey hints stand. See §7a |
 | D2 | The concept render duplicates the colonist bar top and bottom. Which survives, and what takes the freed slot? | Keep the **top** roster bar; the top edge is otherwise dead space. Bottom-left is the inspect pane. Give the **right edge** to the Depth Ruler and the alert stack |
 | ~~D3~~ | Above-and-below policy: ghost the storey above, or hide it? | **Answered 2026-09-15: neither.** X-ray by default, with six modes, a depth cap and a below-slice treatment shipped for playtest. See `docs/adr/0006-layer-visibility-policy.md`. The row keeps its number so D4 to D9 keep theirs |
-| D4 | Reference resolution, scale policy, minimum supported resolution | 1080p reference, relative-unit scaling with a user slider from 80 to 150 per cent, minimum 1366 × 768. **Amended by ADR 0007:** text and padding scale continuously, icons step through 32, 64 and 128, because pixel art at a fractional scale either shimmers or smears |
+| ~~D4~~ | Reference resolution, scale policy, minimum supported resolution | **Built 2026-09-16.** 1920 × 1080 reference — literal now, not nominal, since every anchor in the interface specification is a 1080p pixel. The 80-to-150 per cent user control exists as a **ladder of six rungs** in the settings panel's Interface section rather than a slider, because a HUD at a fractional scale puts its one-pixel hairlines between pixels; it works by dividing the reference canvas, so the anchored layout adapts with no other code knowing. The default is chosen from the screen: 100 below 1440p, 110 at 1440p, 125 at 4K, after the owner reported the type reading too small on a 4K panel. **Amended by ADR 0007:** text and padding scale continuously, icons step through 32, 64 and 128, because pixel art at a fractional scale either shimmers or smears. See `14-hud-layout.md` §2.1 |
 | D5 | Colour-blind-safe alert palette from day one? | Yes. Severity encoded as colour **and** shape **and** position. Nearly free now, expensive later |
 | D6 | Is mod-supplied layout a day-one promise or an M8 one? | Day-one plumbing, because our own HUD is driven by it and therefore exercises it. M8 promise, documented and frozen |
 | ~~D7~~ | Cell size | **Answered: 2.5 m x 2.5 m x 3.0 m**, measured from 2,138 Synty prefabs and confirmed by the owner (`docs/adr/0002-cell-size-and-layer-model.md`). The interface was never structurally blocked on it; `WorldMetrics` remains the only consumer. The Depth Ruler, slice control and overlay budgets can now assume 250 x 250 cells over about 40 layers, a 625 m district |

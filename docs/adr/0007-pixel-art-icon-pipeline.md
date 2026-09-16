@@ -67,6 +67,21 @@ draws its **full name** beside the icon per `09` §7a, so the badge appears only
 placeholder tile and below 32 pixels — and never as the only thing identifying a control. The
 pixel arithmetic in this ADR is unaffected; the labels are text and do not enter the icon atlas.
 
+**Amended again 2026-09-16, with the HUD rebuild: the placeholder tile is gone.** The amendment
+above kept the two-to-four character badge inside a generated tile, and the rebuilt HUD's acceptance
+criteria strike out both halves of it — "MEA / WOO / SCR read as truncated data", and a filled
+colour tile behind a value outshouts the value it belongs to. A missing glyph is now drawn as a
+**single-colour outlined square at a 1.6 px stroke, in the key's category colour**, with no text in
+it at all (`14-hud-layout.md` §4), and a PlayMode test fails if any two- or three-letter capitalised
+fragment reaches a HUD label. Chrome icons — play, pause, chevrons, close, the alert marks — are not
+placeholders at all any more: they are vector paths drawn with `Painter2D` at Lucide's proportions,
+so they need no sheet and enter no atlas.
+
+**None of the pipeline this ADR decides is affected**, and that is the point of it: the icon is
+still referenced by symbolic key, still displayed at 32 and 64 only, still destined for the owner's
+64 px sheets, and when they land `IconBadge` becomes a sprite lookup on the same key with nothing
+about the HUD's layout moving. What changed is only what is drawn in the gap.
+
 Consequences that follow and are therefore also decided:
 
 - **Every texture under `Assets/Art/Ui/` is point-filtered, including the generated placeholders.**

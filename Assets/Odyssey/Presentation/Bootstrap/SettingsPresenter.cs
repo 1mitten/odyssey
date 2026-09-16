@@ -32,6 +32,7 @@ namespace Odyssey.Presentation.Bootstrap
     {
         OdysseyBootstrap? _bootstrap;
         DesignatePresenter? _designate;
+        Ui.HudShell? _shell;
         SettingsDirector? _director;
 
         // What "on" means for the two levers that carry an amount rather than a state. Captured
@@ -44,6 +45,7 @@ namespace Odyssey.Presentation.Bootstrap
         {
             _bootstrap = GetComponent<OdysseyBootstrap>();
             _designate = GetComponent<DesignatePresenter>();
+            _shell = GetComponent<Ui.HudShell>();
         }
 
         void Update()
@@ -56,10 +58,19 @@ namespace Odyssey.Presentation.Bootstrap
 
             // One key, one rule, one place. The order itself is the director's and is tested
             // without an engine; all that happens here is the doing of it.
-            switch (_director.Escape(_designate != null && _designate.ToolArmed))
+            switch (_director.Escape(
+                        _designate != null && _designate.ToolArmed,
+                        _shell != null && _shell.BuildPaletteOpen))
             {
                 case EscapeAction.DisarmTool:
                     _designate?.PutToolAway();
+                    break;
+                case EscapeAction.ClosePalette:
+                    // The Build palette is a panel opened over the board by the Build command, so
+                    // it unwinds before the menu does. It had no place in this order until the
+                    // interface rebuild, because it used to be a column pinned to the left edge
+                    // and permanently open.
+                    _shell?.CloseBuildPalette();
                     break;
                 case EscapeAction.ClosePanel:
                     _director.SetOpen(false);
@@ -94,6 +105,12 @@ namespace Odyssey.Presentation.Bootstrap
                 if (_bootstrap.grassScatter > 0) _grassDensity = _bootstrap.grassScatter;
                 if (_bootstrap.groundRelief > 0f) _reliefAmplitude = _bootstrap.groundRelief;
 
+                // The interface scale is seeded from the screen rather than from the scene,
+                // because it is the one setting here that is about the monitor rather than about
+                // the board. The owner's report on 2026-09-16 was that the HUD read too small on
+                // a 4K panel; SettingsDirector.DefaultScaleFor is where that judgement lives.
+                director.SeedUiScale(SettingsDirector.DefaultScaleFor(Screen.height));
+
                 director.Seed(GraphicsOption.Shadows, _bootstrap.castShadows);
                 director.Seed(GraphicsOption.Surround, _bootstrap.terrainSkirt);
                 director.Seed(GraphicsOption.GrassTufts, _bootstrap.grassScatter > 0);
@@ -102,6 +119,11 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             director.OptionChanged += Apply;
+            director.UiScaleChanged += ApplyScale;
+
+            // Applied once up front, because the shell may have been built before the seed was
+            // known and the stored preference is laid over it below.
+            ApplyScale(director.UiScale);
 
             // Anything this machine has been told before is laid over the scene, and raises
             // OptionChanged as it goes, so the board catches up without a second code path.
@@ -110,8 +132,14 @@ namespace Odyssey.Presentation.Bootstrap
 
         void OnDestroy()
         {
-            if (_director != null) _director.OptionChanged -= Apply;
+            if (_director == null) return;
+            _director.OptionChanged -= Apply;
+            _director.UiScaleChanged -= ApplyScale;
         }
+
+        /// <summary>The shell owns the UI document, so it owns the panel the scale is applied
+        /// to.</summary>
+        void ApplyScale(int percent) => _shell?.ApplyUiScale(percent);
 
         /// <summary>
         /// Turn one boolean into what the renderer does.

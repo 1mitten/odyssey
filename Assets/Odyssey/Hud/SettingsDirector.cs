@@ -27,8 +27,16 @@ namespace Odyssey.Hud
     /// </summary>
     public enum EscapeAction
     {
+        /// <summary>Put down the tool the player is holding.</summary>
         DisarmTool,
+
+        /// <summary>Close the Build palette, which is the one panel that opens over the board.</summary>
+        ClosePalette,
+
+        /// <summary>Close the settings panel.</summary>
         ClosePanel,
+
+        /// <summary>Nothing is open and nothing is held, so Escape is the way into the menu.</summary>
         OpenPanel,
     }
 
@@ -46,6 +54,26 @@ namespace Odyssey.Hud
         bool? Read(string key);
 
         void Write(string key, bool value);
+
+        /// <summary>The stored number, or null if this machine has never been told.</summary>
+        int? ReadInt(string key);
+
+        void WriteInt(string key, int value);
+    }
+
+    /// <summary>
+    /// The sections of the settings panel.
+    ///
+    /// <para>Two, because there are now two kinds of thing in it and they answer different
+    /// questions: <see cref="Interface"/> is how the HUD itself is drawn, <see cref="Graphics"/>
+    /// is how the world is. The panel held only the second until 2026-09-16, when the owner
+    /// reported the HUD's type reading too small on a 4K monitor and the fix was a setting rather
+    /// than a constant.</para>
+    /// </summary>
+    public enum SettingsTab
+    {
+        Interface,
+        Graphics,
     }
 
     /// <summary>
@@ -73,8 +101,14 @@ namespace Odyssey.Hud
         /// <summary>The registry key naming the panel itself.</summary>
         public const string PanelKey = "ui.settings.panel";
 
-        /// <summary>The registry key naming the one section the panel has so far.</summary>
+        /// <summary>The registry key naming the graphics section.</summary>
         public const string GraphicsKey = "ui.settings.graphics";
+
+        /// <summary>The registry key naming the interface section.</summary>
+        public const string InterfaceKey = "ui.settings.interface";
+
+        /// <summary>The registry key naming the interface-scale row.</summary>
+        public const string UiScaleKey = "ui.settings.uiscale";
 
         static readonly GraphicsOption[] Order =
         {
@@ -94,12 +128,53 @@ namespace Odyssey.Hud
         {
             PanelKey,
             GraphicsKey,
+            InterfaceKey,
+            UiScaleKey,
             "ui.settings.shadows",
             "ui.settings.surround",
             "ui.settings.grass",
             "ui.settings.relief",
             "ui.settings.seethrough",
         };
+
+        /// <summary>
+        /// The interface scales the panel offers, as percentages.
+        ///
+        /// <para>A ladder rather than a slider, and these six rather than a continuous range,
+        /// because <c>09-ui-and-input.md</c> §9 D4 fixes the band at 80 to 150 per cent and
+        /// because a HUD drawn at a fractional scale is a HUD whose one-pixel hairlines land
+        /// between pixels. The steps are close enough together that no two adjacent ones look
+        /// like a jump.</para>
+        ///
+        /// <para><b>Above 100 the HUD covers more of the board</b>, which is the trade the player
+        /// is making: the coverage ceiling the interface was built to is stated at 100, and at 150
+        /// on a 16:9 screen the HUD occupies about a quarter of it rather than an
+        /// ninth.</para>
+        /// </summary>
+        public static readonly int[] UiScales = { 80, 90, 100, 110, 125, 150 };
+
+        /// <summary>The scale a screen this tall should start at, before any stored preference.
+        ///
+        /// <para>The interface is authored in 1080p pixels, so on a 1080p monitor one reference
+        /// pixel is one real one and 100 is right by construction. It is also right on a 4K
+        /// monitor <i>in angular terms</i> — the panel scales with the screen, so the type
+        /// subtends the same angle — and the owner's report on 2026-09-16 was nonetheless that it
+        /// read too small there. Physically identical is not perceptually identical at arm's
+        /// length from a large panel, and the HUD this replaced was drawn against a 1200 x 800
+        /// reference, which made every glyph on it 1.6 times larger. So a tall screen starts a
+        /// step or two up, and the player can move it either way.</para>
+        ///
+        /// <para><b>125 at 4K is arithmetic rather than taste.</b> The HUD this replaced set its
+        /// body text at 11 px against a 1200 x 800 canvas; on a 3840 x 2160 screen, Unity's
+        /// match-0.5 scaling is the geometric mean of 3.2 and 2.7, so that text landed at about
+        /// <b>32 physical pixels</b>. This one sets body text at 13 px, and at 125 per cent the
+        /// canvas is 1536 x 864, so the scale is exactly 2.5 and the text lands at
+        /// <b>32.5 physical pixels</b>. The default therefore restores the size the owner was
+        /// reading at before the rebuild, which is the size they were telling us about.</para>
+        /// </summary>
+        public static int DefaultScaleFor(int screenHeight) =>
+            screenHeight >= 2160 ? 125 :
+            screenHeight >= 1440 ? 110 : 100;
 
         readonly Dictionary<GraphicsOption, bool> _on = new();
 
@@ -115,8 +190,22 @@ namespace Odyssey.Hud
 
         public bool Open { get; private set; }
 
+        /// <summary>Which section is showing. Interface first, because it is the one a player
+        /// reaches for on the first evening.</summary>
+        public SettingsTab Tab { get; private set; } = SettingsTab.Interface;
+
+        /// <summary>How large the HUD is drawn, as a percentage. Always a member of
+        /// <see cref="UiScales"/>.</summary>
+        public int UiScale { get; private set; } = 100;
+
         /// <summary>Raised when the panel opens or closes.</summary>
         public event Action? Changed;
+
+        /// <summary>Raised when the showing section changes.</summary>
+        public event Action<SettingsTab>? TabChanged;
+
+        /// <summary>Raised when the interface scale changes, with the new percentage.</summary>
+        public event Action<int>? UiScaleChanged;
 
         /// <summary>Raised when one option's value changes, with the option that changed.</summary>
         public event Action<GraphicsOption>? OptionChanged;
@@ -150,6 +239,43 @@ namespace Odyssey.Hud
 
         public void Toggle() => SetOpen(!Open);
 
+        public void SetTab(SettingsTab tab)
+        {
+            if (Tab == tab) return;
+            Tab = tab;
+            TabChanged?.Invoke(Tab);
+        }
+
+        /// <summary>
+        /// Move the interface scale. Anything not on the ladder snaps to the nearest rung, so a
+        /// stored preference from an older ladder cannot leave the panel showing a value none of
+        /// its own buttons can reproduce.
+        /// </summary>
+        public void SetUiScale(int percent)
+        {
+            int snapped = Nearest(percent);
+            if (UiScale == snapped) return;
+            UiScale = snapped;
+            _store?.WriteInt(UiScaleKey, snapped);
+            UiScaleChanged?.Invoke(snapped);
+        }
+
+        /// <summary>Move one rung up or down the ladder; at either end, stay there.</summary>
+        public void StepUiScale(int rungs)
+        {
+            int at = Array.IndexOf(UiScales, UiScale);
+            if (at < 0) at = Array.IndexOf(UiScales, Nearest(UiScale));
+            SetUiScale(UiScales[Math.Max(0, Math.Min(UiScales.Length - 1, at + rungs))]);
+        }
+
+        static int Nearest(int percent)
+        {
+            int best = UiScales[0];
+            foreach (int rung in UiScales)
+                if (Math.Abs(rung - percent) < Math.Abs(best - percent)) best = rung;
+            return best;
+        }
+
         public void Set(GraphicsOption option, bool on)
         {
             if (IsOn(option) == on) return;
@@ -172,6 +298,14 @@ namespace Odyssey.Hud
         public void Seed(GraphicsOption option, bool on) => _on[option] = on;
 
         /// <summary>
+        /// Record the scale this screen should start at, without raising anything and without
+        /// writing it back — the same bargain <see cref="Seed(GraphicsOption, bool)"/> makes. A
+        /// stored preference is laid over it by <see cref="UseStore"/>, so the machine beats the
+        /// screen and the screen beats nothing at all.
+        /// </summary>
+        public void SeedUiScale(int percent) => UiScale = Nearest(percent);
+
+        /// <summary>
         /// Attach the place preferences are kept, and apply anything this machine has already been
         /// told. Stored values are laid over the seeded ones, so a preference beats the scene and
         /// the scene beats nothing at all.
@@ -184,6 +318,9 @@ namespace Odyssey.Hud
                 bool? stored = store.Read(KeyOf(option));
                 if (stored.HasValue) Set(option, stored.Value);
             }
+
+            int? scale = store.ReadInt(UiScaleKey);
+            if (scale.HasValue) SetUiScale(scale.Value);
         }
 
         /// <summary>
@@ -195,9 +332,21 @@ namespace Odyssey.Hud
         /// listener would have disarmed the tool and opened the panel in the same keystroke —
         /// the sort of fault that looks like a flicker and is diagnosed as a rendering bug.</para>
         /// </summary>
-        public EscapeAction Escape(bool toolArmed)
+        public EscapeAction Escape(bool toolArmed) => Escape(toolArmed, paletteOpen: false);
+
+        /// <summary>
+        /// The same rule with the Build palette in it.
+        ///
+        /// <para>The palette used to be a column pinned to the left edge and permanently open, so
+        /// it was never something Escape had to unwind. The interface rebuild makes it a panel
+        /// opened by the Build command and closed by Escape, which puts it in the middle of the
+        /// order: a tool is held in the hand and comes off first, the palette is the panel the
+        /// player just opened over the board, and the menu is the last resort.</para>
+        /// </summary>
+        public EscapeAction Escape(bool toolArmed, bool paletteOpen)
         {
             if (toolArmed) return EscapeAction.DisarmTool;
+            if (paletteOpen) return EscapeAction.ClosePalette;
             return Open ? EscapeAction.ClosePanel : EscapeAction.OpenPanel;
         }
     }

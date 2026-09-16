@@ -6,6 +6,7 @@ using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Ui;
 using UnityEngine;
 using UnityEngine.TestTools;
+using UnityEngine.UIElements;
 
 namespace Odyssey.Tests.PlayMode
 {
@@ -32,26 +33,35 @@ namespace Odyssey.Tests.PlayMode
     /// the guard fires exactly where the search said, and the test passes. They prove the guard
     /// holds <i>wherever the function claims the HUD is</i>. They cannot prove the claim.</para>
     ///
-    /// <para>So the assertion below is anchored in something the coordinate transform cannot
-    /// influence: <b>this HUD is bottom-heavy</b>. The bottom bar runs the full width of the
-    /// screen and is two rows tall once every tab carries its name; the top edge holds only the
-    /// clock, in one corner. The left and right columns run vertically and contribute to both
-    /// halves about equally. So the HUD must claim more of the lower half of the screen than the
-    /// upper half — and a vertical mirror is exactly the fault that reverses that.</para>
+    /// <para><b>Rewritten 2026-09-16, because the HUD rebuild falsified the old premise.</b> This
+    /// used to sample a grid and assert that more of it landed in the lower half of the screen than
+    /// the upper, on the grounds that the HUD was bottom-heavy — a full-width bar two rows tall
+    /// along the bottom against a clock in one top corner. The rebuilt HUD is the other way round:
+    /// the bar is one row and may not wrap, the empty inspect pane is a single line, and the depth
+    /// rail is four hundred pixels down the top right. The old test failed, correctly, and its own
+    /// remarks had predicted exactly that — "it only breaks if the HUD stops being bottom-heavy,
+    /// which would be a design change worth failing a test over".</para>
     ///
-    /// <para>Deliberately an inequality rather than named points. A test that asserted "the HUD
-    /// covers the bottom centre" would break the first time somebody moved a region for a good
-    /// reason; this one only breaks if the HUD stops being bottom-heavy, which would be a design
-    /// change worth failing a test over, or if the axis flips again, which is the fault.</para>
+    /// <para><b>What replaces it is stronger and needs no argument about balance:</b> the panel's
+    /// own hit-test is the ground truth. <c>panel.Pick</c> takes a point already in panel
+    /// coordinates and never touches the screen axis at all, so comparing it against
+    /// <c>PointOverUi</c> over a grid asks precisely the question — does the screen-space path
+    /// agree with the layout about where the HUD is? A missing flip disagrees at every sampled
+    /// point that is not on the midline, so the test fails loudly rather than by one count.</para>
+    ///
+    /// <para>The round trip is not circular, and it is worth saying why. <c>ToScreen</c> below is
+    /// written out here with its flip stated explicitly, so it is the inverse of a <i>correct</i>
+    /// <c>ToPanel</c> rather than of whatever <c>ToPanel</c> happens to do. Drop the flip from the
+    /// shell and the two stop being inverses, which is the whole of the fault.</para>
     /// </summary>
     public class PointerOriginTests
     {
-        /// <summary>Samples across the screen. Odd so no row lands exactly on the midline.</summary>
-        const int Columns = 21;
-        const int Rows = 21;
+        /// <summary>Samples across the canvas. Odd, so no row lands exactly on the midline.</summary>
+        const int Columns = 31;
+        const int Rows = 31;
 
         [UnityTest]
-        public IEnumerator TheHudClaimsMoreOfTheBottomOfTheScreenThanTheTop()
+        public IEnumerator TheHudIsClickableExactlyWhereTheLayoutPutIt()
         {
             GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap _, out SliceCameraRig rig,
                 out HudShell shell);
@@ -60,32 +70,61 @@ namespace Odyssey.Tests.PlayMode
                 yield return RigWorld.WarmUp();
                 yield return RigWorld.SettleCamera(rig);
 
-                int bottom = 0, top = 0;
+                var doc = root.GetComponentInChildren<UIDocument>();
+                Assert.That(doc, Is.Not.Null, "the harness built no HUD document");
+
+                VisualElement root2 = doc!.rootVisualElement;
+                Rect canvas = root2.worldBound;
+                Assert.That(canvas.width, Is.GreaterThan(0f), "the panel has no size");
+
+                // Panel units to screen pixels. The panel fills the game view in this harness, so
+                // one scale covers both axes — and the y axis is turned over, once, here.
+                float scale = Screen.width / canvas.width;
+                Vector2 ToScreen(Vector2 panel) =>
+                    new Vector2(panel.x * scale, Screen.height - panel.y * scale);
+
+                int over = 0, clear = 0, disagreements = 0;
+                Vector2 firstDisagreement = default;
+                string firstDetail = string.Empty;
+
                 for (int row = 0; row < Rows; row++)
                 for (int col = 0; col < Columns; col++)
                 {
-                    float y = Screen.height * (row + 0.5f) / Rows;
-                    var point = new Vector2(Screen.width * (col + 0.5f) / Columns, y);
-                    if (!shell.PointOverUi(point)) continue;
+                    var point = new Vector2(
+                        canvas.width * (col + 0.5f) / Columns,
+                        canvas.height * (row + 0.5f) / Rows);
 
-                    if (y < Screen.height * 0.5f) bottom++;
-                    else top++;
+                    VisualElement? hit = root2.panel.Pick(point);
+                    bool truth = hit != null && hit.name != "hud" && hit != root2;
+                    bool claimed = shell.PointOverUi(ToScreen(point));
+
+                    if (truth) over++; else clear++;
+                    if (truth == claimed) continue;
+
+                    if (disagreements == 0)
+                    {
+                        firstDisagreement = point;
+                        firstDetail = truth
+                            ? $"the layout puts '{hit!.name}' ({string.Join(".", hit.GetClasses())}) there " +
+                              "and the pointer guard says the world"
+                            : "nothing is drawn there and the pointer guard says the HUD";
+                    }
+                    disagreements++;
                 }
 
-                // A HUD that claims nothing at all would pass an inequality by accident, and that
-                // is a real possibility here: the shell builds its regions over several frames.
-                Assert.That(bottom + top, Is.GreaterThan(0),
-                    "the HUD claims no point anywhere on the screen, so this test proves nothing. " +
-                    "Either the shell built no regions or PointOverUi is answering false for " +
-                    "everything.");
+                Assert.That(over, Is.GreaterThan(0),
+                    "the HUD claims no point anywhere on the canvas, so this test proves nothing. " +
+                    "Either the shell built no regions, or every region is non-pickable.");
+                Assert.That(clear, Is.GreaterThan(0),
+                    "the HUD covers every sampled point, which would be a coverage regression long " +
+                    "before it was a pointer one");
 
-                Assert.That(bottom, Is.GreaterThan(top),
-                    $"the HUD claims {top} sampled points in the TOP half of the screen and only " +
-                    $"{bottom} in the bottom half. This HUD is bottom-heavy — a full-width bar two " +
-                    "rows tall along the bottom, a clock in one top corner — so that is the wrong " +
-                    "way round, and a vertical mirror is what reverses it. A mouse position is " +
-                    "bottom-left origin and a panel is top-left origin; RuntimePanelUtils." +
-                    "ScreenToPanel does not turn the axis over. See HudShell.ToPanel.");
+                Assert.That(disagreements, Is.Zero,
+                    $"{disagreements} of {Rows * Columns} sampled points disagree about whether they " +
+                    $"are over the HUD. The first is {firstDisagreement}, where {firstDetail}. " +
+                    "A mouse position is bottom-left origin and a panel is top-left origin; " +
+                    "RuntimePanelUtils.ScreenToPanel does not turn the axis over. See " +
+                    "HudShell.ToPanel.");
             }
             finally
             {

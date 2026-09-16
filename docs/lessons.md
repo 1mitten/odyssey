@@ -1308,3 +1308,95 @@ because the mode is not what decides the update type. The next thing to try is a
 update explicitly — `InputSystem.Update(InputUpdateType.Dynamic)` in `InputPump` rather than the
 bare `InputSystem.Update()`, which resolves to `Editor` in this context. Un-ignore that test to find
 out.
+
+## Three UI Toolkit measurements that are off by one or two pixels, and why each is
+
+Found while making the rebuilt HUD's layout model agree with the boxes UI Toolkit actually produced.
+Each cost a full PlayMode run to diagnose, and none was guessable from reading the sheet.
+
+- **Unity's runtime theme gives every `Label` a vertical margin of its own.** It costs nothing
+  inside a parent of a fixed height, which is why it went unnoticed for a whole HUD: the stores
+  rows, the clock line and the inspect header all size their own children. It shows up on a label
+  that is the *last* thing in a content-sized panel — the depth rail's "R / F" hint was adding two
+  pixels to the rail's height, and nothing about the sheet said so. A `.unity-label { margin: 0 }`
+  reset at the top of the sheet is the fix; put it first, or it beats the rules that want a margin.
+- **The layout is rounded to the *physical* pixel grid, so a scaled panel reports quantised
+  sizes.** A panel scaled to a 1280-pixel window against a 1920-pixel canvas has one physical pixel
+  to every 1.5 reference pixels, so an element declared `height: 38px` occupies 25.3 physical
+  pixels, rounds to 26, and measures back as **39**. Every element in a column can gain one such
+  step. A geometry test that compares realised boxes against a model therefore needs a tolerance
+  that scales with `canvasWidth / screenWidth`, not a constant — and a constant that happens to
+  work at 1:1 will fail on the first non-integer scale somebody tests at.
+- **A label left to size itself claims about twice the point size, and stacked labels then
+  overlap.** UI Toolkit's line box for 13 px type measures ~26 px, not the ~17 the point size
+  suggests — most of it leading. Inside a row of a fixed height that is invisible; stacked in a
+  column it pushes the next row down, and the first screenshot of the rebuilt HUD showed a
+  colonist's job line printed through the tab strip under it. The fix is an explicit `height` plus
+  `-unity-text-align: middle-*`, which centres the ink in the box you chose and lets the leading
+  fall outside it. Do it for every label that shares a column with another; a label alone in a row
+  whose height is set by something else is fine as it is. **Measure it rather than assuming a
+  factor** — 1.35 would have been the reasonable guess and it is wrong by half a line.
+- **A `display: none` element has no width to read.** Reflowing a bar by hiding what does not fit
+  means measuring everything first, and measuring means the items have to be laid out. Use
+  `visibility: hidden`, which lays out and does not draw; otherwise the only way to find out that
+  the bar overflows is to draw it overflowing for a frame.
+
+**And the diagnostic that made all three cheap:** the failure message prints every child's classes,
+height, top and margins. The first run said only "the panel is 2 px taller than the model", which is
+not a sentence anybody can act on, and a second run of the PlayMode gate costs a minute and a half.
+A containment assertion between two boxes should always be able to name what filled the difference.
+
+## A test anchored in a design fact fails when the design changes, and that is correct
+
+`PointerOriginTests` guarded a real and silent bug — `PointOverUi` tested every click against the
+opposite side of the screen, because a mouse position is bottom-left origin and a panel is top-left
+origin. It could not be written against `PointOverUi`'s own answers, since a mirrored guard is
+self-consistent with a mirrored search; so it was anchored in something the transform could not
+influence: **this HUD is bottom-heavy**, a full-width bar two rows tall against a clock in one
+corner, so it must claim more of the lower half of the screen than the upper.
+
+The HUD rebuild made the bar one row, shrank the resting inspect pane to a single line and put a
+four-hundred-pixel depth rail down the top right. The count reversed, the test failed, and it was
+*right to*: its own remarks had said it would break "if the HUD stops being bottom-heavy, which
+would be a design change worth failing a test over".
+
+The lesson is what replaced it rather than that it broke. **The panel's own hit-test is ground
+truth and takes panel coordinates, so it never touches the screen axis at all.** Comparing
+`panel.Pick(p)` against `PointOverUi(ToScreen(p))` over a grid asks the question directly, disagrees
+at every point off the midline when the flip is missing, and depends on no property of the layout
+whatever. It is not circular as long as the test writes its own `ToScreen` with the flip stated
+explicitly: that makes it the inverse of a *correct* `ToPanel` rather than of whatever `ToPanel`
+happens to do.
+
+Worth generalising: when a guard has to be anchored in something outside the thing it is testing,
+prefer another *mechanism* that answers the same question independently over a *fact about the
+current design*. The mechanism survives the redesign.
+
+## A reserved-key list maintained by hand is wrong before anyone reads it
+
+The rebuilt command bar gave each of its eleven items a hotkey and shipped a test asserting that
+none of them collided with "the keys the game already uses". The list in that test had nine entries
+— the designate tools, the slice keys, the speed digits — and was missing **WASD**, which pans the
+camera, **B**, which cycled the below-slice mode, and **Q** and **E**, which turn it. Five of the
+eleven hotkeys clashed. The test passed.
+
+Nothing about it looked wrong. It was a real assertion with a real list and a clear failure message,
+and it had been written specifically to prevent this. What it could not do is know about a binding
+added in a file it had never heard of.
+
+**So the reserved set is read out of the source.** `HotkeyClashTests` greps the Presentation
+assembly for every `keys.somethingKey`, and allows a command's key only in the one file that reads
+it on that command's behalf — `bKey` in `HudShell.cs` for Build, `escapeKey` in
+`SettingsPresenter.cs` for Menu. Anything else reading one of them is the clash. It also asserts
+that **every hotkey cap is one the test knows how to map**, because a cap it cannot map is a cap it
+silently skips, which is the same failure wearing a different hat.
+
+Two things generalise:
+
+- **When a guard needs to know about "everything else in the codebase", derive the set, do not type
+  it.** A grep-based test is an unusual shape and is sometimes the only shape that can answer the
+  question at all without a running game and a person pressing keys.
+- **A test that skips what it cannot handle passes for the wrong reason.** Make the unhandled case
+  an explicit failure. Both of this file's earlier entries about silent skipping — the `Assume` that
+  hid six dead mining tests, the loose tolerance that made a test prove nothing — are the same
+  shape.

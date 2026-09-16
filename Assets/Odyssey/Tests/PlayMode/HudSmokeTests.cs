@@ -46,19 +46,28 @@ namespace Odyssey.Tests.PlayMode
                 // The panel scales with the screen against the mockup's canvas. At constant pixel
                 // size a 4K monitor showed nine-pixel labels nine pixels tall, which is no HUD.
                 Assert.That(doc.panelSettings.scaleMode, Is.EqualTo(PanelScaleMode.ScaleWithScreenSize));
-                Assert.That(doc.panelSettings.referenceResolution, Is.EqualTo(new Vector2Int(1200, 800)));
+                // 1920x1080 since the interface rebuild: the specification gives every anchor,
+                // width and row height in 1080p pixels, and a panel scaled against 1200x800 would
+                // draw every one of them 1.6 times too large.
+                Assert.That(doc.panelSettings.referenceResolution, Is.EqualTo(new Vector2Int(1920, 1080)));
 
-                // Every region of the screen map, built once by the shell: ledger, build palette,
-                // clock, alerts, ruler, inspect and the settings panel. Seven framed regions —
-                // the overlay strip is not framed, which is why the count is one short of the
-                // list in the catalogue.
-                //
-                // It is a bare number on purpose and it has just earned its keep: adding the
-                // settings panel moved it from six to seven and this was the test that said so.
-                // A panel built but never parented, or parented twice, is invisible in every
-                // other check we have.
-                Assert.That(doc.rootVisualElement.Query(className: "region").ToList().Count,
-                    Is.EqualTo(7), "the HUD did not build every region (the overlay strip is not framed)");
+                // Every framed region, by name rather than by a bare count. The count was the
+                // assertion until the interface rebuild, and it earned its keep twice — a panel
+                // built but never parented, or parented twice, is invisible in every other check
+                // we have. Naming them keeps that and says which one is missing, which a number
+                // cannot: the rebuild moved it from seven to eight and the failure was "expected
+                // 7, was 8", which is not a sentence anybody can act on.
+                string[] expected =
+                {
+                    "stores", "clock", "alerts", "rail", "inspect", "build", "menu", "settings",
+                };
+                var regions = doc.rootVisualElement.Query(className: "region").ToList();
+                var names = regions.ConvertAll(r => r.name);
+                names.Sort();
+                var wanted = new System.Collections.Generic.List<string>(expected);
+                wanted.Sort();
+                Assert.That(names, Is.EqualTo(wanted),
+                    "the HUD did not build every framed region exactly once");
 
                 // The roster is bound to the frame: one card per published pawn.
                 int cards = doc.rootVisualElement.Query(className: "card").ToList().Count;
@@ -211,8 +220,8 @@ namespace Odyssey.Tests.PlayMode
 
                 for (int i = 0; i < 20; i++) yield return null;
 
-                var rows = doc.rootVisualElement.Q(className: "ruler");
-                Assert.That(rows, Is.Not.Null, "the ruler has no row container");
+                var rows = doc.rootVisualElement.Q(className: "rail__cells");
+                Assert.That(rows, Is.Not.Null, "the depth rail has no cell container");
 
                 var steps = doc.rootVisualElement.Query(className: "ruler__tick").ToList();
                 Assert.That(steps.Count, Is.EqualTo(shipped),
