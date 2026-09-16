@@ -288,7 +288,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>The cell itself, or the nearest walkable empty cell on the same layer, ring by ring.</summary>
-        static int FreeCellNear(PawnContext ctx, int cell)
+        internal static int FreeCellNear(PawnContext ctx, int cell)
         {
             if (ctx.Items.CellHasSpace(cell)) return cell;
 

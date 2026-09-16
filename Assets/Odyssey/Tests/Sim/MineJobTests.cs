@@ -1,0 +1,286 @@
+#nullable enable
+using System.Collections.Generic;
+using NUnit.Framework;
+using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Designations;
+using Odyssey.Sim.Pawns;
+using Odyssey.Sim.World;
+using Odyssey.Sim.Worldgen.Natural;
+
+namespace Odyssey.Tests.Sim
+{
+    /// <summary>
+    /// A marked cell of rock becomes a hole and a pile of stone, and the pile becomes stock.
+    ///
+    /// Sixteen layers, not the eight the felling tests use: with eight the heightfield clamp
+    /// leaves a single layer of rock and there is nothing to mine into.
+    /// </summary>
+    public class MineJobTests
+    {
+        static readonly GridSize Size = new GridSize(60, 60, 16);
+
+        static ColonyWorld Board(uint seed = 1u)
+        {
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 3;
+            scenario.beds = 3;
+            scenario.startingFellRadius = 0;
+            return ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: true);
+        }
+
+        /// <summary>The nearest cell of plain rock that a colonist could actually get at.</summary>
+        static int NearestRock(ColonyWorld colony, ushort terrain = NaturalContent.TerrainRock)
+        {
+            CellRef start = colony.Start;
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            int best = -1, bestDistance = int.MaxValue;
+
+            for (int y = 0; y < Size.SizeY; y++)
+            for (int z = 0; z < Size.SizeZ; z++)
+            for (int x = 0; x < Size.SizeX; x++)
+            {
+                int index = Size.Index(x, z, y);
+                if (colony.Grid.Terrain[index] != terrain) continue;
+                if (!colony.Designations.CanMine(index)) continue;
+                if (MineWorkGiver.StandToMine(colony.Pawns, pawn, index) < 0) continue;
+
+                int distance = System.Math.Abs(x - start.X) + System.Math.Abs(z - start.Z)
+                             + System.Math.Abs(y - start.Y) * 4;
+                if (distance >= bestDistance) continue;
+                bestDistance = distance;
+                best = index;
+            }
+
+            return best;
+        }
+
+        static int OnTheGround(ColonyWorld colony, int item)
+        {
+            int total = 0;
+            var items = colony.Pawns.Items.Items;
+            for (int i = 0; i < items.Count; i++)
+                if (!items[i].Despawned && items[i].DefIndex == item) total += items[i].Stack;
+            return total;
+        }
+
+        [Test]
+        public void AMarkedCellIsDugOutAndTheOrderIsCleared()
+        {
+            ColonyWorld colony = Board();
+            int rock = NearestRock(colony);
+            Assume.That(rock, Is.GreaterThanOrEqualTo(0), "the board has reachable rock");
+
+            colony.World.Intents.Submit(
+                new Intent(IntentKind.Designate, Size.FromIndex(rock), (int)DesignationKind.Mine));
+            colony.World.Tick();
+            Assert.That(colony.World.Intents.Rejected, Is.Empty);
+
+            int dugAt = -1;
+            for (int tick = 0; tick < 12_000 && dugAt < 0; tick++)
+            {
+                colony.World.Tick();
+                if (!colony.Grid.IsSolidTerrain(rock)) dugAt = colony.World.CurrentTick;
+            }
+
+            Assert.That(dugAt, Is.GreaterThan(0), "the cell was never dug out");
+            Assert.That(colony.Grid.Terrain[rock], Is.EqualTo(NaturalContent.TerrainAir));
+            Assert.That(colony.Designations.At(rock), Is.EqualTo(DesignationKind.None),
+                "the order is cleared once carried out");
+        }
+
+        [Test]
+        public void DiggingRevealsWhatTheWallsAreMadeOf()
+        {
+            ColonyWorld colony = Board();
+            int rock = NearestRock(colony);
+            Assume.That(rock, Is.GreaterThanOrEqualTo(0));
+
+            Assert.That(colony.Grid.IsDiscovered(rock - 1), Is.False, "something was known before the dig");
+
+            colony.World.Intents.Submit(
+                new Intent(IntentKind.Designate, Size.FromIndex(rock), (int)DesignationKind.Mine));
+            for (int tick = 0; tick < 12_000 && colony.Grid.IsSolidTerrain(rock); tick++) colony.World.Tick();
+            Assume.That(colony.Grid.IsSolidTerrain(rock), Is.False, "the cell was never dug out");
+
+            int revealed = 0;
+            foreach (int neighbour in Around(rock))
+                if (colony.Grid.IsDiscovered(neighbour)) revealed++;
+
+            Assert.That(revealed, Is.GreaterThan(0), "the dig revealed none of its own walls");
+        }
+
+        static IEnumerable<int> Around(int cell)
+        {
+            yield return cell - 1;
+            yield return cell + 1;
+            yield return cell - Size.SizeX;
+            yield return cell + Size.SizeX;
+            yield return cell - Size.LayerStride;
+            yield return cell + Size.LayerStride;
+        }
+
+        [Test]
+        public void ASeamAlwaysGivesUpItsMetalAndRockSometimesGivesUpStone()
+        {
+            // Called directly rather than mined, because the point is the rule and not the walk:
+            // twenty cells of rock and twenty of iron, and what each leaves.
+            ColonyWorld colony = Board();
+            PawnContext ctx = colony.Pawns;
+            int stone = 0, iron = 0;
+
+            for (int i = 0; i < 20; i++)
+            {
+                int cell = Size.Index(10 + i, 10, 4);
+                if (MineJobDriver.Yield(ctx, cell, NaturalContent.TerrainRock, out int item, out int count))
+                {
+                    Assert.That(item, Is.EqualTo(ItemIndex.Stone));
+                    Assert.That(count, Is.EqualTo(ctx.Content.StonePerRock));
+                    stone++;
+                }
+
+                Assert.That(MineJobDriver.Yield(ctx, cell, NaturalContent.TerrainIronOre, out int ore, out int oreCount),
+                    Is.True, "an iron seam gave up nothing");
+                Assert.That(ore, Is.EqualTo(ItemIndex.IronOre));
+                Assert.That(oreCount, Is.EqualTo(ctx.Content.OrePerCell));
+                iron++;
+            }
+
+            Assert.That(iron, Is.EqualTo(20), "a seam is never empty-handed");
+            Assert.That(stone, Is.InRange(1, 19), $"{stone} of 20 rock cells yielded, which is not 'sometimes'");
+        }
+
+        [Test]
+        public void SubsoilIsDugThroughAndLeavesNothing()
+        {
+            ColonyWorld colony = Board();
+            int cell = Size.Index(10, 10, 4);
+            Assert.That(MineJobDriver.Yield(colony.Pawns, cell, NaturalContent.TerrainSubsoil, out _, out _), Is.False);
+            Assert.That(MineJobDriver.Yield(colony.Pawns, cell, NaturalContent.TerrainGrass, out _, out _), Is.False);
+        }
+
+        [Test]
+        public void TheStoneRollBelongsToTheCellAndNotToTheMoment()
+        {
+            // The determinism property that matters: the same cell answers the same way whenever
+            // it is asked, so a save, a reload or a re-ordering of the colony's work cannot
+            // reroll it. A live stream would have made the yield depend on what else rolled dice
+            // first that tick, and that surfaces as a resume divergence days later.
+            ColonyWorld colony = Board();
+            PawnContext ctx = colony.Pawns;
+
+            for (int i = 0; i < 50; i++)
+            {
+                int cell = Size.Index(20 + i, 20, 5);
+                bool first = MineJobDriver.Yield(ctx, cell, NaturalContent.TerrainRock, out _, out _);
+                colony.World.Tick(7);
+                bool later = MineJobDriver.Yield(ctx, cell, NaturalContent.TerrainRock, out _, out _);
+                Assert.That(later, Is.EqualTo(first), $"cell {cell} answered differently seven ticks later");
+            }
+        }
+
+        [Test]
+        public void TheMinerWorksFromBesideTheCellWhereItCan()
+        {
+            ColonyWorld colony = Board();
+            int rock = NearestRock(colony);
+            Assume.That(rock, Is.GreaterThanOrEqualTo(0));
+            CellRef at = Size.FromIndex(rock);
+
+            colony.World.Intents.Submit(new Intent(IntentKind.Designate, at, (int)DesignationKind.Mine));
+
+            Pawn? miner = null;
+            for (int tick = 0; tick < 6_000 && miner == null; tick++)
+            {
+                colony.World.Tick();
+                foreach (Pawn pawn in colony.Pawns.Pawns.All)
+                    if (pawn.CurrentJob != null && pawn.CurrentJob.DefIndex == JobIndex.Mine) miner = pawn;
+            }
+
+            Assert.That(miner, Is.Not.Null, "nobody took the mining order");
+            Job job = miner!.CurrentJob!;
+            Assert.That(job.DestCell, Is.EqualTo(rock), "the rock is the destination");
+            Assert.That(job.TargetCell, Is.Not.EqualTo(rock), "the stand is the cell being cut");
+
+            CellRef stand = Size.FromIndex(job.TargetCell);
+            Assert.That(System.Math.Abs(stand.X - at.X), Is.LessThanOrEqualTo(1));
+            Assert.That(System.Math.Abs(stand.Z - at.Z), Is.LessThanOrEqualTo(1));
+            Assert.That(stand.Y - at.Y, Is.InRange(0, 1), "the stand is neither below the cell nor two layers up");
+        }
+
+        [Test]
+        public void ADiggerDoesNotEndUpStandingOnNothing()
+        {
+            // Cutting downward means standing on the cell being cut away; the answer is to step
+            // down into the hole. Whatever happens, no colonist may be left in a cell it could
+            // not have walked into.
+            ColonyWorld colony = Board();
+            CellRef start = colony.Start;
+            int under = Size.Index(start.X, start.Z, start.Y - 1);
+            Assume.That(colony.Designations.CanMine(under), Is.True, "the ground under the start is minable");
+
+            colony.World.Intents.Submit(
+                new Intent(IntentKind.Designate, Size.FromIndex(under), (int)DesignationKind.Mine));
+            colony.World.Tick(12_000);
+
+            foreach (Pawn pawn in colony.Pawns.Pawns.All)
+                Assert.That(colony.Grid.IsWalkable(pawn.Cell), Is.True,
+                    $"a colonist is standing in {Size.FromIndex(pawn.Cell)}, which cannot be stood in");
+        }
+
+        [Test]
+        public void MiningIsDeterministic()
+        {
+            ColonyWorld first = Board(seed: 5u);
+            ColonyWorld second = Board(seed: 5u);
+            int rock = NearestRock(first);
+            Assume.That(rock, Is.GreaterThanOrEqualTo(0));
+            CellRef at = Size.FromIndex(rock);
+
+            first.World.Intents.Submit(new Intent(IntentKind.Designate, at, (int)DesignationKind.Mine));
+            second.World.Intents.Submit(new Intent(IntentKind.Designate, at, (int)DesignationKind.Mine));
+            first.World.Tick(12_000);
+            second.World.Tick(12_000);
+
+            Assert.That(first.World.ComputeStateHash().Value, Is.EqualTo(second.World.ComputeStateHash().Value));
+            Assert.That(first.Grid.IsSolidTerrain(rock), Is.False, "nothing was actually mined");
+        }
+
+        [Test]
+        public void MinedStoneIsHauledToTheStockpile()
+        {
+            ColonyWorld colony = Board();
+            Pawn pawn = colony.Pawns.Pawns.All[0];
+            int marked = 0;
+
+            // A seam of orders rather than one, because three cells in four leave nothing and a
+            // single order would make this test a dice roll.
+            for (int y = 0; y < Size.SizeY && marked < 12; y++)
+            for (int z = 0; z < Size.SizeZ && marked < 12; z++)
+            for (int x = 0; x < Size.SizeX && marked < 12; x++)
+            {
+                int index = Size.Index(x, z, y);
+                if (colony.Grid.Terrain[index] != NaturalContent.TerrainRock) continue;
+                if (!colony.Designations.CanMine(index)) continue;
+                if (MineWorkGiver.StandToMine(colony.Pawns, pawn, index) < 0) continue;
+                if (colony.Designations.Designate(Size.FromIndex(index), DesignationKind.Mine) == IntentRejection.None)
+                    marked++;
+            }
+
+            Assume.That(marked, Is.GreaterThan(0), "no reachable rock to mark");
+            colony.World.Tick(60_000);
+
+            Assert.That(OnTheGround(colony, ItemIndex.Stone), Is.GreaterThan(0), "a dozen cells of rock left no stone");
+
+            int stocked = 0;
+            var items = colony.Pawns.Items.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                var item = items[i];
+                if (item.Despawned || item.DefIndex != ItemIndex.Stone || item.Cell < 0) continue;
+                if (colony.Pawns.Items.IsStockpileCell(item.Cell)) stocked++;
+            }
+
+            Assert.That(stocked, Is.GreaterThan(0), "mined stone never reached the stockpile");
+        }
+    }
+}

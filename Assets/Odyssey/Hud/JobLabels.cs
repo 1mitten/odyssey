@@ -12,13 +12,13 @@ namespace Odyssey.Hud
     {
         const string Idle = "ui.status.idle";
 
-        /// <summary>Parallel to <c>JobIndex</c>: Haul, Eat, Sleep, Wander, Wait, Fell. Wandering
-        /// and waiting both read as idle at a glance, which is true, and <c>ui.status.idle</c> is
-        /// the key that says so.</summary>
+        /// <summary>Parallel to <c>JobIndex</c>: Haul, Eat, Sleep, Wander, Wait, Fell, Mine.
+        /// Wandering and waiting both read as idle at a glance, which is true, and
+        /// <c>ui.status.idle</c> is the key that says so.</summary>
         public static readonly string[] IconKeys =
         {
             "ui.status.hauling", "ui.status.eating", "ui.status.sleeping",
-            Idle, Idle, "ui.status.felling",
+            Idle, Idle, "ui.status.felling", "ui.status.mining",
         };
 
         public static string IconKey(int jobDef) =>

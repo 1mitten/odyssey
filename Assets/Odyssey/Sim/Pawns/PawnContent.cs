@@ -128,6 +128,7 @@ namespace Odyssey.Sim.Pawns
         public const int Wander = JobHandle.Wander;
         public const int Wait = JobHandle.Wait;
         public const int Fell = JobHandle.Fell;
+        public const int Mine = JobHandle.Mine;
         public const int Count = JobHandle.Count;
     }
 
@@ -151,7 +152,8 @@ namespace Odyssey.Sim.Pawns
     {
         public const int Haul = 0;
         public const int Cutting = 1;
-        public const int Count = 2;
+        public const int Mining = 2;
+        public const int Count = 3;
     }
 
     /// <summary>A container for work givers, carrying the natural order they scan in.</summary>
@@ -166,6 +168,9 @@ namespace Odyssey.Sim.Pawns
         public const int Meal = ItemHandle.Meal;
         public const int Salvage = ItemHandle.Salvage;
         public const int Wood = ItemHandle.Wood;
+        public const int Stone = ItemHandle.Stone;
+        public const int IronOre = ItemHandle.IronOre;
+        public const int Coal = ItemHandle.Coal;
         public const int Count = ItemHandle.Count;
     }
 
@@ -262,6 +267,29 @@ namespace Odyssey.Sim.Pawns
         /// </summary>
         public int WoodPerTree = 20;
 
+        /// <summary>
+        /// Stone a plain rock cell leaves, when it leaves any. ASSUMED, like everything else here.
+        /// </summary>
+        public int StonePerRock = 10;
+
+        /// <summary>
+        /// One rock cell in this many yields stone; the rest yield nothing at all.
+        ///
+        /// <para>This is the dial that stops the colony drowning in gravel. The played board holds
+        /// something like eighty thousand cells of rock, so a yield from every one of them would
+        /// put eight hundred thousand stone on the map and make the material worthless before it
+        /// had a use. One in four keeps a dug shaft feeling like work with an occasional payoff,
+        /// which is what a shaft is.</para>
+        ///
+        /// <para>Ore is not rolled at all: a seam always gives up its metal. Finding one is the
+        /// scarce event, and making the reward for finding it a second dice roll would be two
+        /// scarcities stacked on one moment.</para>
+        /// </summary>
+        public int StoneChanceOneIn = 4;
+
+        /// <summary>Ore a seam cell leaves. Always, never rolled. ASSUMED.</summary>
+        public int OrePerCell = 15;
+
         public int ThinkLoopWindowTicks = 60;
 
         /// <summary>How long a pawn tripped by the think-loop trap stands still.</summary>
@@ -329,14 +357,25 @@ namespace Odyssey.Sim.Pawns
                 // ASSUMED: ten seconds of work at normal speed, and one tree per job. Nothing in
                 // docs/research/ has measured what a tree should take; A8 (plants) is still open.
                 new JobDef { defName = "Job_Fell", driver = JobIndex.Fell, workTicks = 600, expiryTicks = 6_000 },
+
+                // No workTicks: mining is priced per material, and the terrain defs already carry
+                // the number (rock 700, iron 900, coal 760). One constant here would make a seam
+                // cost the same as the stone around it, which is the whole difference between
+                // materials. The driver reads TerrainAt(...).workToClear as it swings.
+                //
+                // The expiry is generous because a shaft can be a long walk from the colony and a
+                // job that expires on the way there is a colonist who never arrives.
+                new JobDef { defName = "Job_Mine", driver = JobIndex.Mine, expiryTicks = 12_000 },
             };
 
             content.WorkTypes = new[]
             {
-                // Cutting scans before hauling at equal priority: felled wood is what there is
-                // to haul, so the order that makes the work exist comes first.
-                new WorkTypeDef { defName = "Work_Haul", label = "hauling", order = 1 },
+                // Cutting and mining scan before hauling at equal priority: the orders that make
+                // work exist come before the order that tidies it up. Cutting is first of the two
+                // because felling is the shorter job and the wood is usually nearer.
+                new WorkTypeDef { defName = "Work_Haul", label = "hauling", order = 2 },
                 new WorkTypeDef { defName = "Work_Cutting", label = "cutting", order = 0 },
+                new WorkTypeDef { defName = "Work_Mining", label = "mining", order = 1 },
             };
 
             content.Items = new[]
@@ -344,6 +383,9 @@ namespace Odyssey.Sim.Pawns
                 new ItemDef { defName = "Item_Meal", label = "ration pack", nutrition = 450 },
                 new ItemDef { defName = "Item_Salvage", label = "salvage" },
                 new ItemDef { defName = "Item_Wood", label = "wood", stackLimit = 75 },
+                new ItemDef { defName = "Item_Stone", label = "stone", stackLimit = 75 },
+                new ItemDef { defName = "Item_IronOre", label = "iron ore", stackLimit = 75 },
+                new ItemDef { defName = "Item_Coal", label = "coal", stackLimit = 75 },
             };
 
             content.Mood = new MoodDef { defName = "Mood_Default" };
@@ -362,5 +404,14 @@ namespace Odyssey.Sim.Pawns
     {
         public const uint MentalBreak = 0x9E37_79B1;
         public const uint Wander = 0x85EB_CA6B;
+
+        /// <summary>
+        /// Whether a rock cell gives up stone. Drawn from (world seed, <b>cell index</b>) rather
+        /// than from the tick, which is the one thing about it that matters: the answer belongs
+        /// to the cell and not to the moment. A cell mined on tick 900 in one run and tick 40,000
+        /// in another yields the same, so the roll survives a save, a reload and a replay, and no
+        /// amount of re-ordering the colony's work can reroll it.
+        /// </summary>
+        public const uint StoneYield = 0xC2B2_AE35;
     }
 }
