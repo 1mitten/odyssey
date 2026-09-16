@@ -16,7 +16,7 @@ namespace Odyssey.Presentation.World
     ///
     /// <para>Fitting, gripping and re-gripping the axe, pick and hammer, and the measurement
     /// passes that <c>SwingCheck</c> reads. Split out of the director on 2026-09-16 because the
-    /// one file had reached 2,787 lines; it is the same class and the same behaviour.</para>
+    /// one file had reached 3,033 lines; it is the same class and the same behaviour.</para>
     ///
     /// <para>A tool is <b>gripped by measurement, not by authored Euler angles</b>: the haft is
     /// the long axis of the combined mesh bounds, the head is the end the mass sits towards, and
@@ -477,8 +477,8 @@ namespace Odyssey.Presentation.World
         /// Take every tool out of every hand and fit it again.
         ///
         /// For tuning: the grip is fitted once when a figure is built, so a change to
-        /// <see cref="WorkStyle.BladeRoll"/> or <see cref="WorkStyle.GripFraction"/> would
-        /// otherwise only show on the next colonist to be given a figure. This makes a contact sheet of several
+        /// <see cref="AxeBladeRoll"/> or <see cref="AxeGripFraction"/> would otherwise only show
+        /// on the next colonist to be given a figure. This makes a contact sheet of several
         /// settings possible in one run of the editor rather than one run each.
         /// </summary>
         public void RegripTools()
@@ -524,7 +524,7 @@ namespace Odyssey.Presentation.World
         /// The rule that holds instead: a head is roughly symmetric about the haft along its edge
         /// and hangs off to one side along its bit, so the bit is whichever perpendicular axis the
         /// bounds centre is furthest from the haft line on — which also gives the sign for free.
-        /// <see cref="WorkStyle.BladeRoll"/> remains for a tool this is wrong about.
+        /// <see cref="AxeBladeRoll"/> remains for a tool this is wrong about.
         /// </summary>
         static Vector3 BitAxis(Bounds bounds, Vector3 haft)
         {

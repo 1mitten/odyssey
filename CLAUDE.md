@@ -107,9 +107,17 @@ pawn can be in has something under it. A hop is three seams that must agree — 
 Ladders are still climbed, so the climb *pose* is live presentation code.
 
 **Presentation** — instanced chunk rendering (no GameObject per cell), a slice camera rig, the HUD,
-audio, a day/night cycle and golden-hour grading. Colonists are drawn from 61 Synty characters and
-recoloured per pawn. No pack contains a work animation, so the axe, pick and hammer strokes are
-**computed** (`WorkSwing`, `WorkStyle`) and stand in for art we do not have.
+audio, a day/night cycle and golden-hour grading. No pack contains a work animation, so the axe,
+pick and hammer strokes are **computed** (`WorkSwing`, `WorkStyle`) and stand in for art we do not
+have.
+
+**Colonists are 61 Synty characters, recoloured — not dressed.** No modular body exists in any
+pack (a character is one skinned mesh from scalp to boots with one material), so clothing, hair and
+skin are repainted by rewriting the atlas swatch rectangles each vertex is already mapped to
+(`Odyssey/Character`, `ColonistMaterials`). Appearance derives from the world seed and the pawn id,
+so a world deals the same people every load. **`OdysseyBootstrap.randomCastEachSession` defaults
+on** while the palette is being judged, which means pressing Play deals new faces each time; switch
+it off for a stable cast.
 
 **What the player can see is decided by how deep they are.** At or above the surface, every layer
 above is drawn solid; below it, one layer above is x-rayed and every layer below is drawn. Anything

@@ -15,7 +15,7 @@ namespace Odyssey.Presentation.World
     ///
     /// <para><c>Figure</c> is one live, animated colonist — its bones, its gait state, its stroke
     /// clock and its fitted tools. <c>FittedTool</c> is one prop already measured into a grip.
-    /// Split out of the director on 2026-09-16 because the one file had reached 2,787 lines.</para>
+    /// Split out of the director on 2026-09-16 because the one file had reached 3,033 lines.</para>
     ///
     /// <para>Nothing here is simulation state. A figure is discarded and re-leased freely; the
     /// pawn it draws owns everything that must survive.</para>
@@ -42,6 +42,17 @@ namespace Odyssey.Presentation.World
             public readonly PlayableGraph Graph;
             public readonly AnimationMixerPlayable Mixer;
             public readonly AnimationClipPlayable[] Clips;
+
+            /// <summary>
+            /// The figure's skinned renderers and the material each was built with.
+            ///
+            /// Kept so a lease can repaint the figure for the pawn borrowing it and hand the art
+            /// back when it cannot. The pool is keyed on the face, not on the colours, so the same
+            /// body is lent to colonists wearing different clothes and must be repainted on every
+            /// lease rather than once at construction.
+            /// </summary>
+            public SkinnedMeshRenderer[] Skins = Array.Empty<SkinnedMeshRenderer>();
+            public Material?[] ArtMaterials = Array.Empty<Material?>();
 
             /// <summary>The pawn this figure is lent to, or -1 when it is parked in the pool.</summary>
             public int Pawn;
@@ -157,6 +168,23 @@ namespace Odyssey.Presentation.World
             /// can no longer be asked where the ground under this pawn is.
             /// </summary>
             public float GroundY;
+
+            /// <summary>
+            /// How far this figure's sole sits below its ankle bone, measured off its own rig.
+            ///
+            /// <para><b>A humanoid foot bone is the ankle, not the sole</b> — the same fact about
+            /// Mecanim that had every tool in this project seated behind the hand until
+            /// <c>HandGrip.Palm</c> measured where a held thing really sits. Planting the ankle on
+            /// the ground therefore buries the boot by the height of the ankle above it, which at
+            /// the figure's 1.4 scale is a good ten centimetres, and it reads exactly as the
+            /// owner described: feet sinking into the terrain while walking.</para>
+            ///
+            /// <para>Measured rather than guessed, and per figure rather than once, because the
+            /// cast is sixty-one characters from four packs and a boot is not the same height on
+            /// all of them. Taken in the idle pose at bind time, where the figure stands at its
+            /// own root and both feet are down.</para>
+            /// </summary>
+            public float SoleOffset;
 
             /// <summary>
             /// One tool per style, fitted once and kept, all hidden but the one in use.

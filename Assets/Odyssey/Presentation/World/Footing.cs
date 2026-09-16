@@ -79,6 +79,19 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public static float MaxAnkleDegrees { get; set; } = 18f;
 
+        /// <summary>
+        /// A little clearance under every sole, on top of the sole height measured off the rig.
+        ///
+        /// <para>A sole placed exactly on the ground still meets it at a single plane, and the
+        /// drawn ground is not a plane: <c>GroundRelief</c> shears every cell and the turf mesh is
+        /// not flat inside one, so a toe catches where the heel does not. The owner reported it as
+        /// barefoot characters still sinking once the boots had been fixed.</para>
+        ///
+        /// <para>Two centimetres: below the height at which a figure reads as floating, above the
+        /// one at which a bare toe catches on the grass.</para>
+        /// </summary>
+        public static float SoleClearance { get; set; } = 0.02f;
+
         /// <summary>Reset to the shipped values. For tests, which must not inherit each other's tuning.</summary>
         public static void Reset()
         {

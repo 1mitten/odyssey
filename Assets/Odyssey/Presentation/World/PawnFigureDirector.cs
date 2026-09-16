@@ -384,7 +384,15 @@ namespace Odyssey.Presentation.World
             public float[] Speeds = Array.Empty<float>();
         }
 
-        readonly Look[] _looks;
+        readonly Look?[] _looks;
+        readonly int _usableLooks;
+        readonly ModuleCatalogue? _catalogue;
+
+        /// <summary>
+        /// Where a colonist's colours come from. Null draws every figure in the pack's own paint,
+        /// which is what a harness that never set one gets.
+        /// </summary>
+        public ColonistMaterials? Materials { get; set; }
 
         /// <summary>
         /// The catalogue row per style, or null on a clone without the packs.
@@ -429,10 +437,20 @@ namespace Odyssey.Presentation.World
         readonly List<int> _retired = new List<int>();
 
         /// <summary>True when there is at least one usable face, so figures can be made at all.</summary>
-        public bool Enabled => _looks.Length > 0;
+        public bool Enabled => _usableLooks > 0;
 
-        /// <summary>How many different faces a colonist can be drawn with.</summary>
+        /// <summary>
+        /// The size of the face lottery: every colonist row the catalogue has, holes included.
+        ///
+        /// Not the number of *usable* faces. This is the index space the appearance book deals in
+        /// and the instanced renderer buckets by, and the three must be the same number or a
+        /// colonist changes identity on crossing the figure cap. See
+        /// <see cref="ColonistAppearanceBook"/>, which explains how they used to differ.
+        /// </summary>
         public int LookCount => _looks.Length;
+
+        /// <summary>How many of those rows actually resolved to art this session.</summary>
+        public int UsableLookCount => _usableLooks;
 
         public int FigureCount => _byPawn.Count;
 
@@ -614,7 +632,9 @@ namespace Odyssey.Presentation.World
         {
             _parent = parent;
             _layer = layer;
+            _catalogue = catalogue;
             _looks = LooksFrom(catalogue);
+            for (int i = 0; i < _looks.Length; i++) if (_looks[i] != null) _usableLooks++;
             for (int i = 0; i < _toolRows.Length; i++)
                 _toolRows[i] = catalogue != null ? catalogue.Find(Styles[i].ToolModule) : null;
             Chips = new ChipDirector(parent, layer);
@@ -627,43 +647,83 @@ namespace Odyssey.Presentation.World
         /// one pack still gets every face the packs it does have can provide, and a colony on a
         /// machine with no packs at all simply falls through to the baked instanced path.
         /// </summary>
-        static Look[] LooksFrom(ModuleCatalogue? catalogue)
+        /// <summary>
+        /// One slot per colonist row of the catalogue, in the catalogue's own order, with
+        /// <c>null</c> where the art did not resolve.
+        ///
+        /// <para><b>The holes are the point.</b> This used to skip unusable rows and compact the
+        /// survivors, which quietly made look <c>i</c> mean a different body here than it meant to
+        /// the instanced renderer — so with three packs of four installed, every colonist would
+        /// change face on crossing the figure cap, and the fault would be hunted in the
+        /// simulation. Keeping the slot preserves the index space; a pawn whose face is a hole is
+        /// simply not drawn as a figure and takes the baked path instead, which degrades that one
+        /// colonist rather than re-dealing the colony.</para>
+        /// </summary>
+        static Look?[] LooksFrom(ModuleCatalogue? catalogue)
         {
-            if (catalogue == null) return Array.Empty<Look>();
+            if (catalogue == null) return Array.Empty<Look?>();
 
-            var looks = new List<Look>();
-            foreach (ModuleEntry row in catalogue.FindFamily(ModuleIds.ColonistBase))
+            List<ModuleEntry> rows = catalogue.FindFamily(ModuleIds.ColonistBase);
+            var looks = new Look?[rows.Count];
+            for (int i = 0; i < rows.Count; i++)
             {
+                ModuleEntry row = rows[i];
                 if (row.prefab == null) continue;
                 LocomotionEntry[] gaits = Gaits(row);
                 if (gaits.Length == 0) continue;
 
-                looks.Add(new Look
+                looks[i] = new Look
                 {
                     Prefab = row.prefab,
                     Scale = row.scale,
                     Gaits = gaits,
                     Speeds = GroundSpeeds(gaits, row.scale),
-                });
+                };
             }
-            return looks.ToArray();
+            return looks;
         }
 
         /// <summary>
-        /// Which face a pawn wears, fixed by its id.
+        /// Who every colonist is: which face, and what colour their skin, hair and clothes are.
         ///
-        /// By id and not by draw order, because a figure is leased and returned as a pawn crosses
-        /// the drawn layers, and a colonist who came back from a trip downstairs as somebody else
-        /// would be worse than a colony of identical twins.
+        /// <para>Set before the first <see cref="Sync"/> and then left alone. It must be the
+        /// <b>same object</b> the instanced renderer holds, not an equal one — that is the whole
+        /// reason the book exists, and a test asserts the identity. Two drawers that computed the
+        /// answer separately would put a different person on screen the moment a colonist crossed
+        /// the figure cap, and the fault would be hunted in the simulation.</para>
+        ///
+        /// <para>A harness that never sets one gets a book dealt from seed 0 over the same number
+        /// of faces, so an editor tool still draws a varied cast without having to know this type
+        /// exists. That is safe precisely because the derivation is pure: two books with the same
+        /// seed and the same face count give the same answers, object identity or not. Identity
+        /// still matters once overrides exist, which is why the game hands one object to both.</para>
         /// </summary>
-        /// <summary>
-        /// Per-session salt for the face lottery. Set before the first <see cref="Sync"/> and then
-        /// left alone, and set to the *same* value on the instanced renderer, or a colonist will
-        /// change face on crossing the figure cap.
-        /// </summary>
-        public uint LookSalt { get; set; }
+        public ColonistAppearanceBook Appearances
+        {
+            get => _appearances ??= new ColonistAppearanceBook(0u, _looks.Length);
+            set => _appearances = value;
+        }
 
-        int LookFor(PawnId pawn) => ColonistLook.For(pawn.Value, _looks.Length, LookSalt);
+        ColonistAppearanceBook? _appearances;
+
+        int LookFor(PawnId pawn) => Appearances.LookFor(pawn.Value);
+
+        /// <summary>
+        /// How far the sole sits below the ankle, on the figure whose boot is thickest.
+        ///
+        /// Printed by the contact sheets. A rig that answers zero is one whose feet are not bound,
+        /// and a number far from a tenth of a metre is one worth looking at rather than trusting.
+        /// </summary>
+        public float MeasuredSoleOffset { get; private set; }
+
+
+        /// <summary>True when this pawn's face resolved to art and a figure can be built for it.</summary>
+        bool CanDraw(PawnId pawn)
+        {
+            if (_looks.Length == 0) return false;
+            int look = LookFor(pawn);
+            return (uint)look < (uint)_looks.Length && _looks[look] != null;
+        }
 
         /// <summary>Gaits with a live clip, slowest first. Order is what makes the blend a blend.</summary>
         static LocomotionEntry[] Gaits(ModuleEntry? row)
@@ -747,6 +807,11 @@ namespace Odyssey.Presentation.World
             {
                 CellRef cell = pawns[i].Cell;
                 if (cell.Y < lowest || cell.Y > highest) continue;
+
+                // A face that did not resolve is not drawn here at all: the pawn falls through to
+                // the baked path, which will draw whatever that row does resolve to (a marker, if
+                // nothing). Skipping is what keeps a missing row a one-colonist problem.
+                if (!CanDraw(pawns[i].Id)) continue;
 
                 Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading, World);
                 Figure figure = Lease(pawns[i].Id, position);
@@ -1139,13 +1204,72 @@ namespace Odyssey.Presentation.World
         /// </summary>
         void Blend(Figure figure, float speed, bool running)
         {
-            Look look = _looks[figure.Look];
+            Look look = _looks[figure.Look]!;
             GaitBlend blend = GaitBlend.Solve(look.Speeds, speed);
             for (int i = 0; i < look.Gaits.Length; i++)
             {
                 figure.Mixer.SetInputWeight(i, blend.WeightOf(i));
                 figure.Clips[i].SetSpeed(running ? blend.Rate : 0f);
             }
+        }
+
+        /// <summary>
+        /// Dress a figure in the colours the pawn borrowing it was dealt.
+        ///
+        /// <para>Assigns <c>sharedMaterial</c> and never <c>material</c>. The latter silently
+        /// instantiates a per-renderer copy that Unity then owns and never collects — the same
+        /// class of leak <c>ModuleLibrary.Dispose</c> exists to prevent, arriving once per lease
+        /// rather than once per look.</para>
+        ///
+        /// <para>A body the classifier could not read, or a build with no character shader, gets
+        /// its own art back rather than something approximate. That is what keeps an unclassified
+        /// colonist looking exactly the way the artist painted it.</para>
+        /// </summary>
+        void Repaint(Figure figure, PawnId pawn)
+        {
+            if (Materials == null || figure.Skins.Length == 0) return;
+
+            AppearanceCells? cells = CellsFor(figure.Look);
+            ColonistAppearance look = Appearances.For(pawn.Value);
+
+            for (int i = 0; i < figure.Skins.Length; i++)
+            {
+                SkinnedMeshRenderer skin = figure.Skins[i];
+                if (skin == null) continue;
+
+                Material? art = figure.ArtMaterials[i];
+                Material? painted = Materials.For(art, cells, look);
+                skin.sharedMaterial = painted != null ? painted : art;
+            }
+        }
+
+        /// <summary>
+        /// Dress every live figure again, for when the colours themselves have changed.
+        ///
+        /// A figure is normally painted once, as it is leased, because its colours are a function
+        /// of the pawn wearing it and neither changes while it is on screen. Two things break that
+        /// assumption: the contact sheet, which forces a slot to a signal colour and shoots the
+        /// same colony again, and — later — an appearance panel, where the player picks a colour
+        /// for somebody already standing in front of them.
+        /// </summary>
+        public void RepaintAll()
+        {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                Figure figure = _figures[i];
+                if (figure.Pawn < 0) continue;
+                Repaint(figure, new PawnId(figure.Pawn));
+            }
+        }
+
+        /// <summary>Which swatches this face's body uses, or null when it was never classified.</summary>
+        AppearanceCells? CellsFor(int look)
+        {
+            if (_catalogue == null) return null;
+            List<ModuleEntry> rows = _catalogue.FindFamily(ModuleIds.ColonistBase);
+            if ((uint)look >= (uint)rows.Count) return null;
+            AppearanceCells cells = rows[look].appearance;
+            return cells.Any ? cells : null;
         }
 
         Figure Lease(PawnId pawn, Vector3 at)
@@ -1157,6 +1281,7 @@ namespace Odyssey.Presentation.World
             // different face would put the wrong person on screen rather than save any work.
             int look = LookFor(pawn);
             Figure figure = Free(look) ?? Create(look);
+            Repaint(figure, pawn);
             figure.Pawn = pawn.Value;
             figure.Settled = false;
             figure.Speed = 0f;
@@ -1235,7 +1360,7 @@ namespace Odyssey.Presentation.World
 
         Figure Create(int look)
         {
-            Look face = _looks[look];
+            Look face = _looks[look]!;
             GameObject instance = UnityEngine.Object.Instantiate(face.Prefab, _parent);
             instance.name = $"Colonist figure {_figures.Count} ({face.Prefab.name})";
             instance.transform.localScale = face.Scale;
@@ -1291,7 +1416,12 @@ namespace Odyssey.Presentation.World
             graph.Evaluate(0f);
 
             var figure = new Figure(instance, animator, graph, mixer, clips) { Look = look };
+            figure.Skins = skins;
+            figure.ArtMaterials = new Material?[skins.Length];
+            for (int i = 0; i < skins.Length; i++) figure.ArtMaterials[i] = skins[i].sharedMaterial;
             BindWorkBones(figure, animator);
+            figure.SoleOffset = MeasureSole(figure);
+            if (figure.SoleOffset > MeasuredSoleOffset) MeasuredSoleOffset = figure.SoleOffset;
             _figures.Add(figure);
             return figure;
         }
@@ -1320,5 +1450,6 @@ namespace Odyssey.Presentation.World
             _byPawn.Clear();
             Drawn.Clear();
         }
+
     }
 }
