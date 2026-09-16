@@ -845,7 +845,7 @@ namespace Odyssey.Presentation.World
         /// <summary>
         /// Bend one leg so its foot lands on a point, and lay the foot along the ground there.
         ///
-        /// <para>The solve is <see cref="ArmIk.Reach"/> unchanged — it is a two-bone analytic
+        /// <para>The solve is <see cref="TwoBoneIk.Reach"/> unchanged — it is a two-bone analytic
         /// solve written against transforms and its own header says it is not about arms. A leg is
         /// two bones and a target, which is exactly what it takes.</para>
         ///
@@ -859,7 +859,7 @@ namespace Odyssey.Presentation.World
             if (upper == null || lower == null || foot == null) return;
 
             Vector3 pole = upper.position + body.forward * 1.2f - body.up * 0.4f;
-            ArmIk.Reach(upper, lower, foot, target, pole);
+            TwoBoneIk.Reach(upper, lower, foot, target, pole);
 
             GroundRelief.SlopeAt(target.x, target.z, out float slopeX, out float slopeZ);
             foot.rotation = Footing.AnkleLevel(Footing.GroundNormal(slopeX, slopeZ), lean) * foot.rotation;
@@ -2591,15 +2591,10 @@ namespace Odyssey.Presentation.World
             /// </summary>
             public int SeenSerial = -1;
 
-            // Legs, for standing on ground that is not flat. Bound alongside the arms because the
-            // same one question decides both: is this a Humanoid rig at all?
-            public Transform? Hips;
-            public Transform? LeftUpperLeg;
-            public Transform? LeftLowerLeg;
-            public Transform? LeftFoot;
-            public Transform? RightUpperLeg;
-            public Transform? RightLowerLeg;
-            public Transform? RightFoot;
+            // The leg bones the footing pass needs are declared above, with the rest of the rig:
+            // the crouch work bound them first and for its own reasons, and one declaration serves
+            // both. Standing on uneven ground and crouching to climb want exactly the same bones,
+            // which is worth noticing rather than duplicating.
 
             /// <summary>The lean this figure is drawn at, which eases towards the ground's own.</summary>
             public Quaternion Lean = Quaternion.identity;

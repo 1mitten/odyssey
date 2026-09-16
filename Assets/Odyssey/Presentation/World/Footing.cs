@@ -16,7 +16,7 @@ namespace Odyssey.Presentation.World
     ///
     /// <para><b>All arithmetic, no bones.</b> Everything here is a pure function of a slope, a
     /// height or a pair of numbers, so it can be checked by a test rather than by looking at a
-    /// screenshot — the house rule that <c>WorkSwing</c>, <c>GaitBlend</c> and <c>ArmIk</c> all
+    /// screenshot — the house rule that <c>WorkSwing</c>, <c>GaitBlend</c> and <c>TwoBoneIk</c> all
     /// follow. The director owns the <c>Transform</c> work; this owns the decisions.</para>
     ///
     /// <para><b>It is a facade, like the ground it answers to.</b> Nothing in the simulation knows
