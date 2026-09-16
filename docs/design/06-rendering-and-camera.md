@@ -67,6 +67,47 @@ ends than the mid-air edge ever was. The first ring is strewn by the same hash o
 coordinates the mesher uses inside the board, at the same density, fading to nothing 20 m out. A
 clone without the licensed packs gets bare ground out there, exactly as it does on the board.
 
+**There is a second wood, on the hills (owner request, 2026-09-16).** The near wood stops 90 m past
+the rim, and by the amendment below the hills only begin to rise there — the ramp gives them about
+six of their fifty metres at that distance. So every hill in the background was bare ground, and a
+bare hillside is unreadable: there is nothing on it of known size, so the eye cannot tell how far
+away it is or how big it is, and it flattens into a green backdrop. Trees are the cheapest scale
+reference there is, and they are the whole of what makes the distance read as distance.
+
+The far wood runs from the edge of the near wood out to **900 m**, which is chosen against two
+numbers that already exist rather than by eye: the hills reach full height by 700 m, so everything
+inside that is the landform the trees describe, and fog closes at 1,100 m, so a tree past that is
+drawn into an opaque wall. It is scattered on a **15 m lattice with a jitter**, not the 2.5 m cell
+grid — the band is some four million square metres, and walking it at cell resolution would be
+670,000 samples to place a couple of thousand trees. The jitter is what stops a lattice reading as
+an orchard, and a test holds it.
+
+**Its cost is batches, not triangles, and that had to be measured.** A batch key is (sector,
+variant, part). At the near wood's 80 m sectors and all sixteen tree kinds, the meadow drew **1,154
+surround batches against 72** before the hill wood existed. Widening the sector to 800 m and capping
+the far wood to **four kinds** attacks both factors: at 300 m a tree is a few dozen pixels and
+nobody can tell one conifer from another, so the variety was buying nothing and costing a multiple.
+Coarse sectors cull worse, and out here that is the right trade — there are only a few thousand far
+trees, so submitting them all costs less than the draw calls fine culling would take.
+
+Measured under the real player loop, meadow, RTX 5070 Ti at 640 × 480, with the city as a control
+because it has no surround trees at all:
+
+| | hill wood off | hill wood on |
+|---|---|---|
+| mean | 1.45 ms | 1.38 ms |
+| worst | 2.13 ms | 1.81 ms |
+| draw calls | 1,270 | 1,322 |
+| instances | 39,929 | 42,506 |
+| surround batches | 734 | 786 |
+
+So 2,577 trees for 52 draw calls, against a 5 ms budget. The mean moved by less than the run-to-run
+noise: the city, which gains nothing from this change, moved 1.70 → 1.84 ms between the same two
+runs, so ±0.14 ms is the floor of what can be claimed and the hill wood's −0.07 ms is inside it.
+**The honest statement is that it has no measurable cost, not that it made anything faster.**
+`OdysseyBootstrap.skirtHillTrees` switches it off for the comparison, and `skirtTreeDensity` scales
+it along with the near wood.
+
 **The surround measures the board rather than being configured.** The surface level, the terrain and
 its tint, which trees grow and how thickly are all read off the generated map, so a bare board gets
 bare ground, the wooded meadow gets woodland at its own density, and the ruined city gets whatever

@@ -828,3 +828,26 @@ and never `git add -A` on the strength of an exit code.** If the catalogue is in
 revert it or make the junction first and rebuild. Reverting is right whenever the catalogue is not
 what you changed — `git checkout -- Assets/Odyssey/Presentation/ModuleCatalogue.asset` — because a
 catalogue rebuilt without the packs can never be more correct than the committed one.
+
+## A generated asset and its generator had drifted apart, and only a rebuild said so
+
+Worse than the packless rebuild above, because it survives having the packs. On 2026-09-16 the
+committed `ModuleCatalogue.asset` held a `terrain.marsh` row with the bare-earth material, and
+`PlayScene.cs` — the only thing that writes that asset — had stopped emitting it. It also emitted a
+`tool.hammer` row the asset did not have. So the asset was simultaneously ahead of and behind its
+own generator, and had been for as long as nobody rebuilt it.
+
+Nothing could have caught this. The asset is licensed art, so no test loads it; the generator is
+editor tooling, so no test runs it; and both sides were individually valid. The only symptom
+available was a diff, and only if somebody rebuilt and then read it rather than staging it.
+
+The damage it was holding: marsh terrain resolves `odyssey.module.terrain.marsh` through
+`NaturalContent`, so the next rebuild would have dropped marsh to the untextured fallback — the
+dark olive slab that reads as shadow, which is exactly the fault the water work had gone and fixed.
+A rebuild for an unrelated reason would have quietly undone it, weeks later, with no failing test
+and nothing in the commit to connect the two.
+
+**The rule this suggests is narrow and worth keeping: a generated asset that is committed must be
+rebuilt by whoever changes its generator, in the same commit.** And when a rebuild's diff shows a
+row *disappearing*, that is never churn — a generator emits what it is told to emit, so a missing
+row means the instruction went missing. Read the diff for absences, not just for changes.

@@ -408,6 +408,34 @@ after a rebuild, republish `docs/wiki/artifact.html` and
   the idiom this HUD already uses), audio, interface scale, accessibility and keybindings, all M8.
   The golden-hour work fills the Graphics section out, since its quality tier is a settings
   surface by definition.
+- **There are trees on the background hills now (owner request, 2026-09-16).** The surround's wood
+  stopped 90 m past the rim, where the hills have risen about six of their fifty metres, so every
+  hill in the background was bare — and a bare hillside has nothing of known size on it, so the eye
+  cannot place it and it flattens into a green backdrop. `SkirtLayout.BuildFarTrees` runs a second
+  wood from 90 m out to **900 m**, chosen against two numbers that already existed: hills reach full
+  height at 700 m, fog is opaque at 1,100 m. Scattered on a **15 m lattice with a jitter** rather
+  than the cell grid, because the band is four million square metres and cell resolution would be
+  670,000 samples for two thousand trees; the jitter is what stops it reading as an orchard, and a
+  test holds that. **The cost is batches, not triangles**, and it was measured rather than assumed:
+  at the near wood's 80 m sectors with all sixteen tree kinds the meadow drew **1,154 surround
+  batches against 72** before, so the far sector went to 800 m and the far wood is capped to **four
+  kinds** (at 300 m nobody can tell one conifer from another, so variety was a batch multiplier
+  buying nothing). Measured under the real player loop with the city as a control: meadow **1.45 ms
+  off → 1.38 ms on**, +52 draw calls, +2,577 instances, against a 5 ms budget — and since the city
+  moved 1.70 → 1.84 ms between the same runs, ±0.14 ms is noise and **the honest claim is no
+  measurable cost, not a speed-up**. Levers: `OdysseyBootstrap.skirtHillTrees`, and
+  `skirtTreeDensity` scales it with the near wood. Design: `06-rendering-and-camera.md` §2a.
+- **Two traps found while doing it, both in `docs/lessons.md`.** Rebuilding the scene in a worktree
+  **without the Synty packs** rewrites `ModuleCatalogue.asset` with every prefab reference set to
+  `{fileID: 0}` — 501 lines, exit code zero, no message — so a blanket `git add -A` commits a
+  catalogue with no art and no failing test to explain it; the junction from the worktree lesson is
+  the fix, and reading the diff is the guard. Worse, and independent of the packs: **the committed
+  catalogue and `PlayScene.cs` had drifted apart.** The asset held a `terrain.marsh` row the builder
+  no longer emitted, and lacked a `tool.hammer` row it did. Nothing could catch it — the asset is
+  licensed art no test loads, the builder is editor tooling no test runs. The next rebuild for any
+  reason would have dropped marsh to the untextured fallback, undoing the water work's marsh fix
+  weeks later with nothing connecting the two. Marsh is restored in the builder and the catalogue
+  rebuilt. **When a rebuild's diff shows a row disappearing, that is never churn.**
 - **Sim vs UI vocabulary is deliberate:** simulation systems are *subsystems*, presentation-side coordinators are *directors* (`01-architecture.md` §3a). Do not unify the two words.
 - **Phase 3 (design): complete 2026-09-15.** `docs/design/` 00, 01, 02, 03, 04, 05, 06, 07, 08; ADRs 0001, 0002, 0005; and the execution plan `docs/plans/vertical-slice.md` (32 units, M0→M3). **The Phase 3 → Phase 4 hard stop was cleared by the owner on 2026-09-15; execution is under way.**
 - **Interface, icons and content naming (the UI line of work), 2026-09-15.** Design `09-ui-and-input.md`, `10-ui-panel-catalogue.md`, `11-icon-library.md`; ADRs 0003 UI framework, 0004 sim-to-UI contract, 0006 layer visibility, 0007 pixel-art icon pipeline; research `g-01`, `g-02`; mockups `hud-v1.html` (historical) and `hud-v2.html` (current). **Layer visibility decided:** x-ray by default with six modes shipped for playtest, amended by Lane B so that nothing above the active slice is ever a pointer target. **Icons:** 382 keys enumerated, 268 mapped to the owner's eight pixel-art sheets, 114 gaps listed in `11-icon-library.md` — the largest being people, since no sheet contains a human figure. **Names:** all 29 proper nouns proposed and awaiting the owner's veto, in `docs/design/proper-nouns.csv`.

@@ -50,6 +50,7 @@ namespace Odyssey.Tests.PlayMode
         IEnumerator Measure(Odyssey.Sim.Worldgen.Natural.MapType mapType, bool barren, string label)
         {
             GameObject root = Build(mapType, barren, out OdysseyBootstrap boot);
+
             try
             {
                 for (int i = 0; i < WarmupFrames; i++) yield return null;
@@ -69,7 +70,15 @@ namespace Odyssey.Tests.PlayMode
                 // and the batch game view is not the player's monitor.
                 Debug.Log($"[FrameTime] {label}: mean {mean:0.00} ms, worst {worst:0.00} ms over {TimedFrames} frames; " +
                           $"{renderer?.DrawCalls ?? 0} draw calls, {renderer?.InstancesDrawn ?? 0} instances, " +
-                          $"{renderer?.ChunksDrawn ?? 0} chunks; {Screen.width}x{Screen.height}, " +
+                          $"{renderer?.ChunksDrawn ?? 0} chunks; " +
+                          // The surround is built once and submitted whole, so its own counts are
+                          // the only way to attribute a frame-time change to it rather than to the
+                          // board. The hill wood in particular is a switch somebody will want to
+                          // weigh, and a number beats an opinion about it.
+                          $"surround {renderer?.Skirt.TreeInstances ?? 0} trees + " +
+                          $"{renderer?.Skirt.FarTreeInstances ?? 0} on the hills, " +
+                          $"{renderer?.Skirt.BatchesDrawn ?? 0} batches; " +
+                          $"{Screen.width}x{Screen.height}, " +
                           $"{SystemInfo.graphicsDeviceName}");
 
                 Assert.That(mean, Is.LessThan(CeilingMs),

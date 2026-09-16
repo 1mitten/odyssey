@@ -337,6 +337,125 @@ namespace Odyssey.Presentation.Rendering
 
         // Arbitrary and fixed, and distinct from GroundScatter's, so that the tufts inside the
         // board and the trees outside it do not agree about which cells are interesting.
+        /// <summary>
+        /// How far the far wood reaches, in metres beyond the rim.
+        ///
+        /// <para>Chosen against two numbers that already exist rather than by eye. The hills ramp
+        /// from nothing at the rim to their full 50 m by <c>GroundRelief.HillRampMetres</c> (700 m),
+        /// so everything inside that is the landform the trees are meant to describe. And linear
+        /// fog closes at 1,100 m, so a tree past that is drawn into an opaque wall. 900 m sits in
+        /// the gap: past the tallest hills, short of the fog that would hide the work.</para>
+        /// </summary>
+        public const float FarTreeRangeMetres = 900f;
+
+        /// <summary>
+        /// The lattice the far wood is scattered on.
+        ///
+        /// <para>Not the 2.5 m cell grid the near trees use. The far band is some four million
+        /// square metres, and walking it at cell resolution is 670,000 samples to place a couple
+        /// of thousand trees. A 15 m step is 18,000 samples for the same answer, and at 90 m and
+        /// beyond a 15 m lattice is far finer than anything the eye can resolve — especially once
+        /// each tree is jittered off its own lattice point, which is what stops a scatter reading
+        /// as an orchard.</para>
+        /// </summary>
+        public const float FarTreeStepMetres = 15f;
+
+        /// <summary>The chance of a tree at a lattice point just outside the near wood.</summary>
+        public const float FarTreeNearDensity = 0.30f;
+
+        /// <summary>And at <see cref="FarTreeRangeMetres"/>, where it is nearly haze.</summary>
+        public const float FarTreeFarDensity = 0.07f;
+
+        /// <summary>
+        /// How much of a tree a lattice point this far out gets. Thins outwards for the same
+        /// reason the near wood does: spend the instances where they can still be seen.
+        /// </summary>
+        public static float FarTreeDensityScale(float distanceMetres)
+        {
+            if (distanceMetres <= TreeRangeMetres) return FarTreeNearDensity;
+            if (distanceMetres >= FarTreeRangeMetres) return FarTreeFarDensity;
+            float t = (distanceMetres - TreeRangeMetres) / (FarTreeRangeMetres - TreeRangeMetres);
+            return Mathf.Lerp(FarTreeNearDensity, FarTreeFarDensity, t);
+        }
+
+        /// <summary>
+        /// One tree of the far wood. Carries a world position rather than a cell, because it sits
+        /// on a coarse lattice with a jitter and was never on the cell grid at all — and, like
+        /// everything else out here, is not a cell in any other sense either.
+        /// </summary>
+        public readonly struct FarTree
+        {
+            public FarTree(float x, float z, int variant)
+            {
+                X = x;
+                Z = z;
+                Variant = variant;
+            }
+
+            public readonly float X, Z;
+            public readonly int Variant;
+        }
+
+        /// <summary>
+        /// Strew trees over the hills, from the edge of the near wood out to
+        /// <see cref="FarTreeRangeMetres"/>.
+        ///
+        /// <para><b>Why the surround needed a second wood at all.</b> The near wood stops 90 m
+        /// past the rim, and the hills have barely started rising by then — the ramp gives them
+        /// about six of their fifty metres at that distance. So every hill the surround raises was
+        /// bare ground, which reads as a smooth green backdrop rather than as land: there is
+        /// nothing of known size on a hillside to say how far away it is or how big it is. Trees
+        /// are the cheapest scale reference there is, and putting them out there is the whole
+        /// difference between a painted horizon and a landscape.</para>
+        ///
+        /// <para>Deterministic from the lattice index, like every other scatter in the renderer,
+        /// so the same board draws the same wood every session and a screenshot can be compared
+        /// with another. Nothing here is a cell, is saved, or reaches the hash.</para>
+        /// </summary>
+        public static void BuildFarTrees(GridSize size, int variants, float densityScale,
+            List<FarTree> into)
+        {
+            into.Clear();
+            if (variants <= 0 || densityScale <= 0f) return;
+
+            SkirtRect board = Board(size);
+            float step = FarTreeStepMetres;
+            var outer = board.Expand(FarTreeRangeMetres);
+
+            int firstX = Mathf.FloorToInt(outer.MinX / step);
+            int lastX = Mathf.CeilToInt(outer.MaxX / step);
+            int firstZ = Mathf.FloorToInt(outer.MinZ / step);
+            int lastZ = Mathf.CeilToInt(outer.MaxZ / step);
+
+            for (int lz = firstZ; lz <= lastZ; lz++)
+            for (int lx = firstX; lx <= lastX; lx++)
+            {
+                // The jitter is taken first and the distance measured where the tree actually
+                // lands, so a tree cannot be admitted at a lattice point inside the range and then
+                // jittered out of it, or judged for density at a distance it does not stand at.
+                float jx = (GroundScatter.Unit(lx, lz, SaltFarJitterX) - 0.5f) * step;
+                float jz = (GroundScatter.Unit(lx, lz, SaltFarJitterZ) - 0.5f) * step;
+                float x = lx * step + step * 0.5f + jx;
+                float z = lz * step + step * 0.5f + jz;
+
+                float distance = board.DistanceOutside(x, z);
+
+                // The near wood owns everything inside its own range, and the board owns itself.
+                if (distance <= TreeRangeMetres || distance > FarTreeRangeMetres) continue;
+
+                float chance = FarTreeDensityScale(distance) * densityScale;
+                if (GroundScatter.Unit(lx, lz, SaltFarPresence) >= chance) continue;
+
+                into.Add(new FarTree(x, z,
+                    (int)(GroundScatter.Hash(lx, lz, SaltFarVariant) % (uint)variants)));
+            }
+        }
+
+        const uint SaltFarPresence = 0x91D3u;
+        const uint SaltFarVariant = 0x4C77u;
+        const uint SaltFarJitterX = 0xA3E1u;
+        const uint SaltFarJitterZ = 0x6B5Fu;
+
         const uint SaltPresence = 0x7F4Au;
         const uint SaltVariant = 0x2E9Bu;
 

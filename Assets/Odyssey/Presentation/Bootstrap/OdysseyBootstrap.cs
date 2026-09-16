@@ -80,6 +80,9 @@ namespace Odyssey.Presentation.Bootstrap
         [Range(0, 100)]
         public int skirtTreeDensity = 100;
 
+        [Tooltip("Scatter trees over the background hills, out to 900 m. They are what gives the distance a scale; off is the old bare hillside. Decoration only, like the rest of the surround.")]
+        public bool skirtHillTrees = true;
+
         [Tooltip("Which faces the colonists get. 0 draws a fresh cast every session; any other value pins one, and the log prints the value each session used so a cast you liked can be kept.")]
         public int colonistLookSeed = 0;
 
@@ -264,11 +267,14 @@ namespace Odyssey.Presentation.Bootstrap
             };
             _renderer.Skirt.Enabled = terrainSkirt;
             _renderer.Skirt.TreeDensityPercent = skirtTreeDensity;
+            _renderer.Skirt.HillTrees = skirtHillTrees;
             if (terrainSkirt)
             {
                 _renderer.Skirt.Build();
                 Debug.Log($"[Odyssey] surround: {_renderer.Skirt.GroundInstances} ground tiles, " +
-                          $"{_renderer.Skirt.TreeInstances} trees and {_renderer.Skirt.TuftInstances} tufts " +
+                          $"{_renderer.Skirt.TreeInstances} trees, " +
+                          $"{_renderer.Skirt.FarTreeInstances} more on the hills " +
+                          $"and {_renderer.Skirt.TuftInstances} tufts " +
                           $"beyond the rim, at the board's own " +
                           $"{_renderer.Skirt.MeasuredTreeDensity} trees per thousand cells");
             }

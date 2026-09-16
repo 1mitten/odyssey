@@ -1231,6 +1231,14 @@ namespace Odyssey.EditorTools
             Ground(ModuleIds.Terrain("PackedGravel"), "Mat_Gravel_01");
             Ground(ModuleIds.Terrain("Subsoil"), "Mat_Mud_01");
 
+            // Marsh, restored 2026-09-16. The committed catalogue carried this row and the
+            // builder had stopped emitting it, so the asset and its generator disagreed and the
+            // next person to rebuild the catalogue would silently have taken marsh's texture away
+            // — which is precisely the fault the water work went and fixed, an untextured dark
+            // olive slab that reads as shadow rather than as ground. Found by rebuilding the
+            // catalogue with the packs present and reading the diff line by line.
+            Ground(ModuleIds.Terrain("Marsh"), "Mat_Dirt_01");
+
             // No meadow texture reads as these, and a wrong texture is worse than an honest
             // colour: sand would come out as mud, and an ore seam has to stay findable at a
             // glance. They keep their tints until a pack with the right ground arrives.
