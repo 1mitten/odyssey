@@ -19,19 +19,15 @@ namespace Odyssey.Tests.Sim
     /// region graph, the stair connectors and the job pipeline carry a pawn <i>up and down</i>.
     /// That is the whole of M2's claim, and it is the one claim a flat map cannot test.</para>
     ///
-    /// <para><b>What it does not yet prove, and why.</b> The row this came from asks for beds on
-    /// one storey, food on another and a stockpile on a third, so that the run demonstrates
-    /// colonists using the stairs. The colony cannot be placed that way: <c>FindStartSpots</c>
-    /// spirals outward taking the nearest layer it can find at each column, so wherever the ground
-    /// is walkable — which on a city map is nearly everywhere — everything lands on the start
-    /// layer. Measured on this map: thirty-three spots, all on one storey, and a full day without
-    /// a single layer change. Raising the finder's layer spread does not help, because the spread
-    /// is a fallback for columns with nothing walkable below, not a preference.
-    ///
-    /// So the layer claim is <b>not asserted here</b>, and is not quietly dropped either: it is
-    /// <c>OQ-47</c>, and until that lands M2's demonstration of layers rests on
-    /// <c>StampedConnectorTests</c>, which proves a colonist can reach an upper storey, rather
-    /// than on a day's run showing one choosing to.</para>
+    /// <para><b>How the layer claim is forced, and why it has to be.</b> The colony is placed
+    /// across three storeys — the store on the floor it wakes up on, the beds one above, the food
+    /// two above — which a scenario could not ask for until <c>OQ-47</c>. Without that, the spiral
+    /// took the nearest layer at every column, and on a city map nearly every column is walkable
+    /// at the start layer, so everything landed on one floor and a full day passed without a
+    /// single layer change. That measurement is not history: it is
+    /// <see cref="ADayOnOneFloorNeverTouchesAStair"/>, which runs the same day with the offsets
+    /// removed and asserts that nobody changes layer. It is the control. If the assertion below
+    /// could pass without the stairs being used, that test would fail.</para>
     /// </summary>
     public class M2DemoTests
     {
@@ -49,13 +45,33 @@ namespace Odyssey.Tests.Sim
 
         const int Colonists = 3;
 
+        /// <summary>
+        /// The store where they stand, the beds one storey up, the food two. Measured on this map
+        /// and seed: every storey the scenario names is found and filled, and a third one above
+        /// that is not (the map is five layers and the start is on the second), which is why the
+        /// spread is one and two rather than something wider.
+        /// </summary>
+        const int StockpileStorey = 0;
+        const int BedStorey = 1;
+        const int MealStorey = 2;
+
         [Test, Category("Long")]
         public void ThreePawnsLiveInARuinedShellForADay()
         {
-            ColonyWorld colony = Build(seed: 1u);
+            ColonyWorld colony = Build(seed: 1u, acrossStoreys: true);
 
             int pawnCount = colony.Pawns.Pawns.Count;
             Assert.That(pawnCount, Is.EqualTo(Colonists), colony.Placement.ToString());
+
+            // The run proves nothing about storeys if the colony was never spread over them. A
+            // shortfall here is a placement failure, and it must not be allowed to read later as
+            // a colonist who chose to stay put.
+            Assert.That(colony.Placement.Beds, Is.EqualTo(colony.Scenario.beds),
+                $"the beds did not all reach storey +{BedStorey}: {colony.Placement}");
+            Assert.That(colony.Placement.Meals, Is.EqualTo(colony.Scenario.mealPiles),
+                $"the food did not all reach storey +{MealStorey}: {colony.Placement}");
+            Assert.That(colony.Placement.StockpileCells, Is.EqualTo(colony.Scenario.stockpileCells),
+                $"the store did not fit on storey +{StockpileStorey}: {colony.Placement}");
 
             // Where each colonist has been. A set per pawn rather than a first-and-last, because
             // a pawn that goes up and comes back has changed layer twice and would read as
@@ -92,10 +108,15 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.World.CurrentTick, Is.EqualTo(Day));
             Assert.That(colony.Pawns.Pawns.Count, Is.EqualTo(pawnCount), "a colonist left the registry");
 
-            // The storeys each colonist used are printed above rather than asserted on. See the
-            // summary: the colony cannot currently be placed across storeys, so an assertion here
-            // would be a demand the scenario system cannot meet, and making it pass would mean
-            // weakening it until it meant nothing. OQ-47.
+            // M2's whole claim: not that a colonist *can* reach another storey, which
+            // StampedConnectorTests proves on a graph, but that one does it in the course of an
+            // ordinary day because what it needs is up there. Every colonist, not some: a pawn
+            // that stayed on one floor all day either could not get off it or had no reason to,
+            // and both are the failure this run exists to catch.
+            foreach (var pawn in visited)
+                Assert.That(pawn.Value.Count, Is.GreaterThan(1),
+                    $"colonist {pawn.Key} spent the whole day on storey {string.Join(", ", pawn.Value)}, " +
+                    "with its bed one floor up and its food two");
 
             // The three behaviours, as the soak asserts them — on the city map this time, which
             // is the part that is new: the same colony on stamped shells and rubble rather than
@@ -122,9 +143,42 @@ namespace Odyssey.Tests.Sim
                 $"the city run diverged between two identical passes: {first:X16} then {second:X16}");
         }
 
+        /// <summary>
+        /// The control for the test above, and the reason its layer assertion is evidence.
+        ///
+        /// <para>The same map, the same seed, the same day — with the colony placed the way it was
+        /// placed before a scenario could name a storey, everything on the floor it wakes up on.
+        /// Nobody changes layer. So the stairs in the run above are not something the city
+        /// generator would have given us anyway, or something the sampling would report whatever
+        /// happened: they are the consequence of putting the beds and the food upstairs.</para>
+        ///
+        /// <para>If this ever starts failing it is good news that still needs looking at — some
+        /// other reason to change storey has appeared, and the test above stops being a clean
+        /// measurement of this one.</para>
+        /// </summary>
+        [Test, Category("Long")]
+        public void ADayOnOneFloorNeverTouchesAStair()
+        {
+            ColonyWorld colony = Build(seed: 1u, acrossStoreys: false);
+            var visited = new Dictionary<int, HashSet<int>>();
+
+            Record(colony, visited);
+            for (int done = 0; done < Day; done += SampleEvery)
+            {
+                colony.World.Tick(Math.Min(SampleEvery, Day - done));
+                Record(colony, visited);
+            }
+
+            foreach (var pawn in visited)
+                Assert.That(pawn.Value.Count, Is.EqualTo(1),
+                    $"colonist {pawn.Key} used storeys {string.Join(", ", pawn.Value)} with everything " +
+                    "on one floor, so a layer change in the demo run is no longer evidence that the " +
+                    "scenario put it there");
+        }
+
         static ulong RunForHash(uint seed)
         {
-            ColonyWorld colony = Build(seed);
+            ColonyWorld colony = Build(seed, acrossStoreys: true);
             colony.World.Tick(Day);
             return colony.World.ComputeStateHash().Value;
         }
@@ -134,10 +188,16 @@ namespace Odyssey.Tests.Sim
         /// point. Three colonists rather than five, as the row asks, so that one idle pawn cannot
         /// hide behind two busy ones.
         /// </summary>
-        static ColonyWorld Build(uint seed)
+        static ColonyWorld Build(uint seed, bool acrossStoreys)
         {
             var scenario = ScenarioDef.Bare();
             scenario.colonists = Colonists;
+            if (acrossStoreys)
+            {
+                scenario.stockpileLayerOffset = StockpileStorey;
+                scenario.bedLayerOffset = BedStorey;
+                scenario.mealLayerOffset = MealStorey;
+            }
             return ColonyWorld.Build(CitySize, seed, scenario, barren: false, chunks: null,
                 mapType: MapType.RuinedCity);
         }
