@@ -75,6 +75,25 @@ namespace Odyssey.Presentation.CameraRig
         [Tooltip("Layers per slice step with shift held.")]
         public int fastLayerStep = 4;
 
+        /// <summary>
+        /// Degrees a second Q and E turn the camera while held.
+        ///
+        /// <para><b>Free rotation, not a 90-degree snap</b> (owner, 2026-09-16: "change Q and E to
+        /// snap rotate — to allow a free rotation completely for now as I think that would make it
+        /// easier"). Q and E used to add or subtract ninety degrees on the frame they were
+        /// pressed, which is the genre's convention and assumes a board that reads the same from
+        /// four sides. This one does not: it is layered, the slice is cut at an angle, and a wall
+        /// or an outcrop hides different things at fifty degrees than at ninety. Held keys let the
+        /// player stop wherever the view is actually clearest.</para>
+        ///
+        /// <para>Ninety a second is one quarter turn a second at full speed, which is about as
+        /// fast as the eye can follow a rotating board; shift multiplies it like every other
+        /// camera speed, so a full turn takes a third of a second when you already know where you
+        /// are going.</para>
+        /// </summary>
+        [Tooltip("Degrees a second Q and E turn the camera while held. Shift multiplies it.")]
+        public float rotateSpeed = 90f;
+
         [Header("Selection")]
         public Color selectionColour = Color.white;
 
@@ -228,8 +247,13 @@ namespace Odyssey.Presentation.CameraRig
             if (keys.aKey.isPressed || keys.leftArrowKey.isPressed) move.x -= 1f;
             if (move.sqrMagnitude > 0f) Pan(move.normalized * (panSpeed * dt * DistanceScale * Boost));
 
-            if (keys.qKey.wasPressedThisFrame) _targetYaw -= 90f;
-            if (keys.eKey.wasPressedThisFrame) _targetYaw += 90f;
+            // Held, not tapped: see rotateSpeed. The target is driven rather than the yaw itself,
+            // so the same smoothing that carries a mouse orbit carries this, and the two cannot
+            // fight each other over who owns the angle.
+            float turn = 0f;
+            if (keys.qKey.isPressed) turn -= 1f;
+            if (keys.eKey.isPressed) turn += 1f;
+            if (turn != 0f) _targetYaw += turn * rotateSpeed * dt * Boost;
 
             // Shift covers several storeys at once, for the same reason it covers more ground: a
             // layer at a time is right for reading a building and slow for getting from the
@@ -243,9 +267,16 @@ namespace Odyssey.Presentation.CameraRig
             if (keys.digit2Key.wasPressedThisFrame) RequestGameSpeed(2);
             if (keys.digit3Key.wasPressedThisFrame) RequestGameSpeed(3);
 
-            if (keys.vKey.wasPressedThisFrame) CycleAboveMode();
-            if (keys.bKey.wasPressedThisFrame)
-                slice.below = (BelowMode)(((int)slice.below + 1) % 3);
+            // V and shift-V are the two halves of one question — what do I see above me, and what
+            // do I see below me — so they share a key. B was the below-mode cycle until
+            // 2026-09-16, when the command bar wanted it for Build; a view-debug key gives way to
+            // a player-facing command, and pairing the two cycles is tidier than the letter it
+            // replaced.
+            if (keys.vKey.wasPressedThisFrame)
+            {
+                if (Fast) slice.below = (BelowMode)(((int)slice.below + 1) % 3);
+                else CycleAboveMode();
+            }
             if (keys.homeKey.wasPressedThisFrame) Frame();
 
             // The developer overlay sits on the picture, so it is off until asked for.
@@ -499,6 +530,13 @@ namespace Odyssey.Presentation.CameraRig
         void ApplyTransform(bool instant)
         {
             float k = instant ? 1f : 1f - Mathf.Exp(-smoothing * Time.unscaledDeltaTime);
+
+            // Both ways of turning the camera add to the target rather than setting it, so it
+            // wanders away from zero for as long as the session lasts — a mouse orbit always did,
+            // and a held Q or E does it ninety degrees a second. Wrapped here, at the one place
+            // that reads it, because LerpAngle takes the short way round regardless and the only
+            // thing an unbounded angle costs is float precision, eventually.
+            _targetYaw = Mathf.Repeat(_targetYaw, 360f);
             yaw = Mathf.LerpAngle(yaw, _targetYaw, k);
             distance = Mathf.Lerp(distance, _targetDistance, k);
 

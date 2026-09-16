@@ -91,6 +91,42 @@ nearest step, because a scale with six exceptions in it is not being enforced by
 difference is one or two pixels. The 11 px mono hotkey cap is kept, because the type section itself
 named it.
 
+### 2.1 Interface scale (owner, 2026-09-16)
+
+The type is authored in 1080p pixels and the panel scales with the screen, so on a 4K monitor it
+subtends the same angle as on a 1080p one. The owner's report was nonetheless that it **reads too
+small there**, and that is not a contradiction: physically identical is not perceptually identical
+at arm's length from a large panel, and the HUD this replaced was drawn against a 1200 x 800
+reference, which made every glyph on it 1.6 times larger than this one.
+
+So the scale is a setting, which is what `09-ui-and-input.md` §9 D4 planned for all along — "a user
+slider from 80 to 150 per cent". It is a **ladder rather than a slider** (80, 90, 100, 110, 125,
+150), because a HUD at a fractional scale is a HUD whose one-pixel hairlines land between pixels.
+
+**It works by dividing the reference canvas**: at 125% the panel is told its reference is
+1536 x 864, so everything drawn against these numbers comes out an eighth larger. Nothing else has
+to know. The layout is anchored rather than sized, so the smaller canvas is a case it already
+handles — the colonist strip re-clamps to what fits, the command bar moves its tail into Menu, and
+`HudLayoutTests` already tested a literal 1280 x 720, which is exactly the canvas 150% produces.
+`UiScaleTests` walks every rung and asserts no two panels overlap at any of them.
+
+**The default depends on the screen**: 100% below 1440p, 110% at 1440p, 125% at 4K and above.
+**125 at 4K is arithmetic rather than taste.** The old HUD set body text at 11 px against a
+1200 x 800 canvas, and on a 3840 x 2160 screen Unity's match-0.5 scaling is the geometric mean of
+3.2 and 2.7 — so that text landed at about **32 physical pixels**. This one sets body text at 13 px,
+and at 125% the canvas is 1536 x 864, so the scale is exactly 2.5 and the text lands at **32.5
+physical pixels**. The default restores the size that was being read before the rebuild, which is
+the size the report was about. The
+coverage ceiling is stated at 100%, and the defaults are checked against it — at 125% the HUD
+covers about 17%, still inside. **Above that the player is trading board for legibility** and the
+panel says so on each rung: at 150% the HUD occupies about a quarter of the screen. That is a
+choice worth offering and not one to make silently on somebody's behalf.
+
+**The panel writes to a copy of its `PanelSettings`, never the asset.** It is a file on disk, and
+writing to it from play mode in the editor leaves the change behind after the session ends —
+permanently, in a committed asset. This project met that exact trap once already with the sky
+material.
+
 **The sheet sets no type at all.** `Hud.uss` contains not one `font-size`, `letter-spacing` or
 `-unity-font-style`, and a test asserts that. Type comes from `HudType` through `HudText`, in the
 Unity-free assembly, because "six sizes and no others" is an acceptance criterion and a size written
@@ -252,11 +288,23 @@ and invisible. Hiding with `visibility` rather than `display` is what makes that
 `display:none` element has no width to read, so the bar would have to be drawn overflowing for one
 frame in order to find out that it overflows.
 
-**Every item shows a hotkey**, and they avoid the keys the game already uses — M, C and X arm the
-designate tools, R and F move the slice, V cycles layer visibility, Space and 1–3 are the clock,
-Home recentres. So Research takes **E** and Colonists takes **O**. Two are live today: **B** opens
-the Build palette and **Escape** opens Menu. A test asserts both the distinctness and the avoidance,
-because a legend on a control that claims a key doing something else is worse than no legend.
+**Every item shows a hotkey, and the panels are on F1 to F9.** That was not the first answer. The
+first pass gave each item a letter — W for Work, S for Schedule, A for Animals — and every one of
+those is already a camera key: WASD pans, Q and E turn, B cycled the below-slice mode, V the above
+one, M, C and X arm the designate tools, R and F move the slice, Space and 1–3 are the clock, Home
+recentres. **Five of the eleven clashed and the test written to prevent exactly that passed
+anyway**, because its list of reserved keys was written from memory and was missing five of them.
+
+`HotkeyClashTests` now reads the reserved set **out of the source** — every `keys.somethingKey` in
+the Presentation assembly — and allows a command's key only in the one file that reads it on its
+behalf. It is an unusual shape of test and it is the only shape that can answer the question
+without a running game and a person pressing keys.
+
+Function keys are unclaimed, are the convention for top-level panels, and are narrow, which the
+overflow budget appreciates. **Build keeps B**, because it is the one item that does something
+today and the one a player reaches for without looking; the below-slice cycle gave the letter up
+and moved to **shift-V**, beside the above-slice cycle it belongs with. **Escape** opens Menu,
+which is the panel Escape already opened.
 
 **A12, the overlay toggles, moved into Menu.** They were ten unlabelled icon buttons at the right end
 of the bottom bar, sitting on the tab row and eating its last tab; the acceptance criteria strike out
@@ -291,6 +339,18 @@ was neither disabled nor labelled.
 
 ---
 
+## 7a. The camera keys that changed with this pass
+
+- **Q and E rotate freely while held** (owner, 2026-09-16), at `rotateSpeed` 90 degrees a second,
+  multiplied by shift like every other camera speed. They used to add or subtract ninety degrees on
+  the frame they were pressed, which is the genre's convention and assumes a board that reads the
+  same from four sides. This one does not: it is layered, the slice is cut at an angle, and a wall
+  or an outcrop hides different things at fifty degrees than at ninety. A held key lets the player
+  stop wherever the view is actually clearest. The target angle is driven rather than the yaw
+  itself, so the same smoothing that carries a mouse orbit carries this and the two cannot fight
+  over who owns the angle.
+- **Shift-V cycles the below-slice mode**, which was B. See §6.
+
 ## 8. Escape, and the panels that open over the board
 
 The unwind order is one rule in one place — `SettingsDirector.Escape`, decided in the fast tier:
@@ -315,6 +375,9 @@ over the board it costs nothing when it is shut, which is most of the time.
 - **No backdrop blur**, because UI Toolkit has none (§1).
 - **True 500/600/700 weights** wait on static Archivo Narrow files, which Google's repository does
   not publish (§2).
+- **The interface scale is a ladder of six rungs, not a slider**, and there is no live preview of
+  what a rung costs in coverage beyond the tooltip's wording. Both are fine for six rungs and would
+  not be for a continuous control.
 - **The build palette's tools, the inspect pane's tabs beyond Needs, and nine of the eleven
   command-bar items** are still disabled with a reason, as they were. This pass changed how the HUD
   looks and measures, not what the game can do.

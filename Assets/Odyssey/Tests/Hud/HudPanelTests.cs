@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Sim.Contracts;
@@ -241,6 +242,173 @@ namespace Odyssey.Tests.Hud
             ledger.Refresh(WithMeals(100));
             ledger.Refresh(WithMeals(10));
             Assert.That(Meals(ledger).Trend, Is.EqualTo(StockTrend.Steady));
+        }
+    }
+
+    /// <summary>
+    /// The interface scale: the setting the owner asked for on 2026-09-16, when the rebuilt HUD's
+    /// type read too small on a 4K monitor.
+    /// </summary>
+    public class UiScaleTests
+    {
+        [Test]
+        public void ALargerScaleMeansASmallerCanvasAndSoBiggerType()
+        {
+            (int wide, int tall) = HudLayout.ReferenceFor(100);
+            Assert.That(wide, Is.EqualTo(HudLayout.ReferenceWidth), "100% is the canvas as authored");
+            Assert.That(tall, Is.EqualTo(HudLayout.ReferenceHeight));
+
+            (int bigger, _) = HudLayout.ReferenceFor(125);
+            Assert.That(bigger, Is.EqualTo(1536),
+                "at 125% the panel is told a smaller reference, so everything drawn against it " +
+                "comes out an eighth larger");
+
+            (int smaller, _) = HudLayout.ReferenceFor(80);
+            Assert.That(smaller, Is.GreaterThan(HudLayout.ReferenceWidth));
+        }
+
+        [Test]
+        public void TheLayoutStillHoldsAtEveryRungOfTheLadder()
+        {
+            // Turning the scale up shrinks the canvas, which is the same thing as running at a
+            // lower resolution — so every rung has to survive the overlap check, not just the
+            // default. 150% on a 16:9 screen is a 1280x720 canvas, which is why that size is in
+            // HudLayoutTests as well.
+            foreach (int percent in SettingsDirector.UiScales)
+            {
+                (int width, int height) = HudLayout.ReferenceFor(percent);
+                var content = new HudContent(colonists: 3, storeRows: 6, alerts: 2, layers: 16, needRows: 2);
+                var boxes = HudLayout.Solve(width, height, content);
+
+                Assert.That(HudLayout.FirstOverlap(boxes), Is.Null,
+                    $"two panels overlap at {percent}% (a {width}x{height} canvas)");
+                TestContext.WriteLine(
+                    $"{percent}%: {width}x{height}, " +
+                    $"{HudLayout.Coverage(HudLayout.Solve(width, height, HudContent.NothingSelected(3, 3, 16)), width, height):P1} covered");
+            }
+        }
+
+        [Test]
+        public void TheDefaultIsBiggerOnABiggerScreen()
+        {
+            Assert.That(SettingsDirector.DefaultScaleFor(1080), Is.EqualTo(100),
+                "the interface is authored in 1080p pixels, so 1080p is 100% by construction");
+            Assert.That(SettingsDirector.DefaultScaleFor(1440), Is.GreaterThan(100));
+            Assert.That(SettingsDirector.DefaultScaleFor(2160),
+                Is.GreaterThanOrEqualTo(SettingsDirector.DefaultScaleFor(1440)),
+                "a 4K screen does not start smaller than a 1440p one");
+
+            foreach (int height in new[] { 720, 1080, 1440, 2160, 4320 })
+                Assert.That(SettingsDirector.UiScales, Has.Member(SettingsDirector.DefaultScaleFor(height)),
+                    $"the default for a {height}px screen is not a rung the panel can show");
+        }
+
+        [Test]
+        public void TheDefaultAtTheDesignResolutionKeepsTheCoverageCeiling()
+        {
+            // The ceiling is stated at the size the interface is designed at. A player who turns
+            // the scale up is choosing to hide more of the board, and the panel says so; what must
+            // not happen is the *default* quietly breaking the criterion on a common monitor.
+            foreach (int height in new[] { 1080, 1440, 2160 })
+            {
+                int percent = SettingsDirector.DefaultScaleFor(height);
+                (int width, int canvasHeight) = HudLayout.ReferenceFor(percent);
+                var boxes = HudLayout.Solve(width, canvasHeight, HudContent.NothingSelected(3, 3, 16));
+                float coverage = HudLayout.Coverage(boxes, width, canvasHeight);
+
+                Assert.That(coverage, Is.LessThanOrEqualTo(HudLayout.CoverageCeiling),
+                    $"a {height}px screen starts at {percent}%, where the HUD covers {coverage:P1}");
+            }
+        }
+
+        [Test]
+        public void AnythingOffTheLadderSnapsOntoIt()
+        {
+            var settings = new SettingsDirector();
+            settings.SetUiScale(117);
+            Assert.That(SettingsDirector.UiScales, Has.Member(settings.UiScale),
+                "a stored preference from an older ladder must not leave the panel showing a " +
+                "value none of its own buttons can reproduce");
+
+            settings.SetUiScale(10_000);
+            Assert.That(settings.UiScale, Is.EqualTo(150), "the ladder has a top");
+            settings.SetUiScale(0);
+            Assert.That(settings.UiScale, Is.EqualTo(80), "and a bottom");
+        }
+
+        [Test]
+        public void SteppingMovesOneRungAndStopsAtTheEnds()
+        {
+            var settings = new SettingsDirector();
+            settings.SetUiScale(100);
+
+            settings.StepUiScale(1);
+            Assert.That(settings.UiScale, Is.EqualTo(110));
+            settings.StepUiScale(-2);
+            Assert.That(settings.UiScale, Is.EqualTo(90));
+
+            for (int i = 0; i < 10; i++) settings.StepUiScale(1);
+            Assert.That(settings.UiScale, Is.EqualTo(150));
+            for (int i = 0; i < 10; i++) settings.StepUiScale(-1);
+            Assert.That(settings.UiScale, Is.EqualTo(80));
+        }
+
+        [Test]
+        public void TheScreenSeedsItAndTheMachineOverridesTheScreen()
+        {
+            var settings = new SettingsDirector();
+            int raised = 0;
+            settings.UiScaleChanged += _ => raised++;
+
+            settings.SeedUiScale(125);
+            Assert.That(settings.UiScale, Is.EqualTo(125));
+            Assert.That(raised, Is.Zero, "seeding describes the screen; it does not announce a change");
+
+            var store = new FakeSettingsStore();
+            store.Preset(SettingsDirector.UiScaleKey, 90);
+            settings.UseStore(store);
+
+            Assert.That(settings.UiScale, Is.EqualTo(90),
+                "a preference this machine has been told beats what its screen suggests");
+            Assert.That(raised, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ChoosingAScaleIsRemembered()
+        {
+            var settings = new SettingsDirector();
+            var store = new FakeSettingsStore();
+            settings.UseStore(store);
+
+            settings.SetUiScale(125);
+            Assert.That(store.ReadInt(SettingsDirector.UiScaleKey), Is.EqualTo(125));
+        }
+    }
+
+    /// <summary>The settings panel's two sections.</summary>
+    public class SettingsTabTests
+    {
+        [Test]
+        public void ItOpensOnInterface()
+        {
+            // The first thing a player wants from a settings panel on a large monitor is to make
+            // the type bigger, and it is the one setting here that changes the panel they are
+            // looking at while they look at it.
+            Assert.That(new SettingsDirector().Tab, Is.EqualTo(SettingsTab.Interface));
+        }
+
+        [Test]
+        public void ChangingSectionAnnouncesItselfOnceAndOnlyWhenItChanges()
+        {
+            var settings = new SettingsDirector();
+            var seen = new List<SettingsTab>();
+            settings.TabChanged += seen.Add;
+
+            settings.SetTab(SettingsTab.Graphics);
+            settings.SetTab(SettingsTab.Graphics);
+            settings.SetTab(SettingsTab.Interface);
+
+            Assert.That(seen, Is.EqualTo(new[] { SettingsTab.Graphics, SettingsTab.Interface }));
         }
     }
 

@@ -202,24 +202,9 @@ namespace Odyssey.Tests.Hud
             }
         }
 
-        [Test]
-        public void HotkeysAreDistinctAndAvoidTheKeysTheGameAlreadyUses()
-        {
-            // M, C and X arm the designate tools; R and F move the slice; V cycles layer
-            // visibility; Space and 1 to 3 are the clock; Home recentres. A legend on a control
-            // that claims a key doing something else is worse than no legend.
-            var taken = new[] { "M", "C", "X", "R", "F", "V", "1", "2", "3" };
-            var seen = new List<string>();
-
-            foreach (HudCommand command in HudCommands.All)
-            {
-                Assert.That(seen, Has.No.Member(command.Hotkey),
-                    $"two command-bar items both claim {command.Hotkey}");
-                Assert.That(taken, Has.No.Member(command.Hotkey),
-                    $"{command.Key} claims {command.Hotkey}, which the game already uses");
-                seen.Add(command.Hotkey);
-            }
-        }
+        // Clashes with the keys the game already reads are HotkeyClashTests', which scans the
+        // source for them rather than comparing against a list written from memory. The list this
+        // test used to hold was missing five of them and passed anyway.
 
         [Test]
         public void TheBarNeverRunsPastTheEdgeAtAnyWidth()

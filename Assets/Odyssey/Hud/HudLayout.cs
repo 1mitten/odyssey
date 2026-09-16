@@ -122,6 +122,34 @@ namespace Odyssey.Hud
     /// </summary>
     public static class HudLayout
     {
+        // ------------------------------------------------------------------ the canvas
+
+        /// <summary>
+        /// The canvas every number below is authored in.
+        ///
+        /// <para>The interface panel scales with the screen against this, so one reference pixel
+        /// is one real pixel on a 1080p monitor and two on a 4K one. It is also what the
+        /// <b>interface scale</b> setting divides: at 125 per cent the panel is told its reference
+        /// is 1536 x 864, so everything drawn against these numbers comes out an eighth larger and
+        /// the layout adapts around it — fewer colonist cards fit the strip, and the command bar
+        /// moves its tail into Menu. Both of those are already tested at a literal 1280 x 720,
+        /// which is exactly the canvas 150 per cent produces.</para>
+        /// </summary>
+        public const int ReferenceWidth = 1920;
+
+        public const int ReferenceHeight = 1080;
+
+        /// <summary>
+        /// The reference resolution a panel should be given for an interface scale, as a
+        /// percentage. Larger scale, smaller canvas, bigger everything.
+        /// </summary>
+        public static (int Width, int Height) ReferenceFor(int scalePercent)
+        {
+            int percent = Math.Max(10, scalePercent);
+            return ((int)Math.Round(ReferenceWidth * 100.0 / percent),
+                    (int)Math.Round(ReferenceHeight * 100.0 / percent));
+        }
+
         // ------------------------------------------------------------------ space
 
         /// <summary>Screen edge to panel.</summary>

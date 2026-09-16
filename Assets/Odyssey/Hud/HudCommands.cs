@@ -59,11 +59,20 @@ namespace Odyssey.Hud
     /// from the right, so the order on screen never reshuffles as the window is resized; only its
     /// tail shortens.</para>
     ///
-    /// <para><b>Hotkeys avoid the keys the game already uses.</b> M, C and X are the designate
-    /// tools, R and F move the slice, V cycles layer visibility, Space and 1–3 are the clock, and
-    /// Home recentres. So Research takes E rather than R and Colonists takes O rather than C. Two
-    /// of these are live today — B opens the Build palette and Escape opens Menu — and the rest
-    /// are legends on controls that say in their tooltip why they are not.</para>
+    /// <para><b>The panels are on function keys, and that was not the first answer.</b> The first
+    /// pass gave each item a letter — W for Work, S for Schedule, A for Animals — and every one of
+    /// those is already a camera key: WASD pans, Q and E turn, B cycled the below-slice mode, V the
+    /// above one, M, C and X arm the designate tools, R and F move the slice, Space and 1 to 3 are
+    /// the clock, Home recentres. The test that was supposed to catch it listed nine reserved keys
+    /// and missed five, which is why <c>HotkeyClashTests</c> now reads the reserved set out of the
+    /// source rather than out of somebody's memory.</para>
+    ///
+    /// <para>F1 to F9 are unclaimed, are the convention for top-level panels, and have the
+    /// incidental virtue of being narrow: eleven labelled items have to cross the bottom of the
+    /// screen without one falling off the end. <b>Build keeps a letter</b>, because it is the one
+    /// item here that does something today and the one a player reaches for without looking; the
+    /// below-slice cycle gave B up and moved to shift-V, beside the above-slice cycle it belongs
+    /// with. Escape opens Menu, which is the panel Escape already opened.</para>
     /// </summary>
     public static class HudCommands
     {
@@ -76,15 +85,15 @@ namespace Odyssey.Hud
         static readonly (string Key, string Hotkey, string Reason)[] Order =
         {
             (BuildKey, "B", ""),
-            ("ui.tab.work", "W", "the work grid arrives with M7"),
-            ("ui.tab.schedule", "S", "schedules arrive with M7"),
-            ("ui.tab.research", "E", "research arrives with M7"),
-            ("ui.tab.colonists", "O", "the roster strip is the colonist list for now"),
-            ("ui.tab.animals", "A", "animals arrive with M5"),
-            ("ui.tab.wildlife", "K", "wildlife arrives with M5"),
-            ("ui.tab.bills", "N", "bills arrive with M5"),
-            ("ui.tab.factions", "T", "factions arrive with M7"),
-            ("ui.tab.archive", "G", "the archive arrives with M2"),
+            ("ui.tab.work", "F1", "the work grid arrives with M7"),
+            ("ui.tab.schedule", "F2", "schedules arrive with M7"),
+            ("ui.tab.research", "F3", "research arrives with M7"),
+            ("ui.tab.colonists", "F4", "the roster strip is the colonist list for now"),
+            ("ui.tab.animals", "F5", "animals arrive with M5"),
+            ("ui.tab.wildlife", "F6", "wildlife arrives with M5"),
+            ("ui.tab.bills", "F7", "bills arrive with M5"),
+            ("ui.tab.factions", "F8", "factions arrive with M7"),
+            ("ui.tab.archive", "F9", "the archive arrives with M2"),
             (MenuKey, "Esc", ""),
         };
 

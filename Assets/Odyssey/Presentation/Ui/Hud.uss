@@ -782,6 +782,47 @@
     width: 300px;
 }
 
+.settings__tabs {
+    flex-direction: row;
+    margin-top: 6px;
+    height: 26px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.09);
+}
+
+.settings__body { margin-top: 9px; }
+
+/* The scale ladder: one rung per percentage, the live one filled. Chips rather than a slider,
+   which is the on-off idiom this HUD already uses everywhere else. */
+.settings__ladder {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 4px;
+    margin-left: 26px;
+}
+
+.rung {
+    height: 26px;
+    padding: 0 9px;
+    margin: 0 4px 4px 0;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.66);
+    -unity-text-align: middle-center;
+}
+
+.rung:hover { border-color: #6fd3e3; }
+
+.rung--on {
+    background-color: #6fd3e3;
+    border-color: #6fd3e3;
+    color: #0b1116;
+}
+
+/* A row that only labels the control under it, and answers nothing itself. */
+.settings__row--static:hover { background-color: rgba(0, 0, 0, 0); }
+
 .settings__section {
     color: rgba(255, 255, 255, 0.50);
     margin: 9px 0 4px 0;

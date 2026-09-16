@@ -1266,3 +1266,32 @@ happens to do.
 Worth generalising: when a guard has to be anchored in something outside the thing it is testing,
 prefer another *mechanism* that answers the same question independently over a *fact about the
 current design*. The mechanism survives the redesign.
+
+## A reserved-key list maintained by hand is wrong before anyone reads it
+
+The rebuilt command bar gave each of its eleven items a hotkey and shipped a test asserting that
+none of them collided with "the keys the game already uses". The list in that test had nine entries
+— the designate tools, the slice keys, the speed digits — and was missing **WASD**, which pans the
+camera, **B**, which cycled the below-slice mode, and **Q** and **E**, which turn it. Five of the
+eleven hotkeys clashed. The test passed.
+
+Nothing about it looked wrong. It was a real assertion with a real list and a clear failure message,
+and it had been written specifically to prevent this. What it could not do is know about a binding
+added in a file it had never heard of.
+
+**So the reserved set is read out of the source.** `HotkeyClashTests` greps the Presentation
+assembly for every `keys.somethingKey`, and allows a command's key only in the one file that reads
+it on that command's behalf — `bKey` in `HudShell.cs` for Build, `escapeKey` in
+`SettingsPresenter.cs` for Menu. Anything else reading one of them is the clash. It also asserts
+that **every hotkey cap is one the test knows how to map**, because a cap it cannot map is a cap it
+silently skips, which is the same failure wearing a different hat.
+
+Two things generalise:
+
+- **When a guard needs to know about "everything else in the codebase", derive the set, do not type
+  it.** A grep-based test is an unusual shape and is sometimes the only shape that can answer the
+  question at all without a running game and a person pressing keys.
+- **A test that skips what it cannot handle passes for the wrong reason.** Make the unhandled case
+  an explicit failure. Both of this file's earlier entries about silent skipping — the `Assume` that
+  hid six dead mining tests, the loose tolerance that made a test prove nothing — are the same
+  shape.

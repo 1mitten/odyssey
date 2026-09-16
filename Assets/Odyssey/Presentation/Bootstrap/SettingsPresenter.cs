@@ -105,6 +105,12 @@ namespace Odyssey.Presentation.Bootstrap
                 if (_bootstrap.grassScatter > 0) _grassDensity = _bootstrap.grassScatter;
                 if (_bootstrap.groundRelief > 0f) _reliefAmplitude = _bootstrap.groundRelief;
 
+                // The interface scale is seeded from the screen rather than from the scene,
+                // because it is the one setting here that is about the monitor rather than about
+                // the board. The owner's report on 2026-09-16 was that the HUD read too small on
+                // a 4K panel; SettingsDirector.DefaultScaleFor is where that judgement lives.
+                director.SeedUiScale(SettingsDirector.DefaultScaleFor(Screen.height));
+
                 director.Seed(GraphicsOption.Shadows, _bootstrap.castShadows);
                 director.Seed(GraphicsOption.Surround, _bootstrap.terrainSkirt);
                 director.Seed(GraphicsOption.GrassTufts, _bootstrap.grassScatter > 0);
@@ -112,6 +118,11 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             director.OptionChanged += Apply;
+            director.UiScaleChanged += ApplyScale;
+
+            // Applied once up front, because the shell may have been built before the seed was
+            // known and the stored preference is laid over it below.
+            ApplyScale(director.UiScale);
 
             // Anything this machine has been told before is laid over the scene, and raises
             // OptionChanged as it goes, so the board catches up without a second code path.
@@ -120,8 +131,14 @@ namespace Odyssey.Presentation.Bootstrap
 
         void OnDestroy()
         {
-            if (_director != null) _director.OptionChanged -= Apply;
+            if (_director == null) return;
+            _director.OptionChanged -= Apply;
+            _director.UiScaleChanged -= ApplyScale;
         }
+
+        /// <summary>The shell owns the UI document, so it owns the panel the scale is applied
+        /// to.</summary>
+        void ApplyScale(int percent) => _shell?.ApplyUiScale(percent);
 
         /// <summary>
         /// Turn one boolean into what the renderer does.

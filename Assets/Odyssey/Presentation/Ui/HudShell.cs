@@ -153,7 +153,15 @@ namespace Odyssey.Presentation.Ui
         VisualElement _buildTools = null!;
         int _buildCategory = -1;
         VisualElement _settingsPanel = null!;
+        VisualElement _interfaceSection = null!;
+        VisualElement _graphicsSection = null!;
         readonly Dictionary<GraphicsOption, VisualElement> _settingRows = new();
+        readonly Dictionary<SettingsTab, Label> _settingTabs = new();
+        readonly Dictionary<int, Label> _scaleRungs = new();
+
+        /// <summary>Our own copy of the panel settings, so that changing the interface scale does
+        /// not write to the committed asset. See <see cref="ApplyUiScale"/>.</summary>
+        PanelSettings? _panelCopy;
 
         Texture2D? _topRamp;
         Texture2D? _bottomRamp;
@@ -235,6 +243,13 @@ namespace Odyssey.Presentation.Ui
         void Start()
         {
             var doc = GetComponent<UIDocument>();
+
+            // Before anything is built. Swapping a UIDocument's panel settings re-attaches its
+            // root to a different panel, and doing that after the tree exists is asking the
+            // engine to carry a live HUD across the change for us. Taking the copy first means
+            // the interface scale only ever writes a number on an asset nobody else holds.
+            EnsurePanelCopy(doc);
+
             var root = doc.rootVisualElement;
             if (root == null)
             {
@@ -277,6 +292,7 @@ namespace Odyssey.Presentation.Ui
             Detach();
             if (_topRamp != null) DestroyImmediate(_topRamp);
             if (_bottomRamp != null) DestroyImmediate(_bottomRamp);
+            if (_panelCopy != null) DestroyImmediate(_panelCopy);
         }
 
         /// <summary>
@@ -291,8 +307,15 @@ namespace Odyssey.Presentation.Ui
             _directors.Slice.LayerChanged += OnLayerChanged;
             _directors.Settings.Changed += OnSettingsChanged;
             _directors.Settings.OptionChanged += OnSettingChanged;
+            _directors.Settings.TabChanged += OnSettingsTabChanged;
+            _directors.Settings.UiScaleChanged += OnUiScaleChanged;
 
+            // The panel may already disagree with the director by the time we get here: the
+            // presenter seeds it from the scene and the screen and then lays stored preferences
+            // over it, and both happen before the shell has found anything to attach to.
             OnSettingsChanged();
+            OnSettingsTabChanged(_directors.Settings.Tab);
+            OnUiScaleChanged(_directors.Settings.UiScale);
             foreach (GraphicsOption option in SettingsDirector.All) OnSettingChanged(option);
         }
 
@@ -303,6 +326,8 @@ namespace Odyssey.Presentation.Ui
             _directors.Slice.LayerChanged -= OnLayerChanged;
             _directors.Settings.Changed -= OnSettingsChanged;
             _directors.Settings.OptionChanged -= OnSettingChanged;
+            _directors.Settings.TabChanged -= OnSettingsTabChanged;
+            _directors.Settings.UiScaleChanged -= OnUiScaleChanged;
             _directors = null;
         }
 
@@ -1718,12 +1743,16 @@ namespace Odyssey.Presentation.Ui
         // ============================================================ B17 settings
 
         /// <summary>
-        /// The settings panel: one section of graphics toggles, opened with Escape or from Menu.
+        /// The settings panel: two sections behind a tab strip, opened with Escape or from Menu.
         ///
         /// <para><b>It is not a modal.</b> There is no scrim and nothing is blocked: the world
         /// runs, the camera orbits and the clock ticks while it is open, because the only reason
         /// to have the panel is to watch the board change as a lever moves. Clicks that land on it
         /// already stop at the panel edge through <see cref="PointOverUi"/>.</para>
+        ///
+        /// <para><b>Interface before Graphics</b>, because the first thing a player wants from a
+        /// settings panel on a large monitor is to make the type bigger, and because that is the
+        /// one setting here that changes the panel they are looking at while they look at it.</para>
         /// </summary>
         void BuildSettings()
         {
@@ -1731,8 +1760,84 @@ namespace Odyssey.Presentation.Ui
             Header(_settingsPanel, Registry.Label(SettingsDirector.PanelKey), out _);
             _settingsPanel.style.display = DisplayStyle.None;
 
-            _settingsPanel.Add(HudText.Make(Registry.Label(SettingsDirector.GraphicsKey),
-                HudTextRole.PanelLabel, ussClass: "settings__section"));
+            // The tab strip, in the same idiom as the inspect pane's: nothing new is invented for
+            // a second use of a control the HUD already has.
+            var tabs = new VisualElement();
+            tabs.AddToClassList("settings__tabs");
+            foreach (SettingsTab tab in new[] { SettingsTab.Interface, SettingsTab.Graphics })
+            {
+                string key = tab == SettingsTab.Interface
+                    ? SettingsDirector.InterfaceKey
+                    : SettingsDirector.GraphicsKey;
+                Label chip = HudText.Make(Registry.Label(key), HudTextRole.Body, ussClass: "tab");
+                SettingsTab captured = tab;
+                chip.RegisterCallback<ClickEvent>(_ => _directors?.Settings.SetTab(captured));
+                _settingTabs[tab] = chip;
+                tabs.Add(chip);
+            }
+            _settingsPanel.Add(tabs);
+
+            BuildInterfaceSection();
+            BuildGraphicsSection();
+
+            // The director opens on Interface, and the shell may never attach to a director at all
+            // in a harness that builds no world. Showing both sections at once is not a state
+            // anything asks for, so it is not a state the panel is ever in.
+            OnSettingsTabChanged(SettingsTab.Interface);
+
+            _settingsPanel.Add(HudText.Make("Escape closes. None of it is in the save.",
+                HudTextRole.Meta, ussClass: "settings__note"));
+            _hud.Add(_settingsPanel);
+        }
+
+        /// <summary>
+        /// The Interface section: how large the HUD is drawn.
+        ///
+        /// <para>A ladder of percentages rather than a slider. The rungs are the director's, so
+        /// the set is testable in the fast tier, and each says out loud what the trade is — larger
+        /// type is easier to read and hides more of the board, which is the whole of the decision
+        /// the player is making.</para>
+        /// </summary>
+        void BuildInterfaceSection()
+        {
+            _interfaceSection = new VisualElement();
+            _interfaceSection.AddToClassList("settings__body");
+
+            var row = new VisualElement();
+            row.AddToClassList("settings__row");
+            row.AddToClassList("settings__row--static");
+            var icon = new IconBadge(SettingsDirector.UiScaleKey, IconBadge.RowSize);
+            icon.Inherit(HudTokens.TextMeta);
+            row.Add(icon);
+            row.Add(HudText.Make(Registry.Label(SettingsDirector.UiScaleKey), HudTextRole.Row,
+                ussClass: "settings__label"));
+            _interfaceSection.Add(row);
+
+            var ladder = new VisualElement();
+            ladder.AddToClassList("settings__ladder");
+            foreach (int percent in SettingsDirector.UiScales)
+            {
+                // A percentage is a figure, so it is set in the mono face like every other figure
+                // on this screen.
+                Label rung = HudText.Make(percent + "%", HudTextRole.Body, numeric: true, "rung");
+                rung.tooltip = percent == 100
+                    ? "The size the interface is designed at"
+                    : percent < 100
+                        ? "Smaller type, less of the board hidden"
+                        : "Larger type, more of the board hidden";
+                int captured = percent;
+                rung.RegisterCallback<ClickEvent>(_ => _directors?.Settings.SetUiScale(captured));
+                _scaleRungs[percent] = rung;
+                ladder.Add(rung);
+            }
+            _interfaceSection.Add(ladder);
+            _settingsPanel.Add(_interfaceSection);
+        }
+
+        void BuildGraphicsSection()
+        {
+            _graphicsSection = new VisualElement();
+            _graphicsSection.AddToClassList("settings__body");
 
             foreach (GraphicsOption option in SettingsDirector.All)
             {
@@ -1757,12 +1862,64 @@ namespace Odyssey.Presentation.Ui
                 GraphicsOption captured = option;
                 row.RegisterCallback<ClickEvent>(_ => _directors?.Settings.Toggle(captured));
                 _settingRows[option] = row;
-                _settingsPanel.Add(row);
+                _graphicsSection.Add(row);
             }
 
-            _settingsPanel.Add(HudText.Make("Escape closes. Graphics only, and none of it is in the save.",
-                HudTextRole.Meta, ussClass: "settings__note"));
-            _hud.Add(_settingsPanel);
+            _settingsPanel.Add(_graphicsSection);
+        }
+
+        void OnSettingsTabChanged(SettingsTab tab)
+        {
+            foreach (var entry in _settingTabs)
+            {
+                bool on = entry.Key == tab;
+                entry.Value.EnableInClassList("tab--on", on);
+                entry.Value.EnableInClassList("tab--off", !on);
+            }
+            _interfaceSection.style.display =
+                tab == SettingsTab.Interface ? DisplayStyle.Flex : DisplayStyle.None;
+            _graphicsSection.style.display =
+                tab == SettingsTab.Graphics ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        void OnUiScaleChanged(int percent)
+        {
+            foreach (var entry in _scaleRungs)
+                entry.Value.EnableInClassList("rung--on", entry.Key == percent);
+            ApplyUiScale(percent);
+        }
+
+        /// <summary>
+        /// Draw the HUD larger or smaller by telling its panel a different reference resolution.
+        ///
+        /// <para><b>On a copy of the asset, never the asset itself.</b> <c>PanelSettings</c> is a
+        /// file on disk, and writing to it from play mode in the editor leaves the change behind
+        /// after the session ends — permanently, and invisibly, in a committed asset. This project
+        /// has met that exact trap once already with the sky material, which is copied before it
+        /// is tinted for the same reason.</para>
+        ///
+        /// <para>Everything else follows for free: the panel re-lays-out, the shell's own
+        /// <c>GeometryChangedEvent</c> fires, the colonist strip re-clamps to what fits and the
+        /// command bar reflows its tail into Menu. The layout is anchored rather than sized, so a
+        /// smaller canvas is a case it already handles and is already tested at.</para>
+        /// </summary>
+        public void ApplyUiScale(int percent)
+        {
+            if (_panelCopy == null) EnsurePanelCopy(GetComponent<UIDocument>());
+            if (_panelCopy == null) return;
+
+            (int width, int height) = HudLayout.ReferenceFor(percent);
+            _panelCopy.referenceResolution = new Vector2Int(width, height);
+        }
+
+        void EnsurePanelCopy(UIDocument? doc)
+        {
+            if (_panelCopy != null || doc == null || doc.panelSettings == null) return;
+
+            _panelCopy = Instantiate(doc.panelSettings);
+            _panelCopy.name = doc.panelSettings.name + " (scaled)";
+            _panelCopy.hideFlags = HideFlags.HideAndDontSave;
+            doc.panelSettings = _panelCopy;
         }
 
         void OnSettingsChanged()

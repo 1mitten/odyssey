@@ -233,6 +233,60 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// Turning the interface scale up makes the HUD bigger, end to end.
+        ///
+        /// <para>The fast tier proves the arithmetic and that no two panels overlap at any rung.
+        /// What it cannot prove is that the rung reaches the panel at all — that the director's
+        /// event is subscribed, that the shell writes the reference resolution, and above all that
+        /// it writes it to <b>its own copy</b> of the settings asset rather than to the committed
+        /// one.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TurningTheInterfaceScaleUpMakesTheHudBigger()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+                Assert.That(boot.Directors, Is.Not.Null, "the bootstrap never built its directors");
+
+                PanelSettings before = doc.panelSettings;
+                Rect wide = doc.rootVisualElement.worldBound;
+                Rect storesBefore = doc.rootVisualElement.Q(name: "stores")!.worldBound;
+
+                boot.Directors!.Settings.SetUiScale(150);
+                for (int i = 0; i < 6; i++) yield return null;
+
+                Assert.That(doc.panelSettings.referenceResolution.x,
+                    Is.EqualTo(HudLayout.ReferenceFor(150).Width),
+                    "the scale never reached the panel");
+                Assert.That(doc.rootVisualElement.worldBound.width, Is.LessThan(wide.width),
+                    "a larger scale is a smaller canvas, which is what makes everything on it bigger");
+
+                // The panel is the same asset instance throughout — the shell takes its copy once,
+                // before the tree is built, so changing the scale never swaps the panel under a
+                // live HUD and never writes to the asset on disk.
+                Assert.That(doc.panelSettings, Is.SameAs(before),
+                    "the shell swapped its panel settings mid-session");
+
+                // The stores panel is a fixed 288 reference pixels wide, so at 150% it occupies
+                // half again as much of the screen. Measured as a fraction of the canvas, because
+                // worldBound is in canvas units and those are what just changed.
+                Rect narrow = doc.rootVisualElement.worldBound;
+                Rect storesAfter = doc.rootVisualElement.Q(name: "stores")!.worldBound;
+                float was = storesBefore.width / wide.width;
+                float now = storesAfter.width / narrow.width;
+                Debug.Log($"[HudGeometry] stores is {was:P1} of the canvas at 100% and {now:P1} at 150%");
+                Assert.That(now, Is.GreaterThan(was * 1.3f),
+                    "the HUD did not actually grow relative to the screen");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// The one acceptance criterion that is about words rather than boxes: no three-letter
         /// placeholder strings anywhere on the screen. MEA, WOO and SCR were the old icon
         /// stand-in, and they read as truncated data rather than as a deliberate gap.

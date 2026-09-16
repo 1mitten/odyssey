@@ -184,6 +184,41 @@ after a rebuild, republish `docs/wiki/artifact.html` and
   - **Three model faults the new tests found before any of it was drawn.** The colonist strip is centred on the *screen* while the panels either side are different widths, so a strip sized to the free span and then centred poked seventeen pixels into the clock column. The depth rail is the one region the *world* sizes, so it has to be the one that gives: its cells shrink in proportion rather than the rail overflowing, and above all rather than silently losing its last layers, which was a playtest report. And the rail runs down to the command bar, not to the bottom of the screen.
   - **Escape now unwinds tool → Build palette → settings → menu**, one rule in `SettingsDirector.Escape` decided in the fast tier. The palette is new to that order because it used to be a permanently open column.
   - **Not done: nobody has looked at it.** No test can say whether it reads well. **Press Play in `Play.unity`.** Also open: real icon art (every game glyph is an outlined square), no backdrop blur (UI Toolkit has none, and the scrims carry the contrast that mattered), and true 500/600/700 weights.
+- **The interface has a scale, and the camera turns freely (owner, 2026-09-16, both on the HUD rebuild branch).**
+  - **The type read too small on 4K**, which is not a contradiction of the panel scaling with the
+    screen: it subtends the same angle as at 1080p, but physically identical is not perceptually
+    identical at arm's length from a large panel, and the HUD this replaced was drawn against a
+    1200 x 800 reference, so every glyph on it was 1.6 times larger. The fix is the setting
+    `09-ui-and-input.md` §9 D4 planned for all along, which **closes D4**: a **ladder** of 80 / 90 /
+    100 / 110 / 125 / 150 per cent rather than a slider, because a HUD at a fractional scale puts
+    its one-pixel hairlines between pixels. It works by **dividing the reference canvas** — at 125%
+    the panel is told 1536 x 864 — so nothing else has to know: the anchored layout adapts, the
+    colonist strip re-clamps and the command bar moves its tail into Menu. `UiScaleTests` walks
+    every rung and asserts no two panels overlap at any of them. **The default is read off the
+    screen**: 100 below 1440p, 110 at 1440p, **125 at 4K**, and the defaults are checked against the
+    coverage ceiling (125% comes to about 17%, inside the 18% budget). Above that the player is
+    knowingly trading board for legibility and each rung's tooltip says so. **The panel settings
+    asset is copied before it is written**, the same trap the sky material already taught.
+  - **B17 is tabbed: Interface, then Graphics.** It opens on Interface, because the scale is the
+    one setting in it that changes the panel you are looking at while you look at it. Two new
+    registry names, `ui.settings.interface` and `ui.settings.uiscale`; wiki and `Registry.g.cs`
+    regenerated.
+  - **Q and E rotate freely while held** (`SliceCameraRig.rotateSpeed`, 90°/s, multiplied by shift
+    like every other camera speed). They used to snap ninety degrees a press, which is the genre's
+    convention and assumes a board that reads the same from four sides — this one does not, since
+    it is layered and its slice is cut at an angle, so a wall hides different things at fifty
+    degrees than at ninety. The *target* angle is driven rather than the yaw, so mouse orbit and
+    key rotation share one smoothing and cannot fight over the angle.
+  - **The command bar's hotkeys were wrong and the test written to catch that passed anyway.** Five
+    of eleven — W, S, E, A and B — were already camera keys (WASD pans, Q/E turn, B cycled the
+    below-slice mode), and the guard compared against a **reserved list written from memory** that
+    was missing all five. The panels are on **F1–F9** now (unclaimed, conventional for top-level
+    panels, and narrow, which the overflow budget likes), **Build keeps B**, and the below-slice
+    cycle moved to **shift-V** beside the above-slice cycle it belongs with. `HotkeyClashTests`
+    replaces the list: it **greps the Presentation assembly** for every `keys.somethingKey` and
+    allows a command's key only in the one file that reads it on that command's behalf. The lesson
+    generalises and is in `docs/lessons.md` — *a reserved list maintained by hand is wrong the
+    moment somebody binds a key without updating it.*
 - **Multi-selection landed 2026-09-16 (M2's selection slice, `claude/selection-mvp`).** `SelectionDirector` now holds an ordered set of colonist handles (`Pawns`, first is the primary `Pawn`) with `PickMany` (drag box / select-similar), shift-toggle on `Pick`/`Choose`/`Toggle`, and per-handle death pruning under the one-frame grace — items and cells stay single-subject, per 09 §3 row 5's "multi-select within one class". New reasons on `Changed`: `Boxed`, `Toggled`, `Similar`. **The gestures:** a left drag past a 6 px threshold in `SliceCameraRig` completes a screen rect against the world even over a panel (input case 1, §6); `SelectionPresenter` tests containment of each drawn colonist's chest point (feet-tweened, layer-filtered like the ray hit-test) and a double click on a colonist takes everything of that kind on screen — the docs' wording, not a vision radius, which stays a future knob. **The roster bar (A2) keeps pace:** every selected card is marked, shift-press toggles without the camera jump, shift-drag sweeps a range. The marquee is a UI Toolkit overlay in `Hud.uss`; multi-brackets are drawn by the composition root (primary full, rest at 0.45 alpha); the inspect pane prefixes "N selected" when the set is larger than one. Headless: seven new director tests in `DirectorTests`. **Not yet:** no per-colonist orders read the set — the command grid (A10) is the consumer this was built for; double-click select-similar does not yet jump the camera from the roster card (single double-click semantics still to settle).
 - **The board no longer ends in mid-air (owner decision 2026-09-16).** A decorative surround carries
   the ground and the wood 1,220 m past the rim into the fog, so the map reads as a clearing in a
