@@ -241,13 +241,19 @@ namespace Odyssey.Sim.Worldgen
     /// <summary>
     /// The core content set worldgen writes: terrain kinds, slab kinds, stuffs and edifice kinds.
     ///
-    /// These are built in code rather than loaded from XML because there is no content pack yet
-    /// and the generator must run headless in a clone with no <c>Assets/</c> content at all. The
-    /// declaration order below **is** the table order, so when the XML lands it must declare the
-    /// same names in the same order.
+    /// **The terrain table now exists as content too** (OQ-16): <c>Defs/Core/World/Terrain.xml</c>
+    /// holds these ten and the wilderness's eleven as one table, and <c>WorldContentDefTests</c>
+    /// compares the two field for field on every run, so they cannot part unnoticed.
     ///
-    /// TODO(content): move these to Defs/Core/*.xml and resolve handles by name at world
-    /// construction, then delete the constants. Nothing else in worldgen needs to change.
+    /// This copy remains for one reason: it is the oracle, and the generator must run headless in
+    /// a clone that has no <c>Assets/</c> content at all. The declaration order below **is** the
+    /// table order, and a terrain index is stored in every cell of every save — so the order is a
+    /// save-compatibility contract, not a convention. <see cref="WorldContent.TerrainOrder"/>
+    /// restates it and a test checks both against these constants.
+    ///
+    /// TODO(content): build the world from a loaded <see cref="DefDatabase"/> at the composition
+    /// root, then delete this table and turn the constants into resolved handles. That is its own
+    /// change, and nothing else in worldgen needs to change with it.
     /// </summary>
     public static class CoreContent
     {

@@ -15,8 +15,13 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// different things. The same is done for edifice ids (<see cref="FirstEdifice"/>) and stuffs
     /// (<see cref="StuffWood"/>).
     ///
-    /// TODO(content): when terrain moves to Defs/Core/*.xml, the two tables become one declared in
-    /// one file and this class disappears. Until then, three rules keep the split honest:
+    /// **The XML is already one table** (OQ-16): <c>Defs/Core/World/Terrain.xml</c> declares all
+    /// twenty-one kinds in index order, <see cref="WorldContent.TerrainOrder"/> is the list that
+    /// decides which name is which index, and <c>WorldContentDefTests</c> checks that list against
+    /// every constant below. What remains split is the code: these constants and the in-code
+    /// tables stay until the composition root builds a world from a loaded database, which is its
+    /// own change (see <see cref="Pawns.PawnContent"/>). Until then three rules keep the split
+    /// honest:
     ///   1. never renumber <see cref="CoreContent"/> without renumbering here;
     ///   2. ask <see cref="IsSolid"/> / <see cref="TerrainAt"/> here, never
     ///      <c>CoreContent.IsSolid</c> directly, on any index that may be natural — the CoreContent
@@ -25,8 +30,9 @@ namespace Odyssey.Sim.Worldgen.Natural
     ///      <c>WorldRenderModel</c>) must be widened to <see cref="TerrainCount"/> before a natural
     ///      map is rendered. The module ids below are what such a table needs to resolve.
     ///
-    /// The declaration order below **is** the table order, exactly as in CoreContent: when the XML
-    /// lands it must declare the same names in the same order.
+    /// The declaration order below **is** the table order, exactly as in CoreContent, and it is
+    /// the order <see cref="WorldContent.TerrainOrder"/> repeats. A name added here is added there
+    /// too, or a test fails — which is the point of having written it down twice.
     /// </summary>
     public static class NaturalContent
     {
