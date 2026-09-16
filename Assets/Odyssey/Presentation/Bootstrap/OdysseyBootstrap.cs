@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Odyssey.Hud;
+using Odyssey.Presentation.Audio;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
@@ -82,8 +83,17 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Which faces the colonists get. 0 draws a fresh cast every session; any other value pins one, and the log prints the value each session used so a cast you liked can be kept.")]
         public int colonistLookSeed = 0;
 
+        /// <summary>
+        /// The hour the colony's first day begins, 0 to 23. Noon by default: the board is lit for
+        /// midday and has no day/night lighting, so a clock starting at 00:00 meant a player saw
+        /// noon and heard the night bed. Set it negative to start at tick 0 the way a headless
+        /// run does.
+        /// </summary>
+        [Range(-1, 23)] public int startHour = 12;
+
         [Header("Presentation")]
         public ModuleCatalogue? moduleCatalogue;
+        public AudioCatalogue? audioCatalogue;
         public SliceCameraRig? cameraRig;
         public bool castShadows = true;
 
@@ -113,6 +123,7 @@ namespace Odyssey.Presentation.Bootstrap
         ChunkRenderer? _renderer;
         PawnContext? _pawns;
         PawnFigureDirector? _figures;
+        AudioDirector? _audio;
         Material? _actorMaterial;
         MapGenDef? _gen;
         double _accumulator;
@@ -154,6 +165,8 @@ namespace Odyssey.Presentation.Bootstrap
 
         void Start()
         {
+            WarnIfTheSceneIsStale();
+
             // Set before anything is meshed, because the relief is read at mesh time and a chunk
             // built flat would stay flat until something dirtied it. Statics, like the scatter
             // density beside them: the field has to be reachable from the mesher, the picker and
@@ -212,6 +225,12 @@ namespace Odyssey.Presentation.Bootstrap
                 .AddSnapshotContributor(mirror)
                 .AddColony(_pawns, designations, support, nav)
                 .Build();
+
+            // Noon, before the world has ticked once. It has to be here and not further down:
+            // the composition root ticks once during setup to publish a first frame, and
+            // SimWorld.StartAtTick refuses a clock that has already run — which is how this was
+            // caught being in the wrong place rather than quietly starting the day an hour late.
+            if (startHour >= 0) _world.StartAtTick(startHour * GameClock.TicksPerHour);
 
             ScenarioDef scenarioDef = scenario == StartingScenario.Bare ? ScenarioDef.Bare() : ScenarioDef.Playtest();
             var placement = ColonyScenario.Place(_grid, _pawns, outcome.StartCell, seed, scenarioDef);
@@ -278,6 +297,17 @@ namespace Odyssey.Presentation.Bootstrap
             Directors = new HudDirectors(size.SizeY, outcome.StartCell.Y);
             Directors.Slice.LayerChanged += OnActiveLayerChanged;
 
+            // Sound, built once beside the figures: one director serves the whole colony, reading
+            // the published frame and the render mirror and nothing the simulation owns. The
+            // faders come from the player's stored settings (the B17 stub), so a volume the
+            // player set last session is set again before the first frame is drawn. A null
+            // catalogue — a clone without the audio assets — yields a working, silent game.
+            _audio = new AudioDirector(
+                audioCatalogue, _model != null ? new MirrorTerrain(_model) : null,
+                size, transform, gameObject.layer, outcome.StartCell.Y);
+            AudioSettingsStore.Load().ApplyTo(_audio);
+            if (_figures != null) _figures.BlowLanded += OnBlowLanded;
+
             if (cameraRig != null)
             {
                 // Bind to the layer the colony actually stands on, not the generator nominal
@@ -315,6 +345,13 @@ namespace Odyssey.Presentation.Bootstrap
 
         void OnActiveLayerChanged(int layer) =>
             _world?.Intents.Submit(new Intent(IntentKind.SetSliceLayer, default, layer));
+
+        /// <summary>
+        /// A tool landed somewhere: chop or pick by the style the figure already resolved, played
+        /// from the edge the chips left. The director does the rest — distance, cooldown, pitch.
+        /// </summary>
+        void OnBlowLanded(int workStyle, Vector3 edge) =>
+            _audio?.PlayOneShot(SoundIds.ForBlow(workStyle), edge);
 
         void OnGameSpeedRequested(int speed)
         {
@@ -371,6 +408,38 @@ namespace Odyssey.Presentation.Bootstrap
             }
         }
 
+        /// <summary>
+        /// Say so, loudly, when the play scene was built before a presenter existed.
+        ///
+        /// <para><b>A stale scene fails silently, and that is what makes it expensive.</b>
+        /// <c>Assets/Scenes/Play.unity</c> is committed <i>and</i> generated: the generator is
+        /// <c>PlayScene.cs</c> and the scene is its output. Add a component to the generator and
+        /// the committed scene does not have it until somebody runs
+        /// <b>Odyssey → Presentation → Build play scene</b>. Until they do, the feature is simply
+        /// absent — no error, no missing reference, nothing to see. It is indistinguishable from a
+        /// broken feature, and it cost a whole playtest round: designation was reported as "nothing
+        /// happened" when in truth nothing was there.</para>
+        ///
+        /// <para>Checked by name rather than by a generator stamp because a stamp has to be
+        /// remembered and this does not: a presenter the composition root depends on is either on
+        /// the object or it is not. The list is short and it is the list of things whose absence
+        /// is silent — a missing renderer throws, a missing presenter does nothing at all.</para>
+        ///
+        /// <para>It warns rather than adding the component itself. Adding it would paper over a
+        /// scene that may be stale in ways this cannot see — the camera rig, the lighting, the
+        /// module catalogue — and the useful signal is "rebuild the scene", not "one thing has
+        /// been quietly patched".</para>
+        /// </summary>
+        void WarnIfTheSceneIsStale()
+        {
+            if (GetComponent<DesignatePresenter>() != null) return;
+
+            Debug.LogWarning(
+                "[Odyssey] This play scene was built before DesignatePresenter existed, so no tool " +
+                "can be armed and the mining and felling keys (M, C, X) will do nothing. The scene " +
+                "is generated: rebuild it with Odyssey > Presentation > Build play scene.");
+        }
+
         void LateUpdate()
         {
             if (_renderer == null || _model == null || _world == null) return;
@@ -387,6 +456,16 @@ namespace Odyssey.Presentation.Bootstrap
             int movePerTick = PawnContent.Core().Movement.movePerTick;
             _figures?.Sync(_world.Views.Current, activeLayer, slice, _tickAlpha, movePerTick,
                 Time.deltaTime);
+
+            // Sound after the figures, so a blow that landed this frame sounds on the same frame
+            // its chips fly. The listener is the camera (where the AudioListener lives) and the
+            // ambience anchor is its focus, which sits down among the water rather than up where
+            // the camera itself is.
+            if (_audio != null)
+                _audio.Sync(Time.deltaTime, _world.Views.Current,
+                    cameraRig != null ? cameraRig.transform.position : transform.position,
+                    cameraRig != null ? cameraRig.Focus : transform.position,
+                    activeLayer);
 
             if (_actorMaterial != null)
                 _renderer.RenderActors(_world.Views.Current, activeLayer, slice, _actorMaterial,
@@ -573,6 +652,10 @@ namespace Odyssey.Presentation.Bootstrap
                 $"   figures {_figures?.FigureCount ?? 0} @ {_figures?.FastestSpeed ?? 0f:0.0} m/s\n" +
                 $"frame {_smoothedFrameMs:0.00} ms ({(_smoothedFrameMs > 0f ? 1000f / _smoothedFrameMs : 0f):0}fps)" +
                 $"   submit {_renderMs:0.00} ms   tick {_tickMs:0.00} ms   remeshed {_renderer.ChunksMeshedThisFrame}\n" +
+                $"sound played {_audio?.OneShotsPlayed ?? 0} culled {_audio?.DistanceCulled ?? 0}" +
+                $" skipped {_audio?.CooldownSkipped ?? 0} starved {_audio?.VoiceStarved ?? 0}" +
+                $" noclip {_audio?.ClipMissing ?? 0}" +
+                $" water {_audio?.WaterLevel ?? 0f:0.00} music {_audio?.MusicPhase.ToString().ToLowerInvariant() ?? "none"}\n" +
                 $"WASD pan - Q/E orbit - wheel zoom - R/F layer - V above-mode - B below-mode - " +
                 $"space pause - 1/2/3 speed - Home frame\n{_catalogueNote}";
 
@@ -580,9 +663,9 @@ namespace Odyssey.Presentation.Bootstrap
             // the one region immediate mode is permitted in, and it must not sit on the HUD's
             // top-left region when both are visible.
             GUI.color = Color.black;
-            GUI.Label(new Rect(11f, 181f, 1400f, 110f), text);
+            GUI.Label(new Rect(11f, 181f, 1400f, 128f), text);
             GUI.color = Color.white;
-            GUI.Label(new Rect(10f, 180f, 1400f, 110f), text);
+            GUI.Label(new Rect(10f, 180f, 1400f, 128f), text);
         }
 
         void OnDestroy()
@@ -592,6 +675,8 @@ namespace Odyssey.Presentation.Bootstrap
                 if (Directors != null) Directors.Slice.LayerChanged -= OnActiveLayerChanged;
                 cameraRig.GameSpeedRequested -= OnGameSpeedRequested;
             }
+            if (_figures != null) _figures.BlowLanded -= OnBlowLanded;
+            _audio?.Dispose();
             _figures?.Dispose();
             _renderer?.Dispose();
             // The library owns every mesh it baked or merged, and a Mesh made in code is a GPU

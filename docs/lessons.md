@@ -459,6 +459,19 @@ Pure layout and arithmetic can be *run* the same way: reference the built DLL fr
 ring coverage was checked to be exactly 100.0000% of the area outside the board before anything was
 committed.
 
+Two more, found on 2026-09-16 doing exactly this for a camera change:
+
+- **Exclude `Presentation/Tests/`.** It is its own assembly definition and needs NUnit, so a glob of
+  `Presentation/**/*.cs` fails with a screenful of `CS0246: NUnit could not be found` that has
+  nothing to do with the code being checked. Adding NUnit to compile it is also an option; excluding
+  it is faster when the question is only "does the game code still build".
+- **Glob the references rather than naming them.** `$(UnityManaged)\UnityEngine*.dll` and
+  `Library/ScriptAssemblies/Unity.RenderPipelines*.dll` in one `<Reference Include>` each. The
+  Presentation assembly reaches into particles, physics, animation, the Playables graph and the
+  render pipeline, and naming the modules one at a time is a game of whack-a-mole against an error
+  list that only reveals the next missing one. `Unity.InputSystem.dll` is needed too, and lives in
+  `Library/ScriptAssemblies/` rather than with the engine.
+
 Two traps while doing it. MSBuild reads `<HintPath>` as XML, so a Windows path written with
 backslashes dies on `MSB4025: hexadecimal value 0x0C is an invalid character` — the `` in a path
 segment. **Write every path in a generated csproj with forward slashes**; MSBuild accepts them and
@@ -495,6 +508,166 @@ Four of these cost more than ten minutes each.
   metres, and it read as long diagonal cracks scored across the hillsides. The same technique is
   fine at one scale and useless at another, and the arithmetic tells you which before the screenshot
   does.
+
+## A tint aimed at a property a shader does not declare fails silently
+
+The owner reported the grass clumps drawing yellow when they should be green. It took **three wrong
+explanations reasoned out of the source** before anyone measured, which is the standing lesson in
+this file arriving again, so the method is worth recording as much as the answer.
+
+- **`Material.SetColor` on a property the shader does not declare does nothing and reports
+  nothing.** `MaterialCache` writes `_BaseColor` and `_Color`. The grass clumps use
+  `Synty/Foliage`, which declares neither, so every value ever put in the foliage tint table was
+  decorative — the table looked like a working lever for as long as nobody moved it. Note that the
+  same file reaches emission through `_Emission_Color` and the cutout through
+  `_Alpha_Clip_Threshold`, both Synty Shader Graph names: the evidence that the pack does not use
+  URP naming was already in the file, two lines above the code that assumed it did.
+- **Synty foliage is procedural.** There is no albedo texture to tint. `Synty/Foliage` mixes a leaf
+  from `_Leaf_Base_Color`, `_Leaf_Noise_Color` and `_Leaf_Noise_Large_Color`, and the last of those
+  is `(0.50, 0.58, 0.06)` — the near-zero blue against a red nearly as high as the green is exactly
+  what "straw" is. Those three are the only handles there are.
+- **To turn a yellow-green green, bring red down.** Lifting blue is the instinct and it is a weak
+  handle, because green is a low-blue colour too: multiplying 0.06 by two is still 0.12. The
+  multipliers that work look lopsided (`0.55, 1.00, 2.20`) and that is why.
+- **Two honest pictures of one asset disagreeing is the tell.** `ScatterSheet` instantiates prefabs
+  untouched and showed green clumps; the board drew the same clumps yellow. That difference *is* the
+  bug localised to the draw path, and it was sitting in the logs from the first run. The other half
+  of the answer was that the ground is deliberately lifted by `(1.04, 1.30, 1.55)` while the tufts
+  were not moved at all, so even correct art reads warm on a cooled field.
+- **Enumerate, do not guess at names.** `TintProbe`
+  (`unity.sh exec Odyssey.EditorTools.TintProbe.Run`) prints each module's material, its shader, and
+  every colour property that shader actually declares. A list of eleven plausible names matched
+  none of them; asking the shader took one run and answered it completely. Reach for it whenever a
+  tint, an emission or a cutoff appears to have no effect.
+
+## Variety at cell scale needs a tile set that agrees at its edges, or it reads as noise
+
+Three separate attempts at "make the ground less uniform" failed the same way and it is worth
+stating once. The rim ripple gave every cell its own top and produced cracks. The bank gave every
+cell its own jittered tread positions and produced a ridge of misaligned bars — "these Toblerone
+pieces", in the owner's words. Both were varied, both were individually correct, and both read as
+noise because **neighbouring cells did not agree along the edge they share**.
+
+- **The fix is not less variation, it is variation that is continuous.** The bank ended up as three
+  height functions — `z`, `max(x, z)`, `min(x, z)` — chosen precisely because along any shared edge
+  two of them collapse to the same expression. A run of them is one surface with no seam to find,
+  and the width is matched by construction rather than by tuning.
+- **Rotation is what keeps a tile set small.** Sixteen patterns of exposed sides fold onto five; the
+  three bank shapes cover every corner in both directions. Folding is free because the yaw rides in
+  the instance matrix, so the cost of a tile set is meshes, and meshes are buckets, not instances.
+- **When the answer is a tile set, the per-cell hash goes away entirely.** Every version that kept a
+  hash "for variety" was the version that broke, because a hash cannot know what its neighbour
+  chose. If a shape depends on its surroundings, its surroundings must be the only input.
+- **The instrument has to be pointed at the fault.** All of this was visible in a close shot and
+  invisible at 70 m, and it was reported from close up while the sheet was being judged from far
+  away. `SlopeCheck` shoots a 14 m macro for that reason now.
+
+## Coplanar surfaces flicker only when they face the same way
+
+A bank fills its cell in plan, so an inside corner where two terrace steps meet was drawing two
+banks in one cell, turned ninety degrees to each other. The side wall of one then lands in the same
+plane as the *back* wall of the other, **facing the same way**, and the depth buffer has nothing to
+choose between them — so it picks whichever rounds higher, and the choice changes as the camera
+moves. That is z-fighting, and the owner saw it before any test did.
+
+The distinction is the useful part. Coplanar surfaces with *opposite* normals are harmless, because
+back-face culling removes one of them from every viewpoint — which is why a straight run of banks,
+whose touching walls face away from each other, never flickered. Only the corner did. When hunting a
+flicker, look for same-facing coplanar pairs and ignore back-to-back ones.
+
+It is also worth noting what no test could have caught: every mesh was watertight, every face was
+wound correctly, every instance was in the right place, and the fault was a *relationship between
+two of them*. Geometry tests check one mesh at a time.
+
+## Getting the licensed packs into a worktree without copying or committing them
+
+A git worktree is a fresh checkout, and `Assets/Synty/` is gitignored, so a worktree has no art at
+all. Everything still builds and every test passes — degrading without the packs is a designed path,
+not an error path — but **every screenshot is untextured flat colour**, which makes a worktree the
+wrong place to settle any question about how something looks. That cost a whole contact sheet once.
+
+**Junction the folder rather than copying it.** On Windows, from the worktree:
+
+```
+cmd /c mklink /J "<worktree>\Assets\Synty" "D:\code\odyssey\Assets\Synty"
+copy "D:\code\odyssey\Assets\Synty.meta" "<worktree>\Assets\Synty.meta"
+```
+
+`mklink /J` makes a directory junction and needs no administrator rights, unlike `/D`. Three reasons
+it beats a copy of 1.5 GB and 15,868 files:
+
+- **The `.meta` files are shared, so the GUIDs match.** This is the load-bearing part.
+  `ModuleCatalogue.asset` is committed and refers to prefabs by GUID, so art that imported under
+  different GUIDs would resolve to nothing and the world would draw as boxes *with* the packs
+  present — which looks exactly like not having them and is far more confusing.
+- Nothing is duplicated on disk, and nothing can drift out of step with the main checkout.
+- `Assets/Synty/` is gitignored in every worktree too, so `git status` stays empty and licensed
+  content cannot be staged by accident. Check that before the first commit, not after.
+
+Two things to know. The two projects share the source files, so if one of them rewrites an import
+setting the other sees it — Unity does not rewrite an existing `.meta` during an ordinary import, but
+changing an importer setting in one project changes it for both. And the worktree still builds its
+*own* `Library`, so the first run after junctioning imports the whole pack set and takes many
+minutes and a couple of gigabytes; run it in the background and do something else.
+
+Remove the junction with `rmdir` (not `Remove-Item -Recurse`, which on some shells follows the link
+and would delete the real packs).
+
+## Per-cell geometry cracks where a continuous field does not
+
+Written after giving earth its own mesh (`GroundMesh`, `06-rendering-and-camera.md` §2c). The
+mistake took one screenshot to find and would have taken a long time to reason out.
+
+- **A mesh shared by every cell cannot make neighbours agree at a shared edge.** Each cell picks its
+  own variant, so if the rim moves at all, two neighbours disagree across their boundary by up to
+  *twice* the movement. At 12 cm of rim ripple that is a 24 cm step at every cell edge on the board,
+  and the meadow came out as crazy paving — visibly worse than the flat quads it replaced. There is
+  no amount of tuning that fixes this, only a smaller number that hides it: the ceiling is set by
+  the fact that the rim height is a function of the *cell*, when it needs to be a function of the
+  *shared corner's world position*. That wants vertex displacement in a shader, or per-cell meshes
+  and no instancing.
+- **The same trick at a different scale is the opposite of the same trick.** `GroundRelief` gives
+  the board a rolling surface that never cracks, because it is one smooth field sampled per cell and
+  neighbouring tangent planes part by millimetres. Adding per-cell noise on top looked like more of
+  the same thing and is structurally the reverse of it. Compare with the sibling lesson above:
+  tangent-plane displacement scales with the square of the tile, and this is what happens at the
+  other end of that argument.
+- **Photograph the control, not just the change.** The shot of the change alone showed a textured
+  meadow and could plausibly have been called a success. The shot of the board *without* it showed a
+  clean green surface, and the comparison settled it in one glance. `SlopeCheck` shoots plain, earth
+  and banks for exactly this reason, and the harness paid for itself on its first run.
+- **Frame the instrument before trusting it.** The first side-on shot put the camera 3 m above its
+  focus — one layer — so it sat inside the hillside and all three conditions photographed the same
+  flat green nothing, at identical file sizes. Identical output from conditions that must differ is
+  the instrument telling you it is broken, and it is worth checking the file sizes for that.
+- **Verify which fault you were asked to fix.** The complaint was a terrace riser: "one big block
+  and then a completely straight wall". The top surface was never mentioned and was already fine.
+  Adding geometry to the part that worked, and only then getting to the part that did not, is how a
+  change ends up net negative while every piece of it passes its tests.
+- **A dark line between two surfaces is more often a lighting fault than a hole.** The black lines
+  round every ground tile looked like gaps and were not: a gap would have shown the pale blue
+  skybox, and these were near-black, so they were geometry receiving no light. The fix was to tilt
+  the shading normals of side faces up towards the sky, which costs no vertex, no triangle and no
+  draw call — the measured count was identical with it and without. **Check the colour of the fault
+  before deciding what kind of fault it is**: a hole shows you what is behind the world, and what is
+  behind the world is not black.
+- **"It does not happen on main" is not evidence about a cause when main does not have the
+  feature.** The owner reported the lines against `main`, which has no `GroundMesh` at all. That
+  narrowed nothing by itself, and the temptation was to accept the offered explanation (the missing
+  textures) and move on. Measuring instead settled it in one run: 14.7 mm from the relief field, 72
+  mm from the rim ripple. Both observations turned out to be true — the lines were on main, subtly —
+  and only the measurement said which part to spend on.
+- **When a mesh has to vary by its surroundings, fold the cases with rotation before building them.**
+  A chamfer that may only touch exposed sides needs a mesh per pattern of exposed sides: sixteen.
+  Turning a mesh is free because the yaw rides in the instance matrix, so the sixteen fold onto
+  **five** — one side, two adjacent, two opposite, three, four. The price is that the bearing stops
+  being available for variety, which is worth stating out loud because it silently removes a source
+  of variation somebody else may be relying on.
+- **A lever whose "off" costs more than its "on" is not a lever.** With the chamfer at zero all five
+  exposure patterns build the identical mesh, and five buckets a chunk for five copies of one block
+  would have made turning it off the expensive choice. The family collapses to one when there is
+  nothing to cut. Worth checking for any feature whose cost is paid in *variants* rather than in
+  work per instance.
 
 ## A loose tolerance can make a test prove nothing
 
@@ -597,6 +770,41 @@ conclusion: a stubbing experiment "proved" the suspect loop was innocent when in
 never been applied — the file was unchanged. Read the file back, or use the Edit tool, before
 believing an experiment that depends on an edit.
 
+## Driving the mouse in a PlayMode test: three silent failures, in order
+
+`OQ-40` was blocked for a week on "mouse input cannot be driven in a PlayMode test". It can. Three
+separate things stop it, each of which looks exactly like the others from outside, and none of
+which reports anything:
+
+1. **There is no mouse.** `Mouse.current` is null in a batch run: no window, no pointer, no device.
+   Queueing state at it does nothing, and `SliceCameraRig.ReadMouse` returns immediately when the
+   device is null, so nothing downstream can be reached. `InputSystem.AddDevice<Mouse>()` fixes it.
+2. **The device you add is disabled.** `backgroundBehavior` defaults to
+   `ResetAndDisableNonBackgroundDevices` and a batch player is never focused, so the device is
+   disabled and every event is dropped. Set `InputSettings.BackgroundBehavior.IgnoreFocus` and
+   enable the device. This one is also why an early attempt looked like it worked: between adding
+   a device and focus being applied there is a window where events do land, so the same test passed
+   when it ran first and failed when it ran second.
+3. **Nothing processes the queue, and a queued event does not survive the frame.** The player loop
+   never calls `InputSystem.Update()` in a batch run, and queueing in one frame and updating in the
+   next delivers nothing — queue and update have to be one act.
+
+Then there is the observation problem on top: **a test coroutine resumes after every `Update` has
+run**, so it is always too late to see a delta control, which is spent within the frame. A
+coroutine reading `mouse.scroll` therefore cannot tell "delivered and consumed by the game" from
+"never delivered at all". That is what made the earlier three tests pass vacuously.
+
+The answer is `MouseHarness` plus `InputPump` in `Tests/PlayMode`: a component at
+`DefaultExecutionOrder(-10000)` that takes posted state, queues **and** updates at the top of the
+frame, and records what the device read immediately afterwards. The game then reads it through its
+ordinary path later in the same frame, and the recording is what lets the harness fail loudly.
+
+**Assert the intent, not the smoothed value.** The first working version still failed: a notch
+moved the camera's *target* by six units but its drawn `distance` by 0.457, because the rig smooths
+exponentially and a batch player runs frames in about a millisecond. The same test would have
+passed on a machine running at sixty frames a second. `SliceCameraRig.TargetDistance` exists for
+this: it moves the instant input is read and does not drift, so the assertion and its control are
+both exact. Any frame-rate-dependent assertion is a flaky test waiting for a faster machine.
 ## Photographing a figure: the mesh is not square to its own root
 
 Three traps, all found in one afternoon building `GestureCheck`, and all three produced pictures
@@ -778,3 +986,57 @@ references in the project were the fresh ones, after `obj/` was cleared, and aft
 and the package assemblies, builds in seconds and answers the only question a handoff needs: do
 *these sources* agree with each other. Assembly-definition boundaries are then unverified, which is
 what `scripts/unity.sh test editmode` is for.
+
+## A generated file that is also committed fails silently when it goes stale
+
+`Assets/Scenes/Play.unity` is committed *and* generated — `PlayScene.cs` is the generator and the
+scene is its output. Add a component to the generator and the committed scene does not have it
+until somebody runs **Odyssey → Presentation → Build play scene**.
+
+Until they do, the feature is simply **absent**. No error, no missing reference, nothing in the
+console. It is indistinguishable from a broken feature, and that is exactly how it was read: the
+designate tool was reported as "nothing happened" and "I couldn't mark anything", when in truth
+nothing was there to respond. A playtest round was spent on it.
+
+The same trap caught the same session twice over, in two forms:
+
+- **The owner's checkout was 22 commits behind** and the build under test predated every change
+  being tested. Three further observations — a pause that reset a walker to standing, colonists
+  repeating a bad move, animations "a mess" — were all faithful reports of bugs that had already
+  been fixed on `main`. **Before reading a playtest report, confirm the commit it was taken
+  against.** `git log --oneline -1` in their checkout costs nothing and reframes everything.
+- **"git pull" was written as one bullet in a list of steps**, and the whole exercise depended on
+  it. A step that everything hinges on is not a bullet; and handing over instructions in the same
+  message as the merge they depend on guarantees a race.
+
+Two rules follow.
+
+- **A generated artefact under version control needs a staleness check, not a convention.** The
+  wiki and the label registry already have one — `build_wiki.py --check` and `emit_labels.py
+  --check` exit 1 when the output does not match the source, and both are CI gates. The play scene
+  has no equivalent. Until it does, `OdysseyBootstrap.WarnIfTheSceneIsStale` at least turns silence
+  into a console line naming the menu item.
+- **Warn, do not self-heal.** Adding the missing component at runtime would paper over a scene
+  that may be stale in ways the check cannot see — the camera rig, the lighting, the module
+  catalogue. The useful signal is "rebuild the scene", not "one thing was quietly patched".
+## The CI runner is the owner's machine, and a timing test cannot tell you apart from a regression
+
+`HudStressTests.Adr0003_F1_TheDenseHudHoldsItsBudgetAndAllocatesNothing` failed on CI —
+**expected under 1.167 ms, measured 2.000 ms** — on a commit whose PlayMode tier had passed 8/8
+in a worktree minutes earlier. Nothing in the change touched the HUD. Re-running the same job on
+the same commit was green.
+
+The cause is that the Unity tier's self-hosted runner **is the Windows dev machine**, so
+`scripts/unity.sh test` in a worktree and the CI job are two Unity instances competing for one
+CPU and one GPU. A frame-budget assertion cannot distinguish "the code got slower" from "somebody
+else was compiling shaders", and it fails in the direction that looks like a regression.
+
+- **Before pushing, stop running Unity locally**, or expect to re-run the job. The window that
+  matters is the minute or two after the push, which is exactly when it is tempting to keep
+  working.
+- **A timing failure on CI that passes locally on the same commit is contention until proved
+  otherwise**, and the proof is one `gh run rerun --failed`. Do not start bisecting a performance
+  regression that the next run will not reproduce.
+- **Read the whole report before believing the headline.** The run that failed also carried
+  `EditMode 696 total, 694 passed, 0 failed`, identical to the local run — which already said the
+  change was innocent and narrowed it to one timing assertion.
