@@ -70,8 +70,8 @@ namespace Odyssey.Presentation.Ui
         VisualElement _rightColumn = null!;
         VisualElement _bottomRow = null!;
         VisualElement _bottomStack = null!;
-        VisualElement _archPanel = null!;
-        VisualElement _archButton = null!;
+        VisualElement _buildPanel = null!;
+        VisualElement _buildButton = null!;
         readonly List<CardView> _cards = new List<CardView>();
         VisualElement _rosterHost = null!;
         VisualElement _rulerRows = null!;
@@ -181,7 +181,7 @@ namespace Odyssey.Presentation.Ui
             _bottomStack.Add(_bottomRow);
 
             BuildLedger();
-            BuildArchitect();
+            BuildPalette();
             BuildRoster();
             BuildClock();
             BuildAlerts();
@@ -415,7 +415,7 @@ namespace Odyssey.Presentation.Ui
         /// a category still answers, by showing that category's shape, so the region reads as a
         /// thing that will work rather than a decoration that ignores you.
         /// </summary>
-        static readonly (string key, string label, string[] tools)[] ArchitectCategories =
+        static readonly (string key, string label, string[] tools)[] BuildCategories =
         {
             ("ui.arch.category.structure", "Structure", new[] { "ui.arch.tool.wall", "ui.arch.tool.door", "ui.arch.tool.stair", "ui.arch.tool.ladder", "ui.arch.tool.roof", "ui.arch.tool.reclaim" }),
             ("ui.arch.category.orders", "Orders", new[] { "ui.arch.tool.mine", "ui.arch.tool.deconstruct", "ui.arch.tool.harvest", "ui.arch.tool.forbid", "ui.arch.tool.clearrubble" }),
@@ -429,16 +429,16 @@ namespace Odyssey.Presentation.Ui
             ("ui.arch.category.recreation", "Recreation", new[] { "ui.arch.tool.gamestable", "ui.arch.tool.viewscreen", "ui.arch.tool.planter" }),
         };
 
-        VisualElement _archPalette = null!;
-        int _archCategory = -1;
+        VisualElement _buildTools = null!;
+        int _buildCategory = -1;
 
-        void BuildArchitect()
+        void BuildPalette()
         {
-            var region = Region(_bottomStack, "A7 · ARCHITECT", "arch");
-            _archPanel = region;
+            var region = Region(_bottomStack, "A7 · BUILD", "build");
+            _buildPanel = region;
             region.style.display = DisplayStyle.None;
             var cats = new VisualElement();
-            cats.AddToClassList("arch__cats");
+            cats.AddToClassList("build__cats");
 
             // The categories scroll. The left column is not tall enough for the ledger and ten
             // categories at once -- and USS lengths here are reference pixels, not screen ones,
@@ -447,42 +447,42 @@ namespace Odyssey.Presentation.Ui
             // palette, and when the palette was told not to yield it crushed the ledger instead.
             // A list too long for its panel should scroll rather than quietly lose its end.
             var scroll = new ScrollView(ScrollViewMode.Vertical);
-            scroll.AddToClassList("arch__scroll");
-            for (int i = 0; i < ArchitectCategories.Length; i++)
+            scroll.AddToClassList("build__scroll");
+            for (int i = 0; i < BuildCategories.Length; i++)
             {
-                var (key, label, _) = ArchitectCategories[i];
+                var (key, label, _) = BuildCategories[i];
                 var chip = Chip(new IconBadge(key), label);
                 int index = i;
                 chip.tooltip = label + " — placement tools arrive with M3";
-                chip.RegisterCallback<ClickEvent>(_ => SelectArchitectCategory(index));
+                chip.RegisterCallback<ClickEvent>(_ => SelectBuildCategory(index));
                 cats.Add(chip);
             }
             scroll.Add(cats);
             region.Add(scroll);
 
-            _archPalette = new VisualElement();
-            _archPalette.AddToClassList("arch__tools");
-            region.Add(_archPalette);
+            _buildTools = new VisualElement();
+            _buildTools.AddToClassList("build__tools");
+            region.Add(_buildTools);
         }
 
-        const string ArchitectKey = "ui.tab.architect";
+        const string BuildTabKey = "ui.tab.build";
 
         /// <summary>Open or close the placement palette from the bottom bar.</summary>
-        void ToggleArchitect()
+        void ToggleBuildPalette()
         {
-            bool opening = _archPanel.style.display == DisplayStyle.None;
-            _archPanel.style.display = opening ? DisplayStyle.Flex : DisplayStyle.None;
-            _archButton.EnableInClassList("chip--on", opening);
+            bool opening = _buildPanel.style.display == DisplayStyle.None;
+            _buildPanel.style.display = opening ? DisplayStyle.Flex : DisplayStyle.None;
+            _buildButton.EnableInClassList("chip--on", opening);
         }
 
-        void SelectArchitectCategory(int index)
+        void SelectBuildCategory(int index)
         {
-            if (_archCategory == index) return;
-            _archCategory = index;
+            if (_buildCategory == index) return;
+            _buildCategory = index;
 
-            _archPalette.Clear();
-            foreach (string tool in ArchitectCategories[index].tools)
-                _archPalette.Add(Off(Chip(new IconBadge(tool), IconBadge.Abbreviation(tool))));
+            _buildTools.Clear();
+            foreach (string tool in BuildCategories[index].tools)
+                _buildTools.Add(Off(Chip(new IconBadge(tool), IconBadge.Abbreviation(tool))));
         }
 
         // ------------------------------------------------------------ A2 roster
@@ -882,14 +882,14 @@ namespace Odyssey.Presentation.Ui
         static readonly string[] TabKeys =
         {
             "ui.tab.work", "ui.tab.schedule", "ui.tab.research", "ui.tab.colonists",
-            "ui.tab.animals", "ui.tab.wildlife", "ui.tab.bills", "ui.tab.trade",
+            "ui.tab.animals", "ui.tab.wildlife", "ui.tab.bills",
             "ui.tab.factions", "ui.tab.archive", "ui.tab.menu",
         };
 
         static readonly string[] TabReasons =
         {
             "the work grid arrives with M7", "M7", "M7", "the roster is the top bar",
-            "M5", "M5", "M5", "M7", "M7", "the archive arrives with M2",
+            "M5", "M5", "M5", "M7", "the archive arrives with M2",
             "save, load and settings arrive with the game menu",
         };
 
@@ -898,15 +898,16 @@ namespace Odyssey.Presentation.Ui
             var bar = new VisualElement();
             bar.AddToClassList("slot-tabs");
 
-            // Architect first, left of Work, because it is the one control on this bar that
-            // does something today: it opens the placement palette. It used to be a panel
-            // pinned to the left edge, where it competed with the ledger for a column that
-            // could not hold both (owner decision, 2026-09-16).
-            _archButton = Chip(new IconBadge(ArchitectKey), Registry.Label(ArchitectKey));
-            _archButton.AddToClassList("tab--architect");
-            _archButton.tooltip = "Build, dig and zone — placement tools arrive with M3";
-            _archButton.RegisterCallback<ClickEvent>(_ => ToggleArchitect());
-            bar.Add(_archButton);
+            // Build first, left of Work, because it is the one control on this bar that does
+            // something today: it opens the placement palette. It used to be a panel pinned to
+            // the left edge, where it competed with the ledger for a column that could not hold
+            // both, and it used to be called Architect (owner decisions, 2026-09-16). Trade left
+            // the bar in the same breath, so that adding this did not widen the row.
+            _buildButton = Chip(new IconBadge(BuildTabKey), Registry.Label(BuildTabKey));
+            _buildButton.AddToClassList("tab--build");
+            _buildButton.tooltip = "Build, dig and zone — placement tools arrive with M3";
+            _buildButton.RegisterCallback<ClickEvent>(_ => ToggleBuildPalette());
+            bar.Add(_buildButton);
 
             for (int i = 0; i < TabKeys.Length; i++)
             {

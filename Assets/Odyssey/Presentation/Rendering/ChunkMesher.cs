@@ -170,16 +170,25 @@ namespace Odyssey.Presentation.Rendering
         {
             Vector3 centre = CellMetrics.FloorCentre(x, z, y) + Vector3.up * (CellMetrics.SizeY * WaterSurface);
 
-            // **Lifted, not draped** — the one piece of ground-level geometry that is not sheared
-            // onto the relief, and the rule in `06-rendering-and-camera.md` already covers it:
-            // ground is sheared, everything standing on it is lifted. Water stands *in* the
-            // ground; it is not ground, and a water surface is level by definition.
+            // **Draped, like the ground it lies in** — and this was got wrong twice, so the
+            // reasoning is here rather than in a commit nobody will find.
             //
-            // It also fixes a visible fault. A sheared tile disagrees with its neighbour along
-            // their shared edge, and where the ground's own texture hides that, a translucent
-            // surface does not: the disagreement overlaps, the overlap blends twice, and the
-            // board came out ruled into dark squares. Level tiles meet exactly.
-            AddRoof(batch, module, TintCode.Water(terrain), Matrix4x4.Translate(GroundRelief.Lift(centre)));
+            // Water was first draped, then switched to a plain lift on the argument that a water
+            // surface is level. True of water, false of *tiles*: a lifted tile is flat and takes
+            // its height from its own centre, so two neighbours sit at heights differing by the
+            // first-order slope of the relief across a whole cell. On a low, near-horizontal
+            // camera those little steps open into slivers you can see the riverbed through, which
+            // is what the board looked like after the change.
+            //
+            // A draped tile is sheared onto the tangent plane of the field, so neighbours
+            // disagree only by the *curvature* over a cell — second order, and invisible. It is
+            // the same argument `06-rendering-and-camera.md` makes for the surround, where tiles
+            // had to be halved twice because the disagreement grows as the square of the width.
+            //
+            // The dark grid that prompted the switch was never the shear at all. It was the six
+            // faces of the box this tile is drawn from, blending over each other at every shared
+            // edge, and the shader clips all but the top one.
+            AddRoof(batch, module, TintCode.Water(terrain), GroundRelief.Drape(centre));
         }
 
         // ------------------------------------------------------------- scatter

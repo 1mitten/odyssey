@@ -124,7 +124,7 @@ namespace Odyssey.Tests.PlayMode
 
                 // And again with the architect palette open, since it is hidden until the
                 // bottom bar opens it and a picture of the closed state cannot show it at all.
-                var palette = doc.rootVisualElement.Q(className: "arch");
+                var palette = doc.rootVisualElement.Q(className: "build");
                 if (palette != null)
                 {
                     palette.style.display = DisplayStyle.Flex;

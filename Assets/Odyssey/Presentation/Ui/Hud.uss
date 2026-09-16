@@ -470,7 +470,7 @@
     white-space: normal;
 }
 
-/* ---------------- architect (A7) ---------------- */
+/* ---------------- build palette (A7, called Architect until 2026-09-16) ---------------- */
 
 /* The ledger has the left column to itself now that the palette has moved to the bottom bar,
    so there is nothing left to shrink it. */
@@ -481,7 +481,7 @@
 /* The palette, opened from the bottom bar rather than pinned to the left edge. It sits beside
    the inspect pane in the space that was empty, and above the bar that opens it. The scroll
    stays: ten categories and their tools will outgrow any panel that has to share a screen. */
-.arch {
+.build {
     /* In the stack above the bar, so it can never cross it. Held clear of the inspect pane on
        its left, whose width is fixed at 356 by .slot-inspect. */
     align-self: flex-start;
@@ -493,13 +493,13 @@
 
 /* On, when its panel is open. The bar's other tabs are all disabled, so this is the only one
    that ever lights. */
-.tab--architect.chip--on {
+.tab--build.chip--on {
     background-color: #2b7f8f;
     border-color: #5ec8dc;
     color: #ffffff;
 }
 
-.arch__scroll {
+.build__scroll {
     flex-grow: 1;
     min-height: 0;
 }
@@ -507,23 +507,23 @@
 /* The scroller, dressed for this sheet. Unity's default is a light-grey bar with two arrow
    buttons, which against a near-black panel reads as something broken rather than as a way to
    see the rest of the list. Thin, dark, no arrows, and the track left invisible. */
-.arch__scroll .unity-scroller--vertical {
+.build__scroll .unity-scroller--vertical {
     width: 8px;
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
     margin-left: 2px;
 }
 
-.arch__scroll .unity-scroller--vertical .unity-repeat-button {
+.build__scroll .unity-scroller--vertical .unity-repeat-button {
     display: none;
 }
 
-.arch__scroll .unity-scroller--vertical .unity-base-slider__tracker {
+.build__scroll .unity-scroller--vertical .unity-base-slider__tracker {
     background-color: rgba(0, 0, 0, 0);
     border-width: 0;
 }
 
-.arch__scroll .unity-scroller--vertical .unity-base-slider__dragger {
+.build__scroll .unity-scroller--vertical .unity-base-slider__dragger {
     width: 6px;
     background-color: #3d4f61;
     border-width: 0;
@@ -531,17 +531,17 @@
     margin-left: 0;
 }
 
-.arch__scroll .unity-scroller--vertical .unity-base-slider__dragger:hover {
+.build__scroll .unity-scroller--vertical .unity-base-slider__dragger:hover {
     background-color: #5ec8dc;
 }
 
-.arch__cats {
+.build__cats {
     flex-direction: row;
     flex-wrap: wrap;
     padding: 4px;
 }
 
-.arch__tool {
+.build__tool {
     flex-direction: row;
     align-items: center;
     border-width: 1px;
@@ -555,7 +555,7 @@
     opacity: 0.55;
 }
 
-.arch__tools {
+.build__tools {
     flex-direction: row;
     flex-wrap: wrap;
     padding: 0 4px 4px 4px;
