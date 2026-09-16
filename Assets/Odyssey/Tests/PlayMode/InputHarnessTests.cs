@@ -104,5 +104,95 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// Can the harness press a <b>button</b>? The wheel above proves only that state arrives;
+        /// a button is a different question, and the answer today is <b>no</b> — see
+        /// <see cref="MouseHarness"/>, failure four. A PlayMode test runs inside the editor, the
+        /// input system's update type is <c>Editor</c> rather than a player update, and every
+        /// edge property is gated on one, so <c>wasPressedThisFrame</c> never fires for game
+        /// code. Every world gesture — pick, box-select, designate — is built on that edge, so
+        /// none of them can be tested here until this passes.
+        ///
+        /// <para><b>Ignored rather than deleted, and ignored rather than <c>Assume</c>d.</b> An
+        /// <c>Assume</c> would make it skip in silence, which is exactly how six mining tests sat
+        /// dead on main (<c>docs/lessons.md</c>). The untried lead is in
+        /// <see cref="MouseHarness"/>: ask <see cref="InputPump"/> for a player update
+        /// explicitly. Un-ignore this to find out.</para>
+        /// </summary>
+        [UnityTest]
+        [Ignore("The harness cannot press a button: a PlayMode test's input update type is " +
+                "Editor, and every edge property is gated on a player update. See MouseHarness, " +
+                "failure four, for the measurement and the untried fix.")]
+        public IEnumerator AClickIsSeenAsAPressAndARelease()
+        {
+            var probe = new GameObject("ButtonProbe").AddComponent<ButtonProbe>();
+            try
+            {
+                yield return null;
+                probe.Reset();
+
+                yield return _mouse.Click(new Vector2(320f, 240f));
+                yield return null;
+
+                Assert.That(probe.Presses, Is.EqualTo(1),
+                    $"an ordinary Update saw {probe.Presses} presses and {probe.Releases} " +
+                    "releases from one Click, so no world gesture could fire.");
+                Assert.That(probe.Releases, Is.EqualTo(1),
+                    $"the press arrived but the release did not ({probe.Releases}), so a gesture " +
+                    "would begin and never end");
+            }
+            finally
+            {
+                Object.Destroy(probe.gameObject);
+            }
+        }
+
+        /// <summary>
+        /// The control for the test above, per this file's rule. Ignored with it: on its own it
+        /// asserts only that nothing happens when nothing is done, which guards nothing.
+        /// </summary>
+        [UnityTest]
+        [Ignore("Paired with AClickIsSeenAsAPressAndARelease; meaningless without it.")]
+        public IEnumerator WithoutAClickTheProbeSeesNoButton()
+        {
+            var probe = new GameObject("ButtonProbe").AddComponent<ButtonProbe>();
+            try
+            {
+                yield return null;
+                probe.Reset();
+
+                for (int i = 0; i < 4; i++) yield return null;
+
+                Assert.That(probe.Presses + probe.Releases, Is.EqualTo(0),
+                    $"the probe saw {probe.Presses} presses and {probe.Releases} releases with " +
+                    "no input at all, so it is not measuring the click");
+            }
+            finally
+            {
+                Object.Destroy(probe.gameObject);
+            }
+        }
+
+        /// <summary>
+        /// Reads the left button the way <c>SliceCameraRig</c> does: from an ordinary
+        /// <c>Update</c>, at the default execution order, through <c>Mouse.current</c>.
+        /// </summary>
+        sealed class ButtonProbe : MonoBehaviour
+        {
+            public int Presses { get; private set; }
+
+            public int Releases { get; private set; }
+
+            public void Reset() => Presses = Releases = 0;
+
+            void Update()
+            {
+                Mouse? mouse = Mouse.current;
+                if (mouse == null) return;
+                if (mouse.leftButton.wasPressedThisFrame) Presses++;
+                if (mouse.leftButton.wasReleasedThisFrame) Releases++;
+            }
+        }
+
     }
 }
