@@ -155,8 +155,13 @@ first.
 - **Nobody has pressed Play on the look work.** Every judgement about the day cycle, the golden
   hour, the hill wood and the colonist palette comes from contact sheets and `FrameTimeTests`. A
   sheet cannot say whether night is playable or whether the light steps at speed 3.
-- **The eight icon sheets** go in `art-source/icons/sheets/` (that folder's README names them).
-  Until they land, every game glyph is an outlined square.
+- **The rest of the icon art.** Four keys draw real art as of 2026-09-16 (`ui.res.wood`,
+  `ui.res.stone`, `ui.res.ironore`, `ui.res.scrap`); the other **130 gaps of 405 keys** still draw
+  an outlined square. `IconArt` resolves a key to a texture and falls back, so the HUD is correct
+  at every stage in between and one icon can be judged in the running game. Sheets go in
+  `art-source/icons/sheets/` (that folder's README names them). **Open, and the owner's call:** the
+  HUD draws icons at 16, 17 and 30 px while ADR 0007 says not to draw pixel art below 32 — measured,
+  30 px reads, 17 px loses the grooves, 16 px goes to noise.
 - **The 29 proposed proper nouns** in `docs/design/proper-nouns.csv` await approval or veto.
 - **Marsh reads as a sandy bank** — re-tint it greener or rename it.
 - **The audio listener is on the camera**, 32–160 m up, while the catalogue authors ranges as ground

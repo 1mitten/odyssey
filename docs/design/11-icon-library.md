@@ -2,8 +2,14 @@
 
 - **Status:** design. Written out of phase order alongside `09` and `10`, at the owner's request.
 - **Governed by:** `docs/adr/0007-pixel-art-icon-pipeline.md` for the format and size contract.
-- **Data:** `docs/design/icon-keys.csv` (the registry, 382 keys) and `docs/design/icon-map.csv`
-  (the assignments, 268 with art and 114 gaps).
+- **Data:** `docs/design/icon-keys.csv` (the registry, 405 keys) and `docs/design/icon-map.csv`
+  (the assignments, 265 with art and 130 gaps).
+
+> **The counts below are as of the 382-key registry this file was written against**, and the
+> registry has moved since: keys were added for mining, water, audio and the settings panel, and
+> `ui.res.alloy`, `ui.res.concrete` and `ui.res.water` were struck out on 2026-09-16 at the owner's
+> request. The header figures above are current; §3's per-namespace table and §4's gap lists are
+> not, and want a pass against the CSVs before they are used to commission anything.
 
 The owner owns eight pixel-art icon sheets, roughly six hundred cells, and has decided they are the
 prototype's real HUD art. This file records what they cover, what they do not, and the item taxonomy

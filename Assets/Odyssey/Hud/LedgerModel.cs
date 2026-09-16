@@ -67,7 +67,7 @@ namespace Odyssey.Hud
         public const double FallingFraction = 0.10;
 
         /// <summary>The future economy's rows. Names come from the registry, as every row's does.</summary>
-        static readonly string[] Planned = { Scrap, "ui.res.alloy", "ui.res.concrete", "ui.res.water", "ui.res.medkit" };
+        static readonly string[] Planned = { Scrap, "ui.res.medkit" };
 
         /// <summary>Every key a row can carry, so a test can prove each is a name the registry knows.</summary>
         public static readonly string[] IconKeys = new[] { Meal, Wood }.Concat(Planned).ToArray();

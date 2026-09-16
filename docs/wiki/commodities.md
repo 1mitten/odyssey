@@ -2,7 +2,7 @@
 
 What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the ore classes a wilderness colony sim would have, because the setting is a dead city and the ground is already full of manufactured things. These names appear in the resource ledger, in every bill and in every trade, so they are the names worth arguing about first.
 
-52 entries, 4 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+49 entries, 4 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
@@ -10,9 +10,7 @@ What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the o
 | **Rubble** | `ui.res.rubble` | Broken concrete and masonry. Cleared, not mined | sheet 01 (raw materials), high | M1 |
 | **Girder** | `ui.res.girder` | Structural steel cut from a shell. Heavy, valuable | sheet 04 (manufactured), med | M1 |
 | **Hull panel** | `ui.res.panel` | Flat salvaged plating. The cheapest wall material | sheet 04 (manufactured), high | M1 |
-| **Alloy** | `ui.res.alloy` | Refined structural metal. The default build material | sheet 04 (manufactured), high | M1 |
 | **Composite** | `ui.res.composite` | Light high-strength laminate. Scarce, from deep salvage | sheet 04 (manufactured), med | M1 |
-| **Concrete** | `ui.res.concrete` | Poured floors and heavy walls. Bulky, cheap | sheet 08 (salvage gear), med | M1 |
 | **Glass** | `ui.res.glass` | Windows, screens and hydroponic covers | sheet 04 (manufactured), high | M1 |
 | **Polymer** | `ui.res.polymer` | Moulded plastics. Light, flammable | sheet 04 (manufactured), med | M1 |
 | **Ceramic** | `ui.res.ceramic` | Heat-resistant tile and insulator stock | sheet 01 (raw materials), low | M1 |
@@ -42,7 +40,6 @@ What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the o
 | **Coal** | `ui.res.coal` | Burns hot. Found deeper than iron, and for that reason <br>**Needs:** glossy black lumps | no art | M3 |
 | **Grain** | `ui.res.grain` | Bulk staple. Stores well, needs cooking | sheet 01 (raw materials), med | M1 |
 | **Fungus** | `ui.res.fungus` | Grows without light. The underground staple | sheet 01 (raw materials), high | M1 |
-| **Water** | `ui.res.water` | Drinking and hydroponics | sheet 08 (salvage gear), high | M1 |
 | **Stimulant** | `ui.res.stimulant` | Buys an hour of wakefulness at a cost | sheet 02 (food), med | M1 |
 | **Alcohol** | `ui.res.alcohol` | Recreation, and a problem for some | sheet 02 (food), high | M1 |
 | **Medkit** | `ui.res.medkit` | Field tending. Consumed per treatment | sheet 08 (salvage gear), high | M1 |

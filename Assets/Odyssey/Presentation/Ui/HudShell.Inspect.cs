@@ -131,6 +131,11 @@ namespace Odyssey.Presentation.Ui
             _inspectBody = new VisualElement();
             _inspectBody.AddToClassList("inspect__body");
             _inspectPanel.Add(_inspectBody);
+
+            // Hidden from the first frame. Nothing is selected when a game starts, and a pane that
+            // appeared for one frame before the first refresh took it away would be the kind of
+            // flicker nobody can reproduce on demand.
+            _inspectPanel.style.display = DisplayStyle.None;
             _hud.Add(_inspectPanel);
         }
 
@@ -254,17 +259,19 @@ namespace Odyssey.Presentation.Ui
             _needs.Clear();
             _needRows = 0;
 
-            // Nothing selected: one dim line, and the panel is 41 px tall rather than 302. The
-            // three sentences this replaces ("click a colonist, an item, or the ground", the
-            // colony summary, "salvage lies where it fell") were the interface talking about
-            // itself, and they are most of why an empty HUD covered a third of the screen.
+            // Nothing selected: no panel at all (owner, 2026-09-16), and this is the HUD's resting
+            // state. It was a 41 px strip reading "Nothing selected", itself already a cut-down of
+            // a three-sentence empty state; both were the interface talking about itself, and a
+            // panel whose only content is the news that it has none earns less than the gap.
+            // display:none rather than zero opacity, so it leaves the layout, leaves the measured
+            // region set, and cannot take a click.
             if (_inspect.Subject == InspectSubject.None)
             {
-                _inspectBody.Add(HudText.Make("Nothing selected", HudTextRole.Body, ussClass: "inspect__empty"));
-                _inspectPanel.EnableInClassList("inspect--empty", true);
+                _inspectPanel.style.display = DisplayStyle.None;
                 return;
             }
-            _inspectPanel.EnableInClassList("inspect--empty", false);
+
+            _inspectPanel.style.display = DisplayStyle.Flex;
 
             // ---- header: avatar, name and its two lines, then the actions on the right
             var header = new VisualElement();
