@@ -5,102 +5,82 @@ using UnityEngine;
 namespace Odyssey.Presentation.Rendering
 {
     /// <summary>
-    /// The earth bank that makes a terrace step somewhere you can walk up.
+    /// The earth bank that makes a terrace step somewhere you can walk up: one smooth slope, the
+    /// full width of its cell, with corners that meet.
     ///
     /// <para><b>The problem, and why it is not solvable in the cell model.</b> A terrace riser is a
-    /// whole cell: 3.0 m of sheer face, drawn as one flat rectangle. ADR 0002 fixes the cell at
-    /// 2.5 x 2.5 x 3.0 m and calls it effectively irreversible, so there are no half-heights to
-    /// spread the drop over. Meanwhile the simulation says a colonist walks up that face —
-    /// <c>MoveCost.JumpUp</c>, a hop into the column next door — so the board shows a wall where
-    /// the game has a path.</para>
+    /// whole cell: 3.0 m of sheer face. ADR 0002 fixes the cell at 2.5 x 2.5 x 3.0 m and calls it
+    /// effectively irreversible, so there are no half-heights to spread the drop over. Meanwhile the
+    /// simulation says a colonist walks up that face — <c>MoveCost.JumpUp</c>, a hop into the column
+    /// next door — so the board shows a wall where the game has a path. This is the picture of that
+    /// path, and it is a facade in the strict sense: no cell knows about it, it is not pathable, not
+    /// selectable, not in the save and not in the state hash.</para>
     ///
-    /// <para><b>Where the half and quarter steps actually go: in the mesh.</b> A mesh variant
-    /// costs one instancing bucket, not one instance per cell, so geometry is the cheap place to
-    /// put detail the cell model cannot carry. This is a stepped bank, three treads and three
-    /// risers, drawn in the empty cell beside the step. It is a facade in exactly the sense
-    /// <see cref="GroundRelief"/> and <see cref="GroundScatter"/> are: no cell knows about it, it
-    /// is not pathable, not selectable, not in the save and not in the state hash.</para>
+    /// <para><b>It was a staircase first, and that was wrong.</b> The first version cut the slope
+    /// into three treads with the tread positions jittered per cell so a long run would not repeat.
+    /// Every part of that was a mistake and the owner named it exactly: the jitter meant
+    /// neighbouring cells put their treads in different places, so a run came out as a ridge of
+    /// misaligned bars rather than as one flight; the taper that stopped the ends being walls turned
+    /// them into wedges; and it read as built furniture dropped onto the ground rather than as
+    /// ground. <b>Simple and continuous beats varied and broken</b>, which is the same lesson the
+    /// rim ripple taught one file over.</para>
     ///
-    /// <para><b>Stepped rather than smooth, on purpose.</b> Three metres over one cell is a
-    /// fifty-degree ramp however it is drawn, and a smooth fifty-degree ramp reads as a road
-    /// somebody built. Cut into treads it reads as a bank that has weathered into ledges, which is
-    /// what a hillside does and what the eye accepts a person climbing.</para>
+    /// <para><b>Three shapes, and they tile.</b> The top surface of a bank is a height field over
+    /// its own cell, and the three cases are the three simplest functions there are — where local
+    /// <c>+z</c> and <c>+x</c> point at the steps a cell is climbing:</para>
     ///
-    /// <para><b>Three stacked boxes, not one carved solid.</b> Each step is its own closed box,
-    /// stacked on the one below rather than nested inside it. Carving a single staircase solid
-    /// means triangulating two staircase-shaped side polygons and getting the shared vertical
-    /// edges right, and every one of those edges is a chance at a T-junction and a crack. Stacking
-    /// costs a few triangles nobody can see — the faces where two boxes meet are back to back, so
-    /// at most one is ever front-facing and there is nothing to z-fight — and it cannot be got
-    /// wrong.</para>
+    /// <list type="bullet">
+    /// <item><see cref="Kind.Straight"/>, against one step: <c>y = z</c>.</item>
+    /// <item><see cref="Kind.Inner"/>, tucked into a corner with steps on two adjacent sides:
+    /// <c>y = max(x, z)</c>, which is high along both and dips to the open corner.</item>
+    /// <item><see cref="Kind.Outer"/>, wrapping the outside of a corner with a step only on the
+    /// diagonal: <c>y = min(x, z)</c>, a hip that rises to that one corner.</item>
+    /// </list>
+    ///
+    /// <para><b>They agree exactly where they meet</b>, which is the whole reason for choosing these
+    /// three. Along the edge it shares with a straight neighbour, <c>max(x, z)</c> is <c>z</c> and so
+    /// is <c>min(x, z)</c> — the same value the straight piece has there. So a run of banks around a
+    /// terrace, corners and all, is one continuous surface with no seam to find and no width to
+    /// match by hand. It is matched by construction.</para>
+    ///
+    /// <para>The <see cref="Outer"/> piece is what fixes corners rather than merely surviving them.
+    /// A cell diagonally outside a convex corner touches no step orthogonally, so it used to get
+    /// nothing and the run had a square bite out of it. It is exactly the cell that should carry the
+    /// hip.</para>
+    ///
+    /// <para><b>Nothing is varied and nothing is jittered.</b> One mesh per shape, four bearings
+    /// from the instance matrix, and no per-cell choice at all — so three modules cover every bank
+    /// on the board, which is fewer than the stepped version needed for one.</para>
     /// </summary>
     public static class BankMesh
     {
-        /// <summary>
-        /// How many treads a bank is cut into.
-        ///
-        /// <para>Three, which over a 3 m rise is a one-metre riser and an 83 cm tread. Two reads as
-        /// a single awkward half-step; four makes each tread narrower than a boot and the whole
-        /// thing turns back into a ramp with texture on it. Three is also what a hillside path
-        /// tends to weather into, which is the look being borrowed.</para>
-        /// </summary>
-        public const int Steps = 3;
+        /// <summary>The three ways a cell can meet the steps around it.</summary>
+        public enum Kind
+        {
+            /// <summary>One step, against local +z. The surface is <c>y = z</c>.</summary>
+            Straight = 0,
+
+            /// <summary>Steps on local +z and +x. The surface is <c>y = max(x, z)</c>.</summary>
+            Inner = 1,
+
+            /// <summary>A step only on the local +z/+x diagonal. The surface is <c>y = min(x, z)</c>.</summary>
+            Outer = 2,
+        }
+
+        /// <summary>How many shapes there are. One module each, per earth terrain.</summary>
+        public const int Kinds = 3;
 
         /// <summary>
-        /// How many distinct banks are built. Each is one more instancing bucket.
+        /// How far the slope is sunk into the ground it stands on, as a fraction of cell height.
         ///
-        /// <para>Unlike <see cref="GroundMesh"/>, a bank cannot take its variety from the four
-        /// right-angle bearings: the bearing is already spoken for, because it is what points the
-        /// bank at the step it climbs. So variety has to come from meshes, and two is enough that
-        /// a long riser does not read as a repeated stamp.</para>
-        /// </summary>
-        public const int Variants = 2;
-
-        /// <summary>
-        /// How far a tread's edge wanders from the even division, as a fraction of the cell.
-        ///
-        /// Small: enough that two banks side by side do not line their steps up into a continuous
-        /// ledge running along the whole terrace, which is the thing that would read as masonry.
-        /// </summary>
-        public const float MaxJitter = 0.06f;
-
-        /// <summary>
-        /// How far the bank is sunk into the ground it stands on, as a fraction of cell height.
-        ///
-        /// <para>The cell below the bank wears a <see cref="GroundMesh"/> top whose rim may dip by
-        /// <see cref="GroundMesh.MaxRipple"/>, so a bank sitting exactly on the nominal floor would
-        /// hang over that dip by a visible centimetre or two along its whole foot. Sinking it past
-        /// the deepest possible dip costs nothing — what is buried is buried — and removes the
-        /// question.</para>
+        /// <para>The cell below wears a <see cref="GroundMesh"/> top whose rim may move by
+        /// <see cref="GroundMesh.MaxRipple"/>, so a slope sitting exactly on the nominal floor could
+        /// hang over that by a centimetre along its foot. Sinking it past the deepest the rim can go
+        /// costs nothing — what is buried is buried — and removes the question.</para>
         /// </summary>
         public static float Sink => GroundMesh.MaxRipple + 0.02f;
 
-        /// <summary>
-        /// How far the open end of a bank is drawn in, as a fraction of the cell, by the time it
-        /// reaches the top.
-        ///
-        /// <para><b>This is a bug fix, and the bug was dark green patches beside the steps.</b> A
-        /// bank fills its cell in plan, so along a run each one's side wall is buried in the next
-        /// and nothing shows. At the end of a run there is no next one, and the side wall — up to
-        /// three metres of it — stands in open air below the terrace top. The owner saw them before
-        /// any test did, and no test would have: every bank was a correct closed mesh in the right
-        /// place, and the fault was that nothing stood beside it.</para>
-        ///
-        /// <para>Tapering rather than hiding the wall, because an earth bank does fade out at its
-        /// end; it does not stop dead. Each step is drawn in on the open side as it rises, so the
-        /// stack narrows away and the wall becomes a slope. The insets accumulate — a step starts
-        /// where the step below finished — or every tread would overhang the one under it and the
-        /// taper would come out as a flight of ledges.</para>
-        /// </summary>
-        public const float EndTaper = 0.40f;
-
-        /// <summary>How many ways a bank's two ends can be open: neither, left, right, both.</summary>
-        public const int EndCases = 4;
-
-        /// <summary>One mesh per variant per pattern of open ends.</summary>
-        public static int Slots => Variants * EndCases;
-
-        static readonly Mesh?[] Cache = new Mesh?[Variants * EndCases];
+        static readonly Mesh?[] Cache = new Mesh?[Kinds];
 
         /// <summary>
         /// Throw away the built banks so the next request rebuilds them, for a harness sweeping
@@ -120,107 +100,95 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
-        /// One of the banks, built on first use and kept.
+        /// One of the three slopes, built on first use and kept.
         ///
         /// <para>In the unit box, like every other module the renderer owns: <c>y = -0.5</c> is the
         /// floor of the cell the bank stands in, which is the top of the lower terrace, and
-        /// <c>y = +0.5</c> is the top of the cell, which is the top of the riser beside it. Local
-        /// <c>+z</c> points at the riser, because that is where
-        /// <see cref="Directions.Yaw"/> turns a module's local <c>+z</c> to face.</para>
+        /// <c>y = +0.5</c> is the top of the cell, which is the top of the step beside it. Local
+        /// <c>+z</c> points at the step, because that is where <see cref="Directions.Yaw"/> turns a
+        /// module's local <c>+z</c> to face.</para>
         /// </summary>
-        public static Mesh For(int variant) => For(variant, 0);
-
-        /// <summary>
-        /// A bank, built for one pattern of open ends.
-        ///
-        /// <paramref name="ends"/> is two bits in the bank's own frame: bit 0 is the local -x side
-        /// and bit 1 the local +x side. An open side is one with no bank beside it, whose wall
-        /// would otherwise stand in the air.
-        /// </summary>
-        public static Mesh For(int variant, int ends)
+        public static Mesh For(Kind kind)
         {
-            int slot = Slot(variant, ends);
-            Mesh? mesh = Cache[slot];
+            int index = ((int)kind % Kinds + Kinds) % Kinds;
+            Mesh? mesh = Cache[index];
             if (mesh != null) return mesh;
-            return Cache[slot] = Build(slot % Variants, slot / Variants);
+            return Cache[index] = Build((Kind)index);
         }
 
-        /// <summary>Where a (variant, ends) pair sits in the family. Variant-minor, like the faces.</summary>
-        public static int Slot(int variant, int ends)
-        {
-            int v = ((variant % Variants) + Variants) % Variants;
-            int e = ((ends % EndCases) + EndCases) % EndCases;
-            return e * Variants + v;
-        }
+        /// <summary>The same, by index, for a caller that resolves modules through one integer.</summary>
+        public static Mesh For(int kind) => For((Kind)(((kind % Kinds) + Kinds) % Kinds));
 
         /// <summary>
-        /// Where the treads are, front to back: <c>Edges(v)[k]</c> is the z at which tread
-        /// <c>k</c> begins, and <c>Edges(v)[Steps]</c> is the back of the cell.
+        /// The height of a bank's surface at a point in its own cell, where <c>x</c> and <c>z</c>
+        /// run -0.5 to 0.5.
         ///
-        /// <para>Monotonic by construction rather than by luck — each edge is the even division
-        /// plus a bounded wobble, and the wobble is less than half the spacing, so no amount of
-        /// jitter can put two edges out of order and turn a tread inside out.</para>
+        /// <para>Public because it is the whole definition of the shape, and because the tests that
+        /// matter are about this function rather than about the triangles built from it: that the
+        /// slope reaches the step, that it meets the floor at the open side, and that neighbouring
+        /// pieces agree along the edge they share.</para>
         /// </summary>
-        public static float[] Edges(int variant)
+        public static float HeightAt(Kind kind, float x, float z)
         {
-            var edges = new float[Steps + 1];
-            float span = 1f / Steps;
-
-            for (int k = 0; k <= Steps; k++)
+            switch (kind)
             {
-                float even = -0.5f + span * k;
-                if (k == 0 || k == Steps) { edges[k] = even; continue; }
-
-                uint salt = (uint)(variant * 397 + k) + 1u;
-                edges[k] = even + (Unit(salt, 0x5B5Bu) - 0.5f) * 2f * Mathf.Min(MaxJitter, span * 0.4f);
+                case Kind.Inner: return Mathf.Max(x, z);
+                case Kind.Outer: return Mathf.Min(x, z);
+                default: return z;
             }
-
-            return edges;
         }
 
-        /// <summary>The height of tread <c>k</c>, in the unit box. The last one is the cell top.</summary>
-        public static float TreadHeight(int variant, int step)
+        static Mesh Build(Kind kind)
         {
-            // Evenly spaced and not jittered. The top tread has to meet the terrace it climbs to
-            // exactly, and the foot has to meet the ground it stands on; wandering the heights in
-            // between would buy very little and risks a step taller than the one above it.
-            return -0.5f + (step + 1) * (1f / Steps);
-        }
+            var vertices = new List<Vector3>(64);
+            var normals = new List<Vector3>(64);
+            var uvs = new List<Vector2>(64);
+            var triangles = new List<int>(96);
 
-        static Mesh Build(int variant, int ends)
-        {
-            float[] edges = Edges(variant);
-            float perStep = EndTaper / Steps;
-            bool openMinX = (ends & 1) != 0;
-            bool openMaxX = (ends & 2) != 0;
+            const float lo = -0.5f, hi = 0.5f;
+            float foot = lo - Sink;
 
-            var vertices = new List<Vector3>(128);
-            var normals = new List<Vector3>(128);
-            var uvs = new List<Vector2>(128);
-            var triangles = new List<int>(192);
+            float hMinMin = HeightAt(kind, lo, lo);
+            float hMaxMin = HeightAt(kind, hi, lo);
+            float hMaxMax = HeightAt(kind, hi, hi);
+            float hMinMax = HeightAt(kind, lo, hi);
 
-            float below = -0.5f - Sink;
+            var cMinMin = new Vector3(lo, hMinMin, lo);
+            var cMaxMin = new Vector3(hi, hMaxMin, lo);
+            var cMaxMax = new Vector3(hi, hMaxMax, hi);
+            var cMinMax = new Vector3(lo, hMinMax, hi);
 
-            for (int k = 0; k < Steps; k++)
-            {
-                // Step k spans from its own front edge to the back of the cell, and stands on the
-                // step in front of it rather than on the floor — stacked, not nested. Its top face
-                // is the tread; the part of it the next step stands on is buried, which is exactly
-                // what makes the visible tread the right width without anyone computing one.
-                float front = edges[k];
-                float top = TreadHeight(variant, k);
-                float bottom = k == 0 ? below : TreadHeight(variant, k - 1);
+            // ---- the top, as two triangles split along the main diagonal -----------------------
+            //
+            // Both max and min bend along x = z and are planar either side of it, so that diagonal
+            // is where the surface really creases. A straight slope is planar and does not care
+            // which way it is cut, so one split serves all three and there is no special case.
+            AddQuad(vertices, normals, uvs, triangles, cMinMin, cMaxMin, cMaxMax, cMaxMax);
+            AddQuad(vertices, normals, uvs, triangles, cMinMin, cMaxMax, cMinMax, cMinMax);
 
-                // The taper accumulates, so this step starts exactly where the step below finished.
-                // Anything else leaves a ledge at every tread.
-                AddTaperedBox(vertices, normals, uvs, triangles,
-                    new Vector3(-0.5f, bottom, front),
-                    new Vector3(0.5f, top, 0.5f),
-                    openMinX ? k * perStep : 0f, openMinX ? (k + 1) * perStep : 0f,
-                    openMaxX ? k * perStep : 0f, openMaxX ? (k + 1) * perStep : 0f);
-            }
+            // ---- the four sides ---------------------------------------------------------------
+            //
+            // Every side is a straight line in all three shapes — along an edge, max and min each
+            // collapse to one of their arguments or to a constant — so a quad from the foot up to
+            // the two corner heights is exact rather than an approximation of a curve.
+            AddQuad(vertices, normals, uvs, triangles,          // -z
+                new Vector3(lo, foot, lo), new Vector3(hi, foot, lo), cMaxMin, cMinMin);
 
-            var mesh = new Mesh { name = "Odyssey/Bank" + variant + "-" + ends };
+            AddQuad(vertices, normals, uvs, triangles,          // +z
+                new Vector3(hi, foot, hi), new Vector3(lo, foot, hi), cMinMax, cMaxMax);
+
+            AddQuad(vertices, normals, uvs, triangles,          // -x
+                new Vector3(lo, foot, hi), new Vector3(lo, foot, lo), cMinMin, cMinMax);
+
+            AddQuad(vertices, normals, uvs, triangles,          // +x
+                new Vector3(hi, foot, lo), new Vector3(hi, foot, hi), cMaxMax, cMaxMin);
+
+            // ---- the foot ---------------------------------------------------------------------
+            AddQuad(vertices, normals, uvs, triangles,
+                new Vector3(lo, foot, hi), new Vector3(hi, foot, hi),
+                new Vector3(hi, foot, lo), new Vector3(lo, foot, lo));
+
+            var mesh = new Mesh { name = "Odyssey/Bank" + kind };
             mesh.SetVertices(vertices);
             mesh.SetNormals(normals);
             mesh.SetUVs(0, uvs);
@@ -230,67 +198,21 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
-        /// One box whose top face may be drawn in along x, so a side becomes a slope rather than a
-        /// wall. Six flat-shaded quads, every face pointing outward, exactly as a plain box.
+        /// One flat facet, given clockwise as seen from outside. Repeating the last corner makes it
+        /// a triangle, which is how the two halves of the top are emitted.
         ///
-        /// <para>The insets are given for the bottom and the top of each x side separately, so a
-        /// stack of these forms one continuous slope instead of a flight of ledges: a step takes as
-        /// its bottom inset whatever the step below used at its top. All four zero is an ordinary
-        /// box, which is what a bank with no open end gets.</para>
-        /// </summary>
-        static void AddTaperedBox(List<Vector3> vertices, List<Vector3> normals, List<Vector2> uvs,
-            List<int> triangles, Vector3 min, Vector3 max,
-            float bottomMinX, float topMinX, float bottomMaxX, float topMaxX)
-        {
-            float bx0 = min.x + bottomMinX, bx1 = max.x - bottomMaxX;
-            float tx0 = min.x + topMinX, tx1 = max.x - topMaxX;
-
-            // A taper wide enough to cross itself would turn the box inside out. Clamped rather
-            // than asserted, because the caller is arithmetic and not a person, and the sensible
-            // answer to "narrower than nothing" is a ridge.
-            if (tx0 > tx1) { float mid = 0.5f * (tx0 + tx1); tx0 = mid; tx1 = mid; }
-            if (bx0 > bx1) { float mid = 0.5f * (bx0 + bx1); bx0 = mid; bx1 = mid; }
-
-            // -z, +z, -x, +x, -y, +y. Corners of each are given anticlockwise about the outward
-            // normal, which AddQuad's winding then turns into triangles facing that way.
-            AddQuad(vertices, normals, uvs, triangles,
-                new Vector3(bx0, min.y, min.z), new Vector3(bx1, min.y, min.z),
-                new Vector3(tx1, max.y, min.z), new Vector3(tx0, max.y, min.z));
-
-            AddQuad(vertices, normals, uvs, triangles,
-                new Vector3(bx1, min.y, max.z), new Vector3(bx0, min.y, max.z),
-                new Vector3(tx0, max.y, max.z), new Vector3(tx1, max.y, max.z));
-
-            AddQuad(vertices, normals, uvs, triangles,
-                new Vector3(bx0, min.y, max.z), new Vector3(bx0, min.y, min.z),
-                new Vector3(tx0, max.y, min.z), new Vector3(tx0, max.y, max.z));
-
-            AddQuad(vertices, normals, uvs, triangles,
-                new Vector3(bx1, min.y, min.z), new Vector3(bx1, min.y, max.z),
-                new Vector3(tx1, max.y, max.z), new Vector3(tx1, max.y, min.z));
-
-            AddQuad(vertices, normals, uvs, triangles,
-                new Vector3(bx0, min.y, max.z), new Vector3(bx1, min.y, max.z),
-                new Vector3(bx1, min.y, min.z), new Vector3(bx0, min.y, min.z));
-
-            AddQuad(vertices, normals, uvs, triangles,
-                new Vector3(tx0, max.y, min.z), new Vector3(tx1, max.y, min.z),
-                new Vector3(tx1, max.y, max.z), new Vector3(tx0, max.y, max.z));
-        }
-
-        /// <summary>
-        /// One flat facet. The winding is 0-2-1 and 0-3-2, the same convention
+        /// <para>The winding is 0-2-1 and 0-3-2, the same convention
         /// <see cref="PrimitiveMeshes.UnitCube"/> and <see cref="RockMesh"/> use — the opposite of
         /// the obvious order, because taking the corners as given builds triangles facing inward,
-        /// which is valid geometry that renders as a hole.
+        /// which is valid geometry that renders as a hole.</para>
         /// </summary>
         static void AddQuad(List<Vector3> vertices, List<Vector3> normals, List<Vector2> uvs,
             List<int> triangles, Vector3 a, Vector3 b, Vector3 c, Vector3 d)
         {
-            // Fold away corners that have collapsed onto one another before anything else looks at
-            // them. A fully tapered step brings the two ends of a side together, and a quad with
-            // coincident corners carries a zero-length edge and counts a real edge three times, so
-            // the block stops being closed. Same reasoning, and the same fix, as GroundMesh.
+            // Fold away corners that have collapsed onto one another. A slope that reaches the
+            // floor at an edge leaves that side with no height at all, and a quad with coincident
+            // corners carries a zero-length edge and a triangle with no area, which shades from a
+            // normal that cannot be computed. Same guard, same reason, as GroundMesh.
             var given = new[] { a, b, c, d };
             var corners = new Vector3[4];
             int count = 0;
@@ -302,33 +224,22 @@ namespace Odyssey.Presentation.Rendering
             if (count > 1 && (corners[0] - corners[count - 1]).sqrMagnitude < 1e-10f) count--;
             if (count < 3) return;
 
-            a = corners[0];
-            b = corners[1];
-            c = corners[2];
-            d = count > 3 ? corners[3] : corners[2];
-
-            Vector3 normal = Vector3.Cross(c - a, b - a);
+            Vector3 normal = Vector3.Cross(corners[2] - corners[0], corners[1] - corners[0]);
             if (normal.sqrMagnitude < 1e-12f) return;
             normal = normal.normalized;
-            int start = vertices.Count;
 
-            // Shaded like the ground it grows out of, through GroundMesh.SideNormalTiltDegrees.
-            // A bank is a metre-high riser every 83 cm, so if its risers kept true vertical normals
-            // while the terrace either side of it did not, the bank would come out as a ladder of
-            // black bars laid across the one place the eye is being drawn to.
+            // Shaded like the ground it grows out of, through GroundMesh.SideNormalTiltDegrees, so
+            // a near-vertical side of a slope is lit as earth rather than as the side of a building.
             Vector3 shaded = GroundMesh.ShadingNormal(normal);
+            int start = vertices.Count;
 
             for (int i = 0; i < count; i++)
             {
                 vertices.Add(corners[i]);
                 normals.Add(shaded);
-                // Planar UVs, one repeat per cell, so the bank wears the same tiling terrain
-                // texture at the same scale as the ground it grows out of.
                 uvs.Add(Uv(corners[i], normal));
             }
 
-            // A fan from the first corner, wound 0-2-1 for the reason PrimitiveMeshes records: the
-            // obvious order builds triangles facing inward, which renders as a hole.
             for (int i = 2; i < count; i++)
             {
                 triangles.Add(start);
@@ -337,15 +248,16 @@ namespace Odyssey.Presentation.Rendering
             }
         }
 
+        /// <summary>
+        /// Planar UVs, one repeat per cell, so a bank wears the same tiling terrain texture at the
+        /// same scale as the ground either side of it. Taken from the plan for anything facing
+        /// mostly upward, which is what keeps a slope continuous with the flat ground it joins.
+        /// </summary>
         static Vector2 Uv(Vector3 point, Vector3 normal)
         {
             if (Mathf.Abs(normal.y) > 0.5f) return new Vector2(point.x + 0.5f, point.z + 0.5f);
             float across = Mathf.Abs(normal.x) > Mathf.Abs(normal.z) ? point.z : point.x;
             return new Vector2(across + 0.5f, point.y + 0.5f);
         }
-
-        /// <summary>A stable 0..1 from a salt pair. The same avalanche <see cref="GroundScatter"/> uses.</summary>
-        static float Unit(uint a, uint b) =>
-            (GroundScatter.Hash((int)a, (int)b, 0x9E3779B9u) & 0xFFFFFFu) * (1f / 0x1000000);
     }
 }

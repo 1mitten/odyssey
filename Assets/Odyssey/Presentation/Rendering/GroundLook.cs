@@ -61,18 +61,11 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static float Yaw(int x, int z, int y) => 90f * (Hash(x, z, y, SaltYaw) % 4u);
 
-        /// <summary>
-        /// Which of <see cref="BankMesh.Variants"/> banks climbs the step in this direction.
-        ///
-        /// <para>The direction is in the salt, not just the cell, because one cell can carry two
-        /// banks at an inside corner and they should not be the same bank twice. A bank cannot
-        /// take its variety from the four bearings the way turf does — the bearing is already
-        /// spoken for, since it is what points the bank at the step it climbs.</para>
-        /// </summary>
-        public static int BankVariant(int x, int z, int y, int dir) =>
-            (int)(Hash(x, z, y, SaltBank + (uint)dir * 0x9E37u) % (uint)BankMesh.Variants);
-
-        const uint SaltBank = 0x41C3u;
+        // A bank used to pick a variant from here, and does not any more. Its shape is decided
+        // entirely by the steps around its cell — see BankMesh, where the reasoning is — and the
+        // variety it used to take from a hash was the very thing that made a run of banks read as
+        // a ridge of misaligned bars rather than as one slope. Nothing replaced it: the answer was
+        // less variation, not different variation.
 
         static uint Hash(int x, int z, int y, uint salt) =>
             GroundScatter.Hash(x, z, salt + (uint)y * 2246822519u);

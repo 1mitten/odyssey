@@ -370,7 +370,7 @@ namespace Odyssey.Presentation.World
             // collapses to one when there is no ripple to vary, and a bank varies only by its own
             // step jitter.
             int count =
-                shape == ModuleShape.Bank ? BankMesh.Slots
+                shape == ModuleShape.Bank ? BankMesh.Kinds
                 : shape == ModuleShape.GroundBlock ? GroundMesh.TurfVariants
                 : GroundMesh.FaceSlots;
             for (int i = 0; i < table.Length; i++)

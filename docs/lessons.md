@@ -540,6 +540,28 @@ this file arriving again, so the method is worth recording as much as the answer
   none of them; asking the shader took one run and answered it completely. Reach for it whenever a
   tint, an emission or a cutoff appears to have no effect.
 
+## Variety at cell scale needs a tile set that agrees at its edges, or it reads as noise
+
+Three separate attempts at "make the ground less uniform" failed the same way and it is worth
+stating once. The rim ripple gave every cell its own top and produced cracks. The bank gave every
+cell its own jittered tread positions and produced a ridge of misaligned bars — "these Toblerone
+pieces", in the owner's words. Both were varied, both were individually correct, and both read as
+noise because **neighbouring cells did not agree along the edge they share**.
+
+- **The fix is not less variation, it is variation that is continuous.** The bank ended up as three
+  height functions — `z`, `max(x, z)`, `min(x, z)` — chosen precisely because along any shared edge
+  two of them collapse to the same expression. A run of them is one surface with no seam to find,
+  and the width is matched by construction rather than by tuning.
+- **Rotation is what keeps a tile set small.** Sixteen patterns of exposed sides fold onto five; the
+  three bank shapes cover every corner in both directions. Folding is free because the yaw rides in
+  the instance matrix, so the cost of a tile set is meshes, and meshes are buckets, not instances.
+- **When the answer is a tile set, the per-cell hash goes away entirely.** Every version that kept a
+  hash "for variety" was the version that broke, because a hash cannot know what its neighbour
+  chose. If a shape depends on its surroundings, its surroundings must be the only input.
+- **The instrument has to be pointed at the fault.** All of this was visible in a close shot and
+  invisible at 70 m, and it was reported from close up while the sheet was being judged from far
+  away. `SlopeCheck` shoots a 14 m macro for that reason now.
+
 ## Coplanar surfaces flicker only when they face the same way
 
 A bank fills its cell in plan, so an inside corner where two terrace steps meet was drawing two

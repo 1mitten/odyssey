@@ -203,10 +203,36 @@ being cheap, the cost lands on every cell of the board at once.
 
 **`BankMesh` is the answer to the straight wall.** The simulation already says a colonist walks up a
 one-block step — `MoveCost.JumpUp`, a hop into the column next door — so the board was showing a
-wall where the game had a path. A bank is three treads and three risers, a metre of rise and 83 cm
-of tread, drawn in the *empty cell* beside the step. Stepped rather than smooth on purpose: 3 m over
-one cell is a fifty-degree ramp however it is drawn, and a smooth fifty-degree ramp reads as a road
-somebody built, where treads read as a bank weathered into ledges.
+wall where the game had a path. A bank is one smooth slope, the full width of its cell, drawn in the
+*empty cell* beside the step.
+
+**It was a stepped staircase first, and that was wrong.** The first version cut the slope into three
+treads and jittered the tread positions per cell so a long run would not repeat. The owner named
+every part of the fault: the jitter meant neighbouring cells put their treads in different places,
+so a run came out as a ridge of misaligned bars rather than one flight; the taper that stopped the
+run ends being bare walls turned them into wedges; and the whole thing read as built furniture
+dropped onto the ground rather than as ground. **Simple and continuous beats varied and broken** —
+the same lesson the rim ripple taught, arriving again by a different road.
+
+**Three shapes, and they tile.** A bank's surface is a height field over its own cell, and the three
+cases are the three simplest functions there are, with local `+z` and `+x` pointing at the steps:
+
+| Shape | Surface | Where |
+|---|---|---|
+| Straight | `y = z` | one step against one side |
+| Inner | `y = max(x, z)` | a notch, with steps on two adjacent sides |
+| Outer | `y = min(x, z)` | a hip, with a step only on the diagonal |
+
+**They agree exactly where they meet**, which is the whole reason for choosing them. Along the edge
+it shares with a straight neighbour, `max(x, z)` is `z` and so is `min(x, z)` — the same value the
+straight piece has there. So a run of banks around a terrace, corners and all, is one continuous
+surface: **the width is matched by construction rather than by hand.** The `Outer` piece is what
+fixes corners rather than merely surviving them — a cell diagonally outside a convex corner touches
+no step orthogonally, so it used to get nothing and every corner had a square bite out of it.
+
+Nothing is varied and nothing is jittered: one mesh per shape, four bearings from the instance
+matrix, no per-cell choice at all. Three modules cover every bank on the board, which is fewer than
+the stepped version needed for one.
 
 The bank belongs to the empty cell rather than to the block it climbs, and that is what makes it
 cheap to decide: it stands at the same layer as the riser, on the top of the lower terrace, reaching
