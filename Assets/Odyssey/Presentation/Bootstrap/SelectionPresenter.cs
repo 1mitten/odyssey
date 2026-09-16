@@ -184,7 +184,8 @@ namespace Odyssey.Presentation.Bootstrap
                 return feet + Vector3.up * (_bootstrap.colonistCursor.y * 0.5f);
             int movePerTick = _bootstrap != null ? _bootstrap.MovePerTick : 0;
             float tickAlpha = _bootstrap != null ? _bootstrap.TickAlpha : 0f;
-            return Odyssey.Presentation.Rendering.PawnPose.Of(pawn, tickAlpha, movePerTick, out _)
+            return Odyssey.Presentation.Rendering.PawnPose.Of(
+                       pawn, tickAlpha, movePerTick, out _, _bootstrap?.Model)
                 + Vector3.up * (_bootstrap != null ? _bootstrap.colonistCursor.y * 0.5f : 1.35f);
         }
 
@@ -227,7 +228,8 @@ namespace Odyssey.Presentation.Bootstrap
                 // reach the wood, so the pose and the screen disagree by most of a stride exactly
                 // while a colonist is chopping — which is when the player is trying to click them.
                 if (_bootstrap?.Figures == null || !_bootstrap.Figures.TryGetFeet(pawn.Id, out Vector3 feet))
-                    feet = Odyssey.Presentation.Rendering.PawnPose.Of(pawn, tickAlpha, movePerTick, out _);
+                    feet = Odyssey.Presentation.Rendering.PawnPose.Of(
+                        pawn, tickAlpha, movePerTick, out _, _bootstrap?.Model);
                 var bounds = new Bounds(feet + Vector3.up * (box.y * 0.5f), box);
                 if (!bounds.IntersectRay(ray, out float distance) || distance >= nearest) continue;
 
