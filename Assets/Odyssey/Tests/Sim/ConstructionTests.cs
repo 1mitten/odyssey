@@ -351,7 +351,34 @@ namespace Odyssey.Tests.Sim
             Assert.That(view.CellIndex, Is.EqualTo(cell));
             Assert.That(view.Building, Is.EqualTo((byte)BuildingHandle.Wall));
             Assert.That(view.Stuff, Is.EqualTo((byte)StuffHandle.Wood));
-            Assert.That(view.Delivered, Is.EqualTo(255), "all five arrived");
+
+            // Real counts and real ticks, not a quantised fraction: the inspect pane is asked "how
+            // much wood is missing" and "how much longer", and neither can be recovered from a byte.
+            Assert.That(view.Delivered, Is.EqualTo(5));
+            Assert.That(view.Cost, Is.EqualTo(5));
+            Assert.That(view.IsFrame, Is.True, "all five arrived");
+            Assert.That(view.WorkTotal, Is.EqualTo(135), "a wooden wall");
+            Assert.That(view.WorkDone, Is.Zero);
+            Assert.That(view.Progress, Is.Zero);
+        }
+
+        /// <summary>
+        /// A stone wall publishes its own, dearer, work total — so the interface's "about N seconds
+        /// left" is the material's answer and not the thing's.
+        /// </summary>
+        [Test]
+        public void TheWorkPublishedIsTheMaterialsOwn()
+        {
+            ColonyWorld colony = Board();
+            int cell = SiteBesideTheStart(colony);
+            Assume.That(cell, Is.GreaterThanOrEqualTo(0));
+
+            Order(colony, cell, StuffHandle.Stone);
+            colony.Construction.Deliver(cell, 5);
+            colony.World.Tick();
+
+            SiteView view = colony.World.Views.Current.Sites[0];
+            Assert.That(view.WorkTotal, Is.EqualTo(229), "135 x 1.7");
         }
 
         // ---- the whole journey -------------------------------------------------------------------

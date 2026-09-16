@@ -83,6 +83,9 @@ namespace Odyssey.Presentation.Ui
         // ---- roots
         VisualElement _hud = null!;
         VisualElement _marquee = null!;
+        VisualElement _armedBanner = null!;
+        Label _armedWhat = null!;
+        Label _armedHow = null!;
 
         // ---- stores (A1)
         VisualElement _storesPanel = null!;
@@ -135,6 +138,7 @@ namespace Odyssey.Presentation.Ui
         string? _stateJob;
         string? _stateBand;
         int _stateSelected = int.MinValue;
+        string? _stateSite;
 
         // ---- command bar (A8)
         VisualElement _barRow = null!;
@@ -275,6 +279,17 @@ namespace Odyssey.Presentation.Ui
             _marquee.AddToClassList("marquee");
             _marquee.style.display = DisplayStyle.None;
             _hud.Add(_marquee);
+
+            // What the player is holding, and how to stop holding it. Above the command
+            // bar, where the eye already goes for the bar and the palette.
+            _armedBanner = new VisualElement { name = "armed", pickingMode = PickingMode.Ignore };
+            _armedBanner.AddToClassList("armed");
+            _armedBanner.style.display = DisplayStyle.None;
+            _armedWhat = HudText.Make(string.Empty, HudTextRole.Name, ussClass: "armed__what");
+            _armedHow = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "armed__how");
+            _armedBanner.Add(_armedWhat);
+            _armedBanner.Add(_armedHow);
+            _hud.Add(_armedBanner);
 
             BuildStores();
             BuildStrip();
@@ -437,6 +452,7 @@ namespace Odyssey.Presentation.Ui
             }
 
             UpdateMarquee();
+            UpdateArmedBanner();
             ReadBarKeys();
 
             // The roster sweep ends when the button does, wherever the pointer happens to be when
@@ -1220,11 +1236,15 @@ namespace Odyssey.Presentation.Ui
                 HudText.Set(_inspectMeta, MetaLine(), HudTextRole.Meta);
             }
             if (!ReferenceEquals(_stateJob, _inspect.Job) || !ReferenceEquals(_stateBand, band) ||
-                _stateSelected != selected)
+                _stateSelected != selected || !ReferenceEquals(_stateSite, _inspect.Site))
             {
                 _stateJob = _inspect.Job;
                 _stateBand = band;
                 _stateSelected = selected;
+                // The model hands back the same instance until the line would read differently, so
+                // a reference comparison is the whole test — and a countdown rebuilds once a
+                // second rather than fifteen times.
+                _stateSite = _inspect.Site;
                 HudText.Set(_inspectState, StateLine(), HudTextRole.Meta);
             }
 
@@ -1285,7 +1305,11 @@ namespace Odyssey.Presentation.Ui
                 case InspectSubject.Item:
                     return "item on the ground";
                 case InspectSubject.Cell:
-                    return "cell readout arrives with cell inspection";
+                    // A site says what it is waiting for or how much longer; bare ground still has
+                    // nothing to say, and says so rather than pretending.
+                    return _inspect.Site.Length > 0
+                        ? _inspect.Site
+                        : "cell readout arrives with cell inspection";
                 default:
                     return string.Empty;
             }
@@ -1804,6 +1828,61 @@ namespace Odyssey.Presentation.Ui
 
         /// <summary>The gap between the palette and the bar it stands on. Enough to read as two panels, not more.</summary>
         const float PaletteGap = 6f;
+
+        /// <summary>
+        /// A strip over the board saying what the player is holding and how to put it down.
+        ///
+        /// <para><b>An armed tool was invisible, and the way out of it was a key nobody had been
+        /// told about.</b> Escape has disarmed the tool since the settings panel landed — it is the
+        /// first step of <c>SettingsDirector.Escape</c>'s unwind — but nothing on screen said a tool
+        /// was held or that Escape would drop it, so the only evidence of build mode was that
+        /// clicking stopped selecting things. The owner reported it as being hard to get out of
+        /// (2026-09-17).</para>
+        ///
+        /// <para>Centred just above the command bar rather than at the cursor: a cursor decoration
+        /// is the conventional answer and cannot carry a sentence, and the one thing this has to
+        /// carry is the sentence. It sits where the eye already goes for the bar and the palette,
+        /// so it is in the path of a player who is about to wonder.</para>
+        ///
+        /// <para>Rebuilt only when the tool or the material changes, not per frame, for the reason
+        /// every other string in this shell is.</para>
+        /// </summary>
+        void UpdateArmedBanner()
+        {
+            DesignateDirector? tool = _directors?.Designate;
+            DesignateTool armed = tool?.Tool ?? DesignateTool.None;
+
+            if (armed == DesignateTool.None)
+            {
+                _armedBanner.style.display = DisplayStyle.None;
+                _armedFor = DesignateTool.None;
+                _armedStuffFor = -1;
+                return;
+            }
+
+            _armedBanner.style.display = DisplayStyle.Flex;
+            int stuff = tool!.Stuff;
+            if (_armedFor == armed && _armedStuffFor == stuff) return;
+
+            _armedFor = armed;
+            _armedStuffFor = stuff;
+
+            string what = armed switch
+            {
+                DesignateTool.Mine => "Mining",
+                DesignateTool.Fell => "Felling",
+                DesignateTool.Cancel => "Cancelling orders",
+                _ => BuildLabels.Building(tool.Building) is { Length: > 0 } name
+                    ? "Building " + name.ToLowerInvariant() + " of " + BuildLabels.Stuff(stuff)
+                    : "Building",
+            };
+
+            HudText.Set(_armedWhat, what, HudTextRole.Name);
+            HudText.Set(_armedHow, "drag over the board · Esc to stop", HudTextRole.Meta);
+        }
+
+        DesignateTool _armedFor = DesignateTool.None;
+        int _armedStuffFor = -1;
 
         /// <summary>
         /// The tools that actually do something, keyed the way everything in this interface is

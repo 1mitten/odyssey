@@ -1,6 +1,7 @@
 #nullable enable
 using NUnit.Framework;
 using Odyssey.Hud;
+using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Tests.Hud
 {
@@ -34,6 +35,45 @@ namespace Odyssey.Tests.Hud
             foreach (GraphicsOption option in SettingsDirector.All)
                 Assert.That(SettingsDirector.IconKeys, Does.Contain(SettingsDirector.KeyOf(option)),
                     "an option the panel can draw but the registry test does not cover is a label nobody checks");
+        }
+
+        /// <summary>
+        /// A job with no icon key reads as <i>idle</i>, which is a lie rather than a gap.
+        ///
+        /// <para>The table is bounds-checked and falls through to <c>ui.status.idle</c>, so
+        /// two missing entries are not a compile error — they are every builder and every
+        /// porter in the game showing as having nothing to do. That happened when the build
+        /// pipeline added two job indices, and this is what stops the next one.</para>
+        /// </summary>
+        [Test]
+        public void EveryJobHasAStatusOfItsOwn()
+        {
+            Assert.That(JobLabels.IconKeys.Length, Is.EqualTo(JobHandle.Count),
+                "a job the table does not cover draws as idle, silently");
+
+            foreach (string key in JobLabels.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+        }
+
+        [Test]
+        public void EveryBuildableAndMaterialHasARegisteredNameOrNoneAtAll()
+        {
+            Assert.That(BuildLabels.BuildingKeys.Length, Is.EqualTo(BuildingHandle.Count));
+            Assert.That(BuildLabels.StuffKeys.Length, Is.EqualTo(StuffHandle.Count));
+
+            // A blank is deliberate and means "the player can never be shown this" - the
+            // three stuffs only the generator stamps, and the zero slot. Anything else must
+            // be a name the wiki knows.
+            foreach (string key in BuildLabels.BuildingKeys)
+                if (key.Length > 0)
+                    Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+            foreach (string key in BuildLabels.StuffKeys)
+                if (key.Length > 0)
+                    Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+
+            Assert.That(BuildLabels.Building(BuildingHandle.Wall), Is.EqualTo("Wall"));
+            Assert.That(BuildLabels.Stuff(StuffHandle.Wood), Is.EqualTo("wood"),
+                "a material is read inside a sentence, so it is lower case");
         }
 
         [Test]

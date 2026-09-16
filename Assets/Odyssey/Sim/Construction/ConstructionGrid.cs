@@ -396,11 +396,11 @@ namespace Odyssey.Sim.Construction
                 byte building = _building[index];
                 if (building == 0) continue;
 
-                int cost = ConstructionContent.BuildingAt(building).costCount;
-                byte delivered = cost <= 0 ? (byte)255 : (byte)(_delivered[index] * 255 / cost);
-
                 writer.AddSite(new SiteView(
-                    index, building, _stuff[index], delivered, (byte)(Fraction(index) * 255f)));
+                    index, building, _stuff[index],
+                    (ushort)_delivered[index],
+                    (ushort)ConstructionContent.BuildingAt(building).costCount,
+                    _work[index], WorkFor(index)));
             }
         }
     }

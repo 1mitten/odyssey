@@ -227,19 +227,45 @@ namespace Odyssey.Sim.Contracts
         /// <summary>What of, as a <see cref="StuffHandle"/> value.</summary>
         public readonly byte Stuff;
 
-        /// <summary>Material delivered, 0 for none and 255 for all of it.</summary>
-        public readonly byte Delivered;
+        /// <summary>Units of material that have arrived.</summary>
+        public readonly ushort Delivered;
 
-        /// <summary>Work applied, 0 for untouched and 255 for finished. Quantised, per <see cref="OrderView.Progress"/>.</summary>
-        public readonly byte Progress;
+        /// <summary>Units the site wants in total.</summary>
+        public readonly ushort Cost;
 
-        public SiteView(int cellIndex, byte building, byte stuff, byte delivered, byte progress)
+        /// <summary>Ticks of work applied.</summary>
+        public readonly int WorkDone;
+
+        /// <summary>Ticks of work the thing costs, in this material.</summary>
+        public readonly int WorkTotal;
+
+        /// <summary>
+        /// Real counts and real ticks, where <see cref="OrderView.Progress"/> is a quantised byte —
+        /// and the difference is not an inconsistency.
+        ///
+        /// <para>An order's progress is <i>a picture</i>: what reads on screen is whether a face is
+        /// barely scratched or nearly through, and a byte says that to a tenth of a per cent. A
+        /// site is asked a <i>question</i> — the player clicks it and expects to be told what is
+        /// going up, whether the wood has arrived, and how much longer. "Three of five wood" and
+        /// "about nine seconds left" cannot be recovered from a fraction, and the alternative is
+        /// the interface keeping its own copy of the cost table, which is two sources for one
+        /// number.</para>
+        /// </summary>
+        public float Progress => WorkTotal <= 0 ? 0f : (float)WorkDone / WorkTotal;
+
+        /// <summary>Has every unit arrived, so that the thing can be worked on?</summary>
+        public bool IsFrame => Delivered >= Cost;
+
+        public SiteView(int cellIndex, byte building, byte stuff,
+            ushort delivered, ushort cost, int workDone, int workTotal)
         {
             CellIndex = cellIndex;
             Building = building;
             Stuff = stuff;
             Delivered = delivered;
-            Progress = progress;
+            Cost = cost;
+            WorkDone = workDone;
+            WorkTotal = workTotal;
         }
     }
     /// <summary>

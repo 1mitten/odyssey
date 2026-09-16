@@ -917,6 +917,27 @@
 
 /* ---------------------------------------------------------------- the drag-select marquee */
 
+/* What the player is holding. Centred over the command bar, out of the way of the board and
+   in the path of anyone about to wonder how to stop. Never a click target: it is a
+   sentence, not a control, and a control here would be one more thing between the player
+   and the ground they are trying to drag over. */
+.armed {
+    position: absolute;
+    left: 50%;
+    translate: -50% 0;
+    bottom: 92px;
+    align-items: center;
+    padding: 5px 14px;
+    background-color: rgba(12, 16, 20, 0.90);
+    border-width: 1px;
+    border-color: #6fd3e3;
+    border-radius: 6px;
+}
+
+.armed__what { color: #dff6fa; }
+.armed__how { color: rgba(255, 255, 255, 0.55); }
+
+
 .marquee {
     position: absolute;
     border-width: 1px;
