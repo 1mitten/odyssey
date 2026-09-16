@@ -410,30 +410,6 @@ namespace Odyssey.EditorTools
             return samples;
         }
 
-        static float[] Music(float seconds, float root, float fifth, float third, float wobbleHz)
-        {
-            int count = (int)(seconds * Rate);
-            var samples = new float[count];
-
-            // Every component is locked to an integer number of cycles over the loop, so the
-            // last sample hands to the first without a seam and the 24 s loop is honest.
-            float Lock(float hz) => Mathf.Round(hz * seconds) / seconds;
-
-            float a = Lock(root), b = Lock(fifth), c = Lock(third);
-            float lfo = Mathf.Round(wobbleHz * seconds) / seconds;
-
-            for (int i = 0; i < count; i++)
-            {
-                float t = (float)i / Rate;
-                float swell = 0.7f + 0.3f * Mathf.Sin(2f * Mathf.PI * lfo * t);
-                samples[i] = (
-                    Mathf.Sin(2f * Mathf.PI * a * t) * 0.34f +
-                    Mathf.Sin(2f * Mathf.PI * b * t) * 0.27f +
-                    Mathf.Sin(2f * Mathf.PI * c * t) * 0.20f) * swell;
-            }
-            return samples;
-        }
-
         /// <summary>Blend the buffer's tail into its head so a filter's state does not click at
         /// the loop point. The blended tail is then dropped: the loop shortens by the fade length
         /// and stays seamless, which is the property that matters.</summary>
