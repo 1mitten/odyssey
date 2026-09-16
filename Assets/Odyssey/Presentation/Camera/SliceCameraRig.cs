@@ -95,6 +95,15 @@ namespace Odyssey.Presentation.CameraRig
         /// <summary>Where the camera is looking, in world metres. For tests and readouts.</summary>
         public Vector3 Focus => _focus;
 
+        /// <summary>
+        /// Where the zoom is heading, as against <see cref="distance"/>, which is where it has
+        /// smoothed to so far. A test that asks "did the wheel do anything" wants this: the
+        /// smoothed value approaches its target exponentially and never quite arrives, so it
+        /// cannot distinguish a small input from none without waiting an arbitrary number of
+        /// frames.
+        /// </summary>
+        public float TargetDistance => _targetDistance;
+
         /// <summary>Where a glide is taking the focus, or null when the camera is where it was asked to be.</summary>
         public Vector3? GlideTarget => _glideTarget;
 
