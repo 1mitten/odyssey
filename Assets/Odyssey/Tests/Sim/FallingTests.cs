@@ -203,281 +203,14 @@ namespace Odyssey.Tests.Sim
             Assert.That(items.ItemAt(100)!.Stack, Is.EqualTo(8), "the stack merged with itself");
         }
 
-        // ---- climbing out --------------------------------------------------------------
 
-        [Test]
-        public void ACutShaftIsStillClimbableWithNothingDrawnInIt()
-        {
-            // The connector is what makes a shaft escapable, and it is deliberately all there is.
-            // A ladder edifice was placed here for one commit and taken out again — the owner's
-            // words were "these ladders shouldn't be visible" — so what is left has to be checked
-            // as behaviour rather than as a prop: nothing standing in the cell, and a colonist can
-            // still get out of it.
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-            int surface = Size.Index(start.X, start.Z, start.Y);
-            int shaft = surface - Size.LayerStride;
-            Assume.That(colony.Designations.CanMine(shaft), Is.True);
 
-            Dig(colony, shaft);
 
-            // Out onto the ground BESIDE the hole. The cell directly over it is the one whose
-            // floor was just dug away, so it is no longer somewhere a colonist may be.
-            int ground = GroundBeside(colony, start);
-            Assume.That(ground, Is.GreaterThanOrEqualTo(0), "no ground beside the hole on this board");
 
-            Assert.That(colony.Grid.Edifice[shaft], Is.LessThan(0),
-                "something is standing in the shaft; the owner asked for nothing to be");
-            Assert.That(
-                colony.Pawns.Nav.Reachable(shaft, ground, Odyssey.Sim.Pathing.TraverseMode.Colonist),
-                Is.True, "a colonist that cut this shaft cannot get out of it");
-        }
 
-        [Test]
-        public void AClimbNeedsABlockBesideItToClimbAgainst()
-        {
-            // The owner's rule: "a climb can only happen if there is a tile in front of you — a
-            // height block above and you climb against the edge of that block."
-            //
-            // Without it a connector went on every cut cell with an open ceiling, which in the
-            // middle of an open quarry is a colonist going up through clear air with nothing
-            // anywhere near it. Measured over 40,000 ticks before the rule: 1,890 of 9,880
-            // climbing pawn-ticks — near enough one in five — had no wall beside them.
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-            int surface = Size.Index(start.X, start.Z, start.Y);
-            int shaft = surface - Size.LayerStride;
-            Assume.That(colony.Designations.CanMine(shaft), Is.True);
 
-            // Untouched ground, so the cut cell has rock on all four sides.
-            Assert.That(MineJobDriver.HasWallBeside(colony.Grid, shaft), Is.True);
-            Dig(colony, shaft);
 
-            int ground = GroundBeside(colony, start);
-            Assume.That(ground, Is.GreaterThanOrEqualTo(0), "no ground beside the hole on this board");
-            Assert.That(
-                colony.Pawns.Nav.Reachable(shaft, ground, Odyssey.Sim.Pathing.TraverseMode.Colonist),
-                Is.True, "a hole with rock on every side of it is not climbable");
-        }
 
-        [Test]
-        public void TheMiddleOfAnOpenQuarryHasNothingToClimb()
-        {
-            // The other half of the same rule, and the one that matters: dig a patch out and the
-            // cells in the middle of it have no face left anywhere near them.
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-
-            // A three-by-three of cut cells one layer down.
-            int middle = -1;
-            for (int dz = -1; dz <= 1; dz++)
-            for (int dx = -1; dx <= 1; dx++)
-            {
-                if (!Size.Contains(start.X + dx, start.Z + dz, start.Y)) continue;
-                int cell = Size.Index(start.X + dx, start.Z + dz, start.Y) - Size.LayerStride;
-                if (!colony.Designations.CanMine(cell)) continue;
-                Dig(colony, cell);
-                if (dx == 0 && dz == 0) middle = cell;
-            }
-
-            Assume.That(middle, Is.GreaterThanOrEqualTo(0), "the patch could not be dug on this board");
-            Assume.That(colony.Grid.IsSolidTerrain(middle), Is.False);
-
-            Assert.That(MineJobDriver.HasWallBeside(colony.Grid, middle), Is.False,
-                "the middle of a cut patch still thinks it has a wall beside it");
-        }
-
-        [Test]
-        public void ACornerIsNotSomethingYouCanClimb()
-        {
-            // Four faces and not the diagonals. A corner is not something you can get your weight
-            // against, and a colonist climbing one would be hanging off a line rather than
-            // pressed to a face.
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-
-            // Open the four faces of a cell and leave its diagonals solid.
-            int centre = Size.Index(start.X, start.Z, start.Y) - Size.LayerStride;
-            Assume.That(colony.Designations.CanMine(centre), Is.True);
-
-            foreach (var face in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
-            {
-                int cell = Size.Index(start.X + face.Item1, start.Z + face.Item2, start.Y)
-                         - Size.LayerStride;
-                Assume.That(colony.Designations.CanMine(cell), Is.True);
-                Dig(colony, cell);
-            }
-
-            Dig(colony, centre);
-
-            Assume.That(colony.Grid.IsSolidTerrain(
-                Size.Index(start.X + 1, start.Z + 1, start.Y) - Size.LayerStride), Is.True,
-                "the diagonal was not left solid, so this proved nothing");
-
-            Assert.That(MineJobDriver.HasWallBeside(colony.Grid, centre), Is.False,
-                "a diagonal corner was counted as a wall to climb");
-        }
-
-        [Test]
-        public void MiningAwayAClimbsWallTakesTheClimbWithIt()
-        {
-            // Checking only at the moment a climb is created is not enough, and this is why: a
-            // colonist cuts a shaft, the rock around the shaft is then mined out, and the climb
-            // goes on insisting there is a face to hold on to. Measured over 40,000 ticks with the
-            // creation test in place and nothing to retire them, one climbing pawn-tick in five
-            // still had no wall beside it.
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-            int surface = Size.Index(start.X, start.Z, start.Y);
-            int shaft = surface - Size.LayerStride;
-            Assume.That(colony.Designations.CanMine(shaft), Is.True);
-
-            Dig(colony, shaft);
-            Assume.That(
-                colony.Pawns.Nav.Reachable(shaft, surface, Odyssey.Sim.Pathing.TraverseMode.Colonist),
-                Is.True, "the fresh shaft was not climbable, so this proves nothing");
-
-            // Now take every wall away from it.
-            foreach (var face in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
-            {
-                int wall = Size.Index(start.X + face.Item1, start.Z + face.Item2, start.Y)
-                         - Size.LayerStride;
-                Assume.That(colony.Designations.CanMine(wall), Is.True);
-                Dig(colony, wall);
-            }
-
-            Assert.That(MineJobDriver.HasWallBeside(colony.Grid, shaft), Is.False,
-                "the walls were not actually removed, so this proves nothing");
-            Assert.That(
-                (colony.Pawns.Nav.Grid.Flags[shaft] & Odyssey.Sim.Pathing.NavFlags.ConnectorClimb),
-                Is.EqualTo(default(Odyssey.Sim.Pathing.NavFlags)),
-                "the climb outlived the wall it went up");
-        }
-
-        [Test]
-        public void ARetiredClimbDropsWhoeverWasOnItToTheFloor()
-        {
-            // The live cause the safety net was missing. A cell with a climb counts as standable
-            // to navigation — that is what lets a colonist be on a rock face at all — so taking
-            // the climb away takes its footing with it. Without this, two of five colonists spent
-            // the last 12,600 ticks of a 40,000-tick run standing still in mid-air.
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-            int surface = Size.Index(start.X, start.Z, start.Y);
-            int shaft = surface - Size.LayerStride;
-            int bottom = shaft - Size.LayerStride;
-            Assume.That(colony.Designations.CanMine(shaft), Is.True);
-            Dig(colony, shaft);
-            Assume.That(colony.Designations.CanMine(bottom), Is.True);
-            Dig(colony, bottom);
-
-            // Put somebody on the middle of the shaft, which has no floor of its own.
-            Pawn pawn = colony.Pawns.Pawns.All[0];
-            Assume.That(colony.Grid.HasFloor(shaft), Is.False, "the shaft cell has a floor of its own");
-            pawn.Cell = shaft;
-
-            // Cut every wall away from under them.
-            foreach (var face in new[] { (1, 0), (-1, 0), (0, 1), (0, -1) })
-            {
-                int wall = Size.Index(start.X + face.Item1, start.Z + face.Item2, start.Y)
-                         - Size.LayerStride;
-                if (!colony.Designations.CanMine(wall)) continue;
-                Dig(colony, wall);
-            }
-
-            Assert.That(colony.Grid.HasFloor(pawn.Cell), Is.True,
-                $"the colonist is in {Size.FromIndex(pawn.Cell)}, which has nothing under it");
-        }
-
-        [Test]
-        public void AClimbLandsOnTheGroundBesideTheHoleAndNotInTheAirAboveIt()
-        {
-            // The fault that sealed pits shut. A climb used to end in the cell directly above the
-            // one it started in — which, for a hole in flat ground, is open air with its floor
-            // just dug away. That was survivable only while a colonist could stand there and walk
-            // off, and standing there is what the owner reported as walking across air. Forbid it
-            // and the one cell joining the pit to the world is a cell nobody may enter.
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-            int over = Size.Index(start.X, start.Z, start.Y);
-            int pit = over - Size.LayerStride;
-            Assume.That(colony.Designations.CanMine(pit), Is.True);
-
-            Dig(colony, pit);
-
-            Assert.That(colony.Grid.HasFloor(over), Is.False,
-                "the cell over the pit still has a floor, so this proves nothing");
-            Assert.That(colony.Pawns.Nav.Grid.IsClimbOnly(over), Is.False,
-                "the climb ended in the air above the hole instead of on the ground beside it");
-
-            int ground = GroundBeside(colony, start);
-            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
-            Assert.That(
-                colony.Pawns.Nav.Reachable(ground, pit, Odyssey.Sim.Pathing.TraverseMode.Colonist),
-                Is.True, "a colonist standing beside the pit cannot get into it");
-        }
-
-        [Test]
-        public void YouMayStepOffARockFaceButNotOntoOne()
-        {
-            // The asymmetry is the whole rule, and getting it the tidy-looking way round strands
-            // everybody: the top of a climb out of a deep shaft is itself a floorless cell, and
-            // stepping off it onto the ground is the last move of getting out.
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-            int over = Size.Index(start.X, start.Z, start.Y);
-            int pit = over - Size.LayerStride;
-            int deeper = pit - Size.LayerStride;
-            Assume.That(colony.Designations.CanMine(pit), Is.True);
-            Dig(colony, pit);
-            Assume.That(colony.Designations.CanMine(deeper), Is.True);
-            Dig(colony, deeper);
-
-            // The middle of a two-deep shaft is standable and has nothing under it.
-            Assume.That(colony.Pawns.Nav.Grid.IsClimbOnly(pit), Is.True,
-                "the middle of the shaft is not a rock face on this board");
-
-            var nav = colony.Pawns.Nav;
-            var mode = Odyssey.Sim.Pathing.TraverseMode.Colonist;
-            int ground = GroundBeside(colony, start);
-            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
-
-            Assert.That(nav.Grid.CanWalkInto(pit, mode), Is.False,
-                "a colonist may walk sideways onto a rock face");
-            Assert.That(nav.Grid.CanEnter(pit, mode), Is.True,
-                "a colonist may not be on a rock face at all, so nobody can climb");
-            Assert.That(nav.Grid.CanWalkInto(ground, mode), Is.True,
-                "ordinary ground stopped being walkable");
-        }
-
-        [Test]
-        public void NobodyHangsOnARockFaceDoingNothing()
-        {
-            // A cell a climb passes through is standable and has no floor, so a pawn whose path
-            // ends or fails while it is on one used to stay there, idle, in mid-air — 702
-            // pawn-ticks of it over 40,000. Letting go is the only honest answer: there is
-            // nothing to hold on to.
-            ColonyWorld colony = Board();
-            CellRef start = colony.Start;
-            int over = Size.Index(start.X, start.Z, start.Y);
-            int pit = over - Size.LayerStride;
-            int deeper = pit - Size.LayerStride;
-            Assume.That(colony.Designations.CanMine(pit), Is.True);
-            Dig(colony, pit);
-            Assume.That(colony.Designations.CanMine(deeper), Is.True);
-            Dig(colony, deeper);
-            Assume.That(colony.Pawns.Nav.Grid.IsClimbOnly(pit), Is.True);
-
-            Pawn pawn = colony.Pawns.Pawns.All[0];
-            pawn.ClearPath();
-            pawn.Cell = pit;
-
-            colony.World.Tick();
-
-            Assert.That(pawn.Cell, Is.Not.EqualTo(pit), "the colonist is still clinging to the face");
-            Assert.That(colony.Grid.HasFloor(pawn.Cell), Is.True,
-                $"it let go and landed in {Size.FromIndex(pawn.Cell)}, which has nothing under it");
-        }
 
         // ---- you work what you can reach ------------------------------------------------
 
@@ -608,37 +341,21 @@ namespace Odyssey.Tests.Sim
             }
         }
 
-        [Test]
-        public void AClimbIsNotALadder()
-        {
-            // Ladders are a built thing: the generator puts them in buildings, they cost what a
-            // made object costs, and something is drawn where one is. A hole cut with a pick has
-            // none of that. Modelling it as a ladder claimed all three, and for one commit the
-            // game duly drew a free unbuilt ladder in every pit on the board.
-            Assert.That(Odyssey.Sim.Pathing.ConnectorKind.Climb,
-                Is.Not.EqualTo(Odyssey.Sim.Pathing.ConnectorKind.Ladder));
-            Assert.That(Odyssey.Sim.Pathing.MoveCost.ClimbUp,
-                Is.LessThan(Odyssey.Sim.Pathing.MoveCost.LadderUp),
-                "climbing rock is dearer than a ladder somebody built to make it easier");
-            Assert.That((Odyssey.Sim.Pathing.NavFlags.Connector
-                         & Odyssey.Sim.Pathing.NavFlags.ConnectorClimb), Is.Not.EqualTo(0),
-                "a climb footprint is not counted as a connector, so its cell has no floor");
-        }
 
         [Test]
-        public void GoingDownCostsLessThanClimbingBackUp()
+        public void DroppingCostsLessThanJumpingBackUp()
         {
             // The asymmetry is the point and it is not a fudge: going down a hole and coming back
             // up it are not the same job. Priced alike, a descent took six and a half seconds for
             // three metres, which the owner twice described as floating.
-            Assert.That(Odyssey.Sim.Pathing.MoveCost.ClimbDown,
-                Is.LessThan(Odyssey.Sim.Pathing.MoveCost.ClimbUp));
-            Assert.That(Odyssey.Sim.Pathing.MoveCost.ClimbDown,
+            Assert.That(Odyssey.Sim.Pathing.MoveCost.Drop,
+                Is.LessThan(Odyssey.Sim.Pathing.MoveCost.JumpUp));
+            Assert.That(Odyssey.Sim.Pathing.MoveCost.Drop,
                 Is.LessThanOrEqualTo(Odyssey.Sim.Pathing.MoveCost.Orthogonal),
-                "dropping a layer costs more than walking a cell, so it still reads as a climb");
-            Assert.That(Odyssey.Sim.Pathing.MoveCost.ClimbUp,
+                "dropping a layer costs more than walking a cell, so it still reads as a drop");
+            Assert.That(Odyssey.Sim.Pathing.MoveCost.JumpUp,
                 Is.GreaterThan(Odyssey.Sim.Pathing.MoveCost.Orthogonal),
-                "climbing became as cheap as walking, so nothing will ever prefer a ramp");
+                "a jump became as cheap as walking, so nothing will ever prefer a ramp");
         }
 
         // ---- the glide -------------------------------------------------------------------

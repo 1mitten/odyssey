@@ -722,12 +722,18 @@ namespace Odyssey.Presentation.World
             if (Chips != null) Chips.Running = running;
 
             int lowest = Mathf.Max(0, slice.LowestDrawnLayer(activeLayer));
+
+            // And up to the highest layer the world is drawn on. A figure belongs wherever its
+            // surroundings are visible: the owner's report was that a colonist mining one layer up
+            // could not be seen at all, because this cull was against the active layer while the
+            // rock around that colonist was being x-rayed perfectly well.
+            int highest = slice.HighestVisibleLayer(activeLayer, snapshot.Size.SizeY);
             var pawns = snapshot.Pawns;
 
             for (int i = 0; i < pawns.Length && Drawn.Count < MaxFigures; i++)
             {
                 CellRef cell = pawns[i].Cell;
-                if (cell.Y < lowest || cell.Y > activeLayer) continue;
+                if (cell.Y < lowest || cell.Y > highest) continue;
 
                 Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading);
                 Figure figure = Lease(pawns[i].Id, position);
@@ -1522,7 +1528,23 @@ namespace Odyssey.Presentation.World
             // pose either, so it rose through a hole in whatever the mixer produced. With the gait
             // reading ground speed that is the idle, which is better than a walk cycle in mid-air
             // and still is not climbing.
-            figure.ClimbPhase = pawn.MovePercent > 0 && pawn.NextCell.Y != pawn.Cell.Y
+            //
+            // **Strictly vertical, and that test is the whole of it** (owner, 2026-09-16). There
+            // are now two ways to change layer and they want opposite things:
+            //
+            //   * a LADDER joins a cell to the one directly above it — same x and z — and is
+            //     climbed. `SurfacePasses` stamps them one cell to one cell, so the geometry is
+            //     the signal and no new contract is needed.
+            //   * a HOP is a jump up onto the block next door, or a drop off it: one cell across
+            //     as well as one layer up. Posing that as a climb is what the owner reported as
+            //     the animation looking wrong, and it needs no pose at all — a hop has real
+            //     horizontal travel, so the gait already walks the figure up onto the block.
+            //
+            // A stair sorts itself out by the same test: a stairwell moves across as well as up.
+            // If lifts ever land this has to become a question about the connector's KIND rather
+            // than its geometry, because a lift is vertical and you stand in it.
+            bool straightUp = pawn.NextCell.X == pawn.Cell.X && pawn.NextCell.Z == pawn.Cell.Z;
+            figure.ClimbPhase = pawn.MovePercent > 0 && pawn.NextCell.Y != pawn.Cell.Y && straightUp
                 ? HeldClimbPhase ?? Mathf.Clamp01(pawn.MovePercent * 0.01f)
                 : -1f;
 

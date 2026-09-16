@@ -715,3 +715,66 @@ that reason alone — pulling the speed smoothing out as a static over two posit
 the test file itself was then executed headlessly by compiling it against the rebuilt
 `Odyssey.Presentation.dll` with the NuGet NUnit and invoking every `[Test]` by reflection. Three of
 the five went red against the old behaviour, which is the only reason they are worth anything.
+## An Assume can hide a dead feature, and a green tier can mean nothing ran
+
+Six of `MineJobTests`' thirteen tests open with a variant of `Assume.That(rock >= 0)` — the fixture
+looks for a cell of rock a colonist could actually get at, and gives up if there is none. On `main`
+that assumption was failing: **not one rock cell on the fixture's board had a stance a colonist
+could reach**, so `NearestRock` returned -1 and the tests reported *inconclusive*. The default fast
+tier prints those as part of a passing run. Mining was effectively dead on that board and the suite
+said nothing.
+
+It cost a wrong conclusion in this session. Checking "was this failing before my change?" by
+stashing and re-running showed `Passed: 6, Failed: 0` and I read it as "these tests passed on main,
+so I broke them". They had not passed; seven of them had not run. Only `-v n`, which prints a line
+per test, showed six `Skipped`.
+
+- **Read the total, not the verdict.** `Passed: 6 ... Total: 6` against a file with thirteen
+  `[Test]` methods is the finding. Compare the count to the file before comparing anything else.
+- **An `Assume` guards a fixture, not a feature.** It is right for "this seed happened not to put a
+  pond here" and wrong for "the thing under test is unreachable", which is the failure itself
+  wearing the fixture's clothes. Where the assumption is really a precondition the feature must
+  meet, make it an `Assert`.
+- **A skip is not a pass, and neither is a category.** The same board also hid this behind
+  `Category("Long")`, which the default tier excludes — so the one test that would have run the
+  colony for a day only ran when something passed an explicit filter.
+
+## A merge that auto-resolves in the wrong direction, and a compile check that lies
+
+Reconciling the vertical-movement line (which deleted climbing as a mining mechanic) with the
+gesture line (which had just finished the climb *pose*, legs and all) produced two separate traps
+worth the same hour twice.
+
+**Git flagged three conflicts and silently dropped four more things.** The conflicts were the
+obvious ones — the pose methods, and two documents both lines had appended to. What auto-merged
+without a murmur was every deletion made in a region the other branch had not touched:
+`World = _model` in the composition root, the whole climb shot in `PlayScene`, the `Figure` fields
+(`ClimbPhase`, `ClimbWeight`, `ClimbFace`), and the `ClimbLean` / `ClimbEaseSeconds` constants.
+
+The result compiled in the reviewer's head and would have run wrong: with no world mirror,
+`TryWallBeside` returns false, `ClimbFace` stays zero, and `ApplyClimbPose` is gated on it — so the
+pose would have been present, correct, and **never executed**, with the one diagnostic that could
+have shown it also deleted.
+
+- **A merge conflict list is not a change list.** After a merge that removes a feature one side
+  extended, grep the merged tree for the feature's own vocabulary and check each hit is where you
+  expect. `git merge-tree --write-tree` gives you the merged blobs without touching a working tree,
+  so this can be done *before* committing to the merge.
+- **Resolving conflict hunks is not the same as taking a side.** Keeping "ours" in five hunks still
+  left the file broken, because the losses were outside the hunks. Taking the whole file from the
+  branch that owns the feature and re-applying the other side's few real additions was quicker and
+  correct — and the second approach is the one to reach for first when one side deleted a subsystem.
+
+**And the headless compile check can bind stale assemblies.** `docs/lessons.md` above recommends
+compiling the Unity-only assemblies against `Library/ScriptAssemblies`. In a *worktree* that is a
+trap: the built DLLs there belong to whatever branch the main checkout is on. Worse, pointing the
+generated csproj at freshly built DLLs did not fix it — the compiler went on reporting members that
+were plainly in the source (`MoveCost.Drop`, `WorldSnapshot.Running`) even after the only Odyssey
+references in the project were the fresh ones, after `obj/` was cleared, and after every prebuilt
+`Odyssey.*` was excluded. Roughly an hour went into that, and none of it was a real defect.
+
+**Compile the sources, not against the binaries.** One csproj that includes `Sim.Contracts`, `Sim`,
+`Hud`, `Presentation` and `Editor/Odyssey` as `<Compile>` items, referencing only Unity's own DLLs
+and the package assemblies, builds in seconds and answers the only question a handoff needs: do
+*these sources* agree with each other. Assembly-definition boundaries are then unverified, which is
+what `scripts/unity.sh test editmode` is for.

@@ -250,8 +250,10 @@ namespace Odyssey.Sim.Pawns
         /// has the stand as its target and the tree as its destination. Both are reasonable, the
         /// second is better, and the figure has to face the tree under either.
         /// </summary>
+        /// <para>Nothing during the settle toil either, which is the point of it: the tree is
+        /// already down and the figure should be easing out of its stance, not still swinging.</para>
         public override int WorkFocus =>
-            ToilIndex < 1 ? -1 : Job.DestCell >= 0 ? Job.DestCell : Job.TargetCell;
+            ToilIndex != 1 ? -1 : Job.DestCell >= 0 ? Job.DestCell : Job.TargetCell;
 
         public override bool TryMakeReservations(PawnContext ctx)
         {
@@ -264,6 +266,10 @@ namespace Odyssey.Sim.Pawns
 
         public override JobStatus Tick(PawnContext ctx)
         {
+            // Before every guard below: by now the tree is down and its order cleared, so asking
+            // whether it is still a marked tree would fail the job on the first settle tick.
+            if (ToilIndex == SettleToil) return Settle(ctx);
+
             var designations = ctx.Designations;
             if (designations == null) return JobStatus.Failed;
 
@@ -297,7 +303,10 @@ namespace Odyssey.Sim.Pawns
             designations.Clear(cell);
             int yield = ctx.Content.WoodPerTree;
             ctx.Defer(_ => FellTree(ctx, cell, yield));
-            return JobStatus.Succeeded;
+
+            // The tree falls now; the woodcutter straightens up before walking off.
+            NextToil();
+            return JobStatus.Ongoing;
         }
 
         /// <summary>

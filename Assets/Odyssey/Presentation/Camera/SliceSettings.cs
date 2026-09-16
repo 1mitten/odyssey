@@ -47,6 +47,39 @@ namespace Odyssey.Presentation.CameraRig
     [Serializable]
     public sealed class SliceSettings
     {
+        /// <summary>
+        /// The layer the game opens at — the surface the colony starts on. Anything below it is
+        /// underground. Set from the world's start cell; it is a render-side constant, not a
+        /// simulation fact.
+        /// </summary>
+        [Tooltip("The layer the game opens at. Below it is underground.")]
+        public int surfaceLayer;
+
+        /// <summary>
+        /// Let the depth of the slice choose the treatment, rather than the fields below
+        /// (owner, 2026-09-16). **This is the default and it is what a player meets.**
+        ///
+        /// <para><b>At or above the surface: everything above is drawn, and drawn SOLID.</b> The
+        /// player is looking at the world from outside and wants to see all of it — the owner's
+        /// words, after the first attempt left it x-rayed: "this includes everything buildings,
+        /// stones, rocks and everything, as I noticed the mining rocks were transparent". An
+        /// outcrop rising two cells above the surface is a rock, not a hint of one. The depth cap
+        /// does not apply and neither does the fade.</para>
+        ///
+        /// <para><b>Below the surface: one layer above, and every layer below.</b> Underground the
+        /// question reverses. What is overhead is a ceiling and one layer of it is all the context
+        /// that helps; what is *under* you is the shape of the working, and a base three storeys
+        /// deep is unreadable through a three-layer cap. So the cap comes off downwards and goes
+        /// on upwards.</para>
+        ///
+        /// <para>The six ADR 0006 modes are untouched and still ship. This decides what the
+        /// player gets when they have not chosen one: switch it off and every field below is
+        /// obeyed exactly as before, which is what an explicit mode choice will do.</para>
+        /// </summary>
+        [Tooltip("Let the slice's depth choose the treatment: everything above at the surface, " +
+                 "one above and everything below when underground. Off obeys the fields below.")]
+        public bool followDepth = true;
+
         [Tooltip("Treatment of layers above the active one. Never interactive, whatever this says.")]
         public AboveMode above = AboveMode.Xray;
 
@@ -100,32 +133,105 @@ namespace Odyssey.Presentation.CameraRig
         /// </summary>
         public bool suppressActiveCeiling = true;
 
-        /// <summary>The lowest layer that is drawn at all.</summary>
-        public int LowestDrawnLayer(int activeLayer) =>
-            below == BelowMode.Hide ? activeLayer : activeLayer - belowDepth;
+        /// <summary>
+        /// Below the opacity at which a ghosted layer is not drawn at all.
+        ///
+        /// <para>It lived as a literal in <c>ChunkRenderer</c>'s loop. It is named here because
+        /// <see cref="HighestVisibleLayer"/> has to agree with it exactly: a figure must be drawn
+        /// on every layer the world is drawn on and on no other, or a colonist appears standing
+        /// in rock that has faded away.</para>
+        /// </summary>
+        public const float MinVisibleAlpha = 0.012f;
 
-        /// <summary>The highest layer that is drawn at all.</summary>
+        /// <summary>Is the slice underground — below the layer the game opens at?</summary>
+        public bool BelowSurface(int activeLayer) => followDepth && activeLayer < surfaceLayer;
+
+        /// <summary>
+        /// The treatment above the slice, after <see cref="followDepth"/> has had its say.
+        /// Everything that asks about the layers above goes through here.
+        /// </summary>
+        public AboveMode AboveAt(int activeLayer) =>
+            !followDepth ? above
+            : BelowSurface(activeLayer) ? AboveMode.XrayMin
+            : AboveMode.Full;
+
+        /// <summary>The lowest layer that is drawn at all.</summary>
+        public int LowestDrawnLayer(int activeLayer)
+        {
+            if (below == BelowMode.Hide) return activeLayer;
+
+            // Underground, the cap comes off: the shape of a working is what is beneath you, and
+            // the dimming falloff is what keeps the active layer standing out from it.
+            if (BelowSurface(activeLayer)) return 0;
+
+            return activeLayer - belowDepth;
+        }
+
+        /// <summary>The highest layer that is drawn at all, before the fade cutoff.</summary>
         public int HighestDrawnLayer(int activeLayer, int layerCount)
         {
-            switch (above)
+            switch (AboveAt(activeLayer))
             {
                 case AboveMode.Hide: return activeLayer;
                 case AboveMode.XrayMin: return activeLayer + 1;
                 case AboveMode.Full:
                 case AboveMode.RoofsOff: return layerCount - 1;
-                default: return activeLayer + aboveDepth;
+
+                // Following the depth at or above the surface means every layer above, not
+                // aboveDepth of them. What actually bounds it is the fade — see
+                // HighestVisibleLayer — rather than a count nobody chose.
+                default: return followDepth ? layerCount - 1 : activeLayer + aboveDepth;
             }
         }
 
+        /// <summary>
+        /// The highest layer anything is drawn on, the ghost cutoff included — which is the one
+        /// every actor should be culled against.
+        ///
+        /// <para><see cref="HighestDrawnLayer"/> can say "all of them" while the fade has long
+        /// since taken the geometry to nothing. Chunks handle that by skipping the layer inside
+        /// the loop; a pawn is drawn solid and would not, so it needs the answer up front.</para>
+        /// </summary>
+        public int HighestVisibleLayer(int activeLayer, int layerCount)
+        {
+            int highest = Mathf.Min(layerCount - 1, HighestDrawnLayer(activeLayer, layerCount));
+            if (!GhostsAbove(activeLayer)) return highest;
+
+            while (highest > activeLayer && AlphaAbove(activeLayer, highest - activeLayer) < MinVisibleAlpha)
+                highest--;
+
+            return highest;
+        }
+
+        /// <summary>
+        /// Should the active layer's ceiling — the slab stored on the layer above — be dropped?
+        ///
+        /// <para><b>`Full` normally keeps its lid and the depth-following default does not,
+        /// although both draw everything above solid.</b> They mean different things. `Full` is the
+        /// exterior and screenshot view, deliberately the control case with no cut-away anywhere;
+        /// the default is "let me see the world", and "the active layer is drawn roofless" is a
+        /// separate standing decision (<c>06-rendering-and-camera.md</c> §3 point 2) that it has no
+        /// business quietly reversing.</para>
+        ///
+        /// <para>Nothing changes outdoors either way, because open ground has no slab over it.
+        /// It changes as soon as anything is built, which is why it is settled now rather than
+        /// discovered then.</para>
+        /// </summary>
+        public bool SuppressCeilingAt(int activeLayer) =>
+            suppressActiveCeiling && (followDepth || AboveAt(activeLayer) != AboveMode.Full);
+
         /// <summary>Is a layer above the slice drawn translucent rather than solid?</summary>
-        public bool GhostsAbove =>
-            above == AboveMode.Ghost || above == AboveMode.Xray || above == AboveMode.XrayMin;
+        public bool GhostsAbove(int activeLayer)
+        {
+            AboveMode mode = AboveAt(activeLayer);
+            return mode == AboveMode.Ghost || mode == AboveMode.Xray || mode == AboveMode.XrayMin;
+        }
 
         /// <summary>Opacity for a layer this many steps above the slice.</summary>
-        public float AlphaAbove(int steps)
+        public float AlphaAbove(int activeLayer, int steps)
         {
             float alpha = ghostAlpha * Mathf.Pow(ghostFalloff, Mathf.Max(0, steps - 1));
-            if (above == AboveMode.Ghost) alpha *= 0.55f;
+            if (AboveAt(activeLayer) == AboveMode.Ghost) alpha *= 0.55f;
             return Mathf.Clamp01(alpha);
         }
 
