@@ -44,19 +44,41 @@ namespace Odyssey.EditorTools
         const float MergeTolerance = 0.004f;
 
         /// <summary>
-        /// Where every pack paints skin.
+        /// Where the packs paint skin. <b>Measured, not guessed</b>, and there is more than one.
         ///
-        /// <b>Measured, not guessed.</b> `SwatchProbe` put the skin clusters of bodies from all
-        /// four packs inside u 0.008-0.029, v 0.183-0.190 — Synty use the same corner of the
-        /// layout in each pack, which is why one rectangle serves all four. It is padded to
-        /// u 0.004-0.040, v 0.174-0.200, which still excludes every neighbouring cluster the probe
-        /// found: the hair browns sit at u 0.049-0.052 and the pale head cell at v 0.166.
+        /// <para>The first rectangle is the column every pack shares: `SwatchProbe` found the skin
+        /// clusters of PolygonGeneric, Farm, the Sci-Fi civilians and the Western Frontier bandit
+        /// inside u 0.008-0.029, v 0.183-0.190, padded here to exclude the neighbours it also
+        /// found — the hair browns at u 0.049-0.052 and the pale head cell at v 0.166.</para>
         ///
-        /// A cluster inside this band is only accepted as skin if it also carries head or arm
-        /// vertices, so a garment that happens to be painted from a skin swatch is not mistaken
-        /// for a face.
+        /// <para>The other two were found by asking why fourteen bodies came back with no skin at
+        /// all. Western Frontier paints its Native American characters from a swatch of their own
+        /// at (0.2746, 0.1537), and the Sci-Fi cyborgs from another at (0.2591, 0.1075). Seven
+        /// bare-chested warriors reported as having no skin showing is what a single hard-coded
+        /// column buys, and it is why the contact sheet exists: a body wrongly classed as covered
+        /// simply loses a slot, quietly.</para>
+        ///
+        /// <para>A cluster inside one of these is only accepted as skin if it also carries head or
+        /// arm vertices, so a garment painted from a skin swatch is not mistaken for a face.</para>
         /// </summary>
-        static readonly Rect SkinColumn = Rect.MinMaxRect(0.004f, 0.174f, 0.040f, 0.200f);
+        static readonly Rect[] SkinColumns =
+        {
+            Rect.MinMaxRect(0.004f, 0.174f, 0.040f, 0.200f),
+            Rect.MinMaxRect(0.268f, 0.130f, 0.282f, 0.160f),
+            Rect.MinMaxRect(0.252f, 0.100f, 0.266f, 0.115f),
+        };
+
+        /// <summary>
+        /// How wide a cluster may be and still be one swatch cell.
+        ///
+        /// The merge tolerance occasionally bridges two neighbouring cells into one cluster, and
+        /// repainting such a cluster would flatten two of the artist's colours into one. They are
+        /// told apart by size: a real cell measured 0.002 to 0.007 across, while the one merged
+        /// cluster the probe caught — the Native American warrior's war paint and shirt, the only
+        /// cluster in the whole survey whose interior was not perfectly flat, at a deviation of
+        /// 64 — spans 0.0165. Anything this wide is skipped rather than recoloured.
+        /// </summary>
+        const float MaxSlotExtent = 0.012f;
 
         /// <summary>A cluster this head-dominant is something worn on or growing from the head.</summary>
         const float HairHeadShare = 0.80f;
@@ -208,7 +230,8 @@ namespace Odyssey.EditorTools
             {
                 if (skinClusters.Count == 2) break;
                 if (c.Count < MinSlotVertices) continue;
-                if (!SkinColumn.Contains(c.Rect.center)) continue;
+                if (!IsOneCell(c)) continue;
+                if (!InAnySkinColumn(c.Rect.center)) continue;
                 if (c.Head == 0 && c.Arm == 0) continue;
                 skinClusters.Add(c);
             }
@@ -220,6 +243,7 @@ namespace Odyssey.EditorTools
             {
                 if (hairClusters.Count == 2) break;
                 if (used.Contains(c) || c.Count < MinSlotVertices) continue;
+                if (!IsOneCell(c)) continue;
                 if (c.Head < HairHeadShare * c.Count) continue;
                 if (c.Count <= MaxEyeVertices && c.NearBlack) continue;
                 hairClusters.Add(c);
@@ -232,6 +256,7 @@ namespace Odyssey.EditorTools
             {
                 if (clothClusters.Count == 2) break;
                 if (used.Contains(c) || c.Count < MinSlotVertices) continue;
+                if (!IsOneCell(c)) continue;
                 if (c.Torso + c.Leg + c.Arm < c.Count / 2) continue;
                 clothClusters.Add(c);
             }
@@ -254,9 +279,22 @@ namespace Odyssey.EditorTools
 
             cells.quality = QualityOf(cells, ref note);
 
+            // Two rectangles of the *same* slot that touch are merged rather than kept apart.
+            // They paint the same colour, so one rectangle is the same picture and one fewer
+            // thing for the disjointness rule below to trip over. The monk has two adjacent skin
+            // cells, which is what found this.
+            cells.skin = MergeTouching(cells.skin);
+            cells.hair = MergeTouching(cells.hair);
+            cells.cloth = MergeTouching(cells.cloth);
+            cells.cloth2 = MergeTouching(cells.cloth2);
+
             // The shader lays the four slots over each other in a fixed order and does not test
-            // for overlap, so disjointness is guaranteed here or not at all.
-            if (Overlaps(cells))
+            // for overlap, so a fragment inside two *different* slots would take whichever came
+            // last. Disjointness across slots is guaranteed here or not at all, and guaranteeing
+            // it means actually dropping a slot rather than merely noticing — which is what this
+            // did at first, leaving the catalogue with overlapping rectangles and a label saying
+            // so.
+            if (DropCrossSlotOverlaps(cells))
             {
                 note = string.IsNullOrEmpty(note) ? "overlapping slots" : note + "; overlapping slots";
                 cells.quality = AppearanceQuality.Shared;
@@ -264,6 +302,16 @@ namespace Odyssey.EditorTools
 
             return cells;
         }
+
+        static bool InAnySkinColumn(Vector2 centre)
+        {
+            foreach (Rect column in SkinColumns) if (column.Contains(centre)) return true;
+            return false;
+        }
+
+        /// <summary>One cell, not several merged together. See <see cref="MaxSlotExtent"/>.</summary>
+        static bool IsOneCell(Cluster c) =>
+            c.Rect.width <= MaxSlotExtent && c.Rect.height <= MaxSlotExtent;
 
         static AppearanceQuality QualityOf(AppearanceCells cells, ref string note)
         {
@@ -283,18 +331,66 @@ namespace Odyssey.EditorTools
             return AppearanceQuality.ClothOnly;
         }
 
-        static bool Overlaps(AppearanceCells cells)
+        /// <summary>Fold rectangles of one slot that touch into single rectangles.</summary>
+        static Rect[] MergeTouching(Rect[] rects)
         {
-            var all = new List<Rect>();
-            all.AddRange(cells.skin);
-            all.AddRange(cells.hair);
-            all.AddRange(cells.cloth);
-            all.AddRange(cells.cloth2);
+            if (rects.Length < 2) return rects;
 
-            for (int i = 0; i < all.Count; i++)
-            for (int j = i + 1; j < all.Count; j++)
-                if (all[i].Overlaps(all[j])) return true;
-            return false;
+            var merged = new List<Rect>(rects);
+            bool again = true;
+            while (again)
+            {
+                again = false;
+                for (int i = 0; i < merged.Count && !again; i++)
+                for (int j = i + 1; j < merged.Count && !again; j++)
+                {
+                    if (!merged[i].Overlaps(merged[j])) continue;
+                    merged[i] = Rect.MinMaxRect(
+                        Mathf.Min(merged[i].xMin, merged[j].xMin),
+                        Mathf.Min(merged[i].yMin, merged[j].yMin),
+                        Mathf.Max(merged[i].xMax, merged[j].xMax),
+                        Mathf.Max(merged[i].yMax, merged[j].yMax));
+                    merged.RemoveAt(j);
+                    again = true;
+                }
+            }
+            return merged.ToArray();
+        }
+
+        /// <summary>
+        /// Make the four slots disjoint by giving up the smaller one wherever two collide.
+        ///
+        /// Returns true when something was dropped, which is what <see cref="AppearanceQuality.Shared"/>
+        /// records. Losing a slot is the honest cost of recolouring by UV region rather than by an
+        /// authored per-vertex mask: two things painted from one cell cannot be told apart here,
+        /// and painting them both the shirt colour would be worse than painting neither.
+        /// </summary>
+        static bool DropCrossSlotOverlaps(AppearanceCells cells)
+        {
+            // Least important first, so a collision costs the slot that matters least. Clothing
+            // outranks the rest because every body has it and it carries most of the variety.
+            var slots = new (Func<Rect[]> Get, Action Clear, int Verts)[]
+            {
+                (() => cells.cloth2, () => { cells.cloth2 = Array.Empty<Rect>(); cells.cloth2Verts = 0; }, cells.cloth2Verts),
+                (() => cells.hair,   () => { cells.hair = Array.Empty<Rect>(); cells.hairVerts = 0; },     cells.hairVerts),
+                (() => cells.skin,   () => { cells.skin = Array.Empty<Rect>(); cells.skinVerts = 0; },     cells.skinVerts),
+                (() => cells.cloth,  () => { cells.cloth = Array.Empty<Rect>(); cells.clothVerts = 0; },   cells.clothVerts),
+            };
+
+            bool dropped = false;
+            for (int i = 0; i < slots.Length; i++)
+            {
+                bool collides = false;
+                for (int j = i + 1; j < slots.Length && !collides; j++)
+                    foreach (Rect a in slots[i].Get())
+                    foreach (Rect b in slots[j].Get())
+                        if (a.Overlaps(b)) { collides = true; break; }
+
+                if (!collides) continue;
+                slots[i].Clear();
+                dropped = true;
+            }
+            return dropped;
         }
 
         static Rect[] Rects(List<Cluster> clusters)

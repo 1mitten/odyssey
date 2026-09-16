@@ -52,14 +52,10 @@ namespace Odyssey.EditorTools
         /// <summary>One body per pack, plus a couple that are expected to be awkward.</summary>
         static readonly string[] Bodies =
         {
-            "SM_Gen_Chr_Street_Male_01",
-            "SM_Gen_Chr_Business_Female_01",
-            "SM_Chr_CyberPunk_Male_01",
-            "SM_Chr_Cop_01",
-            "SM_Chr_Robot_01",
-            "SM_Chr_Bandit_Male_01",
-            "SM_Chr_GoldMiner_Male_01",
-            "SM_Chr_Farmer_Male_01",
+            "SM_Chr_NativeAmericanWarrior_Male_01",
+            "SM_Chr_NativeAmerican_Female_01",
+            "SM_Chr_Cyber_Male_01",
+            "SM_Chr_Monk_Male_01",
         };
 
         [MenuItem("Odyssey/Presentation/Probe the character swatches")]
