@@ -391,7 +391,7 @@ namespace Odyssey.Presentation.World
         /// wall with both fists is the axe's motion with a shorter tool, and it reuses every part
         /// of the fitting path unchanged. A one-handed hammer — the other hand steadying a nail —
         /// is a different thing and would be the first tool in the project to need a
-        /// <c>TwoHanded</c> flag, because <c>ArmIk</c> currently puts the off hand on the haft
+        /// <c>TwoHanded</c> flag, because <c>TwoBoneIk</c> currently puts the off hand on the haft
         /// unconditionally. §10 of <c>13-gestures.md</c> keeps that question.</para>
         ///
         /// <para>Aimed at the near face like mining and not at the cell centre like felling: a

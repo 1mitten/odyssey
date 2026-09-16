@@ -23,8 +23,16 @@ namespace Odyssey.Presentation.World
     /// The same call will hold the other end of a stretcher, a crate carried between two people,
     /// or a beam being lifted into place, which is why it is its own file rather than six lines
     /// inside the swing.
+    ///
+    /// <para><b>And a leg is two bones.</b> It was called <c>ArmIk</c> until the crouch needed it,
+    /// which was a name describing the first caller rather than the thing: a hip, a knee and a
+    /// foot are the same chain as a shoulder, an elbow and a hand, with the pole in front instead
+    /// of behind. That matters more for legs than it ever did for arms, because sixty-one
+    /// characters have sixty-one sets of limb proportions — a crouch posed by authored angles is a
+    /// deep squat on one figure and a curtsey on the next, where a crouch solved to the foot the
+    /// gait already put down is right on all of them and needs no photograph.</para>
     /// </summary>
-    public static class ArmIk
+    public static class TwoBoneIk
     {
         /// <summary>
         /// Bend <paramref name="upper"/> and <paramref name="lower"/> so that

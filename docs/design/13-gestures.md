@@ -185,8 +185,13 @@ PawnView.Gesture : PawnGesture   // what the pawn last did, sticky
 PawnView.GestureSerial : byte    // bumped each time a gesture starts, wraps
 ```
 
-`WorkCell` is reused unchanged and needs nothing new: a lift wants a direction to face and the
-item's cell is exactly that, which is the same reason `WorkCell` is a cell and not a flag.
+**No cell is carried with it, and that was a mistake in the first draft of this note.** It proposed
+reusing `WorkCell` to give the lift a direction to face. There is nothing to face: the haul's
+pickup toil *fails* unless the item is in the pawn's own cell, and the drop happens at the cell the
+pawn has just walked to. Both ends of the motion are therefore at the colonist's own feet, so the
+gesture needs no target beyond the figure's own position and the hands reach down in front of its
+boots. The same is true of the item's drawn place — asking `ItemHeap` where it scattered the pile
+would couple the pose to the pile's own decoration for a difference of a few centimetres.
 
 ### Why a serial, and why sticky — this is the trap
 
@@ -264,6 +269,19 @@ A one-shot gesture is precisely the thing that would be tempted to advance a tim
 function, and it would then run at double speed under the player loop and single speed in the
 editor harness — a discrepancy that the check shots, which step the graph by hand, would not show.
 
+**Amended in the build (2026-09-16): the clock advances in `Pose`, not in `Evaluate`.** The rule
+above is the one that matters and it is unchanged — advance in exactly one place, and leave
+`ApplyWorkPose` a pure re-derivation — but the place the codebase had already chosen is `Pose`,
+which is where `SwingClock` has always been advanced, and which runs once per `Sync`. Putting the
+gesture clock anywhere else would have made two clocks tick in two different passes.
+
+There is a second thing resting on that same assumption and it is worth naming, because a
+translation is more alarming to get wrong than a rotation. `Pitch` *adds* to a bone's current
+rotation and the crouch *adds* to the pelvis's current position, so both would double if the pass
+ran twice with no animation write between. It does not: were that untrue, the axe swing would have
+been drawing at twice its angles since the day it landed. A doubled crouch, though, would put a
+colonist's knees through the floor rather than merely overacting.
+
 ---
 
 ## 7. What to test, and where
@@ -307,7 +325,10 @@ the hand targets' height above the item and the arc the hands take between them.
 
 ---
 
-## 8. Why no code ships with this note
+## 8. Why no code shipped with the first draft of this note
+
+*Superseded on the same day: the owner asked for the work to proceed, the blocker below cleared
+itself, and §9 now records what was built. Kept because the second paragraph is still live.*
 
 The phase rule: design, hard stop, approval, then build. But there is a second reason, found while
 checking the facts for §2, and it is a blocker rather than a formality.
@@ -336,20 +357,34 @@ not a silent restoration.
 Steps G1 and G2 are refactors that change no picture; G3 upward each end in something the owner can
 look at.
 
-| # | Step | Size | Needs |
-|---|---|---|---|
-| **G0** | **Land the mining merge.** Commit `claude/mines-merge`, and bring `12-work-poses-and-tools.md` with it. *Nothing below can start.* | owner | — |
-| **G1** | Bind `Hips`, both upper and lower legs and both feet. Rename `ArmIk` to `TwoBoneIk` and move its tests. No behaviour change, no picture change. | ~60 lines + tests | Unity |
-| **G2** | The crouch: pelvis translation, leg solve, ankle counter-rotation, measured hip height. `CrouchTests`. Still nothing plays it. | ~120 + ~90 tests | Unity |
-| **G3** | `Gesture`, `GesturePose`, the table, and `ApplyWorkPose`'s two branches rewritten onto it. Felling, mining and climbing must come out **identical** — same contact sheets, same `MeasuredBladeGap`. | ~180 + ~100 tests | Unity |
-| **G4** | The contract: `PawnGesture`, `Gesture`, `GestureSerial`, sticky, unhashed, unsaved; the haul driver's one assignment; first-sighting rule in the director. | ~50 + ~70 tests | dotnet only |
-| **G5** | **The lift.** One-shot, IK to the item's drawn point, crouch under it, `MeasuredHandGap`, `GestureCheck`. **Owner judges.** | ~150 + ~80 tests | Unity + packs |
-| **G6** | Crouched sustained work. Cyclic, harness only, no job. | ~60 | Unity |
-| **G7** | Legs on the climb, now that they are bound. Fixes a hole the mining line shipped with. | ~50 | Unity |
-| **G8** | The gun: aimed hold, off hand on the foregrip by the same solve, recoil as a one-shot laid over the hold. Harness only. | ~120 | Unity + packs |
+| # | Step | State |
+|---|---|---|
+| **G0** | Land the mining merge. | **Done** by the owner as `482ff0f` while this note was being written. `12-work-poses-and-tools.md` did *not* come with it and is still on `worktree-agent-a8e0c6ab1138f2fda` alone, cited by five shipping files. |
+| **GH** | **The builder's hammer.** Added ahead of the queue because the owner asked for it and because it is pure data on machinery that already exists: a stroke, a style, a chip recipe, a catalogue row. | **Written, not compiled, not photographed.** |
+| **G1** | Bind `Hips`, both legs, both feet; measure each figure's own standing hip height. Rename `ArmIk` to `TwoBoneIk` — a leg is two bones. | **Written, not compiled.** |
+| **G2** | The crouch: pelvis translation, leg solve to the feet the gait left, sole restored. | **Written, not compiled.** |
+| **G3** | `Gesture` as a value with its own tests; the dispatch in `ApplyWorkPose` grows a third arm. Felling, mining and climbing are untouched. | **Written, not compiled.** |
+| **G4** | The contract: `PawnGesture`, the sticky pair on `PawnView`, the haul driver's two assignments, the first-sighting rule. | **Done and verified** — 7 new tests, 409 green in the fast tier. |
+| **G5** | **The lift**, plus `GestureCheck` and `MeasuredCrouchDrop`. | **Written, not compiled, not photographed. Wants the owner's eye.** |
+| **G6** | Crouched sustained work. Cyclic, harness only, no job. | Not started. |
+| **G7** | Legs on the climb, now that they are bound. | Not started. |
+| **G8** | The gun: aimed hold, off hand on the foregrip, recoil over the hold. Harness only. | Not started. |
 
-G4 is the only step that can be done on a machine without Unity. G5 and G8 need the packs and a
-screen.
+**"Written, not compiled" is not modesty, it is the state of the evidence.** A worktree has no
+`Assets/Synty` and no `Library`, so the whole of `Odyssey.Presentation` — every line of G1, G2, G3,
+G5 and the hammer — has never been through a compiler, and no figure has been drawn. Only G4 is on
+the simulation side, which is why only G4 is verified. What is needed, on the machine that has
+Unity and the packs:
+
+```
+scripts/unity.sh test editmode                          # the whole Presentation assembly
+Odyssey → Presentation → Check the lift                 # and Check the set-down
+Odyssey → Presentation → Check the hammer swing         # and the axe and the pick, unchanged
+```
+
+The first tells us whether it builds. The second and third are the only things that can tell us
+whether any of it looks like anything, and until they are run every angle in G5 and GH has exactly
+the standing the pick's numbers have: an argument, and an argument is not a measurement.
 
 ---
 

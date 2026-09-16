@@ -4,6 +4,34 @@ using System;
 namespace Odyssey.Sim.Contracts
 {
     /// <summary>
+    /// A momentary thing a pawn did that presentation may want to draw, as opposed to a state it
+    /// is in.
+    ///
+    /// <para><b>Why the contract needs this at all.</b> <see cref="PawnView.Working"/> is a
+    /// sustained bit: it is true for the ten seconds a tree takes, and a figure can simply look at
+    /// it every frame and pose accordingly. Picking a stack up is not like that. It takes no
+    /// simulation time whatever — one toil, one tick, the item changes hands — so there is no
+    /// state to observe, and the drawn lift is a presentation-side animation over an instant that
+    /// has already happened. Something still has to say the instant occurred.</para>
+    ///
+    /// <para><b>None of these has any effect on the simulation.</b> They are a report, not state:
+    /// not saved, not hashed, and nothing in <c>Sim</c> reads them back. Hashing them would make
+    /// the look of the game part of the determinism contract, which is the wrong thing to promise
+    /// and the wrong thing to be bound by.</para>
+    /// </summary>
+    public enum PawnGesture : byte
+    {
+        /// <summary>Nothing has happened worth drawing.</summary>
+        None = 0,
+
+        /// <summary>Stooping to take something off the ground.</summary>
+        Lift = 1,
+
+        /// <summary>Setting something down.</summary>
+        Stow = 2,
+    }
+
+    /// <summary>
     /// What the presentation layer knows about one pawn. A view is a value: it holds an id, never
     /// a reference to a simulation object.
     ///
@@ -65,11 +93,42 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly CellRef WorkCell;
 
+        /// <summary>
+        /// The last momentary thing this pawn did, which stays reported until it does another.
+        ///
+        /// <para><b>Sticky, and that is the whole design.</b> Presentation reads the latest
+        /// snapshot once a frame, and the simulation runs several ticks between frames at speed
+        /// three. A gesture flag set for the single tick it happened on would therefore be missed
+        /// routinely — the lift would play at slow speeds, not play at fast ones, and the bug
+        /// would look like a rendering glitch rather than a contract that cannot be observed.
+        /// Left standing until the next gesture, no snapshot can miss it.</para>
+        /// </summary>
+        public readonly PawnGesture Gesture;
+
+        /// <summary>
+        /// Bumped every time a gesture begins, wrapping through 255 back to 0.
+        ///
+        /// <para>Stickiness alone is not enough: two lifts in a row leave
+        /// <see cref="Gesture"/> reading <c>Lift</c> throughout, and presentation cannot tell one
+        /// from two. The serial is what makes them distinct. Presentation fires when the serial
+        /// differs from the one it last recorded for that pawn, which is correct whether it missed
+        /// no snapshots, one, or forty — the test is <em>different</em>, never <em>greater</em>,
+        /// so the wrap costs nothing.</para>
+        ///
+        /// <para>A figure that has never seen this pawn before must record the serial and pose
+        /// nothing. Otherwise every colonist walking into view, and every colonist at all after a
+        /// load, plays one lift it never made.</para>
+        /// </summary>
+        public readonly byte GestureSerial;
+
         public PawnView(
             PawnId id, CellRef cell, int food, int rest, int mood,
             int jobDef = -1, CellRef nextCell = default, int movePercent = 0,
-            bool working = false, CellRef workCell = default)
+            bool working = false, CellRef workCell = default,
+            PawnGesture gesture = PawnGesture.None, byte gestureSerial = 0)
         {
+            Gesture = gesture;
+            GestureSerial = gestureSerial;
             Id = id;
             Cell = cell;
             Food = food;
