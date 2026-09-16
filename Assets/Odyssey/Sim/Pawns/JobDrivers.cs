@@ -116,7 +116,12 @@ namespace Odyssey.Sim.Pawns
             var need = ctx.Content.Needs[NeedIndex.Food];
             int nutrition = ctx.Content.Items[item.DefIndex].nutrition;
             Pawn.Needs[NeedIndex.Food] = System.Math.Min(need.max, Pawn.Needs[NeedIndex.Food] + nutrition);
-            ctx.Items.Despawn(item);
+
+            // One meal from the pile, not the pile. Despawning the whole item ate four meals per
+            // sitting, which is why the soak found the pantry empty by the end of day one and
+            // why every pantry-size estimate made before this was four times too high.
+            if (item.Stack > 1) item.Stack--;
+            else ctx.Items.Despawn(item);
             Pawn.AddMemory(ThoughtIndex.AteMeal, ctx.CurrentTick);
             return JobStatus.Succeeded;
         }

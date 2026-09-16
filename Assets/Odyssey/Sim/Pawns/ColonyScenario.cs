@@ -19,6 +19,17 @@ namespace Odyssey.Sim.Pawns
     public static class ColonyScenario
     {
         /// <summary>
+        /// Meals in each starting pile. Twelve piles of twenty is 240 meals. Measured, not
+        /// estimated: five colonists ate 120 meals in about 7.8 days on the ten-day soak (seed 1),
+        /// which is 15 a day, so ten days is about 155 and this leaves a good half in hand. The
+        /// arithmetic from the Defs said 9 a day and was wrong, which is why the number comes
+        /// from the run. The ten-day run proves the simulation is stable unattended, not that a
+        /// food economy balances, and nothing in the slice makes food (OQ-39); the pantry is sized
+        /// so the gate measures the simulation.
+        /// </summary>
+        public const int MealsPerPile = 20;
+
+        /// <summary>
         /// Mark every tree within <paramref name="radius"/> cells of the start for felling, on the
         /// start layer. The scene does this before its first tick so the colony has work from the
         /// moment it exists; a scenario choice, not a player command, so it writes the grid
@@ -132,7 +143,7 @@ namespace Odyssey.Sim.Pawns
 
             int placedMeals = 0;
             for (int i = 0; i < meals && take < spots.Count; i++, take++, placedMeals++)
-                pawns.Items.Spawn(ItemIndex.Meal, spots[take], stack: 4);
+                pawns.Items.Spawn(ItemIndex.Meal, spots[take], stack: MealsPerPile);
 
             int placedBeds = 0;
             for (int i = 0; i < colonistCount && take < spots.Count; i++, take++, placedBeds++)

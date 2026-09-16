@@ -238,6 +238,25 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
+        public void EatingTakesOneMealFromThePileNotThePile()
+        {
+            // Despawning the whole pile ate four meals a sitting; the soak found the pantry empty
+            // by the end of day one and blamed the scope. One meal leaves the pile, and the pile
+            // goes only with its last meal.
+            var colony = Colony.Build();
+            var pawn = colony.Ctx.Pawns.Spawn(colony.Cell(2, 2, 0));
+            pawn.Needs[NeedIndex.Food] = 100;
+
+            ThingId pile = colony.Ctx.Items.Spawn(ItemIndex.Meal, colony.Cell(6, 2, 0), stack: 4);
+
+            for (int i = 0; i < 3_000 && pawn.Needs[NeedIndex.Food] < 400; i++) colony.World.Tick();
+
+            var left = colony.Ctx.Items.Get(pile);
+            Assert.That(left, Is.Not.Null, "three meals are still there");
+            Assert.That(left!.Stack, Is.EqualTo(3));
+        }
+
+        [Test]
         public void ATiredPawnGoesToBedAndRestRecovers()
         {
             var colony = Colony.Build();

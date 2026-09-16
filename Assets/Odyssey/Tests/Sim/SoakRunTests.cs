@@ -42,23 +42,17 @@ namespace Odyssey.Tests.Sim
         public void OneDay() => Soak(seed: 1u, ticks: Day, budgetSeconds: 120);
 
         /// <summary>
-        /// <b>Fails today, and the reason is content rather than code.</b> The starting scenario
-        /// places twelve meal piles of four — 48 meals — and nothing in the slice makes more:
-        /// plants, growing and cooking are all explicitly out of scope
-        /// (<c>docs/plans/vertical-slice.md</c>, "what this plan deliberately leaves out"). Five
-        /// colonists eat the lot by about tick 86,000, and the first of them is at zero food with
-        /// none left on the map by tick 88,500.
-        ///
-        /// <para>That makes U32's gate — "five pawns survive ten in-game days" — unreachable as
-        /// the slice is scoped, which is a decision for the owner and not something to fix by
-        /// loosening the assertion. It is OQ-39. Until then these two runs are the measurement,
-        /// kept explicit so they do not fail the suite for a reason nobody has chosen yet.</para>
+        /// These two starved on day two when they were written, and the finding was filed as a
+        /// scope problem (OQ-39: 48 meals, nothing in the slice makes more). The scope problem
+        /// was real but four times smaller than measured: eating despawned the whole pile of four
+        /// rather than one meal from it. With that fixed and the pantry sized for the run
+        /// (<see cref="ColonyScenario.MealsPerPile"/>), the ten-day gate is a gate again.
         /// </summary>
-        [Test, Category("Long"), Explicit("Starves on day two: 48 meals, nothing makes more. See OQ-39.")]
+        [Test, Category("Long")]
         public void ThreeDays() => Soak(seed: 1u, ticks: 3 * Day, budgetSeconds: 0);
 
-        /// <summary>The M3 gate run. Blocked on the same thing as <see cref="ThreeDays"/>.</summary>
-        [Test, Category("Long"), Explicit("Starves on day two: 48 meals, nothing makes more. See OQ-39.")]
+        /// <summary>The M3 gate run: five pawns, ten in-game days, unattended.</summary>
+        [Test, Category("Long")]
         public void TenDays() => Soak(seed: 1u, ticks: 10 * Day, budgetSeconds: 0);
 
         // ------------------------------------------------------------------ the run
@@ -200,8 +194,8 @@ namespace Odyssey.Tests.Sim
                 $"rest {worstStreak[NeedIndex.Rest]}, joy {worstStreak[NeedIndex.Joy]} ticks " +
                 $"(limit {MaxTicksAtZero})");
             TestContext.WriteLine(
-                $"  meals left {MealsLeft(colony)} of the {colony.Placement.Meals * 4} placed — " +
-                "nothing in the slice makes more, which is what stops a ten-day run (OQ-39)");
+                $"  meals left {MealsLeft(colony)} of the {colony.Placement.Meals * ColonyScenario.MealsPerPile} placed — " +
+                "nothing in the slice makes more (OQ-39), so the pantry is sized for the run");
             TestContext.WriteLine($"  final hash {colony.World.ComputeStateHash().Value:x16}");
         }
     }
