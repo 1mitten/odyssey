@@ -330,6 +330,7 @@ namespace Odyssey.Tests.Hud
     sealed class FakeSettingsStore : ISettingsStore
     {
         readonly System.Collections.Generic.Dictionary<string, bool> _values = new();
+        readonly System.Collections.Generic.Dictionary<string, int> _numbers = new();
 
         public int Writes { get; private set; }
 
@@ -341,7 +342,17 @@ namespace Odyssey.Tests.Hud
             Writes++;
         }
 
+        public int? ReadInt(string key) => _numbers.TryGetValue(key, out int value) ? value : null;
+
+        public void WriteInt(string key, int value)
+        {
+            _numbers[key] = value;
+            Writes++;
+        }
+
         public void Preset(string key, bool value) => _values[key] = value;
+
+        public void Preset(string key, int value) => _numbers[key] = value;
     }
 
     public class SettingsDirectorTests

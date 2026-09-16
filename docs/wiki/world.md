@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-62 entries, 39 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+64 entries, 41 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -96,6 +96,8 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 |---|---|---|---|---|
 | **Settings** | `ui.settings.panel` | What the game does, not what the colony does | no art | M1 |
 | **Graphics** | `ui.settings.graphics` | How the world is drawn. None of it reaches the simulation | no art | M1 |
+| **Interface** | `ui.settings.interface` | How the interface itself is drawn and how large it is | no art | M1 |
+| **Interface scale** | `ui.settings.uiscale` | How large the HUD is drawn. Larger type covers more of the board | no art | M1 |
 | **Shadows** | `ui.settings.shadows` | Whether people and buildings cast shadows on the ground | no art | M1 |
 | **Surrounding land** | `ui.settings.surround` | The land carried past the rim so the board does not end in mid-air | no art | M1 |
 | **Grass tufts** | `ui.settings.grass` | Tufts strewn over the meadow. Decoration, in no cell and no save | no art | M1 |
