@@ -138,6 +138,29 @@ namespace Odyssey.Presentation.World
         public float? HeldGesturePhase { get; set; }
 
         /// <summary>
+        /// Put every figure on a wall in this direction, whatever the world says. **Harness only.**
+        ///
+        /// <para>A climb happens where a shaft has been dug, which on a wooded board is nowhere
+        /// until somebody has spent a morning mining one, and it lasts under a second when it does.
+        /// Photographing one by waiting for it means generating a map with rock in it, digging a
+        /// hole and following a colonist down — a great deal of apparatus to look at a pose. This
+        /// is <see cref="ForceGesture"/>'s counterpart and the same bargain.</para>
+        ///
+        /// <para>What a forced sheet can settle and what it cannot is worth stating, because the
+        /// difference is not obvious: it settles the <em>figure</em> — boots below the hips and
+        /// apart, knees bent alternately, arm and leg on opposite sides rising together. It cannot
+        /// settle the figure against the rock, because with this set there is no rock. That half
+        /// was settled when the lean landed, against a real shaft.</para>
+        /// </summary>
+        public Vector3? ForceClimbFace { get; set; }
+
+        /// <summary>
+        /// Hold every climb at this point in its cycle rather than reading it off the step's own
+        /// progress. **Harness only**, and the counterpart of <see cref="HeldGesturePhase"/>.
+        /// </summary>
+        public float? HeldClimbPhase { get; set; }
+
+        /// <summary>
         /// How far the last drawn crouch took the hips below where the animation had them, in
         /// metres.
         ///
@@ -157,6 +180,16 @@ namespace Odyssey.Presentation.World
 
         /// <summary>See <see cref="CrouchedFigures"/>. Non-zero means some rig has no legs.</summary>
         public int LeglessFigures { get; private set; }
+
+        /// <summary>
+        /// How far the worst-placed boot finished from the foothold it was sent to this pass, in
+        /// metres. Zero is a foot on the rock.
+        ///
+        /// <para>The climb's <see cref="MeasuredBladeGap"/>. <see cref="TwoBoneIk"/> straightens
+        /// towards a target it cannot reach and stops, so a foothold asked for beyond the leg draws
+        /// as a plausible enough pose and is only ever caught by being stated in centimetres.</para>
+        /// </summary>
+        public float MeasuredFootReach { get; private set; }
 
         /// <summary>
         /// How far the off forearm sits above the working one at the moment of the blow, in metres.
@@ -464,7 +497,10 @@ namespace Odyssey.Presentation.World
                       .Append(" weight ").Append(figure.ClimbWeight.ToString("0.00"))
                       .Append(" face ").Append(figure.ClimbFace == Vector3.zero
                           ? "NONE - nothing to climb"
-                          : figure.ClimbFace.ToString("0.0"));
+                          : figure.ClimbFace.ToString("0.0"))
+                      .Append(" legs ").Append(figure.LegLength <= 0f
+                          ? "NONE - no leg bones bound"
+                          : figure.LegLength.ToString("0.00") + " m");
             }
 
             return climbing == 0 ? "nobody is on a wall" : report.ToString();
@@ -707,6 +743,7 @@ namespace Odyssey.Presentation.World
             MeasuredCrouchDrop = 0f;
             CrouchedFigures = 0;
             LeglessFigures = 0;
+            MeasuredFootReach = 0f;
 
             for (int i = 0; i < _figures.Count; i++)
             {
@@ -794,8 +831,6 @@ namespace Odyssey.Presentation.World
         /// </summary>
         void ApplyClimbPose(Figure figure)
         {
-            if (figure.RightUpperArm == null || figure.LeftUpperArm == null) return;
-
             // Two reaches a cell. One would have a colonist take a whole three metres in a single
             // grab, which reads as being hauled up rather than as climbing.
             const float ReachesPerCell = 2f;
@@ -807,16 +842,93 @@ namespace Odyssey.Presentation.World
             const float ElbowBend = -30f;
 
             float swing = Mathf.Sin(figure.ClimbPhase * ReachesPerCell * 2f * Mathf.PI);
-            float right = Mathf.Lerp(Pulling, Reaching, (swing + 1f) * 0.5f) * figure.ClimbWeight;
-            float left = Mathf.Lerp(Reaching, Pulling, (swing + 1f) * 0.5f) * figure.ClimbWeight;
 
-            // No tilt: a climb is straight up the sagittal plane, where a swing is across the body.
-            Vector3 axis = SwingAxis(figure.Transform, 0f);
+            if (figure.RightUpperArm != null && figure.LeftUpperArm != null)
+            {
+                float right = Mathf.Lerp(Pulling, Reaching, (swing + 1f) * 0.5f) * figure.ClimbWeight;
+                float left = Mathf.Lerp(Reaching, Pulling, (swing + 1f) * 0.5f) * figure.ClimbWeight;
 
-            Pitch(figure.RightUpperArm, axis, right);
-            Pitch(figure.RightLowerArm, axis, ElbowBend * figure.ClimbWeight);
-            Pitch(figure.LeftUpperArm, axis, left);
-            Pitch(figure.LeftLowerArm, axis, ElbowBend * figure.ClimbWeight);
+                // No tilt: a climb is straight up the sagittal plane, where a swing is across the
+                // body.
+                Vector3 axis = SwingAxis(figure.Transform, 0f);
+
+                Pitch(figure.RightUpperArm, axis, right);
+                Pitch(figure.RightLowerArm, axis, ElbowBend * figure.ClimbWeight);
+                Pitch(figure.LeftUpperArm, axis, left);
+                Pitch(figure.LeftLowerArm, axis, ElbowBend * figure.ClimbWeight);
+            }
+
+            ApplyClimbLegs(figure, swing);
+        }
+
+        /// <summary>
+        /// And the boots on the rock, which is the half of a climb this pose did without until the
+        /// legs were bound.
+        ///
+        /// <para>The arms alone read as climbing at this camera height — that was the bargain the
+        /// pose was written under and it was an honest one — but underneath them the gait mixer was
+        /// still playing the idle, because a purely vertical step has no ground speed. So a
+        /// colonist went up a shaft hauling on the wall with its boots together, standing to
+        /// attention. Legs make it a climb.</para>
+        ///
+        /// <para><b>Contralateral, solved, and eased in world space.</b> The first is
+        /// <see cref="ClimbPose.StepsFrom"/>'s business and the second
+        /// <see cref="ClimbPose.Foothold"/>'s. The third is here: at zero weight the target is
+        /// exactly where the animation put the boot, so stepping on to a wall and off it again is
+        /// continuous by construction rather than by a number that has to be kept in step with the
+        /// arms' own ease.</para>
+        ///
+        /// <para><b>The sole is left as the gait wrote it</b>, restored after the solve the same
+        /// way <see cref="SolveLeg"/> restores it. A foot flat against a vertical face wants its
+        /// toes pointing up, and which rotation that is depends on the rig's own convention for a
+        /// foot bone — a thing settled by photographing a figure, which no worktree can do. What
+        /// the gait leaves is toes forward, and the figure is turned to face the wall, so the boots
+        /// address the rock toes-first: a climber edging on small holds, which is a real way to
+        /// stand on rock rather than a placeholder pretending to be one.</para>
+        /// </summary>
+        void ApplyClimbLegs(Figure figure, float swing)
+        {
+            if (figure.LegLength <= 0f) return;
+
+            ClimbPose.StepsFrom(swing, out float left, out float right);
+
+            Vector3 toRock = figure.LastClimbFace;
+            if (toRock == Vector3.zero) toRock = figure.Transform.forward;
+
+            // How far in front of the figure the stone actually is, which is the one number that
+            // puts both boots on one plane rather than on a cone. The face of the cell is half a
+            // cell from its centre and the lean has already carried the body most of the way to it,
+            // so what is left is the gap the legs have to cross — and it is ClimbLean's own
+            // arithmetic rather than a second constant that would drift out of step with it.
+            toRock = toRock.normalized * Mathf.Max(0.05f, CellMetrics.HalfXZ - ClimbLean);
+
+            PlantFoot(figure, figure.LeftUpperLeg, figure.LeftLowerLeg, figure.LeftFoot, toRock, left);
+            PlantFoot(figure, figure.RightUpperLeg, figure.RightLowerLeg, figure.RightFoot, toRock, right);
+        }
+
+        /// <summary>One boot on to its hold, eased out of wherever the gait had it.</summary>
+        void PlantFoot(Figure figure, Transform? upper, Transform? lower, Transform? foot,
+            Vector3 toRock, float step)
+        {
+            if (upper == null || lower == null || foot == null) return;
+
+            Vector3 hold = ClimbPose.Foothold(upper.position, toRock, figure.Transform.up,
+                figure.LegLength, step);
+            Vector3 target = Vector3.Lerp(foot.position, hold, Mathf.Clamp01(figure.ClimbWeight));
+
+            Quaternion sole = foot.rotation;
+
+            // The knee goes towards the rock, which is where a climber's knee goes and is also
+            // simply where a knee goes: it bends forwards. A leg solved with an arm's pole bends
+            // backwards, which does not read as a bad pose, it reads as a broken person.
+            TwoBoneIk.Reach(upper, lower, foot, target, lower.position + toRock.normalized);
+            foot.rotation = sole;
+
+            // How far the boot finished from the hold it was sent to. The climb's own
+            // MeasuredBladeGap: a leg that has run out of reach straightens towards its target and
+            // stops, which in a photograph is indistinguishable from a leg that arrived.
+            float missed = Vector3.Distance(foot.position, target);
+            if (missed > MeasuredFootReach) MeasuredFootReach = missed;
         }
 
         /// <summary>Which curve a gesture follows. See <see cref="Gesture"/>.</summary>
@@ -1218,7 +1330,7 @@ namespace Odyssey.Presentation.World
             // reading ground speed that is the idle, which is better than a walk cycle in mid-air
             // and still is not climbing.
             figure.ClimbPhase = pawn.MovePercent > 0 && pawn.NextCell.Y != pawn.Cell.Y
-                ? Mathf.Clamp01(pawn.MovePercent * 0.01f)
+                ? HeldClimbPhase ?? Mathf.Clamp01(pawn.MovePercent * 0.01f)
                 : -1f;
 
             // And WHAT it is climbing. A colonist goes up the edge of the block beside the hole,
@@ -1227,8 +1339,18 @@ namespace Odyssey.Presentation.World
             // connector where there is no block (MineWorkGiver's HasWallBeside), so this should
             // always find one — and where it does not, the figure simply stays where it was, which
             // is the behaviour before any of this existed.
+            // Forced first, and completely: a harness that set only the direction would still be
+            // waiting for a real vertical step to give it a phase, and there is never going to be
+            // one on a board with no shaft in it.
             figure.ClimbFace = Vector3.zero;
-            if (figure.ClimbPhase >= 0f)
+            if (ForceClimbFace.HasValue)
+            {
+                figure.ClimbPhase = HeldClimbPhase ?? 0f;
+                figure.ClimbFace = ForceClimbFace.Value;
+                figure.LastClimbFace = figure.ClimbFace;
+                heading = figure.ClimbFace;
+            }
+            else if (figure.ClimbPhase >= 0f)
             {
                 CellRef lower = pawn.NextCell.Y < pawn.Cell.Y ? pawn.NextCell : pawn.Cell;
                 if (TryWallBeside(lower, out Vector3 toWall))
@@ -1626,6 +1748,16 @@ namespace Odyssey.Presentation.World
             figure.StandingHipHeight = figure.Hips != null
                 ? Mathf.Max(0.2f, figure.Hips.position.y - figure.Transform.position.y)
                 : 0f;
+
+            // And how long its legs are, for the same reason and measured the same way: a climber's
+            // foothold is a fraction of its own leg, never a number of metres. Thigh plus shin
+            // rather than hip-to-floor, because that is the quantity TwoBoneIk can actually deliver
+            // and hip height includes an ankle and a boot that it cannot.
+            figure.LegLength =
+                figure.LeftUpperLeg != null && figure.LeftLowerLeg != null && figure.LeftFoot != null
+                    ? Vector3.Distance(figure.LeftUpperLeg.position, figure.LeftLowerLeg.position)
+                      + Vector3.Distance(figure.LeftLowerLeg.position, figure.LeftFoot.position)
+                    : 0f;
 
             Transform? hand = figure.RightHand;
             if (hand == null) return;
@@ -2101,6 +2233,10 @@ namespace Odyssey.Presentation.World
 
             /// <summary>This figure's own hip height when it stands, in metres. See BindWorkBones.</summary>
             public float StandingHipHeight;
+
+            /// <summary>Thigh plus shin, in metres, measured off this figure's own rig. See
+            /// <see cref="ClimbPose"/>: every foothold is a fraction of it.</summary>
+            public float LegLength;
 
             /// <summary>The fingers, so a fist can close on a haft. See <see cref="HandGrip"/>.</summary>
             public HandGrip.Bones RightGrip;

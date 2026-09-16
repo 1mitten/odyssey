@@ -5,7 +5,7 @@
 document this one extends. §6a of `06-rendering-and-camera.md` remains the record of the felling
 pose itself.*
 
-**Status, 2026-09-16: designed, then built as far as the lift.** The note was written as design only
+**Status, 2026-09-16: designed, then built as far as the climb.** The note was written as design only
 and §8 said why; the owner then asked for the work to proceed on the same day, and §9 records what
 exists. It builds and its arithmetic is tested. Nothing in it has been photographed yet, which for
 a pose is the only evidence that counts.
@@ -371,7 +371,7 @@ look at.
 | **G4** | The contract: `PawnGesture`, the sticky pair on `PawnView`, the haul driver's two assignments, the first-sighting rule. | **Done and verified** — 7 new tests, 409 green in the fast tier. |
 | **G5** | **The lift**, plus `GestureCheck` and `MeasuredCrouchDrop`. | **Built, EditMode green. Not yet photographed — wants the owner's eye.** |
 | **G6** | Crouched sustained work. Cyclic, harness only, no job. | Not started. |
-| **G7** | Legs on the climb, now that they are bound. | Not started. |
+| **G7** | Legs on the climb, now that they are bound. | **Built, EditMode green, photographed.** `ClimbPose`, `ClimbCheck`, `MeasuredFootReach`. See §11. |
 | **G8** | The gun: aimed hold, off hand on the foregrip, recoil over the hold. Harness only. | Not started. |
 
 **What is verified, and what is not.** The fast tier is 409 Sim and 29 Hud; EditMode is **639 total,
@@ -410,3 +410,65 @@ so no figure can be drawn in one and the sheets have to be shot where the art is
 - **Does anything ever need two gestures at once beyond the gun's hold-plus-recoil?** Carrying
   while climbing is the obvious candidate and there is no answer yet. The poses are additive, so
   the arithmetic permits it; legibility is the constraint, not the maths.
+
+---
+
+## 11. G7, the climb's legs, and the two things the plan did not foresee
+
+*Built 2026-09-16. `ClimbPose`, `ClimbPoseTests`, `PawnFigureDirector.ApplyClimbLegs`, `ClimbCheck`.*
+
+`ApplyClimbPose` posed two arms and nothing else, and its own comment said why: no leg was bound.
+They are now, so this is the piece of work that comment named. Underneath the arms the gait mixer
+was playing the **idle** — a purely vertical step has no ground speed — so a colonist went up a
+shaft hauling on the wall with its boots together, standing to attention.
+
+The pose follows §3's rule and is **solved, not authored**: the figure is turned to face its rock
+and leaned against it before any of this runs, so the wall is a known plane in front of the hips and
+the only question left is how far down it each boot goes. It is **contralateral** — the right hand
+reaches with the left foot — which is one subtraction and is the whole of what separates a climb
+from a frog's bound. Every number is a fraction of the figure's own thigh-plus-shin, measured at
+bind time beside the hip height the crouch already measured, because a foothold given in metres is a
+stride on one of the sixty-one characters and a stumble on the next.
+
+Two things the design did not foresee, both found by looking rather than by reasoning.
+
+**A wall is a plane, and the first version made it a cone.** The step was written as a reach and an
+angle, shorter and further forward as the knee came up, which is how a leg feels and is not how a
+wall is: the two boots finished at different distances from the rock, one of them some thirty
+centimetres inside it. Neither a test of reach nor the contact sheet — which photographs a figure on
+a face of clear air — would ever have said so. The fix is that the rock distance is **held fixed and
+only the height varies**, and it is `ClimbLean`'s own arithmetic that supplies it (half a cell, less
+the lean the body has already taken) rather than a second constant that would drift out of step. Of
+the two compromises, the boot keeps the wall and the drop gives: a boot that has come up too high is
+a small step, and a boot off the wall is the levitating colonist the lean was written to fix.
+
+**The first numbers made a chair.** A drop of 0.46 of a leg with the wall 0.3 m away folds the knee
+so far that the thigh comes up past horizontal, and against no wall at all it reads unmistakably as
+sitting down — the same failure §6 warns about for the crouch, arrived at from the other direction.
+0.92 and 0.68 read as a climber. That is taste and it is the owner's to overrule; it is recorded
+because the two numbers are the sheet's only levers.
+
+**The sole is left as the gait wrote it**, restored after the solve exactly as the crouch restores
+it. A foot flat on a vertical face wants its toes pointing up, and which rotation that is depends on
+the rig's own convention for a foot bone — settleable only by photographing sixty-one characters.
+What the gait leaves is toes forward, and the figure faces the wall, so the boots address the rock
+toes-first: edging, which is a real way to stand on rock rather than a placeholder pretending to be
+one.
+
+**Judged by `Odyssey → Presentation → Check the climb`** (`scripts/unity.sh shot
+Odyssey.EditorTools.ClimbCheck.Run`), which forces the climb the way `GestureCheck` forces a lift
+and walks the cycle by hand — a real one happens where a shaft has been dug, which on a wooded board
+is nowhere, and is over in under a second when it does. Two things about that sheet are worth
+knowing before reading it. It shoots at **facing + 90°** where `GestureCheck` shoots at the facing
+itself, and that is not a disagreement: there the figure's facing is whatever the walk left and the
+Synty mesh's own ninety-degree turn inside the prefab cancels the correction, where here the yaw is
+driven straight off the forced wall direction. And **the boots stand in the grass**, because a
+forced climber is a colonist on a meadow rather than a colonist half way between two layers — read
+each boot against the hip, not against the ground. `MeasuredFootReach` is printed beside every
+picture for the reason `MeasuredBladeGap` is: `TwoBoneIk` straightens towards a hold it cannot reach
+and stops, which in a photograph is indistinguishable from a leg that arrived.
+
+**What is not done.** The climb still has no hand *grip* — the fists are open and `Grasp` is now
+exactly the machinery that would close them on a hold, which is the argument for doing it and the
+reason it is listed rather than done. Nothing else in §9 moved: G6 and G8 are still open, and still
+harness-only.
