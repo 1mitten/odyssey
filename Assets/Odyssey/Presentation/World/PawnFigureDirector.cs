@@ -99,6 +99,30 @@ namespace Odyssey.Presentation.World
         public WorkStyle[] Styles { get; } = (WorkStyle[])WorkStyle.All.Clone();
 
         /// <summary>
+        /// Work every figure in this style regardless of the job it is doing, or -1 to let the job
+        /// decide. **For contact sheets. The game never sets it.**
+        ///
+        /// <para>It exists because a style can now outrun the simulation. <see cref="WorkStyle"/>
+        /// holds a builder's hammer, and nothing in the game builds — there is no job index for
+        /// <see cref="WorkStyle.IndexForJob"/> to map, so without this the stroke could not be
+        /// photographed at all, and a pose that cannot be photographed cannot be settled. Every
+        /// angle in this project that is right is right because somebody looked at it.</para>
+        ///
+        /// <para>A field rather than a fake job, which was the alternative and is worse: a
+        /// <c>JobHandle.Build</c> that no driver runs would put a lie in the contract, show up in
+        /// the inspect pane as a job a colonist is not doing, and have to be unpicked when
+        /// building is really written. This touches nothing outside presentation and is one
+        /// assignment for the harness to make.</para>
+        /// </summary>
+        public int StyleOverride { get; set; } = -1;
+
+        /// <summary>Which style a pawn is worked in, the override first. See <see cref="StyleOverride"/>.</summary>
+        int StyleFor(int jobDef) =>
+            StyleOverride >= 0 && StyleOverride < Styles.Length
+                ? StyleOverride
+                : WorkStyle.IndexForJob(jobDef);
+
+        /// <summary>
         /// Where the off hand grips, as a fraction of the haft, relative to the main hand.
         ///
         /// Both fists at the butt (owner, 2026-09-16), so this is small: just far enough up the
@@ -940,7 +964,7 @@ namespace Odyssey.Presentation.World
                 // Half a cell is the threshold rather than a whole one so that the test is about
                 // which layer the work is on and not about exactly where in a cell a pawn is drawn.
                 float drop = position.y - figure.WorkCentre.y;
-                WorkStyle style = Styles[WorkStyle.IndexForJob(pawn.JobDef)];
+                WorkStyle style = Styles[StyleFor(pawn.JobDef)];
 
                 if (drop > CellMetrics.SizeY * 0.5f)
                 {
@@ -968,7 +992,7 @@ namespace Odyssey.Presentation.World
                 // felling and walks off to mine eases down to nothing in between, so this costs
                 // nothing real — and without it a pick would appear in a raised hand half way
                 // through an axe stroke.
-                if (figure.WorkWeight <= 0.5f) figure.Style = WorkStyle.IndexForJob(pawn.JobDef);
+                if (figure.WorkWeight <= 0.5f) figure.Style = StyleFor(pawn.JobDef);
             }
             Quaternion facing = Quaternion.Euler(0f, figure.Yaw, 0f);
             Vector3 drawn = figure.WorkWeight > 0.001f

@@ -101,6 +101,36 @@ namespace Odyssey.Presentation.World
             // a recoil in the curve the shortest honest thing is to spend less time at the bottom.
             strikeEnds: 0.84f);
 
+        /// <summary>
+        /// The builder's stroke. **Every number is a proposal**, on the same footing as the pick's.
+        ///
+        /// <para>The owner's brief was "like chopping rather than like mining", and that settles
+        /// the one thing that most distinguishes the three: where the arc lives. An axe comes past
+        /// a shoulder and across the body; a pick goes over the crown and down the midline; a
+        /// hammer is the axe's plane with a good deal less of it.</para>
+        ///
+        /// <para>What makes it its own stroke rather than a fast axe is the <em>haft</em>. The
+        /// hammer is 0.63 m against the axe's 0.74, and a short haft is swung from the elbow where
+        /// a long one is swung from the shoulder. So the shoulder comes back much less (−128°
+        /// against −158°) while the elbow cocks <em>harder</em> (−86° against −74°): the tool is
+        /// brought back beside the ear rather than behind the back. Get that the wrong way round —
+        /// a short tool on a long arc — and the figure reads as swinging a hammer it wishes were
+        /// an axe, which is exactly what copying <see cref="Axe"/> and shortening the period
+        /// would produce.</para>
+        ///
+        /// <para>Faster and flatter besides: 0.7 s a blow, because driving a frame together is a
+        /// quick repeated tap and not a woodcutter's rhythm, and <see cref="StrikeEnds"/> at 0.88
+        /// because a hammer rebounds off what it hits harder than a pick does and far harder than
+        /// an axe, which buries itself and rests. Until a stroke can recoil, the only honest way to
+        /// say "it bounces" is to spend almost no time at the bottom.</para>
+        /// </summary>
+        public static readonly WorkStroke Hammer = new WorkStroke(
+            raised: new WorkSwing(-128f, -86f, -8f),
+            struck: new WorkSwing(-58f, -14f, 16f),
+            strokeSeconds: 0.7f,
+            raiseEnds: 0.6f,
+            strikeEnds: 0.88f);
+
         /// <summary>The pose at the moment the head is in the work. Any phase in the dwell agrees.</summary>
         public WorkSwing AtStrike => At(0.9f);
 
@@ -341,14 +371,56 @@ namespace Odyssey.Presentation.World
             // Bent over the hole when the rock is below, and at full stretch when it is above.
             dip: 45f, raise: -55f);
 
+        /// <summary>
+        /// Building. **Proposed, and with less standing than even mining had**, because mining at
+        /// least had a job to be photographed doing and this has none.
+        ///
+        /// <para><b>Nothing in the simulation builds anything.</b> There is no build pipeline, no
+        /// <c>JobHandle.Build</c>, no construction designation that anything acts on — so
+        /// <see cref="IndexForJob"/> can never return this index, and no colonist will ever be
+        /// seen in it during play. It exists because the owner asked for the motion (2026-09-16)
+        /// and because a hammer is the cheapest possible test of the claim this file makes: that a
+        /// third kind of work should cost "a new static here and a row in
+        /// <see cref="IndexForJob"/>, and nothing else". It cost a static, a recipe and a
+        /// catalogue row. The claim holds.</para>
+        ///
+        /// <para>It is reached only through <c>PawnFigureDirector.StyleOverride</c>, which is the
+        /// harness's way in and is not used by the game.</para>
+        ///
+        /// <para><b>Two-handed, on the owner's "akin to chopping".</b> A framing hammer swung at a
+        /// wall with both fists is the axe's motion with a shorter tool, and it reuses every part
+        /// of the fitting path unchanged. A one-handed hammer — the other hand steadying a nail —
+        /// is a different thing and would be the first tool in the project to need a
+        /// <c>TwoHanded</c> flag, because <c>ArmIk</c> currently puts the off hand on the haft
+        /// unconditionally. §10 of <c>13-gestures.md</c> keeps that question.</para>
+        ///
+        /// <para>Aimed at the near face like mining and not at the cell centre like felling: a
+        /// wall under construction fills its cell, so a stroke aimed 0.15 m past the middle of it
+        /// finishes a metre inside the timber. That is the <see cref="AimFromCentre"/> bug, and it
+        /// would have been made a second time here by copying the wrong one of the two.</para>
+        /// </summary>
+        public static readonly WorkStyle Building = new WorkStyle(
+            WorkStroke.Hammer, ModuleIds.ToolHammer, ChipRecipe.Timber,
+            aimFromCentre: CellMetrics.SizeXZ * 0.5f - 0.12f,
+            // Between the axe's -30 and the pick's -8: across the body, but a short haft cannot
+            // travel as far round as a long one without the elbow leaving the plane.
+            tilt: -20f, gripFraction: 0.16f, bladeRoll: 0f, bladeYaw: 0f, offHandSpacing: 0.11f,
+            // Less than mining's 0.22: a timber frame is open work rather than an opaque block, so
+            // the head does not disappear into it and the burst needs backing out much less far.
+            chipStandOff: 0.1f,
+            // A builder works the joists under its feet and the plate over its head, exactly as a
+            // miner works the layer below and the ceiling above, so both aims are wanted.
+            dip: 45f, raise: -55f);
+
         /// <summary>How many styles there are. Sizes the per-figure tool table.</summary>
-        public const int Count = 2;
+        public const int Count = 3;
 
         public const int FellingIndex = 0;
         public const int MiningIndex = 1;
+        public const int BuildingIndex = 2;
 
         /// <summary>The styles, by index. Mutable so a contact sheet can tune one and re-fit.</summary>
-        public static readonly WorkStyle[] All = { Felling, Mining };
+        public static readonly WorkStyle[] All = { Felling, Mining, Building };
 
         /// <summary>
         /// Which style a job is worked in, from the job def the snapshot already publishes.

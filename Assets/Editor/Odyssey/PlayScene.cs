@@ -1305,6 +1305,36 @@ namespace Odyssey.EditorTools
                 prefabName = "SM_Gen_Wep_Pickaxe_01",
             });
 
+            // The builder's hammer, and the first prop in the project that could not be chosen on
+            // merit, because there is no choice: SM_Wep_Hammer_01 is the only hammer in all 7,222
+            // imported assets. The axe and the pick were both picked from Generic over Farm and
+            // Western Frontier alternatives; here Western Frontier is the whole field.
+            //
+            // What that costs, recorded rather than discovered: 768 triangles against the axe's
+            // 172 and the pick's 160, and two materials against their one, from a pack nothing
+            // else in the game draws from. None of it matters much — a tool is one instantiated
+            // prefab parented to a hand while the work lasts, not a chunk-instanced module, so it
+            // adds a material and not a draw-call bucket, and at most one per working colonist.
+            //
+            // Two measurements that bear on the fitting path, both from synty-inventory.csv:
+            //
+            //   Haft ratio 0.63 : 0.21, or 3 : 1. GripTool finds the haft as the long axis of the
+            //   combined bounds, and this is a wider margin than the pick's 1.4 : 1 — so of the
+            //   three tools the hammer is the one least likely to be gripped by its own head.
+            //
+            //   The pivot is at the butt (minY 0.00, maxY 0.63) where the axe and pick sit
+            //   mid-haft (-0.18 to 0.56). 12-work-poses-and-tools.md rejected Western Frontier's
+            //   pickaxe partly for this. It should not in fact matter: the fitting works off the
+            //   mesh bounds and slides the tool until the grip is in the palm, so where the
+            //   modeller put the origin never enters the arithmetic. This is the first prop to
+            //   prove that, which is worth knowing when the contact sheet is judged — a hammer
+            //   held a hand's width out of the fist means the claim is wrong.
+            rows.Add(new ModuleEntry
+            {
+                moduleId = ModuleIds.ToolHammer, shape = ModuleShape.Pillar,
+                prefabName = "SM_Wep_Hammer_01",
+            });
+
             // Colonists. A Synty character is a rigged humanoid with no MeshFilter anywhere on it,
             // so the ordinary prefab path finds no geometry at all and quietly falls back to a
             // grey box; ModuleLibrary.CollectSkinned explains why baking is the way out and what
