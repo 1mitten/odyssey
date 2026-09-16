@@ -117,6 +117,24 @@ namespace Odyssey.Presentation.Bootstrap
         MapGenDef? _gen;
         double _accumulator;
         float _tickAlpha;
+
+        /// <summary>
+        /// How far this frame sits between two ticks, 0 to 1.
+        ///
+        /// Exposed because the pick hit-test has to build its box from the same number the figure
+        /// is drawn with. When it did not, the box sat at the tick boundary and the figure had
+        /// moved on, so a walking colonist was not clickable where they appeared.
+        /// </summary>
+        public float TickAlpha => _tickAlpha;
+
+        /// <summary>Cost units a pawn retires in one tick, the other half of that same tween.</summary>
+        public int MovePerTick => PawnContent.Core().Movement.movePerTick;
+
+        /// <summary>
+        /// The live figures, for anything that must agree with where a colonist is actually drawn
+        /// rather than with where the simulation keeps them. See <see cref="PawnFigureDirector.TryGetFeet"/>.
+        /// </summary>
+        public PawnFigureDirector? Figures => _figures;
         readonly Stopwatch _frameTimer = new Stopwatch();
         double _renderMs;
         double _tickMs;
@@ -411,7 +429,11 @@ namespace Odyssey.Presentation.Bootstrap
             if (selection != null && selection.HasPawn
                 && snapshot.TryGetPawn(selection.Pawn, out PawnView pawn))
             {
-                Vector3 feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _);
+                // The figure's own position where there is one, for the same reason the hit-test
+                // uses it: a working colonist is stepped off their cell, and a bracket drawn from
+                // the pose would sit on the cell while the person stands beside it.
+                if (_figures == null || !_figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                    feet = PawnPose.Of(pawn, _tickAlpha, movePerTick, out _);
                 _renderer.DrawSelectionBracket(
                     feet + Vector3.up * (colonistCursor.y * 0.5f), colonistCursor, colour);
                 return;

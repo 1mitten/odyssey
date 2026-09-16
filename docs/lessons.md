@@ -26,6 +26,16 @@ What to do: `scripts/unity.sh` treats the **results file, not the process exit c
 
 **Burst compiles asynchronously by default and will pollute a measured window.** In the D1 benchmark it inflated the grid phase from 0.283 ms mean to 0.498 ms with a 3.9 ms maximum. Set `EnableBurstCompileSynchronously` before any run whose numbers you intend to trust, or prewarm with a discarded run.
 
+## Continuous integration
+
+**A self-hosted Windows runner installed as a service has no Git on its `PATH`, and `bash` is then not merely missing — it is worse than missing.** It resolves to `C:\Windows\System32\bash.exe`, the WSL stub, which has no distribution installed and exits 1 before it reads the script. So every `shell: bash` step fails identically and instantly, with no output naming the real problem: the log shows the script you meant to run and an exit code, and nothing about which bash ran it.
+
+**Naming Git Bash by its full path in the shell line does not fix it.** The runner splits the shell line on spaces, so `C:\Program Files\Git\bin\bash.exe` becomes a command that does not exist. Put Git's `bin` on the job's `PATH` in a first step instead — `Add-Content -Path $env:GITHUB_PATH -Value 'C:\Program Files\Git\bin'` — and let every later step say plain `bash`.
+
+**That first step must ask for `powershell`, not `pwsh`.** They are different programs. `powershell` is Windows PowerShell 5.1 and ships with the OS, so it is always there; `pwsh` is PowerShell 7 and is a separate install this machine does not have. A step with `shell: pwsh` dies with `pwsh: command not found` — and, on a job whose whole purpose is to fix the `PATH`, that then fails every step after it and produces a second, louder and misleading error from the test reporter (`No test report files were found`). Read the *first* red step, not the last one.
+
+**Keep `clean: false` on the checkout.** The runner checks the project out into its own folder and the gitignored `Library/` is the import cache. Without it every run re-imports the whole project, which is tens of minutes rather than the 1 m 46 s the first green run took.
+
 ## Testing
 
 **The tests are not the slow part.** The suite executes in about 40 ms. A Unity EditMode cycle takes minutes, and essentially all of it is Unity booting, refreshing the asset database (~7 s) and reloading the script domain (~3 s compile). **Filtering which tests run therefore saves nothing.** The only thing that helps is not starting Unity.

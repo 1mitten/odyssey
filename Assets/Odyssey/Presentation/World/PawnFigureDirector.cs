@@ -146,6 +146,33 @@ namespace Odyssey.Presentation.World
         /// <summary>Pawn ids drawn as live figures this frame. The instanced pass skips these.</summary>
         public HashSet<int> Drawn { get; } = new HashSet<int>();
 
+        /// <summary>
+        /// Where a pawn's live figure is actually standing this frame, if it has one.
+        ///
+        /// **Not the same as <see cref="Rendering.PawnPose"/>, and that is the whole point.** A
+        /// working figure is stepped off its cell by <see cref="WorkStance.StandAt"/> so the axe
+        /// reaches the wood, so the person on screen can be the better part of a stride from the
+        /// cell the simulation has them in. Anything that has to agree with what the player can
+        /// see — the click hit-test, the selection bracket — has to ask here rather than recompute
+        /// the pose, because recomputing it disagrees with the screen exactly while a colonist is
+        /// working, which is exactly when the player wants to click them.
+        ///
+        /// Reported from a playtest on 2026-09-16: a colonist chopping a tree could not be
+        /// selected at all. The box was on the cell; the colonist was not.
+        /// </summary>
+        public bool TryGetFeet(PawnId id, out Vector3 feet)
+        {
+            for (int i = 0; i < _figures.Count; i++)
+            {
+                if (_figures[i].Pawn != id.Value || _figures[i].Transform == null) continue;
+                feet = _figures[i].Transform.position;
+                return true;
+            }
+
+            feet = default;
+            return false;
+        }
+
         readonly Transform _parent;
         readonly int _layer;
 

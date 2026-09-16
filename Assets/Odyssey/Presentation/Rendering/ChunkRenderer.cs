@@ -615,15 +615,23 @@ namespace Odyssey.Presentation.Rendering
         ///
         /// The rig's colour is the hue; this is the weight, and it lives with the drawing because
         /// it is a fact about how a cursor should sit on a scene rather than about which colour
-        /// was chosen. Low, by the owner's eye: a cursor is a note on the world, not a thing in it.
+        /// was chosen.
+        ///
+        /// Raised from 0.32 on the owner's eye, 2026-09-16: against the wooded meadow the cursor
+        /// was hard to pick out at a glance, which is the one job it has. Still short of solid,
+        /// because a cursor is a note on the world rather than a thing in it.
         /// </summary>
-        public const float BracketOpacity = 0.32f;
+        public const float BracketOpacity = 0.62f;
 
         /// <summary>
-        /// Emission on the cursor. Kept faint: the earlier value lifted the line so much that a
-        /// translucent material read as solid, which defeated the translucency entirely.
+        /// Emission on the cursor, which is what keeps it the same white in shade as in sun.
+        ///
+        /// Raised with the opacity above. The earlier note here warned that lifting emission made
+        /// a translucent material read as solid — that was a fair objection when the alpha was
+        /// 0.32 and the glow was doing the work of being visible on its own. With the alpha
+        /// carrying it, the emission can go back to holding the colour steady under the light.
         /// </summary>
-        const float BracketGlow = 0.25f;
+        const float BracketGlow = 0.85f;
 
         Material BracketMaterial(Color colour) =>
             _materials.Get(_model.Library.FallbackMaterial, colour, colour * BracketGlow,

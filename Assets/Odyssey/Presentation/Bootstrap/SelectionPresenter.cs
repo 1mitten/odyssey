@@ -65,6 +65,8 @@ namespace Odyssey.Presentation.Bootstrap
         PawnId PawnUnderRay(WorldSnapshot snapshot, Ray ray, int activeLayer)
         {
             Vector3 box = _bootstrap != null ? _bootstrap.colonistCursor : new Vector3(1.15f, 2.7f, 1.15f);
+            float tickAlpha = _bootstrap != null ? _bootstrap.TickAlpha : 0f;
+            int movePerTick = _bootstrap != null ? _bootstrap.MovePerTick : 0;
             PawnId best = PawnId.None;
             float nearest = float.MaxValue;
 
@@ -74,7 +76,18 @@ namespace Odyssey.Presentation.Bootstrap
                 PawnView pawn = pawns[i];
                 if (pawn.Cell.Y > activeLayer) continue;
 
-                Vector3 feet = Odyssey.Presentation.Rendering.PawnPose.Of(pawn, 0f, 0, out _);
+                // The same tween the figure is drawn with, which is what the summary above claims
+                // and what this line did not do: it passed 0 and 0, placing the box at the tick
+                // boundary while the figure had already been carried on into the part-tick. A
+                // walking colonist was therefore clickable slightly behind where they appeared,
+                // by up to the distance they cover in one tick, and a click aimed at the figure
+                // fell through to the cell underneath them instead.
+                // The figure's own position when it has one, and the pose only as the fallback for
+                // a pawn drawn by the instanced pass. A working figure is stepped off its cell to
+                // reach the wood, so the pose and the screen disagree by most of a stride exactly
+                // while a colonist is chopping — which is when the player is trying to click them.
+                if (_bootstrap?.Figures == null || !_bootstrap.Figures.TryGetFeet(pawn.Id, out Vector3 feet))
+                    feet = Odyssey.Presentation.Rendering.PawnPose.Of(pawn, tickAlpha, movePerTick, out _);
                 var bounds = new Bounds(feet + Vector3.up * (box.y * 0.5f), box);
                 if (!bounds.IntersectRay(ray, out float distance) || distance >= nearest) continue;
 

@@ -93,7 +93,7 @@ observation. A budget met on the first attempt was set too loosely.
 
 | # | Question | Cheapest experiment | Size |
 |---|---|---|---|
-| R1 | Does a dense HUD hold 3.5 ms and zero per-frame allocation on the target laptop? | Synthetic scene: the stress case above driven by fake data at 60 Hz, with the performance-testing package and an allocation recorder. | 1 day. **This is the flip-condition experiment.** |
+| R1 | Does a dense HUD hold 3.5 ms and zero per-frame allocation on the target laptop? | Synthetic scene: the stress case above driven by fake data at 60 Hz, with the performance-testing package and an allocation recorder. | **Run 2026-09-16, `HudStressTests`. F1 does not fire: 0.488 ms against a 1.167 ms dev budget, zero bytes a frame, zero collections. Cost tracks labels retexted per frame at about 15 us each, not tree size; ten thousand virtualised rows cost nothing; the grid is cheap and the roster bar is 90% of it. Full numbers in ADR 0003.** |
 | R2 | Do about two hundred icons land in two atlas pages or fewer, and at what draw-call count? | Two hundred generated 64-pixel textures in one panel; read the atlas page count and draw stats. | 2 hours |
 | R3 | Can pointer events be partitioned correctly, including a drag begun on the world and released over a panel, and a modal that must swallow everything? | A click-through torture scene exercising eight enumerated cases. | 1 day. **Most likely to bite.** |
 | R4 | Do view-level tests with a live panel run under `-batchmode -nographics`? | One trivial test asserting an element exists and its layout resolved. | 1 hour. Decides whether any view-level test is CI-able. |
