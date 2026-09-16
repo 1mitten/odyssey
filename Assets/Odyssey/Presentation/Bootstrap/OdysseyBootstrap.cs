@@ -471,6 +471,8 @@ namespace Odyssey.Presentation.Bootstrap
                 }
             }
 
+            ReportRejections();
+
             // The light follows the clock every frame, not every tick: at speed 3 several ticks
             // retire in one frame and the sky would step, and when the game is paused the hour
             // stops with it, which is right — a paused world should not go on getting dark.
@@ -708,6 +710,64 @@ namespace Odyssey.Presentation.Bootstrap
                     _renderer.DrawCellFill(cell, sites[i].Progress / 255f, FrameColour);
             }
         }
+
+        /// <summary>
+        /// Say out loud when the simulation refuses a command.
+        ///
+        /// <para><b>Nothing in the build read <c>Intents.Rejected</c> at all</b>, although
+        /// <c>Intents.cs</c> has said since it was written that "a command that silently does
+        /// nothing is the worst possible outcome for a player". Every refusal in the game was
+        /// therefore invisible: the build pipeline shipped with no handler for
+        /// <c>PlaceBuilding</c>, every order came back <c>UnknownIntent</c>, and the only evidence
+        /// available to anyone was that walls did not appear. Two playtests were spent on that.</para>
+        ///
+        /// <para><b>A log line, not an alert.</b> A refusal is usually correct and usually
+        /// expected — a box dragged over a hillside is meant to contain cells that cannot be mined,
+        /// and the rejection is silent and right. What is wanted is not a warning in the player's
+        /// face but a record a developer can read afterwards, which is exactly what the console
+        /// is for. The alerts panel stays for things the colony needs a decision about.</para>
+        ///
+        /// <para>Grouped and throttled, or a 400-cell drag writes 400 lines and the one that
+        /// matters scrolls away. One line per (command, reason) per second, with the count.</para>
+        /// </summary>
+        void ReportRejections()
+        {
+            if (_world == null) return;
+            var rejected = _world.Intents.Rejected;
+            if (rejected.Count == 0) return;
+
+            for (int i = 0; i < rejected.Count; i++)
+            {
+                RejectedIntent r = rejected[i];
+
+                // AlreadyInThatState is the ordinary answer to marking the same cell twice, which
+                // a drag does constantly. It is never the reason a feature does not work.
+                if (r.Reason == IntentRejection.AlreadyInThatState) continue;
+
+                long key = ((long)r.Intent.Kind << 32) | (uint)r.Reason;
+                if (_rejectionCounts.TryGetValue(key, out int count)) _rejectionCounts[key] = count + 1;
+                else _rejectionCounts[key] = 1;
+            }
+
+            if (Time.unscaledTime - _lastRejectionReport < 1f || _rejectionCounts.Count == 0) return;
+            _lastRejectionReport = Time.unscaledTime;
+
+            foreach (var pair in _rejectionCounts)
+            {
+                var kind = (IntentKind)(pair.Key >> 32);
+                var reason = (IntentRejection)(uint)pair.Key;
+                Debug.LogWarning($"[Odyssey] the simulation refused {pair.Value} x {kind}: {reason}" +
+                    (reason == IntentRejection.UnknownIntent
+                        ? " — nothing in the colony handles this command, which is a composition " +
+                          "fault rather than a rule (see ColonyComposition.AddColony)"
+                        : string.Empty));
+            }
+
+            _rejectionCounts.Clear();
+        }
+
+        readonly Dictionary<long, int> _rejectionCounts = new Dictionary<long, int>();
+        float _lastRejectionReport;
 
         /// <summary>
         /// The box the player is dragging right now, before they let go.
