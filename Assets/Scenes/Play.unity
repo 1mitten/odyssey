@@ -520,6 +520,9 @@ MonoBehaviour:
   grassScatter: 60
   groundRelief: 2
   groundReliefPeriod: 150
+  seeThroughToSelection: 1
+  seeThroughRadius: 0.9
+  seeThroughAlpha: 0.22
   ticksPerSecond: 60
   maxTicksPerFrame: 8
   colonistCursor: {x: 1.15, y: 2.7, z: 1.15}

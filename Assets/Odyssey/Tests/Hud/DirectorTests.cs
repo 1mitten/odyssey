@@ -398,10 +398,11 @@ namespace Odyssey.Tests.Hud
             foreach (GraphicsOption option in SettingsDirector.All)
                 Assert.That(settings.IsOn(option), Is.True, $"{option} should default to drawn");
 
-            // Two are read as the frame is submitted; two are baked into the instance matrices
+            // Three are read as the frame is submitted; two are baked into the instance matrices
             // when a chunk is meshed, and the panel has to know which it is holding.
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.Shadows), Is.False);
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.Surround), Is.False);
+            Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.SeeThrough), Is.False);
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.GrassTufts), Is.True);
             Assert.That(SettingsDirector.NeedsRedraw(GraphicsOption.GroundRelief), Is.True);
         }

@@ -18,6 +18,7 @@ namespace Odyssey.Hud
         Surround,
         GrassTufts,
         GroundRelief,
+        SeeThrough,
     }
 
     /// <summary>
@@ -115,6 +116,7 @@ namespace Odyssey.Hud
             GraphicsOption.Surround,
             GraphicsOption.GrassTufts,
             GraphicsOption.GroundRelief,
+            GraphicsOption.SeeThrough,
         };
 
         /// <summary>
@@ -132,6 +134,7 @@ namespace Odyssey.Hud
             "ui.settings.surround",
             "ui.settings.grass",
             "ui.settings.relief",
+            "ui.settings.seethrough",
         };
 
         /// <summary>
@@ -223,6 +226,7 @@ namespace Odyssey.Hud
             GraphicsOption.Surround => "ui.settings.surround",
             GraphicsOption.GrassTufts => "ui.settings.grass",
             GraphicsOption.GroundRelief => "ui.settings.relief",
+            GraphicsOption.SeeThrough => "ui.settings.seethrough",
             _ => "ui.settings.panel",
         };
 
