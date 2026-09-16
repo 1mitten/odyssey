@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# Odyssey: the fast test tier. Runs the pure-C# simulation tests with no Unity at all.
+# Odyssey: the fast test tier. Runs the pure-C# simulation and HUD tests with no Unity at all.
 #
-#   scripts/test-fast.sh                 run every Sim test
+#   scripts/test-fast.sh                 run every Sim and Hud test
 #   scripts/test-fast.sh --filter Name~Def   run a subset (dotnet test filter syntax)
 #
 # Why this exists: Unity batchmode spends tens of seconds booting the editor, refreshing the
 # asset database and reloading the script domain. The tests themselves take about 0.06 seconds.
-# Odyssey.Sim and Odyssey.Sim.Contracts carry no UnityEngine reference by design (ADR 0005), so
-# they can be compiled and tested by a plain dotnet SDK, which turns the inner loop from minutes
-# into seconds.
+# Odyssey.Sim, Odyssey.Sim.Contracts and Odyssey.Hud carry no UnityEngine reference by design
+# (ADR 0005, ADR 0003), so they can be compiled and tested by a plain dotnet SDK, which turns
+# the inner loop from minutes into seconds.
 #
 # This tier is fast, not authoritative. Unity remains the gate:
 #   - only Unity proves the assembly-definition boundaries actually hold;
@@ -20,7 +20,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-PROJECT="tools/dotnet/Odyssey.Tests.Sim/Odyssey.Tests.Sim.csproj"
+PROJECTS=(
+  "tools/dotnet/Odyssey.Tests.Sim/Odyssey.Tests.Sim.csproj"
+  "tools/dotnet/Odyssey.Tests.Hud/Odyssey.Tests.Hud.csproj"
+)
 
 has_sdk() {
   # A runtime-only install answers --list-sdks with an error on stdout and still exits 0, so
@@ -61,4 +64,8 @@ find_dotnet() {
 }
 
 DOTNET_BIN="$(find_dotnet)"
-exec "$DOTNET_BIN" test "$PROJECT" --nologo "$@"
+STATUS=0
+for PROJECT in "${PROJECTS[@]}"; do
+  "$DOTNET_BIN" test "$PROJECT" --nologo "$@" || STATUS=1
+done
+exit "$STATUS"
