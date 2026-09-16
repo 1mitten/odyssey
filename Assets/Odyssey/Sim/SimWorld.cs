@@ -54,6 +54,14 @@ namespace Odyssey.Sim
         /// <summary>Ticks elapsed. Starts at 0 and is part of the state hash.</summary>
         public int CurrentTick { get; private set; }
 
+        /// <summary>
+        /// Optional, and null in every ordinary run: something that wants the state hash at every
+        /// tick boundary, for binary-searching the first tick two runs disagree on.
+        /// <see cref="Diagnostics.HashTrace"/> is the implementation. Attaching one costs a full
+        /// <see cref="ComputeStateHash"/> per tick and cannot change what the world does.
+        /// </summary>
+        public Diagnostics.ITickHashSink? HashSink { get; set; }
+
         public IReadOnlyList<ITickable> Tickables => _tickables;
 
         /// <summary>
@@ -110,6 +118,11 @@ namespace Odyssey.Sim
 
             // 6. Publish the snapshot, after every system has finished mutating the world.
             Views.Publish(this, _contributors);
+
+            // 7. The hash trace, when one is attached. Recorded before the counter moves, so the
+            // entry is labelled with the tick that produced the state — which is the tick to
+            // re-run when two traces part here.
+            HashSink?.Record(CurrentTick, ComputeStateHash().Value);
 
             CurrentTick++;
         }
