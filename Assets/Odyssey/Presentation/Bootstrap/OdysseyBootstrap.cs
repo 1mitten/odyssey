@@ -83,7 +83,7 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Scatter trees over the background hills, out to 900 m. They are what gives the distance a scale; off is the old bare hillside. Decoration only, like the rest of the surround.")]
         public bool skirtHillTrees = true;
 
-        [Tooltip("Which faces the colonists get. 0 draws a fresh cast every session; any other value pins one, and the log prints the value each session used so a cast you liked can be kept.")]
+        [Tooltip("Which cast the colonists get. 0 deals from the world seed, so the same world is the same people every load; any other value overrides it, and the log prints the value used so a cast you liked can be rerolled or kept.")]
         public int colonistLookSeed = 0;
 
         /// <summary>
@@ -257,22 +257,27 @@ namespace Odyssey.Presentation.Bootstrap
             _world.Intents.Submit(new Intent(IntentKind.SetSliceLayer, default, outcome.StartCell.Y));
             _world.Tick();
 
-            // The face lottery is a presentation choice and never enters the simulation, so it is
-            // free to be genuinely random per session — which is the point: with a fixed hash the
-            // starting five wore the same five faces every play and a cast of sixty-one read as a
-            // cast of five. Logged so a cast worth keeping can be pinned by copying the number
-            // into colonistLookSeed.
-            uint lookSalt = colonistLookSeed != 0
-                ? (uint)colonistLookSeed
-                : (uint)UnityEngine.Random.Range(1, int.MaxValue);
-            Debug.Log($"[Odyssey] colonist look seed {lookSalt} (set colonistLookSeed to keep this cast)");
+            // The cast is dealt from the world seed, and the reasoning here has changed once, so
+            // it is worth restating. It was a number rolled at startup, because a *fixed* hash
+            // dealt the starting five — always pawns 1 to 5 — the same five faces every play, and
+            // a cast of sixty-one read as a cast of five. The world seed answers that just as
+            // well, since it differs from world to world, and it also does what a random number
+            // could not: the same world deals the same people on every load, so a colonist's
+            // appearance is a property of the colonist rather than of the session.
+            //
+            // It never enters the simulation and is not saved — nothing is stored, because the
+            // same inputs are re-derived. See ColonistAppearance.
+            uint castSeed = colonistLookSeed != 0 ? (uint)colonistLookSeed : seed;
+            var appearances = new ColonistAppearanceBook(castSeed, moduleCatalogue);
+            Debug.Log($"[Odyssey] colonist cast seed {castSeed} over {appearances.LookCount} faces " +
+                      "(set colonistLookSeed to override the world seed)");
 
             _renderer = new ChunkRenderer(_model)
             {
                 CastShadows = castShadows,
                 GameObjectLayer = gameObject.layer,
                 ScatterDensity = grassScatter,
-                ColonistLookSalt = lookSalt,
+                Appearances = appearances,
             };
             _renderer.Skirt.Enabled = terrainSkirt;
             _renderer.Skirt.TreeDensityPercent = skirtTreeDensity;
@@ -295,7 +300,7 @@ namespace Odyssey.Presentation.Bootstrap
             // form, and so does everybody if the packs are absent or the catalogue has no gaits.
             _figures = new PawnFigureDirector(moduleCatalogue, transform, gameObject.layer)
             {
-                LookSalt = lookSalt,
+                Appearances = appearances,
                 // So a climbing figure can find the block it is climbing against. The same mirror
                 // the chunk renderer meshes from, so the rock it is pressed to is the rock drawn.
                 //

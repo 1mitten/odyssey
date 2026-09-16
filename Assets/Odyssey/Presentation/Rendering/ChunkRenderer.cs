@@ -69,10 +69,18 @@ namespace Odyssey.Presentation.Rendering
         public bool FoliageCastsShadows { get; set; }
 
         /// <summary>
-        /// Per-session salt for which face a baked colonist wears. Must match the figure director's
-        /// <c>LookSalt</c>, or a colonist changes identity on crossing the figure cap.
+        /// Who every colonist is. Must be the <b>same object</b> the figure director holds, not an
+        /// equal one, or a colonist changes identity on crossing the figure cap — see
+        /// <see cref="ColonistAppearanceBook"/>.
+        ///
+        /// <para>Set it before the first render: the size of the face lottery is taken from it
+        /// once, when the colonist rows are first prepared.</para>
         /// </summary>
-        public uint ColonistLookSalt { get; set; }
+        public ColonistAppearanceBook? Appearances { get; set; }
+
+        /// <summary>The book, or one dealt from seed 0 so an editor harness still gets variety.</summary>
+        ColonistAppearanceBook Cast =>
+            Appearances ??= new ColonistAppearanceBook(0u, _model.Library.Catalogue);
 
         /// <summary>
         /// Where the viewer is, for the one culling decision that depends on distance. Null draws
@@ -391,8 +399,9 @@ namespace Odyssey.Presentation.Rendering
                 Vector3 position = PawnPose.Of(pawns[i], tickAlpha, movePerTick, out Vector3 heading);
 
                 // The same face the live figures would have given this pawn, so a colonist does
-                // not change identity on crossing the figure cap.
-                int variant = ColonistLook.For(pawns[i].Id.Value, _colonistModules.Length, ColonistLookSalt);
+                // not change identity on crossing the figure cap. Same object, same answer.
+                int variant = Cast.LookFor(pawns[i].Id.Value);
+                if ((uint)variant >= (uint)_colonistModules.Length) variant = 0;
                 ResolvedModule colonist = ColonistModule(variant);
 
                 if (!colonist.UsesArt || colonist.IsEmpty)
@@ -564,10 +573,11 @@ namespace Odyssey.Presentation.Rendering
             if (_colonistsResolved) return;
             _colonistsResolved = true;
 
+            // Sized from the appearance book, not counted again here. Two places counting the
+            // catalogue's colonist rows is two places that can come to disagree, and when they do
+            // the symptom is every colonist changing face on crossing the figure cap.
             ModuleCatalogue? catalogue = _model.Library.Catalogue;
-            int variants = catalogue != null
-                ? catalogue.FindFamily(ModuleIds.ColonistBase).Count
-                : 1;
+            int variants = Cast.LookCount;
             if (variants < 1) variants = 1;
 
             _colonistModules = new int[variants];

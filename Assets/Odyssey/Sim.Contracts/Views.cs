@@ -242,6 +242,22 @@ namespace Odyssey.Sim.Contracts
         /// <summary>True while the simulation is advancing. See <see cref="GameSpeed"/>.</summary>
         public bool Running => GameSpeed > 0;
 
+        /// <summary>
+        /// The world's seed, carried here for the same reason <see cref="GameSpeed"/> is:
+        /// presentation reads the snapshot and nothing else.
+        ///
+        /// <para>Nothing new enters the determinism hash by publishing it — the seed is already an
+        /// input to that hash (<c>SimWorld.GetStateHash</c> adds it first). What it buys is a
+        /// stable source of randomness for things that are <b>drawn and never simulated</b>, of
+        /// which the colonist cast is the first: a face derived from the seed is the same face on
+        /// every load of that world, and still a different cast in the next world.</para>
+        ///
+        /// <para>Zero on a snapshot nobody has written. Callers that derive an appearance from it
+        /// must behave sensibly at zero rather than treating it as "unset", because a harness that
+        /// builds a snapshot by hand is a legitimate caller.</para>
+        /// </summary>
+        public uint Seed { get; private set; }
+
         public int PawnCount { get; private set; }
         public int ThingCount { get; private set; }
         public int SliceCellCount { get; private set; }
@@ -280,12 +296,14 @@ namespace Odyssey.Sim.Contracts
 
         // ---- writing side, used only by the simulation while building the back buffer ----
 
-        internal void BeginWrite(int tick, GridSize size, int sliceLayer, int gameSpeed = 1)
+        internal void BeginWrite(int tick, GridSize size, int sliceLayer, int gameSpeed = 1,
+                                 uint seed = 0u)
         {
             Tick = tick;
             Size = size;
             SliceLayer = sliceLayer;
             GameSpeed = gameSpeed;
+            Seed = seed;
             PawnCount = 0;
             ThingCount = 0;
             SliceCellCount = 0;
