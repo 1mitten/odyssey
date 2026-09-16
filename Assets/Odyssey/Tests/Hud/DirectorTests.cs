@@ -176,3 +176,26 @@ namespace Odyssey.Tests.Hud
         }
     }
 }
+
+namespace Odyssey.Tests.Hud
+{
+    public class OverlayDirectorTests
+    {
+        [Test]
+        public void TheDeveloperOverlayIsOffUntilToggledAndAnnouncesEachChange()
+        {
+            var overlays = new OverlayDirector();
+            int raised = 0;
+            overlays.Changed += () => raised++;
+
+            Assert.That(overlays.DeveloperVisible, Is.False, "it sits on the picture, so it starts off");
+            overlays.ToggleDeveloper();
+            Assert.That(overlays.DeveloperVisible, Is.True);
+            overlays.SetDeveloper(true);
+            Assert.That(raised, Is.EqualTo(1), "setting what is already set says nothing");
+            overlays.ToggleDeveloper();
+            Assert.That(overlays.DeveloperVisible, Is.False);
+            Assert.That(raised, Is.EqualTo(2));
+        }
+    }
+}

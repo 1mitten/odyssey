@@ -157,6 +157,9 @@ namespace Odyssey.Presentation.CameraRig
             if (keys.bKey.wasPressedThisFrame)
                 slice.below = (BelowMode)(((int)slice.below + 1) % 3);
             if (keys.homeKey.wasPressedThisFrame) Frame();
+
+            // The developer overlay sits on the picture, so it is off until asked for.
+            if (keys.backquoteKey.wasPressedThisFrame) _directors!.Overlays.ToggleDeveloper();
         }
 
         void ReadMouse(float dt)
