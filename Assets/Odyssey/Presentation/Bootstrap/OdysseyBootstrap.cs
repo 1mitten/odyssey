@@ -83,7 +83,10 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Scatter trees over the background hills, out to 900 m. They are what gives the distance a scale; off is the old bare hillside. Decoration only, like the rest of the surround.")]
         public bool skirtHillTrees = true;
 
-        [Tooltip("Which faces the colonists get. 0 draws a fresh cast every session; any other value pins one, and the log prints the value each session used so a cast you liked can be kept.")]
+        [Tooltip("Roll a fresh cast every session: different faces, hair, skin and clothes each time you press Play. Off deals from the world seed instead, so a given world is the same people on every load. Either way colonistLookSeed overrides it.")]
+        public bool randomCastEachSession = true;
+
+        [Tooltip("Pin one cast. 0 follows the switch above; any other value deals that cast every time, and the log prints the value used so a cast you liked can be kept.")]
         public int colonistLookSeed = 0;
 
         /// <summary>
@@ -146,6 +149,7 @@ namespace Odyssey.Presentation.Bootstrap
         AudioDirector? _audio;
         DaylightDirector? _daylight;
         Material? _actorMaterial;
+        ColonistMaterials? _colonistMaterials;
         MapGenDef? _gen;
         double _accumulator;
         float _tickAlpha;
@@ -268,22 +272,46 @@ namespace Odyssey.Presentation.Bootstrap
             _world.Intents.Submit(new Intent(IntentKind.SetSliceLayer, default, outcome.StartCell.Y));
             _world.Tick();
 
-            // The face lottery is a presentation choice and never enters the simulation, so it is
-            // free to be genuinely random per session — which is the point: with a fixed hash the
-            // starting five wore the same five faces every play and a cast of sixty-one read as a
-            // cast of five. Logged so a cast worth keeping can be pinned by copying the number
-            // into colonistLookSeed.
-            uint lookSalt = colonistLookSeed != 0
-                ? (uint)colonistLookSeed
-                : (uint)UnityEngine.Random.Range(1, int.MaxValue);
-            Debug.Log($"[Odyssey] colonist look seed {lookSalt} (set colonistLookSeed to keep this cast)");
+            // Where the cast comes from, and the reasoning has now changed twice, so it is worth
+            // stating all three positions rather than leaving the file arguing with itself.
+            //
+            // It began as a *fixed* hash of the pawn id, which dealt the starting five — always
+            // pawns 1 to 5 — the same five faces every play, so a cast of sixty-one read as a cast
+            // of five. Then a number rolled at startup, which fixed that at the price of a
+            // colonist who was somebody else after a reload. Then the world seed, which fixes both
+            // — a different world is a different cast, and a given world is the same people every
+            // load, so an appearance is a property of the colonist rather than of the session.
+            //
+            // **And the world seed is pinned in the scene**, which is the part that matters here:
+            // with `seed` fixed at 1, "the same world deals the same people" means the same twelve
+            // people every single time you press Play. That is right for a saved colony and wrong
+            // for looking at what the palette does, which is what the owner is doing now — so the
+            // roll is back, behind a switch, defaulting on while the look is being judged. Turning
+            // it off restores the stable cast exactly, and it is what a real saved game will want.
+            //
+            // None of it enters the simulation and none of it is saved: nothing is stored, because
+            // the same inputs are re-derived. See ColonistAppearance.
+            uint castSeed =
+                colonistLookSeed != 0 ? (uint)colonistLookSeed :
+                randomCastEachSession ? (uint)UnityEngine.Random.Range(1, int.MaxValue) :
+                seed;
+            var appearances = new ColonistAppearanceBook(castSeed, moduleCatalogue);
+            // One ink line in the game, not two. Characters draw their own hull because they are
+            // absent from the depth texture the world's outline pass reads, so the colour and
+            // width have to be copied across from the feature that inks everything else.
+            ColonistMaterials.AdoptInkFrom();
+            _colonistMaterials = new ColonistMaterials();
+            Debug.Log($"[Odyssey] colonist cast seed {castSeed} over {appearances.LookCount} faces, " +
+                      (colonistLookSeed != 0 ? "pinned by colonistLookSeed" :
+                       randomCastEachSession ? "rolled for this session — copy it into colonistLookSeed to keep this cast" :
+                       "dealt from the world seed"));
 
             _renderer = new ChunkRenderer(_model)
             {
                 CastShadows = castShadows,
                 GameObjectLayer = gameObject.layer,
                 ScatterDensity = grassScatter,
-                ColonistLookSalt = lookSalt,
+                Appearances = appearances,
             };
             _renderer.Skirt.Enabled = terrainSkirt;
             _renderer.Skirt.TreeDensityPercent = skirtTreeDensity;
@@ -306,7 +334,8 @@ namespace Odyssey.Presentation.Bootstrap
             // form, and so does everybody if the packs are absent or the catalogue has no gaits.
             _figures = new PawnFigureDirector(moduleCatalogue, transform, gameObject.layer)
             {
-                LookSalt = lookSalt,
+                Appearances = appearances,
+                Materials = _colonistMaterials,
                 // So a climbing figure can find the block it is climbing against. The same mirror
                 // the chunk renderer meshes from, so the rock it is pressed to is the rock drawn.
                 //
@@ -810,6 +839,7 @@ namespace Odyssey.Presentation.Bootstrap
             _audio?.Dispose();
             _daylight?.Dispose();
             _figures?.Dispose();
+            _colonistMaterials?.Dispose();
             _renderer?.Dispose();
             // The library owns every mesh it baked or merged, and a Mesh made in code is a GPU
             // allocation Unity never collects. Leaving Play mode without this leaked the whole

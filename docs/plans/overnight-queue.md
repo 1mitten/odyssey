@@ -1,5 +1,12 @@
 # Overnight queue
 
+> **Superseded where it talks about branching (2026-09-16).** Every instruction below to cut a
+> branch from `claude/m1-world`, or to merge back into it, is **wrong now**: that branch is 342
+> commits behind `main` and following it would build on a stale tree. **Branch from `main`, name it
+> `claude/<slug>`, and land it with a pull request** — both CI tiers green, one approving review,
+> branch up to date. Nothing reaches `main` any other way, agents included. The rows and their
+> verdicts below are still a true record of what was done; only the workflow around them changed.
+
 Tasks an unattended agent can finish **and prove** with nobody in the loop. Written 2026-09-16 from `CLAUDE.md`, `docs/plans/vertical-slice.md`, `docs/lessons.md`, `docs/research/INDEX.md`, `docs/design/08-milestones.md`, ADR 0005 and the state of the code on `claude/m1-world` at `bf9cfaf`.
 
 The measure of this file is how many rows get to `done` with a green gate, not how many rows it has. If a row turns out to be larger than it says, stop, write what was learned in the row's status cell, and take the next one.

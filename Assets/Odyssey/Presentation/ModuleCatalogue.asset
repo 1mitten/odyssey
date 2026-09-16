@@ -31,6 +31,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.wall.panel
     shape: 1
     prefab: {fileID: 1314183909916261615, guid: d6b56504304c325419b598fe3ddb95ed, type: 3}
@@ -49,6 +60,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.wall.block
     shape: 1
     prefab: {fileID: 1314183909916261615, guid: d6b56504304c325419b598fe3ddb95ed, type: 3}
@@ -67,6 +89,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.wall.curtain
     shape: 1
     prefab: {fileID: 2095505155170527388, guid: c5c2a8e6bf649504c9a44506e4e45bd9, type: 3}
@@ -85,6 +118,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.window
     shape: 1
     prefab: {fileID: 1575485029253254693, guid: 312c2475757f3d449bc5791d854de9f8, type: 3}
@@ -103,6 +147,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.wall.window
     shape: 1
     prefab: {fileID: 1575485029253254693, guid: 312c2475757f3d449bc5791d854de9f8, type: 3}
@@ -121,6 +176,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.wall.shopfront
     shape: 1
     prefab: {fileID: 2095505155170527388, guid: c5c2a8e6bf649504c9a44506e4e45bd9, type: 3}
@@ -139,6 +205,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.wall.glazed
     shape: 1
     prefab: {fileID: 2095505155170527388, guid: c5c2a8e6bf649504c9a44506e4e45bd9, type: 3}
@@ -157,6 +234,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.wall.vault
     shape: 1
     prefab: {fileID: 1314183909916261615, guid: d6b56504304c325419b598fe3ddb95ed, type: 3}
@@ -175,6 +263,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.door
     shape: 1
     prefab: {fileID: 1090055365757069019, guid: b00e173b113716a458e7d028b5a22a6e, type: 3}
@@ -193,6 +292,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.door.single
     shape: 1
     prefab: {fileID: 1090055365757069019, guid: b00e173b113716a458e7d028b5a22a6e, type: 3}
@@ -211,6 +321,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.door.double
     shape: 1
     prefab: {fileID: 5000267000382648265, guid: 4429b90df2f00014eb1874ba70387189, type: 3}
@@ -229,6 +350,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.door.lobby
     shape: 1
     prefab: {fileID: 6601050566410634084, guid: 80f8de5fa3b15d8459024f191962186c, type: 3}
@@ -247,6 +379,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pillar
     shape: 4
     prefab: {fileID: 7567519678023432404, guid: 3c3333a360e049e459c73b3ca0afec89, type: 3}
@@ -265,6 +408,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.stair
     shape: 5
     prefab: {fileID: 5184713431846949732, guid: d1e81d08282ca3b49b6f9b7fb3935878, type: 3}
@@ -283,6 +437,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.stair.straight
     shape: 5
     prefab: {fileID: 5184713431846949732, guid: d1e81d08282ca3b49b6f9b7fb3935878, type: 3}
@@ -301,6 +466,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.stair.core
     shape: 5
     prefab: {fileID: 5184713431846949732, guid: d1e81d08282ca3b49b6f9b7fb3935878, type: 3}
@@ -319,6 +495,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.ladder
     shape: 6
     prefab: {fileID: 9016761526901123284, guid: 52340b3b1ff43e74bae915614541ffad, type: 3}
@@ -337,6 +524,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.ladder.fixed
     shape: 6
     prefab: {fileID: 9016761526901123284, guid: 52340b3b1ff43e74bae915614541ffad, type: 3}
@@ -355,6 +553,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.slab
     shape: 2
     prefab: {fileID: 218261247472390261, guid: 14c2043f70fad33459f6bbab2bef8720, type: 3}
@@ -373,6 +582,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.slab.concrete
     shape: 2
     prefab: {fileID: 218261247472390261, guid: 14c2043f70fad33459f6bbab2bef8720, type: 3}
@@ -391,6 +611,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.slab.deck
     shape: 2
     prefab: {fileID: 218261247472390261, guid: 14c2043f70fad33459f6bbab2bef8720, type: 3}
@@ -409,6 +640,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.utility.tap
     shape: 4
     prefab: {fileID: 0}
@@ -427,6 +669,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.pavement
     shape: 2
     prefab: {fileID: 1554687143679090, guid: 625e1518f7d51b741b259e863a096e42, type: 3}
@@ -445,6 +698,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.crackedpavement
     shape: 2
     prefab: {fileID: 1965909188301746, guid: ac86e58f7706ca04a9df3f348cf148bd, type: 3}
@@ -463,6 +727,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.rubble
     shape: 2
     prefab: {fileID: 1653527390631264, guid: bc32377f7b002c2408c36cbf8dcff58c, type: 3}
@@ -481,6 +756,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.soil
     shape: 2
     prefab: {fileID: 1577172829149528, guid: f1caf2cf329e69744a5b641ea8285df6, type: 3}
@@ -499,6 +785,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.gravel
     shape: 2
     prefab: {fileID: 1036822767203376, guid: 2d7c7ed92e45db34992dafca4ced6ea5, type: 3}
@@ -517,6 +814,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.engineeredfill
     shape: 3
     prefab: {fileID: 0}
@@ -535,6 +843,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.buriedseam
     shape: 3
     prefab: {fileID: 0}
@@ -553,6 +872,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.salvage
     shape: 3
     prefab: {fileID: 0}
@@ -571,6 +901,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.grass
     shape: 3
     prefab: {fileID: 0}
@@ -589,6 +930,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.bareearth
     shape: 3
     prefab: {fileID: 0}
@@ -607,6 +959,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.packedgravel
     shape: 3
     prefab: {fileID: 0}
@@ -625,6 +988,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.subsoil
     shape: 3
     prefab: {fileID: 0}
@@ -643,6 +1017,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.marsh
     shape: 3
     prefab: {fileID: 0}
@@ -661,6 +1046,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.sand
     shape: 3
     prefab: {fileID: 0}
@@ -679,6 +1075,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.rock
     shape: 7
     prefab: {fileID: 0}
@@ -697,6 +1104,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.rock.1
     shape: 7
     prefab: {fileID: 0}
@@ -715,6 +1133,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.rock.2
     shape: 7
     prefab: {fileID: 0}
@@ -733,6 +1162,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.rock.3
     shape: 7
     prefab: {fileID: 0}
@@ -751,6 +1191,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.rock.4
     shape: 7
     prefab: {fileID: 0}
@@ -769,6 +1220,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.rock.5
     shape: 7
     prefab: {fileID: 0}
@@ -787,6 +1249,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.bedrock
     shape: 7
     prefab: {fileID: 0}
@@ -805,6 +1278,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.bedrock.1
     shape: 7
     prefab: {fileID: 0}
@@ -823,6 +1307,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.bedrock.2
     shape: 7
     prefab: {fileID: 0}
@@ -841,6 +1336,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.bedrock.3
     shape: 7
     prefab: {fileID: 0}
@@ -859,6 +1365,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.bedrock.4
     shape: 7
     prefab: {fileID: 0}
@@ -877,6 +1394,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.bedrock.5
     shape: 7
     prefab: {fileID: 0}
@@ -895,6 +1423,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.ironore
     shape: 7
     prefab: {fileID: 0}
@@ -913,6 +1452,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.ironore.1
     shape: 7
     prefab: {fileID: 0}
@@ -931,6 +1481,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.ironore.2
     shape: 7
     prefab: {fileID: 0}
@@ -949,6 +1510,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.ironore.3
     shape: 7
     prefab: {fileID: 0}
@@ -967,6 +1539,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.ironore.4
     shape: 7
     prefab: {fileID: 0}
@@ -985,6 +1568,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.ironore.5
     shape: 7
     prefab: {fileID: 0}
@@ -1003,6 +1597,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.coalseam
     shape: 7
     prefab: {fileID: 0}
@@ -1021,6 +1626,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.coalseam.1
     shape: 7
     prefab: {fileID: 0}
@@ -1039,6 +1655,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.coalseam.2
     shape: 7
     prefab: {fileID: 0}
@@ -1057,6 +1684,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.coalseam.3
     shape: 7
     prefab: {fileID: 0}
@@ -1075,6 +1713,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.coalseam.4
     shape: 7
     prefab: {fileID: 0}
@@ -1093,6 +1742,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.terrain.coalseam.5
     shape: 7
     prefab: {fileID: 0}
@@ -1111,6 +1771,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.scatter.grass.a
     shape: 4
     prefab: {fileID: 6998238221925613595, guid: 0996b546c8b0c714991e7456ae040490, type: 3}
@@ -1129,6 +1800,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.scatter.grass.b
     shape: 4
     prefab: {fileID: 7698657471702998983, guid: c0a9fc5c9edd29e4b9879734f3792d2c, type: 3}
@@ -1147,6 +1829,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.scatter.grass.c
     shape: 4
     prefab: {fileID: 6171772110245735729, guid: cfe5427e6e4acef4bb8dc5e23f38b3d5, type: 3}
@@ -1165,6 +1858,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.tree.conifer
     shape: 4
     prefab: {fileID: 6131553767378768855, guid: ae12f1ba847c6f74281e7a9a7b0ac7fd, type: 3}
@@ -1183,6 +1887,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.tree.broadleaf
     shape: 4
     prefab: {fileID: 2137760205200772258, guid: 49091280d622b904f96e72e71fe4e877, type: 3}
@@ -1201,6 +1916,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.tool.axe
     shape: 4
     prefab: {fileID: 936837361358885588, guid: c037a3d7cf0b14449a2efc99e7a8f759, type: 3}
@@ -1219,6 +1945,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.tool.pickaxe
     shape: 4
     prefab: {fileID: 203093951140853599, guid: 02233d3c799d9b746bcfa1a8b34a3ade, type: 3}
@@ -1237,6 +1974,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.tool.hammer
     shape: 4
     prefab: {fileID: 1294210970984720, guid: 19cc85b724f1bea4c806426ea56b0ac3, type: 3}
@@ -1255,6 +2003,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.pawn.colonist
     shape: 4
     prefab: {fileID: 6597860165486235920, guid: 0a84514f554d6724098bbb2bd951d28b, type: 3}
@@ -1285,6 +2044,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.18432601
+        width: 0.0034000464
+        height: 0.002628386
+      hair:
+      - serializedVersion: 2
+        x: 0.048531
+        y: 0.19677
+        width: 0.0035430007
+        height: 0.0028780103
+      - serializedVersion: 2
+        x: 0.024338445
+        y: 0.1645673
+        width: 0.0034000464
+        height: 0.0032103509
+      cloth:
+      - serializedVersion: 2
+        x: 0.14191301
+        y: 0.18189545
+        width: 0.0034000427
+        height: 0.0028873384
+      cloth2:
+      - serializedVersion: 2
+        x: 0.14125772
+        y: 0.16850074
+        width: 0.0028476566
+        height: 0.0034000725
+      skinVerts: 892
+      hairVerts: 160
+      clothVerts: 1465
+      cloth2Verts: 366
+      totalVerts: 3401
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.1
     shape: 4
     prefab: {fileID: 6346790247640168239, guid: 34e0c0478273ba845ab029d21cb52a79, type: 3}
@@ -1315,6 +2110,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.18432485
+        width: 0.0034000464
+        height: 0.0026295483
+      hair:
+      - serializedVersion: 2
+        x: 0.02458777
+        y: 0.16437764
+        width: 0.0031507201
+        height: 0.0034000129
+      - serializedVersion: 2
+        x: 0.049138088
+        y: 0.19622578
+        width: 0.0034000203
+        height: 0.0026139617
+      cloth:
+      - serializedVersion: 2
+        x: 0.20431514
+        y: 0.10659235
+        width: 0.0034000278
+        height: 0.0028208792
+      cloth2:
+      - serializedVersion: 2
+        x: 0.20654298
+        y: 0.12521102
+        width: 0.0034000576
+        height: 0.0029151589
+      skinVerts: 695
+      hairVerts: 172
+      clothVerts: 882
+      cloth2Verts: 828
+      totalVerts: 3029
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.2
     shape: 4
     prefab: {fileID: 3863946197356255772, guid: e19a6cb628a52034393bc3af10bf0a72, type: 3}
@@ -1345,6 +2176,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.18378063
+        width: 0.0034000464
+        height: 0.0026317835
+      hair:
+      - serializedVersion: 2
+        x: 0.048531
+        y: 0.19677
+        width: 0.0035430007
+        height: 0.0028780103
+      - serializedVersion: 2
+        x: 0.024338445
+        y: 0.1645527
+        width: 0.0034000464
+        height: 0.003224954
+      cloth:
+      - serializedVersion: 2
+        x: 0.18429859
+        y: 0.18670675
+        width: 0.0031134337
+        height: 0.0041084886
+      cloth2:
+      - serializedVersion: 2
+        x: 0.18354298
+        y: 0.20676811
+        width: 0.004407525
+        height: 0.0037928224
+      skinVerts: 1014
+      hairVerts: 176
+      clothVerts: 976
+      cloth2Verts: 294
+      totalVerts: 3022
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.3
     shape: 4
     prefab: {fileID: 1237103786066752629, guid: 6b755f2212fb17d4f8d6ee004f322f2c, type: 3}
@@ -1375,6 +2242,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.18376853
+        width: 0.0034000464
+        height: 0.0026316047
+      hair:
+      - serializedVersion: 2
+        x: 0.024539491
+        y: 0.16437759
+        width: 0.003199
+        height: 0.0034000725
+      - serializedVersion: 2
+        x: 0.04739316
+        y: 0.19662903
+        width: 0.0034000203
+        height: 0.0026489347
+      cloth:
+      - serializedVersion: 2
+        x: 0.18418874
+        y: 0.18670675
+        width: 0.003223285
+        height: 0.004052818
+      cloth2:
+      - serializedVersion: 2
+        x: 0.18354298
+        y: 0.20676811
+        width: 0.004407525
+        height: 0.0037928224
+      skinVerts: 976
+      hairVerts: 196
+      clothVerts: 916
+      cloth2Verts: 280
+      totalVerts: 2848
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.4
     shape: 4
     prefab: {fileID: 3898496384508839527, guid: 3c469630796c82c4387e97ea9923fb5c, type: 3}
@@ -1405,6 +2308,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.1843205
+        width: 0.0034000464
+        height: 0.0026338995
+      hair:
+      - serializedVersion: 2
+        x: 0.048531
+        y: 0.19677
+        width: 0.0035430007
+        height: 0.0028780103
+      - serializedVersion: 2
+        x: 0.024338445
+        y: 0.16468598
+        width: 0.0034000464
+        height: 0.003091678
+      cloth:
+      - serializedVersion: 2
+        x: 0.1340654
+        y: 0.3536672
+        width: 0.0034000576
+        height: 0.0027544796
+      cloth2:
+      - serializedVersion: 2
+        x: 0.14154555
+        y: 0.2075407
+        width: 0.002864048
+        height: 0.0034000874
+      skinVerts: 860
+      hairVerts: 160
+      clothVerts: 1100
+      cloth2Verts: 669
+      totalVerts: 3468
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.5
     shape: 4
     prefab: {fileID: 3755277747141990492, guid: 89e401adace34884084d47323dfed9fc, type: 3}
@@ -1435,6 +2374,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.18432082
+        width: 0.0034000464
+        height: 0.0026335716
+      hair:
+      - serializedVersion: 2
+        x: 0.024485966
+        y: 0.16437759
+        width: 0.0032525249
+        height: 0.0034000725
+      - serializedVersion: 2
+        x: 0.04739316
+        y: 0.19662903
+        width: 0.0034000203
+        height: 0.0026489347
+      cloth:
+      - serializedVersion: 2
+        x: 0.027251622
+        y: 0.28055027
+        width: 0.0034000464
+        height: 0.0032695532
+      cloth2:
+      - serializedVersion: 2
+        x: 0.3834021
+        y: 0.49060813
+        width: 0.0024501085
+        height: 0.002469927
+      skinVerts: 740
+      hairVerts: 172
+      clothVerts: 286
+      cloth2Verts: 285
+      totalVerts: 3284
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.6
     shape: 4
     prefab: {fileID: 2651856903210286764, guid: eb54016f4b8b78e49b46d6ae66b3a976, type: 3}
@@ -1465,6 +2440,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.18378063
+        width: 0.0034000464
+        height: 0.0031737685
+      hair:
+      - serializedVersion: 2
+        x: 0.048531
+        y: 0.19677
+        width: 0.0035430007
+        height: 0.0028780103
+      - serializedVersion: 2
+        x: 0.024338445
+        y: 0.1645527
+        width: 0.0034000464
+        height: 0.003224954
+      cloth:
+      - serializedVersion: 2
+        x: 0.14199172
+        y: 0.14470227
+        width: 0.0028250962
+        height: 0.0034000278
+      cloth2:
+      - serializedVersion: 2
+        x: 0.02444317
+        y: 0.25335643
+        width: 0.002897758
+        height: 0.003399998
+      skinVerts: 1739
+      hairVerts: 176
+      clothVerts: 1221
+      cloth2Verts: 578
+      totalVerts: 4268
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.7
     shape: 4
     prefab: {fileID: 7229581758514280130, guid: 2d07864ce16f5e042a9bb64e7d61d8ff, type: 3}
@@ -1495,6 +2506,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.18376853
+        width: 0.0034000464
+        height: 0.0031858683
+      hair:
+      - serializedVersion: 2
+        x: 0.024539491
+        y: 0.16437759
+        width: 0.003199
+        height: 0.0034000725
+      - serializedVersion: 2
+        x: 0.04739316
+        y: 0.19662903
+        width: 0.0034000203
+        height: 0.0026489347
+      cloth:
+      - serializedVersion: 2
+        x: 0.14060374
+        y: 0.1472269
+        width: 0.0031528324
+        height: 0.0032993853
+      cloth2:
+      - serializedVersion: 2
+        x: 0.013438894
+        y: 0.34717283
+        width: 0.0060880436
+        height: 0.00756526
+      skinVerts: 1398
+      hairVerts: 196
+      clothVerts: 969
+      cloth2Verts: 440
+      totalVerts: 3570
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.8
     shape: 4
     prefab: {fileID: 85345772695510664, guid: f17f73fd88e335b499ab14d595ab4540, type: 3}
@@ -1525,6 +2572,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.183657
+        width: 0.0034000464
+        height: 0.0032973886
+      hair:
+      - serializedVersion: 2
+        x: 0.024435421
+        y: 0.16437759
+        width: 0.0033030696
+        height: 0.0034000725
+      - serializedVersion: 2
+        x: 0.04739316
+        y: 0.19662903
+        width: 0.0034000203
+        height: 0.0026489347
+      cloth:
+      - serializedVersion: 2
+        x: 0.07666554
+        y: 0.24798729
+        width: 0.003399983
+        height: 0.003039524
+      cloth2:
+      - serializedVersion: 2
+        x: 0.2466213
+        y: 0.20782919
+        width: 0.002809137
+        height: 0.0034000576
+      skinVerts: 150
+      hairVerts: 172
+      clothVerts: 1538
+      cloth2Verts: 731
+      totalVerts: 3791
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.9
     shape: 4
     prefab: {fileID: 3458756976290546274, guid: 7b5fb4afed2fb4d4f8a267687405b11c, type: 3}
@@ -1555,6 +2638,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.18432258
+        width: 0.0034000464
+        height: 0.0026318133
+      hair:
+      - serializedVersion: 2
+        x: 0.048531
+        y: 0.19677
+        width: 0.0035430007
+        height: 0.0028780103
+      - serializedVersion: 2
+        x: 0.024338504
+        y: 0.1647019
+        width: 0.0033999868
+        height: 0.0030757636
+      cloth:
+      - serializedVersion: 2
+        x: 0.13924219
+        y: 0.20170788
+        width: 0.0034000725
+        height: 0.002874285
+      cloth2:
+      - serializedVersion: 2
+        x: 0.08000495
+        y: 0.25119916
+        width: 0.0034000278
+        height: 0.0033418238
+      skinVerts: 842
+      hairVerts: 160
+      clothVerts: 622
+      cloth2Verts: 548
+      totalVerts: 3148
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.10
     shape: 4
     prefab: {fileID: 9064580088405009711, guid: 2d9271186b9b6394698643d253e56181, type: 3}
@@ -1585,6 +2704,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.18390225
+        width: 0.0034000464
+        height: 0.0030521452
+      hair:
+      - serializedVersion: 2
+        x: 0.048531
+        y: 0.19677
+        width: 0.0035430007
+        height: 0.0028780103
+      - serializedVersion: 2
+        x: 0.024338445
+        y: 0.16458507
+        width: 0.0034000464
+        height: 0.0031925887
+      cloth:
+      - serializedVersion: 2
+        x: 0.13990481
+        y: 0.20346989
+        width: 0.0034000576
+        height: 0.0027772188
+      cloth2:
+      - serializedVersion: 2
+        x: 0.3396482
+        y: 0.43967512
+        width: 0.0029042363
+        height: 0.0034000576
+      skinVerts: 1024
+      hairVerts: 160
+      clothVerts: 986
+      cloth2Verts: 784
+      totalVerts: 3551
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.11
     shape: 4
     prefab: {fileID: 3779599460037819802, guid: 078289b95e4329c4698859519204f23e, type: 3}
@@ -1615,6 +2770,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036926
+        y: 0.1838307
+        width: 0.0033999868
+        height: 0.0031237006
+      hair:
+      - serializedVersion: 2
+        x: 0.048530824
+        y: 0.19677012
+        width: 0.0035432428
+        height: 0.0028776824
+      - serializedVersion: 2
+        x: 0.024338445
+        y: 0.16462101
+        width: 0.0034000464
+        height: 0.003156647
+      cloth:
+      - serializedVersion: 2
+        x: 0.14008887
+        y: 0.18416446
+        width: 0.003078729
+        height: 0.003383994
+      cloth2:
+      - serializedVersion: 2
+        x: 0.15451644
+        y: 0.18851893
+        width: 0.0029583275
+        height: 0.0034000576
+      skinVerts: 1324
+      hairVerts: 160
+      clothVerts: 510
+      cloth2Verts: 417
+      totalVerts: 2743
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.12
     shape: 4
     prefab: {fileID: 3381359940843186067, guid: 415206fdf339ef44cbed508914a9a7e2, type: 3}
@@ -1645,6 +2836,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.18385883
+        width: 0.0034000464
+        height: 0.0030955672
+      hair:
+      - serializedVersion: 2
+        x: 0.048531
+        y: 0.19677
+        width: 0.0035430007
+        height: 0.0028780103
+      - serializedVersion: 2
+        x: 0.024338445
+        y: 0.16459359
+        width: 0.0034000464
+        height: 0.0031840652
+      cloth:
+      - serializedVersion: 2
+        x: 0.14263912
+        y: 0.21037282
+        width: 0.0034000874
+        height: 0.0030357689
+      cloth2:
+      - serializedVersion: 2
+        x: 0.07692983
+        y: 0.27698573
+        width: 0.0030374825
+        height: 0.0034000278
+      skinVerts: 1218
+      hairVerts: 160
+      clothVerts: 795
+      cloth2Verts: 306
+      totalVerts: 2789
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.13
     shape: 4
     prefab: {fileID: 3989931881015276717, guid: 253e338a5c21f2d4691b62c2411dbf0d, type: 3}
@@ -1675,6 +2902,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.18432175
+        width: 0.0034000464
+        height: 0.0026326478
+      hair:
+      - serializedVersion: 2
+        x: 0.024513265
+        y: 0.16437764
+        width: 0.003225226
+        height: 0.0034000129
+      - serializedVersion: 2
+        x: 0.04739316
+        y: 0.19662903
+        width: 0.0034000203
+        height: 0.0026489347
+      cloth:
+      - serializedVersion: 2
+        x: 0.07688477
+        y: 0.274884
+        width: 0.0062524304
+        height: 0.003730923
+      cloth2:
+      - serializedVersion: 2
+        x: 0.08960488
+        y: 0.2973477
+        width: 0.0032924712
+        height: 0.0033999681
+      skinVerts: 690
+      hairVerts: 172
+      clothVerts: 909
+      cloth2Verts: 584
+      totalVerts: 4081
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.14
     shape: 4
     prefab: {fileID: 2601170466289135297, guid: 0f895ab6fa2a7e9419ef17d25c18bf9c, type: 3}
@@ -1705,6 +2968,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.18432559
+        width: 0.0034000464
+        height: 0.0026288033
+      hair:
+      - serializedVersion: 2
+        x: 0.024600646
+        y: 0.16437759
+        width: 0.0031378455
+        height: 0.0034000725
+      - serializedVersion: 2
+        x: 0.04739316
+        y: 0.19662903
+        width: 0.0034000203
+        height: 0.0026489347
+      cloth:
+      - serializedVersion: 2
+        x: 0.14269657
+        y: 0.20890965
+        width: 0.0034000874
+        height: 0.0031932741
+      cloth2:
+      - serializedVersion: 2
+        x: 0.33941105
+        y: 0.44735488
+        width: 0.0028152764
+        height: 0.0034000278
+      skinVerts: 984
+      hairVerts: 172
+      clothVerts: 822
+      cloth2Verts: 683
+      totalVerts: 3155
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.15
     shape: 4
     prefab: {fileID: 1315923550000629945, guid: 875a2010d705b604f8a5d36dd1a8b485, type: 3}
@@ -1735,6 +3034,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.18432419
+        width: 0.0034000464
+        height: 0.002630204
+      hair:
+      - serializedVersion: 2
+        x: 0.024575552
+        y: 0.16437764
+        width: 0.003162939
+        height: 0.0034000129
+      - serializedVersion: 2
+        x: 0.045535333
+        y: 0.19724625
+        width: 0.0024000034
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.40081725
+        y: 0.47558737
+        width: 0.0034000576
+        height: 0.0031360388
+      cloth2:
+      - serializedVersion: 2
+        x: 0.23672922
+        y: 0.1285562
+        width: 0.0028259754
+        height: 0.0034000427
+      skinVerts: 972
+      hairVerts: 172
+      clothVerts: 592
+      cloth2Verts: 558
+      totalVerts: 2730
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.16
     shape: 4
     prefab: {fileID: 1988853622293806244, guid: 56f849b594aff0f429ad26bb10cf911f, type: 3}
@@ -1765,6 +3100,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.027036866
+        y: 0.18384369
+        width: 0.0034000464
+        height: 0.0031107068
+      hair:
+      - serializedVersion: 2
+        x: 0.024571618
+        y: 0.16437759
+        width: 0.003166873
+        height: 0.0034000725
+      - serializedVersion: 2
+        x: 0.04739316
+        y: 0.19662903
+        width: 0.0034000203
+        height: 0.0026489347
+      cloth:
+      - serializedVersion: 2
+        x: 0.14124425
+        y: 0.20653899
+        width: 0.0034000725
+        height: 0.003113374
+      cloth2:
+      - serializedVersion: 2
+        x: 0.09967234
+        y: 0.22628872
+        width: 0.002399996
+        height: 0.0024000108
+      skinVerts: 1300
+      hairVerts: 160
+      clothVerts: 812
+      cloth2Verts: 480
+      totalVerts: 3299
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.17
     shape: 4
     prefab: {fileID: 1199693883326640, guid: 9d6944272ca1ef448a6c08e77fec10f0, type: 3}
@@ -1795,6 +3166,32 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.30622274
+        y: 0.05172336
+        width: 0.0031779408
+        height: 0.005295269
+      cloth:
+      - serializedVersion: 2
+        x: 0.3993834
+        y: 0.44346353
+        width: 0.0042717755
+        height: 0.0046517253
+      cloth2:
+      - serializedVersion: 2
+        x: 0.28371808
+        y: 0.33909914
+        width: 0.0026521087
+        height: 0.002788365
+      skinVerts: 0
+      hairVerts: 60
+      clothVerts: 1155
+      cloth2Verts: 1055
+      totalVerts: 4752
+      quality: 3
   - moduleId: odyssey.module.pawn.colonist.18
     shape: 4
     prefab: {fileID: 1076653177335980, guid: 9724bf37757803a4997ef69d34974e3d, type: 3}
@@ -1825,6 +3222,37 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.28748873
+        y: 0.05771664
+        width: 0.0024000108
+        height: 0.0024000034
+      - serializedVersion: 2
+        x: 0.008324405
+        y: 0.008144936
+        width: 0.0024000593
+        height: 0.002400089
+      cloth:
+      - serializedVersion: 2
+        x: 0.26868555
+        y: 0.30011532
+        width: 0.0048437715
+        height: 0.0053907037
+      cloth2:
+      - serializedVersion: 2
+        x: 0.28724906
+        y: 0.08795435
+        width: 0.0029184222
+        height: 0.009227499
+      skinVerts: 0
+      hairVerts: 354
+      clothVerts: 598
+      cloth2Verts: 558
+      totalVerts: 5194
+      quality: 3
   - moduleId: odyssey.module.pawn.colonist.19
     shape: 4
     prefab: {fileID: 1132329847709068, guid: 35b2f23f35e445a4ab2e58c5310d87bd, type: 3}
@@ -1855,6 +3283,27 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin: []
+      hair: []
+      cloth:
+      - serializedVersion: 2
+        x: 0.090009116
+        y: 0.27775198
+        width: 0.003062427
+        height: 0.0056993365
+      cloth2:
+      - serializedVersion: 2
+        x: 0.3202559
+        y: 0.35103926
+        width: 0.0024000108
+        height: 0.0024000108
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 1770
+      cloth2Verts: 1748
+      totalVerts: 4851
+      quality: 4
   - moduleId: odyssey.module.pawn.colonist.20
     shape: 4
     prefab: {fileID: 1394440181588748, guid: a37e15f4f9ea2284097945cfeb8fe9c0, type: 3}
@@ -1885,6 +3334,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.01908814
+        y: 0.1848741
+        width: 0.003318701
+        height: 0.005232841
+      hair:
+      - serializedVersion: 2
+        x: 0.2596344
+        y: 0.12922949
+        width: 0.0036709309
+        height: 0.0050399005
+      - serializedVersion: 2
+        x: 0.019139666
+        y: 0.16347285
+        width: 0.0029181466
+        height: 0.0060989857
+      cloth:
+      - serializedVersion: 2
+        x: 0.33722198
+        y: 0.37254527
+        width: 0.0035296082
+        height: 0.004437357
+      cloth2:
+      - serializedVersion: 2
+        x: 0.23281851
+        y: 0.25354323
+        width: 0.0024835318
+        height: 0.002414465
+      skinVerts: 892
+      hairVerts: 826
+      clothVerts: 892
+      cloth2Verts: 710
+      totalVerts: 7149
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.21
     shape: 4
     prefab: {fileID: 1298641209967538, guid: 80a5aa5d3c514d842841d031ae24d8e1, type: 3}
@@ -1915,6 +3400,37 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.35757944
+        y: 0.28695187
+        width: 0.0024009347
+        height: 0.002399981
+      - serializedVersion: 2
+        x: 0.35650685
+        y: 0.271805
+        width: 0.0024005175
+        height: 0.0024055839
+      cloth:
+      - serializedVersion: 2
+        x: 0.3570586
+        y: 0.30383924
+        width: 0.0024100542
+        height: 0.005106151
+      cloth2:
+      - serializedVersion: 2
+        x: 0.35706136
+        y: 0.35313573
+        width: 0.0024027526
+        height: 0.004406154
+      skinVerts: 0
+      hairVerts: 52
+      clothVerts: 2146
+      cloth2Verts: 1280
+      totalVerts: 4722
+      quality: 3
   - moduleId: odyssey.module.pawn.colonist.22
     shape: 4
     prefab: {fileID: 1447477219941586, guid: 4493b9786df76d64fad99c1e9ac91ace, type: 3}
@@ -1945,6 +3461,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.016164502
+        y: 0.1821581
+        width: 0.008497268
+        height: 0.005931556
+      hair:
+      - serializedVersion: 2
+        x: 0.31249088
+        y: 0.13064548
+        width: 0.0033128262
+        height: 0.0025393218
+      - serializedVersion: 2
+        x: 0.24435158
+        y: 0.2771661
+        width: 0.0024004877
+        height: 0.002399981
+      cloth:
+      - serializedVersion: 2
+        x: 0.4084603
+        y: 0.37293252
+        width: 0.0044707954
+        height: 0.004590422
+      cloth2:
+      - serializedVersion: 2
+        x: 0.26707813
+        y: 0.29959565
+        width: 0.006691426
+        height: 0.007482022
+      skinVerts: 479
+      hairVerts: 284
+      clothVerts: 934
+      cloth2Verts: 912
+      totalVerts: 5838
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.23
     shape: 4
     prefab: {fileID: 1546608955749146, guid: 6b3fff6a0afe72545a41df9afbe304a2, type: 3}
@@ -1975,6 +3527,47 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.25736466
+        y: 0.10656365
+        width: 0.0024115145
+        height: 0.0026791245
+      - serializedVersion: 2
+        x: 0.27922282
+        y: 0.13041736
+        width: 0.002531767
+        height: 0.002627641
+      hair:
+      - serializedVersion: 2
+        x: 0.25721303
+        y: 0.06018542
+        width: 0.002407372
+        height: 0.0024509616
+      - serializedVersion: 2
+        x: 0.046941478
+        y: 0.1456048
+        width: 0.0024000034
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.3749558
+        y: 0.33633593
+        width: 0.0028527975
+        height: 0.0049705505
+      cloth2:
+      - serializedVersion: 2
+        x: 0.3745788
+        y: 0.3727239
+        width: 0.0024020076
+        height: 0.002408266
+      skinVerts: 1520
+      hairVerts: 86
+      clothVerts: 920
+      cloth2Verts: 746
+      totalVerts: 5715
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.24
     shape: 4
     prefab: {fileID: 1550672808291654, guid: 0f9ccd71741ee50488626ad04bd719f9, type: 3}
@@ -2005,6 +3598,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.25794464
+        y: 0.10633199
+        width: 0.0024000704
+        height: 0.0024072453
+      hair:
+      - serializedVersion: 2
+        x: 0.29627907
+        y: 0.13059856
+        width: 0.0025154352
+        height: 0.0024361312
+      - serializedVersion: 2
+        x: 0.25791505
+        y: 0.060855865
+        width: 0.0024074316
+        height: 0.002406925
+      cloth:
+      - serializedVersion: 2
+        x: 0.13687254
+        y: 0.009179561
+        width: 0.0024033338
+        height: 0.0024031168
+      cloth2:
+      - serializedVersion: 2
+        x: 0.37544578
+        y: 0.33629903
+        width: 0.0027361512
+        height: 0.0037819743
+      skinVerts: 1052
+      hairVerts: 563
+      clothVerts: 832
+      cloth2Verts: 517
+      totalVerts: 4756
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.25
     shape: 4
     prefab: {fileID: 1112095941276756, guid: 9173cd04cd0fa7d478bdcc707b3aab84, type: 3}
@@ -2035,6 +3664,32 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.4299763
+        y: 0.33886722
+        width: 0.0024001896
+        height: 0.002399981
+      cloth:
+      - serializedVersion: 2
+        x: 0.4288107
+        y: 0.32101554
+        width: 0.0032154918
+        height: 0.006603837
+      cloth2:
+      - serializedVersion: 2
+        x: 0.07863472
+        y: 0.22455378
+        width: 0.0050343275
+        height: 0.006703824
+      skinVerts: 0
+      hairVerts: 40
+      clothVerts: 1923
+      cloth2Verts: 1185
+      totalVerts: 4209
+      quality: 3
   - moduleId: odyssey.module.pawn.colonist.26
     shape: 4
     prefab: {fileID: 1885274332863988, guid: 9d49ce5feb2bfd245a9e7f8e7a33026f, type: 3}
@@ -2065,6 +3720,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.017390186
+        y: 0.18692175
+        width: 0.0023999996
+        height: 0.0024000108
+      hair:
+      - serializedVersion: 2
+        x: 0.33114648
+        y: 0.13076718
+        width: 0.0029672682
+        height: 0.004020542
+      - serializedVersion: 2
+        x: 0.019292533
+        y: 0.16431989
+        width: 0.0036482122
+        height: 0.0028562844
+      cloth:
+      - serializedVersion: 2
+        x: 0.44810945
+        y: 0.3193255
+        width: 0.0034305155
+        height: 0.0025984943
+      cloth2:
+      - serializedVersion: 2
+        x: 0.44760948
+        y: 0.37270898
+        width: 0.002399981
+        height: 0.002399981
+      skinVerts: 128
+      hairVerts: 427
+      clothVerts: 2189
+      cloth2Verts: 990
+      totalVerts: 5174
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.27
     shape: 4
     prefab: {fileID: 1568468871427000, guid: aad8348bab0cb854f83377110195a3bc, type: 3}
@@ -2095,6 +3786,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.014392277
+        y: 0.18355341
+        width: 0.010798555
+        height: 0.00442484
+      hair:
+      - serializedVersion: 2
+        x: 0.23187514
+        y: 0.30017635
+        width: 0.0055194795
+        height: 0.004856646
+      - serializedVersion: 2
+        x: 0.46567222
+        y: 0.30517995
+        width: 0.002399981
+        height: 0.002399981
+      cloth:
+      - serializedVersion: 2
+        x: 0.23494501
+        y: 0.22739191
+        width: 0.0024000108
+        height: 0.0024000108
+      cloth2:
+      - serializedVersion: 2
+        x: 0.08938142
+        y: 0.22624366
+        width: 0.004191473
+        height: 0.0070272684
+      skinVerts: 577
+      hairVerts: 502
+      clothVerts: 806
+      cloth2Verts: 792
+      totalVerts: 5779
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.28
     shape: 4
     prefab: {fileID: 1787067274310504, guid: be6e7002526a3724f97d31ae3e596927, type: 3}
@@ -2125,6 +3852,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.01732241
+        y: 0.1867693
+        width: 0.002793355
+        height: 0.002558872
+      hair:
+      - serializedVersion: 2
+        x: 0.34898672
+        y: 0.1305149
+        width: 0.0024778247
+        height: 0.0025490224
+      - serializedVersion: 2
+        x: 0.1069242
+        y: 0.008600367
+        width: 0.0026424527
+        height: 0.0024061818
+      cloth:
+      - serializedVersion: 2
+        x: 0.48363754
+        y: 0.32071155
+        width: 0.002399981
+        height: 0.002399981
+      cloth2:
+      - serializedVersion: 2
+        x: 0.23281851
+        y: 0.25354323
+        width: 0.0024835318
+        height: 0.002414465
+      skinVerts: 758
+      hairVerts: 708
+      clothVerts: 932
+      cloth2Verts: 674
+      totalVerts: 7150
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.29
     shape: 4
     prefab: {fileID: 1295246249878948, guid: 5f7f35f5ee9d7fa4e9139ee56900d398, type: 3}
@@ -2155,6 +3918,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.017205399
+        y: 0.18659586
+        width: 0.002886761
+        height: 0.0028928518
+      hair:
+      - serializedVersion: 2
+        x: 0.019292533
+        y: 0.16439682
+        width: 0.0036482122
+        height: 0.0031953752
+      - serializedVersion: 2
+        x: 0.28136197
+        y: 0.2194035
+        width: 0.002399981
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.2813497
+        y: 0.25516793
+        width: 0.002399981
+        height: 0.002399981
+      cloth2:
+      - serializedVersion: 2
+        x: 0.2813618
+        y: 0.23444457
+        width: 0.002399981
+        height: 0.0024000108
+      skinVerts: 719
+      hairVerts: 130
+      clothVerts: 1320
+      cloth2Verts: 694
+      totalVerts: 5643
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.30
     shape: 4
     prefab: {fileID: 1967492678687660, guid: 57fc8dbaad512514aa9683fd9261d4a2, type: 3}
@@ -2185,6 +3984,32 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin: []
+      hair:
+      - serializedVersion: 2
+        x: 0.3022668
+        y: 0.2030694
+        width: 0.002399981
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.07924434
+        y: 0.27811214
+        width: 0.0042310506
+        height: 0.0024970472
+      cloth2:
+      - serializedVersion: 2
+        x: 0.30203357
+        y: 0.22072835
+        width: 0.002399981
+        height: 0.0024000108
+      skinVerts: 0
+      hairVerts: 36
+      clothVerts: 2532
+      cloth2Verts: 990
+      totalVerts: 5850
+      quality: 3
   - moduleId: odyssey.module.pawn.colonist.31
     shape: 4
     prefab: {fileID: 1542036819191410, guid: fc62b962a6a22f148b707e207ab06996, type: 3}
@@ -2215,6 +4040,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.012835225
+        y: 0.18487409
+        width: 0.00921249
+        height: 0.0062937886
+      hair:
+      - serializedVersion: 2
+        x: 0.077689074
+        y: 0.30170545
+        width: 0.0053101927
+        height: 0.0051825643
+      - serializedVersion: 2
+        x: 0.0148532
+        y: 0.16420527
+        width: 0.0024009533
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.31936568
+        y: 0.25255454
+        width: 0.0033189654
+        height: 0.0043761134
+      cloth2:
+      - serializedVersion: 2
+        x: 0.32023382
+        y: 0.23494387
+        width: 0.0034605265
+        height: 0.004057884
+      skinVerts: 1006
+      hairVerts: 534
+      clothVerts: 1114
+      cloth2Verts: 476
+      totalVerts: 3683
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.32
     shape: 4
     prefab: {fileID: 1870903629192928, guid: 2c12eb3809a798446836011a05b7a00b, type: 3}
@@ -2245,6 +4106,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.013700029
+        y: 0.1848741
+        width: 0.0086400695
+        height: 0.010066748
+      hair:
+      - serializedVersion: 2
+        x: 0.060782153
+        y: 0.20898113
+        width: 0.004102815
+        height: 0.0029732734
+      - serializedVersion: 2
+        x: 0.022470077
+        y: 0.1651494
+        width: 0.0031334832
+        height: 0.004422426
+      cloth:
+      - serializedVersion: 2
+        x: 0.0766656
+        y: 0.20840998
+        width: 0.006870821
+        height: 0.0035497844
+      cloth2:
+      - serializedVersion: 2
+        x: 0.07671901
+        y: 0.30030605
+        width: 0.0057501867
+        height: 0.010358125
+      skinVerts: 215
+      hairVerts: 490
+      clothVerts: 754
+      cloth2Verts: 677
+      totalVerts: 5950
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.33
     shape: 4
     prefab: {fileID: 1102192756587244, guid: 19c80593b90872a4fa3bb5a1139b26c1, type: 3}
@@ -2275,6 +4172,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.01732241
+        y: 0.18676566
+        width: 0.0027933568
+        height: 0.002522409
+      hair:
+      - serializedVersion: 2
+        x: 0.35536656
+        y: 0.21943532
+        width: 0.0050555468
+        height: 0.003410399
+      - serializedVersion: 2
+        x: 0.07625841
+        y: 0.009862024
+        width: 0.002399996
+        height: 0.0023999996
+      cloth:
+      - serializedVersion: 2
+        x: 0.35723084
+        y: 0.25133207
+        width: 0.0026246905
+        height: 0.0027585626
+      cloth2:
+      - serializedVersion: 2
+        x: 0.35508338
+        y: 0.23516138
+        width: 0.0026463568
+        height: 0.0028678477
+      skinVerts: 736
+      hairVerts: 694
+      clothVerts: 1732
+      cloth2Verts: 434
+      totalVerts: 3969
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.34
     shape: 4
     prefab: {fileID: 1420900672563822, guid: a136ffd5a9160a74d975cbda00d432bb, type: 3}
@@ -2305,6 +4238,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.017295416
+        y: 0.18685916
+        width: 0.0024187528
+        height: 0.0024107993
+      hair:
+      - serializedVersion: 2
+        x: 0.3566576
+        y: 0.2219922
+        width: 0.002410531
+        height: 0.0024089515
+      - serializedVersion: 2
+        x: 0.019872041
+        y: 0.16476609
+        width: 0.0024891961
+        height: 0.0024568439
+      cloth:
+      - serializedVersion: 2
+        x: 0.3563571
+        y: 0.2536855
+        width: 0.0031457245
+        height: 0.0028517544
+      cloth2:
+      - serializedVersion: 2
+        x: 0.3553471
+        y: 0.2370441
+        width: 0.0030176938
+        height: 0.0029772818
+      skinVerts: 712
+      hairVerts: 364
+      clothVerts: 1415
+      cloth2Verts: 913
+      totalVerts: 4017
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.35
     shape: 4
     prefab: {fileID: 1674885529865632, guid: 5384b0579aea21545b42e1e5bd2f4cc0, type: 3}
@@ -2335,6 +4304,47 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.023780545
+        y: 0.1877038
+        width: 0.0024004765
+        height: 0.00240314
+      - serializedVersion: 2
+        x: 0.017655632
+        y: 0.1848741
+        width: 0.0039484818
+        height: 0.003978491
+      hair:
+      - serializedVersion: 2
+        x: 0.048151463
+        y: 0.19675246
+        width: 0.002863329
+        height: 0.003512621
+      - serializedVersion: 2
+        x: 0.022470077
+        y: 0.1651494
+        width: 0.0031334832
+        height: 0.004422426
+      cloth:
+      - serializedVersion: 2
+        x: 0.11130675
+        y: 0.21063007
+        width: 0.0024007186
+        height: 0.0024038255
+      cloth2:
+      - serializedVersion: 2
+        x: 0.2353142
+        y: 0.2531323
+        width: 0.0024000108
+        height: 0.002399981
+      skinVerts: 1032
+      hairVerts: 431
+      clothVerts: 699
+      cloth2Verts: 566
+      totalVerts: 3872
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.36
     shape: 4
     prefab: {fileID: 1660164172697688, guid: a3981b0f4b9c4bb489dce3db59ee32b5, type: 3}
@@ -2365,6 +4375,47 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.020828774
+        y: 0.18514247
+        width: 0.003453482
+        height: 0.0062650144
+      - serializedVersion: 2
+        x: 0.010115078
+        y: 0.1863286
+        width: 0.0034254082
+        height: 0.004720986
+      hair:
+      - serializedVersion: 2
+        x: 0.06550336
+        y: 0.19572511
+        width: 0.0031409785
+        height: 0.004285559
+      - serializedVersion: 2
+        x: 0.06621469
+        y: 0.19015785
+        width: 0.002399996
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.26518852
+        y: 0.2692327
+        width: 0.0026079416
+        height: 0.0027282834
+      cloth2:
+      - serializedVersion: 2
+        x: 0.050203517
+        y: 0.18819232
+        width: 0.0024000108
+        height: 0.0024002492
+      skinVerts: 1299
+      hairVerts: 1038
+      clothVerts: 353
+      cloth2Verts: 276
+      totalVerts: 4568
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.37
     shape: 4
     prefab: {fileID: 1019791486663424, guid: 827a26e9b261b7847ac6cc3df54f2677, type: 3}
@@ -2395,6 +4446,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.011140337
+        y: 0.18864949
+        width: 0.0024001487
+        height: 0.0024001002
+      hair:
+      - serializedVersion: 2
+        x: 0.06578214
+        y: 0.19723172
+        width: 0.002399996
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.06551134
+        y: 0.18851936
+        width: 0.002399996
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.23161711
+        y: 0.28011534
+        width: 0.0024000108
+        height: 0.002399981
+      cloth2:
+      - serializedVersion: 2
+        x: 0.23078434
+        y: 0.27109888
+        width: 0.0024000108
+        height: 0.002399981
+      skinVerts: 22
+      hairVerts: 588
+      clothVerts: 940
+      cloth2Verts: 464
+      totalVerts: 4091
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.38
     shape: 4
     prefab: {fileID: 1160220439793846, guid: 3c3a8236be548bb4c892cf39a5abadfe, type: 3}
@@ -2425,6 +4512,47 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.023780825
+        y: 0.1877069
+        width: 0.0023999996
+        height: 0.0024000406
+      - serializedVersion: 2
+        x: 0.01920411
+        y: 0.1848741
+        width: 0.0028436054
+        height: 0.003926307
+      hair:
+      - serializedVersion: 2
+        x: 0.04861479
+        y: 0.19675246
+        width: 0.0036591515
+        height: 0.0036610365
+      - serializedVersion: 2
+        x: 0.048833568
+        y: 0.18913148
+        width: 0.0024000034
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.22790389
+        y: 0.29006913
+        width: 0.0026288927
+        height: 0.0026035905
+      cloth2:
+      - serializedVersion: 2
+        x: 0.23089498
+        y: 0.3020827
+        width: 0.0024001747
+        height: 0.0024009347
+      skinVerts: 1314
+      hairVerts: 479
+      clothVerts: 379
+      cloth2Verts: 172
+      totalVerts: 2960
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.39
     shape: 4
     prefab: {fileID: 1350103588185370, guid: 6a71738add6483c4e8a1479556240d54, type: 3}
@@ -2455,6 +4583,47 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.023780825
+        y: 0.1877069
+        width: 0.0023999996
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.01885738
+        y: 0.1848741
+        width: 0.002746733
+        height: 0.003978491
+      hair:
+      - serializedVersion: 2
+        x: 0.1747604
+        y: 0.20967345
+        width: 0.013594374
+        height: 0.0024030209
+      - serializedVersion: 2
+        x: 0.16604325
+        y: 0.20856084
+        width: 0.0068536103
+        height: 0.003512621
+      cloth:
+      - serializedVersion: 2
+        x: 0.1050468
+        y: 0.2097693
+        width: 0.0077022985
+        height: 0.002674669
+      cloth2:
+      - serializedVersion: 2
+        x: 0.07800075
+        y: 0.25470516
+        width: 0.002399996
+        height: 0.002399981
+      skinVerts: 358
+      hairVerts: 802
+      clothVerts: 949
+      cloth2Verts: 372
+      totalVerts: 4376
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.40
     shape: 4
     prefab: {fileID: 1344827926872286, guid: 1007a253e12b0a040ac2601c4464f7c2, type: 3}
@@ -2485,6 +4654,47 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.023780825
+        y: 0.1877069
+        width: 0.0023999996
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.01885738
+        y: 0.1848741
+        width: 0.002746733
+        height: 0.003978491
+      hair:
+      - serializedVersion: 2
+        x: 0.0499505
+        y: 0.19684972
+        width: 0.0024001226
+        height: 0.0024001151
+      - serializedVersion: 2
+        x: 0.07756751
+        y: 0.27444664
+        width: 0.0024000853
+        height: 0.0024001002
+      cloth:
+      - serializedVersion: 2
+        x: 0.11142083
+        y: 0.22816916
+        width: 0.0024004728
+        height: 0.0024000108
+      cloth2:
+      - serializedVersion: 2
+        x: 0.058684543
+        y: 0.30250397
+        width: 0.002400007
+        height: 0.002399981
+      skinVerts: 328
+      hairVerts: 712
+      clothVerts: 616
+      cloth2Verts: 589
+      totalVerts: 5161
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.41
     shape: 4
     prefab: {fileID: 1104157133539584, guid: 61a51a0904b1ab846b8015fc4017ff05, type: 3}
@@ -2515,6 +4725,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.01920411
+        y: 0.1848741
+        width: 0.0024000034
+        height: 0.0024000406
+      hair:
+      - serializedVersion: 2
+        x: 0.04673739
+        y: 0.19527669
+        width: 0.005399637
+        height: 0.0051293224
+      - serializedVersion: 2
+        x: 0.0788949
+        y: 0.25380576
+        width: 0.0024000257
+        height: 0.002399981
+      cloth:
+      - serializedVersion: 2
+        x: 0.2377374
+        y: 0.12199254
+        width: 0.0024000108
+        height: 0.002399996
+      cloth2:
+      - serializedVersion: 2
+        x: 0.045006353
+        y: 0.20736285
+        width: 0.009640444
+        height: 0.005804926
+      skinVerts: 132
+      hairVerts: 462
+      clothVerts: 1053
+      cloth2Verts: 840
+      totalVerts: 3963
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.42
     shape: 4
     prefab: {fileID: 1076165931881782, guid: 46a285bd16879d240b8c67eb1509a33a, type: 3}
@@ -2545,6 +4791,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.018131217
+        y: 0.18581887
+        width: 0.0031717587
+        height: 0.0027622283
+      hair:
+      - serializedVersion: 2
+        x: 0.39948323
+        y: 0.49031013
+        width: 0.0027041435
+        height: 0.0026490688
+      - serializedVersion: 2
+        x: 0.014813596
+        y: 0.32479486
+        width: 0.0023999996
+        height: 0.002399981
+      cloth:
+      - serializedVersion: 2
+        x: 0.002647897
+        y: 0.37673137
+        width: 0.003979657
+        height: 0.0033133924
+      cloth2:
+      - serializedVersion: 2
+        x: 0.25361016
+        y: 0.12014509
+        width: 0.002399981
+        height: 0.002399996
+      skinVerts: 566
+      hairVerts: 766
+      clothVerts: 903
+      cloth2Verts: 794
+      totalVerts: 5510
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.43
     shape: 4
     prefab: {fileID: 1699602026086422, guid: ce1e13ae0f9a7e04ea8ff9e83390f083, type: 3}
@@ -2575,6 +4857,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.02062749
+        y: 0.18557534
+        width: 0.0023999996
+        height: 0.0024000108
+      hair:
+      - serializedVersion: 2
+        x: 0.05974615
+        y: 0.32689825
+        width: 0.0024003163
+        height: 0.0024073124
+      - serializedVersion: 2
+        x: 0.05892921
+        y: 0.22805113
+        width: 0.0024000034
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.26762202
+        y: 0.12186124
+        width: 0.002399981
+        height: 0.002399996
+      cloth2:
+      - serializedVersion: 2
+        x: 0.02062749
+        y: 0.16520374
+        width: 0.0023999996
+        height: 0.0024000257
+      skinVerts: 311
+      hairVerts: 306
+      clothVerts: 906
+      cloth2Verts: 706
+      totalVerts: 4696
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.44
     shape: 4
     prefab: {fileID: 1367791153762574, guid: 61cca5f35bc07064c8b53b56641c4bc4, type: 3}
@@ -2605,6 +4923,47 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.023780825
+        y: 0.1877069
+        width: 0.0023999996
+        height: 0.0024000406
+      - serializedVersion: 2
+        x: 0.01920411
+        y: 0.18487412
+        width: 0.0024000034
+        height: 0.0024000257
+      hair:
+      - serializedVersion: 2
+        x: 0.0018919909
+        y: 0.3235155
+        width: 0.005225975
+        height: 0.008594036
+      - serializedVersion: 2
+        x: 0.055100996
+        y: 0.30391094
+        width: 0.002400063
+        height: 0.002399981
+      cloth:
+      - serializedVersion: 2
+        x: 0.003324231
+        y: 0.30023476
+        width: 0.0042227125
+        height: 0.004927695
+      cloth2:
+      - serializedVersion: 2
+        x: 0.5275126
+        y: 0.20302431
+        width: 0.0024000406
+        height: 0.0024000108
+      skinVerts: 652
+      hairVerts: 964
+      clothVerts: 835
+      cloth2Verts: 828
+      totalVerts: 6030
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.45
     shape: 4
     prefab: {fileID: 1910007866545544, guid: 665550c0dd38b7f4bb813b293b9efeaa, type: 3}
@@ -2635,6 +4994,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.01637879
+        y: 0.18646646
+        width: 0.0046498477
+        height: 0.003995985
+      hair:
+      - serializedVersion: 2
+        x: 0.5277928
+        y: 0.20290735
+        width: 0.0024000406
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.048686653
+        y: 0.19649644
+        width: 0.003270328
+        height: 0.0027876794
+      cloth:
+      - serializedVersion: 2
+        x: 0.28043905
+        y: 0.12395314
+        width: 0.0024240315
+        height: 0.0027549043
+      cloth2:
+      - serializedVersion: 2
+        x: 0.015084347
+        y: 0.25360748
+        width: 0.0024000295
+        height: 0.002399981
+      skinVerts: 1243
+      hairVerts: 540
+      clothVerts: 553
+      cloth2Verts: 480
+      totalVerts: 4251
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.46
     shape: 4
     prefab: {fileID: 1847472524973406, guid: 44cca74992c7c9244beb12877a22e37d, type: 3}
@@ -2665,6 +5060,47 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.023780825
+        y: 0.1877069
+        width: 0.0023999996
+        height: 0.0024000406
+      - serializedVersion: 2
+        x: 0.01885738
+        y: 0.1848741
+        width: 0.002746733
+        height: 0.003978491
+      hair:
+      - serializedVersion: 2
+        x: 0.052400436
+        y: 0.15194328
+        width: 0.00368689
+        height: 0.0026294142
+      - serializedVersion: 2
+        x: 0.07930537
+        y: 0.2249928
+        width: 0.0025598332
+        height: 0.0062334538
+      cloth:
+      - serializedVersion: 2
+        x: 0.20827909
+        y: 0.2765917
+        width: 0.0028520525
+        height: 0.0028026104
+      cloth2:
+      - serializedVersion: 2
+        x: 0.046062294
+        y: 0.25184438
+        width: 0.0040639266
+        height: 0.003246367
+      skinVerts: 668
+      hairVerts: 542
+      clothVerts: 552
+      cloth2Verts: 508
+      totalVerts: 3919
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.47
     shape: 4
     prefab: {fileID: 1433619625548648, guid: 6dd2a3233145d71498a233d919f68aba, type: 3}
@@ -2695,6 +5131,47 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.023780825
+        y: 0.1877069
+        width: 0.0023999996
+        height: 0.0024000406
+      - serializedVersion: 2
+        x: 0.01885738
+        y: 0.1848741
+        width: 0.002746733
+        height: 0.003978491
+      hair:
+      - serializedVersion: 2
+        x: 0.07931542
+        y: 0.27649143
+        width: 0.0028802007
+        height: 0.0040308237
+      - serializedVersion: 2
+        x: 0.06705897
+        y: 0.14794834
+        width: 0.011747651
+        height: 0.0075028986
+      cloth:
+      - serializedVersion: 2
+        x: 0.2803205
+        y: 0.12484429
+        width: 0.002399981
+        height: 0.0024000034
+      cloth2:
+      - serializedVersion: 2
+        x: 0.025189122
+        y: 0.27661633
+        width: 0.0024000295
+        height: 0.0024000406
+      skinVerts: 758
+      hairVerts: 777
+      clothVerts: 578
+      cloth2Verts: 526
+      totalVerts: 4747
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.48
     shape: 4
     prefab: {fileID: 1614204489042142, guid: 53bec25d8f1b3d940891e307bc7cb56f, type: 3}
@@ -2725,6 +5202,47 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.27241534
+        y: 0.153326
+        width: 0.002399981
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.27227765
+        y: 0.1372176
+        width: 0.002399981
+        height: 0.0024000108
+      hair:
+      - serializedVersion: 2
+        x: 0.100534454
+        y: 0.22691317
+        width: 0.0030150637
+        height: 0.0060664117
+      - serializedVersion: 2
+        x: 0.03632034
+        y: 0.32296684
+        width: 0.0040148795
+        height: 0.005454719
+      cloth:
+      - serializedVersion: 2
+        x: 0.024805447
+        y: 0.27563772
+        width: 0.00331082
+        height: 0.004755914
+      cloth2:
+      - serializedVersion: 2
+        x: 0.0039091315
+        y: 0.355008
+        width: 0.002488155
+        height: 0.0034819245
+      skinVerts: 832
+      hairVerts: 2929
+      clothVerts: 1330
+      cloth2Verts: 809
+      totalVerts: 12740
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.49
     shape: 4
     prefab: {fileID: 1725913698063520, guid: da740ceec44642c43b7db9037aa14024, type: 3}
@@ -2755,6 +5273,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.27343518
+        y: 0.15252338
+        width: 0.002399981
+        height: 0.0024000108
+      hair:
+      - serializedVersion: 2
+        x: 0.1011495
+        y: 0.22691317
+        width: 0.0024000183
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.2537085
+        y: 0.34941408
+        width: 0.002399981
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.2195845
+        y: 0.3514577
+        width: 0.0024000406
+        height: 0.0024018884
+      cloth2:
+      - serializedVersion: 2
+        x: 0.5265061
+        y: 0.20163892
+        width: 0.0032980442
+        height: 0.0036168694
+      skinVerts: 786
+      hairVerts: 236
+      clothVerts: 1263
+      cloth2Verts: 294
+      totalVerts: 4831
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.50
     shape: 4
     prefab: {fileID: 1859953206739270, guid: f5b6bad2280936a43aa995f321812e03, type: 3}
@@ -2785,6 +5339,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.27343518
+        y: 0.15252338
+        width: 0.002399981
+        height: 0.0024000108
+      hair:
+      - serializedVersion: 2
+        x: 0.07795394
+        y: 0.25228056
+        width: 0.0030897707
+        height: 0.0030888915
+      - serializedVersion: 2
+        x: 0.23314334
+        y: 0.3253915
+        width: 0.0024000704
+        height: 0.002399981
+      cloth:
+      - serializedVersion: 2
+        x: 0.26850435
+        y: 0.32639647
+        width: 0.0032852292
+        height: 0.003970325
+      cloth2:
+      - serializedVersion: 2
+        x: 0.024416884
+        y: 0.27808368
+        width: 0.00320011
+        height: 0.0068029463
+      skinVerts: 710
+      hairVerts: 642
+      clothVerts: 1767
+      cloth2Verts: 586
+      totalVerts: 5116
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.51
     shape: 4
     prefab: {fileID: 1539777346913648, guid: 05e3035009b0eaf44b0e3cb2a6e2e98e, type: 3}
@@ -2815,6 +5405,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.27343515
+        y: 0.15252338
+        width: 0.002399981
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.2727994
+        y: 0.13776937
+        width: 0.002399981
+        height: 0.0024000108
+      hair:
+      - serializedVersion: 2
+        x: 0.0796388
+        y: 0.22827934
+        width: 0.0027455762
+        height: 0.0044059306
+      cloth:
+      - serializedVersion: 2
+        x: 0.10837561
+        y: 0.16372278
+        width: 0.0039187893
+        height: 0.008012101
+      cloth2:
+      - serializedVersion: 2
+        x: 0.046970297
+        y: 0.3244968
+        width: 0.0027314797
+        height: 0.0043806136
+      skinVerts: 1450
+      hairVerts: 222
+      clothVerts: 839
+      cloth2Verts: 612
+      totalVerts: 4864
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.52
     shape: 4
     prefab: {fileID: 1465311805662470, guid: 6a8f21ba83708e943944219ac28b3aca, type: 3}
@@ -2845,6 +5471,47 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.27343515
+        y: 0.15252338
+        width: 0.0024000108
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.2727994
+        y: 0.13776937
+        width: 0.002399981
+        height: 0.0024000108
+      hair:
+      - serializedVersion: 2
+        x: 0.09916011
+        y: 0.22658437
+        width: 0.0043894053
+        height: 0.002728805
+      - serializedVersion: 2
+        x: 0.03632034
+        y: 0.32296684
+        width: 0.0024000034
+        height: 0.002399981
+      cloth:
+      - serializedVersion: 2
+        x: 0.047412086
+        y: 0.3011803
+        width: 0.0026256517
+        height: 0.003049016
+      cloth2:
+      - serializedVersion: 2
+        x: 0.047301773
+        y: 0.34917855
+        width: 0.0024000034
+        height: 0.002400577
+      skinVerts: 1325
+      hairVerts: 281
+      clothVerts: 385
+      cloth2Verts: 354
+      totalVerts: 4731
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.53
     shape: 4
     prefab: {fileID: 1717726254881766, guid: 09093ff8624662d43a05d585d0c17e3d, type: 3}
@@ -2875,6 +5542,47 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.27343518
+        y: 0.15252338
+        width: 0.002399981
+        height: 0.0024000108
+      - serializedVersion: 2
+        x: 0.2727994
+        y: 0.13776937
+        width: 0.002399981
+        height: 0.0024000108
+      hair:
+      - serializedVersion: 2
+        x: 0.090728424
+        y: 0.22814532
+        width: 0.0026111752
+        height: 0.004528761
+      - serializedVersion: 2
+        x: 0.024896761
+        y: 0.22809781
+        width: 0.0023999996
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.034223277
+        y: 0.34982845
+        width: 0.005349718
+        height: 0.00770241
+      cloth2:
+      - serializedVersion: 2
+        x: 0.035573114
+        y: 0.30157092
+        width: 0.0029003248
+        height: 0.004472971
+      skinVerts: 1696
+      hairVerts: 937
+      clothVerts: 1053
+      cloth2Verts: 488
+      totalVerts: 7157
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.54
     shape: 4
     prefab: {fileID: 1251887375674614, guid: f4a4844b0c1edce4fadad9ab0d125d6c, type: 3}
@@ -2905,6 +5613,42 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.27343515
+        y: 0.15252338
+        width: 0.002399981
+        height: 0.0024000108
+      hair:
+      - serializedVersion: 2
+        x: 0.03793521
+        y: 0.32602152
+        width: 0.0024000108
+        height: 0.0024000406
+      - serializedVersion: 2
+        x: 0.06824558
+        y: 0.30461088
+        width: 0.002399996
+        height: 0.002399981
+      cloth:
+      - serializedVersion: 2
+        x: 0.0037029588
+        y: 0.32713747
+        width: 0.0062534194
+        height: 0.005540967
+      cloth2:
+      - serializedVersion: 2
+        x: 0.004179733
+        y: 0.35125756
+        width: 0.0028510317
+        height: 0.0038295388
+      skinVerts: 954
+      hairVerts: 244
+      clothVerts: 908
+      cloth2Verts: 496
+      totalVerts: 5637
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.55
     shape: 4
     prefab: {fileID: 1152173450834818, guid: 6c049a3b6de50ad40a9313fe33d2743f, type: 3}
@@ -2935,6 +5679,47 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.023780823
+        y: 0.1877069
+        width: 0.0024000015
+        height: 0.0024000406
+      - serializedVersion: 2
+        x: 0.01885738
+        y: 0.1848741
+        width: 0.002746733
+        height: 0.003978491
+      hair:
+      - serializedVersion: 2
+        x: 0.07905843
+        y: 0.2278039
+        width: 0.00371854
+        height: 0.003914565
+      - serializedVersion: 2
+        x: 0.018002754
+        y: 0.16367425
+        width: 0.0024002679
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.28999862
+        y: 0.1235253
+        width: 0.0030366778
+        height: 0.0033198074
+      cloth2:
+      - serializedVersion: 2
+        x: 0.2904606
+        y: 0.1141956
+        width: 0.0024014115
+        height: 0.0024030358
+      skinVerts: 716
+      hairVerts: 231
+      clothVerts: 1195
+      cloth2Verts: 380
+      totalVerts: 3299
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.56
     shape: 4
     prefab: {fileID: 1761784186981298, guid: d7f7756c24aae434f902ccb965490a0d, type: 3}
@@ -2965,6 +5750,42 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.01641973
+        y: 0.1848741
+        width: 0.005184384
+        height: 0.0043418407
+      hair:
+      - serializedVersion: 2
+        x: 0.04850622
+        y: 0.18908794
+        width: 0.002813436
+        height: 0.0027591884
+      - serializedVersion: 2
+        x: 0.048027713
+        y: 0.19641319
+        width: 0.0024000853
+        height: 0.0024000555
+      cloth:
+      - serializedVersion: 2
+        x: 0.29005012
+        y: 0.11285136
+        width: 0.0030050278
+        height: 0.003976226
+      cloth2:
+      - serializedVersion: 2
+        x: 0.13112651
+        y: 0.30227536
+        width: 0.0042020082
+        height: 0.0029254854
+      skinVerts: 152
+      hairVerts: 268
+      clothVerts: 1251
+      cloth2Verts: 685
+      totalVerts: 4102
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.57
     shape: 4
     prefab: {fileID: 1303515429907952, guid: 9b802b1f99ad3cf47afb574a6ce9ce7d, type: 3}
@@ -2995,6 +5816,47 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.023780825
+        y: 0.1877069
+        width: 0.0023999996
+        height: 0.0024000406
+      - serializedVersion: 2
+        x: 0.01920411
+        y: 0.18351622
+        width: 0.0026443694
+        height: 0.0037579238
+      hair:
+      - serializedVersion: 2
+        x: 0.04673739
+        y: 0.19527669
+        width: 0.0049820766
+        height: 0.0052146018
+      - serializedVersion: 2
+        x: 0.078981005
+        y: 0.277189
+        width: 0.0024000555
+        height: 0.003811419
+      cloth:
+      - serializedVersion: 2
+        x: 0.23750417
+        y: 0.121114455
+        width: 0.0037180185
+        height: 0.0034923702
+      cloth2:
+      - serializedVersion: 2
+        x: 0.047491748
+        y: 0.20819445
+        width: 0.0070526823
+        height: 0.005480379
+      skinVerts: 727
+      hairVerts: 492
+      clothVerts: 1134
+      cloth2Verts: 652
+      totalVerts: 3893
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.58
     shape: 4
     prefab: {fileID: 1611975939568586, guid: 83d6acf81ce429644af87dbde08a456a, type: 3}
@@ -3025,6 +5887,47 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.023780825
+        y: 0.1877069
+        width: 0.0023999996
+        height: 0.0024000555
+      - serializedVersion: 2
+        x: 0.018302223
+        y: 0.1848741
+        width: 0.0033018906
+        height: 0.003978491
+      hair:
+      - serializedVersion: 2
+        x: 0.1108957
+        y: 0.20933448
+        width: 0.0024719387
+        height: 0.0028221756
+      - serializedVersion: 2
+        x: 0.07756751
+        y: 0.27444664
+        width: 0.0024000853
+        height: 0.0024001002
+      cloth:
+      - serializedVersion: 2
+        x: 0.23924741
+        y: 0.10605468
+        width: 0.0024000108
+        height: 0.002399996
+      cloth2:
+      - serializedVersion: 2
+        x: 0.20164067
+        y: 0.46855038
+        width: 0.0041075647
+        height: 0.004024595
+      skinVerts: 696
+      hairVerts: 958
+      clothVerts: 625
+      cloth2Verts: 516
+      totalVerts: 4552
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.59
     shape: 4
     prefab: {fileID: 1407229853643162, guid: 304b0adaadef5f643a6e6d4f06099092, type: 3}
@@ -3055,6 +5958,47 @@ MonoBehaviour:
       clip: {fileID: 1827226128182048838, guid: 6c670ea8c84cf324980a21b4b9b927a0, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Masc
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.023780825
+        y: 0.1877069
+        width: 0.0023999996
+        height: 0.0024000406
+      - serializedVersion: 2
+        x: 0.015401265
+        y: 0.1848741
+        width: 0.0066464506
+        height: 0.0042541027
+      hair:
+      - serializedVersion: 2
+        x: 0.048350293
+        y: 0.18884589
+        width: 0.0031721964
+        height: 0.0030012429
+      - serializedVersion: 2
+        x: 0.07911881
+        y: 0.23235418
+        width: 0.002399996
+        height: 0.0024000108
+      cloth:
+      - serializedVersion: 2
+        x: 0.30136573
+        y: 0.13743787
+        width: 0.0024000108
+        height: 0.0024036467
+      cloth2:
+      - serializedVersion: 2
+        x: 0.05700305
+        y: 0.22797288
+        width: 0.0028985962
+        height: 0.00622198
+      skinVerts: 740
+      hairVerts: 320
+      clothVerts: 614
+      cloth2Verts: 442
+      totalVerts: 4529
+      quality: 1
   - moduleId: odyssey.module.pawn.colonist.60
     shape: 4
     prefab: {fileID: 1165589093028652, guid: e335486154b22ae44b3eca1992570c22, type: 3}
@@ -3085,6 +6029,47 @@ MonoBehaviour:
       clip: {fileID: 4763494864668633848, guid: 4dcfcd030150f2e408b985ae4c109387, type: 3}
       speedFromClipName: A_Run_F_RootMotion_Femn
       metresPerSecond: 2.5950913
+    appearance:
+      skin:
+      - serializedVersion: 2
+        x: 0.02084834
+        y: 0.18580522
+        width: 0.0024344362
+        height: 0.002898693
+      - serializedVersion: 2
+        x: 0.011140337
+        y: 0.18864949
+        width: 0.0024001487
+        height: 0.0024001002
+      hair:
+      - serializedVersion: 2
+        x: 0.39831424
+        y: 0.4683986
+        width: 0.004132211
+        height: 0.005864352
+      - serializedVersion: 2
+        x: 0.048530824
+        y: 0.19677012
+        width: 0.0040231682
+        height: 0.0028776824
+      cloth:
+      - serializedVersion: 2
+        x: 0.5416953
+        y: 0.20350105
+        width: 0.0024000406
+        height: 0.0024000108
+      cloth2:
+      - serializedVersion: 2
+        x: 0.013155779
+        y: 0.35327882
+        width: 0.0024001189
+        height: 0.0024000108
+      skinVerts: 758
+      hairVerts: 1134
+      clothVerts: 1360
+      cloth2Verts: 256
+      totalVerts: 4139
+      quality: 1
   - moduleId: odyssey.module.item.meal
     shape: 4
     prefab: {fileID: 8752115278972753073, guid: 53e689cdb89924f4eacb5b2f01c0bae0, type: 3}
@@ -3103,6 +6088,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.salvage
     shape: 4
     prefab: {fileID: 1183212502589018, guid: 8c52c17108ac4d14b93017d91e804006, type: 3}
@@ -3121,6 +6117,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.wood
     shape: 4
     prefab: {fileID: 1512692650189916, guid: 64662ae7674b301469fcf38f47b7c658, type: 3}
@@ -3139,6 +6146,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.stone
     shape: 4
     prefab: {fileID: 7211606713778384998, guid: cc46b771562eb3e4793292607fc3f72b, type: 3}
@@ -3157,6 +6175,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.ironore
     shape: 4
     prefab: {fileID: 1168210563750090145, guid: daad3195a405192409324b56eec44e2b, type: 3}
@@ -3175,6 +6204,17 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.item.coal
     shape: 4
     prefab: {fileID: 6873938577213127126, guid: a9a82dc7a09f37741916c33cc3483e7c, type: 3}
@@ -3193,3 +6233,14 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
