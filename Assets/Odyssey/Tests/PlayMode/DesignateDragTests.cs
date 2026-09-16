@@ -4,7 +4,10 @@ using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
+using Odyssey.Presentation.Rendering;
+using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
 using UnityEngine.TestTools;
 
@@ -52,8 +55,12 @@ namespace Odyssey.Tests.PlayMode
                     "the bare scenario is meant to start with no standing orders, so this test " +
                     "cannot tell its own drag from the scenario's");
 
+                Camera camera = Camera.main!;
+                Assume.That(TryFindATreeOnScreen(boot, camera, out Vector2 tree), Is.True,
+                    "no tree is visible on this board, so a felling order has nothing to aim at");
+
                 designate.Director.Tool = DesignateTool.Fell;
-                yield return _mouse.Drag(Near(0.4f, 0.4f), Near(0.6f, 0.6f));
+                yield return _mouse.Drag(tree - new Vector2(60f, 60f), tree + new Vector2(60f, 60f));
                 for (int i = 0; i < SettleFrames; i++) yield return null;
 
                 Assert.That(MarkedCells(boot), Is.GreaterThan(0),
@@ -89,8 +96,12 @@ namespace Odyssey.Tests.PlayMode
                 yield return RigWorld.SettleCamera(rig);
                 Assume.That(MarkedCells(boot), Is.Zero);
 
+                Camera camera = Camera.main!;
+                Assume.That(TryFindATreeOnScreen(boot, camera, out Vector2 tree), Is.True,
+                    "no tree is visible on this board, so a felling order has nothing to aim at");
+
                 designate.Director.Tool = DesignateTool.Fell;
-                yield return _mouse.Click(Near(0.5f, 0.45f));
+                yield return _mouse.Click(tree);
                 for (int i = 0; i < SettleFrames; i++) yield return null;
 
                 Assert.That(MarkedCells(boot), Is.GreaterThan(0),
@@ -120,7 +131,10 @@ namespace Odyssey.Tests.PlayMode
 
                 Assume.That(designate.Director.Tool, Is.EqualTo(DesignateTool.None));
 
-                yield return _mouse.Drag(Near(0.4f, 0.4f), Near(0.6f, 0.6f));
+                Camera camera = Camera.main!;
+                Assume.That(TryFindATreeOnScreen(boot, camera, out Vector2 tree), Is.True);
+
+                yield return _mouse.Drag(tree - new Vector2(60f, 60f), tree + new Vector2(60f, 60f));
                 for (int i = 0; i < SettleFrames; i++) yield return null;
 
                 Assert.That(MarkedCells(boot), Is.Zero,
@@ -168,6 +182,41 @@ namespace Odyssey.Tests.PlayMode
             foreach (byte order in snapshot.Designations)
                 if (order != 0) marked++;
             return marked;
+        }
+
+        /// <summary>
+        /// Where a tree is, on screen.
+        ///
+        /// <para><b>Both of these tests failed before this existed, and the reason was the test
+        /// rather than the feature.</b> They clicked and dragged at fractions of the screen and
+        /// asserted that orders appeared — but felling only applies to a tree, so a gesture that
+        /// lands on grass is refused, correctly and silently, and the assertion reads exactly like
+        /// a broken feature. An oracle has to aim at something it knows is there.</para>
+        ///
+        /// <para>The tree comes from the render mirror, which is what the camera is looking at, so
+        /// projecting its floor centre gives a point the ray will meet. Cells behind the camera or
+        /// off the screen are skipped: the board is bigger than the view.</para>
+        /// </summary>
+        static bool TryFindATreeOnScreen(OdysseyBootstrap boot, Camera camera, out Vector2 at)
+        {
+            at = default;
+            WorldRenderModel? model = boot.Model;
+            if (model == null) return false;
+
+            GridSize size = model.Size;
+            for (int i = 0; i < size.CellCount; i++)
+            {
+                if (!NaturalContent.IsTree(model.EdificeDef(i))) continue;
+
+                Vector3 point = camera.WorldToScreenPoint(CellMetrics.FloorCentre(size.FromIndex(i)));
+                if (point.z <= 0f) continue;
+                if (point.x < 0f || point.y < 0f || point.x > Screen.width || point.y > Screen.height) continue;
+
+                at = new Vector2(point.x, point.y);
+                return true;
+            }
+
+            return false;
         }
 
         static Vector2 Near(float x, float y) => new Vector2(Screen.width * x, Screen.height * y);
