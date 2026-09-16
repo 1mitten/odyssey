@@ -78,9 +78,11 @@ jobs:
       # Windows WSL stub in system32, which has no distribution and exits 1 before a script
       # runs. Naming Git Bash by its path in the shell line fails too: the runner cannot parse a
       # shell path with a space in it. So Git's bin goes first on the PATH for the rest of the
-      # job, from the one shell that is always present.
+      # job, from the one shell that is genuinely always present: "powershell" is Windows
+      # PowerShell 5.1, shipped with the OS. "pwsh" is PowerShell 7, a separate install this
+      # machine does not have, and a step asking for it dies with "pwsh: command not found".
       - name: Put Git Bash on the PATH
-        shell: pwsh
+        shell: powershell
         run: Add-Content -Path $env:GITHUB_PATH -Value 'C:\Program Files\Git\bin'
 
       - name: Which editor
