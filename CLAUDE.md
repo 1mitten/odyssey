@@ -81,7 +81,18 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 
 **Before more features, open the seams.** The mining line was 73 files and had to edit six shared
 files to add itself, five of which should have been extension points. The table and the order are in
-`docs/plans/vertical-slice.md`, "Where the seams are".
+`docs/plans/vertical-slice.md`, "Where the seams are" — **audited against the code on 2026-09-17,
+because it had gone stale and misled a session into recommending work that had already landed.**
+
+- **Content is written once** (2026-09-17). `PawnContent.Core()` is deleted and the XML under
+  `Assets/Odyssey/Defs/Core/Pawns` is the only copy; every caller goes through
+  `ContentPack.Pawns()`, which finds the pack by walking up to the repository root and caches the
+  parse. A built player would not find it — nothing builds one, and `ContentPack.UseRoot` is the
+  tested seam for the day something does. **The world tables are still doubled** (`CoreContent.Terrain`,
+  `NaturalContent.Terrain` against `Defs/Core/World/*.xml`); that is the remaining half.
+- **Work givers register themselves** (OQ-44): a giver in the simulation assembly joins by existing.
+- **Still open:** mesh contributors for `ChunkMesher` (OQ-46), and `OdysseyBootstrap` wiring every
+  presentation system by hand — the one chokepoint with no queue row.
 
 ### What runs today
 
@@ -134,7 +145,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~10 s, no Unity): **428 Sim + 106 Hud**.
+- **Fast tier** (`scripts/test-fast.sh`, ~10 s, no Unity): **432 Sim + 106 Hud**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and

@@ -29,7 +29,7 @@ Written 2026-09-16 from evidence rather than taste: the mining line on `claude/m
 
 | Chokepoint | Why a feature has to touch it | What it should be |
 |---|---|---|
-| `Sim/Pawns/PawnContent.cs` | every item, job and work type is a C# constant and a table in code | XML Defs. `OQ-15` and `OQ-16` are written and open; the `TODO(content)` markers name the spot |
+| `Sim/Pawns/PawnContent.cs` | every item, job and work type was a C# constant and a table in code | **done for pawns** (`OQ-15`, then `OQ-48` on 2026-09-17). The XML under `Assets/Odyssey/Defs/Core/Pawns` is the only copy: `PawnContent.Core()` and its 163 lines of hand-written tables are gone, every call site loads through `ContentPack.Pawns()`, and a fingerprint guards the content in place of the old field-for-field oracle. **The world half is still open** — `CoreContent.Terrain` and `NaturalContent.Terrain` are in-code tables mirrored by `Defs/Core/World/*.xml` (`OQ-16` loaded them; nothing reads the XML yet), and the `TODO(content)` in `WorldGenDefs.cs:254` names the spot |
 | `Sim/Pawns/JobSystem.cs` | `DefaultGivers()` is a hardcoded array, so a new job is an edit to a shared file | givers registered by Def, the way intents are registered by `AddIntentHandler` |
 | `Sim.Contracts/Views.cs` | a new thing a pawn can do needs a new field on the published frame | the snapshot already has `AddSnapshotContributor`; the pawn view has no equivalent |
 | `Presentation/Bootstrap/OdysseyBootstrap.cs` | the composition root wires every system by hand | it already delegates the colony to `ColonyComposition.AddColony`; the same treatment for presentation |
@@ -40,7 +40,7 @@ The last row is the point. One of the six is a designed seam and cost nothing; t
 
 **The order to do it in, cheapest and most load-bearing first.**
 
-1. **`OQ-15` and `OQ-16`, content to Defs.** Already specified, already have their acceptance tests written into the rows, and they remove the largest chokepoint. Mining's stone, the pick and its work type all land as data afterwards rather than as edits to `PawnContent`.
+1. ~~**`OQ-15` and `OQ-16`, content to Defs.**~~ **Done for pawns** (`OQ-15` moved the tables to XML, `OQ-48` made the XML the source and deleted `PawnContent.Core()`), and it removed the largest chokepoint as expected: a new item, job or work type is now written once, in XML, with no C# to keep in step. **What is left of this step is the world tables** — terrain and ores load from `Defs/Core/World/*.xml` in a test but the generators still read the in-code arrays, so `CoreContent.Terrain` and `NaturalContent.Terrain` are the remaining duplicate. Smaller than the pawn half and subtler: a terrain index is in every cell of every save and every hash, so the order is the risk rather than the values.
 2. **Work givers by registration.** A dozen lines: `JobSystem` takes givers from a list the composition adds to, as `SimWorldBuilder.AddIntentHandler` already does for intents. Mining's `MineWorkGiver` then adds itself.
 3. **A pawn-view contributor**, mirroring `ISnapshotContributor`, so a feature can publish what the interface needs without widening a struct everyone reads.
 4. **Mesh contributors** last, because it is the largest and only the terrain features need it.

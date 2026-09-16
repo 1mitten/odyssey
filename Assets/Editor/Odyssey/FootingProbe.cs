@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
@@ -42,7 +43,7 @@ namespace Odyssey.EditorTools
             var nav = new NavGraph(grid);
             nav.Rebuild();
             var pawns = new PawnContext(
-                grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core())
+                grid, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns())
                 { Chunks = chunks };
             var support = new SupportSystem(grid, new SupportSolver(grid), chunks);
             var designations = new DesignationGrid(grid, result.Edifices);
@@ -207,7 +208,7 @@ namespace Odyssey.EditorTools
                         Debug.Log($"[Footing] tick {tick}: pawn {pawn.Id.Value} is taking a " +
                                   $"{size.FromIndex(pawn.Cell)} -> {size.FromIndex(next)} step " +
                                   $"costing {cost} units ({cost / 100f:0.0} flat cells, " +
-                                  $"{cost / (float)PawnContent.Core().Movement.movePerTick:0} ticks)");
+                                  $"{cost / (float)ContentPack.Pawns().Movement.movePerTick:0} ticks)");
                     }
                 }
             }

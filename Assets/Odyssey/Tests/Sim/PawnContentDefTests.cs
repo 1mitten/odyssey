@@ -1,6 +1,5 @@
 #nullable enable
-using System;
-using System.Collections.Generic;
+using System.IO;
 using NUnit.Framework;
 using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pawns;
@@ -8,71 +7,162 @@ using Odyssey.Sim.Pawns;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The pawn tuning now lives in XML (OQ-15), and this is what makes that safe: the XML and
-    /// <see cref="PawnContent.Core"/> are compared field for field, and <c>Core</c> stays as the
-    /// oracle until the bootstrap loads content at startup.
+    /// The pawn tuning lives in XML and the simulation loads it, which is the whole of OQ-15 and
+    /// the half of it that was left open until 2026-09-17.
     ///
-    /// <para><b>Why an oracle rather than a golden file.</b> A baked hash of the XML would prove
-    /// only that the XML has not changed, which is not the question. The question is whether the
-    /// content a clone loads is the content the simulation has been measured on — every soak
-    /// hash, every golden, every tuning decision in <c>docs/research</c> was taken against
-    /// <c>Core()</c>. So <c>Core()</c> is the specification and the XML is the implementation,
-    /// and the day they part is the day this fails with the field that differs.</para>
+    /// <para><b>Why this is a fingerprint now and was an oracle before.</b> While the game built
+    /// its content from <c>PawnContent.Core()</c>, the right test was "the XML says the same as
+    /// the code", because the code was the specification every soak hash and tuning decision had
+    /// been measured against; the file said so, and said the oracle would stand <i>"until the
+    /// bootstrap loads content at startup"</i>. It does now. There is no second copy left to
+    /// disagree with — keeping one would have meant writing every new item, job and work type
+    /// twice for ever, which is the cost the row existed to remove — so the question changes from
+    /// "do the two copies agree" to the one a golden answers: <b>has the content moved without
+    /// anybody saying so?</b></para>
     ///
-    /// <para>The comparison walks public fields recursively rather than listing them, so a field
-    /// added to a Def tomorrow is compared without anybody remembering to add it here. That is
-    /// also why <see cref="TheComparisonCanFail"/> exists: a reflective comparer that quietly
-    /// walks nothing would pass forever, and this one is made to fail on demand before it is
-    /// trusted.</para>
+    /// <para>The fingerprint walks the loaded record by reflection, the same walk
+    /// <see cref="DefComparison.Differences"/> uses, so a field added to a Def tomorrow is
+    /// covered without anybody remembering to come back here. A legitimate content change costs
+    /// one deliberate line; an accidental one fails loudly. When it fails and you did not expect
+    /// it, <c>git diff Assets/Odyssey/Defs/Core</c> is the answer to "what moved" — that is the
+    /// only way content can change.</para>
+    ///
+    /// <para>The controls matter more than usual: a reflective walk that quietly reached nothing
+    /// would return the bare offset basis and pass for ever. Each one perturbs a single value at
+    /// a different depth and requires the number to move, and each was seen to fail first.</para>
     /// </summary>
     public class PawnContentDefTests
     {
+        /// <summary>
+        /// A pack of its own, loaded fresh.
+        ///
+        /// <para>Not <see cref="ContentPack.Pawns"/>, deliberately: that shares one parsed
+        /// database between every caller, and a control here writes to a Def reached through the
+        /// record it is given. Through the shared database that write would land in every test
+        /// that ran afterwards.</para>
+        /// </summary>
         static DefDatabase LoadCore() => ContentPack.LoadCore(RepoPaths.CoreDefs);
 
+        /// <summary>
+        /// The content as it stands. Update this number only when you meant to change the
+        /// content, and say what moved in the commit message.
+        /// </summary>
+        const ulong ContentFingerprint = 3197150531378429983UL;
+
         [Test]
-        public void TheXmlIsTheSameContentAsTheCodeOracle()
+        public void TheContentIsStillWhatItWas()
         {
-            PawnContent fromXml = PawnContent.FromDefs(LoadCore());
+            ulong actual = DefComparison.Fingerprint(ContentPack.Pawns(), "PawnContent");
 
-            var differences = DefComparison.Differences(PawnContent.Core(), fromXml, "PawnContent");
-
-            Assert.That(differences, Is.Empty,
-                "the XML content and PawnContent.Core() have parted:" + Environment.NewLine +
-                string.Join(Environment.NewLine, differences));
+            Assert.That(actual, Is.EqualTo(ContentFingerprint),
+                "the pawn content has moved. If that was deliberate, set ContentFingerprint to " +
+                $"{actual}UL and say what changed. If it was not, `git diff Assets/Odyssey/Defs/Core` " +
+                "is what moved.");
         }
 
         /// <summary>
-        /// The control. One value is changed in the loaded content and the comparison must name
-        /// exactly that field — otherwise the test above passes because the comparer walks
-        /// nothing, which is the failure mode a reflective comparer has.
+        /// The seam this row opened: the simulation finds its content without being handed a path,
+        /// from the fast tier's bin directory and from Unity's ScriptAssemblies alike. Everything
+        /// else in this file loads a pack explicitly, so nothing else would notice if the walk up
+        /// to the repository root broke.
         /// </summary>
         [Test]
-        public void TheComparisonCanFail()
+        public void TheContentPackIsFoundWithoutBeingToldWhereItIs()
         {
-            PawnContent fromXml = PawnContent.FromDefs(LoadCore());
-            fromXml.Items[ItemIndex.Wood].stackLimit += 1;
+            PawnContent content = ContentPack.Pawns();
 
-            var differences = DefComparison.Differences(PawnContent.Core(), fromXml, "PawnContent");
+            Assert.That(content.Items, Has.Length.GreaterThan(0));
+            Assert.That(content.Items[ItemIndex.Wood].defName, Is.EqualTo("Item_Wood"));
+            Assert.That(content.Movement.movePerTick, Is.GreaterThan(0));
+        }
 
-            Assert.That(differences, Has.Count.EqualTo(1), string.Join(Environment.NewLine, differences));
-            Assert.That(differences[0], Does.Contain("Items[2].stackLimit"));
+        /// <summary>
+        /// Each caller gets its own record, because <c>MineJobTests</c> writes to one it was
+        /// handed. Sharing the record would leak that into every test that ran afterwards, and the
+        /// leak would look like a flaky test rather than a cache.
+        /// </summary>
+        [Test]
+        public void EveryCallerGetsItsOwnRecord()
+        {
+            PawnContent first = ContentPack.Pawns();
+            PawnContent second = ContentPack.Pawns();
+            Assert.That(first, Is.Not.SameAs(second));
+
+            int was = first.StoneChanceOneIn;
+            first.StoneChanceOneIn = was + 1;
+
+            Assert.That(ContentPack.Pawns().StoneChanceOneIn, Is.EqualTo(was));
+        }
+
+        /// <summary>
+        /// The seam a built player will need. Nothing builds one yet, so this is the only thing
+        /// standing between <see cref="ContentPack.UseRoot"/> and being discovered broken on the
+        /// day somebody first points it at <c>StreamingAssets</c>.
+        /// </summary>
+        [Test]
+        public void ThePackCanBeToldWhereItIsInsteadOfFindingItself()
+        {
+            try
+            {
+                ContentPack.UseRoot(RepoPaths.CoreDefs);
+                Assert.That(DefComparison.Fingerprint(ContentPack.Pawns(), "PawnContent"),
+                    Is.EqualTo(ContentFingerprint), "an explicit root loaded different content");
+
+                ContentPack.UseRoot(Path.Combine(RepoPaths.Root, "no", "such", "pack"));
+                Assert.Throws<DefLoadException>(() => _ = ContentPack.Pawns());
+            }
+            finally
+            {
+                // Global state: leave it as the rest of the suite expects to find it.
+                ContentPack.Reset();
+            }
+
+            Assert.That(DefComparison.Fingerprint(ContentPack.Pawns(), "PawnContent"),
+                Is.EqualTo(ContentFingerprint), "Reset did not restore the repository's own pack");
+        }
+
+        /// <summary>
+        /// The control. One value is changed in the loaded content and the fingerprint must move
+        /// — otherwise the test above passes because the walk reaches nothing, which is the
+        /// failure mode a reflective walk has.
+        /// </summary>
+        [Test]
+        public void TheFingerprintNoticesAChangedField()
+        {
+            PawnContent content = PawnContent.FromDefs(LoadCore());
+            ulong before = DefComparison.Fingerprint(content, "PawnContent");
+
+            content.Items[ItemIndex.Wood].stackLimit += 1;
+
+            Assert.That(DefComparison.Fingerprint(content, "PawnContent"), Is.Not.EqualTo(before));
+            Assert.That(before, Is.EqualTo(ContentFingerprint), "the freshly loaded pack is the shipped one");
         }
 
         /// <summary>
         /// A deeper control: the walk must reach inside a list of nested records, which is where
-        /// the need bands live and where a comparer that stops at the first object would silently
+        /// the need bands live and where a walk that stopped at the first object would silently
         /// stop looking.
         /// </summary>
         [Test]
-        public void TheComparisonReachesInsideNestedLists()
+        public void TheFingerprintReachesInsideNestedLists()
         {
-            PawnContent fromXml = PawnContent.FromDefs(LoadCore());
-            fromXml.Needs[NeedIndex.Rest].bands[2].fallPerInterval += 1;
+            PawnContent content = PawnContent.FromDefs(LoadCore());
+            ulong before = DefComparison.Fingerprint(content, "PawnContent");
 
-            var differences = DefComparison.Differences(PawnContent.Core(), fromXml, "PawnContent");
+            content.Needs[NeedIndex.Rest].bands[2].fallPerInterval += 1;
 
-            Assert.That(differences, Has.Count.EqualTo(1), string.Join(Environment.NewLine, differences));
-            Assert.That(differences[0], Does.Contain("Needs[1].bands[2].fallPerInterval"));
+            Assert.That(DefComparison.Fingerprint(content, "PawnContent"), Is.Not.EqualTo(before));
+        }
+
+        /// <summary>
+        /// The walk must be reading real values rather than folding a constant, which the two
+        /// controls above would not catch if it returned the same number for everything.
+        /// </summary>
+        [Test]
+        public void TheFingerprintIsNotTheEmptyWalk()
+        {
+            Assert.That(DefComparison.Fingerprint(ContentPack.Pawns(), "PawnContent"),
+                Is.Not.EqualTo(DefComparison.Fingerprint(new PawnContent(), "PawnContent")));
         }
 
         /// <summary>

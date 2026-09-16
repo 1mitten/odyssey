@@ -2,6 +2,7 @@
 using NUnit.Framework;
 using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
@@ -36,7 +37,7 @@ namespace Odyssey.Tests.Sim
 
             var nav = new NavGraph(grid);
             nav.Rebuild();
-            var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core());
+            var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns());
             var solver = new SupportSolver(grid);
             var support = new SupportSystem(grid, solver);
 
