@@ -68,6 +68,27 @@ namespace Odyssey.Sim.Worldgen.Natural
             return this;
         }
 
+        /// <summary>
+        /// The barren board with its woodland put back: flat, grass in every cell, no outcrops,
+        /// ore or bare patches, and trees at this def's own density in the clumped, cleared
+        /// pattern the natural map grows them in. The start pass still clears a stand around the
+        /// start location, so the colony begins on open ground with wood a short walk away.
+        ///
+        /// This is what the scene loads from 2026-09-16, by owner decision: trees are the first
+        /// resource the colony works, so the board needs them, and nothing else the natural map
+        /// scatters is wanted yet. It is a mode of its own rather than a flag on
+        /// <see cref="MakeBarren"/> because the barren board's argument — anything that is not
+        /// grass is a bug — is exactly what a wooded board gives up.
+        /// </summary>
+        public NaturalMapGenDef MakeWooded()
+        {
+            int trees = treeDensityPerMille;
+            MakeBarren();
+            treeDensityPerMille = trees;
+            barren = false;
+            return this;
+        }
+
         // ---- pass 1, heightfield -------------------------------------------------------------
 
         /// <summary>

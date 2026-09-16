@@ -40,16 +40,22 @@ namespace Odyssey.Hud
         {
             Rows.Clear();
 
-            int meals = 0, salvage = 0;
+            // Stacks, not piles: a pile of twenty meals is twenty in the ledger, which is the
+            // number the player is deciding on.
+            int meals = 0, salvage = 0, wood = 0;
             var things = snapshot.Things;
             for (int i = 0; i < things.Length; i++)
             {
-                if (things[i].DefIndex == ItemHandle.Meal) meals++;
-                else if (things[i].DefIndex == ItemHandle.Salvage) salvage++;
+                int stack = things[i].Stack;
+                if (things[i].DefIndex == ItemHandle.Meal) meals += stack;
+                else if (things[i].DefIndex == ItemHandle.Salvage) salvage += stack;
+                else if (things[i].DefIndex == ItemHandle.Wood) wood += stack;
             }
 
             if (meals > 0) Rows.Add(new LedgerRow
                 { IconKey = "ui.res.meal", Name = "Meals", Quantity = meals, Real = true });
+            if (wood > 0) Rows.Add(new LedgerRow
+                { IconKey = "ui.res.wood", Name = "Wood", Quantity = wood, Real = true });
             if (salvage > 0) Rows.Add(new LedgerRow
                 { IconKey = "ui.res.scrap", Name = "Salvage", Quantity = salvage, Real = true });
 

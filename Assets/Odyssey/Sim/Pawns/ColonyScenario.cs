@@ -18,6 +18,39 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public static class ColonyScenario
     {
+        /// <summary>
+        /// Meals in each starting pile. Twelve piles of twenty is 240 meals. Measured, not
+        /// estimated: five colonists ate 120 meals in about 7.8 days on the ten-day soak (seed 1),
+        /// which is 15 a day, so ten days is about 155 and this leaves a good half in hand. The
+        /// arithmetic from the Defs said 9 a day and was wrong, which is why the number comes
+        /// from the run. The ten-day run proves the simulation is stable unattended, not that a
+        /// food economy balances, and nothing in the slice makes food (OQ-39); the pantry is sized
+        /// so the gate measures the simulation.
+        /// </summary>
+        public const int MealsPerPile = 20;
+
+        /// <summary>
+        /// Mark every tree within <paramref name="radius"/> cells of the start for felling, on the
+        /// start layer. The scene does this before its first tick so the colony has work from the
+        /// moment it exists; a scenario choice, not a player command, so it writes the grid
+        /// directly rather than queueing intents. Returns how many trees were marked.
+        /// </summary>
+        public static int DesignateTreesNear(Designations.DesignationGrid designations, CellRef start, int radius)
+        {
+            GridSize size = designations.Size;
+            int marked = 0;
+            for (int dz = -radius; dz <= radius; dz++)
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                int x = start.X + dx, z = start.Z + dz;
+                if (!size.Contains(x, z, start.Y)) continue;
+                var cell = new CellRef(x, z, start.Y);
+                if (!designations.IsTree(size.Index(cell))) continue;
+                if (designations.Designate(cell, Designations.DesignationKind.Fell) == IntentRejection.None) marked++;
+            }
+            return marked;
+        }
+
         /// <summary>What a placement actually managed to do, so a caller can check rather than hope.</summary>
         public readonly struct Result
         {
@@ -110,7 +143,7 @@ namespace Odyssey.Sim.Pawns
 
             int placedMeals = 0;
             for (int i = 0; i < meals && take < spots.Count; i++, take++, placedMeals++)
-                pawns.Items.Spawn(ItemIndex.Meal, spots[take], stack: 4);
+                pawns.Items.Spawn(ItemIndex.Meal, spots[take], stack: MealsPerPile);
 
             int placedBeds = 0;
             for (int i = 0; i < colonistCount && take < spots.Count; i++, take++, placedBeds++)

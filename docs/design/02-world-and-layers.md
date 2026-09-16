@@ -86,6 +86,12 @@ Worldgen stamps buildings that are already standing, so their slabs must begin l
 
 Worldgen must also guarantee that every stamped shell is *initially* consistent, or the first tick collapses the map. The generation pass ends with a full support solve and an assertion; a template that fails it is a content bug caught in a test, not at runtime.
 
+**Measured 2026-09-16, and the assertion has two halves as a result.** Wiring that solve in (pass 10's `SupportConsistencyCheck`) showed that the shipped templates stand on the ordinary rule with every construction mark revoked — nothing at all comes down on seeds 1 to 10 of the slice map. What does come down is damage: the damage pass removes walls that were holding slabs up, and 21 to 85 slabs per map, 0.6% to 2.4% of them, are then standing on construction trust alone. Almost all are on the top two storeys, and the map reaches a fixed point in two solves.
+
+So the check **sheds rather than complains** on a damaged map: what cannot stand comes down once, at generation, and the world starts in the state its own rule produces. A ruin that has stood for decades has already dropped what those walls carried, so this is also what a ruin should look like. With damage off — the templates sitting their own exam — shedding is switched off and a single collapse throws, naming the cell and the template. That is the content gate, and it is the half that catches a template which cannot hold itself up.
+
+This does not soften the runtime tension described above. Construction trust still means a pre-war span keeps standing until a colonist disturbs what is under it; the difference is that the span now demonstrably *could* stand, because generation proved it.
+
 ## 5. Vertical connectors
 
 Vertical movement happens **only** through connectors. There are no slopes, no half-heights and no free climbing.

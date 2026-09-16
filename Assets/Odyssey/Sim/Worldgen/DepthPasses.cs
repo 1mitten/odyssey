@@ -414,18 +414,19 @@ namespace Odyssey.Sim.Worldgen
     /// The start is the walkable street cell nearest the middle of the map: streets are the
     /// circulation, so starting on one guarantees the colony can reach something.
     ///
-    /// The pass then asserts the map is internally consistent. What it does **not** yet do is the
-    /// full support solve the design document requires — see <see cref="IStructuralConsistencyCheck"/>
-    /// and the TODO there. The hook is called if one is supplied, so the day SupportSolver lands,
-    /// wiring it in is one line at the call site and every existing test starts checking it.
+    /// The pass then asserts the map is internally consistent, in two steps. First the cheap
+    /// bookkeeping invariants below. Then the full support solve the design document requires:
+    /// <see cref="SupportConsistencyCheck"/> is the default, so a map that cannot hold itself up
+    /// fails generation rather than collapsing on tick one. A caller may substitute its own
+    /// <see cref="IStructuralConsistencyCheck"/>; stopping before pass 10 is how a test skips it.
     /// </summary>
     public sealed class StartPass : IWorldGenPass
     {
-        readonly IStructuralConsistencyCheck? _structuralCheck;
+        readonly IStructuralConsistencyCheck _structuralCheck;
 
         public StartPass(IStructuralConsistencyCheck? structuralCheck = null)
         {
-            _structuralCheck = structuralCheck;
+            _structuralCheck = structuralCheck ?? new SupportConsistencyCheck();
         }
 
         public int Order => 10;
@@ -436,17 +437,12 @@ namespace Odyssey.Sim.Worldgen
             ctx.Report.StartCell = ChooseStart(ctx);
             AssertConsistent(ctx);
 
-            // TODO(SupportSolver): replace this with an unconditional full solve over the grid
-            // once Assets/Odyssey/Sim/World/SupportSolver.cs exists, per
-            // docs/design/02-world-and-layers.md section 4 ("worldgen must also guarantee that
-            // every stamped shell is initially consistent, or the first tick collapses the map")
-            // and section 6 pass 10. Until then the assertion below is structural bookkeeping
-            // only and does not prove that anything stands up.
-            if (_structuralCheck != null)
-            {
-                _structuralCheck.Verify(ctx.Grid, ctx);
-                ctx.Report.StructuralCheckRan = true;
-            }
+            // The structural guarantee of section 4: "worldgen must also guarantee that every
+            // stamped shell is initially consistent, or the first tick collapses the map". The
+            // default check clears construction trust and solves the whole grid, so reaching the
+            // next line means the map stands on the ordinary rule alone.
+            _structuralCheck.Verify(ctx.Grid, ctx);
+            ctx.Report.StructuralCheckRan = true;
 
             // TODO(items): "scatter starting resources" is the other half of this pass. It needs
             // the thing registry, which does not exist yet; nothing about the cell grid changes

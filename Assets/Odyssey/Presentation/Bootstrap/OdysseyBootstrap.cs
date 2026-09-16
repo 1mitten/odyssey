@@ -6,6 +6,7 @@ using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
@@ -46,11 +47,17 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Natural wilderness is the prototype default (ADR 0008). RuinedCity is kept and still works.")]
         public MapType mapType = MapType.Natural;
 
-        [Tooltip("Flat grass everywhere, no trees, rock or ore. The plain board to build from.")]
+        [Tooltip("Flat grass everywhere, no rock or ore. The plain board to build from.")]
         public bool barrenMap = true;
+
+        [Tooltip("With barrenMap: keep the woodland, so there are trees to fell. Off gives the bare board.")]
+        public bool woodedMap = true;
 
         [Tooltip("Colonists spawned near the start location when the scene begins.")]
         public int colonistCount = 5;
+
+        [Tooltip("Every tree within this many cells of the start is marked for felling before the first tick, so the colony has work from the moment it exists. 0 marks nothing.")]
+        public int startingFellRadius = 10;
 
         [Tooltip("Which faces the colonists get. 0 draws a fresh cast every session; any other value pins one, and the log prints the value each session used so a cast you liked can be kept.")]
         public int colonistLookSeed = 0;
@@ -104,7 +111,11 @@ namespace Odyssey.Presentation.Bootstrap
             // (ADR 0008). The ruined-city generator is still here and still tested; switch
             // mapType to reach it.
             _gen = MapGenerator.DefaultDef(mapType, size);
-            if (barrenMap && _gen is NaturalMapGenDef natural) natural.MakeBarren();
+            if (barrenMap && _gen is NaturalMapGenDef natural)
+            {
+                if (woodedMap) natural.MakeWooded();
+                else natural.MakeBarren();
+            }
 
             var generation = Stopwatch.StartNew();
             MapGenOutcome outcome = MapGenerator.Generate(_grid, seed, _gen);
@@ -129,27 +140,28 @@ namespace Odyssey.Presentation.Bootstrap
             var nav = new NavGraph(_grid);
             nav.Rebuild();
             var pathService = new PathService(new PathFinder(nav));
-            _pawns = new PawnContext(_grid, nav, pathService, PawnContent.Core());
+            _pawns = new PawnContext(_grid, nav, pathService, PawnContent.Core()) { Chunks = chunks };
 
             var support = new SupportSystem(grid, solver, chunks);
-            PawnContext pawns = _pawns;
+            var designations = new DesignationGrid(_grid, edifices);
 
+            // The mirror publishes first so the geometry a frame shows is the one its pawns and
+            // orders were computed against; the colony itself is listed once, in ColonyComposition.
             _world = new SimWorldBuilder()
                 .WithSeed(seed)
                 .WithSize(size)
-                .AddSystem(_ => support)
-                .AddSystem(_ => new NavigationSystem(nav, support))
-                .AddSystem(_ => new NeedsSystem(pawns))
-                .AddSystem(_ => new JobSystem(pawns))
-                .AddSystem(_ => new MovementSystem(pawns))
-                .AddTickable(_ => pawns.Pawns)
                 .AddSnapshotContributor(mirror)
-                .AddSnapshotContributor(pawns.Pawns)
+                .AddColony(_pawns, designations, support, nav)
                 .Build();
 
             var placement = ColonyScenario.Place(_grid, _pawns, outcome.StartCell, seed, colonistCount);
             if (placement.Colonists == 0)
                 Debug.LogError($"[Odyssey] no colonists were placed near {outcome.StartCell}: {placement}");
+            if (startingFellRadius > 0)
+            {
+                int marked = ColonyScenario.DesignateTreesNear(designations, outcome.StartCell, startingFellRadius);
+                Debug.Log($"[Odyssey] {marked} trees within {startingFellRadius} cells of the start are marked for felling");
+            }
 
             // One tick primes the mirror: the contributor runs in the publish phase, so until the
             // world has ticked once there is no published frame and nothing to draw.

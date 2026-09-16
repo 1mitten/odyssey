@@ -127,6 +127,7 @@ namespace Odyssey.Sim.Pawns
         public const int Sleep = JobHandle.Sleep;
         public const int Wander = JobHandle.Wander;
         public const int Wait = JobHandle.Wait;
+        public const int Fell = JobHandle.Fell;
         public const int Count = JobHandle.Count;
     }
 
@@ -149,7 +150,8 @@ namespace Odyssey.Sim.Pawns
     public static class WorkTypeIndex
     {
         public const int Haul = 0;
-        public const int Count = 1;
+        public const int Cutting = 1;
+        public const int Count = 2;
     }
 
     /// <summary>A container for work givers, carrying the natural order they scan in.</summary>
@@ -163,6 +165,7 @@ namespace Odyssey.Sim.Pawns
     {
         public const int Meal = ItemHandle.Meal;
         public const int Salvage = ItemHandle.Salvage;
+        public const int Wood = ItemHandle.Wood;
         public const int Count = ItemHandle.Count;
     }
 
@@ -184,12 +187,18 @@ namespace Odyssey.Sim.Pawns
     public class MovementDef : Def
     {
         /// <summary>
-        /// Cost units retired per tick. A flat cell costs 100, so 2 gives fifty ticks per cell:
-        /// at sixty ticks a second that is a cell every 0.83 s, about 3 m/s, which reads as a
-        /// brisk walk. The previous 10 meant ten ticks a cell, roughly 54 km/h, and colonists
-        /// visibly teleported around the map.
+        /// Cost units retired per tick. A flat cell costs 100, so 1 gives a hundred ticks per
+        /// cell: at sixty ticks a second that is a 2.5 m cell every 1.67 s, or 1.5 m/s, the top
+        /// of the range a person walks at (about 1.3 to 1.5 m/s) — brisk, and clearly a walk.
+        ///
+        /// It used to be 2, which is 3 m/s: a jog, and on screen it was one, because the drawn
+        /// walk cycle covers about 2 m/s and anything faster blends the run clip in. Before that
+        /// it was 10, roughly 54 km/h, and colonists visibly teleported around the map.
+        ///
+        /// A movement-speed modifier belongs in <see cref="Pawn.MovePerTick"/>, not here; and a
+        /// pace between these integers wants the cost scale raised, not a fraction stored.
         /// </summary>
-        public int movePerTick = 2;
+        public int movePerTick = 1;
 
         /// <summary>Estimated cost of a layer change, used to order candidates before pathing.</summary>
         public int layerChangeEstimate = 300;
@@ -246,6 +255,12 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Job starts allowed inside <see cref="ThinkLoopWindowTicks"/> before a stand-down.</summary>
         public int ThinkLoopLimit = 10;
+
+        /// <summary>
+        /// Wood a felled tree leaves on the ground. ASSUMED: nothing in docs/research/ has
+        /// measured it; A8 (plants) is still an open row. One stack, so a single haul clears it.
+        /// </summary>
+        public int WoodPerTree = 20;
 
         public int ThinkLoopWindowTicks = 60;
 
@@ -311,17 +326,24 @@ namespace Odyssey.Sim.Pawns
                 new JobDef { defName = "Job_Sleep", driver = JobIndex.Sleep, casuallyInterruptible = false },
                 new JobDef { defName = "Job_Wander", driver = JobIndex.Wander, expiryTicks = 1_200 },
                 new JobDef { defName = "Job_Wait", driver = JobIndex.Wait, workTicks = 120 },
+                // ASSUMED: ten seconds of work at normal speed, and one tree per job. Nothing in
+                // docs/research/ has measured what a tree should take; A8 (plants) is still open.
+                new JobDef { defName = "Job_Fell", driver = JobIndex.Fell, workTicks = 600, expiryTicks = 6_000 },
             };
 
             content.WorkTypes = new[]
             {
-                new WorkTypeDef { defName = "Work_Haul", label = "hauling", order = 0 },
+                // Cutting scans before hauling at equal priority: felled wood is what there is
+                // to haul, so the order that makes the work exist comes first.
+                new WorkTypeDef { defName = "Work_Haul", label = "hauling", order = 1 },
+                new WorkTypeDef { defName = "Work_Cutting", label = "cutting", order = 0 },
             };
 
             content.Items = new[]
             {
                 new ItemDef { defName = "Item_Meal", label = "ration pack", nutrition = 450 },
                 new ItemDef { defName = "Item_Salvage", label = "salvage" },
+                new ItemDef { defName = "Item_Wood", label = "wood", stackLimit = 75 },
             };
 
             content.Mood = new MoodDef { defName = "Mood_Default" };

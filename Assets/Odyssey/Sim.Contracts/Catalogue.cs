@@ -16,7 +16,8 @@ namespace Odyssey.Sim.Contracts
         public const int Sleep = 2;
         public const int Wander = 3;
         public const int Wait = 4;
-        public const int Count = 5;
+        public const int Fell = 5;
+        public const int Count = 6;
     }
 
     /// <summary>See <see cref="JobHandle"/>: item def indices as <see cref="ThingView"/> carries them.</summary>
@@ -24,6 +25,7 @@ namespace Odyssey.Sim.Contracts
     {
         public const int Meal = 0;
         public const int Salvage = 1;
-        public const int Count = 2;
+        public const int Wood = 2;
+        public const int Count = 3;
     }
 }

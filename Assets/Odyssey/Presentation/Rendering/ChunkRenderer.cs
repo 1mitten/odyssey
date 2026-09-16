@@ -69,22 +69,23 @@ namespace Odyssey.Presentation.Rendering
         public Vector3? ViewerPosition { get; set; }
 
         /// <summary>
-        /// Metres beyond which chunks draw no grass.
+        /// Metres beyond which chunks draw no grass. Infinite by default: grass is drawn to the
+        /// rim of the board.
         ///
-        /// **Why grass and only grass.** A clump is a fan of facets pointing every way, so half its
-        /// faces turn from the sun and render at ambient. Up close you see the lit faces; at range
-        /// the eye averages the clump, and the average is darker than the flat-lit ground beside
-        /// it — so the far meadow went dark exactly where the tufts crowded, and no tint or
-        /// density fixed it because the cause is lighting. Past this distance a tuft is a few
-        /// pixels anyway. Dropping it leaves flat lit ground, which is what the reference art
-        /// does at range and what aerial perspective does in life, and it removes the largest
-        /// instance count in the scene from the far half of the board for free.
-        ///
-        /// Per chunk, against the chunk's bounds, so the cutoff is a 62.5 m step rather than a
-        /// per-instance fade. Cheap and abrupt; if the step shows, the next lever is a ghosted
-        /// band one chunk wide.
+        /// A 110 m cutoff was introduced when the far meadow went dark, on the theory that a
+        /// clump's facets average darker than flat ground at range. The theory was wrong: the
+        /// darkness was the outline pass inking the ground itself at grazing angles, which
+        /// <c>MeadowCheck</c> showed and the outline shader now explains. With that fixed, far
+        /// grass looks as it should from every view, and the cutoff was a workaround that had
+        /// outlived its problem. It is kept as a lever, per chunk against the chunk's bounds, for
+        /// a machine that needs the far half of the board's largest instance count back: on the
+        /// 120-cell meadow the whole field is 116 draw calls and 23,000 instances against 89 and
+        /// 20,400 with the cutoff, measured under <c>MeadowCheck</c> on 2026-09-16.
         /// </summary>
-        public float FoliageDrawDistance { get; set; } = 110f;
+        public float FoliageDrawDistance { get; set; } = DefaultFoliageDrawDistance;
+
+        /// <summary>What the game ships with; <c>MeadowCheck</c> photographs against it.</summary>
+        public const float DefaultFoliageDrawDistance = float.PositiveInfinity;
 
         /// <summary>
         /// Tufts of grass per hundred grass cells. Zero is bare ground. Changing it after chunks

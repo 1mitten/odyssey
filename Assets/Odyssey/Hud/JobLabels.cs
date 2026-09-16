@@ -10,14 +10,14 @@ namespace Odyssey.Hud
     public static class JobLabels
     {
         /// <summary>Parallel to <c>JobIndex</c>: Haul, Eat, Sleep, Wander, Wait.</summary>
-        public static readonly string[] Labels = { "hauling", "eating", "sleeping", "wandering", "waiting" };
+        public static readonly string[] Labels = { "hauling", "eating", "sleeping", "wandering", "waiting", "felling" };
 
         /// <summary>Symbolic icon keys. Wandering and waiting both read as idle at a glance,
         /// which is true, and <c>ui.status.idle</c> is the key that says so.</summary>
         public static readonly string[] IconKeys =
         {
             "ui.status.hauling", "ui.status.eating", "ui.status.sleeping",
-            "ui.status.idle", "ui.status.idle",
+            "ui.status.idle", "ui.status.idle", "ui.status.felling",
         };
 
         public static string Label(int jobDef) =>

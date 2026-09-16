@@ -67,6 +67,18 @@ namespace Odyssey.Sim.World
         /// <summary>An edifice that blocks movement, such as a wall or a closed door.</summary>
         public bool IsBlockedByEdifice(int index) => (Flags[index] & CellFlags.BlockingEdifice) != 0;
 
+        /// <summary>
+        /// Take whatever stands in the cell out of the world: the handle goes, and so does the
+        /// blocking flag. The placement list keeps its slot, so other handles stay valid. A caller
+        /// removing something that blocked must mark navigation dirty itself; a tree blocks
+        /// nothing, so felling one changes no path.
+        /// </summary>
+        public void RemoveEdifice(int index)
+        {
+            Edifice[index] = -1;
+            Flags[index] &= ~CellFlags.BlockingEdifice;
+        }
+
         /// <summary>Can a pawn stand here? Needs somewhere to stand on and nothing in the way.</summary>
         public bool IsWalkable(int index) =>
             !IsSolidTerrain(index) && !IsBlockedByEdifice(index) && HasFloor(index);

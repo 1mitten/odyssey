@@ -197,17 +197,21 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void RealRowsCountStacksAndPlannedRowsStayGreyed()
         {
+            // Two piles of meals, twenty and four, are twenty-four meals, not two; the ledger is
+            // the number the player decides on, and a pile is not a number.
             var snapshot = Frame.Write();
-            snapshot.AddThing(new ThingView(new ThingId(1), new CellRef(1, 1, 1), ItemHandle.Meal, 0));
-            snapshot.AddThing(new ThingView(new ThingId(2), new CellRef(2, 2, 1), ItemHandle.Meal, 0));
+            snapshot.AddThing(new ThingView(new ThingId(1), new CellRef(1, 1, 1), ItemHandle.Meal, 0, stack: 20));
+            snapshot.AddThing(new ThingView(new ThingId(2), new CellRef(2, 2, 1), ItemHandle.Meal, 0, stack: 4));
             snapshot.AddThing(new ThingView(new ThingId(3), new CellRef(3, 3, 1), ItemHandle.Salvage, 0));
+            snapshot.AddThing(new ThingView(new ThingId(4), new CellRef(4, 4, 1), ItemHandle.Wood, 0, stack: 20));
 
             var ledger = new LedgerModel();
             ledger.Refresh(snapshot);
 
             var meals = ledger.Rows.Find(r => r.Name == "Meals");
             Assert.That(meals.Real, Is.True);
-            Assert.That(meals.Quantity, Is.EqualTo(2));
+            Assert.That(meals.Quantity, Is.EqualTo(24));
+            Assert.That(ledger.Rows.Find(r => r.Name == "Wood").Quantity, Is.EqualTo(20), "felled wood is a real row");
 
             Assert.That(ledger.Rows.Find(r => r.Name == "Scrap").Real, Is.False);
             Assert.That(ledger.Rows.Find(r => r.Name == "Scrap").Quantity, Is.Zero);
