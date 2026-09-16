@@ -29,6 +29,7 @@ ui.res.meal,Meal,ui.res,M1,Cooked at a galley. Mood as well as nutrition
 ui.res.protein,Protein paste,ui.res,M1,Reclaimed nutrition. Edible; that is all
 ui.res.meat,Raw meat,ui.res,M1,Butchered. Spoils without cold
 ui.res.produce,Produce,ui.res,M1,"Grown food, uncooked"
+ui.res.wood,Wood,ui.res,M3,"Felled timber. The first thing the colony builds with"
 ui.res.grain,Grain,ui.res,M1,"Bulk staple. Stores well, needs cooking"
 ui.res.fungus,Fungus,ui.res,M1,Grows without light. The underground staple
 ui.res.water,Water,ui.res,M1,Drinking and hydroponics
@@ -144,6 +145,7 @@ ui.arch.tool.salvage,Salvage,ui.arch.tool,M3,"Strip a ruin. Slower than deconstr
 ui.arch.tool.haulurgent,Haul urgently,ui.arch.tool,M3,Jump this to the top of the haul list
 ui.arch.tool.cancel,Cancel,ui.arch.tool,M3,Remove designations and orders
 ui.arch.tool.forbid,Forbid,ui.arch.tool,M3,Hands off this
+ui.arch.tool.fell,Fell trees,ui.arch.tool,M3,Cut a tree down for wood
 ui.arch.tool.allowitem,Allow,ui.arch.tool,M3,Hands back on
 ui.arch.tool.clearrubble,Clear rubble,ui.arch.tool,M3,Remove loose debris from a cell
 ui.arch.tool.extinguish,Extinguish,ui.arch.tool,M3,Put this fire out now

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Saving;
 using Odyssey.Sim.World;
@@ -11,15 +12,16 @@ using Odyssey.Sim.Worldgen.Natural;
 namespace Odyssey.Sim.Pawns
 {
     /// <summary>
-    /// The standard colony world, built the one way everything agrees on: a natural map, the
-    /// navigation graph, the support solver, the five simulation systems in their fixed order,
-    /// and a starting colony placed near the start cell.
+    /// The standard colony world, built the one way everything agrees on: a map, the navigation
+    /// graph with its stamped connectors, the support solver, the simulation systems in their
+    /// fixed order, the designation grid, and a starting colony placed near the start cell.
     ///
     /// **Why this exists.** The same dozen lines of wiring had grown up in four places — the
     /// composition root, the screenshot harness, the measurement harness and the scenario tests —
     /// and they had already drifted once: one built the support system with a chunk grid and the
     /// others without. A headless run that proves the game is bug-free proves nothing if it is
-    /// not running the game's own world, so the world is built here and only here.
+    /// not running the game's own world, so the world is built here and only here, and the
+    /// systems themselves are listed once in <see cref="ColonyComposition.AddColony"/>.
     ///
     /// Pure simulation: no UnityEngine, so it runs in the fast test tier and in any container.
     /// </summary>
@@ -27,6 +29,7 @@ namespace Odyssey.Sim.Pawns
     {
         public CellGrid Grid { get; }
         public PawnContext Pawns { get; }
+        public DesignationGrid Designations { get; }
         public SimWorld World { get; }
         public MapGenOutcome Outcome { get; }
         public ColonyScenario.Result Placement { get; }
@@ -46,12 +49,14 @@ namespace Odyssey.Sim.Pawns
         readonly SupportSolver _solver;
         readonly NavGraph _nav;
 
-        ColonyWorld(CellGrid grid, PawnContext pawns, SimWorld world, MapGenOutcome outcome,
-            ColonyScenario.Result placement, SupportSolver solver, NavGraph nav, JobSystem jobs)
+        ColonyWorld(CellGrid grid, PawnContext pawns, DesignationGrid designations, SimWorld world,
+            MapGenOutcome outcome, ColonyScenario.Result placement, SupportSolver solver, NavGraph nav,
+            JobSystem jobs)
         {
             Jobs = jobs;
             Grid = grid;
             Pawns = pawns;
+            Designations = designations;
             World = world;
             Outcome = outcome;
             Placement = placement;
@@ -64,6 +69,7 @@ namespace Odyssey.Sim.Pawns
                 pawns.Items,
                 pawns.Pawns,
                 jobs,
+                designations,
             };
         }
 
@@ -115,18 +121,27 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// Build the world the play scene plays.
         /// </summary>
-        /// <param name="barren">Flat grass with nothing on it, which is what the scene loads by
-        /// owner instruction. False gives the full natural generator with trees, rock and ore.</param>
+        /// <param name="barren">Flat grass with no rock, ore or bare patches. False gives the full
+        /// natural generator with hills, rock and ore.</param>
         /// <param name="chunks">The presentation chunk grid, when a renderer will be attached, so
-        /// the support system can mark chunks dirty. Null for a purely headless run.</param>
+        /// the support system and the jobs that edit the world can mark chunks dirty. Null for a
+        /// purely headless run.</param>
         /// <param name="mapType">Natural by owner instruction, which is what the scene loads. The
         /// ruined city is still generated and still tested (ADR 0008), and is what the M2 demo
         /// needs, because it is the only map with storeys to climb between.</param>
+        /// <param name="wooded">With <paramref name="barren"/>: keep the woodland, which is what
+        /// the scene loads since 2026-09-16. False is the bare board the tests baseline on.</param>
+        /// <param name="fellRadius">Cells around the start within which every tree is marked for
+        /// felling before the first tick, as the scene does. Zero marks nothing.</param>
         public static ColonyWorld Build(GridSize size, uint seed, int colonists = 5, bool barren = true,
-            ChunkGrid? chunks = null, MapType mapType = MapType.Natural)
+            ChunkGrid? chunks = null, MapType mapType = MapType.Natural, bool wooded = false, int fellRadius = 0)
         {
             MapGenDef gen = MapGenerator.DefaultDef(mapType, size);
-            if (barren && gen is NaturalMapGenDef natural) natural.MakeBarren();
+            if (barren && gen is NaturalMapGenDef natural)
+            {
+                if (wooded) natural.MakeWooded();
+                else natural.MakeBarren();
+            }
 
             var grid = new CellGrid(size);
             MapGenOutcome outcome = MapGenerator.Generate(grid, seed, gen);
@@ -137,27 +152,25 @@ namespace Odyssey.Sim.Pawns
             // appear in the region graph.
             ConnectorRegistrar.Register(nav, grid, outcome.Connectors);
             nav.Rebuild();
-            var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core());
+            var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core())
+            {
+                Chunks = chunks,
+            };
             var solver = new SupportSolver(grid);
             var support = new SupportSystem(grid, solver, chunks);
+            var designations = new DesignationGrid(grid, outcome.Edifices);
             var jobs = new JobSystem(pawns);
 
-            // The order is the schedule: support before navigation because a collapse changes
-            // what is walkable, and needs before jobs because a hungry pawn picks a different job.
             SimWorld world = new SimWorldBuilder()
                 .WithSeed(seed)
                 .WithSize(size)
-                .AddSystem(_ => support)
-                .AddSystem(_ => new NavigationSystem(nav, support))
-                .AddSystem(_ => new NeedsSystem(pawns))
-                .AddSystem(_ => jobs)
-                .AddSystem(_ => new MovementSystem(pawns))
-                .AddTickable(_ => pawns.Pawns)
-                .AddSnapshotContributor(pawns.Pawns)
+                .AddColony(pawns, designations, support, nav, jobs)
                 .Build();
 
             ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed, colonists);
-            var built = new ColonyWorld(grid, pawns, world, outcome, placement, solver, nav, jobs);
+            if (fellRadius > 0) ColonyScenario.DesignateTreesNear(designations, outcome.StartCell, fellRadius);
+
+            var built = new ColonyWorld(grid, pawns, designations, world, outcome, placement, solver, nav, jobs);
             built.RebuildDerived();
             return built;
         }

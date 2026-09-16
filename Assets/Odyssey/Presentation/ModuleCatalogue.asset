@@ -2689,3 +2689,21 @@ MonoBehaviour:
     poseClipName: 
     poseClipTime: 0
     locomotion: []
+  - moduleId: odyssey.module.item.wood
+    shape: 4
+    prefab: {fileID: 1512692650189916, guid: 64662ae7674b301469fcf38f47b7c658, type: 3}
+    prefabName: SM_Prop_LogPile_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 0.4, y: 0.4, z: 0.4}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []

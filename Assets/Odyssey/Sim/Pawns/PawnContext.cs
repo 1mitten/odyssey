@@ -1,5 +1,6 @@
 #nullable enable
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.World;
 
@@ -40,8 +41,32 @@ namespace Odyssey.Sim.Pawns
 
         public uint Seed { get; internal set; }
 
+        /// <summary>The standing orders, when the world has them. Null in a bare pawn fixture.</summary>
+        public DesignationGrid? Designations { get; set; }
+
+        /// <summary>
+        /// The presentation chunk grid, when a renderer is attached, so a job that edits the world
+        /// can say which chunk to re-mesh. Null for a purely headless run.
+        /// </summary>
+        public ChunkGrid? Chunks { get; set; }
+
+        /// <summary>The world being ticked, valid inside a pawn system's tick.</summary>
+        public SimWorld? World { get; private set; }
+
+        /// <summary>
+        /// Queue a world edit for the structural-events phase of this tick. A job that changes
+        /// the map goes through here rather than editing inline, like every other collapse,
+        /// spawn or removal: a scan that is walking the world must never see it move.
+        /// </summary>
+        public void Defer(System.Action<SimWorld> action)
+        {
+            if (World == null) throw new System.InvalidOperationException("no world is being ticked");
+            World.Defer(action);
+        }
+
         internal void Sync(SimWorld world)
         {
+            World = world;
             CurrentTick = world.CurrentTick;
             Seed = world.Seed;
         }

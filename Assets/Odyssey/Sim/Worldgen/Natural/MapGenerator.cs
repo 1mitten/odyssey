@@ -108,6 +108,10 @@ namespace Odyssey.Sim.Worldgen.Natural
 
         public MapType Type { get; }
 
+        /// <summary>Everything standing in a cell, whichever generator placed it. Handles in <c>CellGrid.Edifice</c> index this list.</summary>
+        public System.Collections.Generic.IReadOnlyList<PlacedEdifice> Edifices =>
+            City != null ? City.Context.Edifices : Natural!.Context.Edifices;
+
         /// <summary>Set when <see cref="Type"/> is <see cref="MapType.Natural"/>.</summary>
         public NaturalMapResult? Natural { get; }
 

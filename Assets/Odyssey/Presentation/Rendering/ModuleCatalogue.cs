@@ -303,6 +303,7 @@ namespace Odyssey.Presentation.Rendering
         // picked up and carried moves without any cell changing.
         public const string ItemMeal = Prefix + "item.meal";
         public const string ItemSalvage = Prefix + "item.salvage";
+        public const string ItemWood = Prefix + "item.wood";
 
         /// <summary>
         /// Module ids for item def indices, in <c>ItemIndex</c> order.
@@ -313,7 +314,7 @@ namespace Odyssey.Presentation.Rendering
         /// stand-in box, which is what made a barren map look like it had been spattered with
         /// paint.
         /// </summary>
-        static readonly string[] ItemModules = { ItemMeal, ItemSalvage };
+        static readonly string[] ItemModules = { ItemMeal, ItemSalvage, ItemWood };
 
         /// <summary>How many item def indices have a module. Must equal <c>ItemIndex.Count</c>.</summary>
         public static int ItemModuleCount => ItemModules.Length;

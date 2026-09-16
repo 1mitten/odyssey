@@ -15,12 +15,18 @@ namespace Odyssey.Tests.Presentation
     ///
     /// The speeds used here are the ones actually measured from the pack's root-motion clips,
     /// scaled by the 1.4 the colonist is drawn at: a walk that covers 2.04 m/s and a run that
-    /// covers 3.63. The pawn's own speed of about 3 m/s — a 2.5 m cell every fifty ticks at sixty
-    /// ticks a second — lands between them, which is the case that matters.
+    /// covers 3.63. The pawn's own pace is 1.5 m/s — a 2.5 m cell every hundred ticks at sixty
+    /// ticks a second — which sits below the walk, so at ordinary game speed the run clip must
+    /// carry no weight at all. It did once: at the old 3 m/s the blend was six parts run to
+    /// four parts walk, and the owner reported that colonists ran everywhere by default.
     /// </summary>
     public class GaitBlendTests
     {
         static readonly float[] Colonist = { 0f, 2.04f, 3.63f };
+
+        /// <summary>The pace the simulation moves a colonist at: one cost unit a tick against
+        /// a hundred-unit cell, sixty ticks a second, 2.5 m cells.</summary>
+        const float ColonistPace = 1.5f;
 
         [Test]
         public void StandingStillIsAllIdle()
@@ -33,10 +39,29 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
-        public void AColonistsOwnPaceBlendsWalkIntoRun()
+        public void AColonistsOwnPaceIsAWalkAndNeverARun()
         {
-            // The speed the simulation actually moves a pawn at. It sits between the two moving
-            // gaits, which is the whole reason a run clip was catalogued as well as a walk.
+            // The speed the simulation actually moves a pawn at. It sits below the walk clip's
+            // own stride, so the walk carries the figure and the run stays out of it; and the
+            // walk plays at its authored rate, with the idle taking up the slack, so the stance
+            // foot travels back at the ground's own speed and grips rather than skates.
+            GaitBlend blend = GaitBlend.Solve(Colonist, ColonistPace);
+
+            Assert.That(blend.Lower, Is.EqualTo(0), "idle");
+            Assert.That(blend.Upper, Is.EqualTo(1), "walk");
+            Assert.That(blend.WeightOf(2), Is.EqualTo(0f).Within(1e-4f), "the run is out of it entirely");
+            Assert.That(blend.WeightOf(1), Is.GreaterThan(0.7f), "and it is mostly walk");
+            Assert.That(blend.WeightOf(0) + blend.WeightOf(1), Is.EqualTo(1f).Within(1e-4f));
+            Assert.That(blend.Rate, Is.EqualTo(1f).Within(1e-4f),
+                "inside the range the gaits cover, the authored rate is already the right one");
+        }
+
+        [Test]
+        public void FasterThanTheWalkBlendsWalkIntoRun()
+        {
+            // 3 m/s is what a colonist covers at double game speed, and what the simulation used
+            // to move them at by default. It sits between the two moving gaits, which is the
+            // reason a run clip is catalogued as well as a walk.
             GaitBlend blend = GaitBlend.Solve(Colonist, 3.0f);
 
             Assert.That(blend.Lower, Is.EqualTo(1), "walk");

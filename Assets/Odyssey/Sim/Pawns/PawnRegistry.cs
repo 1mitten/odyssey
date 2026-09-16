@@ -64,6 +64,7 @@ namespace Odyssey.Sim.Pawns
             new SleepJobDriver(),
             new WanderJobDriver(),
             new WaitJobDriver(),
+            new FellJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------

@@ -6,6 +6,7 @@ using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
@@ -46,11 +47,17 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Natural wilderness is the prototype default (ADR 0008). RuinedCity is kept and still works.")]
         public MapType mapType = MapType.Natural;
 
-        [Tooltip("Flat grass everywhere, no trees, rock or ore. The plain board to build from.")]
+        [Tooltip("Flat grass everywhere, no rock or ore. The plain board to build from.")]
         public bool barrenMap = true;
+
+        [Tooltip("With barrenMap: keep the woodland, so there are trees to fell. Off gives the bare board.")]
+        public bool woodedMap = true;
 
         [Tooltip("Colonists spawned near the start location when the scene begins.")]
         public int colonistCount = 5;
+
+        [Tooltip("Every tree within this many cells of the start is marked for felling before the first tick, so the colony has work from the moment it exists. 0 marks nothing.")]
+        public int startingFellRadius = 10;
 
         [Tooltip("Which faces the colonists get. 0 draws a fresh cast every session; any other value pins one, and the log prints the value each session used so a cast you liked can be kept.")]
         public int colonistLookSeed = 0;
@@ -63,6 +70,13 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Tufts of grass per hundred grass cells. 0 is bare ground; 60 is a tuft on six cells in ten.")]
         [Range(0, 300)]
         public int grassScatter = 60;
+
+        [Tooltip("Carry the land on past the rim of the board, so it does not end in mid-air. Decoration only: nothing out there is a cell.")]
+        public bool terrainSkirt = true;
+
+        [Tooltip("How much of the board's own tree density the surround gets. 100 continues the wood; lower is the lever for a machine that cannot afford it.")]
+        [Range(0, 100)]
+        public int skirtTreeDensity = 100;
 
         [Header("Tick")]
         [Tooltip("Ticks per second at speed 1. The simulation has no notion of seconds; this is it.")]
@@ -104,7 +118,11 @@ namespace Odyssey.Presentation.Bootstrap
             // (ADR 0008). The ruined-city generator is still here and still tested; switch
             // mapType to reach it.
             _gen = MapGenerator.DefaultDef(mapType, size);
-            if (barrenMap && _gen is NaturalMapGenDef natural) natural.MakeBarren();
+            if (barrenMap && _gen is NaturalMapGenDef natural)
+            {
+                if (woodedMap) natural.MakeWooded();
+                else natural.MakeBarren();
+            }
 
             var generation = Stopwatch.StartNew();
             MapGenOutcome outcome = MapGenerator.Generate(_grid, seed, _gen);
@@ -129,27 +147,28 @@ namespace Odyssey.Presentation.Bootstrap
             var nav = new NavGraph(_grid);
             nav.Rebuild();
             var pathService = new PathService(new PathFinder(nav));
-            _pawns = new PawnContext(_grid, nav, pathService, PawnContent.Core());
+            _pawns = new PawnContext(_grid, nav, pathService, PawnContent.Core()) { Chunks = chunks };
 
             var support = new SupportSystem(grid, solver, chunks);
-            PawnContext pawns = _pawns;
+            var designations = new DesignationGrid(_grid, edifices);
 
+            // The mirror publishes first so the geometry a frame shows is the one its pawns and
+            // orders were computed against; the colony itself is listed once, in ColonyComposition.
             _world = new SimWorldBuilder()
                 .WithSeed(seed)
                 .WithSize(size)
-                .AddSystem(_ => support)
-                .AddSystem(_ => new NavigationSystem(nav, support))
-                .AddSystem(_ => new NeedsSystem(pawns))
-                .AddSystem(_ => new JobSystem(pawns))
-                .AddSystem(_ => new MovementSystem(pawns))
-                .AddTickable(_ => pawns.Pawns)
                 .AddSnapshotContributor(mirror)
-                .AddSnapshotContributor(pawns.Pawns)
+                .AddColony(_pawns, designations, support, nav)
                 .Build();
 
             var placement = ColonyScenario.Place(_grid, _pawns, outcome.StartCell, seed, colonistCount);
             if (placement.Colonists == 0)
                 Debug.LogError($"[Odyssey] no colonists were placed near {outcome.StartCell}: {placement}");
+            if (startingFellRadius > 0)
+            {
+                int marked = ColonyScenario.DesignateTreesNear(designations, outcome.StartCell, startingFellRadius);
+                Debug.Log($"[Odyssey] {marked} trees within {startingFellRadius} cells of the start are marked for felling");
+            }
 
             // One tick primes the mirror: the contributor runs in the publish phase, so until the
             // world has ticked once there is no published frame and nothing to draw.
@@ -173,6 +192,15 @@ namespace Odyssey.Presentation.Bootstrap
                 ScatterDensity = grassScatter,
                 ColonistLookSalt = lookSalt,
             };
+            _renderer.Skirt.Enabled = terrainSkirt;
+            _renderer.Skirt.TreeDensityPercent = skirtTreeDensity;
+            if (terrainSkirt)
+            {
+                _renderer.Skirt.Build();
+                Debug.Log($"[Odyssey] surround: {_renderer.Skirt.GroundInstances} ground tiles and " +
+                          $"{_renderer.Skirt.TreeInstances} trees beyond the rim, " +
+                          $"at the board's own {_renderer.Skirt.MeasuredTreeDensity} trees per thousand cells");
+            }
             _actorMaterial = new Material(library.FallbackMaterial) { name = "Odyssey/Actor" };
             // High-contrast against grass, earth and stone, which tan was not.
             _actorMaterial.SetColor("_BaseColor", new Color(0.98f, 0.36f, 0.20f));
@@ -393,6 +421,7 @@ namespace Odyssey.Presentation.Bootstrap
                 $"  above: {above}\n" +
                 $"draw calls {_renderer.DrawCalls}   instances {_renderer.InstancesDrawn}" +
                 $"   chunks {_renderer.ChunksDrawn}   materials {_renderer.MaterialCount}" +
+                $"   surround {_renderer.Skirt.InstancesDrawn}" +
                 $"   figures {_figures?.FigureCount ?? 0} @ {_figures?.FastestSpeed ?? 0f:0.0} m/s\n" +
                 $"frame {_smoothedFrameMs:0.00} ms ({(_smoothedFrameMs > 0f ? 1000f / _smoothedFrameMs : 0f):0}fps)" +
                 $"   submit {_renderMs:0.00} ms   tick {_tickMs:0.00} ms   remeshed {_renderer.ChunksMeshedThisFrame}\n" +

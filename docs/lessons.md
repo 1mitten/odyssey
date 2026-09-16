@@ -86,7 +86,11 @@ Two details matter. Use **smooth low-frequency noise, not a per-cell hash** — 
 
 **Where a thing is drawn is not where it can be clicked.** Picking answers with the floor cell a ray crosses, but colonists are drawn as a body and a beacon standing metres clear of that floor so they can be found at a glance. Under a tilted camera the player aims at the beacon and the ray lands a cell or two beyond the pawn. With a pick radius of one, the most natural click in the game — straight at the bright marker — selected nothing, which reads as the click being ignored rather than as a near miss.
 
-**The Windows `python3` stub exits 0 while doing nothing.** There is no Python on PATH on the Windows dev machine, and `python3` resolves to the Microsoft Store app-execution alias, which prints "Python was not found" and **exits 0**. A gate invoked as `python3 tools/wiki/build_wiki.py --check && git commit` therefore passes without ever checking anything. `py -3` does not exist either. This is the same shape as the `dotnet --list-sdks` trap above: **a missing interpreter that reports success is worse than one that reports failure.** Check for real output, not for a zero exit code, and install Python on this machine before the wiki check is relied on here.
+**The Windows `python3` stub exits 0 while doing nothing.** There was no Python on PATH on the Windows dev machine, and `python3` resolved to the Microsoft Store app-execution alias, which prints "Python was not found" and **exits 0**. A gate invoked as `python3 tools/wiki/build_wiki.py --check && git commit` therefore passed without ever checking anything. `py -3` did not exist either. This is the same shape as the `dotnet --list-sdks` trap above: **a missing interpreter that reports success is worse than one that reports failure.** Check for real output, not for a zero exit code.
+
+**Fixed 2026-09-16: Python 3.13.15 is installed on the Windows machine** (`winget install --id Python.Python.3.13 --scope user`), at `%LOCALAPPDATA%\Programs\Python\Python313`, which the installer put *ahead* of `WindowsApps` in the user PATH, so `python` now wins over the alias. CPython on Windows ships no `python3.exe`, so a copy of `python.exe` was placed beside it under that name — without it every `python3 …` command in this repository's documentation still hit the Store stub. A shell started before the install keeps the old PATH: check `python3 -V` prints a version, not the Store message.
+
+**And the second half of that install, which is easy to miss: `PYTHONUTF8=1`.** Windows Python defaults to the locale encoding (cp1252), not UTF-8, so `open(path)` with no `encoding=` mangles every em dash in the docs. The first `build_wiki.py --check` after installing reported **all fourteen wiki files stale** — not stale at all, merely decoded in the wrong codec; the same run in write mode would have rewritten the whole wiki in cp1252. `PYTHONUTF8=1` is now set as a user environment variable on this machine. It is a per-machine plaster: the tools under `tools/` still pass no explicit `encoding=`, so a fresh Windows clone hits this again. **When a checker says everything is stale, suspect the reader before the files.**
 
 **A Synty pack has two kinds of material, and only one of them can be worn by a box.** Props are UV-mapped into a shared colour atlas, where each material is one small swatch of one large image. Put that material on a cell-sized cube and every face samples the whole atlas, which is where the stray blades of grass and the dark patches came from. The Nature Biomes pack also ships **terrain** materials under `PNB_Meadow_Forest/Terrain/`, and those are ordinary tiling textures with no atlas, authored for Unity terrain layers. One of those on the cell-shaped box is what ground needed all along. Three attempts were spent on this: a flat tile prefab that z-fought inside every cell, a prop material that sampled the atlas, and a flat tint that was correct but lifeless. **When a texture comes out as garbage on a primitive, ask what the UVs were authored against before changing the mesh.**
 
@@ -205,6 +209,30 @@ See `d-10-outline-pass.md`.
 **One-sided ink is half the width, so the thickness has to be re-tuned when you switch.** Otherwise
 the change reads as "the outlines have mostly disappeared" rather than "the outlines are now on the
 object".
+
+**A depth-edge test built on the first difference inks flat ground at a grazing angle.** The meadow
+went dark towards the horizon, with the tufts bright and the ground between them ink-green. Three
+diagnoses were reasoned from the source before a picture was taken — facet lighting (which led to a
+110 m grass cutoff), the cut-out texture's mip fringe (which led to a lower clip threshold), and a
+multisample mismatch — and `MeadowCheck` refuted each in one render. The cause: a flat plane seen
+low across the board has its depth change per pixel grow with the *square* of the distance, while a
+threshold that scales with distance grows only linearly, so from about eighty metres out the ground
+itself passed the edge test and was inked. The tufts looked bright only because their own depth
+broke the gradient. The fix is to measure the second difference of *inverse* depth: 1/z is affine
+across the screen on any plane, so a plane scores exactly zero however steeply it recedes, and only a
+real step scores. Two lessons. **Photograph before the second theory, not after the third** — every
+one of the three wrong diagnoses was plausible, and each cost a workaround that then had to be
+removed. And **when a fix lands upstream of a workaround, delete the workaround**: the grass cutoff
+and the lowered threshold both outlived the problem they were guessing at.
+
+**Grass is drawn in the transparent range so that it is never inked.** With the ground fixed, the
+tufts themselves still wore a black cap and a rim under the ink, and the sliver test only ever
+reached the narrowest of them. The depth texture the outline reads is copied after the opaques, so
+a material in the first transparent slot is simply not in it; the tufts are then drawn over the
+inked picture with their depth write and alpha clip intact. No mask pass, no extra draw. The
+outline pass had to move to before the transparents for this to work, and the colour target it
+hands on now keeps the camera's sample count, because what follows draws into it against the
+camera's depth.
 
 ## Diagnosing a colour cast
 

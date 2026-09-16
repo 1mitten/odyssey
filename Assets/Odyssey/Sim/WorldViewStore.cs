@@ -26,6 +26,9 @@ namespace Odyssey.Sim
 
         /// <summary>Claim the slice buffer and write one byte per cell of the active layer.</summary>
         public Span<byte> BeginSlice(int cellCount) => _target.BeginSlice(cellCount);
+
+        /// <summary>Claim the designation buffer and write one byte per cell of the active layer.</summary>
+        public Span<byte> BeginDesignations(int cellCount) => _target.BeginDesignations(cellCount);
     }
 
     /// <summary>

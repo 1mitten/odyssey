@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Saving;
 
@@ -133,7 +134,7 @@ namespace Odyssey.Sim.Pawns
             new IdleThinkNode(),
         };
 
-        public static WorkGiver[] DefaultGivers() => new WorkGiver[] { new HaulWorkGiver() };
+        public static WorkGiver[] DefaultGivers() => new WorkGiver[] { new FellWorkGiver(), new HaulWorkGiver() };
 
         public void Tick(SimWorld world)
         {
@@ -596,6 +597,56 @@ namespace Odyssey.Sim.Pawns
             }
 
             return bestCell;
+        }
+    }
+}
+
+namespace Odyssey.Sim.Pawns
+{
+    /// <summary>
+    /// Fell a tree the player has marked.
+    ///
+    /// The scan walks the designation grid's own list of designated cells, never the map, so
+    /// it costs what the orders cost and not what the board costs. A tree that has already gone
+    /// is skipped here and its order left standing; the driver that reaches it clears it.
+    /// </summary>
+    public sealed class FellWorkGiver : WorkGiver
+    {
+        public override string Name => "Fell";
+
+        public override int WorkType => WorkTypeIndex.Cutting;
+
+        public override bool TryGiveJob(Pawn pawn, PawnContext ctx, Job job)
+        {
+            var designations = ctx.Designations;
+            if (designations == null) return false;
+
+            var cells = designations.Cells;
+            int best = -1;
+            int bestDistance = int.MaxValue;
+
+            for (int i = 0; i < cells.Count; i++)
+            {
+                int cell = cells[i];
+                if (designations.At(cell) != DesignationKind.Fell) continue;
+                if (!designations.IsTree(cell)) continue;
+
+                long key = ReservationManager.Key(ReservationTargetKind.Cell, cell);
+                if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
+
+                int distance = ctx.Distance(pawn.Cell, cell);
+                if (distance >= bestDistance) continue;
+                if (!ctx.Reachable(pawn, cell)) continue;
+
+                bestDistance = distance;
+                best = cell;
+            }
+
+            if (best < 0) return false;
+
+            job.Reset(JobIndex.Fell);
+            job.TargetCell = best;
+            return true;
         }
     }
 }

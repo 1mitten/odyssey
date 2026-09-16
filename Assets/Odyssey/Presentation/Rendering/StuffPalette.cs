@@ -25,6 +25,10 @@ namespace Odyssey.Presentation.Rendering
             new Color(0.92f, 0.91f, 0.88f),            // concrete
             new Color(0.82f, 0.86f, 0.92f),            // steel
             new Color(0.88f, 0.92f, 0.94f),            // composite
+            // Wood continues the table at NaturalContent.StuffWood. White: a tree wears its own
+            // pack material, which is already the right green and brown, and a built wooden wall
+            // will get its own art rather than a tinted concrete one.
+            Color.white,                               // wood
         };
 
         static readonly Color[] StuffSolids =
@@ -33,6 +37,7 @@ namespace Odyssey.Presentation.Rendering
             new Color(0.62f, 0.60f, 0.56f),            // concrete
             new Color(0.48f, 0.53f, 0.60f),            // steel
             new Color(0.60f, 0.66f, 0.70f),            // composite
+            new Color(0.46f, 0.34f, 0.22f),            // wood
         };
 
         static readonly Color[] TerrainSolids =

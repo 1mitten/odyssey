@@ -75,16 +75,31 @@ Shader "Odyssey/Outline"
                 float d2 = EyeDepth(uv + float2(-texel.x,  texel.y));
                 float d3 = EyeDepth(uv + float2( texel.x, -texel.y));
 
-                float gradient = sqrt((d1 - d0) * (d1 - d0) + (d3 - d2) * (d3 - d2));
-
-                // The threshold has to grow with distance or the whole far half of the board
-                // becomes a solid outline: at a fixed tolerance, one pixel spans more metres the
-                // further away it is, so a flat field eventually trips it everywhere. Scaling by
-                // the depth at this pixel keeps the line on real edges at every zoom level.
                 float centre = EyeDepth(uv);
+
+                // The edge measure is the *second* difference of inverse depth, not the first
+                // difference of depth. On any flat surface 1/z is affine across the screen — the
+                // same fact that makes perspective-correct interpolation work — so a plane scores
+                // exactly zero however steeply it recedes, and only a real step in depth scores.
+                //
+                // The first difference could not do this. A flat field seen low across the board
+                // has its depth change per pixel grow with the square of the distance, while the
+                // threshold below grew only linearly with it, so from about eighty metres out the
+                // ground itself tripped the detector and inked over: the meadow went dark towards
+                // the horizon, with the tufts bright because their own depth broke the gradient.
+                // Photographed under MeadowCheck, 2026-09-16, after the ambient occlusion, the
+                // grass cutoff and the grass texture import had each been ruled out.
+                //
+                // Multiplying by the centre depth turns the score into a relative step: a
+                // neighbour at n in front of a centre at c gives (c - n) / n on that diagonal, so
+                // the threshold keeps its meaning as a fraction of distance.
+                float invCentre = 1.0 / centre;
+                float curvature = abs(1.0 / d0 + 1.0 / d1 - 2.0 * invCentre)
+                                + abs(1.0 / d2 + 1.0 / d3 - 2.0 * invCentre);
+                float step = curvature * centre;
                 float threshold = max(_DepthThreshold * centre, 1e-4);
 
-                float edge = saturate((gradient - threshold) / threshold);
+                float edge = saturate((step - _DepthThreshold) / _DepthThreshold);
 
                 // One-sided: keep the ink on the near side of the step, which is the object.
                 //
