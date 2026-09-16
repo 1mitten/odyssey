@@ -71,13 +71,6 @@ namespace Odyssey.Presentation.Bootstrap
         [Range(0, 300)]
         public int grassScatter = 60;
 
-        [Tooltip("Carry the land on past the rim of the board, so it does not end in mid-air. Decoration only: nothing out there is a cell.")]
-        public bool terrainSkirt = true;
-
-        [Tooltip("How much of the board's own tree density the surround gets. 100 continues the wood; lower is the lever for a machine that cannot afford it.")]
-        [Range(0, 100)]
-        public int skirtTreeDensity = 100;
-
         [Header("Tick")]
         [Tooltip("Ticks per second at speed 1. The simulation has no notion of seconds; this is it.")]
         public int ticksPerSecond = 60;
@@ -192,15 +185,6 @@ namespace Odyssey.Presentation.Bootstrap
                 ScatterDensity = grassScatter,
                 ColonistLookSalt = lookSalt,
             };
-            _renderer.Skirt.Enabled = terrainSkirt;
-            _renderer.Skirt.TreeDensityPercent = skirtTreeDensity;
-            if (terrainSkirt)
-            {
-                _renderer.Skirt.Build();
-                Debug.Log($"[Odyssey] surround: {_renderer.Skirt.GroundInstances} ground tiles and " +
-                          $"{_renderer.Skirt.TreeInstances} trees beyond the rim, " +
-                          $"at the board's own {_renderer.Skirt.MeasuredTreeDensity} trees per thousand cells");
-            }
             _actorMaterial = new Material(library.FallbackMaterial) { name = "Odyssey/Actor" };
             // High-contrast against grass, earth and stone, which tan was not.
             _actorMaterial.SetColor("_BaseColor", new Color(0.98f, 0.36f, 0.20f));
@@ -421,7 +405,6 @@ namespace Odyssey.Presentation.Bootstrap
                 $"  above: {above}\n" +
                 $"draw calls {_renderer.DrawCalls}   instances {_renderer.InstancesDrawn}" +
                 $"   chunks {_renderer.ChunksDrawn}   materials {_renderer.MaterialCount}" +
-                $"   surround {_renderer.Skirt.InstancesDrawn}" +
                 $"   figures {_figures?.FigureCount ?? 0} @ {_figures?.FastestSpeed ?? 0f:0.0} m/s\n" +
                 $"frame {_smoothedFrameMs:0.00} ms ({(_smoothedFrameMs > 0f ? 1000f / _smoothedFrameMs : 0f):0}fps)" +
                 $"   submit {_renderMs:0.00} ms   tick {_tickMs:0.00} ms   remeshed {_renderer.ChunksMeshedThisFrame}\n" +
