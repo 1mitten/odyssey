@@ -69,23 +69,32 @@ namespace Odyssey.Sim.Worldgen.Natural
         }
 
         /// <summary>
-        /// The barren board with its woodland put back: flat, grass in every cell, no outcrops,
-        /// ore or bare patches, and trees at this def's own density in the clumped, cleared
-        /// pattern the natural map grows them in. The start pass still clears a stand around the
-        /// start location, so the colony begins on open ground with wood a short walk away.
+        /// The played board: grass in every cell, and everything the wilderness generator knows
+        /// how to put on and under it — terraced ground, woodland, rock outcrops, ore and
+        /// caverns. The start pass still clears a flat stand around the start location, so the
+        /// colony begins on open ground with wood a short walk away and stone in sight.
         ///
-        /// This is what the scene loads from 2026-09-16, by owner decision: trees are the first
-        /// resource the colony works, so the board needs them, and nothing else the natural map
-        /// scatters is wanted yet. It is a mode of its own rather than a flag on
-        /// <see cref="MakeBarren"/> because the barren board's argument — anything that is not
-        /// grass is a bug — is exactly what a wooded board gives up.
+        /// <para>This is a **cover** mode, not a feature switch. Its one departure from the
+        /// generator's defaults is <see cref="barePatchThreshold"/>: the surface is grass
+        /// everywhere rather than mottled with earth, gravel and sand, which is the look the
+        /// owner chose on 2026-09-16 and the only part of the old wooded board that survives.
+        /// Everything else is the def's own default, so tuning a default now reaches the board
+        /// that is actually played instead of being zeroed on the way there.</para>
+        ///
+        /// <para>It used to be <see cref="MakeBarren"/> with the trees put back, which meant the
+        /// board had no rock, no ore and a dead-flat surface. The mining MVP is exactly the
+        /// decision to stop doing that (<c>docs/research/mining-interview.md</c>).
+        /// <see cref="MakeBarren"/> itself is untouched and stays the test baseline on which
+        /// anything that is not grass is a bug.</para>
         /// </summary>
         public NaturalMapGenDef MakeWooded()
         {
-            int trees = treeDensityPerMille;
-            MakeBarren();
-            treeDensityPerMille = trees;
             barren = false;
+
+            // The cover pass keeps grass where `cover >= barePatchThreshold`, and noise is never
+            // negative, so zero keeps grass everywhere. Reaching for a huge value does the exact
+            // opposite — see MakeBarren, where that mistake is recorded.
+            barePatchThreshold = 0;
             return this;
         }
 
@@ -169,16 +178,46 @@ namespace Odyssey.Sim.Worldgen.Natural
         public int startClearingRadius = 2;
 
         /// <summary>
-        /// Parameters scaled to a grid. Unlike a city map, most of a wilderness map is sky: the
-        /// ground sits about two fifths of the way up, which leaves a deep enough column to mine
-        /// and plenty of headroom to build in.
+        /// Layers of open air kept above the **highest** terrace. Everything left over goes
+        /// underground, which is the rule <see cref="For"/> applies.
+        ///
+        /// Three is what the mining MVP settled on: nine metres, three storeys, and more than the
+        /// colony has ever built upward. It is deliberately a small number, because headroom is
+        /// the only thing depth can be bought with on a board whose layer count is fixed.
+        /// </summary>
+        public int headroomLayers = 3;
+
+        /// <summary>
+        /// Parameters scaled to a grid.
+        ///
+        /// <para><b>Depth is what is left after headroom.</b> The ground sits as high as it can
+        /// while still leaving <see cref="headroomLayers"/> of sky above the tallest terrace, and
+        /// everything below it is the mine. A deeper board is therefore a deeper mine rather than
+        /// more sky, which is the right trade for a game about digging: nothing is ever built in
+        /// the twentieth layer of empty air, and coal is 7 cells down.</para>
+        ///
+        /// <para>It used to be two fifths of the way up, on the reasoning that most of a
+        /// wilderness map is sky. On the 120 x 120 x 16 board that is played that put the ground
+        /// at layer 6 and left <em>two</em> layers of rock between the subsoil and the bedrock —
+        /// too thin for the coal band to exist at all, so coal simply never generated. The bug was
+        /// invisible because a map with no coal in it looks exactly like a map where nobody has
+        /// dug deep enough yet (<c>docs/research/mining-interview.md</c> section 3).</para>
         /// </summary>
         public static new NaturalMapGenDef For(GridSize size)
         {
             var gen = new NaturalMapGenDef { defName = "MapGenNatural_" + size };
-            gen.groundLayer = Math.Max(1, Math.Min(14, size.SizeY * 2 / 5));
+            gen.groundLayer = gen.GroundLayerFor(size);
             return gen;
         }
+
+        /// <summary>
+        /// The highest ground layer that still leaves <see cref="headroomLayers"/> of air above a
+        /// terrace at full relief, floored at 1 so that a map too shallow to honour it generates
+        /// something rather than throwing. The heightfield pass clamps per column on top of this,
+        /// so a shallow board compresses rather than overflows.
+        /// </summary>
+        public int GroundLayerFor(GridSize size) =>
+            Math.Max(1, size.SizeY - 1 - headroomLayers - surfaceRelief);
 
         /// <summary>The slice-sized wilderness map, for tests and the look-check scene.</summary>
         public static new NaturalMapGenDef Slice() => For(new GridSize(60, 60, 16));
@@ -195,6 +234,7 @@ namespace Odyssey.Sim.Worldgen.Natural
             if (size.SizeY < 3)
                 throw new ArgumentOutOfRangeException(nameof(size), "A natural map needs at least three layers.");
             if (surfaceRelief < 0) throw new ArgumentOutOfRangeException(nameof(surfaceRelief));
+            if (headroomLayers < 1) throw new ArgumentOutOfRangeException(nameof(headroomLayers));
             if (surfacePeriod < 2) throw new ArgumentOutOfRangeException(nameof(surfacePeriod));
             if (subsoilDepth < 0) throw new ArgumentOutOfRangeException(nameof(subsoilDepth));
             if (bedrockLayers < 0) throw new ArgumentOutOfRangeException(nameof(bedrockLayers));
