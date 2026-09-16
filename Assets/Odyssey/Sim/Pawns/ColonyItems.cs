@@ -138,7 +138,7 @@ namespace Odyssey.Sim.Pawns
             _items.Add(item);
             int index = _items.Count - 1;
             _itemAtCell[cell] = index;
-            List(cell, index);
+            Enlist(cell, index);
             return item.Id;
         }
 
@@ -206,7 +206,7 @@ namespace Odyssey.Sim.Pawns
             item.CarriedBy = 0;
             int index = item.Id.Value - 1;
             _itemAtCell[cell] = index;
-            List(cell, index);
+            Enlist(cell, index);
             return item;
         }
 
@@ -293,7 +293,7 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>A thing at a cell is on exactly one of the two listers, by where the cell is.</summary>
-        void List(int cell, int itemIndex) => InsertInto(IsStockpileCell(cell) ? _stored : _loose, itemIndex);
+        void Enlist(int cell, int itemIndex) => InsertInto(IsStockpileCell(cell) ? _stored : _loose, itemIndex);
 
         void Unlist(int itemIndex)
         {
