@@ -1,4 +1,5 @@
 #nullable enable
+using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
@@ -80,7 +81,7 @@ namespace Odyssey.Presentation.Rendering
 
         /// <summary>The book, or one dealt from seed 0 so an editor harness still gets variety.</summary>
         ColonistAppearanceBook Cast =>
-            Appearances ??= new ColonistAppearanceBook(0u, _model.Library.Catalogue);
+            Appearances ??= AppearanceBooks.For(0u, _model.Library.Catalogue);
 
         /// <summary>
         /// Where the viewer is, for the one culling decision that depends on distance. Null draws

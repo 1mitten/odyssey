@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;

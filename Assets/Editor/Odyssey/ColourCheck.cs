@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
@@ -114,7 +115,7 @@ namespace Odyssey.EditorTools
                 lightingRoot = new GameObject("ColourRoot");
                 PlayScene.BuildSheetLighting(lightingRoot.transform);
 
-                var appearances = new ColonistAppearanceBook(20260916u, catalogue);
+                ColonistAppearanceBook appearances = AppearanceBooks.For(20260916u, catalogue);
                 materials = new ColonistMaterials();
                 figures = new PawnFigureDirector(catalogue, lightingRoot.transform, 0)
                 {

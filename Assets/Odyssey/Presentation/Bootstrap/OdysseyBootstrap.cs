@@ -494,7 +494,7 @@ namespace Odyssey.Presentation.Bootstrap
                 colonistLookSeed != 0 ? (uint)colonistLookSeed :
                 randomCastEachSession ? (uint)UnityEngine.Random.Range(1, int.MaxValue) :
                 sessionSeed;
-            var appearances = new ColonistAppearanceBook(castSeed, moduleCatalogue);
+            ColonistAppearanceBook appearances = AppearanceBooks.For(castSeed, moduleCatalogue);
             // One ink line in the game, not two. Characters draw their own hull because they are
             // absent from the depth texture the world's outline pass reads, so the colour and
             // width have to be copied across from the feature that inks everything else.

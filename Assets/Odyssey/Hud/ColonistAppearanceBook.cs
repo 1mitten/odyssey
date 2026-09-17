@@ -1,7 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 
-namespace Odyssey.Presentation.Rendering
+namespace Odyssey.Hud
 {
     /// <summary>
     /// The one place that answers "what does this colonist look like".
@@ -46,11 +46,15 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public int LookCount { get; }
 
-        public ColonistAppearanceBook(uint seed, ModuleCatalogue? catalogue)
-            : this(seed, catalogue == null ? 1 : catalogue.FindFamily(ModuleIds.ColonistBase).Count)
-        {
-        }
-
+        /// <summary>
+        /// <para><b>The catalogue is not named here, and that is what lets this file live in
+        /// <c>Odyssey.Hud</c>.</b> Counting the colonist family was the book's only tie to Unity;
+        /// it is now <c>AppearanceBooks.For</c> on the Presentation side, which is where the
+        /// catalogue already lives. What is bought by the move is that the whole derivation — and
+        /// the 300 lines of test that pin it — runs in the fast tier, and that the HUD can ask
+        /// what a colonist looks like at all, which is what a flat avatar needs
+        /// (<c>docs/design/20-avatars.md</c>).</para>
+        /// </summary>
         public ColonistAppearanceBook(uint seed, int lookCount)
         {
             Seed = seed;
