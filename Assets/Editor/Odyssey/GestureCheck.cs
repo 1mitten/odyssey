@@ -130,7 +130,7 @@ namespace Odyssey.EditorTools
                     .WithSeed(1u)
                     .WithSize(size)
                     .AddSnapshotContributor(mirror)
-                    .AddColony(pawns, designations, support, nav)
+                    .AddColony(pawns, designations, support, nav, result.Placements, out _)
                     .Build();
 
                 // Bare rather than Playtest: no trees are marked, so nobody takes up an axe. A

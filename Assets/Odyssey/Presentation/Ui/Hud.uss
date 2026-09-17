@@ -134,6 +134,11 @@
 .chip--off { opacity: 0.42; }
 .chip--off:hover { border-color: rgba(255, 255, 255, 0.13); }
 
+/* Armed. The accent the rest of the interface uses for "this is on", so a lit palette chip
+   and a lit command-bar item say the same thing. */
+.chip--on { border-color: #6fd3e3; background-color: rgba(111, 211, 227, 0.12); }
+.chip--on .chip__label { color: #dff6fa; }
+
 /* ---------------------------------------------------------------- A1 stores */
 
 /* Docked to the top-left corner (owner, 2026-09-17), so it lines up with the colonist strip
@@ -910,6 +915,18 @@
     padding-top: 9px;
 }
 
+/* The material row, under the tools and shown only while something made of a material is
+   armed: a material is a property of the order being given, not a category of its own. */
+.build__materials {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin-top: 7px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.09);
+    padding-top: 7px;
+}
+
 /* ---------------------------------------------------------------- B17 settings
 
    Centred, and deliberately narrow: it holds a short list of switches, not a settings tree. Not a
@@ -1008,7 +1025,65 @@
     margin-top: 9px;
 }
 
+/* One key cap on a binding row. A small rung rather than the command bar's bare cap, because
+   a cap here is a control in its own right — click it, and the next key pressed is offered to
+   the slot it names. */
+.settings__keycap {
+    min-width: 26px;
+    height: 19px;
+    margin-left: 6px;
+    padding: 0 6px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.66);
+    -unity-text-align: middle-center;
+}
+
+.settings__keycap:hover { border-color: #6fd3e3; }
+
+.settings__keycap--listening {
+    border-color: #6fd3e3;
+    color: #6fd3e3;
+}
+
+/* The reset row under the binding list, set apart from the list it undoes. */
+.settings__reset { margin-top: 9px; }
+
+/* The way out, below every tab: separated by a hairline, because it is not a setting and
+   should not read as one. Armed, it says what it is waiting for and the accent says it means
+   it. */
+.settings__exit {
+    margin-top: 9px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.09);
+}
+
+.settings__exit--armed { background-color: rgba(111, 211, 227, 0.12); }
+
+.settings__exit--armed .settings__label { color: #6fd3e3; }
+
 /* ---------------------------------------------------------------- the drag-select marquee */
+
+/* What the player is holding. Centred over the command bar, out of the way of the board and
+   in the path of anyone about to wonder how to stop. Never a click target: it is a sentence,
+   not a control. */
+.armed {
+    position: absolute;
+    left: 50%;
+    translate: -50% 0;
+    bottom: 92px;
+    align-items: center;
+    padding: 5px 14px;
+    background-color: rgba(12, 16, 20, 0.90);
+    border-width: 1px;
+    border-color: #6fd3e3;
+    border-radius: 6px;
+}
+
+.armed__what { color: #dff6fa; }
+.armed__how { color: rgba(255, 255, 255, 0.55); }
+
 
 .marquee {
     position: absolute;

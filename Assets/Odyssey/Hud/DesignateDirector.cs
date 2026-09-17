@@ -28,6 +28,17 @@ namespace Odyssey.Hud
 
         /// <summary>Take the order off, whatever it was.</summary>
         Cancel = 3,
+
+        /// <summary>
+        /// Put it here. See <see cref="DesignateDirector.Building"/> and
+        /// <see cref="DesignateDirector.Stuff"/> for what, and what of.
+        ///
+        /// <para>The one tool that is not fully described by its own name. Mine and Fell are verbs
+        /// applied to whatever is already in a cell, so a tool is all there is to say; a build
+        /// order names a thing that is not there yet and has to carry which thing and which
+        /// material with it.</para>
+        /// </summary>
+        Build = 4,
     }
 
     /// <summary>
@@ -71,6 +82,52 @@ namespace Odyssey.Hud
         }
 
         DesignateTool _tool = DesignateTool.None;
+
+        /// <summary>
+        /// What <see cref="DesignateTool.Build"/> would put down, as a <c>BuildingHandle</c> value.
+        /// Meaningless under any other tool, and deliberately left alone when the tool changes: a
+        /// player who puts the wall tool down and picks it up again wants the wall back.
+        /// </summary>
+        public int Building { get; private set; } = BuildingHandle.Wall;
+
+        /// <summary>
+        /// What to build it of, as a <c>StuffHandle</c> value. Wood by default because it is what a
+        /// colony has first — felling is the job that works from the day it lands, and a stone wall
+        /// needs a mine before it needs a builder.
+        /// </summary>
+        public int Stuff { get; private set; } = StuffHandle.Wood;
+
+        /// <summary>Raised when the thing or the material changes, so the palette can mark it.</summary>
+        public event Action<int, int>? BuildChoiceChanged;
+
+        /// <summary>
+        /// Arm the build tool on a thing, keeping the material already chosen. Pressing the same
+        /// thing again puts the tool down, which is how every other tool behaves.
+        /// </summary>
+        public void ArmBuild(int building)
+        {
+            if (_tool == DesignateTool.Build && Building == building)
+            {
+                Tool = DesignateTool.None;
+                return;
+            }
+
+            Building = building;
+            BuildChoiceChanged?.Invoke(Building, Stuff);
+            Tool = DesignateTool.Build;
+        }
+
+        /// <summary>
+        /// Choose the material. It does <b>not</b> arm the tool: picking stone is a statement about
+        /// the next wall, not an order to place one, and a material button that also armed a tool
+        /// would leave the player holding something they only meant to configure.
+        /// </summary>
+        public void ChooseStuff(int stuff)
+        {
+            if (Stuff == stuff) return;
+            Stuff = stuff;
+            BuildChoiceChanged?.Invoke(Building, Stuff);
+        }
 
         /// <summary>Is a box being drawn right now?</summary>
         public bool Dragging { get; private set; }

@@ -30,6 +30,9 @@ namespace Odyssey.Sim
         /// <summary>Publish one standing order, wherever in the world it is.</summary>
         public void AddOrder(in OrderView view) => _target.AddOrder(view);
 
+        /// <summary>Publish one building site, wherever in the world it is.</summary>
+        public void AddSite(in SiteView view) => _target.AddSite(view);
+
         /// <summary>
         /// Publish one number about one pawn, under a name the feature owns. See
         /// <see cref="PawnAspect"/> for why this exists rather than another field on

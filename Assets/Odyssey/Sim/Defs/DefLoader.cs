@@ -348,6 +348,12 @@ namespace Odyssey.Sim.Defs
             if (type == typeof(string)) return element.Value;
             if (type == typeof(int)) return int.Parse(text, CultureInfo.InvariantCulture);
             if (type == typeof(long)) return long.Parse(text, CultureInfo.InvariantCulture);
+
+            // ushort, because that is what the world model stores a terrain, a slab, an edifice and
+            // a stuff as — every index that goes into a cell. Until a Def could carry one, any
+            // table naming one had to launder it through an int field and a cast, which is a
+            // silent widening of the very type the grid chose deliberately.
+            if (type == typeof(ushort)) return ushort.Parse(text, CultureInfo.InvariantCulture);
             if (type == typeof(bool)) return bool.Parse(text);
             if (type == typeof(float)) return float.Parse(text, CultureInfo.InvariantCulture);
             if (type.IsEnum)

@@ -36,11 +36,33 @@ namespace Odyssey.Presentation.Bootstrap
         OdysseyBootstrap? _bootstrap;
         SliceCameraRig? _rig;
 
+        DesignateDirector? _fallback;
+        HotkeyDirector? _hotkeysFallback;
+
         /// <summary>
-        /// What the player is about to order. Public so a palette button can set it once one
-        /// exists, and so a readout can show it.
+        /// What the player is about to order.
+        ///
+        /// <para><b>The colony's one, not this presenter's.</b> It used to construct its own, which
+        /// was correct while a key was the only way to arm a tool; the Build palette is the second
+        /// way, and two directors would be two answers to "what is armed" — a palette button lit
+        /// for a tool the world did not have. It lives on <see cref="HudDirectors"/> now and this
+        /// borrows it. The fallback instance is for a scene with no HUD, which the screenshot
+        /// harnesses build.</para>
+        ///
+        /// <para>Resolved every time rather than cached: the bootstrap builds its directors during
+        /// its own startup, so a presenter that cached on the first frame would keep a throwaway
+        /// for the life of the session and the palette would drive a director nobody reads.</para>
         /// </summary>
-        public DesignateDirector Director { get; } = new DesignateDirector();
+        public DesignateDirector Director =>
+            _bootstrap?.Directors?.Designate ?? (_fallback ??= new DesignateDirector());
+
+        /// <summary>
+        /// The binding map, borrowed the same way the designate director is: the colony's
+        /// when there is one, a defaults-only one when there is not, so the keys still arm
+        /// tools in a scene built without a HUD.
+        /// </summary>
+        HotkeyDirector Hotkeys =>
+            _bootstrap?.Directors?.Hotkeys ?? (_hotkeysFallback ??= new HotkeyDirector());
 
         void Awake()
         {
@@ -51,32 +73,62 @@ namespace Odyssey.Presentation.Bootstrap
             // The rig asks this before it decides whether a press belonged to selection.
             _rig.WorldToolArmed = () => Director.Tool != DesignateTool.None;
             _rig.ToolDrag += OnToolDrag;
+            _rig.ToolDragging += OnToolDragging;
+            _rig.ToolDragCancelled += OnToolDragCancelled;
         }
 
         void OnDestroy()
         {
             if (_rig == null) return;
             _rig.ToolDrag -= OnToolDrag;
+            _rig.ToolDragging -= OnToolDragging;
+            _rig.ToolDragCancelled -= OnToolDragCancelled;
             if (_rig.WorldToolArmed != null) _rig.WorldToolArmed = null;
         }
+
+        /// <summary>
+        /// The box is being drawn: keep the director's own state machine in step with the pointer
+        /// so that <c>DesignateDirector.TryPreview</c> can be drawn.
+        ///
+        /// <para><b>The director is driven live rather than asked for a rectangle</b>, for the
+        /// reason <see cref="OnToolDrag"/> already gives: one implementation of "which cells does
+        /// this box cover", and it is the one the fast tier tests. It also means the preview cannot
+        /// disagree with the order that follows, because they are literally the same object's
+        /// answer a frame apart.</para>
+        /// </summary>
+        void OnToolDragging(CellRef anchor, CellRef head)
+        {
+            if (!Director.Dragging && !Director.Begin(anchor)) return;
+            Director.DragTo(head);
+        }
+
+        void OnToolDragCancelled() => Director.Abandon();
 
         void Update()
         {
             Keyboard? keys = Keyboard.current;
             if (keys == null) return;
+            HotkeyDirector hotkeys = Hotkeys;
 
-            // M mine, C cut, X cancel. Pressing the armed tool's own key again disarms it, so a
-            // player who picked one up can always put it down the way they picked it up.
+            // While the settings panel is waiting for a key, every press belongs to the
+            // rebind: arming a tool with the very key being offered to the slot would be two
+            // things on one key, which is the fault this assembly's clash test exists for.
+            if (hotkeys.Listening != null) return;
+
+            // Mine, cut, cancel. Pressing the armed tool's own key again disarms it, so a
+            // player who picked one up can always put it down the way they picked it up. The
+            // letters themselves are the binding map's business; these lines say only what
+            // the key does.
             //
             // **Escape is deliberately not read here any more.** It used to be, and it was the
             // only consumer in the build; the settings panel made it the second, and two
-            // components reading one key would have disarmed the tool and opened the panel on the
-            // same keystroke. The unwind order is one rule (`09-ui-and-input.md` §6) so it lives
+            // components reading one key would have disarmed the tool and opened the panel on
+            // the same keystroke. The unwind order is one rule (`09-ui-and-input.md` §6) so it lives
             // in one place — `SettingsDirector.Escape`, decided in the fast tier — and
             // `SettingsPresenter` calls `PutToolAway` when the answer is to disarm.
-            if (keys.mKey.wasPressedThisFrame) Arm(DesignateTool.Mine);
-            if (keys.cKey.wasPressedThisFrame) Arm(DesignateTool.Fell);
-            if (keys.xKey.wasPressedThisFrame) Arm(DesignateTool.Cancel);
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ToolMine)) Arm(DesignateTool.Mine);
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ToolFell)) Arm(DesignateTool.Fell);
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ToolCancel)) Arm(DesignateTool.Cancel);
         }
 
         /// <summary>Whether a tool is armed, for whoever is deciding what Escape means.</summary>
@@ -108,19 +160,42 @@ namespace Odyssey.Presentation.Bootstrap
             var world = _bootstrap?.World;
             if (world == null) return;
 
-            if (!Director.Begin(anchor)) return;
+            DesignateTool tool = Director.Tool;
+            // Begun already by the live preview in the ordinary case; begun here for a press that
+            // never moved a pixel, which raises no dragging frame at all.
+            if (!Director.Dragging && !Director.Begin(anchor)) return;
             Director.DragTo(head);
             IReadOnlyList<CellRef> cells = Director.Commit();
 
-            IntentKind kind = Director.Tool == DesignateTool.Cancel
-                ? IntentKind.CancelDesignation
-                : IntentKind.Designate;
-            int a = Director.Tool == DesignateTool.Mine ? (int)DesignationKind.Mine
-                  : Director.Tool == DesignateTool.Fell ? (int)DesignationKind.Fell
+            // Cancel is two intents, because there are two kinds of order and the player is holding
+            // one rubber. A cell cannot carry both a designation and a building site, so exactly
+            // one of the pair does anything and the other is refused with AlreadyInThatState —
+            // which is the cheapest possible way to make one tool mean "whatever is here, stop".
+            if (tool == DesignateTool.Cancel)
+            {
+                for (int i = 0; i < cells.Count; i++)
+                {
+                    world.Intents.Submit(new Intent(IntentKind.CancelDesignation, cells[i]));
+                    world.Intents.Submit(new Intent(IntentKind.CancelBuilding, cells[i]));
+                }
+
+                return;
+            }
+
+            if (tool == DesignateTool.Build)
+            {
+                for (int i = 0; i < cells.Count; i++)
+                    world.Intents.Submit(new Intent(
+                        IntentKind.PlaceBuilding, cells[i], Director.Building, Director.Stuff));
+                return;
+            }
+
+            int a = tool == DesignateTool.Mine ? (int)DesignationKind.Mine
+                  : tool == DesignateTool.Fell ? (int)DesignationKind.Fell
                   : 0;
 
             for (int i = 0; i < cells.Count; i++)
-                world.Intents.Submit(new Intent(kind, cells[i], a));
+                world.Intents.Submit(new Intent(IntentKind.Designate, cells[i], a));
         }
     }
 }

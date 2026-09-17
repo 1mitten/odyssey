@@ -985,13 +985,59 @@ namespace Odyssey.Presentation.Rendering
                 Matrix4x4.TRS(centre, Quaternion.identity, size));
         }
 
+        /// <summary>
+        /// The outline of a whole cell, for a thing that is going to fill one.
+        ///
+        /// <para><b>A box rather than the floor plate <see cref="DrawCellMark"/> draws</b>, and the
+        /// shape is the whole point. A mine order and a fell order are read looking down at a face
+        /// that is already there, so paint on the floor says everything. A wall is not there yet
+        /// and stands three metres tall: marked with a plate, a row of ordered walls reads as a
+        /// path drawn on the grass. The owner asked for "some kind of outline" and this is it
+        /// (2026-09-17).</para>
+        ///
+        /// <para>The same corner brackets a selected thing gets, so an outlined cell and an
+        /// outlined colonist are recognisably the same language — one says "this is what you
+        /// picked", the other "this is what you asked for".</para>
+        /// </summary>
+        public void DrawCellOutline(CellRef cell, Color colour)
+        {
+            Vector3 centre = GroundRelief.Lift(CellMetrics.Centre(cell.X, cell.Z, cell.Y));
+            var size = new Vector3(
+                CellMetrics.SizeXZ - OutlineInset * 2f,
+                CellMetrics.SizeY - OutlineInset * 2f,
+                CellMetrics.SizeXZ - OutlineInset * 2f);
+
+            DrawSelectionBracket(centre, size, colour);
+        }
+
+        /// <summary>
+        /// Held in from the cell edges so that two outlined cells side by side read as two, and so
+        /// the box never z-fights the faces of whatever is standing next to it.
+        /// </summary>
+        const float OutlineInset = 0.12f;
+
         /// <summary>Clear of the face it is laid on, or it z-fights with it.</summary>
         const float MarkLift = 0.05f;
 
         /// <summary>A plate, not a box. Thin enough to read as paint rather than as a thing.</summary>
         const float MarkThickness = 0.04f;
 
-        public void DrawCellCut(CellRef cell, float fraction, Color colour)
+        public void DrawCellCut(CellRef cell, float fraction, Color colour) =>
+            DrawCellSlab(cell, fraction, colour, fromTheFloor: false);
+
+        /// <summary>
+        /// A slab growing out of the floor, for a thing being built.
+        ///
+        /// <para>The same slab as <see cref="DrawCellCut"/> the other way up, and the direction is
+        /// the whole of the difference: a cut eats down from the top of the rock because that is
+        /// where the pick lands, and a wall rises from the floor because that is how a wall is
+        /// built. Drawn with a cut's downward fill, a wall at nine tenths would read as a wall with
+        /// its bottom missing.</para>
+        /// </summary>
+        public void DrawCellFill(CellRef cell, float fraction, Color colour) =>
+            DrawCellSlab(cell, fraction, colour, fromTheFloor: true);
+
+        void DrawCellSlab(CellRef cell, float fraction, Color colour, bool fromTheFloor)
         {
             if (fraction <= 0.02f) return;
             if (fraction > 1f) fraction = 1f;
@@ -1012,7 +1058,8 @@ namespace Odyssey.Presentation.Rendering
                 CellMetrics.SizeXZ - Inset * 2f, height, CellMetrics.SizeXZ - Inset * 2f);
 
             Vector3 centre = CellMetrics.Centre(cell.X, cell.Z, cell.Y);
-            centre.y += (CellMetrics.SizeY - height) * 0.5f;
+            float offset = (CellMetrics.SizeY - height) * 0.5f;
+            centre.y += fromTheFloor ? -offset : offset;
 
             Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
                 Matrix4x4.TRS(centre, Quaternion.identity, size));

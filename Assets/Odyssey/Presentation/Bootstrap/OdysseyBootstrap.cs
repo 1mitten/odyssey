@@ -147,6 +147,7 @@ namespace Odyssey.Presentation.Bootstrap
         ChunkRenderer? _renderer;
         PawnContext? _pawns;
         PawnFigureDirector? _figures;
+        DesignatePresenter? _designate;
         AudioDirector? _audio;
         DaylightDirector? _daylight;
         Material? _actorMaterial;
@@ -198,6 +199,10 @@ namespace Odyssey.Presentation.Bootstrap
         public HudDirectors? Directors { get; private set; }
         public WorldRenderModel? Model => _model;
         public ChunkRenderer? Renderer => _renderer;
+
+        /// <summary>The colony's one audio director, for the presenter that applies the
+        /// settings panel's faders to it live.</summary>
+        public AudioDirector? Audio => _audio;
 
         void Start()
         {
@@ -259,7 +264,7 @@ namespace Odyssey.Presentation.Bootstrap
                 .WithSeed(seed)
                 .WithSize(size)
                 .AddSnapshotContributor(mirror)
-                .AddColony(_pawns, designations, support, nav)
+                .AddColony(_pawns, designations, support, nav, edifices, out _)
                 .Build();
 
             // Noon, before the world has ticked once. It has to be here and not further down:
@@ -481,6 +486,8 @@ namespace Odyssey.Presentation.Bootstrap
                 }
             }
 
+            ReportRejections();
+
             // The light follows the clock every frame, not every tick: at speed 3 several ticks
             // retire in one frame and the sky would step, and when the game is paused the hour
             // stops with it, which is right — a paused world should not go on getting dark.
@@ -530,7 +537,8 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         void WarnIfTheSceneIsStale()
         {
-            if (GetComponent<DesignatePresenter>() != null) return;
+            _designate = GetComponent<DesignatePresenter>();
+            if (_designate != null) return;
 
             // Add it, then say so. **This reverses a decision, and the reversal is the point.**
             //
@@ -545,7 +553,7 @@ namespace Odyssey.Presentation.Bootstrap
             // is still reported rather than hidden. Rebuilding remains the right thing to do —
             // the scene may well be stale in other ways — but it is no longer the difference
             // between a feature existing and not.
-            gameObject.AddComponent<DesignatePresenter>();
+            _designate = gameObject.AddComponent<DesignatePresenter>();
 
             Debug.LogWarning(
                 "[Odyssey] This play scene was built before DesignatePresenter existed. It has " +
@@ -592,6 +600,8 @@ namespace Odyssey.Presentation.Bootstrap
                     _tickAlpha, movePerTick, _figures?.Drawn);
 
             DrawStandingOrders(_world.Views.Current);
+            DrawBuildingSites(_world.Views.Current);
+            DrawToolPreview();
             DrawSelectionCursor(_world.Views.Current, movePerTick);
             _frameTimer.Stop();
             _renderMs = _frameTimer.Elapsed.TotalMilliseconds;
@@ -674,11 +684,188 @@ namespace Odyssey.Presentation.Bootstrap
             }
         }
 
+        /// <summary>
+        /// Every building site on a drawn layer: what was ordered, and how far along it is.
+        ///
+        /// <para><b>Two measures, drawn as two things.</b> The mark says an order is here; the slab
+        /// rising out of the floor says how much of the thing exists. A site that has not been fed
+        /// shows a mark and nothing else, which is the picture the player needs — "nobody has
+        /// brought the wood yet" and "it is half built" are different problems with different
+        /// answers, and one bar would merge them (<c>SiteView</c> says the same thing from the
+        /// simulation's side).</para>
+        ///
+        /// <para>Deliberately a mark and a slab rather than a ghost of the finished wall. A ghost
+        /// wants the mesher to place a module it has not been asked for, which is the mesh
+        /// contributor seam (OQ-46) and a larger change than this; the mark and the fill are the
+        /// precedent standing orders already set, cost one instanced cube each, and read.</para>
+        /// </summary>
+        void DrawBuildingSites(WorldSnapshot snapshot)
+        {
+            if (_renderer == null || cameraRig == null) return;
+
+            System.ReadOnlySpan<SiteView> sites = snapshot.Sites;
+            if (sites.Length == 0) return;
+
+            GridSize size = snapshot.Size;
+            int lowest = System.Math.Max(0, cameraRig.LowestSelectableLayer);
+            int highest = cameraRig.HighestSelectableLayer;
+
+            for (int i = 0; i < sites.Length; i++)
+            {
+                CellRef cell = size.FromIndex(sites[i].CellIndex);
+                if (cell.Y < lowest || cell.Y > highest) continue;
+
+                // The outline first, because a site is a thing that is going to fill the cell and a
+                // plate on the floor reads as a path drawn on the grass. The plate stays under it:
+                // it is what says which cell, at a glance, from directly above.
+                _renderer.DrawCellOutline(cell, BuildOrderColour);
+                _renderer.DrawCellMark(cell, BuildOrderColour);
+
+                if (sites[i].Progress > 0)
+                    _renderer.DrawCellFill(cell, sites[i].Progress / 255f, FrameColour);
+            }
+        }
+
+        /// <summary>
+        /// Say out loud when the simulation refuses a command.
+        ///
+        /// <para><b>Nothing in the build read <c>Intents.Rejected</c> at all</b>, although
+        /// <c>Intents.cs</c> has said since it was written that "a command that silently does
+        /// nothing is the worst possible outcome for a player". Every refusal in the game was
+        /// therefore invisible: the build pipeline shipped with no handler for
+        /// <c>PlaceBuilding</c>, every order came back <c>UnknownIntent</c>, and the only evidence
+        /// available to anyone was that walls did not appear. Two playtests were spent on that.</para>
+        ///
+        /// <para><b>A log line, not an alert.</b> A refusal is usually correct and usually
+        /// expected — a box dragged over a hillside is meant to contain cells that cannot be mined,
+        /// and the rejection is silent and right. What is wanted is not a warning in the player's
+        /// face but a record a developer can read afterwards, which is exactly what the console
+        /// is for. The alerts panel stays for things the colony needs a decision about.</para>
+        ///
+        /// <para>Grouped and throttled, or a 400-cell drag writes 400 lines and the one that
+        /// matters scrolls away. One line per (command, reason) per second, with the count.</para>
+        /// </summary>
+        void ReportRejections()
+        {
+            if (_world == null) return;
+            var rejected = _world.Intents.Rejected;
+            if (rejected.Count == 0) return;
+
+            for (int i = 0; i < rejected.Count; i++)
+            {
+                RejectedIntent r = rejected[i];
+
+                // AlreadyInThatState is the ordinary answer to marking the same cell twice, which
+                // a drag does constantly. It is never the reason a feature does not work.
+                if (r.Reason == IntentRejection.AlreadyInThatState) continue;
+
+                long key = ((long)r.Intent.Kind << 32) | (uint)r.Reason;
+                if (_rejectionCounts.TryGetValue(key, out int count)) _rejectionCounts[key] = count + 1;
+                else _rejectionCounts[key] = 1;
+            }
+
+            if (Time.unscaledTime - _lastRejectionReport < 1f || _rejectionCounts.Count == 0) return;
+            _lastRejectionReport = Time.unscaledTime;
+
+            foreach (var pair in _rejectionCounts)
+            {
+                var kind = (IntentKind)(pair.Key >> 32);
+                var reason = (IntentRejection)(uint)pair.Key;
+                Debug.LogWarning($"[Odyssey] the simulation refused {pair.Value} x {kind}: {reason}" +
+                    (reason == IntentRejection.UnknownIntent
+                        ? " — nothing in the colony handles this command, which is a composition " +
+                          "fault rather than a rule (see ColonyComposition.AddColony)"
+                        : string.Empty));
+            }
+
+            _rejectionCounts.Clear();
+        }
+
+        readonly Dictionary<long, int> _rejectionCounts = new Dictionary<long, int>();
+        float _lastRejectionReport;
+
+        /// <summary>
+        /// The box the player is dragging right now, before they let go.
+        ///
+        /// <para><b>Nothing drew this at all, and it is the whole of the owner's report that
+        /// dragging a wall over the meadow did nothing</b> (2026-09-17). The order was placed
+        /// correctly on release — measured — but between the press and the release the board
+        /// looked exactly as it had before, so there was no way to tell a tool that was working
+        /// from one that was not, and no way to see what a box was going to cover before
+        /// committing to it.</para>
+        ///
+        /// <para>Drawn from the director's own <c>TryPreview</c>, which was written for this and
+        /// had never been called. That is what stops the preview and the order disagreeing: they
+        /// are the same object's answer to "which cells does this box cover", a frame apart.</para>
+        ///
+        /// <para><b>Green for a build and the tool's own colour otherwise.</b> Green because it is
+        /// the colour of a thing about to be added and nothing else on the board uses it, and
+        /// because it is what the owner asked for by name.</para>
+        /// </summary>
+        void DrawToolPreview()
+        {
+            if (_renderer == null || _designate == null) return;
+
+            DesignateDirector director = _designate.Director;
+            if (!director.TryPreview(out CellRef min, out CellRef max)) return;
+
+            bool build = director.Tool == DesignateTool.Build;
+            Color tint = director.Tool switch
+            {
+                DesignateTool.Build => PreviewBuildColour,
+                DesignateTool.Mine => MineOrderColour,
+                DesignateTool.Fell => FellOrderColour,
+                _ => PreviewCancelColour,
+            };
+
+            for (int z = min.Z; z <= max.Z; z++)
+            for (int x = min.X; x <= max.X; x++)
+            {
+                var cell = new CellRef(x, z, min.Y);
+
+                // A build order is lifted onto the cell above solid ground by the simulation
+                // (ConstructionGrid.StandingOn), because a click on grass names the block and a
+                // wall goes in the air. The preview has to be lifted the same way or it is drawn
+                // one layer below the wall it is promising.
+                if (build && _grid != null && _grid.Contains(x, z, min.Y)
+                    && _grid.IsSolidTerrain(_grid.Index(cell)) && min.Y + 1 < _grid.Size.SizeY)
+                    cell = new CellRef(x, z, min.Y + 1);
+
+                if (build) _renderer.DrawCellOutline(cell, tint);
+                else _renderer.DrawCellMark(cell, tint);
+            }
+        }
+
+        /// <summary>
+        /// The box being dragged with a build tool. Green: the colour of a thing about to be added,
+        /// used nowhere else on the board, and brighter than a placed order because it is following
+        /// the pointer and has to be found instantly.
+        /// </summary>
+        static readonly Color PreviewBuildColour = new Color(0.42f, 0.95f, 0.45f, 0.70f);
+
+        /// <summary>The box being dragged with the cancel tool. Red, for the one tool that takes away.</summary>
+        static readonly Color PreviewCancelColour = new Color(0.95f, 0.38f, 0.34f, 0.60f);
+
         /// <summary>Marks a cell ordered dug. Warm, against the cool stone it is drawn over.</summary>
         static readonly Color MineOrderColour = new Color(0.95f, 0.72f, 0.32f, 0.42f);
 
         /// <summary>Marks a tree ordered felled.</summary>
         static readonly Color FellOrderColour = new Color(0.55f, 0.85f, 0.45f, 0.42f);
+
+        /// <summary>
+        /// Marks a cell ordered built. The interface accent rather than a third warm hue, because
+        /// a build order is the one standing order that is <em>additive</em> — mine and fell take
+        /// something away, and a colour the rest of the interface already uses for "the player
+        /// asked for this" separates the two at a glance.
+        /// </summary>
+        static readonly Color BuildOrderColour = new Color(0.44f, 0.83f, 0.89f, 0.42f);
+
+        /// <summary>
+        /// The thing going up. Pale and translucent like <see cref="CutColour"/> and for the same
+        /// reason — it is material, not a marker — but it fills from the floor rather than eating
+        /// down from the top, because that is the direction a wall is actually built in.
+        /// </summary>
+        static readonly Color FrameColour = new Color(0.82f, 0.78f, 0.66f, 0.38f);
 
         /// <summary>
         /// The non-primary members of a multi-selection: the same shape as the primary's bracket

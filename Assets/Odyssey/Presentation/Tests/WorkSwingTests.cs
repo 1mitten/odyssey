@@ -530,21 +530,10 @@ namespace Odyssey.Tests.Presentation
                 Is.GreaterThan(WorkStyle.Felling.AimFromCentre));
         }
 
-        [Test]
-        public void BuildingCanBeReachedOnlyByOverridingTheStyle()
-        {
-            // Nothing in the simulation builds: there is no JobHandle.Build, so no job maps to this
-            // style and no colonist will be seen in it during play. It is reached from SwingCheck
-            // through PawnFigureDirector.StyleOverride and nowhere else.
-            //
-            // **This test is a tripwire, not a rule.** The day building becomes a real job, add the
-            // row to IndexForJob and delete this.
-            for (int job = 0; job < JobHandle.Count; job++)
-            {
-                Assert.That(WorkStyle.IndexForJob(job), Is.Not.EqualTo(WorkStyle.BuildingIndex),
-                    $"job {job} now maps to building; give it a row in IndexForJob and drop this test");
-            }
-        }
+        // Building was once reachable only through PawnFigureDirector.StyleOverride, and a
+        // tripwire test here asserted no job mapped to it. The build pipeline landed
+        // JobHandle.Build and the row in IndexForJob, the tripwire fired, and both were
+        // retired on 2026-09-17 — the test's own instruction.
 
         [Test]
         public void TimberIsItsOwnRecipeAndNotFellingChips()

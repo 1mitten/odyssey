@@ -11,9 +11,14 @@ dropped, mirroring how brief §5 treats simulation systems.
 **Clean room.** Every name here is ours. Nothing is copied from the reference game's text,
 labels or flavour. The taxonomy behind it is `docs/research/g-01-ui-information-design.md`.
 
-**B17, the settings panel, is tabbed since 2026-09-16**: an *Interface* section holding the
-interface-scale ladder, and the *Graphics* section it already had. It opens on Interface, because
-the first thing a player wants from a settings panel on a large monitor is to make the type bigger.
+**B17, the settings panel, is four tabs since 2026-09-17**: *Interface* (the interface-scale
+ladder, a camera-speed ladder and the developer-overlay toggle), *Graphics* (as before), *Audio*
+(five dB rung ladders — the faders that had waited in `AudioSettingsStore` since the sound work
+landed), and *Keys* (the binding list, grouped, one or two caps per row, click a cap to rebind,
+conflicts refused and reported, a reset row under it). It opens on Interface, because the first
+thing a player wants from a settings panel on a large monitor is to make the type bigger. Under
+all four tabs sits the exit row — two clicks, because nothing is saved — which is B18's quit
+living here until the game menu exists.
 
 **What the built HUD looks like is `docs/design/14-hud-layout.md`**, since the rebuild of
 2026-09-16. This file still says what each region *is* and what it will eventually hold; that one
@@ -641,9 +646,11 @@ submitted. The other two are baked into instance matrices when a chunk is meshed
 sends the board back through the mesher and rebuilds the surround. The panel says which is which
 in the row's tooltip, so a player is never left wondering why one switch stutters and three do not.
 
-Audio, interface scale, accessibility and keybindings are all still M8, and the golden-hour work
+Audio, interface scale and keybindings are **built as of 2026-09-17** — audio as one dB rung
+ladder per bus writing through `AudioSettingsStore`, keybindings as the `HotkeyDirector` binding
+list with its rebind-and-refuse rules — and the golden-hour work
 (`docs/research/look-interview.md`) is what fills the Graphics section out, since its own
-quality tier is a settings surface by definition.
+quality tier is a settings surface by definition. Accessibility modes remain the M8 pass.
 
 **Accessibility modes exposed here**, all specified in `09`: text fallback for icons,
 colour-blind-safe alert palette, interface scale from 80 to 150 per cent.
@@ -651,7 +658,9 @@ colour-blind-safe alert palette, interface scale from 80 to 150 per cent.
 ## B18 Game menu
 
 Save, load, options, quit. Reached from the tab bar or by the escape key unwinding to the
-bottom of the stack. Milestone M0.
+bottom of the stack. Milestone M0. **The quit half lives in B17 since 2026-09-17** — an exit
+row pinned under the settings tabs, two clicks because nothing is saved — and moves here when
+this menu exists.
 
 ---
 

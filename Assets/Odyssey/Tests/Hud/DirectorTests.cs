@@ -331,6 +331,7 @@ namespace Odyssey.Tests.Hud
     {
         readonly System.Collections.Generic.Dictionary<string, bool> _values = new();
         readonly System.Collections.Generic.Dictionary<string, int> _numbers = new();
+        readonly System.Collections.Generic.Dictionary<string, string> _words = new();
 
         public int Writes { get; private set; }
 
@@ -350,9 +351,19 @@ namespace Odyssey.Tests.Hud
             Writes++;
         }
 
+        public string? ReadString(string key) => _words.TryGetValue(key, out string value) ? value : null;
+
+        public void WriteString(string key, string value)
+        {
+            _words[key] = value;
+            Writes++;
+        }
+
         public void Preset(string key, bool value) => _values[key] = value;
 
         public void Preset(string key, int value) => _numbers[key] = value;
+
+        public void Preset(string key, string value) => _words[key] = value;
     }
 
     public class SettingsDirectorTests
@@ -458,6 +469,124 @@ namespace Odyssey.Tests.Hud
             settings.Toggle(GraphicsOption.GroundRelief);
             Assert.That(store.Read(SettingsDirector.KeyOf(GraphicsOption.GroundRelief)), Is.False);
             Assert.That(store.Writes, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TheCameraSpeedSnapsToItsLadderAndIsKeptOnTheMachine()
+        {
+            var settings = new SettingsDirector();
+            var store = new FakeSettingsStore();
+            settings.UseStore(store);
+            var raised = new System.Collections.Generic.List<int>();
+            settings.CameraSpeedChanged += raised.Add;
+
+            Assert.That(settings.CameraSpeed, Is.EqualTo(100), "the rig's tuned speed is the default");
+
+            settings.SetCameraSpeed(90);
+            Assert.That(settings.CameraSpeed, Is.EqualTo(100), "90 snaps to the rung it sits between");
+            Assert.That(raised, Is.Empty, "a snap that lands where it started says nothing");
+
+            settings.SetCameraSpeed(160);
+            Assert.That(settings.CameraSpeed, Is.EqualTo(150));
+            Assert.That(raised, Is.EqualTo(new[] { 150 }));
+            Assert.That(store.ReadInt(SettingsDirector.CamSpeedKey), Is.EqualTo(150));
+
+            // A stored preference beats the tuning, the same as every other lever here.
+            store.Preset(SettingsDirector.CamSpeedKey, 60);
+            var restarted = new SettingsDirector();
+            restarted.UseStore(store);
+            Assert.That(restarted.CameraSpeed, Is.EqualTo(60));
+        }
+
+        [Test]
+        public void TheDeveloperOverlayRowDescribesTheScreenAndThenKeepsItsOwnCounsel()
+        {
+            var settings = new SettingsDirector();
+            var store = new FakeSettingsStore();
+            settings.UseStore(store);
+            int raised = 0;
+            settings.DeveloperOverlayChanged += () => raised++;
+
+            // Seeded from whatever armed the readout — the key, or last session's preference —
+            // so the row never switches the overlay on by existing.
+            settings.SeedDeveloperOverlay(true);
+            Assert.That(settings.DeveloperOverlay, Is.True);
+            Assert.That(raised, Is.Zero, "seeding is a record of what is, not a request");
+
+            settings.SetDeveloperOverlay(true);
+            Assert.That(raised, Is.Zero);
+            settings.SetDeveloperOverlay(false);
+            Assert.That(raised, Is.EqualTo(1));
+            Assert.That(store.Read(SettingsDirector.DeveloperKey), Is.False,
+                "the key never wrote anything down; the row does");
+        }
+
+        [Test]
+        public void AVolumeSnapsToItsLadderAndSaysSoOnlyWhenItMoves()
+        {
+            var settings = new SettingsDirector();
+            var changed = new System.Collections.Generic.List<SettingsBus>();
+            settings.BusDbChanged += changed.Add;
+
+            foreach (SettingsBus bus in SettingsDirector.Buses)
+                Assert.That(settings.BusDb(bus), Is.Zero,
+                    "a fader starts at unity — nothing attenuated, nothing boosted");
+
+            settings.SetBusDb(SettingsBus.Music, -33);
+            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(-36), "-33 snaps to -36");
+            settings.SetBusDb(SettingsBus.Music, -25);
+            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(-24), "-25 snaps to -24");
+            settings.SetBusDb(SettingsBus.Music, -30);
+            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(-36),
+                "-30 is equidistant, and a tie goes to the quieter rung");
+            Assert.That(changed, Is.EqualTo(new[] { SettingsBus.Music, SettingsBus.Music, SettingsBus.Music }),
+                "each real move is announced; the faders the store left alone say nothing");
+
+            // Seeding is the presenter laying the audio store's values in: recorded, never
+            // raised, never written.
+            var seeded = new SettingsDirector();
+            var seededRaised = new System.Collections.Generic.List<SettingsBus>();
+            seeded.BusDbChanged += seededRaised.Add;
+            seeded.SeedBusDb(SettingsBus.Alerts, -80);
+            Assert.That(seeded.BusDb(SettingsBus.Alerts), Is.EqualTo(-80));
+            Assert.That(seededRaised, Is.Empty);
+        }
+
+        [Test]
+        public void TheExitRowAsksBeforeItLeavesAndThePanelClosingStandsItDown()
+        {
+            var settings = new SettingsDirector();
+            int armed = 0, asked = 0;
+            settings.ExitChanged += () => armed++;
+            settings.ExitRequested += () => asked++;
+
+            settings.RequestExit();
+            Assert.That(settings.ExitArmed, Is.True, "the first click asks to be sure");
+            Assert.That(asked, Is.Zero);
+            settings.RequestExit();
+            Assert.That(asked, Is.EqualTo(1), "the second click is the promise kept");
+            Assert.That(settings.ExitArmed, Is.False, "a fired exit is not still armed");
+
+            // Nothing is saved, so an armed row must not outlive the panel it lives in.
+            settings.SetOpen(true);
+            settings.RequestExit();
+            Assert.That(settings.ExitArmed, Is.True);
+            settings.SetOpen(false);
+            Assert.That(settings.ExitArmed, Is.False,
+                "closing the panel stands the row down, Escape included");
+            Assert.That(asked, Is.EqualTo(1), "standing down is not leaving");
+        }
+
+        [Test]
+        public void ThePanelNamesItsOwnTabsFromTheRegistry()
+        {
+            // The tab chips used to be a ternary in the shell; four tabs made it a switch,
+            // and a switch belongs beside the enum it switches on, where the naming test can
+            // reach it.
+            Assert.That(SettingsDirector.TabKey(SettingsTab.Interface), Is.EqualTo(SettingsDirector.InterfaceKey));
+            Assert.That(SettingsDirector.TabKey(SettingsTab.Graphics), Is.EqualTo(SettingsDirector.GraphicsKey));
+            Assert.That(SettingsDirector.TabKey(SettingsTab.Audio), Is.EqualTo(SettingsDirector.AudioKey));
+            Assert.That(SettingsDirector.TabKey(SettingsTab.Keys), Is.EqualTo(HotkeyDirector.KeysKey));
         }
     }
 }

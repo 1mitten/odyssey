@@ -1405,6 +1405,35 @@ Two things generalise:
   hid six dead mining tests, the loose tolerance that made a test prove nothing — are the same
   shape.
 
+## An optional parameter is how a composition root forgets
+
+`ColonyComposition.AddColony` gained the build pipeline's construction grid as
+`ConstructionGrid? construction = null`. Every one of the twelve existing call sites went on
+compiling, and eleven of them — including `OdysseyBootstrap`, the one the game actually runs —
+silently built a colony with **no intent handler for `PlaceBuilding`, no sites, and both
+construction work givers answering no for ever**.
+
+Every test passed, because every test builds its world through `ColonyWorld`, the twelfth call
+site, which did pass one. So the feature was green in the fast tier, green in the Long tier, and
+did nothing at all in the only build a player can touch. It was found by the owner dragging a wall
+across the meadow, watching the preview draw and watching nothing be built.
+
+`ColonyComposition`'s own class comment had predicted it: *"a designation grid that one of them
+forgot to attach would be a player command that silently did nothing in that build. So the list
+lives here, once."* The comment was right and the signature undid it.
+
+**The rule: a composition root's parameters are not optional.** If a new piece of colony state has
+a sensible default of "absent", every existing caller takes that default and the omission is
+invisible. Either make the parameter required — the compiler then names every site that has to
+think about it — or, better, build the thing inside the composition so there is nothing to pass.
+`AddColony` now takes the edifice list and hands the grid back through an `out`, so forgetting is
+not expressible.
+
+**And the standing guard is a test over the enum**, not over one command:
+`ConstructionTests.EveryIntentTheInterfaceCanSendIsAnsweredByTheColony` walks every `IntentKind`
+and asserts the colony answers it. The next command will arrive the same way — an enum value
+somebody adds and a handler somebody means to attach.
+
 **The price, met on 2026-09-16: a guard keyed by filename fails when a file is split.** Cutting
 `HudShell.cs` into partial-class files moved `keys.bKey` into `HudShell.Bar.cs`, and the ownership
 map still named `HudShell.cs`, so the tidy-up broke a test that had nothing to do with hotkeys. That

@@ -182,8 +182,9 @@ namespace Odyssey.Presentation.Ui
                 HudText.Set(_inspectMeta, MetaLine(), HudTextRole.Meta);
             }
             if (!ReferenceEquals(_stateJob, _inspect.Job) || !ReferenceEquals(_stateBand, band) ||
-                _stateSelected != selected)
+                _stateSelected != selected || !ReferenceEquals(_stateSite, _inspect.Site))
             {
+                _stateSite = _inspect.Site;
                 _stateJob = _inspect.Job;
                 _stateBand = band;
                 _stateSelected = selected;
@@ -351,7 +352,11 @@ namespace Odyssey.Presentation.Ui
                 case InspectSubject.Item:
                     return "item on the ground";
                 case InspectSubject.Cell:
-                    return "cell readout arrives with cell inspection";
+                    // A site says what it is waiting for or how much longer; bare ground still
+                    // has nothing to say, and says so rather than pretending.
+                    return _inspect.Site.Length > 0
+                        ? _inspect.Site
+                        : "cell readout arrives with cell inspection";
                 default:
                     return string.Empty;
             }

@@ -91,6 +91,22 @@ namespace Odyssey.Hud
         public string Position = string.Empty;
         public int Layer = -1;
 
+        /// <summary>
+        /// The one line a building site has to say for itself: what it is waiting for, or how much
+        /// longer it will take. Empty when the selected cell has no site on it.
+        /// </summary>
+        public string Site = string.Empty;
+
+        /// <summary>The registry key for what is being built, so the pane can draw its icon.</summary>
+        public string SiteIconKey = string.Empty;
+
+        /// <summary>Units of material delivered and wanted, for a bar. Both 0 when there is no site.</summary>
+        public int SiteDelivered;
+        public int SiteCost;
+
+        /// <summary>How far through the work, 0 to 1. Separate from the material, per <see cref="SiteView"/>.</summary>
+        public float SiteProgress;
+
         // ---- colonist body, the Needs tab
         public string Job = "idle";
         public string JobIconKey = "ui.status.idle";
@@ -243,10 +259,16 @@ namespace Odyssey.Hud
 
             if (Subject == InspectSubject.Cell)
             {
-                Title = "Ground";
-                Subtitle = "cell";
                 SetPosition(_cell);
                 Layer = _cell.Y;
+                if (!DescribeSiteAt(snapshot, _cell))
+                {
+                    Title = "Ground";
+                    Subtitle = "cell";
+                    Site = string.Empty;
+                    SiteIconKey = string.Empty;
+                }
+
                 return;
             }
 
@@ -263,6 +285,96 @@ namespace Odyssey.Hud
             for (int i = 0; i < pawns.Length; i++)
                 if (pawns[i].JobDef >= 0 && pawns[i].JobDef < JobHandle.Count)
                     JobCounts[pawns[i].JobDef]++;
+        }
+
+        /// <summary>
+        /// What is going up here, whether it has its material, and how much longer.
+        ///
+        /// <para><b>The three questions a player asks of a blueprint, and the pane could answer
+        /// none of them</b> — a click on a site said "Ground · cell", exactly as a click on bare
+        /// grass did, so the one thing on the board that is <i>about</i> a plan had nothing to say
+        /// about it (owner, 2026-09-17).</para>
+        ///
+        /// <para><b>The material line leads when the material is missing</b>, because that is the
+        /// actionable half: a site with no wood is not slow, it is stuck, and telling the player
+        /// "0%" would describe the symptom rather than the cause. Once it is fed, the time left is
+        /// what they want, so that is what the line becomes. It is the same rule <c>AlertModel</c>
+        /// follows — lead with the actionable clause.</para>
+        ///
+        /// <para>The estimate is honest about being one: it is the work remaining at one colonist's
+        /// pace, and two builders halve it while none makes it infinite. "about" is doing real work
+        /// in that sentence.</para>
+        /// </summary>
+        bool DescribeSiteAt(WorldSnapshot snapshot, CellRef cell)
+        {
+            int index = snapshot.Size.Index(cell);
+            var sites = snapshot.Sites;
+
+            for (int i = 0; i < sites.Length; i++)
+            {
+                if (sites[i].CellIndex != index) continue;
+
+                SiteView site = sites[i];
+                string thing = BuildLabels.Building(site.Building);
+                string stuff = BuildLabels.Stuff(site.Stuff);
+
+                Title = thing.Length == 0 ? "Building site" : thing;
+                Subtitle = stuff.Length == 0 ? "planned" : "planned · " + stuff;
+                SiteIconKey = BuildLabels.BuildingKey(site.Building);
+                SetSiteLine(site, stuff);
+                SiteDelivered = site.Delivered;
+                SiteCost = site.Cost;
+                SiteProgress = site.Progress;
+                return true;
+            }
+
+            SiteDelivered = 0;
+            SiteCost = 0;
+            SiteProgress = 0f;
+            _siteDeliveredFor = -1;
+            _siteSecondsFor = -1;
+            return false;
+        }
+
+        // The last values Site was written for. Same argument as _positionFor: the pane refreshes
+        // fifteen times a second and this is an interpolated string, so rebuilding it every time
+        // would allocate for as long as a site is selected — ADR 0003 F1 — and would also defeat
+        // the view's own guard, which asks "is this the same instance".
+        //
+        // The seconds reading is quantised to whole seconds before it is compared, so a countdown
+        // rebuilds once a second rather than fifteen times.
+        int _siteDeliveredFor = -1;
+        int _siteSecondsFor = -1;
+        bool _siteFramedFor;
+
+        void SetSiteLine(SiteView site, string stuff)
+        {
+            int seconds = site.IsFrame ? (site.WorkTotal - site.WorkDone + 59) / 60 : -1;
+            if (_siteFramedFor == site.IsFrame
+                && _siteDeliveredFor == site.Delivered
+                && _siteSecondsFor == seconds) return;
+
+            _siteFramedFor = site.IsFrame;
+            _siteDeliveredFor = site.Delivered;
+            _siteSecondsFor = seconds;
+
+            // The material leads while it is missing, because that is the actionable half: a site
+            // with no wood is not slow, it is stuck.
+            Site = site.IsFrame
+                ? "about " + Seconds(site.WorkTotal - site.WorkDone) + " left"
+                : $"{site.Delivered} of {site.Cost} {stuff} delivered";
+        }
+
+        /// <summary>
+        /// Ticks as a rough wall-clock reading at speed 1, which is the only pace a player can
+        /// judge a wait against. 60 ticks a second, per the composition root's own rate.
+        /// </summary>
+        static string Seconds(int ticks)
+        {
+            if (ticks <= 0) return "no time";
+            int seconds = (ticks + 59) / 60;
+            if (seconds < 60) return seconds + "s";
+            return seconds / 60 + "m " + seconds % 60 + "s";
         }
 
         /// <summary>

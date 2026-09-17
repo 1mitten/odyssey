@@ -80,4 +80,34 @@
     <settleTicks>30</settleTicks>
   </JobDef>
 
+  <!--
+    Carrying material to a site. It trains construction rather than hauling, which is the
+    one decision in this def: the alternative is that a colony builds its first hut and
+    comes out of it with four expert haulers and no builder, because most of the labour in
+    a wall is the walk. The carry is the work, exactly as it is for a haul, so the
+    experience is bounded the same way.
+  -->
+  <JobDef>
+    <defName>Job_Deliver</defName>
+    <driver>7</driver>
+    <expiryTicks>6000</expiryTicks>
+    <trainsSkill>3</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+  </JobDef>
+
+  <!--
+    No workTicks: building is priced per thing and per material, and
+    ConstructionContent.WorkFor reads both as the colonist swings, so a stone wall is 1.7
+    times the work of a wooden one. One constant here would make every wall cost the same,
+    which is the whole difference between materials - the argument Job_Mine already makes.
+  -->
+  <JobDef>
+    <defName>Job_Build</defName>
+    <driver>8</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>3</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
 </Defs>

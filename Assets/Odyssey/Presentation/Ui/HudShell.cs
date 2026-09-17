@@ -83,6 +83,9 @@ namespace Odyssey.Presentation.Ui
         // ---- roots
         VisualElement _hud = null!;
         VisualElement _marquee = null!;
+        VisualElement _armedBanner = null!;
+        Label _armedWhat = null!;
+        Label _armedHow = null!;
 
         // ---- stores (A1)
         VisualElement _storesPanel = null!;
@@ -139,6 +142,7 @@ namespace Odyssey.Presentation.Ui
         string? _stateJob;
         string? _stateBand;
         int _stateSelected = int.MinValue;
+        string? _stateSite;
 
         // ---- command bar (A8)
         VisualElement _barRow = null!;
@@ -155,13 +159,40 @@ namespace Odyssey.Presentation.Ui
         // ---- panels over the board
         VisualElement _buildPanel = null!;
         VisualElement _buildTools = null!;
+        VisualElement _buildMaterials = null!;
         int _buildCategory = -1;
         VisualElement _settingsPanel = null!;
         VisualElement _interfaceSection = null!;
         VisualElement _graphicsSection = null!;
+        VisualElement _audioSection = null!;
+        VisualElement _keysSection = null!;
+        VisualElement _developerRow = null!;
+        VisualElement _exitRow = null!;
+        Label _exitLabel = null!;
         readonly Dictionary<GraphicsOption, VisualElement> _settingRows = new();
         readonly Dictionary<SettingsTab, Label> _settingTabs = new();
         readonly Dictionary<int, Label> _scaleRungs = new();
+        readonly Dictionary<int, Label> _cameraRungs = new();
+        readonly Dictionary<(SettingsBus Bus, int Db), Label> _busRungs = new();
+        readonly Dictionary<HotkeyAction, KeyRowView> _keyRows = new();
+
+        /// <summary>One binding row: its root and the caps of its two slots, for
+        /// event-driven refresh. Strings are rebuilt on click, never per frame.</summary>
+        sealed class KeyRowView
+        {
+            public VisualElement Root = null!;
+            public readonly Label[] Caps = new Label[HotkeyDirector.SlotCount];
+        }
+
+        /// <summary>The command-bar Build cap and its item, so a rebind can move the legend
+        /// with the key it names.</summary>
+        Label _buildCap = null!;
+        VisualElement _buildItem = null!;
+        string _buildTooltipLabel = "";
+
+        /// <summary>Defaults-only binding map for the frames before the shell attaches to
+        /// the colony's directors, and for harness scenes that build no world.</summary>
+        HotkeyDirector? _hotkeysFallback;
 
         /// <summary>Our own copy of the panel settings, so that changing the interface scale does
         /// not write to the committed asset. See <see cref="ApplyUiScale"/>.</summary>
@@ -295,6 +326,17 @@ namespace Odyssey.Presentation.Ui
             _marquee.style.display = DisplayStyle.None;
             _hud.Add(_marquee);
 
+            // What the player is holding, and how to stop holding it. Above the command
+            // bar, where the eye already goes for the bar and its popovers.
+            _armedBanner = new VisualElement { name = "armed", pickingMode = PickingMode.Ignore };
+            _armedBanner.AddToClassList("armed");
+            _armedBanner.style.display = DisplayStyle.None;
+            _armedWhat = HudText.Make(string.Empty, HudTextRole.Name, ussClass: "armed__what");
+            _armedHow = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "armed__how");
+            _armedBanner.Add(_armedWhat);
+            _armedBanner.Add(_armedHow);
+            _hud.Add(_armedBanner);
+
             BuildStores();
             BuildStrip();
             BuildRightColumn();
@@ -329,6 +371,13 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.OptionChanged += OnSettingChanged;
             _directors.Settings.TabChanged += OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged += OnUiScaleChanged;
+            _directors.Settings.CameraSpeedChanged += OnCameraSpeedChanged;
+            _directors.Settings.DeveloperOverlayChanged += OnDeveloperOverlayChanged;
+            _directors.Settings.BusDbChanged += OnBusDbChanged;
+            _directors.Settings.ExitChanged += OnExitChanged;
+            _directors.Hotkeys.BindingChanged += OnBindingChanged;
+            _directors.Hotkeys.ListenChanged += OnListenChanged;
+            _directors.Hotkeys.ConflictNoted += OnHotkeyConflict;
 
             // The panel may already disagree with the director by the time we get here: the
             // presenter seeds it from the scene and the screen and then lays stored preferences
@@ -336,7 +385,12 @@ namespace Odyssey.Presentation.Ui
             OnSettingsChanged();
             OnSettingsTabChanged(_directors.Settings.Tab);
             OnUiScaleChanged(_directors.Settings.UiScale);
+            OnCameraSpeedChanged(_directors.Settings.CameraSpeed);
+            OnDeveloperOverlayChanged();
+            foreach (SettingsBus bus in SettingsDirector.Buses) OnBusDbChanged(bus);
+            OnExitChanged();
             foreach (GraphicsOption option in SettingsDirector.All) OnSettingChanged(option);
+            RefreshKeyCaps();
         }
 
         void Detach()
@@ -348,8 +402,18 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.OptionChanged -= OnSettingChanged;
             _directors.Settings.TabChanged -= OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged -= OnUiScaleChanged;
+            _directors.Settings.CameraSpeedChanged -= OnCameraSpeedChanged;
+            _directors.Settings.DeveloperOverlayChanged -= OnDeveloperOverlayChanged;
+            _directors.Settings.BusDbChanged -= OnBusDbChanged;
+            _directors.Settings.ExitChanged -= OnExitChanged;
+            _directors.Hotkeys.BindingChanged -= OnBindingChanged;
+            _directors.Hotkeys.ListenChanged -= OnListenChanged;
+            _directors.Hotkeys.ConflictNoted -= OnHotkeyConflict;
             _directors = null;
         }
+
+        /// <summary>A slot opened or closed its wait for a key; the caps say which.</summary>
+        void OnListenChanged() => RefreshKeyCaps();
 
         void OnEnable()
         {
@@ -456,6 +520,7 @@ namespace Odyssey.Presentation.Ui
             }
 
             UpdateMarquee();
+            UpdateArmedBanner();
             ReadBarKeys();
 
             // The roster sweep ends when the button does, wherever the pointer happens to be when
@@ -556,6 +621,55 @@ namespace Odyssey.Presentation.Ui
         /// reads as lag. Screen coordinates grow from the bottom-left and panel coordinates from
         /// the top-left, so the rect is flipped once, here, at the only place that draws it.
         /// </summary>
+        /// <summary>
+        /// A strip over the board saying what the player is holding and how to put it down.
+        ///
+        /// <para><b>An armed tool was invisible, and the way out of it was a key nobody had
+        /// been told about.</b> Escape has disarmed the tool since the settings panel landed —
+        /// it is the first step of <c>SettingsDirector.Escape</c> — but nothing on screen said
+        /// a tool was held, so the only evidence of build mode was that clicking stopped
+        /// selecting things. Reported by the owner as being hard to get out of (2026-09-17).</para>
+        ///
+        /// <para>Above the command bar rather than at the cursor: a cursor decoration is the
+        /// conventional answer and cannot carry a sentence, and the sentence is the point.</para>
+        /// </summary>
+        void UpdateArmedBanner()
+        {
+            DesignateDirector? tool = _directors?.Designate;
+            DesignateTool armed = tool?.Tool ?? DesignateTool.None;
+
+            if (armed == DesignateTool.None)
+            {
+                _armedBanner.style.display = DisplayStyle.None;
+                _armedFor = DesignateTool.None;
+                _armedStuffFor = -1;
+                return;
+            }
+
+            _armedBanner.style.display = DisplayStyle.Flex;
+            int stuff = tool!.Stuff;
+            if (_armedFor == armed && _armedStuffFor == stuff) return;
+
+            _armedFor = armed;
+            _armedStuffFor = stuff;
+
+            string what = armed switch
+            {
+                DesignateTool.Mine => "Mining",
+                DesignateTool.Fell => "Felling",
+                DesignateTool.Cancel => "Cancelling orders",
+                _ => BuildLabels.Building(tool.Building) is { Length: > 0 } name
+                    ? "Building " + name.ToLowerInvariant() + " of " + BuildLabels.Stuff(stuff)
+                    : "Building",
+            };
+
+            HudText.Set(_armedWhat, what, HudTextRole.Name);
+            HudText.Set(_armedHow, "drag over the board · Esc to stop", HudTextRole.Meta);
+        }
+
+        DesignateTool _armedFor = DesignateTool.None;
+        int _armedStuffFor = -1;
+
         void UpdateMarquee()
         {
             Rect? box = _rig?.DragBox;

@@ -46,8 +46,12 @@ namespace Odyssey.Tests.Sim
         /// <summary>
         /// The content as it stands. Update this number only when you meant to change the
         /// content, and say what moved in the commit message.
+        ///
+        /// <para>Moved 2026-09-17 by the build pipeline: two jobs (<c>Job_Deliver</c>,
+        /// <c>Job_Build</c>), a work type (<c>Work_Construction</c>, which also renumbered the other
+        /// three so it could scan first) and a skill (<c>Skill_Construction</c>).</para>
         /// </summary>
-        const ulong ContentFingerprint = 3197150531378429983UL;
+        const ulong ContentFingerprint = 5563497223069918341UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

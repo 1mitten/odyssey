@@ -74,7 +74,13 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   one-day run), switched on by the repository variable `UNITY_RUNNER=1`.
 - **M1 and M2 are done and reported** — `docs/milestones/M1-report.md`,
   `docs/milestones/M2-report.md`. Both went further than the plan asked.
-- **M3 is under way:** designations, felling, stockpiles and mining are in.
+- **M3 is under way:** designations, felling, stockpiles and mining are in, and **U26
+  building landed 2026-09-17** — a wall can be ordered from the Build palette in wood or
+  stone, and colonists carry the material and raise it. Design, the test procedure and what
+  is still open are `docs/design/15-building.md`; **read that before touching this line.**
+  It is on `claude/build-pipeline` (PR #63), not yet merged, and the owner reports walls are
+  still not going up in the running game — **unreproduced**, and the rejection log added the
+  same day exists to settle it on the next run rather than by a fourth round of inference.
 - **Work reaches `main` only through a pull request** with both tiers green, one approving review
   and the branch up to date. Branch protection enforces it, agents included. There is no long-lived
   feature branch — `claude/*` branches are per-change and short-lived.
@@ -200,7 +206,10 @@ first.
   grooves, 16 px goes to noise, and a **framed** sheet-06 tile at 17 px is mostly frame
   (`Logs/skill-icons.png`).
 - **Nobody has pressed Play on the interface work either.** The roster card, the docked bars, the
-  popovers and the Skills tab are all measured and none of them has been looked at.
+  popovers, the Skills tab and the settings panel's new Keys and Audio tabs are all measured and
+  none of them has been looked at. The Keys tab is the tallest panel yet — at 150 per cent
+  interface scale on a 1080p screen it is within pixels of the screen height and may want the
+  first max-height-and-scroll any panel here has carried.
 - **The 29 proposed proper nouns** in `docs/design/proper-nouns.csv` await approval or veto.
 - **Marsh reads as a sandy bank** — re-tint it greener or rename it.
 - **The audio listener is on the camera**, 32–160 m up, while the catalogue authors ranges as ground
@@ -209,9 +218,9 @@ first.
 
 ### Known gaps
 
-Felled trees, mined cells and climbs are not in the save (the designation grid is not saved). Mining
-collapses nothing. There is no fog of war, so a sealed cavern is visible if the player scrolls the
-layer down.
+Felled trees, mined cells and building sites are not in the save (the designation grid is not
+saved; the construction grid is). Mining collapses nothing. There is no fog of war, so a sealed
+cavern is visible if the player scrolls the layer down.
 
 **The state hash covers the world** (OQ-50, ADR 0005 amended 2026-09-17). It did not until then —
 `CellGrid` is neither a tickable nor a system, which were the only two lists `ComputeStateHash`

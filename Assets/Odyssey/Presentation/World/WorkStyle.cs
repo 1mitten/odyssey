@@ -436,8 +436,12 @@ namespace Odyssey.Presentation.World
         ///
         /// <para><b>Nothing in the simulation builds anything.</b> There is no build pipeline, no
         /// <c>JobHandle.Build</c>, no construction designation that anything acts on — so
-        /// <see cref="IndexForJob"/> can never return this index, and no colonist will ever be
-        /// seen in it during play. It exists because the owner asked for the motion (2026-09-16)
+        /// <b>Reached in play since the build pipeline landed</b> — <see cref="IndexForJob"/> maps
+        /// <c>JobHandle.Build</c> here, and a colonist raising a wall swings it. The paragraph below
+        /// is kept because it is the record of why the style existed before anything could use it,
+        /// and of the claim it was written to test.
+        ///
+        /// <para>It exists because the owner asked for the motion (2026-09-16)
         /// and because a hammer is the cheapest possible test of the claim this file makes: that a
         /// third kind of work should cost "a new static here and a row in
         /// <see cref="IndexForJob"/>, and nothing else". It cost a static, a recipe and a
@@ -498,7 +502,9 @@ namespace Odyssey.Presentation.World
         /// virtual on the driver, and nothing written here is wasted.</para>
         /// </summary>
         public static int IndexForJob(int jobDef) =>
-            jobDef == JobHandle.Mine ? MiningIndex : FellingIndex;
+            jobDef == JobHandle.Mine ? MiningIndex
+            : jobDef == JobHandle.Build ? BuildingIndex
+            : FellingIndex;
 
         /// <summary>The same, resolved. Anything that is not mining swings an axe.</summary>
         public static WorkStyle ForJob(int jobDef) => All[IndexForJob(jobDef)];

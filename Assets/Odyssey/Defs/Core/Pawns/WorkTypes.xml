@@ -10,19 +10,36 @@
   <WorkTypeDef>
     <defName>Work_Haul</defName>
     <label>hauling</label>
-    <order>2</order>
+    <order>3</order>
   </WorkTypeDef>
 
   <WorkTypeDef>
     <defName>Work_Cutting</defName>
     <label>cutting</label>
-    <order>0</order>
+    <order>1</order>
   </WorkTypeDef>
 
   <WorkTypeDef>
     <defName>Work_Mining</defName>
     <label>mining</label>
-    <order>1</order>
+    <order>2</order>
+  </WorkTypeDef>
+
+  <!--
+    Construction scans before all three, which is the reference's own order and the right
+    one here for a plainer reason: a site is work already begun, and a colony that wanders
+    off to fell another tree with half a wall standing is a colony that finishes nothing.
+    It costs the other three nothing while there are no sites, because both construction
+    givers then answer in a single comparison.
+
+    It covers carrying material to a site as well as working at one. Delivery is not a
+    haul that happens to help: a haul takes a thing to a stockpile because it is tidier
+    there, and this takes a thing to a site because a wall cannot be built without it.
+  -->
+  <WorkTypeDef>
+    <defName>Work_Construction</defName>
+    <label>construction</label>
+    <order>0</order>
   </WorkTypeDef>
 
 </Defs>
