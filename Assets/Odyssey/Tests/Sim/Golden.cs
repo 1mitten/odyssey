@@ -83,8 +83,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 13449042641056873599UL,
-            Simulated = 17620425191032474815UL,
+            Generated = 7633281305254602338UL,
+            Simulated = 7274653310757277862UL,
         };
 
         /// <summary>
@@ -100,8 +100,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 545303012395077803UL,
-            Simulated = 4037971380253130273UL,
+            Generated = 10240930215320707382UL,
+            Simulated = 13373369047270975494UL,
         };
 
         /// <summary>
@@ -116,8 +116,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 11350740491233283268UL,
-            Simulated = 11831035356810792670UL,
+            Generated = 15938833264199567841UL,
+            Simulated = 5887301857021239423UL,
         };
     }
 }
