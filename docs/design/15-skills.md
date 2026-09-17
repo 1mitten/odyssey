@@ -34,6 +34,14 @@ Two further facts worth having in front of you:
   levels above ten and that is the whole of it. A Skills tab is therefore honest about a number
   that currently has no consequence.
 
+  **Scheduled 2026-09-17** — the owner asked why chopping is not faster for a skilled colonist, and
+  the answer to "what would make the level mean something" is now designed in
+  `17-rates-and-stats.md` and planned as `U42`–`U45` (`vertical-slice.md` §WS). It reads
+  `SkillIndex` as it stands, so it neither depends on nor blocks the table reshuffle §6 leaves
+  open. One convergence worth noting here: that design's research found the reference's general
+  labour has **no skill-driven speed at all**, which is §6's "hauling is a work type, not a skill"
+  arriving from the opposite direction.
+
 ---
 
 ## 2. The sheet, cell by cell

@@ -183,6 +183,53 @@ resume with matching full hashes headless, and `docs/milestones/MS-report.md` wr
 
 ---
 
+## WS — Skill and condition become a rate (owner, 2026-09-17)
+
+A colonist's standing changes how fast they work and how fast they walk. **Design:
+`docs/design/17-rates-and-stats.md` — read it before starting any unit here**, and do not take the
+reference's curves out of it without reading §3b.
+
+**Where it came from.** Two owner questions in one conversation: chopping should be faster for a
+skilled colonist and should visibly swing faster, with experience rising as they do it; and move
+speed should vary between characters and depend on their condition and health. The first is
+**half built** — experience is complete and correct (OQ-14) and **nothing reads a level back
+out**; the second **cannot be built as the numbers stand**, because `movePerTick` is `1` against a
+cell cost of `100` and the only speeds expressible are 1.5, 3.0 and 4.5 m/s.
+
+**Why it is one milestone and not two features.** Both are the same missing thing — a per-pawn,
+per-activity rate in thousandths, multiplied into an accumulator — and both need the same
+one-off change to make integers work at all: **the accumulator scales by 1,000 and no authored
+content number moves.** Doing them separately would pay that cost twice and risk two answers to
+the same question.
+
+**Why it is beside M3 and not inside it.** M3's gate is a ten-day headless run, and this changes
+how fast every colonist does everything, so it moves that run's economy. It is sequenced **after**
+M3's gate is taken, or M3's gate measures a moving target. `U42` alone is safe to land at any time,
+because its done criterion is that nothing changes.
+
+**The standing risk, named once.** Every golden hash moves at `U43` and again at `U44`. That is
+expected and deliberate; it is a re-bake with `ODYSSEY_REGOLDEN=1`, the reason written into
+`Golden.cs` the way OQ-50 and the edifice-save change established. **`U42` is what makes those
+re-bakes readable**: it proves the mechanism moves nothing, so everything that moves afterwards is
+tuning.
+
+| Unit | Size | Depends on | Done when |
+|---|---|---|---|
+| **U42 The rate seam** | M | — | `Pawn.WorkRatePerMille(workType)` and `Pawn.MoveRatePerMille()` exist, virtual, and both return a constant 1,000. `_work[cell]` (designations and construction alike) and `Pawn.MoveProgress` count thousandths; every comparison reads `cost × 1,000`; **no authored number in `Terrain.xml`, `Jobs.xml`, `ConstructionContent` or `MoveCost` changes**, so both content fingerprints hold. **The done criterion is that nothing moves:** every golden hash, every path checksum and the one-day run are identical before and after, and the save reads a v1/v2 file by scaling the old value. A control sets a rate to 500 and requires a job to take twice as long. |
+| **U43 Work speed from skill** ∥ | M | U42 | `rate = base + slope × level`, floored, as three Def fields per work type, anchored per design §3b (eight proposed integers, INVENTED — the owner's call; hauling is flat 1.0, which is both the reference's answer and `15-skills.md` §6's). Felling, mining, building and deconstruction all pay at the pawn's rate; a level-20 colonist finishes a fixed cell in a ratio of ticks that equals the curve exactly; two colonists of different skill sharing one cell sum their contributions in one unit. `odyssey.pawn.rate.work` published as a `PawnAspect`, so `Sim.Contracts` does not change. **Presentation scales the stroke clock by it** (`PawnFigureDirector.cs:924`, one line) so a fast worker visibly swings faster. Goldens re-baked deliberately; the ten-day soak re-run on three seeds and **its economy compared against the previous run, not merely checked for errors**. |
+| **U44 Move speed, and condition on both rates** | M | U42, U43 | An innate factor rolled once from `(world seed, pawn id)` on its own `PawnPurpose`, **capped at ±15%** because the drawn walk cycle blends the run clip in above ~2 m/s (design §4b). **One shared `ConditionPerMille()` multiplying the work rate as well as the move rate** (owner, 2026-09-17: *"if exhausted, starving etc, all has an effect"*) — exhaustion and starvation, hard floor ×0.70, and a test that the floor holds when both apply at once. `odyssey.pawn.rate.move` published as an aspect. **Terrain cost stays in the step cost and is not touched** (§4g) — a test asserts the planner's chosen route is unchanged by a pawn's rate. **The soak is the done criterion, not a formality:** three seeds, ten days, against a run with the condition factors disabled, both economies recorded, proving no starvation spiral. |
+| **U45 Running** | S | U44 | **Held, not scheduled (owner, 2026-09-17: "not sure yet").** The capability is a multiplier on a rate `U44` already produces, and the gait blend already turns it into a run above ~2 m/s with no new clip and no new state — so nothing is lost by waiting for a reason to run. **The standing rule while it is held: do not invent an urgency model.** When it is taken: a PlayMode test that the run clip's weight rises, with the control that at the ordinary rate it does not; nothing in the save or the hash. |
+
+**Gate:** both tiers green; `U42`'s "nothing moved" control passing on the same commit as `U43`'s
+re-bake, so the diff shows which change moved what; the ten-day run green on three seeds with its
+economy written down beside the previous one; and the owner has played it and judged the anchor.
+
+**Not in scope, and §6 of the design says why for each:** quality, yield, the passion mood buff,
+traits, health capacities, carried load, and the skill-table reshuffle `15-skills.md` §6 leaves
+open.
+
+---
+
 ## Deferred: the rest of the look (recorded 2026-09-16, owner deferred)
 
 Pull request #50 landed the day/night cycle, the golden hour under it, the hill wood and the B17

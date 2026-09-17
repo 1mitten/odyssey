@@ -2436,3 +2436,104 @@ work itself.
     `QueryCell` plus a republish per hover-frame would be sixty publishes a second and is the
     wrong shape — that feature wants a throttled question or a presentation-side read of the
     mirror, and ADR 0004 amendment 2's flip condition is where the decision is recorded.
+
+- **A skill level has never meant anything, and now there is a plan for what it should mean
+  (2026-09-17).** The owner asked whether anything determines that a better woodcutter chops
+  faster and swings faster while their experience creeps up, and then, in the same breath, asked
+  for a move speed that varies between characters and depends on their condition and health.
+  Answering the first honestly took reading the code rather than the plan, and the answer was
+  **half**.
+  - **Experience is complete and correct.** `JobDriver.Work()` pays on the ticks that are work and
+    not on the walk to it; the gain is base × learning factor × passion × the over-cap factor; the
+    level is read off a Def table and never stored; it decays above ten; it is saved and hashed;
+    `U37` now rolls a starting level. None of that was in question.
+  - **Nothing reads the level back out**, and it is the same one line in four places:
+    `AddWork(cell, 1)`. A level-20 miner and a level-0 miner clear the same rock in the same 700
+    ticks. `15-skills.md` §1 had already said so in plain words — *"Nothing reads a skill level
+    yet. Not work speed, not yield, not quality"* — and left it there, because that document was
+    about icons. **`a-08-plants-growing-food.md` had gone further and written the instruction**:
+    *"when OQ-14 lands skills, the felling driver multiplies work by the plant-work-speed curve"*.
+    OQ-14 landed in the overnight queue; the multiplication did not; nothing connected the two,
+    and no test could have, because a research recommendation is prose.
+  - **Move speed could not have been built at all as the numbers stand, and the content file
+    already knew.** `movePerTick` is `1` against a cell cost of `100`, so the only speeds
+    expressible are 1.5, 3.0 and 4.5 m/s — there is no room between them for "this colonist is a
+    little quicker". `Colonist.xml:36` had diagnosed it in a comment months ago: *"A pace between
+    these integers wants the cost scale raised, not a fraction stored."* Nobody had needed the
+    room until the owner asked for it.
+  - **So the two asks are one mechanism**, which is why they became one design
+    (`docs/design/17-rates-and-stats.md`) rather than two features: a per-pawn, per-activity rate
+    in thousandths, multiplied into an accumulator. The decision that makes it cheap is **scale
+    the accumulator, not the content**. `_work[cell]` and `MoveProgress` count thousandths and
+    every comparison reads `cost × 1,000`; not one authored number in `Terrain.xml`, `Jobs.xml`,
+    `ConstructionContent` or `MoveCost` moves, so both content fingerprints hold, no path changes,
+    and `HopPriceHasOneOwnerTests` is not fought with. Two saved integers change scale and nothing
+    else does.
+  - **The alternative was ruled out by a decision already taken.** Dividing a job's total work by
+    the worker's speed when the job starts is the obvious reading, and it is impossible here:
+    **work is banked on the cell, not on the job** (`DesignationGrid`, "a miner who stopped for a
+    meal took the whole morning's work with it"), so a cell worked by two colonists of different
+    skill must accumulate in a unit that means the same to both.
+  - **The research that was fetched corrected one of our own files.** One capped subagent
+    (`docs/research/work-speed-and-stats.md`) found that every work-speed curve in the reference
+    is dead linear with no diminishing returns, and that **every slope is chosen so level 8 reads
+    exactly 100%** — mining steepest at 61× novice to master, construction shallowest at 6.8×
+    because there skill buys quality rather than throughput, hauling with no skill speed at all.
+    That invariant settles a disagreement without a third source: `a-04-building-and-materials.md`
+    had construction at 50% + 15 points a level, which puts level 8 at 170%, and it is struck
+    through and corrected in place. Nothing was built on it — no code had ever read a construction
+    speed.
+  - **The finding that changes the design, rather than filling it in: our colonists are not the
+    reference's.** Its curves are anchored on a level-8 colonist; `Colonist.xml`'s roll has a
+    **mean of 1.16**, so taking the curves verbatim would fell at 19.5% and mine at 16% — a 5–6×
+    brake on every colonist in the game, which is not a balance tweak but a different game, and
+    it would have been discovered as a failing soak rather than as a decision. The design
+    therefore **re-anchors on our own average colonist and keeps the reference's relative
+    character** (mining steepest, construction shallowest, hauling flat), which puts a novice at
+    0.55–0.7× and a master at about 2.5×. Eight integers, all INVENTED, and the owner's to argue
+    with at the keyboard.
+  - **Hauling being flat is two arguments meeting.** The reference's general-labour stat has no
+    skill term, and `15-skills.md` §6 had independently concluded — from an icon sheet — that
+    hauling is a work type and not a skill. Two lines of reasoning arriving at the same place is
+    the strongest evidence in the document.
+  - **The swing is presentation's and stays presentation's.** `figure.SwingClock += deltaTime`
+    becomes `+= deltaTime * rate / 1000`, one line, and the chips and impact audio follow for free
+    off `BlowLanded`. The tighter design — one blow, one quantum of work — was refused for the
+    reason `JobDef.settleTicks` records: a presentation constant in the tick, the save and the
+    hash. Work stays continuous, the swing is scaled to match, and the two agree in aggregate
+    without either owning the other.
+  - **One honest argument against part of it, recorded rather than buried.** The reference *had* a
+    mood-driven work-speed bonus and **removed** it, on the reasoning that mood should produce
+    visible events rather than an invisible percentage tax. The design proposes exactly such a tax
+    for movement (exhaustion and starvation, floored at ×0.70 so there is no death spiral). The
+    difference it relies on is that ours will be visible in the inspect pane; if that turns out not
+    to be enough in play, §3e is the reason to drop it rather than tune it.
+  - **Planned as `U42`–`U45`** in `vertical-slice.md` §WS and `OQ-51`–`OQ-54` in the queue, in that
+    order and beside M3 rather than inside it, because it moves the economy the ten-day gate
+    measures. `U42` lands alone and its done criterion is **that nothing changes** — every golden,
+    every path checksum and `OneDay` identical — which is what will make the deliberate re-bakes
+    at `U43` and `U44` readable as tuning rather than as drift.
+- **The three rate questions answered, and one of them widened the design (owner, 2026-09-17).**
+  Asked the three questions `17-rates-and-stats.md` could not settle headless, the owner took the
+  proposed curve anchor as a starting point (*"sure we start somewhere"*), said condition should
+  bite (*"if exhausted, starving etc — all has an effect"*), parked running (*"not sure yet"*), and
+  gave the governing rule for the whole line: *"use RimWorld as a rough reference to how this
+  could work well."*
+  - **The condition answer is the one that changed the design rather than confirming it.** As
+    written, condition multiplied the *move* rate only. "All has an effect" reads wider than that,
+    so it now multiplies **both** rates from a single `ConditionPerMille()` — one computation, one
+    floor, two consumers, and one place to look when asking why a colonist is slow. The cost is
+    that the starvation spiral the floor exists to prevent gained a second turn: a hungry colonist
+    now also cooks and chops more slowly, so the soak comparison that was a sensible check is
+    `U44`'s **done criterion**.
+  - **"Rough reference" is now written into the design as a rule rather than left as a habit**
+    (`17-rates-and-stats.md`, intro): shape, structure and intent taken — the linear curve, the
+    counter model, the composition order, capacity weighting, the relative character of the skills,
+    and even the decisions the reference *unmade*; constants re-anchored only where our own numbers
+    differ, which is the one departure and is §3b's; never a name, a line of text, a Def or a line
+    of code. A later session can hold the document to that.
+  - **Running is held, deliberately and cheaply.** The capability is a multiplier on a rate `U44`
+    already produces and the gait blend already turns it into a run above ~2 m/s, so leaving it
+    unbuilt costs nothing and building it now would mean inventing an urgency model to justify it.
+    `OQ-54` is marked blocked with that reason rather than left open to be picked up by a session
+    looking for work.

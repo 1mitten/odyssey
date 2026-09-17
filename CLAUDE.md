@@ -218,9 +218,45 @@ two methods and reachable from no tick path.
 Three things a later session should not re-litigate. **Live portraits** are refused by
 `09-ui-and-input.md` §4.5 — but that argument is about fifty of them in the roster bar at 15 Hz
 while the world renders, and the select screen is three, rendered once, with no world behind them;
-§4.5 gets an explicit carve-out in `U41` rather than a silent exception. **Colonists start every
+§4.5 gets an explicit carve-out in `U41` rather than a silent exception. ~~**Colonists start every
 skill at 0 experience** — only passions are rolled — so there is nothing to choose between three
-candidates until `U37`.
+candidates until `U37`.~~ **`U37` landed**: levels are rolled on the first tick from a weighted
+table, mean 1.16.
+
+### WS, rates, is designed and planned — nothing is built (owner, 2026-09-17)
+
+**A skill level has never had a consequence.** Experience is complete — earned per work tick,
+scaled by passion, capped daily, decaying above ten, saved and hashed — and **nothing reads a level
+back out**: felling, mining, building and deconstructing each bank exactly `1` per tick whoever is
+working (`MineJob.cs:342` and its three siblings), so a level-20 miner and a level-0 miner clear
+the same rock in the same 700 ticks. **Move speed is worse than absent**: `movePerTick` is `1`
+against a cell cost of `100`, so the only speeds expressible are 1.5, 3.0 and 4.5 m/s and there is
+no room to vary within — which `Colonist.xml:36` had already written down.
+
+Both are one mechanism and one design, `docs/design/17-rates-and-stats.md` — **read it before
+touching this line**, and in particular do not take the reference's curves out of it without §3b.
+A rate is an integer in thousandths where 1,000 is today's speed; **the accumulator scales and the
+content does not**, so no authored number moves, no path changes and both content fingerprints
+hold. The research behind it (`docs/research/work-speed-and-stats.md`) **corrected one of our own
+files in passing**: every work-speed slope in the reference is chosen so level 8 reads exactly
+100%, which falsifies `a-04`'s construction figure (struck through there). The finding that shaped
+the design is that **our colonists are not the reference's** — its curves are anchored on level 8
+and our roll means 1.16, so taking them verbatim would put a 5–6× brake on the whole game. The
+curves are re-anchored on our own average colonist instead.
+
+Planned as `U42`–`U45` (`vertical-slice.md` §WS) and `OQ-51`–`OQ-54`, **beside M3 rather than
+inside it** because it moves the economy M3's ten-day gate measures. `U42` lands alone and its
+done criterion is that **nothing changes**.
+
+**Three owner decisions on 2026-09-17, so a later session does not re-open them.** The proposed
+curve anchor is **accepted as a starting point** — a novice at 0.55–0.7×, a master at about 2.5×,
+mining steeper than building, eight Def integers to be judged at the keyboard. **Condition bites
+both rates**, not movement alone: one shared `ConditionPerMille()` for exhaustion and starvation,
+floored at ×0.70, which makes `U44`'s soak comparison a done criterion rather than a formality.
+**Running is held** — the capability is free to leave unbuilt and nobody is to invent an urgency
+model to justify building it. The governing rule for the whole line is the owner's: *use the
+reference roughly* — shape, structure and intent taken, constants re-anchored where our colonists
+differ from its own, never a name or a line of text.
 
 ### What runs today
 
