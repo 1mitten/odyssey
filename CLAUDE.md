@@ -180,7 +180,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **461 Sim + 117 Hud**; Long tier **15**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **471 Sim + 117 Hud**; Long tier **15**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
