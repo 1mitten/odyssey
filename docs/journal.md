@@ -3113,3 +3113,29 @@ work itself.
     tier — it runs on the owner's self-hosted runner against the pull request. **Not measured:
     nobody has pressed Play.** The bed's placeholder art, the popover's reach and the R claim
     are all judgements for the keyboard, and design 20 §12 already lists what is open.
+
+- **The bed and the floors, checked against the owner's use case, 2026-09-17.** The owner asked
+  the question the flat-board tests had not: does the bed build on a floor above, and is the
+  colonist assigned to it able to sleep in it — checked for floors above and below. Five tests
+  came out of the asking, and nothing had to change: the seams were already right, they had
+  simply never been asked.
+  - **A slab is a floor, and the bed's footprint accepts both cells on one.** A bed ordered a
+    storey above the ground, on slabs laid over open air, places, raises, publishes its tier and
+    joins the sleep list — with the control proving the pass is the slab and not thin air (air
+    over air is still refused). The slabs are laid straight onto the grid the way the floor half
+    of the building line will lay them when its branch lands; the bed's claim is about what it
+    stands on, not who put it there.
+  - **A floor over a bed changes nothing.** A slab laid over the site between order and raise —
+    the world moving over the order while the wood was out — leaves placement, raising and
+    ownership untouched, because nothing in the bed's rules looks up.
+  - **A storey up, end to end.** On the terraced meadow a bed ordered as a player orders it
+    (an intent) on higher ground than the start is fed its wood up the riser, worked, and
+    finished at a rolled tier by the driver's own completion branch — the one path no earlier
+    bed test had reached, every other test raising beds directly. Its owner then climbs to it
+    and sleeps there at the Epic rate.
+  - **The honest limit, stated in the test's own comment:** a bed on a *built slab* storey can
+    be placed, raised, owned and asked about today, but sleeping in it — and hauling to it —
+    waits on a way up. The built-stair line has not landed; a ladder excludes a laden hauler by
+    its own rule, and nothing else on this branch connects storeys. The terrace test reaches
+    its bed the way the game currently can: a one-block hop. The day stairs land, the same
+    tests will hold one storey higher without a line changing.

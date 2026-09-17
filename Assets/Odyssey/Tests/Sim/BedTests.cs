@@ -403,6 +403,221 @@ namespace Odyssey.Tests.Sim
                 "the unowned bed is the free bed: nobody checks into somebody else's");
         }
 
+        // ---- a bed and the floors: above, below, and one storey up (the owner's use case) ------
+
+        /// <summary>
+        /// Lay a slab the way the building line's floor half will lay it when it lands: straight
+        /// onto the grid, at the cell's lower boundary. Until then this is the same rig
+        /// <c>SupportSolverTests</c> uses, and the bed's claim is about what it stands on, not who
+        /// put it there.
+        /// </summary>
+        static void LaySlab(ColonyWorld colony, int cell) =>
+            colony.Grid.Floor[cell] = CoreContent.SlabStructural;
+
+        /// <summary>
+        /// A bed ordered a storey above the ground, on slabs laid over open air: both cells of the
+        /// footprint must accept it, because a slab is a floor - the one rule <c>Allows</c> has
+        /// always made about underfoot, now asked of a two-cell thing on a storey nothing else
+        /// occupies (owner, 2026-09-17: beds must build on floors above).
+        /// </summary>
+        [Test]
+        public void ABedCanBeOrderedOnSlabsAStoreyAboveTheGround()
+        {
+            ColonyWorld colony = Fresh();
+            CellRef start = colony.Start;
+
+            // Open air one storey over the start's floor, with open air beneath it too: a true
+            // second storey, not the surface cell renamed. The board is flat here, so the pair a
+            // step up over the start's own clearing is the honest example.
+            int head = Size.Index(start.X, start.Z, start.Y + 1);
+            int foot = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, 0, Size);
+            Assume.That(foot, Is.GreaterThanOrEqualTo(0));
+            Assume.That(colony.Grid.IsSolidTerrain(head), Is.False);
+            Assume.That(colony.Grid.HasFloor(head), Is.False,
+                "the storey beneath is open air, so the slab - not the ground - must be the floor");
+
+            LaySlab(colony, head);
+            LaySlab(colony, foot);
+
+            Assert.That(
+                colony.Construction.Place(Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, 0),
+                Is.EqualTo(IntentRejection.None),
+                "a slab is a floor, and the bed's footprint accepts both of its cells on slabs");
+            colony.Construction.Raise(colony.Pawns, head, (byte)QualityHandle.Normal);
+
+            Assert.That(colony.Grid.Edifice[foot], Is.EqualTo(colony.Grid.Edifice[head]),
+                "the record stands behind both slab cells");
+            Assert.That(colony.Pawns.Items.Beds, Has.Member(head));
+            Assert.That(colony.Construction.BedQualityAt(head), Is.EqualTo(QualityHandle.Normal),
+                "the questions all work a storey up: what tier, and whose");
+        }
+
+        /// <summary>
+        /// The control for the one above: the same order with no slab and no ground beneath either
+        /// cell is refused, so the pass above is the slab and not thin air.
+        /// </summary>
+        [Test]
+        public void ABedAStoreyUpWithNoFloorAtAllIsRefused()
+        {
+            ColonyWorld colony = Fresh();
+            CellRef start = colony.Start;
+            int head = Size.Index(start.X, start.Z, start.Y + 1);
+            Assume.That(colony.Grid.IsSolidTerrain(head), Is.False);
+            Assume.That(colony.Grid.HasFloor(head), Is.False,
+                "air over air: nothing to stand on until a slab is laid");
+
+            Assert.That(
+                colony.Construction.Place(Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, 0),
+                Is.EqualTo(IntentRejection.NotPermitted));
+        }
+
+        /// <summary>
+        /// A bed under a floor - a slab laid over its head, the cell above the bed - changes
+        /// nothing about ordering, raising, owning or being slept in. Nothing in the bed's rules
+        /// looks up, and this is the test that says so on purpose rather than by silence.
+        /// </summary>
+        [Test]
+        public void ABedCanBeOrderedAndOwnedUnderAFloorLaidOverIt()
+        {
+            ColonyWorld colony = Fresh();
+            int head = OpenFootprint(colony, out int second);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+            Assume.That(colony.Construction.Place(Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, 0),
+                Is.EqualTo(IntentRejection.None));
+
+            // The slab goes on after the order and before the raise, which is the awkward half of
+            // the question: the world moved over the site while the wood was being fetched.
+            LaySlab(colony, head + Size.LayerStride);
+            colony.Construction.Raise(colony.Pawns, head, (byte)QualityHandle.Normal);
+
+            var pawn = colony.Pawns.Pawns.All[0];
+            Assert.That(Assign(colony, head, pawn.Id.Value), Is.EqualTo(IntentRejection.None));
+            Assert.That(colony.Construction.BedOwnerAt(head), Is.EqualTo(pawn.Id.Value),
+                "a ceiling over the bed does not unmake it");
+        }
+
+        /// <summary>
+        /// The whole use case on one board, a storey up and walked to: on the terraced meadow a
+        /// bed stands on higher ground than the colony's start, its owner climbs the riser to it
+        /// and sleeps there at the tier's own rate. Reachability is the terraced board's own - a
+        /// one-block hop - because the built-stair line has not landed, and this test is the
+        /// record of what a bed on a floor above costs today.
+        /// </summary>
+        [Test]
+        public void AnOwnerClimbsToABedOnHigherGroundAndSleepsThere()
+        {
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 3;
+            scenario.beds = 0;
+            ColonyWorld colony = ColonyWorld.Build(Size, Seed, scenario, barren: false, wooded: true);
+            var owner = colony.Pawns.Pawns.All[0];
+
+            // A footprint standing higher than the start: both cells floor themselves on the
+            // terrace's own ground, which is what a floor above is when the floor is the land.
+            int high = -1;
+            for (int radius = 1; radius < 14 && high < 0; radius++)
+            for (int dz = -radius; dz <= radius && high < 0; dz++)
+            for (int dx = -radius; dx <= radius && high < 0; dx++)
+            {
+                if (System.Math.Abs(dx) != radius && System.Math.Abs(dz) != radius) continue;
+                int x = colony.Start.X + dx, z = colony.Start.Z + dz;
+                for (int y = colony.Start.Y + 1; y < Size.SizeY - 1 && high < 0; y++)
+                {
+                    int head = Size.Index(x, z, y);
+                    if (!colony.Construction.Allows(head)) continue;
+                    int foot = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, 0, Size);
+                    if (foot < 0 || !colony.Construction.Allows(foot)) continue;
+
+                    // Higher than the start, and the walk to it exists: the chooser's own
+                    // reachability is the oracle, asked once here rather than assumed.
+                    if (colony.Pawns.Reachable(owner, head)) high = head;
+                }
+            }
+            Assume.That(high, Is.GreaterThanOrEqualTo(0),
+                "the terraced board has a reachable footprint above the start");
+
+            colony.Construction.Raise(colony.Pawns, high, (byte)QualityHandle.Epic);
+            Assume.That(Assign(colony, high, owner.Id.Value), Is.EqualTo(IntentRejection.None));
+
+            owner.Needs[NeedIndex.Rest] = 60;
+            for (int i = 0; i < 8_000 && !owner.Asleep; i++) colony.World.Tick();
+            Assert.That(owner.Asleep, Is.True, "the owner found somewhere to sleep");
+            Assert.That(owner.Cell, Is.EqualTo(high),
+                "the owner climbed to their own bed a storey up and slept in it");
+
+            int before = owner.Needs[NeedIndex.Rest];
+            colony.World.Tick(1_500);
+            Assert.That(owner.Needs[NeedIndex.Rest] - before, Is.GreaterThan(70),
+                "an Epic bed restores at 140 per cent, a storey up as on the ground");
+        }
+
+        /// <summary>
+        /// The whole pipeline on one board, a storey up: the bed is ordered as a player orders
+        /// it (an intent), the wood is carried up the terrace, the work is done, and the thing
+        /// that lands is one record behind two cells finished at a rolled tier - the driver's own
+        /// roll, which no other test reaches (the rest raise beds directly, bypassing the
+        /// completion branch the way a unit test is allowed to and an end-to-end one is for).
+        /// </summary>
+        [Test]
+        public void ABedAStoreyUpIsFedWorkedAndFinishedAtAQualityTier()
+        {
+            ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 3;
+            scenario.beds = 0;
+            ColonyWorld colony = ColonyWorld.Build(Size, Seed, scenario, barren: false, wooded: true);
+
+            int high = -1;
+            for (int radius = 1; radius < 14 && high < 0; radius++)
+            for (int dz = -radius; dz <= radius && high < 0; dz++)
+            for (int dx = -radius; dx <= radius && high < 0; dx++)
+            {
+                if (System.Math.Abs(dx) != radius && System.Math.Abs(dz) != radius) continue;
+                int x = colony.Start.X + dx, z = colony.Start.Z + dz;
+                for (int y = colony.Start.Y + 1; y < Size.SizeY - 1 && high < 0; y++)
+                {
+                    int head = Size.Index(x, z, y);
+                    if (!colony.Construction.Allows(head)) continue;
+                    int foot = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, 0, Size);
+                    if (foot < 0 || !colony.Construction.Allows(foot)) continue;
+                    if (!colony.Pawns.Reachable(colony.Pawns.Pawns.All[0], head)) continue;
+
+                    // Somewhere to stand and build it from, or nobody ever will - and a place
+                    // nearby for the wood pile the delivery needs.
+                    if (FellJobDriver.StandBeside(colony.Pawns, colony.Pawns.Pawns.All[0], head) >= 0) high = head;
+                }
+            }
+            Assume.That(high, Is.GreaterThanOrEqualTo(0),
+                "the terraced board has a buildable, reachable footprint above the start");
+
+            int foot2 = EdificeFootprint.SecondCell(high, CoreContent.EdificeBed, 0, Size);
+            int pile = colony.Pawns.Items.NearestCellWithSpace(
+                colony.Grid, high, ItemIndex.Wood, 20, JobDriver.DropSearchRadius);
+            Assume.That(pile, Is.GreaterThanOrEqualTo(0));
+            colony.Pawns.Items.Spawn(ItemIndex.Wood, pile, 20);
+
+            colony.World.Intents.Submit(new Intent(
+                IntentKind.PlaceBuilding, Size.FromIndex(high), BuildingHandle.Bed, StuffHandle.Wood, 0));
+            colony.World.Tick();
+            Assume.That(colony.World.Intents.Rejected.Count, Is.EqualTo(0));
+
+            bool raised = false;
+            for (int tick = 0; tick < 30_000 && !raised; tick++)
+            {
+                colony.World.Tick();
+                raised = colony.Grid.Edifice[high] >= 0;
+            }
+
+            Assert.That(raised, Is.True, "the bed went up a storey above the start");
+            Assert.That(colony.Grid.Edifice[foot2], Is.EqualTo(colony.Grid.Edifice[high]));
+
+            PlacedEdifice bed = colony.Outcome.Edifices[colony.Grid.Edifice[high]];
+            Assert.That(bed.Def, Is.EqualTo(CoreContent.EdificeBed));
+            Assert.That(bed.Quality, Is.InRange(1, 5),
+                "the finisher rolled one of the five tiers - the success roll, landed by the driver");
+            Assert.That(colony.Pawns.Items.Beds, Has.Member(high),
+                "and the finished bed joined the list the sleep chooser scans");
+        }
+
         [Test]
         public void AnOwnedBedSurvivesASaveAndItsOwnerWithIt()
         {
