@@ -170,12 +170,8 @@ namespace Odyssey.Presentation.Ui
 
         // ---- panels over the board
         VisualElement _buildPanel = null!;
-        VisualElement _buildTools = null!;
-        VisualElement _buildMaterials = null!;
 
         /// <summary>The always-on row under the palette. See <see cref="PaletteTools.Pinned"/>.</summary>
-        VisualElement _buildPinned = null!;
-        int _buildCategory = -1;
         VisualElement _settingsPanel = null!;
         VisualElement _interfaceSection = null!;
         VisualElement _graphicsSection = null!;
@@ -188,6 +184,7 @@ namespace Odyssey.Presentation.Ui
         readonly Dictionary<SettingsTab, Label> _settingTabs = new();
         readonly Dictionary<int, Label> _scaleRungs = new();
         readonly Dictionary<int, Label> _cameraRungs = new();
+        readonly Dictionary<BuildPaletteLayout, Label> _layoutRungs = new();
         readonly Dictionary<SettingsBus, FaderView> _busFaders = new();
         readonly Dictionary<HotkeyAction, KeyRowView> _keyRows = new();
 
@@ -210,6 +207,7 @@ namespace Odyssey.Presentation.Ui
         /// <summary>The command-bar Build cap and its item, so a rebind can move the legend
         /// with the key it names.</summary>
         Label _buildCap = null!;
+        IconBadge? _buildIcon;
         VisualElement _buildItem = null!;
         string _buildTooltipLabel = "";
 
@@ -431,6 +429,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.TabChanged += OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged += OnUiScaleChanged;
             _directors.Settings.CameraSpeedChanged += OnCameraSpeedChanged;
+            _directors.Settings.BuildPaletteLayoutChanged += OnBuildLayoutChanged;
             _directors.Settings.DeveloperOverlayChanged += OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged += OnBusDbChanged;
             _directors.Settings.ExitChanged += OnExitChanged;
@@ -439,6 +438,11 @@ namespace Odyssey.Presentation.Ui
             _directors.Hotkeys.ListenChanged += OnListenChanged;
             _directors.Hotkeys.ConflictNoted += OnHotkeyConflict;
 
+            // The palette is a view of the designate director, so it cannot be built until there
+            // is one. Everything above this line is the shell catching up with state that already
+            // existed; this is the one thing that did not exist at all until now.
+            BindBuildPalette();
+
             // The panel may already disagree with the director by the time we get here: the
             // presenter seeds it from the scene and the screen and then lays stored preferences
             // over it, and both happen before the shell has found anything to attach to.
@@ -446,6 +450,7 @@ namespace Odyssey.Presentation.Ui
             OnSettingsTabChanged(_directors.Settings.Tab);
             OnUiScaleChanged(_directors.Settings.UiScale);
             OnCameraSpeedChanged(_directors.Settings.CameraSpeed);
+            OnBuildLayoutChanged(_directors.Settings.BuildPaletteLayout);
             OnDeveloperOverlayChanged();
             foreach (SettingsBus bus in SettingsDirector.Buses) OnBusDbChanged(bus);
             OnExitChanged();
@@ -463,6 +468,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.TabChanged -= OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged -= OnUiScaleChanged;
             _directors.Settings.CameraSpeedChanged -= OnCameraSpeedChanged;
+            _directors.Settings.BuildPaletteLayoutChanged -= OnBuildLayoutChanged;
             _directors.Settings.DeveloperOverlayChanged -= OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged -= OnBusDbChanged;
             _directors.Settings.ExitChanged -= OnExitChanged;
@@ -523,9 +529,6 @@ namespace Odyssey.Presentation.Ui
             return hit != null && hit != _hud;
         }
 
-        /// <summary>Whether the Build palette is open, for whoever owns the Escape key.</summary>
-        public bool BuildPaletteOpen => _buildPanel != null && _buildPanel.style.display == DisplayStyle.Flex;
-
         /// <summary>Close the Build palette. The Escape half, called by <c>SettingsPresenter</c>.</summary>
         public void CloseBuildPalette() => SetBuildPalette(false);
 
@@ -572,6 +575,7 @@ namespace Odyssey.Presentation.Ui
                 RefreshStores();
                 RefreshAlerts();
                 RefreshSpeed();
+                RefreshBuildPalette();
             }
             if (_slow >= SlowBucketSeconds)
             {
@@ -699,7 +703,12 @@ namespace Odyssey.Presentation.Ui
             DesignateDirector? tool = _directors?.Designate;
             DesignateTool armed = tool?.Tool ?? DesignateTool.None;
 
-            if (armed == DesignateTool.None)
+            // Not while the Build palette is open. The banner floats in the middle of the screen
+            // saying what is armed, and the open palette says the same thing in its own header,
+            // in the armed tool's colour, a few pixels away — two labels about one tool, one of
+            // them over the panel that set it. The banner is for the player who armed something
+            // and then closed the palette, which is the case it was written for.
+            if (armed == DesignateTool.None || BuildPaletteOpen)
             {
                 _armedBanner.style.display = DisplayStyle.None;
                 _armedFor = DesignateTool.None;

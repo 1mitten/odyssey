@@ -155,6 +155,9 @@ namespace Odyssey.Hud
         /// <summary>The registry key naming the developer-overlay row.</summary>
         public const string DeveloperKey = "ui.settings.developer";
 
+        /// <summary>The registry key naming the Build-palette layout row.</summary>
+        public const string BuildLayoutKey = "ui.settings.buildlayout";
+
         /// <summary>The registry key naming the exit row.</summary>
         public const string ExitKey = "ui.settings.exit";
 
@@ -181,6 +184,7 @@ namespace Odyssey.Hud
             AudioKey,
             CamSpeedKey,
             DeveloperKey,
+            BuildLayoutKey,
             ExitKey,
             "ui.settings.shadows",
             "ui.settings.surround",
@@ -365,6 +369,17 @@ namespace Odyssey.Hud
         public bool DeveloperOverlay { get; private set; }
 
         /// <summary>
+        /// Which of the three Build-palette layouts the player has chosen.
+        ///
+        /// <para><b>It lives here rather than on the palette</b> because there are two controls
+        /// for it — the switcher in the palette's own header, for the player who is looking at the
+        /// panel and wants it shaped differently, and a row in this panel, for the player who
+        /// never finds an icon in a header. Two controls over one preference have to read and
+        /// write one value or the second one a player touches will appear to undo the first.</para>
+        /// </summary>
+        public BuildPaletteLayout BuildPaletteLayout { get; private set; } = BuildPaletteModel.Default;
+
+        /// <summary>
         /// The session row that has been clicked once and is asking to be sure, or null.
         ///
         /// <para>A key rather than a flag since U38, because the panel grew three more session
@@ -400,6 +415,9 @@ namespace Odyssey.Hud
 
         /// <summary>Raised when the developer overlay is switched by the panel.</summary>
         public event Action? DeveloperOverlayChanged;
+
+        /// <summary>Raised when the Build-palette layout changes, whichever control changed it.</summary>
+        public event Action<BuildPaletteLayout>? BuildPaletteLayoutChanged;
 
         /// <summary>Raised when one bus's volume changes, with the bus that changed.</summary>
         public event Action<SettingsBus>? BusDbChanged;
@@ -533,6 +551,21 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
+        /// Choose a Build-palette layout, from either of the two controls that offer one, and
+        /// write the choice down. Stored as the enum's ordinal, which is the one place this
+        /// project stores an enum as a number rather than as its name — a layout is a position on
+        /// a switcher of three, and <see cref="BuildPaletteModel"/> rejects an ordinal outside the
+        /// set rather than trusting the file.
+        /// </summary>
+        public void SetBuildPaletteLayout(BuildPaletteLayout layout)
+        {
+            if (BuildPaletteLayout == layout) return;
+            BuildPaletteLayout = layout;
+            _store?.WriteInt(BuildLayoutKey, (int)layout);
+            BuildPaletteLayoutChanged?.Invoke(layout);
+        }
+
+        /// <summary>
         /// Move one bus's volume. A fader holds a continuum, so anything between silence and
         /// the boost ceiling is taken rather than snapped — but whole dB only, because a thumb
         /// that rests between two decibels is a position the readout cannot say and the store
@@ -648,6 +681,10 @@ namespace Odyssey.Hud
         /// </summary>
         public void SeedBusDb(SettingsBus bus, int db) => _db[bus] = Math.Clamp(db, SilenceDb, BoostDb);
 
+        /// <summary>Record a Build-palette layout without raising anything, so the shell can lay
+        /// in what it opened with.</summary>
+        public void SeedBuildPaletteLayout(BuildPaletteLayout layout) => BuildPaletteLayout = layout;
+
         /// <summary>
         /// Attach the place preferences are kept, and apply anything this machine has already been
         /// told. Stored values are laid over the seeded ones, so a preference beats the scene and
@@ -670,6 +707,10 @@ namespace Odyssey.Hud
 
             bool? developer = store.Read(DeveloperKey);
             if (developer.HasValue) SetDeveloperOverlay(developer.Value);
+
+            int? layout = store.ReadInt(BuildLayoutKey);
+            if (layout.HasValue && BuildPaletteModel.IsLayout(layout.Value))
+                SetBuildPaletteLayout((BuildPaletteLayout)layout.Value);
         }
 
         /// <summary>

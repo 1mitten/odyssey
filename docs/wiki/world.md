@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-79 entries, 54 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+80 entries, 55 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -110,6 +110,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Reset keys to defaults** | `ui.settings.resetkeys` | Put every action back on the key it shipped with | no art | M3 |
 | **Audio** | `ui.settings.audio` | How loud each part of the game is. Stored on the machine, in decibels | no art | M3 |
 | **Camera speed** | `ui.settings.camspeed` | How fast the camera pans and zooms, as a share of its tuned speed | no art | M3 |
+| **Build palette layout** | `ui.settings.buildlayout` | Which of the three shapes the Build palette takes: rows, rail or bar | no art | M3 |
 | **Developer overlay** | `ui.settings.developer` | The frame-time and draw-call readout, kept on the machine between sessions | no art | M3 |
 | **Exit game** | `ui.settings.exit` | Leave the game. The row asks twice, because leaving is not undoable | no art | M3 |
 | **Master volume** | `ui.settings.volume.master` | Everything at once | no art | M3 |

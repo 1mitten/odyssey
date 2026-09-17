@@ -59,10 +59,26 @@ namespace Odyssey.Presentation.Ui
             label.text = style.Uppercase ? (text ?? string.Empty).ToUpperInvariant() : text ?? string.Empty;
         }
 
+        /// <summary>
+        /// The class every hotkey cap carries.
+        ///
+        /// <para><b>It exists so that one rule can be stated once.</b> A key cap is a legend, not
+        /// a word — "ESC", "F3", "M" — and it is the one thing on this screen allowed to be a
+        /// two-or-three-letter capitalised fragment, which everything else is forbidden to be by
+        /// <c>NoLabelIsAThreeLetterPlaceholder</c>. That test used to name the classes it would
+        /// excuse, one per place a cap happened to be drawn, and the Build palette's ESC hint is
+        /// what showed the cost of that: a fourth cap in a fourth place failed a test about
+        /// placeholder names, correctly by the letter of the rule and wrongly by its meaning.
+        /// Marking the role rather than listing the sites means a fifth cannot.</para>
+        /// </summary>
+        public const string KeyCapClass = "keycap";
+
         /// <summary>Apply a role's size, weight, tracking and family to any text element.</summary>
         public static void Apply(TextElement element, HudTextRole role, bool numeric = false)
         {
             HudTextStyle style = HudType.Of(role, numeric);
+
+            if (role == HudTextRole.Hotkey) element.AddToClassList(KeyCapClass);
 
             element.style.fontSize = style.Size;
             element.style.letterSpacing = style.LetterSpacing;

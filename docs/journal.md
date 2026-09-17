@@ -2578,3 +2578,184 @@ work itself.
   side effect of an unrelated decision is one you lose the moment that decision changes**, and the
   only reason this one was caught is that the person who found it the first time wrote down *why*
   it mattered rather than just fixing it.
+
+
+- **The Build palette became three layouts, 2026-09-17** (`claude/build-palette-layouts`,
+  `docs/design/17-build-palette-layouts.md`). The owner supplied a specification and three rendered
+  mockups — 4a Rows, 4b Rail, 4c Bar — with 4a the default and the other two switchable from inside
+  the panel. The whole design follows from one clause of it: *all three share one data source and
+  one state object*. `BuildPaletteModel` in the Unity-free assembly holds the category, the
+  sub-type, the per-sub-type material memory, the breadcrumb and the cost line, and the three layout
+  builders in `HudShell.Build.cs` read it and decide nothing — so "switching layout never changes
+  selection" is a property of the structure rather than a thing three builders have to remember, and
+  it is checked in eleven seconds rather than by opening the game.
+
+  **Dropping the Orders category would have hidden mining and chopping.** The specification takes
+  Orders, Zones and Salvage off the palette, leaving exactly the seven it names. Zones and Salvage
+  took nothing live with them; Orders held Mine and Chop, which are two of the five tools in this
+  game that actually do anything. Taken literally it would have left both reachable by the `M` and
+  `C` keys and by nothing a player could see — which is not a hypothetical, it is precisely what had
+  happened to Cancel the day before: *the tool was never missing, every way of finding it was
+  missing*, and it cost a playtest to find. Both are pinned in the panel header now beside
+  Deconstruct and Cancel, on the test those two already passed — all four are verbs applied to what
+  is already on the board, not nouns to place. `EveryLiveToolIsDrawnSomewhere` is the general form,
+  so a third time cannot be silent.
+
+  **The mockups were drawn over a bare board.** All three floated at a 28 px margin with the panel's
+  corner in the screen's corner, and the real screen has the stores panel docked down the left edge
+  and the roster strip across the whole top, so a panel there covers both while it is open. Asked
+  which of three placements they wanted, the owner answered with a principle instead: *"tight and
+  flush to other elements to enable full use of space"*. So the margins went, Rows and Bar span the
+  screen edge to edge, Rail keeps its 840 anchored to the button that raised it, and all three dock
+  flush on whatever is under them — the command bar, or the inspect pane's collapsed header. That is
+  the rule the bar and the popovers already follow, and very nearly the words the owner used about
+  the popovers a day earlier.
+
+  **Thirty-seven icons are drawn rather than imported.** The specification asks for 1.8 px line art
+  on a 24 px grid and forbids the placeholder square anywhere in the palette; the ADR 0007 pipeline
+  covers nineteen keys and not one is an architecture tool, so every tile would have been an
+  outlined box. They are `Painter2D` paths in `HudGlyph`'s existing 24-unit box, sharing its stroke
+  rule and its helpers — one path each, no texture, no atlas, no licence — and the key is still the
+  contract, so a sheet landing later takes the slot back with nothing moving. The materials are
+  deliberately not among them: Wood and Stone keep the exact sprites the game already draws, which
+  is the one tier the specification says not to touch.
+
+  **Rail's only promise broke three times, and the test written for it found all three.** Its claim
+  is that its height does not change when the category does, so nothing below it reflows. It did:
+  376 px on Structure against 343 on Production. The sub-type grid was sizing itself to its
+  contents; then, fixed, the material band was collapsing entirely for a category whose first
+  buildable tool is not made of anything, which is five of the seven; then, fixed, the cost line was
+  17 px shorter when empty. Each was found by printing the measurement rather than by reading the
+  code — the second and third would both have read as correct. All seven now stand at 396 px, and
+  the row count is held to the largest category in the fast tier so an eighth tool fails in eleven
+  seconds rather than in a PlayMode run. The price is an empty band under the word MATERIAL while an
+  order is armed, which is the honest cost of the promise and is visible only in Rail.
+
+  **Mode colour, asked for mid-build** (owner: *"the cancel/deconstruct colours … should also be
+  represented in the dialog … so it becomes clearer what mode you are in"*). Each of the four pinned
+  actions has a hue — four existing signal tokens, not four new ones — and while one is held the
+  panel wears it: the header line becomes that action's name in its colour, its icon appears beside
+  it, and the panel's top edge becomes a 2 px hairline of it. The header line is a sentence to read;
+  the edge is seen without reading, which is the half that answers the question. The breadcrumb is
+  replaced rather than joined, because what the palette would have built is not what is about to
+  happen. The floating armed banner is suppressed while the palette is open, since it said the same
+  thing over the panel that had just set it.
+
+  **One token departs from the specification, and the test is why.** The specified 0.30 disabled ink
+  measures 2.71:1 against its own chip over the brightest terrain the game draws. WCAG exempts
+  inactive controls, so nothing external said it was wrong; what says so is this palette at this
+  moment — one of its twenty-seven sub-types is live, so the greyed-out state is very nearly the
+  whole panel and is the only thing telling a player what the game will eventually let them build.
+  0.35 measures 3.21:1. `HudTheme.SubTypeDisabledInk` records when to put it back, and the second
+  half of the assertion stops the fix going too far: a disabled chip must stay obviously quieter
+  than a live one.
+
+  **Two general fixes fell out of it.** The ESC hint failed
+  `NoLabelIsAThreeLetterPlaceholder` — correctly by the letter of that rule and wrongly by its
+  meaning, since a key cap is a legend rather than a truncated word. The test had been excusing caps
+  by naming each class one happened to be drawn in, three entries long, and this would have been a
+  fourth; `HudText.Apply` now marks anything set in the Hotkey role and the test excuses the role,
+  so a fifth cannot go wrong. And the palette's close button needed the shared `panel__close` class,
+  or "every window carries an X" would have passed while the rule was broken.
+
+  **Every PlayMode run now writes three portraits** to `Logs/palette-{rows,rail,bar}.png`. The rig
+  already renders the real HUD into a render texture, so this costs one `ReadPixels` and is of the
+  actual panel. It exists because everything else here asks whether the palette *fits*, and nothing
+  can say whether the shape meant to be a bench reads as a bench — which is exactly where a mirrored
+  axis hides in thirty-seven hand-written paths. The first set came out with each layout ghosting
+  under the next, because nothing clears that texture when there is no camera drawing a world into
+  it first; a picture with a ghost in it invites a diagnosis of a bug that is not there, so the
+  portrait run clears it. Reading them found three real faults the tests could not: the cost readout
+  was never wired to a cost table, the hint line was drawing through the material buttons, and the
+  armed banner was floating over the panel.
+
+  **Tiers: EditMode 1244, PlayMode 42 (39 passed, 3 ignored with reasons), fast tier 559 Sim + 217
+  Hud.** One PlayMode failure was seen once and did not reproduce —
+  `Adr0003_F1_TheDenseHudHoldsItsBudget` at 1.721 ms against a 1.167 ms budget, while four other
+  Unity batch runs from other worktrees were on the machine; it measured 0.422 ms on the next two
+  runs. Recorded rather than fixed: it is a shared-machine artefact of this dev box, not of the
+  palette, and the palette is not in that test's dense layer.
+
+  **Then the default view became a column** (owner, same afternoon, having looked at the portraits:
+  *"make the 1st group of buttons short width as possible but evenly sized … you could probably fit
+  4 on a row but increase the height and try to use the left hand side of the screen instead of the
+  width … also make the stone/wood and material buttons evenly sized in font and size as the other
+  buttons but keep the style"*). Rows had spanned the screen, which is what the mockup drew and what
+  *"the first group should use the horizontal space"* had asked for back when the palette was ten
+  wrapping chips; seven tiles stretched across 1920 are seven very wide tiles with a small icon
+  adrift in each, and the board they cover is the board the player is aiming at. It is 372 px now —
+  the narrowest that holds four category tiles, with `Recreation` setting the floor — so the seven
+  stand two rows deep and the panel is a tall column against the left edge. Only Bar still spans.
+
+  **The header had to break in two to fit.** Eight controls plus BUILD and a three-part breadcrumb
+  came to 426 px against a 372 px panel, and the overflow test said so before anything was drawn.
+  Rows stacks them: what is selected, then what you can press. The split is made in the shell rather
+  than by letting the row wrap, because a wrapping row breaks wherever it runs out of room and could
+  have put the close button on a line of its own.
+
+  **Materials went back to the row's box and type** and kept their tint, doubled border and seated
+  shadow. The specification had made them the loudest thing in the panel on the argument that a
+  material is the terminal choice; in a narrow column that read as two buttons of a different kind
+  rather than as the last tier of one control, and what carries "terminal" was never the extra eight
+  pixels. Rail's 86 px grid is deliberately untouched — that is the shape of that layout rather than
+  a row in it.
+
+  **A third pass fixed the default's height, dropped the hint line, and found the tool that armed
+  itself.** The owner asked for three things. The height must stay fixed *"as tall as the structure
+  menu/selection goes so it can accommodate all of the menus"* — the panel is docked on the command
+  bar and grows upward, so a category with fewer sub-types than the last does not shrink neatly, it
+  drops the whole control down the screen while the player is aiming at it. It took four
+  reservations, three of them the same faults Rail had already had one tier at a time: the sub-type
+  band, the material row, the cost line, and finally the word MATERIAL itself, which was being
+  hidden along with its buttons and took another 31 px with it. Unlike Rail the row count is not
+  arithmetic — Rows wraps by how wide the *words* are, so the height is a measured constant and the
+  test prints every category's band on every run so it can be re-derived rather than guessed twice.
+  All seven now stand at 516 px. The hint line went outright: a sentence about the three most basic
+  gestures in the game, printed permanently over the board.
+
+  **The third ask uncovered a real defect.** The owner reported that the Build cap on the command
+  bar *"still stays bold when it shouldn't"* after leaving build mode, and called it *"an indicator
+  to whether you are truly in build mode"*. Two things were wrong and the second was serious. The
+  cap could not report a state at all: Build is the bar's primary item and was drawn with a solid
+  accent fill at all times, so `.cmd--on` was invisible underneath it — the fill is the state now
+  and an outline is the resting style. And then the test written for it failed *before the palette
+  had been opened*, which was the real finding: `BuildPaletteModel` is constructed when the HUD
+  attaches to its directors, long before anybody opens anything, and its seeding pass **armed** the
+  landing sub-type. The game began in build mode with a wall on the cursor that nobody had asked
+  for, and a click on the world would have placed one. The lit cap had been telling the truth.
+
+  Nothing is armed now until the player asks: the seeded pass sets where the palette is *pointing*,
+  a click is what picks a tool *up*, and the sub-type tiles light by asking `DesignateDirector`
+  what is in the player's hand rather than by comparing against what the palette points at. The
+  half of that fix which could have gone wrong on its own is the guard in `SelectSubType` — with
+  the landing sub-type seeded but unarmed, the first tile a player reaches for is usually the one
+  already pointed at, so "same key, do nothing" would have made the first click of every session a
+  dead button. The fast tier caught that one within a minute of the first.
+
+  **A fourth pass pinned it into the corner and narrowed what the cap means.** The owner asked for
+  the panel *"up against the left screen border and also attached to the bottom bar"*; it had been
+  anchored under the Build cap by `PopoverLeft`, which is the rule every other popover follows and
+  which left it a few pixels of the bar's own padding short of the edge. And *"if the tile info
+  dialog is showing, that is closed down and the build mode is open"* — the specification had asked
+  only for the inspect pane to collapse to its header, which was the wrong half of the idea: the
+  pane is docked in the same corner, so a collapsed header is still a strip of panel wedged between
+  the palette and the bar, describing a cell the player has stopped asking about. Clearing the
+  selection also removed the last reason the palette's bottom edge had to be computed at all.
+
+  **And the cap stopped counting an open panel as build mode.** It had counted "a tool is held or
+  the panel is up", on the reasoning that a player who has opened the palette is about to build.
+  The owner's correction — *"I click esc, that button is not highlighted at all"* — exposes why that
+  is wrong: Escape puts the tool down before it closes anything, so counting the panel left the cap
+  lit over an empty hand, which is the state the original complaint was about, one step further on.
+  What it reports now is the honest question — will the next click on the world place, cancel or dig
+  something rather than select it — and an open palette with nothing chosen is its own evidence that
+  it is open.
+
+  **The Unity tiers could not be run on this pass:** the owner had the editor open on this worktree,
+  and an editor and a batch run cannot share a project. The fast tier is green (559 Sim, 219 Hud)
+  and the Presentation changes were reviewed by reading rather than compiling — which caught one
+  real error that a compiler would have, a conditional returning a length on one branch and a
+  `StyleKeyword` on the other, with no common type between them. That is not a substitute for the
+  tiers and the gap is recorded here rather than papered over.
+
+  **Nobody has pressed Play on any of it.** The portraits are the only thing anyone has looked at.
