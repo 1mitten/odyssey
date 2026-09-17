@@ -76,10 +76,20 @@ namespace Odyssey.Tests.Presentation
             return this;
         }
 
-        public RenderTestWorld Edifice(int x, int z, int y, ushort def, bool blocking = true)
+        public RenderTestWorld Edifice(int x, int z, int y, ushort def, bool blocking = true) =>
+            Edifice(x, z, y, def, CoreContent.StuffConcrete, blocking);
+
+        /// <summary>
+        /// The same, for a test that cares what the thing is made of.
+        ///
+        /// <para>Most do not, which is why concrete is the default and was for a long time the
+        /// only option. A test that asks how the stuff tint is chosen needs to say — a tree and a
+        /// wall are both placed with wood, and telling them apart is the whole point.</para>
+        /// </summary>
+        public RenderTestWorld Edifice(int x, int z, int y, ushort def, ushort stuff, bool blocking = true)
         {
             int index = Index(x, z, y);
-            _edifices.Add(new PlacedEdifice { CellIndex = index, Def = def, Stuff = CoreContent.StuffConcrete });
+            _edifices.Add(new PlacedEdifice { CellIndex = index, Def = def, Stuff = stuff });
             Grid.Edifice[index] = _edifices.Count - 1;
             if (blocking) Grid.Flags[index] |= CellFlags.BlockingEdifice;
             return this;

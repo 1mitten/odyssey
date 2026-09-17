@@ -508,7 +508,16 @@ namespace Odyssey.Presentation.Rendering
             int module = _model.EdificeModule(index);
             if (module == 0) return;
 
-            int tint = TintCode.Stuff(_model.EdificeStuff(index));
+            // **The stuff tint says what a thing was *built* from, and a tree was not built.**
+            // A tree is placed with NaturalContent.StuffWood because that is what it is made of,
+            // and it wears its own pack material — green canopy, brown trunk, already right. So
+            // long as the wood tint was white the conflation cost nothing; the moment wood became
+            // a brown multiply, so that a wooden wall stopped coming out as cream plaster, every
+            // tree on the board would have been multiplied brown with it. A natural edifice takes
+            // no stuff tint at all.
+            int tint = TintCode.Stuff(def >= NaturalContent.FirstEdifice
+                ? CoreContent.StuffNone
+                : _model.EdificeStuff(index));
             var shape = _model.Library[module].Shape;
 
             switch (def)

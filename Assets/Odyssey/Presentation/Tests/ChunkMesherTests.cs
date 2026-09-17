@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Worldgen;
+using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
 
 namespace Odyssey.Tests.Presentation
@@ -179,6 +180,37 @@ namespace Odyssey.Tests.Presentation
             }
 
             return box;
+        }
+
+        /// <summary>
+        /// A tree is not tinted by the stuff it is made of, and a wall is.
+        ///
+        /// <para>Both are placed with <c>NaturalContent.StuffWood</c> — one because it was built
+        /// from wood, the other because it *is* wood — and while the wood tint was white that
+        /// conflation cost nothing. It stopped being free on 2026-09-17, when wood became a brown
+        /// multiply so that a wooden wall would stop drawing as cream plaster: the same multiply
+        /// would have gone over every tree's own pack material, which is already the right green
+        /// and brown. The stuff tint says what a thing was built from, and a tree was not built.</para>
+        /// </summary>
+        [Test]
+        public void ATreeTakesNoStuffTintAndAWoodenWallTakesOne()
+        {
+            GroundRelief.Reset();
+            var world = new RenderTestWorld(8, 8, 3)
+                .Edifice(2, 2, 1, NaturalContent.EdificeTreeBroadleaf, NaturalContent.StuffWood,
+                    blocking: false)
+                .Edifice(5, 5, 1, CoreContent.EdificeWall, NaturalContent.StuffWood)
+                .Publish();
+
+            ChunkBatch batch = MeshLayer(world, 1);
+
+            var codes = new HashSet<int>();
+            foreach (InstanceBucket bucket in batch.Body) codes.Add(TintCode.Value(bucket.Tint));
+
+            Assert.That(codes, Does.Contain((int)CoreContent.StuffNone),
+                "the tree draws untinted, in the material the pack gave it");
+            Assert.That(codes, Does.Contain((int)NaturalContent.StuffWood),
+                "and the wall carries the wood tint, which is what browns it");
         }
 
         [Test]
