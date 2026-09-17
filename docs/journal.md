@@ -3232,3 +3232,66 @@ A trap found on the way out: rebuilding the module catalogue to pick up the two 
 61 colonists' atlas swatch rectangles — 665 insertions against 2,162 deletions, while the entry
 count went reassuringly from 136 to 138. `docs/lessons.md` has it.
 
+### A wall could not stand on a wall, and stone was steel with a different label (2026-09-17)
+
+Three reports from one playtest. *"I've seen colonists go up ladders"* closes the ladder line.
+
+**A wall on a wall.** *"On the next floor - I couldn't build a wall on top of the wall below, but
+could on other tiles."* Reproduced before it was explained: a test that orders a wall, then asks
+whether the cell above it will take another, failed on the first run. `ConstructionGrid.Allows`
+asked `CellGrid.HasFloor`, which counts a slab at the boundary or solid terrain below and knows
+nothing about what anybody has built — so the other tiles worked because the new storey's slab was
+under them, and the wall's own head was the one place with neither.
+
+**The support model had always disagreed with the rule.** `SupportSolver.IsGrounded` has counted
+the cell above a blocking edifice as fully grounded since M1, so the wall would have stood
+perfectly well; the order was refused for a reason the physics did not share. `SomethingUnderfoot`
+is the permission catching up, not a new allowance — and it takes *blocking* edifices rather than
+the solver's wider "any edifice at all", because the wider test is how a tree came to hold up a
+roof, and felling first is a rule this file already had.
+
+**The cursor was drawing nothing, and the comment said otherwise.** Yesterday's guard against
+ghosting a ladder inside a wall returned early over any occupied cell, and its comment claimed the
+refusal still read "because the cursor is red". It did not: hover draws nothing else, so the
+pointer went blank over every wall and the player got no answer at all to "can I build here" —
+worse than the wrong answer it replaced. The thing is still not drawn inside the obstruction; the
+refusal is, as the drag's own red plate or box.
+
+**And stone was steel.** *"The stone floor looks more like steel. I would expect a stone floor to
+be more boring gray with some texture."* Put the two table entries side by side and there is
+nothing to diagnose: steel is `(0.82, 0.86, 0.92)` and stone was `(0.86, 0.87, 0.88)` — the same
+pale blue-grey, b over g over r, with **stone the brighter of the two**. Two materials the player
+is asked to choose between were one colour with the labels swapped, and a near-white multiply
+leaves whatever is under it looking polished, which is the one thing stone is not.
+
+The replacement is not invented either. `StuffSolids` — the tint used where there is no art at all
+— has held stone at `(0.52, 0.51, 0.49)` from the start: mid, warm-neutral, r over g over b. The
+project had already decided what stone looks like and the over-art entry had never been made to
+agree with it. `StuffPaletteTests` now asks the question that nobody was asking: every buildable
+material is a measured distance from every other, stone is darker than steel and stone does not
+lean blue.
+
+**A standing test said the opposite, and it was half right.** `StoneStaysCoolWhileWoodIsWarm`
+had pinned "stone is grey or cooler" since the wood tint was fixed. It was written to separate
+stone from *wood*, which it does, and nothing in it had ever looked at steel — so the cool end it
+permitted was precisely where steel already sat. The guarantee it exists for is untouched: wood is
+warm, stone is not, and the two are still told apart by warmth rather than only by lightness. What
+it no longer does is push stone into steel's corner in order to achieve that. `docs/lessons.md`
+already has the rule this follows — a test anchored in a design fact fails when the design changes,
+and that is correct — so the assertion was rewritten with the reason rather than deleted.
+
+**One gap is recorded rather than asserted.** Concrete, steel and composite are within 0.09 of one
+another: a pale near-white trio that the new test would fail on. None of them is buildable, so no
+player is asked to choose between them and the ruined city is meant to be uniform anyway. The test
+walks `ConstructionContent.IsBuildable` rather than a list written by hand, so the day one of them
+gets an item it starts failing — which is the right moment to care, and is exactly the comparison
+nobody had made for stone.
+
+**The mesh is as good as this pack gets, and that is worth writing down.** A contact sheet of all
+eleven cell-sized floor prefabs says the Synty packs contain **no stone floor**: the
+`SM_Env_Ground_Tile_Half_*` family is sci-fi street plating — cross grooves, a manhole, notched
+recesses — and `SM_Bld_Base_Floor_01`, the two-triangle flat quad that looked like the neutral
+option on paper, is **wooden planks**. `Half_01` is the plainest of the five and is what stone
+uses. A flat stone slab is a genuine gap of the kind `CLAUDE.md` reserves Blender for; nobody has
+been asked yet.
+

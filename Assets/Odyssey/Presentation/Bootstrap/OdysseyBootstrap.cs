@@ -1126,12 +1126,26 @@ namespace Odyssey.Presentation.Bootstrap
             bool allowed = sites.Allows(cell, director.Building);
             BuildingDef what = ConstructionContent.BuildingAt(director.Building);
 
-            // **Never inside something.** StandingOn lifts a wall order over solid terrain and not
-            // over an edifice, so pointing a ladder at a wall resolves to the wall's own cell — and
-            // the ghost was being drawn inside it (owner, 2026-09-17: "the ladder placement does
-            // appear inside the walls, which is odd"). There is nowhere to put it, so nothing is
-            // drawn; the refusal still reads, because the cursor is red.
-            if (_grid.IsSolidTerrain(cell) || _grid.Edifice[cell] >= 0) return;
+            // **Never inside something, but never silent either.** StandingOn lifts a wall order
+            // over solid terrain and not over an edifice, so pointing a ladder at a wall resolves
+            // to the wall's own cell and the ghost was drawn inside it (owner, 2026-09-17: "the
+            // ladder placement does appear inside the walls, which is odd").
+            //
+            // The first fix returned here and drew nothing at all, and the comment claimed the
+            // refusal still read "because the cursor is red". It did not: this is the only thing
+            // hover draws, so the pointer went blank over every wall and the player got no answer
+            // to "can I build here" — which is worse than the wrong answer it replaced, and is
+            // what "I couldn't build a floor" felt like from the other side of the screen.
+            //
+            // So the thing is not drawn and the refusal is. A plate for a slab and a box for an
+            // edifice, in the drag's own refused red, which is the shape and the colour the player
+            // already knows from dragging a run that will do nothing.
+            if (_grid.IsSolidTerrain(cell) || _grid.Edifice[cell] >= 0)
+            {
+                if (what.slab) _renderer.DrawCellSpanPlate(at, at, PreviewRefusedColour);
+                else _renderer.DrawCellSpanBox(at, at, PreviewRefusedColour);
+                return;
+            }
 
             ushort material = ConstructionContent.StuffAt(director.Stuff).stuff;
             int module = GhostModuleFor(cell, what, material);

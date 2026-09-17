@@ -296,7 +296,35 @@ namespace Odyssey.Sim.Construction
                 // model exists to prevent, and refusing it at the order is far better than
                 // collapsing it afterwards: the player never gave an order that could not be
                 // carried out.
-                : _grid.HasFloor(index);
+                : SomethingUnderfoot(index);
+        }
+
+        /// <summary>
+        /// Is there something for an edifice to stand on at the bottom of this cell?
+        ///
+        /// <para><b>A wall may stand on a wall</b>, and until 2026-09-17 it could not. This asked
+        /// <c>HasFloor</c>, which counts a slab at the boundary or solid terrain below and knows
+        /// nothing about what anyone has built — so a second storey went up over the room and
+        /// refused over its own walls. The owner hit exactly that: *"on the next floor - I couldn't
+        /// build a wall on top of the wall below, but could on other tiles."* The other tiles had
+        /// the new slab under them.</para>
+        ///
+        /// <para><b>The support model always agreed with the player, not with the rule.</b>
+        /// <c>SupportSolver.IsGrounded</c> has counted the cell above a blocking edifice as fully
+        /// grounded since M1, so the wall would have stood; the order was refused for a reason the
+        /// physics did not share. This is the permission catching up, not a new allowance.</para>
+        ///
+        /// <para><b>Blocking, rather than any edifice.</b> The solver's own test is wider — it
+        /// takes any edifice at all, which is how a tree came to hold up a roof — and a tree is
+        /// something you fell before you build, exactly as <see cref="Allows(int, int)"/> already
+        /// says about building through a wood. A ladder is excluded by the same word and that is
+        /// wanted too: capping a ladder with a wall is not a thing to permit by accident.</para>
+        /// </summary>
+        bool SomethingUnderfoot(int index)
+        {
+            if (_grid.HasFloor(index)) return true;
+            int below = index - _grid.Size.LayerStride;
+            return below >= 0 && (_grid.Flags[below] & CellFlags.BlockingEdifice) != 0;
         }
 
         /// <summary>

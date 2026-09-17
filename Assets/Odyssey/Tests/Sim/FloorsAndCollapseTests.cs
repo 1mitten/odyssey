@@ -73,6 +73,42 @@ namespace Odyssey.Tests.Sim
             return total;
         }
 
+        // ---- a second storey stands on the first ---------------------------------------------
+
+        /// <summary>
+        /// A wall may be built on top of a wall. The owner, playtesting (2026-09-17): *"on the next
+        /// floor - I couldn't build a wall on top of the wall below, but could on other tiles."*
+        /// </summary>
+        [Test]
+        public void AWallMayStandOnTheWallBelowIt()
+        {
+            ColonyWorld colony = Board();
+            int ground = GroundLevelCellNear(colony, 3);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+
+            RaiseNow(colony, ground, BuildingHandle.Wall);
+
+            Assert.That(colony.Construction.Allows(Above(ground), BuildingHandle.Wall), Is.True,
+                "the cell above a wall refused a wall");
+        }
+
+        /// <summary>The control: the same cell one layer up, over a slab, which already worked.</summary>
+        [Test]
+        public void AWallMayStandOnASlabTheSameWayItStandsOnAWall()
+        {
+            ColonyWorld colony = Board();
+            int ground = GroundLevelCellNear(colony, 3);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+
+            RaiseNow(colony, ground, BuildingHandle.Wall);
+            int over = Above(ground);
+            Assume.That(colony.Grid.Floor[over], Is.EqualTo(CoreContent.SlabNone));
+
+            // A slab at the same boundary is what the other tiles had, and it is permitted.
+            Assert.That(colony.Construction.Allows(over, BuildingHandle.Floor), Is.True,
+                "a floor could not be laid at the top of a wall");
+        }
+
         // ---- a floor is the same pipeline ----------------------------------------------------
 
         /// <summary>
