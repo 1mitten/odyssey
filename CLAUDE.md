@@ -570,10 +570,27 @@ have.
 **Colonists are 61 Synty characters, recoloured — not dressed.** No modular body exists in any
 pack (a character is one skinned mesh from scalp to boots with one material), so clothing, hair and
 skin are repainted by rewriting the atlas swatch rectangles each vertex is already mapped to
-(`Odyssey/Character`, `ColonistMaterials`). Appearance derives from the world seed and the pawn id,
-so a world deals the same people every load. **`OdysseyBootstrap.randomCastEachSession` defaults
-on** while the palette is being judged, which means pressing Play deals new faces each time; switch
-it off for a stable cast.
+(`Odyssey/Character`, `ColonistMaterials`). **Appearance derives from the pawn's own `RollSeed`
+and its id since 2026-09-18** — the same seed the name, age, trade and skills come from, so
+rerolling a candidate on the setup screen changes the face too and the person you chose is the
+person who walks around. It used to be the world's cast seed, which no card could know.
+`OdysseyBootstrap.randomCastEachSession` and `colonistLookSeed` still work but they are now an
+**override**: either one sets `ColonistAppearanceBook.Pinned` and deals the whole colony from one
+number, overruling the pawns. That is for judging the palette over many colonists at once, and it
+means the people you picked are not the people you get — leave both off to play.
+
+**Every colonist has a composed flat avatar, drawn** (`U41`, 2026-09-18) — on the roster card, in
+the inspect header, and on both halves of the world-setup page. `ColonistFace` in `Odyssey.Hud` is
+the recipe (four colours plus one of eight crowns and one of three builds) and `AvatarGlyph` paints
+it as four `Painter2D` layers in `HudGlyph`'s 24-unit box. **The colours are
+`ColonistAppearance.Of`'s, the same call the 3D figure is painted from**, which is why that class
+and its book moved down into `Odyssey.Hud`; `AppearanceBooks.For` is the one line left behind,
+because counting the catalogue's colonist family is Unity. **There is deliberately no face** — no
+eyes, no mouth: our pixel art goes to noise by 16–17 px and a card avatar is 26, so it is a
+silhouette portrait, which is what lets one drawing serve 26, 30 and 64 px. Nothing is saved or
+hashed and no golden moved. Design and the owner's seven decisions: `docs/design/20-avatars.md`
+— **read §7a before changing any of the shape numbers**, they were measured off
+`Logs/avatars.png` rather than chosen. `Logs/setup-page.png` is the other picture.
 
 **The floor above you is drawn, and the cut-away is opt-in** (owner, 2026-09-17). The active layer
 used to be drawn roofless always, so a floor built one layer up was invisible and — because a
@@ -635,11 +652,12 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **641 Sim + 358 Hud**; Long tier **20**.
-  Unity tier on 2026-09-17, on the merge of U29's floors into the orders strip, U40 and the
-  world-setup page: EditMode **1486 total, 1474 passed, 0 failed**; PlayMode **69 total, 64 passed,
-  0 failed** (the rest are pre-existing `[Explicit]` or ignored rows). The Hud figure is main's 348
-  plus this branch's 10, so neither side lost a test to the merge.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **645 Sim + 384 Hud**; Long tier **20**.
+  Unity tier on 2026-09-18, on the flat avatars: EditMode **1533 total, 1521 passed, 0 failed**;
+  PlayMode **74 total, 69 passed, 0 failed** (the rest are pre-existing `[Explicit]` or ignored
+  rows). The Hud figure grew by 26 over main's 358 without a feature earning all of them: eleven
+  are `ColonistAppearanceTests` arriving from the Unity tier with the appearance itself, which is
+  what moving a Unity-free derivation into `Odyssey.Hud` buys.
   **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
   touches the composition root or the HUD shell is unproven until Unity has compiled it, however
   green the 11 seconds look (`docs/lessons.md`).
@@ -790,6 +808,15 @@ Three things the owner reported after playing. **Read `docs/journal.md` for each
 - **Nobody has pressed Play on the look work.** Every judgement about the day cycle, the golden
   hour, the hill wood and the colonist palette comes from contact sheets and `FrameTimeTests`. A
   sheet cannot say whether night is playable or whether the light steps at speed 3.
+- **The flat avatars are drawn and photographed, not played** (`Logs/avatars.png`,
+  `Logs/setup-page.png`). Three questions no test can answer. Does a colonist read as a *person* at
+  26 px, or only as a coloured blob that happens to differ from its neighbour? Fourteen garments
+  against seven skins is 98 pairs and **some of them will be one muddy value at that size** — the
+  ink hull under the figure is what stops the head vanishing, and whether it is enough is a
+  judgement. And does the 64 px portrait belong beside the record on the setup page, or does the
+  choosing screen want it larger? A fourth, if you disagree with the design at all: **the avatar
+  has no face** — no eyes, no mouth — which §4 argues is a limit rather than a stage, and is the
+  one decision here worth overturning early if you want it overturned.
 - **The rest of the icon art.** **Nineteen keys draw real art** as of 2026-09-17: the four
   commodities, three activity icons on the roster card (`ui.status.felling`, `.mining`,
   `.building`), and twelve of the thirteen skills, cut from **sheet 06** by
