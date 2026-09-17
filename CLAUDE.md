@@ -161,7 +161,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **461 Sim + 117 Hud**; Long tier **15**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **478 Sim + 158 Hud**; Long tier **17**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
@@ -188,6 +188,18 @@ searches for unreachable targets — was **falsified by its own follow-up experi
 budget exhaustions were unreachable, under 1% on a structured map). The fix is hierarchical search
 plus a better heuristic, with the district-id reachability check (`d-04-pathfinding.md`) measured
 first.
+
+**The graph that search would run on is now measured** (OQ-18, 2026-09-17;
+`NavGraphStatisticsTests`, and `d-04-pathfinding.md` §"Measured 2026-09-17"). At 250 × 250 × 40 the
+region graph holds **24,141 regions on the wilderness and 23,240 on the city** — inside d-04's
+"low tens of thousands" budget — but **only 6.8% and 38.8% of them are walkable**; the rest is
+impassable rock kept as a substrate for rooms and atmosphere, carrying no links and excluded from
+the district flood. An abstract search is therefore cheaper than the totals suggest. A full rebuild
+is 168 ms (wilderness) and 124 ms (city), which is the all-dirty worst case and not a per-tick cost.
+**d-04's stated reason for the budget was wrong** — it credited all-solid chunks allocating nothing,
+and all-solid is exactly what allocates here; what really bounds the count is that a region never
+leaves its 10 × 10 block, now asserted over every cell of both boards along with the guarantee that
+no region spans two layers.
 
 ### Waiting on the owner
 
