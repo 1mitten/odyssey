@@ -18,7 +18,7 @@ namespace Odyssey.Sim.World
     /// cell is the floor of the cell above it. That removes a whole class of "which of the two
     /// cells owns it" bugs and makes "is this cell roofed?" a single lookup one layer up.
     /// </summary>
-    public sealed class CellGrid
+    public sealed class CellGrid : IStateHashable
     {
         public readonly GridSize Size;
 
@@ -161,6 +161,23 @@ namespace Odyssey.Sim.World
         /// round trip appear to diverge for no reason. Reachability is not on the grid at all:
         /// <see cref="Pathing.NavGraph"/> keeps its own region array, and a per-cell region
         /// field here was 5 MB at the scale target that nothing ever wrote (OQ-38).
+        ///
+        /// <para><b>This was written long before anything called it</b> (OQ-50, 2026-09-17). The
+        /// grid is not an <c>ITickable</c> and not an <c>IWorldSystem</c>, which were the only two
+        /// things <c>SimWorld.ComputeStateHash</c> walked, so for most of the project's life the
+        /// terrain, floors, edifices and flags were in no hash at all — mining a cell or felling a
+        /// tree moved nothing. <c>SimWorldBuilder.AddHashable</c> is what reaches it now, and
+        /// <c>ColonyComposition</c> registers it.</para>
+        ///
+        /// <para><b>It walks the whole grid every call, and that is the safe choice rather than
+        /// the lazy one.</b> The arrays above are public and written directly from dozens of
+        /// places — every generator pass, the support solver, mining, felling. A hash maintained
+        /// incrementally on write would be silently wrong the first time anyone assigned to
+        /// <c>Terrain[i]</c> without telling it, which is a worse failure than the one this fixes:
+        /// it would claim two different worlds were the same. Recomputing cannot drift. The cost
+        /// is real and measured — see <c>HashTraceTests.TheCostOfTracingIsMeasuredRatherThanAssumed</c>,
+        /// which prints it — and it is paid per call, not per tick, because nothing in an ordinary
+        /// run asks for the hash.</para>
         /// </summary>
         public void ContributeTo(ref StateHash hash)
         {
