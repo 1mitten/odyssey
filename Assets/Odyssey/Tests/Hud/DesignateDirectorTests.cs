@@ -159,39 +159,52 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// <b>Click, move, click.</b> The default gesture (owner, 2026-09-17): a click places the
-        /// cell under it <em>and</em> opens a run, the pointer then moves with nothing held, and a
-        /// second click places the rest.
+        /// <b>One click places one cell and closes the run.</b> (Owner, 2026-09-17: *"it should
+        /// just place the ladder with a click, no need to do many"*.)
         ///
-        /// <para>The first click placing is the later half of the same conversation — *"it should
-        /// just place the ladder with a click, no need to do many"* — because a ladder, a door and
-        /// a bench are all one cell and runs are the exception. The anchor cell is ordered twice
-        /// and that costs nothing: the simulation answers <c>AlreadyInThatState</c>, which is what
-        /// that rejection is for.</para>
+        /// <para><b>Click-move-click was tried and taken out again.</b> For a few hours a click
+        /// placed its cell and left the run open for a second click to extend. It reads well and it
+        /// cost the player the cursor: while a run is open <c>TryPreview</c> succeeds, so the
+        /// composition root draws the run's box and never calls <c>DrawHoverGhost</c>. So a single
+        /// click swapped the cursor that follows the pointer for a box anchored to the last thing
+        /// placed, for as long as the player did not happen to click again — and when they did, it
+        /// placed the whole line between. The owner reported the cursor simply missing, which is
+        /// what that looks like from the other side of the screen.</para>
         ///
-        /// <para>Holding a button while steering a pointer precisely across a board drawn in
-        /// perspective is the awkward part of the old gesture, and it is awkward in a way practice
-        /// does not fix.</para>
+        /// <para>A run is still a run: press, move, release is a drag and arrives through
+        /// <c>Drag</c>. What is gone is the gesture that stayed open with nothing but a box to say
+        /// so.</para>
         /// </summary>
         [Test]
-        public void AClickAnchorsARunAndASecondClickPlacesIt()
+        public void AClickPlacesOneCellAndLeavesNoRunOpen()
         {
             var director = new DesignateDirector { Tool = DesignateTool.Mine };
 
-            // One click places one thing, and leaves the run open behind it.
             Assert.That(director.Click(At(2, 2)), Is.EqualTo(new[] { At(2, 2) }),
                 "a click places the cell it landed on");
-            Assert.That(director.AwaitingSecondClick, Is.True, "and the run is still open");
-
-            // Free movement with nothing held.
-            director.DragTo(At(5, 2));
-            Assert.That(director.PreviewCount, Is.EqualTo(4), "the box follows the pointer");
-
-            IReadOnlyList<CellRef> placed = director.Click(At(5, 2));
-
-            Assert.That(placed.Count, Is.EqualTo(4), "and the second click places the run");
-            Assert.That(director.Dragging, Is.False, "which ends the box");
+            Assert.That(director.Dragging, Is.False, "and leaves no run open behind it");
             Assert.That(director.AwaitingSecondClick, Is.False);
+
+            // The cursor's own gate: with nothing open, the hover ghost is what gets drawn.
+            Assert.That(director.TryPreview(out _, out _), Is.False,
+                "a run left open here is exactly what hides the build cursor");
+        }
+
+        /// <summary>
+        /// A second click is a second thing, not the far end of a line from the first.
+        ///
+        /// <para>The failure this pins is the one the owner met: two separate ladders placed a few
+        /// cells apart became a solid run of ladders between them.</para>
+        /// </summary>
+        [Test]
+        public void TwoClicksApartPlaceTwoCellsAndNotTheLineBetween()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.Mine };
+
+            Assert.That(director.Click(At(2, 2)), Is.EqualTo(new[] { At(2, 2) }));
+            director.HoverAt(At(5, 2));
+            Assert.That(director.Click(At(5, 2)), Is.EqualTo(new[] { At(5, 2) }),
+                "the second click placed the line between the two rather than one cell");
         }
 
         /// <summary>
@@ -202,7 +215,7 @@ namespace Odyssey.Tests.Hud
         /// complete gesture and the pointer could never travel.
         /// </summary>
         [Test]
-        public void APressThatAlreadyOpenedTheBoxStillOnlyAnchorsIt()
+        public void APressThatAlreadyOpenedTheBoxStillPlacesOnlyItsOwnCell()
         {
             var director = new DesignateDirector { Tool = DesignateTool.Fell };
 
@@ -213,7 +226,8 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(director.Click(At(3, 3)), Is.EqualTo(new[] { At(3, 3) }),
                 "the release of the anchoring press places that one cell and no more");
-            Assert.That(director.AwaitingSecondClick, Is.True, "it is now waiting for the second");
+            Assert.That(director.Dragging, Is.False, "and closes the run it opened");
+            Assert.That(director.AwaitingSecondClick, Is.False);
         }
 
         /// <summary>

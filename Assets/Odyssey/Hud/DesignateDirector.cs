@@ -193,14 +193,23 @@ namespace Odyssey.Hud
             // down the rig reports the pointer every frame, so a box exists by the time the release
             // arrives even for a click that never moved. Both shapes therefore mean "anchor": no
             // box at all, or a box this very press created and has not been told to wait on.
-            if (!Dragging)
-            {
-                if (!Begin(cell)) return Array.Empty<CellRef>();
-                return Anchored();
-            }
+            if (!Dragging && !Begin(cell)) return Array.Empty<CellRef>();
 
-            if (!AwaitingSecondClick) return Anchored();
-
+            // **One click places one cell and closes the run.** It used to place the cell and leave
+            // the run open for a second click to extend, and that cost the owner the cursor: while
+            // a run is open `TryPreview` succeeds, so the composition root draws the run's box and
+            // never calls `DrawHoverGhost` again. A click therefore replaced the cursor that
+            // follows the pointer with a box anchored to the last thing placed, for as long as the
+            // player did not happen to click a second time — and the second click, when it came,
+            // placed the whole line between (owner, 2026-09-17: *"the build cursor doesn't appear
+            // for walls, floors etc - when I move around in the world - that cursor is no longer
+            // there"*).
+            //
+            // A run is still a run: press, move, release is a drag and arrives through `Drag`. What
+            // is gone is the click-move-click half, which asked the player to remember that a
+            // gesture was open with nothing but a box to say so. "It should just place the ladder
+            // with a click (no need to do many)" is the instruction this follows, and the cursor
+            // being live at all times is the rest of it.
             DragTo(cell);
             AwaitingSecondClick = false;
             return Commit();
