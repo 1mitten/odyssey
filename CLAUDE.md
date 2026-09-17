@@ -206,7 +206,10 @@ first.
   grooves, 16 px goes to noise, and a **framed** sheet-06 tile at 17 px is mostly frame
   (`Logs/skill-icons.png`).
 - **Nobody has pressed Play on the interface work either.** The roster card, the docked bars, the
-  popovers and the Skills tab are all measured and none of them has been looked at.
+  popovers, the Skills tab and the settings panel's new Keys and Audio tabs are all measured and
+  none of them has been looked at. The Keys tab is the tallest panel yet — at 150 per cent
+  interface scale on a 1080p screen it is within pixels of the screen height and may want the
+  first max-height-and-scroll any panel here has carried.
 - **The 29 proposed proper nouns** in `docs/design/proper-nouns.csv` await approval or veto.
 - **Marsh reads as a sandy bank** — re-tint it greener or rename it.
 - **The audio listener is on the camera**, 32–160 m up, while the catalogue authors ranges as ground

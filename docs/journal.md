@@ -1182,3 +1182,61 @@ work itself.
   - **Verified:** fast tier **455 Sim + 117 Hud**, Long tier **15**. Every control run and
     restored. **Not verified locally:** the Unity tier, which is where the cross-runtime half of
     this gate actually gets tested — one committed number that satisfies both CoreCLR and Mono.
+
+- **The settings panel grows up, 2026-09-17.** Keybindings, the audio faders, a camera-speed
+  ladder, a developer-overlay toggle and a two-click exit landed in B17, on `feat/front-ui`
+  ahead of a PR.
+
+  - **`HotkeyDirector` exists at last.** Design 09 §3 row 23 had reserved it since the input
+    spec was written; every key in the game was a hardcoded `Keyboard.current.xKey` poll in
+    four files. It is Unity-free in `Odyssey.Hud`, holds bindings as **actions with two
+    slots** (a primary and an alternate — the honest shape for a game that pans on WASD *or*
+    arrows and steps the slice on R/F *or* PgUp/PgDn), refuses a key another action owns
+    rather than silently swapping it (§6's rule), and persists as key-name strings under
+    `odyssey.ui.keys.*` through `ISettingsStore`, which grew `ReadString/WriteString`.
+    **One context, for now**: no key in the game means two things today, so the first cut is
+    a single global map; contexts arrive with `InputRouter` the day a key earns a second
+    meaning. Escape and Shift stay fixed and unbindable — the unwind rule and the fast
+    modifier — and the function keys stay out because the command bar has promised them to
+    panels.
+  - **`HotkeyClashTests` changed shape, not job.** It still greps the Presentation assembly,
+    but what it asserts now is that *no key is read by name at all*: the only whitelisted
+    reads are `escapeKey` (the unwind rule), `allKeys` (the rebind capture, which names no
+    key) and the two shift modifiers. The reserved set a command cap is checked against is
+    read out of the binding map's own defaults — the hand-written list this test replaced in
+    its last life was wrong in exactly the way its own doc comment describes.
+  - **While a slot is listening, every key press belongs to the rebind.** The three pollers
+    (rig, designate, bar) sit the frame out when `Listening != null`, so offering M to a
+    slot cannot arm the mine tool on the way past. Escape cancels the wait *before* the
+    unwind order runs — the rule lives in `HotkeyDirector.ConsumeEscape`, decided in the
+    fast tier.
+  - **The faders found the panel that was promised them.** `AudioSettingsStore` has held
+    five dB faders, persisted and applied at boot, since the sound work landed — its own doc
+    said they "belong in that panel beside them when B17 grows an audio section". The
+    section is a dB rung ladder per bus (Mute, −36, −24, −16, −10, −5, 0), the Hud-side
+    `SettingsBus` mirroring `SoundBus` across the ADR 0003 seam, and the presenter writes
+    through the existing store — no second copy of a volume anywhere. **Rungs, not sliders,
+    everywhere**, for the reason the interface scale set: honest answers, no fractional
+    states, and the ladder idiom the panel already owns.
+  - **Camera speed and the developer readout came along because they were free.** The speed
+    is a three-rung multiplier (0.6×, 1×, 1.5×) on the rig's tuned pan/zoom — translation
+    only, like shift, leaving orbit's mouse-delta mapping alone. The developer overlay is
+    now a persisted toggle seeded from the overlay director: the backquote key still flips
+    it, and the preference follows, because the key never wrote anything down and the row
+    does.
+  - **Exit is two clicks, pinned under the tabs.** Nothing is saved, so one click in a
+    panel a player reaches across for the close button would be a trap; the first click arms
+    the row ("Quit? Click again"), the second raises `ExitRequested`, which the presenter
+    answers with `Application.Quit()` — stop-play in the editor, or a quit button that
+    silently does nothing teaches the player not to trust it. Closing the panel stands the
+    row down. It lives in B17 "for now"; B18's game menu is its documented home when that
+    exists.
+  - **One pre-existing red was retired on the way in** (fix-before-features rule): the
+    building-work tripwire in `WorkSwingTests` fired — `JobHandle.Build` now maps to the
+    hammer style — and the test's own comment says what to do when it does. Both the row and
+    the tripwire are gone.
+  - **Verified:** fast tier **158 Hud** (472 Sim), Unity EditMode **1064**, PlayMode **27**,
+    both content gates `--check`. **Not verified:** a human eye — the Keys tab is the tallest
+    thing the panel has held (19 rows in five groups); at 150 per cent interface scale on a
+    1080p screen it is within a few pixels of the screen height, and if it clips, the window
+    wants a max-height and a scroll, which no panel here has yet.
