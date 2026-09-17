@@ -45,6 +45,15 @@ namespace Odyssey.Presentation.World
         readonly byte[] _flags;
         readonly ushort[] _slot;
 
+        /// <summary>
+        /// The bed's drawing state, mirrored per cell from the one record both cells point at:
+        /// the facing (on both halves) and which half is the head (on the head alone), so the
+        /// mesher can draw the whole bed once from the head without asking the world a question
+        /// on every cell.
+        /// </summary>
+        readonly byte[] _bedFacing;
+        readonly bool[] _bedHead;
+
         ModuleGroup[] _groups;
         readonly int[] _terrainModule;
         readonly int[][] _stoneModule;
@@ -55,6 +64,7 @@ namespace Odyssey.Presentation.World
         readonly int _vaultWallModule;
         readonly int _utilityTapModule;
         readonly int _wallCoreModule;
+        readonly int _bedModule;
 
         public WorldRenderModel(GridSize size, ChunkGrid chunks, ModuleLibrary library)
         {
@@ -70,6 +80,8 @@ namespace Odyssey.Presentation.World
             _edificeStuff = new ushort[count];
             _flags = new byte[count];
             _slot = new ushort[count];
+            _bedFacing = new byte[count];
+            _bedHead = new bool[count];
 
             _groups = new[] { ResolveGroup(library, new TemplateDef()) };
             _terrainModule = ResolveTerrain(library);
@@ -81,6 +93,12 @@ namespace Odyssey.Presentation.World
             _vaultWallModule = library.Resolve(ModuleIds.VaultWall, ModuleShape.WallPanel);
             _utilityTapModule = library.Resolve(ModuleIds.UtilityTap, ModuleShape.Pillar);
             _wallCoreModule = library.Resolve(ModuleIds.WallCore, ModuleShape.SolidBlock);
+
+            // The bed's placeholder: a plain block module, because the honest stand-in for absent
+            // art is a box the tint colours, not a borrowed tree or wall wearing a bed's name.
+            // When real two-cell art exists a catalogue row on this id upgrades it everywhere,
+            // with no code change — the same deal every other module id already offers.
+            _bedModule = library.Resolve(ModuleIds.Bed, ModuleShape.SolidBlock);
         }
 
         /// <summary>
@@ -233,11 +251,20 @@ namespace Odyssey.Presentation.World
 
         public ushort EdificeStuff(int index) => _edificeStuff[index];
 
+        /// <summary>The facing of the bed in this cell, 0–3. Meaningful only while a bed stands here.</summary>
+        public byte BedFacing(int index) => _bedFacing[index];
+
+        /// <summary>Whether this cell is the head of the bed that stands in it — the half that draws.</summary>
+        public bool BedHead(int index) => _bedHead[index];
+
         /// <summary>The module index for whatever edifice stands in this cell, or 0.</summary>
         public int EdificeModule(int index)
         {
             ushort def = _edifice[index];
             if (def == CoreContent.EdificeNone) return 0;
+            // The bed first, before the natural range: its id sits above the trees' but it is not
+            // one of theirs, and the natural table below would index past itself for it.
+            if (def == CoreContent.EdificeBed) return _bedModule;
             // The natural table continues CoreContent's numbering, as terrain does. A tree is not
             // a kind of wall: before this branch existed every tree fell through the switch below
             // to the wall module and the woodland rendered as a grid of grey boxes.
@@ -614,11 +641,21 @@ namespace Odyssey.Presentation.World
                 var placed = edifices[handle];
                 _edifice[index] = placed.Def;
                 _edificeStuff[index] = placed.Stuff;
+
+                // A bed is one record behind two cells, and the mesher draws it once: from the
+                // head, turned the way it was placed. Both halves carry the facing so the drawing
+                // half never has to ask the world which end is which, and only the head carries
+                // the flag — the far cell draws nothing of the bed at all.
+                bool bed = placed.Def == CoreContent.EdificeBed && !placed.Removed;
+                _bedFacing[index] = bed ? placed.Facing : (byte)0;
+                _bedHead[index] = bed && placed.CellIndex == index;
             }
             else
             {
                 _edifice[index] = CoreContent.EdificeNone;
                 _edificeStuff[index] = CoreContent.StuffNone;
+                _bedFacing[index] = 0;
+                _bedHead[index] = false;
             }
 
             // Anything at all here means this layer is worth drawing, and so is the one above it —

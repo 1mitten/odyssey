@@ -476,8 +476,9 @@ namespace Odyssey.Presentation.Rendering
             // long as the wood tint was white the conflation cost nothing; the moment wood became
             // a brown multiply, so that a wooden wall stopped coming out as cream plaster, every
             // tree on the board would have been multiplied brown with it. A natural edifice takes
-            // no stuff tint at all.
-            int tint = TintCode.Stuff(def >= NaturalContent.FirstEdifice
+            // no stuff tint at all — asked by tree-ness, not by id range, so the bed (whose id
+            // sits above the trees') still wears what it was built of.
+            int tint = TintCode.Stuff(NaturalContent.IsTree(def)
                 ? CoreContent.StuffNone
                 : _model.EdificeStuff(index));
             var shape = _model.Library[module].Shape;
@@ -493,6 +494,9 @@ namespace Odyssey.Presentation.Rendering
                     return;
                 case CoreContent.EdificeLadder:
                     EmitLadder(batch, module, tint, index, x, z, y);
+                    return;
+                case CoreContent.EdificeBed:
+                    EmitBed(batch, module, tint, index, x, z, y);
                     return;
                 case CoreContent.EdificePillar:
                 case CoreContent.EdificeUtilityTap:
@@ -625,6 +629,51 @@ namespace Odyssey.Presentation.Rendering
                 GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
                 Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[facing], 0f)));
         }
+
+        /// <summary>
+        /// The bed, drawn once from the head cell as three scaled instances of the plain block
+        /// module: a frame, a mattress, a pillow — the computed-swing idiom, an honest placeholder
+        /// for two-tile art no pack contains (design 20 §9). The far cell points at the same
+        /// record and draws nothing of it.
+        ///
+        /// <para><b>Centred on the seam and draped there</b>, because a bed is one thing fixed to
+        /// the grid across two cells, and the rule the stepped walls settled is that anything
+        /// fixed to the grid is draped. The scale factors are fractions of the block module's own
+        /// cell extents, so the geometry is stated in cells and survives a cell-size change.</para>
+        ///
+        /// <para><b>It may straddle a chunk boundary</b> when its two cells sit across a chunk
+        /// edge: instances are not clipped by their bucket, so it renders correctly from either
+        /// side, and this is written here so nobody "fixes" it later. Both cells' chunks are
+        /// marked dirty by the same edit that raised the bed.</para>
+        ///
+        /// <para>The pillow sits at the head end — local −Z — and the facing's yaw turns local +Z
+        /// outward, so the head of a north-facing bed is the cell the order named, which is the
+        /// cell the sleep chooser sends its owner to.</para>
+        /// </summary>
+        void EmitBed(ChunkBatch batch, int module, int tint, int index, int x, int z, int y)
+        {
+            if (!_model.BedHead(index)) return;
+
+            int facing = _model.BedFacing(index);
+            var yaw = Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[facing], 0f));
+
+            Vector3 centre = CellMetrics.FloorCentre(x, z, y)
+                + new Vector3(Directions.DeltaX[facing], 0f, Directions.DeltaZ[facing])
+                    * CellMetrics.HalfXZ;
+            Matrix4x4 draped = GroundRelief.Drape(centre);
+
+            BedPart(batch, module, tint, draped, yaw,
+                offset: new Vector3(0f, 0.195f, 0f), scale: new Vector3(0.80f, 0.13f, 0.97f));
+            BedPart(batch, module, tint, draped, yaw,
+                offset: new Vector3(0f, 0.54f, 0.05f), scale: new Vector3(0.66f, 0.10f, 0.86f));
+            BedPart(batch, module, tint, draped, yaw,
+                offset: new Vector3(0f, 0.57f, -1.75f), scale: new Vector3(0.46f, 0.06f, 0.13f));
+        }
+
+        /// <summary>One box of the bed: the block module, scaled about its centre and set at a local offset.</summary>
+        void BedPart(ChunkBatch batch, int module, int tint, Matrix4x4 at, Matrix4x4 yaw,
+            Vector3 offset, Vector3 scale) =>
+            AddBody(batch, module, tint, at * yaw * Matrix4x4.Translate(offset) * Matrix4x4.Scale(scale));
 
         int FirstOpenDirection(int x, int z, int y)
         {

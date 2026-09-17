@@ -891,6 +891,22 @@ namespace Odyssey.Presentation.Bootstrap
                 _renderer.DrawCellOutline(cell, BuildOrderColour);
                 _renderer.DrawCellMark(cell, BuildOrderColour);
 
+                // A two-cell thing's order covers both of its cells: a mark on the head alone
+                // would read as half an order, and the far cell is exactly where a colonist
+                // stands to build the thing. The facing says which neighbour, the same
+                // arithmetic the simulation derives the second cell with.
+                if (sites[i].Footprint > 1)
+                {
+                    int facing = sites[i].Facing;
+                    int fx = cell.X + Directions.DeltaX[facing], fz = cell.Z + Directions.DeltaZ[facing];
+                    if (size.Contains(fx, fz, cell.Y))
+                    {
+                        var foot = new CellRef(fx, fz, cell.Y);
+                        _renderer.DrawCellOutline(foot, BuildOrderColour);
+                        _renderer.DrawCellMark(foot, BuildOrderColour);
+                    }
+                }
+
                 if (sites[i].Progress > 0)
                     _renderer.DrawCellFill(cell, sites[i].Progress / 255f, FrameColour);
             }

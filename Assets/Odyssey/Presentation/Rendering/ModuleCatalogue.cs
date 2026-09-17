@@ -403,6 +403,15 @@ namespace Odyssey.Presentation.Rendering
         public const string UtilityTap = Prefix + "utility.tap";
 
         /// <summary>
+        /// The bed. No catalogue row exists and none is owed yet: the id resolves to the plain
+        /// block placeholder, tinted by the stuff the bed was built of, and drawn by the mesher as
+        /// frame, mattress and pillow from scaled instances of it (design 20 §9) — the computed
+        /// swing's idiom, an honest stand-in rather than borrowed art. The day real two-cell bed
+        /// art lands, one row on this id upgrades every bed with no code change.
+        /// </summary>
+        public const string Bed = Prefix + "bed";
+
+        /// <summary>
         /// The colonist figures. Not placed in a cell by worldgen or the mesher: pawns move every
         /// tick and are drawn from the published snapshot, so these are resolved once and drawn by
         /// the actor pass rather than meshed into a chunk.

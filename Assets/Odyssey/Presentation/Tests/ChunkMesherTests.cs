@@ -213,6 +213,39 @@ namespace Odyssey.Tests.Presentation
                 "and the wall carries the wood tint, which is what browns it");
         }
 
+        /// <summary>
+        /// A bed is three boxes drawn once, from the head cell, over the seam of its two cells —
+        /// and nothing at all from the far cell, which points at the same record (design 20 §9).
+        /// Three instances is the whole claim: fewer means a part went missing, more means the far
+        /// half drew the bed again.
+        /// </summary>
+        [Test]
+        public void ABedIsThreeBoxesFromTheHeadAndNothingFromTheFoot()
+        {
+            GroundRelief.Reset();
+            var world = new RenderTestWorld(8, 8, 3)
+                .Bed(3, 3, 1, facing: Directions.North)
+                .Publish();
+
+            ChunkBatch batch = MeshLayer(world, 1);
+
+            Assert.That(Instances(batch.Body), Is.EqualTo(3),
+                "frame, mattress, pillow - and nothing drawn twice from the far cell");
+
+            // Every part sits inside the span of the two cells, on the head cell's column: a bed
+            // drawn from the head's own centre rather than the seam would sit half a cell short,
+            // which is the difference between a bed and two boxes in a row.
+            Vector3 seam = CellMetrics.FloorCentre(3, 3, 1) + new Vector3(0f, 0f, CellMetrics.HalfXZ);
+            foreach (InstanceBucket bucket in batch.Body)
+            for (int i = 0; i < bucket.Count; i++)
+            {
+                Vector3 position = bucket.Matrices[i].GetColumn(3);
+                Assert.That(position.x, Is.EqualTo(seam.x).Within(0.01f), "on the head cell's column");
+                Assert.That(position.z, Is.InRange(seam.z - CellMetrics.HalfXZ, seam.z + CellMetrics.HalfXZ),
+                    "within the two cells the bed spans");
+            }
+        }
+
         [Test]
         public void ADoorIsOneLeafInTheMiddleOfItsCell()
         {
