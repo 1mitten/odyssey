@@ -67,6 +67,16 @@ namespace Odyssey.Hud
     }
 
     /// <summary>
+    /// One line of the tile readout: what the fact is called, and what it reads. See
+    /// <see cref="InspectModel.CellRows"/> for why the facts are rows rather than a sentence.
+    /// </summary>
+    public struct InspectRow
+    {
+        public string Name;
+        public string Value;
+    }
+
+    /// <summary>
     /// Assembles the inspect pane (A9) for the current selection: which subject, which header,
     /// which tabs, which commands. Pure function of the selection handle and the published
     /// frame; holds no reference to a simulation object, which is the whole contract.
@@ -116,12 +126,13 @@ namespace Odyssey.Hud
 
         // ---- cell body
         /// <summary>
-        /// The one line a cell has to say for itself when no site stands on it: what crossing it
-        /// costs, what is built or standing there, and what it is worth digging. Empty when the
-        /// world has not answered the question yet — and the pane says nothing rather than
-        /// pretending, the same rule the site line follows.
+        /// The tile's facts, one row each in a fixed order: any order standing on it, the work of
+        /// it, what crossing it costs, the floor, what it bears. A row is a label and a value
+        /// because the pane prints them in two columns — the same fact is always in the same
+        /// place, which a joined line never gave (owner, 2026-09-17). Empty when the world has
+        /// not answered the question yet, and the pane says nothing rather than pretending.
         /// </summary>
-        public string CellLine = string.Empty;
+        public readonly List<InspectRow> CellRows = new List<InspectRow>();
 
         /// <summary>The tile's own icon key, so the pane's avatar is the thing that was clicked.</summary>
         public string CellIconKey = "ui.overlay.zones";
@@ -286,8 +297,8 @@ namespace Odyssey.Hud
                 {
                     // A site leads and is the whole answer: the tile under a blueprint is the
                     // least interesting thing about the click.
-                    CellLine = string.Empty;
-                    _cellLineFor = -1;
+                    CellRows.Clear();
+                    _cellRowsFor = -1;
                     CellIconKey = "ui.overlay.zones";
                     return;
                 }
@@ -426,10 +437,10 @@ namespace Odyssey.Hud
                 Title = "Ground";
                 Subtitle = "cell";
                 CellIconKey = "ui.overlay.zones";
-                if (_cellLineFor >= 0)
+                if (_cellRowsFor >= 0)
                 {
-                    CellLine = string.Empty;
-                    _cellLineFor = -1;
+                    CellRows.Clear();
+                    _cellRowsFor = -1;
                 }
                 return;
             }
@@ -462,33 +473,31 @@ namespace Odyssey.Hud
                 CellIconKey = "ui.overlay.zones";
             }
 
-            SetCellLine(snapshot, detail);
+            SetCellRows(snapshot, detail);
         }
 
-        // The last cell the readout line was written for, and everything it quotes. The pane
-        // refreshes fifteen times a second and the line is a joined interpolation, so it is
-        // rebuilt only when something it says has moved — the same argument as _positionFor and
+        // The last cell the readout rows were written for, and everything they quote. The pane
+        // refreshes fifteen times a second and the rows are strings, so they are rebuilt only
+        // when something they say has moved — the same argument as _positionFor and
         // _siteSecondsFor, and the same flip condition F1 from ADR 0003. Order progress is
-        // compared as the whole percent it prints, so a face being cut rebuilds the line once
+        // compared as the whole percent it prints, so a face being cut rebuilds the rows once
         // per percent rather than fifteen times a second.
-        int _cellLineFor = -1;
-        int _cellLineCost;
-        int _cellLineFloor;
-        int _cellLineEdifice;
-        int _cellLineSupport;
-        int _cellLineWork;
-        int _cellLineOrderKind;
-        int _cellLineOrderPercent;
-        readonly List<string> _cellParts = new List<string>();
+        int _cellRowsFor = -1;
+        int _cellRowsCost;
+        int _cellRowsFloor;
+        int _cellRowsEdifice;
+        int _cellRowsSupport;
+        int _cellRowsWork;
+        int _cellRowsOrderKind;
+        int _cellRowsOrderPercent;
 
         /// <summary>
-        /// The line under the title: what crossing the tile costs, what is built or standing
-        /// there, what it is worth digging, and what it bears. An order standing on the cell
-        /// leads — the same "lead with the actionable clause" rule <c>AlertModel</c> and the site
-        /// line follow — because "mining · 45% done" is what the player clicked a half-cut face
-        /// to learn.
+        /// The tile's facts, one row each, in a fixed order so a fact is always in the same
+        /// place: any order standing on the cell first — the actionable clause leads, the same
+        /// rule <c>AlertModel</c> and the site line follow — then the work of it, what crossing
+        /// it costs, the floor, and what it bears.
         /// </summary>
-        void SetCellLine(WorldSnapshot snapshot, in CellDetail detail)
+        void SetCellRows(WorldSnapshot snapshot, in CellDetail detail)
         {
             byte progress = 0, kind = 0;
             bool ordered = false;
@@ -503,49 +512,61 @@ namespace Odyssey.Hud
             }
             int orderPercent = (progress * 100 + 127) / 255;
 
-            if (_cellLineFor == detail.CellIndex
-                && _cellLineCost == detail.MoveCostPerMille
-                && _cellLineFloor == detail.FloorStuff
-                && _cellLineEdifice == detail.Edifice
-                && _cellLineSupport == detail.Support
-                && _cellLineWork == detail.WorkToClear
-                && _cellLineOrderKind == (ordered ? kind : 0)
-                && _cellLineOrderPercent == (ordered ? orderPercent : 0)) return;
+            if (_cellRowsFor == detail.CellIndex
+                && _cellRowsCost == detail.MoveCostPerMille
+                && _cellRowsFloor == detail.FloorStuff
+                && _cellRowsEdifice == detail.Edifice
+                && _cellRowsSupport == detail.Support
+                && _cellRowsWork == detail.WorkToClear
+                && _cellRowsOrderKind == (ordered ? kind : 0)
+                && _cellRowsOrderPercent == (ordered ? orderPercent : 0)) return;
 
-            _cellLineFor = detail.CellIndex;
-            _cellLineCost = detail.MoveCostPerMille;
-            _cellLineFloor = detail.FloorStuff;
-            _cellLineEdifice = detail.Edifice;
-            _cellLineSupport = detail.Support;
-            _cellLineWork = detail.WorkToClear;
-            _cellLineOrderKind = ordered ? kind : 0;
-            _cellLineOrderPercent = ordered ? orderPercent : 0;
+            _cellRowsFor = detail.CellIndex;
+            _cellRowsCost = detail.MoveCostPerMille;
+            _cellRowsFloor = detail.FloorStuff;
+            _cellRowsEdifice = detail.Edifice;
+            _cellRowsSupport = detail.Support;
+            _cellRowsWork = detail.WorkToClear;
+            _cellRowsOrderKind = ordered ? kind : 0;
+            _cellRowsOrderPercent = ordered ? orderPercent : 0;
 
-            _cellParts.Clear();
-
+            // Written in place, like the skills list: the count is a handful and changes rarely,
+            // so the list never churns while a tile is held.
+            int n = 0;
             if (ordered)
-                _cellParts.Add(OrderVerb(kind) + " · " + orderPercent + "% done");
+                Row(n++, OrderVerb(kind), orderPercent + "% done");
             else if (detail.WorkToClear > 0)
-                _cellParts.Add("minable · about " + Seconds(detail.WorkToClear) + " of work");
+                Row(n++, "minable", "about " + Seconds(detail.WorkToClear) + " of work");
 
-            if (detail.MoveCostPerMille == 0) _cellParts.Add("cannot walk");
-            else _cellParts.Add("walk speed " + (100_000 + detail.MoveCostPerMille / 2) / detail.MoveCostPerMille + "%");
+            Row(n++, "walk speed", detail.MoveCostPerMille == 0
+                ? "cannot walk"
+                : (100_000 + detail.MoveCostPerMille / 2) / detail.MoveCostPerMille + "%");
 
-            // The floor is said once: as the title when that is what was clicked, in the line
-            // when something above it — a tree, an order — is the headline instead.
+            // The floor is said once: as the title when that is what was clicked, as a row when
+            // something above it — a tree, an order — is the headline instead.
             bool floorIsTitle = EdificeLabels.Title(detail.Edifice).Length == 0
                 && detail.FloorStuff != StuffHandle.None;
             if (detail.FloorStuff != StuffHandle.None && !floorIsTitle)
             {
                 string stuff = BuildLabels.Stuff(detail.FloorStuff);
-                _cellParts.Add(stuff.Length == 0 ? "built floor" : stuff + " floor");
+                Row(n++, "floor", stuff.Length == 0 ? "built" : stuff);
             }
 
             // Support is a solid's own fact — what the column can still bear — and is shown
             // where there is something to dig, which is where a collapse is a question.
-            if (detail.WorkToClear > 0) _cellParts.Add("support " + detail.Support);
+            if (detail.WorkToClear > 0)
+                Row(n++, "support", detail.Support.ToString());
 
-            CellLine = string.Join(" · ", _cellParts);
+            while (CellRows.Count > n) CellRows.RemoveAt(CellRows.Count - 1);
+        }
+
+        void Row(int index, string name, string value)
+        {
+            while (CellRows.Count <= index) CellRows.Add(new InspectRow());
+            InspectRow row = CellRows[index];
+            row.Name = name;
+            row.Value = value;
+            CellRows[index] = row;
         }
 
         /// <summary>

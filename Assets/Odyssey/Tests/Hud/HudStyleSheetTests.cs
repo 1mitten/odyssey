@@ -55,6 +55,8 @@ namespace Odyssey.Tests.Hud
             (".inspect__meta", "color", () => HudTheme.TextMeta, "text meta"),
             (".stores__count", "color", () => HudTheme.TextDim, "text dim"),
             (".inspect__state", "color", () => HudTheme.TextDim, "text dim"),
+            (".inspect__rowname", "color", () => HudTheme.TextDim, "text dim"),
+            (".inspect__rowvalue", "color", () => HudTheme.TextMeta, "text meta"),
             (".cmd__key", "color", () => HudTheme.TextFaint, "text faint"),
             (".menu__key", "color", () => HudTheme.TextFaint, "text faint"),
 
@@ -137,6 +139,7 @@ namespace Odyssey.Tests.Hud
             (".inspect", "left", () => HudLayout.Edge, "screen edge margin"),
             (".inspect", "bottom", () => HudLayout.InspectBottom, "inspect bottom offset"),
             (".inspect", "width", () => HudLayout.InspectWidth, "inspect width"),
+            (".inspect--narrow", "width", () => HudLayout.InspectNarrowWidth, "tile readout width"),
             (".inspect__hdr", "height", () => HudLayout.InspectHeader, "inspect header"),
             (".inspect__tabs", "height", () => HudLayout.InspectTabs, "inspect tab strip"),
             (".inspect__tabs", "margin-top", () => HudLayout.InspectHeaderGap, "header to tabs"),
@@ -144,6 +147,8 @@ namespace Odyssey.Tests.Hud
             (".need", "margin-bottom", () => HudLayout.NeedRowGap, "need row gap"),
             (".skill", "height", () => HudLayout.SkillRow, "a skill line"),
             (".skill", "margin-bottom", () => HudLayout.SkillRowGap, "skill row gap"),
+            (".inspect__row", "height", () => HudLayout.CellRow, "a tile fact row"),
+            (".inspect__rowname", "width", () => HudLayout.CellRowName, "tile fact label column"),
 
             (".alert", "min-height", () => HudLayout.AlertHeight, "an alert row"),
             (".alerts__rows", "margin-top", () => HudLayout.HeaderGap, "header to first alert"),

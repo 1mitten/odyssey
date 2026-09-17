@@ -1,4 +1,6 @@
 #nullable enable
+using System.Linq;
+using System.Text;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Sim.Contracts;
@@ -69,11 +71,14 @@ namespace Odyssey.Tests.Hud
 
     /// <summary>
     /// What the pane says about a clicked cell once the world has answered the question: the
-    /// tile's own name, what crossing it costs, and what is standing on or waiting in it.
+    /// tile's own name, and its facts as rows — one fact per line, label and value in fixed
+    /// columns, in a fixed order.
     ///
     /// <para>Until this seam existed the pane's own words for a bare cell were "cell readout
     /// arrives with cell inspection" — a promise, shipped. These tests are it arriving (owner,
-    /// 2026-09-17: rocks indistinguishable from grass, water silent about being water).</para>
+    /// 2026-09-17: rocks indistinguishable from grass, water silent about being water). The rows
+    /// came the same day, from the same keyboard: a joined line made every number hunt for its
+    /// label, so the tile window halved its width and stood its facts up in a column instead.</para>
     /// </summary>
     public class InspectCellTests
     {
@@ -103,6 +108,18 @@ namespace Odyssey.Tests.Hud
             ushort moveCost = 1000, ushort workToClear = 0) =>
             new CellDetail(Size.Index(At), terrain, edifice, floorStuff, support, moveCost, workToClear);
 
+        /// <summary>The rows as one readable line, in order: "walk speed=33%" and friends.</summary>
+        static string Rows(InspectModel model)
+        {
+            var text = new StringBuilder();
+            foreach (InspectRow row in model.CellRows)
+            {
+                if (text.Length > 0) text.Append(" | ");
+                text.Append(row.Name).Append('=').Append(row.Value);
+            }
+            return text.ToString();
+        }
+
         [Test]
         public void ShallowWaterIsNamedAndPricedAtAThird()
         {
@@ -111,7 +128,7 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(model.Title, Is.EqualTo("Shallow Water"));
             Assert.That(model.Subtitle, Is.EqualTo("cell"));
-            Assert.That(model.CellLine, Is.EqualTo("walk speed 33%"));
+            Assert.That(Rows(model), Is.EqualTo("walk speed=33%"));
             Assert.That(model.CellIconKey, Is.EqualTo("ui.terrain.water.shallow"));
         }
 
@@ -122,7 +139,7 @@ namespace Odyssey.Tests.Hud
                 Detail(terrain: TerrainHandle.DeepWater, moveCost: 0)));
 
             Assert.That(model.Title, Is.EqualTo("Deep Water"));
-            Assert.That(model.CellLine, Is.EqualTo("cannot walk"),
+            Assert.That(Rows(model), Is.EqualTo("walk speed=cannot walk"),
                 "impassable is a different answer from slow, not an extreme of it");
         }
 
@@ -133,7 +150,7 @@ namespace Odyssey.Tests.Hud
                 Detail(terrain: TerrainHandle.Marsh, moveCost: 1400)));
 
             Assert.That(model.Title, Is.EqualTo("Marsh"));
-            Assert.That(model.CellLine, Is.EqualTo("walk speed 71%"));
+            Assert.That(Rows(model), Is.EqualTo("walk speed=71%"));
         }
 
         [Test]
@@ -142,12 +159,12 @@ namespace Odyssey.Tests.Hud
             InspectModel model = Looking(FrameWith(Detail()));
 
             Assert.That(model.Title, Is.EqualTo("Grass"));
-            Assert.That(model.CellLine, Is.EqualTo("walk speed 100%"));
+            Assert.That(Rows(model), Is.EqualTo("walk speed=100%"));
         }
 
         /// <summary>
         /// The tree is what the click meant, so the tree is the title and the tile's facts follow
-        /// in the line — the picker's own rule, read back.
+        /// as rows — the picker's own rule, read back.
         /// </summary>
         [Test]
         public void ATreeTitlesThePaneAndTheGroundAnswersBeneathIt()
@@ -156,13 +173,13 @@ namespace Odyssey.Tests.Hud
                 Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.TreeConifer)));
 
             Assert.That(model.Title, Is.EqualTo("Conifer"));
-            Assert.That(model.CellLine, Is.EqualTo("walk speed 100%"));
+            Assert.That(Rows(model), Is.EqualTo("walk speed=100%"));
             Assert.That(model.CellIconKey, Is.EqualTo("ui.terrain.tree.conifer"));
         }
 
         /// <summary>
-        /// A rock's answer leads with the actionable clause — the work of it — at the same honest
-        /// estimate a site gives, because "how long is this rock" is why anyone clicks one.
+        /// A rock's first row is the actionable one — the work of it — at the same honest estimate
+        /// a site gives, because "how long is this rock" is why anyone clicks one.
         /// </summary>
         [Test]
         public void ARockLeadsWithTheWorkOfIt()
@@ -171,8 +188,8 @@ namespace Odyssey.Tests.Hud
                 Detail(terrain: TerrainHandle.Rock, support: 4, moveCost: 1000, workToClear: 700)));
 
             Assert.That(model.Title, Is.EqualTo("Rock"));
-            Assert.That(model.CellLine, Is.EqualTo(
-                "minable · about 12s of work · walk speed 100% · support 4"));
+            Assert.That(Rows(model), Is.EqualTo(
+                "minable=about 12s of work | walk speed=100% | support=4"));
         }
 
         [Test]
@@ -183,9 +200,9 @@ namespace Odyssey.Tests.Hud
                 Detail(terrain: TerrainHandle.Rock, support: 4, workToClear: 700),
                 new OrderView(Size.Index(At), 1, 115)));
 
-            Assert.That(model.CellLine, Is.EqualTo(
-                "mining · 45% done · walk speed 100% · support 4"),
-                "the order is the actionable clause, so it leads");
+            Assert.That(Rows(model), Is.EqualTo(
+                "mining=45% done | walk speed=100% | support=4"),
+                "the order is the actionable row, so it leads and the estimate stands down");
         }
 
         [Test]
@@ -195,8 +212,8 @@ namespace Odyssey.Tests.Hud
                 Detail(terrain: TerrainHandle.Air, floorStuff: StuffHandle.Wood)));
 
             Assert.That(model.Title, Is.EqualTo("Wood floor"));
-            Assert.That(model.CellLine, Is.EqualTo("walk speed 100%"),
-                "the floor is the title; the line does not say it twice");
+            Assert.That(Rows(model), Is.EqualTo("walk speed=100%"),
+                "the floor is the title; the rows do not say it twice");
         }
 
         [Test]
@@ -209,7 +226,7 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(model.Title, Is.EqualTo("Ground"));
             Assert.That(model.Subtitle, Is.EqualTo("cell"));
-            Assert.That(model.CellLine, Is.Empty,
+            Assert.That(model.CellRows, Is.Empty,
                 "the answer is one publish behind the click; nothing is better than a guess");
         }
 
@@ -226,26 +243,30 @@ namespace Odyssey.Tests.Hud
             model.Refresh(answered);
 
             Assert.That(model.Title, Is.EqualTo("Ground"));
-            Assert.That(model.CellLine, Is.Empty);
+            Assert.That(model.CellRows, Is.Empty);
         }
 
         /// <summary>
-        /// The line is the same instance until it would read differently, which is what lets the
-        /// view compare by reference and what keeps the pane from allocating fifteen times a
-        /// second (ADR 0003, flip condition F1) — the same promise the site line makes.
+        /// The rows are the same instances until they would read differently, which is what lets
+        /// the view compare by content cheaply and what keeps the pane from allocating fifteen
+        /// times a second (ADR 0003, flip condition F1) — the same promise the site line makes.
         /// </summary>
         [Test]
-        public void TheLineIsNotRebuiltWhileItWouldReadTheSame()
+        public void TheRowsAreNotRebuiltWhileTheyWouldReadTheSame()
         {
             var model = new InspectModel();
             model.SetCell(At);
 
             model.Refresh(FrameWith(Detail(terrain: TerrainHandle.Rock, support: 4, workToClear: 700)));
-            string first = model.CellLine;
+            string first = Rows(model);
+            var values = model.CellRows.Select(row => row.Value).ToArray();
 
             model.Refresh(FrameWith(Detail(terrain: TerrainHandle.Rock, support: 4, workToClear: 700)));
-            Assert.That(ReferenceEquals(model.CellLine, first), Is.True,
-                "the pane rebuilt a line that reads identically");
+            Assert.That(Rows(model), Is.EqualTo(first),
+                "the pane rebuilt rows that read identically");
+            for (int i = 0; i < values.Length; i++)
+                Assert.That(ReferenceEquals(model.CellRows[i].Value, values[i]), Is.True,
+                    $"row {i} was rebuilt although it reads the same");
         }
 
         /// <summary>
@@ -265,7 +286,7 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(model.Title, Is.EqualTo("Wall"));
             Assert.That(model.Site, Is.EqualTo("2 of 5 wood delivered"));
-            Assert.That(model.CellLine, Is.Empty, "the site is the whole answer while it stands");
+            Assert.That(model.CellRows, Is.Empty, "the site is the whole answer while it stands");
         }
     }
 }

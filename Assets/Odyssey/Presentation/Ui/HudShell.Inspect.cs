@@ -196,16 +196,17 @@ namespace Odyssey.Presentation.Ui
             }
             if (!ReferenceEquals(_stateJob, _inspect.Job) || !ReferenceEquals(_stateBand, band) ||
                 _stateSelected != selected || !ReferenceEquals(_stateSite, _inspect.Site) ||
-                _stateStack != _inspect.Stack || !ReferenceEquals(_stateCell, _inspect.CellLine))
+                _stateStack != _inspect.Stack)
             {
                 _stateSite = _inspect.Site;
                 _stateJob = _inspect.Job;
                 _stateBand = band;
                 _stateSelected = selected;
                 _stateStack = _inspect.Stack;
-                _stateCell = _inspect.CellLine;
                 HudText.Set(_inspectState, StateLine(), HudTextRole.Meta);
             }
+
+            if (_inspect.Subject == InspectSubject.Cell) SyncCellRows();
 
             if (_inspect.Subject != InspectSubject.Colonist || _inspect.Tombstoned) return;
 
@@ -371,12 +372,11 @@ namespace Odyssey.Presentation.Ui
                         ? _inspect.Stack + " in the pile"
                         : "item on the ground";
                 case InspectSubject.Cell:
-                    // A site says what it is waiting for or how much longer; any other cell says
-                    // what the world has answered about it, and says nothing rather than
-                    // pretending while the answer is still a publish away.
-                    return _inspect.Site.Length > 0
-                        ? _inspect.Site
-                        : _inspect.CellLine;
+                    // A site is the one thing a cell still says in a sentence — what it is
+                    // waiting for, or how much longer. Every other fact the tile has is a row
+                    // below in its own column, and the state line stays empty rather than
+                    // repeating any of them.
+                    return _inspect.Site;
                 default:
                     return string.Empty;
             }
@@ -388,8 +388,10 @@ namespace Odyssey.Presentation.Ui
             _needs.Clear();
             _skills.Clear();
             _tabChips.Clear();
+            _cellRows.Clear();
             _needsGrid = null;
             _skillsGrid = null;
+            _cellRowsGrid = null;
             _needRows = 0;
 
             // Nothing selected: no panel at all (owner, 2026-09-16), and this is the HUD's resting
@@ -405,6 +407,12 @@ namespace Odyssey.Presentation.Ui
             }
 
             _inspectPanel.style.display = DisplayStyle.Flex;
+
+            // The tile readout and a selected pile take a column; a colonist takes a band. The
+            // pane is the same panel either way — one class says which shape it is standing in
+            // (owner, 2026-09-17: the tile window at half width, with its facts in rows).
+            _inspectPanel.EnableInClassList("inspect--narrow",
+                _inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item);
 
             // ---- header: avatar, name and its two lines, then the actions on the right
             var header = new VisualElement();
@@ -456,7 +464,6 @@ namespace Odyssey.Presentation.Ui
             {
                 var strip = new VisualElement();
                 strip.AddToClassList("inspect__tabs");
-                _tabChips.Clear();
                 for (int i = 0; i < _inspect.Tabs.Count; i++)
                 {
                     InspectTab tab = _inspect.Tabs[i];
@@ -494,10 +501,68 @@ namespace Odyssey.Presentation.Ui
                 ShowActiveTab();
             }
 
+            if (_inspect.Subject == InspectSubject.Cell)
+            {
+                // The tile's facts, one row each. Rows are added by SyncCellRows as the answer
+                // arrives and the facts change, so the pane never rebuilds its tree for a value.
+                _cellRowsGrid = new VisualElement();
+                _cellRowsGrid.AddToClassList("inspect__rows");
+                _inspectBody.Add(_cellRowsGrid);
+            }
+
             _tombReason = HudText.Make("no longer present — the pane keeps last-known values",
                 HudTextRole.Meta, ussClass: "inspect__reason");
             _tombReason.style.display = DisplayStyle.None;
             _inspectBody.Add(_tombReason);
+        }
+
+        /// <summary>
+        /// Bring the readout rows to what the model holds: one element per fact, its label in the
+        /// fixed column and its value beside it, written only when the words have moved.
+        ///
+        /// <para>Rows are added and removed rather than rebuilt — a tile held while a face is cut
+        /// changes one number once a second, and the pane's own rule is that structure is built
+        /// when the subject changes and never for a value.</para>
+        /// </summary>
+        void SyncCellRows()
+        {
+            if (_cellRowsGrid == null) return;
+
+            while (_cellRows.Count < _inspect.CellRows.Count)
+            {
+                var view = new CellRowView();
+
+                view.Root = new VisualElement();
+                view.Root.AddToClassList("inspect__row");
+
+                view.Name = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__rowname");
+                view.Value = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__rowvalue");
+                view.Root.Add(view.Name);
+                view.Root.Add(view.Value);
+                _cellRowsGrid.Add(view.Root);
+                _cellRows.Add(view);
+            }
+            while (_cellRows.Count > _inspect.CellRows.Count)
+            {
+                _cellRowsGrid.Remove(_cellRows[_cellRows.Count - 1].Root);
+                _cellRows.RemoveAt(_cellRows.Count - 1);
+            }
+
+            for (int i = 0; i < _cellRows.Count; i++)
+            {
+                CellRowView view = _cellRows[i];
+                InspectRow row = _inspect.CellRows[i];
+                if (view.LastName != row.Name)
+                {
+                    view.LastName = row.Name;
+                    HudText.Set(view.Name, row.Name, HudTextRole.Meta);
+                }
+                if (view.LastValue != row.Value)
+                {
+                    view.LastValue = row.Value;
+                    HudText.Set(view.Value, row.Value, HudTextRole.Meta);
+                }
+            }
         }
 
         VisualElement ActionButton(InspectCommand command)
