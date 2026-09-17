@@ -2405,3 +2405,34 @@ work itself.
     caching: the question is submitted and the view republished *before* `Pick` runs, because
     `Pick` raises the change whose handlers read the frame. One click, one paint, the right
     answer — and the same republish that serves the paused world serves the running one.
+
+- **The readout audited for scale, 2026-09-17.** The owner asked whether the tile answers would
+  hold up as the game grows, so every path the feature touches was walked and the two that matter
+  were measured rather than argued.
+  - **Measured, on the scale target** (250 × 250 × 40, fifty pawns, a question standing every
+    tick): the answered publish — the Snapshot phase, which is also exactly what one click's
+    `RepublishViews` costs — runs at **0.019 ms mean, 0.026 p95**, statistically identical to the
+    no-question arm's 0.021 and 2.4% of the 0.8 ms publish budget. Allocation in the paired
+    same-process measurement: **3.3 bytes per tick with the question standing against 3.3
+    without — the standing question adds 0.0** over 5,000 ticks, no collection. The arm that
+    produced this is `TickBenchmarkTests.TheColonyAnsweringACellQuestion`, and the guard that
+    keeps it true is `PathAllocationTests.AStandingQuestionCostsTheTickNothing`, because the
+    publish phase is allocation-free and a row-a-tick of heap traffic would be sixty objects a
+    second the GC owned for one frame each.
+  - **Walked, and O(1) in the board everywhere.** The contributor is one bounds check when
+    nobody is asking and about eight array reads plus one terrain-table lookup when they are —
+    the cost does not move with 2.5 million cells, because a question is about one of them. The
+    pane at 15 Hz scans a channel of at most a handful of rows and rebuilds a row string only
+    when the printed value changes (pinned by test, ADR 0003 F1). The picker's water rule is two
+    comparisons a floor-crossing; the director's second look is one more scan of tens of things
+    per click.
+  - **Expansion is guarded at the edges.** The three label tables are held to their contract
+    counts by `RegistryTests`, so a terrain or edifice or commodity added to the simulation
+    cannot reach the pane unnamed — the fast tier says so. The contract's handles are welded to
+    the simulation's tables by test on both sides. And the channel already fits design 09's
+    32-subject selection-detail bound without change.
+  - **The one thing to watch, written down where it will be looked for:** a hover tooltip (A13)
+    is the one future consumer that asks questions *per hover* rather than per click. A
+    `QueryCell` plus a republish per hover-frame would be sixty publishes a second and is the
+    wrong shape — that feature wants a throttled question or a presentation-side read of the
+    mirror, and ADR 0004 amendment 2's flip condition is where the decision is recorded.
