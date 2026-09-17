@@ -241,8 +241,12 @@ namespace Odyssey.Tests.Presentation
             {
                 Vector3 position = bucket.Matrices[i].GetColumn(3);
                 Assert.That(position.x, Is.EqualTo(seam.x).Within(0.01f), "on the head cell's column");
-                Assert.That(position.z, Is.InRange(seam.z - CellMetrics.HalfXZ, seam.z + CellMetrics.HalfXZ),
-                    "within the two cells the bed spans");
+                // The pillow's centre is the farthest out at 1.75 m from the seam, so the claim
+                // is the bed's own length, not the half-cell: every part's centre lies inside the
+                // 4.85 m the bed spans across its two cells.
+                Assert.That(position.z,
+                    Is.InRange(seam.z - 1.8f, seam.z + 1.8f),
+                    "within the span the bed covers across its two cells");
             }
         }
 
