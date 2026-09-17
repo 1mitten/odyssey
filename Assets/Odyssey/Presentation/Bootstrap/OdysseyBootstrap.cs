@@ -1258,9 +1258,60 @@ namespace Odyssey.Presentation.Bootstrap
         /// inside a frame's update and the world is at rest — but that is a property of where it
         /// is called from rather than of this method, so it is asserted rather than assumed.</para>
         /// </summary>
-        public string SaveSession()
+        /// <summary>
+        /// The file this session is bound to: the one it was loaded from, or the one it last saved
+        /// to. Null until it has been saved or loaded once.
+        ///
+        /// <para><b>This is what stops a folder filling up</b> (owner, 2026-09-17: *"I notice you
+        /// keep saving a new game everytime … otherwise lots of saves will be created"*). Save
+        /// writes here; only Save as changes where here is.</para>
+        /// </summary>
+        public string? BoundSavePath { get; private set; }
+
+        /// <summary>
+        /// What the naming prompt should offer: the name this session already has, or the colony's
+        /// own name the first time. Never empty — a prompt whose default is blank is a prompt that
+        /// cannot be confirmed until the player has thought of something.
+        /// </summary>
+        public string SuggestedSaveName()
         {
-            string path = SaveFiles.PathFor(CurrentRecipe());
+            if (BoundSavePath != null)
+                return System.IO.Path.GetFileNameWithoutExtension(BoundSavePath);
+
+            // SaveCatalogue's own suggestion rather than the colony's bare name, because it carries
+            // an invariant worth having: a player who accepts the offer lands on exactly the file
+            // an unnamed save would have chosen, so one colony cannot end up holding both
+            // "riverbend-day-12" and a near-identical twin of it.
+            return _colony != null
+                ? SaveCatalogue.SuggestedName(CurrentRecipe())
+                : colonyName;
+        }
+
+        /// <summary>
+        /// Save over the file this session is bound to.
+        ///
+        /// <para>Returns the path written, or <b>null when there is nothing to write over</b> — the
+        /// first save of a colony, which the caller answers by asking for a name. It is a return
+        /// value rather than an exception because "this colony has not been named yet" is an
+        /// ordinary state, not a fault.</para>
+        /// </summary>
+        public string? SaveSession()
+        {
+            if (BoundSavePath == null) return null;
+            SaveSession(BoundSavePath);
+            return BoundSavePath;
+        }
+
+        /// <summary>
+        /// Save under a name the player chose, and bind the session to it.
+        ///
+        /// <para>Overwrites a file of that name if there is one. The asking is the prompt's, and it
+        /// has already happened by the time this is called — a method that re-asked would be a
+        /// second place the rule lived.</para>
+        /// </summary>
+        public string SaveSessionAs(string name)
+        {
+            string path = SaveFiles.PathForName(name);
             SaveSession(path);
             return path;
         }
@@ -1280,6 +1331,9 @@ namespace Odyssey.Presentation.Bootstrap
                 _view.Capture(cameraRig, Directors, _world.GameSpeed);
 
             WorldSave.SaveToFile(path, _world, WithView(_colony.SaveComponents), CurrentRecipe());
+
+            // Bound by writing it, so the next Save goes here rather than somewhere new.
+            BoundSavePath = path;
         }
 
         /// <summary>
@@ -1351,6 +1405,11 @@ namespace Odyssey.Presentation.Bootstrap
             // in the rebuild above rather than in the file.
             using (var stream = System.IO.File.OpenRead(path))
                 WorldSave.Load(_world!, stream, WithView(_colony!.SaveComponents));
+
+            // A loaded colony is bound to the file it came out of, so Save puts it back where the
+            // player found it. This is the half that makes Save mean "save" rather than "save a
+            // copy" for every session after the first.
+            BoundSavePath = path;
 
             RefreshAfterLoad();
         }
@@ -1431,6 +1490,11 @@ namespace Odyssey.Presentation.Bootstrap
             Directors = null;
             _accumulator = 0d;
             _tickAlpha = 0f;
+
+            // The binding belongs to the session, not to the component. A new colony that inherited
+            // the last one's file would overwrite it on its first Save, which is the worst of both
+            // behaviours: a lost save and no prompt.
+            BoundSavePath = null;
 
             // Last, and after everything is null: whoever listens is about to ask whether a
             // session exists, and the answer has to already be no.

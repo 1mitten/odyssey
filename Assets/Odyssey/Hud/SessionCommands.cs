@@ -103,8 +103,29 @@ namespace Odyssey.Hud
         /// <summary>Open a colony from a file. Both surfaces.</summary>
         public const string LoadKey = "ui.session.load";
 
-        /// <summary>Write the running colony to a file. In game only: nothing to write otherwise.</summary>
+        /// <summary>
+        /// Write the running colony over the save it came from. In game only: nothing to write
+        /// otherwise.
+        ///
+        /// <para><b>Over, not beside</b> (owner, 2026-09-17: *"I notice you keep saving a new game
+        /// everytime … otherwise lots of saves will be created"*). A session is bound to a file —
+        /// the one it was loaded from, or the one it last saved to — and this writes to that. The
+        /// first save in a colony has nothing to bind to, so it asks for a name and then binds.
+        /// </para>
+        /// </summary>
         public const string SaveKey = "ui.session.save";
+
+        /// <summary>
+        /// Write the running colony to a save of its own, leaving the one it came from alone.
+        ///
+        /// <para><b>The reason there are two rows rather than one prompt.</b> Naming the save on
+        /// every press is the version that does not multiply files and does annoy: a player who
+        /// saves often would confirm the same name every time. Naming it once and then overwriting
+        /// it is the ordinary case, and branching is the exception — so the ordinary case is one
+        /// press and the exception says what it is. After this, the session is bound to the *new*
+        /// file, which is what "save as" means everywhere else.</para>
+        /// </summary>
+        public const string SaveAsKey = "ui.session.saveas";
 
         /// <summary>
         /// Options, on the main screen. Deliberately the settings panel's own key: in game the row
@@ -134,9 +155,11 @@ namespace Odyssey.Hud
         /// it.</para>
         ///
         /// <para><b>The in-game order runs from what costs nothing to what costs everything:</b>
-        /// Save loses nothing, Load discards this colony but stays in the game, Quit to main menu
-        /// leaves the world, Quit leaves the application. Save is therefore first — it is also what
-        /// a player opening this panel before doing anything drastic is reaching for — and
+        /// Save and Save as lose nothing, Load discards this colony but stays in the game, Quit to
+        /// main menu leaves the world, Quit leaves the application. The two saves are therefore
+        /// first — Save is also what a player opening this panel before doing anything drastic is
+        /// reaching for, and Save as sits directly under it because it is the same act with one
+        /// question asked — and
         /// <see cref="QuitKey"/> stays last, which is where the settings panel already draws it, so
         /// adding three rows moves nothing the owner has already looked at.</para>
         ///
@@ -157,9 +180,10 @@ namespace Odyssey.Hud
             (QuitKey,       SessionContext.MainScreen, 4, true),
 
             (SaveKey,       SessionContext.InGame,     1, false),
-            (LoadKey,       SessionContext.InGame,     2, true),
-            (QuitToMenuKey, SessionContext.InGame,     3, true),
-            (QuitKey,       SessionContext.InGame,     4, true),
+            (SaveAsKey,     SessionContext.InGame,     2, false),
+            (LoadKey,       SessionContext.InGame,     3, true),
+            (QuitToMenuKey, SessionContext.InGame,     4, true),
+            (QuitKey,       SessionContext.InGame,     5, true),
         };
 
         /// <summary>The contexts, so a test can walk every one rather than naming two by hand and

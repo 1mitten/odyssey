@@ -53,7 +53,18 @@ namespace Odyssey.Hud
         /// in <see cref="MenuDirector.LoadRequested"/> and never parsed.</summary>
         public readonly string Id;
 
-        /// <summary>The colony's name, from the save's own header.</summary>
+        /// <summary>
+        /// What the player called this save — its title in the list.
+        ///
+        /// <para><b>Separate from <see cref="Colony"/> since saves could be named</b> (owner,
+        /// 2026-09-17). A folder is mostly repeated attempts at one colony, so a list titled by the
+        /// colony said the same word on every row and hid the one thing that told them apart.</para>
+        /// </summary>
+        public readonly string Name;
+
+        /// <summary>The colony's name, from the save's own header. The line under the title, beside
+        /// the day and the hour — still worth saying, because a name the player typed need not
+        /// mention the colony at all.</summary>
         public readonly string Colony;
 
         /// <summary>Which day the colony had reached.</summary>
@@ -80,10 +91,11 @@ namespace Odyssey.Hud
         /// </summary>
         public readonly string When;
 
-        public SaveRow(string id, string colony, int day, string map, string problem = "",
-            string when = "")
+        public SaveRow(string id, string name, int day, string map, string problem = "",
+            string when = "", string colony = "")
         {
             Id = id ?? string.Empty;
+            Name = name ?? string.Empty;
             Colony = colony ?? string.Empty;
             Day = day;
             Map = map ?? string.Empty;

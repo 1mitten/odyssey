@@ -42,6 +42,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(KeysOf(SessionContext.InGame), Is.EqualTo(new[]
             {
                 SessionCommands.SaveKey,
+                SessionCommands.SaveAsKey,
                 SessionCommands.LoadKey,
                 SessionCommands.QuitToMenuKey,
                 SessionCommands.QuitKey,
@@ -135,6 +136,10 @@ namespace Odyssey.Tests.Hud
             Assert.That(SessionCommands.AsksTwice(SessionCommands.QuitKey, SessionContext.MainScreen), Is.True,
                 "it is irreversible and it sits under the row above it");
 
+            // Neither save arms. Save writes over a file the player already named and asked for;
+            // Save as writes a file that does not exist yet, or asks its own question in the
+            // prompt. The row that could destroy something is the prompt's Overwrite, not this.
+            Assert.That(SessionCommands.AsksTwice(SessionCommands.SaveAsKey, SessionContext.InGame), Is.False);
             Assert.That(SessionCommands.AsksTwice(SessionCommands.SaveKey, SessionContext.InGame), Is.False,
                 "writing a file loses nothing");
             Assert.That(SessionCommands.AsksTwice(SessionCommands.LoadKey, SessionContext.InGame), Is.True,

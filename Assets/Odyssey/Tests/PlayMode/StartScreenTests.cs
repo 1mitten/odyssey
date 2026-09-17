@@ -5,6 +5,7 @@ using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Ui;
+using Odyssey.Sim.Saving;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
@@ -150,6 +151,63 @@ namespace Odyssey.Tests.PlayMode
             }
             finally
             {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Saving twice writes one file, not two (owner, 2026-09-17: *"I notice you keep saving a
+        /// new game everytime … otherwise lots of saves will be created"*).
+        ///
+        /// <para>The claim the whole naming change exists to make, asserted on the folder itself
+        /// rather than on the binding — the binding is the mechanism, and a mechanism that is right
+        /// while the folder still fills up would be no use to anybody.</para>
+        ///
+        /// <para>It writes into a real temporary folder rather than the player's own, and puts it
+        /// back afterwards whatever happens: a test that left files in <c>persistentDataPath</c>
+        /// would show up in the owner's load list.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SavingTwiceWritesOneFile()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell shell);
+            string folder = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(), "odyssey-save-twice-" + System.Guid.NewGuid());
+            try
+            {
+                yield return Settle();
+                Assert.That(boot.HasSession, Is.True);
+                Assert.That(boot.SaveSession(), Is.Null,
+                    "a colony that has never been named claimed to have somewhere to save to");
+
+                // The path-taking overload, so this writes into a temporary folder rather than
+                // into the player's own. SaveSessionAs is the same act with the folder and the
+                // naming rules applied, and those are SaveCatalogue's to prove.
+                System.IO.Directory.CreateDirectory(folder);
+                string first = System.IO.Path.Combine(folder, "keep" + SaveCatalogue.Extension);
+                boot.SaveSession(first);
+
+                Assert.That(boot.BoundSavePath, Is.EqualTo(first),
+                    "writing a save did not bind the session to it, so the next Save has nowhere to go");
+
+                // The ordinary case: Save, with no prompt and no new file.
+                string? second = boot.SaveSession();
+                Assert.That(second, Is.EqualTo(first), "Save wrote somewhere other than its own file");
+
+                Assert.That(System.IO.Directory.GetFiles(folder).Length, Is.EqualTo(1),
+                    "saving twice left more than one file, which is the whole complaint");
+
+                // And the binding does not outlive the colony: a new one inheriting it would
+                // overwrite somebody else's save on its first press.
+                boot.TeardownSession();
+                yield return Settle();
+                Assert.That(boot.BoundSavePath, Is.Null);
+            }
+            finally
+            {
+                if (System.IO.Directory.Exists(folder))
+                    System.IO.Directory.Delete(folder, recursive: true);
                 Object.Destroy(root);
             }
         }

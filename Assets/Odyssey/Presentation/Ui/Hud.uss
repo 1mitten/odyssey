@@ -1245,6 +1245,79 @@
     border-top-color: rgba(255, 255, 255, 0.09);
 }
 
+/* ---------------------------------------------------------------- the naming prompt
+
+   Names a save before it is written (owner, 2026-09-17). A modal over a running colony, which is
+   the first time that combination exists — the start screen's modal has no world behind it. The
+   world keeps running underneath, which is the owner's standing answer for what a modal does. */
+
+.prompt {
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    width: 420px;
+}
+
+/* The first text field in the project, so it is restyled from Unity's default rather than
+   accepted — the default is a pale box with a blue focus ring, which against a near-black panel
+   reads as a control from a different program. The scroller and the volume slider went the same
+   way; this is the third. No font-size here: type belongs to HudType, and the sheet is checked
+   for that. */
+.field {
+    height: 30px;
+    margin-top: 9px;
+}
+
+.field .unity-base-text-field__input {
+    background-color: rgba(0, 0, 0, 0.35);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+    padding: 0 8px;
+    color: #eef3f6;
+    --unity-cursor-color: #6fd3e3;
+    -unity-text-align: middle-left;
+}
+
+.field:hover .unity-base-text-field__input { border-color: rgba(255, 255, 255, 0.35); }
+.field:focus .unity-base-text-field__input { border-color: #6fd3e3; }
+
+/* The two answers, side by side under the field: confirm on the left where the eye already is
+   after typing, leave on the right. */
+.prompt__answers {
+    flex-direction: row;
+    margin-top: 9px;
+}
+
+.prompt__answer {
+    flex-grow: 1;
+    flex-basis: 0;
+    height: 29px;
+    margin-right: 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+    justify-content: center;
+    align-items: center;
+}
+
+.prompt__answer:hover { border-color: #6fd3e3; }
+
+/* A name that cannot be written — empty, or nothing but punctuation. Disabled with its reason
+   rather than a press that silently does nothing, which is the panel catalogue's rule. */
+.prompt__answer--off { opacity: 0.42; }
+.prompt__answer--off:hover { border-color: rgba(255, 255, 255, 0.13); }
+
+/* The line under the field: what will happen, in words, before it happens. It is the only warning
+   there is, since the write itself is instant and silent. */
+.prompt__note {
+    color: rgba(255, 255, 255, 0.50);
+    white-space: normal;
+    margin-top: 9px;
+}
+
+.prompt__note--warn { color: #e8b55c; }
+
 /* ---------------------------------------------------------------- the drag-select marquee */
 
 /* What the player is holding. Centred over the command bar, out of the way of the board and

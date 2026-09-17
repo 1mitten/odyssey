@@ -167,6 +167,188 @@ namespace Odyssey.Sim.Saving
         public static string FileNameFor(SaveRecipe recipe, IEnumerable<string>? taken) =>
             FreeName(FileNameFor(recipe), taken);
 
+        // ------------------------------------------------------ naming by the player's own name
+
+        /// <summary>
+        /// What an unnameable colony is called when a <i>person</i> is going to read it, as opposed
+        /// to <see cref="FallbackSlug"/>, which is what the filesystem gets. The two are the same
+        /// word and a test holds them to it: <c>Slug(FallbackName) == FallbackSlug</c>, so a later
+        /// change to one that forgets the other is red rather than merely odd.
+        /// </summary>
+        public const string FallbackName = "Colony";
+
+        /// <summary>
+        /// What is put on the end of a stem that would otherwise be a Windows device name. See
+        /// <see cref="FileNameForName"/> for why it exists at all, and
+        /// <see cref="IsReservedName"/> for what it is defending against.
+        ///
+        /// <para>A suffix rather than a prefix because the folder is sorted by name and a player
+        /// looking for the save they called "Aux" should find it under A.</para>
+        /// </summary>
+        public const string DeviceSuffix = "-save";
+
+        /// <summary>
+        /// The names MS-DOS gave to devices and Windows has reserved ever since: creating a file
+        /// called any of these fails, with or without an extension, in any mix of case. Lowercase
+        /// here because <see cref="IsReservedName"/> folds before it compares.
+        /// </summary>
+        static readonly string[] ReservedNames =
+        {
+            "con", "prn", "aux", "nul",
+            "com1", "com2", "com3", "com4", "com5", "com6", "com7", "com8", "com9",
+            "lpt1", "lpt2", "lpt3", "lpt4", "lpt5", "lpt6", "lpt7", "lpt8", "lpt9",
+        };
+
+        /// <summary>
+        /// Whether Windows would refuse to create a file with this name.
+        ///
+        /// <para><b>The extension does not save you</b>, which is the part that catches people:
+        /// <c>con.odyssey</c> is as unopenable as <c>con</c>, because the rule is applied to the
+        /// part before the first dot. So this answers about a whole file name, strips at the first
+        /// dot, and folds case — a player who types "Nul" is asking for the same file a player who
+        /// types "NUL" is.</para>
+        ///
+        /// <para>The classic four and the numbered twenty-two, and no more. Windows also reserves
+        /// these names followed by trailing spaces or dots, and <c>CONIN$</c> / <c>CONOUT$</c> on
+        /// recent builds — none of which <see cref="Slug"/> can produce, since it keeps only ASCII
+        /// letters, digits and interior hyphens. This is a public check all the same, because
+        /// something that is true by construction elsewhere is worth being able to assert.</para>
+        /// </summary>
+        public static bool IsReservedName(string? fileName)
+        {
+            if (string.IsNullOrEmpty(fileName)) return false;
+
+            int dot = fileName!.IndexOf('.');
+            string stem = dot < 0 ? fileName : fileName.Substring(0, dot);
+
+            foreach (string reserved in ReservedNames)
+                if (string.Equals(stem, reserved, StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+            return false;
+        }
+
+        /// <summary>
+        /// Whether a name the player typed can become a file at all: whether
+        /// <see cref="Slug"/> would keep anything of it.
+        ///
+        /// <para>This exists because a player-chosen name and a colony name want opposite
+        /// treatment when they slug to nothing. A colony called "!!!" still has to be saved, so
+        /// <see cref="Slug"/> quietly substitutes <see cref="FallbackSlug"/>. A <i>save</i> called
+        /// "!!!" is a player asking for something, and answering with a file called
+        /// <c>colony.odyssey</c> would be the interface lying about what it did — worse, the next
+        /// "!!!" and the next "..." would both land on that same file and overwrite it. So the
+        /// prompt refuses the name instead, and this is the question it refuses on.</para>
+        ///
+        /// <para>Length is deliberately not part of it: a name too long for the path budget is
+        /// <i>cut</i>, never rejected, which is the bargain <see cref="MaxSlugLength"/> already
+        /// struck.</para>
+        /// </summary>
+        public static bool IsUsableName(string? saveName)
+        {
+            foreach (char raw in saveName ?? string.Empty)
+                if (IsKept(AsciiLower(raw)))
+                    return true;
+
+            return false;
+        }
+
+        /// <summary>
+        /// The file a name the player typed maps to: the slug, plus <see cref="Extension"/>.
+        ///
+        /// <para><b>No disambiguator, and that is the whole point of this method existing beside
+        /// <see cref="FileNameFor(SaveRecipe, IEnumerable{string})"/>.</b> The owner's report on
+        /// 2026-09-17 was that saving twice produced two files; it did, because the recipe-named
+        /// path asks <see cref="FreeName"/> to step around anything already there. A name the
+        /// player chose has to map to exactly one file, for ever, or saving again cannot mean
+        /// overwriting. Collision is therefore not this method's problem — it is a question the
+        /// prompt asks with <see cref="NameIsTaken(string, IEnumerable{string})"/> and the player
+        /// answers.</para>
+        ///
+        /// <para><b>The device-name hole has to be closed here deliberately.</b> Every name the
+        /// recipe path produces contains <c>-day-N</c>, and the author of that method recorded that
+        /// the segment is what keeps a colony called "Con" or "Nul" from producing a file Windows
+        /// will not create. A player-chosen name has no such segment, so the protection is gone and
+        /// is put back by <see cref="DeviceSuffix"/>: "Aux" is saved as
+        /// <c>aux-save.odyssey</c>.</para>
+        ///
+        /// <para><b>Two names can map to one file, and that is safe rather than merely tolerated.</b>
+        /// "Ashford" and "ashford" both give <c>ashford.odyssey</c>; so do "Aux" and "aux save".
+        /// Nothing here hides that, because collision is decided <i>on the file name</i> — so every
+        /// many-to-one case in the slug surfaces as the same overwrite question the player would get
+        /// for typing the name twice, rather than as a silent clobber. Deciding it on the typed
+        /// name is what would be unsafe, and it is the thing this shape rules out.</para>
+        ///
+        /// <para>It cannot refuse. An unusable name falls back to <see cref="FallbackSlug"/> rather
+        /// than throwing, because a method on the path to writing a save must not turn a bad name
+        /// into a crash; <see cref="IsUsableName"/> is how a caller arranges never to ask.</para>
+        /// </summary>
+        public static string FileNameForName(string? saveName)
+        {
+            string stem = Slug(saveName);
+            if (IsReservedName(stem)) stem += DeviceSuffix;
+            return stem + Extension;
+        }
+
+        /// <summary>Whether the file <paramref name="saveName"/> maps to is already in
+        /// <paramref name="taken"/>. Case-insensitive, for the reason <see cref="FreeName"/>
+        /// is: the folder may be case-insensitive and may hold files a player renamed by
+        /// hand.</summary>
+        public static bool NameIsTaken(string? saveName, IEnumerable<string>? taken) =>
+            NameIsTaken(saveName, taken, null);
+
+        /// <summary>
+        /// The same question with one file excused: <paramref name="ignoring"/> is a file name
+        /// that does not count as a collision.
+        ///
+        /// <para>That is how a session saves over its own file without being asked. Save writes to
+        /// the file the session is bound to — the one it was loaded from or last saved to — and
+        /// "you are about to overwrite the save you are playing" is not a question worth putting to
+        /// somebody who just pressed Save. Every <i>other</i> file is still a collision, including
+        /// under Save as…, where nothing is excused and typing the bound name asks like any
+        /// other.</para>
+        /// </summary>
+        public static bool NameIsTaken(string? saveName, IEnumerable<string>? taken, string? ignoring)
+        {
+            if (taken == null) return false;
+
+            string wanted = FileNameForName(saveName);
+            foreach (string name in taken)
+            {
+                if (name == null) continue;
+                if (!string.Equals(name, wanted, StringComparison.OrdinalIgnoreCase)) continue;
+                if (ignoring != null && string.Equals(name, ignoring, StringComparison.OrdinalIgnoreCase)) continue;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// The name to offer a player who has not chosen one: the colony, the word day, and the
+        /// day — "Riverbend day 12".
+        ///
+        /// <para><b>It lives here rather than in the presenter so that the two naming paths agree
+        /// on the first save.</b> Slug this and you get exactly the stem
+        /// <see cref="FileNameFor(SaveRecipe)"/> produces, so a player who accepts the offered name
+        /// writes the file an unnamed save would have written, and a folder does not end up holding
+        /// <c>riverbend-day-12.odyssey</c> and <c>riverbend-day-12-2.odyssey</c> with the same
+        /// colony in both. A test states that equality rather than leaving it to the two methods
+        /// happening to spell the day the same way.</para>
+        ///
+        /// <para>The one case where they part is a colony name over
+        /// <see cref="MaxSlugLength"/>: this suggestion carries its day after the name, so the cut
+        /// falls on the day rather than on the colony. The player is looking at the text when that
+        /// happens and can type something shorter, which is the difference between a suggestion and
+        /// a derivation.</para>
+        /// </summary>
+        public static string SuggestedName(SaveRecipe recipe)
+        {
+            string colony = IsUsableName(recipe.ColonyName) ? recipe.ColonyName.Trim() : FallbackName;
+            string day = recipe.Day >= 0 ? recipe.Day.ToString(CultureInfo.InvariantCulture) : "unknown";
+            return colony + " day " + day;
+        }
+
         /// <summary>Whether a path looks like one of ours, by extension alone. Case-insensitive,
         /// for the same reason <see cref="FreeName"/> is.</summary>
         public static bool IsSaveFile(string? path) =>

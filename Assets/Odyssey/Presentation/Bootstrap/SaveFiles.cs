@@ -98,16 +98,64 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         /// <summary>
-        /// A save's own name, as a row in the load list should say it: the colony, or the file's
-        /// stem when the header could not be read and there is no colony to name.
+        /// A save's own name, as a row in the load list should say it: <b>what the player called
+        /// it</b>, which is the file's own stem.
+        ///
+        /// <para><b>This used to prefer the colony's name and that was wrong once saves could be
+        /// named</b> (owner, 2026-09-17). A folder is mostly repeated attempts at one colony, so
+        /// every row said "Landfall" and the thing that told them apart — the name the player
+        /// typed — was the one thing not shown. The colony's name moved to the line underneath,
+        /// where it belongs beside the day and the hour.</para>
         /// </summary>
         public static string TitleOf(SaveEntry entry)
         {
             if (entry == null) throw new ArgumentNullException(nameof(entry));
-            string? colony = entry.Header?.Recipe.ColonyName;
-            return string.IsNullOrWhiteSpace(colony)
-                ? Path.GetFileNameWithoutExtension(entry.FileName)
-                : colony!;
+            return Path.GetFileNameWithoutExtension(entry.FileName);
+        }
+
+        /// <summary>The colony a save holds, for the line under its name. Empty when the header
+        /// could not be read, which is when the row is showing its problem there instead.</summary>
+        public static string ColonyOf(SaveEntry entry)
+        {
+            if (entry == null) throw new ArgumentNullException(nameof(entry));
+            return entry.Header?.Recipe.ColonyName ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Where a save the player has named should be written.
+        ///
+        /// <para><b>No disambiguation, and that is the whole point</b> (owner, 2026-09-17: *"we
+        /// should be able to name the save game … and then can overwrite that save if need be —
+        /// otherwise lots of saves will be created"*). <see cref="PathFor"/> finds a free name,
+        /// which is right for a save nobody named and wrong for one somebody did: a name the player
+        /// typed has to map to exactly one file, or saving again beside it is the file-multiplying
+        /// this replaces.</para>
+        /// </summary>
+        public static string PathForName(string name) =>
+            Path.Combine(EnsureFolder(), SaveCatalogue.FileNameForName(name));
+
+        /// <summary>
+        /// Whether a save of this name already exists — so the prompt can say "Overwrite" and ask
+        /// twice rather than discovering it after the file is gone.
+        ///
+        /// <para>Answered by <see cref="SaveCatalogue"/> against the folder's own listing rather
+        /// than by <see cref="File.Exists"/>, because the comparison has to be the one the
+        /// filesystem will make: on Windows "Ashford" and "ashford" are one file, and a check that
+        /// said otherwise would overwrite a save while promising not to.</para>
+        /// </summary>
+        /// <param name="ignoringPath">
+        /// A file that does not count as a collision — the one this session is already bound to.
+        /// Re-saving your own save under its own name is the ordinary case, not an overwrite to be
+        /// warned about, and a prompt that said "Overwrite?" about the file you are plainly saving
+        /// would teach the player to ignore the word.
+        /// </param>
+        public static bool NameIsTaken(string name, string? ignoringPath = null)
+        {
+            var names = new List<string>();
+            foreach (SaveEntry entry in SaveCatalogue.Read(Folder)) names.Add(entry.FileName);
+
+            return SaveCatalogue.NameIsTaken(name, names,
+                ignoringPath == null ? null : Path.GetFileName(ignoringPath));
         }
     }
 }

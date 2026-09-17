@@ -538,6 +538,23 @@ namespace Odyssey.Hud
         public const float StartPanelHeight =
             Frame + Pad + StartTitle + StartTitleGap + StartBody + Pad;
 
+        // ------------------------------------------------------------------ the naming prompt
+
+        /// <summary>
+        /// The prompt that names a save. The start screen's width, because a save's name is as long
+        /// as a save's row and the two are read one after the other.
+        /// </summary>
+        public const int PromptWidth = StartWidth;
+
+        /// <summary>
+        /// A text field's box — the first control of its kind in this interface.
+        ///
+        /// <para>Thirty rather than the <see cref="RowHeight"/> of twenty-nine, because a field is
+        /// a thing you click into and type in rather than a line you read, and the one pixel is the
+        /// border it carries that a row does not.</para>
+        /// </summary>
+        public const int FieldHeight = 30;
+
         /// <summary>
         /// How tall the load list may stand before it scrolls: whatever the fixed body leaves once
         /// the row that goes back has taken its share.

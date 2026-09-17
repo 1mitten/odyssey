@@ -61,10 +61,13 @@ namespace Odyssey.Tests.PlayMode
                 // "start" is B18, built whether or not a session exists because the state it
                 // belongs to is the one where none does (U38). It is in the tree and hidden here,
                 // which is why it counts as a framed region while this rig is in a colony.
+                // "saveprompt" joins for the same reason "start" did: both are modals, built at
+                // startup and hidden until something asks for them, so both are framed regions in
+                // the tree whatever the colony is doing.
                 string[] expected =
                 {
                     "stores", "clock", "alerts", "rail", "inspect", "build", "menu", "settings",
-                    "start",
+                    "start", "saveprompt",
                 };
                 var regions = doc.rootVisualElement.Query(className: "region").ToList();
                 var names = regions.ConvertAll(r => r.name);

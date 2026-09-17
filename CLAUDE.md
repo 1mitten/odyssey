@@ -236,6 +236,19 @@ fixed box**, 420 × 384, because a centred panel that resizes moves every row un
 load list's ceiling is derived from that box rather than written down beside it, and a save row now
 carries the date and time, since a folder is mostly repeated attempts at the same colony.
 
+**Saves are named, and Save overwrites** (owner, 2026-09-17: *"I notice you keep saving a new game
+everytime … otherwise lots of saves will be created"* — a fault `17-start-flow.md` §10 had already
+admitted). A session is **bound** to a file: the one it was loaded from, or the one it last saved
+to. **Save** writes over that; **Save as** asks for a name and binds to the answer; the first save
+of a colony has nothing bound, so it asks, defaulting to the colony's name. **A player-chosen name
+is never disambiguated** — that is the point, since a name that maps to one file is what makes
+saving again an overwrite — so naming an existing save *is* an overwrite and the prompt asks twice.
+**The trap it opened:** the old scheme was accidentally safe because every stem carried `-day-N`,
+which is what kept a colony called `con` or `com1` off a Windows reserved device name
+(`con-day-4.odyssey` is creatable, `con.odyssey` is not); a typed name has no `-day-`, so that guard
+is now deliberate. The naming prompt is the project's **first text field** and the **first modal
+over a running colony**.
+
 **Save format is 3.** The recipe gained `Barren` and `Wooded`, because U38's round-trip test found
 that `MapType` says "Natural" for three genuinely different boards and a header could not rebuild
 the one it was written on. **The state hash could not have caught it** — the load overwrites every

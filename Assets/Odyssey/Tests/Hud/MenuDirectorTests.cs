@@ -286,7 +286,7 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(chosen, Has.Count.EqualTo(1), "exactly once");
             Assert.That(chosen[0].Id, Is.EqualTo("b"));
-            Assert.That(chosen[0].Colony, Is.EqualTo("Bellwether"));
+            Assert.That(chosen[0].Name, Is.EqualTo("Bellwether"));
             Assert.That(chosen[0].Day, Is.EqualTo(3));
         }
 

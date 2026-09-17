@@ -86,6 +86,19 @@ namespace Odyssey.Tests.Hud
             }
         }
 
+        /// <summary>The naming prompt's four words, held to the CSV like every other panel.</summary>
+        [Test]
+        public void EverySavePromptWordIsARegisteredName()
+        {
+            foreach (string key in SavePrompt.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+
+            // The two the prompt swaps between on its own button. A missing one would draw the key
+            // at the player on exactly the press that is about to overwrite a save.
+            Assert.That(SavePrompt.IconKeys, Does.Contain(SavePrompt.ConfirmKey));
+            Assert.That(SavePrompt.IconKeys, Does.Contain(SavePrompt.OverwriteKey));
+        }
+
         [Test]
         public void EveryHotkeyKeyIsARegisteredName()
         {

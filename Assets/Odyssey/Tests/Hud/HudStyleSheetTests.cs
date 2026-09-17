@@ -92,6 +92,15 @@ namespace Odyssey.Tests.Hud
             (".save__meta", "color", () => HudTheme.TextMeta, "text meta"),
             (".startscreen__back", "border-top-color", () => HudTheme.Divider, "divider"),
             (".save--bad .save__meta", "color", () => HudTheme.Warn, "warn"),
+
+            // The naming prompt, and the project's first text field.
+            (".field .unity-base-text-field__input", "color", () => HudTheme.TextPrimary, "text primary"),
+            (".field .unity-base-text-field__input", "border-color", () => HudTheme.PanelBorder, "panel border"),
+            (".field:focus .unity-base-text-field__input", "border-color", () => HudTheme.Accent, "accent"),
+            (".prompt__answer", "border-color", () => HudTheme.PanelBorder, "panel border"),
+            (".prompt__answer:hover", "border-color", () => HudTheme.Accent, "accent"),
+            (".prompt__note", "color", () => HudTheme.TextDim, "text dim"),
+            (".prompt__note--warn", "color", () => HudTheme.Warn, "warn"),
         };
 
         [Test]
@@ -183,6 +192,10 @@ namespace Odyssey.Tests.Hud
             (".save", "height", () => HudLayout.StartSaveRow, "a save row"),
             (".save", "margin-bottom", () => HudLayout.StartSaveGap, "save row gap"),
             (".startscreen__back", "margin-top", () => HudLayout.StartRowGap, "start screen row gap"),
+
+            (".prompt", "width", () => HudLayout.PromptWidth, "naming prompt width"),
+            (".field", "height", () => HudLayout.FieldHeight, "a text field"),
+            (".prompt__answer", "height", () => HudLayout.RowHeight, "list row"),
 
             // The row the start screen reuses rather than reinventing. Pinned in both places it is
             // already used, so "the start screen is built from rows the interface already has"

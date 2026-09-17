@@ -236,14 +236,14 @@ namespace Odyssey.Presentation.Ui
 
                 var row = new VisualElement();
                 row.AddToClassList("save");
-                row.Add(HudText.Make(save.Colony, HudTextRole.Row, ussClass: "save__name"));
+                row.Add(HudText.Make(save.Name, HudTextRole.Row, ussClass: "save__name"));
 
-                // Day, board and when it was written — the line that tells two saves of the same
-                // colony apart, which is what a folder of them mostly contains. Asked for by the
-                // owner after playing it (2026-09-17). A figure, so mono, like every other figure
-                // on this screen.
+                // The colony, the day and when it was written — the line that tells two saves
+                // apart once the title is a name the player chose. Asked for by the owner after
+                // playing it (2026-09-17). A figure, so mono, like every other figure on this
+                // screen.
                 row.Add(HudText.Make(
-                    save.Readable ? $"Day {save.Day} · {save.Map} · {save.When}" : save.Problem,
+                    save.Readable ? $"{save.Colony} · Day {save.Day} · {save.When}" : save.Problem,
                     HudTextRole.Meta, numeric: save.Readable, "save__meta"));
 
                 if (save.Readable)
@@ -281,7 +281,7 @@ namespace Odyssey.Presentation.Ui
                 rows.Add(entry.IsReadable
                     ? new SaveRow(entry.Path, SaveFiles.TitleOf(entry), entry.Header!.Recipe.Day,
                         entry.Header.Recipe.Map.ToString(), problem: string.Empty,
-                        when: SaveFiles.WhenOf(entry))
+                        when: SaveFiles.WhenOf(entry), colony: SaveFiles.ColonyOf(entry))
                     : new SaveRow(entry.Path, SaveFiles.TitleOf(entry), 0, string.Empty,
                         entry.Problem ?? Registry.Label("ui.start.unreadable"),
                         when: SaveFiles.WhenOf(entry)));
@@ -301,6 +301,133 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         void OnNewGame() => _boot!.BuildSession(SeedEntry.Draw(), null);
 
+        // ============================================================ naming a save
+
+        readonly SavePrompt _prompt = new SavePrompt();
+
+        HudModal _promptModal = null!;
+        TextField _promptField = null!;
+        VisualElement _promptConfirm = null!;
+        Label _promptConfirmLabel = null!;
+        Label _promptNote = null!;
+
+        /// <summary>The naming prompt, for a test that wants to drive it without a pointer.</summary>
+        public SavePrompt Prompt => _prompt;
+
+        /// <summary>
+        /// The prompt that names a save (owner, 2026-09-17).
+        ///
+        /// <para><b>Two firsts in one small box.</b> It is the project's first text field — Unity's
+        /// default is a pale control with a blue focus ring, so it is restyled in the sheet the way
+        /// the palette's scroller and the volume slider were before it — and the first modal raised
+        /// over a <i>running</i> colony, the start screen's having nothing behind it. The world
+        /// carries on underneath, which is the owner's standing answer for what a modal does.</para>
+        /// </summary>
+        void BuildSavePrompt()
+        {
+            _promptModal = Modal("saveprompt", Registry.Label(SavePrompt.TitleKey),
+                () => _prompt.Cancel(), "prompt");
+
+            _promptField = new TextField { isDelayed = false };
+            _promptField.AddToClassList("field");
+            _promptField.RegisterValueChangedCallback(change => OnNameTyped(change.newValue));
+            _promptModal.Panel.Add(_promptField);
+
+            _promptNote = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "prompt__note");
+            _promptModal.Panel.Add(_promptNote);
+
+            var answers = new VisualElement();
+            answers.AddToClassList("prompt__answers");
+
+            _promptConfirm = new VisualElement();
+            _promptConfirm.AddToClassList("prompt__answer");
+            _promptConfirmLabel = HudText.Make(Registry.Label(SavePrompt.ConfirmKey), HudTextRole.Row);
+            _promptConfirm.Add(_promptConfirmLabel);
+            _promptConfirm.RegisterCallback<ClickEvent>(_ => _prompt.Confirm());
+            answers.Add(_promptConfirm);
+
+            var cancel = new VisualElement();
+            cancel.AddToClassList("prompt__answer");
+            cancel.Add(HudText.Make(Registry.Label(SavePrompt.CancelKey), HudTextRole.Row));
+            cancel.RegisterCallback<ClickEvent>(_ => _prompt.Cancel());
+            answers.Add(cancel);
+
+            _promptModal.Panel.Add(answers);
+
+            _prompt.Changed += RefreshSavePrompt;
+            _prompt.Confirmed += OnSaveNamed;
+        }
+
+        /// <summary>
+        /// What the folder makes of a name. The prompt cannot look at a disk — it is compiled
+        /// without one — so the presenter answers, on every keystroke.
+        /// </summary>
+        /// <remarks>
+        /// <b>Nothing is excused from the collision.</b> <c>SaveCatalogue.NameIsTaken</c> can be
+        /// told to ignore the file a session is bound to, which is what stops plain Save asking to
+        /// overwrite its own save — but plain Save never reaches this prompt when it is bound, it
+        /// writes straight through. Everything that gets here is either a colony with no file yet
+        /// or a deliberate Save as, and in both of those a name already in use really is an
+        /// overwrite and deserves the question.
+        /// </remarks>
+        SaveNameStatus StatusOf(string? name)
+        {
+            if (!SaveCatalogue.IsUsableName(name)) return SaveNameStatus.Unusable;
+
+            return SaveFiles.NameIsTaken(name!) ? SaveNameStatus.Taken : SaveNameStatus.Free;
+        }
+
+        void OnNameTyped(string typed) => _prompt.Type(typed, StatusOf(typed));
+
+        /// <summary>
+        /// Open the prompt, offering a name: this session's own if it has one, the colony's
+        /// otherwise. The settings panel goes first, so the player is not naming a save through
+        /// two stacked windows.
+        /// </summary>
+        void OpenSavePrompt()
+        {
+            _boot!.Preferences.SetOpen(false);
+
+            string suggested = _boot.SuggestedSaveName();
+            _prompt.Show(suggested, StatusOf(suggested));
+
+            // SetValueWithoutNotify, or the field's own change event would call Type again with
+            // the name the director was just given and stand down any arming that came with it.
+            _promptField.SetValueWithoutNotify(_prompt.Name);
+            _promptField.Focus();
+        }
+
+        void RefreshSavePrompt()
+        {
+            _promptModal.Show(_prompt.Showing);
+            if (!_prompt.Showing) return;
+
+            HudText.Set(_promptConfirmLabel, Registry.Label(_prompt.ActionKey), HudTextRole.Row);
+            _promptConfirm.EnableInClassList("prompt__answer--off", !_prompt.CanConfirm);
+            _promptConfirm.EnableInClassList("row--armed", _prompt.Armed);
+
+            _promptNote.EnableInClassList("prompt__note--warn", _prompt.Status != SaveNameStatus.Free);
+            HudText.Set(_promptNote, NoteFor(), HudTextRole.Meta);
+        }
+
+        /// <summary>
+        /// What is about to happen, in words, before it happens — the only warning there is, since
+        /// the write itself is instant and silent.
+        /// </summary>
+        string NoteFor() => _prompt.Status switch
+        {
+            SaveNameStatus.Unusable => "That name cannot be a file. Try letters and digits.",
+            SaveNameStatus.Taken when _prompt.Armed => "This will replace the save of that name.",
+            SaveNameStatus.Taken => "A save of that name already exists.",
+            _ => "Saved under this name. Saving again will write over it.",
+        };
+
+        void OnSaveNamed(string name)
+        {
+            string path = _boot!.SaveSessionAs(name);
+            Debug.Log($"[Odyssey] saved to {path}");
+        }
+
         /// <summary>
         /// A session row of the settings panel was confirmed (U38).
         ///
@@ -315,10 +442,22 @@ namespace Odyssey.Presentation.Ui
             switch (key)
             {
                 case SessionCommands.SaveKey:
-                    // Closed first, so the panel is not still open over a colony whose file has
-                    // already been written — and so the player sees that something happened.
-                    _boot!.Preferences.SetOpen(false);
-                    Debug.Log($"[Odyssey] saved to {_boot.SaveSession()}");
+                {
+                    // Over the file this session is bound to. Nothing bound means this colony has
+                    // never been named, so the prompt asks — which is also the only time Save and
+                    // Save as do the same thing.
+                    string? path = _boot!.SaveSession();
+                    if (path == null) { OpenSavePrompt(); break; }
+
+                    // Closed after the write, so the panel is not still open over a colony whose
+                    // file has already changed — and so the player sees that something happened.
+                    _boot.Preferences.SetOpen(false);
+                    Debug.Log($"[Odyssey] saved to {path}");
+                    break;
+                }
+
+                case SessionCommands.SaveAsKey:
+                    OpenSavePrompt();
                     break;
 
                 case SessionCommands.LoadKey:

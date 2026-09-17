@@ -183,6 +183,197 @@ namespace Odyssey.Tests.Sim
                 Is.EqualTo("riverbend-day-12-3.odyssey"));
         }
 
+        // ---------------------------------------------------------------- a name the player chose
+
+        [Test]
+        public void ANameThePlayerTypedBecomesTheFileItsSlugAsksFor()
+        {
+            Assert.That(SaveCatalogue.FileNameForName("Ashford"), Is.EqualTo("ashford.odyssey"));
+            Assert.That(SaveCatalogue.FileNameForName("  Before the winter!! "),
+                Is.EqualTo("before-the-winter.odyssey"));
+            Assert.That(SaveCatalogue.FileNameForName("Riverbend day 12"),
+                Is.EqualTo("riverbend-day-12.odyssey"));
+
+            // Nothing hostile survives, and the stem carries no dot, so a file browser still knows
+            // where the extension starts.
+            char[] hostile = Path.GetInvalidFileNameChars();
+            foreach (string typed in new[] { "A:B", "up/down", "back\\slash", "pipe|", "dot.dot", "Ravnsbjørg" })
+            {
+                string file = SaveCatalogue.FileNameForName(typed);
+                Assert.That(file.IndexOfAny(hostile), Is.EqualTo(-1), $"'{typed}' produced {file}");
+                Assert.That(Path.GetFileNameWithoutExtension(file), Does.Not.Contain("."));
+                Assert.That(file, Does.EndWith(SaveCatalogue.Extension));
+            }
+        }
+
+        [Test]
+        public void ANameThePlayerChoseIsNeverDisambiguated()
+        {
+            // This is the behaviour the owner asked to have removed (2026-09-17: "I notice you keep
+            // saving a new game everytime"). The recipe path steps around a collision on purpose;
+            // the named path must not, or saving twice under one name cannot mean overwriting once.
+            var folder = new[] { "ashford.odyssey", "ashford-2.odyssey", "ashford-3.odyssey" };
+
+            Assert.That(SaveCatalogue.FileNameForName("Ashford"), Is.EqualTo("ashford.odyssey"));
+            Assert.That(SaveCatalogue.FileNameForName("Ashford"), Is.EqualTo("ashford.odyssey"),
+                "a name maps to one file for ever, or Save cannot overwrite");
+
+            // And the collision is reported rather than routed around: the answer is a question for
+            // the player, not a second file.
+            Assert.That(SaveCatalogue.NameIsTaken("Ashford", folder), Is.True);
+            Assert.That(SaveCatalogue.NameIsTaken("Ashford", Array.Empty<string>()), Is.False);
+            Assert.That(SaveCatalogue.NameIsTaken("Ashford", null), Is.False);
+
+            // The recipe path is untouched by any of this and still disambiguates.
+            Assert.That(SaveCatalogue.FileNameFor(Recipe("Riverbend", 12), new[] { "riverbend-day-12.odyssey" }),
+                Is.EqualTo("riverbend-day-12-2.odyssey"));
+        }
+
+        [Test]
+        public void AReservedDeviceNameIsEscapedNowThatTheDaySegmentIsGone()
+        {
+            // The recipe path was safe by accident: every stem it produced contained "-day-N", and
+            // the previous author recorded that as the thing keeping a colony called Con off a
+            // Windows device name. A name the player typed has no such segment, so the protection
+            // had to be put back on purpose.
+            var reserved = new List<string> { "CON", "prn", "Aux", "nul" };
+            for (int i = 1; i <= 9; i++) { reserved.Add("com" + i); reserved.Add("LPT" + i); }
+
+            foreach (string device in reserved)
+            {
+                string file = SaveCatalogue.FileNameForName(device);
+                Assert.That(SaveCatalogue.IsReservedName(file), Is.False, $"'{device}' produced {file}");
+                Assert.That(file, Is.EqualTo(device.ToLowerInvariant() + SaveCatalogue.DeviceSuffix +
+                                             SaveCatalogue.Extension));
+            }
+
+            // The extension does not save you, which is the half that catches people: the rule
+            // applies to the part before the first dot.
+            Assert.That(SaveCatalogue.IsReservedName("con"), Is.True);
+            Assert.That(SaveCatalogue.IsReservedName("CON.odyssey"), Is.True);
+            Assert.That(SaveCatalogue.IsReservedName("Nul.txt"), Is.True);
+            Assert.That(SaveCatalogue.IsReservedName("com9.odyssey"), Is.True);
+
+            // And near misses are ordinary files. com10 is not a device, and neither is a device
+            // name with anything attached to it.
+            foreach (string ordinary in new[] { "com0", "com10", "lpt0", "console", "connor", "aux2", "" })
+                Assert.That(SaveCatalogue.IsReservedName(ordinary), Is.False, ordinary);
+
+            // The escape itself is not reserved, and a player who types it back gets the same file
+            // — which is a visible overwrite question, not a silent clobber. See FileNameForName.
+            Assert.That(SaveCatalogue.FileNameForName("con save"), Is.EqualTo("con-save.odyssey"));
+            Assert.That(SaveCatalogue.FileNameForName("Con"), Is.EqualTo("con-save.odyssey"));
+            Assert.That(SaveCatalogue.NameIsTaken("con save", new[] { "con-save.odyssey" }), Is.True);
+        }
+
+        [Test]
+        public void ANameThatKeepsNothingIsRefusedRatherThanQuietlyRenamed()
+        {
+            // A colony called "!!!" still has to be saved, so Slug substitutes a fallback. A save
+            // called "!!!" is a player asking for something, and answering with colony.odyssey
+            // would be the interface lying — and would put every unusable name on one file.
+            foreach (string nothing in new[] { "", "   ", "!!!", "---", "...", "  ??  ", "日本語", "Ω" })
+                Assert.That(SaveCatalogue.IsUsableName(nothing), Is.False, $"'{nothing}'");
+
+            Assert.That(SaveCatalogue.IsUsableName(null), Is.False);
+
+            foreach (string usable in new[] { "a", "7", "Ashford", "!!Fort 9!!", "Ω9" })
+                Assert.That(SaveCatalogue.IsUsableName(usable), Is.True, $"'{usable}'");
+
+            // Length is not part of it: an over-long name is cut, never rejected.
+            Assert.That(SaveCatalogue.IsUsableName(new string('a', 400)), Is.True);
+
+            // It still cannot throw. A method on the path to writing a save must not turn a bad
+            // name into a crash, so it falls back; the prompt is what arranges never to ask.
+            Assert.That(SaveCatalogue.FileNameForName("!!!"),
+                Is.EqualTo(SaveCatalogue.FallbackSlug + SaveCatalogue.Extension));
+            Assert.That(SaveCatalogue.FileNameForName(null),
+                Is.EqualTo(SaveCatalogue.FallbackSlug + SaveCatalogue.Extension));
+        }
+
+        [Test]
+        public void AVeryLongChosenNameIsCutRatherThanRejected()
+        {
+            string huge = new string('a', 400) + " " + new string('b', 400);
+            string file = SaveCatalogue.FileNameForName(huge);
+
+            Assert.That(file, Is.EqualTo(new string('a', SaveCatalogue.MaxSlugLength) + SaveCatalogue.Extension));
+            Assert.That(file, Has.Length.LessThan(80), "the file part stays far inside any path budget");
+
+            // The cut never leaves a trailing hyphen, which would read as a typo in the folder.
+            string cutOnASeparator = new string('a', SaveCatalogue.MaxSlugLength - 1) + " tail";
+            Assert.That(SaveCatalogue.FileNameForName(cutOnASeparator),
+                Is.EqualTo(new string('a', SaveCatalogue.MaxSlugLength - 1) + SaveCatalogue.Extension));
+
+            // Two long names that differ only past the cut are one file, and that is reported as a
+            // collision rather than hidden — which is the whole reason collision is decided on the
+            // file name and not on what was typed.
+            string other = new string('a', 400) + " something else";
+            Assert.That(SaveCatalogue.FileNameForName(other), Is.EqualTo(file));
+            Assert.That(SaveCatalogue.NameIsTaken(other, new[] { file }), Is.True);
+        }
+
+        [Test]
+        public void TwoNamesThatDifferOnlyInCaseAreOneSave()
+        {
+            // The folder may be case-insensitive, and a player may have renamed a file by hand.
+            // Treating "Ashford" and "ashford" as two saves would overwrite one of them on Windows
+            // and not on Linux — the same fault this file's FreeName tests already guard.
+            Assert.That(SaveCatalogue.FileNameForName("Ashford"), Is.EqualTo(SaveCatalogue.FileNameForName("ashford")));
+            Assert.That(SaveCatalogue.NameIsTaken("ASHFORD", new[] { "Ashford.ODYSSEY" }), Is.True);
+            Assert.That(SaveCatalogue.NameIsTaken("Ashford", new[] { "ashford.odyssey" }), Is.True);
+            Assert.That(SaveCatalogue.NameIsTaken("Ashford", new[] { "ashfordd.odyssey" }), Is.False);
+        }
+
+        [Test]
+        public void TheFileASessionIsBoundToIsNotACollisionWithItself()
+        {
+            var folder = new[] { "ashford.odyssey", "bellwether.odyssey" };
+
+            // Save writes over the file this session is bound to. "You are about to overwrite the
+            // save you are playing" is not a question worth putting to somebody who pressed Save.
+            Assert.That(SaveCatalogue.NameIsTaken("Ashford", folder, "ashford.odyssey"), Is.False);
+            Assert.That(SaveCatalogue.NameIsTaken("Ashford", folder, "ASHFORD.ODYSSEY"), Is.False,
+                "the excuse is matched the way a filesystem would match it");
+
+            // Every other file is still a collision, bound session or not.
+            Assert.That(SaveCatalogue.NameIsTaken("Bellwether", folder, "ashford.odyssey"), Is.True);
+
+            // And nothing is excused when nothing is bound, which is Save as… and the first save of
+            // a session alike.
+            Assert.That(SaveCatalogue.NameIsTaken("Ashford", folder, null), Is.True);
+        }
+
+        [Test]
+        public void TheOfferedNameWritesTheFileAnUnnamedSaveWouldHave()
+        {
+            // The point of the suggestion living in the catalogue rather than in the presenter: a
+            // player who accepts it lands on the file the recipe path would have chosen, so a
+            // folder never ends up holding riverbend-day-12 and riverbend-day-12-2 for one colony.
+            foreach (SaveRecipe recipe in new[]
+                     {
+                         Recipe("Riverbend", 12),
+                         Recipe("  The Long   Watch!! ", 4),
+                         Recipe("Outpost 7 — North/South", 101),
+                         Recipe("Con", 4),
+                         Recipe("!!!", 9),
+                         SaveRecipe.Unknown,
+                     })
+            {
+                string suggested = SaveCatalogue.SuggestedName(recipe);
+                Assert.That(SaveCatalogue.IsUsableName(suggested), Is.True, suggested);
+                Assert.That(SaveCatalogue.FileNameForName(suggested),
+                    Is.EqualTo(SaveCatalogue.FileNameFor(recipe)), suggested);
+            }
+
+            Assert.That(SaveCatalogue.SuggestedName(Recipe("Riverbend", 12)), Is.EqualTo("Riverbend day 12"));
+            Assert.That(SaveCatalogue.SuggestedName(SaveRecipe.Unknown), Is.EqualTo("Colony day unknown"));
+
+            // The two fallbacks are the same word said to two audiences, and they have to stay so:
+            // the equality above rests on it for a colony with no usable name.
+            Assert.That(SaveCatalogue.Slug(SaveCatalogue.FallbackName), Is.EqualTo(SaveCatalogue.FallbackSlug));
+        }
+
         // ---------------------------------------------------------------- the listing
 
         [Test]

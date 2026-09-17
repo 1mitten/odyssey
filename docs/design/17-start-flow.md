@@ -201,9 +201,32 @@ this without a code change.
 Sim cannot see `Application` — and everything *about* a file that is not the folder is Unity-free
 and in the fast tier:
 
-- **The file name comes from the recipe.** Colony name, slugged, plus the day, plus a
-  disambiguator when that collides. A save is identified by its header, never by its name; the
-  name exists so the folder is legible to a human in a file browser.
+- **Corrected 2026-09-17, after the owner played it: a save has the name the player gave it.**
+  *"I notice you keep saving a new game everytime. We should be able to name the save game (with a
+  default) and then can overwrite that save if need be — otherwise lots of saves will be created."*
+  §10 of this file had already admitted the fault; the folder only ever grew, because the name was
+  derived from the colony and the day and then **disambiguated around whatever was already there**,
+  so two saves on one day gave `landfall-day-4` and `landfall-day-4-2`, for ever.
+
+  **The shape, and why it is two rows rather than one prompt.** A session is **bound** to a file —
+  the one it was loaded from, or the one it last saved to. **Save** writes over that; **Save as**
+  asks for a name and binds to the answer. Prompting on every press is the version that does not
+  multiply files and *does* annoy, because a player who saves often would confirm the same name
+  every time. Naming once and overwriting after is the ordinary case, so the ordinary case is one
+  press and the exception says what it is. The first save of a colony has nothing bound, so it asks
+  — which is where the default comes in: the colony's own name.
+
+  **A player-chosen name is never disambiguated.** That is the whole point: a name maps to exactly
+  one file, so saving again overwrites it. Naming a save that already exists therefore *is* an
+  overwrite, and the prompt says "Overwrite" and asks twice before doing it.
+
+  **The trap this opened.** The old scheme was accidentally safe: every stem contained `-day-N`, and
+  that is what kept a colony called `con`, `aux` or `com1` off a **Windows reserved device name** —
+  `con-day-4.odyssey` is creatable, `con.odyssey` is not. A player-chosen name has no `-day-` in
+  it, so that protection had to be put back deliberately rather than inherited.
+
+- **A save with no name of its own** — there is no longer a route to one from the interface, but the
+  recipe-derived naming remains for any caller that has no player to ask.
 - **The listing is sorted newest first**, by the file's own modification time, and an unreadable
   or future-version file is **listed with its reason rather than hidden**. A save the build cannot
   open is a thing the player needs to be told about; silently omitting it is how a player concludes
@@ -348,8 +371,10 @@ Three things the code knows are unfinished, named so the next session does not r
    `Odyssey.Sim` turns a scenario name back into a `ScenarioDef`. It wants a real lookup. It is not
    urgent: a scenario acts only at tick zero, so a loaded world is unaffected by getting it wrong,
    and both copies say so out loud.
-2. **Save always writes a new file.** There is no overwrite, no rotation and no autosave, so a
-   folder is a history and it only grows. That is the right default for a prototype with no
-   confirmation dialog, and it is not a policy anybody has chosen.
+2. ~~**Save always writes a new file.** There is no overwrite, no rotation and no autosave, so a
+   folder is a history and it only grows.~~ **Fixed 2026-09-17** — the owner hit it on the first
+   evening, which is about as long as "not a policy anybody has chosen" was ever going to last. See
+   §5. **Autosave is still not built**, and that is still deliberate: it wants a cadence, a rotation
+   and a policy about what it is allowed to overwrite, and none of those is a menu.
 3. **The load list has a ceiling and no search.** Eight rows before it scrolls, newest first. A
    folder of two hundred saves is a scroll.

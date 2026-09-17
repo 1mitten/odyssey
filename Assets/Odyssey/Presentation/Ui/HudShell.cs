@@ -362,6 +362,10 @@ namespace Odyssey.Presentation.Ui
             // one where none does.
             BuildStartScreen();
 
+            // After it, so the naming prompt is above the start screen in the tree — it is raised
+            // from in game today, but the two are both modals and the one raised last should win.
+            BuildSavePrompt();
+
             _hud.RegisterCallback<GeometryChangedEvent>(_ => OnResized());
 
             // A session coming or going is the one thing that decides whether the start screen is

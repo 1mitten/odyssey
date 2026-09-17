@@ -2449,3 +2449,26 @@ work itself.
   question about the player's machine, and the Hud assembly is compiled without any of that in
   mind. The panel widened 320 → 420 to carry the longer line rather than cutting a word, since the
   acceptance criteria allow an ellipsis on a colonist's name and on nothing else.
+- **Saves are named and Save overwrites, 2026-09-17 — and the fault had already been written down.**
+  The owner: *"I notice you keep saving a new game everytime. We should be able to name the save
+  game (with a default) and then can overwrite that save if need be - otherwise lots of saves will
+  be created."* `17-start-flow.md` §10 had listed exactly this under "things the code knows are
+  unfinished" — *"Save always writes a new file… that is the right default for a prototype with no
+  confirmation dialog, and it is not a policy anybody has chosen."* **A known gap written down is
+  not a gap deferred**; it lasted one evening, which is about how long "nobody has chosen this"
+  survives contact with somebody using it.
+- **A session is bound to a file**, the one it was loaded from or last saved to, and Save writes
+  over that. **Two rows rather than one prompt**, and the reasoning is the interesting part:
+  prompting on every press does not multiply files and *does* annoy, because a player who saves
+  often confirms the same name every time. Naming once and overwriting after is the ordinary case,
+  so the ordinary case is one press and the exception — Save as — says what it is. The binding is
+  cleared on teardown, because a new colony inheriting the last one's file would overwrite it on its
+  first Save: the worst of both behaviours, a lost save *and* no prompt.
+- **A player-chosen name is never disambiguated, and that reopened a trap the old scheme closed by
+  accident.** The derived name always contained `-day-N`, and the author of the catalogue had
+  noticed that this was what kept a colony called `con`, `aux` or `com1` off a **Windows reserved
+  device name** — `con-day-4.odyssey` is creatable, `con.odyssey` is not. A typed name has no
+  `-day-` in it, so the guard had to be put back deliberately. **A safety property that holds as a
+  side effect of an unrelated decision is one you lose the moment that decision changes**, and the
+  only reason this one was caught is that the person who found it the first time wrote down *why*
+  it mattered rather than just fixing it.
