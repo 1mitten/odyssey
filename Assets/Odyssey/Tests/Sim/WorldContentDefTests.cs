@@ -39,7 +39,10 @@ namespace Odyssey.Tests.Sim
         /// The terrain table as it stands. Update this number only when you meant to change the
         /// world's content, and say what moved in the commit message.
         /// </summary>
-        const ulong TerrainFingerprint = 675045117585215745UL;
+        // U29 gave Rubble two flags: `buildable` false, so a collapse leaves a mess that has to be
+        // cleared before anything is built where it fell, and `clearable` true, so a Mine order
+        // can clear it although it is not solid. Rubble is the only terrain that sets either.
+        const ulong TerrainFingerprint = 7436477142659073776UL;
 
         [Test]
         public void TheTerrainIsStillWhatItWas()

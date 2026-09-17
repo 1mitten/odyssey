@@ -1199,6 +1199,17 @@ namespace Odyssey.EditorTools
             Slab("odyssey.module.slab.concrete", "SM_Bld_Base_Floor_Combined_01");
             Slab("odyssey.module.slab.deck", "SM_Bld_Base_Floor_Combined_01");
 
+            // Slab art per material, which the three ids above cannot express: they are the
+            // *template's* floor, and a colonist chooses the material after the template is
+            // stamped. All three resolve to the planked deck, so before this a stone floor was
+            // that deck under a 0.86 grey multiply and read as wood (owner, 2026-09-17).
+            //
+            // Wood keeps the deck — it is what the deck mesh already is, and the owner liked it.
+            // Stone takes the street tile, which is one cell square, one material and already
+            // in the build as Pavement, so its look is known rather than guessed.
+            Slab(ModuleIds.SlabOf("wood"), "SM_Bld_Base_Floor_Combined_01");
+            Slab(ModuleIds.SlabOf("stone"), "SM_Env_Ground_Tile_Half_01");
+
             rows.Add(new ModuleEntry
             {
                 moduleId = ModuleIds.UtilityTap, shape = ModuleShape.Pillar, prefabName = string.Empty,
@@ -1853,6 +1864,13 @@ namespace Odyssey.EditorTools
             // over a C# default and the scene would keep whatever the first build wrote for ever.
             // Opaque now: the cursor is corner brackets, not a wash over the thing selected.
             rig.selectionColour = Color.white;
+
+            // Same reason, and the same trap caught a second time. The active layer keeps its
+            // ceiling, so from the default depth you can see the floor above and build on it —
+            // the owner asked for this twice ("I couldn't see the upper floor from the normal
+            // view still"), and the first fix moved the C# default only, which a scene built
+            // before it overrides for ever.
+            rig.slice.suppressActiveCeiling = false;
             return rig;
         }
 

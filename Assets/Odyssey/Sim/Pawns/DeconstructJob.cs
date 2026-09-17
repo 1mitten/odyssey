@@ -115,10 +115,9 @@ namespace Odyssey.Sim.Pawns
                 return JobStatus.Ongoing;
             }
 
-            if (!designations.TryEdifice(cell, out PlacedEdifice placed)) return JobStatus.Failed;
-            int building = ConstructionContent.BuildingForEdifice(placed.Def);
-            int stuff = ConstructionContent.StuffForValue(placed.Stuff);
-            if (building == BuildingHandle.None) return JobStatus.Failed;
+            // A wall or one of our own floors: the resolver knows the difference and the rest of
+            // this driver does not need to.
+            if (!designations.TryTakeApart(cell, out int building, out int stuff)) return JobStatus.Failed;
 
             ToilProgress++;
             if (designations.AddWork(cell, 1) < ConstructionContent.WorkToDeconstruct(building, stuff))
@@ -138,7 +137,16 @@ namespace Odyssey.Sim.Pawns
         {
             // The world edit belongs to the grid that raised it, beside `Raise` so the two cannot
             // drift. What is left here is the salvage, which is this job's own business.
-            if (ctx.Construction == null || !ctx.Construction.Demolish(ctx, cell, out _)) return;
+            //
+            // Two removals rather than one because there are two kinds of thing: a wall standing in
+            // the cell and a floor at its lower boundary. Whichever it is, the grid that put it
+            // there is the one that takes it away — and taking a floor away is the edit that lets a
+            // player pull the last support out of a room and watch the rest come down.
+            if (ctx.Construction == null) return;
+            bool removed = ConstructionContent.BuildingAt(building).slab
+                ? ctx.Construction.RemoveSlab(ctx, cell, out _)
+                : ctx.Construction.Demolish(ctx, cell, out _);
+            if (!removed) return;
 
             // Where the wall stood, or as near as will take it — the same landing felled wood and
             // mined stone already use, so a row of walls comes down into a few stacks rather than

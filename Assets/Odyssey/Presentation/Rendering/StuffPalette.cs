@@ -44,7 +44,21 @@ namespace Odyssey.Presentation.Rendering
             // Stone is the second thing a colony can build with (NaturalContent.StuffStone). A
             // grey against the concrete's warm cream, so a stone wall reads as cut rock rather
             // than as poured slab; it takes the rock material, which is already close.
-            new Color(0.86f, 0.87f, 0.88f),            // stone
+            //
+            // **It was (0.86, 0.87, 0.88) and it read as steel** (owner, 2026-09-17: "the stone
+            // floor looks more like steel. I would expect a stone floor to be more boring gray
+            // with some texture"). Put beside the entry three rows up, the reason is plain: steel
+            // is (0.82, 0.86, 0.92) and stone was *brighter than it* and leaning the same way, b
+            // over g over r. Two materials a player is asked to tell apart were one pale blue-grey
+            // with the labels swapped, and a near-white multiply leaves whatever it is over
+            // looking polished — which is the one thing stone is not.
+            //
+            // The number is not invented. StuffSolids, the tint used where there is no art at all,
+            // has always held stone at (0.52, 0.51, 0.49): a mid grey, warm-neutral, r over g over
+            // b. That is what this project already decided stone looks like; the over-art entry
+            // had simply never been made to agree with it. This is that colour brought up by the
+            // amount the art underneath is darker than plain white, and no further.
+            new Color(0.62f, 0.61f, 0.58f),            // stone
         };
 
         static readonly Color[] StuffSolids =

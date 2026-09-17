@@ -131,7 +131,7 @@ namespace Odyssey.Presentation.CameraRig
         /// only: the slab is still there in the simulation, still holds up what is on it and is
         /// still what makes the cell below roofed.
         /// </summary>
-        public bool suppressActiveCeiling = true;
+        public bool suppressActiveCeiling;
 
         /// <summary>
         /// Below the opacity at which a ghosted layer is not drawn at all.

@@ -116,7 +116,30 @@ namespace Odyssey.Sim.Contracts
     {
         public const int None = 0;
         public const int Wall = 1;
-        public const int Count = 2;
+
+        /// <summary>
+        /// A slab at the cell's lower boundary: the floor you stand on and the roof of whatever is
+        /// beneath it. One thing, of a material — see docs/design/17-floors-and-collapse.md.
+        /// </summary>
+        public const int Floor = 2;
+
+        /// <summary>
+        /// A floor covering laid on ground that is already there (U42). A slab like
+        /// <see cref="Floor"/>, and the opposite of it about what must be underneath: this one
+        /// wants a floor already and never asks the support rule, because it cannot fall.
+        /// </summary>
+        public const int DeckPlate = 3;
+
+        /// <summary>
+        /// A ladder: the first thing a colony can build that goes <b>up</b>. One cell, joining the
+        /// floor it stands on to the floor directly above it.
+        ///
+        /// <para>Until U43 a second storey was decorative — measured, every slab came back
+        /// walkable and unreachable — because vertical movement goes through a
+        /// <c>Pathing.Connector</c> and connectors only ever came from worldgen.</para>
+        /// </summary>
+        public const int Ladder = 4;
+        public const int Count = 5;
     }
 
     /// <summary>

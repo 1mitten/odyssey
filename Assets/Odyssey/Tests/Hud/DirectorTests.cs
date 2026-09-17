@@ -461,12 +461,29 @@ namespace Odyssey.Tests.Hud
             Assert.That(settings.Escape(toolArmed: false), Is.EqualTo(EscapeAction.OpenPanel));
         }
 
+        /// <summary>
+        /// Every option starts as <see cref="SettingsDirector.DefaultOn"/> says, and the panel
+        /// knows which ones cost a remesh to change.
+        ///
+        /// <para><b>This used to assert that every option starts on</b>, which was true while every
+        /// option added a piece of the world. <c>CutAwayCeiling</c> is the first that <em>takes one
+        /// away</em> — it is what hid the floor a player had just built one layer up — so it starts
+        /// off, and the rule is now "as the default says" with the default itself spelled out
+        /// below rather than a blanket true.</para>
+        /// </summary>
         [Test]
         public void EveryOptionStartsOnAndReportsWhetherChangingItCostsARedraw()
         {
             var settings = new SettingsDirector();
             foreach (GraphicsOption option in SettingsDirector.All)
-                Assert.That(settings.IsOn(option), Is.True, $"{option} should default to drawn");
+                Assert.That(settings.IsOn(option), Is.EqualTo(SettingsDirector.DefaultOn(option)),
+                    $"{option} does not start as its own default says");
+
+            // Spelled out rather than derived, so that flipping a default has to be written here.
+            Assert.That(SettingsDirector.DefaultOn(GraphicsOption.Shadows), Is.True);
+            Assert.That(SettingsDirector.DefaultOn(GraphicsOption.SeeThrough), Is.True);
+            Assert.That(SettingsDirector.DefaultOn(GraphicsOption.CutAwayCeiling), Is.False,
+                "the cut-away hides the floor overhead, so it is the one option that starts off");
 
             // Three are read as the frame is submitted; two are baked into the instance matrices
             // when a chunk is meshed, and the panel has to know which it is holding.

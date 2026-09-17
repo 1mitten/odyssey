@@ -1,6 +1,9 @@
 #nullable enable
+using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using Odyssey.Presentation.Rendering;
+using UnityEditor;
 using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 
@@ -100,6 +103,60 @@ namespace Odyssey.Tests.Presentation
                 .Publish();
 
             Assert.That(world.Model.LowestOutdoorLayer, Is.EqualTo(2));
+        }
+
+        /// <summary>
+        /// Two floors of different materials are not drawn with the same mesh.
+        ///
+        /// <para>They were. Every slab id in the catalogue — the template default, the concrete
+        /// one and the deck — resolved to the one wooden deck prefab, and a material showed only
+        /// as a tint multiplied over it. Stone's tint is a near-white grey, so a stone floor was
+        /// the wood deck 12% darker and the owner read it as wood (2026-09-17). A multiply cannot
+        /// separate them: it only darkens, and brown times grey is browner.</para>
+        ///
+        /// <para>The catalogue rather than the render model, because that is where the fault was.
+        /// The model's part of it is <see cref="WithoutTheLicensedPacksAFloorDrawsWhatItAlwaysDrew"/>:
+        /// the mesh is only swapped when there is art to swap to.</para>
+        /// </summary>
+        [Test]
+        public void StoneAndWoodFloorsAreNotTheSameMesh()
+        {
+            var catalogue = AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(
+                "Assets/Odyssey/Presentation/ModuleCatalogue.asset");
+            Assert.That(catalogue, Is.Not.Null, "the module catalogue is committed and should load");
+
+            List<ModuleEntry> slabs = catalogue!.FindFamily(ModuleIds.Slab);
+            string PrefabFor(string id)
+            {
+                ModuleEntry? row = slabs.FirstOrDefault(e => e.moduleId == id);
+                Assert.That(row, Is.Not.Null, $"{id} has no row; rebuild the catalogue");
+                return row!.prefabName;
+            }
+
+            Assert.That(PrefabFor(ModuleIds.SlabOf("stone")),
+                Is.Not.EqualTo(PrefabFor(ModuleIds.SlabOf("wood"))),
+                "a stone floor and a wooden one drew the same planks");
+        }
+
+        /// <summary>
+        /// A clone without the licensed packs draws exactly what it drew before.
+        ///
+        /// <para>An unknown module id does not resolve to nothing — it resolves to a built-in
+        /// primitive — so a per-material lookup that trusted the resolver would swap the group's
+        /// slab for a bare block on every machine that has no art. The material's mesh is taken
+        /// only when it is real art; otherwise the template's slab stands, for both.</para>
+        /// </summary>
+        [Test]
+        public void WithoutTheLicensedPacksAFloorDrawsWhatItAlwaysDrew()
+        {
+            var world = new RenderTestWorld(6, 6, 3)
+                .Solid(2, 2, 0).Slab(2, 2, 1, NaturalContent.StuffWood)
+                .Solid(3, 2, 0).Slab(3, 2, 1, NaturalContent.StuffStone)
+                .Publish();
+
+            int slab = world.Library.Resolve(ModuleIds.Slab, ModuleShape.FloorSlab);
+            Assert.That(world.Model.FloorModule(world.Index(2, 2, 1)), Is.EqualTo(slab));
+            Assert.That(world.Model.FloorModule(world.Index(3, 2, 1)), Is.EqualTo(slab));
         }
     }
 }
