@@ -132,6 +132,38 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static float WaterSurface { get; set; } = 0.72f;
 
+        /// <summary>
+        /// The contributors, in the order they are asked. First to claim the cell owns it.
+        ///
+        /// <para>This replaced a chain of early returns inside <see cref="EmitTerrain"/> (OQ-46).
+        /// The order here is the order those returns were in, and it is load-bearing: water before
+        /// surface before stone before earth before the plain block. A contributor states its own
+        /// condition, so adding a terrain feature is a registration rather than an edit to this
+        /// file — which is the point, since this file is on the queue's do-not-touch list and both
+        /// the water line and the mining line had to edit it anyway.</para>
+        /// </summary>
+        readonly List<ITerrainContributor> _terrain = new List<ITerrainContributor>
+        {
+            new WaterContributor(),
+            new SurfaceContributor(),
+            new StoneContributor(),
+            new EarthContributor(),
+            new SolidBlockContributor(),
+        };
+
+        /// <summary>
+        /// Add a contributor ahead of the plain block that ends the chain, so a feature can claim
+        /// cells the built-in kinds would otherwise draw as ordinary solid terrain.
+        /// </summary>
+        public void AddTerrainContributor(ITerrainContributor contributor)
+        {
+            if (contributor == null) throw new System.ArgumentNullException(nameof(contributor));
+            _terrain.Insert(_terrain.Count - 1, contributor);
+        }
+
+        /// <summary>The contributors as registered, for a test to assert the order it relies on.</summary>
+        public IReadOnlyList<ITerrainContributor> TerrainContributors => _terrain;
+
         void EmitTerrain(ChunkBatch batch, int index, int x, int z, int y)
         {
             ushort terrain = _model.Terrain(index);
@@ -140,124 +172,34 @@ namespace Odyssey.Presentation.Rendering
             int module = _model.TerrainModule(index);
             if (module == 0) return;
 
-            if (NaturalContent.IsWater(terrain))
-            {
-                EmitWater(batch, module, terrain, x, z, y);
-                return;
-            }
-
             int tint = TintCode.Daylit(TintCode.Terrain(terrain), _model.OpenToTheSky(index, y));
+
             // Terrain is the ground, so it is the one thing that is draped rather than lifted: the
             // cell is tilted onto the tangent plane of the relief field so its top face follows
             // the slope. Everything built or standing on it is lifted instead - see GroundRelief.
             Matrix4x4 at = GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y));
 
-            if (!_model.IsSolid(index))
-            {
-                // A surface material: pavement, soil, rubble. One tile on the cell floor, and it
-                // belongs to the roof list so that a storey above the slice can drop its ground.
-                AddRoof(batch, module, tint, at);
-                return;
-            }
+            // Computed here and only for solid cells, which is exactly where the chain computed
+            // it. Three contributors read it, and asking each to work it out for itself would pay
+            // for a neighbour scan three times on the hot path.
+            bool solid = _model.IsSolid(index);
+            bool showsAFace = solid && HasExposedFace(index, x, z, y);
 
-            if (!HasExposedFace(index, x, z, y)) return;
+            var cell = new TerrainCell(this, _model, index, x, z, y, terrain, module, tint, at, solid, showsAFace);
+            var sink = new MeshSink(this, batch);
 
-            if (_model.IsStone(index))
-            {
-                // Stone is drawn as one of several chipped lumps, turned to one of four bearings.
-                // Both come from a hash of the cell, so a cliff face does not rearrange itself
-                // every time somebody digs a cell in the same chunk — see RockLook.
-                //
-                // The turn is composed on the left of the module's own local transform, which is
-                // a vertical shift and a scale equal in x and z; a rotation about the vertical
-                // commutes with both, so the lump turns about its own axis and still fills its
-                // cell exactly. Three quarters of the variety for no extra mesh and no extra draw.
-                int variant = RockLook.Variant(x, z, y);
-                Matrix4x4 turned = at * Matrix4x4.Rotate(Quaternion.Euler(0f, RockLook.Yaw(x, z, y), 0f));
-                AddBody(batch, _model.StoneModule(index, variant), tint, turned);
-                return;
-            }
+            for (int i = 0; i < _terrain.Count; i++)
+                if (_terrain[i].Emit(cell, sink))
+                    return;
+        }
 
-            if (Earth && _model.IsEarth(index))
-            {
-                // Earth is a block with an uneven top, and — only where a side of it can be seen —
-                // coursed walls as well. The two are different meshes and so different buckets, so
-                // the question is asked per cell rather than paid for everywhere: on a flat board
-                // a surface cell's four same-layer neighbours are solid too and nothing but its
-                // top is ever visible. Sides appear at terrace risers and at the walls of a
-                // cutting, which are a small fraction of what is drawn and exactly the places the
-                // ruled 3 m rectangle was the fault.
-                //
-                // The turn is composed on the left of the module's own local transform, for the
-                // reason RockLook.Yaw gives: that local is a vertical shift and a scale equal in x
-                // and z, and a rotation about the vertical commutes with both, so the block turns
-                // about its own axis and still fills its cell exactly.
-                int variant = GroundLook.Variant(x, z, y);
-                int exposed = ExposedSides(x, z, y);
+        internal int ExposedSidesOf(int x, int z, int y) => ExposedSides(x, z, y);
 
-                // A cell with nothing to show takes the cheap block and a free bearing; a cell with
-                // a face takes the mesh cut for its own pattern of exposed sides, and spends the
-                // bearing turning that pattern onto the sides that are really open. Five meshes
-                // then cover all sixteen possibilities, which is the whole reason the chamfer is
-                // affordable — see GroundMesh.ExposurePatterns.
-                float yaw;
-                int earth;
-                if (exposed == 0)
-                {
-                    yaw = GroundLook.Yaw(x, z, y);
-                    earth = _model.EarthModule(index, variant, showsAFace: false);
-                }
-                else
-                {
-                    int canonical = GroundMesh.CanonicalExposure(exposed, out int rotation);
-                    yaw = 90f * rotation;
-                    earth = _model.EarthFaceModule(index, variant, canonical);
-                }
-
-                AddBody(batch, earth, tint, at * Matrix4x4.Rotate(Quaternion.Euler(0f, yaw, 0f)));
-                return;
-            }
-
+        internal void SinkBody(ChunkBatch batch, int module, int tint, in Matrix4x4 at) =>
             AddBody(batch, module, tint, at);
-        }
 
-        /// <summary>
-        /// A water surface: one tile, draped onto the relief like any other ground so that a pond
-        /// on a rolling board does not cut across it, and raised inside its cell to
-        /// <see cref="WaterSurface"/>.
-        ///
-        /// It goes in the roof list with the rest of the ground, so a storey above the slice
-        /// drops its water along with its floor, and it carries a water tint code so the renderer
-        /// hands it <c>Odyssey/Water</c> rather than tinting a ground tile blue. No catalogue
-        /// entry is wanted and none is looked for: water has a shader of its own, so a clone
-        /// without the licensed packs draws exactly the same water as a machine with them.
-        /// </summary>
-        void EmitWater(ChunkBatch batch, int module, ushort terrain, int x, int z, int y)
-        {
-            Vector3 centre = CellMetrics.FloorCentre(x, z, y) + Vector3.up * (CellMetrics.SizeY * WaterSurface);
-
-            // **Draped, like the ground it lies in** — and this was got wrong twice, so the
-            // reasoning is here rather than in a commit nobody will find.
-            //
-            // Water was first draped, then switched to a plain lift on the argument that a water
-            // surface is level. True of water, false of *tiles*: a lifted tile is flat and takes
-            // its height from its own centre, so two neighbours sit at heights differing by the
-            // first-order slope of the relief across a whole cell. On a low, near-horizontal
-            // camera those little steps open into slivers you can see the riverbed through, which
-            // is what the board looked like after the change.
-            //
-            // A draped tile is sheared onto the tangent plane of the field, so neighbours
-            // disagree only by the *curvature* over a cell — second order, and invisible. It is
-            // the same argument `06-rendering-and-camera.md` makes for the surround, where tiles
-            // had to be halved twice because the disagreement grows as the square of the width.
-            //
-            // The dark grid that prompted the switch was never the shear at all. It was the six
-            // faces of the box this tile is drawn from, blending over each other at every shared
-            // edge, and the shader clips all but the top one.
-            AddRoof(batch, module,
-                TintCode.Daylit(TintCode.Water(terrain), _model.OpenToTheSky(_model.Index(x, z, y), y)),
-                GroundRelief.Drape(centre));
-        }
+        internal void SinkRoof(ChunkBatch batch, int module, int tint, in Matrix4x4 at) =>
+            AddRoof(batch, module, tint, at);
 
         // ------------------------------------------------------------- scatter
 
@@ -406,7 +348,27 @@ namespace Odyssey.Presentation.Rendering
         /// off is exactly the ground as it was drawn before any of this, which is what makes the
         /// check harness's first photograph a real comparison rather than a remembered one.
         /// </summary>
-        public bool Earth { get; set; } = true;
+        /// <summary>
+        /// The earth look, on or off while it is being judged. Forwarded to the contributor that
+        /// owns it (OQ-46) rather than kept here as a second copy of the same switch.
+        /// </summary>
+        public bool Earth
+        {
+            get => EarthKind.Enabled;
+            set => EarthKind.Enabled = value;
+        }
+
+        EarthContributor EarthKind
+        {
+            get
+            {
+                for (int i = 0; i < _terrain.Count; i++)
+                    if (_terrain[i] is EarthContributor earth) return earth;
+
+                throw new System.InvalidOperationException(
+                    "the earth contributor was unregistered; ChunkRenderer.Earth has nothing to switch");
+            }
+        }
 
         /// <inheritdoc cref="BankLayout.InWorkings"/>
         public bool BanksInWorkings
@@ -496,7 +458,7 @@ namespace Odyssey.Presentation.Rendering
             int module = _model.FloorModule(index);
             if (module == 0) return;
             // Draped, like every other thing that fills a cell - see EmitFacePanels for why a
-            // lift cannot close a seam, and EmitWater for the same argument made about tiles.
+            // lift cannot close a seam, and WaterContributor for the same argument made about tiles.
             AddRoof(batch, module, TintCode.Stuff(_model.FloorStuff(index)),
                 GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)));
         }
@@ -609,7 +571,7 @@ namespace Odyssey.Presentation.Rendering
         /// edge they share only by the field's curvature over a cell - about 11 mm, second order,
         /// and invisible. The shear leaves vertical edges vertical, so the wall does not lean and
         /// stays a full 3 m everywhere; only its head and its foot rake with the ground, which is
-        /// what a wall built along a slope does. It is the same argument <see cref="EmitWater"/>
+        /// what a wall built along a slope does. It is the same argument <see cref="WaterContributor"/>
         /// makes about tiles, and it was already the right one there.
         ///
         /// The drape is taken at the *face's* own centre rather than the cell's, for the reason
