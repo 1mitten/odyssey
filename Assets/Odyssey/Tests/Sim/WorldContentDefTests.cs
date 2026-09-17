@@ -13,8 +13,9 @@ using SimTerrainDef = Odyssey.Sim.Worldgen.TerrainDef;
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
-    /// The world's tables now live in XML (OQ-16), and the in-code tables stay as the oracle, as
-    /// the pawn tuning does (<see cref="PawnContentDefTests"/>).
+    /// The world's tables live in XML and the game reads them (OQ-16, finished by OQ-49). The
+    /// in-code tables that used to mirror them are gone, so this guards the content the same way
+    /// <see cref="PawnContentDefTests"/> does: with a fingerprint over the loaded table.
     ///
     /// <para><b>The stakes here are higher than for the pawn tables.</b> A terrain index is
     /// written into every cell of every save and folded into every state hash, so a table whose
@@ -22,45 +23,78 @@ namespace Odyssey.Tests.Sim
     /// different world, silently, with grass where the water was. That is why
     /// <see cref="TheIndexOrderIsTheOneTheConstantsSay"/> exists and why it checks all
     /// twenty-one names against the constants rather than spot-checking a few.</para>
+    ///
+    /// <para><b>The fingerprint is not decoration, and it was measured rather than assumed.</b>
+    /// The moment the generators started reading the XML, the old oracle became a comparison of
+    /// the XML against itself — it passed without asking anything. It was checked: editing rock's
+    /// <c>workToClear</c> from 700 to 701, a number mining reads on every work tick, left all 448
+    /// tests green. Nothing at all pinned these values. The fingerprint is what closed that, and
+    /// the same edit fails it.</para>
     /// </summary>
     public class WorldContentDefTests
     {
         static DefDatabase LoadCore() => ContentPack.LoadCore(RepoPaths.CoreDefs);
 
-        /// <summary>The in-code table: the city's ten, then the wilderness's eleven.</summary>
-        static SimTerrainDef[] Oracle()
-        {
-            var table = new List<SimTerrainDef>(CoreContent.Terrain);
-            table.AddRange(NaturalContent.Terrain);
-            return table.ToArray();
-        }
+        /// <summary>
+        /// The terrain table as it stands. Update this number only when you meant to change the
+        /// world's content, and say what moved in the commit message.
+        /// </summary>
+        const ulong TerrainFingerprint = 675045117585215745UL;
 
         [Test]
-        public void TheXmlIsTheSameTerrainAsTheCodeOracle()
+        public void TheTerrainIsStillWhatItWas()
         {
-            SimTerrainDef[] fromXml = WorldContent.TerrainFromDefs(LoadCore());
+            ulong actual = DefComparison.Fingerprint(WorldContent.Table, "Terrain");
 
-            var differences = DefComparison.Differences(Oracle(), fromXml, "Terrain");
-
-            Assert.That(differences, Is.Empty,
-                "the XML terrain and the in-code tables have parted:" + Environment.NewLine +
-                string.Join(Environment.NewLine, differences));
+            Assert.That(actual, Is.EqualTo(TerrainFingerprint),
+                "the terrain table has moved. If that was deliberate, set TerrainFingerprint to " +
+                $"{actual}UL and say what changed. If it was not, " +
+                "`git diff Assets/Odyssey/Defs/Core/World` is what moved.");
         }
 
         /// <summary>
         /// The control, without which the test above proves nothing: change one field of one
-        /// terrain and the walk must name it.
+        /// terrain and the fingerprint must move.
         /// </summary>
         [Test]
-        public void TheComparisonCanFail()
+        public void TheFingerprintNoticesAChangedField()
         {
             SimTerrainDef[] fromXml = WorldContent.TerrainFromDefs(LoadCore());
+            ulong before = DefComparison.Fingerprint(fromXml, "Terrain");
+            Assert.That(before, Is.EqualTo(TerrainFingerprint), "the freshly loaded pack is the shipped one");
+
             fromXml[NaturalContent.TerrainDeepWater].impassable = false;
 
-            var differences = DefComparison.Differences(Oracle(), fromXml, "Terrain");
+            Assert.That(DefComparison.Fingerprint(fromXml, "Terrain"), Is.Not.EqualTo(before));
+        }
 
-            Assert.That(differences, Has.Count.EqualTo(1), string.Join(Environment.NewLine, differences));
-            Assert.That(differences[0], Does.Contain($"Terrain[{NaturalContent.TerrainDeepWater}].impassable"));
+        /// <summary>
+        /// The exact edit that went unnoticed before this test existed: one integer, on the
+        /// terrain the mining job prices its work from.
+        /// </summary>
+        [Test]
+        public void TheFingerprintNoticesTheEditThatUsedToBeSilent()
+        {
+            SimTerrainDef[] fromXml = WorldContent.TerrainFromDefs(LoadCore());
+            ulong before = DefComparison.Fingerprint(fromXml, "Terrain");
+
+            fromXml[CoreContent.TerrainRock].workToClear += 1;
+
+            Assert.That(DefComparison.Fingerprint(fromXml, "Terrain"), Is.Not.EqualTo(before));
+        }
+
+        /// <summary>
+        /// The game reads the pack rather than a table built in code, which is the whole of this
+        /// row. Asserted on a value with teeth: rock's work cost is what mining prices from.
+        /// </summary>
+        [Test]
+        public void TheRunningGameReadsTheLoadedTable()
+        {
+            Assert.That(WorldContent.Table, Has.Length.EqualTo(WorldContent.TerrainOrder.Length));
+            Assert.That(NaturalContent.TerrainAt(CoreContent.TerrainRock).workToClear,
+                Is.EqualTo(WorldContent.Table[CoreContent.TerrainRock].workToClear));
+            Assert.That(NaturalContent.TerrainAt(NaturalContent.TerrainDeepWater).impassable, Is.True);
+            Assert.That(CoreContent.TerrainAt(CoreContent.TerrainAir).defName, Is.EqualTo("Air"));
         }
 
         /// <summary>
@@ -109,17 +143,22 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// The defName the XML declares is the defName the in-code table carries, for every
-        /// terrain. Separate from the comparison above because it is the thing a rename breaks
-        /// first, and a message naming the two spellings is worth more than a field path.
+        /// The table the game reads is in the order the order list declares, row by row.
+        ///
+        /// <para>Worth asserting separately from the fingerprint, which would also move if the
+        /// order did but would only say "something changed". This names the row and both
+        /// spellings, and a rename is the thing that breaks it first. It is also the check that
+        /// the loader's own by-defName sort has not become the order the table is built in —
+        /// <see cref="WorldContent.TerrainOrder"/> is what decides an index, not the loader.</para>
         /// </summary>
         [Test]
-        public void EveryTerrainIsNamedTheSameInBothPlaces()
+        public void TheLoadedTableIsInTheDeclaredOrder()
         {
-            SimTerrainDef[] oracle = Oracle();
-            for (int i = 0; i < oracle.Length; i++)
-                Assert.That(WorldContent.TerrainOrder[i], Is.EqualTo(oracle[i].defName),
-                    $"terrain {i} is '{oracle[i].defName}' in code and '{WorldContent.TerrainOrder[i]}' in the order list");
+            SimTerrainDef[] table = WorldContent.Table;
+            Assert.That(table, Has.Length.EqualTo(WorldContent.TerrainOrder.Length));
+            for (int i = 0; i < table.Length; i++)
+                Assert.That(table[i].defName, Is.EqualTo(WorldContent.TerrainOrder[i]),
+                    $"terrain {i} loaded as '{table[i].defName}' but the order list says '{WorldContent.TerrainOrder[i]}'");
         }
 
         [Test]

@@ -44,8 +44,11 @@ namespace Odyssey.Sim.Worldgen
     /// terrain index. <c>WorldContentDefTests</c> checks every constant in both content classes
     /// against it, so a name added in the wrong place fails a test rather than a save.</para>
     ///
-    /// <para>The in-code tables remain the oracle; nothing constructs a world from these yet.
-    /// See <see cref="Pawns.PawnContent"/> for why that switch is its own change.</para>
+    /// <para>Since OQ-49 this is not a mirror of anything: <see cref="Table"/> is the table the
+    /// running game reads, and the in-code tables that used to hold the same values were deleted
+    /// with it. <c>WorldContentDefTests</c> guards the values with a fingerprint, because with
+    /// both copies reduced to one the old field-for-field oracle was comparing the XML against
+    /// itself.</para>
     /// </summary>
     public static class WorldContent
     {
@@ -105,6 +108,28 @@ namespace Odyssey.Sim.Worldgen
             for (int i = 0; i < TerrainOrder.Length; i++) table[i] = One<TerrainDef>(defs, TerrainOrder[i]);
             return table;
         }
+
+        static TerrainDef[]? _table;
+
+        /// <summary>
+        /// The terrain table the running game reads, loaded from the content pack once.
+        ///
+        /// <para><b>Cached because this is a hot path.</b> Every lookup in the game comes through
+        /// <c>CoreContent.TerrainAt</c> or <c>NaturalContent.TerrainAt</c> and so through here:
+        /// <c>DepthPasses</c> asks for <c>salvageWeight</c> per cell while generating, and mining
+        /// asks for <c>workToClear</c> on every work tick. Rebuilding twenty-one Def lookups per
+        /// call would be a different kind of mistake from the one this change fixes.</para>
+        ///
+        /// <para><b>Lazy rather than a static field initialiser</b>, because filling it loads the
+        /// pack, and loading the pack calls <see cref="Register"/> on this very class. A field
+        /// initialiser would run that inside this type's static constructor; a property runs it
+        /// after the type is initialised, where a plain static call back into it is harmless.</para>
+        /// </summary>
+        public static TerrainDef[] Table => _table ??= TerrainFromDefs(ContentPack.Core);
+
+        /// <summary>Drop the cached table, so the next read reloads. Paired with
+        /// <c>ContentPack.Reset</c>, which is the only thing that should call it.</summary>
+        internal static void Forget() => _table = null;
 
         /// <summary>The ore kinds, resolved into the same struct the generator already draws from.</summary>
         public static NaturalContent.OreKind[] OresFromDefs(DefDatabase defs)
