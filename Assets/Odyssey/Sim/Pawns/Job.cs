@@ -276,17 +276,61 @@ namespace Odyssey.Sim.Pawns
         /// <c>docs/plans/vertical-slice.md</c> "where the seams are" argument applied to a very
         /// small thing.</para>
         ///
-        /// <para>The simulation's whole part is that it happened, here, now: this is one tick and
-        /// stays one tick. The stoop and the rise are presentation's, take about eight-tenths of a
-        /// second of game time and cost the colony nothing, so no throughput, golden or balance
-        /// number moves — which means a figure may still be straightening as its pawn sets off
-        /// walking. That is the accepted price of the owner's decision (2026-09-16) to keep the
-        /// duration out of the simulation.</para>
+        /// <para><b>It now costs time, and it did not before</b> (owner, 2026-09-17). The stoop and
+        /// the rise were presentation's alone: this was one tick, the drawn gesture took 0.8 s, and
+        /// the pawn set off walking while its figure was still straightening. So it is no longer a
+        /// call a driver makes in passing but a whole toil — the thing is still taken up in one
+        /// instant, and the instant is now in the middle of a motion the colony pays for.</para>
+        ///
+        /// <para>Named for the toil rather than for the transfer, and there is deliberately no
+        /// instant form left: a driver that wanted one would be a driver whose colonist acquires
+        /// things by magic while standing upright, which is the case this seam exists to
+        /// prevent.</para>
+        ///
+        /// <para>Returns <see cref="JobStatus.Ongoing"/> while the motion is running, and advances
+        /// the driver to its next toil on the tick it finishes. A driver's whole case is
+        /// <c>return LiftToil(ctx, item);</c>, so the two drivers that carry things cannot come to
+        /// spend different amounts of time on the same motion.</para>
+        ///
+        /// <para><b>The gesture starts on the first tick and the thing changes hands in the
+        /// middle</b>, at <see cref="PawnContent.LiftGraspTicks"/>. Both ends matter and they are
+        /// different faults: report the gesture late and the figure snaps into a crouch it has no
+        /// time left to finish; transfer early and the pile vanishes off the ground while the
+        /// colonist is still upright, which is the magic-acquisition the stoop exists to
+        /// prevent.</para>
+        ///
+        /// <para>The guard that the thing is still where the pawn is standing holds only until the
+        /// grasp. After it the thing is carried, its cell is -1, and asking again would fail the
+        /// job for having succeeded.</para>
         /// </summary>
-        protected void TakeUp(PawnContext ctx, ColonyItem item)
+        protected JobStatus LiftToil(PawnContext ctx, ColonyItem item)
         {
-            ctx.Items.PickUp(item, Pawn.Id);
-            Pawn.BeginGesture(PawnGesture.Lift);
+            int total = ctx.Content.LiftTicks;
+            int grasp = ctx.Content.LiftGraspTicks;
+            if (grasp > total) grasp = total;
+            if (grasp < 1) grasp = 1;
+
+            if (ToilProgress == 0) Pawn.BeginGesture(PawnGesture.Lift);
+
+            int elapsed = ++ToilProgress;
+
+            if (elapsed < grasp)
+            {
+                // Still bending. Somebody else may have taken it, or it may have been eaten.
+                return item.Cell == Pawn.Cell ? JobStatus.Ongoing : JobStatus.Failed;
+            }
+
+            if (elapsed == grasp)
+            {
+                if (item.Cell != Pawn.Cell) return JobStatus.Failed;
+                ctx.Items.PickUp(item, Pawn.Id);
+                Job.CarriedItem = item.Id.Value;
+            }
+
+            if (elapsed < total) return JobStatus.Ongoing;
+
+            NextToil();
+            return JobStatus.Ongoing;
         }
 
         /// <summary>

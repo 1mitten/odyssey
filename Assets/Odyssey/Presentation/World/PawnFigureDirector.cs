@@ -161,6 +161,18 @@ namespace Odyssey.Presentation.World
         public float? HeldClimbPhase { get; set; }
 
         /// <summary>
+        /// Treat every figure as being this far into the water, whatever cell it is standing in.
+        /// **Harness only**, and the counterpart of <see cref="ForceClimbFace"/>.
+        ///
+        /// <para>Needed for the same reason a forced climb face is: the pose is the one thing about
+        /// this that no test can judge, and arranging a real colonist to walk into a real stream at
+        /// the moment a camera is pointed at it is a great deal of scaffolding to photograph a
+        /// shape. Forcing the weight is the whole of what the water does to a figure, so a picture
+        /// taken this way is the same picture — see <c>SwimCheck</c>.</para>
+        /// </summary>
+        public float? ForceSwim { get; set; }
+
+        /// <summary>
         /// How far the last drawn crouch took the hips below where the animation had them, in
         /// metres.
         ///
@@ -1055,6 +1067,30 @@ namespace Odyssey.Presentation.World
             figure.ClimbWeight = Mathf.MoveTowards(
                 figure.ClimbWeight, figure.ClimbFace != Vector3.zero ? 1f : 0f, leanStep);
 
+            // Swimming: is this colonist in water, and how far into looking like it.
+            //
+            // The target is blended over the step by `WaterLine.Weight`, so a colonist wading in
+            // off a bank is half a swimmer half way across the step and the pose comes on at
+            // exactly the rate the drawn height rises. Snapping either one on at the water's edge
+            // moves the figure nearly two metres in a frame; snapping only one of them puts a
+            // prone figure on the bank, or an upright one afloat.
+            //
+            // **Presentation only** (owner, 2026-09-17: "float is how it looks; shallow stays
+            // crossable"). Nothing here reads back into the simulation: a colonist in shallow
+            // water carries what it was carrying, works where it was working, and pays the third
+            // speed the cost class has always charged. The helpless-swimmer rules are deep water's
+            // and are not built — docs/design/20-swimming-and-water.md.
+            float afloat = ForceSwim ?? WaterLine.Weight(World, pawn.Cell, pawn.NextCell,
+                Mathf.Clamp01(pawn.MovePercent * 0.01f));
+
+            // Forced weight is taken whole rather than eased towards, so a harness that sets it
+            // gets the pose on the frame it asks rather than a third of a second later — the same
+            // reason ForceClimbFace assigns the phase outright.
+            figure.SwimWeight = ForceSwim.HasValue
+                ? afloat
+                : SwimPose.Settle(figure.SwimWeight, afloat, deltaTime);
+            if (running && figure.SwimWeight > 0.001f) figure.SwimClock += deltaTime;
+
             // Face the work. A pawn that has stopped walking has no heading left — that is what
             // makes PawnPose hand back a zero vector — so without the work cell the figure would
             // swing at whatever it happened to be facing when it arrived, which is as often as
@@ -1209,6 +1245,21 @@ namespace Odyssey.Presentation.World
         void Blend(Figure figure, float speed, bool running)
         {
             Look look = _looks[figure.Look]!;
+
+            // **A swimmer has ground speed and must not walk on it.** The gait reads speed from
+            // how far the figure moved this frame, which is the right rule everywhere else and
+            // exactly wrong here: a colonist crossing a stream is travelling, so without this the
+            // mixer plays a walk cycle and the figure strides along the surface of the water. The
+            // speed is faded out with the swim weight rather than zeroed, so a colonist wading in
+            // off the bank slows to the idle as it tips over instead of stopping dead a frame
+            // before.
+            //
+            // This is the climb's own fault arriving from the other side. There, a purely vertical
+            // step had *no* ground speed, so the mixer played the idle and a colonist went up a
+            // shaft standing to attention until the legs were bound. Ground speed is a poor proxy
+            // for what the legs are doing, and every pose that is not walking has to say so.
+            speed *= 1f - Mathf.Clamp01(figure.SwimWeight);
+
             GaitBlend blend = GaitBlend.Solve(look.Speeds, speed);
             for (int i = 0; i < look.Gaits.Length; i++)
             {

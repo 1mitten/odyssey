@@ -43,7 +43,8 @@ namespace Odyssey.Presentation.Rendering
             {
                 heading = Vector3.zero;
                 return GroundRelief.Lift(from) +
-                       Vector3.up * BankLayout.RiseAt(world, pawn.Cell, from.x, from.z);
+                       Vector3.up * (BankLayout.RiseAt(world, pawn.Cell, from.x, from.z) +
+                                     WaterLine.FloatRise(world, pawn.Cell));
             }
 
             Vector3 to = CellMetrics.FloorCentre(pawn.NextCell);
@@ -71,6 +72,20 @@ namespace Odyssey.Presentation.Rendering
             // walks along the drawn ground instead of cutting the chord between two cell centres.
             float t = Mathf.Clamp(percent, 0f, 100f) * 0.01f;
             Vector3 along = GroundRelief.Lift(from + travel * t);
+
+            // **A step with water at either end is drawn by its two ends, not by the ground under
+            // it.** Ground-following is right wherever there is ground; between a waterline and
+            // the bank above it there is none, and the first version — the float added on top of
+            // the ordinary clamp — produced both of the faults the owner then reported (2026-09-17).
+            // Leaving a channel, the float decayed evenly across the step while the clamp jumped to
+            // the arriving cell at the midpoint, so the figure spent the first half of the step
+            // buried in the bank it was climbing ("clipped and sunk half way into a terrain tile")
+            // and the second half hanging above it, having overshot by the float it had not yet
+            // lost. See WaterLine.VerticalProgress for the curve and the argument.
+            if (WaterLine.Crosses(world, pawn.Cell, pawn.NextCell))
+                return new Vector3(along.x,
+                    WaterLine.CrossingHeight(world, pawn.Cell, pawn.NextCell, t), along.z);
+
             return OnTheDrawnGround(along, pawn, t, world);
         }
 
@@ -119,7 +134,34 @@ namespace Odyssey.Presentation.Rendering
             }
 
             CellRef over = t < 0.5f ? pawn.Cell : pawn.NextCell;
-            float ground = GroundRelief.Lift(CellMetrics.FloorCentre(over)).y +
+
+            // **The relief is sampled where the walker is, not at the cell's centre**, and that
+            // distinction is the whole of a fault the owner reported as colonists jolting about
+            // (2026-09-17). `along.y` already carries the field at the walker's own position; this
+            // used to compare it against the field at the centre of whichever cell she was over,
+            // and `over` switches at the midpoint of every step. So on any ground with a slope to
+            // it the clamp held the figure flat at the leaving cell's centre height for the first
+            // half of the step and then let go — a vertical snap, once a step, everywhere on the
+            // board.
+            //
+            // **Measured before the fix** (`WalkOnReliefTests`): 81.9 mm in one frame, at phase
+            // 0.495, on open rolling ground with no bank anywhere near it, against the 25 mm an
+            // honest frame of walking moves her. It is worse than a jolt on its own, too:
+            // `PawnFigureDirector.ObserveSpeed` differences position frame to frame to drive the
+            // gait blend, so a snapped frame reads as a speed spike and can throw the feet into a
+            // run as well.
+            //
+            // **Why it was never caught.** `BankFootingTests` measures exactly this with exactly
+            // this instrument, five ways across a terrace, four hundred samples a step — and
+            // `GroundRelief.Reset()` sets `Amplitude` to zero, which every one of those cases
+            // inherits. At zero amplitude `Lift` returns its argument, the two samples agree, and
+            // the switch is invisible. The board the game loads has a 2 m field on it everywhere.
+            //
+            // The floor term stays keyed to `over`, because that one is *meant* to jump: a hop up
+            // changes layer, the chord passes inside the block being climbed, and taking the
+            // arriving cell's floor from the midpoint is what lifts the figure onto it.
+            float ground = CellMetrics.FloorCentre(over).y +
+                           GroundRelief.HeightAt(along.x, along.z) +
                            BankLayout.RiseAt(world, over, along.x, along.z);
 
             return along.y >= ground ? along : new Vector3(along.x, ground, along.z);

@@ -323,13 +323,7 @@ namespace Odyssey.Sim.Pawns
                 }
 
                 case 1:
-                {
-                    if (item.Cell != Pawn.Cell) return JobStatus.Failed;
-                    TakeUp(ctx, item);
-                    Job.CarriedItem = item.Id.Value;
-                    NextToil();
-                    return JobStatus.Ongoing;
-                }
+                    return LiftToil(ctx, item);
 
                 case 2:
                 {
