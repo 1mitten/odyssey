@@ -30,6 +30,12 @@ namespace Odyssey.Presentation.Ui
     {
         readonly MenuDirector _menu = new MenuDirector();
 
+        /// <summary>
+        /// The start screen's own director, which the shell owns rather than the session does —
+        /// this screen outlives every colony, and exists exactly when none is running.
+        /// </summary>
+        public MenuDirector Menu => _menu;
+
         HudModal _startScreen = null!;
         VisualElement _startRows = null!;
         ScrollView _startList = null!;
