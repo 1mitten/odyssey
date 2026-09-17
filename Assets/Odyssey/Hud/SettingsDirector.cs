@@ -364,8 +364,24 @@ namespace Odyssey.Hud
         /// so the row describes the screen rather than dictating to it.</summary>
         public bool DeveloperOverlay { get; private set; }
 
-        /// <summary>Whether the exit row has been clicked once and is asking to be sure.</summary>
-        public bool ExitArmed { get; private set; }
+        /// <summary>
+        /// The session row that has been clicked once and is asking to be sure, or null.
+        ///
+        /// <para>A key rather than a flag since U38, because the panel grew three more session
+        /// rows — Save, Load and Quit to main menu — and two of them are as irreversible as the
+        /// exit row. One armed row at a time, so pressing another stands the first down: a screen
+        /// with two rows both asking "are you sure?" is a screen where the second press lands on
+        /// whichever one the hand reaches first.</para>
+        /// </summary>
+        public string? ArmedRow { get; private set; }
+
+        /// <summary>
+        /// Whether the exit row is the one asking. Kept as its own name because the panel, its
+        /// stylesheet class and the tests written before U38 all speak in these terms, and
+        /// renaming them would have been a change to what this file means rather than to what it
+        /// does.
+        /// </summary>
+        public bool ExitArmed => ArmedRow == ExitKey;
 
         /// <summary>Raised when the panel opens or closes.</summary>
         public event Action? Changed;
@@ -398,6 +414,14 @@ namespace Odyssey.Hud
         /// </summary>
         public event Action? ExitRequested;
 
+        /// <summary>
+        /// A session row was confirmed, with the key of the row that was: Save, Load, Quit to main
+        /// menu or Exit game. Raised rather than performed, like everything else here — writing a
+        /// file and putting a colony down both need Unity, and "the panel asked" is a sentence the
+        /// fast tier can assert without one.
+        /// </summary>
+        public event Action<string>? RowRequested;
+
         public bool IsOn(GraphicsOption option) => _on.TryGetValue(option, out bool on) && on;
 
         /// <summary>
@@ -425,9 +449,9 @@ namespace Odyssey.Hud
             // The armed exit row lives only in this panel, so the panel going away stands it
             // down. A "quit?" that survived its own panel would be a trap armed across the
             // whole screen.
-            if (!open && ExitArmed)
+            if (!open && ArmedRow != null)
             {
-                ExitArmed = false;
+                ArmedRow = null;
                 ExitChanged?.Invoke();
             }
             Changed?.Invoke();
@@ -547,17 +571,39 @@ namespace Odyssey.Hud
         /// not test; the armed row says what it wants and the panel closing stands it
         /// down.</para>
         /// </summary>
-        public void RequestExit()
+        public void RequestExit() => Request(ExitKey);
+
+        /// <summary>
+        /// A session row was pressed: Save, Load, Quit to main menu, or Exit game (U38).
+        ///
+        /// <para><b>Whether it asks twice is not decided here.</b> It is read from
+        /// <see cref="SessionCommands"/>, the one table both this panel and the start screen build
+        /// their rows from — which is the whole reason that table exists. Before U38 the exit row's
+        /// two clicks were written into this method, and adding three more destructive rows with
+        /// the same rule written again beside them would have been two answers to one question, in
+        /// the file whose job is to have one.</para>
+        ///
+        /// <para>Pressing a different row stands down whatever was armed, so the second click
+        /// always answers the row it landed on.</para>
+        /// </summary>
+        public void Request(string key)
         {
-            if (!ExitArmed)
+            if (key == null) return;
+
+            if (SessionCommands.AsksTwice(key, SessionContext.InGame) && ArmedRow != key)
             {
-                ExitArmed = true;
+                ArmedRow = key;
                 ExitChanged?.Invoke();
                 return;
             }
 
-            ExitArmed = false;
-            ExitRequested?.Invoke();
+            ArmedRow = null;
+
+            // Exit keeps its own event as well as the general one: the presenter that quits the
+            // application has listened to it since before this panel had any other session row,
+            // and "the panel asked the game to leave" is still the sentence the fast tier asserts.
+            if (key == ExitKey) ExitRequested?.Invoke();
+            RowRequested?.Invoke(key);
             ExitChanged?.Invoke();
         }
 

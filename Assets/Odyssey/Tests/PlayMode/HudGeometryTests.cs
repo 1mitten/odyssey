@@ -815,6 +815,17 @@ namespace Odyssey.Tests.PlayMode
         /// <summary>
         /// Every window carries an X, which is the owner's rule stated as a test rather than as a
         /// convention each call site has to remember.
+        ///
+        /// <para><b>One window is exempt, and the exemption is named here rather than allowed
+        /// silently (U38).</b> The start screen's root has nothing behind it to close <i>to</i>:
+        /// it exists precisely when no session is built, so an X on it could only either do
+        /// nothing or quit the game while wearing the glyph that means "dismiss this". A control
+        /// that does nothing is worse than no control, and one that quits under a dismiss glyph is
+        /// worse still — so it has none, and the way out is the Quit row that says so in words and
+        /// asks twice.</para>
+        ///
+        /// <para>Every <i>other</i> window still has to carry one, which is what the named
+        /// exception buys over loosening the rule: a second window without an X fails here.</para>
         /// </summary>
         [UnityTest]
         public IEnumerator EveryWindowHasAWayOutThatIsNotTheKeyboard()
@@ -828,13 +839,31 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(windows.Count, Is.GreaterThanOrEqualTo(3),
                     "the Build palette, the Menu popover and the settings panel are all windows");
 
+                var exempt = new[] { "start" };
+                int exemptSeen = 0;
+
                 foreach (VisualElement window in windows)
                 {
-                    Assert.That(window.Q(className: "panel__close"), Is.Not.Null,
-                        $"the '{window.name}' window has no close button");
                     Assert.That(window.ClassListContains("panel"), Is.True,
                         $"the '{window.name}' window is not a panel, so it does not carry the fill");
+
+                    if (System.Array.IndexOf(exempt, window.name) >= 0)
+                    {
+                        exemptSeen++;
+                        Assert.That(window.Q(className: "panel__close"), Is.Null,
+                            $"the '{window.name}' window is listed as having nothing to close to, " +
+                            "yet it has an X — one of the two is wrong");
+                        continue;
+                    }
+
+                    Assert.That(window.Q(className: "panel__close"), Is.Not.Null,
+                        $"the '{window.name}' window has no close button");
                 }
+
+                // The exemption has to still apply to something, or it is a hole left open for a
+                // window that quietly stopped being built.
+                Assert.That(exemptSeen, Is.EqualTo(exempt.Length),
+                    "a window named as exempt from the close-button rule was not on screen at all");
             }
             finally
             {
@@ -1093,6 +1122,9 @@ namespace Odyssey.Tests.PlayMode
             bootObject.transform.SetParent(root.transform, false);
             bootObject.SetActive(false);
             boot = bootObject.AddComponent<OdysseyBootstrap>();
+            // Explicitly, not by default: since U38 pressing Play lands on the start screen, and
+            // what this rig is asserting is that a session exists.
+            boot.buildOnPlay = true;
             boot.sizeX = 60;
             boot.sizeZ = 60;
             boot.seed = 1;

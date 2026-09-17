@@ -40,6 +40,13 @@ namespace Odyssey.Tests.Hud
 
         static readonly (string Selector, string Property, Func<HudColour> Token, string Name)[] Colours =
         {
+            // The inherited ink. `color` cascades in UI Toolkit and nothing above a leaf set one,
+            // so a label built without a style class fell through to the imported runtime theme's
+            // dark ink and drew invisibly on a near-black panel — which is how the naming prompt's
+            // two buttons and the palette's "MADE OF" came to be unreadable rather than merely
+            // unstyled. Pinned because the absence of a default is not visible in a review.
+            (".hud", "color", () => HudTheme.TextPrimary, "text primary"),
+
             (".panel", "background-color", () => HudTheme.PanelFill, "panel fill"),
             (".panel", "border-color", () => HudTheme.PanelBorder, "panel border"),
             (".card", "background-color", () => HudTheme.PanelFill, "panel fill"),
@@ -83,8 +90,28 @@ namespace Odyssey.Tests.Hud
             (".settings__keycap", "color", () => HudTheme.TextMeta, "text meta"),
             (".settings__keycap--listening", "border-color", () => HudTheme.Accent, "accent"),
             (".settings__keycap--listening", "color", () => HudTheme.Accent, "accent"),
-            (".settings__exit--armed", "background-color", () => HudTheme.ActiveTabFill, "active tab fill"),
-            (".settings__exit--armed .settings__label", "color", () => HudTheme.Accent, "accent"),
+            (".row--armed", "background-color", () => HudTheme.ActiveTabFill, "active tab fill"),
+            (".row--armed .settings__label", "color", () => HudTheme.Accent, "accent"),
+
+            // B18, the start screen. The scrim is the only colour this screen introduces; every
+            // other line here is the screen proving it introduced none.
+            (".modal-scrim", "background-color", () => HudTheme.ModalScrim, "modal scrim"),
+            (".startscreen__title", "color", () => HudTheme.TextPrimary, "text primary"),
+            (".save__name", "color", () => HudTheme.TextPrimary, "text primary"),
+            (".save__meta", "color", () => HudTheme.TextMeta, "text meta"),
+            (".startscreen__back", "border-top-color", () => HudTheme.Divider, "divider"),
+            (".save--bad .save__meta", "color", () => HudTheme.Warn, "warn"),
+
+            // The naming prompt, and the project's first text field.
+            (".field .unity-base-text-field__input", "color", () => HudTheme.TextPrimary, "text primary"),
+            (".field .unity-base-text-field__input", "border-color", () => HudTheme.PanelBorder, "panel border"),
+            (".field:focus .unity-base-text-field__input", "border-color", () => HudTheme.Accent, "accent"),
+            (".prompt__answer", "border-color", () => HudTheme.PanelBorder, "panel border"),
+            (".prompt__answer:hover", "border-color", () => HudTheme.Accent, "accent"),
+            (".prompt__answer--armed", "background-color", () => HudTheme.ActiveTabFill, "active tab fill"),
+            (".prompt__answer--armed", "color", () => HudTheme.Accent, "accent"),
+            (".prompt__note", "color", () => HudTheme.TextDim, "text dim"),
+            (".prompt__note--warn", "color", () => HudTheme.Warn, "warn"),
         };
 
         [Test]
@@ -168,6 +195,27 @@ namespace Odyssey.Tests.Hud
             (".cmd", "margin-right", () => HudCommands.ItemGap, "command item gap"),
             (".commandbar__divider", "height", () => HudCommands.DividerHeight, "divider height"),
             (".commandbar__divider", "width", () => HudCommands.DividerWidth, "divider width"),
+
+            // B18, the start screen.
+            (".startscreen", "width", () => HudLayout.StartWidth, "start screen width"),
+            (".startscreen", "height", () => HudLayout.StartPanelHeight, "start screen height"),
+            (".startscreen__title", "height", () => HudLayout.StartTitle, "start screen title"),
+            (".startscreen__body", "height", () => HudLayout.StartBody, "start screen body"),
+            (".startscreen__body", "margin-top", () => HudLayout.StartTitleGap, "title to body"),
+            (".startscreen__list", "max-height", () => HudLayout.StartListMax, "the load list's ceiling"),
+            (".save", "height", () => HudLayout.StartSaveRow, "a save row"),
+            (".save", "margin-bottom", () => HudLayout.StartSaveGap, "save row gap"),
+            (".startscreen__back", "margin-top", () => HudLayout.StartRowGap, "start screen row gap"),
+
+            (".prompt", "width", () => HudLayout.PromptWidth, "naming prompt width"),
+            (".field", "height", () => HudLayout.FieldHeight, "a text field"),
+            (".prompt__answer", "height", () => HudLayout.RowHeight, "list row"),
+
+            // The row the start screen reuses rather than reinventing. Pinned in both places it is
+            // already used, so "the start screen is built from rows the interface already has"
+            // fails here the moment one of the three drifts.
+            (".settings__row", "height", () => HudLayout.StartRow, "list row"),
+            (".menu__row", "height", () => HudLayout.StartRow, "list row"),
 
             (".panel", "padding", () => HudLayout.Pad, "panel padding"),
             (".panel", "border-radius", () => HudTheme.PanelRadius, "panel radius"),

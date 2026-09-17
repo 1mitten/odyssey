@@ -190,6 +190,21 @@ namespace Odyssey.Hud
         public const int TopScrimHeight = 170;
         public const int BottomScrimHeight = 200;
 
+        /// <summary>
+        /// The wash a modal lays over the whole viewport.
+        ///
+        /// <para><b>The third scrim, and the only one that is not always on.</b> The two above are
+        /// ramps at the top and bottom of the screen carrying the HUD's text contrast; this one is
+        /// flat, covers everything, and says that what is behind it is not available. It is the
+        /// same ink, so the interface has one darkness rather than two.</para>
+        ///
+        /// <para>Two thirds rather than opaque, because a modal that blacks the screen out is a
+        /// scene change and this is not one: the start screen still wants to read as the game with
+        /// something in front of it. It is also what makes <c>Modal()</c> usable later over a live
+        /// colony, which the start screen never has behind it.</para>
+        /// </summary>
+        public static readonly HudColour ModalScrim = ScrimInk.WithAlpha(0.66f);
+
         // ------------------------------------------------------------------ geometry
 
         public const int PanelRadius = 5;

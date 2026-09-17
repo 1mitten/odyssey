@@ -111,7 +111,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Audio** | `ui.settings.audio` | How loud each part of the game is. Stored on the machine, in decibels | no art | M3 |
 | **Camera speed** | `ui.settings.camspeed` | How fast the camera pans and zooms, as a share of its tuned speed | no art | M3 |
 | **Developer overlay** | `ui.settings.developer` | The frame-time and draw-call readout, kept on the machine between sessions | no art | M3 |
-| **Exit game** | `ui.settings.exit` | Leave. Nothing is saved yet, so the row asks before it goes | no art | M3 |
+| **Exit game** | `ui.settings.exit` | Leave the game. The row asks twice, because leaving is not undoable | no art | M3 |
 | **Master volume** | `ui.settings.volume.master` | Everything at once | no art | M3 |
 | **Music volume** | `ui.settings.volume.music` | What plays under the game | no art | M3 |
 | **Ambience volume** | `ui.settings.volume.ambience` | The sound of the place itself | no art | M3 |
