@@ -84,13 +84,19 @@
     <item>-1</item>
   </StuffDef>
 
-  <!-- item 2 is ItemHandle.Wood: what felling a tree leaves on the ground. -->
+  <!--
+    item 2 is ItemHandle.Wood: what felling a tree leaves on the ground.
+
+    workOffsetTicks 0 (U27): nailing and lashing a plank into place has no separate fitting step
+    for the factor to leave out, so the whole of wood's cost is the factor.
+  -->
   <StuffDef>
     <defName>Stuff_Wood</defName>
     <label>wood</label>
     <stuff>4</stuff>
     <item>2</item>
     <workFactorPerMille>1000</workFactorPerMille>
+    <workOffsetTicks>0</workOffsetTicks>
     <hitPointsFactorPerMille>1000</hitPointsFactorPerMille>
     <iconKey>ui.res.wood</iconKey>
   </StuffDef>
@@ -102,6 +108,12 @@
     a stone one (a-04 section 3, read off its material table). It is the one number that makes the
     choice of material a decision rather than a colour, which is why it is carried in ahead of the
     rest of the stat block.
+
+    workOffsetTicks 15 (U27, stat = base x factor + offset, a-04 section 3) is Odyssey's own
+    number: a flat dressing-and-fitting pass a stone block wants regardless of the wall it joins,
+    on top of the factor above. Proportionate to the one factor Odyssey chose rather than copied
+    from the reference's own much larger stone offset (+140 against a base of 135, stacked with a
+    x5-6 factor across several stone materials).
   -->
   <StuffDef>
     <defName>Stuff_Stone</defName>
@@ -109,6 +121,7 @@
     <stuff>5</stuff>
     <item>3</item>
     <workFactorPerMille>1700</workFactorPerMille>
+    <workOffsetTicks>15</workOffsetTicks>
     <hitPointsFactorPerMille>1500</hitPointsFactorPerMille>
     <iconKey>ui.res.stone</iconKey>
   </StuffDef>

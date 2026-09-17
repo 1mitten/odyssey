@@ -8,6 +8,11 @@ using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 
+// DefLoaderTests declares its own fixture StuffDef in this namespace, which wins over a using-alias
+// of the same name — the same clash WorldContentDefTests aliases around (as SimTerrainDef) for
+// TerrainDef. This file's tests spell the real type ConstructionStuffDef instead.
+using ConstructionStuffDef = Odyssey.Sim.Construction.StuffDef;
+
 namespace Odyssey.Tests.Sim
 {
     /// <summary>
@@ -134,9 +139,49 @@ namespace Odyssey.Tests.Sim
             int wood = ConstructionContent.WorkFor(BuildingHandle.Wall, StuffHandle.Wood);
             int stone = ConstructionContent.WorkFor(BuildingHandle.Wall, StuffHandle.Stone);
 
-            Assert.That(wood, Is.EqualTo(135));
-            Assert.That(stone, Is.EqualTo(229), "135 x 1.7, rounded down by integer division");
+            Assert.That(wood, Is.EqualTo(135), "wood's factor is 1000 per mille and its offset is 0");
+            Assert.That(stone, Is.EqualTo(244), "135 x 1.7 = 229 (rounded down), + a 15-tick offset");
             Assert.That(stone, Is.GreaterThan(wood));
+        }
+
+        /// <summary>
+        /// U27: <c>stat = base x factor + offset</c>. This is the offset's own test, isolated from
+        /// the factor — without it, <see cref="AStoneWallIsMoreWorkThanAWoodenOne"/> could pass with
+        /// the offset silently dropped, because a bigger factor alone would still make stone cost
+        /// more than wood.
+        /// </summary>
+        [Test]
+        public void TheOffsetIsAddedAfterTheFactorNotFoldedIntoIt()
+        {
+            var stuff = new ConstructionStuffDef { workFactorPerMille = 2000, workOffsetTicks = 50 };
+            var building = new BuildingDef { workToBuild = 100 };
+
+            // 100 x 2000 / 1000 = 200, then +50 = 250. Not 100 x (2000 + 50) / 1000 = 205.
+            Assert.That(ConstructionContent.WorkFor(building, stuff), Is.EqualTo(250));
+        }
+
+        /// <summary>
+        /// The floor of one tick (see <see cref="ConstructionContent.WorkFor(BuildingDef, StuffDef)"/>)
+        /// applies to the whole expression, factor and offset together, not to the factored term
+        /// alone.
+        /// </summary>
+        [Test]
+        public void AZeroFactorWithNoOffsetStillFloorsToOneTick()
+        {
+            var stuff = new ConstructionStuffDef { workFactorPerMille = 0, workOffsetTicks = 0 };
+            var building = new BuildingDef { workToBuild = 100 };
+
+            Assert.That(ConstructionContent.WorkFor(building, stuff), Is.EqualTo(1));
+        }
+
+        /// <summary>A negative offset is not on the menu today, but the floor must still catch it.</summary>
+        [Test]
+        public void AnOffsetThatWouldGoNegativeStillFloorsToOneTick()
+        {
+            var stuff = new ConstructionStuffDef { workFactorPerMille = 1000, workOffsetTicks = -500 };
+            var building = new BuildingDef { workToBuild = 100 };
+
+            Assert.That(ConstructionContent.WorkFor(building, stuff), Is.EqualTo(1));
         }
 
         [Test]
@@ -378,7 +423,7 @@ namespace Odyssey.Tests.Sim
             colony.World.Tick();
 
             SiteView view = colony.World.Views.Current.Sites[0];
-            Assert.That(view.WorkTotal, Is.EqualTo(229), "135 x 1.7");
+            Assert.That(view.WorkTotal, Is.EqualTo(244), "135 x 1.7 = 229, + stone's 15-tick offset");
         }
 
         // ---- the whole journey -------------------------------------------------------------------
