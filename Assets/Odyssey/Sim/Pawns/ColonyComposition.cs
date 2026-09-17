@@ -67,9 +67,16 @@ namespace Odyssey.Sim.Pawns
             // Until 2026-09-17 a wall a colonist raised was in neither the save nor the hash;
             // `EdificeSaveSection` carries the measurement that found it.
             var edificeSave = new EdificeSaveSection(edifices);
-            construction = new ConstructionGrid(pawns.Cells, edificeSave, pawns.Items);
+            construction = new ConstructionGrid(pawns.Cells, edificeSave, pawns.Items, support.Solver);
             pawns.Designations = designations;
             pawns.Construction = construction;
+            // U29: the seam through which a job that edits the world says the structure changed.
+            // Taken off the system rather than passed in beside it, so the solver a collapse is
+            // computed from and the solver a wall marks dirty cannot be two different objects.
+            pawns.Support = support.Solver;
+            // And the other way: the system that finds a collapse needs the colony to drop things
+            // into. Bound here because this is the one place that holds both (U29).
+            support.Bind(pawns);
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
             builder
                 // The world itself, first: it is what everything below reads, and it ticks
@@ -110,7 +117,12 @@ namespace Odyssey.Sim.Pawns
                 // pipeline because starting and ending jobs is what the pipeline is, and because a
                 // second path into `StartJob` would be a second path out of it — which is where a
                 // reservation leak comes from.
-                .AddIntentHandler(IntentKind.ForceJob, pipeline.HandleForceJob);
+                .AddIntentHandler(IntentKind.ForceJob, pipeline.HandleForceJob)
+                // The debug menu's two rows. Neither is player content — see the doc comments on
+                // the intents themselves — so both live beside the ordinary handlers rather than in
+                // a debug-only wiring path a real colony would not otherwise get.
+                .AddIntentHandler(IntentKind.SpawnPawn, pawns.Pawns.HandleSpawnPawn)
+                .AddIntentHandler(IntentKind.GiveResource, intent => pawns.Items.HandleGiveResource(intent, pawns.Cells));
             designations.Attach(builder);
             construction.Attach(builder);
             return builder;

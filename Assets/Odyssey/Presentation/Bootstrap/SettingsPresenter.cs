@@ -133,7 +133,13 @@ namespace Odyssey.Presentation.Bootstrap
         void Attach()
         {
             if (_director != null) return;
-            SettingsDirector? director = _bootstrap?.Directors?.Settings;
+
+            // The bootstrap's own preferences, not the session's (U38). They are the same object
+            // while a session exists — the composition root hands this pair to every HudDirectors
+            // it builds — and the difference is that these exist with no session at all, which is
+            // when the start screen's Options row opens this panel. Waiting for Directors would
+            // have left that row opening a panel nothing drove.
+            SettingsDirector? director = _bootstrap?.Preferences;
             if (director == null) return;
 
             _director = director;
@@ -158,6 +164,9 @@ namespace Odyssey.Presentation.Bootstrap
                 director.Seed(GraphicsOption.GrassTufts, _bootstrap.grassScatter > 0);
                 director.Seed(GraphicsOption.GroundRelief, _bootstrap.groundRelief > 0f);
                 director.Seed(GraphicsOption.SeeThrough, _bootstrap.seeThroughToSelection);
+                director.Seed(GraphicsOption.CutAwayCeiling,
+                    _bootstrap.cameraRig != null && _bootstrap.cameraRig.slice != null
+                    && _bootstrap.cameraRig.slice.suppressActiveCeiling);
             }
 
             director.OptionChanged += Apply;
@@ -250,6 +259,15 @@ namespace Odyssey.Presentation.Bootstrap
                     // live, so clicking follows the ground without anything further here.
                     GroundRelief.Amplitude = on ? _reliefAmplitude : 0f;
                     Redraw(renderer);
+                    break;
+
+                case GraphicsOption.CutAwayCeiling:
+                    // The slice's own rule, and nothing has to be re-meshed: SuppressCeilingAt is
+                    // asked afresh every frame by the renderer's layer loop and by the picker's
+                    // band, so the floor overhead appears and becomes clickable on the next frame.
+                    if (_bootstrap != null && _bootstrap.cameraRig != null
+                        && _bootstrap.cameraRig.slice != null)
+                        _bootstrap.cameraRig.slice.suppressActiveCeiling = on;
                     break;
 
                 case GraphicsOption.SeeThrough:

@@ -64,54 +64,154 @@ namespace Odyssey.Hud
         // The keys the shell and the tests need by name. Everything else is a string in the table
         // below and is never compared against.
         public const string Wall = "ui.arch.tool.wall";
+
+        /// <summary>
+        /// The <b>slab</b>: an upper floor, on a wall or bridging out from one. Never on the
+        /// ground, which is already a floor.
+        ///
+        /// <para>The key says "roof" because a slab is both — it floors the layer it is in and
+        /// roofs the one below — and keys are forever, so only the label has ever moved (U29, then
+        /// again when it stopped being called "Floor" in 2026-09-17's rename).</para>
+        ///
+        /// <para><b>Named `Slab` here and not `Floor`, deliberately.</b> The identifier the player
+        /// sees and the identifier in the code used to disagree, which cost three rounds of
+        /// confusion in one afternoon. Note that <c>BuildingHandle.Floor</c> is still this one:
+        /// handle <i>values</i> are a save contract and were not worth the risk of a swap that
+        /// would compile silently and mean the other thing.</para>
+        /// </summary>
+        public const string Slab = "ui.arch.tool.roof";
+
+        /// <summary>
+        /// <b>Paving</b>, which is what the player simply calls a floor: laid on ground that is
+        /// already there (U42). <c>BuildingHandle.DeckPlate</c> behind it, for the reason
+        /// <see cref="Slab"/> gives about handle values.
+        /// </summary>
+        public const string Paving = "ui.arch.tool.deckplate";
+
+        /// <summary>
+        /// The way up (U43). Under <c>Structure</c>, beside the wall and the slab, because a wall,
+        /// its floor and the ladder onto it are one job.
+        /// </summary>
+        public const string Ladder = "ui.arch.tool.ladder";
         public const string Mine = "ui.arch.tool.mine";
         public const string Fell = "ui.arch.tool.fell";
         public const string Cancel = "ui.arch.tool.cancel";
         public const string Deconstruct = "ui.arch.tool.deconstruct";
 
         /// <summary>
-        /// Categories in catalogue order, each with a few of its tools. Every icon key exists in
-        /// the registry; a tool not in <see cref="Live"/> is drawn and disabled, so the shape of
-        /// the game is visible before the thing behind a key exists.
+        /// The seven categories the palette offers, in the order they are drawn, each with a few
+        /// of its tools. Every icon key exists in the registry; a tool not in <see cref="Live"/>
+        /// is drawn and disabled, so the shape of the game is visible before the thing behind a
+        /// key exists.
+        ///
+        /// <para><b>Seven, not ten</b> (specification, 2026-09-17). Orders, Zones and Salvage came
+        /// out. All three were answering a different question from the other seven: those seven
+        /// are kinds of thing to <i>put down</i>, and a palette whose tiles do not all answer one
+        /// question is a palette the player has to read rather than aim at. Zones and Salvage take
+        /// nothing live with them. Orders did, and <see cref="Pinned"/> is where its two live
+        /// tools went.</para>
+        ///
+        /// <para><b>A category has no label here, and that is the point</b> (owner, 2026-09-17:
+        /// <i>"ensure that consistency can be enforced using a centralised place"</i>). It carried
+        /// one until then — "Structure", "Production", seven words written in C# beside the seven
+        /// keys that already name them — and the two copies happened to agree, which is what a
+        /// silent duplicate looks like right up until somebody corrects one of them.
+        /// <c>Registry.Label(key)</c> is the only answer now, and
+        /// <c>RegistryTests.NoPlayerFacingNameIsWrittenInCSharp</c> is what stops the second copy
+        /// coming back.</para>
         /// </summary>
-        public static readonly (string key, string label, string[] tools)[] Categories =
+        public static readonly (string key, string[] tools)[] Categories =
         {
-            ("ui.arch.category.structure", "Structure", new[] { Wall, "ui.arch.tool.door", "ui.arch.tool.stair", "ui.arch.tool.ladder", "ui.arch.tool.roof", "ui.arch.tool.reclaim" }),
-            ("ui.arch.category.orders", "Orders", new[] { Mine, Fell, "ui.arch.tool.forbid", "ui.arch.tool.clearrubble" }),
-            ("ui.arch.category.zones", "Zones", new[] { "ui.arch.tool.stockpile", "ui.arch.tool.growzone", "ui.arch.tool.dumping" }),
-            ("ui.arch.category.production", "Production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
-            ("ui.arch.category.furniture", "Furniture", new[] { "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
-            ("ui.arch.category.power", "Power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
-            ("ui.arch.category.security", "Security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
-            ("ui.arch.category.salvage", "Salvage", new[] { "ui.arch.tool.salvage", "ui.arch.tool.reclaim" }),
-            ("ui.arch.category.floors", "Floors", new[] { "ui.arch.tool.deckplate", "ui.arch.tool.grating", "ui.arch.tool.tile" }),
-            ("ui.arch.category.recreation", "Recreation", new[] { "ui.arch.tool.gamestable", "ui.arch.tool.viewscreen", "ui.arch.tool.planter" }),
+            ("ui.arch.category.structure", new[] { Wall, Paving, "ui.arch.tool.door", "ui.arch.tool.stair", Ladder, Slab, "ui.arch.tool.reclaim" }),
+            ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
+            ("ui.arch.category.furniture", new[] { "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
+            ("ui.arch.category.power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
+            ("ui.arch.category.security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
+            ("ui.arch.category.floors", new[] { Paving, "ui.arch.tool.grating", "ui.arch.tool.tile" }),
+            ("ui.arch.category.recreation", new[] { "ui.arch.tool.gamestable", "ui.arch.tool.viewscreen", "ui.arch.tool.planter" }),
         };
 
         /// <summary>
-        /// Tools that belong to no category and are always on show, under everything else.
+        /// What a thing may be made of, in the order the player meets them — and only what the
+        /// colony can actually build with.
         ///
-        /// <para><b>Cancel is not a kind of thing to build.</b> Every other chip in this palette
-        /// answers "what would you like to put down"; this one answers "stop", about whatever is
-        /// already on the board, and it is as relevant to a wall as to a mine mark. Filing it under
-        /// Orders was tidy and wrong in practice (owner, 2026-09-17: *"would be a good idea to be
-        /// able to access the cancel button on the build sub menu"*): the moment a player wants it
-        /// is while they are holding <em>another</em> tool, which is exactly when the category row
-        /// is showing something else and reaching for it costs two clicks and a hunt.</para>
+        /// <para>Two entries, because <c>ConstructionContent.IsBuildable</c> admits two. The other
+        /// four <see cref="StuffHandle"/> values are what the ruined city is made <i>of</i> rather
+        /// than what a colony builds <i>with</i>; <see cref="BuildLabels.StuffKeys"/> leaves them
+        /// unnamed for the same reason. <see cref="HudTheme.MaterialTintOf"/> already holds tints
+        /// for four, so a third and fourth buildable material is one row here.</para>
+        /// </summary>
+        public static readonly int[] Materials = { StuffHandle.Wood, StuffHandle.Stone };
+
+        /// <summary>
+        /// The tools that belong to no category and are always on show. They are the orders strip
+        /// down the right-hand gutter, under the depth rail.
         ///
-        /// <para><b>Deconstruct joined it</b> (owner, 2026-09-17, having failed to get it to work
-        /// from Orders: <i>"could you put deconstruct next to cancel as a button so we can at least
-        /// deconstruct this way"</i>). It belongs by the same argument, which is worth stating
-        /// because it was filed under Orders on exactly the reasoning that put Cancel there: both
-        /// are about <em>what is already on the board</em> rather than about what to put down next,
-        /// and both are wanted at the moment a player is holding something else. Two chips is also
-        /// the sensible limit — a pinned row that grows is a second palette.</para>
+        /// <para><b>None of these is a kind of thing to build.</b> Every tile in the seven
+        /// categories answers "what would you like to put down"; each of these answers a question
+        /// about <em>what is already on the board</em> — stop that, take that apart, dig that out,
+        /// cut that down — and each is wanted at the moment the player is holding something else,
+        /// which is exactly when the category tier is showing something different and reaching for
+        /// it would cost two clicks and a hunt. Filing them under a category was tidy and wrong in
+        /// practice (owner, 2026-09-17, of Cancel: <i>"would be a good idea to be able to access
+        /// the cancel button on the build sub menu"</i>, and of Deconstruct, having failed to
+        /// reach it from Orders: <i>"could you put deconstruct next to cancel as a button so we
+        /// can at least deconstruct this way"</i>).</para>
+        ///
+        /// <para><b>Chop and Mine joined them when Orders was dropped</b> (2026-09-17). The
+        /// specification takes the Orders category off the palette, and those two were the only
+        /// live tools in it — so taken literally it would have left the game's mining and felling
+        /// reachable by the <c>M</c> and <c>C</c> keys and by nothing a player could see. That is
+        /// not a hypothetical failure: it is precisely what had already happened to Cancel, which
+        /// <i>"was never missing — every way of finding it was missing"</i>, and which cost a
+        /// playtest to find. They belong here on the same test the other two pass, which is the
+        /// reason this list is allowed to have grown rather than an exception to it: all four are
+        /// verbs applied to what is there, not nouns to place.</para>
         ///
         /// <para>They are in no category at all rather than pinned <i>and</i> listed, because the
         /// same chip appearing twice in one open panel is a question the player has to stop and
         /// answer: whether the two do the same thing.</para>
+        ///
+        /// <para><b>They left the palette header on 2026-09-17</b> (owner: <i>"the small buttons
+        /// on the build menu for Chop Trees, Mine, Deconstruct, Cancel should be a vertical button
+        /// strip that sits below the depth control … this enables us to quickly give orders
+        /// without having to click the build button — we can use this in future for more
+        /// orders"</i>). In the header they were always on show <i>within a panel that was
+        /// usually shut</i>, so giving an order cost opening the palette first and the cost was
+        /// paid on every order. They are a column in the right-hand gutter now, on screen whether
+        /// or not anything else is.</para>
+        ///
+        /// <para><b>And that lifted the ceiling.</b> Four was the limit while this was a row in a
+        /// header with a switcher and a way out beside it; a column down an otherwise empty
+        /// gutter is bounded by the screen. Adding a fifth order is one entry here and one in
+        /// <see cref="HudTheme.PinnedActionHue"/>, and <see cref="HudLayout.OrdersHeight"/> reads
+        /// the length of this array rather than a number somebody wrote down beside it.</para>
         /// </summary>
-        public static readonly string[] Pinned = { Cancel, Deconstruct };
+        public static readonly string[] Pinned = { Fell, Mine, Deconstruct, Cancel };
+
+        /// <summary>
+        /// The word the armed banner uses for an order: the order's own name, the one the wiki
+        /// prints, the palette's breadcrumb says and the strip's tooltip repeats.
+        ///
+        /// <para><b>One name for one thing, everywhere</b> (owner, 2026-09-17: <i>"rename
+        /// 'Cancelling orders' to Cancel … rename this to 'Deconstruct' … keep the consistent in
+        /// the wiki and the language and UI"</i>). The banner was the odd one out: it said
+        /// "Chopping", "Mining", "Deconstructing" and — in a C# literal, because cancel has no
+        /// activity to borrow — "Cancelling orders", while every other surface in the game called
+        /// the same four things <b>Chop trees, Mine, Deconstruct, Cancel</b>. It now reads the
+        /// <c>ui.arch.tool.*</c> names, so the wiki, the palette, the strip and the banner cannot
+        /// disagree and a rename in <c>icon-keys.csv</c> reaches all four at once.</para>
+        ///
+        /// <para><b>The gerunds did not go away; they were never this.</b> "Chopping" is what a
+        /// <i>colonist</i> is doing and belongs to <c>ui.status.*</c>, which the roster card
+        /// draws. An order is an imperative and an activity is a gerund — that is the rule the
+        /// banner was breaking by mixing the two namespaces.</para>
+        ///
+        /// <para>This method rather than a bare <c>Registry.Label</c> call at each site, because
+        /// <see cref="HudLayout.ArmedWidth"/> has to walk exactly these words to size the banner
+        /// to the longest of them, and "exactly these words" needs one owner.</para>
+        /// </summary>
+        public static string OrderWord(string key) => Registry.Label(key);
 
         /// <summary>
         /// The tools that actually do something. Anything absent is drawn disabled, which is most
@@ -122,6 +222,18 @@ namespace Odyssey.Hud
             new PaletteTool(Wall,
                 d => d.ArmBuild(BuildingHandle.Wall),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Wall,
+                wantsMaterial: true),
+            new PaletteTool(Slab,
+                d => d.ArmBuild(BuildingHandle.Floor),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Floor,
+                wantsMaterial: true),
+            new PaletteTool(Paving,
+                d => d.ArmBuild(BuildingHandle.DeckPlate),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.DeckPlate,
+                wantsMaterial: true),
+            new PaletteTool(Ladder,
+                d => d.ArmBuild(BuildingHandle.Ladder),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Ladder,
                 wantsMaterial: true),
             new PaletteTool(Mine, Toggle(DesignateTool.Mine), Holding(DesignateTool.Mine)),
             new PaletteTool(Fell, Toggle(DesignateTool.Fell), Holding(DesignateTool.Fell)),
@@ -159,7 +271,7 @@ namespace Odyssey.Hud
             get
             {
                 var keys = new List<string>(Pinned);
-                foreach (var (key, _, tools) in Categories)
+                foreach (var (key, tools) in Categories)
                 {
                     keys.Add(key);
                     keys.AddRange(tools);

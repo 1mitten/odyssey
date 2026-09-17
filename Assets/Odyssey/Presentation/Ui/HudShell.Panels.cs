@@ -11,6 +11,56 @@ using UnityEngine.UIElements;
 namespace Odyssey.Presentation.Ui
 {
     /// <summary>
+    /// A modal and the scrim beneath it, which are one thing as far as anything outside is
+    /// concerned.
+    ///
+    /// <para>A pair rather than two fields on the shell because the failure mode is specific and
+    /// silent: a scrim left showing over a hidden panel is a screen that swallows every click,
+    /// shows nothing, and cannot be dismissed. <see cref="Show"/> is the only thing that moves
+    /// either element, so the two cannot get out of step.</para>
+    /// </summary>
+    public sealed class HudModal
+    {
+        /// <summary>The wash over the viewport. Pickable, which is what swallows the pointer.</summary>
+        public readonly VisualElement Scrim;
+
+        /// <summary>The window itself.</summary>
+        public readonly VisualElement Panel;
+
+        internal HudModal(VisualElement scrim, VisualElement panel)
+        {
+            Scrim = scrim;
+            Panel = panel;
+        }
+
+        public bool Showing => Panel.style.display == DisplayStyle.Flex;
+
+        /// <summary>Show or hide both halves at once.</summary>
+        public void Show(bool on)
+        {
+            DisplayStyle display = on ? DisplayStyle.Flex : DisplayStyle.None;
+            Scrim.style.display = display;
+            Panel.style.display = display;
+        }
+
+        /// <summary>
+        /// Take the panel away and leave the scrim, for when another window stands in its place.
+        ///
+        /// <para>The one case where the two halves legitimately differ, and it is not the failure
+        /// this class exists to prevent: that one is a scrim with <i>nothing</i> over it, which
+        /// eats every click and shows no reason why. Here the state is still modal and something is
+        /// still on screen — the start screen's Options row puts the settings panel where the menu
+        /// was, rather than on top of it (owner, 2026-09-17).</para>
+        /// </summary>
+        public void ShowScrimOnly()
+        {
+            Scrim.style.display = DisplayStyle.Flex;
+            Panel.style.display = DisplayStyle.None;
+        }
+    }
+
+
+    /// <summary>
     /// <see cref="HudShell"/>: the shared furniture and the panels down the left and right.
     ///
     /// <para>The <c>Panel</c>/<c>Header</c>/<c>Scrim</c> builders every region uses, then A1
@@ -83,14 +133,55 @@ namespace Odyssey.Presentation.Ui
         /// owner's rule. Every window is built through here, so "consistent" is a property of the
         /// code rather than a convention three call sites have to remember.
         /// </summary>
-        VisualElement Window(string name, string label, Action onClose, params string[] extraClasses)
+        /// <param name="onClose">
+        /// What the X does, or <c>null</c> for a window with no way out of its own — which is only
+        /// ever the start screen's root, because a window with nothing behind it has nothing to
+        /// close <i>to</i>, and an X that does nothing is worse than no X at all.
+        /// </param>
+        VisualElement Window(string name, string label, Action? onClose, params string[] extraClasses)
         {
             var panel = Panel(name, extraClasses);
             panel.AddToClassList("window");
             VisualElement header = Header(panel, label, out _);
-            CloseButton(header, label, onClose);
+            if (onClose != null) CloseButton(header, label, onClose);
             panel.style.display = DisplayStyle.None;
             return panel;
+        }
+
+        /// <summary>
+        /// A modal: a window with a scrim under it, the two shown and hidden as one thing.
+        ///
+        /// <para><b>The fourth link in this chain, and the first real modal in the project.</b>
+        /// <c>09-ui-and-input.md</c> §6 case 5 — "a modal swallows every pointer and key event
+        /// except its own dismissal" — has been specified since the interface was designed and has
+        /// never had anything to be true of. The settings panel is deliberately not one: you open
+        /// it to watch the board change as a lever moves.</para>
+        ///
+        /// <para><b>The swallow needs no code.</b> The scrim is a pickable element covering the
+        /// viewport, under the panel and over everything else, so
+        /// <see cref="HudShell.PointOverUi"/> — which asks the panel what is under the cursor —
+        /// answers "the interface" everywhere while a modal is up, and the camera rig already
+        /// declines a press it is told belongs to the interface. The two always-on scrims are
+        /// explicitly <i>not</i> pickable for exactly this reason; this one is pickable for exactly
+        /// this reason. That is the whole mechanism, and it is worth stating because the obvious
+        /// alternative — a flag consulted in every input path — is the version that grows a case
+        /// somebody forgets.</para>
+        ///
+        /// <para>Returned as a pair rather than as a panel, because a scrim left showing over a
+        /// hidden panel is a screen the player cannot dismiss and cannot see the cause of.
+        /// <see cref="HudModal.Show"/> is the only thing that moves either of them.</para>
+        /// </summary>
+        HudModal Modal(string name, string label, Action? onClose, params string[] extraClasses)
+        {
+            var scrim = new VisualElement { name = name + "-scrim" };
+            scrim.AddToClassList("modal-scrim");
+            scrim.style.display = DisplayStyle.None;
+            _hud.Add(scrim);
+
+            VisualElement panel = Window(name, label, onClose, extraClasses);
+            _hud.Add(panel);
+
+            return new HudModal(scrim, panel);
         }
 
         /// <summary>
@@ -147,8 +238,8 @@ namespace Odyssey.Presentation.Ui
             _topRamp = HudTokens.VerticalRamp(clear, new Color(ink.r, ink.g, ink.b, HudTheme.TopScrimAlpha));
             _bottomRamp = HudTokens.VerticalRamp(new Color(ink.r, ink.g, ink.b, HudTheme.BottomScrimAlpha), clear);
 
-            _hud.Add(Scrim("scrim-top", _topRamp, top: true, HudTheme.TopScrimHeight));
-            _hud.Add(Scrim("scrim-bottom", _bottomRamp, top: false, HudTheme.BottomScrimHeight));
+            _worldUi.Add(Scrim("scrim-top", _topRamp, top: true, HudTheme.TopScrimHeight));
+            _worldUi.Add(Scrim("scrim-bottom", _bottomRamp, top: false, HudTheme.BottomScrimHeight));
         }
 
         static VisualElement Scrim(string name, Texture2D ramp, bool top, int height)
@@ -187,7 +278,7 @@ namespace Odyssey.Presentation.Ui
             _storesRows = new VisualElement();
             _storesRows.AddToClassList("stores__rows");
             _storesPanel.Add(_storesRows);
-            _hud.Add(_storesPanel);
+            _worldUi.Add(_storesPanel);
         }
 
         void ToggleStores()
@@ -287,7 +378,7 @@ namespace Odyssey.Presentation.Ui
             // then describes what the engine will do rather than competing with it.
             _strip = new VisualElement { name = "strip", pickingMode = PickingMode.Ignore };
             _strip.AddToClassList("strip");
-            _hud.Add(_strip);
+            _worldUi.Add(_strip);
         }
 
         void RefreshStrip()
@@ -441,7 +532,7 @@ namespace Odyssey.Presentation.Ui
         {
             var column = new VisualElement { name = "right-column", pickingMode = PickingMode.Ignore };
             column.AddToClassList("column-right");
-            _hud.Add(column);
+            _worldUi.Add(column);
 
             // ---- clock and speed, one panel
             VisualElement clock = Panel("clock", "clock");

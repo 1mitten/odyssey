@@ -58,7 +58,8 @@ namespace Odyssey.Sim.Pawns
                 ColonyItem? load = NearestLoad(pawn, ctx, wanted);
                 if (load == null) continue;
 
-                int stand = FellJobDriver.StandBeside(ctx, pawn, site);
+                int stand = BuildWorkGiver.StandToBuild(
+                    ctx, pawn, site, ConstructionContent.BuildingAt(sites.At(site)).slab);
                 if (stand < 0) continue;
 
                 bestDistance = distance;
@@ -218,8 +219,41 @@ namespace Odyssey.Sim.Pawns
             // Last, because it is the dearest: eight neighbours, each asked whether this pawn could
             // get to it. It is also the reachability test — a stance nobody can walk to is not a
             // stance — so a site in a sealed pocket answers no here and nowhere earlier.
-            stand = FellJobDriver.StandBeside(ctx, pawn, site);
+            stand = StandToBuild(ctx, pawn, site, ConstructionContent.BuildingAt(sites.At(site)).slab);
             return stand >= 0;
+        }
+
+        /// <summary>
+        /// Where a colonist stands to build this, or -1.
+        ///
+        /// <para><b>A wall and a floor are worked from different places, and the difference is not
+        /// cosmetic — it is whether the job can be done at all.</b> A wall is built from beside it
+        /// on the same floor, which is what <c>FellJobDriver.StandBeside</c> answers. A slab has no
+        /// neighbours on its own layer to stand on until there is already a floor up there, so the
+        /// first slab of a storey would have no stance and would simply never be offered to
+        /// anybody: the order would sit there for ever and the feature would look broken.</para>
+        ///
+        /// <para>So a slab is reached from <b>below</b> as well: beside-and-one-down, then directly
+        /// underneath. This is mining's envelope rather than felling's, and for the same reason
+        /// mining has one — a pick goes overhead and so do a plank and a hammer. Extending an
+        /// existing floor still prefers the stance on that floor, because <c>StandBeside</c> is
+        /// asked first and answers whenever there is anything up there to stand on.</para>
+        /// </summary>
+        public static int StandToBuild(PawnContext ctx, Pawn pawn, int site, bool slab)
+        {
+            int beside = FellJobDriver.StandBeside(ctx, pawn, site);
+            if (beside >= 0 || !slab) return beside;
+
+            int below = site - ctx.Size.LayerStride;
+            if (below < 0) return -1;
+
+            int besideBelow = FellJobDriver.StandBeside(ctx, pawn, below);
+            if (besideBelow >= 0) return besideBelow;
+
+            // Directly under it, last: a colonist that floors over its own head is walled in only
+            // if it has also walled itself in, and refusing the stance would refuse the first
+            // ceiling of every room built from the inside.
+            return ctx.Cells.IsWalkable(below) && ctx.Reachable(pawn, below) ? below : -1;
         }
 
         /// <summary>
@@ -390,9 +424,14 @@ namespace Odyssey.Sim.Pawns
                 return walk == JobStatus.Failed ? JobStatus.Failed : JobStatus.Ongoing;
             }
 
-            // A builder stands beside what it builds and on the same floor, which is felling's
-            // envelope rather than mining's: there is no rim to work a wall from and no undercut.
-            if (!StillInReach(ctx, Pawn, cell, layersAbove: 0, layersBelow: 0))
+            // A builder stands beside what it builds and on the same floor — felling's envelope —
+            // for a wall, because there is no rim to work one from and no undercut. A slab is
+            // reached from below as well, which is mining's envelope and the same argument: a
+            // plank goes overhead exactly as a pick does. See StandToBuild, which chooses the
+            // stance this has to agree with; a stance the work toil then rejects is a colonist
+            // that walks to a wall and turns round again.
+            bool slab = ConstructionContent.BuildingAt(sites.At(cell)).slab;
+            if (!StillInReach(ctx, Pawn, cell, layersAbove: 0, layersBelow: slab ? 1 : 0))
             {
                 WalkBack();
                 return JobStatus.Ongoing;

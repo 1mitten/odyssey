@@ -51,6 +51,62 @@ namespace Odyssey.Sim.Contracts
         /// twice is ordinary play, not an error to surface.</para>
         /// </summary>
         QueryCell,
+
+        /// <summary>
+        /// Debug-menu-only: put a fresh colonist at <see cref="Intent.Cell"/>. Not player content —
+        /// no scenario, no starting kit — because the debug menu is testing the colony that already
+        /// exists, not dealing a new one. <c>A</c> and <c>B</c> are unused.
+        /// </summary>
+        SpawnPawn,
+
+        /// <summary>
+        /// Debug-menu-only: grant <c>B</c> units of the item def indexed by <c>A</c> near
+        /// <see cref="Intent.Cell"/>. Widens outward from the cell for one with room the way an
+        /// ordinary drop does, so it behaves like any other item arriving rather than inventing a
+        /// second way for one to appear.
+        /// </summary>
+        GiveResource,
+    }
+
+    /// <summary>
+    /// Which intents a paused world may apply without spending a tick.
+    ///
+    /// <para><b>Why this exists.</b> A paused world never reaches a tick boundary, so it never
+    /// drains its queue — and the player pauses in order to give orders. Until 2026-09-17 only
+    /// <see cref="IntentKind.QueryCell"/> was let through, so laying a slab while paused put the
+    /// order in the queue and nothing else: no site, no blueprint, nothing, until the clock was
+    /// started and the queue drained (owner: *"if I pause the game, go up a depth and create a
+    /// slab, I place the slab but then nothing appears until I press play"*). Pausing to plan is
+    /// the genre's central interaction, so an order that does not land until you unpause is the
+    /// one thing this cannot do.</para>
+    ///
+    /// <para><b>Why it is safe, which is the part the earlier comment was right to worry about.</b>
+    /// While the clock is stopped nothing else runs, so applying a player's order the moment it is
+    /// given produces exactly the state the next tick's drain would have produced. The hash is
+    /// taken at tick boundaries and the boundary state is identical either way; the tick counter
+    /// does not move, so a save written while paused correctly contains the order, which it did
+    /// not before.</para>
+    ///
+    /// <para><b>What is deliberately not here.</b> <see cref="IntentKind.SetGameSpeed"/> keeps its
+    /// own path — unpausing is what spends the tick, and routing it through here would be circular.
+    /// <see cref="IntentKind.SetSliceLayer"/> is presentation state that the simulation need never
+    /// hear about off-boundary. Everything else in this list is a player's order over a cell or a
+    /// colonist: it writes state the player authored and needs no system to finish it, which is
+    /// precisely the test for landing off-boundary.</para>
+    /// </summary>
+    public static class PausedIntents
+    {
+        public static bool AppliesWhilePaused(IntentKind kind) => kind switch
+        {
+            IntentKind.QueryCell => true,
+            IntentKind.Designate => true,
+            IntentKind.CancelDesignation => true,
+            IntentKind.SetForbidden => true,
+            IntentKind.PlaceBuilding => true,
+            IntentKind.CancelBuilding => true,
+            IntentKind.ForceJob => true,
+            _ => false,
+        };
     }
 
     /// <summary>
@@ -172,6 +228,20 @@ namespace Odyssey.Sim.Contracts
                 if (reason != IntentRejection.None) _rejected.Add(new RejectedIntent(intent, reason));
             }
             _pending.Clear();
+        }
+
+        /// <summary>
+        /// Is any intent waiting that this test accepts? The same scan as
+        /// <see cref="HasPending(IntentKind)"/>, for a caller that cares about a set of kinds
+        /// rather than one — which the paused frame does, and used to do by naming a single kind
+        /// and quietly stranding every other order in the queue.
+        /// </summary>
+        public bool HasAnyPending(Func<IntentKind, bool> claim)
+        {
+            if (claim == null) throw new ArgumentNullException(nameof(claim));
+            for (int i = 0; i < _pending.Count; i++)
+                if (claim(_pending[i].Kind)) return true;
+            return false;
         }
 
         /// <summary>Is any intent of this kind waiting? A scan of a list that is empty almost always.</summary>

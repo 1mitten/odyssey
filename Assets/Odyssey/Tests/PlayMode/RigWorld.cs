@@ -26,10 +26,15 @@ namespace Odyssey.Tests.PlayMode
         /// The same world with the HUD on top of it, for the tests that are about the interface
         /// standing between the pointer and the world.
         /// </summary>
+        /// <param name="buildOnPlay">
+        /// False lands the rig on the start screen with no session built, which is what pressing
+        /// Play does since U38. Every other caller wants a colony and says so.
+        /// </param>
         public static GameObject BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig rig,
-            out HudShell shell)
+            out HudShell shell, bool buildOnPlay = true)
         {
             GameObject root = Build(out boot, out rig, active: false);
+            boot.buildOnPlay = buildOnPlay;
             GameObject bootObject = boot.gameObject;
 
             var doc = bootObject.AddComponent<UIDocument>();
@@ -71,6 +76,9 @@ namespace Odyssey.Tests.PlayMode
             bootObject.transform.SetParent(root.transform, false);
             bootObject.SetActive(false);   // so the fields land before Start runs
             boot = bootObject.AddComponent<OdysseyBootstrap>();
+            // Explicitly, not by default: since U38 pressing Play lands on the start screen, and
+            // what this rig is asserting is that a session exists.
+            boot.buildOnPlay = true;
             boot.sizeX = 60;
             boot.sizeZ = 60;
             boot.layers = 8;

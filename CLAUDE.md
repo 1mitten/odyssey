@@ -50,6 +50,16 @@ The HUD reads its labels from the same file: `emit_labels.py` generates `Registr
 `RegistryTests` fails the fast tier on any key the CSV does not know. A content commit runs both
 checks.
 
+**And the reverse is enforced too, since 2026-09-17** (owner: *"keep the consistent in the wiki and
+the language and UI … ensure that consistency can be enforced using a centralised place"*).
+`RegistryTests.NoPlayerFacingNameIsWrittenInCSharp` reads every C# file in `Odyssey.Hud` and
+`Odyssey.Presentation` and fails on a string literal that equals a registry name in the six
+namespaces where one thing is named on several surfaces at once (`ui.arch.tool.*`,
+`ui.arch.category.*`, `ui.status.*`, `ui.res.*`, `ui.alert.*`, `ui.job.*`). **Do not answer it by
+rewording the literal** — call `Registry.Label(key)`, or the wiki and the screen will disagree the
+first time somebody corrects one of the two copies. It found two on the day it was written: the
+seven Build category labels, and the armed banner's `"Building"`.
+
 Both `--check`s are the gate and belong in CI beside the test tiers. Two notes before extending
 it. The registry is hand-authored **only until the Def set covers it**: then `icon-keys.csv` is generated
 one way out of the Defs and committed, so the wiki and the build-gating icon tests share one
@@ -98,6 +108,47 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   key is unchanged, because `ui.status.felling` draws real art and `icon-map.csv` is keyed the same
   way. Design, what is still open and the by-hand procedure are
   `docs/design/16-cancel-and-deconstruct.md`.
+  **The four orders are a strip down the right-hand gutter** (`claude/build-palette-layouts`,
+  2026-09-17). Chop, Mine, Deconstruct and Cancel left the Build palette's header for a column of
+  34 px buttons under the depth rail, against the right edge of the screen (owner: *"a vertical
+  button strip that sits below the depth control … this enables us to quickly give orders without
+  having to click the build button — we can use this in future for more orders"*). They **moved**,
+  they were not copied. Design is `docs/design/14-hud-layout.md` §5.4; code is
+  `HudShell.Orders.cs`. Three things not to undo by tidying. **The rail and the strip are one
+  column** — the rail is the region the *world* sizes, so a strip with a top of its own would float
+  away from it, and `RailPitch` gives the strip's room up before dividing what is left among the
+  layers. **Four is no longer the ceiling**: `HudLayout.OrdersHeight` reads the length of
+  `PaletteTools.Pinned`, so a fifth order is one row of that table and one hue. And **the coverage
+  ceiling went from 18% to 19%** — the strip is 0.80% of the smallest canvas the game draws and
+  took the model's worst resting case there to 18.55%; `HudLayout.CoverageCeiling` carries the
+  per-region measurement and the argument, and **it is the owner's to reverse**. Nobody has pressed
+  Play on it.
+
+  **The Build palette is now three layouts over one selection** (`claude/build-palette-layouts`,
+  2026-09-17) — the owner's 4a *Rows* (the default), 4b *Rail* and 4c *Bar*, switchable from the
+  panel header and from Options › Interface, with the choice stored. Design, the measurements and
+  what nobody has judged are `docs/design/17-build-palette-layouts.md`; **read it before touching
+  `HudShell.Build.cs`, `BuildPalette.cs` or the `bp__*` block of `Hud.uss`.** Three things a later
+  session should not undo by tidying. **Orders, Zones and Salvage came off the palette** as the
+  specification asked, but Orders held Mine and Chop — so both are **pinned in the header** beside
+  Deconstruct and Cancel rather than lost to the `M` and `C` keys, which is the Cancel fault of the
+  day before repeated exactly; `EveryLiveToolIsDrawnSomewhere` is the general form of that rule.
+  (All four then left the header for the orders strip, above — the rule is what followed them.)
+  **The panel is docked, not floating, and the default is a column** (owner: *"tight and flush to
+  other elements to enable full use of space"*, then *"use the left hand side of the screen instead
+  of the width"*) — the mockups were drawn over a bare board and would have covered the stores panel
+  and the roster strip, and Rows spanning 1920 made seven very wide tiles out of the category row.
+  Rows is 372 px and four tiles across, and its height is **fixed at the widest category's** so the
+  control does not move up and down the screen as categories are opened; only Bar still spans the
+  screen. **Nothing is armed until the player clicks** — the palette model is built when the HUD
+  attaches, and its seeding pass used to arm a wall, so the game began in build mode with a wall on
+  the cursor. The Build cap on the command bar is the indicator of that: outlined at rest, filled
+  **only while a tool is actually held** — an open panel with nothing chosen is not build mode. The
+  palette pins into the bottom-left corner and **closes the inspect pane when it opens**. And **thirty-seven icons are drawn** as `Painter2D` paths in `HudGlyph`'s
+  existing box, because ADR 0007's pipeline covers no architecture key and the specification forbids
+  the placeholder square here; materials keep the game's own sprites, which is the one tier whose
+  art must not change. **Every PlayMode run writes `Logs/palette-{rows,rail,bar}.png`** — the only
+  thing anybody has looked at, and what found the three faults the tests could not see.
   **Deconstruct landed the same day** and closes U26's last outstanding line but one. A colonist
   walks to one of our own walls, takes it apart and leaves **2 or 3 wood of the 5 it cost** — a
   seeded coin flip on the odd unit, keyed on cell *and tick* so a cell cannot become a permanently
@@ -110,6 +161,22 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   one. The gesture took three rounds because the first two fixed the *number* and the fault was
   that the gate latched. What nobody has judged yet is the site marks, the blueprint readout and
   the computed hammer swing (`docs/design/15-building.md` §8).
+  **Backtick opens a debug menu now, not the developer overlay directly**
+  (`claude/build-palette-layouts`, 2026-09-17). Design, what's on it, what's deliberately not, and
+  the by-hand test procedure are `docs/design/18-debug-menu.md`; **read that before touching
+  `HudShell.Debug.cs` or `DebugDirector`.** The overlay toggle moved there wholesale from Settings'
+  Interface tab rather than being duplicated. Its text went bigger twice the same day: first to
+  28 pt at its original top-left spot, then — after the owner played that and asked again — to
+  56 pt, anchored to the bottom of the screen so doubling the size again did not put it back on top
+  of the HUD's top-left ledger. Two cheats went in because both wrap sim APIs that already existed
+  with no new mechanic: `IntentKind.SpawnPawn` (`PawnRegistry.Spawn`) and `IntentKind.GiveResource`
+  (`ColonyItems.Spawn` via the existing `NearestCellWithSpace`), the fourth and fifth intent handlers
+  registered in `ColonyComposition.AddColony` beside `ForceJob`. A disabled "Invoke event" row stands
+  in for the row a real feature would earn — there is no repeatable event system in the sim, only a
+  scenario that acts once at tick zero — and kill/heal is left out entirely, since `Pawn` has no
+  health or injury model of any kind yet. **Nobody has pressed Play on the panel itself past the
+  overlay's own two rounds of feedback.**
+
   **Forced orders have their simulation half** (`claude/forced-orders-intent`, 2026-09-17): steps 1
   and 2 of that section's four. `ForceJob(cell, A = job, B = pawn)` is the first intent that names a
   colonist, and `Job.PlayerForced` — saved and hashed since the job record was written, and read by
@@ -120,6 +187,60 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   query — so the offered path and the forced path cannot come to disagree. **Steps 3 and 4 are not
   started** (the right-click/drag split, and the context-menu panel), so nothing in the running game
   can send one yet and nobody has pressed Play on it.
+- **U29 is built — floors, roofs and collapse** (2026-09-17), the unit the plan calls the one the
+  project exists to prove. A floor is `Building_Wall` with one field changed (`BuildingDef.slab`)
+  through the same pipeline; a slab is written to `Floor[cell]` as `CoreContent.SlabBuilt`, which is
+  `PlacedEdifice.Built`'s argument one level down and costs no new state. **The support physics was
+  already built and switched off**: `SupportSolver` had computed collapses since M1 and the deferred
+  lambda that should have acted on them was empty. It acts now — what stood on a falling slab drops
+  to the first real floor below, keeps a memory of it, and the debris lands as rubble that must be
+  cleared before anything is rebuilt. **An order that could not stand is refused**
+  (`SupportIfSlabAt`), so a bridge reaches as far as `S_max` and no further, and the three
+  "support is deliberately not marked dirty" comments in `Raise`, `Demolish` and `MineCell` are
+  closed together as all three demanded. **Fall damage is deferred and said so**: `a-02` has the
+  number and there is no health model to apply it to. Design and the eleven owner decisions:
+  `docs/design/17-floors-and-collapse.md`.
+  **In review the tool turned out to be armable, draggable and inert** (2026-09-17, measured):
+  `SlicePicker` answers a click on a wall with the wall's *own* cell, a floor ordered there was
+  `NotPermitted`, and the one cell that accepted an order — the cell above a wall — could not be
+  named by pointing at anything. Every U29 test named its site in C# and so could not see it.
+  `ConstructionGrid.StandingOver` is the fix: **a slab ordered at anything that fills a cell means
+  the boundary on top of it**, which is what decision 4 of the design asked for in the first place
+  (*"the same lift a wall order gets"*). The cursor was lifted by the same rule.
+  **The picker-to-order seam is now tested as a seam** — `FloorToolReachTests` feeds the picker's
+  answer straight into the order, in the one assembly that can see both halves.
+  **Two cursor rules came out of the owner playing it (2026-09-17).** A floor cursor is a flat
+  plate laid on the boundary the slab will occupy, not a cell-tall box — the cursor is the shape of
+  the thing. And **the build cursor goes red when the simulation would refuse every cell of the
+  drag**, asking `ConstructionGrid.Allows`, the same method the order calls. It had to: on the
+  played meadow only **21 of the 441 cells within ten of the start** will take a slab, and the
+  cursor was green over all of it.
+  **A floor you lay on the ground is a different feature, and it is `U42`, built 2026-09-17**
+  (`docs/design/18-paving.md`). `Building_DeckPlate` is `Building_Floor` with one more field:
+  `covering` inverts exactly one question, so paving wants a cell that **has** a floor and **never
+  asks the support rule**, because the ground holds it and it cannot fall. A fifth slab kind in
+  `Floor[]`, so **no new save state and no hash change**; it takes the *wall's* lift and
+  `WorkingLayer` stays null for it. Grass no longer grows through a paved cell.
+  **Paving does nothing yet** — walking speed, cleanliness and beauty do not exist — so it is a
+  surface that looks different and that is all.
+  **The two are called `Slab` and `Floor`** (owner, 2026-09-17, reversing "both say floor" the same
+  afternoon after three rounds of confusion). Keys did not move; only labels. **Paving is offered in
+  `Floors` and in `Structure` both**, because a wall, its floor and the slab over it are one job —
+  the slab stays in `Structure` alone, and a test pins all of it. Note the asymmetry:
+  `BuildingHandle.Floor` is still the **slab** and `BuildingHandle.DeckPlate` is still paving, because
+  handle values are a save contract and a swap would compile in silence.
+  **`U43` is the way up, built 2026-09-17.** Before it, every slab in the game measured **walkable
+  and unreachable** — U29 shipped floors and collapse and a colony could never stand on a second
+  storey. Vertical movement goes through a `Pathing.Connector` and connectors only came from
+  worldgen; `ConstructionGrid.RefreshLadder` registers one at run time, idempotently, from every
+  place either end can change. **No save-format change**: the connector is derived from the edifice
+  list by `RebuildDerived`, like support and the region graph. **A hauler cannot climb a ladder**
+  (`Connector`'s own long-standing rule), so a colonist can get up but cannot carry material up —
+  which is why **stairs are the next unit rather than a maybe**.
+  **Nothing tests that a click reaches the game**, and that is why this line of work has had three
+  silent failures: a PlayMode test cannot press a button (input update type `Editor`, so
+  `wasPressedThisFrame` never fires), which `FloorToolClickTests` and `InputHarnessTests` both carry
+  as ignored tests. Un-ignore them together the day the harness can.
 - **Work reaches `main` only through a pull request** with both tiers green, one approving review
   and the branch up to date. Branch protection enforces it, agents included. There is no long-lived
   feature branch — `claude/*` branches are per-change and short-lived.
@@ -144,7 +265,13 @@ All five chokepoints named after the mining line are now open:
   thousandths of a clear crossing — published for the one asked-about cell by a sim-side
   contributor every colony gets. The question is a `QueryCell` intent, and **a paused world answers
   it by republishing the view without spending a tick** — the first time "intents flush while the
-  clock is paused" (ADR 0004's own Decision) has been true of anything but a speed change. This is
+  clock is paused" (ADR 0004's own Decision) was true of anything but a speed change.
+  **It is no longer only questions** (2026-09-17): a slab ordered while paused sat in the queue and
+  drew nothing until the clock started, because only `QueryCell` was drained off-boundary.
+  `PausedIntents.AppliesWhilePaused` names the set — the questions plus the player's orders over a
+  cell or a colonist — on the ground that while the clock is stopped nothing else runs, so an order
+  applied at once gives exactly the state the next tick's drain would have given. Chop and mine
+  orders had the same hole. A save written while paused now contains them. This is
   U16's readback arriving two milestones late: the pane had shipped the placeholder "cell readout
   arrives with cell inspection" since M1, and the owner's reports (rocks indistinguishable from
   grass, water silent about being water, piles generic with no count) are what opened it. The same
@@ -198,30 +325,166 @@ read — the `Saves` folder itself is left to the caller that wires the menu on 
 is likewise handed in already computed: `GameClock`'s tick-to-calendar mapping lives in the Hud
 assembly and Sim must not reference it, so nothing here re-implements that conversion.
 
-**`U38` is the one thing blocking the rest of the chain, and it has not moved.** `HudShell.Bar.cs`
-still carries the comment that the B18 menu "does not exist yet", and there is no menu panel
-anywhere in the presentation assembly — so there is nowhere for `U39`'s screen to attach.
-**Check the code, not the plan's table, before starting anything downstream**: that table listed
-`U36` and `U37` as available while both were still open, and then both landed mid-afternoon on
-2026-09-17 while a branch was in flight against the earlier reading.
+**`U38` is done, 2026-09-17, and it is not the unit the plan described.** Read
+`docs/design/17-start-flow.md` before touching this line; §2 holds the owner's six decisions and two
+of them overturn the plan's own row. There is **no new in-game menu** — the owner's ruling was
+*"there is already an in game menu/settings — reuse that"* — so Save, Load and Quit to main menu
+joined the **B17 settings panel** beside its exit row, the quit row did **not** move out of B17 as
+`10-ui-panel-catalogue.md` predicted, and **`SettingsDirector.Escape` gained no case at all**,
+because the start screen is not reached by Escape.
 
-**`U39`'s seed logic landed without its screen** (2026-09-17): `SeedEntry` in
+What was built instead is **the screen before the game**. `buildOnPlay` now defaults **false**, so
+pressing Play lands on New game / Load / Settings / Exit game and a colony exists only once somebody
+asks for one; the flag stays as the development loop, and every PlayMode rig now sets it explicitly
+rather than inheriting it. It is **the project's first true modal**, which makes `09` §6 case 5 true
+of something for the first time — and **the swallow is a pickable full-viewport scrim, not a flag**:
+`PointOverUi` then answers "the interface" everywhere, and the camera rig already declines a press it
+is told belongs to the interface. The two always-on contrast scrims are explicitly *not* pickable,
+for the mirror-image reason. `HudShell.Modal()` is the one place a modal is made and returns scrim
+and panel as a pair, because a scrim left showing over a hidden panel is a screen that eats every
+click, shows nothing and cannot be dismissed.
+
+**Save and Load work end to end**, which brought U36's unbuilt disk half here: `Saves` under
+`persistentDataPath`, names derived from the recipe, and a listing read from headers alone that
+**keeps an unreadable file with its reason rather than hiding it** — a save that vanishes from the
+list is a colony the player concludes is gone. The one exempt window in the game is this screen's
+root: it has nothing behind it to close *to*, so it carries no X, and `HudGeometryTests` names the
+exemption rather than loosening the rule.
+
+**The row set is data, in one table.** `SessionCommands` names every session-level command with its
+key, context, order and whether it asks twice, and both surfaces build from it — the bargain
+`HudCommands` already makes for the command bar. `SettingsDirector` now *reads* that flag rather than
+stating it: its exit row had the two clicks written into `RequestExit`, and three more destructive
+rows beside it would have been two answers to one question. `HudDirectors` no longer builds the
+settings and hotkey directors, it **takes** them — they are preferences about the machine, not facts
+about a colony, and the start screen exists precisely when no colony does.
+
+**The owner played it on 2026-09-17 and four things came back, all now in.** (1) A worktree has no
+art until `Assets/Synty/` is **junctioned** — gitignored, so a fresh worktree draws everything as
+primitives; the procedure is in `docs/lessons.md` and **the junction must be removed with `rmdir`
+before the worktree is, or a recursive delete follows it and empties the real packs.** (2) **The
+view is in the save now** — camera focus, yaw, pitch and distance, the slice layer, the selected
+colonist and the game speed, as a `"view"` section that is `ISaveable` and deliberately **not**
+`IStateHashable`. The rule that nothing in presentation reaches the save was aimed at determinism,
+and determinism is the hash's business; where the camera points cannot affect a tick. `SliceCameraRig`
+gained `RestorePose`, because yaw and distance are lerped toward *private* targets and assigning the
+public fields alone holds for one frame and then swings back. (3) **Settings is a screen of the start
+menu**, not a panel over it — both are centred, so one landed on the other. (4) **The panel is a
+fixed box**, 420 × 384, because a centred panel that resizes moves every row under the pointer; the
+load list's ceiling is derived from that box rather than written down beside it, and a save row now
+carries the date and time, since a folder is mostly repeated attempts at the same colony.
+
+**Saves are named, and Save overwrites** (owner, 2026-09-17: *"I notice you keep saving a new game
+everytime … otherwise lots of saves will be created"* — a fault `17-start-flow.md` §10 had already
+admitted). A session is **bound** to a file: the one it was loaded from, or the one it last saved
+to. **Save** writes over that; **Save as** asks for a name and binds to the answer; the first save
+of a colony has nothing bound, so it asks, defaulting to the colony's name. **A player-chosen name
+is never disambiguated** — that is the point, since a name that maps to one file is what makes
+saving again an overwrite — so naming an existing save *is* an overwrite and the prompt asks twice.
+**The trap it opened:** the old scheme was accidentally safe because every stem carried `-day-N`,
+which is what kept a colony called `con` or `com1` off a Windows reserved device name
+(`con-day-4.odyssey` is creatable, `con.odyssey` is not); a typed name has no `-day-`, so that guard
+is now deliberate. The naming prompt is the project's **first text field** and the **first modal
+over a running colony**.
+
+**Save format is 3.** The recipe gained `Barren` and `Wooded`, because U38's round-trip test found
+that `MapType` says "Natural" for three genuinely different boards and a header could not rebuild
+the one it was written on. **The state hash could not have caught it** — the load overwrites every
+cell, so the hashes agreed; what differed was the start cell the camera frames a loaded colony on,
+so a restored game opened on empty ground a third of the map away. Versions 1 and 2 still load.
+
+**`U39` is done, 2026-09-17, and `U37` was already done before it started.** The plan's table said
+otherwise about both — it had `U39` "blocked on U38, which has not moved" hours after U38 merged as
+PR #92, and `U37` carried no done marker although `StartingSkillsSystem` had landed at `0baa37f`.
+**Check the code, not the plan's table, before starting anything downstream.** That is now the third
+time that table has misled a session, and both rows say so in place.
+
+**`U39`'s seed logic had landed first, without its screen**: `SeedEntry` in
 `Odyssey.Sim.Contracts` draws a seed, rerolls to one guaranteed different, formats it as plain
-decimal and reads back what the player typed — the half of `U39` that needs no interface, and the
-half that would otherwise live in a text field's callback where the fast tier could never reach it.
-A seed is decimal because that is already the form the project prints one in; **free-text seeds in
-the Minecraft idiom were considered and not taken**, because they only work if the typed text is
-kept beside the number — now a `SaveRecipe` field, so it is a live question rather than a blocked
-one. It is the one deliberately non-deterministic code in the simulation assemblies, confined to
-two methods and reachable from no tick path.
+decimal and reads back what the player typed — the half that needs no interface, and the half that
+would otherwise live in a text field's callback where the fast tier could never reach it. A seed is
+decimal because that is already the form the project prints one in; **free-text seeds in the
+Minecraft idiom were considered and not taken**, because they only work if the typed text is kept
+beside the number — now a `SaveRecipe` field, so it is a live question rather than a blocked one. It
+is the one deliberately non-deterministic code in the simulation assemblies, confined to two methods
+and reachable from no tick path.
 
-Three things a later session should not re-litigate. **Live portraits** are refused by
+**The screen it was written for is now a fourth screen of the start menu** —
+`docs/design/17-start-flow.md` §11. A caption, the seed in a text field, Reroll and Start, inside
+the *same* fixed box as the root, the load list and settings, so the panel still does not move
+between them. The root's New game row **navigates instead of building**, which is the one behaviour
+U38 shipped that this changes: before it, a seed was drawn, used and shown to nobody, so the world a
+player got was unrepeatable by construction. `SeedField` holds the text, the parsed seed and
+`Usable` in the `SavePrompt` idiom, so every rule is a fast-tier test rather than something judged
+with a finger on the keyboard. **A box that does not name a seed refuses to start** — it does not
+quietly build the last good number, which would be this screen lying about the only thing it exists
+to show — and `MenuDirector.Start()` enforces that as well as drawing the row inert, because a rule
+kept only by whoever draws it is a rule the next caller does not have. Entering the screen draws a
+fresh seed: being dealt the same world twice reads as a reroll that does not work, and nothing on
+screen could tell a player otherwise. **`U40` is unblocked** — both its dependencies are in and the
+screen it hangs off exists.
+
+**`U40`, colonist select, is done — 2026-09-17.** Read `docs/design/18-colonist-select.md`; §2 holds
+the owner's three decisions and §6a what building it changed about that design. A fourth screen of
+the start menu — Seed → **Next** → Colonists → **Start** — because three cards do not fit beside the
+seed and the box is fixed on purpose. A lock rather than a per-slot reroll: the two are the same
+control said twice, so Reroll is one row and you keep the ones you like. **A new game starts with
+exactly the three chosen**; the headless ten-day gate keeps its own five-colonist scenario, so M3's
+gate is untouched.
+
+**The one real change underneath is that a pawn rolls from its own seed.** `Pawn.RollSeed` defaults
+to the world's at spawn, so every colony nobody chose — every headless run, every test, every
+scenario — rolls exactly what it always did, and the id is still mixed in so five colonists still
+differ from each other. It is saved in a **section of its own** rather than in the pawn record,
+because sections are skippable and a save written before this simply has no entry, leaving every
+restored colonist on the world seed, which is what that colony *was*. No format bump.
+**All six goldens re-baked, and `Generated` moved as well as `Simulated` this time** — U37's roll
+happens on the first tick, but a seed is assigned at placement, which runs before that hash is
+taken. Nothing about those worlds changed; the hash can now see the number they were rolled from.
+
+**A colonist's name follows the roll, not the slot**, so a reroll gives a different person rather
+than the same person with different numbers. It could not be a plain hash of the seed: every
+colonist a world places itself shares that world's seed, and a pool of eight would then call **two
+of five the same thing more often than not**. The seed chooses where in the pool the colony starts
+reading and the id says how far along — distinctness within a colony is asserted over 200 seeds.
+The seed reaches the HUD as a `PawnAspect`, which is what OQ-45 built that seam for.
+
+**Three things building it changed about its own design**, recorded in §6a rather than folded away:
+the card had to be rolled for the **slot** it will occupy (both draws mix the id in, so two of three
+cards would have shown the right name and the wrong skills); three cards did **not** fit the fixed
+box at a line per skill, 296 against 284, which is §11.4a's own prediction coming true and was
+answered by putting both skills on one line rather than by growing the box; and `PawnContext.Seed`
+turned out to be unset until the first tick, so the first version rolled **every colony in the game
+from seed zero** until `StartingSkillsTests` caught it.
+
+**A new colony now starts with no orders at all** (owner, 2026-09-17: *"at the start of game there
+are no orders, until you assign them for the time being"*). This is a change `ScenarioDef.Playtest`'s
+own comment had promised — *"when the UI line's designate tool lands, the scene moves to Bare"* —
+and that tool landed in M3, so a new colony had gone on arriving with a ring of trees marked and
+colonists already walking off to chop them. **A note saying what to do when a thing lands does not
+do it.** `Playtest` keeps `miners`, which is an inclination rather than an order, so it is still not
+`Bare`; three tests that had been living off those pre-marked trees give the orders themselves now.
+No golden moved, because every golden case builds on `Bare`.
+
+**The owner played `U39` on 2026-09-17 and it was right first time** (*"works spot on"*), which is the
+first thing on this screen that has been. U38 took four corrections off its own playtest and the
+gesture work before it took three rounds; this took none. Nothing about it is open on the owner's
+side, so the seed, the reroll, the Start row and the order they sit in are **settled** rather than
+merely untested — a later session changing any of them is changing something that was judged, not
+something nobody had looked at.
+
+**Both controls were run rather than assumed.** With the presenter drawing its own seed instead of
+using the one handed to it, exactly `TheWorldIsBuiltFromTheSeedInTheBox` fails; with the usability
+guard removed from `Start()`, exactly `StartRefusesABoxThatNamesNoSeed` does. The first is the only
+claim here no fast-tier test can make, because it spans a `TextField`, the director, the bootstrap
+and `ColonyRequest`.
+
+Two things a later session should not re-litigate. **Live portraits** are refused by
 `09-ui-and-input.md` §4.5 — but that argument is about fifty of them in the roster bar at 15 Hz
 while the world renders, and the select screen is three, rendered once, with no world behind them;
 §4.5 gets an explicit carve-out in `U41` rather than a silent exception. ~~**Colonists start every
 skill at 0 experience** — only passions are rolled — so there is nothing to choose between three
-candidates until `U37`.~~ **`U37` landed**: levels are rolled on the first tick from a weighted
-table, mean 1.16.
+candidates until `U37`.~~ **`U37` landed 2026-09-17**, so there is now something to choose between.
 
 ### WS, rates, is designed and planned — nothing is built (owner, 2026-09-17)
 
@@ -312,6 +575,14 @@ so a world deals the same people every load. **`OdysseyBootstrap.randomCastEachS
 on** while the palette is being judged, which means pressing Play deals new faces each time; switch
 it off for a stable cast.
 
+**The floor above you is drawn, and the cut-away is opt-in** (owner, 2026-09-17). The active layer
+used to be drawn roofless always, so a floor built one layer up was invisible and — because a
+surface that is not drawn must not be a pointer target — unclickable with it. `GraphicsOption.CutAwayCeiling`
+is the switch and is **the first option in the panel that starts off**: seeing what you have just
+built is the commoner need, so the specialist one (watching colonists indoors without changing
+depth) asks. An explicit `Full`, the exterior view, still refuses to cut away even with the option
+on, which is the invariant the test now asserts deliberately rather than by accident.
+
 **What the player can see is decided by how deep they are.** At or above the surface, every layer
 above is drawn solid; below it, one layer above is x-rayed and every layer below is drawn. Anything
 drawn solid is clickable at any depth; a ghost never is. Whatever hides a selected colonist fades to
@@ -327,7 +598,21 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **570 Sim + 210 Hud**; Long tier **20**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **641 Sim + 358 Hud**; Long tier **20**.
+  Unity tier on 2026-09-17, on the merge of U29's floors into the orders strip, U40 and the
+  world-setup page: EditMode **1486 total, 1474 passed, 0 failed**; PlayMode **69 total, 64 passed,
+  0 failed** (the rest are pre-existing `[Explicit]` or ignored rows). The Hud figure is main's 348
+  plus this branch's 10, so neither side lost a test to the merge.
+  **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
+  touches the composition root or the HUD shell is unproven until Unity has compiled it, however
+  green the 11 seconds look (`docs/lessons.md`).
+- **The two tiers do not run the same NUnit**, and the fast tier's is newer. `Assert.Multiple` does
+  not exist under Unity (a compile error, so the whole batch aborts before a test runs) and
+  `Has.Count` throws on an interface-typed collection. Both cost a Unity run each on 2026-09-17;
+  `docs/lessons.md` has them.
+- **A frame is not a tick.** Waiting one Unity frame for a simulation effect is a flake — the
+  composition root steps the sim on accumulated real time, so a frame holds zero or more ticks.
+  Wait for the effect with a bounded loop (`docs/lessons.md`).
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
@@ -414,6 +699,20 @@ no region spans two layers.
   30 px while ADR 0007 says not to draw pixel art below 32 — measured, 30 px reads, 17 px loses the
   grooves, 16 px goes to noise, and a **framed** sheet-06 tile at 17 px is mostly frame
   (`Logs/skill-icons.png`).
+- **Nobody has pressed Play on the debug menu itself.** The overlay text and its position went
+  through two rounds of owner feedback the same day and are settled for now (28 pt then 56 pt at the
+  bottom of the screen), but whether the two cheats land sensibly near the camera rather than in
+  rock or through a wall, and whether the panel wants to look different from Settings at all, are
+  still open — `docs/design/18-debug-menu.md` §"By-hand test procedure" has the checklist.
+- **Nobody has pressed Play on the orders strip, or on the armed banner it raises.** Both are
+  measured — the strip against the rail and the screen edge at three resolutions, the banner's four
+  colours, its 3 px border and its 139 px box — and `Logs/palette-rows.png` is all anybody has
+  looked at. **The banner lost the line that taught right-click**, which is the one thing to watch
+  for in a playtest: if putting a tool down stops being obvious, that sentence is what was carrying
+  it. Two questions a picture cannot answer: whether a 34 px button is the right size for something
+  aimed at without looking, and whether the strip wants to sit **lower** down that edge — nearer
+  the Menu button, which the owner named in the same sentence — rather than directly under the
+  rail. The **19% coverage ceiling** it cost is in the same basket.
 - **Nobody has pressed Play on the cancel tool or on right-click.** Both tiers are green and
   neither can say whether right-click disarms when the hand expects it to, or whether the six-pixel
   threshold separating a right-*click* from a right-*drag* is the right number — an orbit is a
@@ -432,9 +731,25 @@ no region spans two layers.
 
 ### Known gaps
 
-Felled trees, mined cells and building sites are not in the save (the designation grid is not
-saved; the construction grid is). Mining collapses nothing. There is no fog of war, so a sealed
-cavern is visible if the player scrolls the layer down.
+~~Felled trees, mined cells and building sites are not in the save (the designation grid is not
+saved; the construction grid is).~~ **That was stale and is struck rather than quietly edited
+(found 2026-09-17 by U38's round-trip test, which had to check).** `DesignationGrid` is
+`ITickable, IStateHashable, ISaveable, ISnapshotContributor` and it is in
+`ColonyWorld.SaveComponents` beside the construction grid — so designations are saved, hashed and
+round-trip. **Check a claim in this section against the code before repeating it**; that one
+outlived its own fix and would have sent somebody to build a thing that exists.
+
+**Mining collapses things** (U29, 2026-09-17) — this section said it did not, and the three places
+that deliberately declined to mark support dirty are all wired now. What is still missing is the
+*injury*: a colonist rides a floor down, keeps a memory of it and is otherwise unharmed, because
+there is no health model for `a-02`'s fall-damage number to act on. There is no fog of war, so a
+sealed cavern is visible if the player scrolls the layer down.
+
+**The scenario table is written twice** (U38): `OdysseyBootstrap.ScenarioFor` and
+`SessionRoundTripTests.ScenarioByName` each map two `defName`s to a `ScenarioDef` by hand, because
+nothing in `Odyssey.Sim` turns a scenario name back into one. It wants a real lookup. It is not
+urgent — a scenario acts only at tick zero, so a loaded world is unaffected by getting it wrong —
+and both copies say so out loud.
 
 **And it covers what stands on the world, since 2026-09-17** — one level down from OQ-50 and found
 the same way, by a test written to fail. `List<PlacedEdifice>` was owned by worldgen and by nothing

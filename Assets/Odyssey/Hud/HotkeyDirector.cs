@@ -61,7 +61,12 @@ namespace Odyssey.Hud
         ToolCancel,
 
         BuildPalette,
-        DeveloperOverlay,
+
+        /// <summary>
+        /// Open or close the debug menu (was "toggle the developer overlay" directly, until the
+        /// overlay moved into that menu as its first row).
+        /// </summary>
+        DebugMenu,
     }
 
     /// <summary>What came of offering a key to a listening slot.</summary>
@@ -144,7 +149,7 @@ namespace Odyssey.Hud
             (HotkeyAction.ToolCancel, HudKey.X, HudKey.None),
 
             (HotkeyAction.BuildPalette,     HudKey.B,         HudKey.None),
-            (HotkeyAction.DeveloperOverlay, HudKey.Backquote, HudKey.None),
+            (HotkeyAction.DebugMenu,        HudKey.Backquote, HudKey.None),
         };
 
         /// <summary>
@@ -263,7 +268,7 @@ namespace Odyssey.Hud
             HotkeyAction.ToolFell => "ui.keys.fell",
             HotkeyAction.ToolCancel => "ui.keys.cancel",
             HotkeyAction.BuildPalette => "ui.keys.build",
-            HotkeyAction.DeveloperOverlay => "ui.keys.developer",
+            HotkeyAction.DebugMenu => "ui.keys.debugmenu",
             _ => KeysKey,
         };
 

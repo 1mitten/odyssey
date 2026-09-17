@@ -10,7 +10,7 @@ the same conversation:
 > "We should also have a move speed (to determine walking and running) that varies between
 > characters and also is dependent on their condition/health."
 
-The answer to the first is **half**: experience is fully built and nothing reads a level back out.
+The answer to the first is **half**: experience is fully built and **no rate reads a level back out**.
 The answer to the second is **no, and it cannot be built as the numbers stand** — the movement
 accumulator has no resolution to vary within. Both are the same missing thing, which is why they
 are one document: **a rate**, per pawn, per activity, computed in one place and multiplied into an
@@ -46,18 +46,19 @@ Every claim in this table was read off the code on 2026-09-17.
 
 | | What is true now | Where |
 |---|---|---|
-| **Experience** | Fully built. A driver calls `Work(ctx)` on the ticks that are work and not on the walk to it; the pawn earns `experiencePerWorkTick` (110 thousandths for every working job, ASSUMED) × learning factor × passion (×0.35 / ×1.0 / ×1.5) × 0.2 once the day's soft cap is passed. | `Job.cs:264`, `Pawn.cs:263` |
+| **Experience** | Fully built. A driver calls `Work(ctx)` on the ticks that are work and not on the walk to it; the pawn earns `experiencePerWorkTick` (110 thousandths for every working job, ASSUMED) × learning factor × passion (×0.35 / ×1.0 / ×1.5) × 0.2 once the day's soft cap is passed. | `Job.cs:264`, `Pawn.cs:284` |
 | **Level** | Read off experience by a Def table, never stored; decays above level 10 on the Long cadence. Saved and hashed. | `PawnContent.cs` `SkillDef`, `SkillSystem.cs` |
 | **Starting level** | Rolled once on the first tick from a weighted table, deterministic on `(world seed, pawn id)`. **Mean level 1.16**; levels 6–7 together are a 2% roll. | `StartingSkillsSystem.cs`, `Colonist.xml:80` |
-| **Work rate** | **Does not exist.** Every work tick adds exactly **1**, whoever is working and whatever they know. | `MineJob.cs:342`, `BuildJob.cs:403`, `DeconstructJob.cs:124`, `JobDrivers.cs:281` |
-| **Skill as a gate** | **One read exists, and it is not a rate.** `BuildWorkGiver.CanBuild` refuses to offer a site to a colonist below the building's `minSkill` — a thing you cannot make is not offered rather than offered and botched. **Inert today**, because every shipped building is `minSkill = 0`. Found 2026-09-17 by auditing this document against the code, and it corrects this document's own first draft, which said nothing read a level at all. | `BuildJob.cs:213` |
-| **Move rate** | A single content constant shared by every colonist: `movePerTick = 1` against a flat crossing of 100, i.e. 1.5 m/s. | `Pawn.cs:226`, `Colonist.xml:43` |
+| **Work rate** | **Does not exist.** Every work tick adds exactly **1**, whoever is working and whatever they know. | `MineJob.cs:342`, `BuildJob.cs:442`, `DeconstructJob.cs:123`, `JobDrivers.cs:283` |
+| **Skill as a gate** | **A level is read, but never as a rate.** `BuildWorkGiver.CanBuild` refuses to offer a site to a colonist below the building's `minSkill` — a thing you cannot make is not offered rather than offered and botched. **Inert today**, because every shipped building is `minSkill = 0`. Found 2026-09-17 by auditing this document against the code, and it corrects this document's own first draft, which said nothing read a level at all. | `BuildJob.cs:213` |
+| **Skill as a number on a card** | `U40`'s colonist-select screen reads every candidate's level to print it. A *display*, not a consequence — but it is the screen that makes the absence of a consequence visible, because three candidates differing only in numbers that do nothing is a choice without stakes. | `HudShell.Start.cs:109` |
+| **Move rate** | A single content constant shared by every colonist: `movePerTick = 1` against a flat crossing of 100, i.e. 1.5 m/s. | `Pawn.cs:247`, `Colonist.xml:43` |
 | **Condition** | Needs, mood and thoughts all run. **Health does not exist** — a pawn cannot be hurt, so there are no capacities to read. | `NeedsSystem.cs`; `a-02-health.md` is research only |
 | **The swing** | Presentation, and decorative. `figure.SwingClock += deltaTime` against a fixed `StrokeSeconds` per tool, jittered per pawn so a work gang does not beat in unison. It is not derived from, and does not affect, the work being done. | `PawnFigureDirector.cs:924`, `WorkStyle.cs:138` |
 
 **So the owner's reading of the game is exactly right and the gap is one-sided.** A colonist does
-get better at chopping — the number goes up, it is saved, it survives a reload, and `U40`'s
-candidate cards will show it. It buys nothing that can be felt. A level-20 miner and a level-0
+get better at chopping — the number goes up, it is saved, it survives a reload, and since `U40`
+landed the candidate cards print it. It buys nothing that can be felt. A level-20 miner and a level-0
 miner clear the same rock in the same 700 ticks, swinging at the same rate.
 
 **The one exception is worth keeping in view, because it is the shape the rest should follow.**
@@ -89,7 +90,7 @@ Three consequences follow, and the third is the one that makes this cheap.
 
 A tree costs 800. A granite cell costs 700. A wall costs `workToBuild × stuffFactor + stuffOffset`
 — **which is already `base × factor + offset`**, the `a-04` stuff formula, live at
-`ConstructionContent.cs:173`. None of those numbers move. What moves is how much of that cost one
+`ConstructionContent.cs:220`. None of those numbers move. What moves is how much of that cost one
 tick of one colonist's labour discharges.
 
 This is forced rather than chosen, and the code already decided it: **work is banked on the cell,
@@ -99,6 +100,13 @@ finish the cell). A cell worked by two colonists of different skill therefore ha
 a unit that means the same thing to both of them. **That single fact rules out the obvious
 alternative** — dividing the job's total by the worker's speed at job start, the way one might
 naively read the reference — because the total would then depend on who happened to pick the job up.
+
+**Re-checked against `main` on 2026-09-17, after `U29`'s floors and collapse landed.** A slab is a
+new buildable with its own `workToBuild`, and it added **no new work call site** — it banks through
+`sites.AddWork(cell, 1)` like everything else. So the three callers this design has to change are
+still three, and a feature built between the writing of this document and the doing of it went
+through the seam rather than around it. That is the cheapest evidence available that the seam is in
+the right place.
 
 ### 2b. Scale the accumulator, not the content
 

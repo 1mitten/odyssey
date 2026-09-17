@@ -112,6 +112,11 @@ namespace Odyssey.Sim.Pawns
                 // `WorldRoundTripTests.TheRoundTripReproducesTheStateExactly` fails the moment the
                 // save stops covering what the hash covers.
                 construction.Edifices,
+                // After the pawn registry, because it writes into pawns that registry has just
+                // rebuilt (U40). A save written before this section existed simply has no entry
+                // here, and every restored colonist keeps the world seed — which is what that
+                // colony was.
+                new PawnSeedSection(pawns.Pawns),
             };
         }
 
@@ -121,7 +126,8 @@ namespace Odyssey.Sim.Pawns
         /// Day is not — <c>GameClock</c> lives in the Hud assembly and Sim must not reference it
         /// — so it is the one field every caller here has to supply for itself.
         /// </summary>
-        public SaveRecipe Recipe(int day) => new SaveRecipe(Request.Map, Scenario.defName, Request.Name, day);
+        public SaveRecipe Recipe(int day) =>
+            new SaveRecipe(Request.Map, Scenario.defName, Request.Name, day, Request.Barren, Request.Wooded);
 
         /// <summary>Write the whole world to a stream.</summary>
         public void Save(Stream stream, SaveRecipe? recipe = null) => WorldSave.Save(World, stream, SaveComponents, recipe);
@@ -178,6 +184,14 @@ namespace Odyssey.Sim.Pawns
         public void RebuildDerived()
         {
             _solver.SolveFull();
+
+            // A built ladder's connector is derived, not saved — the same argument as support, one
+            // level along (U43). The edifice comes back with the save; the portal it opens between
+            // two layers is worked out again here, before the rebuild that turns it into an edge.
+            // Worldgen's own ladders are already registered, because the board is regenerated from
+            // its seed before a save is read over it.
+            Construction.RebuildLadderConnectors(Pawns);
+
             _nav.Rebuild();
         }
 
@@ -271,8 +285,19 @@ namespace Odyssey.Sim.Pawns
             // random stream. A start tick of zero is inert, so nothing baked moves.
             if (request.StartTick > 0) world.StartAtTick(request.StartTick);
 
+            // The context learns the seed here rather than on the first tick, which is where
+            // `Sync` would have given it (U40). Placement runs before any tick and spawns every
+            // colonist, and a pawn's own roll seed defaults to the context's — so without this
+            // line every colony in the game would roll its people from seed zero, whatever board
+            // it was on. Found by `StartingSkillsTests`: two different world seeds produced
+            // identical colonists. Only the seed is set, not the world and the tick `Sync` also
+            // carries, because `PawnContext.Defer` uses a non-null world to mean "a tick is in
+            // progress" and one is not.
+            pawns.Seed = seed;
+
             ScenarioDef scenario = request.Scenario;
-            ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed, scenario);
+            ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed,
+                scenario, request.Colonists);
             int marked = ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenario);
 
             var built = new ColonyWorld(grid, pawns, designations, construction, world, outcome, scenario, placement,

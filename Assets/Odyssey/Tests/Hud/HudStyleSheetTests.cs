@@ -40,6 +40,13 @@ namespace Odyssey.Tests.Hud
 
         static readonly (string Selector, string Property, Func<HudColour> Token, string Name)[] Colours =
         {
+            // The inherited ink. `color` cascades in UI Toolkit and nothing above a leaf set one,
+            // so a label built without a style class fell through to the imported runtime theme's
+            // dark ink and drew invisibly on a near-black panel — which is how the naming prompt's
+            // two buttons and the palette's "MADE OF" came to be unreadable rather than merely
+            // unstyled. Pinned because the absence of a default is not visible in a review.
+            (".hud", "color", () => HudTheme.TextPrimary, "text primary"),
+
             (".panel", "background-color", () => HudTheme.PanelFill, "panel fill"),
             (".panel", "border-color", () => HudTheme.PanelBorder, "panel border"),
             (".card", "background-color", () => HudTheme.PanelFill, "panel fill"),
@@ -52,6 +59,8 @@ namespace Odyssey.Tests.Hud
             (".stores__value", "color", () => HudTheme.TextPrimary, "text primary"),
             (".inspect__title", "color", () => HudTheme.TextPrimary, "text primary"),
             (".panel__label", "color", () => HudTheme.TextMeta, "text meta"),
+            (".bp__mats-label", "color", () => HudTheme.TextDim, "text dim"),
+            (".bp__pane-label", "color", () => HudTheme.TextDim, "text dim"),
             (".inspect__meta", "color", () => HudTheme.TextMeta, "text meta"),
             (".stores__count", "color", () => HudTheme.TextDim, "text dim"),
             (".inspect__state", "color", () => HudTheme.TextDim, "text dim"),
@@ -61,10 +70,12 @@ namespace Odyssey.Tests.Hud
             (".menu__key", "color", () => HudTheme.TextFaint, "text faint"),
 
             (".card--sel", "border-color", () => HudTheme.Accent, "accent"),
-            (".cmd--primary", "background-color", () => HudTheme.Accent, "accent"),
+            (".cmd--primary.cmd--on", "background-color", () => HudTheme.Accent, "accent"),
             (".speed__btn--on", "background-color", () => HudTheme.Accent, "accent"),
             (".rail__cell--active", "background-color", () => HudTheme.Accent, "accent"),
-            (".cmd__label--primary", "color", () => HudTheme.OnAccent, "on-accent ink"),
+            (".cmd--primary", "border-color", () => HudTheme.Accent, "accent"),
+            (".cmd__label--primary", "color", () => HudTheme.Accent, "accent"),
+            (".cmd--primary.cmd--on .cmd__label--primary", "color", () => HudTheme.OnAccent, "on-accent ink"),
             (".rail__number", "color", () => HudTheme.OnAccent, "on-accent ink"),
             (".card__initial", "color", () => HudTheme.OnAccent, "on-accent ink"),
 
@@ -83,8 +94,36 @@ namespace Odyssey.Tests.Hud
             (".settings__keycap", "color", () => HudTheme.TextMeta, "text meta"),
             (".settings__keycap--listening", "border-color", () => HudTheme.Accent, "accent"),
             (".settings__keycap--listening", "color", () => HudTheme.Accent, "accent"),
-            (".settings__exit--armed", "background-color", () => HudTheme.ActiveTabFill, "active tab fill"),
-            (".settings__exit--armed .settings__label", "color", () => HudTheme.Accent, "accent"),
+            (".row--armed", "background-color", () => HudTheme.ActiveTabFill, "active tab fill"),
+            (".row--armed .settings__label", "color", () => HudTheme.Accent, "accent"),
+
+            // B18, the start screen. The scrim is the only colour this screen introduces; every
+            // other line here is the screen proving it introduced none.
+            (".modal-scrim", "background-color", () => HudTheme.ModalScrim, "modal scrim"),
+            (".startscreen__title", "color", () => HudTheme.TextPrimary, "text primary"),
+            (".save__name", "color", () => HudTheme.TextPrimary, "text primary"),
+            (".save__meta", "color", () => HudTheme.TextMeta, "text meta"),
+            (".startscreen__back", "border-top-color", () => HudTheme.Divider, "divider"),
+            (".save--bad .save__meta", "color", () => HudTheme.Warn, "warn"),
+
+            // The New game screen (U39), which introduces no colour of its own either.
+            (".startscreen__seedcap", "color", () => HudTheme.TextMeta, "text meta"),
+
+            // The colonist screen (U40). Same two inks as a save row, for the same reason: a name
+            // over a line that tells it apart from the one beside it.
+            (".colonist__name", "color", () => HudTheme.TextPrimary, "text primary"),
+            (".colonist__skills", "color", () => HudTheme.TextMeta, "text meta"),
+
+            // The naming prompt, and the project's first text field.
+            (".field .unity-base-text-field__input", "color", () => HudTheme.TextPrimary, "text primary"),
+            (".field .unity-base-text-field__input", "border-color", () => HudTheme.PanelBorder, "panel border"),
+            (".field:focus .unity-base-text-field__input", "border-color", () => HudTheme.Accent, "accent"),
+            (".prompt__answer", "border-color", () => HudTheme.PanelBorder, "panel border"),
+            (".prompt__answer:hover", "border-color", () => HudTheme.Accent, "accent"),
+            (".prompt__answer--armed", "background-color", () => HudTheme.ActiveTabFill, "active tab fill"),
+            (".prompt__answer--armed", "color", () => HudTheme.Accent, "accent"),
+            (".prompt__note", "color", () => HudTheme.TextDim, "text dim"),
+            (".prompt__note--warn", "color", () => HudTheme.Warn, "warn"),
         };
 
         [Test]
@@ -113,13 +152,23 @@ namespace Odyssey.Tests.Hud
             (".stores", "top", () => HudLayout.Edge, "screen edge margin"),
             (".stores", "width", () => HudLayout.StoresWidth, "stores width"),
 
-            (".rail", "right", () => HudLayout.Edge, "screen edge margin"),
-            (".rail", "top", () => HudLayout.Edge, "screen edge margin"),
-            (".rail", "width", () => HudLayout.RailWidth, "rail width"),
+            // The right-hand gutter, and the two panels stacked in it. The anchor is the
+            // gutter's, not the rail's, since 2026-09-17: the rail and the orders strip are in a
+            // column so that the strip sits under a rail whose height the world decides.
+            (".column-edge", "right", () => HudLayout.Edge, "screen edge margin"),
+            (".column-edge", "top", () => HudLayout.Edge, "screen edge margin"),
+            (".column-edge", "width", () => HudLayout.RailWidth, "rail width"),
             (".rail", "padding-left", () => HudLayout.RailSidePad, "rail side padding"),
             (".rail__cell", "width", () => HudLayout.RailCellWidth, "rail cell"),
             (".rail__cell", "height", () => HudLayout.RailCellHeight, "rail cell"),
             (".rail__cell", "margin-bottom", () => HudLayout.RailCellGap, "rail cell gap"),
+
+            (".orders", "margin-top", () => HudLayout.RailToOrders, "rail to orders strip"),
+            (".orders", "padding-top", () => HudLayout.OrdersPadTop, "orders strip top padding"),
+            (".orders", "padding-left", () => HudLayout.OrdersSidePad, "orders strip side padding"),
+            (".ord__btn", "width", () => HudLayout.OrderButton, "an order button"),
+            (".ord__btn", "height", () => HudLayout.OrderButton, "an order button"),
+            (".ord__btn", "margin-bottom", () => HudLayout.OrderGap, "gap between orders"),
 
             (".column-right", "right", () => HudLayout.Edge + HudLayout.RailWidth + HudLayout.RailToClock,
                 "the rail's width plus its gap, measured from the right edge"),
@@ -131,10 +180,37 @@ namespace Odyssey.Tests.Hud
             (".speed", "margin-top", () => HudLayout.ClockGap, "clock to speed"),
             (".speed__btn", "height", () => HudLayout.SpeedButton, "speed button"),
 
-            (".build", "width", () => HudLayout.BuildWidth, "build palette width"),
-            (".build__scroll", "max-height", () => HudLayout.BuildCatHeight, "category group height"),
-            (".chip", "height", () => HudLayout.BuildChip, "a palette chip"),
-            (".chip", "margin", () => HudLayout.BuildChipMargin, "chip margin"),
+            // The Build palette, in three layouts. Rows and Bar take their left and right from
+            // code, because they span the screen and their bottom depends on what is docked
+            // under them, so what is checkable here is every fixed box in all three.
+            (".bp--rows", "width", () => HudLayout.BuildRowsWidth, "rows layout width"),
+            (".bp--rail", "width", () => HudLayout.BuildRailWidth, "rail layout width"),
+            (".bp__rail", "width", () => HudLayout.BuildRailColumn, "rail category column"),
+            (".bp__rail-row", "height", () => HudLayout.BuildRailRow, "a rail category row"),
+            (".bp__rail-row", "border-left-width", () => HudLayout.BuildRailMark, "selected rail mark"),
+            (".bp__sub-tile", "height", () => HudLayout.BuildRailSubTile, "a rail sub-type tile"),
+            (".bp__sub-grid", "height", () => HudLayout.BuildRailSubGrid, "rail sub-type grid"),
+            (".bp__mat-grid", "height", () => HudLayout.BuildRailMatGrid, "rail material grid"),
+            (".bp__mat-tile", "height", () => HudLayout.BuildRailMatTile, "a rail material tile"),
+            (".bp__cat", "height", () => HudLayout.BuildCatTile, "a category tile"),
+            (".bp__sub", "height", () => HudLayout.BuildSubRow, "a sub-type button"),
+            (".bp--rows .bp__subs", "height", () => HudLayout.BuildRowsSubBand, "rows sub-type band"),
+            (".bp--rows .bp__mats-row", "height", () => HudLayout.BuildMatRow, "rows material row"),
+            (".bp__mat", "height", () => HudLayout.BuildMatRow, "a material button"),
+            (".bp__bar-cat", "width", () => HudLayout.BuildBarCat, "a bar category tile"),
+            (".bp__bar-sub", "width", () => HudLayout.BuildBarSub, "a bar sub-type tile"),
+            (".bp__action", "width", () => HudLayout.BuildAction, "the header's way out"),
+            (".bp__switch-btn", "width", () => HudLayout.BuildSwitchButton, "a switcher button"),
+            (".bp__material", "border-width", () => HudTheme.MaterialBorderWidth, "material border"),
+            (".bp__material", "border-radius", () => HudTheme.MaterialRadius, "material radius"),
+
+            // "The same value on every labelled button, no exceptions" (specification). Four
+            // selectors, one number, and a fifth that drifted would fail here rather than read as
+            // a tile that looks very slightly wrong.
+            (".bp__tile-label", "margin-left", () => HudLayout.BuildIconGap, "icon to label"),
+            (".bp__material-label", "margin-left", () => HudLayout.BuildIconGap, "icon to label"),
+            (".bp__crumb", "margin-left", () => HudLayout.BuildIconGap, "icon to label"),
+            (".bp__mode-icon", "margin-left", () => HudLayout.BuildIconGap, "icon to label"),
 
             (".inspect", "left", () => HudLayout.Edge, "screen edge margin"),
             (".inspect", "bottom", () => HudLayout.InspectBottom, "inspect bottom offset"),
@@ -168,6 +244,37 @@ namespace Odyssey.Tests.Hud
             (".cmd", "margin-right", () => HudCommands.ItemGap, "command item gap"),
             (".commandbar__divider", "height", () => HudCommands.DividerHeight, "divider height"),
             (".commandbar__divider", "width", () => HudCommands.DividerWidth, "divider width"),
+
+            // B18, the start screen.
+            (".startscreen", "width", () => HudLayout.StartWidth, "start screen width"),
+            (".startscreen", "height", () => HudLayout.StartPanelHeight, "start screen height"),
+            (".startscreen__title", "height", () => HudLayout.StartTitle, "start screen title"),
+            (".startscreen__body", "height", () => HudLayout.StartBody, "start screen body"),
+            (".startscreen__body", "margin-top", () => HudLayout.StartTitleGap, "title to body"),
+            (".startscreen__list", "max-height", () => HudLayout.StartListMax, "the load list's ceiling"),
+            (".save", "height", () => HudLayout.StartSaveRow, "a save row"),
+            (".save", "margin-bottom", () => HudLayout.StartSaveGap, "save row gap"),
+            (".startscreen__back", "margin-top", () => HudLayout.StartRowGap, "start screen row gap"),
+            (".startscreen__seedcap", "height", () => HudLayout.StartSeedCaption, "the seed's caption"),
+            (".startscreen__seedrows", "margin-top", () => HudLayout.Gap, "the box to the rows under it"),
+            (".colonist", "height", () => HudLayout.ColonistCard, "a candidate's card"),
+            (".colonist", "margin-bottom", () => HudLayout.ColonistCardGap, "card gap"),
+
+            (".prompt", "width", () => HudLayout.PromptWidth, "naming prompt width"),
+            (".field", "height", () => HudLayout.FieldHeight, "a text field"),
+            (".prompt__answer", "height", () => HudLayout.RowHeight, "list row"),
+
+            // The row the start screen reuses rather than reinventing. Pinned in both places it is
+            // already used, so "the start screen is built from rows the interface already has"
+            // fails here the moment one of the three drifts.
+            (".settings__row", "height", () => HudLayout.StartRow, "list row"),
+            (".menu__row", "height", () => HudLayout.StartRow, "list row"),
+
+            // The armed banner: a thick border in the held order's colour, one gap above the
+            // command bar. Both are the owner's, 2026-09-17, and both are numbers the sheet could
+            // otherwise drift from — the colour is written from code and the border width is not.
+            (".armed", "border-width", () => HudTheme.ArmedBorderWidth, "armed banner border"),
+            (".armed", "bottom", () => HudLayout.ArmedBottom, "armed banner to command bar"),
 
             (".panel", "padding", () => HudLayout.Pad, "panel padding"),
             (".panel", "border-radius", () => HudTheme.PanelRadius, "panel radius"),

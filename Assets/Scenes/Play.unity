@@ -196,7 +196,7 @@ MonoBehaviour:
     belowFalloff: 0.68
     ghostAlpha: 0.38
     ghostFalloff: 0.72
-    suppressActiveCeiling: 1
+    suppressActiveCeiling: 0
   pitch: 48
   yaw: 45
   distance: 48

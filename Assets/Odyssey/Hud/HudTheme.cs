@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
 {
@@ -190,6 +191,21 @@ namespace Odyssey.Hud
         public const int TopScrimHeight = 170;
         public const int BottomScrimHeight = 200;
 
+        /// <summary>
+        /// The wash a modal lays over the whole viewport.
+        ///
+        /// <para><b>The third scrim, and the only one that is not always on.</b> The two above are
+        /// ramps at the top and bottom of the screen carrying the HUD's text contrast; this one is
+        /// flat, covers everything, and says that what is behind it is not available. It is the
+        /// same ink, so the interface has one darkness rather than two.</para>
+        ///
+        /// <para>Two thirds rather than opaque, because a modal that blacks the screen out is a
+        /// scene change and this is not one: the start screen still wants to read as the game with
+        /// something in front of it. It is also what makes <c>Modal()</c> usable later over a live
+        /// colony, which the start screen never has behind it.</para>
+        /// </summary>
+        public static readonly HudColour ModalScrim = ScrimInk.WithAlpha(0.66f);
+
         // ------------------------------------------------------------------ geometry
 
         public const int PanelRadius = 5;
@@ -203,8 +219,249 @@ namespace Odyssey.Hud
         public const int ChipRadius = 3;
         public const int BorderWidth = 1;
 
+        /// <summary>
+        /// The armed banner's border, which is not a hairline (owner, 2026-09-17: <i>"make that
+        /// border much thicker"</i>).
+        ///
+        /// <para>It is three pixels because the border is the whole of what that banner says at a
+        /// glance: it is drawn in the held order's own hue — green for chopping, blue for mining,
+        /// amber for deconstructing, red for cancelling — and at one pixel a colour is a detail
+        /// rather than a signal. The panel's top edge wears the same idea at two pixels while the
+        /// palette is open (<c>docs/design/17-build-palette-layouts.md</c> §7), and this one is
+        /// over the board with nothing else around it.</para>
+        /// </summary>
+        public const int ArmedBorderWidth = 3;
+
         /// <summary>The width of the neutral square drawn where a real glyph does not exist yet.</summary>
         public const float PlaceholderStroke = 1.6f;
+
+        // ------------------------------------------------------------------ build palette
+
+        /// <summary>
+        /// A tier of the Build palette, drawn as one hue and the four states derived from it: the
+        /// resting fill, the resting border, the ink, and the wash a selected one takes.
+        ///
+        /// <para><b>Why a struct rather than four loose tokens per category.</b> The palette has
+        /// three layouts and seven categories, so a category drawn from loose tokens is twenty-one
+        /// chances for one layout to reach for the wrong one. A tier is asked for its colours as a
+        /// set, and every colour in the set is a function of one hue — which is also the rule the
+        /// specification states in words: <i>selection is a stronger wash of the category's own
+        /// colour</i>, never a global cyan on this tier. Derived rather than authored means the
+        /// stronger wash cannot drift away from the hue it is supposed to be a wash of.</para>
+        /// </summary>
+        public readonly struct BuildTier
+        {
+            /// <summary>The one colour every other member here is a function of.</summary>
+            public readonly HudColour Hue;
+
+            public BuildTier(HudColour hue) => Hue = hue;
+
+            /// <summary>Resting fill: the hue at 9%.</summary>
+            public HudColour Fill => Hue.WithAlpha(0.09f);
+
+            /// <summary>Resting border: the hue at 38%.</summary>
+            public HudColour Border => Hue.WithAlpha(0.38f);
+
+            /// <summary>Resting ink, for the label and the icon stroke alike: the hue at 92%.</summary>
+            public HudColour Ink => Hue.WithAlpha(0.92f);
+
+            /// <summary>Hover: the resting fill, lifted.</summary>
+            public HudColour HoverFill => Hue.WithAlpha(0.15f);
+
+            /// <summary>Selected fill: the same hue again, at 22%.</summary>
+            public HudColour SelectedFill => Hue.WithAlpha(0.22f);
+
+            /// <summary>Selected border and ink: the solid hue.</summary>
+            public HudColour Selected => Hue;
+        }
+
+        /// <summary>
+        /// The seven Build categories' hues, in palette order.
+        ///
+        /// <para><b>This is the one place in the HUD allowed a hue per row</b>, and it is worth
+        /// saying why, because <see cref="HudCategory"/> a few lines below exists on exactly the
+        /// opposite principle — eight categories sharing five tokens, "because a screen with a
+        /// colour per commodity is a screen with no colour code at all". That argument is about
+        /// icons scattered across a whole screen, where a hue has to be recognised out of context
+        /// and a large set cannot be. These seven are a closed row of tiles, always drawn together
+        /// and always in the same order, and the hue is doing a different job here: it is not
+        /// asking to be recognised in isolation, it is separating seven adjacent things and then
+        /// carrying that separation down into the selected state. The acceptance criterion is
+        /// "each is visually distinct with the labels masked", which a shared five-token set
+        /// cannot meet by construction.</para>
+        ///
+        /// <para>Indexed by position in <c>PaletteTools.Categories</c>, and
+        /// <c>BuildPaletteTests</c> fails the fast tier if the two lengths part company.</para>
+        /// </summary>
+        public static readonly BuildTier[] BuildCategoryTiers =
+        {
+            new BuildTier(new HudColour(0x8f, 0xb3, 0xd9)), // Structure
+            new BuildTier(new HudColour(0xe8, 0xa4, 0x5c)), // Production
+            new BuildTier(new HudColour(0xc9, 0xa0, 0x6a)), // Furniture
+            new BuildTier(new HudColour(0xe8, 0xd1, 0x5c)), // Power
+            new BuildTier(new HudColour(0x7f, 0xc9, 0x8c)), // Security
+            new BuildTier(new HudColour(0x6f, 0xd3, 0xe3)), // Floors
+            new BuildTier(new HudColour(0xb9, 0xa8, 0xe0)), // Recreation
+        };
+
+        // ------------------------------------------------------------------ palette sub-types
+
+        /// <summary>A sub-type chip at rest. Neutral: the tier under the hues is not colour-coded,
+        /// because a sub-type belongs to whichever category is showing and has no identity of its
+        /// own to carry.</summary>
+        public static readonly HudColour SubTypeFill = new HudColour(255, 255, 255, 0.04f);
+
+        public static readonly HudColour SubTypeBorder = new HudColour(255, 255, 255, 0.14f);
+        public static readonly HudColour SubTypeInk = new HudColour(255, 255, 255, 0.82f);
+        public static readonly HudColour SubTypeHoverFill = new HudColour(255, 255, 255, 0.09f);
+        public static readonly HudColour SubTypeHoverBorder = new HudColour(255, 255, 255, 0.26f);
+
+        /// <summary>A selected sub-type, and the one tier of the palette that is cyan: the hue
+        /// tier above it is its own selected state and the material tier below it is its own, so
+        /// this is the only place left where the interface's "this is on" colour still means
+        /// what it means everywhere else in the HUD.</summary>
+        public static readonly HudColour SubTypeSelectedFill = Accent.WithAlpha(0.14f);
+
+        public static readonly HudColour SubTypeDisabledFill = new HudColour(255, 255, 255, 0.02f);
+        public static readonly HudColour SubTypeDisabledBorder = new HudColour(255, 255, 255, 0.07f);
+
+        /// <summary>
+        /// A disabled sub-type's ink.
+        /// </summary>
+        /// <remarks>
+        /// <para><b>0.35, where the specification says 0.30</b>, and the five hundredths are the
+        /// only place this palette departs from a number it was given. At 0.30 the label measures
+        /// <b>2.71:1</b> against its own chip over the brightest terrain the game can draw; at 0.35
+        /// it measures <b>3.21:1</b>. WCAG would allow either — it exempts inactive controls
+        /// entirely — and on a finished game 0.30 would be right, because a greyed-out row is
+        /// meant to recede.</para>
+        /// <para>It is wrong <i>here</i>, and for a reason that is temporary and specific: of the
+        /// twenty-seven sub-types on this palette, one is live. Five of the seven categories are
+        /// disabled from end to end. So the greyed-out state is not an occasional row a player
+        /// skims past — it is nearly the whole panel, and it is the only thing telling them what
+        /// this game is eventually going to let them build. A label nobody can read is a roadmap
+        /// nobody can read. When the palette is mostly live this should go back to 0.30, and the
+        /// test that holds it to 3:1 should be the thing that gets deleted, deliberately.</para>
+        /// </remarks>
+        public static readonly HudColour SubTypeDisabledInk = new HudColour(255, 255, 255, 0.35f);
+
+        // ------------------------------------------------------------------ palette materials
+
+        /// <summary>
+        /// A material button's three colours. The button is tinted <i>from the material</i> so
+        /// that it reads before its label does — which is also what makes the out-of-stock state
+        /// legible without a word: a tinted button always means buildable, an untinted one never
+        /// does.
+        /// </summary>
+        public readonly struct MaterialTint
+        {
+            public readonly HudColour Fill;
+            public readonly HudColour Border;
+            public readonly HudColour Ink;
+
+            public MaterialTint(HudColour fill, HudColour border, HudColour ink)
+            {
+                Fill = fill;
+                Border = border;
+                Ink = ink;
+            }
+        }
+
+        /// <summary>
+        /// The tint for a <see cref="StuffHandle"/> value, or null where that material has none.
+        ///
+        /// <para><b>Four tints for two buildable materials, deliberately</b> (owner, 2026-09-17).
+        /// Wood and Stone are what the colony can build with; concrete and steel are drawn here
+        /// and shown by nothing, because the material band is driven by what is actually buildable
+        /// rather than by this table. The alternative was two permanently dead buttons and two
+        /// invented registry keys — and concrete was struck out of the content on 2026-09-16, so
+        /// putting it back to decorate a menu would add a name to the wiki that no colonist could
+        /// ever touch. The tints wait here instead, and the day either material becomes buildable
+        /// it arrives correctly coloured with no further decision to make.</para>
+        /// </summary>
+        public static MaterialTint? MaterialTintOf(int stuff) => stuff switch
+        {
+            StuffHandle.Wood => new MaterialTint(
+                new HudColour(0xf2, 0xe3, 0xcb),
+                new HudColour(0x8a, 0x5a, 0x2b),
+                new HudColour(0x5c, 0x3a, 0x17)),
+            StuffHandle.Stone => new MaterialTint(
+                new HudColour(0xe6, 0xe7, 0xe8),
+                new HudColour(0x6b, 0x70, 0x75),
+                new HudColour(0x3b, 0x40, 0x45)),
+            StuffHandle.Concrete => new MaterialTint(
+                new HudColour(0xe3, 0xe6, 0xea),
+                new HudColour(0x5d, 0x6a, 0x78),
+                new HudColour(0x33, 0x3d, 0x48)),
+            StuffHandle.Steel => new MaterialTint(
+                new HudColour(0xdf, 0xe6, 0xee),
+                new HudColour(0x44, 0x60, 0x7d),
+                new HudColour(0x28, 0x39, 0x4a)),
+            _ => null,
+        };
+
+        /// <summary>Out of stock: the tint drops entirely, so the button stops promising.</summary>
+        public static readonly HudColour MaterialOutFill = new HudColour(255, 255, 255, 0.05f);
+
+        public static readonly HudColour MaterialOutBorder = new HudColour(255, 255, 255, 0.14f);
+        public static readonly HudColour MaterialOutInk = new HudColour(255, 255, 255, 0.38f);
+
+        /// <summary>A material button carries twice the border of everything else on the palette,
+        /// because it is the panel's terminal choice.</summary>
+        public const int MaterialBorderWidth = 2;
+
+        /// <summary>The radius on a material button: one more than a control, for the same
+        /// reason.</summary>
+        public const int MaterialRadius = 5;
+
+        // ------------------------------------------------------------------ palette header
+
+        /// <summary>The Deconstruct action's outline and ink in the palette header. Warn, because
+        /// taking a building apart is not destruction but it is not placement either.</summary>
+        public static readonly HudColour DeconstructBorder = Warn.WithAlpha(0.45f);
+
+        public static readonly HudColour DeconstructFill = Warn.WithAlpha(0.12f);
+
+        /// <summary>The Cancel action's outline and ink. Bad, because it undoes work already
+        /// ordered.</summary>
+        public static readonly HudColour CancelBorder = Bad.WithAlpha(0.45f);
+
+        public static readonly HudColour CancelFill = Bad.WithAlpha(0.12f);
+
+        /// <summary>The Close control's outline, and the ink of its cross. Neutral: it is the one
+        /// header action that does nothing to the world.</summary>
+        public static readonly HudColour HeaderNeutralBorder = new HudColour(255, 255, 255, 0.18f);
+
+        public static readonly HudColour HeaderNeutralInk = new HudColour(255, 255, 255, 0.65f);
+
+        /// <summary>
+        /// The hue of one pinned action — the four verbs in <see cref="PaletteTools.Pinned"/> —
+        /// or null for every other key.
+        ///
+        /// <para><b>The hue is the mode, and that is what it is for</b> (owner, 2026-09-17:
+        /// <i>"the cancel/deconstruct colours … should also be represented in the dialog … so it
+        /// becomes clearer what mode you are in"</i>). These four are the tools that do something
+        /// irreversible to what is already on the board, and all four are armed from a header
+        /// button that is easy to press on the way to somewhere else. So the colour does not stop
+        /// at the button: while one of them is held, the palette says so in that tool's own
+        /// colour, with that tool's own icon, where the breadcrumb would otherwise be. A player
+        /// who is about to drag a box over their colony can tell from the panel whether they are
+        /// about to cancel it or take it apart.</para>
+        ///
+        /// <para>Four existing signal tokens rather than four new hues. They are already the
+        /// interface's words for "careful", "destructive", "growing" and "information", which is
+        /// close enough to what each tool does that nothing new had to be invented — and the rule
+        /// that the HUD does not grow a colour per thing is the one the category tiers above
+        /// already spend their exception on.</para>
+        /// </summary>
+        public static HudColour? PinnedActionHue(string key) => key switch
+        {
+            PaletteTools.Fell => Good,
+            PaletteTools.Mine => Info,
+            PaletteTools.Deconstruct => Warn,
+            PaletteTools.Cancel => Bad,
+            _ => null,
+        };
 
         // ------------------------------------------------------------------ categories
 

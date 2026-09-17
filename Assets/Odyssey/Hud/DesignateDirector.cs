@@ -152,12 +152,155 @@ namespace Odyssey.Hud
         public bool Begin(CellRef cell)
         {
             if (_tool == DesignateTool.None) return false;
-            _anchor = cell;
-            _head = cell;
+            _anchor = OnTheWorkingLayer(cell);
+            _head = _anchor;
             _wide = false;
             Dragging = true;
+            Hover = null;
             return true;
         }
+
+        /// <summary>
+        /// Is the box waiting for a second click rather than for a button to be let go?
+        ///
+        /// <para><b>Click, move, click</b> (owner, 2026-09-17, and the default): one click anchors
+        /// the run, the pointer then moves with nothing held, a second click places it, and a
+        /// right-click throws it away. Holding a button down while steering a pointer precisely
+        /// across a board drawn in perspective is the awkward part of the old gesture, and it is
+        /// awkward in a way practice does not fix.</para>
+        ///
+        /// <para><b>Both ways in still work, and the hand decides which</b> — a press that travels
+        /// past the widen threshold is a held drag and finishes when the button comes up, exactly
+        /// as it always has. So a player reaching for the old gesture is never punished and has
+        /// nothing to unlearn. That is why this is a state the box is in rather than a mode the
+        /// whole director is in: the same box can be begun either way.</para>
+        /// </summary>
+        public bool AwaitingSecondClick { get; private set; }
+
+        /// <summary>
+        /// A click landed on the world with a tool armed: anchor the run, or finish it.
+        ///
+        /// <para>Returns the cells to order when this click completed a box, and empty when it
+        /// only started one. One method rather than two so that the caller cannot get the order of
+        /// the two halves wrong, which is the same argument <see cref="Commit"/> already makes.
+        /// </para>
+        /// </summary>
+        public IReadOnlyList<CellRef> Click(CellRef cell)
+        {
+            if (_tool == DesignateTool.None) return Array.Empty<CellRef>();
+
+            // **The press that opens a box has usually opened it already.** While the button is
+            // down the rig reports the pointer every frame, so a box exists by the time the release
+            // arrives even for a click that never moved. Both shapes therefore mean "anchor": no
+            // box at all, or a box this very press created and has not been told to wait on.
+            if (!Dragging && !Begin(cell)) return Array.Empty<CellRef>();
+
+            // **One click places one cell and closes the run.** It used to place the cell and leave
+            // the run open for a second click to extend, and that cost the owner the cursor: while
+            // a run is open `TryPreview` succeeds, so the composition root draws the run's box and
+            // never calls `DrawHoverGhost` again. A click therefore replaced the cursor that
+            // follows the pointer with a box anchored to the last thing placed, for as long as the
+            // player did not happen to click a second time — and the second click, when it came,
+            // placed the whole line between (owner, 2026-09-17: *"the build cursor doesn't appear
+            // for walls, floors etc - when I move around in the world - that cursor is no longer
+            // there"*).
+            //
+            // A run is still a run: press, move, release is a drag and arrives through `Drag`. What
+            // is gone is the click-move-click half, which asked the player to remember that a
+            // gesture was open with nothing but a box to say so. "It should just place the ladder
+            // with a click (no need to do many)" is the instruction this follows, and the cursor
+            // being live at all times is the rest of it.
+            DragTo(cell);
+            AwaitingSecondClick = false;
+            return Commit();
+        }
+
+        /// <summary>
+        /// The anchoring click: <b>place the one cell under the pointer, and keep the run open.</b>
+        ///
+        /// <para><b>One click places one thing</b> (owner, 2026-09-17: *"it should just place the
+        /// ladder with a click, no need to do many"*). Anchoring without placing made a single
+        /// ladder cost two clicks, which is most of what anybody places — a ladder, a door, a
+        /// bench are all one cell, and runs are the exception rather than the rule.</para>
+        ///
+        /// <para><b>And the run is still open</b>, so click-move-click is untouched: the second
+        /// click places from this cell to wherever the pointer went. This cell is ordered twice and
+        /// that costs nothing — the simulation answers <c>AlreadyInThatState</c> the second time,
+        /// which is the whole reason that rejection exists.</para>
+        ///
+        /// <para><b>The wrinkle, said out loud rather than discovered:</b> a right-click after this
+        /// throws away the <em>rest</em> of the run, and the cell this click placed stays placed.
+        /// A click placed it; cancelling something that has not happened yet cannot unplace
+        /// something that has. Cancel takes it off like any other order.</para>
+        /// </summary>
+        IReadOnlyList<CellRef> Anchored()
+        {
+            AwaitingSecondClick = true;
+            _oneCell[0] = _anchor;
+            return _oneCell;
+        }
+
+        readonly CellRef[] _oneCell = new CellRef[1];
+
+        /// <summary>
+        /// Right-click, or Escape: throw away the half-drawn box and say whether there was one.
+        ///
+        /// <para><b>The answer is what decides whether the tool is also put down.</b> False means
+        /// nothing was pending, and the caller unwinds one step further. So the same button cancels
+        /// a mis-anchored run first and disarms only when there is nothing left to cancel — one
+        /// press, one step, which is the rule the Escape key already follows
+        /// (`09-ui-and-input.md` §6).</para>
+        /// </summary>
+        public bool CancelPending()
+        {
+            if (!Dragging) return false;
+            Abandon();
+            return true;
+        }
+
+        /// <summary>
+        /// The layer this tool works on, when the pointer is not allowed to choose it.
+        ///
+        /// <para><b>Null for every tool but one, and the exception is the floor.</b> A click names
+        /// a <em>surface</em> — the picker stops the ray at the first thing that occludes it — so
+        /// a pointer can only ever name a cell one layer above something solid. That is right for
+        /// a wall, which is put on the ground you clicked, and it cannot express the thing a floor
+        /// is for: a cell of open air over a room, with nothing beneath it to aim at. Measured on
+        /// 2026-09-17 with the real renderer — every one of the twelve clicks over a roofed room's
+        /// interior named the floor of the room or missed entirely, so **the middle of a room could
+        /// not be roofed at all**, only its walls capped.</para>
+        ///
+        /// <para>So a floor takes its column from the pointer and its layer from the slice: set the
+        /// slice to the storey you are roofing and click inside the room (owner, 2026-09-17). It
+        /// also answers the cursor question `17-floors-and-collapse.md` §9 left open — ordering a
+        /// floor over a drop named the bottom of the drop, and now names the layer being worked.
+        /// </para>
+        ///
+        /// <para>Set by whoever knows both the slice and the content, which is the presentation
+        /// layer: this assembly cannot see <c>ConstructionContent</c> and has no business learning
+        /// which buildings are slabs. What is here is only the substitution, so the geometry that
+        /// results is still decided in the one class the fast tier can reach.</para>
+        /// </summary>
+        public int? WorkingLayer { get; set; }
+
+        /// <summary>
+        /// Lift a cell to the working layer — <b>and only ever lift it</b>.
+        ///
+        /// <para>The working layer is a <b>floor under the order, not an override of it</b>, and the
+        /// difference is the whole of the owner's third report that the slab tool "never wants to
+        /// build" (2026-09-17). It overrode unconditionally, and the played meadow is terraced
+        /// across five layers: a click on a wall standing one terrace above the slice was rewritten
+        /// down to the slice's layer, which is inside the hillside, and refused. The tool worked
+        /// only on the columns whose ground happened to sit at exactly the slice's height, which
+        /// from a player's seat is never.</para>
+        ///
+        /// <para>Taking the higher of the two keeps the thing it was added for — a pointer cannot
+        /// name open air over a room, so a slice raised above the surface still decides — and
+        /// removes the thing it was never meant to do, which is drag an order down into the
+        /// ground.</para>
+        /// </summary>
+        CellRef OnTheWorkingLayer(CellRef cell) =>
+            WorkingLayer is int y && y > cell.Y ? new CellRef(cell.X, cell.Z, y) : cell;
 
         /// <summary>
         /// Move the far corner. Ignored unless a drag is running.
@@ -194,6 +337,7 @@ namespace Odyssey.Hud
         public void DragTo(CellRef cell)
         {
             if (!Dragging) return;
+            cell = OnTheWorkingLayer(cell);
             _head = cell;
             if (_tool != DesignateTool.Build) return;
 
@@ -258,11 +402,37 @@ namespace Odyssey.Hud
             return cells;
         }
 
+        /// <summary>
+        /// Where the pointer is resting with a tool armed and nothing pressed, put through the same
+        /// layer rule an order gets, or null when there is nothing under it.
+        ///
+        /// <para><b>A hover is a one-cell drag that has not started.</b> It is held here rather than
+        /// in the renderer so that the cell the cursor draws and the cell the order lands in are the
+        /// same answer from the same object — which is the rule the whole class exists to keep, and
+        /// the one that has been broken three times in this line of work.</para>
+        ///
+        /// <para>Null while a drag is running: the box is then the thing being shown, and a lone
+        /// cursor cell hanging off the head of it would be a second answer to "where is this
+        /// going".</para>
+        /// </summary>
+        public CellRef? Hover { get; private set; }
+
+        /// <summary>The pointer is over this cell. Ignored mid-drag, for the reason above.</summary>
+        public void HoverAt(CellRef cell)
+        {
+            if (_tool == DesignateTool.None || Dragging) { Hover = null; return; }
+            Hover = OnTheWorkingLayer(cell);
+        }
+
+        /// <summary>Nothing under the pointer, or nothing that should be shown.</summary>
+        public void HoverNowhere() => Hover = null;
+
         /// <summary>Throw the box away — the escape key, a layer change, a tool change.</summary>
         public void Abandon()
         {
             if (!Dragging) return;
             Dragging = false;
+            AwaitingSecondClick = false;
             _wide = false;
             _anchor = default;
             _head = default;

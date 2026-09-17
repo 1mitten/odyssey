@@ -119,6 +119,43 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
+        /// <b>A floor cursor is a plate, not a cube</b>, and it lies on the boundary the slab will
+        /// be laid on.
+        ///
+        /// <para>The owner's report (2026-09-17): *"the selection box for floors should be flat to
+        /// the tile that it will be placed on rather than a cube."* A cell-tall box drawn for a
+        /// slab claims a wall, hides the tile underneath itself, and at the slice camera's range
+        /// gives no way to tell which of two layers it means.</para>
+        ///
+        /// <para>The height is pinned against the wall cursor rather than against a number, so the
+        /// two can never drift into looking alike: whatever <c>PlateThickness</c> is tuned to, a
+        /// floor cursor stays a small fraction of a wall cursor.</para>
+        /// </summary>
+        [Test]
+        public void AFloorCursorIsAPlateOnTheBoundaryItWillBeLaidOn()
+        {
+            ChunkRenderer.SpanPlate(new CellRef(3, 7, 5), new CellRef(8, 7, 5),
+                out Vector3 centre, out Vector3 size);
+
+            Assert.That(size.x, Is.EqualTo(6f * CellMetrics.SizeXZ).Within(0.3f),
+                "six cells of run, less the inset — the same footprint the box cursor covers");
+            Assert.That(size.z, Is.EqualTo(CellMetrics.SizeXZ).Within(0.3f), "one cell across");
+
+            Assert.That(size.y, Is.LessThan(CellMetrics.SizeY * 0.25f),
+                "and flat: a quarter of a cell would already read as a wall");
+
+            // On the boundary, not straddling it: the underside of the plate is the plane the slab
+            // is laid on, which is CellMetrics.FloorCentre — where ChunkMesher.EmitFloor puts it.
+            float underside = centre.y - size.y * 0.5f;
+            Assert.That(underside, Is.EqualTo(CellMetrics.FloorCentre(3, 7, 5).y).Within(1e-3f),
+                "the cursor sits on the floor plane the slab will occupy");
+
+            ChunkRenderer.SpanBox(new CellRef(3, 7, 5), new CellRef(8, 7, 5), out _, out Vector3 wall);
+            Assert.That(size.y, Is.LessThan(wall.y * 0.25f),
+                "a floor cursor cannot be mistaken for a wall cursor at any tuning");
+        }
+
+        /// <summary>
         /// The drape leaves the box plumb and full height, and the shear is what carries it onto a
         /// slope. This is the same guarantee <c>ChunkMesherTests.ADrapedWallStaysVerticalAndFullHeight</c>
         /// holds the wall itself to — the cursor promises the wall, so it has to stand the way the

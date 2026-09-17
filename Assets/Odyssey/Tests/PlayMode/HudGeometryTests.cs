@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
@@ -418,7 +419,13 @@ namespace Odyssey.Tests.PlayMode
                     // A hotkey cap is a legend, not a word, and a colonist's initial is one
                     // letter. What is forbidden is an upper-case fragment of two or three letters
                     // standing in for a name.
-                    if (label.ClassListContains("cmd__key") || label.ClassListContains("menu__key")) continue;
+                    //
+                    // The caps excuse themselves by their role rather than by this list naming
+                    // every place one is drawn — HudText.Apply adds HudText.KeyCapClass to
+                    // anything set in the Hotkey role. The list was three classes long and the
+                    // Build palette's ESC hint would have been a fourth; a rule that has to be
+                    // extended every time it is obeyed is a rule that eventually is not.
+                    if (label.ClassListContains(HudText.KeyCapClass)) continue;
                     if (label.ClassListContains("card__initial")) continue;
                     if (label.ClassListContains("rail__hint")) continue;
 
@@ -535,7 +542,9 @@ namespace Odyssey.Tests.PlayMode
                 string longestName = string.Empty;
                 for (int id = 1; id <= 96; id++)
                 {
-                    string name = ColonistNames.Of(new PawnId(id));
+                    // Seed zero reads the pool from the top, so this still walks every name the
+                    // pool holds — which is what the widest-name measurement is after (U40).
+                    string name = ColonistNames.Of(0u, new PawnId(id));
                     float w = Draws(nameLabel!, name);
                     if (w <= widestName) continue;
                     widestName = w;
@@ -659,14 +668,23 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
-        /// A popover raised from the command bar lands on the button that raised it, flush on the
-        /// bar, and carries a way out (owner, 2026-09-17).
+        /// A popover raised from the command bar lands flush on the bar, carries a way out, and —
+        /// unless it is the Build palette — sits over the button that raised it (owner,
+        /// 2026-09-17).
         ///
         /// <para><b>Only the player loop can answer this.</b> Where a popover sits is decided from
         /// the laid-out bar — the reflow moves buttons as items go into Menu, and the interface
         /// scale moves them again — so the model can state the rule but not that the shell obeys
-        /// it. What is measured here is the realised boxes: the popover's bottom against the
-        /// bar's top, and its left against the button's.</para>
+        /// it. What is measured here is the realised boxes: the popover's bottom against the bar's
+        /// top, and its left against the button's.</para>
+        ///
+        /// <para><b>The Build palette is exempt from the second half, on purpose.</b> It is pinned
+        /// into the bottom-left corner of the screen rather than anchored to its cap (owner, later
+        /// the same day: <i>"it needs to pin/dock against the bottom and left for space — so up
+        /// against the left screen border"</i>), because <c>PopoverLeft</c> puts it a few pixels of
+        /// the bar's own padding short of the edge. It is exempted here rather than dropped from
+        /// the loop, because every other clause — flush on the bar, on the screen at both ends, a
+        /// close button in its top right — still applies to it and is worth keeping.</para>
         /// </summary>
         [UnityTest]
         public IEnumerator EveryBarPopoverOpensOverItsOwnButtonAndFlushWithTheBar()
@@ -711,10 +729,20 @@ namespace Odyssey.Tests.PlayMode
                         $"the {name} popover sits {box.yMax - bar.yMin:0.#} px from the bar " +
                         "rather than flush on it");
 
-                    float wanted = HudLayout.PopoverLeft(
-                        button.xMin - canvas.xMin, box.width, canvas.width) + canvas.xMin;
-                    Assert.That(box.xMin, Is.EqualTo(wanted).Within(0.5f),
-                        $"the {name} popover is not over the button that raised it");
+                    if (name == "build")
+                    {
+                        Assert.That(box.xMin, Is.EqualTo(canvas.xMin).Within(0.5f),
+                            "the Build palette is pinned to the left edge of the screen and is " +
+                            $"{box.xMin - canvas.xMin:0.#} px off it");
+                    }
+                    else
+                    {
+                        float wanted = HudLayout.PopoverLeft(
+                            button.xMin - canvas.xMin, box.width, canvas.width) + canvas.xMin;
+                        Assert.That(box.xMin, Is.EqualTo(wanted).Within(0.5f),
+                            $"the {name} popover is not over the button that raised it");
+                    }
+
                     Assert.That(box.xMin, Is.GreaterThanOrEqualTo(canvas.xMin - 0.5f),
                         $"the {name} popover hangs off the left of the screen");
                     Assert.That(box.xMax, Is.LessThanOrEqualTo(canvas.xMax + 0.5f),
@@ -744,67 +772,870 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
-        /// The Build palette spends its height on the group the player is reaching into (owner,
-        /// 2026-09-17: the first group "is using too much vertical space").
+        /// Open the Build palette and hand back the panel.
+        /// </summary>
+        static IEnumerator OpenPalette(UIDocument doc)
+        {
+            VisualElement? button = ButtonFor(doc, "build");
+            Assert.That(button, Is.Not.Null, "the command bar has no Build button");
+            using (var click = ClickEvent.GetPooled())
+            {
+                click.target = button;
+                button!.SendEvent(click);
+            }
+            yield return Settle(doc);
+        }
+
+        /// <summary>Put the palette into a given layout by clicking its switcher, the way a
+        /// player would, rather than by writing to the director behind its back.</summary>
+        static IEnumerator SwitchLayout(UIDocument doc, BuildPaletteLayout layout)
+        {
+            VisualElement? button = doc.rootVisualElement.Q(name: "layout-" + layout);
+            Assert.That(button, Is.Not.Null, $"the switcher has no {layout} button");
+            using (var click = ClickEvent.GetPooled())
+            {
+                click.target = button;
+                button!.SendEvent(click);
+            }
+            yield return Settle(doc);
+        }
+
+        /// <summary>
+        /// No row of the Build palette overflows, in any layout, at any of the three resolutions.
         ///
-        /// <para><b>What the fast tier cannot say.</b> How many rows ten category chips wrap to is
-        /// a fact about the text engine and the panel's width, not about the model — so the cap is
-        /// stated in <see cref="HudLayout.BuildCatHeight"/> and measured here. The assertion that
-        /// matters is the comparison: the tools group must get at least as much height as the
-        /// categories, which is what "more room for the second group" reduces to.</para>
+        /// <para><b>This is the specification's own acceptance criterion</b>, which it states as
+        /// <c>scrollWidth &lt;= clientWidth</c> on every flex row — a browser's way of asking
+        /// whether the contents fit the box. UI Toolkit has no such property, so the same question
+        /// is asked of the laid-out children directly: no child may end beyond the right edge of
+        /// the row that holds it. It is the criterion that matters most for Bar, whose whole
+        /// premise is that two dense rows fit inside 1920 minus its margins, and which would
+        /// otherwise fail by silently clipping the last material.</para>
         /// </summary>
         [UnityTest]
-        public IEnumerator TheBuildPaletteGivesItsHeightToTheToolsRatherThanTheCategories()
+        public IEnumerator NoRowOfTheBuildPaletteOverflowsInAnyLayoutAtAnyResolution()
+        {
+            foreach (Vector2Int resolution in Resolutions)
+            {
+                GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, resolution);
+                try
+                {
+                    yield return Settle(doc);
+                    yield return OpenPalette(doc);
+
+                    float slack = SlackFor(doc.rootVisualElement.worldBound, resolution);
+
+                    foreach (BuildPaletteLayout layout in BuildPaletteModel.Layouts)
+                    {
+                        yield return SwitchLayout(doc, layout);
+
+                        VisualElement? palette = doc.rootVisualElement.Q(name: "build");
+                        Assert.That(palette, Is.Not.Null);
+
+                        int rows = 0;
+                        foreach (VisualElement row in Rows(palette!))
+                        {
+                            rows++;
+                            Rect box = row.worldBound;
+                            foreach (VisualElement child in row.Children())
+                            {
+                                if (child.resolvedStyle.display == DisplayStyle.None) continue;
+                                Rect kid = child.worldBound;
+                                Assert.That(kid.xMax, Is.LessThanOrEqualTo(box.xMax + slack),
+                                    $"at {resolution.x}x{resolution.y} in {layout}, a child of " +
+                                    $"'{ClassPath(row)}' ends at {kid.xMax:0.#} against a row " +
+                                    $"ending at {box.xMax:0.#} — the row overflows");
+                            }
+                        }
+
+                        Assert.That(rows, Is.GreaterThan(0),
+                            $"{layout} built no rows at all, so this test measured nothing");
+
+                        // And the panel itself fits the screen it is docked in.
+                        Assert.That(palette!.worldBound.xMax,
+                            Is.LessThanOrEqualTo(doc.rootVisualElement.worldBound.xMax + slack),
+                            $"the {layout} palette runs off the right of a {resolution.x}px screen");
+                    }
+                }
+                finally
+                {
+                    Object.Destroy(root);
+                }
+            }
+        }
+
+        /// <summary>
+        /// The palette's header is one row in every layout: BUILD and the breadcrumb on the left,
+        /// the switcher, ESC and the X on the right of the same line (owner, 2026-09-17: <i>"shift
+        /// the toggle view, esc and x onto the same row as the build text — this will tidy that
+        /// up"</i>).
+        ///
+        /// <para>Asserted on the two halves' realised boxes rather than on the resolved flex
+        /// direction, because the direction being a row and the halves still standing one above
+        /// the other is a state this panel has actually been in: Rows stacked them with a
+        /// <c>column</c> override, and the fault a later session would reintroduce is a margin or
+        /// a width that wraps them, which no property reports. Two halves are on one row when
+        /// their vertical spans overlap and the controls end at the right of the identity.</para>
+        ///
+        /// <para>It also checks the row still fits, at every category and in the narrowest layout,
+        /// because one row is only tidy while nothing runs off the end of it — the breadcrumb
+        /// ellipsises, and a category whose name pushed the X off the panel would be the fault
+        /// this replaced.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBuildHeaderIsOneRowInEveryLayout()
+        {
+            foreach (Vector2Int resolution in Resolutions)
+            {
+                GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, resolution);
+                try
+                {
+                    yield return Settle(doc);
+                    yield return OpenPalette(doc);
+
+                    float slack = SlackFor(doc.rootVisualElement.worldBound, resolution);
+
+                    foreach (BuildPaletteLayout layout in BuildPaletteModel.Layouts)
+                    {
+                        yield return SwitchLayout(doc, layout);
+
+                        VisualElement? palette = doc.rootVisualElement.Q(name: "build");
+                        VisualElement? identity = palette!.Q(className: "bp__hdr-id");
+                        VisualElement? controls = palette.Q(className: "bp__hdr-ctl");
+                        VisualElement? header = palette.Q(className: "bp__hdr");
+                        Assert.That(identity, Is.Not.Null, $"{layout} has no header identity");
+                        Assert.That(controls, Is.Not.Null, $"{layout} has no header controls");
+
+                        for (int category = 0; category < PaletteTools.Categories.Length; category++)
+                        {
+                            VisualElement? tile =
+                                palette.Q(name: "cat-" + PaletteTools.Categories[category].key);
+                            if (tile != null)
+                            {
+                                using (var click = ClickEvent.GetPooled())
+                                {
+                                    click.target = tile;
+                                    tile.SendEvent(click);
+                                }
+                                yield return Settle(doc);
+                            }
+
+                            Rect id = identity!.worldBound;
+                            Rect ctl = controls!.worldBound;
+                            Rect box = header!.worldBound;
+
+                            Assert.That(id.yMin, Is.LessThan(ctl.yMax - slack),
+                                $"in {layout} at {resolution.x}x{resolution.y} the controls sit " +
+                                $"below the BUILD line: identity {id}, controls {ctl}");
+                            Assert.That(ctl.yMin, Is.LessThan(id.yMax - slack),
+                                $"in {layout} at {resolution.x}x{resolution.y} the BUILD line sits " +
+                                $"below the controls: identity {id}, controls {ctl}");
+                            Assert.That(ctl.xMin, Is.GreaterThanOrEqualTo(id.xMax - slack),
+                                $"in {layout} the controls start inside the identity half");
+                            Assert.That(ctl.xMax, Is.LessThanOrEqualTo(box.xMax + slack),
+                                $"in {layout} the header's controls run {ctl.xMax - box.xMax:0.#} " +
+                                "px past the end of their own row");
+                        }
+                    }
+                }
+                finally
+                {
+                    Object.Destroy(root);
+                }
+            }
+        }
+
+        /// <summary>Every flex row in the palette: the bands, the grids and the bar's two rows.</summary>
+        static List<VisualElement> Rows(VisualElement palette)
+        {
+            var rows = new List<VisualElement>();
+            foreach (string className in new[]
+                     {
+                         "bp__hdr", "bp__hdr-id", "bp__hdr-ctl", "bp__band", "bp__bar-row",
+                         "bp__sub-grid", "bp__mat-grid", "bp__bar-subs", "bp__bar-mats",
+                         "bp__mats-row",
+                     })
+                rows.AddRange(palette.Query(className: className).ToList());
+            return rows;
+        }
+
+        /// <summary>An element's classes, for a failure message that names the row that
+        /// overflowed rather than leaving it to be found by eye.</summary>
+        static string ClassPath(VisualElement element)
+        {
+            var classes = new List<string>(element.GetClasses());
+            return classes.Count > 0 ? string.Join(".", classes) : element.name;
+        }
+
+        /// <summary>
+        /// Nothing in the palette draws the placeholder square.
+        ///
+        /// <para><b>The specification forbids it by name</b> — "no empty-checkbox placeholders
+        /// anywhere in the palette" — and it is exactly the sort of rule that rots quietly: a
+        /// category added without a shape draws an outlined box, which looks deliberate, sits
+        /// beside six that are not, and reads as art nobody has got to yet. This walks every glyph
+        /// the open panel contains and names the one that fell through.</para>
+        ///
+        /// <para>The material tier is included on purpose. Those are <c>IconBadge</c> slots on the
+        /// game's own sprites, and an <c>IconBadge</c> whose key has no art falls back to the
+        /// square — so this is also the test that fails if the wood or stone art is ever
+        /// unloadable.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EveryTileInTheBuildPaletteDrawsSomething()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+                yield return OpenPalette(doc);
+
+                foreach (BuildPaletteLayout layout in BuildPaletteModel.Layouts)
+                {
+                    yield return SwitchLayout(doc, layout);
+
+                    VisualElement? palette = doc.rootVisualElement.Q(name: "build");
+                    var glyphs = palette!.Query<HudGlyph>().ToList();
+                    Assert.That(glyphs, Is.Not.Empty, $"{layout} drew no icons at all");
+
+                    foreach (HudGlyph glyph in glyphs)
+                    {
+                        if (glyph is IconBadge badge)
+                        {
+                            Assert.That(IconArt.Has(badge.Key), Is.True,
+                                $"in {layout}, the material slot '{badge.Key}' has no art and is " +
+                                "drawing the placeholder square");
+                            continue;
+                        }
+
+                        Assert.That(glyph.Kind, Is.Not.EqualTo(HudGlyphKind.Placeholder),
+                            $"in {layout}, a tile in '{ClassPath(glyph.parent)}' is drawing the " +
+                            "placeholder square — something on the palette has no shape");
+                    }
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Every key the palette can put on screen has a shape of its own.
+        ///
+        /// <para>The general form of the test above, and cheaper: it does not need the panel open
+        /// or a category selected, so it covers the twenty-six sub-types that only appear once
+        /// their category is chosen. Between the two, no tile can reach a player as a square.</para>
+        /// </summary>
+        [Test]
+        public void EveryPaletteKeyHasItsOwnShape()
+        {
+            foreach (string key in PaletteTools.IconKeys)
+                Assert.That(PaletteGlyphs.Has(key), Is.True,
+                    $"{key} is on the Build palette and has no drawn shape, so it would draw the " +
+                    "placeholder square that the specification forbids");
+        }
+
+        /// <summary>
+        /// Write a picture of each layout to <c>Logs/</c>.
+        ///
+        /// <para><b>Why a test takes photographs.</b> Everything else here asks whether the
+        /// palette <i>fits</i> — nothing overflows, nothing overlaps, no tile falls back to the
+        /// placeholder square, every label clears its contrast floor. None of that can say whether
+        /// the shape meant to be a bench reads as a bench, and the palette's thirty-seven icons are
+        /// hand-written vector paths, which is exactly where a mirrored axis hides: it still draws
+        /// something, it still passes, and it still looks like nothing.</para>
+        ///
+        /// <para>The rig already renders the real HUD into a render texture at the real
+        /// resolution, so the picture costs one <c>ReadPixels</c> and is of the actual panel rather
+        /// than of a mock-up of it. It asserts only that it managed to write something: it is here
+        /// to produce the artefact the owner judges, in the same spirit as the <c>*Check</c>
+        /// harnesses, not to have an opinion about what is in it.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EveryLayoutSitsForItsPortrait()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                // Nothing else clears this texture. In the game a camera draws the world into the
+                // frame before the panel goes over it; in the rig the panel is all there is, so
+                // without this each portrait carries the last one underneath it — which is how the
+                // first set came out with the previous layout showing around the edges of the
+                // next. A picture with a ghost in it is worse than no picture: it invites a
+                // diagnosis of a bug that is not there.
+                doc.panelSettings.clearColor = true;
+                doc.panelSettings.colorClearValue = new Color(0.06f, 0.08f, 0.09f, 1f);
+
+                yield return Settle(doc);
+                yield return OpenPalette(doc);
+
+                Directory.CreateDirectory("Logs");
+
+                foreach (BuildPaletteLayout layout in BuildPaletteModel.Layouts)
+                {
+                    yield return SwitchLayout(doc, layout);
+
+                    // One more frame after the switch, so the texture holds the panel that was
+                    // just built rather than the one it replaced.
+                    yield return null;
+
+                    string path = $"Logs/palette-{layout.ToString().ToLowerInvariant()}.png";
+                    Capture(doc, path);
+                    Assert.That(File.Exists(path), Is.True, $"no picture was written for {layout}");
+                    Debug.Log($"[HudGeometry] wrote {path}");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        static void Capture(UIDocument doc, string path)
+        {
+            RenderTexture? target = doc.panelSettings.targetTexture;
+            if (target == null) return;
+
+            RenderTexture previous = RenderTexture.active;
+            var picture = new Texture2D(target.width, target.height, TextureFormat.RGBA32, false);
+            try
+            {
+                RenderTexture.active = target;
+                picture.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                picture.Apply();
+                File.WriteAllBytes(path, picture.EncodeToPNG());
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                Object.DestroyImmediate(picture);
+            }
+        }
+
+        /// <summary>
+        /// The Build cap on the command bar says whether the player is in build mode, and stops
+        /// saying it when they leave.
+        ///
+        /// <para><b>The owner's bug, stated as a test</b> (2026-09-17): <i>"when I come out of
+        /// build mode by escaping etc, the build button still stays bold when it shouldn't and is
+        /// confusing — it's an indicator to whether you are truly in build mode"</i>. The cap was
+        /// drawn with a permanent accent fill, so the wash that was supposed to mean "open" was
+        /// invisible under it and the button looked identical either way.</para>
+        ///
+        /// <para>It checks the resolved fill rather than only the class, because the class being
+        /// set and the fill not following is exactly the shape this fault took the first time. And
+        /// it arms the tool through the panel rather than through the director, because the whole
+        /// question is whether the cap follows what the player did.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBuildCapIsLitOnlyWhileAToolIsHeld()
         {
             GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
             try
             {
                 yield return Settle(doc);
 
-                VisualElement? button = ButtonFor(doc, "build");
-                Assert.That(button, Is.Not.Null);
+                VisualElement? cap = ButtonFor(doc, "build");
+                Assert.That(cap, Is.Not.Null, "the command bar has no Build cap");
+
+                Color resting = cap!.resolvedStyle.backgroundColor;
+                Assert.That(cap.ClassListContains("cmd--on"), Is.False,
+                    "the Build cap is lit before anything has been opened or armed");
+
+                // Opening the panel is not build mode. Nothing is in the player's hand yet, and a
+                // click on the world would still select rather than place.
+                yield return OpenPalette(doc);
+                Assert.That(cap.ClassListContains("cmd--on"), Is.False,
+                    "the Build cap lit merely because the panel was opened");
+
+                VisualElement? wall = doc.rootVisualElement.Q(name: "sub-" + PaletteTools.Wall);
+                Assert.That(wall, Is.Not.Null);
                 using (var click = ClickEvent.GetPooled())
                 {
-                    click.target = button;
-                    button!.SendEvent(click);
+                    click.target = wall;
+                    wall!.SendEvent(click);
                 }
                 yield return Settle(doc);
 
+                Assert.That(cap.ClassListContains("cmd--on"), Is.True,
+                    "the Build cap is dark with a wall in the player's hand");
+                Color lit = cap.resolvedStyle.backgroundColor;
+                Assert.That(lit, Is.Not.EqualTo(resting),
+                    $"the Build cap draws {lit} both in and out of build mode, so it says nothing");
+                Assert.That(lit.r, Is.EqualTo(HudTokens.Accent.r).Within(0.02f),
+                    "the lit cap is not the accent fill");
+
+                // What Escape does first: put the tool down. The panel stays open, and the cap
+                // must go dark anyway — that is the owner's report.
+                boot.Directors!.Designate.Tool = DesignateTool.None;
+                yield return Settle(doc);
+
+                Assert.That(cap.ClassListContains("cmd--on"), Is.False,
+                    "the Build cap is still lit after the tool was put down — the owner's report");
+                Assert.That(cap.resolvedStyle.backgroundColor, Is.EqualTo(resting),
+                    "the Build cap did not go back to its resting fill");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// The orders strip stands in the right-hand gutter, against the edge of the screen and
+        /// directly under the depth rail, at every resolution the criteria name (owner,
+        /// 2026-09-17).
+        ///
+        /// <para>Measured on the realised boxes rather than on the model, because the whole claim
+        /// is about a position the model can only describe: the rail's height is the world's to
+        /// decide, and "under it" is therefore a relationship between two boxes rather than a
+        /// number anybody can write down. Nothing is opened first — that is the point of the
+        /// strip.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheOrdersStripSitsInTheGutterUnderTheDepthRail()
+        {
+            foreach (Vector2Int resolution in Resolutions)
+            {
+                GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, resolution);
+                try
+                {
+                    yield return Settle(doc);
+
+                    Rect canvas = doc.rootVisualElement.worldBound;
+                    float slack = SlackFor(canvas, resolution);
+
+                    VisualElement? strip = doc.rootVisualElement.Q(name: "orders");
+                    VisualElement? rail = doc.rootVisualElement.Q(name: "rail");
+                    VisualElement? bar = doc.rootVisualElement.Q(name: "bar");
+                    Assert.That(strip, Is.Not.Null, "the shell built no orders strip");
+                    Assert.That(rail, Is.Not.Null, "the shell built no depth rail");
+                    Assert.That(bar, Is.Not.Null, "the shell built no command bar");
+
+                    Rect box = strip!.worldBound;
+                    Rect railBox = rail!.worldBound;
+                    Debug.Log($"[HudGeometry] orders at {resolution.x}x{resolution.y}: {box}, " +
+                              $"rail {railBox}, canvas {canvas}");
+
+                    Assert.That(box.xMax, Is.EqualTo(canvas.xMax).Within(slack + 0.5f),
+                        $"the orders strip stops {canvas.xMax - box.xMax:0.#} px short of the right " +
+                        $"edge at {resolution.x}x{resolution.y}");
+                    Assert.That(box.xMax, Is.EqualTo(railBox.xMax).Within(slack + 0.5f),
+                        "the orders strip and the depth rail are not in one gutter");
+                    Assert.That(box.yMin, Is.GreaterThanOrEqualTo(railBox.yMax - slack),
+                        $"the orders strip starts at {box.yMin:0.#}, above the rail's bottom at " +
+                        $"{railBox.yMax:0.#} — it is over the depth control rather than under it");
+                    Assert.That(box.yMax, Is.LessThanOrEqualTo(bar!.worldBound.yMin + slack),
+                        $"the orders strip runs {box.yMax - bar.worldBound.yMin:0.#} px into the " +
+                        "command bar");
+                }
+                finally
+                {
+                    Object.Destroy(root);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Every order has a button in the strip, and pressing one arms it with nothing else open.
+        ///
+        /// <para>That last clause is the reason the strip exists (owner, 2026-09-17: <i>"this
+        /// enables us to quickly give orders without having to click the build button"</i>), so it
+        /// is asserted rather than assumed: the palette is never opened in this test, and the tool
+        /// still ends up in the player's hand. Pressing the same button again puts it down, which
+        /// is the toggle every tool in this game obeys.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator PressingAnOrderArmsItWithoutOpeningTheBuildPalette()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
                 VisualElement? palette = doc.rootVisualElement.Q(name: "build");
-                VisualElement? cats = palette!.Q(className: "build__scroll");
-                VisualElement? tools = palette.Q(className: "build__tools");
-                Assert.That(cats, Is.Not.Null, "the palette built no category group");
-                Assert.That(tools, Is.Not.Null, "the palette built no tools group");
+                Assert.That(palette, Is.Not.Null, "the shell built no Build palette");
+                Assert.That(palette!.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                    "the Build palette is open before the test has touched anything");
 
-                // A chip has to be the height the model counts rows in, or the cap is a count of
-                // something else.
-                VisualElement? chip = cats!.Q(className: "chip");
-                Assert.That(chip, Is.Not.Null, "the palette built no category chips");
-                Assert.That(chip!.worldBound.height, Is.EqualTo((float)HudLayout.BuildChip).Within(0.5f),
-                    $"a chip is {chip.worldBound.height:0.#} px against a modelled {HudLayout.BuildChip}");
+                foreach (string key in PaletteTools.Pinned)
+                {
+                    VisualElement? button = doc.rootVisualElement.Q(name: "action-" + key);
+                    Assert.That(button, Is.Not.Null, $"the orders strip has no button for {key}");
+                    Assert.That(button!.ClassListContains("ord__btn"), Is.True,
+                        $"{key} is drawn somewhere other than the orders strip");
 
-                float catHeight = cats.worldBound.height;
-                float toolHeight = tools!.worldBound.height;
-                Debug.Log($"[HudGeometry] build palette: categories {catHeight:0.#} px, " +
-                          $"tools {toolHeight:0.#} px, panel {palette.worldBound.height:0.#}");
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = button;
+                        button.SendEvent(click);
+                    }
+                    yield return Settle(doc);
 
-                Assert.That(catHeight, Is.LessThanOrEqualTo(HudLayout.BuildCatHeight + 0.5f),
-                    $"the category group stands {catHeight:0.#} px against a cap of " +
-                    $"{HudLayout.BuildCatHeight}, so it is still taking the panel's height");
-                Assert.That(catHeight / HudLayout.BuildChipRow,
-                    Is.LessThanOrEqualTo(HudLayout.BuildCatRows + 0.01f),
-                    $"the categories are wrapping to more than {HudLayout.BuildCatRows} rows");
+                    Assert.That(PaletteTools.TryGet(key, out PaletteTool tool), Is.True,
+                        $"{key} is in the strip and is not a live tool");
+                    Assert.That(tool.IsArmed(boot.Directors!.Designate), Is.True,
+                        $"pressing {key} in the orders strip armed nothing");
+                    Assert.That(palette.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                        $"pressing {key} opened the Build palette, which is the trip the strip " +
+                        "exists to save");
+                    Assert.That(button.ClassListContains("ord__btn--on"), Is.True,
+                        $"the {key} button does not say it is held");
 
-                // The second group has something in it the moment the palette opens, and none of
-                // it is cut off by the panel it sits in. A tools group that only fills once the
-                // player has guessed the chips above are clickable is a panel needing explanation.
-                var toolChips = tools.Query(className: "chip").ToList();
-                Assert.That(toolChips, Is.Not.Empty,
-                    "the palette opened on no category, so the second group is empty");
-                foreach (VisualElement toolChip in toolChips)
-                    Assert.That(toolChip.worldBound.yMax,
-                        Is.LessThanOrEqualTo(palette.worldBound.yMax + 0.5f),
-                        "a tool chip is cut off by the bottom of the palette");
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = button;
+                        button.SendEvent(click);
+                    }
+                    yield return Settle(doc);
+
+                    Assert.That(tool.IsArmed(boot.Directors!.Designate), Is.False,
+                        $"pressing {key} a second time did not put it down");
+                    Assert.That(button.ClassListContains("ord__btn--on"), Is.False,
+                        $"the {key} button is still lit with nothing in the player's hand");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// The armed banner wears the held order's colour, in a thick border, one word, just above
+        /// the command bar (owner, 2026-09-17).
+        ///
+        /// <para>Every clause of that is checked, because each is a separate way for it to be
+        /// wrong: the colour comes from the same token the strip's button is painted with, so the
+        /// two cannot disagree about what mode a colour means; the width is the token rather than
+        /// the hairline it was; the second line is gone, so the banner holds exactly one label;
+        /// and it sits within a gap of the bar rather than floating in the middle of the board.
+        /// The colour is read off the <i>resolved</i> border rather than off a class, which is the
+        /// shape the Build cap's fault took — the class set and the fill not following.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheArmedBannerWearsTheHeldOrdersColour()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                float slack = SlackFor(doc.rootVisualElement.worldBound, Resolutions[1]);
+
+                VisualElement? banner = doc.rootVisualElement.Q(name: "armed");
+                Assert.That(banner, Is.Not.Null, "the shell built no armed banner");
+                Assert.That(banner!.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                    "the armed banner is showing with nothing in the player's hand");
+
+                // Every order, so a hue that was written for one and not the others fails here
+                // rather than in a playtest of whichever one nobody tried.
+                foreach (string key in PaletteTools.Pinned)
+                {
+                    VisualElement? button = doc.rootVisualElement.Q(name: "action-" + key);
+                    Assert.That(button, Is.Not.Null, $"the orders strip has no button for {key}");
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = button;
+                        button!.SendEvent(click);
+                    }
+                    yield return Settle(doc);
+
+                    Assert.That(banner.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex),
+                        $"holding {key} says nothing over the board");
+
+                    Color want = HudTokens.Convert(HudTheme.PinnedActionHue(key)!.Value);
+                    Color edge = banner.resolvedStyle.borderTopColor;
+                    Debug.Log($"[HudGeometry] armed banner for {key}: border {edge}, want {want}");
+                    Assert.That(edge.r, Is.EqualTo(want.r).Within(0.02f),
+                        $"the banner's border is not {key}'s colour");
+                    Assert.That(edge.g, Is.EqualTo(want.g).Within(0.02f),
+                        $"the banner's border is not {key}'s colour");
+                    Assert.That(edge.b, Is.EqualTo(want.b).Within(0.02f),
+                        $"the banner's border is not {key}'s colour");
+
+                    Assert.That(banner.resolvedStyle.borderTopWidth,
+                        Is.EqualTo((float)HudTheme.ArmedBorderWidth).Within(1f),
+                        "the banner's border is not the thick one the owner asked for");
+
+                    int labels = banner.Query<Label>().ToList().Count;
+                    Assert.That(labels, Is.EqualTo(1),
+                        "the armed banner says more than what is held — the second line came off " +
+                        "on 2026-09-17");
+
+                    Label word = banner.Query<Label>().First();
+                    Assert.That(word.text, Is.EqualTo(Registry.Label(key)),
+                        $"the banner calls {key} something the registry does not");
+
+                    // The floor: every order draws at least the width of the longest of them, so
+                    // the banner does not resize under the eye as the mode changes. Reported as
+                    // well as asserted, because whether the four come out *equal* depends on
+                    // whether the modelled advance covers the real face, and the number is worth
+                    // having in the log rather than inferring from a pass.
+                    float width = banner.worldBound.width;
+                    Debug.Log($"[HudGeometry] armed banner for {key}: \"{word.text}\" " +
+                              $"{width:0.#} px against a floor of {HudLayout.ArmedWidth:0.#}");
+                    Assert.That(width, Is.GreaterThanOrEqualTo(HudLayout.ArmedWidth - slack),
+                        $"the banner for {key} is narrower than the longest order");
+
+                    // Down by the controls it is about, not adrift in the middle of the board.
+                    VisualElement? bar = doc.rootVisualElement.Q(name: "bar");
+                    float gap = bar!.worldBound.yMin - banner.worldBound.yMax;
+                    Assert.That(gap, Is.GreaterThanOrEqualTo(0f),
+                        $"the armed banner runs {-gap:0.#} px into the command bar");
+                    Assert.That(gap, Is.LessThanOrEqualTo(HudLayout.Gap * 2f),
+                        $"the armed banner floats {gap:0.#} px above the command bar");
+
+                    // Put it down again, so the next order starts from nothing held.
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = button;
+                        button.SendEvent(click);
+                    }
+                    yield return Settle(doc);
+                }
+
+                Assert.That(banner.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                    "the armed banner is still showing after the last order was put down");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Opening Build puts away whatever was being inspected, and the palette then sits in the
+        /// bottom-left corner: hard against the left edge and on the command bar (owner,
+        /// 2026-09-17).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBuildPaletteDocksIntoTheBottomLeftCorner()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+                yield return OpenPalette(doc);
+
+                float slack = SlackFor(doc.rootVisualElement.worldBound, Resolutions[1]);
+
+                foreach (BuildPaletteLayout layout in BuildPaletteModel.Layouts)
+                {
+                    yield return SwitchLayout(doc, layout);
+
+                    Rect panel = doc.rootVisualElement.Q(name: "build")!.worldBound;
+                    Rect screen = doc.rootVisualElement.worldBound;
+
+                    Assert.That(panel.xMin, Is.EqualTo(screen.xMin).Within(slack),
+                        $"the {layout} palette starts at {panel.xMin:0.#} rather than against the " +
+                        "left edge of the screen");
+
+                    VisualElement? bar = doc.rootVisualElement.Q(className: "commandbar");
+                    Assert.That(bar, Is.Not.Null);
+                    Assert.That(panel.yMax, Is.EqualTo(bar!.worldBound.yMin).Within(slack + 2f),
+                        $"the {layout} palette ends at {panel.yMax:0.#} against a command bar " +
+                        $"starting at {bar.worldBound.yMin:0.#}, so it is not sitting on the bar");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Rows holds its height too, whatever category is open (owner, 2026-09-17: <i>"the height
+        /// needs to stay fixed — ie as tall as the structure menu/selection goes so it can
+        /// accommodate all of the menus"</i>).
+        ///
+        /// <para>Rail's promise was a property of that layout; this is the same promise made of the
+        /// default, and for a plainer reason — the panel is docked on the command bar and grows
+        /// upward, so a category with fewer sub-types than the last one does not shrink neatly, it
+        /// drops the whole control down the screen while the player is aiming at it.</para>
+        ///
+        /// <para>Unlike Rail's four-column grid, where the row count is arithmetic on the number of
+        /// tools, Rows wraps its sub-types by how wide their <i>words</i> are. That is a fact about
+        /// the text engine, so the reserved height is a measured constant rather than a derived
+        /// one, and this test prints every category's band on every run so that the constant can be
+        /// re-derived from the output rather than guessed at again.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheRowsLayoutKeepsItsHeightWhateverCategoryIsOpen()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+                yield return OpenPalette(doc);
+                yield return SwitchLayout(doc, BuildPaletteLayout.Rows);
+
+                float first = -1f;
+                for (int i = 0; i < PaletteTools.Categories.Length; i++)
+                {
+                    VisualElement? tile =
+                        doc.rootVisualElement.Q(name: "cat-" + PaletteTools.Categories[i].key);
+                    Assert.That(tile, Is.Not.Null, $"Rows has no {Registry.Label(PaletteTools.Categories[i].key)} tile");
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = tile;
+                        tile!.SendEvent(click);
+                    }
+                    yield return Settle(doc);
+
+                    VisualElement panel = doc.rootVisualElement.Q(name: "build")!;
+                    float height = panel.worldBound.height;
+                    if (first < 0f) first = height;
+
+                    Debug.Log($"[HudGeometry] rows {Registry.Label(PaletteTools.Categories[i].key)}: " +
+                              $"panel {height:0.#}, " +
+                              $"subs {panel.Q(className: "bp__subs")?.worldBound.height ?? -1:0.#}, " +
+                              $"mats {panel.Q(className: "bp__mats-row")?.worldBound.height ?? -1:0.#}");
+
+                    Assert.That(height, Is.EqualTo(first).Within(1f),
+                        $"the Rows palette stands {height:0.#} px on " +
+                        $"{Registry.Label(PaletteTools.Categories[i].key)} against {first:0.#} on the first " +
+                        "category, so opening a category moves the whole control up or down the " +
+                        "screen while the player is aiming at it");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Rail's whole argument: its height does not change when the category does, so nothing
+        /// below it reflows.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheRailLayoutKeepsItsHeightWhateverCategoryIsOpen()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+                yield return OpenPalette(doc);
+                yield return SwitchLayout(doc, BuildPaletteLayout.Rail);
+
+                float first = -1f;
+                for (int i = 0; i < PaletteTools.Categories.Length; i++)
+                {
+                    VisualElement? tile =
+                        doc.rootVisualElement.Q(name: "cat-" + PaletteTools.Categories[i].key);
+                    Assert.That(tile, Is.Not.Null, $"the rail has no {Registry.Label(PaletteTools.Categories[i].key)} row");
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = tile;
+                        tile!.SendEvent(click);
+                    }
+                    yield return Settle(doc);
+
+                    VisualElement panel = doc.rootVisualElement.Q(name: "build")!;
+                    float height = panel.worldBound.height;
+                    if (first < 0f) first = height;
+
+                    // Printed every run, because "it stands the same height" is the whole claim
+                    // and a failure that only says which two disagree costs a second run to find
+                    // out what the shape of the disagreement is.
+                    Debug.Log($"[HudGeometry] rail {Registry.Label(PaletteTools.Categories[i].key)}: " +
+                              $"panel {height:0.#}, " +
+                              $"subs {panel.Q(className: "bp__sub-grid")?.worldBound.height ?? -1:0.#}, " +
+                              $"mats {panel.Q(className: "bp__mat-grid")?.worldBound.height ?? -1:0.#}, " +
+                              $"pane {panel.Q(className: "bp__pane")?.worldBound.height ?? -1:0.#}");
+
+                    Assert.That(height, Is.EqualTo(first).Within(1f),
+                        $"the Rail palette stands {height:0.#} px on " +
+                        $"{Registry.Label(PaletteTools.Categories[i].key)} against {first:0.#} on the first " +
+                        "category, so opening a category reflows everything under the panel");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Switching layout in the running game keeps the selection, which the fast tier proves
+        /// about the model and this proves about the screen.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator SwitchingLayoutOnScreenKeepsWhatWasArmed()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+                yield return OpenPalette(doc);
+
+                VisualElement? wall = doc.rootVisualElement.Q(name: "sub-" + PaletteTools.Wall);
+                Assert.That(wall, Is.Not.Null, "the palette did not open on Structure");
+                using (var click = ClickEvent.GetPooled())
+                {
+                    click.target = wall;
+                    wall!.SendEvent(click);
+                }
+                yield return Settle(doc);
+
+                foreach (BuildPaletteLayout layout in BuildPaletteModel.Layouts)
+                {
+                    yield return SwitchLayout(doc, layout);
+
+                    VisualElement? armed = doc.rootVisualElement.Q(name: "sub-" + PaletteTools.Wall);
+                    Assert.That(armed, Is.Not.Null, $"{layout} does not draw the armed sub-type");
+                    Assert.That(armed!.ClassListContains("bp__tile--on"), Is.True,
+                        $"the wall stopped being lit after switching to {layout}");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// While one of the four orders is held, the open palette says which mode it is in — in
+        /// that order's own colour, with that order's own icon (owner, 2026-09-17).
+        ///
+        /// <para>The order is picked up from the strip in the right-hand gutter, which is where
+        /// the four buttons live since they came off the palette's header. That the panel still
+        /// wears the colour is the point of the test: the two are joined by the model rather than
+        /// by being in the same box, and moving the buttons out is exactly the change that could
+        /// have broken it.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator HoldingAnOrderColoursTheOpenPalette()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+                yield return OpenPalette(doc);
+
+                VisualElement? palette = doc.rootVisualElement.Q(name: "build");
+                Color resting = palette!.resolvedStyle.borderTopColor;
+
+                VisualElement? cancel =
+                    doc.rootVisualElement.Q(name: "action-" + PaletteTools.Cancel);
+                Assert.That(cancel, Is.Not.Null, "the orders strip has no Cancel button");
+                using (var click = ClickEvent.GetPooled())
+                {
+                    click.target = cancel;
+                    cancel!.SendEvent(click);
+                }
+                yield return Settle(doc);
+
+                Color expected = HudTokens.Convert(HudTheme.PinnedActionHue(PaletteTools.Cancel)!.Value);
+                Assert.That(palette.resolvedStyle.borderTopColor, Is.Not.EqualTo(resting),
+                    "holding Cancel left the panel looking exactly as it did while building");
+                Assert.That(palette.resolvedStyle.borderTopColor.r, Is.EqualTo(expected.r).Within(0.02f),
+                    "the panel's edge is not Cancel's colour");
+
+                Label? crumb = palette.Q<Label>(className: "bp__crumb");
+                Assert.That(crumb!.text, Is.EqualTo(Registry.Label(PaletteTools.Cancel)),
+                    "the header still describes a build that is not about to happen");
             }
             finally
             {
@@ -815,6 +1646,17 @@ namespace Odyssey.Tests.PlayMode
         /// <summary>
         /// Every window carries an X, which is the owner's rule stated as a test rather than as a
         /// convention each call site has to remember.
+        ///
+        /// <para><b>One window is exempt, and the exemption is named here rather than allowed
+        /// silently (U38).</b> The start screen's root has nothing behind it to close <i>to</i>:
+        /// it exists precisely when no session is built, so an X on it could only either do
+        /// nothing or quit the game while wearing the glyph that means "dismiss this". A control
+        /// that does nothing is worse than no control, and one that quits under a dismiss glyph is
+        /// worse still — so it has none, and the way out is the Quit row that says so in words and
+        /// asks twice.</para>
+        ///
+        /// <para>Every <i>other</i> window still has to carry one, which is what the named
+        /// exception buys over loosening the rule: a second window without an X fails here.</para>
         /// </summary>
         [UnityTest]
         public IEnumerator EveryWindowHasAWayOutThatIsNotTheKeyboard()
@@ -828,13 +1670,31 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(windows.Count, Is.GreaterThanOrEqualTo(3),
                     "the Build palette, the Menu popover and the settings panel are all windows");
 
+                var exempt = new[] { "start" };
+                int exemptSeen = 0;
+
                 foreach (VisualElement window in windows)
                 {
-                    Assert.That(window.Q(className: "panel__close"), Is.Not.Null,
-                        $"the '{window.name}' window has no close button");
                     Assert.That(window.ClassListContains("panel"), Is.True,
                         $"the '{window.name}' window is not a panel, so it does not carry the fill");
+
+                    if (System.Array.IndexOf(exempt, window.name) >= 0)
+                    {
+                        exemptSeen++;
+                        Assert.That(window.Q(className: "panel__close"), Is.Null,
+                            $"the '{window.name}' window is listed as having nothing to close to, " +
+                            "yet it has an X — one of the two is wrong");
+                        continue;
+                    }
+
+                    Assert.That(window.Q(className: "panel__close"), Is.Not.Null,
+                        $"the '{window.name}' window has no close button");
                 }
+
+                // The exemption has to still apply to something, or it is a hole left open for a
+                // window that quietly stopped being built.
+                Assert.That(exemptSeen, Is.EqualTo(exempt.Length),
+                    "a window named as exempt from the close-button rule was not on screen at all");
             }
             finally
             {
@@ -1093,6 +1953,9 @@ namespace Odyssey.Tests.PlayMode
             bootObject.transform.SetParent(root.transform, false);
             bootObject.SetActive(false);
             boot = bootObject.AddComponent<OdysseyBootstrap>();
+            // Explicitly, not by default: since U38 pressing Play lands on the start screen, and
+            // what this rig is asserting is that a session exists.
+            boot.buildOnPlay = true;
             boot.sizeX = 60;
             boot.sizeZ = 60;
             boot.seed = 1;

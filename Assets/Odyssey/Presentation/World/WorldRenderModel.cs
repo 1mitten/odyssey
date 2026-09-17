@@ -52,6 +52,7 @@ namespace Odyssey.Presentation.World
         readonly int[][] _earthFaceModule;
         readonly int[][] _bankModule;
         readonly int[] _naturalEdificeModule;
+        readonly int[] _slabByStuff;
         readonly int _vaultWallModule;
         readonly int _utilityTapModule;
         readonly int _wallCoreModule;
@@ -78,6 +79,7 @@ namespace Odyssey.Presentation.World
             _earthFaceModule = ResolveEarth(library, ModuleShape.GroundFace);
             _bankModule = ResolveEarth(library, ModuleShape.Bank);
             _naturalEdificeModule = ResolveNaturalEdifices(library);
+            _slabByStuff = ResolveSlabsByStuff(library);
             _vaultWallModule = library.Resolve(ModuleIds.VaultWall, ModuleShape.WallPanel);
             _utilityTapModule = library.Resolve(ModuleIds.UtilityTap, ModuleShape.Pillar);
             _wallCoreModule = library.Resolve(ModuleIds.WallCore, ModuleShape.SolidBlock);
@@ -234,9 +236,20 @@ namespace Odyssey.Presentation.World
         public ushort EdificeStuff(int index) => _edificeStuff[index];
 
         /// <summary>The module index for whatever edifice stands in this cell, or 0.</summary>
-        public int EdificeModule(int index)
+        public int EdificeModule(int index) => ModuleForEdificeAt(index, _edifice[index]);
+
+        /// <summary>
+        /// The module a <em>named</em> edifice would draw with in this cell, whether or not one is
+        /// standing there.
+        ///
+        /// <para><see cref="EdificeModule"/>'s twin for the build cursor, and it exists because that
+        /// one reads the grid: a ghost is precisely the case where nothing is in the cell yet. The
+        /// stuff group still comes from the cell, because a thing is drawn in the material of where
+        /// it stands (U43 — before this, a ladder ghosted as a solid wall block, which is the
+        /// opposite of "the cursor is the shape of the thing").</para>
+        /// </summary>
+        public int ModuleForEdificeAt(int index, ushort def)
         {
-            ushort def = _edifice[index];
             if (def == CoreContent.EdificeNone) return 0;
             // The natural table continues CoreContent's numbering, as terrain does. A tree is not
             // a kind of wall: before this branch existed every tree fell through the switch below
@@ -261,7 +274,21 @@ namespace Odyssey.Presentation.World
 
         /// <summary>The module index for the slab at this cell's lower boundary, or 0.</summary>
         public int FloorModule(int index) =>
-            _floor[index] == CoreContent.SlabNone ? 0 : _groups[_slot[index]].Slab;
+            _floor[index] == CoreContent.SlabNone ? 0 : SlabModuleFor(index, _floorStuff[index]);
+
+        /// <summary>
+        /// The slab module this cell <em>would</em> draw with, whether or not it holds one.
+        ///
+        /// <para><see cref="FloorModule"/>'s twin for the build cursor: that one answers "what is
+        /// drawn here" and returns nothing for an empty cell, which is precisely the cell a ghost
+        /// is being drawn in (`19-build-cursor.md`). Same module, same group, one guard
+        /// removed.</para>
+        /// </summary>
+        public int SlabModuleFor(int index, int stuff)
+        {
+            int art = (uint)stuff < (uint)_slabByStuff.Length ? _slabByStuff[stuff] : 0;
+            return art != 0 ? art : _groups[_slot[index]].Slab;
+        }
 
         /// <summary>The module index for the natural material in this cell, or 0 for open air.</summary>
         public int TerrainModule(int index) => _terrainModule[_terrain[index]];
@@ -399,6 +426,32 @@ namespace Odyssey.Presentation.World
             Ladder = library.Resolve(def.ladderModuleId, ModuleShape.Ladder),
             Slab = library.Resolve(def.slabModuleId, ModuleShape.FloorSlab),
         };
+
+        /// <summary>
+        /// Slab art by material, for the materials that have their own; 0 for the rest.
+        ///
+        /// <para>Only the materials a colonist can actually build in are listed. The generator's
+        /// concrete, steel and composite slabs keep the template's module and draw exactly what
+        /// they drew before, so nothing in the city moves.</para>
+        ///
+        /// <para>A row that resolved to a fallback is dropped rather than kept. An unknown module
+        /// id does not resolve to nothing — it resolves to a built-in primitive — so without this
+        /// test a clone with no licensed packs would swap the group's slab for a bare block, which
+        /// is worse than the wood it replaced.</para>
+        /// </summary>
+        static int[] ResolveSlabsByStuff(ModuleLibrary library)
+        {
+            var table = new int[NaturalContent.StuffCount];
+            Take(NaturalContent.StuffWood, "wood");
+            Take(NaturalContent.StuffStone, "stone");
+            return table;
+
+            void Take(ushort stuff, string material)
+            {
+                int module = library.Resolve(ModuleIds.SlabOf(material), ModuleShape.FloorSlab);
+                if (library[module].UsesArt) table[stuff] = module;
+            }
+        }
 
         /// <summary>Tree modules by natural edifice code, offset by <see cref="NaturalContent.FirstEdifice"/>.</summary>
         static int[] ResolveNaturalEdifices(ModuleLibrary library)

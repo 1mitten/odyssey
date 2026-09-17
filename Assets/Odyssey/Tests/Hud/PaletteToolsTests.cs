@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using System;
 using NUnit.Framework;
 using Odyssey.Hud;
 
@@ -68,7 +69,7 @@ namespace Odyssey.Tests.Hud
         public void EveryLiveToolIsOnAChipSomewhere()
         {
             var drawn = new HashSet<string>(PaletteTools.Pinned);
-            foreach (var (_, _, tools) in PaletteTools.Categories)
+            foreach (var (_, tools) in PaletteTools.Categories)
                 foreach (string tool in tools)
                     drawn.Add(tool);
 
@@ -107,14 +108,21 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The pinned row is two chips and should stay small. A row that grows is a second palette,
-        /// and the whole point of it is to be the short list of things that are true whatever the
-        /// player is doing.
+        /// The pinned row should stay small. A row that grows is a second palette, and the whole
+        /// point of it is to be the short list of things that are true whatever the player is
+        /// doing.
+        ///
+        /// <para><b>The ceiling moved from three to four on 2026-09-17</b>, when the Orders
+        /// category was dropped and its two live tools were pinned rather than lost. Four is where
+        /// it stops: the palette header has room for four 26 px buttons beside the layout switcher
+        /// and the way out, and a fifth would start pushing one of those off a 1280-wide screen —
+        /// which is a limit the geometry imposes rather than one this test invented, and is why
+        /// the number is written here as well as argued for in <c>PaletteTools.Pinned</c>.</para>
         /// </summary>
         [Test]
         public void ThePinnedRowStaysShort()
         {
-            Assert.That(PaletteTools.Pinned.Length, Is.LessThanOrEqualTo(3));
+            Assert.That(PaletteTools.Pinned.Length, Is.LessThanOrEqualTo(4));
         }
 
         /// <summary>
@@ -126,35 +134,108 @@ namespace Odyssey.Tests.Hud
         public void APinnedToolIsNotAlsoFiledUnderACategory()
         {
             foreach (string pinned in PaletteTools.Pinned)
-                foreach (var (_, label, tools) in PaletteTools.Categories)
+                foreach (var (key, tools) in PaletteTools.Categories)
                     Assert.That(tools, Does.Not.Contain(pinned),
-                        $"{pinned} is pinned and also listed under {label}, so it draws twice");
+                        $"{pinned} is pinned and also listed under {Registry.Label(key)}, so it draws twice");
         }
 
-        /// <summary>The Orders row keeps the two tools whose orders Cancel takes off.</summary>
+        /// <summary>
+        /// The orders a player gives are still reachable, now that the category holding them is
+        /// gone.
+        ///
+        /// <para><b>This test used to assert the opposite</b> — that an Orders category existed
+        /// and contained Mine and Chop — and it is the same claim, rewritten against where those
+        /// two tools now live. The claim worth keeping is not "there is an Orders row"; it is
+        /// "the two orders a player actually gives can be found by looking". Dropping the
+        /// category without moving them would have left both on the <c>M</c> and <c>C</c> keys
+        /// and on nothing visible, which is exactly the fault the owner reported about Cancel on
+        /// 2026-09-17: the tool was never missing, every way of finding it was.</para>
+        /// </summary>
         [Test]
-        public void TheOrdersRowOffersTheOrdersAPlayerGives()
+        public void TheOrdersAPlayerGivesAreStillReachable()
         {
-            string[]? orders = null;
-            foreach (var (key, _, tools) in PaletteTools.Categories)
-                if (key == "ui.arch.category.orders")
-                    orders = tools;
+            Assert.That(PaletteTools.Pinned, Does.Contain(PaletteTools.Mine),
+                "mining is reachable from the palette rather than only from the M key");
+            Assert.That(PaletteTools.Pinned, Does.Contain(PaletteTools.Fell),
+                "chopping is reachable from the palette rather than only from the C key");
+        }
 
-            Assert.That(orders, Is.Not.Null, "the palette has an Orders category");
-            Assert.That(orders, Does.Contain(PaletteTools.Mine));
-            Assert.That(orders, Does.Contain(PaletteTools.Fell));
+        /// <summary>
+        /// Every live tool in the game is on the palette somewhere, in a category or pinned.
+        ///
+        /// <para>The general form of the test above, and the one that would have caught the
+        /// Orders question without anybody thinking of it. A tool with a working simulation half
+        /// and no way in is the failure this project has now made twice; a tier that walks
+        /// <see cref="PaletteTools.Live"/> and asks where each one is drawn cannot let it happen
+        /// a third time silently.</para>
+        /// </summary>
+        [Test]
+        public void EveryLiveToolIsDrawnSomewhere()
+        {
+            foreach (PaletteTool tool in PaletteTools.Live)
+            {
+                bool pinned = Array.IndexOf(PaletteTools.Pinned, tool.Key) >= 0;
+                bool filed = false;
+                foreach (var (_, tools) in PaletteTools.Categories)
+                    if (Array.IndexOf(tools, tool.Key) >= 0) filed = true;
+
+                Assert.That(pinned || filed, Is.True,
+                    $"{tool.Key} arms a real tool and appears nowhere on the palette, so the only " +
+                    "way to reach it is a key the player has to already know about");
+            }
+        }
+
+        /// <summary>
+        /// <b>Paving is in two categories on purpose, and this test is here so nobody tidies it
+        /// away.</b>
+        ///
+        /// <para>It belongs in <c>Floors</c>, which is what it is. It is also in <c>Structure</c>
+        /// beside the wall and the slab, because that is where a player already is when they are
+        /// building — the owner asked for it by name (2026-09-17): *"it won't be painful having to
+        /// go backwards and forwards between menus"*. A wall, its floor and the slab over it are
+        /// one job and should be one row.</para>
+        ///
+        /// <para>Not a new idea in this table: <c>ui.arch.tool.reclaim</c> has sat in both
+        /// <c>Structure</c> and <c>Salvage</c> since it was written, and <see cref="PaletteTools.TryGet"/>
+        /// is keyed by the tool rather than by where it is drawn, so a key in two lists arms one
+        /// tool and lights in both places.</para>
+        /// </summary>
+        [Test]
+        public void PavingIsOfferedInBothFloorsAndStructure()
+        {
+            string[]? structure = null, floors = null;
+            foreach (var (key, tools) in PaletteTools.Categories)
+            {
+                if (key == "ui.arch.category.structure") structure = tools;
+                if (key == "ui.arch.category.floors") floors = tools;
+            }
+
+            Assert.That(floors, Does.Contain(PaletteTools.Paving), "paving is what the Floors row is for");
+            Assert.That(structure, Does.Contain(PaletteTools.Paving),
+                "and it is beside the wall too, so building a room is not two menus");
+            Assert.That(structure, Does.Contain(PaletteTools.Slab),
+                "the slab stays in Structure and nowhere else: it is structure");
+            Assert.That(floors, Does.Not.Contain(PaletteTools.Slab),
+                "a slab under Floors would be the confusion this rename was meant to end");
         }
 
         /// <summary>
         /// Only a thing made of something offers a material. An order is a verb applied to what is
         /// already there, so a "made of" row under the cancel tool would be asking what to cancel
         /// it out of.
+        ///
+        /// <para>The list is spelled out rather than derived from <c>WantsMaterial</c> itself,
+        /// which would assert that a field equals itself. Three things are built out of something
+        /// today — a wall, a slab and paving — and a fourth arriving should have to be written
+        /// here.</para>
         /// </summary>
         [Test]
         public void OnlyAThingMadeOfSomethingAsksWhatItIsMadeOf()
         {
             foreach (PaletteTool tool in PaletteTools.Live)
-                Assert.That(tool.WantsMaterial, Is.EqualTo(tool.Key == PaletteTools.Wall),
+                Assert.That(tool.WantsMaterial,
+                    Is.EqualTo(tool.Key == PaletteTools.Wall || tool.Key == PaletteTools.Slab
+                        || tool.Key == PaletteTools.Paving || tool.Key == PaletteTools.Ladder),
                     $"{tool.Key} disagrees with itself about whether it is built out of something");
         }
 
@@ -165,6 +246,38 @@ namespace Odyssey.Tests.Hud
             var seen = new HashSet<string>();
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(seen.Add(tool.Key), Is.True, $"{tool.Key} is in the live table twice");
+        }
+
+        /// <summary>
+        /// Every chip the Build palette offers actually arms something.
+        ///
+        /// <para>The build cursor vanished for walls and floors alike after two merges rebuilt the
+        /// palette (owner, 2026-09-17), and the first thing to rule out is the simplest: that
+        /// pressing a chip no longer arms the tool at all. Nothing drawn in the world can be right
+        /// if <c>Director.Tool</c> is still None, because the rig gates hover, the press and the
+        /// preview on a tool being armed.</para>
+        ///
+        /// <para>Every key in every category, not the four this line of work touched: a palette is
+        /// a table and the way a table breaks is one row at a time.</para>
+        /// </summary>
+        [Test]
+        public void EveryChipInEveryCategoryArmsItsTool()
+        {
+            foreach (var (category, tools) in PaletteTools.Categories)
+            foreach (string key in tools)
+            {
+                if (!PaletteTools.TryGet(key, out PaletteTool tool)) continue;
+
+                var director = new DesignateDirector();
+                Assume.That(director.Tool, Is.EqualTo(DesignateTool.None));
+
+                tool.Arm(director);
+
+                Assert.That(director.Tool, Is.Not.EqualTo(DesignateTool.None),
+                    $"{key} in {category} armed nothing, so the world would show no cursor for it");
+                Assert.That(tool.IsArmed(director), Is.True,
+                    $"{key} in {category} armed a tool it does not then recognise as its own");
+            }
         }
     }
 }

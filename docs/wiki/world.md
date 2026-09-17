@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-79 entries, 54 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+81 entries, 56 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -106,12 +106,14 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Grass tufts** | `ui.settings.grass` | Tufts strewn over the meadow. Decoration, in no cell and no save | no art | M1 |
 | **Ground relief** | `ui.settings.relief` | The roll of the drawn ground. The cells underneath stay flat | no art | M1 |
 | **See through to selection** | `ui.settings.seethrough` | Fade whatever stands between the camera and a selected colonist | no art | M1 |
+| **Cut away the ceiling** | `ui.settings.cutaway` | See into rooms on this layer. Off shows the floor above you | no art | M3 |
 | **Keys** | `ui.settings.keys` | Every key the game reads, and what each one may be changed to | no art | M3 |
 | **Reset keys to defaults** | `ui.settings.resetkeys` | Put every action back on the key it shipped with | no art | M3 |
 | **Audio** | `ui.settings.audio` | How loud each part of the game is. Stored on the machine, in decibels | no art | M3 |
 | **Camera speed** | `ui.settings.camspeed` | How fast the camera pans and zooms, as a share of its tuned speed | no art | M3 |
+| **Build palette layout** | `ui.settings.buildlayout` | Which of the three shapes the Build palette takes: rows, rail or bar | no art | M3 |
 | **Developer overlay** | `ui.settings.developer` | The frame-time and draw-call readout, kept on the machine between sessions | no art | M3 |
-| **Exit game** | `ui.settings.exit` | Leave. Nothing is saved yet, so the row asks before it goes | no art | M3 |
+| **Exit game** | `ui.settings.exit` | Leave the game. The row asks twice, because leaving is not undoable | no art | M3 |
 | **Master volume** | `ui.settings.volume.master` | Everything at once | no art | M3 |
 | **Music volume** | `ui.settings.volume.music` | What plays under the game | no art | M3 |
 | **Ambience volume** | `ui.settings.volume.ambience` | The sound of the place itself | no art | M3 |

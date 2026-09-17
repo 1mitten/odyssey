@@ -103,12 +103,50 @@ namespace Odyssey.Sim.Pawns
         public int stockpileLayerOffset = 0;
 
         /// <summary>
-        /// The scene's scenario: the colony has felling work the moment it exists, because there
-        /// is no tool to give the order with yet. When the UI line's designate tool lands, the
-        /// scene moves to <see cref="Bare"/> and the player gives the first order.
+        /// The scene's scenario: a colony with people, food, beds and a store, and **no standing
+        /// orders** — nothing is felled or mined until the player says so.
+        ///
+        /// <para><b>This is the change this comment used to promise</b> (owner, 2026-09-17: *"at
+        /// the start of game there are no orders, until you assign them for the time being"*). It
+        /// read: *"the colony has felling work the moment it exists, because there is no tool to
+        /// give the order with yet. When the UI line's designate tool lands, the scene moves to
+        /// Bare and the player gives the first order."* The designate tool landed in M3, the
+        /// cancel tool and the Build palette after it, and this was never taken — so a new colony
+        /// arrived with a ring of trees already marked and colonists walking off to chop them
+        /// before the player had touched anything. **A note saying what to do when a thing lands
+        /// does not do it**; this one outlived the condition it was waiting on by a milestone.</para>
+        ///
+        /// <para><b>It is not the same as <see cref="Bare"/>, and the difference is deliberate.</b>
+        /// Bare also flattens <see cref="miners"/>, which is not an order but an inclination — who
+        /// reaches for a pick rather than an axe when work does appear. A colony where nobody
+        /// favours mining is a different colony; one where nobody has been *told* to mine yet is
+        /// this one on its first morning.</para>
+        ///
+        /// <para>No golden moves: the golden table builds on <see cref="Bare"/>, which has had no
+        /// orders since it was written.</para>
         /// </summary>
         public static ScenarioDef Playtest() =>
-            new ScenarioDef { defName = "Scenario_Playtest", label = "playtest" };
+            new ScenarioDef
+            {
+                defName = "Scenario_Playtest", label = "playtest",
+                startingFellRadius = 0, startingMineRadius = 0, startingMineOutcrops = 0,
+            };
+
+        /// <summary>
+        /// This scenario with a different number of colonists (U40).
+        ///
+        /// <para>A copy rather than an assignment, because <see cref="Playtest"/> and
+        /// <see cref="Bare"/> hand out fresh objects but a caller may perfectly well be holding one
+        /// that something else also holds — a scenario is a Def, and a Def is shared. The select
+        /// screen changing the population of every other colony in the process would be a memorable
+        /// afternoon.</para>
+        /// </summary>
+        public virtual ScenarioDef WithColonists(int count)
+        {
+            var copy = (ScenarioDef)MemberwiseClone();
+            copy.colonists = count < 0 ? 0 : count;
+            return copy;
+        }
 
         /// <summary>
         /// The same colony with no standing orders. Bare of orders, not of trees: the terrain is
@@ -499,7 +537,20 @@ namespace Odyssey.Sim.Pawns
         /// <summary>
         /// Place the colony. Returns what it managed, so the caller can assert rather than assume.
         /// </summary>
-        public static Result Place(CellGrid grid, PawnContext pawns, CellRef start, uint seed, ScenarioDef scenario)
+        /// <param name="chosen">
+        /// One roll seed per colonist the player picked on the select screen (U40), in the order
+        /// they were shown, or null for a colony nobody chose.
+        ///
+        /// <para><b>Null is the ordinary case and it is not a degraded one</b>: every headless run,
+        /// every test and every scenario placed by the world itself passes null, and each colonist
+        /// then keeps the world seed <see cref="PawnRegistry.Spawn"/> gave it — which is exactly
+        /// what those colonies rolled before pawns had seeds of their own. A list shorter than
+        /// <see cref="ScenarioDef.colonists"/> covers the ones it names and leaves the rest on the
+        /// world seed, rather than refusing: it is the scenario that decides how many colonists
+        /// there are, and this only decides who some of them are.</para>
+        /// </param>
+        public static Result Place(CellGrid grid, PawnContext pawns, CellRef start, uint seed,
+            ScenarioDef scenario, IReadOnlyList<uint>? chosen = null)
         {
             var storeys = new Storeys(grid, pawns.Nav, start);
             storeys.Want(ColonistStorey, scenario.colonists);
@@ -523,7 +574,11 @@ namespace Odyssey.Sim.Pawns
                 // Main's storey-aware spot, this branch's trade split: a scenario now says
                 // which floor a colonist starts on AND which of them mine rather than cut.
                 Pawn colonist = pawns.Pawns.Spawn(spot);
-                colonist.RollPassions(seed);
+                // A colonist chosen on the select screen brings its own seed (U40); one the world
+                // placed by itself keeps the world's, which Spawn has already given it. The order
+                // matters — the seed must be in place before either roll reads it.
+                if (chosen != null && i < chosen.Count) colonist.RollSeed = chosen[i];
+                colonist.RollPassions();
                 AssignTrade(colonist, i, scenario);
                 placedColonists++;
             }

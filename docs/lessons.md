@@ -50,6 +50,50 @@ What to do: `scripts/unity.sh` treats the **results file, not the process exit c
 
 **A remote container can run the whole fast tier, and the SDK comes from the distribution, not from Microsoft.** The container images used by Claude Code on the web carry python3 but no dotnet, and the official installer is useless there: `dot.net/v1/dotnet-install.sh` redirects to `builds.dotnet.microsoft.com`, which the egress proxy refuses outright (`CONNECT tunnel failed, response 403` — a policy denial, so retrying it only spends the session's time). The Ubuntu archive *is* reachable, and 24.04 packages the SDK, so `apt-get install -y dotnet-sdk-8.0` puts 8.0.131 on the path in about a minute and `scripts/test-fast.sh` then restores from nuget.org and runs every Sim test — 227 passed, 4 s cold, on 2026-09-16. **So "no Unity" does not mean "no gate" for Sim work:** every row in `docs/plans/overnight-queue.md` tagged **C** can be proved in a container, and only the **W** rows genuinely need the Windows machine. Still, **check `dotnet --version` before promising "fast tier green"** rather than assuming it: if an image ever has neither the SDK nor a reachable archive, the only safe rows are the ones whose done-when needs no test run at all. What the container cannot do at all: Unity itself (assembly-definition boundaries, editor tooling, PlayMode, frame time), and web research — `rimworldwiki.com`, `dwarffortresswiki.org`, `steamcommunity.com` and even `en.wikipedia.org` are blocked for both `curl` and `WebFetch`, leaving only the `WebSearch` tool's own extracts, which is thinner than a research row's format asks for.
 
+**The two tiers do not run the same NUnit, and the fast tier's is the newer one.** Learnt on
+2026-09-17, twice in one unit, at a Unity run each. A test written and proved green in the fast
+tier can fail to *compile* or fail at *runtime* under Unity because its assertion vocabulary is
+larger there. Two that bit:
+
+- **`Assert.Multiple(() => { ... })` does not exist** in Unity's bundled NUnit. It is a compile
+  error — `CS0117: 'Assert' does not contain a definition for 'Multiple'` — which aborts the whole
+  batch run before a single test executes, so the failure looks like a broken build rather than a
+  test problem. Write the assertions out; stopping at the first failure costs nothing here.
+- **`Has.Count.EqualTo(n)` throws on an interface-typed collection.** Against
+  `IReadOnlyList<T>` Unity's NUnit raises `ArgumentException: Property Count was not found` at
+  runtime, because it resolves the property against the declared type and does not find
+  `IReadOnlyList<T>.Count` the way the newer one does. It works on `List<T>`, which is why some
+  uses in the same file passed and others did not — the rule is about the *declared* type, not the
+  object. Write `Assert.That(thing.Count, Is.EqualTo(n))`.
+
+The general rule: **the fast tier proves behaviour, the Unity tier proves the code exists in the
+form Unity accepts**, and that includes the test code. Neither of these is catchable by reading;
+both are one `scripts/unity.sh test editmode` away, so run it before saying a test suite is done
+rather than after.
+
+**A frame is not a tick, and waiting one frame for a simulation effect is a flake.** Found
+2026-09-17, one failure in three PlayMode runs. `OdysseyBootstrap` accumulates real time and steps
+the simulation only when it has a tick's worth, so **a Unity frame contains zero or more ticks
+depending on how long it took**. A test that submits an intent and then does `yield return null`
+before asserting is really asserting that the frame happened to be long enough — which it is, most
+of the time, on this machine. Wait for the *effect* with a bounded loop instead:
+
+```csharp
+for (int frame = 0; frame < 120 && boot.World!.GameSpeed != wanted; frame++) yield return null;
+Assert.That(boot.World!.GameSpeed, Is.EqualTo(wanted), "the request never reached the simulation");
+```
+
+It is still a real assertion — a request that never arrives exhausts the budget and fails with the
+same message — and it does not get slower, because it stops as soon as the effect lands. The same
+applies to anything downstream of a tick: a published snapshot, a job starting, a designation
+clearing.
+
+**The fast tier compiles neither Presentation nor Editor.** `scripts/test-fast.sh` builds only the
+two mirror projects, `Odyssey.Tests.Sim` and `Odyssey.Tests.Hud`, so a green fast tier says nothing
+at all about `Assets/Odyssey/Presentation/`, `Assets/Editor/` or the scene wiring. A unit that
+touches the composition root or the HUD shell is **unproven until Unity has compiled it**, however
+green the 11-second run looks.
+
 **The fast tier cannot see a broken build, and a commit can be split across the gate.** On
 2026-09-16 the tip of `main` (`a98dced`) did not compile in Unity: `OdysseyBootstrap.cs` called
 `_renderer.Skirt`, while `TerrainSkirt.cs`, `SkirtLayout.cs` and the `ChunkRenderer.Skirt` property
@@ -1616,6 +1660,28 @@ forbid, and a budget raised to swallow a flake is a budget that swallows the nex
 starts flaking often, the window (5,000 ticks) is what to grow, not the threshold — a longer window
 averages the GC timing out rather than hiding what it is measuring.
 
+## Rebuilding the module catalogue erases the colonists' faces
+
+`Odyssey/Presentation/Rebuild module catalogue` writes every row of
+`ModuleCatalogue.asset` from `PlayScene`'s registration list, and that list says nothing about
+appearance. The 61 character rows carry something no code in `PlayScene` can reproduce: the atlas
+swatch rectangles each colonist's skin, hair and cloth vertices are mapped to, measured once by
+`CharacterSwatches` and committed. A rebuild clears them — and the asset still looks healthy,
+because every row is still there and every `totalVerts` is still a number. It is `0`.
+
+Adding two slab rows produced **665 insertions and 2,162 deletions**, and the deletions were 311
+swatch rectangles. The entry count told the reassuring half of the story: 136 before, 138 after,
+nothing lost. `git diff --stat` told the true half.
+
+**The rule: after a catalogue rebuild, check the diff is only what you added.** If it is not, keep
+the committed asset and splice the new rows into it — split the file on `  - moduleId: `, lift the
+blocks you want out of the rebuilt copy and insert them into the original. The rebuilt file is still
+the right source for a new row's `prefab` GUID and `fileID`, which is the part that cannot be
+written by hand.
+
+Two ways this could stop being a trap, neither taken here: make the rebuild preserve `appearance`
+on rows it is not authoring, or re-run `CharacterSwatches` after every rebuild. The first is right;
+it wants the owner, because it changes what "rebuild" means.
 ## A recommendation in a research file is enforced by nothing, and one sat unread for months
 
 `a-08-plants-growing-food.md` ended with an instruction as clear as any in this repository:

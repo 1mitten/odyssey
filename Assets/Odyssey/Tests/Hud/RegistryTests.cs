@@ -1,4 +1,8 @@
 #nullable enable
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text.RegularExpressions;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Sim.Contracts;
@@ -59,6 +63,57 @@ namespace Odyssey.Tests.Hud
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(Registry.Labels, Does.ContainKey(tool.Key),
                     $"{tool.Key} can be armed and has no name");
+        }
+
+        /// <summary>
+        /// The session rows — Save, Load, Quit to main menu, Exit, New game, Settings — held to
+        /// the CSV like every other panel here (U38).
+        ///
+        /// <para>The second loop is the one that matters: it walks what the two surfaces actually
+        /// <i>draw</i>, rather than the array that says what they might, so a row added to the
+        /// table and forgotten in <c>IconKeys</c> fails here instead of drawing a key at the
+        /// player.</para>
+        /// </summary>
+        [Test]
+        public void EverySessionRowIsARegisteredName()
+        {
+            foreach (string key in SessionCommands.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+
+            foreach (SessionContext context in SessionCommands.Contexts)
+            foreach (SessionCommand command in SessionCommands.For(context))
+            {
+                Assert.That(Registry.Labels, Does.ContainKey(command.Key),
+                    $"{command.Key} is drawn in {context} and has no name");
+                Assert.That(SessionCommands.IconKeys, Does.Contain(command.Key),
+                    "a row the menu can draw but the registry test does not cover is a label nobody checks");
+            }
+        }
+
+        /// <summary>The naming prompt's four words, held to the CSV like every other panel.</summary>
+        [Test]
+        public void EverySavePromptWordIsARegisteredName()
+        {
+            foreach (string key in SavePrompt.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+
+            // The two the prompt swaps between on its own button. A missing one would draw the key
+            // at the player on exactly the press that is about to overwrite a save.
+            Assert.That(SavePrompt.IconKeys, Does.Contain(SavePrompt.ConfirmKey));
+            Assert.That(SavePrompt.IconKeys, Does.Contain(SavePrompt.OverwriteKey));
+        }
+
+        /// <summary>The New game screen's three words (U39), held to the CSV like every other
+        /// surface.</summary>
+        [Test]
+        public void EveryNewGameWordIsARegisteredName()
+        {
+            foreach (string key in SeedField.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+
+            // The row that commits is a word of its own rather than the root row's (§11.3), so a
+            // rename of one must not silently become a rename of both.
+            Assert.That(SeedField.StartKey, Is.Not.EqualTo(SessionCommands.NewGameKey));
         }
 
         [Test]
@@ -152,6 +207,143 @@ namespace Odyssey.Tests.Hud
             Assert.That(Registry.Label("ui.status.hauling"), Is.EqualTo("Hauling"));
             Assert.That(Registry.Label("ui.nothing.of.the.kind"), Is.EqualTo("ui.nothing.of.the.kind"),
                 "a raw key on screen is a visible fault; a blank is a silent one");
+        }
+
+        // ------------------------------------------------------------------ one name, one place
+
+        /// <summary>
+        /// The namespaces this enforces: the things a player points at and talks about.
+        ///
+        /// <para>Not every key in the registry. "Build" and "Menu" are registry names too, and
+        /// they are also ordinary English words that appear in a tooltip, a log line or a class
+        /// name — enforcing those would cost more in escapes than it earns. These six are the
+        /// namespaces where the same thing is named on several surfaces at once, which is where
+        /// two copies actually drift apart.</para>
+        /// </summary>
+        static readonly string[] Enforced =
+        {
+            "ui.arch.tool.", "ui.arch.category.", "ui.status.", "ui.res.", "ui.alert.", "ui.job.",
+        };
+
+        /// <summary>
+        /// No name a player reads for one of those things is written out in C#.
+        ///
+        /// <para><b>The centralised place already existed; this is what enforces it</b> (owner,
+        /// 2026-09-17: <i>"keep the consistent in the wiki and the language and UI … ensure that
+        /// consistency can be enforced using a centralised place"</i>). One name lives in
+        /// <c>docs/design/icon-keys.csv</c>, is generated into <see cref="Registry"/> and printed
+        /// into the wiki from the same row, so the screen and the wiki cannot disagree — as long
+        /// as nobody types the word a second time. Every test above asks whether a key is
+        /// registered. This asks the opposite and harder question: whether a name has been
+        /// written anywhere it could go stale.</para>
+        ///
+        /// <para><b>It found two real duplicates on the run that introduced it.</b> The seven
+        /// Build categories carried their labels in <c>PaletteTools.Categories</c> beside the keys
+        /// that already named them, and the armed banner's fallback said "Building" in a literal.
+        /// Both agreed with the registry at the time, which is exactly what a silent duplicate
+        /// looks like until somebody corrects one copy. The banner had already been caught once
+        /// this way, by hand: it said "Felling" in a <c>switch</c> and disagreed with the palette
+        /// the day that chip became "Chop trees".</para>
+        ///
+        /// <para>It is the shape of <c>HopPriceHasOneOwnerTests</c> in the simulation assembly —
+        /// read the source, fail on a second owner — and it runs in the fast tier, so the answer
+        /// arrives in eleven seconds rather than in a playtest.</para>
+        /// </summary>
+        [Test]
+        public void NoPlayerFacingNameIsWrittenInCSharp()
+        {
+            var watched = new Dictionary<string, string>();
+            foreach (KeyValuePair<string, string> entry in Registry.Labels)
+            {
+                if (entry.Value.Length == 0) continue;
+                foreach (string space in Enforced)
+                    if (entry.Key.StartsWith(space, StringComparison.Ordinal))
+                    {
+                        // A label two keys share is still one word to look for; the message names
+                        // the first, which is enough to find it.
+                        if (!watched.ContainsKey(entry.Value)) watched[entry.Value] = entry.Key;
+                        break;
+                    }
+            }
+
+            Assert.That(watched.Count, Is.GreaterThan(50),
+                "the registry lost most of its player-facing names, so this test is watching " +
+                "almost nothing and would pass whatever the source said");
+
+            var offences = new List<string>();
+            var literal = new Regex("\"([^\"\\\\]*)\"");
+
+            foreach (string file in Sources())
+            {
+                string[] lines = File.ReadAllLines(file);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    string trimmed = lines[i].TrimStart();
+                    if (trimmed.StartsWith("//", StringComparison.Ordinal)) continue;
+
+                    foreach (Match match in literal.Matches(lines[i]))
+                    {
+                        string text = match.Groups[1].Value;
+                        if (!watched.TryGetValue(text, out string? key)) continue;
+                        offences.Add($"{Short(file)}:{i + 1} writes \"{text}\", which is the " +
+                                     $"registry's name for {key}");
+                    }
+                }
+            }
+
+            Assert.That(offences, Is.Empty,
+                "a player-facing name is written in C# as well as in docs/design/icon-keys.csv. " +
+                "Two copies of one name drift, and the symptom is the screen and the wiki calling " +
+                "one thing two things. Call Registry.Label(key) instead:\n  " +
+                string.Join("\n  ", offences));
+        }
+
+        /// <summary>
+        /// Every C# file the HUD and the presentation layer are built from, apart from the
+        /// generated registry itself — which is where the names are supposed to be.
+        ///
+        /// <para>Test sources are excluded on purpose: a test that asserts a chip reads "Chopping"
+        /// is naming the expected value, which is what a test is for.</para>
+        /// </summary>
+        static IEnumerable<string> Sources()
+        {
+            foreach (string root in new[] { "Assets/Odyssey/Hud", "Assets/Odyssey/Presentation" })
+            {
+                string? found = Find(root);
+                if (found == null) continue;
+                foreach (string file in Directory.GetFiles(found, "*.cs", SearchOption.AllDirectories))
+                {
+                    string name = Path.GetFileName(file);
+                    if (name == "Registry.g.cs") continue;
+                    if (file.Replace('\\', '/').Contains("/Tests/")) continue;
+                    yield return file;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Walk up for a path relative to the repository root.
+        ///
+        /// <para>The same trick <c>HudStyleSheetTests</c> uses, and for the same reason: under
+        /// Unity the working directory is the project root, and in the fast tier it is a build
+        /// output several levels down.</para>
+        /// </summary>
+        static string? Find(string relative)
+        {
+            var directory = new DirectoryInfo(Directory.GetCurrentDirectory());
+            for (int i = 0; i < 12 && directory != null; i++, directory = directory.Parent)
+            {
+                string candidate = Path.Combine(directory.FullName, relative);
+                if (Directory.Exists(candidate)) return candidate;
+            }
+            return null;
+        }
+
+        static string Short(string file)
+        {
+            string path = file.Replace('\\', '/');
+            int at = path.IndexOf("Assets/", StringComparison.Ordinal);
+            return at >= 0 ? path.Substring(at) : path;
         }
     }
 }

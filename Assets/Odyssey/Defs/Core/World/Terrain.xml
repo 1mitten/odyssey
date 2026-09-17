@@ -39,12 +39,24 @@
     <salvageWeight>4</salvageWeight>
   </TerrainDef>
 
+  <!--
+    Rubble is what a collapse leaves (U29) as well as what the ruined city is strewn with. It is
+    deliberately NOT solid: a colonist stands in it and a stack of wood shares the cell with it,
+    so a floor coming down makes a mess rather than burying whatever was underneath. What it does
+    do is refuse to be built on until somebody clears it, which is the whole of "a collapse
+    leaves a mess to clear, not a clean hole" (02-world-and-layers.md section 4).
+
+    clearable, because mining otherwise wants solid terrain and this is a heap on a floor rather
+    than a face to cut. It is the only terrain in the game that sets it.
+  -->
   <TerrainDef>
     <defName>Rubble</defName>
     <label>rubble</label>
     <workToClear>90</workToClear>
     <fertility>20</fertility>
     <salvageWeight>10</salvageWeight>
+    <buildable>false</buildable>
+    <clearable>true</clearable>
   </TerrainDef>
 
   <!--

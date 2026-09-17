@@ -58,9 +58,22 @@ namespace Odyssey.Tests.PlayMode
                 // we have. Naming them keeps that and says which one is missing, which a number
                 // cannot: the rebuild moved it from seven to eight and the failure was "expected
                 // 7, was 8", which is not a sentence anybody can act on.
+                // "start" is B18, built whether or not a session exists because the state it
+                // belongs to is the one where none does (U38). It is in the tree and hidden here,
+                // which is why it counts as a framed region while this rig is in a colony.
+                // "saveprompt" joins for the same reason "start" did: both are modals, built at
+                // startup and hidden until something asks for them, so both are framed regions in
+                // the tree whatever the colony is doing.
+                // "orders" is the strip in the right-hand gutter under the rail (2026-09-17): the
+                // four order buttons left the Build palette's header, so they are a framed region
+                // of their own now rather than eight pixels of somebody else's.
+                // "debug" is the debug menu (2026-09-17), backtick's own panel now rather than a
+                // direct toggle of the developer overlay: built and hidden at startup exactly as
+                // "settings" is, so it too is a framed region whatever the colony is doing.
                 string[] expected =
                 {
-                    "stores", "clock", "alerts", "rail", "inspect", "build", "menu", "settings",
+                    "stores", "clock", "alerts", "rail", "orders", "inspect", "build", "menu",
+                    "settings", "debug", "start", "saveprompt",
                 };
                 var regions = doc.rootVisualElement.Query(className: "region").ToList();
                 var names = regions.ConvertAll(r => r.name);
@@ -177,7 +190,7 @@ namespace Odyssey.Tests.PlayMode
                 var doc = root.GetComponentInChildren<UIDocument>();
                 Label? title = doc!.rootVisualElement.Q<Label>(className: "inspect__title");
                 Assert.That(title, Is.Not.Null, "the inspect pane never built a header");
-                Assert.That(title!.text, Is.EqualTo(ColonistNames.Of(pawn)),
+                Assert.That(title!.text, Is.EqualTo(ColonistNames.Of(boot.World.Views.Current, pawn)),
                     "the pane does not show the selected colonist by name");
 
                 // A card click also takes the camera to the colonist: the rig glides to their
@@ -340,6 +353,9 @@ namespace Odyssey.Tests.PlayMode
             bootObject.transform.SetParent(root.transform, false);
             bootObject.SetActive(false);   // so the fields land before Start runs
             boot = bootObject.AddComponent<OdysseyBootstrap>();
+            // Explicitly, not by default: since U38 pressing Play lands on the start screen, and
+            // what this rig is asserting is that a session exists.
+            boot.buildOnPlay = true;
             boot.sizeX = 60;
             boot.sizeZ = 60;
             boot.layers = layers;

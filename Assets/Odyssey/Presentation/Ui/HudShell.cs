@@ -82,10 +82,29 @@ namespace Odyssey.Presentation.Ui
 
         // ---- roots
         VisualElement _hud = null!;
+
+        /// <summary>
+        /// Everything that only means anything with a colony running — the bars, the panels, the
+        /// rail, the two contrast scrims. Put away as one thing when no session is built.
+        /// </summary>
+        VisualElement _worldUi = null!;
+
+        /// <summary>The picture behind the main menu, and the only thing on screen when there is
+        /// no world to be the backdrop itself.</summary>
+        VisualElement _backdrop = null!;
+
+        /// <summary>
+        /// Where the menu's backdrop is loaded from.
+        ///
+        /// <para><c>Resources</c> rather than a serialised field, because scenes here are generated
+        /// by editor scripts and a field somebody has to remember to drag an image into is a field
+        /// that is empty in every scene but the one they did it in. A missing file is not an error:
+        /// the menu simply has no picture, which is what a clone without the art gets.</para>
+        /// </summary>
+        public const string MenuBackdropResource = "Odyssey/menu-backdrop";
         VisualElement _marquee = null!;
         VisualElement _armedBanner = null!;
         Label _armedWhat = null!;
-        Label _armedHow = null!;
 
         // ---- stores (A1)
         VisualElement _storesPanel = null!;
@@ -170,24 +189,20 @@ namespace Odyssey.Presentation.Ui
 
         // ---- panels over the board
         VisualElement _buildPanel = null!;
-        VisualElement _buildTools = null!;
-        VisualElement _buildMaterials = null!;
 
-        /// <summary>The always-on row under the palette. See <see cref="PaletteTools.Pinned"/>.</summary>
-        VisualElement _buildPinned = null!;
-        int _buildCategory = -1;
         VisualElement _settingsPanel = null!;
+        VisualElement _debugPanel = null!;
         VisualElement _interfaceSection = null!;
         VisualElement _graphicsSection = null!;
         VisualElement _audioSection = null!;
         VisualElement _keysSection = null!;
-        VisualElement _developerRow = null!;
         VisualElement _exitRow = null!;
         Label _exitLabel = null!;
         readonly Dictionary<GraphicsOption, VisualElement> _settingRows = new();
         readonly Dictionary<SettingsTab, Label> _settingTabs = new();
         readonly Dictionary<int, Label> _scaleRungs = new();
         readonly Dictionary<int, Label> _cameraRungs = new();
+        readonly Dictionary<BuildPaletteLayout, Label> _layoutRungs = new();
         readonly Dictionary<SettingsBus, FaderView> _busFaders = new();
         readonly Dictionary<HotkeyAction, KeyRowView> _keyRows = new();
 
@@ -210,6 +225,7 @@ namespace Odyssey.Presentation.Ui
         /// <summary>The command-bar Build cap and its item, so a rebind can move the legend
         /// with the key it names.</summary>
         Label _buildCap = null!;
+        IconBadge? _buildIcon;
         VisualElement _buildItem = null!;
         string _buildTooltipLabel = "";
 
@@ -353,6 +369,23 @@ namespace Odyssey.Presentation.Ui
             _hud.AddToClassList("hud");
             root.Add(_hud);
 
+            // Behind everything, and only ever seen when there is no colony: with a world running
+            // the backdrop is the world.
+            BuildBackdrop();
+
+            // Everything that is only meaningful with a colony running lives in here, so it can be
+            // put away as one thing (owner, 2026-09-17: the in-game interface was showing through
+            // the main menu's scrim).
+            //
+            // **A container rather than a class on the shell**, and the reason is mechanical: half
+            // these regions set `style.display` in code as they come and go, and an inline style
+            // beats a stylesheet rule in UI Toolkit — so `.hud--noworld .inspect { display: none }`
+            // would be quietly ignored by exactly the panels most likely to be showing. Hiding the
+            // parent cannot be argued with.
+            _worldUi = new VisualElement { name = "world-ui", pickingMode = PickingMode.Ignore };
+            _worldUi.AddToClassList("worldui");
+            _hud.Add(_worldUi);
+
             BuildScrims();
 
             // The marquee is a picture, not a decision: it polls the rig's rect every frame rather
@@ -361,7 +394,7 @@ namespace Odyssey.Presentation.Ui
             _marquee = new VisualElement { name = "marquee", pickingMode = PickingMode.Ignore };
             _marquee.AddToClassList("marquee");
             _marquee.style.display = DisplayStyle.None;
-            _hud.Add(_marquee);
+            _worldUi.Add(_marquee);
 
             // What the player is holding, and how to stop holding it. Above the command
             // bar, where the eye already goes for the bar and its popovers.
@@ -369,25 +402,53 @@ namespace Odyssey.Presentation.Ui
             _armedBanner.AddToClassList("armed");
             _armedBanner.style.display = DisplayStyle.None;
             _armedWhat = HudText.Make(string.Empty, HudTextRole.Name, ussClass: "armed__what");
-            _armedHow = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "armed__how");
             _armedBanner.Add(_armedWhat);
-            _armedBanner.Add(_armedHow);
-            _hud.Add(_armedBanner);
+
+            // A floor rather than a width, so the four orders all draw the same box and the banner
+            // stops resizing under the eye every time the mode changes; an armed build is longer
+            // and is allowed to push past it. Written from code because the number is derived from
+            // names in the content registry, and a literal in the sheet would be a second copy of
+            // an answer a rename can change.
+            _armedBanner.style.minWidth = HudLayout.ArmedWidth;
+            _worldUi.Add(_armedBanner);
 
             BuildStores();
             BuildStrip();
             BuildRightColumn();
-            BuildRail();
+            BuildGutter();
             BuildInspect();
             BuildBar();
             BuildPalette();
             BuildSettings();
+            BuildDebug();
+
+            // B18, last, so it is the top-most element in the tree and its scrim covers everything
+            // above. Built whether or not a session exists, because the state it belongs to is the
+            // one where none does.
+            BuildStartScreen();
+
+            // After it, so the naming prompt is above the start screen in the tree — it is raised
+            // from in game today, but the two are both modals and the one raised last should win.
+            BuildSavePrompt();
 
             _hud.RegisterCallback<GeometryChangedEvent>(_ => OnResized());
+
+            // A session coming or going is the one thing that decides whether the start screen is
+            // on screen, so it is driven by the event rather than polled: Update returns early
+            // with no world, which is exactly when the start screen has to be visible.
+            _boot!.SessionChanged += OnSessionChanged;
+            OnSessionChanged();
         }
 
         void OnDestroy()
         {
+            if (_boot != null)
+            {
+                _boot.SessionChanged -= OnSessionChanged;
+                // The preferences outlive every session and this component, so a subscription left
+                // on them is a leak that survives the scene.
+                _boot.Preferences.Changed -= OnPreferencesChanged;
+            }
             Detach();
             if (_topRamp != null) DestroyImmediate(_topRamp);
             if (_bottomRamp != null) DestroyImmediate(_bottomRamp);
@@ -409,12 +470,20 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.TabChanged += OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged += OnUiScaleChanged;
             _directors.Settings.CameraSpeedChanged += OnCameraSpeedChanged;
+            _directors.Settings.BuildPaletteLayoutChanged += OnBuildLayoutChanged;
             _directors.Settings.DeveloperOverlayChanged += OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged += OnBusDbChanged;
             _directors.Settings.ExitChanged += OnExitChanged;
+            _directors.Settings.RowRequested += OnSessionRow;
+            _directors.Debug.Changed += OnDebugChanged;
             _directors.Hotkeys.BindingChanged += OnBindingChanged;
             _directors.Hotkeys.ListenChanged += OnListenChanged;
             _directors.Hotkeys.ConflictNoted += OnHotkeyConflict;
+
+            // The palette is a view of the designate director, so it cannot be built until there
+            // is one. Everything above this line is the shell catching up with state that already
+            // existed; this is the one thing that did not exist at all until now.
+            BindBuildPalette();
 
             // The panel may already disagree with the director by the time we get here: the
             // presenter seeds it from the scene and the screen and then lays stored preferences
@@ -423,11 +492,13 @@ namespace Odyssey.Presentation.Ui
             OnSettingsTabChanged(_directors.Settings.Tab);
             OnUiScaleChanged(_directors.Settings.UiScale);
             OnCameraSpeedChanged(_directors.Settings.CameraSpeed);
+            OnBuildLayoutChanged(_directors.Settings.BuildPaletteLayout);
             OnDeveloperOverlayChanged();
             foreach (SettingsBus bus in SettingsDirector.Buses) OnBusDbChanged(bus);
             OnExitChanged();
             foreach (GraphicsOption option in SettingsDirector.All) OnSettingChanged(option);
             RefreshKeyCaps();
+            OnDebugChanged();
         }
 
         void Detach()
@@ -440,9 +511,12 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.TabChanged -= OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged -= OnUiScaleChanged;
             _directors.Settings.CameraSpeedChanged -= OnCameraSpeedChanged;
+            _directors.Settings.BuildPaletteLayoutChanged -= OnBuildLayoutChanged;
             _directors.Settings.DeveloperOverlayChanged -= OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged -= OnBusDbChanged;
             _directors.Settings.ExitChanged -= OnExitChanged;
+            _directors.Settings.RowRequested -= OnSessionRow;
+            _directors.Debug.Changed -= OnDebugChanged;
             _directors.Hotkeys.BindingChanged -= OnBindingChanged;
             _directors.Hotkeys.ListenChanged -= OnListenChanged;
             _directors.Hotkeys.ConflictNoted -= OnHotkeyConflict;
@@ -496,11 +570,16 @@ namespace Odyssey.Presentation.Ui
         {
             if (_hud == null || _hud.panel == null) return false;
             VisualElement? hit = _hud.panel.Pick(ToPanel(screenPosition));
-            return hit != null && hit != _hud;
-        }
+            if (hit == null || hit == _hud) return false;
 
-        /// <summary>Whether the Build palette is open, for whoever owns the Escape key.</summary>
-        public bool BuildPaletteOpen => _buildPanel != null && _buildPanel.style.display == DisplayStyle.Flex;
+            // **The panel's root is not interface, it is the canvas the interface sits on.** It
+            // covers the whole screen and is pickable by default, so counting it made every point
+            // on the screen "over the interface" — and the rig gates hover, scroll and the left
+            // press on exactly that answer, which is a build cursor that never appears anywhere
+            // (owner, 2026-09-17: "the build cursor doesn't appear for walls, floors etc"). `_hud`
+            // was already excluded for this reason; its parent needs excluding for the same one.
+            return hit != hit.panel.visualTree;
+        }
 
         /// <summary>Close the Build palette. The Escape half, called by <c>SettingsPresenter</c>.</summary>
         public void CloseBuildPalette() => SetBuildPalette(false);
@@ -548,6 +627,7 @@ namespace Odyssey.Presentation.Ui
                 RefreshStores();
                 RefreshAlerts();
                 RefreshSpeed();
+                RefreshBuildPalette();
             }
             if (_slow >= SlowBucketSeconds)
             {
@@ -558,6 +638,7 @@ namespace Odyssey.Presentation.Ui
 
             UpdateMarquee();
             UpdateArmedBanner();
+            MarkOrders();
             ReadBarKeys();
 
             // The roster sweep ends when the button does, wherever the pointer happens to be when
@@ -659,7 +740,7 @@ namespace Odyssey.Presentation.Ui
         /// the top-left, so the rect is flipped once, here, at the only place that draws it.
         /// </summary>
         /// <summary>
-        /// A strip over the board saying what the player is holding and how to put it down.
+        /// A strip over the board saying what the player is holding, in that thing's own colour.
         ///
         /// <para><b>An armed tool was invisible, and the way out of it was a key nobody had
         /// been told about.</b> Escape has disarmed the tool since the settings panel landed —
@@ -667,15 +748,35 @@ namespace Odyssey.Presentation.Ui
         /// a tool was held, so the only evidence of build mode was that clicking stopped
         /// selecting things. Reported by the owner as being hard to get out of (2026-09-17).</para>
         ///
+        /// <para><b>The border is the held order's hue, three pixels of it</b> (owner, same day:
+        /// <i>"the border around the big dialog … should be the same colour as that order …
+        /// chopping should have a green border … make that border much thicker"</i>). It is the
+        /// same four tokens the orders strip paints its buttons with and the same idea the open
+        /// palette wears along its top edge, so the button pressed, the panel and this banner
+        /// cannot come to disagree about what colour a mode is. A build tool has no order hue and
+        /// keeps the accent.</para>
+        ///
+        /// <para><b>The second line came off on the same instruction.</b> It read "drag over the
+        /// board · right-click or Esc to stop" and was the only place the right-click gesture was
+        /// written down — which is the one thing lost here, and it is recorded rather than
+        /// glossed. What replaced it is not nothing: the orders strip lights the button that armed
+        /// the tool and puts it down when pressed again, so the way out is now a thing on screen
+        /// rather than a sentence about a key.</para>
+        ///
         /// <para>Above the command bar rather than at the cursor: a cursor decoration is the
-        /// conventional answer and cannot carry a sentence, and the sentence is the point.</para>
+        /// conventional answer and cannot carry a word, let alone a colour this size.</para>
         /// </summary>
         void UpdateArmedBanner()
         {
             DesignateDirector? tool = _directors?.Designate;
             DesignateTool armed = tool?.Tool ?? DesignateTool.None;
 
-            if (armed == DesignateTool.None)
+            // Not while the Build palette is open. The banner floats in the middle of the screen
+            // saying what is armed, and the open palette says the same thing in its own header,
+            // in the armed tool's colour, a few pixels away — two labels about one tool, one of
+            // them over the panel that set it. The banner is for the player who armed something
+            // and then closed the palette, which is the case it was written for.
+            if (armed == DesignateTool.None || BuildPaletteOpen)
             {
                 _armedBanner.style.display = DisplayStyle.None;
                 _armedFor = DesignateTool.None;
@@ -690,29 +791,34 @@ namespace Odyssey.Presentation.Ui
             _armedFor = armed;
             _armedStuffFor = stuff;
 
-            // Mine and Chop are the registry's own words, taken from the activity keys because
-            // those are already phrased as the thing being done — so renaming the tool in
-            // `icon-keys.csv` moves the chip and this banner together, which is the whole point of
-            // the registry. "Felling" was written out here in C# and quietly disagreed with the
-            // palette the day the chip became "Chop trees".
-            //
-            // Cancel keeps its own words: there is no activity key for it, because no colonist is
-            // ever *cancelling* — it is a thing the player does, not work anybody carries out.
-            string what = armed switch
-            {
-                DesignateTool.Mine => Registry.Label("ui.status.mining"),
-                DesignateTool.Fell => Registry.Label("ui.status.felling"),
-                DesignateTool.Cancel => "Cancelling orders",
-                DesignateTool.Deconstruct => Registry.Label("ui.status.deconstructing"),
-                _ => BuildLabels.Building(tool.Building) is { Length: > 0 } name
-                    ? "Building " + name.ToLowerInvariant() + " of " + BuildLabels.Stuff(stuff)
-                    : "Building",
-            };
+            // Which of the four orders is held, or empty for a build tool. Asked of the palette
+            // model rather than switched on the tool here: ArmedPinned is what the orders strip
+            // lights its button from, so one question answers the word, the colour and the lit
+            // button, and the three cannot drift apart.
+            string order = _palette?.ArmedPinned ?? string.Empty;
+
+            // The order's own registry name — the same words the wiki prints, the palette's
+            // breadcrumb says and the strip's tooltip repeats (owner: "keep the consistent in the
+            // wiki and the language and UI"). This banner used to say "Chopping" and "Cancelling
+            // orders", the second of them a C# literal, which is the failure the naming registry
+            // exists to prevent.
+            string building = Registry.Label("ui.status.building");
+            string what = order.Length > 0
+                ? PaletteTools.OrderWord(order)
+                : BuildLabels.Building(tool.Building) is { Length: > 0 } name
+                    ? building + " " + name.ToLowerInvariant() + " of " + BuildLabels.Stuff(stuff)
+                    : building;
 
             HudText.Set(_armedWhat, what, HudTextRole.Name);
-            // The banner is the only place the right-click gesture is written down. Nothing else on
-            // screen could teach it, and a gesture nobody is told about is one nobody uses.
-            HudText.Set(_armedHow, "drag over the board · right-click or Esc to stop", HudTextRole.Meta);
+
+            // The border, in the held order's own colour — the same four tokens the strip paints
+            // its buttons with. A build tool is not an order and has no hue of its own, which is
+            // what the accent is doing here.
+            HudColour hue = (order.Length > 0 ? HudTheme.PinnedActionHue(order) : null)
+                            ?? HudTheme.Accent;
+            Color edge = HudTokens.Convert(hue);
+            _armedBanner.style.borderTopColor = _armedBanner.style.borderRightColor =
+                _armedBanner.style.borderBottomColor = _armedBanner.style.borderLeftColor = edge;
         }
 
         DesignateTool _armedFor = DesignateTool.None;
