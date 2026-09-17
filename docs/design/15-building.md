@@ -326,34 +326,66 @@ reads it yet. A forced order is not a new job kind — it is the existing `Build
 scan bypassed, the reservation taken immediately, and the job pushed onto the pawn rather than
 offered to it.
 
-What it will need, in the order it should be built:
+What it will need, in the order it should be built. **Steps 1 and 2 landed on 2026-09-17**
+(`claude/forced-orders-intent`); 3 and 4 are the presentation half and are not started.
 
-1. **An intent.** `ForceJob(cell, A = job, B = pawn)` — the pawn must be named, because a forced
-   order is about one colonist and the existing intents are all about a cell.
-2. **A legality query the menu can ask without side effects.** The menu has to be built *before* the
-   player chooses, so "which forced jobs could this colonist take on this target" must be answerable
-   without reserving anything. Today every giver decides legality and claims in one pass; splitting
-   that is the real work of this unit, and it is worth doing because the A10 grid needs exactly the
-   same split to grey a command with a reason.
+1. ~~**An intent.**~~ **Built.** `ForceJob(cell, A = job, B = pawn)` — the pawn is named, because a
+   forced order is about one colonist and the existing intents are all about a cell. It is handled by
+   `JobSystem.HandleForceJob`, registered in `ColonyComposition.AddColony` beside the colony's other
+   commands. It resolves the cell through `ConstructionGrid.SiteAt` — the same ground-to-site lift a
+   build order and a cancellation get, extracted from `Cancel` rather than copied out of it — asks
+   the legality query below, ends whatever the colonist is doing **as a failure** (the one ending
+   that releases claims, and how a mental break already takes a job away), and starts the ordinary
+   `BuildJobDriver` through `JobSystem.StartJob` with `Job.PlayerForced` set. It is therefore the
+   first thing in the game that reads that field. An illegal order is a rejection with a reason and
+   changes nothing: legality is asked *before* the current job is interrupted, so a refusal cannot
+   leave a colonist idle or a cell claimed.
+2. ~~**A legality query the menu can ask without side effects.**~~ **Built**, and it is the piece
+   that mattered. `BuildWorkGiver.CanBuild(pawn, ctx, site, out stand)` answers "could this colonist
+   build that, now" and reserves nothing; `JobSystem.CanForce(pawn, ctx, job, target)` is the entry
+   point a menu asks, switching on the job def — one case today, defaulting to no, because a job
+   nobody has decided the forced meaning of should not acquire one by omission. **It is the scan's
+   own test, not a second opinion beside it:** `BuildWorkGiver.TryGiveJob` calls `CanBuild` for every
+   candidate, so the offered path and the forced path cannot drift into disagreeing about what a
+   colonist may build. What it deliberately does *not* answer is **why not** — a greyed command wants
+   a reason, and "nowhere to stand" and "somebody else has it" are not `IntentRejection` values. That
+   vocabulary belongs with A10, which is the first thing that can display one.
 3. **Input case 5 of `09-ui-and-input.md` §6** — right-click is currently orbit-drag on the camera
    rig, so a right-*click* that never travelled has to be separated from a right-*drag*, the way the
-   left button already separates a pick from a box.
+   left button already separates a pick from a box. *(Half of this shipped with the cancel tool:
+   right-click puts an armed tool down. The click/drag split is what is left, and with nothing armed
+   right-click is deliberately inert, reserved for this menu — see
+   `16-cancel-and-deconstruct.md`.)*
 4. **The menu itself**, which is a HUD panel and should be a director plus a presenter like every
-   other region (09 §3).
+   other region (09 §3). Its model asks `JobSystem.CanForce` once per command it is about to draw
+   and submits a `ForceJob` intent when one is picked; nothing else in the simulation is needed.
 
-**How to test it when it lands**, so the procedure exists before the feature:
+**How to test it**, written before the feature and now half kept. The Sim lines are built —
+`ForcedOrderTests`, nine tests in the fast tier; the Hud line waits on step 4 and the by-hand line on
+steps 3 and 4, so **nobody has pressed Play on a forced order.**
 
 - *Fast tier, Hud:* the menu model offers exactly the forced jobs a colonist could legally take on a
   given target view, and no others — with a negative control that a colonist who could not reach the
-  target is offered nothing.
-- *Fast tier, Sim:* a `ForceJob` intent makes the named colonist take that job **on that target**,
+  target is offered nothing. **Not written: there is no menu yet.**
+- ✅ *Fast tier, Sim:* a `ForceJob` intent makes the named colonist take that job **on that target**,
   past a nearer one it would otherwise have chosen. That is the whole claim, and a test that only
   asserts the job started proves nothing, because the scan would have started one anyway. **The
-  control is a second site nearer the colonist.**
-- *Fast tier, Sim:* a forced job that becomes illegal — the site cancelled underneath it — fails and
-  releases its reservation, like any other job.
+  control is a second site nearer the colonist.** Both halves are built:
+  `TheScanChoosesTheNearerSiteWhenNobodyForcesAnything` measures that the colonist really does prefer
+  the near site unforced, and `AForcedOrderSendsTheColonistPastTheNearerSite` then forces the far one
+  and asserts the far wall goes up **with the near one still standing** — the order the walls appear
+  in, not merely that one did.
+- ✅ *Fast tier, Sim:* a forced job that becomes illegal — the site cancelled underneath it — fails
+  and releases its reservation, like any other job. `AForcedJobThatBecomesIllegalFailsAndReleasesItsClaim`
+  asserts the claim is gone and not only that the job ended.
+- ✅ *Fast tier, Sim, and not in the original list:* the legality query refuses on its own for each of
+  the three reasons separately — unreachable (a site walled into a sealed pocket), already claimed by
+  another colonist, and no site there at all — and in each case claims nothing and starts nothing.
+  `AskingWhetherAColonistCouldBuildChangesNothing` is the one that pins the split itself: it asks
+  twice and asserts the **state hash is unmoved**, because a query that claimed on the first call
+  would answer no on the second and that difference is the only symptom there would be.
 - *By hand:* order two walls, one across the board, right-click the far one with a colonist selected,
-  and watch them walk past the near one.
+  and watch them walk past the near one. **Waits on steps 3 and 4.**
 
 ### A wall was hollow and open-topped; it is filled and capped now
 
