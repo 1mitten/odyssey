@@ -96,11 +96,25 @@ namespace Odyssey.Tests.Hud
         /// something else (owner, 2026-09-17).
         /// </summary>
         [Test]
-        public void CancelIsReachableFromEveryCategory()
+        public void CancelAndDeconstructAreReachableFromEveryCategory()
         {
             Assert.That(PaletteTools.Pinned, Does.Contain(PaletteTools.Cancel));
-            Assert.That(PaletteTools.TryGet(PaletteTools.Cancel, out _), Is.True,
-                "a pinned chip that arms nothing is a button that does nothing");
+            Assert.That(PaletteTools.Pinned, Does.Contain(PaletteTools.Deconstruct));
+
+            foreach (string key in PaletteTools.Pinned)
+                Assert.That(PaletteTools.TryGet(key, out _), Is.True,
+                    $"{key} is pinned and arms nothing, so it is a button that does nothing");
+        }
+
+        /// <summary>
+        /// The pinned row is two chips and should stay small. A row that grows is a second palette,
+        /// and the whole point of it is to be the short list of things that are true whatever the
+        /// player is doing.
+        /// </summary>
+        [Test]
+        public void ThePinnedRowStaysShort()
+        {
+            Assert.That(PaletteTools.Pinned.Length, Is.LessThanOrEqualTo(3));
         }
 
         /// <summary>

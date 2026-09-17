@@ -283,14 +283,17 @@ the state-hash defect in miniature. It is an `Assert` now.
 
 ### By hand, in `Play.unity`
 
-1. **B**, Orders. The row reads Mine, Deconstruct, **Chop trees**, Cancel, Forbid, Clear rubble.
+1. **B**. The Orders row reads Mine, **Chop trees**, Forbid, Clear rubble; **Cancel and
+   Deconstruct are in the pinned row under everything**, visible whichever category is open.
 2. Arm **Chop trees**, drag over the wood, watch the marks appear. Arm **Cancel**, drag back over
    them, watch them go — and watch a colonist already swinging give up and walk away.
 3. Build a wall. While it is still a blueprint, cancel it, and check the wood comes back.
 4. **Right-drag to orbit the camera with a tool armed.** The tool must still be armed at the end —
    this is the fault the threshold exists to prevent.
 5. **Right-click without moving.** The banner above the command bar goes.
-6. Let a wall finish. Arm **Deconstruct**, drag over it, and watch it come down into a small pile.
+6. Let a wall finish — a *blueprint* and a half-fed *frame* are not deconstructable, they are
+   Cancel's. Arm **Deconstruct** from the pinned row, drag over the finished wall, and watch it
+   come down into a small pile of 2 or 3 wood.
 7. Point Deconstruct at the ruined city (load the city map) and watch nothing happen. Check the
    console: `Designate: NotPermitted`, not silence.
 

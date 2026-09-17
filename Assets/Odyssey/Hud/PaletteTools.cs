@@ -77,13 +77,13 @@ namespace Odyssey.Hud
         public static readonly (string key, string label, string[] tools)[] Categories =
         {
             ("ui.arch.category.structure", "Structure", new[] { Wall, "ui.arch.tool.door", "ui.arch.tool.stair", "ui.arch.tool.ladder", "ui.arch.tool.roof", "ui.arch.tool.reclaim" }),
-            ("ui.arch.category.orders", "Orders", new[] { Mine, Fell, Deconstruct, "ui.arch.tool.forbid", "ui.arch.tool.clearrubble" }),
+            ("ui.arch.category.orders", "Orders", new[] { Mine, Fell, "ui.arch.tool.forbid", "ui.arch.tool.clearrubble" }),
             ("ui.arch.category.zones", "Zones", new[] { "ui.arch.tool.stockpile", "ui.arch.tool.growzone", "ui.arch.tool.dumping" }),
             ("ui.arch.category.production", "Production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
             ("ui.arch.category.furniture", "Furniture", new[] { "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
             ("ui.arch.category.power", "Power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
             ("ui.arch.category.security", "Security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
-            ("ui.arch.category.salvage", "Salvage", new[] { "ui.arch.tool.salvage", Deconstruct, "ui.arch.tool.reclaim" }),
+            ("ui.arch.category.salvage", "Salvage", new[] { "ui.arch.tool.salvage", "ui.arch.tool.reclaim" }),
             ("ui.arch.category.floors", "Floors", new[] { "ui.arch.tool.deckplate", "ui.arch.tool.grating", "ui.arch.tool.tile" }),
             ("ui.arch.category.recreation", "Recreation", new[] { "ui.arch.tool.gamestable", "ui.arch.tool.viewscreen", "ui.arch.tool.planter" }),
         };
@@ -99,11 +99,19 @@ namespace Odyssey.Hud
         /// is while they are holding <em>another</em> tool, which is exactly when the category row
         /// is showing something else and reaching for it costs two clicks and a hunt.</para>
         ///
-        /// <para>It is in no category at all rather than pinned <i>and</i> listed, because the same
-        /// chip appearing twice in one open panel is a question the player has to stop and answer:
-        /// whether the two do the same thing.</para>
+        /// <para><b>Deconstruct joined it</b> (owner, 2026-09-17, having failed to get it to work
+        /// from Orders: <i>"could you put deconstruct next to cancel as a button so we can at least
+        /// deconstruct this way"</i>). It belongs by the same argument, which is worth stating
+        /// because it was filed under Orders on exactly the reasoning that put Cancel there: both
+        /// are about <em>what is already on the board</em> rather than about what to put down next,
+        /// and both are wanted at the moment a player is holding something else. Two chips is also
+        /// the sensible limit — a pinned row that grows is a second palette.</para>
+        ///
+        /// <para>They are in no category at all rather than pinned <i>and</i> listed, because the
+        /// same chip appearing twice in one open panel is a question the player has to stop and
+        /// answer: whether the two do the same thing.</para>
         /// </summary>
-        public static readonly string[] Pinned = { Cancel };
+        public static readonly string[] Pinned = { Cancel, Deconstruct };
 
         /// <summary>
         /// The tools that actually do something. Anything absent is drawn disabled, which is most
