@@ -618,18 +618,25 @@ namespace Odyssey.Presentation.Ui
         /// state now and an outline is the resting style, and the state it reports is this
         /// one.</para>
         ///
-        /// <para><b>Build mode is: a tool is held, or the panel is up.</b> Both are conditions
-        /// under which a click on the world does something other than select, which is the thing
-        /// the player needs to know before they click. Either alone is enough — a player who arms
-        /// a wall and shuts the panel is still building, and a player who opens the panel and has
-        /// not chosen anything is still about to be.</para>
+        /// <para><b>Build mode is a tool in the player's hand, and nothing else</b> (owner,
+        /// 2026-09-17: <i>"when you click off build mode the button shouldn't be highlighted — ie
+        /// I click esc, that button is not highlighted at all"</i>). It counted an open panel as
+        /// well for a while, on the reasoning that a player who has opened the palette is about to
+        /// build. That is not what the cap is being asked. Escape puts the tool down before it
+        /// closes anything (<c>09-ui-and-input.md</c> §6), so counting the panel meant the first
+        /// Escape left the cap lit over an empty hand — which is the state the owner was
+        /// complaining about in the first place, one step further on.</para>
+        ///
+        /// <para>What is left is the honest question: <b>will the next click on the world place,
+        /// cancel or dig something, rather than select it?</b> Any designate tool answers yes, and
+        /// all of them are reached through this panel. An open palette with nothing chosen answers
+        /// no, and the open palette is its own evidence that it is open.</para>
         /// </summary>
         void MarkBuildMode()
         {
             if (_buildItem == null) return;
 
-            bool armed = _directors != null && _directors.Designate.Tool != DesignateTool.None;
-            bool on = armed || BuildPaletteOpen;
+            bool on = _directors != null && _directors.Designate.Tool != DesignateTool.None;
 
             _buildItem.EnableInClassList("cmd--on", on);
             _buildIcon?.Inherit(on ? HudTokens.OnAccent : HudTokens.Accent);
@@ -809,12 +816,19 @@ namespace Odyssey.Presentation.Ui
 
             _buildPanel.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
 
-            // While the palette is open the inspect pane collapses to its header (specification).
-            // The palette docks on top of whatever is under it, so this is not only tidiness: it
-            // is what stops a selected colonist's needs pushing the palette up over the board.
-            _inspectPanel?.EnableInClassList("inspect--collapsed", open);
+            // Opening Build puts away whatever was being inspected (owner, 2026-09-17: "if the
+            // tile info dialog is showing, that is closed down and the build mode is open"). The
+            // specification only asked for the pane to collapse to its header, and collapsing was
+            // the wrong half of the idea: the pane is docked in the same bottom-left corner the
+            // palette now pins to, so a collapsed header is still a strip of panel wedged between
+            // the palette and the bar, and it is describing a cell the player has stopped asking
+            // about. Clearing the selection is also what lets the palette sit on the bar in every
+            // case rather than lifting over a pane whose height changes with what is selected.
+            if (open) _directors?.Selection.Clear();
 
-            if (open && _barItems.Count > 0) PlaceBuildPalette();
+            // No longer waits on the bar being laid out: the corner it docks into is two screen
+            // edges, not the position of a button.
+            if (open) PlaceBuildPalette();
 
             // The cap is lit by build mode, not by this panel — see MarkBuildMode.
             MarkBuildMode();
@@ -822,45 +836,32 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// Dock the palette flush on whatever is under it.
+        /// Dock the palette into the bottom-left corner: hard against the left edge of the screen
+        /// and sitting on the command bar.
         ///
-        /// <para>Rows and Bar span the screen, so they only need a bottom. Rail keeps its width
-        /// and is anchored to the button that raised it, like every other popover.</para>
+        /// <para><b>Both anchors are the owner's</b> (2026-09-17: <i>"it needs to pin/dock against
+        /// the bottom and left for space — so up against the left screen border and also attached
+        /// to the bottom bar"</i>), and both replace something that was nearly right. The left edge
+        /// was <see cref="HudLayout.PopoverLeft"/> under the Build cap, which is the rule every
+        /// other popover follows and which left the panel a few pixels of the bar's own padding
+        /// short of the screen. The bottom used to lift over the inspect pane when something was
+        /// selected; the pane is closed when the palette opens now (see
+        /// <see cref="SetBuildPalette"/>), so there is nothing to lift over and the panel sits on
+        /// the bar in every case.</para>
+        ///
+        /// <para>Only the width differs between layouts, and Bar has none — it spans.</para>
         /// </summary>
         void PlaceBuildPalette()
         {
             if (_palette == null) return;
 
-            float bottom = HudLayout.PopoverBottom;
-
-            // Flush on the inspect pane's collapsed header when there is one, rather than on the
-            // bar behind it — "tight and flush to other elements" (owner, 2026-09-17).
-            if (_inspectPanel != null && _inspectPanel.style.display == DisplayStyle.Flex)
-            {
-                float top = _inspectPanel.worldBound.height;
-                if (!float.IsNaN(top) && top > 1f) bottom += top;
-            }
-
-            _buildPanel.style.bottom = bottom;
-
-            // Bar is the only layout that spans the screen now. Rows and Rail both carry a width
-            // and are anchored to the button that raised them, like every other popover — which
-            // for the Build cap, first on the bar, puts them against the left edge.
-            if (_palette.Layout != BuildPaletteLayout.Bar)
-            {
-                _buildPanel.style.right = StyleKeyword.Null;
-                float width = _palette.Layout == BuildPaletteLayout.Rail
-                    ? HudLayout.BuildRailWidth
-                    : HudLayout.BuildRowsWidth;
-                _buildPanel.style.left = _barItems.Count > 0
-                    ? HudLayout.PopoverLeft(_barItems[0].worldBound.xMin, width,
-                        _hud.resolvedStyle.width)
-                    : HudLayout.Edge;
-                return;
-            }
-
+            _buildPanel.style.bottom = HudLayout.PopoverBottom;
             _buildPanel.style.left = HudLayout.Edge;
-            _buildPanel.style.right = HudLayout.Edge;
+
+            // Written as two statements rather than a conditional: an edge is a length and Null is
+            // a keyword, and the two have no common type to pick between.
+            if (_palette.Layout == BuildPaletteLayout.Bar) _buildPanel.style.right = HudLayout.Edge;
+            else _buildPanel.style.right = StyleKeyword.Null;
         }
     }
 }

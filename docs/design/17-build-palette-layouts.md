@@ -87,11 +87,19 @@ space"* (2026-09-17). So:
 
 - the 28 px margins are gone;
 - **only Bar spans the screen**, `left:0` to `right:0`;
-- **Rows is a 372 px column** and **Rail an 840 px panel**, both anchored to the button that raised
-  them like every other popover — which, the Build cap being first on the bar, puts both against
-  the left edge;
-- all three dock **flush on whatever is under them** — the command bar, or the inspect pane's
-  collapsed header when something is selected.
+- **Rows is a 372 px column** and **Rail an 840 px panel**;
+- all three pin into the **bottom-left corner**: `left: 0`, sitting on the command bar (owner,
+  2026-09-17: *"it needs to pin/dock against the bottom and left for space — so up against the left
+  screen border and also attached to the bottom bar"*). Anchoring under the Build cap with
+  `PopoverLeft`, which is the rule every other popover follows, left the panel a few pixels of the
+  bar's own padding short of the screen edge;
+- and **opening Build closes whatever was being inspected** (same instruction: *"if the tile info
+  dialog is showing, that is closed down and the build mode is open"*). The specification asked
+  only for the pane to collapse to its header, and collapsing was the wrong half of the idea: the
+  pane is docked in the same corner, so a collapsed header is still a strip of panel wedged between
+  the palette and the bar, describing a cell the player has stopped asking about. Clearing the
+  selection is also what lets the palette sit on the bar in every case rather than lifting over a
+  pane whose height changes with what is selected.
 
 This is the rule the bar and the popovers already follow, and the same words the owner used about
 the popovers a day earlier: *"directly above the build button … no spacing and padding to ensure
@@ -172,9 +180,17 @@ unarmed, the first tile a player reaches for is usually the one already pointed 
 in `SelectSubType` is "already pointed at **and** already in the player's hand", or that first click
 would do nothing and read as a dead button. `ClickingTheTileAlreadyPointedAtStillArmsIt` pins it.
 
-**Build mode is: a tool is held, or the panel is up.** Both are conditions under which a click on
-the world does something other than select, which is the thing the player needs to know before they
-click.
+**Build mode is a tool in the player's hand, and nothing else.** It counted an open panel as well
+for a few hours, on the reasoning that a player who has opened the palette is about to build. That
+is not what the cap is being asked (owner: *"when you click off build mode the button shouldn't be
+highlighted — ie I click esc, that button is not highlighted at all"*). Escape puts the tool down
+before it closes anything, so counting the panel meant the first Escape left the cap lit over an
+empty hand — the very state the complaint was about, one step further on.
+
+What is left is the honest question: **will the next click on the world place, cancel or dig
+something, rather than select it?** Any designate tool answers yes, and all of them are reached
+through this panel. An open palette with nothing chosen answers no, and the open palette is its own
+evidence that it is open.
 
 ## 5. The icons are drawn, and why
 
@@ -289,9 +305,11 @@ category.
 **Proved, PlayMode** (`HudGeometryTests`): no row overflows in any layout at 1280×720, 1920×1080 or
 2560×1440; no panel overlaps another; every tile draws a real shape rather than the placeholder;
 **Rows and Rail both hold their height across all seven categories**; switching layout on screen
-keeps what was armed; holding Cancel colours the panel; **the Build cap is lit in build mode and
-dark out of it**, checked on the resolved fill and not only on the class, because the class being
-set and the fill not following is the shape that fault took first.
+keeps what was armed; holding Cancel colours the panel; **the Build cap is lit only while a tool is
+held** — dark when the panel is merely open, and dark again the moment the tool is put down —
+checked on the resolved fill and not only on the class, because the class being set and the fill not
+following is the shape that fault took first; and **all three layouts pin into the bottom-left
+corner**, against the left edge of the screen and on the command bar.
 
 **Not judged by anybody.** Three portraits are written to `Logs/palette-{rows,rail,bar}.png` on every
 PlayMode run for exactly this reason, and they are the only reason the mode colours, the hue set and

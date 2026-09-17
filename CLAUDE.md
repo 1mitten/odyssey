@@ -116,7 +116,8 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   screen. **Nothing is armed until the player clicks** — the palette model is built when the HUD
   attaches, and its seeding pass used to arm a wall, so the game began in build mode with a wall on
   the cursor. The Build cap on the command bar is the indicator of that: outlined at rest, filled
-  while a tool is held or the panel is up. And **thirty-seven icons are drawn** as `Painter2D` paths in `HudGlyph`'s
+  **only while a tool is actually held** — an open panel with nothing chosen is not build mode. The
+  palette pins into the bottom-left corner and **closes the inspect pane when it opens**. And **thirty-seven icons are drawn** as `Painter2D` paths in `HudGlyph`'s
   existing box, because ADR 0007's pipeline covers no architecture key and the specification forbids
   the placeholder square here; materials keep the game's own sprites, which is the one tier whose
   art must not change. **Every PlayMode run writes `Logs/palette-{rows,rail,bar}.png`** — the only

@@ -1286,17 +1286,6 @@
     border-bottom-width: 4px;
 }
 
-/* ---- the inspect pane, collapsed while the palette is open
-
-   The palette docks on whatever is under it, so this is not only tidiness: without it a selected
-   colonist's needs would push the palette up over the board. */
-
-.inspect--collapsed .inspect__tabs,
-.inspect--collapsed .needs,
-.inspect--collapsed .skills {
-    display: none;
-}
-
 /* ---------------------------------------------------------------- B17 settings
 
    Centred, and deliberately narrow: it holds a short list of switches, not a settings tree. Not a

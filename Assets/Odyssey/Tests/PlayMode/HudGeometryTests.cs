@@ -1021,10 +1021,12 @@ namespace Odyssey.Tests.PlayMode
         /// invisible under it and the button looked identical either way.</para>
         ///
         /// <para>It checks the resolved fill rather than only the class, because the class being
-        /// set and the fill not following is exactly the shape this fault took the first time.</para>
+        /// set and the fill not following is exactly the shape this fault took the first time. And
+        /// it arms the tool through the panel rather than through the director, because the whole
+        /// question is whether the cap follows what the player did.</para>
         /// </summary>
         [UnityTest]
-        public IEnumerator TheBuildCapIsLitOnlyInBuildMode()
+        public IEnumerator TheBuildCapIsLitOnlyWhileAToolIsHeld()
         {
             GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
             try
@@ -1038,21 +1040,36 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(cap.ClassListContains("cmd--on"), Is.False,
                     "the Build cap is lit before anything has been opened or armed");
 
+                // Opening the panel is not build mode. Nothing is in the player's hand yet, and a
+                // click on the world would still select rather than place.
                 yield return OpenPalette(doc);
+                Assert.That(cap.ClassListContains("cmd--on"), Is.False,
+                    "the Build cap lit merely because the panel was opened");
+
+                VisualElement? wall = doc.rootVisualElement.Q(name: "sub-" + PaletteTools.Wall);
+                Assert.That(wall, Is.Not.Null);
+                using (var click = ClickEvent.GetPooled())
+                {
+                    click.target = wall;
+                    wall!.SendEvent(click);
+                }
+                yield return Settle(doc);
+
                 Assert.That(cap.ClassListContains("cmd--on"), Is.True,
-                    "the Build cap is not lit with the palette open");
+                    "the Build cap is dark with a wall in the player's hand");
                 Color lit = cap.resolvedStyle.backgroundColor;
                 Assert.That(lit, Is.Not.EqualTo(resting),
                     $"the Build cap draws {lit} both in and out of build mode, so it says nothing");
                 Assert.That(lit.r, Is.EqualTo(HudTokens.Accent.r).Within(0.02f),
                     "the lit cap is not the accent fill");
 
-                // Escape disarms the tool first and closes the panel second, so it takes two.
-                _directors_CloseEverything(doc);
+                // What Escape does first: put the tool down. The panel stays open, and the cap
+                // must go dark anyway — that is the owner's report.
+                boot.Directors!.Designate.Tool = DesignateTool.None;
                 yield return Settle(doc);
 
                 Assert.That(cap.ClassListContains("cmd--on"), Is.False,
-                    "the Build cap is still lit after leaving build mode — the owner's report");
+                    "the Build cap is still lit after the tool was put down — the owner's report");
                 Assert.That(cap.resolvedStyle.backgroundColor, Is.EqualTo(resting),
                     "the Build cap did not go back to its resting fill");
             }
@@ -1062,11 +1079,44 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
-        /// <summary>Put the tool down and shut the palette, the way Escape does.</summary>
-        static void _directors_CloseEverything(UIDocument doc)
+        /// <summary>
+        /// Opening Build puts away whatever was being inspected, and the palette then sits in the
+        /// bottom-left corner: hard against the left edge and on the command bar (owner,
+        /// 2026-09-17).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBuildPaletteDocksIntoTheBottomLeftCorner()
         {
-            var shell = doc.GetComponent<HudShell>();
-            shell.CloseBuildPalette();
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+                yield return OpenPalette(doc);
+
+                float slack = SlackFor(doc.rootVisualElement.worldBound, Resolutions[1]);
+
+                foreach (BuildPaletteLayout layout in BuildPaletteModel.Layouts)
+                {
+                    yield return SwitchLayout(doc, layout);
+
+                    Rect panel = doc.rootVisualElement.Q(name: "build")!.worldBound;
+                    Rect screen = doc.rootVisualElement.worldBound;
+
+                    Assert.That(panel.xMin, Is.EqualTo(screen.xMin).Within(slack),
+                        $"the {layout} palette starts at {panel.xMin:0.#} rather than against the " +
+                        "left edge of the screen");
+
+                    VisualElement? bar = doc.rootVisualElement.Q(className: "commandbar");
+                    Assert.That(bar, Is.Not.Null);
+                    Assert.That(panel.yMax, Is.EqualTo(bar!.worldBound.yMin).Within(slack + 2f),
+                        $"the {layout} palette ends at {panel.yMax:0.#} against a command bar " +
+                        $"starting at {bar.worldBound.yMin:0.#}, so it is not sitting on the bar");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
         }
 
         /// <summary>

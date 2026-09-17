@@ -2483,4 +2483,30 @@ work itself.
   already pointed at, so "same key, do nothing" would have made the first click of every session a
   dead button. The fast tier caught that one within a minute of the first.
 
+  **A fourth pass pinned it into the corner and narrowed what the cap means.** The owner asked for
+  the panel *"up against the left screen border and also attached to the bottom bar"*; it had been
+  anchored under the Build cap by `PopoverLeft`, which is the rule every other popover follows and
+  which left it a few pixels of the bar's own padding short of the edge. And *"if the tile info
+  dialog is showing, that is closed down and the build mode is open"* — the specification had asked
+  only for the inspect pane to collapse to its header, which was the wrong half of the idea: the
+  pane is docked in the same corner, so a collapsed header is still a strip of panel wedged between
+  the palette and the bar, describing a cell the player has stopped asking about. Clearing the
+  selection also removed the last reason the palette's bottom edge had to be computed at all.
+
+  **And the cap stopped counting an open panel as build mode.** It had counted "a tool is held or
+  the panel is up", on the reasoning that a player who has opened the palette is about to build.
+  The owner's correction — *"I click esc, that button is not highlighted at all"* — exposes why that
+  is wrong: Escape puts the tool down before it closes anything, so counting the panel left the cap
+  lit over an empty hand, which is the state the original complaint was about, one step further on.
+  What it reports now is the honest question — will the next click on the world place, cancel or dig
+  something rather than select it — and an open palette with nothing chosen is its own evidence that
+  it is open.
+
+  **The Unity tiers could not be run on this pass:** the owner had the editor open on this worktree,
+  and an editor and a batch run cannot share a project. The fast tier is green (559 Sim, 219 Hud)
+  and the Presentation changes were reviewed by reading rather than compiling — which caught one
+  real error that a compiler would have, a conditional returning a length on one branch and a
+  `StyleKeyword` on the other, with no common type between them. That is not a substitute for the
+  tiers and the gap is recorded here rather than papered over.
+
   **Nobody has pressed Play on any of it.** The portraits are the only thing anyone has looked at.
