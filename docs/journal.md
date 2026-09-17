@@ -1292,3 +1292,24 @@ work itself.
     the tee, and something to cover the 0.6 m of bare cell it would leave each side, which today's
     floor slab does not reach. **The cap is the cheap experiment that settles it:** look at a room
     and say whether 2.5 m is a fortress or just a wall.
+
+- **The build line caught up with `main`, and the golden re-bake was made to say why (branch
+  `claude/build-pipeline`, 2026-09-17).** PR #63 had gone conflicting: `main` had baked new golden
+  hashes when `CellGrid` joined the state hash (OQ-50) while the branch had baked its own on the
+  old scheme, so neither side's numbers could survive. The merge is otherwise unremarkable — the
+  journal's two appended entries both kept, `main`'s first because it finishes the bullet the
+  branch's interrupted.
+  - **The re-bake was not taken on trust.** The obvious story was "the construction grid is new
+    hashed state, of course the number moved". A **control run** with `ConstructionGrid`'s
+    `AddTickable` registration removed came back at 17805151056309647682 — not `main`'s
+    13449042641056873599 — so the construction grid was *not* the whole of it. The rest is
+    `Skill_Construction`: a new skill widens every pawn's skill array, which moves the generated
+    hash before a tick has run. Two causes, both deliberate, and the second would have been
+    invisible under a re-bake that stopped at the first plausible explanation.
+  - **Both tiers green for the first time on this branch** (run 35194913924, and again after a
+    second merge): fast tier 478 Sim + 134 Hud, Long 15, Unity 1,055 EditMode and 27 PlayMode, plus
+    the headless day. The PR's "unrun: `unity.sh test editmode`" caveat is retired.
+  - **Worth noticing for next time:** both grids register for the hash by being an `ITickable` with
+    `TickGroup.Never`, a trick that pre-dates `SimWorldBuilder.AddHashable` and that `AddHashable`
+    now exists to replace. Left alone here — moving them would shift every golden again for no
+    behaviour — but the next person to touch either file should use the third list.
