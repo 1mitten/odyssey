@@ -166,16 +166,23 @@ build and teardown callable at runtime — `BuildSession()`/`TeardownSession()` 
 built rig. One half is deferred rather than faked: the figure-leak check cannot run in the rig with
 no module catalogue (everything resolves to a shared Unity primitive, so there is nothing to leak),
 and giving it a real catalogue would make a test depend on the licensed packs — so it `Assert.Ignore`s
-with that reason recorded. `U36` (save format v2) is next in the `MS` chain and still open.
+with that reason recorded. **`U36` (save format v2) is done, Sim-only, 2026-09-17.** The header now
+carries a `SaveRecipe` beside the seed/size/tick it always had — map type, scenario, colony name and
+day — so a load screen can describe a save from its header alone; `WorldSave.ReadHeaderOnly` reads
+exactly that, with no world and no component list. `CurrentFormatVersion` is 2; a version 1 file
+still loads and reads back `SaveRecipe.Unknown` (map type `MapType.Unknown`, a value added for
+exactly this, not a reuse of either real one). Files go through `WorldSave.SaveToFile` /
+`LoadFromFile`, both path-taking because Sim has no `UnityEngine.Application.persistentDataPath` to
+read — the `Saves` folder itself is left to the caller that wires the menu on top (`U38`–`U40`). Day
+is likewise handed in already computed: `GameClock`'s tick-to-calendar mapping lives in the Hud
+assembly and Sim must not reference it, so nothing here re-implements that conversion.
 
 Three things a later session should not re-litigate. **Live portraits** are refused by
 `09-ui-and-input.md` §4.5 — but that argument is about fifty of them in the roster bar at 15 Hz
 while the world renders, and the select screen is three, rendered once, with no world behind them;
 §4.5 gets an explicit carve-out in `U41` rather than a silent exception. **Colonists start every
 skill at 0 experience** — only passions are rolled — so there is nothing to choose between three
-candidates until `U37`. And **the save header records only seed, size and tick**, not the map type,
-so a save reloaded against a different generator would load cell data over a differently generated
-world; `U36` is where that is fixed.
+candidates until `U37`.
 
 ### What runs today
 

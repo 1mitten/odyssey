@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Worldgen.Natural;
 
 namespace Odyssey.Sim.Saving
 {
@@ -100,6 +101,43 @@ namespace Odyssey.Sim.Saving
     }
 
     /// <summary>
+    /// The generation recipe a save's header carries beyond seed, size and tick (U36): what
+    /// generator made the map, which scenario placed the colony, what the player named it, and
+    /// the day the tick falls on. Together with the header's own seed, size and tick, this is
+    /// everything a load screen needs to describe a save from its header alone.
+    ///
+    /// <para><b>Day is handed in already computed, not derived here.</b> The simulation counts
+    /// ticks and nothing else — the tick-to-calendar mapping is <c>GameClock</c>, which lives in
+    /// the Hud assembly, and Sim must never reference it (<c>Odyssey.Sim.csproj</c> enforces the
+    /// dependency direction by referencing only <c>Odyssey.Sim.Contracts</c>). The caller, who
+    /// already has both the tick and the clock, derives the day and hands it in here; nothing in
+    /// Sim re-implements that conversion.</para>
+    /// </summary>
+    public readonly struct SaveRecipe
+    {
+        public readonly MapType Map;
+        public readonly string Scenario;
+        public readonly string ColonyName;
+        public readonly int Day;
+
+        public SaveRecipe(MapType map, string scenario, string colonyName, int day)
+        {
+            Map = map;
+            Scenario = scenario ?? string.Empty;
+            ColonyName = colonyName ?? string.Empty;
+            Day = day;
+        }
+
+        /// <summary>
+        /// What a save gets when nothing else says otherwise: a version 1 file, which recorded
+        /// none of this, and a version 2 file written without an explicit recipe. Both read back
+        /// the same way — <see cref="MapType.Unknown"/>, empty scenario and colony name, day -1 —
+        /// so "unknown" means one thing however it came about.
+        /// </summary>
+        public static readonly SaveRecipe Unknown = new SaveRecipe(MapType.Unknown, string.Empty, string.Empty, -1);
+    }
+
+    /// <summary>
     /// The save container.
     ///
     /// Layout: a magic number, a format version, the world scalars, then a length-prefixed
@@ -118,12 +156,21 @@ namespace Odyssey.Sim.Saving
     public static class WorldSave
     {
         const ulong Magic = 0x59455353594451; // "QDYSSEY" little-endian-ish; any stable value
-        public const int CurrentFormatVersion = 1;
 
-        public static void Save(SimWorld world, Stream stream, IReadOnlyList<ISaveable> components)
+        /// <summary>
+        /// 2 (U36): the header grew a <see cref="SaveRecipe"/> — map type, scenario, colony name
+        /// and day — after the world scalars it always carried. A version 1 file still loads;
+        /// <see cref="ReadHeader"/> is the one place that knows which versions wrote what.
+        /// </summary>
+        public const int CurrentFormatVersion = 2;
+
+        public static void Save(SimWorld world, Stream stream, IReadOnlyList<ISaveable> components,
+            SaveRecipe? recipe = null)
         {
             if (world == null) throw new ArgumentNullException(nameof(world));
             using var binary = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
+
+            SaveRecipe effective = recipe ?? SaveRecipe.Unknown;
 
             binary.Write(Magic);
             binary.Write(CurrentFormatVersion);
@@ -132,6 +179,10 @@ namespace Odyssey.Sim.Saving
             binary.Write(world.Size.SizeZ);
             binary.Write(world.Size.SizeY);
             binary.Write(world.CurrentTick);
+            binary.Write((int)effective.Map);
+            WriteHeaderString(binary, effective.Scenario);
+            WriteHeaderString(binary, effective.ColonyName);
+            binary.Write(effective.Day);
 
             binary.Write(components.Count);
             for (int i = 0; i < components.Count; i++)
@@ -155,6 +206,17 @@ namespace Odyssey.Sim.Saving
             }
         }
 
+        /// <summary>Save straight to a path, for a caller that has one (a menu, a test fixture).
+        /// Sim has no <c>UnityEngine.Application.persistentDataPath</c> to read, so the path —
+        /// wherever the <c>Saves</c> folder turns out to live — is entirely the caller's to
+        /// supply; this only owns the bytes written at the end of it.</summary>
+        public static void SaveToFile(string path, SimWorld world, IReadOnlyList<ISaveable> components,
+            SaveRecipe? recipe = null)
+        {
+            using var stream = File.Create(path);
+            Save(world, stream, components, recipe);
+        }
+
         /// <summary>
         /// Restore into an already-built world. The world is constructed from Defs and a seed by
         /// the composition root first, exactly as a new game would be, and then has its state
@@ -168,24 +230,13 @@ namespace Odyssey.Sim.Saving
             SaveHeader header;
             try
             {
-                ulong magic = binary.ReadUInt64();
-                if (magic != Magic) throw new SaveLoadException("Not an Odyssey save file.");
+                header = ReadHeader(binary);
 
-                int version = binary.ReadInt32();
-                if (version > CurrentFormatVersion)
+                if (header.Seed != world.Seed)
                     throw new SaveLoadException(
-                        $"Save format version {version} is newer than this build understands ({CurrentFormatVersion}).");
-
-                uint seed = binary.ReadUInt32();
-                var size = new GridSize(binary.ReadInt32(), binary.ReadInt32(), binary.ReadInt32());
-                int tick = binary.ReadInt32();
-                header = new SaveHeader(version, seed, size, tick);
-
-                if (seed != world.Seed)
-                    throw new SaveLoadException(
-                        $"Save seed {seed} does not match the world it is being loaded into ({world.Seed}).");
-                if (!size.Equals(world.Size))
-                    throw new SaveLoadException($"Save is {size} but the world is {world.Size}.");
+                        $"Save seed {header.Seed} does not match the world it is being loaded into ({world.Seed}).");
+                if (!header.Size.Equals(world.Size))
+                    throw new SaveLoadException($"Save is {header.Size} but the world is {world.Size}.");
 
                 var byKey = new Dictionary<string, ISaveable>(StringComparer.Ordinal);
                 for (int i = 0; i < components.Count; i++) byKey[components[i].SaveKey] = components[i];
@@ -221,6 +272,84 @@ namespace Odyssey.Sim.Saving
             world.RestoreTick(header.Tick);
             return header;
         }
+
+        /// <summary>Load straight from a path. See <see cref="SaveToFile"/> for why the path is
+        /// the caller's to supply.</summary>
+        public static SaveHeader LoadFromFile(string path, SimWorld world, IReadOnlyList<ISaveable> components)
+        {
+            using var stream = File.OpenRead(path);
+            return Load(world, stream, components);
+        }
+
+        /// <summary>
+        /// Read just the header — seed, size, tick and the <see cref="SaveRecipe"/> — without a
+        /// world to load into and without touching a single component section. This is the whole
+        /// point of the header carrying the recipe: a load screen calls this once per file in a
+        /// folder and can list every save, without parsing any of their bodies.
+        /// </summary>
+        public static SaveHeader ReadHeaderOnly(Stream stream)
+        {
+            using var binary = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true);
+            try
+            {
+                return ReadHeader(binary);
+            }
+            catch (EndOfStreamException e)
+            {
+                throw new SaveLoadException("Save file is truncated.", e);
+            }
+        }
+
+        /// <summary>Read just the header from a path. See <see cref="ReadHeaderOnly(Stream)"/>.</summary>
+        public static SaveHeader ReadHeaderOnly(string path)
+        {
+            using var stream = File.OpenRead(path);
+            return ReadHeaderOnly(stream);
+        }
+
+        /// <summary>
+        /// Everything before the section list: the magic, the version, the world scalars every
+        /// version has written, and — from version 2 on — the <see cref="SaveRecipe"/>. The one
+        /// place that knows the layout differs by version, so <see cref="Load"/> and
+        /// <see cref="ReadHeaderOnly(Stream)"/> cannot read it two different ways.
+        /// </summary>
+        static SaveHeader ReadHeader(BinaryReader binary)
+        {
+            ulong magic = binary.ReadUInt64();
+            if (magic != Magic) throw new SaveLoadException("Not an Odyssey save file.");
+
+            int version = binary.ReadInt32();
+            if (version > CurrentFormatVersion)
+                throw new SaveLoadException(
+                    $"Save format version {version} is newer than this build understands ({CurrentFormatVersion}).");
+
+            uint seed = binary.ReadUInt32();
+            var size = new GridSize(binary.ReadInt32(), binary.ReadInt32(), binary.ReadInt32());
+            int tick = binary.ReadInt32();
+
+            // Version 1 wrote none of this — it predates SaveRecipe entirely — so a file that old
+            // reads back Unknown rather than guessing at a map type or a name it never recorded.
+            SaveRecipe recipe = version >= 2
+                ? new SaveRecipe((MapType)binary.ReadInt32(), ReadHeaderString(binary), ReadHeaderString(binary),
+                    binary.ReadInt32())
+                : SaveRecipe.Unknown;
+
+            return new SaveHeader(version, seed, size, tick, recipe);
+        }
+
+        static void WriteHeaderString(BinaryWriter binary, string value)
+        {
+            byte[] bytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
+            binary.Write(bytes.Length);
+            binary.Write(bytes);
+        }
+
+        static string ReadHeaderString(BinaryReader binary)
+        {
+            int length = binary.ReadInt32();
+            if (length < 0) throw new SaveLoadException("Negative string length in the header; the file is corrupt.");
+            return Encoding.UTF8.GetString(binary.ReadBytes(length));
+        }
     }
 
     /// <summary>What the header said, plus anything the load had to skip.</summary>
@@ -228,18 +357,25 @@ namespace Odyssey.Sim.Saving
     {
         readonly List<string> _skipped = new List<string>();
 
-        internal SaveHeader(int formatVersion, uint seed, GridSize size, int tick)
+        internal SaveHeader(int formatVersion, uint seed, GridSize size, int tick, SaveRecipe recipe)
         {
             FormatVersion = formatVersion;
             Seed = seed;
             Size = size;
             Tick = tick;
+            Recipe = recipe;
         }
 
         public int FormatVersion { get; }
         public uint Seed { get; }
         public GridSize Size { get; }
         public int Tick { get; }
+
+        /// <summary>
+        /// The generation recipe: map type, scenario, colony name and day. A version 1 file reads
+        /// back <see cref="SaveRecipe.Unknown"/>, since it recorded none of this.
+        /// </summary>
+        public SaveRecipe Recipe { get; }
 
         /// <summary>Sections this build did not recognise, usually a mod that is no longer installed.</summary>
         public IReadOnlyList<string> SkippedSections => _skipped;
