@@ -414,6 +414,20 @@ namespace Odyssey.Sim.Pawns
         public int passionMinorPerCent = 35;
 
         public int passionMajorPerCent = 15;
+
+        /// <summary>
+        /// Starting skill levels (U37), one independent roll per skill. Index is the level,
+        /// value is its weight out of the sum of the whole table; level 0 needs no entry beyond
+        /// index 0 carrying the largest share. INVENTED: there is no RimWorld number to take
+        /// (clean room) and nothing in docs/research/ or docs/design/ pins one. Weighted toward a
+        /// low baseline, on the reasoning that a colonist's life before the crash was mostly not
+        /// this particular trade, with a thin tail so an occasional colonist starts competent
+        /// rather than every one of five arriving identical — which is also the reason `U40`'s
+        /// candidate cards need this at all: three colonists rolled from the same table must be
+        /// able to differ. Mean level is 1.16, and levels 6 and 7 together are a 2% roll, so a
+        /// visibly skilled starting colonist is rare rather than routine.
+        /// </summary>
+        public int[] startingSkillLevelWeights = { 40, 20, 14, 10, 6, 4, 3, 2, 1 };
     }
 
     /// <summary>
@@ -624,5 +638,13 @@ namespace Odyssey.Sim.Pawns
         /// stone is the kind of coupling nothing would ever report.
         /// </summary>
         public const uint StoneYield = 0x27D4_EB2F;
+
+        /// <summary>
+        /// Starting skill levels (U37). Drawn from (world seed, pawn id), the same shape as
+        /// <see cref="Passion"/> and for the same reason: a colonist's skills and its passions
+        /// are two different questions, and sharing a salt would make one answer depend on the
+        /// other by coincidence of arithmetic rather than by design.
+        /// </summary>
+        public const uint StartingSkill = 0x1656_67B1;
     }
 }
