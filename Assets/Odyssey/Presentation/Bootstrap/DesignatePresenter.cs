@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
+using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
 using UnityEngine;
@@ -100,8 +101,32 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         void OnToolDragging(CellRef anchor, CellRef head)
         {
+            TellTheDirectorWhichLayerItIsWorkingOn();
             if (!Director.Dragging && !Director.Begin(anchor)) return;
             Director.DragTo(head);
+        }
+
+        /// <summary>
+        /// A floor is ordered on the slice's layer; everything else is ordered where the pointer
+        /// says.
+        ///
+        /// <para><b>Decided here because this is the only place that can see both halves.</b>
+        /// <c>DesignateDirector</c> is Unity-free and references only the contracts, so it cannot
+        /// ask <c>ConstructionContent</c> whether the armed building is a slab; the rig owns the
+        /// active layer and knows nothing about buildings. So the presenter answers the one
+        /// question and hands over a number, and the substitution itself stays in the class the
+        /// fast tier can test.</para>
+        ///
+        /// <para>Why a floor is the exception is <see cref="DesignateDirector.WorkingLayer"/>: a
+        /// pointer can only name a surface, and the cell a floor wants is open air over a room.
+        /// </para>
+        /// </summary>
+        void TellTheDirectorWhichLayerItIsWorkingOn()
+        {
+            DesignateDirector director = Director;
+            bool slab = director.Tool == DesignateTool.Build
+                && ConstructionContent.BuildingAt(director.Building).slab;
+            director.WorkingLayer = slab && _rig != null ? _rig.ActiveLayer : (int?)null;
         }
 
         void OnToolDragCancelled() => Director.Abandon();
@@ -185,7 +210,9 @@ namespace Odyssey.Presentation.Bootstrap
 
             DesignateTool tool = Director.Tool;
             // Begun already by the live preview in the ordinary case; begun here for a press that
-            // never moved a pixel, which raises no dragging frame at all.
+            // never moved a pixel, which raises no dragging frame at all — and that press is
+            // exactly the one that has had no chance to be told its layer yet.
+            TellTheDirectorWhichLayerItIsWorkingOn();
             if (!Director.Dragging && !Director.Begin(anchor)) return;
             Director.DragTo(head);
             IReadOnlyList<CellRef> cells = Director.Commit();

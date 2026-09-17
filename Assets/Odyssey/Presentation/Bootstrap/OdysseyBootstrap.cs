@@ -8,6 +8,7 @@ using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim;
+using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pawns;
@@ -873,6 +874,7 @@ namespace Odyssey.Presentation.Bootstrap
             if (director.Tool == DesignateTool.Build)
             {
                 _previewLayer = min.Y;
+                _previewIsSlab = ConstructionContent.BuildingAt(director.Building).slab;
                 BuildPreview.Gather(min, max, _previewLayerAt ??= PreviewLayerAt, _previewBoxes);
                 for (int i = 0; i < _previewBoxes.Count; i++)
                     _renderer.DrawCellSpanBox(_previewBoxes[i].Min, _previewBoxes[i].Max, tint);
@@ -892,6 +894,12 @@ namespace Odyssey.Presentation.Bootstrap
         /// <em>block</em> and a wall goes in the air. The cursor has to be lifted by the same rule
         /// or it draws one layer below the wall it is promising.</para>
         ///
+        /// <para><b>A floor is lifted over more than a wall is</b>, and the cursor has to know
+        /// which is armed. <c>ConstructionGrid.StandingOver</c> puts a slab on top of anything
+        /// that fills a cell, a wall included, because the first slab of a storey rests on the
+        /// walls of the one below. Asking the solid-terrain question for a floor drawn over a run
+        /// of walls put the green box one layer under the floor it was promising.</para>
+        ///
         /// <para>A method and a cached delegate rather than a lambda, because this is handed to
         /// <see cref="BuildPreview.Gather"/> on every frame of a drag and a closure over
         /// <c>min.Y</c> would allocate on each one.</para>
@@ -899,14 +907,19 @@ namespace Odyssey.Presentation.Bootstrap
         int PreviewLayerAt(int x, int z)
         {
             int y = _previewLayer;
-            if (_grid == null) return y;
+            if (_grid == null || !_grid.Contains(x, z, y) || y + 1 >= _grid.Size.SizeY) return y;
 
-            var cell = new CellRef(x, z, y);
-            return _grid.Contains(x, z, y) && _grid.IsSolidTerrain(_grid.Index(cell))
-                   && y + 1 < _grid.Size.SizeY
-                ? y + 1
-                : y;
+            int index = _grid.Index(new CellRef(x, z, y));
+            bool fills = _grid.IsSolidTerrain(index)
+                || (_previewIsSlab && _grid.Edifice[index] >= 0);
+            return fills ? y + 1 : y;
         }
+
+        /// <summary>
+        /// Is the armed build tool a floor? Read once when the preview is gathered rather than per
+        /// column, because it is the same answer for every cell of one box.
+        /// </summary>
+        bool _previewIsSlab;
 
         int _previewLayer;
         Func<int, int, int>? _previewLayerAt;

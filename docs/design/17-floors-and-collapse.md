@@ -102,6 +102,72 @@ could not be carried out.*
 **Terrain gains `buildable` a reader.** `TerrainDef.buildable` has existed and been read by nothing;
 `Allows` reads it now, and `Rubble` sets it false. That is the whole of "clear the mess first".
 
+### Which cell an order lands in — amended in review, 2026-09-17
+
+Decision 4 says *"the cell they want a floor in — the same lift a wall order gets"*. The first
+implementation deliberately did **not** lift a slab, arguing that a floor ordered on solid ground is
+refused either way so lifting it would only move the refusal. That reasoning is sound about *ground*
+and it is about the wrong surface. **A floor's surface is just as often a wall**, and it left the
+tool unusable.
+
+**Measured, not argued** (`ZzProbe`, discarded; the assertions survive as
+`AFloorIsOrderedByClickingWhatItWillRestOn` and `FloorToolReachTests`). Ordering a floor at each
+cell a click can actually produce:
+
+| What the player points at | Cell the picker returns | Result before | Result now |
+|---|---|---|---|
+| A wall's top face | the wall's **own** cell | `NotPermitted` | `None`, site one cell up |
+| Bare grass | the ground **block** | `NotPermitted` | `NotPermitted` |
+| — (the air over grass) | not reachable by pointing | `NotPermitted` | `NotPermitted` |
+| — (the cell above a wall) | **not reachable by pointing** | `None` | `None` |
+
+The only cell that accepted an order was the one nothing could name. The tool armed, dragged, drew
+its green box and did nothing — the silent refusal `15-building.md` §6 was written about, invisible
+to this unit's own tests because every one of them names the site in C#.
+
+So `ConstructionGrid.StandingOver` is `StandingOn`'s twin: **a slab ordered at anything that fills a
+cell — solid terrain or an edifice — means the boundary on top of it.** Ground is unaffected, and
+deliberately so: a click on grass still lifts to the air above, `AllowsSlab` still refuses it for
+having a floor already, and the refusal is still reported at the cell the player clicked.
+
+The cursor was lifted by the same rule in the same change (`OdysseyBootstrap.PreviewLayerAt`), which
+asked the solid-terrain question for every tool and would otherwise have drawn the green box one
+layer under the floor it was promising.
+
+**The seam is now tested as a seam.** `SlicePicker` and `ConstructionGrid.Place` live in different
+assemblies and neither tier could see the other, which is exactly how they came to disagree.
+`Odyssey.Presentation.Tests.FloorToolReachTests` feeds the picker's answer straight into the order
+with nothing typed in between, and carries the storey loop — point at a wall, floor it, point at the
+floor, wall it — end to end.
+
+### And the layer comes from the slice — decision 12, owner, 2026-09-17
+
+The lift above made a floor *buildable*. It did not make a room *roofable*, and the pictures said so
+before anybody argued about it: `FloorCheck` capped both rooms' walls and left the middle of each
+open to the sky. Measured on the real renderer, all twelve clicks over a roofed room's interior
+either named the floor of the room (banded picker, as the rig uses) or hit nothing at all
+(single-layer picker). **A pointer cannot name a cell of open air**, because the picker's whole
+contract is to stop the ray at the first surface — which is right, is what the owner asked for on
+2026-09-16 (*"I still wanted to select the tile below it or not at all"*), and cannot express the
+one cell a floor is for.
+
+So, for the floor tool alone: **the column comes from the pointer and the layer comes from the
+slice.** Set the slice to the storey you are roofing and click inside the room.
+
+- `DesignateDirector.WorkingLayer` is the substitution, and it lives there so the geometry that
+  results is still decided in the one class the fast tier can reach.
+- `DesignatePresenter` decides *when* — it is the only place that can see both the rig's active
+  layer and `ConstructionContent`, and the Hud assembly deliberately does not reference `Odyssey.Sim`.
+- Null for every other tool, and a test says so. A mine order that went to the layer the camera
+  happened to be at rather than the rock the player clicked is exactly the misclick ADR 0006 exists
+  to prevent.
+- **It also closes §9's open cursor question.** Ordering a floor over a drop named the bottom of the
+  drop; it names the layer being worked now. That line is struck from the open list.
+
+The lift is still needed and still does its own job: with the slice at the wall's own layer, a click
+on a wall caps it without the player having to change storey first. The two rules agree in both
+directions, which is the test `FloorToolReachTests` carries.
+
 ## 4. What a collapse does
 
 The solver already finds them and already erases the slab. The deferred lambda in `SupportSystem` —
@@ -238,7 +304,16 @@ and watch the floor and whoever was on it come down.
   what you build with is a real design lever and a real change to the solver's shape.
 - **U31, the support preview**, is what makes decision 7 fair to the player. Until it lands, the only
   way to discover an orphan is to cause one.
-- **Rubble draws as a terrain colour**, not as a heap. It is in the palette and it is not art.
+- **Rubble draws as a terrain colour**, not as a heap. It is in the palette and it is not art. **And
+  that costs more than it sounds** (measured 2026-09-17, `Logs/floor-pair-after-over.png`): rubble is
+  terrain, so it draws as a full cell block, and a collapsed 6 × 5 room is a clean rectangular plate
+  of it one layer up from the ground — with the two-cell hole its roof had still in the middle,
+  because the hole was over the cells that refused an order. From a high oblique it is very nearly
+  the picture of the *intact* room, and a matched before-and-after pair of the same room from the
+  same camera could not be told apart by eye. The footprint had to be printed as characters to
+  settle whether the collapse had happened at all, which is a poor thing to have to do in a game
+  about pulling buildings down. **Whatever rubble ends up looking like, it must not look like a
+  floor.**
 - **A slab with a hole in it** — `SM_Bld_Base_Floor_Hole_01` — is what a stair or ladder through a
   floor will want, and nothing needs it yet.
 - **What the build cursor names when the player orders a floor over a drop.** The picker answers a

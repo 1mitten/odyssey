@@ -132,7 +132,16 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   "support is deliberately not marked dirty" comments in `Raise`, `Demolish` and `MineCell` are
   closed together as all three demanded. **Fall damage is deferred and said so**: `a-02` has the
   number and there is no health model to apply it to. Design and the eleven owner decisions:
-  `docs/design/17-floors-and-collapse.md`. **Nobody has pressed Play on it.**
+  `docs/design/17-floors-and-collapse.md`.
+  **In review the tool turned out to be armable, draggable and inert** (2026-09-17, measured):
+  `SlicePicker` answers a click on a wall with the wall's *own* cell, a floor ordered there was
+  `NotPermitted`, and the one cell that accepted an order — the cell above a wall — could not be
+  named by pointing at anything. Every U29 test named its site in C# and so could not see it.
+  `ConstructionGrid.StandingOver` is the fix: **a slab ordered at anything that fills a cell means
+  the boundary on top of it**, which is what decision 4 of the design asked for in the first place
+  (*"the same lift a wall order gets"*). The cursor was lifted by the same rule.
+  **The picker-to-order seam is now tested as a seam** — `FloorToolReachTests` feeds the picker's
+  answer straight into the order, in the one assembly that can see both halves.
 - **Work reaches `main` only through a pull request** with both tiers green, one approving review
   and the branch up to date. Branch protection enforces it, agents included. There is no long-lived
   feature branch — `claude/*` branches are per-change and short-lived.
@@ -284,7 +293,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **555 Sim + 191 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **573 Sim + 191 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and

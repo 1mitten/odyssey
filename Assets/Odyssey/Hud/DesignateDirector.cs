@@ -152,12 +152,40 @@ namespace Odyssey.Hud
         public bool Begin(CellRef cell)
         {
             if (_tool == DesignateTool.None) return false;
-            _anchor = cell;
-            _head = cell;
+            _anchor = OnTheWorkingLayer(cell);
+            _head = _anchor;
             _wide = false;
             Dragging = true;
             return true;
         }
+
+        /// <summary>
+        /// The layer this tool works on, when the pointer is not allowed to choose it.
+        ///
+        /// <para><b>Null for every tool but one, and the exception is the floor.</b> A click names
+        /// a <em>surface</em> — the picker stops the ray at the first thing that occludes it — so
+        /// a pointer can only ever name a cell one layer above something solid. That is right for
+        /// a wall, which is put on the ground you clicked, and it cannot express the thing a floor
+        /// is for: a cell of open air over a room, with nothing beneath it to aim at. Measured on
+        /// 2026-09-17 with the real renderer — every one of the twelve clicks over a roofed room's
+        /// interior named the floor of the room or missed entirely, so **the middle of a room could
+        /// not be roofed at all**, only its walls capped.</para>
+        ///
+        /// <para>So a floor takes its column from the pointer and its layer from the slice: set the
+        /// slice to the storey you are roofing and click inside the room (owner, 2026-09-17). It
+        /// also answers the cursor question `17-floors-and-collapse.md` §9 left open — ordering a
+        /// floor over a drop named the bottom of the drop, and now names the layer being worked.
+        /// </para>
+        ///
+        /// <para>Set by whoever knows both the slice and the content, which is the presentation
+        /// layer: this assembly cannot see <c>ConstructionContent</c> and has no business learning
+        /// which buildings are slabs. What is here is only the substitution, so the geometry that
+        /// results is still decided in the one class the fast tier can reach.</para>
+        /// </summary>
+        public int? WorkingLayer { get; set; }
+
+        CellRef OnTheWorkingLayer(CellRef cell) =>
+            WorkingLayer is int y ? new CellRef(cell.X, cell.Z, y) : cell;
 
         /// <summary>
         /// Move the far corner. Ignored unless a drag is running.
@@ -194,6 +222,7 @@ namespace Odyssey.Hud
         public void DragTo(CellRef cell)
         {
             if (!Dragging) return;
+            cell = OnTheWorkingLayer(cell);
             _head = cell;
             if (_tool != DesignateTool.Build) return;
 

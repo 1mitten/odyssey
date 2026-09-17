@@ -132,12 +132,12 @@ namespace Odyssey.Sim.Construction
             if (!ConstructionContent.IsBuilding(building)) return IntentRejection.NotPermitted;
             if (!ConstructionContent.IsBuildable(stuff)) return IntentRejection.NotPermitted;
 
-            // A slab is not lifted. The lift exists because a click names a surface and a wall goes
-            // in the air above it; a floor ordered on solid ground is asking for a floor where
-            // there is already ground, which the rule below refuses either way — so lifting it
-            // would only move the refusal one cell and make it harder to read.
+            // A click names a surface and an order names a cell, for a floor exactly as for a
+            // wall — only the surfaces differ. See StandingOn and StandingOver.
             bool slab = ConstructionContent.BuildingAt(building).slab;
-            int index = slab ? _grid.Index(cell) : StandingOn(_grid.Index(cell));
+            int index = slab
+                ? StandingOver(_grid.Index(cell), building)
+                : StandingOn(_grid.Index(cell));
 
             if (_building[index] == building && _stuff[index] == stuff)
                 return IntentRejection.AlreadyInThatState;
@@ -201,6 +201,38 @@ namespace Odyssey.Sim.Construction
             if (!_grid.IsSolidTerrain(index)) return index;
             int above = index + _grid.Size.LayerStride;
             return above < _grid.Size.CellCount && Allows(above) ? above : index;
+        }
+
+        /// <summary>
+        /// A slab order named at something that fills a cell means the boundary on top of it.
+        ///
+        /// <para><see cref="StandingOn"/>'s twin, and it exists for the same reason: a click names
+        /// a surface. The difference is <b>which</b> surfaces, and it is the whole of whether the
+        /// floor tool works at all. A wall is put in the air over the ground <i>block</i>, so that
+        /// lift asks about solid terrain and nothing else. A floor's surface is just as often a
+        /// <b>wall</b> — the first slab of any storey rests on the walls of the one below — and the
+        /// picker answers a click on a wall with the wall's own cell, because that is the cell
+        /// whose face occludes the ray.</para>
+        ///
+        /// <para><b>Without this the tool was armable, draggable and inert</b> (measured
+        /// 2026-09-17): ordering a floor at the cell a click actually produces was
+        /// <c>NotPermitted</c> on a wall, on bare ground and on the air above bare ground, and the
+        /// one cell that answered <c>None</c> — the cell above a wall — was reachable only by
+        /// naming it in a test. That is the silent refusal `15-building.md` §6 was written about,
+        /// and the unit's own tests could not see it because they name the site by hand.</para>
+        ///
+        /// <para>Ordinary ground is untouched by it. A click on grass lifts to the air above,
+        /// <see cref="AllowsSlab"/> refuses that for having a floor already, and the refusal is
+        /// reported at the cell the player clicked — exactly as it was before.</para>
+        /// </summary>
+        int StandingOver(int index, int building)
+        {
+            // Anything that fills the cell, which is the same set the solver calls grounding: a
+            // slab laid over it has something underneath to rest on.
+            if (!_grid.IsSolidTerrain(index) && _grid.Edifice[index] < 0) return index;
+
+            int above = index + _grid.Size.LayerStride;
+            return above < _grid.Size.CellCount && Allows(above, building) ? above : index;
         }
 
         /// <summary>

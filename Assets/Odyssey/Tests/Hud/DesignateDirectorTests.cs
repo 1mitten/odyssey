@@ -86,6 +86,53 @@ namespace Odyssey.Tests.Hud
                 Assert.That(cell.Y, Is.EqualTo(4), $"{cell} left the anchor's layer");
         }
 
+        /// <summary>
+        /// <b>A floor is ordered on the layer being worked, not the one under the pointer.</b>
+        ///
+        /// <para>The picker can only ever name a surface — it stops the ray at the first thing
+        /// that occludes it — so it cannot express the cell a floor is for, which is open air over
+        /// a room with nothing beneath it to aim at. Measured on the real renderer on 2026-09-17:
+        /// every click over a roofed room's interior named the floor of the room or missed
+        /// outright, so a room's middle could not be roofed at all. The layer therefore comes from
+        /// the slice, and only the column comes from the pointer.</para>
+        ///
+        /// <para>Set by whoever knows the slice and the content, which is not this assembly; what
+        /// is tested here is the substitution, which is all that lives here.</para>
+        /// </summary>
+        [Test]
+        public void AWorkingLayerOverridesTheLayerThePointerNamed()
+        {
+            var director = new DesignateDirector { WorkingLayer = 9 };
+            director.ArmBuild(BuildingHandle.Floor);
+
+            director.Begin(At(2, 2, y: 3));
+            director.DragTo(At(5, 2, y: 1));
+
+            IReadOnlyList<CellRef> cells = director.Commit();
+            Assert.That(cells, Is.Not.Empty);
+            foreach (CellRef cell in cells)
+                Assert.That(cell.Y, Is.EqualTo(9),
+                    $"{cell} took the pointer's layer instead of the slice's");
+        }
+
+        /// <summary>
+        /// And with no working layer set, nothing changes. Every other tool aims at what the
+        /// pointer is over, and this rule must not leak into them — a mine order on the layer the
+        /// camera happens to be at, rather than on the rock the player clicked, would be the
+        /// misclick fault ADR 0006 was written against.
+        /// </summary>
+        [Test]
+        public void WithNoWorkingLayerTheAnchorStillDecides()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.Mine };
+
+            director.Begin(At(2, 2, y: 3));
+            director.DragTo(At(5, 5, y: 9));
+
+            foreach (CellRef cell in director.Commit())
+                Assert.That(cell.Y, Is.EqualTo(3), $"{cell} left the anchor's layer");
+        }
+
         [Test]
         public void TheBoxCanBeThrownAway()
         {

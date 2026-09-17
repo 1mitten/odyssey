@@ -121,6 +121,57 @@ namespace Odyssey.Tests.Sim
             Assert.That(OnTheGround(colony, ItemIndex.Wood), Is.EqualTo(16), "four wood went into it");
         }
 
+        /// <summary>
+        /// <b>The cell a click produces, rather than the cell a test names.</b>
+        ///
+        /// <para>Every other test here orders its floor at <c>Above(wall)</c>, which is correct and
+        /// is not what the running game sends. <c>SlicePicker</c> stops the ray in the first cell
+        /// whose face occludes it, so a click on a wall's top face answers with the <b>wall's own
+        /// cell</b> — and on 2026-09-17 a floor ordered there was <c>NotPermitted</c>, as it was on
+        /// bare ground and in the air over bare ground. The one cell that answered <c>None</c> was
+        /// unreachable by pointing at anything. The tool was armable, draggable and inert.</para>
+        ///
+        /// <para>So this test names the cells a player can actually click and asserts what each one
+        /// does, which is the assertion the journey test cannot make. <c>StandingOver</c> is the
+        /// rule it pins.</para>
+        /// </summary>
+        [Test]
+        public void AFloorIsOrderedByClickingWhatItWillRestOn()
+        {
+            ColonyWorld colony = Board();
+            int ground = GroundLevelCellNear(colony, 3);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+
+            RaiseNow(colony, ground, BuildingHandle.Wall);
+
+            // 1. The wall itself: what a click on a wall hands back. The order belongs one cell up.
+            Assert.That(colony.Construction.Place(Size.FromIndex(ground), BuildingHandle.Floor, StuffHandle.Wood),
+                Is.EqualTo(IntentRejection.None),
+                "a floor ordered on a wall is a floor ordered on top of the wall");
+            Assert.That(colony.Construction.At(Above(ground)), Is.EqualTo(BuildingHandle.Floor),
+                "and the site is in the cell above it, not in the wall");
+            Assert.That(colony.Construction.At(ground), Is.EqualTo(BuildingHandle.None),
+                "nothing was put inside the wall");
+
+            // 2. Bare ground, in both the forms a click can name it. Both are refused, and refused
+            //    for the right reason: there is already a floor there. The lift must not turn a
+            //    correct refusal into an order one layer up.
+            int bare = GroundLevelCellNear(colony, 5);
+            Assume.That(bare, Is.GreaterThanOrEqualTo(0));
+            Assert.That(colony.Construction.Place(
+                    Size.FromIndex(bare - Size.LayerStride), BuildingHandle.Floor, StuffHandle.Wood),
+                Is.EqualTo(IntentRejection.NotPermitted), "the ground block is not a floor site");
+            Assert.That(colony.Construction.Place(Size.FromIndex(bare), BuildingHandle.Floor, StuffHandle.Wood),
+                Is.EqualTo(IntentRejection.NotPermitted), "nor is the air over it — it is floored already");
+            Assert.That(colony.Construction.At(bare + Size.LayerStride), Is.EqualTo(BuildingHandle.None),
+                "and neither refusal leaked an order into the layer above");
+
+            // 3. A wall is still not liftable, so the two rules have not been folded into one.
+            Assert.That(colony.Construction.Place(Size.FromIndex(ground), BuildingHandle.Wall, StuffHandle.Wood),
+                Is.EqualTo(IntentRejection.NotPermitted),
+                "a wall ordered on a wall is refused: only a slab goes on top of one");
+        }
+
         // ---- the support rule, seen from the side ---------------------------------------------
 
         /// <summary>

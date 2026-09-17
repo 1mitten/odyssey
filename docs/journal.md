@@ -2399,3 +2399,109 @@ work itself.
     the surface under a click, which for a pit is the bottom of the pit, so ordering a floor *over* a
     drop may name a cell the player did not mean. Ordering along an existing edge is unaffected. It
     is a cursor question, not a simulation one.
+
+- **U29 reviewed on the way to a playtest: the floor tool was inert, and its own tests could not see
+  it (2026-09-17, `claude/floors-review`).** PR #90 went conflicting against `origin/main` and was
+  taken into a worktree to be merged, reviewed and played. The conflict was docs only — U39's seed
+  entry had landed on `main` in the meantime — and both journal entries were kept, because both
+  happened. What the review found was not in the conflict.
+
+  **The measurement.** U29's thirteen tests all name their site in C#: `Above(wall)`, which is the
+  right cell and is not the cell the running game sends. A probe ordered a floor at each cell a
+  *click* can actually produce, on a board with one wall raised on it:
+
+  | Pointed at | Cell the picker returns | Result |
+  |---|---|---|
+  | the wall's top face | the wall's **own** cell | `NotPermitted` |
+  | bare grass | the ground **block** | `NotPermitted` |
+  | — | the air over grass (unreachable) | `NotPermitted` |
+  | — | **the cell above a wall** (unreachable) | `None` |
+
+  The only cell that accepted a floor was the one nothing could name. `SlicePicker` stops the ray in
+  the first cell whose face occludes it, and a wall's face occludes, so a click on a wall is the
+  wall. The tool armed, dragged, drew its green preview box and did nothing — the silent refusal
+  `15-building.md` §6 was written about, in a feature whose own commit message quotes that section.
+
+  **Why the tests could not see it.** `SlicePicker` is in `Odyssey.Presentation` and
+  `ConstructionGrid.Place` is in `Odyssey.Sim`, and neither assembly's tests can see the other. The
+  two rules were each correct against their own fixture and disagreed about the only thing that
+  matters, which is the cell in the middle. That is a seam, and a seam nobody tests is where this
+  kind of fault lives — the same shape as the hop price, which is why `HopPriceHasOneOwnerTests`
+  exists.
+
+  **The fix is the design's own decision, which the implementation had departed from.** Decision 4
+  of `17-floors-and-collapse.md` reads *"the cell they want a floor in — the same lift a wall order
+  gets"*. The code deliberately did not lift a slab, reasoning that a floor ordered on solid ground
+  is refused either way. Sound about *ground*, and about the wrong surface: **a floor's surface is
+  just as often a wall**, because the first slab of any storey rests on the walls of the one below.
+  `ConstructionGrid.StandingOver` is `StandingOn`'s twin — a slab ordered at anything that fills a
+  cell, solid terrain or an edifice, means the boundary on top of it. Ground is untouched and
+  deliberately so: a click on grass still lifts to the air above, `AllowsSlab` still refuses it for
+  having a floor already, and the refusal is still reported at the cell the player clicked.
+
+  **The cursor was lifted by the same rule in the same change.** `OdysseyBootstrap.PreviewLayerAt`
+  asked the solid-terrain question whatever tool was armed, so a floor drawn over a run of walls
+  would have put the green box one layer under the floor it was promising. It now asks the armed
+  building whether it is a slab.
+
+  **The seam is tested as a seam.** `Odyssey.Tests.Presentation.FloorToolReachTests` is in the one
+  assembly that can see both halves and never writes a cell index down: it fires a ray, feeds
+  whatever the picker returns straight into the order, and asserts a site appears on top of the
+  wall. It carries the storey loop too — point at a wall, floor it, point at the floor, wall it —
+  which is the loop that makes this a building game rather than one slab.
+
+  **And a harness to look at it with.** `FloorCheck` is `WallCheck`'s other half: two rooms on the
+  wooded board, roofed through `ConstructionGrid` with every cell named by the picker, then one wall
+  pulled out of the second with `Demolish` and the world ticked so the solver finds the orphan.
+  Six pictures, `Logs/floor-*.png`. It is deliberately built to fail loudly if the two rules ever
+  disagree again: if the walls stand and no slab does, it logs the error and exits 1 rather than
+  photographing its way past the fault.
+
+  **Then the pictures found the second half of it, which the fix had not touched: a room could not
+  be roofed.** `FloorCheck`'s first sheet showed both rooms with their walls capped and the middle
+  open to the sky, and the instrumented re-run said why — all twelve clicks over the interior either
+  named the floor of the room (the banded picker the rig uses) or hit nothing at all. **A pointer
+  cannot name a cell of open air.** That is the picker's whole contract working as the owner settled
+  it on 2026-09-16 (*"I still wanted to select the tile below it or not at all"*), and it cannot
+  express the one cell a floor is for.
+
+  **Decision 12, taken by the owner with the measurement in hand: the floor tool takes its column
+  from the pointer and its layer from the slice.** Set the slice to the storey you are roofing and
+  click inside the room. `DesignateDirector.WorkingLayer` is the substitution — there, so the
+  geometry is still decided in the one class the fast tier can reach — and `DesignatePresenter`
+  decides when, because it is the only place that can see both the rig's active layer and
+  `ConstructionContent`. Null for every other tool, with a test that says so: a mine order sent to
+  the layer the camera happens to be at rather than the rock the player clicked is exactly the
+  misclick ADR 0006 exists to prevent. **It also closes the cursor question `17` §9 left open** —
+  ordering a floor over a drop named the bottom of the drop, and names the layer being worked now.
+  The roof went from 18 cells of ring to 28 of 30 on the same board.
+
+  **Two things the harness found about itself, both worth keeping.** A hand-composed world does not
+  get `ColonyWorld.RebuildDerived`, so its support field is zero everywhere and the first incremental
+  solve is wrong — `CellGrid` says so in a comment and this is the first thing to be caught by it.
+  And **a tree is a pillar**: `SupportSolver.IsGrounded` asks whether anything fills the cell below,
+  an edifice included, so a trunk makes the boundary over it a full-support source and feeds that
+  support sideways into a roof beside it. Every wall was pulled out from under a 6 × 5 roof and it
+  did not move, held at 4, 3, 2 by two or three trees in its own footprint. That is the model
+  working and it is a useless photograph, so the harness fells the site and a one-cell margin first,
+  which is what `startingFellRadius` does for a colony anyway. **Worth the owner's eye rather than a
+  fix:** felling a tree can now bring a roof down on somebody, and nothing warns them. U31, the
+  support preview, is where that belongs.
+
+  - **Verified after the merge and both fixes:** fast tier **573 Sim + 193 Hud** (three new), Long
+    tier **19**, Unity EditMode **1,237 total, 1,228 passed, 0 failed** — which is the tier U29
+    itself could not run, and the one that compiles `Odyssey.Presentation` and the editor tools at
+    all. Both content gates `--check` clean, unchanged by any of this.
+  - **Still open.** A bridge is ordered outward a cell at a time: support is a settled value read
+    off the grid, so the second cell of a span is refused until the first is standing. That is the
+    rule being honest rather than a fault, and whether a planned span should be orderable is a
+    question for U31 alongside the preview that would make it legible.
+  - **And one for the eye, found by the sheet.** Rubble is terrain, so it draws as a full cell
+    block: a collapsed 6 x 5 room comes out as a clean rectangular plate one layer up from the
+    ground, keeping the two-cell hole its roof had. A matched before-and-after pair of the same
+    room from the same camera could not be told apart by eye, and the footprint had to be printed
+    as characters to settle whether the collapse had happened. It had - every slab down, 28 cells
+    of rubble, the walls gone. **A game about pulling buildings down should not need an ASCII dump
+    to show that one came down**, so whatever rubble ends up looking like, it must not look like a
+    floor. Recorded against `17` section 9's existing "rubble is in the palette and is not art" line,
+    which turns out to be the same finding with the cost attached.
