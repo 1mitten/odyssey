@@ -200,6 +200,23 @@ read — the `Saves` folder itself is left to the caller that wires the menu on 
 is likewise handed in already computed: `GameClock`'s tick-to-calendar mapping lives in the Hud
 assembly and Sim must not reference it, so nothing here re-implements that conversion.
 
+**`U38` is the one thing blocking the rest of the chain, and it has not moved.** `HudShell.Bar.cs`
+still carries the comment that the B18 menu "does not exist yet", and there is no menu panel
+anywhere in the presentation assembly — so there is nowhere for `U39`'s screen to attach.
+**Check the code, not the plan's table, before starting anything downstream**: that table listed
+`U36` and `U37` as available while both were still open, and then both landed mid-afternoon on
+2026-09-17 while a branch was in flight against the earlier reading.
+
+**`U39`'s seed logic landed without its screen** (2026-09-17): `SeedEntry` in
+`Odyssey.Sim.Contracts` draws a seed, rerolls to one guaranteed different, formats it as plain
+decimal and reads back what the player typed — the half of `U39` that needs no interface, and the
+half that would otherwise live in a text field's callback where the fast tier could never reach it.
+A seed is decimal because that is already the form the project prints one in; **free-text seeds in
+the Minecraft idiom were considered and not taken**, because they only work if the typed text is
+kept beside the number — now a `SaveRecipe` field, so it is a live question rather than a blocked
+one. It is the one deliberately non-deterministic code in the simulation assemblies, confined to
+two methods and reachable from no tick path.
+
 Three things a later session should not re-litigate. **Live portraits** are refused by
 `09-ui-and-input.md` §4.5 — but that argument is about fifty of them in the roster bar at 15 Hz
 while the world renders, and the select screen is three, rendered once, with no world behind them;
