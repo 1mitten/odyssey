@@ -53,6 +53,9 @@ palette.
 | Sub-type | neutral white-alpha | cyan, the HUD's ordinary "this is on" |
 | Material | tinted **from the material** | the material's own border, doubled |
 
+The material tier is **the same box and type as the sub-type buttons in Rows** and keeps the
+specification's larger treatment only in Rail's grid — see §4a.
+
 The category tier is **the one place in this HUD allowed a hue per row**, and `HudTheme` carries the
 argument: `HudCategory` a few lines below it exists on the opposite principle (eight categories
 sharing five tokens) because that is about icons scattered over a whole screen, where a hue must be
@@ -83,14 +86,49 @@ Asked directly, the owner's answer was: *"tight and flush to other elements to e
 space"* (2026-09-17). So:
 
 - the 28 px margins are gone;
-- **Rows and Bar span the screen**, `left:0` to `right:0`;
-- **Rail keeps its 840** and stays anchored to the button that raised it, like every other popover;
+- **only Bar spans the screen**, `left:0` to `right:0`;
+- **Rows is a 372 px column** and **Rail an 840 px panel**, both anchored to the button that raised
+  them like every other popover — which, the Build cap being first on the bar, puts both against
+  the left edge;
 - all three dock **flush on whatever is under them** — the command bar, or the inspect pane's
   collapsed header when something is selected.
 
 This is the rule the bar and the popovers already follow, and the same words the owner used about
 the popovers a day earlier: *"directly above the build button … no spacing and padding to ensure
 tight space"*.
+
+### 4a. Rows is a column, not a band (owner, second pass)
+
+Rows spanned the screen at first — which is what the mockup drew, and what *"the first group
+should use the horizontal space"* had asked for back when the palette was ten wrapping chips. Seven
+tiles stretched across 1920 are seven very wide tiles with a small icon adrift in each, and the
+board they cover is the board the player is aiming at. The owner's correction:
+
+> make the 1st group of buttons short width as possible but evenly sized. You could probably fit 4
+> on a row but increase the height and try to use the left hand side of the screen instead of the
+> width … also make the stone/wood and material buttons evenly sized in font and size as the other
+> buttons but keep the style.
+
+So:
+
+- **372 px wide** (`HudLayout.BuildRowsWidth`), which is the narrowest that holds four category
+  tiles: 14 px of band padding each side, four tiles at 23% of what is left, 6 px after each.
+  `Recreation` is the longest label and sets the floor.
+- **Four categories across**, wrapping, so seven stand **two rows deep** — which is where the extra
+  height comes from. Percentage widths rather than `flex-grow`, because a growing row does not wrap
+  into even columns.
+- **Sub-types wrap** in the same width, at their natural lengths.
+- **Materials are the same 34 px box and the same 14/500 label as the sub-type buttons**, and keep
+  their tint, their doubled border and their seated shadow. What said *terminal choice* was never
+  the extra eight pixels and the heavier type. **Rail is deliberately unchanged**: its 86 px grid
+  is the shape of that layout rather than a row in it.
+- **The material band stacks** — the word, the buttons, then the price. Across a full-width band
+  those sat on one line with the cost pushed right; in a column that line does not exist, and a
+  66 px label column in front of two buttons would spend a fifth of the width on a word.
+- **The header is two stacked lines in Rows**: what is selected, then the eight controls. In one
+  row they came to 426 px and ran off a 372 px panel. The split is made in the shell rather than by
+  letting the row wrap, because a wrapping row breaks wherever it runs out of room and could put
+  the close button on a line of its own.
 
 The hint line (*"Left click places · drag for a run · right click cancels"*) is outside the panel
 but is a **child** of it, absolutely positioned above its top edge. Putting it in the shell and
@@ -223,7 +261,9 @@ the line art are not pure assertion. What a picture still cannot say:
 - **Whether seven hues are enough apart** at a glance with the labels masked. The test proves no two
   are the same colour, which is a different claim.
 - **Whether Rows is the right default.** It is the owner's choice from the mockups, but the mockups
-  floated and this docks.
+  floated across the screen and this is a docked column.
+- **Whether 372 px is the right width.** It is the narrowest that fits four category tiles; three
+  across would be narrower and taller still.
 - **Whether Bar's icon-only tiers are usable** without hovering everything.
 - **Whether the empty MATERIAL band in Rail reads as deliberate** or as something broken.
 

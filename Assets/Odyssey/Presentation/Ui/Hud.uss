@@ -864,6 +864,8 @@
     padding: 0;
 }
 
+.bp--rows { width: 372px; }
+
 .bp--rail { width: 840px; }
 
 /* ---- header: BUILD, the mode line, the switcher, ESC, four actions, the way out */
@@ -876,6 +878,29 @@
     border-bottom-color: rgba(255, 255, 255, 0.10);
     flex-shrink: 0;
 }
+
+.bp__hdr-id {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 1;
+    overflow: hidden;
+}
+
+.bp__hdr-ctl {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+    flex-shrink: 0;
+}
+
+/* Rows is 372px wide and the controls alone are eight buttons, so its header is two stacked
+   lines: what is selected, then what you can press. Rail and Bar have the width for one. */
+.bp--rows .bp__hdr {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.bp--rows .bp__hdr-ctl { margin-top: 8px; }
 
 /* The breadcrumb, and the mode line that replaces it while one of the four actions is held.
    Its colour is written from code: cyan for a build, the held action's own hue otherwise. */
@@ -1010,20 +1035,31 @@
 
 .bp__tile--off .bp__tile-label { color: rgba(255, 255, 255, 0.35); }
 
-/* ---- 4a, Rows */
+/* ---- 4a, Rows, the default
 
-/* Seven equal columns. UI Toolkit has no grid, and it does not need one here: seven tiles that
-   each grow equally in a row is the same thing, and it is what makes the band fill the width. */
-.bp__cats { align-items: stretch; }
+   A column down the left rather than a band across the screen (owner, 2026-09-17): "short width
+   as possible but evenly sized … you could probably fit 4 on a row but increase the height and
+   try to use the left hand side of the screen instead of the width". Seven tiles stretched across
+   1920 were seven very wide tiles with a small icon adrift in each, and they hid the board the
+   player is aiming at. */
+
+/* Four equal columns, wrapping — so seven categories stand two rows deep, which is where the
+   height comes from. Percentage widths rather than flex-grow, because a growing row does not
+   wrap into even columns: 4 x 23% plus a 6px gap after each fits the band's inner width with a
+   few pixels to spare. Same construction as Rail's grids, for the same reason. */
+.bp__cats {
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
 
 .bp__cat {
     height: 62px;
-    flex-grow: 1;
-    flex-basis: 0;
+    width: 23%;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     margin-right: 6px;
+    margin-bottom: 6px;
 }
 
 /* An icon over a label, both centred, so the label's own left margin has to come off. */
@@ -1042,13 +1078,29 @@
     margin-bottom: 3px;
 }
 
-.bp__mats-label {
-    width: 66px;
-    flex-shrink: 0;
+/* The material band stacks: the word, the buttons, then the price. Across a full-width band those
+   three sat on one line with the cost pushed to the far right; in a 372px column that line does
+   not exist, and a 66px label column in front of two buttons would spend a fifth of the width on
+   a word. */
+.bp__mats {
+    flex-direction: column;
+    align-items: flex-start;
 }
 
+.bp__mats-label { margin-bottom: 8px; }
+
+.bp__mats-row {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+/* The same box as a sub-type button beside it (owner, 2026-09-17: "evenly sized in font and size
+   as the other buttons but keep the style"). The style is the tint, the doubled border and the
+   seated shadow, and all of it survives the box and the type coming back into line — what said
+   "terminal choice" was never the extra eight pixels. */
 .bp__mat {
-    height: 40px;
+    height: 34px;
     padding: 0 13px 0 11px;
     margin-right: 8px;
 }

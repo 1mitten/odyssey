@@ -477,18 +477,50 @@ namespace Odyssey.Hud
 
         // --- Rows
 
+        /// <summary>
+        /// How wide the default layout is.
+        ///
+        /// <para><b>A column down the left, not a band across the screen</b> (owner, 2026-09-17:
+        /// <i>"make the 1st group of buttons short width as possible but evenly sized … you could
+        /// probably fit 4 on a row but increase the height and try to use the left hand side of
+        /// the screen instead of the width"</i>). It spanned the full width first, which is what
+        /// the mockup drew and what "use the horizontal space" had asked for while the palette was
+        /// ten wrapping chips. Seven tiles stretched across 1920 are seven very wide tiles with a
+        /// small icon adrift in each, and the board they hide is the board the player is aiming
+        /// at.</para>
+        ///
+        /// <para>The number is the narrowest that holds four category tiles: the band's 14 px of
+        /// padding each side, four tiles at 23% of what is left, and a 6 px gap after each.
+        /// <c>Recreation</c> is the longest label and sets the floor; anything narrower clips it
+        /// or drops to three across.</para>
+        /// </summary>
+        public const int BuildRowsWidth = 372;
+
+        /// <summary>How many category tiles Rows fits across. Seven of them therefore stand two
+        /// rows deep, which is where the height the owner asked for comes from.</summary>
+        public const int BuildRowsColumns = 4;
+
         /// <summary>A category tile in the Rows band: a 20 px icon over a label, both centred.</summary>
         public const int BuildCatTile = 62;
 
         /// <summary>A sub-type button in the Rows band.</summary>
         public const int BuildSubRow = 34;
 
-        /// <summary>A material button in the Rows band.</summary>
-        public const int BuildMatRow = 40;
-
-        /// <summary>The column the word MATERIAL sits in, so the buttons beside it start at the
-        /// same x whatever the label does.</summary>
-        public const int BuildMatLabelColumn = 66;
+        /// <summary>
+        /// A material button in the Rows band — the same box as a sub-type button beside it.
+        ///
+        /// <para><b>40 px with a 19/600 label until 2026-09-17</b>, when the owner asked for the
+        /// materials <i>"evenly sized in font and size as the other buttons but keep the style"</i>.
+        /// The specification had made them the loudest thing in the panel, on the argument that a
+        /// material is the terminal choice; in a narrow column that reads as two buttons of a
+        /// different kind rather than as the last tier of one control. What carries "terminal" is
+        /// the tint, the doubled border and the seated shadow — the style the owner kept — and none
+        /// of those needed the extra eight pixels and the heavier type.</para>
+        ///
+        /// <para>Rail is deliberately not changed: its 86 px grid is the whole shape of that
+        /// layout rather than a row in it.</para>
+        /// </summary>
+        public const int BuildMatRow = BuildSubRow;
 
         // --- Bar
 

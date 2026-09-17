@@ -2427,4 +2427,28 @@ work itself.
   runs. Recorded rather than fixed: it is a shared-machine artefact of this dev box, not of the
   palette, and the palette is not in that test's dense layer.
 
+  **Then the default view became a column** (owner, same afternoon, having looked at the portraits:
+  *"make the 1st group of buttons short width as possible but evenly sized … you could probably fit
+  4 on a row but increase the height and try to use the left hand side of the screen instead of the
+  width … also make the stone/wood and material buttons evenly sized in font and size as the other
+  buttons but keep the style"*). Rows had spanned the screen, which is what the mockup drew and what
+  *"the first group should use the horizontal space"* had asked for back when the palette was ten
+  wrapping chips; seven tiles stretched across 1920 are seven very wide tiles with a small icon
+  adrift in each, and the board they cover is the board the player is aiming at. It is 372 px now —
+  the narrowest that holds four category tiles, with `Recreation` setting the floor — so the seven
+  stand two rows deep and the panel is a tall column against the left edge. Only Bar still spans.
+
+  **The header had to break in two to fit.** Eight controls plus BUILD and a three-part breadcrumb
+  came to 426 px against a 372 px panel, and the overflow test said so before anything was drawn.
+  Rows stacks them: what is selected, then what you can press. The split is made in the shell rather
+  than by letting the row wrap, because a wrapping row breaks wherever it runs out of room and could
+  have put the close button on a line of its own.
+
+  **Materials went back to the row's box and type** and kept their tint, doubled border and seated
+  shadow. The specification had made them the loudest thing in the panel on the argument that a
+  material is the terminal choice; in a narrow column that read as two buttons of a different kind
+  rather than as the last tier of one control, and what carries "terminal" was never the extra eight
+  pixels. Rail's 86 px grid is deliberately untouched — that is the shape of that layout rather than
+  a row in it.
+
   **Nobody has pressed Play on any of it.** The portraits are the only thing anyone has looked at.

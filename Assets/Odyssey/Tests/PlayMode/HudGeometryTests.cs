@@ -848,8 +848,9 @@ namespace Odyssey.Tests.PlayMode
             var rows = new List<VisualElement>();
             foreach (string className in new[]
                      {
-                         "bp__hdr", "bp__band", "bp__bar-row", "bp__sub-grid", "bp__mat-grid",
-                         "bp__bar-subs", "bp__bar-mats",
+                         "bp__hdr", "bp__hdr-id", "bp__hdr-ctl", "bp__band", "bp__bar-row",
+                         "bp__sub-grid", "bp__mat-grid", "bp__bar-subs", "bp__bar-mats",
+                         "bp__mats-row",
                      })
                 rows.AddRange(palette.Query(className: className).ToList());
             return rows;

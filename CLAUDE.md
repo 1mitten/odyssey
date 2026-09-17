@@ -107,9 +107,11 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   specification asked, but Orders held Mine and Chop — so both are **pinned in the header** beside
   Deconstruct and Cancel rather than lost to the `M` and `C` keys, which is the Cancel fault of the
   day before repeated exactly; `EveryLiveToolIsDrawnSomewhere` is the general form of that rule.
-  **The panel is docked, not floating** (owner: *"tight and flush to other elements to enable full
-  use of space"*) — the mockups were drawn over a bare board and would have covered the stores panel
-  and the roster strip. And **thirty-seven icons are drawn** as `Painter2D` paths in `HudGlyph`'s
+  **The panel is docked, not floating, and the default is a column** (owner: *"tight and flush to
+  other elements to enable full use of space"*, then *"use the left hand side of the screen instead
+  of the width"*) — the mockups were drawn over a bare board and would have covered the stores panel
+  and the roster strip, and Rows spanning 1920 made seven very wide tiles out of the category row.
+  Rows is 372 px and four tiles across; only Bar still spans the screen. And **thirty-seven icons are drawn** as `Painter2D` paths in `HudGlyph`'s
   existing box, because ADR 0007's pipeline covers no architecture key and the specification forbids
   the placeholder square here; materials keep the game's own sprites, which is the one tier whose
   art must not change. **Every PlayMode run writes `Logs/palette-{rows,rail,bar}.png`** — the only

@@ -32,9 +32,17 @@ namespace Odyssey.Presentation.Ui
     /// All three layouts are docked instead, flush on whatever is under them — the command bar, or
     /// the inspect pane's header when something is selected — which is the same rule the bar and
     /// the popovers already follow and the same words the owner used about the popovers a day
-    /// earlier: "directly above the build button … no spacing and padding to ensure tight space".
-    /// Rows and Bar take the full width; Rail keeps its 840 and stays anchored to the button that
-    /// raised it.</para>
+    /// earlier: "directly above the build button … no spacing and padding to ensure tight space".</para>
+    ///
+    /// <para><b>Only Bar spans the screen.</b> Rows and Bar both did at first, which is what the
+    /// mockup drew. Seven category tiles stretched across 1920 are seven very wide tiles with a
+    /// small icon adrift in each, and the board they cover is the board the player is aiming at —
+    /// so the owner asked for the default to go the other way (2026-09-17): <i>"short width as
+    /// possible but evenly sized … you could probably fit 4 on a row but increase the height and
+    /// try to use the left hand side of the screen instead of the width"</i>. Rows is a 372 px
+    /// column now, four category tiles across and therefore two deep, and it is anchored to the
+    /// button that raised it exactly as Rail is — which, the Build cap being first on the bar,
+    /// puts both against the left edge.</para>
     /// </summary>
     public sealed partial class HudShell
     {
@@ -160,12 +168,27 @@ namespace Odyssey.Presentation.Ui
             return held;
         }
 
+        /// <summary>
+        /// The header, in two halves: what is selected, and the controls.
+        ///
+        /// <para><b>Two halves rather than one row, because Rows is 372 px wide.</b> The controls
+        /// alone are eight buttons — three of switcher, four actions and the way out — and with
+        /// "BUILD" and a three-part breadcrumb in front of them the row came to 426 px and ran off
+        /// its own panel. It is one line in Rail and Bar, which have the width for it, and two
+        /// stacked lines in Rows. The split is here rather than in the stylesheet because a
+        /// wrapping flex row would break wherever it happened to run out of room, which could put
+        /// the close button on a line by itself.</para>
+        /// </summary>
         VisualElement BuildPaletteHeader()
         {
             var header = new VisualElement();
             header.AddToClassList("bp__hdr");
 
-            header.Add(HudText.Make("BUILD", HudTextRole.PanelLabel, ussClass: "panel__label"));
+            // --- what is selected
+            var identity = new VisualElement();
+            identity.AddToClassList("bp__hdr-id");
+
+            identity.Add(HudText.Make("BUILD", HudTextRole.PanelLabel, ussClass: "panel__label"));
 
             // The mode icon sits between the panel label and the line, and is empty except while
             // one of the four actions is held — at which point it and the line beside it are that
@@ -173,31 +196,36 @@ namespace Odyssey.Presentation.Ui
             _buildModeIcon = new VisualElement { pickingMode = PickingMode.Ignore };
             _buildModeIcon.AddToClassList("bp__mode-icon");
             _buildModeIcon.style.display = DisplayStyle.None;
-            header.Add(_buildModeIcon);
+            identity.Add(_buildModeIcon);
 
             _buildCrumb = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "bp__crumb");
-            header.Add(_buildCrumb);
+            identity.Add(_buildCrumb);
+            header.Add(identity);
+
+            // --- the controls
+            var controls = new VisualElement();
+            controls.AddToClassList("bp__hdr-ctl");
 
             var spacer = new VisualElement { pickingMode = PickingMode.Ignore };
             spacer.style.flexGrow = 1;
-            header.Add(spacer);
+            controls.Add(spacer);
 
             // The cost, in the header, for Bar only — the other two have room for it in the body,
             // and two dense rows do not. Its own class as well as the shared one, so that the
             // layout builders can find this copy and not the body's.
             _buildHeaderCost = HudText.Make(string.Empty, HudTextRole.Body, numeric: true, "bp__cost");
             _buildHeaderCost.AddToClassList("bp__cost--hdr");
-            header.Add(_buildHeaderCost);
+            controls.Add(_buildHeaderCost);
 
             _buildSwitch = BuildLayoutSwitcher();
-            header.Add(_buildSwitch);
+            controls.Add(_buildSwitch);
 
-            header.Add(HudText.Make("ESC", HudTextRole.Hotkey, ussClass: "bp__esc"));
+            controls.Add(HudText.Make("ESC", HudTextRole.Hotkey, ussClass: "bp__esc"));
 
             _buildActions = new VisualElement();
             _buildActions.AddToClassList("bp__actions");
             foreach (string key in PaletteTools.Pinned) _buildActions.Add(BuildActionButton(key));
-            header.Add(_buildActions);
+            controls.Add(_buildActions);
 
             var close = new VisualElement();
             close.AddToClassList("bp__action");
@@ -209,8 +237,9 @@ namespace Odyssey.Presentation.Ui
             close.Add(new HudGlyph(HudGlyphKind.Close, 13f, HudTokens.HeaderNeutralInk));
             close.tooltip = "Close Build — Esc";
             close.RegisterCallback<ClickEvent>(_ => SetBuildPalette(false));
-            header.Add(close);
+            controls.Add(close);
 
+            header.Add(controls);
             return header;
         }
 
@@ -338,13 +367,19 @@ namespace Odyssey.Presentation.Ui
 
             _buildBody.Add(Divider());
 
-            var mats = Band("bp__mats");
+            // The material band stacks in a column: the word, the buttons, then the price. Across
+            // a full-width band the three sat on one line with the cost pushed to the far right;
+            // in a 372 px column that line does not exist, and a 66 px label column in front of
+            // two buttons would spend a fifth of the width on a word.
+            var mats = new VisualElement();
+            mats.AddToClassList("bp__band");
+            mats.AddToClassList("bp__mats");
             mats.Add(HudText.Make("MATERIAL", HudTextRole.PanelLabel, ussClass: "bp__mats-label"));
-            foreach (int stuff in PaletteTools.Materials) mats.Add(MaterialTile(stuff, "bp__mat"));
 
-            var spacer = new VisualElement { pickingMode = PickingMode.Ignore };
-            spacer.style.flexGrow = 1;
-            mats.Add(spacer);
+            var buttons = new VisualElement();
+            buttons.AddToClassList("bp__mats-row");
+            foreach (int stuff in PaletteTools.Materials) buttons.Add(MaterialTile(stuff, "bp__mat"));
+            mats.Add(buttons);
 
             _buildCost = HudText.Make(string.Empty, HudTextRole.Body, numeric: true, "bp__cost");
             mats.Add(_buildCost);
@@ -550,15 +585,18 @@ namespace Odyssey.Presentation.Ui
             tile.AddToClassList("bp__material");
             tile.AddToClassList(shape);
 
-            string key = BuildLabels.StuffKey(stuff);
-            var icon = new IconBadge(key, shape == "bp__mat-tile" ? 26f : 19f);
-            tile.Add(icon);
+            bool large = shape == "bp__mat-tile";
 
-            // The specification asks for 17/700 here, and 18/700 in Rail's larger tile. The type
-            // scale is closed at six steps and both snap to the same one (HudType's own header
-            // sets that precedent), so the two sizes are one role — which is the right answer
-            // anyway: a material is the same word in both layouts.
-            tile.Add(HudText.Make(Registry.Label(key), HudTextRole.Name, ussClass: "bp__material-label"));
+            string key = BuildLabels.StuffKey(stuff);
+            tile.Add(new IconBadge(key, large ? 26f : IconBadge.RowSize));
+
+            // Rail's grid keeps the specification's heavier type, because a 86 px tile with a
+            // 14 px word in it is mostly empty. Rows takes the same role as the sub-type buttons
+            // above it (owner, 2026-09-17: "evenly sized in font and size as the other buttons but
+            // keep the style") — the tint and the doubled border are what say "terminal choice",
+            // and they survive the type going back to the row's.
+            tile.Add(HudText.Make(Registry.Label(key),
+                large ? HudTextRole.Name : HudTextRole.Row, ussClass: "bp__material-label"));
 
             tile.RegisterCallback<ClickEvent>(_ => _palette?.SelectMaterial(stuff));
 
@@ -769,17 +807,19 @@ namespace Odyssey.Presentation.Ui
 
             _buildPanel.style.bottom = bottom;
 
-            if (_palette.Layout == BuildPaletteLayout.Rail)
+            // Bar is the only layout that spans the screen now. Rows and Rail both carry a width
+            // and are anchored to the button that raised them, like every other popover — which
+            // for the Build cap, first on the bar, puts them against the left edge.
+            if (_palette.Layout != BuildPaletteLayout.Bar)
             {
-                _buildPanel.style.left = StyleKeyword.Null;
                 _buildPanel.style.right = StyleKeyword.Null;
-                if (_barItems.Count > 0)
-                {
-                    float screen = _hud.resolvedStyle.width;
-                    float width = HudLayout.BuildRailWidth;
-                    _buildPanel.style.left =
-                        HudLayout.PopoverLeft(_barItems[0].worldBound.xMin, width, screen);
-                }
+                float width = _palette.Layout == BuildPaletteLayout.Rail
+                    ? HudLayout.BuildRailWidth
+                    : HudLayout.BuildRowsWidth;
+                _buildPanel.style.left = _barItems.Count > 0
+                    ? HudLayout.PopoverLeft(_barItems[0].worldBound.xMin, width,
+                        _hud.resolvedStyle.width)
+                    : HudLayout.Edge;
                 return;
             }
 

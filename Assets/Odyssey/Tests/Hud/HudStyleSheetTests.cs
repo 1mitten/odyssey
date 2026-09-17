@@ -132,6 +132,7 @@ namespace Odyssey.Tests.Hud
             // The Build palette, in three layouts. Rows and Bar take their left and right from
             // code, because they span the screen and their bottom depends on what is docked
             // under them, so what is checkable here is every fixed box in all three.
+            (".bp--rows", "width", () => HudLayout.BuildRowsWidth, "rows layout width"),
             (".bp--rail", "width", () => HudLayout.BuildRailWidth, "rail layout width"),
             (".bp__rail", "width", () => HudLayout.BuildRailColumn, "rail category column"),
             (".bp__rail-row", "height", () => HudLayout.BuildRailRow, "a rail category row"),
@@ -143,7 +144,6 @@ namespace Odyssey.Tests.Hud
             (".bp__cat", "height", () => HudLayout.BuildCatTile, "a category tile"),
             (".bp__sub", "height", () => HudLayout.BuildSubRow, "a sub-type button"),
             (".bp__mat", "height", () => HudLayout.BuildMatRow, "a material button"),
-            (".bp__mats-label", "width", () => HudLayout.BuildMatLabelColumn, "the MATERIAL column"),
             (".bp__bar-cat", "width", () => HudLayout.BuildBarCat, "a bar category tile"),
             (".bp__bar-sub", "width", () => HudLayout.BuildBarSub, "a bar sub-type tile"),
             (".bp__action", "width", () => HudLayout.BuildAction, "a header action"),
