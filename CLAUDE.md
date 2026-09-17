@@ -100,7 +100,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 files to add itself, five of which should have been extension points. The table and the order are in
 `docs/plans/vertical-slice.md`, "Where the seams are" — **audited against the code on 2026-09-17,
 because it had gone stale and misled a session into recommending work that had already landed.**
-Three of the five chokepoints are now open:
+Four of the five chokepoints are now open, the fourth half:
 
 - **Work givers register themselves** (OQ-44): a giver in the simulation assembly joins by existing.
 - **Content is written once** (OQ-15/OQ-16, finished by OQ-48 and OQ-49 on 2026-09-17). The XML
@@ -111,6 +111,12 @@ Three of the five chokepoints are now open:
   `ContentPack.UseRoot` is the tested seam for the day something does.
 - **A feature can describe a pawn without widening `PawnView`** (OQ-45, ADR 0004 amended): a sparse
   `PawnAspect` row keyed by a name the feature mints for itself.
+- **The scene composes its world the way everything else does** (U34, 2026-09-17), which is the
+  simulation half of the bootstrap chokepoint. It had forty lines that were a copy of
+  `ColonyWorld.Build`, and the copy had drifted: no connectors reached the nav graph, no full
+  support solve ran, and it assembled no `SaveComponents` — so **the one world a player ran was the
+  one world in the project that could not be written to a file.** It now calls
+  `ColonyWorld.Build(ColonyRequest)`, and `OdysseyBootstrap.Colony` is what a save is written from.
 
 **Content values are pinned by fingerprints, and they earn their keep.** `PawnContentDefTests` and
 `WorldContentDefTests` each fold their loaded table into one literal. This is not belt-and-braces:
@@ -118,8 +124,27 @@ the moment the game started reading the world XML, the old oracle was comparing 
 and **editing rock's `workToClear` from 700 to 701 left all 448 tests green** — measured, not
 supposed. A deliberate content change is one line; an accidental one now fails.
 
-**Still open:** mesh contributors for `ChunkMesher` (OQ-46), and `OdysseyBootstrap` wiring every
-presentation system by hand — the one chokepoint with no queue row.
+**Still open:** mesh contributors for `ChunkMesher` (OQ-46), and the presentation half of
+`OdysseyBootstrap` — every director still wired by hand. That half has no queue row; the rest of the
+file's story is now `MS` below.
+
+### MS, the start flow, is scheduled (owner, 2026-09-17)
+
+A main screen with **New game, Load, Options and Quit**; a seed you can see and reroll; three
+candidate colonists with per-slot reroll and locks, each card showing a portrait and a readable
+skill set; and a world you can enter, save, leave and load again. Eight units, `U34`–`U41`, in
+`docs/plans/vertical-slice.md` — **beside M3 rather than inside it**, because M3's gate is a ten-day
+headless run and this is session lifecycle, persistence and a screen. Seam work first, then the
+menu on top, by the owner's decision. **`U34` is done.**
+
+Three things a later session should not re-litigate. **Live portraits** are refused by
+`09-ui-and-input.md` §4.5 — but that argument is about fifty of them in the roster bar at 15 Hz
+while the world renders, and the select screen is three, rendered once, with no world behind them;
+§4.5 gets an explicit carve-out in `U41` rather than a silent exception. **Colonists start every
+skill at 0 experience** — only passions are rolled — so there is nothing to choose between three
+candidates until `U37`. And **the save header records only seed, size and tick**, not the map type,
+so a save reloaded against a different generator would load cell data over a differently generated
+world; `U36` is where that is fixed.
 
 ### What runs today
 
@@ -181,7 +206,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **484 Sim + 158 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **494 Sim + 170 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and

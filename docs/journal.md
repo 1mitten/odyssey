@@ -1679,3 +1679,58 @@ work itself.
     the merges are the reason to notice how fast parallel branches are landing. A PR that sits for a
     few hours is a PR that conflicts, and when it conflicts GitHub stops scheduling its checks
     altogether, so the first symptom is not a red tick but no tick at all.
+- **The scene could not save, and the reason was structural (U34, 2026-09-17).** `WorldSave` has
+  been complete, versioned and tested for weeks. Every caller of it was a test. The composition root
+  had forty lines that were a copy of `ColonyWorld.Build`, so it never built the `SaveComponents`
+  list the save format is handed — and **the one world a player actually ran was the one world in
+  the project that could not be written to a file.** Nothing said so, because nothing asked.
+  - **The copy had drifted twice over, and neither drift was visible.** It registered no connectors
+    with the navigation graph, so a stair on a city map joined no region and the two storeys it
+    linked were unreachable from each other; natural maps have no connectors, which is the only
+    reason nobody met it. And it never ran `RebuildDerived`, so the scene's support field was
+    whatever worldgen pass 10 had left rather than a full solve. Both are fixed by deletion.
+  - **A request rather than more parameters.** `ColonyWorld.Build` had seven, and the two the scene
+    still needed — a clock that does not start at midnight, and a snapshot contributor for the
+    renderer — would have made nine. That is the point at which people write their own build
+    instead, which is precisely what had happened. `ColonyRequest` is also the shape a new-game
+    screen has to hand around, so it was going to exist anyway.
+  - **The mirror is a factory, not a contributor.** It is built *from* the generated grid, and
+    generation is the first thing `Build` does, so it cannot be passed in ready-made. A
+    `Func<CellGrid, MapGenOutcome, ISnapshotContributor>` keeps `ColonyWorld` free of any knowledge
+    of `WorldRenderModel`, and keeps the registration order — mirror before colony — inside the one
+    place that can guarantee it.
+  - **A start tick, not a start hour.** `GameClock` lives in `Odyssey.Hud`, which `Odyssey.Sim` may
+    not reference, so the caller converts. Zero is inert, which is what lets every baked hash stay
+    where it was; there is a test asserting exactly that, because the alternative is moving every
+    golden value in the repository by accident.
+  - **The assertions were weaker than they read, and then the ground moved under them.** Every new
+    test said "the same world" and compared `ComputeStateHash`, which at the time **could not see
+    the cell grid** — so a save round trip asserted with it was blind to whether the board came back
+    at all. This branch worked around it by lifting the golden's bespoke composite into
+    `Golden.FullHash` and using that. **`OQ-50` landed on `main` the same evening** and put the grid
+    in the canonical hash, so the workaround was obsolete before it merged: the fold is gone again,
+    the tests are back on `ComputeStateHash`, and it now means what they always claimed. Worth
+    recording because the branch was right about the problem and wrong about how long it would last.
+  - **One claim was checked rather than inherited.** `RebuildDerived`'s doc comment has always said
+    a full solve reproduces what worldgen settled. Nobody had measured it against the board the
+    scene loads. It holds, and there is now a test that says so.
+  - **What this was for.** It is `U34`, the first unit of **`MS`, the start flow** — menu, new game,
+    colonist select, save and load — which the owner scheduled on 2026-09-17 beside M3 rather than
+    inside it. The seam work comes first by the owner's decision, and this is the half of the
+    bootstrap chokepoint that a save file cannot be built without.
+  - **Verified:** fast tier **465 Sim + 117 Hud**, Long tier **15**, EditMode **1017 passed, 0
+    failed**, PlayMode **29 passed, 0 failed** — including two new ones that ask the half only Unity
+    can ask: that the live bootstrap, having started for real, is holding that world rather than a
+    private copy of the wiring.
+
+  - **Brought up to date 2026-09-17, after fifty-five commits had landed on `main` underneath it.**
+    The merge was not mechanical, because the build line (`#63`) had meanwhile added the
+    construction grid to **exactly the hand-rolled block this change deletes**. Resolved as a
+    union rather than a choice: the composition root keeps U34's `ColonyRequest` build, and
+    `ColonyWorld.Build` carries main's construction grid through it — so the scene now gets a
+    construction grid that is registered, hashed and in `SaveComponents`, which the bootstrap's
+    own copy had been discarding with `out _`. Checked that presentation reads construction
+    through the snapshot and not by holding the grid, so nothing needed rewiring. The
+    `Tests and gates` line conflicted for the reason recorded that morning — it is a shared
+    counter with no owner — and took main's number before being re-measured. Verified after the
+    merge: fast tier **494 Sim + 170 Hud**, Long tier **19**, both content gates green.
