@@ -168,6 +168,24 @@ The lift is still needed and still does its own job: with the slice at the wall'
 on a wall caps it without the player having to change storey first. The two rules agree in both
 directions, which is the test `FloorToolReachTests` carries.
 
+### The cursor is a plate — owner, 2026-09-17
+
+*"The selection box for floors should be flat to the tile that it will be placed on rather than a
+cube."* A build drag draws one closed wireframe box over the whole run, which is right for a wall
+and wrong for a floor in three ways at once: it claims a 3 m wall, it hides the tile it is
+promising underneath itself, and at the slice camera's 32–160 m there is no way to tell which of
+two layers it means.
+
+`ChunkRenderer.DrawCellSpanPlate` is the floor's cursor: the same span, the same inset, the same
+drape, laid on `CellMetrics.FloorCentre` — the plane `ChunkMesher.EmitFloor` puts the slab itself
+on — so the cursor's underside is the floor it is offering. `PlateThickness` is a tenth of a cell,
+which is **a cursor convention rather than a model of the slab**: the prefab is 0.10 m deep and
+that is under a pixel at working range, and a cursor nobody can see is worse than one slightly
+fatter than the thing it promises. One line, the owner's to tune.
+
+`BuildCursorTests.AFloorCursorIsAPlateOnTheBoundaryItWillBeLaidOn` pins the height **against the
+wall cursor** rather than against a number, so no tuning can make the two read alike.
+
 ## 4. What a collapse does
 
 The solver already finds them and already erases the slab. The deferred lambda in `SupportSystem` —

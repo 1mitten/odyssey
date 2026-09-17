@@ -876,8 +876,18 @@ namespace Odyssey.Presentation.Bootstrap
                 _previewLayer = min.Y;
                 _previewIsSlab = ConstructionContent.BuildingAt(director.Building).slab;
                 BuildPreview.Gather(min, max, _previewLayerAt ??= PreviewLayerAt, _previewBoxes);
+
+                // A wall is a box and a floor is a plate, because the cursor is the shape of the
+                // thing. See ChunkRenderer.DrawCellSpanPlate for why a cell-tall box drawn for a
+                // slab is not merely ugly: it hides the tile it is promising and gives no way to
+                // tell which of two layers it means.
                 for (int i = 0; i < _previewBoxes.Count; i++)
-                    _renderer.DrawCellSpanBox(_previewBoxes[i].Min, _previewBoxes[i].Max, tint);
+                {
+                    PreviewBox box = _previewBoxes[i];
+                    if (_previewIsSlab) _renderer.DrawCellSpanPlate(box.Min, box.Max, tint);
+                    else _renderer.DrawCellSpanBox(box.Min, box.Max, tint);
+                }
+
                 return;
             }
 

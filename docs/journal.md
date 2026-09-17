@@ -2505,3 +2505,34 @@ work itself.
     to show that one came down**, so whatever rubble ends up looking like, it must not look like a
     floor. Recorded against `17` section 9's existing "rubble is in the palette and is not art" line,
     which turns out to be the same finding with the cost attached.
+- **"Nothing happens when I try to lay down a floor" was delivery, not code (2026-09-17).** The
+  owner played it and reported the floor tool doing nothing. **It was doing nothing because there
+  was nothing there:** their checkout sits on `claude/status-sync`, where `BuildingHandle.Count` is
+  **2** — None and Wall — and `Buildings.xml` has no `Building_Floor` at all. `origin/main` is the
+  same. The whole of U29 is on PR #90, unmerged, so the roof chip they clicked was the
+  drawn-disabled one that has never done anything and never claimed to. Checked before a single line
+  was read, which is `lessons.md`'s own rule about confirming delivery first, and it saved the
+  session hunting a second cause for a fault that did not exist in the code under it.
+
+  **The second half of the report was real and is fixed.** *"The selection box for floors should be
+  flat to the tile that it will be placed on rather than a cube."* A build drag draws one closed
+  wireframe box over the whole run — played and accepted for a wall on 2026-09-17 — and for a slab
+  it is wrong three ways at once: it claims a 3 m wall, it hides the tile it is promising underneath
+  itself, and at the slice camera's 32–160 m nothing says which of two layers it means.
+
+  `ChunkRenderer.DrawCellSpanPlate` is the floor's own cursor: same span, same inset, same drape,
+  laid on `CellMetrics.FloorCentre` — the plane `ChunkMesher.EmitFloor` puts the slab itself on — so
+  the cursor's underside is the floor being offered rather than something straddling it. It is the
+  argument the box cursor already makes, applied to the other shape: **the cursor is the shape of
+  the thing.**
+
+  `PlateThickness` is a tenth of a cell and is **a cursor convention rather than a model of the
+  slab**, said plainly so nobody later "corrects" it to the real number: the prefab is 0.10 m deep,
+  which is under a pixel at working range, and a cursor nobody can see is worse than one slightly
+  fatter than what it promises. `AFloorCursorIsAPlateOnTheBoundaryItWillBeLaidOn` pins the height
+  **against the wall cursor** rather than against a number, so no tuning of that line can make the
+  two read alike.
+
+  - **Verified:** fast tier **573 Sim + 193 Hud**, Unity EditMode **1,238 total, 1,229 passed, 0
+    failed**. Still nobody has pressed Play on the plate itself — the owner is playing the worktree
+    `D:\code\odyssey-floors`, which is where U29 exists.

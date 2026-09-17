@@ -1035,6 +1035,27 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
+        /// The run of cells a <b>floor</b> drag covers, drawn flat on the boundary the slab will
+        /// be laid on rather than as a cell-tall box.
+        ///
+        /// <para><b>Because the cursor is the shape of the thing</b> — the argument
+        /// <see cref="DrawCellSpanBox"/> already makes — and a floor is not a cube. A 3 m box drawn
+        /// for a slab says "a wall goes here", it hides the tile it is promising underneath itself,
+        /// and at the slice camera's working range it is impossible to tell which of two layers it
+        /// is standing on. The owner reported exactly that (2026-09-17): *"the selection box for
+        /// floors should be flat to the tile that it will be placed on rather than a cube."*</para>
+        ///
+        /// <para>Laid at <see cref="CellMetrics.FloorCentre"/>, which is where
+        /// <c>ChunkMesher.EmitFloor</c> puts the slab itself, so the cursor and the finished floor
+        /// occupy the same plane. Draped like everything fixed to the grid.</para>
+        /// </summary>
+        public void DrawCellSpanPlate(CellRef min, CellRef max, Color colour)
+        {
+            SpanPlate(min, max, out Vector3 centre, out Vector3 size);
+            DrawWireBox(centre, size, colour);
+        }
+
+        /// <summary>
         /// The box a span of cells occupies: its centre and its extent, held in from the cell
         /// edges by <see cref="OutlineInset"/> so it never z-fights whatever it is drawn beside.
         /// </summary>
@@ -1047,6 +1068,41 @@ namespace Odyssey.Presentation.Rendering
             size = new Vector3(
                 (max.X - min.X + 1) * CellMetrics.SizeXZ - OutlineInset * 2f,
                 (max.Y - min.Y + 1) * CellMetrics.SizeY - OutlineInset * 2f,
+                (max.Z - min.Z + 1) * CellMetrics.SizeXZ - OutlineInset * 2f);
+        }
+
+        /// <summary>
+        /// How thick the flat floor cursor is drawn, in metres.
+        ///
+        /// <para><b>A cursor convention rather than a model of the slab.</b> The slab prefab is
+        /// 0.10 m deep, and at the slice camera's 32–160 m that is under a pixel — a cursor nobody
+        /// can see is worse than one that is slightly fatter than the thing it promises. A tenth of
+        /// a cell's height reads as a plate at every camera distance the game has, and against a
+        /// wall cursor's full 3 m it cannot be mistaken for one.</para>
+        ///
+        /// <para>One line, and the owner's to tune.</para>
+        /// </summary>
+        public const float PlateThickness = CellMetrics.SizeY * 0.1f;
+
+        /// <summary>
+        /// The plate a span of cells occupies on its lower boundary: where a floor goes, rather
+        /// than the volume a wall would fill.
+        ///
+        /// <para>Sits <em>on</em> the boundary — the box's underside is the plane the slab is laid
+        /// on, so the cursor covers the tile it is promising instead of straddling it. Held in from
+        /// the cell edges by the same <see cref="OutlineInset"/> the box uses, so a floor cursor
+        /// beside a wall cursor lines up.</para>
+        /// </summary>
+        public static void SpanPlate(CellRef min, CellRef max, out Vector3 centre, out Vector3 size)
+        {
+            Vector3 low = CellMetrics.FloorCentre(min.X, min.Z, min.Y);
+            Vector3 high = CellMetrics.FloorCentre(max.X, max.Z, max.Y);
+            centre = (low + high) * 0.5f;
+            centre.y += PlateThickness * 0.5f;
+
+            size = new Vector3(
+                (max.X - min.X + 1) * CellMetrics.SizeXZ - OutlineInset * 2f,
+                PlateThickness,
                 (max.Z - min.Z + 1) * CellMetrics.SizeXZ - OutlineInset * 2f);
         }
 
