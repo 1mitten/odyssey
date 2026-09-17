@@ -66,18 +66,27 @@ namespace Odyssey.Hud
         public const string Wall = "ui.arch.tool.wall";
 
         /// <summary>
-        /// The floor tool, under the catalogue's own key for it. The key says "roof" because a slab
-        /// is both — it floors the layer it is in and roofs the one below — and keys are forever,
-        /// so the label moved and the key did not (U29).
+        /// The <b>slab</b>: an upper floor, on a wall or bridging out from one. Never on the
+        /// ground, which is already a floor.
+        ///
+        /// <para>The key says "roof" because a slab is both — it floors the layer it is in and
+        /// roofs the one below — and keys are forever, so only the label has ever moved (U29, then
+        /// again when it stopped being called "Floor" in 2026-09-17's rename).</para>
+        ///
+        /// <para><b>Named `Slab` here and not `Floor`, deliberately.</b> The identifier the player
+        /// sees and the identifier in the code used to disagree, which cost three rounds of
+        /// confusion in one afternoon. Note that <c>BuildingHandle.Floor</c> is still this one:
+        /// handle <i>values</i> are a save contract and were not worth the risk of a swap that
+        /// would compile silently and mean the other thing.</para>
         /// </summary>
-        public const string Floor = "ui.arch.tool.roof";
+        public const string Slab = "ui.arch.tool.roof";
 
         /// <summary>
-        /// Paving: a floor laid on ground that is already there (U42). Under <c>Floors</c> and
-        /// never under <c>Structure</c> — with both tools saying "floor", the category is what
-        /// tells a player which one they are holding (`18-paving.md` §7).
+        /// <b>Paving</b>, which is what the player simply calls a floor: laid on ground that is
+        /// already there (U42). <c>BuildingHandle.DeckPlate</c> behind it, for the reason
+        /// <see cref="Slab"/> gives about handle values.
         /// </summary>
-        public const string DeckPlate = "ui.arch.tool.deckplate";
+        public const string Paving = "ui.arch.tool.deckplate";
         public const string Mine = "ui.arch.tool.mine";
         public const string Fell = "ui.arch.tool.fell";
         public const string Cancel = "ui.arch.tool.cancel";
@@ -90,7 +99,7 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly (string key, string label, string[] tools)[] Categories =
         {
-            ("ui.arch.category.structure", "Structure", new[] { Wall, "ui.arch.tool.door", "ui.arch.tool.stair", "ui.arch.tool.ladder", "ui.arch.tool.roof", "ui.arch.tool.reclaim" }),
+            ("ui.arch.category.structure", "Structure", new[] { Wall, Paving, "ui.arch.tool.door", "ui.arch.tool.stair", "ui.arch.tool.ladder", Slab, "ui.arch.tool.reclaim" }),
             ("ui.arch.category.orders", "Orders", new[] { Mine, Fell, "ui.arch.tool.forbid", "ui.arch.tool.clearrubble" }),
             ("ui.arch.category.zones", "Zones", new[] { "ui.arch.tool.stockpile", "ui.arch.tool.growzone", "ui.arch.tool.dumping" }),
             ("ui.arch.category.production", "Production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
@@ -98,7 +107,7 @@ namespace Odyssey.Hud
             ("ui.arch.category.power", "Power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
             ("ui.arch.category.security", "Security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
             ("ui.arch.category.salvage", "Salvage", new[] { "ui.arch.tool.salvage", "ui.arch.tool.reclaim" }),
-            ("ui.arch.category.floors", "Floors", new[] { DeckPlate, "ui.arch.tool.grating", "ui.arch.tool.tile" }),
+            ("ui.arch.category.floors", "Floors", new[] { Paving, "ui.arch.tool.grating", "ui.arch.tool.tile" }),
             ("ui.arch.category.recreation", "Recreation", new[] { "ui.arch.tool.gamestable", "ui.arch.tool.viewscreen", "ui.arch.tool.planter" }),
         };
 
@@ -137,11 +146,11 @@ namespace Odyssey.Hud
                 d => d.ArmBuild(BuildingHandle.Wall),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Wall,
                 wantsMaterial: true),
-            new PaletteTool(Floor,
+            new PaletteTool(Slab,
                 d => d.ArmBuild(BuildingHandle.Floor),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Floor,
                 wantsMaterial: true),
-            new PaletteTool(DeckPlate,
+            new PaletteTool(Paving,
                 d => d.ArmBuild(BuildingHandle.DeckPlate),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.DeckPlate,
                 wantsMaterial: true),

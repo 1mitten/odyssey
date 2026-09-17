@@ -28,7 +28,7 @@ Everything on the architect menu: what can be built, and the one-off orders that
 | **Stair** | `ui.arch.tool.stair` | Two cells. The fast way between layers <br>**Needs:** a staircase. M1 needs it and no sheet has one | no art | M3 |
 | **Ladder** | `ui.arch.tool.ladder` | One cell. Slow, cheap, no hauling <br>**Needs:** a ladder. M1 needs it and no sheet has one | no art | M3 |
 | **Support pillar** | `ui.arch.tool.pillar` | Extends how far a roof can span | sheet 04 (manufactured), low | M3 |
-| **Floor** | `ui.arch.tool.roof` | A slab you walk on. It roofs the layer beneath <br>**Needs:** a roof or ceiling panel seen from below. Central to the layer model | no art | M3 |
+| **Slab** | `ui.arch.tool.roof` | An upper floor. Goes on a wall or bridges out from one <br>**Needs:** a roof or ceiling panel seen from below. Central to the layer model | no art | M3 |
 | **Reclaim shell** | `ui.arch.tool.reclaim` | Adopt existing ruined structure as ours <br>**Needs:** adopting existing ruined structure. Our own invention, nothing to borrow | no art | M3 |
 | **Window** | `ui.arch.tool.window` | Light through a wall, less insulation | sheet 04 (manufactured), high | M3 |
 | **Hatch** | `ui.arch.tool.hatch` | A door in a floor <br>**Needs:** a hatch in a floor | no art | M3 |
@@ -84,7 +84,7 @@ Everything on the architect menu: what can be built, and the one-off orders that
 | **Blast door** | `ui.arch.tool.blastdoor` | Slow, strong, holds a breach <br>**Needs:** a heavy blast door, distinct from a normal door | no art | M3 |
 | **Sandbags** | `ui.arch.tool.sandbag` | Fast cover from salvage | sheet 08 (salvage gear), high | M3 |
 | **Searchlight** | `ui.arch.tool.searchlight` | Light where you need to shoot | sheet 08 (salvage gear), med | M3 |
-| **Deck plate** | `ui.arch.tool.deckplate` | Metal flooring. Fast to lay | sheet 04 (manufactured), high | M3 |
+| **Floor** | `ui.arch.tool.deckplate` | Laid on ground you already walk on | sheet 04 (manufactured), high | M3 |
 | **Grating** | `ui.arch.tool.grating` | See and fall through. Light passes | sheet 04 (manufactured), med | M3 |
 | **Poured concrete** | `ui.arch.tool.concretefloor` | Slow, cheap, permanent | sheet 08 (salvage gear), med | M3 |
 | **Tile** | `ui.arch.tool.tile` | Clean and pretty. Hospitals and kitchens <br>**Needs:** a finished floor tile | no art | M3 |

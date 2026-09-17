@@ -156,6 +156,12 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   `WorkingLayer` stays null for it. Grass no longer grows through a paved cell.
   **Paving does nothing yet** — walking speed, cleanliness and beauty do not exist — so it is a
   surface that looks different and that is all.
+  **The two are called `Slab` and `Floor`** (owner, 2026-09-17, reversing "both say floor" the same
+  afternoon after three rounds of confusion). Keys did not move; only labels. **Paving is offered in
+  `Floors` and in `Structure` both**, because a wall, its floor and the slab over it are one job —
+  the slab stays in `Structure` alone, and a test pins all of it. Note the asymmetry:
+  `BuildingHandle.Floor` is still the **slab** and `BuildingHandle.DeckPlate` is still paving, because
+  handle values are a save contract and a swap would compile in silence.
   **Nothing tests that a click reaches the game**, and that is why this line of work has had three
   silent failures: a PlayMode test cannot press a button (input update type `Editor`, so
   `wasPressedThisFrame` never fires), which `FloorToolClickTests` and `InputHarnessTests` both carry
@@ -311,7 +317,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **578 Sim + 193 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **578 Sim + 195 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and

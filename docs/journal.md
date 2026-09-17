@@ -2673,3 +2673,35 @@ work itself.
   - **Still true and worth not forgetting: paving does nothing.** Walking speed, cleanliness, beauty
     and room stats are why it exists in the genre and none of them exist here, so it is a surface
     that looks different and that is all. Said in the scope before it was built and still true.
+- **Slab and Floor: the rename, reversed the same day and better for it (owner, 2026-09-17).**
+  Earlier that afternoon the owner answered "both say floor" and the recommendation to rename was
+  recorded as overruled, with the failure mode it predicted written down beside it. The prediction
+  came true three times in one session, ending in *"is a slab only supposed to be built at height —
+  I'm so confused"*. Two reachable tools sharing a word cost more than the rename would have.
+
+  **Settled: `Structure → Slab`, `Floors → Floor`.** The word lands on the thing a player means by
+  it and that just works; "slab" is accurate and is already what `02-world-and-layers.md` says
+  throughout. **The keys did not move** — `ui.arch.tool.roof` and `ui.arch.tool.deckplate` are
+  forever — so it is two labels in `icon-keys.csv` and a rebuild, with no defs, no fingerprints and
+  no save implications. The descriptions moved with them, and the old deck-plate line was wrong
+  twice over once it became the default floor: *"Metal flooring. Fast to lay"* against a thing that
+  builds in wood or stone.
+
+  **Paving is now in two categories, and that was asked for rather than tidied in.** It belongs in
+  `Floors`; it is **also** in `Structure` beside the wall and the slab, because *"it won't be painful
+  having to go backwards and forwards between menus"* — a wall, its floor and the slab over it are
+  one job and should be one row. Not a new idea in that table: `ui.arch.tool.reclaim` has sat in both
+  `Structure` and `Salvage` since it was written, and `PaletteTools.TryGet` is keyed by the tool
+  rather than by where it is drawn, so one key in two lists arms one tool and lights in both places.
+  **The slab stays in `Structure` and nowhere else**, and a test says so: a slab under `Floors`
+  would rebuild the confusion the rename exists to end.
+
+  **The identifiers followed the labels; the handles deliberately did not.**
+  `PaletteTools.Slab` and `PaletteTools.Paving` now read the way the screen does.
+  `BuildingHandle.Floor` is still the slab and `BuildingHandle.DeckPlate` is still paving, because
+  handle *values* are a save contract — swapping which constant means 2 and which means 3 would
+  compile in silence and mean the other thing everywhere it was missed. A comment at both sites
+  records the asymmetry rather than leaving it to be rediscovered.
+
+  - **Verified:** fast tier **578 Sim + 195 Hud**, Unity EditMode **1,247 total, 1,238 passed, 0
+    failed**, both content gates clean.

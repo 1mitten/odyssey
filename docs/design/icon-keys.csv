@@ -131,7 +131,7 @@ ui.arch.tool.door,Door,ui.arch.tool,M3,"Passable, and holds a room's air"
 ui.arch.tool.stair,Stair,ui.arch.tool,M3,Two cells. The fast way between layers
 ui.arch.tool.ladder,Ladder,ui.arch.tool,M3,"One cell. Slow, cheap, no hauling"
 ui.arch.tool.pillar,Support pillar,ui.arch.tool,M3,Extends how far a roof can span
-ui.arch.tool.roof,Floor,ui.arch.tool,M3,"A slab you walk on. It roofs the layer beneath"
+ui.arch.tool.roof,Slab,ui.arch.tool,M3,"An upper floor. Goes on a wall or bridges out from one"
 ui.arch.tool.reclaim,Reclaim shell,ui.arch.tool,M3,Adopt existing ruined structure as ours
 ui.arch.tool.window,Window,ui.arch.tool,M3,"Light through a wall, less insulation"
 ui.arch.tool.hatch,Hatch,ui.arch.tool,M3,A door in a floor
@@ -187,7 +187,7 @@ ui.arch.tool.barricade,Barricade,ui.arch.tool,M3,Cover without blocking sight
 ui.arch.tool.blastdoor,Blast door,ui.arch.tool,M3,"Slow, strong, holds a breach"
 ui.arch.tool.sandbag,Sandbags,ui.arch.tool,M3,Fast cover from salvage
 ui.arch.tool.searchlight,Searchlight,ui.arch.tool,M3,Light where you need to shoot
-ui.arch.tool.deckplate,Deck plate,ui.arch.tool,M3,Metal flooring. Fast to lay
+ui.arch.tool.deckplate,Floor,ui.arch.tool,M3,Laid on ground you already walk on
 ui.arch.tool.grating,Grating,ui.arch.tool,M3,See and fall through. Light passes
 ui.arch.tool.concretefloor,Poured concrete,ui.arch.tool,M3,"Slow, cheap, permanent"
 ui.arch.tool.tile,Tile,ui.arch.tool,M3,Clean and pretty. Hospitals and kitchens

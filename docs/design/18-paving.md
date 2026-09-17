@@ -155,36 +155,52 @@ stats are the reason paving exists in the genre and none of those systems exist 
 covering is a surface that looks different and does nothing else. That is worth saying out loud
 rather than discovering: **paving will be cosmetic until rooms are.**
 
-## 7. Naming — settled: both say floor (owner, 2026-09-17)
+## 7. Naming — reversed the same day: Slab and Floor (owner, 2026-09-17)
 
 The question was whether to rename U29's tool to `Slab`, so that "floor" meant only the covering.
-**The owner's answer is that both say floor.** The recommendation to rename is overruled and this
-section records that, so no later session re-opens it: `Structure → Floor` stays `Floor`, and the
-coverings keep the specific names they already have — `Deck plate`, `Grating`, `Tile`. Nothing in
-`icon-keys.csv` moves, and there is no wiki or label rebuild in this unit at all.
+**The owner first said both say floor, then reversed it within the afternoon after playing** — which
+is the right way round for a decision like this and is recorded in both directions on purpose.
 
-**What that costs, and where the cost has to be paid.** Two tools a player can reach both say floor,
-so the *word* can no longer be what tells them apart — the palette category and the cursor have to.
-That is a constraint on U42 rather than a problem with the decision, and it is already half met:
+**Settled: `Structure → Slab` and `Floors → Floor`.** The word "floor" ends up on the thing that
+just works and that a player means by it; "slab" is accurate and is already the word
+`02-world-and-layers.md` uses throughout. The keys do not move — `ui.arch.tool.roof` and
+`ui.arch.tool.deckplate` are forever — so it is two labels in `icon-keys.csv` plus a wiki and
+registry rebuild, and no code, defs, tests or fingerprints.
 
-- **The category is the disambiguator.** `Structure` holds the thing that spans and falls;
-  `Floors` holds the things you lay on ground. A covering must never appear under `Structure`, and
-  the slab must never appear under `Floors`, however tempting a shortcut looks later.
-- **The descriptions do the rest, and they are already written.** The registry has
-  *"A slab you walk on. It roofs the layer beneath"* against `ui.arch.tool.roof` and *"Metal
-  flooring. Fast to lay"* against `ui.arch.tool.deckplate`. Those two lines are the whole
-  distinction, so whatever surfaces a tool's description — a tooltip, a popover — matters more here
-  than it would if the names differed.
-- **The cursors already differ and now must keep differing.** A slab draws a plate on the boundary
-  it will occupy and goes red where it cannot stand; a covering will draw the same plate but will
-  almost never be refused. That is a real cue and it falls out of the rules rather than being
-  arranged.
+**What changed the owner's mind is worth keeping**, because the first answer was reasonable: three
+separate rounds of confusion in one afternoon, ending in *"is a slab only supposed to be built at
+height — I'm so confused"*. Two reachable tools sharing a word cost more than the rename did.
 
-**One thing to watch in play.** With both called floor, a player who arms the wrong one gets a
-cursor that looks nearly identical and an order that behaves completely differently. If that bites,
-the cheapest fix is not a rename but a clearer readout of *which* tool is armed — and the honest
-note is that this doc recommended the rename and was overruled, so the failure mode was predicted
-rather than missed.
+**And paving is offered in two categories.** It sits in `Floors`, which is what it is, and **also in
+`Structure`** beside the wall and the slab — the owner asked for it by name: *"it won't be painful
+having to go backwards and forwards between menus"*. A wall, its floor and the slab over it are one
+job. Not a new idea in that table: `ui.arch.tool.reclaim` has been in both `Structure` and `Salvage`
+since it was written, and `PaletteTools.TryGet` is keyed by the tool rather than by where it is
+drawn. **The slab stays in `Structure` and nowhere else** — a slab under `Floors` would rebuild the
+confusion this rename exists to end. `PavingIsOfferedInBothFloorsAndStructure` pins all of it.
+
+**The C# identifiers followed the labels, but the handles did not.** `PaletteTools.Slab` and
+`PaletteTools.Paving` now read the way the screen does. `BuildingHandle.Floor` is still the slab and
+`BuildingHandle.DeckPlate` is still paving, deliberately: handle *values* are a save contract, and
+swapping which constant means 2 and which means 3 would compile in silence and mean the other thing
+everywhere it was missed. A comment at both sites says so.
+
+**What is still true from the version of this section that argued the other way.** The first answer
+was "both say floor", and the reasoning written under it was that the category and the cursor would
+carry the distinction instead. They now do *as well as* the names rather than in place of them, and
+two of those points survive the reversal and are worth keeping:
+
+- **The descriptions changed with the labels.** `ui.arch.tool.roof` reads *"An upper floor. Goes on
+  a wall or bridges out from one"* and `ui.arch.tool.deckplate` reads *"Laid on ground you already
+  walk on"*. The old deck-plate line said *"Metal flooring. Fast to lay"*, which was wrong twice
+  over once it became the default floor: it builds in wood or stone, not metal.
+- **The cursors differ because the rules do**, not because anyone arranged it. A slab goes red
+  wherever it cannot stand, which on open ground is everywhere; paving almost never will. That is a
+  real cue and it costs nothing to keep.
+
+**The prediction the first version made came true and is why this one exists.** It said a player who
+armed the wrong one would get a nearly identical cursor and a completely different order. That is
+exactly what happened, three times in an afternoon, and the rename was the cheaper answer all along.
 
 ## 8. Cost
 

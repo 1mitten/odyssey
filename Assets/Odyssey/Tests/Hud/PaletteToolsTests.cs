@@ -146,22 +146,56 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// <b>Paving is in two categories on purpose, and this test is here so nobody tidies it
+        /// away.</b>
+        ///
+        /// <para>It belongs in <c>Floors</c>, which is what it is. It is also in <c>Structure</c>
+        /// beside the wall and the slab, because that is where a player already is when they are
+        /// building — the owner asked for it by name (2026-09-17): *"it won't be painful having to
+        /// go backwards and forwards between menus"*. A wall, its floor and the slab over it are
+        /// one job and should be one row.</para>
+        ///
+        /// <para>Not a new idea in this table: <c>ui.arch.tool.reclaim</c> has sat in both
+        /// <c>Structure</c> and <c>Salvage</c> since it was written, and <see cref="PaletteTools.TryGet"/>
+        /// is keyed by the tool rather than by where it is drawn, so a key in two lists arms one
+        /// tool and lights in both places.</para>
+        /// </summary>
+        [Test]
+        public void PavingIsOfferedInBothFloorsAndStructure()
+        {
+            string[]? structure = null, floors = null;
+            foreach (var (key, _, tools) in PaletteTools.Categories)
+            {
+                if (key == "ui.arch.category.structure") structure = tools;
+                if (key == "ui.arch.category.floors") floors = tools;
+            }
+
+            Assert.That(floors, Does.Contain(PaletteTools.Paving), "paving is what the Floors row is for");
+            Assert.That(structure, Does.Contain(PaletteTools.Paving),
+                "and it is beside the wall too, so building a room is not two menus");
+            Assert.That(structure, Does.Contain(PaletteTools.Slab),
+                "the slab stays in Structure and nowhere else: it is structure");
+            Assert.That(floors, Does.Not.Contain(PaletteTools.Slab),
+                "a slab under Floors would be the confusion this rename was meant to end");
+        }
+
+        /// <summary>
         /// Only a thing made of something offers a material. An order is a verb applied to what is
         /// already there, so a "made of" row under the cancel tool would be asking what to cancel
         /// it out of.
         ///
         /// <para>The list is spelled out rather than derived from <c>WantsMaterial</c> itself,
         /// which would assert that a field equals itself. Three things are built out of something
-        /// today — a wall, a floor and a deck plate — and a fourth arriving should have to be
-        /// written here.</para>
+        /// today — a wall, a slab and paving — and a fourth arriving should have to be written
+        /// here.</para>
         /// </summary>
         [Test]
         public void OnlyAThingMadeOfSomethingAsksWhatItIsMadeOf()
         {
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(tool.WantsMaterial,
-                    Is.EqualTo(tool.Key == PaletteTools.Wall || tool.Key == PaletteTools.Floor
-                        || tool.Key == PaletteTools.DeckPlate),
+                    Is.EqualTo(tool.Key == PaletteTools.Wall || tool.Key == PaletteTools.Slab
+                        || tool.Key == PaletteTools.Paving),
                     $"{tool.Key} disagrees with itself about whether it is built out of something");
         }
 
