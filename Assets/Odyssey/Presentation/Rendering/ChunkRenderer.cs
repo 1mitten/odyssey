@@ -311,7 +311,17 @@ namespace Odyssey.Presentation.Rendering
 
                 ModulePart part = _model.Library[bucket.Module].Parts[bucket.Part];
                 ResolveColour(bucket.Tint, part.IsFallback, shade, out Color tint, out Color emission);
-                Material material = _materials.Get(part.Material, tint, emission, ghost, alpha,
+
+                // A tree is the one bucket whose colour is not a tint: it is four colours painted
+                // into four cells of the pack atlas, which needs its own shader and its own cache.
+                // Everything else — and a ghosted tree, which is drawn by the translucent stand-in
+                // and has no atlas to repaint — goes the ordinary way. A null from the tree cache
+                // means there was no shader or no art, and the fallback is exactly what a tree
+                // drew before this feature existed.
+                Material? painted = !ghost && TintCode.IsTree(bucket.Tint) && !part.IsFallback
+                    ? _materials.Trees.For(part.Material, TintCode.Value(bucket.Tint), shade)
+                    : null;
+                Material material = painted ?? _materials.Get(part.Material, tint, emission, ghost, alpha,
                     foliage: TintCode.IsFoliage(bucket.Tint),
                     water: TintCode.IsWater(bucket.Tint));
 
@@ -444,6 +454,18 @@ namespace Odyssey.Presentation.Rendering
                 // Odyssey/Water and the palette entry *is* its colour. The alpha is carried
                 // through untouched below, because for water it is the opacity.
                 tint = StuffPalette.TerrainSolid(value);
+                emission = Color.black;
+            }
+            else if (TintCode.IsTree(tintCode))
+            {
+                // Over real art this is not what colours the tree — TreeMaterials repaints the
+                // atlas's bark and canopy cells separately, which one multiply cannot do — and
+                // white is what the tree drew before any of this existed, so a missing shader
+                // degrades to the pack's own wood rather than to something wrong. Over a
+                // primitive there is no atlas to repaint and the tint is the only colour there
+                // is, so a stand-in box takes the theme's canopy and a clone without the packs
+                // gets a green wood instead of a grey one.
+                tint = fallback ? TreeMaterials.Colour(TreePalette.At(value).DeepCanopy) : Color.white;
                 emission = Color.black;
             }
             else if (TintCode.IsTerrain(tintCode))

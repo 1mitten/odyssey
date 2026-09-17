@@ -260,7 +260,11 @@ namespace Odyssey.Presentation.Rendering
                 trees++;
                 int module = _model.EdificeModule(above);
                 if (module == 0) continue;
-                long key = ((long)module << 20) | (uint)TintCode.Stuff(_model.EdificeStuff(above));
+                // The tree's own tint, which since TreePalette is which stand of wood it grows
+                // in. Sampling it here is what makes the surround the same wood as the board:
+                // the tally is taken by frequency, so a board whose rim is mostly birch puts
+                // mostly birch in the ring outside it without anything having to be told.
+                long key = ((long)module << 20) | (uint)TintCode.Tree(TreeLook.ThemeFor(x, z, edifice));
                 treeCounts.TryGetValue(key, out int count);
                 treeCounts[key] = count + 1;
             }
@@ -623,11 +627,19 @@ namespace Odyssey.Presentation.Rendering
             tint = SkirtLayout.Mute(tint, muteStep);
             emission = SkirtLayout.Mute(emission, muteStep);
 
+            // A tree out here is repainted exactly as one on the board is, haze and all — see
+            // ChunkRenderer.DrawBuckets for why a tree cannot take a single tint. Without this
+            // the wood would change colour at the rim, which is the one thing the surround exists
+            // to prevent.
+            Material? painted = TintCode.IsTree(tintCode) && !part.IsFallback
+                ? _materials.Trees.For(part.Material, TintCode.Value(tintCode), 1f, muteStep)
+                : null;
+
             return new Batch
             {
                 Mesh = part.Mesh,
                 Submesh = part.Submesh,
-                Material = _materials.Get(part.Material, tint, emission, ghost: false, alpha: 1f,
+                Material = painted ?? _materials.Get(part.Material, tint, emission, ghost: false, alpha: 1f,
                     foliage: foliage),
                 Bounds = bounds,
                 CastsShadow = castsShadow,

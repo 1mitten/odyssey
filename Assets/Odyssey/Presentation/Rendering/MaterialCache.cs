@@ -60,8 +60,22 @@ namespace Odyssey.Presentation.Rendering
         readonly List<Material> _owned = new List<Material>();
         Material? _ghostBase;
         Material? _waterBase;
+        TreeMaterials? _trees;
 
         public int MaterialCount => _owned.Count;
+
+        /// <summary>
+        /// The tree cache, which has a key of its own because a tree's colour is four colours.
+        ///
+        /// <para>It is <b>owned</b> here rather than being a second object passed around beside
+        /// this one. Everything that draws — the chunk renderer, the surround — already holds a
+        /// material cache and would otherwise have to be handed a tree cache as well, and
+        /// disposal, which is what stops a session leaking GPU objects until the device resets,
+        /// would then have two places to go wrong. What is deliberately <em>not</em> shared is the
+        /// key: see <see cref="TreeMaterials"/> for why widening this one would change the cost
+        /// model of every wall in the world.</para>
+        /// </summary>
+        public TreeMaterials Trees => _trees ??= new TreeMaterials();
 
         /// <summary>
         /// The material that draws a bucket: the art's own material, tinted and shaded.
@@ -310,6 +324,8 @@ namespace Odyssey.Presentation.Rendering
             _cache.Clear();
             _ghostBase = null;
             _waterBase = null;
+            _trees?.Dispose();
+            _trees = null;
         }
 
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");

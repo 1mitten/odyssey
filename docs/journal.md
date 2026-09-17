@@ -4161,3 +4161,109 @@ and the ghost being drawn at an unseen layer — the owner's own guess, disprove
   - **Verified:** fast tier 611 Sim and 349 Hud; EditMode **1443 total, 1432 passed, 0 failed**.
     **Not verified:** whether the downward scroll reads as falling rather than as a pattern sliding,
     which is the whole of B and cannot be judged in a still.
+
+### The wood was two colours, and one of them was nobody's choice (2026-09-18)
+
+The owner played the meadow and said the world reads dull, naming the trees: *"they need to be a
+variety of colours — mix in different shades brown and variation into this list"*, with a table of
+six themes of four colours each, and *"bake it and make it performant"*.
+
+- **The dullness was the consequence of a fix, not an oversight.** A tree draws with **no tint at
+  all**, and `ChunkMesher.EmitEdifice` says why in place: a tree is placed with
+  `NaturalContent.StuffWood` because that is what it is *made of*, not what it was *built from*, so
+  when wood became a brown multiply on 2026-09-17 — to stop a wooden wall drawing as cream plaster
+  — every tree on the board would have gone brown with it. Refusing the stuff tint was right. The
+  side effect nobody wrote down is that it left a tree with no colour lever whatsoever, so the
+  board's whole woodland was whatever two colours PolygonGeneric happened to ship.
+
+- **A tint could not have been the answer even if one had been available.** Measured before
+  anything was built (`TreeSwatchProbe`, `Logs/tree-swatches.txt`): each tree is **one mesh, one
+  submesh, one material**, and the trunk and the canopy are different flat cells of the same
+  4096 × 4096 atlas. `_BaseColor` — the lever every other module in the game is coloured with —
+  multiplies both at once, so browning the bark browns the leaves. That is the same conflation the
+  stuff tint already refuses to make, arriving from the other direction.
+
+- **The three ways to give one mesh two colours, and why the third won.** Recolouring the atlas per
+  theme is out on memory and the number is off the file rather than estimated: 4096 × 4096 is
+  64 MB uncompressed and this wants about a dozen. Shifting UVs onto neighbouring cells needs spare
+  cells nobody owns. Repainting the cells in the fragment shader costs four rectangle tests and no
+  memory at all — and it is legitimate here for exactly the reason it was legitimate for colonists:
+  the probe reports a **maximum texel deviation of 0** inside every cluster of every tree mesh in
+  the pack. The cells really are flat, so replacing the colour inside one throws no art away. Had a
+  canopy come back carrying a gradient, this would have been the wrong mechanism and the design
+  would have had to settle for a multiply.
+
+- **`Odyssey/Tree` is `Odyssey/Character` minus the ink hull, and the two are deliberately not
+  merged.** The hull exists because skinned meshes are missing from the depth texture the outline
+  pass reads; a tree is ordinary instanced geometry that pass inks perfectly well, and a second,
+  closer line of its own would ink every tree twice. The shared half is thirty lines of rectangle
+  arithmetic, and one include for both would have to fix one set of property names — which means
+  renaming the character's, in a feature the owner has already judged.
+
+- **The whole design is the performance question, and the first answer measured badly.** Drawing is
+  bucketed per *(module, part, tint)* in a chunk, so a tree's colour **is** a bucket key and a draw
+  call is what it costs. A chunk of woodland holds about 160 trees, so a colour rolled per tree
+  saturates the palette in nearly every chunk: measured worst chunk **11 of 11 themes**. Dealing a
+  colour to a *stand* of trees instead was the plan, and at the first stand size tried — 20 cells,
+  chosen by eye against the 25-cell chunk — it measured **6.75 buckets a chunk, worst 10**. A
+  saving that thin would not have been worth the feature. The bill is (stands overlapping a chunk)
+  × 2 species, and a 25-cell chunk overlaps about five 20-cell squares; at 40 cells it overlaps
+  two, and the same board measures **4.34 a chunk, worst 9**. The number was moved by the
+  measurement, not by the argument that produced it.
+
+- **And nothing was given up for it.** The obvious cost of wide stands is a small board carrying
+  few colours, so it is measured at the size the game actually loads rather than inferred from the
+  200-cell fixture: a 120-cell meadow shows **all eleven themes**.
+
+- **Stands are cellular, not a quantised grid.** One line shorter and it draws colour boundaries
+  with ruler-straight edges running the full width of the board, which nothing in a landscape does
+  and which reads at once as a bug. Each stand square sows one jittered site and a tree joins the
+  nearest, so a boundary is the bisector of two arbitrary points and wanders; the test measures
+  that as "a boundary crosses 196 of 200 columns" rather than the 5 a grid would give.
+
+- **Everything is a hash of the cell's own coordinates**, as `GroundLook` already required of the
+  ground: a chunk is re-meshed whenever anything in it changes, so a stream of random numbers would
+  recolour the wood every time a colonist felled a tree twenty metres away. Nothing here is saved,
+  hashed or visible to the simulation, no Def moved and **no golden hash moved**.
+
+- **The surround came free and had to be asked for anyway.** `TerrainSkirt` already samples the
+  board's trees by frequency to decide what grows outside the rim, so pointing that sample at the
+  new tint code makes the ring outside the board the same wood as the board. Without it the wood
+  would have changed colour exactly at the rim, which is the one thing the surround exists to
+  prevent. Its distance haze desaturates a tint, so it had to be applied to all four colours and
+  joined the material key.
+
+- **Cost of the third Unity run: `Does.Not.Contain(x)` resolves to the string overload** under
+  Unity's NUnit, so a negated membership assertion against a `HashSet<int>` is a compile error
+  while the *positive* `Does.Contain(x)` two lines above is fine. `docs/lessons.md` has it beside
+  `Assert.Multiple` and `Has.Count`.
+
+- **The draw-call bill on the real board is +57 of 1758, or 3.2%**, instances unchanged at 44,200
+  (`TreeCheck`, wooded 120 x 120). The first run of that sheet reported **the same number three
+  times over**, and the reason is worth keeping: switching the tree *materials* off still leaves the
+  mesher splitting a chunk's trees into a bucket per stand, so the "before" column was the feature
+  measured against itself. A before that is not a before reads exactly like a free feature.
+
+- **And the fidelity control failed, which is what it was for.** With the repaint strength at zero —
+  our shader drawing the pack's own colours — a tree comes out about **a tenth darker in sRGB**
+  than `Synty/Generic_Standard` draws it, with the meadow beside it identical to the last digit.
+  Three explanations were tested and all three died: **emission** (carried across now; changed the
+  picture by nothing, because `_Emission_Color` is black), **the normal map** (the `flat` column,
+  forced to zero, is identical to `plain` *byte for byte*, so the map contributes nothing at this
+  distance), and **screen-space occlusion**, which is on at 0.4 and applied through a keyword —
+  `CompareShaders` prints both keyword sets and **both declare it**. What is left is that the pack's
+  shader is a Shader Graph carrying a built-in target as well as a URP one and ours calls
+  `UniversalFragmentPBR` directly, and closing that means reverse-engineering the graph, which is
+  the licensed-content line. **Not compensated for**: a gain on `_BaseColor` would cancel most of
+  it, but the correction is not uniform (blue wants 1.24 where red wants 1.12) and a fudge factor
+  fitted to two rectangles of one frame is the kind of number this project distrusts on principle.
+  The brightness lever is the palette, and the palette is one table.
+
+- **Verified:** EditMode 1533 total, 0 failed after the pin was moved to the measured figure;
+  fast tier 645 Sim and 358 Hud.
+  **Not verified:** whether any of it looks good. `scripts/unity.sh shot
+  Odyssey.EditorTools.TreeCheck.Run` writes `Logs/tree-{pack,plain,themed}-{play,wood,close}.png`,
+  where `pack` is the wood as the game drew it before and `plain` is our shader with the repaint at
+  zero — the fidelity control that separates "our shader draws a Synty tree differently" from "the
+  palette is wrong". Design, the owner's table and the five themes we added are
+  `docs/design/21-tree-colours.md`.

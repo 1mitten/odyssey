@@ -191,6 +191,13 @@ namespace Odyssey.Tests.Presentation
         /// multiply so that a wooden wall would stop drawing as cream plaster: the same multiply
         /// would have gone over every tree's own pack material, which is already the right green
         /// and brown. The stuff tint says what a thing was built from, and a tree was not built.</para>
+        ///
+        /// <para><b>What a tree carries instead, since 2026-09-18:</b> a tree tint code, which is
+        /// not in the stuff code space at all and names one of <c>TreePalette</c>'s themes. The
+        /// assertion that matters is unchanged and is the one above — a tree must never pick up
+        /// the wood <i>stuff</i> tint — and it is now made on the whole code rather than on its
+        /// low byte, because a theme index and a stuff index are different numbers in different
+        /// spaces and comparing the byte alone would confuse them.</para>
         /// </summary>
         [Test]
         public void ATreeTakesNoStuffTintAndAWoodenWallTakesOne()
@@ -205,12 +212,21 @@ namespace Odyssey.Tests.Presentation
             ChunkBatch batch = MeshLayer(world, 1);
 
             var codes = new HashSet<int>();
-            foreach (InstanceBucket bucket in batch.Body) codes.Add(TintCode.Value(bucket.Tint));
+            foreach (InstanceBucket bucket in batch.Body) codes.Add(bucket.Tint);
 
-            Assert.That(codes, Does.Contain((int)CoreContent.StuffNone),
-                "the tree draws untinted, in the material the pack gave it");
-            Assert.That(codes, Does.Contain((int)NaturalContent.StuffWood),
+            Assert.That(codes, Does.Contain(TintCode.Tree(TreeLook.Theme(2, 2, TreeSpecies.Broadleaf))),
+                "the tree draws in its stand's colours, not in a stuff tint");
+            Assert.That(codes, Does.Contain(TintCode.Stuff(NaturalContent.StuffWood)),
                 "and the wall carries the wood tint, which is what browns it");
+            // Not Does.Not.Contain: under the NUnit the Unity tier runs, that overload resolves to
+            // the string one and will not compile against a set of ints (docs/lessons.md).
+            Assert.That(codes.Contains(TintCode.Stuff(CoreContent.StuffNone)), Is.False,
+                "nothing here is untinted any more: the tree used to take StuffNone and does not");
+
+            foreach (int code in codes)
+                if (TintCode.IsTree(code))
+                    Assert.That(TreePalette.At(TintCode.Value(code)).Species,
+                        Is.EqualTo(TreeSpecies.Broadleaf), "a broadleaf wearing a conifer's colours");
         }
 
         [Test]

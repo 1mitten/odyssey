@@ -62,11 +62,30 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const int DaylitBase = 2048;
 
+        /// <summary>
+        /// Bit 12 marks a code as a tree, whose colour is four colours rather than one.
+        ///
+        /// <para>Every other code in this space resolves to a single tint that multiplies whatever
+        /// is underneath. A tree cannot: it is one mesh with one material, and the pack paints its
+        /// trunk and its canopy from different cells of the same atlas, so one multiply browns the
+        /// leaves along with the bark. The value is an index into <see cref="TreePalette"/> and it
+        /// is resolved by <c>TreeMaterials</c> against <c>Odyssey/Tree</c>, not by
+        /// <c>ResolveColour</c> against <c>MaterialCache</c>.</para>
+        ///
+        /// <para>It earns a bit of its own for the reason foliage and water did: the bucket key
+        /// already <em>is</em> the whole material identity, and which cache a bucket wants is
+        /// exactly the kind of thing that integer is for.</para>
+        /// </summary>
+        public const int TreeBase = 4096;
+
         public static int Stuff(int stuff) => stuff;
 
         public static int Terrain(int terrain) => TerrainBase + terrain;
 
         public static int Foliage(int variant) => FoliageBase + variant;
+
+        /// <summary>A tree wearing one of <see cref="TreePalette"/>'s themes.</summary>
+        public static int Tree(int theme) => TreeBase + theme;
 
         /// <summary>Water is terrain as well, so it keeps the terrain bit and its palette entry.</summary>
         public static int Water(int terrain) => WaterBase + TerrainBase + terrain;
@@ -76,6 +95,9 @@ namespace Odyssey.Presentation.Rendering
         public static bool IsFoliage(int code) => (code & FoliageBase) != 0;
 
         public static bool IsWater(int code) => (code & WaterBase) != 0;
+
+        /// <summary>Is this bucket a tree, and so coloured from <see cref="TreePalette"/>?</summary>
+        public static bool IsTree(int code) => (code & TreeBase) != 0;
 
         /// <summary>Is this bucket open to the sky, and so exempt from the depth shade?</summary>
         public static bool IsDaylit(int code) => (code & DaylitBase) != 0;

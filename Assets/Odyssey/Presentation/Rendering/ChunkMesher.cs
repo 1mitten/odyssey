@@ -489,9 +489,16 @@ namespace Odyssey.Presentation.Rendering
             // a brown multiply, so that a wooden wall stopped coming out as cream plaster, every
             // tree on the board would have been multiplied brown with it. A natural edifice takes
             // no stuff tint at all.
-            int tint = TintCode.Stuff(def >= NaturalContent.FirstEdifice
-                ? CoreContent.StuffNone
-                : _model.EdificeStuff(index));
+            //
+            // A tree takes a tint of its own instead: which stand of wood it grows in, which is
+            // what decides its four colours. TreeLook has the argument for why the stand and not
+            // the tree — in short, that this code is a bucket key and a colour per tree would
+            // multiply the tree buckets in every chunk by the length of the palette.
+            int tint = NaturalContent.IsTree(def)
+                ? TintCode.Tree(TreeLook.ThemeFor(x, z, def))
+                : TintCode.Stuff(def >= NaturalContent.FirstEdifice
+                    ? CoreContent.StuffNone
+                    : _model.EdificeStuff(index));
             var shape = _model.Library[module].Shape;
 
             switch (def)
