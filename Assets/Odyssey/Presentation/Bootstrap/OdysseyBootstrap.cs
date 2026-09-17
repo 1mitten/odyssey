@@ -1010,7 +1010,21 @@ namespace Odyssey.Presentation.Bootstrap
             {
                 Matrix4x4 root = BedShape.Root(cell.X, cell.Z, cell.Y, facing);
                 for (int part = 0; part < BedShape.PartCount; part++)
-                    _renderer.DrawGhost(module, tint, BedShape.Part(root, facing, part));
+                {
+                    // The pillow keeps its own module and its own colour in the ghost too, or the
+                    // cursor would promise a bed it is not about to build.
+                    bool pillow = BedShape.IsPillow(part);
+                    Color partTint = tint;
+                    if (pillow)
+                    {
+                        Color linen = StuffPalette.Linen;
+                        partTint = new Color(linen.r, linen.g, linen.b, tint.a);
+                    }
+
+                    _renderer.DrawGhost(
+                        pillow && _model != null ? _model.BedPillowModule : module,
+                        partTint, BedShape.Part(root, facing, part));
+                }
                 return;
             }
 
@@ -1667,6 +1681,27 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             int index = _model.Size.Index(cell.X, cell.Z, cell.Y);
+
+            // A bed is bracketed as the bed, not as the cell it was clicked in (owner,
+            // 2026-09-17: "it highlighted the entire cell instead of highlighting the bed"). It is
+            // two cells long and knee high, so a cell highlight is wrong about how big it is,
+            // which way it faces and where it ends — and it is the one edifice in the game that
+            // does not fill the cell it stands in. The head cell is what the bracket is measured
+            // from, whichever half was clicked, so either end selects the same box.
+            if (_model.EdificeDef(index) == CoreContent.EdificeBed)
+            {
+                int head = _model.BedHead(index) ? index : HeadOfBedAt(index);
+                if (head >= 0)
+                {
+                    CellRef at = _model.Size.FromIndex(head);
+                    BedShape.WorldBounds(
+                        at.X, at.Z, at.Y, _model.BedFacing(head),
+                        out Vector3 centre, out Vector3 size);
+                    _renderer.DrawSelectionBracket(centre, size + Vector3.one * ItemCursorMargin, colour);
+                    return;
+                }
+            }
+
             if (_model.IsSolid(index) || _model.EdificeDef(index) != CoreContent.EdificeNone)
             {
                 _renderer.DrawCellHighlight(cell, colour);
@@ -1674,6 +1709,29 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             _renderer.DrawFloorBracket(cell, colour);
+        }
+
+        /// <summary>
+        /// The head cell of the bed occupying this one, or -1. A four-neighbour look, the mirror
+        /// of <c>ConstructionGrid.HeadClaimingSite</c> on the drawing side: only a cell directly
+        /// beside this one can be the head of a two-cell thing that claims it.
+        /// </summary>
+        int HeadOfBedAt(int index)
+        {
+            if (_model == null) return -1;
+
+            GridSize size = _model.Size;
+            CellRef at = size.FromIndex(index);
+            for (int f = 0; f < Directions.Count; f++)
+            {
+                int x = at.X + Directions.DeltaX[f], z = at.Z + Directions.DeltaZ[f];
+                if (!size.Contains(x, z, at.Y)) continue;
+
+                int neighbour = size.Index(x, z, at.Y);
+                if (_model.EdificeDef(neighbour) == CoreContent.EdificeBed && _model.BedHead(neighbour))
+                    return neighbour;
+            }
+            return -1;
         }
 
         void OnGUI()

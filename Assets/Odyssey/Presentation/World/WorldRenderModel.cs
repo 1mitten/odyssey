@@ -67,6 +67,7 @@ namespace Odyssey.Presentation.World
         readonly int _wallCoreModule;
         readonly int _waterFallModule;
         readonly int _bedModule;
+        readonly int _bedPillowModule;
 
         public WorldRenderModel(GridSize size, ChunkGrid chunks, ModuleLibrary library)
         {
@@ -103,6 +104,10 @@ namespace Odyssey.Presentation.World
             // When real two-cell art exists a catalogue row on this id upgrades it everywhere,
             // with no code change — the same deal every other module id already offers.
             _bedModule = library.Resolve(ModuleIds.Bed, ModuleShape.SolidBlock);
+
+            // The pillow is a module of its own so it can be a rounded shape and a linen colour
+            // whatever the bed's frame is made of (BedShape, PillowMesh).
+            _bedPillowModule = library.Resolve(ModuleIds.BedPillow, ModuleShape.Pillow);
         }
 
         /// <summary>
@@ -262,6 +267,9 @@ namespace Odyssey.Presentation.World
         public ushort EdificeDef(int index) => _edifice[index];
 
         public ushort EdificeStuff(int index) => _edificeStuff[index];
+
+        /// <summary>The module a bed's pillow is drawn from — rounded, and tinted as linen.</summary>
+        public int BedPillowModule => _bedPillowModule;
 
         /// <summary>The facing of the bed in this cell, 0–3. Meaningful only while a bed stands here.</summary>
         public byte BedFacing(int index) => _bedFacing[index];

@@ -668,12 +668,21 @@ namespace Odyssey.Presentation.Rendering
 
             int facing = _model.BedFacing(index);
 
-            // The three boxes come from BedShape, which the cursor's ghost asks as well: a bed
+            // The three parts come from BedShape, which the cursor's ghost asks as well: a bed
             // drawn one way under the pointer and another way on the board is how the build
             // cursor's whole bargain comes undone.
+            //
+            // The pillow is its own module and its own tint — a rounded shape rather than a box,
+            // and linen rather than the stuff the frame is made of.
             Matrix4x4 root = BedShape.Root(x, z, y, facing);
             for (int part = 0; part < BedShape.PartCount; part++)
-                AddBody(batch, module, tint, BedShape.Part(root, facing, part));
+            {
+                bool pillow = BedShape.IsPillow(part);
+                AddBody(batch,
+                    pillow ? _model.BedPillowModule : module,
+                    pillow ? TintCode.Linen() : tint,
+                    BedShape.Part(root, facing, part));
+            }
         }
 
         int FirstOpenDirection(int x, int z, int y)

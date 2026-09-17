@@ -551,8 +551,15 @@ namespace Odyssey.Presentation.Ui
 
                 view.Name = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__rowname");
                 view.Value = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__rowvalue");
+                // The chevron that says the row is a control. Built for every row and shown only
+                // on the one that is pickable, because rows are reused across facts and the
+                // affordance has to travel with the row's meaning rather than its element.
+                view.Chevron = HudText.Make("›", HudTextRole.Meta, ussClass: "inspect__rowchevron");
+                view.Chevron.style.display = DisplayStyle.None;
+
                 view.Root.Add(view.Name);
                 view.Root.Add(view.Value);
+                view.Root.Add(view.Chevron);
 
                 // Registered once for every row and armed per tile by IsPick below: the pane's
                 // rows are reused across facts, so the one row that does something is the one
@@ -585,6 +592,20 @@ namespace Odyssey.Presentation.Ui
                 {
                     view.LastValue = row.Value;
                     HudText.Set(view.Value, row.Value, HudTextRole.Meta);
+                    // HudText.Set writes the role's own colour, so a tint that was applied before
+                    // has just been overwritten and has to be laid on again.
+                    view.LastTint = null;
+                }
+
+                // The value's colour, where the fact carries one — a quality tier, and nothing
+                // else so far. Null means the row keeps the colour the stylesheet gives it, which
+                // is what "Normal: no change" asks for, so the style is cleared rather than set to
+                // a colour of our own.
+                if (view.LastTint?.Hex != row.Tint?.Hex)
+                {
+                    view.LastTint = row.Tint;
+                    if (row.Tint is HudColour tint) view.Value.style.color = HudTokens.Convert(tint);
+                    else view.Value.style.color = StyleKeyword.Null;
                 }
 
                 // The owner row is pickable exactly while the tile says it is a bed's (the model
@@ -594,6 +615,7 @@ namespace Odyssey.Presentation.Ui
                 {
                     view.IsPick = pick;
                     view.Root.EnableInClassList("inspect__row--pick", pick);
+                    view.Chevron.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
                     view.Root.tooltip = pick ? "Choose whose bed this is" : null;
                 }
             }

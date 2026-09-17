@@ -343,6 +343,12 @@ namespace Odyssey.Presentation.Ui
             /// row's current meaning rather than being built into the element.
             /// </summary>
             public bool IsPick;
+
+            /// <summary>The tint last applied to the value, so a redraw does not restyle on every frame.</summary>
+            public HudColour? LastTint;
+
+            /// <summary>The "this row does something" chevron, shown only while <see cref="IsPick"/>.</summary>
+            public Label Chevron = null!;
         }
 
         void Awake()

@@ -4302,3 +4302,48 @@ and the ghost being drawn at an unseen layer — the owner's own guess, disprove
     The seam test that would have caught it is in `FloorToolReachTests`, beside the one written
     when U29's floor tool turned out to be armable, draggable and inert: **point at bare grass
     and a bed must be ordered in the air above it.**
+
+- **The bed, after the owner first looked at it, 2026-09-17.** Five reports, four of them about
+  the bed being drawn as *boxes* rather than as a bed, and one about a feature that had been
+  unreachable since it was written.
+  - **`BedShape` is written in metres now**, not in raw scale factors. Two of the three parts are
+    drawn from module boxes of different sizes, so a bare `Scale` meant a different thing for each
+    — which is how six numbers that ought to touch drifted 0.56 m apart without anything failing.
+  - **The pillow floated**, because the mattress reached `z = ±1.02` and the pillow sat at
+    `z = −1.75`, hanging past the end of the bed. The frame and mattress run the bed's whole
+    length now. `BedShapeTests` asserts the *relations* — pillow on mattress, mattress on frame,
+    all of it inside the two cells — rather than the numbers, so the six can be tuned freely and
+    none of them into mid-air.
+  - **A pillow cannot be rounded by a matrix**, so it got a mesh: `PillowMesh`, a superellipsoid
+    spanning the same −0.5..0.5 unit box every stand-in does, and the **only smooth-shaded thing
+    in the renderer** — everything else is hard-normalled because the flat-lit look depends on it,
+    and a pillow is the one thing in the game meant to read as soft. **It was inside-out at the
+    poles**, and the reason is worth keeping: `Mathf.Cos(-π/2)` is `-4.4e-8` in float, not zero,
+    and `SignedPow` carried that sign through — which mirrors the pole ring through the axis and
+    reverses the winding of every triangle touching it. Clamping `cos v` at zero fixes it. Same
+    class as the trap `PrimitiveMeshes` documents: an inside-out mesh is valid geometry, nothing
+    throws, and the counts look healthy.
+  - **White needed a tint that is not a stuff**, because none of the six stuffs is cloth. Bedding
+    got a `TintCode` bit of its own beside foliage and water, so a stone bed has the same linen
+    pillow a wooden one does — and the ghost under the cursor draws it that way too, which is the
+    build cursor's whole bargain.
+  - **Selecting a bed highlighted the whole cell.** A bed is two cells long, knee high, and the
+    one edifice that does not fill the cell it stands in, so a cell highlight was wrong about its
+    size, its facing and both of its ends. It is a bracket round the bed's own box now, measured
+    from the head cell whichever half was clicked.
+  - **A quality tier has a colour, and `HudTheme.Quality` is the only place that decides it.**
+    Normal returns **null** — "no change" read literally, which is not the same as returning the
+    body colour, because a tier named on another surface must keep that surface's colour. The
+    colour rides on the row rather than being chosen by whatever draws it.
+  - **And the owner could not find how to assign a bed at all.** The row had been pickable since
+    it was written and said so with a pointer cursor and a hover brighten — sitting between
+    "quality" and "walk speed", which are facts, and reading "—", which says there is nothing
+    here. **Hover is not an affordance on a row nobody suspects.** It reads "Assign…" now, in a
+    bordered box, with a chevron so the owned case says it is a control too. A fast-tier test had
+    pinned the em dash; it pins the word.
+  - **One of the five test failures was the test's own fault**, and that is the note for next
+    time: `BedShapeTests.LocalBox` applied the part matrix to a unit cube without composing the
+    module's `local`, which is where the geometry actually ends up. Each part then had the
+    module's size divided out and its centre at the origin, and four assertions failed over a bed
+    whose numbers were right. A new test failing is not by itself a fault in the code under test,
+    and "fixing" the bed to satisfy it would have shipped the wrong geometry.

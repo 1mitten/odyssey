@@ -232,6 +232,13 @@ namespace Odyssey.Tests.Presentation
             Assert.That(Instances(batch.Body), Is.EqualTo(3),
                 "frame, mattress, pillow - and nothing drawn twice from the far cell");
 
+            // Two buckets, not one: the pillow is its own module and its own tint, because it is
+            // rounded where the rest of the bed is boxy and linen whatever the frame is made of.
+            Assert.That(batch.Body.Count, Is.EqualTo(2),
+                "the frame and the mattress share a bucket; the pillow has one of its own");
+            Assert.That(batch.Body.Exists(b => TintCode.IsLinen(b.Tint)), Is.True,
+                "and the pillow's bucket is bedding, not the bed's stuff");
+
             // Every part sits inside the span of the two cells, on the head cell's column: a bed
             // drawn from the head's own centre rather than the seam would sit half a cell short,
             // which is the difference between a bed and two boxes in a row.
@@ -241,9 +248,9 @@ namespace Odyssey.Tests.Presentation
             {
                 Vector3 position = bucket.Matrices[i].GetColumn(3);
                 Assert.That(position.x, Is.EqualTo(seam.x).Within(0.01f), "on the head cell's column");
-                // The pillow's centre is the farthest out at 1.75 m from the seam, so the claim
+                // The pillow's centre is the farthest out, at 1.55 m from the seam, so the claim
                 // is the bed's own length, not the half-cell: every part's centre lies inside the
-                // 4.85 m the bed spans across its two cells.
+                // span the bed covers across its two cells.
                 Assert.That(position.z,
                     Is.InRange(seam.z - 1.8f, seam.z + 1.8f),
                     "within the span the bed covers across its two cells");

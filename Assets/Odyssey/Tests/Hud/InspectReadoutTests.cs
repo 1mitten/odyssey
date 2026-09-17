@@ -199,14 +199,72 @@ namespace Odyssey.Tests.Hud
             Assert.That(model.BedUnderPane, Is.True, "the shell arms the owner row on this word");
         }
 
+        /// <summary>
+        /// An unowned bed's owner row <b>names the action</b> rather than saying nothing with an
+        /// em dash.
+        ///
+        /// <para>It was a dash, and the dash is why the feature could not be found: the row has
+        /// been pickable since it was written and looked exactly like the facts above and below
+        /// it, so the owner's report was that there was no way to assign a bed at all
+        /// (2026-09-17). A row that is a control has to say so with the pointer still.</para>
+        /// </summary>
         [Test]
-        public void AnUnownedBedOffersItsOwnerRowAsADash()
+        public void AnUnownedBedOffersItsOwnerRowAsAnAction()
         {
             InspectModel model = Looking(FrameWith(
                 Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Bed, quality: QualityHandle.Normal)));
 
-            Assert.That(Rows(model), Is.EqualTo("quality=normal | owner=— | walk speed=100%"));
+            Assert.That(Rows(model), Is.EqualTo("quality=normal | owner=Assign… | walk speed=100%"));
             Assert.That(model.BedUnderPane, Is.True);
+        }
+
+        /// <summary>
+        /// Every tier a player can be shown carries the colour <see cref="HudTheme.Quality"/>
+        /// gives it, and Normal carries none.
+        ///
+        /// <para>The owner's specification is one colour per tier "anywhere quality is mentioned",
+        /// so the tier's colour travels on the row rather than being chosen by whatever draws it —
+        /// which is what makes a second surface naming a tier agree with this one for free.
+        /// Normal is explicitly <b>no change</b>, which is not the same as the body colour: it
+        /// means the surface keeps whatever it already had.</para>
+        /// </summary>
+        [Test]
+        public void AQualityTierCarriesItsOwnColourAndNormalCarriesNone()
+        {
+            for (byte tier = QualityHandle.Poor; tier <= QualityHandle.Epic; tier++)
+            {
+                InspectModel model = Looking(FrameWith(
+                    Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Bed, quality: tier)));
+
+                InspectRow row = model.CellRows[0];
+                Assert.That(row.Name, Is.EqualTo("quality"));
+                Assert.That(row.Tint?.Hex, Is.EqualTo(HudTheme.Quality(tier)?.Hex),
+                    $"tier {tier} must be drawn in the one colour the theme gives it");
+            }
+
+            Assert.That(HudTheme.Quality(QualityHandle.Normal), Is.Null,
+                "Normal is 'no change', so it names no colour for a surface to override with");
+            Assert.That(HudTheme.Quality(QualityHandle.Poor), Is.Not.Null);
+            Assert.That(HudTheme.Quality(QualityHandle.Epic), Is.Not.Null);
+        }
+
+        /// <summary>
+        /// Every tier that names a colour is readable in it, on the darkest panel the game draws.
+        /// A tier the player cannot read is worse than the uncoloured word it replaced.
+        /// </summary>
+        [Test]
+        public void EveryQualityColourIsReadableOnAPanel()
+        {
+            HudColour panel = HudContrast.Over(
+                HudTheme.PanelFill, HudContrast.Over(HudTheme.ScrimInk, new HudColour(255, 255, 255)));
+
+            for (byte tier = QualityHandle.Poor; tier <= QualityHandle.Epic; tier++)
+            {
+                if (HudTheme.Quality(tier) is not HudColour ink) continue;
+                Assert.That(HudContrast.Ratio(HudContrast.Over(ink, panel), panel),
+                    Is.GreaterThanOrEqualTo(HudContrast.BodyMinimum),
+                    $"{QualityLabels.Label(tier)} is not readable in its own colour");
+            }
         }
 
         /// <summary>The control for the two above: no quality, no bed facts, no pickable row.</summary>

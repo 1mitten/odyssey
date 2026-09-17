@@ -108,6 +108,25 @@ run. The *weights* live in `Quality.xml` (bell-ish over the five tiers, shifting
 skill: skill 0 never reaches Epic; skill 20 never falls to Poor) — the tests pin the table and
 the endpoints, never the drawn values.
 
+### 6a. A tier has a colour, and one place decides it (owner, 2026-09-17)
+
+*"Poor (red), Normal (no change), Decent (a light yellow), Uber (teal) and Epic (purple).
+Anywhere quality is mentioned there should be centralised colours."*
+
+`HudTheme.Quality(tier)` is that place, beside every other interface token. It returns
+**null for Normal**, which is the specification read literally and is not the same as returning
+the body colour: a tier named on a card, in a tooltip or in a log line keeps whatever colour
+that surface gives it, and a caller that wants a colour to paint with skips the paint rather
+than substituting one. Poor reuses the HUD's existing `Bad`; the other three are new, because a
+tier is a judgement about a thing rather than an alarm and three more signal colours would make
+every signal colour mean less. Decent is a yellow rather than the green a "good" tier would
+otherwise want, so that it stays apart from Poor's red for the commonest colour blindness.
+
+The tier's colour rides on the row (`InspectRow.Tint`) rather than being chosen by whatever
+draws it, which is what will make a second surface naming a tier agree with the pane for free.
+A fast-tier test holds every tier to its theme colour and every colour to
+`HudContrast.BodyMinimum` on the darkest panel the game draws.
+
 ## 7. Ownership and sleep
 
 **The owner lives on the bed record and nowhere else.** No `Pawn` field, no `PawnRegistry`
@@ -153,6 +172,34 @@ the grid) the case becomes a module id and the placeholder is deleted, not kept 
 A bed body can straddle a chunk boundary when its two cells sit across a 10-cell edge;
 instances are not clipped by their bucket, so it renders correctly — written here so nobody
 "fixes" it later.
+
+### 9a. What the owner's first look changed (2026-09-17)
+
+Four reports, and all four were about the bed being drawn as *boxes* rather than as a bed.
+`BedShape` is now written in **metres** rather than in raw scale factors, because two of the
+three parts are drawn from module boxes of different sizes and a bare `Scale` meant a different
+thing for each — which is how the numbers drifted apart in the first place.
+
+- **The pillow floated.** The mattress reached `z = ±1.02` and the pillow sat at `z = −1.75`,
+  so there was 0.56 m of open air between them and the pillow hung past the end of the bed.
+  The frame and mattress now run the bed's whole length and the pillow rests on the mattress at
+  the head. `BedShapeTests` asserts the *relations* — pillow on mattress, mattress on frame,
+  everything inside the two cells — rather than the numbers, so all six can be tuned freely and
+  none of them can be tuned into mid-air.
+- **The pillow is bigger, rounded and white.** It was 1.15 × 0.18 × 0.33 m, which is the size
+  and shape of a book; it is 1.30 × 0.26 × 0.95 m now. Rounded needed a mesh —
+  `PillowMesh`, a superellipsoid spanning the same −0.5..0.5 unit box every stand-in does, with
+  **smooth normals**, the only smooth-shaded thing in the renderer: everything else is
+  hard-normalled because the flat-lit look depends on it, and a pillow is the one thing in the
+  game that is meant to read as soft. White needed a tint that is not a stuff — none of the six
+  stuffs is cloth — so bedding got a `TintCode` bit of its own beside foliage and water, and a
+  stone bed has the same linen pillow a wooden one does.
+- **Selecting a bed highlighted the whole cell.** A bed is two cells long and knee high and is
+  the one edifice that does not fill the cell it stands in, so a cell highlight was wrong about
+  its size, its facing and both of its ends. It is a selection bracket round the bed's own box
+  now, measured from the head cell whichever half was clicked.
+- **The pillow's colour and shape are in the ghost too**, because the build cursor's whole
+  bargain is that what is under the pointer is what stands on the board.
 
 ## 10. Save, hash, goldens, merge order
 
@@ -270,6 +317,24 @@ both ghost paths ask it, so what is under the pointer is what stands on the boar
 `FloorToolReachTests.PointingAtBareGroundOrdersABedInTheAirAboveIt` is the seam test that the
 bed is orderable by pointing at grass at all — the one question neither assembly's own tests can
 ask, and the one that caught U29's floor tool being armable, draggable and inert.
+
+### 8a. Finding the owner row (2026-09-17)
+
+**The owner could not work out how to assign a colonist to a bed**, and the row had been there
+since §8 was written. It was styled with a pointer cursor and a hover brighten and nothing else,
+on the argument that a row which shouted would be a button wearing a row's clothes — but hover
+is not an affordance on a row nobody suspects, and the row sat between "quality" and "walk
+speed", which are facts.
+
+Three changes, all of them about saying it is a control while the pointer is still:
+
+1. **The value reads "Assign…"** where nobody owns the bed, instead of an em dash. The word is
+   what actually names the action, and a dash says the opposite — that there is nothing here.
+   A fast-tier test had pinned the dash; it pins the word now.
+2. **The value is boxed** — a faint fill, a border and a radius — and brightens to the accent on
+   hover.
+3. **A chevron** sits after it, shown only on the pickable row, so the *owned* case says it is a
+   control too, where there is no "…" to carry it.
 
 ## 12. Open
 

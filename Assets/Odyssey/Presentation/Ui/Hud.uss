@@ -2019,11 +2019,37 @@
     background-color: rgba(255, 255, 255, 0.12);
 }
 
-/* The bed's owner row: the readout's one pickable fact. The affordance is the value brightening
-   on hover and the pointer, nothing louder — a row that shouted would be a button wearing a
-   row's clothes, and the pane's rule is that it reads first and acts where a fact is a choice. */
+/* The bed's owner row: the readout's one pickable fact.
+
+   It used to be the pointer and a hover brighten and nothing else, on the argument that a row
+   which shouted would be a button wearing a row's clothes. That was too quiet to find: the row
+   looked exactly like the facts above and below it, and the owner could not work out how to
+   assign a bed at all (2026-09-17). Hover is not an affordance on a row nobody suspects.
+
+   So the value now carries a faint boxed fill and a chevron, which is the least that says "this
+   one does something" while it is sitting still — and the model writes "Assign…" rather than an
+   em dash where nobody owns the bed, because the word is what actually names the action. */
 .inspect__row--pick { cursor: pointer; }
-.inspect__row--pick:hover .inspect__rowvalue { color: rgba(255, 255, 255, 0.92); }
+.inspect__row--pick .inspect__rowvalue {
+    color: rgba(238, 243, 246, 0.92);
+    background-color: rgba(255, 255, 255, 0.07);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.16);
+    border-radius: 3px;
+    padding-left: 6px;
+    padding-right: 4px;
+}
+.inspect__row--pick:hover .inspect__rowvalue {
+    color: rgb(255, 255, 255);
+    background-color: rgba(111, 211, 227, 0.16);
+    border-color: rgba(111, 211, 227, 0.55);
+}
+.inspect__row--pick .inspect__rowchevron {
+    color: rgba(255, 255, 255, 0.5);
+    -unity-text-align: middle-center;
+    padding-left: 3px;
+}
+.inspect__row--pick:hover .inspect__rowchevron { color: rgba(111, 211, 227, 0.9); }
 
 /* The picker it raises: one row per colonist plus the release, over the row that raised it. */
 .bedowner { width: 220px; }

@@ -74,6 +74,16 @@ namespace Odyssey.Hud
     {
         public string Name;
         public string Value;
+
+        /// <summary>
+        /// The colour the value is drawn in, or null to leave the row's own colour alone.
+        ///
+        /// <para>Set only where the value carries a judgement the colour is part of — a quality
+        /// tier — so that <c>HudTheme.Quality</c> is the one place a tier's colour is decided and
+        /// every surface that names one agrees. Null is the ordinary case and means the shell
+        /// touches nothing.</para>
+        /// </summary>
+        public HudColour? Tint;
     }
 
     /// <summary>
@@ -569,10 +579,17 @@ namespace Odyssey.Hud
             if (detail.EdificeQuality > 0)
             {
                 _bedUnderPane = true;
-                Row(n++, "quality", QualityLabels.Label(detail.EdificeQuality));
+                Row(n++, "quality", QualityLabels.Label(detail.EdificeQuality),
+                    HudTheme.Quality(detail.EdificeQuality));
+
+                // "Assign…" rather than an em dash for a bed nobody owns. The row has been
+                // pickable since it was written and nothing said so: it looked exactly like the
+                // rows above and below it, which are facts, and the owner could not find the
+                // feature at all (2026-09-17: "I couldn't work out how to assign a colonist to a
+                // bed"). A control has to say it is one, and the word is the cheapest way to.
                 Row(n++, "owner", detail.EdificeOwner > 0
                     ? ColonistNames.Of(snapshot, new PawnId(detail.EdificeOwner))
-                    : "—");
+                    : "Assign…");
             }
 
             Row(n++, "walk speed", detail.MoveCostPerMille == 0
@@ -597,12 +614,13 @@ namespace Odyssey.Hud
             while (CellRows.Count > n) CellRows.RemoveAt(CellRows.Count - 1);
         }
 
-        void Row(int index, string name, string value)
+        void Row(int index, string name, string value, HudColour? tint = null)
         {
             while (CellRows.Count <= index) CellRows.Add(new InspectRow());
             InspectRow row = CellRows[index];
             row.Name = name;
             row.Value = value;
+            row.Tint = tint;
             CellRows[index] = row;
         }
 

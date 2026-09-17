@@ -430,7 +430,13 @@ namespace Odyssey.Presentation.Rendering
         public static void ResolveColour(int tintCode, bool fallback, float shade, out Color tint, out Color emission)
         {
             int value = TintCode.Value(tintCode);
-            if (TintCode.IsFoliage(tintCode))
+            if (TintCode.IsLinen(tintCode))
+            {
+                // One colour, whatever art or stuff is underneath: bedding is bedding.
+                tint = StuffPalette.Linen;
+                emission = Color.black;
+            }
+            else if (TintCode.IsFoliage(tintCode))
             {
                 // Foliage is only ever drawn from real art — the mesher drops a tuft module that
                 // resolved to a primitive rather than strewing boxes over a meadow — so there is

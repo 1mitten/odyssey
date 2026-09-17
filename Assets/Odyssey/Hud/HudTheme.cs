@@ -168,6 +168,35 @@ namespace Odyssey.Hud
         public static readonly HudColour Good = new HudColour(0x7f, 0xc9, 0x8c);
         public static readonly HudColour Info = new HudColour(0x8f, 0xd0, 0xe3);
 
+        // ------------------------------------------------------------------ quality
+
+        /// <summary>
+        /// The colour a quality tier is named in, anywhere in the interface it is named (owner,
+        /// 2026-09-17: <i>"Poor (red), Normal (no change), Decent (A light yellow), Uber (Teal)
+        /// and Epic (Purple). Anywhere quality is mentioned there should be centralised colours"</i>).
+        ///
+        /// <para><b>Null is Normal, and it means "leave it alone".</b> That is the owner's own
+        /// specification and it is not the same as returning the body colour: a tier named in a
+        /// tooltip, a card or a log line has whatever colour that surface gives it, and Normal
+        /// must not override any of them. A caller that wants a colour to paint with should skip
+        /// the paint when this is null rather than substitute one.</para>
+        ///
+        /// <para>Poor reuses <see cref="Bad"/> and nothing else is reused: a tier is a judgement
+        /// about a thing, not an alarm, and three more signal colours in the palette would make
+        /// every one of them mean less. The three new ones are chosen to clear
+        /// <c>HudContrast.BodyMinimum</c> on the darkest panel the game draws and to stay apart
+        /// from each other for the commonest colour blindness — which is why Decent is a yellow
+        /// rather than the green a "good" tier would otherwise want, with Poor's red beside it.</para>
+        /// </summary>
+        public static HudColour? Quality(int tier) => tier switch
+        {
+            1 => Bad,                              // Poor
+            3 => new HudColour(0xe9, 0xe0, 0x8c),  // Decent: a light yellow
+            4 => new HudColour(0x45, 0xc7, 0xb0),  // Uber: teal
+            5 => new HudColour(0xb9, 0x8c, 0xe8),  // Epic: purple
+            _ => null,                             // Normal, and tier 0 which is never shown
+        };
+
         /// <summary>The tint laid over a stores row whose stock is falling.</summary>
         public static readonly HudColour FallingRow = Warn.WithAlpha(0.09f);
 
