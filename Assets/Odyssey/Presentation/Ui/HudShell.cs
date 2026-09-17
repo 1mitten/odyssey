@@ -85,7 +85,6 @@ namespace Odyssey.Presentation.Ui
         VisualElement _marquee = null!;
         VisualElement _armedBanner = null!;
         Label _armedWhat = null!;
-        Label _armedHow = null!;
 
         // ---- stores (A1)
         VisualElement _storesPanel = null!;
@@ -171,7 +170,6 @@ namespace Odyssey.Presentation.Ui
         // ---- panels over the board
         VisualElement _buildPanel = null!;
 
-        /// <summary>The always-on row under the palette. See <see cref="PaletteTools.Pinned"/>.</summary>
         VisualElement _settingsPanel = null!;
         VisualElement _interfaceSection = null!;
         VisualElement _graphicsSection = null!;
@@ -367,15 +365,20 @@ namespace Odyssey.Presentation.Ui
             _armedBanner.AddToClassList("armed");
             _armedBanner.style.display = DisplayStyle.None;
             _armedWhat = HudText.Make(string.Empty, HudTextRole.Name, ussClass: "armed__what");
-            _armedHow = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "armed__how");
             _armedBanner.Add(_armedWhat);
-            _armedBanner.Add(_armedHow);
+
+            // A floor rather than a width, so the four orders all draw the same box and the banner
+            // stops resizing under the eye every time the mode changes; an armed build is longer
+            // and is allowed to push past it. Written from code because the number is derived from
+            // names in the content registry, and a literal in the sheet would be a second copy of
+            // an answer a rename can change.
+            _armedBanner.style.minWidth = HudLayout.ArmedWidth;
             _hud.Add(_armedBanner);
 
             BuildStores();
             BuildStrip();
             BuildRightColumn();
-            BuildRail();
+            BuildGutter();
             BuildInspect();
             BuildBar();
             BuildPalette();
@@ -586,6 +589,7 @@ namespace Odyssey.Presentation.Ui
 
             UpdateMarquee();
             UpdateArmedBanner();
+            MarkOrders();
             ReadBarKeys();
 
             // The roster sweep ends when the button does, wherever the pointer happens to be when
@@ -687,7 +691,7 @@ namespace Odyssey.Presentation.Ui
         /// the top-left, so the rect is flipped once, here, at the only place that draws it.
         /// </summary>
         /// <summary>
-        /// A strip over the board saying what the player is holding and how to put it down.
+        /// A strip over the board saying what the player is holding, in that thing's own colour.
         ///
         /// <para><b>An armed tool was invisible, and the way out of it was a key nobody had
         /// been told about.</b> Escape has disarmed the tool since the settings panel landed —
@@ -695,8 +699,23 @@ namespace Odyssey.Presentation.Ui
         /// a tool was held, so the only evidence of build mode was that clicking stopped
         /// selecting things. Reported by the owner as being hard to get out of (2026-09-17).</para>
         ///
+        /// <para><b>The border is the held order's hue, three pixels of it</b> (owner, same day:
+        /// <i>"the border around the big dialog … should be the same colour as that order …
+        /// chopping should have a green border … make that border much thicker"</i>). It is the
+        /// same four tokens the orders strip paints its buttons with and the same idea the open
+        /// palette wears along its top edge, so the button pressed, the panel and this banner
+        /// cannot come to disagree about what colour a mode is. A build tool has no order hue and
+        /// keeps the accent.</para>
+        ///
+        /// <para><b>The second line came off on the same instruction.</b> It read "drag over the
+        /// board · right-click or Esc to stop" and was the only place the right-click gesture was
+        /// written down — which is the one thing lost here, and it is recorded rather than
+        /// glossed. What replaced it is not nothing: the orders strip lights the button that armed
+        /// the tool and puts it down when pressed again, so the way out is now a thing on screen
+        /// rather than a sentence about a key.</para>
+        ///
         /// <para>Above the command bar rather than at the cursor: a cursor decoration is the
-        /// conventional answer and cannot carry a sentence, and the sentence is the point.</para>
+        /// conventional answer and cannot carry a word, let alone a colour this size.</para>
         /// </summary>
         void UpdateArmedBanner()
         {
@@ -723,29 +742,34 @@ namespace Odyssey.Presentation.Ui
             _armedFor = armed;
             _armedStuffFor = stuff;
 
-            // Mine and Chop are the registry's own words, taken from the activity keys because
-            // those are already phrased as the thing being done — so renaming the tool in
-            // `icon-keys.csv` moves the chip and this banner together, which is the whole point of
-            // the registry. "Felling" was written out here in C# and quietly disagreed with the
-            // palette the day the chip became "Chop trees".
-            //
-            // Cancel keeps its own words: there is no activity key for it, because no colonist is
-            // ever *cancelling* — it is a thing the player does, not work anybody carries out.
-            string what = armed switch
-            {
-                DesignateTool.Mine => Registry.Label("ui.status.mining"),
-                DesignateTool.Fell => Registry.Label("ui.status.felling"),
-                DesignateTool.Cancel => "Cancelling orders",
-                DesignateTool.Deconstruct => Registry.Label("ui.status.deconstructing"),
-                _ => BuildLabels.Building(tool.Building) is { Length: > 0 } name
-                    ? "Building " + name.ToLowerInvariant() + " of " + BuildLabels.Stuff(stuff)
-                    : "Building",
-            };
+            // Which of the four orders is held, or empty for a build tool. Asked of the palette
+            // model rather than switched on the tool here: ArmedPinned is what the orders strip
+            // lights its button from, so one question answers the word, the colour and the lit
+            // button, and the three cannot drift apart.
+            string order = _palette?.ArmedPinned ?? string.Empty;
+
+            // The order's own registry name — the same words the wiki prints, the palette's
+            // breadcrumb says and the strip's tooltip repeats (owner: "keep the consistent in the
+            // wiki and the language and UI"). This banner used to say "Chopping" and "Cancelling
+            // orders", the second of them a C# literal, which is the failure the naming registry
+            // exists to prevent.
+            string building = Registry.Label("ui.status.building");
+            string what = order.Length > 0
+                ? PaletteTools.OrderWord(order)
+                : BuildLabels.Building(tool.Building) is { Length: > 0 } name
+                    ? building + " " + name.ToLowerInvariant() + " of " + BuildLabels.Stuff(stuff)
+                    : building;
 
             HudText.Set(_armedWhat, what, HudTextRole.Name);
-            // The banner is the only place the right-click gesture is written down. Nothing else on
-            // screen could teach it, and a gesture nobody is told about is one nobody uses.
-            HudText.Set(_armedHow, "drag over the board · right-click or Esc to stop", HudTextRole.Meta);
+
+            // The border, in the held order's own colour — the same four tokens the strip paints
+            // its buttons with. A build tool is not an order and has no hue of its own, which is
+            // what the accent is doing here.
+            HudColour hue = (order.Length > 0 ? HudTheme.PinnedActionHue(order) : null)
+                            ?? HudTheme.Accent;
+            Color edge = HudTokens.Convert(hue);
+            _armedBanner.style.borderTopColor = _armedBanner.style.borderRightColor =
+                _armedBanner.style.borderBottomColor = _armedBanner.style.borderLeftColor = edge;
         }
 
         DesignateTool _armedFor = DesignateTool.None;

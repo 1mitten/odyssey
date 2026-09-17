@@ -64,10 +64,13 @@ namespace Odyssey.Tests.PlayMode
                 // "saveprompt" joins for the same reason "start" did: both are modals, built at
                 // startup and hidden until something asks for them, so both are framed regions in
                 // the tree whatever the colony is doing.
+                // "orders" is the strip in the right-hand gutter under the rail (2026-09-17): the
+                // four order buttons left the Build palette's header, so they are a framed region
+                // of their own now rather than eight pixels of somebody else's.
                 string[] expected =
                 {
-                    "stores", "clock", "alerts", "rail", "inspect", "build", "menu", "settings",
-                    "start", "saveprompt",
+                    "stores", "clock", "alerts", "rail", "orders", "inspect", "build", "menu",
+                    "settings", "start", "saveprompt",
                 };
                 var regions = doc.rootVisualElement.Query(className: "region").ToList();
                 var names = regions.ConvertAll(r => r.name);
