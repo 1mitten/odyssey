@@ -193,8 +193,10 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void OnlyAThingMadeOfSomethingAsksWhatItIsMadeOf()
         {
+            // A bed is built out of something exactly as a wall is; an order tool never is.
+            string[] built = { PaletteTools.Wall, PaletteTools.Bed };
             foreach (PaletteTool tool in PaletteTools.Live)
-                Assert.That(tool.WantsMaterial, Is.EqualTo(tool.Key == PaletteTools.Wall),
+                Assert.That(tool.WantsMaterial, Is.EqualTo(System.Array.IndexOf(built, tool.Key) >= 0),
                     $"{tool.Key} disagrees with itself about whether it is built out of something");
         }
 

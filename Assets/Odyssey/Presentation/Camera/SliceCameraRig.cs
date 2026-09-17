@@ -331,7 +331,11 @@ namespace Odyssey.Presentation.CameraRig
             // layer at a time is right for reading a building and slow for getting from the
             // surface to the floor of a sixteen-layer map.
             int layers = Fast ? Mathf.Max(1, fastLayerStep) : 1;
-            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.SliceUp)) _directors.Slice.Step(layers);
+            // The slice-up key belongs to the tool while a rotatable thing is armed — R turns the
+            // ghost and does not also raise the slice (DesignatePresenter owns the other half of
+            // that bargain). PageUp, the slice's alternate, is never claimed.
+            if (!_directors.Designate.RotatableArmed &&
+                keys.WasPressedThisFrame(hotkeys, HotkeyAction.SliceUp)) _directors.Slice.Step(layers);
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.SliceDown)) _directors.Slice.Step(-layers);
 
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.Pause)) RequestGameSpeed(0);

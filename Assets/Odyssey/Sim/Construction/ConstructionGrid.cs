@@ -138,6 +138,12 @@ namespace Odyssey.Sim.Construction
             if (!ConstructionContent.IsBuildable(stuff)) return IntentRejection.NotPermitted;
 
             BuildingDef def = ConstructionContent.BuildingAt(building);
+
+            // A thing that does not rotate never carries one, even if the interface sent a stale
+            // number: a site's facing is hashed, and two identical wall orders that arrived with
+            // different leftovers would have to hash apart for no reason a player can see.
+            if (!def.rotates) facing = 0;
+
             int index = def.footprint > 1 ? _grid.Index(cell) : StandingOn(_grid.Index(cell));
 
             if (def.footprint > 1)

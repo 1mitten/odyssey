@@ -64,6 +64,7 @@ namespace Odyssey.Hud
         // The keys the shell and the tests need by name. Everything else is a string in the table
         // below and is never compared against.
         public const string Wall = "ui.arch.tool.wall";
+        public const string Bed = "ui.arch.tool.bed";
         public const string Mine = "ui.arch.tool.mine";
         public const string Fell = "ui.arch.tool.fell";
         public const string Cancel = "ui.arch.tool.cancel";
@@ -95,7 +96,7 @@ namespace Odyssey.Hud
         {
             ("ui.arch.category.structure", new[] { Wall, "ui.arch.tool.door", "ui.arch.tool.stair", "ui.arch.tool.ladder", "ui.arch.tool.roof", "ui.arch.tool.reclaim" }),
             ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
-            ("ui.arch.category.furniture", new[] { "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
+            ("ui.arch.category.furniture", new[] { Bed, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
             ("ui.arch.category.power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
             ("ui.arch.category.security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
             ("ui.arch.category.floors", new[] { "ui.arch.tool.deckplate", "ui.arch.tool.grating", "ui.arch.tool.tile" }),
@@ -193,6 +194,13 @@ namespace Odyssey.Hud
             new PaletteTool(Wall,
                 d => d.ArmBuild(BuildingHandle.Wall),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Wall,
+                wantsMaterial: true),
+
+            // The first furniture, and the palette's first single-placement, rotatable thing:
+            // one per click, turned with the rotate key while it is armed (design 20 §5).
+            new PaletteTool(Bed,
+                d => d.ArmBuild(BuildingHandle.Bed),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Bed,
                 wantsMaterial: true),
             new PaletteTool(Mine, Toggle(DesignateTool.Mine), Holding(DesignateTool.Mine)),
             new PaletteTool(Fell, Toggle(DesignateTool.Fell), Holding(DesignateTool.Fell)),

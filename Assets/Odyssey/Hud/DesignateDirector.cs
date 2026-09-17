@@ -107,12 +107,57 @@ namespace Odyssey.Hud
         /// </summary>
         public int Stuff { get; private set; } = StuffHandle.Wood;
 
+        /// <summary>
+        /// The facing a rotatable thing will be placed at, 0–3: north, east, south, west. Kept
+        /// while the thing is armed and reset when a different thing is picked up.
+        /// </summary>
+        public int Facing => _facing;
+
+        int _facing;
+
+        /// <summary>
+        /// Whether the armed thing can be turned before it is placed — the one condition under
+        /// which the rotate key belongs to the tool rather than to the slice (design 20 §5, and
+        /// the owner's answer: R rotates the ghost, PageUp is always slice-up, and R raises the
+        /// slice whenever nothing rotatable is armed).
+        /// </summary>
+        public bool RotatableArmed =>
+            _tool == DesignateTool.Build && BuildShapes.CanRotate(Building);
+
+        /// <summary>
+        /// Whether the armed thing is placed one per click rather than dragged as a box. Anything
+        /// that occupies more than one cell is: a run of walls is an order about every cell it
+        /// covers, a bed is one thing that happens to be wide, and dragging it would be a gesture
+        /// with nothing to say.
+        /// </summary>
+        public bool SinglePlacement =>
+            _tool == DesignateTool.Build && BuildShapes.CellsOf(Building) > 1;
+
+        /// <summary>Raised when the facing changes, so a preview can redraw without polling.</summary>
+        public event Action<int>? FacingChanged;
+
+        /// <summary>
+        /// Turn the armed thing a quarter turn clockwise. Does nothing when the armed thing does
+        /// not rotate, which is what lets the presenter offer the key unconditionally: the
+        /// director decides whether the press was meant for it.
+        /// </summary>
+        public void Rotate()
+        {
+            if (!RotatableArmed) return;
+            _facing = (_facing + 1) & 3;
+            FacingChanged?.Invoke(_facing);
+        }
+
         /// <summary>Raised when the thing or the material changes, so the palette can mark it.</summary>
         public event Action<int, int>? BuildChoiceChanged;
 
         /// <summary>
         /// Arm the build tool on a thing, keeping the material already chosen. Pressing the same
         /// thing again puts the tool down, which is how every other tool behaves.
+        ///
+        /// <para>Picking a <i>different</i> thing up resets <see cref="Facing"/> to north: the
+        /// rotation belongs to the gesture, not to the player, and a bed picked up after a wall
+        /// that was never rotated should not inherit a facing nothing showed.</para>
         /// </summary>
         public void ArmBuild(int building)
         {
@@ -122,6 +167,11 @@ namespace Odyssey.Hud
                 return;
             }
 
+            if (Building != building)
+            {
+                _facing = 0;
+                FacingChanged?.Invoke(_facing);
+            }
             Building = building;
             BuildChoiceChanged?.Invoke(Building, Stuff);
             Tool = DesignateTool.Build;
@@ -247,13 +297,25 @@ namespace Odyssey.Hud
         /// the head are the same cell and the rectangle below is one cell wide. That is worth
         /// saying because "click to mark one, drag to mark many" is two code paths in most
         /// engines and one here.</para>
+        ///
+        /// <para><b>A single-placement thing returns its anchor alone</b> (see
+        /// <see cref="SinglePlacement"/>): the facing — not the drag — says where the rest of it
+        /// goes, and the simulation derives the second cell from the pair of them, so the intent
+        /// is one cell and one facing rather than two cells that could drift apart.</para>
         /// </summary>
         public IReadOnlyList<CellRef> Commit()
         {
             if (!Dragging) return Array.Empty<CellRef>();
 
             var cells = new List<CellRef>();
-            CoveredInto(cells);
+            if (SinglePlacement)
+            {
+                cells.Add(_anchor);
+            }
+            else
+            {
+                CoveredInto(cells);
+            }
             Abandon();
             return cells;
         }
@@ -285,6 +347,19 @@ namespace Odyssey.Hud
             min = default;
             max = default;
             if (!Dragging) return false;
+
+            // A single-placement thing's ghost is its own footprint, not the drag's: where the
+            // pointer wandered is nothing to do with where a bed's far cell falls, and drawing a
+            // rectangle because the pointer moved a pixel would be a preview of an order that
+            // cannot exist.
+            if (SinglePlacement)
+            {
+                int fx = _facing == 1 ? 1 : _facing == 3 ? -1 : 0;
+                int fz = _facing == 0 ? 1 : _facing == 2 ? -1 : 0;
+                min = new CellRef(Math.Min(_anchor.X, _anchor.X + fx), Math.Min(_anchor.Z, _anchor.Z + fz), _anchor.Y);
+                max = new CellRef(Math.Max(_anchor.X, _anchor.X + fx), Math.Max(_anchor.Z, _anchor.Z + fz), _anchor.Y);
+                return true;
+            }
 
             CellRef head = _head;
             if (_tool == DesignateTool.Build && !_wide)
