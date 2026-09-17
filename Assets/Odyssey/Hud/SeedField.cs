@@ -72,6 +72,17 @@ namespace Odyssey.Hud
         /// <summary>The registry key naming the colony-name field.</summary>
         public const string ColonyKey = "ui.newgame.colony";
 
+        /// <summary>
+        /// The registry key whose label is what a colony is called when nobody names it (owner,
+        /// 2026-09-17: <i>"The Lost Buckets"</i>).
+        ///
+        /// <para><b>A key rather than a literal, and one key rather than two.</b> It is a name a
+        /// player reads, so it belongs in the CSV like every other — and it is wanted in two places,
+        /// prefilled into the setup page's field and used by the bootstrap when nothing was typed.
+        /// Two literals would be two things to rename and one of them would be missed.</para>
+        /// </summary>
+        public const string DefaultColonyKey = "ui.newgame.defaultcolony";
+
         /// <summary>The registry key naming the board-size control.</summary>
         public const string SizeKey = "ui.newgame.size";
 
@@ -87,6 +98,7 @@ namespace Odyssey.Hud
             StartKey,
             TitleKey,
             ColonyKey,
+            DefaultColonyKey,
             SizeKey,
         };
 

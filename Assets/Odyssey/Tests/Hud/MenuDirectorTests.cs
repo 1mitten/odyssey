@@ -653,12 +653,22 @@ namespace Odyssey.Tests.Hud
 
         // ------------------------------------------------ the colony's name and the board size
 
+        /// <summary>
+        /// The field arrives already holding the default (owner, 2026-09-17), so a player who wants
+        /// it types nothing — and the word comes from the naming CSV rather than from a literal
+        /// here, which is what stops the page and the bootstrap disagreeing about what an unnamed
+        /// colony is called.
+        /// </summary>
         [Test]
-        public void ItStartsUnnamedAndOnTheStandardBoard()
+        public void ItStartsOnTheDefaultNameAndTheStandardBoard()
         {
             MenuDirector menu = WithColonists(1u);
 
-            Assert.That(menu.ColonyName, Is.Empty, "an unnamed colony takes the request's default");
+            Assert.That(menu.ColonyName, Is.EqualTo("The Lost Buckets"));
+            Assert.That(menu.ColonyName,
+                Is.EqualTo(Registry.Label(SeedField.DefaultColonyKey)),
+                "the default name is written somewhere other than the naming CSV");
+
             Assert.That(menu.Size, Is.EqualTo(MapSizes.Default));
             Assert.That(MapSizes.At(menu.Size).Label, Is.EqualTo("Standard"));
         }

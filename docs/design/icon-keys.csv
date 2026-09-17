@@ -457,6 +457,7 @@ ui.newgame.seed,Seed,ui.newgame,MS,"The number the whole world comes from. Type 
 ui.newgame.reroll,Reroll,ui.newgame,MS,"Deal another world. Never the one already in the box"
 ui.newgame.start,Start,ui.newgame,MS,"Build the colony on the seed showing. Greyed while the box does not name one"
 ui.newgame.colony,Colony name,ui.newgame,MS,"What this colony is called. Shown in the load list"
+ui.newgame.defaultcolony,The Lost Buckets,ui.newgame,MS,"What a colony is called when nobody names it"
 ui.newgame.size,Board size,ui.newgame,MS,"How much ground the colony has to grow into"
 ui.newgame.size.small,Small,ui.newgame,MS,"80 x 80. Close quarters"
 ui.newgame.size.standard,Standard,ui.newgame,MS,"120 x 120. The board every measurement was taken on"

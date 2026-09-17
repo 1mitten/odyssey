@@ -493,10 +493,14 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// What the colony will be called. Empty is allowed and is not a failure: the request's own
-        /// default stands in, and the save header has always carried a name that may be blank.
+        /// What the colony will be called.
+        ///
+        /// <para><b>Starts at the default rather than empty</b> (owner, 2026-09-17), so the field
+        /// arrives with "The Lost Buckets" in it and a player who wants that types nothing. Clearing
+        /// it is allowed and is not a failure — the bootstrap falls back to the same name, so an
+        /// empty box and the default box give the same colony.</para>
         /// </summary>
-        public string ColonyName { get; private set; } = string.Empty;
+        public string ColonyName { get; private set; } = Registry.Label(SeedField.DefaultColonyKey);
 
         public void TypeColonyName(string? name)
         {

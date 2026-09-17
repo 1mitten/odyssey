@@ -285,6 +285,7 @@ namespace Odyssey.Hud
             { "ui.need.rest", "Rest" },
             { "ui.need.space", "Space" },
             { "ui.newgame.colony", "Colony name" },
+            { "ui.newgame.defaultcolony", "The Lost Buckets" },
             { "ui.newgame.reroll", "Reroll" },
             { "ui.newgame.seed", "Seed" },
             { "ui.newgame.size", "Board size" },
