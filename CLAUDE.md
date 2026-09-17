@@ -155,7 +155,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~10 s, no Unity): **452 Sim + 117 Hud**.
+- **Fast tier** (`scripts/test-fast.sh`, ~10 s, no Unity): **455 Sim + 117 Hud**; Long tier **15**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
@@ -211,7 +211,20 @@ first.
 
 Felled trees, mined cells and climbs are not in the save (the designation grid is not saved). Mining
 collapses nothing. There is no fog of war, so a sealed cavern is visible if the player scrolls the
-layer down. Cross-runtime determinism is a measurement rather than a standing test.
+layer down.
+
+**The cell grid is not in the state hash** (found 2026-09-17 by OQ-05's own control, which should
+have failed and did not). `CellGrid` does not implement `IStateHashable` and is never registered, so
+`SimWorld.ComputeStateHash()` covers the seed, the tick, the grid *size*, the designations, the jobs
+and the pawns — **not the terrain, floors, edifices or flags**. Mining a cell, felling a tree and a
+collapse therefore move no hash, and `WorldRoundTripTests` proves a save round-trips "exactly" by
+comparing hashes that cannot see the world. It is not a quick fix: hashing the grid costs 10.3 ms
+against the current 0.003 ms, so the per-tick sink would take minutes over a day. `OQ-50` holds the
+real fix (an incremental hash over the chunk dirty-tracking the save already keeps). **Until then,
+`GoldenMasterTests` is the only test that sees the world**, via a composite it folds itself.
+
+Cross-runtime determinism is now a standing test rather than a one-off measurement: the golden table
+is asserted under CoreCLR in the fast tier and Mono in the Unity tier.
 
 ## Read this before losing an hour
 

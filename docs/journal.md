@@ -1138,3 +1138,47 @@ work itself.
     asserting the *loaded* table came back in that order.
   - **Verified:** fast tier **450 Sim + 110 Hud**. Content gates green. **Not verified locally:**
     the Unity tier, for the same reason as yesterday.
+
+- **The golden-master gate, and the hole it found before it was committed (OQ-05, 2026-09-17).**
+  Three worlds are now pinned to committed hashes: the barren meadow at 5,000 ticks on every save,
+  and the wooded 120 x 120 x 16 board and the ruined city at 10,000 ticks on the Long tier.
+  `ODYSSEY_REGOLDEN=1` prints replacements instead of asserting.
+  - **Why this was worth doing at all.** Every other hash test here compares a run against another
+    run of the same build. They prove repeatability and are *blind to change* — a build that broke
+    felling this morning still agrees with itself perfectly. A committed number is the only thing
+    in the suite that compares against the past, and therefore the only thing that can notice a
+    change nobody intended.
+  - **Two hashes per case, because one number cannot be read.** `Generated` is taken before the
+    first tick and covers worldgen; `Simulated` after N ticks and covers everything. Both moved
+    means the generator changed and the simulation inherited it; only the second means a system
+    changed. The failure messages say which, and both were seen to fire correctly: perturbing a
+    need's drain rate reported *"the board generated identically… so a simulation system changed"*,
+    and perturbing terrain reported *"the generated world differs before a single tick ran"*.
+  - **The hole. `CellGrid` is not in the state hash, and never has been.** The control that found
+    it should have failed and did not: flipping `<impassable>` on deep water changes nine cells'
+    flags on the played board and moved no hash at all. `CellGrid` does not implement
+    `IStateHashable` and is never registered, so `SimWorld.ComputeStateHash()` covers the seed, the
+    tick, the grid *size*, the designations, the jobs and the pawns — **not the terrain, the
+    floors, the edifices or the flags**. `CellGrid.ContributeTo` exists, but its only callers are
+    the two map generators' own worldgen check and one test.
+    - **It reads as an oversight rather than a decision.** `GridSaveSection`'s doc comment argues
+      about what to exclude *from* `CellGrid.ContributeTo` on the grounds that "saving it would put
+      bytes in the file that the state hash does not agree are state" — written by someone who
+      believed the grid was hashed.
+    - **What it means today:** mining a cell, felling a tree and a collapse all edit the grid and
+      none of them move the state hash; and `WorldRoundTripTests` proves a save round-trips
+      "exactly" by comparing hashes that cannot see the grid.
+  - **Not fixed here, and the reason is a measurement.** On the played board `ComputeStateHash()`
+    costs **0.003 ms** and hashing the grid costs **10.3 ms** — about three thousand times more.
+    Folding it in unconditionally would make the per-tick sink `HashTraceTests` uses take minutes
+    over a day of ticks. So the golden folds its own composite and the canonical hash is untouched;
+    the real fix wants an incremental hash over the chunk dirty-tracking `GridSaveSection` already
+    maintains, which is `OQ-50` and probably an ADR note, since the state hash is what ADR 0005's
+    "determinism before threads" rests on.
+  - **With the composite, the same edit fails — and fails precisely.** Only the played-board case
+    breaks, because a terrain histogram of all three boards shows the meadow and the city contain
+    no deep water at all and the played board contains exactly nine cells of it. Measuring the
+    boards rather than assuming their contents is what made that reading possible.
+  - **Verified:** fast tier **455 Sim + 117 Hud**, Long tier **15**. Every control run and
+    restored. **Not verified locally:** the Unity tier, which is where the cross-runtime half of
+    this gate actually gets tested — one committed number that satisfies both CoreCLR and Mono.
