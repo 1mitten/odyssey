@@ -165,6 +165,17 @@ namespace Odyssey.Sim.Pawns
             if (at < 0) _beds.Insert(~at, cell);
         }
 
+        /// <summary>
+        /// Take a bed cell out of the list — the other half of <see cref="AddBed"/>, which until a
+        /// bed could be built had no caller: a deconstructed bed must stop being slept in, and the
+        /// scenario's own cells are never removed.
+        /// </summary>
+        public void RemoveBed(int cell)
+        {
+            int at = _beds.BinarySearch(cell);
+            if (at >= 0) _beds.RemoveAt(at);
+        }
+
         public bool IsStockpileCell(int cell) => _stockpileAtCell.ContainsKey(cell);
 
         public Stockpile? StockpileAt(int cell) =>

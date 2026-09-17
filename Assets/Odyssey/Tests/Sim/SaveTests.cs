@@ -205,9 +205,13 @@ namespace Odyssey.Tests.Sim
 
             stream.Position = 0;
             using var readerBinary = new BinaryReader(stream, System.Text.Encoding.UTF8, leaveOpen: true);
-            var reader = typeof(SaveReader)
-                .GetConstructors(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)[0]
-                .Invoke(new object[] { readerBinary }) as SaveReader;
+            // The reader's constructor grew a format-version parameter when sections started
+            // reading the layout they were written in; picked by parameter count rather than
+            // position so this test is not coupled to the ctor list's order.
+            var readerCtor = typeof(SaveReader)
+                .GetConstructors(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                .Single(c => c.GetParameters().Length == 2);
+            var reader = readerCtor.Invoke(new object[] { readerBinary, WorldSave.CurrentFormatVersion }) as SaveReader;
 
             Assert.That(reader!.ReadString(), Is.EqualTo("a string with unicode: éü"));
             Assert.That(reader.ReadBytes(), Is.EqualTo(new byte[] { 1, 2, 3 }));

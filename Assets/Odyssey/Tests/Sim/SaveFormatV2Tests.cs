@@ -6,6 +6,7 @@ using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Saving;
+using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 
 namespace Odyssey.Tests.Sim
@@ -38,9 +39,12 @@ namespace Odyssey.Tests.Sim
         /// that is the whole reason this test exists, and it did its job on the way to 3.
         /// </summary>
         [Test]
-        public void TheFormatVersionIsThree()
+        public void TheFormatVersionIsFour()
         {
-            Assert.That(WorldSave.CurrentFormatVersion, Is.EqualTo(3));
+            // 2 was U36's recipe header; 3 U38's barren/wooded recipe flags; 4 the beds' edifice
+            // record (facing, quality, owner) and a construction site's facing byte. See
+            // WorldSave.CurrentFormatVersion.
+            Assert.That(WorldSave.CurrentFormatVersion, Is.EqualTo(4));
         }
 
         [Test]
@@ -58,7 +62,7 @@ namespace Odyssey.Tests.Sim
             var (restored, restoredCounter) = Build();
             var header = WorldSave.Load(restored, stream, new[] { restoredCounter });
 
-            Assert.That(header.FormatVersion, Is.EqualTo(3));
+            Assert.That(header.FormatVersion, Is.EqualTo(4));
             Assert.That(header.Recipe.Map, Is.EqualTo(MapType.Natural));
             Assert.That(header.Recipe.Scenario, Is.EqualTo("Scenario_Bare"));
             Assert.That(header.Recipe.ColonyName, Is.EqualTo("Meridian"));
@@ -107,7 +111,7 @@ namespace Odyssey.Tests.Sim
         public void SavingWithNoRecipeReadsBackUnknown()
         {
             // Every existing call site (WorldSave.Save(world, stream, components)) still compiles
-            // and still writes a version-2 file; it just carries no recipe.
+            // and still writes a version-3 file; it just carries no recipe.
             var (world, counter) = Build();
 
             using var stream = new MemoryStream();
@@ -252,6 +256,89 @@ namespace Odyssey.Tests.Sim
             Assert.That(recipe.Scenario, Is.EqualTo("Scenario_Bare"));
             Assert.That(recipe.ColonyName, Is.EqualTo("Meridian"));
             Assert.That(recipe.Day, Is.EqualTo(5));
+        }
+
+        /// <summary>
+        /// Version 3 changed a section's payload, not just the header: an edifice record grew
+        /// <c>Facing</c>, <c>Quality</c> and <c>Owner</c>. A version 2 file — written by the build
+        /// that shipped the day before — must load its edifices with the defaults that make it
+        /// behave exactly as it did: north-facing (nothing pre-bed rotated), qualityless (walls
+        /// never had any) and unowned (0 being a value no 1-based pawn id has).
+        ///
+        /// <para>Built by hand, like the version 1 fixture above, for the same reason: these are
+        /// bytes the current writer can no longer produce, not a new file claiming to be old.</para>
+        /// </summary>
+        [Test]
+        public void AVersion2FileStillLoadsItsEdificesWithTheBedsDefaults()
+        {
+            byte[] bytes = BuildVersion2FixtureWithOneWall(seed: 77, size: new GridSize(8, 8, 4), tick: 9,
+                cell: 21, def: 1, stuff: 4);
+
+            var (world, _) = BuildWith(seed: 77, size: new GridSize(8, 8, 4));
+            var edifices = new EdificeSaveSection(new System.Collections.Generic.List<PlacedEdifice>());
+            using var stream = new MemoryStream(bytes);
+            WorldSave.Load(world, stream, new ISaveable[] { edifices });
+
+            Assert.That(edifices.Records.Count, Is.EqualTo(1));
+            PlacedEdifice wall = edifices.Records[0];
+            Assert.That(wall.CellIndex, Is.EqualTo(21));
+            Assert.That(wall.Built, Is.False);
+            Assert.That(wall.Facing, Is.EqualTo(0), "a version 2 wall never recorded a facing");
+            Assert.That(wall.Quality, Is.EqualTo(0), "and nothing before the bed ever had a quality");
+            Assert.That(wall.Owner, Is.EqualTo(0), "and nobody owned it: 0 is no pawn, ids being 1-based");
+        }
+
+        /// <summary>
+        /// The exact bytes a version 2 build wrote: the U36 header, then one section —
+        /// <c>odyssey.edifices</c> in the five-field layout of that version. See
+        /// <c>EdificeSaveSection</c> for the payload shape.
+        /// </summary>
+        static byte[] BuildVersion2FixtureWithOneWall(uint seed, GridSize size, int tick,
+            int cell, ushort def, ushort stuff)
+        {
+            const ulong magic = 0x59455353594451;
+            using var stream = new MemoryStream();
+            using (var binary = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+            {
+                binary.Write(magic);
+                binary.Write(2);
+                binary.Write(seed);
+                binary.Write(size.SizeX);
+                binary.Write(size.SizeZ);
+                binary.Write(size.SizeY);
+                binary.Write(tick);
+                binary.Write((int)MapType.Natural);
+                WriteFixtureString(binary, "Meridian");
+                WriteFixtureString(binary, "Scenario_Bare");
+                binary.Write(1); // day
+
+                using var payload = new MemoryStream();
+                using (var section = new BinaryWriter(payload, System.Text.Encoding.UTF8, leaveOpen: true))
+                {
+                    section.Write(1); // one record
+                    section.Write(cell);
+                    section.Write((uint)def);
+                    section.Write((uint)stuff);
+                    section.Write(false); // Built
+                    section.Write(false); // Removed
+                }
+                byte[] body = payload.ToArray();
+
+                binary.Write(1); // one section
+                string key = "odyssey.edifices";
+                binary.Write(key.Length);
+                binary.Write(System.Text.Encoding.UTF8.GetBytes(key));
+                binary.Write(body.Length);
+                binary.Write(body);
+            }
+            return stream.ToArray();
+        }
+
+        static void WriteFixtureString(BinaryWriter binary, string value)
+        {
+            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(value);
+            binary.Write(bytes.Length);
+            binary.Write(bytes);
         }
 
         /// <summary>

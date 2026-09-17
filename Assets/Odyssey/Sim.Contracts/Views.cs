@@ -364,8 +364,19 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Has every unit arrived, so that the thing can be worked on?</summary>
         public bool IsFrame => Delivered >= Cost;
 
+        /// <summary>
+        /// The rotation the order was placed at, 0–3 — meaningful only while
+        /// <see cref="Footprint"/> is greater than one, and carried so the interface can draw the
+        /// site's marks over every cell the thing will occupy rather than its head alone.
+        /// </summary>
+        public readonly byte Facing;
+
+        /// <summary>Cells the finished thing will occupy: two for the bed's order, one otherwise.</summary>
+        public readonly byte Footprint;
+
         public SiteView(int cellIndex, byte building, byte stuff,
-            ushort delivered, ushort cost, int workDone, int workTotal)
+            ushort delivered, ushort cost, int workDone, int workTotal,
+            byte facing = 0, byte footprint = 1)
         {
             CellIndex = cellIndex;
             Building = building;
@@ -374,6 +385,8 @@ namespace Odyssey.Sim.Contracts
             Cost = cost;
             WorkDone = workDone;
             WorkTotal = workTotal;
+            Facing = facing;
+            Footprint = footprint;
         }
     }
 

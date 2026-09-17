@@ -70,6 +70,12 @@ namespace Odyssey.Sim.Saving
                 writer.Write((uint)placed.Stuff);
                 writer.Write(placed.Built);
                 writer.Write(placed.Removed);
+                // Version 3 (beds): the three fields a bed carries that a wall never does. A
+                // version 2 reader would stop before them and misparse everything after; a
+                // version 3 reader of a version 2 file reads none of them (see Load).
+                writer.Write(placed.Facing);
+                writer.Write(placed.Quality);
+                writer.Write(placed.Owner);
             }
         }
 
@@ -77,16 +83,24 @@ namespace Odyssey.Sim.Saving
         {
             _edifices.Clear();
             int count = reader.ReadInt();
+            bool beds = reader.FormatVersion >= 4;
             for (int i = 0; i < count; i++)
             {
-                _edifices.Add(new PlacedEdifice
+                var placed = new PlacedEdifice
                 {
                     CellIndex = reader.ReadInt(),
                     Def = (ushort)reader.ReadUInt(),
                     Stuff = (ushort)reader.ReadUInt(),
                     Built = reader.ReadBool(),
                     Removed = reader.ReadBool(),
-                });
+                };
+                if (beds)
+                {
+                    placed.Facing = reader.ReadByte();
+                    placed.Quality = reader.ReadByte();
+                    placed.Owner = reader.ReadInt();
+                }
+                _edifices.Add(placed);
             }
         }
 
@@ -101,6 +115,11 @@ namespace Odyssey.Sim.Saving
                 hash.Add(placed.Stuff);
                 hash.Add(placed.Built ? 1 : 0);
                 hash.Add(placed.Removed ? 1 : 0);
+                // Beds' own three: a Poor bed and an Epic one must not hash alike, and who owns a
+                // bed is world state the same way what it is made of is.
+                hash.Add(placed.Facing);
+                hash.Add(placed.Quality);
+                hash.Add(placed.Owner);
             }
         }
     }

@@ -74,6 +74,15 @@ namespace Odyssey.Tests.Sim
     /// <para>The same commit stopped <c>ScenarioDef.Playtest</c> giving starting orders, and that
     /// moved <b>nothing here</b>, because every case below builds on <c>ScenarioDef.Bare</c>, which
     /// has never given any.</para>
+    ///
+    /// <para><b>Moved a <b>fifth</b> time, on the merge, by the beds, and only the two boards with
+    /// something standing.</b> <c>PlacedEdifice</c> gained <c>Facing</c>, <c>Quality</c> and
+    /// <c>Owner</c>, all hashed by <c>EdificeSaveSection</c>, and a construction site gained a
+    /// hashed facing byte. The barren meadow did not move at all — it has an empty edifice list
+    /// and never places a site, so the new fields contribute nothing — which is the control that
+    /// says the generator itself is untouched. The wooded board's trees and the city's walls are
+    /// generator-stamped records, and every one of them now contributes three more zeros to the
+    /// walk; rebaked once on top of U40's numbers, not twice — see the values below.</para>
     /// </summary>
     public static class Golden
     {

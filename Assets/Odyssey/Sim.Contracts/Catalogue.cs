@@ -116,7 +116,14 @@ namespace Odyssey.Sim.Contracts
     {
         public const int None = 0;
         public const int Wall = 1;
-        public const int Count = 2;
+
+        /// <summary>
+        /// The first furniture: two cells, passable, rotatable, finished at a rolled quality
+        /// (docs/design/20-beds.md). Beside the wall rather than after it because handle order is
+        /// the save contract and positions are append-only.
+        /// </summary>
+        public const int Bed = 2;
+        public const int Count = 3;
     }
 
     /// <summary>

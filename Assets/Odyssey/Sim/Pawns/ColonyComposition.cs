@@ -67,7 +67,7 @@ namespace Odyssey.Sim.Pawns
             // Until 2026-09-17 a wall a colonist raised was in neither the save nor the hash;
             // `EdificeSaveSection` carries the measurement that found it.
             var edificeSave = new EdificeSaveSection(edifices);
-            construction = new ConstructionGrid(pawns.Cells, edificeSave, pawns.Items);
+            construction = new ConstructionGrid(pawns.Cells, edificeSave, pawns.Items, pawns.Pawns);
             pawns.Designations = designations;
             pawns.Construction = construction;
             JobSystem pipeline = jobs ?? new JobSystem(pawns);

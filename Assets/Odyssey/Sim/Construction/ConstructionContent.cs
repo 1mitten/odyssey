@@ -26,6 +26,30 @@ namespace Odyssey.Sim.Construction
         public bool blocking = true;
 
         /// <summary>
+        /// Cells the finished thing occupies, in a line along its facing. One for everything
+        /// until the bed; two for the bed, whose one record both cells point at
+        /// (<c>EdificeFootprint</c> derives the second, so nothing stores it twice).
+        /// </summary>
+        public int footprint = 1;
+
+        /// <summary>
+        /// Whether the ghost may be turned before placing. A thing that does not rotate ignores
+        /// the facing it is handed, and one that does cannot be placed without one.
+        /// </summary>
+        public bool rotates;
+
+        /// <summary>
+        /// Whether the thing's completion rolls a quality tier (Poor to Epic) off the finishing
+        /// colonist's Construction skill.
+        ///
+        /// <para><b>Furniture yes, structures no, for ever</b> — the reference's own split
+        /// (a-04 §3: walls, doors and production buildings never carry quality; furniture, art and
+        /// apparel do). A wall is as good as its material and nothing else, which is why a wall
+        /// built by a master and by a novice are the same wall.</para>
+        /// </summary>
+        public bool takesQuality;
+
+        /// <summary>
         /// Units of stuff a site swallows before any work can start.
         ///
         /// <para>Five for a wall, which is the reference's number for a wall of any material
@@ -231,7 +255,7 @@ namespace Odyssey.Sim.Construction
         /// <see cref="BuildingHandle"/> value, written into the published frame and into every
         /// save, so this list — never the table's own sorted order — is what resolves a name.
         /// </summary>
-        public static readonly string[] BuildingOrder = { "Building_None", "Building_Wall" };
+        public static readonly string[] BuildingOrder = { "Building_None", "Building_Wall", "Building_Bed" };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
         public static readonly string[] StuffOrder =
@@ -276,6 +300,20 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Wall", label = "wall", edifice = CoreContent.EdificeWall,
                     blocking = true, costCount = 5, workToBuild = 135, minSkill = 0,
                     iconKey = "ui.arch.tool.wall",
+                },
+
+                // The first furniture (docs/design/20-beds.md). Two cells, passable, rotatable at
+                // the ghost, finished at a rolled quality — the one consumer of takesQuality so
+                // far, and the thing that finally gives U26's outstanding success roll something
+                // to land on. 5 wood like a wall: it is a frame and a pad, not a fortress. Work
+                // 180 over the wall's 135 because joinery is fussier than stacking, but still well
+                // under felling's 800 — a bed is an evening, not a day.
+                new BuildingDef
+                {
+                    defName = "Building_Bed", label = "bed", edifice = CoreContent.EdificeBed,
+                    blocking = false, footprint = 2, rotates = true, takesQuality = true,
+                    costCount = 5, workToBuild = 180, minSkill = 0,
+                    iconKey = "ui.arch.tool.bed",
                 },
             };
         }

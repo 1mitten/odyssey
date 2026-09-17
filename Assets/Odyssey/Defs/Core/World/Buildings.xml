@@ -49,6 +49,38 @@
   </BuildingDef>
 
   <!--
+    THE FIRST FURNITURE (docs/design/20-beds.md). edifice 10 is CoreContent.EdificeBed.
+
+    footprint 2: one record, two cells - the second is derived from the facing at placement
+    (EdificeFootprint), never stored, so the record cannot disagree with itself about where its
+    other half is. blocking false: a bed is walked over at terrain cost; a crossing-cost surcharge
+    is a later seam with a number still to choose. rotates true, so the ghost turns on R before
+    placing and the facing is stored on the record.
+
+    takesQuality true: completion rolls one of five tiers (Poor, Normal, Decent, Uber, Epic) off
+    the finishing colonist's Construction skill - the reference's own split carried into our
+    content (a-04 section 3: furniture carries quality, structures never do), and the first thing
+    U26's outstanding success roll has landed on. Walls stay qualityless for ever.
+
+    costCount 5 as a wall: a frame and a pad, not a fortress. workToBuild 180 over the wall's 135
+    because joinery is fussier than stacking, and still well under felling's 800 - a bed is an
+    evening, not a day.
+  -->
+  <BuildingDef>
+    <defName>Building_Bed</defName>
+    <label>bed</label>
+    <edifice>10</edifice>
+    <blocking>false</blocking>
+    <footprint>2</footprint>
+    <rotates>true</rotates>
+    <takesQuality>true</takesQuality>
+    <costCount>5</costCount>
+    <workToBuild>180</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.bed</iconKey>
+  </BuildingDef>
+
+  <!--
     The four stuffs with no item are what the ruined city is MADE OF, not what a colony builds
     with: nothing produces them, no colonist can carry one, and offering them would be offering an
     order that can never be filled. They keep their indices, because every stamped wall in the city

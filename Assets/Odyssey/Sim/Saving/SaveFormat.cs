@@ -68,7 +68,19 @@ namespace Odyssey.Sim.Saving
     {
         readonly BinaryReader _reader;
 
-        internal SaveReader(BinaryReader reader) { _reader = reader; }
+        internal SaveReader(BinaryReader reader, int formatVersion)
+        {
+            _reader = reader;
+            FormatVersion = formatVersion;
+        }
+
+        /// <summary>
+        /// The file's format version, so a section can read the layout it was written in rather
+        /// than the one it would write today. The only source is <see cref="WorldSave.Load"/>,
+        /// which knows it from the header; a reader handed around anywhere else carries whatever
+        /// that load was told.
+        /// </summary>
+        public int FormatVersion { get; }
 
         public bool ReadBool() => _reader.ReadBoolean();
         public byte ReadByte() => _reader.ReadByte();
@@ -186,19 +198,26 @@ namespace Odyssey.Sim.Saving
         const ulong Magic = 0x59455353594451; // "QDYSSEY" little-endian-ish; any stable value
 
         /// <summary>
-        /// 3 (U38): the recipe grew the two natural-board flags, <c>Barren</c> and <c>Wooded</c>.
-        /// See <see cref="SaveRecipe.Barren"/> for what was wrong without them — in short, three
-        /// different boards all called <c>Natural</c>, so a header could not rebuild the one it
-        /// was written on, and the state hash could not notice because the cells are overwritten
-        /// by the load.
+/// 4 (beds): the edifice record grew <c>Facing</c>, <c>Quality</c> and <c>Owner</c>, and a
+        /// construction site a facing byte. Older files read back zeros — no facing (north, and
+        /// meaningless to a wall anyway), no quality (which nothing before the bed ever had) and
+        /// no owner (pawn ids being 1-based, 0 is nobody) — so an older world loads with its
+        /// behaviour unchanged. Section readers learn the version from
+        /// <see cref="SaveReader.FormatVersion"/>, the one place it is threaded down to them.
+        ///
+        /// <para>3 (U38): the recipe grew the two natural-board flags, <c>Barren</c> and
+        /// <c>Wooded</c>. See <see cref="SaveRecipe.Barren"/> for what was wrong without them —
+        /// in short, three different boards all called <c>Natural</c>, so a header could not
+        /// rebuild the one it was written on, and the state hash could not notice because the
+        /// cells are overwritten by the load.</para>
         ///
         /// <para>2 (U36): the header grew a <see cref="SaveRecipe"/> — map type, scenario, colony
         /// name and day — after the world scalars it always carried.</para>
         ///
-        /// <para>Version 1 and version 2 files both still load; <see cref="ReadHeader"/> is the
-        /// one place that knows which versions wrote what.</para>
+        /// <para>Version 1, 2 and 3 files all still load; <see cref="ReadHeader"/> is the one
+        /// place that knows which versions wrote what.</para>
         /// </summary>
-        public const int CurrentFormatVersion = 3;
+        public const int CurrentFormatVersion = 4;
 
         public static void Save(SimWorld world, Stream stream, IReadOnlyList<ISaveable> components,
             SaveRecipe? recipe = null)
@@ -299,7 +318,7 @@ namespace Odyssey.Sim.Saving
 
                     using var buffer = new MemoryStream(payload, writable: false);
                     using var sectionReader = new BinaryReader(buffer, Encoding.UTF8, leaveOpen: true);
-                    component.Load(new SaveReader(sectionReader));
+                    component.Load(new SaveReader(sectionReader, header.FormatVersion));
                 }
             }
             catch (EndOfStreamException e)
