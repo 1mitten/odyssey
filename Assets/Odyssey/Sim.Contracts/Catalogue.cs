@@ -127,6 +127,22 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// The tier a quality-bearing thing finished at, as <see cref="Pawns.PlacedEdifice.Quality"/>
+    /// carries it. 0 is "takes no quality at all" — every wall, for ever. The five names are the
+    /// owner's (docs/design/20-beds.md §2).
+    /// </summary>
+    public static class QualityHandle
+    {
+        public const int None = 0;
+        public const int Poor = 1;
+        public const int Normal = 2;
+        public const int Decent = 3;
+        public const int Uber = 4;
+        public const int Epic = 5;
+        public const int Count = 6;
+    }
+
+    /// <summary>
     /// What a built thing is made of. These are <c>CoreContent.Stuff*</c> values: the same
     /// numbers the ruined city stamps into <c>PlacedEdifice.Stuff</c>, so a wall a colonist
     /// builds and a wall the generator laid are the same kind of record.

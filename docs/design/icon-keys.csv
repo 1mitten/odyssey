@@ -74,6 +74,11 @@ ui.skill.social,Social,ui.skill,M2,"Negotiation, recruitment and warden work"
 ui.skill.shooting,Shooting,ui.skill,M2,Ranged accuracy
 ui.skill.melee,Melee,ui.skill,M2,"Close combat, hit and parry"
 ui.skill.intellect,Intellect,ui.skill,M2,Research speed
+ui.quality.poor,Poor,ui.quality,M3,"Slapdash work. A poor bed rests worse than none at all feels"
+ui.quality.normal,Normal,ui.quality,M3,What an honest day's joinery makes
+ui.quality.decent,Decent,ui.quality,M3,Made with care. Rests a little better
+ui.quality.uber,Uber,ui.quality,M3,"Master work: square, true and comfortable"
+ui.quality.epic,Epic,ui.quality,M3,A thing the colony will tell stories about
 ui.pawn.colonist,Colonist,ui.pawn,M2,One of ours
 ui.pawn.visitor,Visitor,ui.pawn,M2,"Here peacefully, and watching"
 ui.pawn.hostile,Hostile,ui.pawn,M2,Will attack

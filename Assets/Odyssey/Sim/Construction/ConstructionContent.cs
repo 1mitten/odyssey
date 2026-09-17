@@ -248,7 +248,7 @@ namespace Odyssey.Sim.Construction
 
         /// <summary>See <c>PawnContent.Register</c>: the Def types this content is made of.</summary>
         public static DefLoader Register(DefLoader loader) =>
-            loader.Register<BuildingDef>().Register<StuffDef>();
+            QualityContent.Register(loader.Register<BuildingDef>().Register<StuffDef>());
 
         /// <summary>
         /// The handle order, which is the contract. A def's position here is a

@@ -403,7 +403,20 @@ namespace Odyssey.Sim.Pawns
             if (sites.AddWork(cell, 1) < sites.WorkFor(cell)) return JobStatus.Ongoing;
 
             ConstructionGrid grid = sites;
-            ctx.Defer(_ => grid.Raise(ctx, cell));
+
+            // The success roll U26 left open, landed by the bed (design 20 §6): once, at the
+            // moment of completion, from the finishing colonist's skill — a novice who did 99%
+            // of the work and a master who swung the last tick is the reference's own
+            // exploitable property, kept on purpose. Walls take no quality and roll nothing.
+            byte quality = 0;
+            if (ConstructionContent.BuildingAt(sites.At(cell)).takesQuality)
+            {
+                var rng = DeterministicRandom.ForTick(
+                    ctx.Seed, cell ^ ctx.CurrentTick, PawnPurpose.BuildQuality);
+                quality = QualityContent.Roll(Pawn.SkillLevel(SkillIndex.Construction), rng);
+            }
+
+            ctx.Defer(_ => grid.Raise(ctx, cell, quality));
 
             // The wall goes up now; the builder straightens up before walking off.
             NextToil();

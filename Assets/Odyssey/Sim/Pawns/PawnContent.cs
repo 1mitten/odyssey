@@ -667,5 +667,20 @@ namespace Odyssey.Sim.Pawns
         /// that family rather than fight over who keeps it.</para>
         /// </summary>
         public const uint StartingSkill = 0x5A82_7999;
+
+        /// <summary>
+        /// The quality tier a bed finishes at (design 20 §6). Drawn from (world seed,
+        /// <b>cell index ^ tick</b>) — the refund's shape, not the yield's, and for the refund's
+        /// reason: quality is a property of the <i>moment</i> of completion, not of the cell. A
+        /// bed rebuilt on the same spot is a new bed and may finish better, where a rock mined
+        /// twice is not a thing that happens; keyed on the cell alone, every site on the board
+        /// would be permanently a "Decent" site, stable, discoverable and then farmable by
+        /// demolishing the disappointments.
+        ///
+        /// <para>Chosen outside the xxHash prime family for the reason
+        /// <see cref="StartingSkill"/> records: all five primes are spent, and this is the
+        /// third constant to step outside it.</para>
+        /// </summary>
+        public const uint BuildQuality = 0x7F4A_7C15;
     }
 }
