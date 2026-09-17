@@ -139,6 +139,12 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Ceiling on catch-up ticks in one frame, so a stall cannot spiral.")]
         public int maxTicksPerFrame = 8;
 
+        /// <summary>
+        /// Build a world the moment Play starts. True until a menu exists to ask for one (U35);
+        /// turning it off is how a session begins at a screen instead of in a colony.
+        /// </summary>
+        public bool buildOnPlay = true;
+
 
         SimWorld? _world;
         CellGrid? _grid;
@@ -190,6 +196,9 @@ namespace Odyssey.Presentation.Bootstrap
 
         public SimWorld? World => _world;
 
+        /// <summary>Is a world built right now? False before the first build and after a teardown.</summary>
+        public bool HasSession => _world != null;
+
         /// <summary>
         /// The world as the simulation composed it — the grid, the colony, the scenario it was
         /// given, and the list of components a save is written from.
@@ -217,6 +226,27 @@ namespace Odyssey.Presentation.Bootstrap
         void Start()
         {
             WarnIfTheSceneIsStale();
+            if (buildOnPlay) BuildSession();
+        }
+
+        /// <summary>
+        /// Build a world and everything that draws it, now, rather than at <c>Start</c> (U35).
+        ///
+        /// <para><b>Why this is a method and not a lifecycle hook.</b> A menu has to be able to
+        /// ask for a world after the scene is already running, and to put one down again without
+        /// reloading the scene — that is the whole of the session seam. While the menu does not
+        /// exist, <see cref="buildOnPlay"/> is true and pressing Play lands straight in a world,
+        /// so every PlayMode test that assumed <c>Start</c> built one still passes unedited.</para>
+        ///
+        /// <para>Building twice without a teardown between is a caller error rather than a
+        /// silently doubled world: the second call would leak the first world's meshes and
+        /// figures, which is exactly the failure this unit exists to make impossible.</para>
+        /// </summary>
+        public void BuildSession()
+        {
+            if (HasSession)
+                throw new System.InvalidOperationException(
+                    "a session is already built; call TeardownSession before building another");
 
             // Set before anything is meshed, because the relief is read at mesh time and a chunk
             // built flat would stay flat until something dirtied it. Statics, like the scatter
@@ -1061,7 +1091,23 @@ namespace Odyssey.Presentation.Bootstrap
             GUI.Label(new Rect(10f, 180f, 1400f, 128f), text);
         }
 
-        void OnDestroy()
+        void OnDestroy() => TeardownSession();
+
+        /// <summary>
+        /// Put the world down: dispose everything that owns a GPU or engine resource, drop every
+        /// reference, and leave the component able to build again (U35).
+        ///
+        /// <para>Safe to call with no session, and safe to call twice — a menu unwinding and a
+        /// scene closing both reach it, and they can reach it in either order.</para>
+        ///
+        /// <para><b>What must not survive.</b> A <see cref="ModuleLibrary"/> owns every mesh it
+        /// baked, and a <c>Mesh</c> made in code is a GPU allocation Unity never collects; the
+        /// figures own GameObjects and their animation graphs; the colonist materials own textures
+        /// written at runtime. Leaving any of them behind does not fail a test that looks at the
+        /// world — the next world is perfectly correct — it just costs the memory twice, which is
+        /// why the check for it is a test that counts rather than an eye that looks.</para>
+        /// </summary>
+        public void TeardownSession()
         {
             if (cameraRig != null)
             {
@@ -1079,6 +1125,24 @@ namespace Odyssey.Presentation.Bootstrap
             // cast, every session, until the graphics device was reset out from under the editor.
             _model?.Library.Dispose();
             if (_actorMaterial != null) Destroy(_actorMaterial);
+
+            // Dropped, not merely disposed. A disposed object still reachable from here would let
+            // the next session read a torn-down library and fail somewhere far from the cause.
+            _audio = null;
+            _daylight = null;
+            _figures = null;
+            _colonistMaterials = null;
+            _renderer = null;
+            _designate = null;
+            _actorMaterial = null;
+            _model = null;
+            _colony = null;
+            _world = null;
+            _grid = null;
+            _pawns = null;
+            Directors = null;
+            _accumulator = 0d;
+            _tickAlpha = 0f;
         }
     }
 }

@@ -241,15 +241,27 @@ namespace Odyssey.Hud
         public static readonly int[] CameraSpeeds = { 60, 100, 150 };
 
         /// <summary>
-        /// The volume ladder every bus shares, in dB: silence at the bottom, unity at the
-        /// top, whole decibels between. The mute rung is −80 because that is
+        /// The floor of every volume fader, in dB. −80 because that is
         /// <c>AudioMath.SilenceDb</c> in the Presentation assembly — the fader's own floor,
         /// restated here so the panel and the audio code cannot disagree about where silence
-        /// starts. A ladder rather than a slider because a slider position is a lie about
-        /// loudness: equal steps of dB are equal steps of hearing, and the rungs say what
-        /// they are.
+        /// starts.
         /// </summary>
-        public static readonly int[] VolumeDbRungs = { -80, -36, -24, -16, -10, -5, 0 };
+        public const int SilenceDb = -80;
+
+        /// <summary>
+        /// The default of every volume fader, in dB: unity, neither attenuated nor boosted.
+        /// <c>AudioMath.UnityDb</c> across the seam, and the value the panel seats at the
+        /// centre of its track.
+        /// </summary>
+        public const int UnityDb = 0;
+
+        /// <summary>
+        /// The most a bus may be boosted above unity, in dB. +12, mirroring
+        /// <c>AudioMath.BoostDb</c> the same way <see cref="SilenceDb"/> mirrors its floor —
+        /// the owner asked on 2026-09-17 for faders that raise as well as lower, and the
+        /// ceiling is bounded because a boost amplifies the author's own volume and can clip.
+        /// </summary>
+        public const int BoostDb = 12;
 
         /// <summary>The buses, in the order the panel draws them.</summary>
         public static readonly SettingsBus[] Buses =
@@ -260,6 +272,42 @@ namespace Odyssey.Hud
             SettingsBus.Effects,
             SettingsBus.Alerts,
         };
+
+        /// <summary>
+        /// Where a dB sits on its fader's track: −1 at the left end, 0 at the centre, +1 at
+        /// the right.
+        ///
+        /// <para><b>Unity is seated at the centre because the owner asked for it on
+        /// 2026-09-17:</b> the default stands in the middle of the control, everything left
+        /// of it lowers towards silence, everything right of it boosts to the ceiling. One
+        /// linear track cannot say that — −80 to +12 would put unity six sevenths of the way
+        /// to the right — so each half is linear in dB over its own span: 80 dB of
+        /// attenuation across the left half, <see cref="BoostDb"/> of boost across the
+        /// right. Within a half the fader's own argument holds (equal dB is equal hearing);
+        /// that the halves are different lengths in dB is the price of a centre that means
+        /// something, and it is paid in drag sensitivity rather than in honesty.</para>
+        ///
+        /// <para>Unity-free arithmetic on purpose, like everything here: the seating is an
+        /// acceptance-shaped fact, and the fast tier holds it — unity at the centre, silence
+        /// at the left end, boost at the right, and every whole dB round-trips.</para>
+        /// </summary>
+        public static float TrackOf(int db) =>
+            db >= UnityDb
+                ? Math.Min(1f, (float)db / BoostDb)
+                : Math.Max(-1f, (float)db / -SilenceDb);
+
+        /// <summary>
+        /// The whole dB a track position stands at — the inverse of <see cref="TrackOf"/>,
+        /// rounded to the nearest decibel, because a thumb that rests between two of them is
+        /// a position the readout cannot say and the store cannot keep. Positions beyond the
+        /// track clamp to its ends.
+        /// </summary>
+        public static int DbOf(float track)
+        {
+            float seated = Math.Clamp(track, -1f, 1f);
+            return (int)Math.Round(seated < 0 ? seated * -SilenceDb : seated * BoostDb,
+                MidpointRounding.AwayFromZero);
+        }
 
         /// <summary>The scale a screen this tall should start at, before any stored preference.
         ///
@@ -461,21 +509,33 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// Move one bus's volume. Anything not on the ladder snaps to the nearest rung.
-        /// Not written to <see cref="ISettingsStore"/>: the volumes keep their own store in
-        /// the Presentation assembly (<c>AudioSettingsStore</c>, in dB, under its own prefix,
-        /// since before this panel existed), and the presenter writes through to it so the
-        /// two stores never hold one fader between them.
+        /// Move one bus's volume. A fader holds a continuum, so anything between silence and
+        /// the boost ceiling is taken rather than snapped — but whole dB only, because a thumb
+        /// that rests between two decibels is a position the readout cannot say and the store
+        /// cannot keep. Anything outside the span clamps to its end. Not written to
+        /// <see cref="ISettingsStore"/>: the volumes keep their own store in the Presentation
+        /// assembly (<c>AudioSettingsStore</c>, in dB, under its own prefix, since before this
+        /// panel existed), and the presenter writes through to it so the two stores never
+        /// hold one fader between them.
+        ///
+        /// <para>It was a seven-rung ladder until 2026-09-17, when the owner asked for
+        /// sliders — a fader is dragged, and six of the seven rungs sat between −36 and 0,
+        /// so most of a slider's travel would have been dead space snapping between rungs.
+        /// Later the same day the owner asked for the default (unity) seated at the centre
+        /// of the track, lowering to silence on one side and boosting to
+        /// <see cref="BoostDb"/> on the other — the span and the seating that came of those
+        /// two asks are what this method and <see cref="TrackOf"/> now describe.</para>
         /// </summary>
         public void SetBusDb(SettingsBus bus, int db)
         {
-            int snapped = Nearest(VolumeDbRungs, db);
-            if (_db[bus] == snapped) return;
-            _db[bus] = snapped;
+            int clamped = Math.Clamp(db, SilenceDb, BoostDb);
+            if (_db[bus] == clamped) return;
+            _db[bus] = clamped;
             BusDbChanged?.Invoke(bus);
         }
 
-        /// <summary>One bus's volume, in dB. Always a member of <see cref="VolumeDbRungs"/>.</summary>
+        /// <summary>One bus's volume, in dB. Always a whole dB between
+        /// <see cref="SilenceDb"/> and <see cref="BoostDb"/>.</summary>
         public int BusDb(SettingsBus bus) => _db[bus];
 
         /// <summary>
@@ -535,11 +595,12 @@ namespace Odyssey.Hud
         public void SeedDeveloperOverlay(bool on) => DeveloperOverlay = on;
 
         /// <summary>
-        /// Record one bus's volume as the audio store left it, without raising anything. The
-        /// presenter lays <c>AudioSettingsStore.Load()</c> in through this, so the panel opens
-        /// describing what the game is already playing at.
+        /// Record one bus's volume as the audio store left it, without raising anything —
+        /// clamped to the fader's span rather than snapped, because the fader can rest
+        /// anywhere in it. The presenter lays <c>AudioSettingsStore.Load()</c> in through
+        /// this, so the panel opens describing what the game is already playing at.
         /// </summary>
-        public void SeedBusDb(SettingsBus bus, int db) => _db[bus] = Nearest(VolumeDbRungs, db);
+        public void SeedBusDb(SettingsBus bus, int db) => _db[bus] = Math.Clamp(db, SilenceDb, BoostDb);
 
         /// <summary>
         /// Attach the place preferences are kept, and apply anything this machine has already been

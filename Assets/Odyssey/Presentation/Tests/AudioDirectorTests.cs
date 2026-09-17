@@ -34,6 +34,31 @@ namespace Odyssey.Tests.Presentation
         AudioClip _day = null!;
         AudioClip _night = null!;
 
+        /// <summary>
+        /// The one test here that reads the committed catalogue rather than a hand-built one,
+        /// because what it pins is a property of the shipped asset: the ambience beds are
+        /// audible by default. The owner reported them reading as off (2026-09-17) — the
+        /// outdoor bed was mixed at 0.07–0.09 behind a ten-second fade, on a world that
+        /// boots at midnight and therefore into the quieter of the two tracks. A floor
+        /// rather than exact values, so tuning the mix by ear stays free while drifting back
+        /// to inaudible fails.
+        /// </summary>
+        [Test]
+        public void TheShippedAmbienceBedsAreAudibleByDefault()
+        {
+            AudioCatalogue? shipped = UnityEditor.AssetDatabase.LoadAssetAtPath<AudioCatalogue>(
+                "Assets/Odyssey/Presentation/Audio/AudioCatalogue.asset");
+            Assume.That(shipped, Is.Not.Null, "the committed catalogue is missing");
+            Assume.That(shipped!.Outdoor.Count, Is.GreaterThan(0), "no outdoor beds shipped");
+
+            foreach (AudioCatalogue.PhaseTrackDef bed in shipped.Outdoor)
+                Assert.That(bed.Volume, Is.GreaterThanOrEqualTo(0.2f),
+                    $"the {bed.Phase} outdoor bed ships at {bed.Volume:0.00}, which reads as off");
+            foreach (AudioCatalogue.AmbienceDef bed in shipped.Ambience)
+                Assert.That(bed.Volume, Is.GreaterThanOrEqualTo(0.2f),
+                    $"the {bed.Id} bed ships at {bed.Volume:0.00}, which reads as off");
+        }
+
         /// <summary>Seven in the morning: the first tick of daytime music.</summary>
         const long DayTick = 7 * 2500;
 

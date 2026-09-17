@@ -319,7 +319,7 @@ namespace Odyssey.EditorTools
                 samples[i] = air[i] * breath + life[i] * pulse;
             }
 
-            return CrossfadeTail(samples, 1.2f);
+            return Normalize(CrossfadeTail(samples, 1.2f), BedPeak);
         }
 
         /// <summary>White noise through a one-pole lowpass — the workhorse of every placeholder
@@ -334,6 +334,31 @@ namespace Odyssey.EditorTools
                 state += a * ((float)random.NextDouble() * 2f - 1f - state);
                 samples[i] = state * gain;
             }
+            return samples;
+        }
+
+        /// <summary>The peak every bed placeholder is normalised to, so a bed's catalogue
+        /// Volume means the same thing whatever the synth's own gains left in the
+        /// buffer.</summary>
+        const float BedPeak = 0.5f;
+
+        /// <summary>
+        /// Scale a bed's samples so its loudest moment is <paramref name="peak"/>.
+        ///
+        /// <para>For the <b>placeholder</b> beds only — the shipped beds are real sourced
+        /// recordings with levels of their own. Recorded 2026-09-17, while investigating the
+        /// owner reporting the ambience as off: the placeholder outdoor synth's raw peak was
+        /// about 0.06, so even a def volume of 1.0 could not have made it audible. Normalising
+        /// the placeholders to one shared peak means a def's Volume means the same thing
+        /// whether a clone is running on the real recordings or the stand-ins.</para>
+        /// </summary>
+        static float[] Normalize(float[] samples, float peak)
+        {
+            float loudest = 0f;
+            foreach (float sample in samples) loudest = Mathf.Max(loudest, Mathf.Abs(sample));
+            if (loudest < 1e-6f) return samples;
+            float scale = peak / loudest;
+            for (int i = 0; i < samples.Length; i++) samples[i] *= scale;
             return samples;
         }
 
@@ -354,7 +379,7 @@ namespace Odyssey.EditorTools
                 samples[i] = (low[i] + mid[i]) * breath;
             }
 
-            return CrossfadeTail(samples, 0.25f);
+            return Normalize(CrossfadeTail(samples, 0.25f), BedPeak);
         }
 
         static float[] Chop()
@@ -537,33 +562,36 @@ namespace Odyssey.EditorTools
             catalogue.Ambience.Clear();
             catalogue.Ambience.Add(new AudioCatalogue.AmbienceDef
             {
-                // Quiet on purpose. This one is *already* scaled by how much water is near the
-                // camera — that is what the probe is for — so its volume is what "standing in
-                // the middle of the river" is worth, and a stream should not be able to shout
-                // down the work going on beside it.
+                // Already scaled by how much water is near the camera — that is what the
+                // probe is for — so this is what "standing in the middle of the river" is
+                // worth, and it stays under the work going on beside it. Raised on
+                // 2026-09-17 after the owner reported the beds reading as off, then eased
+                // back a notch on their first listen.
                 Id = SoundIds.AmbienceWater,
                 Clip = Require("water"),
-                Volume = 0.20f, FadeSeconds = 2.5f, MinDistance = 60f, MaxDistance = 300f,
+                Volume = 0.32f, FadeSeconds = 2.5f, MinDistance = 60f, MaxDistance = 300f,
             });
 
-            // The outdoor bed, and it is *quiet*. It is the floor of the mix — the thing you
-            // stop hearing and would only notice the absence of — so it has to sit under the
-            // work, not beside it. These are about eleven dB down on where they started, which
-            // was loud enough to be the loudest thing in the game. Night sits lower still,
-            // because the world is quieter after dark and the bed should say so before any
-            // individual sound does.
+            // The outdoor bed: the floor of the mix, under the work rather than beside it —
+            // night lower than day, because the world is quieter after dark and the bed
+            // should say so before any individual sound does. But a floor has to be felt:
+            // these shipped at 0.09/0.07, and combined with a ten-second arrival fade and
+            // a world that boots at midnight — the quieter track first — the owner reported
+            // the ambience as switched off (2026-09-17). Tripled, then eased back a notch
+            // on their first listen; the arrival fade cut from ten seconds to four,
+            // because a bed that takes ten to arrive reads as absent for the first ten.
             catalogue.Outdoor.Clear();
             catalogue.Outdoor.AddRange(new[]
             {
                 new AudioCatalogue.PhaseTrackDef
                 {
                     Phase = MusicPhase.Day, Clip = Require("ambience-day"),
-                    Volume = 0.09f, FadeSeconds = 6f, ArrivalFadeSeconds = 10f,
+                    Volume = 0.28f, FadeSeconds = 6f, ArrivalFadeSeconds = 4f,
                 },
                 new AudioCatalogue.PhaseTrackDef
                 {
                     Phase = MusicPhase.Night, Clip = Require("ambience-night"),
-                    Volume = 0.07f, FadeSeconds = 8f, ArrivalFadeSeconds = 10f,
+                    Volume = 0.22f, FadeSeconds = 8f, ArrivalFadeSeconds = 4f,
                 },
             });
 

@@ -58,9 +58,13 @@ namespace Odyssey.Tests.Presentation
             Assert.That(AudioMath.StackDb(-10f, -10f), Is.EqualTo(-20f).Within(0.001f));
             Assert.That(AudioMath.StackDb(-90f, -90f), Is.EqualTo(AudioMath.SilenceDb),
                 "past the floor is the floor");
-            // Stacking is arithmetic on purpose; what keeps a bus from raising anything is the
-            // fader range itself — nothing may sit above 0 dB, so nothing adds gain.
+            // Stacking is arithmetic on purpose; the range does the limiting. The floor
+            // below, and above it the one boost ceiling a stack of boosted faders cannot
+            // talk its way past — the owner asked for faders that raise as well as lower
+            // (2026-09-17), and the sum still meets one cap.
             Assert.That(AudioMath.StackDb(AudioMath.SilenceDb, 6f), Is.EqualTo(-74f).Within(0.001f));
+            Assert.That(AudioMath.StackDb(6f, 6f), Is.EqualTo(AudioMath.BoostDb).Within(0.001f),
+                "two boosted faders still meet one ceiling when stacked");
         }
     }
 

@@ -46,7 +46,7 @@ namespace Odyssey.Presentation.Audio
         public float Db(SoundBus bus) => _db[(int)bus];
 
         public void SetDb(SoundBus bus, float db) =>
-            _db[(int)bus] = Mathf.Clamp(db, AudioMath.SilenceDb, AudioMath.UnityDb);
+            _db[(int)bus] = Mathf.Clamp(db, AudioMath.SilenceDb, AudioMath.BoostDb);
 
         /// <summary>Read the player's faders, falling back to 0 dB for any that were never
         /// written. PlayerPrefs reads outside the player (editor, tests) simply find nothing,
