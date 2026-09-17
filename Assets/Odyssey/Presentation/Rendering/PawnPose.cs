@@ -43,7 +43,8 @@ namespace Odyssey.Presentation.Rendering
             {
                 heading = Vector3.zero;
                 return GroundRelief.Lift(from) +
-                       Vector3.up * BankLayout.RiseAt(world, pawn.Cell, from.x, from.z);
+                       Vector3.up * (BankLayout.RiseAt(world, pawn.Cell, from.x, from.z) +
+                                     WaterLine.FloatRise(world, pawn.Cell));
             }
 
             Vector3 to = CellMetrics.FloorCentre(pawn.NextCell);
@@ -71,6 +72,20 @@ namespace Odyssey.Presentation.Rendering
             // walks along the drawn ground instead of cutting the chord between two cell centres.
             float t = Mathf.Clamp(percent, 0f, 100f) * 0.01f;
             Vector3 along = GroundRelief.Lift(from + travel * t);
+
+            // **A step with water at either end is drawn by its two ends, not by the ground under
+            // it.** Ground-following is right wherever there is ground; between a waterline and
+            // the bank above it there is none, and the first version — the float added on top of
+            // the ordinary clamp — produced both of the faults the owner then reported (2026-09-17).
+            // Leaving a channel, the float decayed evenly across the step while the clamp jumped to
+            // the arriving cell at the midpoint, so the figure spent the first half of the step
+            // buried in the bank it was climbing ("clipped and sunk half way into a terrain tile")
+            // and the second half hanging above it, having overshot by the float it had not yet
+            // lost. See WaterLine.VerticalProgress for the curve and the argument.
+            if (WaterLine.Crosses(world, pawn.Cell, pawn.NextCell))
+                return new Vector3(along.x,
+                    WaterLine.CrossingHeight(world, pawn.Cell, pawn.NextCell, t), along.z);
+
             return OnTheDrawnGround(along, pawn, t, world);
         }
 

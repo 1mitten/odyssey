@@ -155,6 +155,20 @@ namespace Odyssey.Presentation.World
                 Figure figure = _figures[i];
                 if (figure.Pawn < 0) continue;
 
+                // A swimmer has no feet on the ground, and the ground is the bed of the stream a
+                // metre and a half below. Left at full strength this would solve both legs down to
+                // it and drag the figure back under the water it is floating on.
+                //
+                // **Faded, not switched.** The first version skipped the whole pass while the swim
+                // weight was above a threshold, which meant the footing arrived complete on one
+                // frame as a colonist left the water — hips dropping and both feet planting between
+                // one frame and the next, every time anybody came ashore. That is a candidate for
+                // the snap the owner reported on climbing out (2026-09-17). Scaling the correction
+                // by how much of a walker the figure is makes the hand-over continuous, and at full
+                // swim weight it multiplies to nothing and the early return below skips the solve
+                // just as the old branch did.
+                float planted = 1f - Mathf.Clamp01(figure.SwimWeight);
+
                 // A rig with no legs bound is not an error: a non-Humanoid prefab answers null to
                 // every bone and simply goes on walking, which is what it does for the arms too.
                 if (figure.LeftFoot == null || figure.RightFoot == null) continue;
@@ -173,8 +187,8 @@ namespace Odyssey.Presentation.World
                 float leftGround = figure.GroundY + GroundRelief.HeightAt(leftAt.x, leftAt.z) + figure.SoleOffset;
                 float rightGround = figure.GroundY + GroundRelief.HeightAt(rightAt.x, rightAt.z) + figure.SoleOffset;
 
-                float left = Footing.Correction(leftAt.y, leftGround);
-                float right = Footing.Correction(rightAt.y, rightGround);
+                float left = Footing.Correction(leftAt.y, leftGround) * planted;
+                float right = Footing.Correction(rightAt.y, rightGround) * planted;
                 if (left == 0f && right == 0f) continue;
 
                 Vector3 leftTarget = leftAt + Vector3.up * left;
@@ -227,6 +241,8 @@ namespace Odyssey.Presentation.World
             CrouchedFigures = 0;
             LeglessFigures = 0;
             MeasuredFootReach = 0f;
+            SwimmingFigures = 0;
+            MeasuredSwimPitch = 0f;
             MeasuredToolDrift = 0f;
 
             for (int i = 0; i < _figures.Count; i++)
@@ -240,7 +256,13 @@ namespace Odyssey.Presentation.World
                 // order, for ever.
                 if (figure.WorkWeight <= 0.001f)
                 {
-                    if (figure.ClimbPhase >= 0f && figure.ClimbFace != Vector3.zero)
+                    // Swimming comes first of the three, because it is the only one that is a
+                    // statement about where the colonist *is* rather than about what it is doing:
+                    // a figure in the water is in the water whatever else it had in mind, and the
+                    // other two poses both assume feet on the ground.
+                    if (figure.SwimWeight > 0.001f)
+                        ApplySwimPose(figure);
+                    else if (figure.ClimbPhase >= 0f && figure.ClimbFace != Vector3.zero)
                         ApplyClimbPose(figure);
                     else if (figure.Gesture != PawnGesture.None || ForceGesture.HasValue)
                         ApplyGesturePose(figure);
@@ -355,6 +377,83 @@ namespace Odyssey.Presentation.World
         /// <see cref="WorkSwing"/>'s convention exactly: an arm hangs down, so a large negative
         /// pitch carries it forward and then overhead.</para>
         /// </summary>
+        /// <summary>
+        /// A colonist in the water: pitched towards prone, pulling with alternate arms, legs
+        /// trailing with a flutter.
+        ///
+        /// <para><b>The pitch is applied to the whole figure and the limbs on top of it</b>, in
+        /// that order, because a swimmer is a walking pose tipped over rather than a new skeleton.
+        /// Doing the limbs first and tipping afterwards gives the same picture only while the
+        /// weight is exactly 1; part way in — which is every frame at the water's edge — the arms
+        /// would swing in a plane that is not the one the body is in.</para>
+        ///
+        /// <para><b>Pitched about the hips and not the root.</b> The root is at the feet, so
+        /// rotating about it would swing the whole body up out of the water like a hand on a clock
+        /// face; the hips are near the middle of a person's mass and a body tips about them, which
+        /// is the difference between floating and being levered.</para>
+        ///
+        /// <para><b>Everything is scaled by the weight</b>, so the pose arrives and leaves with
+        /// the float rather than switching on. <see cref="WaterLine.Weight"/> blends over the step
+        /// and <see cref="SwimPose.Settle"/> eases on top of that, which means a colonist walking
+        /// into a stream tips over as it sinks in rather than at the moment its cell changes.</para>
+        ///
+        /// <para>The pose is arithmetic, in <see cref="SwimPose"/>, so the shape of the stroke is
+        /// checkable by a test and only the application lives here — the bargain
+        /// <see cref="ClimbPose"/> and <see cref="WorkSwing"/> already make.</para>
+        /// </summary>
+        void ApplySwimPose(Figure figure)
+        {
+            float weight = Mathf.Clamp01(figure.SwimWeight);
+            float phase = HeldSwimPhase ?? SwimPose.Phase(figure.SwimClock);
+            float swing = SwimPose.Swing(phase);
+
+            // Tip the body. World-space about the figure's own right, for the same reason every
+            // other pose here works in world space: a bone's local axes belong to whoever rigged
+            // the character, and sixty-one characters from four packs are not a promise that any
+            // two agree about which way is forward.
+            if (figure.Hips != null)
+            {
+                Vector3 axis = figure.Transform.right;
+                float degrees = SwimPose.PitchDegrees * weight;
+                figure.Hips.rotation = Quaternion.AngleAxis(degrees, axis) * figure.Hips.rotation;
+                MeasuredSwimPitch = Mathf.Max(MeasuredSwimPitch, degrees);
+            }
+
+            if (figure.RightUpperArm != null && figure.LeftUpperArm != null)
+            {
+                (float right, float left) = SwimPose.Arms(swing);
+                Vector3 axis = SwingAxis(figure.Transform, 0f);
+
+                Pitch(figure.RightUpperArm, axis, right * weight);
+                Pitch(figure.RightLowerArm, axis, SwimPose.ElbowBend * weight);
+                Pitch(figure.LeftUpperArm, axis, left * weight);
+                Pitch(figure.LeftLowerArm, axis, SwimPose.ElbowBend * weight);
+            }
+
+            if (figure.RightUpperLeg != null && figure.LeftUpperLeg != null)
+            {
+                (float right, float left) = SwimPose.Legs(phase);
+                Vector3 axis = SwingAxis(figure.Transform, 0f);
+
+                Pitch(figure.RightUpperLeg, axis, right * weight);
+                Pitch(figure.LeftUpperLeg, axis, left * weight);
+            }
+
+            SwimmingFigures++;
+        }
+
+        /// <summary>Figures posed as swimmers this pass. Diagnostic, for tests and the overlay.</summary>
+        public int SwimmingFigures { get; private set; }
+
+        /// <summary>The deepest pitch applied to any swimmer this pass, in degrees. Diagnostic.</summary>
+        public float MeasuredSwimPitch { get; private set; }
+
+        /// <summary>
+        /// Hold the swim stroke at one phase, for a contact sheet or a test that wants the same
+        /// instant every run. Null lets the clock drive it, which is what the game does.
+        /// </summary>
+        public float? HeldSwimPhase { get; set; }
+
         void ApplyClimbPose(Figure figure)
         {
             // Two reaches a cell. One would have a colonist take a whole three metres in a single
