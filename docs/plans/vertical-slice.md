@@ -21,29 +21,31 @@ This file is written to be executed by a session with no other context. Read `CL
 
 **What the slice now has that this plan never described.** A HUD (ADR 0003's Unity-free assembly plus a UI Toolkit shell), a naming registry generating labels from a CSV, a terrain surround, water, and a work-pose system that puts an axe in a colonist's hands. None of it was in M0-M3 as written; all of it is real and tested. The plan is behind the code rather than ahead of it, which is the honest reading of the table above.
 
-**The order the remaining work actually falls in**, which is not the order below: close M2 with `OQ-20` and `OQ-21`; take the seam work in the section after this one; then merge mining, which is written and waiting.
+**The order the remaining work actually falls in**, which is not the order below: take the seam work in the section after this one, then the research lane (`OQ-26` … `OQ-35`, none of which is written), then the measurement rows the milestone gates still want (`OQ-03`, `OQ-05`, `OQ-18`, `OQ-19`). M2 closed on 2026-09-16 (`OQ-20`, `OQ-21`) and mining merged as `5ed4573`.
 
 ## Where the seams are, and what the next feature will cost
 
-Written 2026-09-16 from evidence rather than taste: the mining line on `claude/mines` is one feature, 73 files and 6,358 lines, and to add itself it had to edit six files that belong to everybody.
+Written 2026-09-16 from evidence rather than taste: the mining line on `claude/mines` is one feature, 73 files and 6,358 lines, and to add itself it had to edit six files that belong to everybody. **Revised 2026-09-17** — two of the six have been opened since, and the table says where each one stands rather than where it stood.
 
-| Chokepoint | Why a feature has to touch it | What it should be |
+| Chokepoint | Why a feature has to touch it | What it should be, and where it stands |
 |---|---|---|
-| `Sim/Pawns/PawnContent.cs` | every item, job and work type is a C# constant and a table in code | XML Defs. `OQ-15` and `OQ-16` are written and open; the `TODO(content)` markers name the spot |
-| `Sim/Pawns/JobSystem.cs` | `DefaultGivers()` is a hardcoded array, so a new job is an edit to a shared file | givers registered by Def, the way intents are registered by `AddIntentHandler` |
-| `Sim.Contracts/Views.cs` | a new thing a pawn can do needs a new field on the published frame | the snapshot already has `AddSnapshotContributor`; the pawn view has no equivalent |
-| `Presentation/Bootstrap/OdysseyBootstrap.cs` | the composition root wires every system by hand | it already delegates the colony to `ColonyComposition.AddColony`; the same treatment for presentation |
-| `Presentation/Rendering/ChunkMesher.cs` | new terrain needs new meshing, and the file is on the queue's do-not-touch list | a mesh contributor per stuff kind, registered rather than switched on |
+| `Sim/Pawns/PawnContent.cs` | every item, job and work type was a C# constant and a table in code | **done for pawns** (`OQ-15`, `OQ-16`, then `OQ-48` on 2026-09-17). `PawnContent.Core()` and its 163 lines of hand-written tables are gone, so the XML under `Assets/Odyssey/Defs/Core/Pawns` is the only copy and a new item is written once. Every caller goes through `ContentPack.Pawns()`, which finds the pack by walking up to the repository root and caches the parse; a fingerprint guards the content in place of the old field-for-field oracle. **The world half is still open** — `CoreContent.Terrain` and `NaturalContent.Terrain` are in-code tables mirrored by `Defs/Core/World/*.xml` that nothing but the oracle test reads, and the `TODO(content)` in `WorldGenDefs.cs:254` names the spot |
+| `Sim/Pawns/JobSystem.cs` | `DefaultGivers()` was a hardcoded array, so a new job was an edit to a shared file | **done** (`OQ-44`). `WorkGiverRegistry` finds every concrete `WorkGiver` in the simulation assembly, so a giver joins the scan by existing; `SimWorldBuilder.AddWorkGiver` takes the ones declared outside it |
+| `Sim.Contracts/Views.cs` | a new thing a pawn can do needed a new field on the published frame | **done** (`OQ-45`). A sparse `PawnAspect` row, `(PawnId, key, int)`, keyed by a name the feature mints for itself, published through the contributor seam that already existed for the frame. No new registration mechanism and no enum to edit. ADR 0004 amended 2026-09-17 |
+| `Presentation/Bootstrap/OdysseyBootstrap.cs` | the composition root wires every system by hand | **open, and the one chokepoint with no queue row.** It already delegates the colony to `ColonyComposition.AddColony`; presentation wants the same treatment. 851 lines on 2026-09-17 |
+| `Presentation/Rendering/ChunkMesher.cs` | new terrain needs new meshing, and the file is on the queue's do-not-touch list | a mesh contributor per stuff kind, registered rather than switched on. `OQ-46`, open |
 | `docs/design/icon-keys.csv` | a new name | **correct as it is.** This is the one seam that worked: a name added to the CSV reaches the screen with no code change |
 
-The last row is the point. One of the six is a designed seam and cost nothing; the other five are files that grew a new branch of a switch. The work below is to make the other five look like the last one.
+The last row is still the point, and closing two of the others has not changed it. One of the six was a designed seam and cost nothing; the other five were files that grew a new branch of a switch. The work below is what is left of making them look like the last one.
 
-**The order to do it in, cheapest and most load-bearing first.**
+**The order to do it in, cheapest and most load-bearing first.** Three of the original four are done, so what remains is renumbered.
 
-1. **`OQ-15` and `OQ-16`, content to Defs.** Already specified, already have their acceptance tests written into the rows, and they remove the largest chokepoint. Mining's stone, the pick and its work type all land as data afterwards rather than as edits to `PawnContent`.
-2. **Work givers by registration.** A dozen lines: `JobSystem` takes givers from a list the composition adds to, as `SimWorldBuilder.AddIntentHandler` already does for intents. Mining's `MineWorkGiver` then adds itself.
-3. **A pawn-view contributor**, mirroring `ISnapshotContributor`, so a feature can publish what the interface needs without widening a struct everyone reads.
-4. **Mesh contributors** last, because it is the largest and only the terrain features need it.
+1. **The world tables, the last of content to Defs** (`OQ-49`). The pawn half is done (`OQ-48`): `PawnContent.Core()` is deleted and a new item is written once. Terrain and ores are where the pawn tables were a day ago — loaded from `Defs/Core/World/*.xml` by a test, mirrored by `CoreContent.Terrain` and `NaturalContent.Terrain` in code, and it is the in-code arrays the generators read. Smaller than the pawn half and subtler: **a terrain index sits in every cell of every save and every hash**, so the risk is the *order* rather than the values, and `WorldContent.TerrainOrder` already exists to pin it.
+2. **Mesh contributors** (`OQ-46`) last, because it is the largest and only the terrain features need it.
+
+**Unscheduled, and worth a row when presentation next grows.** `OdysseyBootstrap.cs` is the fifth chokepoint and the only one nothing is queued against. It is not urgent while presentation is stable; it will be the moment two features want to add a director in the same week.
+
+**Closed since this section was written.** `OQ-44` made work givers register themselves, `OQ-15`/`OQ-16` moved the content tables to XML and `OQ-48` made the pawn half of that XML the only copy, and `OQ-45` opened the per-pawn half of the read contract. None needed the feature that motivated it to be rewritten, which is the argument for doing seam work before features rather than after.
 
 **What not to refactor.** The intent bus, the save sections, the snapshot contributors, the Def loader and the naming registry are all working seams that a feature has already gone through without touching shared code. The directors split in the HUD is the same shape and is holding. `NavGraph` and `PawnFigureDirector` are the two largest files in the project and neither is a chokepoint — they are large because the problems are, and nothing is queuing behind them.
 

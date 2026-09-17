@@ -81,13 +81,22 @@ namespace Odyssey.Hud
         /// selected and the pane is one dim line.</summary>
         public readonly int NeedRows;
 
-        public HudContent(int colonists, int storeRows, int alerts, int layers, int needRows)
+        /// <summary>
+        /// Rows of skills in the same grid, when the pane is showing the Skills tab instead. One
+        /// tab is on screen at a time, so at most one of this and <see cref="NeedRows"/> is ever
+        /// non-zero — the pane is as tall as the body it is actually showing.
+        /// </summary>
+        public readonly int SkillRows;
+
+        public HudContent(int colonists, int storeRows, int alerts, int layers, int needRows,
+                          int skillRows = 0)
         {
             Colonists = Math.Max(0, colonists);
             StoreRows = Math.Max(0, storeRows);
             Alerts = Math.Max(0, alerts);
             Layers = Math.Max(1, layers);
             NeedRows = Math.Max(0, needRows);
+            SkillRows = Math.Max(0, skillRows);
         }
 
         /// <summary>The state the coverage criterion is stated against: a colony running, nothing
@@ -152,8 +161,27 @@ namespace Odyssey.Hud
 
         // ------------------------------------------------------------------ space
 
-        /// <summary>Screen edge to panel.</summary>
-        public const int Edge = 20;
+        /// <summary>
+        /// Screen edge to panel: **nothing** (owner, 2026-09-17, "make the time control align
+        /// with the top alignment of the rostering so it's closer to the edge of the screen — the
+        /// same goes to stores — less padding and spacing close to screen edge").
+        ///
+        /// <para>Twenty until then, and the last thing on the screen still holding a margin. The
+        /// colonist strip and the command bar were docked to their edges the day before, so the
+        /// clock sat twenty pixels below a strip beside it that started at zero — the two read as
+        /// misaligned because they were. Docking the rest is what makes the strip's own docking
+        /// look deliberate rather than like one panel that had slipped.</para>
+        ///
+        /// <para><b>The breathing room did not go anywhere; it moved inside.</b> A panel's
+        /// <see cref="Pad"/> is still twelve on all four sides, so text is no nearer the screen
+        /// edge than it was — what is gone is the strip of world between a panel's border and the
+        /// edge, which was carrying no information and cost every corner of the screen twenty
+        /// pixels in both directions.</para>
+        ///
+        /// <para><b>It is also forty pixels of strip room</b>, because <see cref="StripRoom"/>
+        /// measures from the panels either side.</para>
+        /// </summary>
+        public const int Edge = 0;
 
         /// <summary>Between two panels in the same column.</summary>
         public const int Gap = 9;
@@ -199,9 +227,80 @@ namespace Odyssey.Hud
 
         // ------------------------------------------------------------------ colonist strip
 
-        public const int CardWidth = 132;
-        public const int CardHeight = 86;
+        /// <summary>
+        /// How wide a roster card is.
+        ///
+        /// <para><b>132 x 86 until 2026-09-17</b>, when the owner took the three need bars off it
+        /// and asked for it tightened so the bar carries many more colonists. What is left is two
+        /// rows — who this is, and what they are at — so the card is sized by the longer of them
+        /// rather than by a number somebody liked.</para>
+        ///
+        /// <para>Widest name row: the avatar (26) plus its gap (8) plus the longest name the pool
+        /// can produce. Widest activity row: the icon (17) plus its gap (6) plus the longest word
+        /// in <c>ui.status</c>. Both plus padding on each side. The figures are not taken on
+        /// trust — <c>TheCardIsWideEnoughForItsRowsAndNoWider</c> asks the text engine what those
+        /// strings really draw in the real face at the real size, and fails on either side with a
+        /// number attached, exactly as the stores panel's own width test does.</para>
+        ///
+        /// <para>The name is the one thing on this screen allowed an ellipsis, so a future name
+        /// longer than the pool's does not break the card — but it does mean a card whose name is
+        /// cut short, which is why the test's lower bound exists rather than only its upper.</para>
+        /// </summary>
+        public const int CardWidth = 106;
+
+        /// <summary>
+        /// How tall a roster card is: padding, the avatar row, the activity line, padding. The
+        /// avatar row takes the slack, so the gap between the two rows is what is left rather
+        /// than a fourth number to keep in step.
+        /// </summary>
+        public const int CardHeight = 63;
+
         public const int CardGap = 7;
+
+        /// <summary>
+        /// How far the colonist strip sits from the top of the screen, and the command bar from
+        /// the bottom: **nothing at all** (owner, 2026-09-17, "directly at the bottom of the
+        /// screen, no spacing, padding, to maximise viewing space — dock it to the bottom and
+        /// apply the same to the roster bar").
+        ///
+        /// <para>Both are deliberately <see cref="Edge"/> no longer. The stores panel, the clock
+        /// and the depth rail keep their margin, because they are panels that sit *in* the view;
+        /// these two are bars that bound it, and a bar with a strip of world under it reads as
+        /// floating rather than as the edge of the screen. Docking also buys back the one thing
+        /// the strip is short of, which is room to grow a second row into.</para>
+        /// </summary>
+        public const int StripTop = 0;
+
+        /// <inheritdoc cref="StripTop"/>
+        public const int BarBottom = 0;
+
+        /// <summary>
+        /// How many rows of cards the strip may run to.
+        ///
+        /// <para>Two, not unbounded: the strip is the one region with no ceiling of its own — a
+        /// colony of fifty would paper the screen — and the clamp is what keeps "no two regions
+        /// overlap" and the coverage ceiling true by construction rather than true for the colony
+        /// sizes somebody happened to test. A colony past what two rows hold shows the ones that
+        /// fit, exactly as it did at one row.</para>
+        /// </summary>
+        public const int StripRows = 2;
+
+        /// <summary>
+        /// The most of the viewport's height the colonist strip may stand in.
+        ///
+        /// <para><b>A second row has to be earned, and this is the rule that earns it.</b> Two
+        /// full rows of cards come to 8.1% of a 1280 x 720 screen against 6.5% of a 2560 x 1440
+        /// one, and at 720p that took the resting HUD to <b>21.7%</b>, over the 18% ceiling the
+        /// acceptance criteria set. A row cap that ignored the screen would have bought capacity
+        /// on a small screen by spending the one budget the interface is actually held to.</para>
+        ///
+        /// <para>So the strip may grow while it stays inside this share of the height, which
+        /// gives <b>one row at 720p and two at 1080p and above</b> — measured, not chosen by
+        /// resolution: 0.14 of 720 is 101 px against the 133 two rows need, and 0.14 of 1080 is
+        /// 151. A colony past what the strip may hold shows the ones that fit, exactly as it did
+        /// when there was only ever one row.</para>
+        /// </summary>
+        public const float StripHeightShare = 0.14f;
 
         /// <summary>The avatar tile on a card, and the selected-thing avatar in the inspect
         /// pane's header, which are the same size by specification.</summary>
@@ -210,8 +309,25 @@ namespace Odyssey.Hud
         /// <summary>The avatar tile on a roster card, which is smaller than the inspect one.</summary>
         public const int CardAvatar = 26;
 
-        /// <summary>One of the three need bars stacked on a card.</summary>
-        public const int CardBar = 3;
+        /// <summary>Avatar to name on a card's identity row.</summary>
+        public const int CardAvatarGap = 8;
+
+        /// <summary>Inside a card, all four sides. Tighter than a panel's <see cref="Pad"/>.</summary>
+        public const int CardPad = 8;
+
+        /// <summary>
+        /// The activity line on a card: a picture of what this colonist is doing, and the word
+        /// for it. One pixel taller than the 16 px line of text it replaces, because the row is
+        /// sized by the taller of the two things in it and that is now the icon.
+        /// </summary>
+        public const int CardJobRow = RowIcon;
+
+        /// <summary>
+        /// Icon to word on that line, tighter than a list row's <see cref="RowIconGap"/>. A card
+        /// is 132 px wide against the stores panel's 168, and the word beside it has to be a
+        /// whole word: an ellipsis is allowed on a colonist's name and on nothing else.
+        /// </summary>
+        public const int CardIconGap = 6;
 
         // ------------------------------------------------------------------ clock and alerts
 
@@ -271,13 +387,62 @@ namespace Odyssey.Hud
         /// </summary>
         public const int RailSidePad = 4;
 
+        // ------------------------------------------------------------------ build palette
+
+        /// <summary>
+        /// How wide the Build popover is.
+        ///
+        /// <para><b>420 until 2026-09-17</b>, when the owner asked the first group to "use the
+        /// horizontal space … giving more room for the second group". Ten category chips with
+        /// their full words come to about eight hundred pixels of chip; at 420 they wrapped to
+        /// five rows and the tools under them got what was left of a 320 px panel, which was
+        /// almost nothing. Wider is the cheap half of the answer, and it costs nothing now that a
+        /// popover is anchored to its button rather than centred on the screen.</para>
+        /// </summary>
+        public const int BuildWidth = 560;
+
+        /// <summary>
+        /// One row of category or tool chips, pitch included: the chip's own height plus the
+        /// margin under it. Written down rather than left to the content, because it is what
+        /// <see cref="BuildCatRows"/> is a count of.
+        /// </summary>
+        public const int BuildChipRow = BuildChip + 2 * BuildChipMargin;
+
+        /// <summary>A chip's own box, without its margins.</summary>
+        public const int BuildChip = 30;
+
+        public const int BuildChipMargin = 2;
+
+        /// <summary>
+        /// How many rows of categories the first group may take before it scrolls.
+        ///
+        /// <para><b>The cap is the real fix, not the width.</b> The category list was
+        /// <c>flex-grow: 1</c>, so it took every pixel the panel had and the tools got the
+        /// remainder — which meant the group the player is actually reaching into shrank as the
+        /// group above it grew. Two rows, and anything past them scrolls: the scroll view was
+        /// already there for exactly this and was never reached.</para>
+        /// </summary>
+        public const int BuildCatRows = 2;
+
+        /// <summary>How tall the category group is allowed to stand.</summary>
+        public const int BuildCatHeight = BuildCatRows * BuildChipRow;
+
         // ------------------------------------------------------------------ inspect
 
         public const int InspectWidth = 560;
 
-        /// <summary>The pane's bottom edge, measured from the bottom of the screen. Sixteen pixels
-        /// clear of the command bar, which cannot grow taller than one row.</summary>
-        public const int InspectBottom = 84;
+        /// <summary>The pane's clearance over the command bar, which cannot grow taller than one row.</summary>
+        public const int InspectToBar = 14;
+
+        /// <summary>
+        /// The pane's bottom edge, measured from the bottom of the screen.
+        ///
+        /// <para>Derived rather than written down, since the bar was docked: the pane sits a fixed
+        /// clearance above whatever the bar's top edge is, and a hand-set 84 would have left it
+        /// hanging twenty pixels over a bar that had moved down. That coupling was in the old
+        /// stylesheet as a comment admitting it was one.</para>
+        /// </summary>
+        public const int InspectBottom = BarBottom + HudCommands.BarHeight + Frame + InspectToBar;
 
         /// <summary>
         /// The pane's header block: the 19 px name on one line and the 12 px job-and-state line
@@ -292,6 +457,16 @@ namespace Odyssey.Hud
         public const int NeedRow = 25;
 
         public const int NeedRowGap = 9;
+
+        /// <summary>
+        /// One line of the Skills tab: an icon, a name, a level and a passion mark, on one row of
+        /// the same two-column grid the needs use. Thirteen skills in one column would make a
+        /// pane 280 px taller than the screen has to spare over the command bar, and would leave
+        /// half of a 560 px pane empty while doing it.
+        /// </summary>
+        public const int SkillRow = 19;
+
+        public const int SkillRowGap = 4;
 
 
         // ================================================================== solve
@@ -324,32 +499,38 @@ namespace Odyssey.Hud
                 : new HudRect(clockX, Edge + ClockHeight + Gap, ClockWidth, AlertsHeight(content.Alerts));
 
             // ---- colonist strip, centred in what is left between the two top corners
-            int cards = VisibleCards(width, content.Colonists);
+            int cards = VisibleCards(width, height, content.Colonists);
             if (cards <= 0) boxes[HudRegion.ColonistStrip] = default;
             else
             {
-                float stripWidth = cards * CardWidth + (cards - 1) * CardGap;
-                boxes[HudRegion.ColonistStrip] =
-                    new HudRect((width - stripWidth) * 0.5f, Edge, stripWidth, CardHeight);
+                // A second row is as wide as a full one, so the box is sized by the widest row
+                // rather than by the count: six cards over two rows still occupies the span of
+                // whatever the first row holds.
+                int perRow = Math.Max(1, CardsPerRow(width));
+                int widest = Math.Min(cards, perRow);
+                int rows = StripRowsUsed(width, height, cards);
+                float stripWidth = widest * CardWidth + (widest - 1) * CardGap;
+                boxes[HudRegion.ColonistStrip] = new HudRect(
+                    (width - stripWidth) * 0.5f, StripTop, stripWidth, StripHeight(rows));
             }
 
             // ---- inspect, bottom left, clear of the bar. Nothing selected, no pane: an empty
             // rect, which is how every other region says "I am not on screen" here.
-            float inspectHeight = InspectHeight(content.NeedRows);
+            float inspectHeight = InspectHeight(content.NeedRows, content.SkillRows);
             boxes[HudRegion.Inspect] = inspectHeight <= 0f
                 ? new HudRect(Edge, height - InspectBottom, 0f, 0f)
                 : new HudRect(Edge, height - InspectBottom - inspectHeight, InspectWidth, inspectHeight);
 
-            // ---- command bar, bottom centre
-            float barWidth = HudCommands.BarWidth(HudCommands.ModelWidths(), FittedCommands(width));
-            // Plus its own hairlines, which HudCommands.BarHeight does not carry: that constant is
-            // the bar's content and padding, and it is what the overflow arithmetic works in.
-            float barHeight = HudCommands.BarHeight + Frame;
-            boxes[HudRegion.CommandBar] = new HudRect(
-                (width - barWidth) * 0.5f,
-                height - Edge - barHeight,
-                barWidth,
-                barHeight);
+            // ---- command bar, the full width of the screen (owner, 2026-09-17)
+            //
+            // It was a centred pill as wide as its items. Full width for the same reason it is
+            // docked: it is the edge of the screen rather than a panel floating near it, and a
+            // popover raised from a button on it has somewhere definite to sit. Its own top
+            // hairline is the only one left, which BarHeight does not carry — that constant is the
+            // bar's content and padding, and it is what the overflow arithmetic works in.
+            float barHeight = HudCommands.BarHeight + BarFrame;
+            boxes[HudRegion.CommandBar] =
+                new HudRect(0f, height - BarBottom - barHeight, width, barHeight);
 
             return boxes;
         }
@@ -364,6 +545,13 @@ namespace Odyssey.Hud
         /// the PlayMode comparison exists to catch, so it may as well be right.
         /// </summary>
         public const int Frame = 2 * HudTheme.BorderWidth;
+
+        /// <summary>
+        /// The command bar's own hairlines: one, not two. It runs the full width of the screen
+        /// with its left, right and bottom edges off it, so only the top one is drawn — which is
+        /// what a bar that is the edge of the screen looks like rather than a panel near it.
+        /// </summary>
+        public const int BarFrame = HudTheme.BorderWidth;
 
         public static float StoresHeight(int rows) =>
             Frame + Pad + HeaderHeight + HeaderGap + Math.Max(0, rows) * RowHeight + Pad;
@@ -406,7 +594,7 @@ namespace Odyssey.Hud
             // runs behind it — which is how a thirty-two layer board at 720p put its deepest
             // layers under the Build button.
             float room = viewportHeight - Edge - RailChrome - RailCellGap
-                         - (Edge + HudCommands.BarHeight + Frame + Gap);
+                         - (BarBottom + HudCommands.BarHeight + Frame + Gap);
             return Math.Max(MinRailPitch, Math.Min(ideal, room / layers));
         }
 
@@ -441,11 +629,26 @@ namespace Odyssey.Hud
         /// because every criterion stated against this model — coverage, overlap, the clearance
         /// above the bar — is stated with nothing selected or a colonist selected.</para>
         /// </summary>
-        public static float InspectHeight(int needRows) =>
-            needRows <= 0
+        public static float InspectHeight(int needRows) => InspectHeight(needRows, 0);
+
+        /// <summary>
+        /// The pane's height with a given tab showing. Exactly one of the two counts is non-zero
+        /// when a colonist is selected: the pane shows one tab's body at a time, and its height
+        /// is that body's plus the chrome above and below it.
+        /// </summary>
+        public static float InspectHeight(int needRows, int skillRows)
+        {
+            float body = skillRows > 0
+                ? skillRows * SkillRow + (skillRows - 1) * SkillRowGap
+                : needRows <= 0
+                    ? 0f
+                    : needRows * NeedRow + (needRows - 1) * NeedRowGap;
+
+            return body <= 0f
                 ? 0f
                 : Frame + Pad + InspectHeader + InspectHeaderGap + InspectTabs + InspectTabGap +
-                  needRows * NeedRow + (needRows - 1) * NeedRowGap + Pad;
+                  body + Pad;
+        }
 
         // ---------------------------------------------------------------- fitting
 
@@ -476,17 +679,86 @@ namespace Odyssey.Hud
         /// letting the strip grow is what keeps "no two panels overlap" true by construction at
         /// any width, rather than true for the colony sizes somebody happened to test.
         /// </summary>
-        public static int VisibleCards(float width, int colonists)
+        public static int VisibleCards(float width, float height, int colonists)
         {
             if (colonists <= 0) return 0;
-            float room = StripRoom(width);
-            int fits = (int)Math.Floor((room + CardGap) / (CardWidth + CardGap));
-            return Math.Max(0, Math.Min(colonists, fits));
+            return Math.Max(0, Math.Min(colonists, CardsPerRow(width) * StripRowsAllowed(height)));
         }
 
-        /// <summary>How many command-bar items fit at this width, by the modelled widths.</summary>
+        /// <summary>How many cards fit across one row of the strip.</summary>
+        public static int CardsPerRow(float width)
+        {
+            float room = StripRoom(width);
+            return Math.Max(0, (int)Math.Floor((room + CardGap) / (CardWidth + CardGap)));
+        }
+
+        /// <summary>
+        /// How many rows this screen is tall enough to spend on the strip, 1 to
+        /// <see cref="StripRows"/>. Never zero: a screen too short for one row of cards would
+        /// have no roster at all, which is worse than being over budget.
+        /// </summary>
+        public static int StripRowsAllowed(float height)
+        {
+            float budget = height * StripHeightShare;
+            int rows = (int)Math.Floor((budget + CardGap) / (CardHeight + CardGap));
+            return Math.Max(1, Math.Min(StripRows, rows));
+        }
+
+        /// <summary>How many rows that many cards actually occupy, 0 to what the screen allows.</summary>
+        public static int StripRowsUsed(float width, float height, int cards)
+        {
+            int perRow = CardsPerRow(width);
+            if (cards <= 0 || perRow <= 0) return 0;
+            return Math.Min(StripRowsAllowed(height), (cards + perRow - 1) / perRow);
+        }
+
+        /// <summary>How tall the strip stands at a given number of rows.</summary>
+        public static float StripHeight(int rows) =>
+            rows <= 0 ? 0f : rows * CardHeight + (rows - 1) * CardGap;
+
+        /// <summary>
+        /// How many command-bar items fit at this width, by the modelled widths.
+        ///
+        /// <para>Against the bar's own padding rather than the screen margin, since the bar became
+        /// full width: the room an item has is the screen less what the bar itself takes, and
+        /// measuring against a margin the bar no longer has would put two items into Menu that
+        /// would have fitted.</para>
+        /// </summary>
         public static int FittedCommands(float width) =>
-            HudCommands.Fit(HudCommands.ModelWidths(), width - 2 * Edge);
+            HudCommands.Fit(HudCommands.ModelWidths(), width - 2 * HudCommands.BarPad);
+
+        // ---------------------------------------------------------------- popovers
+
+        /// <summary>
+        /// Where a panel raised from the command bar sits, measured from the bottom of the screen.
+        ///
+        /// <para><b>Flush on the bar, no gap</b> (owner, 2026-09-17: "directly above the build
+        /// button … no spacing and padding to ensure tight space"). A popover with a strip of
+        /// world between it and the button that raised it reads as a separate window that happens
+        /// to be nearby; sitting on the bar it reads as the button having grown upwards, which is
+        /// what it is.</para>
+        /// </summary>
+        public static float PopoverBottom => BarBottom + HudCommands.BarHeight + BarFrame;
+
+        /// <summary>
+        /// Where a popover's left edge goes: under the button that raised it, pushed back on to
+        /// the screen if that would hang it off an edge.
+        ///
+        /// <para>Left-aligned with the button rather than centred on it, because a menu whose
+        /// left edge lines up with the control it belongs to reads as belonging to it, and
+        /// because centring puts a wide popover off the screen for the leftmost button and then
+        /// has to clamp anyway — at which point it is neither centred nor aligned.</para>
+        ///
+        /// <para>The clamp is to the screen, not to a margin: these panels are docked furniture
+        /// like the bar under them, so a popover raised by the last button on the right ends
+        /// flush with the right edge.</para>
+        /// </summary>
+        public static float PopoverLeft(float buttonLeft, float popoverWidth, float screenWidth)
+        {
+            float widest = Math.Max(0f, screenWidth - popoverWidth);
+            if (widest <= 0f) return 0f;
+            return Math.Max(0f, Math.Min(buttonLeft, widest));
+        }
 
         // ---------------------------------------------------------------- acceptance
 

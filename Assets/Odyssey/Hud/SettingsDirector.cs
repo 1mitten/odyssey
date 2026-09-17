@@ -33,6 +33,9 @@ namespace Odyssey.Hud
         /// <summary>Close the Build palette, which is the one panel that opens over the board.</summary>
         ClosePalette,
 
+        /// <summary>Close the Menu popover.</summary>
+        CloseMenu,
+
         /// <summary>Close the settings panel.</summary>
         ClosePanel,
 
@@ -343,9 +346,24 @@ namespace Odyssey.Hud
         /// order: a tool is held in the hand and comes off first, the palette is the panel the
         /// player just opened over the board, and the menu is the last resort.</para>
         /// </summary>
-        public EscapeAction Escape(bool toolArmed, bool paletteOpen)
+        public EscapeAction Escape(bool toolArmed, bool paletteOpen) =>
+            Escape(toolArmed, paletteOpen, menuOpen: false);
+
+        /// <summary>
+        /// The same rule with the Menu popover in it as well (owner, 2026-09-17: every window can
+        /// be escaped).
+        ///
+        /// <para>The two bar popovers sit at the same level of the order, between the tool in the
+        /// hand and the settings panel, because they are the same kind of thing: a panel the
+        /// player raised from a button a moment ago. Only one of them can be open at a time — the
+        /// shell closes the other when either opens — so their relative order is not a decision
+        /// anything can observe, and the menu is tested first only because it is the newer of the
+        /// two.</para>
+        /// </summary>
+        public EscapeAction Escape(bool toolArmed, bool paletteOpen, bool menuOpen)
         {
             if (toolArmed) return EscapeAction.DisarmTool;
+            if (menuOpen) return EscapeAction.CloseMenu;
             if (paletteOpen) return EscapeAction.ClosePalette;
             return Open ? EscapeAction.ClosePanel : EscapeAction.OpenPanel;
         }

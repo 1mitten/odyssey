@@ -28,6 +28,7 @@ using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.Ui;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
@@ -166,7 +167,7 @@ namespace Odyssey.EditorTools
                 var nav = new NavGraph(grid);
                 nav.Rebuild();
                 var pawns = new PawnContext(
-                    grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core())
+                    grid, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns())
                     { Chunks = chunks };
                 var support = new SupportSystem(grid, new SupportSolver(grid), chunks);
                 var mirror = new Odyssey.Presentation.World.GridMirrorContributor(
@@ -201,7 +202,7 @@ namespace Odyssey.EditorTools
                 // photograph five people standing still and prove nothing about the walk.
                 figures = new Odyssey.Presentation.World.PawnFigureDirector(catalogue, lighting, 0)
                     { World = model };   // so a climber can find its wall
-                int movePerTick = PawnContent.Core().Movement.movePerTick;
+                int movePerTick = ContentPack.Pawns().Movement.movePerTick;
                 const float FrameSeconds = 1f / 60f;
                 for (int frame = 0; frame < 40; frame++)
                 {

@@ -6,6 +6,7 @@ using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Ui;
+using Odyssey.Sim.Contracts;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UIElements;
@@ -198,22 +199,28 @@ namespace Odyssey.Tests.PlayMode
                     VisualElement? bar = doc.rootVisualElement.Q(name: "bar");
                     Assert.That(bar, Is.Not.Null, "the shell built no command bar");
 
+                    // The bar spans the screen (owner, 2026-09-17). What "nothing is cut off at
+                    // the right edge" reduces to is therefore about the items, not the bar: the
+                    // bar itself is meant to reach both edges, and the loop below is what holds
+                    // the items to it.
                     Rect box = bar!.worldBound;
-                    Assert.That(box.xMin, Is.GreaterThanOrEqualTo(HudLayout.Edge - slack),
-                        $"the bar starts {box.xMin:0.#} px from the left at {resolution.x}x{resolution.y}");
-                    Assert.That(box.xMax, Is.LessThanOrEqualTo(canvas.width - HudLayout.Edge + slack),
-                        $"the bar runs to {box.xMax:0.#} on a {canvas.width:0} px canvas at " +
-                        $"{resolution.x}x{resolution.y}, so an item is cut off at the right edge");
+                    Assert.That(box.xMin, Is.EqualTo(canvas.xMin).Within(slack + 0.5f),
+                        $"the bar starts {box.xMin - canvas.xMin:0.#} px in from the left at " +
+                        $"{resolution.x}x{resolution.y}");
+                    Assert.That(box.xMax, Is.EqualTo(canvas.xMax).Within(slack + 0.5f),
+                        $"the bar ends {canvas.xMax - box.xMax:0.#} px short of the right edge at " +
+                        $"{resolution.x}x{resolution.y}");
 
                     // The bar may not wrap. One row, whatever fits; the rest go into Menu, which
                     // is what lets the inspect pane above it assume a height for it.
                     Debug.Log($"[HudGeometry] bar at {resolution.x}x{resolution.y}: {box}, {Describe(bar)}");
-                    Assert.That(box.height, Is.LessThanOrEqualTo(HudCommands.BarHeight + HudLayout.Frame + slack),
+                    Assert.That(box.height, Is.LessThanOrEqualTo(HudCommands.BarHeight + HudLayout.BarFrame + slack),
                         $"the bar is {box.height:0.#} px tall against a modelled " +
-                        $"{HudCommands.BarHeight + HudLayout.Frame}, so it has wrapped to a second " +
-                        $"row. {Describe(bar)}");
+                        $"{HudCommands.BarHeight + HudLayout.BarFrame}, so it has wrapped to a " +
+                        $"second row. {Describe(bar)}");
 
-                    // Every item that is on the row shows a hotkey cap with something in it.
+                    // Every item that is on the row shows a hotkey cap with something in it, and
+                    // none of them runs off the end of the bar.
                     int caps = 0;
                     foreach (VisualElement item in doc.rootVisualElement.Query(className: "cmd").ToList())
                     {
@@ -221,6 +228,9 @@ namespace Odyssey.Tests.PlayMode
                         Label? key = item.Q<Label>(className: "cmd__key");
                         Assert.That(key, Is.Not.Null, "a command-bar item has no hotkey cap");
                         Assert.That(key!.text, Is.Not.Empty, "a command-bar item shows a blank hotkey");
+                        Assert.That(item.worldBound.xMax, Is.LessThanOrEqualTo(box.xMax + slack + 0.5f),
+                            $"a command item runs to {item.worldBound.xMax:0.#} past the bar's " +
+                            $"{box.xMax:0.#} at {resolution.x}x{resolution.y}, so it is cut off");
                         caps++;
                     }
                     Assert.That(caps, Is.GreaterThan(1),
@@ -326,6 +336,428 @@ namespace Odyssey.Tests.PlayMode
                 Object.Destroy(root);
             }
         }
+
+        /// <summary>
+        /// The activity line on a roster card leads with a picture and still holds its word
+        /// (owner, 2026-09-16).
+        ///
+        /// <para><b>What could go wrong is silent.</b> The icon takes 17 px off a 132 px card, and
+        /// a word that no longer fits does not report itself — UI Toolkit simply lays it past the
+        /// card's edge, where the card's own rounded frame hides the tail. So this measures the
+        /// word the text engine would draw against the room the row actually gave it, on the real
+        /// face at the real size, rather than trusting the arithmetic in the sheet's comment.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheActivityLineLeadsWithAnIconAndStillHoldsItsWord()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                var rows = doc.rootVisualElement.Query(className: "card__jobrow").ToList();
+                Assert.That(rows, Is.Not.Empty, "no card carries an activity line");
+
+                foreach (VisualElement row in rows)
+                {
+                    var icon = row.Q<IconBadge>();
+                    var word = row.Q<Label>(className: "card__job");
+                    Assert.That(icon, Is.Not.Null, "an activity line with no icon in it");
+                    Assert.That(word, Is.Not.Null, "an activity line with no word in it");
+
+                    Rect iconBox = icon!.worldBound;
+                    Rect wordBox = word!.worldBound;
+                    Rect card = row.parent.worldBound;
+
+                    Assert.That(iconBox.xMax, Is.LessThanOrEqualTo(wordBox.xMin + 0.01f),
+                        $"the icon for '{word.text}' is not to the left of the word");
+                    Assert.That(iconBox.xMin, Is.GreaterThanOrEqualTo(card.xMin - 0.01f),
+                        "the icon starts outside its own card");
+
+                    float drawn = word.MeasureTextSize(
+                        word.text, 0f, VisualElement.MeasureMode.Undefined,
+                        0f, VisualElement.MeasureMode.Undefined).x;
+
+                    Debug.Log($"[HudGeometry] activity '{word.text}': icon {iconBox.width:0.#} px, " +
+                              $"word {drawn:0.#} px drawn in {wordBox.width:0.#} px of room");
+
+                    Assert.That(wordBox.width, Is.GreaterThanOrEqualTo(drawn - 0.01f),
+                        $"'{word.text}' needs {drawn:0.#} px and the icon left it " +
+                        $"{wordBox.width:0.#}, so the activity is being clipped by the card edge");
+                    Assert.That(wordBox.xMax, Is.LessThanOrEqualTo(card.xMax + 0.01f),
+                        $"'{word.text}' runs off the right of its card");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// A card is as wide as its two rows need and no wider (owner, 2026-09-17: the need bars
+        /// came off so the strip could carry many more colonists).
+        ///
+        /// <para><b>Why the text engine and not arithmetic.</b> A card's width is decided by two
+        /// strings — the longest name the pool can deal and the longest word in <c>ui.status</c> —
+        /// and neither can be predicted from its character count in a narrow face. This asks what
+        /// they really draw, at the real size, and bounds the constant on both sides: too narrow
+        /// and a name is cut short, too wide and every card on the bar is paying for space no
+        /// string uses. The stores panel's own width test is the same idea and found 288 px was
+        /// never measured.</para>
+        ///
+        /// <para>Names are measured off the pool rather than off the colony, because a five-pawn
+        /// scenario never reaches the eighth name, let alone the cycle suffix that a colony of
+        /// fifty will.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCardIsWideEnoughForItsRowsAndNoWider()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                VisualElement? card = doc.rootVisualElement.Q(className: "card");
+                Assert.That(card, Is.Not.Null, "the shell built no roster card");
+
+                var nameLabel = card!.Q<Label>(className: "card__name");
+                var jobLabel = card.Q<Label>(className: "card__job");
+                Assert.That(nameLabel, Is.Not.Null);
+                Assert.That(jobLabel, Is.Not.Null);
+
+                // Twelve cycles of the eight-name pool, which is a colony of ninety-six. The
+                // interesting names are not the pool's own — they are the ones carrying the
+                // cycle number the model appends once the pool is exhausted, and a two-digit
+                // suffix is wider than a one-digit one. Stopping at the pool, or at one cycle,
+                // would size the card for a colony that never grows.
+                float widestName = 0f;
+                string longestName = string.Empty;
+                for (int id = 1; id <= 96; id++)
+                {
+                    string name = ColonistNames.Of(new PawnId(id));
+                    float w = Draws(nameLabel!, name);
+                    if (w <= widestName) continue;
+                    widestName = w;
+                    longestName = name;
+                }
+
+                float widestJob = 0f;
+                string longestJob = string.Empty;
+                foreach (string key in JobLabels.IconKeys)
+                {
+                    float w = Draws(jobLabel!, Registry.Label(key));
+                    if (w <= widestJob) continue;
+                    widestJob = w;
+                    longestJob = Registry.Label(key);
+                }
+
+                float nameRow = 2 * HudLayout.CardPad + HudLayout.CardAvatar +
+                                HudLayout.CardAvatarGap + widestName;
+                float jobRow = 2 * HudLayout.CardPad + IconBadge.RowSize +
+                               HudLayout.CardIconGap + widestJob;
+                float needed = Mathf.Max(nameRow, jobRow);
+
+                Debug.Log($"[HudGeometry] card rows: name '{longestName}' {widestName:0.#} px " +
+                          $"-> {nameRow:0.#}, activity '{longestJob}' {widestJob:0.#} px " +
+                          $"-> {jobRow:0.#}; card is {HudLayout.CardWidth}");
+
+                Assert.That(HudLayout.CardWidth, Is.GreaterThanOrEqualTo(needed),
+                    $"a card is {HudLayout.CardWidth} px and its widest row needs {needed:0.#} " +
+                    $"('{longestName}' / '{longestJob}'), so something is being cut short");
+
+                // Headroom, not comfort: a name is allowed to grow a little before the constant
+                // has to be revisited. More than this and the strip is carrying fewer colonists
+                // than it could for no reason anybody chose.
+                Assert.That(HudLayout.CardWidth, Is.LessThanOrEqualTo(needed + 16f),
+                    $"a card is {HudLayout.CardWidth} px where {needed:0.#} would do, and the " +
+                    "strip is the densest region on the screen");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// The Skills tab builds, switches and draws real art (owner, 2026-09-17).
+        ///
+        /// <para><b>What only the player loop can answer.</b> The fast tier proves the model
+        /// lists thirteen skills and numbers the two the simulation backs. It cannot say whether
+        /// the tab strip is clickable, whether the two bodies swap, or whether a single key of
+        /// the owner's sheet resolves to a texture rather than falling back to the placeholder
+        /// square — which is the failure ADR 0007 calls out as invisible, because a key with no
+        /// art is not an error and is not logged.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheSkillsTabSwitchesAndDrawsTheOwnersArt()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                var world = boot.World;
+                Assert.That(world, Is.Not.Null, "no world to select a colonist in");
+                Assert.That(world!.Views.Current.PawnCount, Is.GreaterThan(0), "no colonists");
+
+                PawnId first = world.Views.Current.Pawns[0].Id;
+                boot.Directors!.ChooseColonist(first, world.Views.Current);
+
+                yield return Settle(doc);
+
+                var tabs = doc.rootVisualElement.Query<Label>(className: "tab").ToList();
+                Label? skillsTab = tabs.Find(t => t.text == "Skills");
+                Assert.That(skillsTab, Is.Not.Null, "the pane built no Skills tab");
+
+                VisualElement? grid = doc.rootVisualElement.Q(className: "skills");
+                Assert.That(grid, Is.Not.Null, "the pane built no skills grid");
+                Assert.That(grid!.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                    "the pane must open on Needs, not on Skills");
+
+                using (var press = PointerDownEvent.GetPooled())
+                {
+                    press.target = skillsTab;
+                    skillsTab!.SendEvent(press);
+                }
+                yield return Settle(doc);
+
+                Assert.That(grid.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex),
+                    "clicking the Skills tab did not show the skills");
+                VisualElement? needs = doc.rootVisualElement.Q(className: "needs");
+                Assert.That(needs!.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                    "two tab bodies are on screen at once");
+
+                var rows = grid.Query(className: "skill").ToList();
+                Assert.That(rows.Count, Is.EqualTo(SkillCatalogue.All.Length),
+                    "the tab does not list every skill the design names");
+
+                int drawn = 0;
+                foreach (VisualElement row in rows)
+                {
+                    var badge = row.Q<IconBadge>();
+                    Assert.That(badge, Is.Not.Null, "a skill row with no icon slot");
+                    if (IconArt.Has(badge!.Key)) drawn++;
+                }
+
+                Debug.Log($"[HudGeometry] skills: {rows.Count} rows, {drawn} drawing real art");
+                Assert.That(drawn, Is.EqualTo(SkillCatalogue.All.Length - 1),
+                    "every skill but social is cut from the owner's sheet; a shortfall means a " +
+                    "key resolved to nothing and quietly drew its placeholder square");
+
+                // And the pane still clears the command bar with its tallest body showing.
+                Rect pane = doc.rootVisualElement.Q(name: "inspect")!.worldBound;
+                Rect bar = doc.rootVisualElement.Q(name: "bar")!.worldBound;
+                Assert.That(pane.yMax, Is.LessThanOrEqualTo(bar.yMin + 0.01f),
+                    $"the skills pane ends at {pane.yMax:0.#} and the command bar starts at " +
+                    $"{bar.yMin:0.#}");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// A popover raised from the command bar lands on the button that raised it, flush on the
+        /// bar, and carries a way out (owner, 2026-09-17).
+        ///
+        /// <para><b>Only the player loop can answer this.</b> Where a popover sits is decided from
+        /// the laid-out bar — the reflow moves buttons as items go into Menu, and the interface
+        /// scale moves them again — so the model can state the rule but not that the shell obeys
+        /// it. What is measured here is the realised boxes: the popover's bottom against the
+        /// bar's top, and its left against the button's.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EveryBarPopoverOpensOverItsOwnButtonAndFlushWithTheBar()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                Rect bar = doc.rootVisualElement.Q(name: "bar")!.worldBound;
+                Rect canvas = doc.rootVisualElement.worldBound;
+
+                Assert.That(bar.xMin, Is.EqualTo(canvas.xMin).Within(0.5f), "the bar is inset on the left");
+                Assert.That(bar.xMax, Is.EqualTo(canvas.xMax).Within(0.5f), "the bar is inset on the right");
+                Assert.That(bar.yMax, Is.EqualTo(canvas.yMax).Within(0.5f),
+                    "the bar is not on the bottom edge of the screen");
+
+                foreach (string name in new[] { "build", "menu" })
+                {
+                    VisualElement? item = ButtonFor(doc, name);
+                    Assert.That(item, Is.Not.Null, $"no command-bar button raises the {name} popover");
+
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = item;
+                        item!.SendEvent(click);
+                    }
+                    yield return Settle(doc);
+
+                    VisualElement? popover = doc.rootVisualElement.Q(name: name);
+                    Assert.That(popover, Is.Not.Null, $"the shell built no {name} popover");
+                    Assert.That(popover!.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex),
+                        $"clicking the button did not open the {name} popover");
+
+                    Rect box = popover.worldBound;
+                    Rect button = item.worldBound;
+
+                    Debug.Log($"[HudGeometry] {name} popover: {box}, button at {button.xMin:0.#}, " +
+                              $"bar top {bar.yMin:0.#}");
+
+                    Assert.That(box.yMax, Is.EqualTo(bar.yMin).Within(0.5f),
+                        $"the {name} popover sits {box.yMax - bar.yMin:0.#} px from the bar " +
+                        "rather than flush on it");
+
+                    float wanted = HudLayout.PopoverLeft(
+                        button.xMin - canvas.xMin, box.width, canvas.width) + canvas.xMin;
+                    Assert.That(box.xMin, Is.EqualTo(wanted).Within(0.5f),
+                        $"the {name} popover is not over the button that raised it");
+                    Assert.That(box.xMin, Is.GreaterThanOrEqualTo(canvas.xMin - 0.5f),
+                        $"the {name} popover hangs off the left of the screen");
+                    Assert.That(box.xMax, Is.LessThanOrEqualTo(canvas.xMax + 0.5f),
+                        $"the {name} popover hangs off the right of the screen");
+
+                    // And a way out that is not the keyboard.
+                    VisualElement? close = popover.Q(className: "panel__close");
+                    Assert.That(close, Is.Not.Null, $"the {name} popover has no close button");
+                    Assert.That(close!.worldBound.xMax, Is.GreaterThan(box.center.x),
+                        $"the {name} popover's close button is not in its top right");
+
+                    using (var shut = ClickEvent.GetPooled())
+                    {
+                        shut.target = close;
+                        close.SendEvent(shut);
+                    }
+                    yield return Settle(doc);
+
+                    Assert.That(popover.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                        $"the {name} popover's X did not close it");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// The Build palette spends its height on the group the player is reaching into (owner,
+        /// 2026-09-17: the first group "is using too much vertical space").
+        ///
+        /// <para><b>What the fast tier cannot say.</b> How many rows ten category chips wrap to is
+        /// a fact about the text engine and the panel's width, not about the model — so the cap is
+        /// stated in <see cref="HudLayout.BuildCatHeight"/> and measured here. The assertion that
+        /// matters is the comparison: the tools group must get at least as much height as the
+        /// categories, which is what "more room for the second group" reduces to.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBuildPaletteGivesItsHeightToTheToolsRatherThanTheCategories()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                VisualElement? button = ButtonFor(doc, "build");
+                Assert.That(button, Is.Not.Null);
+                using (var click = ClickEvent.GetPooled())
+                {
+                    click.target = button;
+                    button!.SendEvent(click);
+                }
+                yield return Settle(doc);
+
+                VisualElement? palette = doc.rootVisualElement.Q(name: "build");
+                VisualElement? cats = palette!.Q(className: "build__scroll");
+                VisualElement? tools = palette.Q(className: "build__tools");
+                Assert.That(cats, Is.Not.Null, "the palette built no category group");
+                Assert.That(tools, Is.Not.Null, "the palette built no tools group");
+
+                // A chip has to be the height the model counts rows in, or the cap is a count of
+                // something else.
+                VisualElement? chip = cats!.Q(className: "chip");
+                Assert.That(chip, Is.Not.Null, "the palette built no category chips");
+                Assert.That(chip!.worldBound.height, Is.EqualTo((float)HudLayout.BuildChip).Within(0.5f),
+                    $"a chip is {chip.worldBound.height:0.#} px against a modelled {HudLayout.BuildChip}");
+
+                float catHeight = cats.worldBound.height;
+                float toolHeight = tools!.worldBound.height;
+                Debug.Log($"[HudGeometry] build palette: categories {catHeight:0.#} px, " +
+                          $"tools {toolHeight:0.#} px, panel {palette.worldBound.height:0.#}");
+
+                Assert.That(catHeight, Is.LessThanOrEqualTo(HudLayout.BuildCatHeight + 0.5f),
+                    $"the category group stands {catHeight:0.#} px against a cap of " +
+                    $"{HudLayout.BuildCatHeight}, so it is still taking the panel's height");
+                Assert.That(catHeight / HudLayout.BuildChipRow,
+                    Is.LessThanOrEqualTo(HudLayout.BuildCatRows + 0.01f),
+                    $"the categories are wrapping to more than {HudLayout.BuildCatRows} rows");
+
+                // The second group has something in it the moment the palette opens, and none of
+                // it is cut off by the panel it sits in. A tools group that only fills once the
+                // player has guessed the chips above are clickable is a panel needing explanation.
+                var toolChips = tools.Query(className: "chip").ToList();
+                Assert.That(toolChips, Is.Not.Empty,
+                    "the palette opened on no category, so the second group is empty");
+                foreach (VisualElement toolChip in toolChips)
+                    Assert.That(toolChip.worldBound.yMax,
+                        Is.LessThanOrEqualTo(palette.worldBound.yMax + 0.5f),
+                        "a tool chip is cut off by the bottom of the palette");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// Every window carries an X, which is the owner's rule stated as a test rather than as a
+        /// convention each call site has to remember.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EveryWindowHasAWayOutThatIsNotTheKeyboard()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                var windows = doc.rootVisualElement.Query(className: "window").ToList();
+                Assert.That(windows.Count, Is.GreaterThanOrEqualTo(3),
+                    "the Build palette, the Menu popover and the settings panel are all windows");
+
+                foreach (VisualElement window in windows)
+                {
+                    Assert.That(window.Q(className: "panel__close"), Is.Not.Null,
+                        $"the '{window.name}' window has no close button");
+                    Assert.That(window.ClassListContains("panel"), Is.True,
+                        $"the '{window.name}' window is not a panel, so it does not carry the fill");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>The bar button that raises a named popover.</summary>
+        static VisualElement? ButtonFor(UIDocument doc, string popover)
+        {
+            string label = popover == "build" ? "Build" : "Menu";
+            foreach (VisualElement item in doc.rootVisualElement.Query(className: "cmd").ToList())
+            {
+                var text = item.Q<Label>(className: "cmd__label");
+                if (text != null && text.text == label) return item;
+            }
+            return null;
+        }
+
+        /// <summary>What a string really draws in a label's own face and size.</summary>
+        static float Draws(Label label, string text) =>
+            label.MeasureTextSize(text, 0f, VisualElement.MeasureMode.Undefined,
+                                  0f, VisualElement.MeasureMode.Undefined).x;
 
         /// <summary>
         /// Nothing selected, no pane (owner, 2026-09-16). This is the state the HUD spends most

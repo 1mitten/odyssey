@@ -111,15 +111,16 @@
     border-radius: 2px;
 }
 
-/* Three need bars stacked on a roster card. */
-.bar--card { height: 3px; margin-top: 3px; }
-
 /* The bar under a need in the inspect pane. */
 .bar--need { height: 4px; margin-top: 4px; }
 
+/* An explicit height, because HudLayout.BuildCatRows is a count of these and a row whose height
+   is content-driven cannot be counted. 30 px box plus 2 px of margin each side is the 34 px pitch
+   the model works in. */
 .chip {
     flex-direction: row;
     align-items: center;
+    height: 30px;
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
     border-radius: 3px;
@@ -140,10 +141,18 @@
 
 /* ---------------------------------------------------------------- A1 stores */
 
+/* Docked to the top-left corner (owner, 2026-09-17), so it lines up with the colonist strip
+   beside it, which has been at the very top since the bars were docked. The corners that sit on
+   a screen edge are squared, for the same reason the command bar's are: a rounded corner against
+   the edge shows a notch of world through it. The breathing room moved inside — the panel's own
+   12 px padding is untouched, so no text is nearer the edge than it was. */
 .stores {
-    left: 20px;
-    top: 20px;
+    left: 0;
+    top: 0;
     width: 168px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-bottom-left-radius: 0;
 }
 
 .stores__count {
@@ -187,18 +196,31 @@
 
 /* ---------------------------------------------------------------- A2 colonist strip */
 
+/* Docked to the very top (owner, 2026-09-17) and allowed to wrap to a second row. The left and
+   right insets are written from code on every resize, because what the strip may occupy is twice
+   the smaller of its two clearances rather than the whole screen — and a wrap has to happen at
+   that width, not at the screen's. */
 .strip {
     position: absolute;
     left: 0; right: 0;
-    top: 20px;
+    top: 0;
     flex-direction: row;
+    flex-wrap: wrap;
     justify-content: center;
+    align-content: flex-start;
 }
 
+/* Two rows and nothing else: who this is, and what they are doing. The three need bars came off
+   on 2026-09-17 (owner), and with them went most of the card's height — a card is a way of
+   finding somebody and saying what they are at, and the strip is the densest region on the
+   screen, so every pixel it does not spend buys another colonist on the bar. */
 .card {
-    width: 132px;
-    height: 86px;
-    margin: 0 3.5px;
+    width: 106px;
+    height: 63px;
+    /* Half the gap on each side horizontally, the whole of it below — so the gap between two
+       rows is one CardGap and the first row still starts exactly at the strip's top edge, which
+       is what lets the layout model state the strip's height as rows and gaps and be right. */
+    margin: 0 3.5px 7px 3.5px;
     padding: 8px;
     background-color: rgba(12, 16, 20, 0.86);
     border-width: 1px;
@@ -260,11 +282,19 @@
 /* Its own line, the full width of the card rather than the strip beside the avatar, and therefore
    not truncated. The acceptance criteria allow an ellipsis on a colonist's name and on nothing
    else, so the job label has to actually fit: 116 px holds every job this game has at 12 px, with
-   room for several more. */
+   room for several more — 93 px of it since the icon took the left of the line, which still holds
+   the longest word the game has by a wide margin. */
+.card__jobrow {
+    flex-direction: row;
+    align-items: center;
+    height: 17px;
+}
+
 .card__job {
     color: rgba(255, 255, 255, 0.50);
     white-space: nowrap;
-    height: 16px;
+    height: 17px;
+    margin-left: 6px;
     -unity-text-align: middle-left;
 }
 
@@ -275,11 +305,20 @@
    hand-picked tops until the clock grew past the 122 px the alerts panel's fixed top allowed it
    and buried the speed buttons. Heights are content's business; only the order is ours. */
 
+/* Docked to the top edge with the strip and the stores panel (owner, 2026-09-17): the clock sat
+   twenty pixels below a strip beside it that started at zero, and the two read as misaligned
+   because they were. It is not against the right edge — the depth rail is, and this column sits
+   inside it — so only its top corners are squared. */
 .column-right {
     position: absolute;
-    right: 76px;
-    top: 20px;
+    right: 56px;
+    top: 0;
     width: 266px;
+}
+
+.clock.panel {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
 }
 
 .clock { position: relative; width: 100%; }
@@ -379,11 +418,14 @@
    44 px rail and twelve either side would leave twenty. See HudLayout.RailSidePad. */
 
 .rail {
-    right: 20px;
-    top: 20px;
+    right: 0;
+    top: 0;
     width: 44px;
     padding-left: 4px;
     padding-right: 4px;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 .rail .panel__hdr {
@@ -441,10 +483,14 @@
 
 /* ---------------------------------------------------------------- A9/A10 inspect */
 
+/* Docked to the left edge with the stores panel above it. Its bottom is not on a screen edge —
+   it clears the command bar — so only the two left corners are squared. */
 .inspect {
-    left: 20px;
-    bottom: 84px;
+    left: 0;
+    bottom: 64px;
     width: 560px;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
 }
 
 /* There is no empty state. With nothing selected the pane is display:none and leaves the layout
@@ -574,6 +620,65 @@
     margin-right: 18px;
 }
 
+/* ---------------------------------------------------------------- B1 Skills tab
+
+   The same two-column grid as the needs, for the same reason: thirteen skills in one column
+   would make the pane 280 px taller than the screen has to spare over the command bar, and would
+   leave half of a 560 px pane empty while doing it. The negative trailing margins are the .needs
+   trick above and carry the same explanation. */
+.skills {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 9px;
+    margin-right: -18px;
+    margin-bottom: -4px;
+}
+
+.skill {
+    width: 256px;
+    height: 19px;
+    margin-bottom: 4px;
+    margin-right: 18px;
+    flex-direction: row;
+    align-items: center;
+}
+
+/* A skill with no system behind it yet. Present and readable rather than hidden — the panel
+   catalogue's "disabled with a reason" rule — but visibly not a number you have. */
+.skill--off { opacity: 0.45; }
+
+.skill__name {
+    flex-grow: 1;
+    margin-left: 9px;
+    color: #eef3f6;
+    white-space: nowrap;
+    overflow: hidden;
+    -unity-text-align: middle-left;
+}
+
+.skill__level {
+    width: 22px;
+    color: rgba(255, 255, 255, 0.66);
+    -unity-text-align: middle-right;
+}
+
+/* Two lozenges rather than the word "major": thirteen rows of words is a column nobody reads,
+   and what the player wants from this list is its shape at a glance. */
+.skill__passion {
+    flex-direction: row;
+    align-items: center;
+    width: 18px;
+    margin-left: 7px;
+}
+
+.skill__pip {
+    width: 5px;
+    height: 5px;
+    margin-right: 3px;
+    border-radius: 3px;
+    background-color: #e8b55c;
+}
+
 .need__line {
     flex-direction: row;
     align-items: center;
@@ -610,22 +715,33 @@
    what lets the inspect pane above it stop guessing at the bar's height — a coupling the old
    sheet carried in a comment admitting it was one. */
 
+/* Docked to the very bottom (owner, 2026-09-17), for the same reason the strip is docked to the
+   very top: a bar with a strip of world under it reads as floating rather than as the edge of
+   the screen, and the twenty pixels are worth more as board. */
 .bar-row {
     position: absolute;
     left: 0; right: 0;
-    bottom: 20px;
+    bottom: 0;
     flex-direction: row;
     justify-content: center;
 }
 
+/* The full width of the screen (owner, 2026-09-17), so no corner is rounded and the only edge
+   drawn is the top one: three of its four sides are off the screen. It is the edge of the screen
+   rather than a panel floating near it, and a popover raised from a button on it has somewhere
+   definite to sit. */
 .commandbar {
     flex-direction: row;
     align-items: center;
+    width: 100%;
     padding: 5px;
     background-color: rgba(12, 16, 20, 0.90);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
-    border-radius: 6px;
+    border-radius: 0;
+    border-left-width: 0;
+    border-right-width: 0;
+    border-bottom-width: 0;
 }
 
 .cmd {
@@ -672,9 +788,27 @@
 
 /* ---------------------------------------------------------------- menu popup */
 
+/* ---------------------------------------------------------------- windows and popovers
+
+   A window is a panel you deliberately opened and are looking at, as against a board panel you
+   read while watching the world. One rule for all of them (owner, 2026-09-17): less transparent
+   than a board panel, a close X in the top right, and closed by Escape. The board behind a window
+   is not being read, and showing it through a list of rows is noise on the one surface the player
+   is attending to. */
+.window {
+    background-color: rgba(12, 16, 20, 0.96);
+}
+
+/* A window raised from the command bar, which is additionally anchored to the left edge of the
+   button that raised it and sits flush on the bar with no gap. The left and bottom are written
+   from code, because where a popover sits is a fact about the button that raised it and only the
+   laid-out bar knows where that is. Square at the bottom, because that edge meets the bar. */
+.popover {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
 .menu {
-    right: 20px;
-    bottom: 82px;
     width: 268px;
     max-height: 560px;
 }
@@ -711,19 +845,23 @@
    edge and permanently open, competing with the stores panel for a column that could not hold
    both. */
 
-/* A wide, short strip standing on the Build button. Its left and bottom are written at
-   runtime by AlignPaletteToItsButton, because the command bar is centred and its width
-   follows the resolution and the interface scale, so neither edge is a number this sheet
-   can hold. The width is here: it is the strip's own proportion, not the bar's. */
 .build {
-    width: 620px;
-    max-height: 168px;
-    padding: 7px 9px;
+    width: 560px;
+    max-height: 320px;
 }
 
+/* The category group is capped at two rows and the tools take what is left (owner, 2026-09-17:
+   "the first group should use the horizontal space … giving more room for the second group — it's
+   using too much vertical space"). It was flex-grow:1, so it took every pixel the panel had and
+   the tools got the remainder — which meant the group the player is actually reaching into shrank
+   as the group above it grew. Anything past two rows scrolls, which is what the scroll view was
+   put here for and never reached. 68px is HudLayout.BuildCatHeight. */
 .build__scroll {
+    flex-grow: 0;
     flex-shrink: 0;
-    max-height: 70px;
+    min-height: 0;
+    max-height: 68px;
+    margin-top: 9px;
 }
 
 /* Unity's default scroller is a light-grey bar with two arrow buttons, which against a near-black
@@ -754,55 +892,21 @@
     background-color: #6fd3e3;
 }
 
-/* The same again for the horizontal scroller, which is the one the categories use now that
-   they run in a single row. Unity styles the two independently and a rule written for one
-   does nothing for the other. */
-.build__scroll .unity-scroller--horizontal {
-    height: 8px;
-    background-color: rgba(0, 0, 0, 0);
-    border-width: 0;
-    margin-top: 2px;
-}
-
-.build__scroll .unity-scroller--horizontal .unity-repeat-button { display: none; }
-
-.build__scroll .unity-scroller--horizontal .unity-base-slider__tracker {
-    background-color: rgba(0, 0, 0, 0);
-    border-width: 0;
-}
-
-.build__scroll .unity-scroller--horizontal .unity-base-slider__dragger {
-    height: 6px;
-    background-color: rgba(255, 255, 255, 0.13);
-    border-width: 0;
-    border-radius: 3px;
-    margin-top: 0;
-}
-
-.build__scroll .unity-scroller--horizontal .unity-base-slider__dragger:hover {
-    background-color: #6fd3e3;
-}
-
 .build__cats {
     flex-direction: row;
-    flex-wrap: nowrap;
-}
-
-/* The tools and the material on one row, divided. Horizontal space is what this panel has. */
-.build__row {
-    flex-direction: row;
-    align-items: center;
-    margin-top: 7px;
-    border-top-width: 1px;
-    border-top-color: rgba(255, 255, 255, 0.09);
-    padding-top: 7px;
+    flex-wrap: wrap;
 }
 
 .build__tools {
     flex-direction: row;
     flex-wrap: wrap;
+    align-content: flex-start;
     flex-grow: 1;
-    flex-shrink: 1;
+    min-height: 0;
+    margin-top: 9px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.09);
+    padding-top: 9px;
 }
 
 /* The material row, under the tools and shown only while something made of a material is
@@ -811,10 +915,10 @@
     flex-direction: row;
     align-items: center;
     flex-shrink: 0;
-    margin-left: 9px;
-    padding-left: 9px;
-    border-left-width: 1px;
-    border-left-color: rgba(255, 255, 255, 0.09);
+    margin-top: 7px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.09);
+    padding-top: 7px;
 }
 
 /* ---------------------------------------------------------------- B17 settings
@@ -918,9 +1022,8 @@
 /* ---------------------------------------------------------------- the drag-select marquee */
 
 /* What the player is holding. Centred over the command bar, out of the way of the board and
-   in the path of anyone about to wonder how to stop. Never a click target: it is a
-   sentence, not a control, and a control here would be one more thing between the player
-   and the ground they are trying to drag over. */
+   in the path of anyone about to wonder how to stop. Never a click target: it is a sentence,
+   not a control. */
 .armed {
     position: absolute;
     left: 50%;

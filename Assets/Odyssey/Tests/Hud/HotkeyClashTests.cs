@@ -39,7 +39,7 @@ namespace Odyssey.Tests.Hud
         /// </summary>
         static readonly Dictionary<string, string> Owners = new Dictionary<string, string>
         {
-            { "bKey", "HudShell.cs" },              // opens the Build palette
+            { "bKey", "HudShell.Bar.cs" },          // opens the Build palette
             { "escapeKey", "SettingsPresenter.cs" },// opens Menu, per 09 §6 case 6
         };
 

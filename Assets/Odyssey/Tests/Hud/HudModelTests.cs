@@ -110,7 +110,7 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void MoodBandsReadTheScaleTheSimulationPublishes()
         {
-            // PawnContent.Core().Mood: baseMood 500, a colonist is placed at 600.
+            // Mood_Default in the content pack: baseMood 500, a colonist is placed at 600.
             Assert.That(MoodBands.Band(600), Is.EqualTo("content"), "a colonist as placed is content");
             Assert.That(MoodBands.Band(500), Is.EqualTo("strained"), "the mood base is not contentment");
             Assert.That(MoodBands.Band(200), Is.EqualTo("breaking"), "a colonist in real trouble is breaking");
@@ -143,12 +143,108 @@ namespace Odyssey.Tests.Hud
             Assert.That(pane.Tabs.Count, Is.EqualTo(7));
             Assert.That(pane.Tabs[0].Name, Is.EqualTo("Needs"));
             Assert.That(pane.Tabs[0].Enabled, Is.True);
-            Assert.That(pane.Tabs.Count(t => t.Enabled), Is.EqualTo(1),
-                "only Needs is live in the slice; the rest are visible with reasons");
+            Assert.That(pane.Tabs[1].Name, Is.EqualTo("Skills"));
+            Assert.That(pane.Tabs.Count(t => t.Enabled), Is.EqualTo(2),
+                "Needs and Skills are live; Gear, Thoughts, Social, Health and Log are visible " +
+                "with reasons");
 
             Assert.That(pane.Commands, Is.Not.Empty);
             Assert.That(pane.Commands.Count(c => c.Enabled), Is.Zero,
                 "no colonist command is wired yet, and none may pretend to be");
+        }
+
+        /// <summary>
+        /// The Skills tab lists every skill the design names, and carries a number only for the
+        /// ones the simulation can actually train (owner, 2026-09-17).
+        /// </summary>
+        [Test]
+        public void TheSkillsTabListsTheWholeDesignAndNumbersOnlyWhatIsSimulated()
+        {
+            var snapshot = Frame.Write();
+            var id = new PawnId(3);
+            snapshot.AddPawn(new PawnView(id, new CellRef(4, 5, 1), 620, 710, 720, JobHandle.Mine));
+
+            // Published by the name the simulation publishes it under, spelled out in full rather
+            // than taken from SkillCatalogue. Reading the key from the thing under test would make
+            // this agree with itself whatever either side had been renamed to, and the name is the
+            // whole contract: this assembly cannot reference Odyssey.Sim at all.
+            Skill(snapshot, id, "mining", level: 7, passion: 2, experience: 9_500);
+            Skill(snapshot, id, "cutting", level: 4, passion: 1, experience: 3_100);
+            Skill(snapshot, id, "hauling", level: 2, passion: 0, experience: 1_400);
+
+            var pane = new InspectModel();
+            pane.SetColonist(id);
+            pane.Refresh(snapshot);
+
+            Assert.That(pane.Skills.Count, Is.EqualTo(SkillCatalogue.All.Length));
+            Assert.That(pane.Skills.Count(s => s.Live), Is.EqualTo(2),
+                "mining and growing are the two the simulation backs; hauling is a work type " +
+                "and not a skill in the design's list");
+
+            SkillRow mining = pane.Skills.Single(s => s.IconKey == "ui.skill.mining");
+            Assert.That(mining.Name, Is.EqualTo("Mining"), "the registry's word for ui.skill.mining");
+            Assert.That(mining.Level, Is.EqualTo(7));
+            Assert.That(mining.Passion, Is.EqualTo(2));
+            Assert.That(mining.Experience, Is.EqualTo(9_500));
+
+            SkillRow growing = pane.Skills.Single(s => s.IconKey == "ui.skill.growing");
+            Assert.That(growing.Level, Is.EqualTo(4), "felling is plant work and trains growing");
+            Assert.That(growing.Note, Is.Not.Empty, "a row that borrows another skill's work says so");
+
+            foreach (SkillRow row in pane.Skills.Where(s => !s.Live))
+            {
+                Assert.That(row.Level, Is.Zero, $"{row.IconKey} has no simulation and no number");
+                Assert.That(row.Reason, Is.Not.Empty,
+                    $"{row.IconKey} is disabled without saying why, which the catalogue forbids");
+            }
+        }
+
+        /// <summary>
+        /// Publish one colonist's standing in one skill, under the names
+        /// <c>Odyssey.Sim.Pawns.SkillAspects</c> uses. The literals are the contract.
+        /// </summary>
+        static void Skill(WorldSnapshot snapshot, PawnId pawn, string skill,
+                          int level, int passion, int experience)
+        {
+            snapshot.AddPawnAspect(new PawnAspect(
+                pawn, AspectKey.Of("odyssey.pawn.skill." + skill + ".level"), level));
+            snapshot.AddPawnAspect(new PawnAspect(
+                pawn, AspectKey.Of("odyssey.pawn.skill." + skill + ".passion"), passion));
+            snapshot.AddPawnAspect(new PawnAspect(
+                pawn, AspectKey.Of("odyssey.pawn.skill." + skill + ".experience"), experience));
+        }
+
+        /// <summary>
+        /// A dead tab does nothing, and a live one switches. The pane's tab is model state, not
+        /// view state, so it survives the refresh that follows every click.
+        /// </summary>
+        [Test]
+        public void OnlyALiveTabCanBeShown()
+        {
+            var snapshot = Frame.Write();
+            var id = new PawnId(1);
+            snapshot.AddPawn(new PawnView(id, new CellRef(1, 1, 1), 600, 600, 600, JobHandle.Haul));
+
+            var pane = new InspectModel();
+            pane.SetColonist(id);
+            pane.Refresh(snapshot);
+
+            Assert.That(pane.ActiveTabName, Is.EqualTo("Needs"), "the pane opens on Needs");
+
+            pane.ShowTab(1);
+            Assert.That(pane.ActiveTabName, Is.EqualTo("Skills"));
+
+            int gear = pane.Tabs.FindIndex(t => t.Name == "Gear");
+            pane.ShowTab(gear);
+            Assert.That(pane.ActiveTabName, Is.EqualTo("Skills"),
+                "a disabled tab must not become the active one");
+
+            pane.ShowTab(99);
+            Assert.That(pane.ActiveTabName, Is.EqualTo("Skills"), "and neither may a tab that is not there");
+
+            pane.Refresh(snapshot);
+            Assert.That(pane.ActiveTabName, Is.EqualTo("Skills"),
+                "the chosen tab survives a refresh, or clicking it would undo itself");
         }
 
         [Test]

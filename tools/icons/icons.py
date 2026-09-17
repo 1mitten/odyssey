@@ -26,7 +26,14 @@ SHEET_DIR = os.path.join(ROOT, "art-source", "icons", "sheets")
 SHEETS_CSV = os.path.join(ROOT, "art-source", "icons", "sheets.csv")
 KEYS_CSV = os.path.join(ROOT, "docs", "design", "icon-keys.csv")
 MAP_CSV = os.path.join(ROOT, "docs", "design", "icon-map.csv")
-OUT_DIR = os.path.join(ROOT, "Assets", "Art", "Ui", "icons")
+# Where the running game looks for icon art. This must stay in step with
+# Assets/Odyssey/Presentation/Ui/IconArt.cs, which loads "<Folder>/<key>" out of Resources: a
+# Resources root under Assets/Art/Ui/ satisfies both ADR 0007's "every interface texture lives
+# under Assets/Art/Ui/" and the engine's own rule about where a runtime-loadable asset may sit.
+# It read Assets/Art/Ui/icons until 2026-09-17, which is a folder nothing loads from — so
+# anything this tool had ever exported would have drawn the placeholder square, silently, because
+# a key with no art is not an error and is not logged.
+OUT_DIR = os.path.join(ROOT, "Assets", "Art", "Ui", "Resources", "odyssey", "icons")
 CONTACT_DIR = os.path.join(ROOT, "art-source", "icons", "contact")
 WEB_TABLE = os.path.join(ROOT, "docs", "reference", "mockups", "icon-map.js")
 

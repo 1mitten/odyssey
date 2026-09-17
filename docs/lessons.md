@@ -36,6 +36,10 @@ What to do: `scripts/unity.sh` treats the **results file, not the process exit c
 
 **Keep `clean: false` on the checkout.** The runner checks the project out into its own folder and the gitignored `Library/` is the import cache. Without it every run re-imports the whole project, which is tens of minutes rather than the 1 m 46 s the first green run took.
 
+**A pull request that conflicts with `main` reports *no checks at all*, which looks exactly like a broken runner.** `gh pr checks` says "no checks reported on the branch" and `gh run list --branch …` is empty, so the first instinct is to go and read `ci.yml` and check whether the runner is online. Neither is the problem. The workflow triggers `on: pull_request`, and a `pull_request` run is built against the *merge* commit — GitHub cannot compute one for a conflicting PR, so the run is never created. The tell is `gh pr view <n> --json mergeable`, which says `CONFLICTING`; merge `main` in, resolve, push, and the checks appear within seconds. **Check `mergeable` before investigating CI**, and be aware the PR page shows this as an absence rather than as a failure, so nothing is red and nothing says why.
+
+**Verify a green Unity tier actually compiled what only it can compile.** The fast tier builds `Odyssey.Sim`, `Odyssey.Sim.Contracts` and the two test projects through the dotnet mirrors; it does **not** build `Assets/Editor/Odyssey/**` or `Odyssey.Presentation`. A change that touches the editor tools is therefore a third unbuilt until the Unity job runs, and "Unity tests — pass" in the same wall-clock time as the fast tier is worth one look rather than a shrug. `gh run view <run> --log --job <job>` and grepping for `error CS`, for `Odyssey.Editor`, and for the names of the files you changed settles it in one command.
+
 ## Testing
 
 **The tests are not the slow part.** The suite executes in about 40 ms. A Unity EditMode cycle takes minutes, and essentially all of it is Unity booting, refreshing the asset database (~7 s) and reloading the script domain (~3 s compile). **Filtering which tests run therefore saves nothing.** The only thing that helps is not starting Unity.
@@ -1386,7 +1390,7 @@ added in a file it had never heard of.
 
 **So the reserved set is read out of the source.** `HotkeyClashTests` greps the Presentation
 assembly for every `keys.somethingKey`, and allows a command's key only in the one file that reads
-it on that command's behalf — `bKey` in `HudShell.cs` for Build, `escapeKey` in
+it on that command's behalf — `bKey` in `HudShell.Bar.cs` for Build, `escapeKey` in
 `SettingsPresenter.cs` for Menu. Anything else reading one of them is the clash. It also asserts
 that **every hotkey cap is one the test knows how to map**, because a cap it cannot map is a cap it
 silently skips, which is the same failure wearing a different hat.
@@ -1429,3 +1433,55 @@ not expressible.
 `ConstructionTests.EveryIntentTheInterfaceCanSendIsAnsweredByTheColony` walks every `IntentKind`
 and asserts the colony answers it. The next command will arrive the same way — an enum value
 somebody adds and a handler somebody means to attach.
+
+**The price, met on 2026-09-16: a guard keyed by filename fails when a file is split.** Cutting
+`HudShell.cs` into partial-class files moved `keys.bKey` into `HudShell.Bar.cs`, and the ownership
+map still named `HudShell.cs`, so the tidy-up broke a test that had nothing to do with hotkeys. That
+is the design working, not failing — the map says *which* file may read a key, so a key that moves
+house must say so — and it is worth knowing before you split anything in the Presentation assembly.
+The fast tier does **not** catch it: `HotkeyClashTests` needs the real directory tree, so it is the
+Unity EditMode run that fails. Split a file, then run `scripts/unity.sh test editmode`, not just
+`scripts/test-fast.sh`.
+
+## A screenshot is data: sample it before you read the rendering code
+
+The report on 2026-09-17 was that low ground under the trees had *"no ground texture or grass"*, with
+a screenshot. Reading the rendering path produced three plausible and entirely wrong culprits in
+turn — an untextured fallback material (the library already logs that case and tints it), a
+desaturated surround, a sand cover patch — and each needed real work to rule out. None of them was
+it: **the ground was not being drawn at all**, and what the picture showed was the sky.
+
+**What settled it was measuring the image, which took about five minutes.** `tools/icons/icons.py`
+has a standard-library PNG codec, so a throwaway script can crop, magnify and sample any screenshot
+the owner sends without Pillow and without Unity:
+
+```python
+sys.path.insert(0, "tools/icons"); import icons
+img = icons.read_png(path); r, g, b, a = img.get(x, y)
+```
+
+Three measurements, in the order they mattered:
+
+- **The plane was the same colour near and far** — (171,129,100) at both ends of the depth range.
+  The scene runs exp2 fog dense enough to be a third opaque at the rim, so *any* lit surface grades
+  with distance. **A surface that does not fog is not a surface.**
+- **It had no outline.** The adjacent meadow was ringed by the ink pass; the plane was not.
+- **It had no tufts and no shadows**, while the meadow six metres behind it had both.
+
+Magnifying the boundary (a 160 px crop at 5x) then showed a hard diagonal edge with the meadow's own
+outline running along the meadow's side of it — a silhouette, not a seam. That is a hole, and a hole
+is a slice question, not a material question.
+
+**The generalisation.** A rendering complaint names a symptom in the vocabulary of art — texture,
+colour, grass — and reading the code invites you to look for a fault in the thing named. The image
+itself is evidence and it is cheap to interrogate: constant colour across depth, a missing outline, a
+missing shadow and a missing decoration are each a sharp signal, and together they said "nothing is
+there" before a single file was opened. This is the same rule as *Measure before diagnosing*
+elsewhere in this file, applied to the one artefact the owner actually hands you.
+
+**The second half, which is the real cost.** Once the mechanism was in hand it still had to be
+proved on the board that is played, not on a fixture — the terracing is what makes the bug, and no
+hand-built grid was going to reproduce five surface layers and their woodland. A throwaway NUnit
+case in the Sim fast tier printed the column histogram in nine seconds (`Assert.Fail` with a
+`StringBuilder`, since the runner swallows `Console.WriteLine`), which is how the 6,140-of-14,400
+figure exists at all. Delete the probe before committing.

@@ -142,6 +142,114 @@ namespace Odyssey.Sim.Contracts
         }
     }
 
+    /// <summary>
+    /// The name of one thing a feature publishes about a pawn, reduced to a number.
+    ///
+    /// <para><b>Why a hashed name and not an enum.</b> An enum of aspect kinds would live in this
+    /// assembly, which both sides reference, so every feature that wanted to say something new
+    /// about a pawn would edit it — which is the cost this mechanism exists to remove. A key
+    /// minted from a symbolic name is the one form that lets a feature declare its own vocabulary
+    /// without touching a file anyone else owns, and it is the same reasoning that made interface
+    /// icons symbolic keys rather than filenames (ADR 0007).
+    /// </para>
+    ///
+    /// <para><b>Sixty-four bits, deliberately.</b> FNV-1a over thirty-two bits collides somewhere
+    /// around one chance in two hundred thousand across a few hundred keys, and a collision here
+    /// is not a crash — it is one feature silently reading another feature's number, in a value
+    /// the player is looking at. At sixty-four the odds stop being worth a paragraph, which is
+    /// cheaper than the central registry that would otherwise be needed to detect the clash, and a
+    /// central registry is the shared file we are trying not to have.</para>
+    ///
+    /// <para><b>Mint it once.</b> <see cref="Of"/> walks the string, so a feature holds the answer
+    /// in a <c>static readonly</c> field rather than calling it inside the publish loop, which is
+    /// meant to stay allocation-free and cheap in steady state.</para>
+    ///
+    /// <para>The default value is zero, which <see cref="Of"/> never returns — even the empty
+    /// string hashes to the FNV offset basis — so an unset key is always distinguishable from a
+    /// real one.</para>
+    /// </summary>
+    public readonly struct AspectKey : IEquatable<AspectKey>
+    {
+        const ulong OffsetBasis = 14695981039346656037UL;
+        const ulong Prime = 1099511628211UL;
+
+        public readonly ulong Value;
+
+        public AspectKey(ulong value) => Value = value;
+
+        /// <summary>
+        /// Mint the key for a symbolic name, such as <c>"odyssey.pawn.carrying"</c>.
+        ///
+        /// <para>Each character is folded in as its two bytes, low first, so the answer is the
+        /// same number under Mono and CoreCLR and under any culture — the same promise
+        /// <see cref="StateHash"/> makes, for the same reason and by the same method.</para>
+        /// </summary>
+        public static AspectKey Of(string name)
+        {
+            if (name == null) throw new ArgumentNullException(nameof(name));
+            ulong h = OffsetBasis;
+            for (int i = 0; i < name.Length; i++)
+            {
+                char c = name[i];
+                h = (h ^ (byte)c) * Prime;
+                h = (h ^ (byte)(c >> 8)) * Prime;
+            }
+            return new AspectKey(h);
+        }
+
+        public bool Equals(AspectKey other) => Value == other.Value;
+
+        public override bool Equals(object? obj) => obj is AspectKey other && Equals(other);
+
+        public override int GetHashCode() => Value.GetHashCode();
+
+        public static bool operator ==(AspectKey a, AspectKey b) => a.Value == b.Value;
+
+        public static bool operator !=(AspectKey a, AspectKey b) => a.Value != b.Value;
+
+        public override string ToString() => "aspect:" + Value.ToString("x16");
+    }
+
+    /// <summary>
+    /// One number a feature has published about one pawn, under a name it chose itself.
+    ///
+    /// <para><b>What this is for.</b> <see cref="PawnView"/> is a struct every consumer reads, in
+    /// the assembly both sides reference. Every new thing a pawn can do has so far widened it:
+    /// felling added <see cref="PawnView.Working"/> and <see cref="PawnView.WorkCell"/>, hauling
+    /// added <see cref="PawnView.Gesture"/> and its serial, and hauling water, sleeping in a bed
+    /// and being injured all would in turn. Widening a shared contract is the chokepoint this
+    /// mechanism exists to open: a feature living entirely outside this assembly can publish what
+    /// the interface needs to see, and nothing anyone else owns changes.</para>
+    ///
+    /// <para><b>Sparse, like <see cref="OrderView"/> and for the same reason.</b> Most pawns have
+    /// no aspects at all and none has many, so a row per published value is smaller than a field
+    /// per aspect on every pawn, and it costs exactly nothing when a feature is not installed.</para>
+    ///
+    /// <para><b>One value type, and it is <c>int</c>.</b> Simulation state is integer — the save
+    /// writer refuses floating point on purpose — and every richer thing the existing views carry
+    /// is already an integer: a cell is a whole-world index (<see cref="OrderView.CellIndex"/>), a
+    /// def is a table index, a flag is nought or one. A second value type would buy an
+    /// expressiveness the simulation underneath does not have.</para>
+    ///
+    /// <para><b>Not saved and not hashed</b>, exactly as <see cref="PawnGesture"/> is not. What a
+    /// feature publishes here is a report derived from state it holds itself; that state is what
+    /// belongs in the save and the hash, and the feature is what owns it. Hashing the report
+    /// instead would make the look of the game part of the determinism contract.</para>
+    /// </summary>
+    public readonly struct PawnAspect
+    {
+        public readonly PawnId Pawn;
+        public readonly AspectKey Key;
+        public readonly int Value;
+
+        public PawnAspect(PawnId pawn, AspectKey key, int value)
+        {
+            Pawn = pawn;
+            Key = key;
+            Value = value;
+        }
+    }
+
     /// <summary>What the presentation layer knows about one thing.</summary>
     public readonly struct ThingView
     {
@@ -284,6 +392,8 @@ namespace Odyssey.Sim.Contracts
         OrderView[] _orders = Array.Empty<OrderView>();
         SiteView[] _sites = Array.Empty<SiteView>();
 
+        PawnAspect[] _aspects = Array.Empty<PawnAspect>();
+
         public int Tick { get; private set; }
         public int SliceLayer { get; private set; }
         public GridSize Size { get; private set; }
@@ -335,6 +445,9 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many building sites <see cref="Sites"/> holds.</summary>
         public int SiteCount { get; private set; }
 
+        /// <summary>How many aspects every feature published this frame, over all pawns.</summary>
+        public int AspectCount { get; private set; }
+
         public ReadOnlySpan<PawnView> Pawns => new ReadOnlySpan<PawnView>(_pawns, 0, PawnCount);
         public ReadOnlySpan<ThingView> Things => new ReadOnlySpan<ThingView>(_things, 0, ThingCount);
 
@@ -354,6 +467,15 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Every building site in the world, in cell-index order. See <see cref="SiteView"/>.</summary>
         public ReadOnlySpan<SiteView> Sites => new ReadOnlySpan<SiteView>(_sites, 0, SiteCount);
 
+        /// <summary>
+        /// Everything features published about pawns this frame, in the order they published it.
+        ///
+        /// <para>Contributors run in the order the composition root added them, so this span is
+        /// the same sequence for the same world state — which is what lets a published frame be
+        /// compared between two runs at all.</para>
+        /// </summary>
+        public ReadOnlySpan<PawnAspect> PawnAspects => new ReadOnlySpan<PawnAspect>(_aspects, 0, AspectCount);
+
         /// <summary>Find a pawn by id. Returns false when it is gone, which callers must handle.</summary>
         public bool TryGetPawn(PawnId id, out PawnView view)
         {
@@ -364,6 +486,30 @@ namespace Odyssey.Sim.Contracts
                 return true;
             }
             view = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Read back one aspect of one pawn. False when no feature published that name for that
+        /// pawn this frame, which callers must handle and which is the ordinary case: the feature
+        /// may not be installed, the pawn may not be doing the thing, or the pawn may have died.
+        ///
+        /// <para>A scan, like <see cref="TryGetPawn"/> beside it. The published set is tens of
+        /// rows on a real colony — sparse is the whole shape of <see cref="PawnAspect"/> — so an
+        /// index would cost a dictionary per frame to save arithmetic that does not show up.
+        /// A reader that wants every aspect of every pawn walks <see cref="PawnAspects"/> once
+        /// instead of calling this in a loop.</para>
+        /// </summary>
+        public bool TryGetPawnAspect(PawnId pawn, AspectKey key, out int value)
+        {
+            for (int i = 0; i < AspectCount; i++)
+            {
+                ref readonly var aspect = ref _aspects[i];
+                if (aspect.Pawn != pawn || aspect.Key != key) continue;
+                value = aspect.Value;
+                return true;
+            }
+            value = 0;
             return false;
         }
 
@@ -382,6 +528,8 @@ namespace Odyssey.Sim.Contracts
             SliceCellCount = 0;
             OrderCount = 0;
             SiteCount = 0;
+
+            AspectCount = 0;
         }
 
         internal void AddPawn(in PawnView view)
@@ -413,6 +561,12 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _sites, SiteCount + 1);
             _sites[SiteCount++] = view;
+        }
+
+        internal void AddPawnAspect(in PawnAspect aspect)
+        {
+            Grow(ref _aspects, AspectCount + 1);
+            _aspects[AspectCount++] = aspect;
         }
 
         static void Grow<T>(ref T[] array, int needed)

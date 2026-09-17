@@ -46,6 +46,7 @@ namespace Odyssey.Tests.Hud
             (".card", "border-color", () => HudTheme.PanelBorder, "panel border"),
             (".commandbar", "background-color", () => HudTheme.BarFill, "bar fill"),
             (".commandbar", "border-color", () => HudTheme.PanelBorder, "panel border"),
+            (".window", "background-color", () => HudTheme.PopoverFill, "popover fill"),
 
             (".stores__name", "color", () => HudTheme.TextPrimary, "text primary"),
             (".stores__value", "color", () => HudTheme.TextPrimary, "text primary"),
@@ -66,6 +67,9 @@ namespace Odyssey.Tests.Hud
             (".card__initial", "color", () => HudTheme.OnAccent, "on-accent ink"),
 
             (".bar__fill", "background-color", () => HudTheme.Good, "good"),
+            (".skill__pip", "background-color", () => HudTheme.Warn, "warn"),
+            (".skill__name", "color", () => HudTheme.TextPrimary, "text primary"),
+            (".skill__level", "color", () => HudTheme.TextMeta, "text meta"),
             (".rail__dot", "background-color", () => HudTheme.Warn, "warn"),
             (".inspect__reason", "color", () => HudTheme.Warn, "warn"),
 
@@ -120,6 +124,11 @@ namespace Odyssey.Tests.Hud
             (".speed", "margin-top", () => HudLayout.ClockGap, "clock to speed"),
             (".speed__btn", "height", () => HudLayout.SpeedButton, "speed button"),
 
+            (".build", "width", () => HudLayout.BuildWidth, "build palette width"),
+            (".build__scroll", "max-height", () => HudLayout.BuildCatHeight, "category group height"),
+            (".chip", "height", () => HudLayout.BuildChip, "a palette chip"),
+            (".chip", "margin", () => HudLayout.BuildChipMargin, "chip margin"),
+
             (".inspect", "left", () => HudLayout.Edge, "screen edge margin"),
             (".inspect", "bottom", () => HudLayout.InspectBottom, "inspect bottom offset"),
             (".inspect", "width", () => HudLayout.InspectWidth, "inspect width"),
@@ -128,17 +137,22 @@ namespace Odyssey.Tests.Hud
             (".inspect__tabs", "margin-top", () => HudLayout.InspectHeaderGap, "header to tabs"),
             (".needs", "margin-top", () => HudLayout.InspectTabGap, "tabs to needs"),
             (".need", "margin-bottom", () => HudLayout.NeedRowGap, "need row gap"),
+            (".skill", "height", () => HudLayout.SkillRow, "a skill line"),
+            (".skill", "margin-bottom", () => HudLayout.SkillRowGap, "skill row gap"),
 
             (".alert", "min-height", () => HudLayout.AlertHeight, "an alert row"),
             (".alerts__rows", "margin-top", () => HudLayout.HeaderGap, "header to first alert"),
 
-            (".strip", "top", () => HudLayout.Edge, "screen edge margin"),
+            (".strip", "top", () => HudLayout.StripTop, "the strip docked to the top"),
             (".card", "width", () => HudLayout.CardWidth, "card width"),
             (".card", "height", () => HudLayout.CardHeight, "card height"),
             (".card__avatar", "width", () => HudLayout.CardAvatar, "card avatar"),
-            (".bar--card", "height", () => HudLayout.CardBar, "card need bar"),
+            (".card__jobrow", "height", () => HudLayout.CardJobRow, "card activity line"),
+            (".card__job", "margin-left", () => HudLayout.CardIconGap, "card icon to word"),
+            (".card__names", "margin-left", () => HudLayout.CardAvatarGap, "card avatar to name"),
+            (".card", "padding", () => HudLayout.CardPad, "card padding"),
 
-            (".bar-row", "bottom", () => HudLayout.Edge, "screen edge margin"),
+            (".bar-row", "bottom", () => HudLayout.BarBottom, "the command bar docked to the bottom"),
             (".commandbar", "padding", () => HudCommands.BarPad, "command bar padding"),
             (".cmd", "height", () => HudCommands.ItemHeight, "command item height"),
             (".cmd", "margin-right", () => HudCommands.ItemGap, "command item gap"),
@@ -196,10 +210,10 @@ namespace Odyssey.Tests.Hud
             // check that matters is that they are still big enough to do their job — carrying text
             // contrast under the panels at the top and bottom of the screen.
             Assert.That(HudTheme.TopScrimHeight, Is.GreaterThanOrEqualTo(
-                HudLayout.Edge + HudLayout.CardHeight),
-                "the top scrim has to reach under the colonist strip");
+                HudLayout.StripTop + HudLayout.StripHeight(HudLayout.StripRows)),
+                "the top scrim has to reach under the colonist strip at its full height");
             Assert.That(HudTheme.BottomScrimHeight, Is.GreaterThanOrEqualTo(
-                HudLayout.Edge + HudCommands.BarHeight),
+                HudLayout.BarBottom + HudCommands.BarHeight),
                 "the bottom scrim has to reach under the command bar");
         }
 

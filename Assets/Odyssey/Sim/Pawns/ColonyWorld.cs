@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Defs;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Saving;
@@ -164,7 +165,7 @@ namespace Odyssey.Sim.Pawns
             // appear in the region graph.
             ConnectorRegistrar.Register(nav, grid, outcome.Connectors);
             nav.Rebuild();
-            var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), PawnContent.Core())
+            var pawns = new PawnContext(grid, nav, new PathService(new PathFinder(nav)), ContentPack.Pawns())
             {
                 Chunks = chunks,
             };

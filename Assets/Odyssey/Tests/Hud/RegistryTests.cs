@@ -21,6 +21,13 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
+        public void EverySkillKeyIsARegisteredName()
+        {
+            foreach (string key in SkillCatalogue.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+        }
+
+        [Test]
         public void EveryLedgerKeyIsARegisteredName()
         {
             foreach (string key in LedgerModel.IconKeys)
