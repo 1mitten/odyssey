@@ -1659,3 +1659,27 @@ anything in the change is reachable from `SimWorld.Tick` at all — a component 
 forbid, and a budget raised to swallow a flake is a budget that swallows the next real one. If it
 starts flaking often, the window (5,000 ticks) is what to grow, not the threshold — a longer window
 averages the GC timing out rather than hiding what it is measuring.
+
+## Rebuilding the module catalogue erases the colonists' faces
+
+`Odyssey/Presentation/Rebuild module catalogue` writes every row of
+`ModuleCatalogue.asset` from `PlayScene`'s registration list, and that list says nothing about
+appearance. The 61 character rows carry something no code in `PlayScene` can reproduce: the atlas
+swatch rectangles each colonist's skin, hair and cloth vertices are mapped to, measured once by
+`CharacterSwatches` and committed. A rebuild clears them — and the asset still looks healthy,
+because every row is still there and every `totalVerts` is still a number. It is `0`.
+
+Adding two slab rows produced **665 insertions and 2,162 deletions**, and the deletions were 311
+swatch rectangles. The entry count told the reassuring half of the story: 136 before, 138 after,
+nothing lost. `git diff --stat` told the true half.
+
+**The rule: after a catalogue rebuild, check the diff is only what you added.** If it is not, keep
+the committed asset and splice the new rows into it — split the file on `  - moduleId: `, lift the
+blocks you want out of the rebuilt copy and insert them into the original. The rebuilt file is still
+the right source for a new row's `prefab` GUID and `fileID`, which is the part that cannot be
+written by hand.
+
+Two ways this could stop being a trap, neither taken here: make the rebuild preserve `appearance`
+on rows it is not authoring, or re-run `CharacterSwatches` after every rebuild. The first is right;
+it wants the owner, because it changes what "rebuild" means.
+

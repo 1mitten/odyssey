@@ -884,9 +884,10 @@ namespace Odyssey.Presentation.Bootstrap
 
             int index = _grid.Index(cell);
             BuildingDef what = ConstructionContent.BuildingAt(building);
-            int module = GhostModuleFor(index, what);
+            ushort material = ConstructionContent.StuffAt(stuff).stuff;
+            int module = GhostModuleFor(index, what, material);
 
-            Color tint = StuffPalette.For(ConstructionContent.StuffAt(stuff).stuff, overArt: true);
+            Color tint = StuffPalette.For(material, overArt: true);
             tint.a = SiteGhostAlpha;
 
             _renderer.DrawGhost(module, tint,
@@ -935,10 +936,13 @@ namespace Odyssey.Presentation.Bootstrap
         /// <c>WallCore</c> is the cell-filling block and is exactly "a wall-shaped thing of this
         /// material" (`19-build-cursor.md` §2).</para>
         /// </summary>
-        int GhostModuleFor(int index, BuildingDef what)
+        int GhostModuleFor(int index, BuildingDef what, ushort stuff)
         {
             if (_model == null) return 0;
-            if (what.slab) return _model.SlabModuleFor(index);
+            // The material, not just the handle: a slab's art now varies by what it is made of,
+            // and a ghost that showed the wood deck for a stone order would be lying about the
+            // one thing the cursor exists to say.
+            if (what.slab) return _model.SlabModuleFor(index, stuff);
             return what.edifice == CoreContent.EdificeWall
                 ? _model.WallCoreModule
                 : _model.ModuleForEdificeAt(index, what.edifice);
@@ -1129,13 +1133,14 @@ namespace Odyssey.Presentation.Bootstrap
             // drawn; the refusal still reads, because the cursor is red.
             if (_grid.IsSolidTerrain(cell) || _grid.Edifice[cell] >= 0) return;
 
-            int module = GhostModuleFor(cell, what);
+            ushort material = ConstructionContent.StuffAt(director.Stuff).stuff;
+            int module = GhostModuleFor(cell, what, material);
 
             // Its own material when it can be built, which is the affirmative signal - it looks
             // like the wooden wall you asked for - and red when it cannot. Green is deliberately
             // not used for yes: looking right IS yes.
             Color tint = allowed
-                ? StuffPalette.For(ConstructionContent.StuffAt(director.Stuff).stuff, overArt: true)
+                ? StuffPalette.For(material, overArt: true)
                 : PreviewRefusedColour;
             tint.a = GhostAlpha;
 

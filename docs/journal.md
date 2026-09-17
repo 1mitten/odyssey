@@ -3183,3 +3183,52 @@ work itself.
   - **Verified:** fast tier **585 Sim + 199 Hud** (six new, `LadderTests`), both content gates
     clean, the building fingerprint re-baked deliberately with what moved beside it. **Nobody has
     pressed Play on a built ladder.**
+
+### Two floors of different materials were the same floor (2026-09-17)
+
+The owner: *"There is a bug as stone floors look like wood floors (or were built incorrectly) - and
+I couldn't see the upper floor from the normal view still."* Two faults, and the interesting one is
+the first, because the earlier answer to it — that the stone tint is nearly white and leaves the
+brown prefab brown — was only the surface of it.
+
+**The data was never wrong.** `Raise` converts the stuff handle to its value
+(`StuffAt(_stuff[cell]).stuff`), `RaiseSlab` writes it to `FloorStuff`, the mesher reads it back as
+`TintCode.Stuff`, and `StuffPalette` holds two plainly different colours — wood `(0.76, 0.59, 0.34)`
+and stone `(0.86, 0.87, 0.88)`. Every step of that measured correct.
+
+The fault was three lines in the scene generator:
+
+```
+Slab(ModuleIds.Slab,                   "SM_Bld_Base_Floor_Combined_01");
+Slab("odyssey.module.slab.concrete",   "SM_Bld_Base_Floor_Combined_01");
+Slab("odyssey.module.slab.deck",       "SM_Bld_Base_Floor_Combined_01");
+```
+
+Every floor id in the game resolved to the one wooden deck mesh. A slab took its mesh from the
+*template's* group — and a colonist chooses the material long after the template is stamped, so the
+material could only ever arrive as a tint. **A tint cannot separate wood from stone**: multiply only
+darkens, so brown times near-white grey is browner. A stone floor was the wood deck 12% darker,
+which is exactly what the owner saw.
+
+So the material picks the mesh now. `ModuleIds.SlabOf(material)` gives wood the deck it already was
+and stone the street tile (`SM_Env_Ground_Tile_Half_01` — one cell square, one material, already in
+the build as Pavement, so its look is known rather than guessed). `WorldRenderModel` resolves the
+two once into a table by stuff value and `FloorModule` prefers it over the group's slab.
+
+**It only swaps when there is art to swap to.** An unknown module id does not resolve to nothing —
+it resolves to a built-in primitive — so a table that trusted the resolver would have given every
+clone without the licensed packs a bare block where the group's slab used to be. The row is kept
+only if `UsesArt`; otherwise the template's slab stands, for both materials, exactly as before.
+That is a test rather than a comment. The generator's concrete, steel and composite slabs have no
+entry at all, so nothing in the ruined city moves.
+
+**The second fault was a serialised value, and it was the second time.** `suppressActiveCeiling`
+had already been flipped in code and the owner still could not see the floor above, because
+`Play.unity` carried `suppressActiveCeiling: 1` from a build made before the flip and a serialised
+value wins over a C# default. `BuildCamera` already carried that exact warning above
+`selectionColour`; it now sets this one too, and the scene is corrected.
+
+A trap found on the way out: rebuilding the module catalogue to pick up the two new rows erased the
+61 colonists' atlas swatch rectangles — 665 insertions against 2,162 deletions, while the entry
+count went reassuringly from 136 to 138. `docs/lessons.md` has it.
+
