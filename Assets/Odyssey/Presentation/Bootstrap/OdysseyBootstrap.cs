@@ -1108,16 +1108,32 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         void DrawHoverGhost(DesignateDirector director)
         {
-            if (_renderer == null || _model == null || _grid == null) return;
-            if (director.Tool != DesignateTool.Build) return;
+            if (_renderer == null || _model == null || _grid == null)
+            {
+                WhyNoCursor("the session's renderer, render mirror or grid is missing");
+                return;
+            }
+            if (director.Tool != DesignateTool.Build)
+            {
+                WhyNoCursor($"no build tool is armed (tool is {director.Tool})");
+                return;
+            }
 
             // Split from the line above rather than folded into it with `||`: definite assignment
             // across a short-circuit and a negated pattern is the sort of thing that compiles on
             // one C# version and not the next, and the owner has the editor open on this worktree.
-            if (director.Hover is not CellRef hover) return;
+            if (director.Hover is not CellRef hover)
+            {
+                WhyNoCursor("the pointer is not over a cell: the rig has raised no hover");
+                return;
+            }
 
             ConstructionGrid? sites = _colony?.Construction;
-            if (sites == null) return;
+            if (sites == null)
+            {
+                WhyNoCursor("the session has no construction grid");
+                return;
+            }
 
             // Where the order would land, asked of the grid that will land it rather than guessed:
             // a wall is lifted onto the ground it was clicked on, a slab onto whatever fills the
@@ -1162,7 +1178,33 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Draped, like everything fixed to the grid, and placed where the mesher would put it.
             _renderer.DrawGhost(module, tint, GroundRelief.Drape(CellMetrics.FloorCentre(at.X, at.Z, at.Y)));
+            WhyNoCursor(null);
         }
+
+        /// <summary>
+        /// Say once why the build cursor is not being drawn, and say it again only when the answer
+        /// changes.
+        ///
+        /// <para><b>This exists because the cursor went missing and could not be found by reading.</b>
+        /// The owner reported it after loading a game (2026-09-17); the rig's hover branch, the
+        /// preview gate, the director's state machine and the session's field lifecycle were all
+        /// walked through and all of them were sound, which is the point at which
+        /// <c>docs/lessons.md</c> says to stop reasoning and measure. Every early return in
+        /// <see cref="DrawHoverGhost"/> was silent, so a cursor that did not appear looked
+        /// identical whichever of five reasons was the true one.</para>
+        ///
+        /// <para>Rate-limited by the message rather than by a timer: a reason that holds for a
+        /// thousand frames logs once, and the log is the transition. Passing null means the cursor
+        /// drew, which arms the next report.</para>
+        /// </summary>
+        void WhyNoCursor(string? reason)
+        {
+            if (reason == _lastCursorComplaint) return;
+            _lastCursorComplaint = reason;
+            if (reason != null) Debug.Log($"[Cursor] no build cursor: {reason}");
+        }
+
+        string? _lastCursorComplaint;
 
         /// <summary>
         /// How solid the build ghost is. Enough to read its shape and its material, not enough to
