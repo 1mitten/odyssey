@@ -1662,7 +1662,8 @@ work itself.
     version's own test — "once widened it does not flicker back on the boundary" — was passing and
     was pinning the sticky behaviour as if it were the feature.
   - **Verified:** fast tier 478 Sim + 146 Hud, unchanged in count because the three tests that
-    encoded the old numbers were re-aimed rather than added to.
+    encoded the old numbers were re-aimed rather than added to.
+
 
 - **The build line was played and accepted (branch `claude/build-pipeline`, 2026-09-17).** The owner
   ordered walls in the running game with the loosened gate and reported it works. That closes the
@@ -1769,6 +1770,44 @@ work itself.
     including 200 chunk meshes, **steady submit 0.22 ms a frame**, warm full re-mesh of 200 chunks
     13.38 ms at 0.067 ms a chunk.
   - **Verified:** Unity EditMode **1121 total, 0 failed**.
+
+- **A terrain kind brings its own meshing, and the seams list closes (OQ-46, 2026-09-17).** The last
+  of the five chokepoints the mining line exposed. `ChunkMesher.EmitTerrain` was a chain of early
+  returns — water, then surface, then an exposure gate, then stone, then earth, then a plain block —
+  so every new terrain feature was an edit to a file on the queue's own do-not-touch list. Both the
+  water line and the mining line edited it anyway, which is what a rule the design leaves no way to
+  obey looks like from outside. It is now a registered list of `ITerrainContributor`; a contributor
+  states its own condition and the first to claim a cell ends it.
+  - **The acceptance was "change nothing", and it is met exactly.** `ChunkMesherTests` passes with
+    no edits, and `ChunkBucketScaleTests` reports **512 buckets and 100,000 instances** — the same
+    numbers, to the instance, as before the refactor. That is the reason OQ-03 was done first: a
+    refactor whose whole promise is that output is unchanged needs an oracle that existed before it
+    started, and "about the same" cannot be checked a month later.
+  - **Three things were hoisted, each of which could have moved a pixel.** The tint and the drape
+    are now computed before any contributor is asked, because in the chain water was decided
+    *before* those two lines ran and everything else after, so what was available depended on where
+    in the method you were; both are pure functions of the cell, so the cost is one tint lookup on a
+    water cell. `ShowsAFace` is computed once and **only for solid cells**, which is exactly when
+    the chain computed it — three contributors read it, and letting each work it out would pay for
+    a neighbour scan three times on the mesher's hot path. And `ChunkRenderer.Earth` now forwards
+    to the contributor that owns the switch rather than to a field, which is the failure this change
+    could most easily have introduced: a toggle that silently stops toggling. There is a test that
+    it still reaches the thing it switches.
+  - **The new test was wrong before the code was, and the mistake is the useful part.** It
+    registered a spy and asserted it got asked; it never was, and the message read as a broken seam.
+    The fixture was built with `Solid()`, which defaults to rock, and **`StoneContributor` claims
+    every rock cell before a registered contributor is reached**. So "registered ahead of the plain
+    block" does not mean registered ahead of *everything* — only ahead of the fallback, which is the
+    only place a new contributor can intercept. The test now uses `TerrainFill`, which is solid and
+    neither stone nor earth, and its doc comment records why, including that the first version
+    measured the wrong thing. Fifth time this week that reading the code would have misled and a
+    test caught it.
+  - **`StuffPalette.cs` was in the row's file list and turned out to have no switch in it at all**,
+    so it was not touched. The row was written from a guess about where the branching lived.
+  - **Verified:** Unity EditMode **1125 total, 0 failed**.
+  - **What this leaves.** All five chokepoints named after the mining line are open. The one piece
+    of the bootstrap row still standing is the **presentation half** — every director wired by hand
+    in `OdysseyBootstrap` — and it has no queue row.
 
 - **The cancel tool was already built; nobody could find it (2026-09-17, `claude/cancel-tool`).**
   The owner asked for "a cancel button ... so we can deselect the build". The investigation's whole
