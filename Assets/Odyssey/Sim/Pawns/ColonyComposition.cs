@@ -66,6 +66,9 @@ namespace Odyssey.Sim.Pawns
             pawns.Construction = construction;
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
             builder
+                // The world itself, first: it is what everything below reads, and it ticks
+                // nothing, so nothing else would ever have put it in the hash (OQ-50).
+                .AddHashable(pawns.Cells)
                 .AddSystem(_ => support)
                 .AddSystem(_ => new NavigationSystem(nav, support))
                 .AddSystem(_ => new NeedsSystem(pawns))
