@@ -241,15 +241,66 @@ namespace Odyssey.Hud
         public static readonly int[] CameraSpeeds = { 60, 100, 150 };
 
         /// <summary>
-        /// The volume ladder every bus shares, in dB: silence at the bottom, unity at the
-        /// top, whole decibels between. The mute rung is −80 because that is
-        /// <c>AudioMath.SilenceDb</c> in the Presentation assembly — the fader's own floor,
-        /// restated here so the panel and the audio code cannot disagree about where silence
-        /// starts. A ladder rather than a slider because a slider position is a lie about
-        /// loudness: equal steps of dB are equal steps of hearing, and the rungs say what
-        /// they are.
+        /// The labelled marks along a volume fader, in dB. **No longer the only values a bus
+        /// can hold** — see <see cref="SetBusDb"/> — but still what the track is printed with,
+        /// so a player can see where −24 is without dragging to find out.
         /// </summary>
         public static readonly int[] VolumeDbRungs = { -80, -36, -24, -16, -10, -5, 0 };
+
+        /// <summary>
+        /// True silence, restated from <c>AudioMath.SilenceDb</c> in the Presentation assembly
+        /// so the panel and the audio code cannot disagree about where silence starts.
+        /// <c>DbToLinear</c> returns exactly zero at or below it.
+        /// </summary>
+        public const int SilenceDb = -80;
+
+        /// <summary>
+        /// The bottom and top of a fader's travel. Unity at the top; −60 at the bottom, which a
+        /// drag reports as <see cref="SilenceDb"/>.
+        ///
+        /// <para><b>Why the travel stops at −60 and not at −80.</b> −60 dB is a thousandth of
+        /// unity amplitude and is inaudible, so a track drawn over the full −80…0 would spend a
+        /// quarter of its length on values that all sound like nothing. Every mixer ever built
+        /// ends its throw at −∞ for the same reason. The bottom of this one is that −∞.</para>
+        ///
+        /// <para><b>And why the track is linear in dB.</b> This control was a seven-rung ladder,
+        /// on the argument that "a slider position is a lie about loudness: equal steps of dB are
+        /// equal steps of hearing". That argument is right, and it is an argument <i>for</i> a
+        /// track measured in dB rather than against a slider — it only convicts a fader linear in
+        /// amplitude, where the top half of the throw does almost nothing. Linear in dB, a
+        /// millimetre of travel is the same change in loudness wherever the handle is, which is
+        /// exactly what the rungs were protecting. The owner asked for a drag (2026-09-17); this
+        /// is the same honesty at finer resolution than seven stops.</para>
+        /// </summary>
+        public const int VolumeDbFloor = -60;
+
+        public const int VolumeDbCeiling = 0;
+
+        /// <summary>
+        /// Where along a fader's track a stored volume sits, 0 at the bottom and 1 at unity.
+        /// Silence and anything under the floor are the bottom of the travel.
+        /// </summary>
+        public static float VolumeFraction(int db)
+        {
+            if (db <= VolumeDbFloor) return 0f;
+            if (db >= VolumeDbCeiling) return 1f;
+            return (db - VolumeDbFloor) / (float)(VolumeDbCeiling - VolumeDbFloor);
+        }
+
+        /// <summary>
+        /// The volume a fader dragged to <paramref name="fraction"/> of its track means, in whole
+        /// dB. The bottom of the travel is <see cref="SilenceDb"/> rather than
+        /// <see cref="VolumeDbFloor"/>, so dragging a fader to the end silences the bus outright
+        /// instead of leaving it a thousandth of the way up.
+        /// </summary>
+        public static int VolumeDbAt(float fraction)
+        {
+            if (fraction <= 0f) return SilenceDb;
+            if (fraction >= 1f) return VolumeDbCeiling;
+
+            int db = (int)Math.Round(VolumeDbFloor + fraction * (VolumeDbCeiling - VolumeDbFloor));
+            return db <= VolumeDbFloor ? SilenceDb : db;
+        }
 
         /// <summary>The buses, in the order the panel draws them.</summary>
         public static readonly SettingsBus[] Buses =
@@ -469,13 +520,26 @@ namespace Odyssey.Hud
         /// </summary>
         public void SetBusDb(SettingsBus bus, int db)
         {
-            int snapped = Nearest(VolumeDbRungs, db);
-            if (_db[bus] == snapped) return;
-            _db[bus] = snapped;
+            int held = Clamp(db);
+            if (_db[bus] == held) return;
+            _db[bus] = held;
             BusDbChanged?.Invoke(bus);
         }
 
-        /// <summary>One bus's volume, in dB. Always a member of <see cref="VolumeDbRungs"/>.</summary>
+        /// <summary>
+        /// A volume this director will hold: whole dB between the floor and unity, with anything
+        /// at or under the floor collapsing to <see cref="SilenceDb"/> so there is exactly one
+        /// value meaning silence rather than twenty of them.
+        /// </summary>
+        static int Clamp(int db) =>
+            db <= VolumeDbFloor ? SilenceDb
+            : db >= VolumeDbCeiling ? VolumeDbCeiling
+            : db;
+
+        /// <summary>
+        /// One bus's volume, in whole dB: <see cref="SilenceDb"/>, or between
+        /// <see cref="VolumeDbFloor"/> and <see cref="VolumeDbCeiling"/>.
+        /// </summary>
         public int BusDb(SettingsBus bus) => _db[bus];
 
         /// <summary>
@@ -539,7 +603,7 @@ namespace Odyssey.Hud
         /// presenter lays <c>AudioSettingsStore.Load()</c> in through this, so the panel opens
         /// describing what the game is already playing at.
         /// </summary>
-        public void SeedBusDb(SettingsBus bus, int db) => _db[bus] = Nearest(VolumeDbRungs, db);
+        public void SeedBusDb(SettingsBus bus, int db) => _db[bus] = Clamp(db);
 
         /// <summary>
         /// Attach the place preferences are kept, and apply anything this machine has already been

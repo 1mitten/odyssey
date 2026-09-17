@@ -696,12 +696,18 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// The Audio section: one ladder per bus, in dB, mute to unity.
+        /// The Audio section: one fader per bus, dragged, in dB from silence to unity.
         ///
         /// <para>These faders have been in <c>AudioSettingsStore</c> since the sound work
         /// landed — persisted, applied at boot, and writable by nothing. This section is the
-        /// panel they were waiting for, and the values are the director's so the set is
-        /// testable in the fast tier like every other ladder here.</para>
+        /// panel they were waiting for, and the values are the director's so the arithmetic is
+        /// testable in the fast tier.</para>
+        ///
+        /// <para><b>A drag, not a ladder</b> (owner, 2026-09-17). It was seven clickable rungs;
+        /// why a continuous track is no less honest than they were is argued where the range is
+        /// defined, at <see cref="SettingsDirector.VolumeDbFloor"/>. The rungs survive as printed
+        /// marks along the track, so a player can still see where −24 is without dragging to find
+        /// out.</para>
         /// </summary>
         void BuildAudioSection()
         {
@@ -718,38 +724,110 @@ namespace Odyssey.Presentation.Ui
                 icon.Inherit(HudTokens.TextMeta);
                 row.Add(icon);
                 row.Add(HudText.Make(Registry.Label(key), HudTextRole.Row, ussClass: "settings__label"));
-                _audioSection.Add(row);
 
-                var ladder = new VisualElement();
-                ladder.AddToClassList("settings__ladder");
-                foreach (int db in SettingsDirector.VolumeDbRungs)
-                {
-                    string text = VolumeText(db);
-                    // The decibel figures are figures and set in the mono face; "Mute" is a
-                    // word, and a word in the mono face is a word pretending to be a number.
-                    Label rung = HudText.Make(text, HudTextRole.Body, text != "Mute", "rung");
-                    rung.tooltip = db == 0
-                        ? "Unity — nothing attenuated, nothing boosted"
-                        : db <= SettingsDirector.VolumeDbRungs[0]
-                            ? "Silence"
-                            : text + " dB";
-                    SettingsBus capturedBus = bus;
-                    int capturedDb = db;
-                    rung.RegisterCallback<ClickEvent>(_ =>
-                        _directors?.Settings.SetBusDb(capturedBus, capturedDb));
-                    _busRungs[(bus, db)] = rung;
-                    ladder.Add(rung);
-                }
-                _audioSection.Add(ladder);
+                // The number belongs on the label row, right-aligned, rather than beside the
+                // handle: a readout that travels with the handle is a readout you cannot find.
+                // Mono, because it is a figure and it changes under the pointer — a proportional
+                // face would shuffle the row sideways on every dB.
+                Label readout = HudText.Make(string.Empty, HudTextRole.Body, true, "fader__value");
+                row.Add(readout);
+                _busReadouts[bus] = readout;
+
+                _audioSection.Add(row);
+                _audioSection.Add(Fader(bus));
             }
 
             _settingsPanel.Add(_audioSection);
         }
 
-        /// <summary>What one rung of a volume ladder says. Mute is a word because silence is
-        /// not a number; everything else is the decibels it is.</summary>
+        /// <summary>
+        /// One volume fader: a track carrying the old rungs as printed marks, a fill, and a
+        /// handle that follows the pointer.
+        ///
+        /// <para><b>The whole control is the drag target, not the handle.</b> A handle is twelve
+        /// pixels wide and catching it is a game of skill; pressing anywhere on the track moves
+        /// the handle there and begins the drag in one gesture, which is the difference between
+        /// easy to use and merely possible.</para>
+        ///
+        /// <para><b>The pointer is captured on press</b> — the first pointer capture in this HUD.
+        /// Without it the drag stops the moment the pointer leaves the track, which on a 96-pixel
+        /// control is most of the time, and overshooting the end would drop the handle rather
+        /// than pinning it to unity.</para>
+        /// </summary>
+        VisualElement Fader(SettingsBus bus)
+        {
+            var fader = new VisualElement { name = SettingsDirector.VolumeKey(bus) };
+            fader.AddToClassList("fader");
+
+            var track = new VisualElement { pickingMode = PickingMode.Ignore };
+            track.AddToClassList("fader__track");
+            fader.Add(track);
+
+            var fill = new VisualElement { pickingMode = PickingMode.Ignore };
+            fill.AddToClassList("fader__fill");
+            track.Add(fill);
+
+            // What the ladder became. Ignored by the pointer, so a mark cannot eat a press aimed
+            // at the track it is drawn on.
+            foreach (int db in SettingsDirector.VolumeDbRungs)
+            {
+                if (db <= SettingsDirector.VolumeDbFloor) continue;
+                var mark = new VisualElement { pickingMode = PickingMode.Ignore };
+                mark.AddToClassList("fader__mark");
+                mark.style.left = new Length(SettingsDirector.VolumeFraction(db) * 100f, LengthUnit.Percent);
+                track.Add(mark);
+            }
+
+            var handle = new VisualElement { pickingMode = PickingMode.Ignore };
+            handle.AddToClassList("fader__handle");
+            fader.Add(handle);
+
+            _busFills[bus] = fill;
+            _busHandles[bus] = handle;
+
+            SettingsBus captured = bus;
+            fader.RegisterCallback<PointerDownEvent>(evt =>
+            {
+                fader.CapturePointer(evt.pointerId);
+                DragFader(captured, fader, evt.localPosition.x);
+                evt.StopPropagation();
+            });
+            fader.RegisterCallback<PointerMoveEvent>(evt =>
+            {
+                if (!fader.HasPointerCapture(evt.pointerId)) return;
+                DragFader(captured, fader, evt.localPosition.x);
+                evt.StopPropagation();
+            });
+            fader.RegisterCallback<PointerUpEvent>(evt =>
+            {
+                if (!fader.HasPointerCapture(evt.pointerId)) return;
+                fader.ReleasePointer(evt.pointerId);
+                evt.StopPropagation();
+            });
+
+            return fader;
+        }
+
+        /// <summary>
+        /// Where the pointer sits along a fader, as a volume.
+        ///
+        /// <para>The width is the resolved one rather than the number in the stylesheet, because
+        /// the panel scales with the interface-scale setting and a hard-coded track length would
+        /// put the handle somewhere else at 1.25x.</para>
+        /// </summary>
+        void DragFader(SettingsBus bus, VisualElement fader, float localX)
+        {
+            float width = fader.resolvedStyle.width;
+            if (float.IsNaN(width) || width <= 0f) return;
+
+            float fraction = Mathf.Clamp01(localX / width);
+            _directors?.Settings.SetBusDb(bus, SettingsDirector.VolumeDbAt(fraction));
+        }
+
+        /// <summary>What a fader's readout says. Mute is a word because silence is not a number;
+        /// everything else is the decibels it is.</summary>
         static string VolumeText(int db) =>
-            db <= SettingsDirector.VolumeDbRungs[0] ? "Mute" : db == 0 ? "0 dB" : db + " dB";
+            db <= SettingsDirector.VolumeDbFloor ? "Mute" : db == 0 ? "0 dB" : db + " dB";
 
         /// <summary>
         /// The groups the binding list is drawn in. Layout is the shell's business — the
@@ -918,10 +996,13 @@ namespace Odyssey.Presentation.Ui
         void OnBusDbChanged(SettingsBus bus)
         {
             if (_directors == null) return;
+
             int at = _directors.Settings.BusDb(bus);
-            foreach (var entry in _busRungs)
-                entry.Value.EnableInClassList("rung--on",
-                    entry.Key.Bus == bus && entry.Key.Db == at);
+            var where = new Length(SettingsDirector.VolumeFraction(at) * 100f, LengthUnit.Percent);
+
+            if (_busFills.TryGetValue(bus, out VisualElement fill)) fill.style.width = where;
+            if (_busHandles.TryGetValue(bus, out VisualElement handle)) handle.style.left = where;
+            if (_busReadouts.TryGetValue(bus, out Label readout)) readout.text = VolumeText(at);
         }
 
         void OnExitChanged()

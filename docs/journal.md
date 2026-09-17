@@ -1254,9 +1254,38 @@ work itself.
     said they "belong in that panel beside them when B17 grows an audio section". The
     section is a dB rung ladder per bus (Mute, −36, −24, −16, −10, −5, 0), the Hud-side
     `SettingsBus` mirroring `SoundBus` across the ADR 0003 seam, and the presenter writes
-    through the existing store — no second copy of a volume anywhere. **Rungs, not sliders,
+    through the existing store — no second copy of a volume anywhere. ~~**Rungs, not sliders,
     everywhere**, for the reason the interface scale set: honest answers, no fractional
-    states, and the ladder idiom the panel already owns.
+    states, and the ladder idiom the panel already owns.~~ **Reversed for audio the same day
+    — see below.**
+
+- **The volume ladders become faders you drag, 2026-09-17** (owner: *"The audio settings need to
+  be sliders then you drag with easy"*). Five draggable faders replace thirty-five clickable
+  rungs; the interface scale and the camera speed stay ladders.
+  - **The rungs' own argument was for this, not against it.** It ran: "a slider position is a lie
+    about loudness — equal steps of dB are equal steps of hearing, and the rungs say what they
+    are". That convicts a fader linear in *amplitude*, where the top half of the throw does almost
+    nothing. A track linear in **dB** is the same claim honoured at finer resolution than seven
+    stops: a millimetre of travel is the same change in loudness wherever the handle sits. The
+    rungs survive as marks printed on the track, so the scale is still readable.
+  - **The travel stops at −60 dB, not at −80.** −60 is a thousandth of unity amplitude and
+    inaudible, so a track drawn over the engine's full −80…0 would spend a quarter of its length
+    on values that all sound like nothing. The bottom of the throw reports `SilenceDb` instead —
+    the −∞ every mixer ends at — so exactly one stored value means silence rather than twenty.
+  - **The whole control is the drag target, not the handle.** A 12 px handle is a game of skill;
+    a press anywhere on the 26 px-tall fader moves the handle there and starts the drag in one
+    gesture. **This is the first pointer capture in the HUD** — without it the drag stops the
+    moment the pointer leaves a 96 px track, which is most of the time.
+  - **What moved and what did not.** `SetBusDb` clamps where it used to snap, so `Nearest` is now
+    the ladders' alone; `SeedBusDb` keeps a stored −17 that the old code would have moved to −16.
+    The presenter already wrote a `float` through to `AudioSettingsStore`, so nothing downstream
+    changed at all.
+  - **Verified:** fast tier **478 Sim + 159 Hud**, EditMode **1071 passed, 0 failed**, PlayMode
+    **28 passed, 0 failed**. The fast tier proves the track arithmetic round-trips — every whole
+    dB maps to a position and back — and a PlayMode test proves the fill, the handle and the
+    readout never disagree. **Not verified:** the drag itself. Synthesising a captured pointer
+    gesture through UI Toolkit is beyond this suite, so whether 96 px is enough travel and whether
+    the grab feels right wants an eye on it.
   - **Camera speed and the developer readout came along because they were free.** The speed
     is a three-rung multiplier (0.6×, 1×, 1.5×) on the rig's tuned pan/zoom — translation
     only, like shift, leaving orbit's mouse-delta mapping alone. The developer overlay is

@@ -173,7 +173,11 @@ namespace Odyssey.Presentation.Ui
         readonly Dictionary<SettingsTab, Label> _settingTabs = new();
         readonly Dictionary<int, Label> _scaleRungs = new();
         readonly Dictionary<int, Label> _cameraRungs = new();
-        readonly Dictionary<(SettingsBus Bus, int Db), Label> _busRungs = new();
+        // One fader per bus, in three parts, because a drag moves all three and a dictionary
+        // lookup per bus is cheaper than walking the tree for them.
+        readonly Dictionary<SettingsBus, VisualElement> _busFills = new();
+        readonly Dictionary<SettingsBus, VisualElement> _busHandles = new();
+        readonly Dictionary<SettingsBus, Label> _busReadouts = new();
         readonly Dictionary<HotkeyAction, KeyRowView> _keyRows = new();
 
         /// <summary>One binding row: its root and the caps of its two slots, for

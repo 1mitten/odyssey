@@ -522,8 +522,11 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void AVolumeSnapsToItsLadderAndSaysSoOnlyWhenItMoves()
+        public void AVolumeKeepsWhateverWholeDecibelItIsDraggedToAndSaysSoOnlyWhenItMoves()
         {
+            // It used to snap to the seven rungs of a ladder. The owner asked for a drag on
+            // 2026-09-17, so any whole dB between the floor and unity is now a value a bus can
+            // hold; the rungs survive as marks printed on the track.
             var settings = new SettingsDirector();
             var changed = new System.Collections.Generic.List<SettingsBus>();
             settings.BusDbChanged += changed.Add;
@@ -533,14 +536,25 @@ namespace Odyssey.Tests.Hud
                     "a fader starts at unity — nothing attenuated, nothing boosted");
 
             settings.SetBusDb(SettingsBus.Music, -33);
-            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(-36), "-33 snaps to -36");
-            settings.SetBusDb(SettingsBus.Music, -25);
-            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(-24), "-25 snaps to -24");
-            settings.SetBusDb(SettingsBus.Music, -30);
-            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(-36),
-                "-30 is equidistant, and a tie goes to the quieter rung");
-            Assert.That(changed, Is.EqualTo(new[] { SettingsBus.Music, SettingsBus.Music, SettingsBus.Music }),
+            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(-33), "-33 is a volume now");
+            settings.SetBusDb(SettingsBus.Music, -34);
+            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(-34), "and so is one dB below it");
+            Assert.That(changed, Is.EqualTo(new[] { SettingsBus.Music, SettingsBus.Music }),
                 "each real move is announced; the faders the store left alone say nothing");
+
+            settings.SetBusDb(SettingsBus.Music, -34);
+            Assert.That(changed.Count, Is.EqualTo(2), "setting the value it already holds says nothing");
+
+            // One value means silence, not twenty. Everything at or under the floor collapses to
+            // it, so the store never holds -61 and a fader dragged to the end is properly off.
+            settings.SetBusDb(SettingsBus.Music, SettingsDirector.VolumeDbFloor);
+            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(SettingsDirector.SilenceDb));
+            settings.SetBusDb(SettingsBus.Music, -999);
+            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(SettingsDirector.SilenceDb));
+
+            settings.SetBusDb(SettingsBus.Music, 12);
+            Assert.That(settings.BusDb(SettingsBus.Music), Is.Zero,
+                "unity is the ceiling: a fader cannot boost");
 
             // Seeding is the presenter laying the audio store's values in: recorded, never
             // raised, never written.
@@ -549,7 +563,37 @@ namespace Odyssey.Tests.Hud
             seeded.BusDbChanged += seededRaised.Add;
             seeded.SeedBusDb(SettingsBus.Alerts, -80);
             Assert.That(seeded.BusDb(SettingsBus.Alerts), Is.EqualTo(-80));
+            seeded.SeedBusDb(SettingsBus.Music, -17);
+            Assert.That(seeded.BusDb(SettingsBus.Music), Is.EqualTo(-17),
+                "a value the old ladder would have moved to -16 is kept as it was stored");
             Assert.That(seededRaised, Is.Empty);
+        }
+
+        [Test]
+        public void AFadersTrackRunsFromSilenceToUnityAndBackAgain()
+        {
+            // The two halves of the drag: where a held value sits on the track, and what a
+            // position on the track means. They have to be inverses or the handle lands
+            // somewhere other than the number beside it.
+            Assert.That(SettingsDirector.VolumeFraction(0), Is.EqualTo(1f), "unity is the top");
+            Assert.That(SettingsDirector.VolumeFraction(SettingsDirector.SilenceDb), Is.EqualTo(0f));
+            Assert.That(SettingsDirector.VolumeFraction(SettingsDirector.VolumeDbFloor), Is.EqualTo(0f),
+                "the floor and true silence are the same end of the travel");
+
+            Assert.That(SettingsDirector.VolumeDbAt(1f), Is.Zero);
+            Assert.That(SettingsDirector.VolumeDbAt(0f), Is.EqualTo(SettingsDirector.SilenceDb));
+            Assert.That(SettingsDirector.VolumeDbAt(0.5f),
+                Is.EqualTo(SettingsDirector.VolumeDbFloor / 2), "linear in dB, so half way is half the range");
+
+            // Round trip: every whole dB the fader can hold maps to a position that maps back to
+            // it. This is the assertion that would catch an off-by-one in either direction.
+            for (int db = SettingsDirector.VolumeDbFloor + 1; db <= 0; db++)
+                Assert.That(SettingsDirector.VolumeDbAt(SettingsDirector.VolumeFraction(db)), Is.EqualTo(db),
+                    $"{db} dB does not survive a trip to the track and back");
+
+            // And a pointer beyond either end is that end, not an exception.
+            Assert.That(SettingsDirector.VolumeDbAt(-2f), Is.EqualTo(SettingsDirector.SilenceDb));
+            Assert.That(SettingsDirector.VolumeDbAt(3f), Is.Zero);
         }
 
         [Test]

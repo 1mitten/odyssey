@@ -972,6 +972,68 @@
     color: #0b1116;
 }
 
+/* ---------------------------------------------------------------- volume faders
+
+   One per audio bus. The interface scale and the camera speed are still ladders, because each
+   is a choice between a few sensible presets; a volume is the one genuinely continuous quantity
+   in this panel, and the owner asked to drag it (2026-09-17).
+
+   The whole .fader is the drag target and it is deliberately taller than the track it draws:
+   26 px of grab for a 4 px groove, so the press lands without aiming. Everything inside it
+   ignores the pointer, or a mark would swallow a press meant for the track behind it. */
+
+.fader {
+    height: 26px;
+    margin-top: 2px;
+    margin-left: 26px;
+    margin-bottom: 4px;
+    justify-content: center;
+}
+
+.fader__track {
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.09);
+    border-radius: 2px;
+}
+
+.fader__fill {
+    height: 100%;
+    background-color: #6fd3e3;
+    border-radius: 2px;
+}
+
+/* The seven rungs the ladder used to be, printed on the track so the scale is still readable.
+   One pixel, and dimmer than the groove they sit in when the fill is not behind them. */
+.fader__mark {
+    position: absolute;
+    top: -3px;
+    width: 1px;
+    height: 10px;
+    background-color: rgba(255, 255, 255, 0.22);
+}
+
+/* Centred on its value by a negative margin of half its width, so the middle of the handle is
+   the number rather than its left edge. */
+.fader__handle {
+    position: absolute;
+    width: 12px;
+    height: 16px;
+    margin-left: -6px;
+    background-color: #eef3f6;
+    border-radius: 3px;
+}
+
+.fader:hover .fader__handle { background-color: #ffffff; }
+
+/* Right-aligned on the label row above the track, so the number holds still while the handle
+   moves. Its width is fixed because "Mute" and "-37 dB" are different lengths and a readout
+   that resizes drags the label beside it around. */
+.fader__value {
+    width: 54px;
+    color: rgba(255, 255, 255, 0.66);
+    -unity-text-align: middle-right;
+}
+
 /* A row that only labels the control under it, and answers nothing itself. */
 .settings__row--static:hover { background-color: rgba(0, 0, 0, 0); }
 

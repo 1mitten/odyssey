@@ -13,7 +13,7 @@ labels or flavour. The taxonomy behind it is `docs/research/g-01-ui-information-
 
 **B17, the settings panel, is four tabs since 2026-09-17**: *Interface* (the interface-scale
 ladder, a camera-speed ladder and the developer-overlay toggle), *Graphics* (as before), *Audio*
-(five dB rung ladders — the faders that had waited in `AudioSettingsStore` since the sound work
+(five dB faders you drag — the ones that had waited in `AudioSettingsStore` since the sound work
 landed), and *Keys* (the binding list, grouped, one or two caps per row, click a cap to rebind,
 conflicts refused and reported, a reset row under it). It opens on Interface, because the first
 thing a player wants from a settings panel on a large monitor is to make the type bigger. Under
@@ -646,11 +646,20 @@ submitted. The other two are baked into instance matrices when a chunk is meshed
 sends the board back through the mesher and rebuilds the surround. The panel says which is which
 in the row's tooltip, so a player is never left wondering why one switch stutters and three do not.
 
-Audio, interface scale and keybindings are **built as of 2026-09-17** — audio as one dB rung
-ladder per bus writing through `AudioSettingsStore`, keybindings as the `HotkeyDirector` binding
+Audio, interface scale and keybindings are **built as of 2026-09-17** — audio as one draggable dB
+fader per bus writing through `AudioSettingsStore`, keybindings as the `HotkeyDirector` binding
 list with its rebind-and-refuse rules — and the golden-hour work
 (`docs/research/look-interview.md`) is what fills the Graphics section out, since its own
 quality tier is a settings surface by definition. Accessibility modes remain the M8 pass.
+
+**Ladders or faders, and where the line is** (owner, 2026-09-17). The audio section began as a
+ladder of seven clickable rungs per bus, on a blanket rule of *rungs, not sliders, everywhere*.
+That rule now has one exception and a reason for it: **a ladder is for choosing among a few
+sensible presets; a fader is for a quantity that is genuinely continuous.** Interface scale and
+camera speed are the former — a HUD at 1.07× is how you get hairlines between pixels — and volume
+is the latter. The ladder's own argument, that equal steps of dB are equal steps of hearing, is
+what makes a track *measured in dB* honest rather than what forbids one; it only convicts a fader
+linear in amplitude. The rungs survive as marks printed along the track.
 
 **Accessibility modes exposed here**, all specified in `09`: text fallback for icons,
 colour-blind-safe alert palette, interface scale from 80 to 150 per cent.
