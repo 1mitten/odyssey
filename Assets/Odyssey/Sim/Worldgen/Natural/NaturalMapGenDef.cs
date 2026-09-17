@@ -15,6 +15,12 @@ namespace Odyssey.Sim.Worldgen.Natural
 
         /// <summary>Empty wilderness: grass, trees, stone and ore, and the player builds from nothing.</summary>
         Natural = 1,
+
+        /// <summary>
+        /// Never generated. The sentinel a save header reads back when the file did not record a
+        /// map type — version 1, before <c>SaveRecipe</c> existed (U36).
+        /// </summary>
+        Unknown = 2,
     }
 
     /// <summary>

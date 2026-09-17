@@ -191,6 +191,14 @@ namespace Odyssey.Tests.Sim
             scenario.beds = 3;
             ColonyWorld colony = ColonyWorld.Build(size, 1u, scenario, barren: true, wooded: true);
 
+            // U37: the first tick of any colony rolls starting skills, so "never cut" no longer
+            // means "stayed at zero" — a colonist can start with cutting experience nobody
+            // earned. Tick once, alone, before designating anything, and measure every colonist's
+            // gain from that baseline rather than from zero.
+            colony.World.Tick();
+            var startingCutting = new System.Collections.Generic.Dictionary<int, int>();
+            foreach (Pawn p in colony.Pawns.Pawns.All) startingCutting[p.Id.Value] = p.Skills[SkillIndex.Cutting];
+
             int tree = NearestTree(colony, size);
             Assume.That(tree, Is.GreaterThanOrEqualTo(0), "the wooded board has a tree to fell");
             colony.World.Intents.Submit(new Intent(IntentKind.Designate, size.FromIndex(tree), (int)DesignationKind.Fell));
@@ -209,11 +217,13 @@ namespace Odyssey.Tests.Sim
             JobDef fell = content.Jobs[JobIndex.Fell];
             Assert.That(fell.experiencePerWorkTick, Is.GreaterThan(0), "felling trains nothing");
             int perMille = content.Skills[SkillIndex.Cutting].gainPerMilleByPassion[cutter!.Passions[SkillIndex.Cutting]];
-            int expected = fell.workTicks * (fell.experiencePerWorkTick * perMille / 1_000);
+            int expected = startingCutting[cutter.Id.Value] + fell.workTicks * (fell.experiencePerWorkTick * perMille / 1_000);
 
             Assert.That(cutter.Skills[SkillIndex.Cutting], Is.EqualTo(expected));
             foreach (Pawn pawn in colony.Pawns.Pawns.All)
-                if (pawn != cutter) Assert.That(pawn.Skills[SkillIndex.Cutting], Is.Zero, $"pawn {pawn.Id.Value} never cut");
+                if (pawn != cutter)
+                    Assert.That(pawn.Skills[SkillIndex.Cutting], Is.EqualTo(startingCutting[pawn.Id.Value]),
+                        $"pawn {pawn.Id.Value} gained cutting experience without ever cutting");
         }
 
         [Test]

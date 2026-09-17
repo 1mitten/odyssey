@@ -166,27 +166,40 @@ build and teardown callable at runtime — `BuildSession()`/`TeardownSession()` 
 built rig. One half is deferred rather than faked: the figure-leak check cannot run in the rig with
 no module catalogue (everything resolves to a shared Unity primitive, so there is nothing to leak),
 and giving it a real catalogue would make a test depend on the licensed packs — so it `Assert.Ignore`s
-with that reason recorded. `U36` (save format v2) is next in the `MS` chain and still open.
+with that reason recorded. **`U36` (save format v2) is done, Sim-only, 2026-09-17.** The header now
+carries a `SaveRecipe` beside the seed/size/tick it always had — map type, scenario, colony name and
+day — so a load screen can describe a save from its header alone; `WorldSave.ReadHeaderOnly` reads
+exactly that, with no world and no component list. `CurrentFormatVersion` is 2; a version 1 file
+still loads and reads back `SaveRecipe.Unknown` (map type `MapType.Unknown`, a value added for
+exactly this, not a reuse of either real one). Files go through `WorldSave.SaveToFile` /
+`LoadFromFile`, both path-taking because Sim has no `UnityEngine.Application.persistentDataPath` to
+read — the `Saves` folder itself is left to the caller that wires the menu on top (`U38`–`U40`). Day
+is likewise handed in already computed: `GameClock`'s tick-to-calendar mapping lives in the Hud
+assembly and Sim must not reference it, so nothing here re-implements that conversion.
 
-**`U36` and `U38` are both still open, and the plan's table does not say so** — check the code, not
-the table, before starting anything downstream of them: `SaveFormat.CurrentFormatVersion` is still
-**1**, and `HudShell.Bar.cs` still carries the comment that the B18 menu "does not exist yet". That
-blocks `U39`'s screen, so only **`U39`'s seed logic** landed (2026-09-17): `SeedEntry` in
+**`U38` is the one thing blocking the rest of the chain, and it has not moved.** `HudShell.Bar.cs`
+still carries the comment that the B18 menu "does not exist yet", and there is no menu panel
+anywhere in the presentation assembly — so there is nowhere for `U39`'s screen to attach.
+**Check the code, not the plan's table, before starting anything downstream**: that table listed
+`U36` and `U37` as available while both were still open, and then both landed mid-afternoon on
+2026-09-17 while a branch was in flight against the earlier reading.
+
+**`U39`'s seed logic landed without its screen** (2026-09-17): `SeedEntry` in
 `Odyssey.Sim.Contracts` draws a seed, rerolls to one guaranteed different, formats it as plain
-decimal and reads back what the player typed. A seed is decimal because that is already what the
-project prints; **free-text seeds in the Minecraft idiom were considered and deferred to `U36`**,
-because they only work if the typed text is kept beside the number and the v2 header is where that
-would live. It is the one deliberately non-deterministic code in the simulation assemblies, confined
-to two methods and reachable from no tick path.
+decimal and reads back what the player typed — the half of `U39` that needs no interface, and the
+half that would otherwise live in a text field's callback where the fast tier could never reach it.
+A seed is decimal because that is already the form the project prints one in; **free-text seeds in
+the Minecraft idiom were considered and not taken**, because they only work if the typed text is
+kept beside the number — now a `SaveRecipe` field, so it is a live question rather than a blocked
+one. It is the one deliberately non-deterministic code in the simulation assemblies, confined to
+two methods and reachable from no tick path.
 
 Three things a later session should not re-litigate. **Live portraits** are refused by
 `09-ui-and-input.md` §4.5 — but that argument is about fifty of them in the roster bar at 15 Hz
 while the world renders, and the select screen is three, rendered once, with no world behind them;
 §4.5 gets an explicit carve-out in `U41` rather than a silent exception. **Colonists start every
 skill at 0 experience** — only passions are rolled — so there is nothing to choose between three
-candidates until `U37`. And **the save header records only seed, size and tick**, not the map type,
-so a save reloaded against a different generator would load cell data over a differently generated
-world; `U36` is where that is fixed.
+candidates until `U37`.
 
 ### What runs today
 

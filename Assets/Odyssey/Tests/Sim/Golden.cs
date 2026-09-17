@@ -49,6 +49,17 @@ namespace Odyssey.Tests.Sim
     /// generator is untouched. Anything that changes the <i>length</i> of a hashed per-job or
     /// per-work-type array will do this, and the way to tell it apart from a real generator change
     /// is that the grid's own hash is unmoved.</para>
+    ///
+    /// <para><b>Moved a third time the same day by U37, starting skills, merged on top of
+    /// deconstruct — and only the way the plan asked.</b> Every <c>Simulated</c> value below moved
+    /// again and no <c>Generated</c> one did on top of the merge, proof that the roll
+    /// (<see cref="Pawns.StartingSkillsSystem"/>) happens on the world's first tick rather than
+    /// during <c>ColonyScenario.Place</c>, which runs before <c>Generated</c> is taken. See
+    /// <c>StartingSkillsTests</c> for the direct, non-hash evidence of the same thing. Rebaked
+    /// once, on top of deconstruct's numbers, not twice: the values below are the merge's own,
+    /// not U37's original branch numbers, because those were baked against a
+    /// <c>StartingSkill</c> salt that collided with <c>DeconstructRefund</c> — see
+    /// <c>PawnPurpose</c>.</para>
     /// </summary>
     public static class Golden
     {
@@ -104,7 +115,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = false,
             Generated = 1445231422113309842UL,
-            Simulated = 14763881648775637894UL,
+            Simulated = 14285869242397174845UL,
         };
 
         /// <summary>
@@ -121,7 +132,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = true,
             Generated = 4423472815424028544UL,
-            Simulated = 15133751629550655244UL,
+            Simulated = 8316998138846647460UL,
         };
 
         /// <summary>
@@ -137,7 +148,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.RuinedCity,
             Wooded = false,
             Generated = 624141440131264568UL,
-            Simulated = 11578219555721241688UL,
+            Simulated = 17545013022261745430UL,
         };
     }
 }

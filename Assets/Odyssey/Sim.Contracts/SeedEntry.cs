@@ -95,9 +95,10 @@ namespace Odyssey.Sim.Contracts
         /// copied out of a log is a number that can be typed back in, and because it needs no
         /// vocabulary a player has to be taught. Free-text seeds in the Minecraft idiom — type a
         /// word, have it hashed — are the genre's other convention and are the friendlier one,
-        /// but they only work if the text itself is kept beside the number, and where that text
-        /// would live is the save header's business (U36). Adding a second representation before
-        /// then would be exactly the second source of truth to avoid.</para>
+        /// but they only work if the typed text itself is kept beside the number. That is a
+        /// <c>SaveRecipe</c> field now that U36 has landed, so it is a live question rather than a
+        /// blocked one; it is deliberately not answered here, because a second representation
+        /// arriving before anything can store one is how two sources of truth start.</para>
         ///
         /// <para>Invariant culture on purpose: a player whose system locale substitutes digits
         /// would otherwise be shown a seed that <see cref="TryParse"/> then refuses.</para>

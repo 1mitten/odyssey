@@ -2119,30 +2119,118 @@ work itself.
     Not run: the Unity tier — no Unity in this environment; it runs on the owner's self-hosted
     runner via CI on the pull request.
 
-- **U39 is blocked on U36 and U38; the seed logic landed early on its own merit (2026-09-17,
-  `claude/exciting-albattani-4ua5z2`).** A session was sent to build U39, the new-game screen, on
-  the plan's word that its dependencies were in place. **They are not**, and the plan does not say
-  so — which is the second time in two days the plan has been ahead of the code
-  (`docs/plans/vertical-slice.md` "Where the seams are" was audited on 2026-09-17 for the same
-  reason). Checked against the source rather than the table:
-  - **U35 is done.** `OdysseyBootstrap.BuildSession()`/`TeardownSession()` exist, are what
-    `buildOnPlay` and `OnDestroy` call, and are covered by `SessionSeamTests`.
-  - **U36 has not landed.** `SaveFormat.CurrentFormatVersion` is still **1**. There is no v2
-    header, so no place to hand a colony name, a map type or a day to.
-  - **U38 has not landed.** `HudShell.Bar.cs:562` still carries the comment saying "the game menu
-    it will one day belong to (B18) does not exist yet", and there is no menu panel anywhere in
-    the presentation assembly. There is nowhere for a new-game screen to attach.
-  - **U37 has not landed either** (informational — U40 needs it, U39 does not). `Pawn.Skills` is
-    experience per skill and only `Passions` is described as rolled at spawn; nothing under
-    `Sim/Pawns` rolls a starting level.
+- **Starting skills, U37, 2026-09-17.** A colonist now spawns with a rolled level in every
+  skill instead of a flat zero — the gap `CLAUDE.md` had flagged as blocking `U40`'s
+  candidate cards, since three colonists with identical zeroes are nothing to choose between.
+
+  - **Where the roll had to live was the actual problem, and it was found by measuring rather
+    than by reasoning about it.** The plan's done criterion is that the roll moves every
+    `Simulated` golden and no `Generated` one. `RollPassions` is called from
+    `ColonyScenario.Place`, which runs inside `ColonyWorld.Build` — and `Build` is exactly
+    what `GoldenMasterTests` hashes for `Generated`, before a single tick runs. Rolling
+    skills the same way `RollPassions` does would have moved `Generated` too, which the plan
+    explicitly does not want. So the roll lives in a new one-shot system,
+    `StartingSkillsSystem`, that fires from inside `SimWorld.Tick()` the first time
+    `CurrentTick` reads zero — after `Generated` is taken, before `Simulated` is, for any
+    case that runs at least one tick. Confirmed by rebaking with `ODYSSEY_REGOLDEN=1` and
+    reading the printed pairs before pasting anything: all three cases' `Generated` values
+    came back byte-identical to what was already committed, and all three `Simulated` values
+    moved. No per-pawn "already rolled" flag is needed — the guard is `CurrentTick == 0`,
+    which a fresh world only ever satisfies once and a loaded save (restored to a non-zero
+    tick) never satisfies again.
+  - **The distribution is invented and said so where it lives.** Nothing in
+    `docs/research/` or `docs/design/` pins a starting-skill spread — clean room, no
+    RimWorld number to take — so `PawnKindDef.startingSkillLevelWeights` is a new Def-driven
+    table, `{ 40, 20, 14, 10, 6, 4, 3, 2, 1 }` over levels 0–8, weighted toward a low
+    baseline (mean 1.16) with a thin tail (levels 6–7 together are a 2% roll) so an
+    occasional colonist starts competent rather than every one of five arriving identical.
+    Marked INVENTED in both the C# field and the XML, per the clean-room rule, and rolled
+    from its own stream (`PawnPurpose.StartingSkill`) rather than sharing `Passion`'s salt —
+    the file's own comment on `StoneYield` already warns what sharing one does.
+  - **The one-shot roll collided with a testing convention already in use, and the fix was
+    to make the roll idempotent rather than the tests fragile.** Several existing tests
+    build a `ColonyWorld`, poke a pawn's `Skills[]` directly, then call `Tick()` once to
+    observe behaviour on that very tick — `ThePublishedFrameCarriesEveryColonistsSkills`,
+    `DecayRunsInTheColonyTheGamePlays`. Because that first `Tick()` is also the roll's only
+    chance to run, it was overwriting the value the test had just set. Fixed in
+    `Pawn.RollStartingSkills`: the draw is always made, so a later skill's roll never
+    depends on which earlier ones happened to be preset, but the result is only written into
+    a skill still holding the constructor's zero. In the game every skill is zero at that
+    point, always, so nothing changes there; in a fixture that decided a skill for its own
+    reason, the roll leaves it alone. `FellingGrantsCuttingExperiencePerWorkTick` needed a
+    real fix rather than a guard, because its premise ("nobody but the cutter has any cutting
+    experience") is no longer true once starting skills are nonzero — it now ticks once to
+    let the roll fire, snapshots every colonist's starting figure, and asserts deltas from
+    that baseline instead of absolute zero.
+  - **Content fingerprint moved on purpose.** `PawnKindDef` gaining a field moves
+    `PawnContentDefTests`'s pinned fingerprint by construction; updated with the reason
+    recorded beside it, not silently.
+  - **New coverage, direct rather than only hash-shaped:** `StartingSkillsTests` proves the
+    zero-before-any-tick state outright (not inferred from a hash not moving), that the roll
+    is deterministic on `(seed, pawn id)` and nothing else, that it never re-fires on a later
+    tick even when a skill is forced back to an arbitrary value, that it lands in the state
+    hash, and that a rolled level survives a save/load round trip — including the case where
+    a colonist has since earned real experience on top of the roll and loading must not
+    disturb it.
+  - **Verified:** fast tier **502 Sim + 171 Hud**, Long tier **19** (`ODYSSEY_TEST_ALL=1`:
+    **521 Sim** total). Both content gates `--check` clean — this is a tuning constant, not
+    player-visible named content, so neither the wiki nor the label registry needed a
+    rebuild, and both confirm nothing went stale regardless. **Not verified:** the Unity
+    tier, which this container cannot run; it is CI's job on the owner's self-hosted runner.
+
+- **U36 Save format v2, and files on disk, 2026-09-17.** Sim-only, per the plan: `WorldSave` gained
+  a `SaveRecipe` — map type, scenario, colony name, day — written into the header after the
+  seed/size/tick it always carried, and `CurrentFormatVersion` moved to 2.
+
+  - **Day is handed in, not derived in Sim.** `GameClock`'s tick-to-calendar mapping lives in the
+    Hud assembly; `Odyssey.Sim.csproj`'s own comment says referencing only `Sim.Contracts` is what
+    keeps the dependency direction enforced, and Hud is not on that list. So `SaveRecipe.Day` is
+    whatever the caller — who already has both the tick and the clock — computed, and nothing in
+    Sim re-implements the conversion. `ColonyWorld.Recipe(day)` fills in map, scenario and colony
+    name from `Request` and still asks the caller for the day, for the same reason.
+  - **A version 1 file reads back `SaveRecipe.Unknown` rather than guessing.** `MapType` gained a
+    third value, `Unknown = 2`, specifically so a file that never recorded a map type does not have
+    to borrow either real one to say so. `ReadHeader` is the one place that knows the layout differs
+    by version, and both `Load` and the new `ReadHeaderOnly` go through it, so they cannot read an
+    old file two different ways.
+  - **The header-only read is the point of the exercise.** `WorldSave.ReadHeaderOnly(Stream | path)`
+    needs no `SimWorld` and no component list — it reads magic, version, seed, size, tick and the
+    recipe, then stops, never touching a section. That is what lets a load screen list a folder of
+    saves from their headers alone, which is what the unit was for.
+  - **`SaveToFile` / `LoadFromFile` exist because Sim cannot read
+    `UnityEngine.Application.persistentDataPath`.** Both take a plain path and do nothing else with
+    it — no `Saves`-folder convention, no extension, no enumeration policy. Deciding where that
+    folder lives and listing what's in it is presentation's job (`U38`–`U40`), not this unit's.
+  - **Every existing three-argument `WorldSave.Save(world, stream, components)` call site still
+    compiles**, because the recipe is an optional fourth parameter; it now writes a version 2 file
+    carrying `SaveRecipe.Unknown`, which reads back identically to an old file that never had one.
+  - **Verified:** fast tier **525 Sim + 191 Hud** (10 new, `SaveFormatV2Tests`: the recipe round
+    trip, the no-recipe-given default, a hand-built version 1 fixture read both header-only and
+    through a full `Load`, the truncated/non-Odyssey failure modes on `ReadHeaderOnly`, a
+    file-path round trip, and `ColonyWorld.Recipe`). Long tier unaffected (19). Wiki and label
+    registries current (no content changed). Not run: the Unity tier — no Unity in this
+    environment; it runs on the owner's self-hosted runner via CI on the pull request.
+
+- **U39's screen is blocked on U38 alone; its seed logic landed on its own merit (2026-09-17,
+  `claude/exciting-albattani-4ua5z2`).** A session was sent to build U39, the new-game screen, and
+  told to verify its dependencies against the code rather than the plan — because
+  `docs/plans/vertical-slice.md` had already been caught ahead of the code once this week. Worth
+  doing: at the moment the branch started, **U36 and U37 were both still open** and the plan's
+  table did not say so. By the time it was pushed, both had merged into `main` (PR #87, the same
+  afternoon) — `SaveFormat.CurrentFormatVersion` is **2** and `StartingSkillsTests` exists — so
+  the check that mattered was the one that was re-run at the end rather than the one at the start.
+  **`U38` is the remaining blocker and has not moved:** `HudShell.Bar.cs:562` still carries the
+  comment that "the game menu it will one day belong to (B18) does not exist yet", and there is no
+  menu panel anywhere in the presentation assembly. There is nowhere for a new-game screen to
+  attach, so none was built.
 
   **What was built instead, and why this and nothing else.** `SeedEntry` in `Odyssey.Sim.Contracts`:
   draw a seed, reroll to a seed that is guaranteed different, format one for the player to read,
   and read back what they typed. That is the whole of U39 that does not depend on a screen, and it
   is the half that would otherwise have been written inside a text field's callback where the fast
-  tier could never reach it. **Nothing was invented to route around the blockers** — no standalone
-  menu, no second save header — because a second source of truth for either is exactly what
-  `CLAUDE.md` warns about while a seam is open.
+  tier could never reach it. **Nothing was invented to route around U38** — no standalone menu —
+  because a second source of truth for the shell is exactly what `CLAUDE.md` warns about while a
+  seam is open.
 
   Four decisions worth not re-litigating:
   - **Decimal digits, not hex and not a word code.** It is already the form the project prints a
@@ -2150,8 +2238,8 @@ work itself.
     number copied out of a log is a number that can be pasted back in, and it needs no vocabulary a
     player has to be taught. **The Minecraft idiom — type a word, have it hashed — is the genre's
     friendlier convention and was deliberately not taken**, because it only works if the typed text
-    is kept beside the number, and where that text would live is the v2 header's business. It is
-    worth reopening when U36 lands; it is not worth a second representation before then.
+    is kept beside the number. That is a `SaveRecipe` field, and now that U36 has landed it is a
+    question that can actually be asked; it was not one while this was written.
   - **Zero is an ordinary seed**, so nothing special-cases it. `DeterministicRandom`'s constructor
     does map a state of 0 to 1, but no consumer ever reaches it that way: every stream comes from
     `ForTick`, which avalanche-mixes first (checked — there is no `new DeterministicRandom(` in

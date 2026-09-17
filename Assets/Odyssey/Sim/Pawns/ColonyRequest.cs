@@ -29,6 +29,13 @@ namespace Odyssey.Sim.Pawns
         public uint Seed;
 
         /// <summary>
+        /// What the player called this colony, for the save header (U36) — a load screen's list
+        /// entry, nothing simulated reads it. Empty until the new-game screen exists to ask for
+        /// one; <see cref="Saving.SaveRecipe.Unknown"/> is what an unnamed save reads back as.
+        /// </summary>
+        public string Name = string.Empty;
+
+        /// <summary>
         /// Who and what is placed at the start, and which orders are already given. Headless runs
         /// and tests take <see cref="ScenarioDef.Bare"/>, the scene takes
         /// <see cref="ScenarioDef.Playtest"/>.
