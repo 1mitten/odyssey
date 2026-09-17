@@ -666,14 +666,23 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
-        /// A popover raised from the command bar lands on the button that raised it, flush on the
-        /// bar, and carries a way out (owner, 2026-09-17).
+        /// A popover raised from the command bar lands flush on the bar, carries a way out, and —
+        /// unless it is the Build palette — sits over the button that raised it (owner,
+        /// 2026-09-17).
         ///
         /// <para><b>Only the player loop can answer this.</b> Where a popover sits is decided from
         /// the laid-out bar — the reflow moves buttons as items go into Menu, and the interface
         /// scale moves them again — so the model can state the rule but not that the shell obeys
-        /// it. What is measured here is the realised boxes: the popover's bottom against the
-        /// bar's top, and its left against the button's.</para>
+        /// it. What is measured here is the realised boxes: the popover's bottom against the bar's
+        /// top, and its left against the button's.</para>
+        ///
+        /// <para><b>The Build palette is exempt from the second half, on purpose.</b> It is pinned
+        /// into the bottom-left corner of the screen rather than anchored to its cap (owner, later
+        /// the same day: <i>"it needs to pin/dock against the bottom and left for space — so up
+        /// against the left screen border"</i>), because <c>PopoverLeft</c> puts it a few pixels of
+        /// the bar's own padding short of the edge. It is exempted here rather than dropped from
+        /// the loop, because every other clause — flush on the bar, on the screen at both ends, a
+        /// close button in its top right — still applies to it and is worth keeping.</para>
         /// </summary>
         [UnityTest]
         public IEnumerator EveryBarPopoverOpensOverItsOwnButtonAndFlushWithTheBar()
@@ -718,10 +727,20 @@ namespace Odyssey.Tests.PlayMode
                         $"the {name} popover sits {box.yMax - bar.yMin:0.#} px from the bar " +
                         "rather than flush on it");
 
-                    float wanted = HudLayout.PopoverLeft(
-                        button.xMin - canvas.xMin, box.width, canvas.width) + canvas.xMin;
-                    Assert.That(box.xMin, Is.EqualTo(wanted).Within(0.5f),
-                        $"the {name} popover is not over the button that raised it");
+                    if (name == "build")
+                    {
+                        Assert.That(box.xMin, Is.EqualTo(canvas.xMin).Within(0.5f),
+                            "the Build palette is pinned to the left edge of the screen and is " +
+                            $"{box.xMin - canvas.xMin:0.#} px off it");
+                    }
+                    else
+                    {
+                        float wanted = HudLayout.PopoverLeft(
+                            button.xMin - canvas.xMin, box.width, canvas.width) + canvas.xMin;
+                        Assert.That(box.xMin, Is.EqualTo(wanted).Within(0.5f),
+                            $"the {name} popover is not over the button that raised it");
+                    }
+
                     Assert.That(box.xMin, Is.GreaterThanOrEqualTo(canvas.xMin - 0.5f),
                         $"the {name} popover hangs off the left of the screen");
                     Assert.That(box.xMax, Is.LessThanOrEqualTo(canvas.xMax + 0.5f),
