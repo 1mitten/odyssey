@@ -69,6 +69,7 @@ namespace Odyssey.Presentation.Ui
         VisualElement CommandItem(HudCommand command)
         {
             var item = new VisualElement();
+            item.name = command.Key;
             item.AddToClassList("cmd");
             if (command.Primary) item.AddToClassList("cmd--primary");
             if (!command.Live) item.AddToClassList("cmd--off");
@@ -101,8 +102,17 @@ namespace Odyssey.Presentation.Ui
                 ? command.Label + " — " + command.Hotkey
                 : command.Label + " — " + command.Reason;
 
-            string key = command.Key;
-            item.RegisterCallback<ClickEvent>(_ => OnCommand(key));
+            // Only a live command listens. Nine of the eleven do nothing yet, and they were all
+            // registering a handler that fell through OnCommand's two cases in silence — a button
+            // that accepts the click and then declines to act. The inspect tabs already work this
+            // way (`if (tab.Enabled)`), and the menu rows and palette chips register nothing at
+            // all; this is the bar catching up with them.
+            if (command.Live)
+            {
+                string key = command.Key;
+                item.RegisterCallback<ClickEvent>(_ => OnCommand(key));
+            }
+
             return item;
         }
 

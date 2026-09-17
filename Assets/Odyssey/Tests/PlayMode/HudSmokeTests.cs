@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections;
+using System.Linq;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
@@ -119,6 +120,27 @@ namespace Odyssey.Tests.PlayMode
                 // Four speed buttons, and the clock has a time in it.
                 Assert.That(doc.rootVisualElement.Query(className: "speed__btn").ToList().Count,
                     Is.EqualTo(4));
+
+                // A command with nothing behind it is drawn as unavailable, and which those are is
+                // read off HudCommands rather than written down here — so the day one is wired up,
+                // this follows it instead of failing. How many reach the row depends on the width
+                // the bar reflowed to; every one that does is checked.
+                var drawn = doc.rootVisualElement.Query(className: "cmd").ToList();
+                Assert.That(drawn, Is.Not.Empty, "the command bar drew nothing");
+                Assert.That(drawn.Any(d => d.ClassListContains("cmd--off")), Is.True,
+                    "no dead command reached the row, so the check below proves nothing — either " +
+                    "the bar reflowed them all into Menu, or nothing is marking them any more");
+
+                foreach (VisualElement item in drawn)
+                {
+                    HudCommand command = HudCommands.All.First(c => c.Key == item.name);
+                    Assert.That(item.ClassListContains("cmd--off"), Is.EqualTo(!command.Live),
+                        $"{command.Key} is {(command.Live ? "live but dimmed" : "dead but drawn as available")}");
+
+                    if (!command.Live)
+                        Assert.That(item.tooltip, Does.Contain(command.Reason),
+                            $"{command.Key} is dimmed without saying why, which the catalogue forbids");
+                }
                 Label? clock = doc.rootVisualElement.Q<Label>(className: "clock__time");
                 Assert.That(clock, Is.Not.Null);
                 Assert.That(clock!.text, Is.Not.Empty, "the clock label never bound");

@@ -776,7 +776,13 @@
 .cmd__label--primary { color: #0b1116; }
 .cmd--primary .cmd__key { color: rgba(11, 17, 22, 0.55); }
 
-.cmd--off { opacity: 0.55; }
+/* A command with nothing behind it yet. 0.42 is the sheet's one off value, shared with
+   .chip--off, .menu__row--off, .action--off and .tab--off; the bar used to sit at 0.55 and read as
+   merely quiet rather than unavailable. The hover rule cancels .cmd:hover, the way every other
+   off state already cancels its own — a control that lights up under the pointer is promising
+   something it will not do. */
+.cmd--off { opacity: 0.42; }
+.cmd--off:hover { background-color: rgba(0, 0, 0, 0); }
 .cmd--on { background-color: rgba(111, 211, 227, 0.18); }
 
 .commandbar__divider {
