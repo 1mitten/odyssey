@@ -1,5 +1,6 @@
 #nullable enable
 using Odyssey.Hud;
+using Odyssey.Presentation.Audio;
 using Odyssey.Presentation.Rendering;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -7,7 +8,9 @@ using UnityEngine.InputSystem;
 namespace Odyssey.Presentation.Bootstrap
 {
     /// <summary>
-    /// Escape opens the settings panel, and throwing a lever in it changes what is drawn.
+    /// Escape opens the settings panel, throwing a lever in it changes what is drawn or
+    /// sounded, offering a key to a waiting slot rebinds it, and the exit row, asked twice,
+    /// leaves.
     ///
     /// <para><b>Why this exists.</b> Every graphics lever in the project was an inspector field on
     /// <see cref="OdysseyBootstrap"/>, which means stop, edit, play — once per variable, and the
@@ -159,14 +162,37 @@ namespace Odyssey.Presentation.Bootstrap
 
             director.OptionChanged += Apply;
             director.UiScaleChanged += ApplyScale;
+            director.CameraSpeedChanged += ApplyCameraSpeed;
+            director.DeveloperOverlayChanged += ApplyDeveloperOverlay;
+            director.BusDbChanged += ApplyBusDb;
+            director.ExitRequested += Quit;
 
             // Applied once up front, because the shell may have been built before the seed was
             // known and the stored preference is laid over it below.
             ApplyScale(director.UiScale);
+            ApplyCameraSpeed(director.CameraSpeed);
+
+            // The faders, laid in from the audio store: the panel opens describing what the
+            // game is already playing at, because the bootstrap applied this same store before
+            // the first frame was drawn.
+            _audioStore = AudioSettingsStore.Load();
+            foreach (SettingsBus bus in SettingsDirector.Buses)
+                director.SeedBusDb(bus, (int)_audioStore.Db(ToSoundBus(bus)));
+
+            // The overlay row starts telling the truth about the screen, and the backquote key
+            // keeps it honest afterwards: whatever toggles the readout, the preference follows,
+            // because the key never wrote anything down and this row does.
+            director.SeedDeveloperOverlay(_bootstrap.Directors.Overlays.DeveloperVisible);
+            _bootstrap.Directors.Overlays.Changed += SyncDeveloperOverlay;
 
             // Anything this machine has been told before is laid over the scene, and raises
             // OptionChanged as it goes, so the board catches up without a second code path.
             director.UseStore(new PlayerPrefsSettingsStore());
+
+            // UseStore raised nothing for the faders — they keep their own store, already laid
+            // in above — but the developer preference may have just been applied to the
+            // director, so the screen catches up here.
+            ApplyDeveloperOverlay();
         }
 
         void OnDestroy()
@@ -174,6 +200,12 @@ namespace Odyssey.Presentation.Bootstrap
             if (_director == null) return;
             _director.OptionChanged -= Apply;
             _director.UiScaleChanged -= ApplyScale;
+            _director.CameraSpeedChanged -= ApplyCameraSpeed;
+            _director.DeveloperOverlayChanged -= ApplyDeveloperOverlay;
+            _director.BusDbChanged -= ApplyBusDb;
+            _director.ExitRequested -= Quit;
+            if (_bootstrap != null && _bootstrap.Directors != null)
+                _bootstrap.Directors.Overlays.Changed -= SyncDeveloperOverlay;
         }
 
         /// <summary>The shell owns the UI document, so it owns the panel the scale is applied
@@ -232,6 +264,83 @@ namespace Odyssey.Presentation.Bootstrap
         {
             _bootstrap?.Model?.Remesh();
             if (renderer.Skirt.Enabled) renderer.Skirt.Build();
+        }
+
+        // ------------------------------------------------------------------ the new levers
+
+        /// <summary>The audio store this machine's faders live in. Held from attach so a
+        /// change writes through the same object that was loaded, never a second copy.</summary>
+        AudioSettingsStore _audioStore = AudioSettingsStore.Defaults();
+
+        /// <summary>
+        /// Turn a camera-speed rung into what the rig does: a multiplier on its tuned
+        /// speeds, so 100 is the fields the scene authored and nothing is invented here.
+        /// </summary>
+        void ApplyCameraSpeed(int percent)
+        {
+            var rig = _bootstrap?.cameraRig;
+            if (rig != null) rig.speedScale = percent / 100f;
+        }
+
+        /// <summary>
+        /// Turn the developer-overlay lever into what the overlay director does. Reaching
+        /// the same director the backquote key reaches is the whole point: one state, two
+        /// ways of flipping it.
+        /// </summary>
+        void ApplyDeveloperOverlay()
+        {
+            OverlayDirector? overlays = _bootstrap?.Directors?.Overlays;
+            if (overlays == null || _director == null) return;
+            overlays.SetDeveloper(_director.DeveloperOverlay);
+        }
+
+        /// <summary>
+        /// The other direction: the backquote key flipped the readout, so the panel's row —
+        /// and the preference, which the key never wrote — follow it.
+        /// </summary>
+        void SyncDeveloperOverlay()
+        {
+            OverlayDirector? overlays = _bootstrap?.Directors?.Overlays;
+            if (overlays == null || _director == null) return;
+            if (_director.DeveloperOverlay != overlays.DeveloperVisible)
+                _director.SetDeveloperOverlay(overlays.DeveloperVisible);
+        }
+
+        /// <summary>
+        /// Turn one fader into what the buses do, and write it through the audio store on
+        /// the way: what the panel set is what the next session loads, with no second copy
+        /// of a volume anywhere.
+        /// </summary>
+        void ApplyBusDb(SettingsBus bus)
+        {
+            AudioDirector? audio = _bootstrap?.Audio;
+            if (audio == null || _director == null) return;
+
+            SoundBus sound = ToSoundBus(bus);
+            float db = _director.BusDb(bus);
+            _audioStore.SetDb(sound, db);
+            _audioStore.Save();
+            audio.SetBusDb(sound, db);
+        }
+
+        /// <summary>
+        /// The one line of glue between the Hud assembly's bus mirror and the audio one:
+        /// same five, same order, so a cast is the whole map (see
+        /// <see cref="SettingsBus"/>'s docs).
+        /// </summary>
+        static SoundBus ToSoundBus(SettingsBus bus) => (SoundBus)bus;
+
+        /// <summary>
+        /// Leave. In the editor, "leaving" is stopping play — a build's quit in the editor
+        /// is a no-op, and a settings row that did nothing when clicked would be a row that
+        /// taught the player not to trust it.
+        /// </summary>
+        void Quit()
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#endif
+            Application.Quit();
         }
     }
 }

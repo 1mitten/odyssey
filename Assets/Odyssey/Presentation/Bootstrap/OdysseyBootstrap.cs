@@ -200,6 +200,10 @@ namespace Odyssey.Presentation.Bootstrap
         public WorldRenderModel? Model => _model;
         public ChunkRenderer? Renderer => _renderer;
 
+        /// <summary>The colony's one audio director, for the presenter that applies the
+        /// settings panel's faders to it live.</summary>
+        public AudioDirector? Audio => _audio;
+
         void Start()
         {
             WarnIfTheSceneIsStale();

@@ -50,6 +50,17 @@ namespace Odyssey.Presentation.CameraRig
         public float smoothing = 12f;
 
         /// <summary>
+        /// What the settings panel's camera-speed rung multiplies every camera
+        /// <em>translation</em> by: keyboard pan, drag pan and wheel zoom. 1 is the tuned
+        /// speed — the fields above, exactly as authored — and the rungs the panel offers
+        /// scale on top of it, beside <see cref="DistanceScale"/> and shift's
+        /// <see cref="fastMultiplier"/> rather than replacing either. Orbit is left alone for
+        /// the same reason shift leaves it alone: it is a direct mouse-delta mapping, and a
+        /// scaled mouse delta is not a slower orbit, only a numb one.
+        /// </summary>
+        [HideInInspector] public float speedScale = 1f;
+
+        /// <summary>
         /// What holding shift multiplies every camera <em>translation</em> by.
         ///
         /// <para>The board is 300 m across and the camera pans at a speed chosen for looking at
@@ -289,7 +300,8 @@ namespace Odyssey.Presentation.CameraRig
             if (keys.IsPressed(hotkeys, HotkeyAction.CameraBack)) move.y -= 1f;
             if (keys.IsPressed(hotkeys, HotkeyAction.CameraRight)) move.x += 1f;
             if (keys.IsPressed(hotkeys, HotkeyAction.CameraLeft)) move.x -= 1f;
-            if (move.sqrMagnitude > 0f) Pan(move.normalized * (panSpeed * dt * DistanceScale * Boost));
+            if (move.sqrMagnitude > 0f)
+                Pan(move.normalized * (panSpeed * speedScale * dt * DistanceScale * Boost));
 
             // Held, not tapped: see rotateSpeed. The target is driven rather than the yaw itself,
             // so the same smoothing that carries a mouse orbit carries this, and the two cannot
@@ -367,7 +379,7 @@ namespace Odyssey.Presentation.CameraRig
             float scroll = mouse.scroll.ReadValue().y;
             if (Mathf.Abs(scroll) > 0.01f && !overInterface)
                 _targetDistance = Mathf.Clamp(
-                    _targetDistance - Mathf.Sign(scroll) * zoomSpeed * DistanceScale * Boost,
+                    _targetDistance - Mathf.Sign(scroll) * zoomSpeed * speedScale * DistanceScale * Boost,
                     minDistance, maxDistance);
             Vector2 delta = pointer - _lastPointer;
             _lastPointer = pointer;
@@ -382,7 +394,7 @@ namespace Odyssey.Presentation.CameraRig
             }
             else if (mouse.middleButton.isPressed)
             {
-                Pan(new Vector2(-delta.x, -delta.y) * (0.02f * DistanceScale * Boost));
+                Pan(new Vector2(-delta.x, -delta.y) * (0.02f * speedScale * DistanceScale * Boost));
             }
             else
             {
