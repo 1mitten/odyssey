@@ -241,6 +241,30 @@ namespace Odyssey.Presentation.World
             public float ClimbWeight;
 
             /// <summary>
+            /// How much of a swimmer this figure is, 0 on dry land and 1 afloat.
+            ///
+            /// <para>Eased rather than switched, like <see cref="ClimbWeight"/>: the drawn height
+            /// rises by nearly two metres between the bank and the water, and a pose that snapped
+            /// on at the water's edge would be a colonist changing shape in one frame. The target
+            /// comes from <c>WaterLine.Weight</c>, which blends over the step, so the pose and the
+            /// height come on together — a figure lying prone while still standing on the bank is
+            /// the same fault as one floating on dry ground.</para>
+            /// </summary>
+            public float SwimWeight;
+
+            /// <summary>
+            /// The swim stroke's own clock, in seconds of game time.
+            ///
+            /// <para>A clock and not a phase taken from the step, which is the opposite choice to
+            /// <see cref="ClimbPhase"/> and is deliberate. A climb's reach has to match the height
+            /// gained, so it is driven by the simulation's own progress; a swim stroke matches
+            /// nothing in particular and simply runs, so it is a stroke in the
+            /// <c>WorkStroke</c> sense. It advances on game time, so a paused colony stops
+            /// swimming, which is the rule the whole director already follows.</para>
+            /// </summary>
+            public float SwimClock;
+
+            /// <summary>
             /// Degrees this figure is aiming its stroke below level, this frame.
             ///
             /// The style's <see cref="WorkStyle.Dip"/> when the work is a layer down and zero when

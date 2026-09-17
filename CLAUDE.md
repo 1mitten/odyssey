@@ -683,6 +683,71 @@ and all-solid is exactly what allocates here; what really bounds the count is th
 leaves its 10 × 10 block, now asserted over every cell of both boards along with the guarantee that
 no region spans two layers.
 
+### Animation work, 2026-09-17
+
+Three things the owner reported after playing. **Read `docs/journal.md` for each.**
+
+- **Picking something up costs time now.** `PawnContent.LiftTicks` is 48 — the 0.8 s the drawn
+  `Gesture.Lift` always took — and `LiftGraspTicks` 24 is the moment the thing changes hands, in
+  the middle of the crouch's hold. The instant `TakeUp` is **gone**: `JobDriver.LiftToil` is the
+  whole motion and both carriers (haul, delivery) are one line each, so they cannot drift apart.
+  The duration lives on the colonist, not on a job, because a lift is a lift. **All three golden
+  `Simulated` hashes moved and no `Generated` one did**, which is the signature saying the re-bake
+  is what it claims — checked by reading which assertion failed before re-baking, not assumed.
+- **The jolting is found and fixed.** Two suspects, both measured. The staircase-path theory was
+  good and is **falsified** (`WalkHeadingMeasurementTests`, writes `Logs/walk-heading.txt`): a
+  30 × 30 diagonal is 60 steps and **5 turns**, and forced along a diagonal impassable band it is
+  **7**. On a 4-connected grid every monotone path costs the same, so the search spends the
+  tie-break on long straight runs — **do not "fix" path smoothing on this theory.** The fault was
+  the other one: `PawnPose.OnTheDrawnGround` compared the walker's height, sampled where she is,
+  against the ground height sampled at the **centre of whichever cell she was over** — and `over`
+  flips at the midpoint of every step. **81.9 mm of vertical snap in one frame** against 25 mm of
+  honest travel, once a step, everywhere on the board. Sampling the relief at the walker's position
+  takes it to **1.6 mm**. `WalkOnReliefTests` is the gate.
+  **Why five thorough tests missed it, which is the reusable lesson:** `BankFootingTests` owns this
+  question with the same instrument and five cases, and `GroundRelief.Reset()` sets `Amplitude` to
+  **zero**, which the fixture applies to all of them — so the whole continuity suite has only ever
+  run on a flat field, while the played board has a 2 m one everywhere. **A fixture-wide default is
+  a silent precondition on every test in the file.**
+  **Left open, deliberately:** crossing between a bank cell and flat ground jumps **28.7 mm rolling
+  and 30.0 mm flat**, so it is the bank surface's own and predates this. It is under the 50 mm
+  budget `BankFootingTests` has always used. Recorded, not chased.
+- **Colonists float and swim in water — the drawn half is built.** `docs/design/20-swimming-and-water.md`;
+  §2 and §2a hold the owner's decisions. They were walking along the *bottom*: both water rows are
+  non-solid so the cell's floor is the bed, and `WaterSurface` 0.72 of a 3 m cell is **2.16 m of
+  water over a 1.8 m person**. The owner reported it twice and ruled: **do not lower the water, and
+  in shallow water the float is a drawing and nothing else** (*"float is how it looks; shallow stays
+  crossable"*). So this is **pure presentation** — no Def change, no cost change, **no golden moved**,
+  nothing in the save or the hash. `WaterLine` (where the figure sits) + `SwimPose` (the shape) +
+  `PawnFigureDirector.ApplySwimPose`. Evidence: `Logs/swim-play.png`, `scripts/unity.sh shot
+  Odyssey.EditorTools.SwimCheck.Run`.
+  **Four things not to undo by tidying.** The **draught is 1.0 m, about a hip height** — it is
+  measured to the root, which is at the *feet*, while the pose tips about the **hips**; 0.25 m
+  "just under the surface" put the torso 0.65 m clear and the colonist lay on the stream like a
+  raft. The **rise and the pose blend across the step together** (the float is 1.16 m; switched at a
+  boundary it is a teleport twenty times the size of the midpoint snap). The **gait's speed is faded
+  out by the swim weight**, or the figure strides along the surface — the climb's fault from the
+  other side. And **`Footing` is faded by the swim weight, not skipped** — skipping it made the
+  footing arrive complete on one frame as a colonist came ashore.
+  **The crossing curve is the second round** (owner played it, 2026-09-17: *"getting out — the
+  colonist ends up clipped and sunk half way into a terrain tile"*). A step with water at either end
+  is drawn by interpolating its **two resting heights**, not by following the ground, because
+  between a waterline and the bank above it there is no drawn surface to follow — and the whole
+  vertical change happens in the **water half** of the step, so climbing out is finished by the edge
+  and getting in does not start until it. The pose weight uses the same curve. **Measured across all
+  341 exits on a real generated board: the figure is never inside the ground it is climbing into
+  (0 cm).** The pull-up is fast on purpose — median 55 mm a frame, worst 106 mm — and finishing
+  later is what would put the figure back inside the bank, so the lever is the step's duration in
+  the simulation, not the curve.
+  **The shoreline jitter is a separate, still-open report**, and the obvious explanation is
+  falsified: profiled across 223 steps along a real shore, the worst is a perfectly even ramp with a
+  **0.0 mm** hand-over gap between steps. 31 mm a frame is just walking up a slope. The remaining
+  candidate is the footing hand-over, now continuous — **unconfirmed until somebody plays it.**
+  **Still not built:** deep water is `impassable` and the helpless-swimmer rules (slow, no work, no
+  carrying, `TraverseMode.Hauler` refuses deep water) are designed only. Shallow water is **already
+  priced at a third speed** (`CostClassShallowWater` 200, so 300 a cell) and stays that way.
+  The depth comparison is still on disk if the question reopens: `Logs/water-depth-{72,50,30,15}-play.png`.
+
 ### Waiting on the owner
 
 - **Nobody has pressed Play on the look work.** Every judgement about the day cycle, the golden
