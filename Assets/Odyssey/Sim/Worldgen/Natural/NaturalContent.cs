@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 
 namespace Odyssey.Sim.Worldgen.Natural
@@ -7,32 +8,30 @@ namespace Odyssey.Sim.Worldgen.Natural
     /// The content the wilderness generator writes: the natural terrain kinds, the tree edifices
     /// and the presentation module ids for both.
     ///
-    /// **Coupling with <see cref="CoreContent"/>, deliberate and temporary.** Terrain is stored in
-    /// <see cref="World.CellGrid.Terrain"/> as a table index, and the ruined-city generator's
-    /// table is <see cref="CoreContent"/>, indices 0 to <see cref="CoreContent.TerrainCount"/> - 1.
-    /// This class continues that numbering from <see cref="FirstTerrain"/> rather than starting a
-    /// second table at zero, so the two generators can never write the same index meaning two
-    /// different things. The same is done for edifice ids (<see cref="FirstEdifice"/>) and stuffs
-    /// (<see cref="StuffWood"/>).
+    /// **There is one terrain table, and this class holds the wilderness half of its numbering.**
+    /// Terrain is stored in <see cref="World.CellGrid.Terrain"/> as a table index; the city's ten
+    /// occupy 0 to <see cref="CoreContent.TerrainCount"/> - 1 and these continue from
+    /// <see cref="FirstTerrain"/> rather than starting a second table at zero, so the two
+    /// generators can never write the same index meaning two different things. The same is done
+    /// for edifice ids (<see cref="FirstEdifice"/>) and stuffs (<see cref="StuffWood"/>).
     ///
-    /// **The XML is already one table** (OQ-16): <c>Defs/Core/World/Terrain.xml</c> declares all
-    /// twenty-one kinds in index order, <see cref="WorldContent.TerrainOrder"/> is the list that
-    /// decides which name is which index, and <c>WorldContentDefTests</c> checks that list against
-    /// every constant below. What remains split is the code: these constants and the in-code
-    /// tables stay until the composition root builds a world from a loaded database, which is its
-    /// own change (see <see cref="Pawns.PawnContent"/>). Until then three rules keep the split
-    /// honest:
+    /// **What is left here is the constants, and only the constants** (OQ-16, OQ-49).
+    /// <c>Defs/Core/World/Terrain.xml</c> declares all twenty-one kinds,
+    /// <see cref="WorldContent.TerrainOrder"/> is the list that decides which name is which index,
+    /// and <see cref="WorldContent.Table"/> is what the running game reads. The in-code tables
+    /// that used to mirror the XML are gone. A constant below is a compile-time handle — it is in
+    /// the views, the saves and the hash — so it cannot become content, and
+    /// <c>WorldContentDefTests</c> checks every one of them against the order list.
+    ///
+    /// Two rules still hold, both about the numbering rather than the values:
     ///   1. never renumber <see cref="CoreContent"/> without renumbering here;
-    ///   2. ask <see cref="IsSolid"/> / <see cref="TerrainAt"/> here, never
-    ///      <c>CoreContent.IsSolid</c> directly, on any index that may be natural — the CoreContent
-    ///      table would throw on ours;
-    ///   3. presentation tables sized by <c>CoreContent.Terrain.Count</c> (currently
+    ///   2. presentation tables sized by <c>CoreContent.Terrain.Count</c> (currently
     ///      <c>WorldRenderModel</c>) must be widened to <see cref="TerrainCount"/> before a natural
     ///      map is rendered. The module ids below are what such a table needs to resolve.
     ///
-    /// The declaration order below **is** the table order, exactly as in CoreContent, and it is
-    /// the order <see cref="WorldContent.TerrainOrder"/> repeats. A name added here is added there
-    /// too, or a test fails — which is the point of having written it down twice.
+    /// The third rule this list used to carry — always ask <see cref="TerrainAt"/> here and never
+    /// <c>CoreContent.TerrainAt</c>, because that table would throw on a natural index — is gone
+    /// with the split it described. Both now read the one table and either answers for any index.
     /// </summary>
     public static class NaturalContent
     {
@@ -198,20 +197,26 @@ namespace Odyssey.Sim.Worldgen.Natural
 
         // ---- the terrain table -------------------------------------------------------------
 
-        static readonly TerrainDef[] NaturalTerrain = BuildTerrain();
-
-        /// <summary>The natural half of the table. Index with <c>terrain - FirstTerrain</c>.</summary>
-        public static IReadOnlyList<TerrainDef> Terrain => NaturalTerrain;
+        /// <summary>
+        /// The wilderness half of the table, loaded from <c>Defs/Core/World/Terrain.xml</c> like
+        /// the city's. This class used to build it in code with the XML mirroring it, which meant
+        /// every terrain was written twice and only a test noticed when one copy was forgotten.
+        /// </summary>
+        public static IReadOnlyList<TerrainDef> Terrain =>
+            new ArraySegment<TerrainDef>(WorldContent.Table, FirstTerrain,
+                                         WorldContent.Table.Length - FirstTerrain);
 
         /// <summary>
-        /// Looks up any index, core or natural. Every worldgen and gameplay path that can see a
-        /// natural map must come through here rather than through CoreContent.
+        /// Looks up any index, core or natural.
+        ///
+        /// <para>There is no longer a split to dispatch on — the core terrains are simply the
+        /// first ten rows of one table, which is what <c>WorldContent.TerrainOrder</c> always
+        /// said they were. The branch this replaced was the seam between two hand-written
+        /// tables, and with the tables gone the seam goes too.</para>
         /// </summary>
-        public static TerrainDef TerrainAt(ushort terrain) =>
-            terrain < FirstTerrain ? CoreContent.TerrainAt(terrain) : NaturalTerrain[terrain - FirstTerrain];
+        public static TerrainDef TerrainAt(ushort terrain) => WorldContent.Table[terrain];
 
-        public static bool IsSolid(ushort terrain) =>
-            terrain < FirstTerrain ? CoreContent.IsSolid(terrain) : NaturalTerrain[terrain - FirstTerrain].solid;
+        public static bool IsSolid(ushort terrain) => WorldContent.Table[terrain].solid;
 
         public static bool IsKnown(ushort terrain) => terrain < TerrainCount;
 
@@ -221,8 +226,7 @@ namespace Odyssey.Sim.Worldgen.Natural
         /// question rather than a correction to <see cref="IsSolid"/>.
         /// </summary>
         public static bool IsImpassable(ushort terrain) =>
-            terrain >= FirstTerrain && terrain < TerrainCount &&
-            NaturalTerrain[terrain - FirstTerrain].impassable;
+            terrain < TerrainCount && WorldContent.Table[terrain].impassable;
 
         /// <summary>
         /// Ground a colonist can stand on. Marsh is in: it is solid ground, and leaving it out
@@ -286,34 +290,6 @@ namespace Odyssey.Sim.Worldgen.Natural
             return own != CostClassClear ? own : CostClassOf(below);
         }
 
-        static TerrainDef[] BuildTerrain()
-        {
-            return new[]
-            {
-                // Everything here is solid: the surface of a wilderness map is the ground, and the
-                // cell above it is what a colonist stands in. CoreContent's Soil and Gravel are
-                // *not* solid — they are the dug-out band under a city — so they cannot be reused
-                // for a surface without punching a hole in it.
-                new TerrainDef { defName = "Grass", label = "grass", solid = true, workToClear = 60, fertility = 100, salvageWeight = 0 },
-                new TerrainDef { defName = "BareEarth", label = "bare earth", solid = true, workToClear = 60, fertility = 85, salvageWeight = 0 },
-                new TerrainDef { defName = "PackedGravel", label = "gravel", solid = true, workToClear = 90, fertility = 30, salvageWeight = 0 },
-                new TerrainDef { defName = "Sand", label = "sand", solid = true, workToClear = 70, fertility = 8, salvageWeight = 0 },
-                new TerrainDef { defName = "Subsoil", label = "subsoil", solid = true, workToClear = 160, fertility = 12, salvageWeight = 0 },
-                new TerrainDef { defName = "Bedrock", label = "bedrock", solid = true, workToClear = 2400, fertility = 0, salvageWeight = 0 },
-                new TerrainDef { defName = "IronOre", label = "iron ore", solid = true, workToClear = 900, fertility = 0, salvageWeight = 0 },
-                new TerrainDef { defName = "CoalSeam", label = "coal seam", solid = true, workToClear = 760, fertility = 0, salvageWeight = 0 },
-
-                // Water. Neither depth is solid, so the bed below is the floor; deep water adds
-                // `impassable`, which is the only thing that stops a colonist walking on a lake
-                // (solid would let them walk *over* it, non-solid alone lets them walk *into*
-                // it). Neither is buildable and both are bridgeable: that pair is the whole of
-                // "you cannot build on water without a bridge", written where the build pipeline
-                // will find it. Marsh is ordinary ground that happens to be slow.
-                new TerrainDef { defName = "ShallowWater", label = "shallow water", solid = false, workToClear = 0, fertility = 0, salvageWeight = 0, buildable = false, bridgeable = true },
-                new TerrainDef { defName = "DeepWater", label = "deep water", solid = false, impassable = true, workToClear = 0, fertility = 0, salvageWeight = 0, buildable = false, bridgeable = true },
-                new TerrainDef { defName = "Marsh", label = "marsh", solid = true, workToClear = 70, fertility = 40, salvageWeight = 0 },
-            };
-        }
 
         // ---- ore kinds ---------------------------------------------------------------------
 

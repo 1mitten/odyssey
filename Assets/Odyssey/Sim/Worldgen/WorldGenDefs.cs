@@ -10,9 +10,10 @@ namespace Odyssey.Sim.Worldgen
     /// Natural cell material: rock, fill, soil, pavement, rubble (docs/design/04-data-model.md #3).
     ///
     /// Worldgen stores the *index* of one of these in <see cref="World.CellGrid.Terrain"/>, which
-    /// is a <see cref="DefTable{T}"/> index in exactly the sense the Def system means. Until
-    /// content files exist, <see cref="CoreContent"/> builds the table in code, in a fixed order
-    /// that the eventual XML must reproduce.
+    /// is a <see cref="DefTable{T}"/> index in exactly the sense the Def system means. The table
+    /// is loaded from <c>Defs/Core/World/Terrain.xml</c> and reached through
+    /// <see cref="WorldContent.Table"/>; <see cref="WorldContent.TerrainOrder"/> is what decides
+    /// which name gets which index, and it is not the order the loader stores Defs in.
     /// </summary>
     public class TerrainDef : Def
     {
@@ -241,19 +242,23 @@ namespace Odyssey.Sim.Worldgen
     /// <summary>
     /// The core content set worldgen writes: terrain kinds, slab kinds, stuffs and edifice kinds.
     ///
-    /// **The terrain table now exists as content too** (OQ-16): <c>Defs/Core/World/Terrain.xml</c>
-    /// holds these ten and the wilderness's eleven as one table, and <c>WorldContentDefTests</c>
-    /// compares the two field for field on every run, so they cannot part unnoticed.
+    /// **The terrain table is content** (OQ-16, OQ-49): <c>Defs/Core/World/Terrain.xml</c> holds
+    /// these ten and the wilderness's eleven as one table, and <see cref="WorldContent.Table"/> is
+    /// what the running game reads. The copy that used to live here, and the comparison that kept
+    /// the two honest, are both gone — a fingerprint guards the values now, because with one copy
+    /// left there was nothing for the comparison to compare against.
     ///
-    /// This copy remains for one reason: it is the oracle, and the generator must run headless in
-    /// a clone that has no <c>Assets/</c> content at all. The declaration order below **is** the
-    /// table order, and a terrain index is stored in every cell of every save — so the order is a
-    /// save-compatibility contract, not a convention. <see cref="WorldContent.TerrainOrder"/>
-    /// restates it and a test checks both against these constants.
+    /// **The constants below stay, and are not a leftover.** They are compile-time handles: a
+    /// terrain index is stored in every cell of every save and folded into every state hash, so it
+    /// has to be a number the code can name without loading anything. The declaration order
+    /// **is** the table order and is therefore a save-compatibility contract rather than a
+    /// convention; <see cref="WorldContent.TerrainOrder"/> restates it, and a test checks every
+    /// constant here and in <c>NaturalContent</c> against it.
     ///
-    /// TODO(content): build the world from a loaded <see cref="DefDatabase"/> at the composition
-    /// root, then delete this table and turn the constants into resolved handles. That is its own
-    /// change, and nothing else in worldgen needs to change with it.
+    /// The old note here worried that the generator must run headless in a clone with no
+    /// <c>Assets/</c> content. That case does not exist: the pack is committed at
+    /// <c>Assets/Odyssey/Defs/Core</c>, so every clone has it. The rule it was reaching for is
+    /// about <c>Assets/Synty/</c>, which is gitignored, and nothing here touches that.
     /// </summary>
     public static class CoreContent
     {
@@ -294,13 +299,17 @@ namespace Odyssey.Sim.Worldgen
         public const ushort EdificeVaultWall = 8;
         public const ushort EdificeUtilityTap = 9;
 
-        static readonly TerrainDef[] TerrainTable = BuildTerrain();
+        /// <summary>
+        /// The city's ten, which are the first ten of the one table. Loaded from
+        /// <c>Defs/Core/World/Terrain.xml</c> like everything else: this class used to build them
+        /// in code and the XML mirrored it, which meant every terrain was written twice.
+        /// </summary>
+        public static IReadOnlyList<TerrainDef> Terrain =>
+            new System.ArraySegment<TerrainDef>(WorldContent.Table, 0, TerrainCount);
 
-        public static IReadOnlyList<TerrainDef> Terrain => TerrainTable;
+        public static TerrainDef TerrainAt(ushort index) => WorldContent.Table[index];
 
-        public static TerrainDef TerrainAt(ushort index) => TerrainTable[index];
-
-        public static bool IsSolid(ushort terrain) => TerrainTable[terrain].solid;
+        public static bool IsSolid(ushort terrain) => WorldContent.Table[terrain].solid;
 
         public static ushort StuffByName(string name)
         {
@@ -311,23 +320,6 @@ namespace Odyssey.Sim.Worldgen
                 case "Composite": return StuffComposite;
                 default: throw new DefLoadException($"Unknown stuff '{name}'.");
             }
-        }
-
-        static TerrainDef[] BuildTerrain()
-        {
-            return new[]
-            {
-                new TerrainDef { defName = "Air", label = "open air" },
-                new TerrainDef { defName = "Pavement", label = "pavement", workToClear = 220, fertility = 0, salvageWeight = 4 },
-                new TerrainDef { defName = "CrackedPavement", label = "cracked pavement", workToClear = 140, fertility = 12, salvageWeight = 4 },
-                new TerrainDef { defName = "Rubble", label = "rubble", workToClear = 90, fertility = 20, salvageWeight = 10 },
-                new TerrainDef { defName = "Soil", label = "soil", workToClear = 60, fertility = 100, salvageWeight = 1 },
-                new TerrainDef { defName = "Gravel", label = "gravel", workToClear = 70, fertility = 55, salvageWeight = 1 },
-                new TerrainDef { defName = "EngineeredFill", label = "engineered fill", solid = true, workToClear = 420, salvageWeight = 14 },
-                new TerrainDef { defName = "Rock", label = "rock", solid = true, workToClear = 700, salvageWeight = 2 },
-                new TerrainDef { defName = "BuriedSeam", label = "buried city", solid = true, workToClear = 520, salvageWeight = 60 },
-                new TerrainDef { defName = "Salvage", label = "salvage", solid = true, workToClear = 480, salvageWeight = 0 },
-            };
         }
     }
 }

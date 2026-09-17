@@ -81,6 +81,7 @@ namespace Odyssey.Sim.Defs
         {
             _core = null;
             _root = null;
+            WorldContent.Forget();
         }
 
         /// <summary>

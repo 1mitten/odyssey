@@ -973,9 +973,14 @@ work itself.
     both sides could have moved together.
   - **Deliberately left: the world half.** `CoreContent.Terrain` and `NaturalContent.Terrain` are
     still in-code tables duplicated by `Defs/Core/World/*.xml`, and `WorldContentDefTests` still
-    uses them as its oracle. They are read at runtime almost nowhere — the oracle and one count
-    assertion — so migrating them is a different and subtler change than this one, and the
-    `TODO(content)` in `WorldGenDefs.cs` still stands.
+    uses them as its oracle. ~~They are read at runtime almost nowhere — the oracle and one count
+    assertion~~ — **wrong, and corrected the same day by OQ-49 below.** That claim came from
+    grepping the `Terrain` *list property* and not `TerrainAt()`, which is the accessor everything
+    actually calls: mining prices `workToClear` through it on every work tick, `DepthPasses` reads
+    `salvageWeight` per cell while generating, and the renderer resolves terrain names through it.
+    The tables were load-bearing all along. Written down because the same mistake is in the
+    `OQ-48` PR body and in the plan docs of that commit: **a grep for a symbol is not a search for
+    its callers**, and the one I ran happened to match only documentation.
   - **Verified:** fast tier **432 Sim + 106 Hud** (from 428 + 106). **Not verified locally:**
     `scripts/unity.sh test editmode` and PlayMode — a Unity editor held the main checkout
     throughout, which matters more than usual here because **the ten editor tools are compiled by
@@ -1096,3 +1101,40 @@ work itself.
   reached. A chip has an explicit 30 px height, because **a count of rows is meaningless if a row's
   height is content-driven**. Measured at 1080p: the palette is **176 px tall with categories at 68
   and tools at 44**, against a panel that ran to its 320 px ceiling with five rows of categories.
+    (Both tiers went green on PR #65, and the Unity log was checked for `error CS`, for
+    `Odyssey.Editor` and for the names of the changed tools rather than trusted on the tick.)
+
+- **The world tables follow, and on the way it turned out nothing was guarding them (OQ-49,
+  2026-09-17).** Terrain now loads from `Defs/Core/World/Terrain.xml` and the in-code copies are
+  deleted — `CoreContent.BuildTerrain()` and `NaturalContent.BuildTerrain()`, twenty-one terrains
+  written out twice. `WorldContent.Table` is the one table, lazily loaded from `ContentPack.Core`
+  and cached.
+  - **The headline is a measurement, not the migration.** Once the generators read the XML, the
+    old field-for-field oracle was comparing the XML *against itself* and passed without asking
+    anything. That was not reasoned about, it was checked: **rock's `workToClear` edited from 700
+    to 701 — a number the mining job prices every work tick from — left all 448 tests green.**
+    Nothing at all pinned the world's content values; a typo in `Terrain.xml` would have shipped
+    in silence. A `DefComparison.Fingerprint` over the table now guards it, and the identical edit
+    fails two tests. Both halves of that were run, before and after.
+  - **The correction that made this worth doing at all.** Yesterday's entry, the OQ-48 PR body and
+    the plan docs all said the in-code world tables were "read at runtime almost nowhere". Wrong:
+    that came from grepping the `Terrain` *list property* rather than `TerrainAt()`, the accessor
+    everything actually calls — mining, `DepthPasses`, the renderer, the ambience probe. **A grep
+    for a symbol is not a search for its callers**, and the one that was run happened to match
+    only documentation. The claim is struck through above and corrected in both plan docs.
+  - **Lazy, not a static field initialiser, and for a specific reason.** Filling the table loads
+    the pack, and loading the pack calls `WorldContent.Register` — on this very class. A field
+    initialiser would run that inside the type's own static constructor; a property runs it after
+    the type is initialised, where a plain static call back in is harmless. Cached because it is a
+    hot path: `DepthPasses` asks for `salvageWeight` per cell while generating.
+  - **A branch disappeared.** `NaturalContent.TerrainAt` used to dispatch on
+    `terrain < FirstTerrain` between two hand-written tables. With one table the core terrains are
+    simply its first ten rows — which is what `WorldContent.TerrainOrder` always said they were —
+    so the branch, and the doc-comment rule warning never to call `CoreContent.TerrainAt` on a
+    natural index, both go.
+  - **What did not change is the numbering.** A terrain index is in every cell of every save and
+    every hash. `TerrainOrder` still decides it, it is still not the loader's own by-defName sort,
+    and the test that checks all twenty-one constants against it is untouched — joined now by one
+    asserting the *loaded* table came back in that order.
+  - **Verified:** fast tier **450 Sim + 110 Hud**. Content gates green. **Not verified locally:**
+    the Unity tier, for the same reason as yesterday.
