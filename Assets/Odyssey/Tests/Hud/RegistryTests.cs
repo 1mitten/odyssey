@@ -61,6 +61,31 @@ namespace Odyssey.Tests.Hud
                     $"{tool.Key} can be armed and has no name");
         }
 
+        /// <summary>
+        /// The session rows — Save, Load, Quit to main menu, Exit, New game, Settings — held to
+        /// the CSV like every other panel here (U38).
+        ///
+        /// <para>The second loop is the one that matters: it walks what the two surfaces actually
+        /// <i>draw</i>, rather than the array that says what they might, so a row added to the
+        /// table and forgotten in <c>IconKeys</c> fails here instead of drawing a key at the
+        /// player.</para>
+        /// </summary>
+        [Test]
+        public void EverySessionRowIsARegisteredName()
+        {
+            foreach (string key in SessionCommands.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+
+            foreach (SessionContext context in SessionCommands.Contexts)
+            foreach (SessionCommand command in SessionCommands.For(context))
+            {
+                Assert.That(Registry.Labels, Does.ContainKey(command.Key),
+                    $"{command.Key} is drawn in {context} and has no name");
+                Assert.That(SessionCommands.IconKeys, Does.Contain(command.Key),
+                    "a row the menu can draw but the registry test does not cover is a label nobody checks");
+            }
+        }
+
         [Test]
         public void EveryHotkeyKeyIsARegisteredName()
         {
