@@ -99,11 +99,14 @@ namespace Odyssey.Tests.Sim
 
             foreach (IntentKind kind in System.Enum.GetValues(typeof(IntentKind)))
             {
-                // The two the world answers out of its own switch rather than through a registered
-                // component: they are about the view of the world, not about anything in it.
+                // The four the world answers out of its own switch rather than through a
+                // registered component: they are about the view of the world, not about anything
+                // in it — how fast it runs, which layer is shown, and which cell is being asked
+                // about all belong to the world itself.
                 if (kind == IntentKind.None
                     || kind == IntentKind.SetGameSpeed
-                    || kind == IntentKind.SetSliceLayer) continue;
+                    || kind == IntentKind.SetSliceLayer
+                    || kind == IntentKind.QueryCell) continue;
 
                 Assert.That(colony.World.HandlesIntent(kind), Is.True,
                     $"nothing in the colony handles {kind}, so a player sending it gets silence");

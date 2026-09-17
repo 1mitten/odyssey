@@ -46,6 +46,12 @@ namespace Odyssey.Sim
         /// </summary>
         public void AddPawnAspect(PawnId pawn, AspectKey key, int value) =>
             _target.AddPawnAspect(new PawnAspect(pawn, key, value));
+
+        /// <summary>
+        /// Publish the answer for one asked-about cell. See <see cref="CellDetail"/> for why this
+        /// is a row per question rather than a channel per layer.
+        /// </summary>
+        public void AddCellDetail(in CellDetail detail) => _target.AddCellDetail(detail);
     }
 
     /// <summary>
@@ -76,6 +82,13 @@ namespace Odyssey.Sim
 
         /// <summary>The layer presentation is currently slicing at. Set through an intent.</summary>
         public int SliceLayer { get; internal set; }
+
+        /// <summary>
+        /// The cell the interface has asked detail about, as a whole-world index, or -1 when no
+        /// question stands. Set through a <c>QueryCell</c> intent, and like the slice layer it is
+        /// view state: not saved, not hashed, and a question changes nothing the simulation owns.
+        /// </summary>
+        public int QueryCell { get; internal set; } = -1;
 
         public int PublishCount { get; private set; }
 

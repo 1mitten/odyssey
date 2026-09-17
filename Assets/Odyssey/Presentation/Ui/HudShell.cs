@@ -144,6 +144,18 @@ namespace Odyssey.Presentation.Ui
         int _stateSelected = int.MinValue;
         string? _stateSite;
 
+        // The pile count, held beside the site line above for the same reason: the state line is
+        // interpolated, so it is rebuilt only when a value it quotes has moved.
+        int _stateStack = int.MinValue;
+
+        // What the avatar was last keyed with, so a tile whose answer changed under the selection
+        // — a face mined through, a tree felled — swaps its icon without rebuilding the pane.
+        string _inspectAvatarKey = string.Empty;
+
+        // ---- the tile readout's rows, built once and updated in place
+        VisualElement? _cellRowsGrid;
+        readonly List<CellRowView> _cellRows = new List<CellRowView>();
+
         // ---- command bar (A8)
         VisualElement _barRow = null!;
         VisualElement _bar = null!;
@@ -292,6 +304,20 @@ namespace Odyssey.Presentation.Ui
             public int LastLevel = int.MinValue;
             public int LastPassion = int.MinValue;
             public bool LastLive;
+        }
+
+        /// <summary>
+        /// One fact of the tile readout: the label in its fixed column, the value beside it.
+        /// Held like a skill row — built once, updated in place, its last strings cached so a
+        /// refresh that says the same thing writes nothing.
+        /// </summary>
+        sealed class CellRowView
+        {
+            public VisualElement Root = null!;
+            public Label Name = null!;
+            public Label Value = null!;
+            public string LastName = string.Empty;
+            public string LastValue = string.Empty;
         }
 
         void Awake()

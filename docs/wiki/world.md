@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-77 entries, 52 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+80 entries, 55 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -18,6 +18,9 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Rock** | `ui.terrain.rock` | Natural stone. Mined, not cleared <br>**Needs:** a face of natural stone | no art | M1 |
 | **Subsoil** | `ui.terrain.subsoil` | The band between soil and rock. Cheap to dig <br>**Needs:** a tile of dug earth | no art | M1 |
 | **Bedrock** | `ui.terrain.bedrock` | The floor of the world. Deliberately punitive to mine <br>**Needs:** a tile of dark, banded stone | no art | M1 |
+| **Packed Gravel** | `ui.terrain.packedgravel` | Stony ground, packed hard. Firm footing, poor soil | no art | M3 |
+| **Conifer** | `ui.terrain.tree.conifer` | An evergreen of the meadow. Chopped for wood | no art | M3 |
+| **Broadleaf** | `ui.terrain.tree.broadleaf` | A broad-crowned tree of the meadow. Chopped for wood | no art | M3 |
 
 ## Weather
 

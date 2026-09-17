@@ -163,6 +163,17 @@ All five chokepoints named after the mining line are now open:
   `ContentPack.UseRoot` is the tested seam for the day something does.
 - **A feature can describe a pawn without widening `PawnView`** (OQ-45, ADR 0004 amended): a sparse
   `PawnAspect` row keyed by a name the feature mints for itself.
+- **The world answers a question about a cell** (2026-09-17, ADR 0004 amendment 2): a sparse
+  `CellDetail` row — terrain, edifice, floor stuff, support, work to clear, crossing cost in
+  thousandths of a clear crossing — published for the one asked-about cell by a sim-side
+  contributor every colony gets. The question is a `QueryCell` intent, and **a paused world answers
+  it by republishing the view without spending a tick** — the first time "intents flush while the
+  clock is paused" (ADR 0004's own Decision) has been true of anything but a speed change. This is
+  U16's readback arriving two milestones late: the pane had shipped the placeholder "cell readout
+  arrives with cell inspection" since M1, and the owner's reports (rocks indistinguishable from
+  grass, water silent about being water, piles generic with no count) are what opened it. The same
+  change made water own its click in the picker and a pile resting on bare ground selectable — the
+  pick resolves to the block under a pile, so `SelectionDirector` looks one cell up.
 - **The scene composes its world the way everything else does** (U34, 2026-09-17), which is the
   simulation half of the bootstrap chokepoint. It had forty lines that were a copy of
   `ColonyWorld.Build`, and the copy had drifted: no connectors reached the nav graph, no full
@@ -295,7 +306,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **559 Sim + 219 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **570 Sim + 238 Hud**; Long tier **20**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and

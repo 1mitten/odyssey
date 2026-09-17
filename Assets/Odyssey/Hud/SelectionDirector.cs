@@ -256,6 +256,17 @@ namespace Odyssey.Hud
             return false;
         }
 
+        /// <summary>
+        /// The thing a pick landed on, if any. The cell itself first, then the cell standing on it
+        /// — which is where a pile on natural ground lives.
+        ///
+        /// <para><b>The second look is the fix, and it is a playtest report.</b> A pile resting on
+        /// bare ground sits in the air cell above the solid block the picker resolves to (the
+        /// owner's rule: the tile below it or not at all), so matching the picked cell alone
+        /// missed every pile that was not on a built slab — the click fell through to the cell
+        /// pane, which read as "a wood pile cannot be selected" (owner, 2026-09-17). A thing
+        /// resting on the block the player clicked <i>is</i> the thing the player clicked.</para>
+        /// </summary>
         static void ThingAt(WorldSnapshot snapshot, CellRef cell, out ThingId id, out int def)
         {
             var things = snapshot.Things;
@@ -266,6 +277,19 @@ namespace Odyssey.Hud
                 def = things[i].DefIndex;
                 return;
             }
+
+            if (cell.Y + 1 < snapshot.Size.SizeY)
+            {
+                CellRef above = cell.Above;
+                for (int i = 0; i < things.Length; i++)
+                {
+                    if (things[i].Cell != above) continue;
+                    id = things[i].Id;
+                    def = things[i].DefIndex;
+                    return;
+                }
+            }
+
             id = ThingId.None;
             def = -1;
         }
