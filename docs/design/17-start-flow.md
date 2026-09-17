@@ -1,7 +1,13 @@
 # 17 — The start flow: a main screen, and a session you can put down
 
-**Status: designed, not yet built.** Written 2026-09-17 on `claude/start-flow`, before the code, as
-`15-building.md` was. This is **U38** of the `MS` milestone in `docs/plans/vertical-slice.md`, and
+**Status: built, all three tiers green, and nobody has pressed Play on it.** Written 2026-09-17 on
+`claude/start-flow` before the code, as `15-building.md` was, and amended in the same branch where
+the building of it proved the design wrong. Those amendments are marked **Corrected** in place
+rather than silently applied, because the wrong version is the more useful record.
+
+**What no tier can say** is in §10: whether a start screen at 320 px reads as a start screen,
+whether a 19 px title is a title, whether landing on a menu instead of a colony is what the owner
+wants every time they press Play. This is **U38** of the `MS` milestone in `docs/plans/vertical-slice.md`, and
 it absorbs the half of **U36** that never landed — the `Saves` folder on disk, which U36's own
 commit message left to "the caller (a menu)". This is that menu.
 
@@ -124,8 +130,8 @@ row is an icon, a label and an optional hotkey cap, which is what a `.menu__row`
 | :::            |                        |            ::: |
 | :::            |   >  New game          |            ::: |
 | :::            |      Load              |            ::: |
-| :::            |      Options           |            ::: |
-| :::            |      Quit              |            ::: |
+| :::            |      Settings          |            ::: |
+| :::            |      Exit game         |            ::: |
 | :::            +------------------------+            ::: |
 | :::                                                  ::: |
 +==========================================================+
@@ -142,6 +148,14 @@ is no live HUD to swallow input from, because the HUD is not built either.
 
 **Options opens the existing settings panel**, over the main screen, unchanged. It is the one
 surface that is the same in both contexts, which is the point of reusing it.
+
+**Corrected, and it is the owner's to settle:** the screen says **Settings** and **Exit game**,
+not "Options" and "Quit". Those two rows reuse `ui.settings.panel` and `ui.settings.exit` rather
+than minting near-duplicate keys, so one thing has one word everywhere and the icon art already
+mapped to them keeps working — and the words those keys carry are the ones the settings panel has
+always used. Changing them is one line each in `docs/design/icon-keys.csv`; inventing a second word
+in C# is not an option, because the whole point of the registry is that the owner can rename any of
+this without a code change.
 
 ---
 
@@ -180,7 +194,12 @@ construction path, which is what U34 and U35 were for.
 | A folder listing sorts newest first and keeps the unreadable, with a reason | `SaveCatalogue` |
 | The menu's navigation | `MenuDirector`: root → load → back, and what each row asks for |
 
-**The gate test, headless** (Sim, `Long`): a colony is built, run, **saved**, **torn down**,
+**Corrected:** the gate test is in the **fast tier**, not `Long`. This section filed it under
+`Long` before anyone had timed it; measured, the whole file is about 420 ms — a 20,000-tick run is
+75 ms and each full-grid hash about 3 ms. It runs after every commit, which is worth more than the
+0.4 s it costs.
+
+**The gate test, headless** (Sim): a colony is built, run, **saved**, **torn down**,
 **rebuilt from the header's recipe**, **loaded**, and its full state hash equals the hash before
 the save. This is the `MS` gate's central claim and OQ-50 is what makes it mean anything — before
 the world was in the hash, this test could have passed over a map it could not see.
@@ -242,3 +261,34 @@ ignores with its reason in the rig without a module catalogue); Load restores a 
   built, by decision (5).
 - **Autosave.** Nothing writes a file the player did not ask for. It wants a cadence, a rotation and
   a policy about overwriting, and none of those is a menu.
+
+---
+
+## 10. What the tiers cannot say, and what is left open
+
+**Nobody has pressed Play on any of it.** Every claim below the line in §6 is a test result. These
+are not:
+
+- **Whether a 320 px column reads as a start screen**, or as a settings panel that has wandered
+  into the middle of an empty scene. It is the width the longest row needs and no more, which is
+  this interface's rule everywhere else and may be wrong for the one screen that has nothing beside
+  it to be economical against.
+- **Whether a 19 px title is a title.** The type scale is closed at six steps, so the game's name
+  is set at the same size as a colonist's name in the inspect pane. A bigger one is a deliberate
+  change to `HudType`, not a literal — but it is a change somebody may well want.
+- **Whether landing on a menu is what you want every time you press Play.** `buildOnPlay` is right
+  there and turning it on restores the old loop exactly.
+- **The two words.** See §4's correction: the rows say Settings and Exit game.
+
+Three things the code knows are unfinished, named so the next session does not rediscover them:
+
+1. **The scenario table is written twice** — `OdysseyBootstrap.ScenarioFor` and
+   `SessionRoundTripTests.ScenarioByName` each map two `defName`s by hand, because nothing in
+   `Odyssey.Sim` turns a scenario name back into a `ScenarioDef`. It wants a real lookup. It is not
+   urgent: a scenario acts only at tick zero, so a loaded world is unaffected by getting it wrong,
+   and both copies say so out loud.
+2. **Save always writes a new file.** There is no overwrite, no rotation and no autosave, so a
+   folder is a history and it only grows. That is the right default for a prototype with no
+   confirmation dialog, and it is not a policy anybody has chosen.
+3. **The load list has a ceiling and no search.** Eight rows before it scrolls, newest first. A
+   folder of two hundred saves is a scroll.

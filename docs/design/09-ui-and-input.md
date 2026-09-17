@@ -528,7 +528,17 @@ The eight cases it must get right, each with a test:
 2. A click on a panel never reaches the world.
 3. A drag begun on the world and released over a panel completes against the world.
 4. A drag begun on a panel and released over the world does not place anything.
-5. A modal swallows every pointer and key event except its own dismissal.
+5. A modal swallows every pointer and key event except its own dismissal. **True of something
+   for the first time on 2026-09-17**, when U38 built the start screen — until then this case
+   had nothing to be true of, because the settings panel is deliberately not a modal and
+   nothing else in the game was one either. The mechanism is deliberately not a flag: a
+   pickable scrim covers the viewport under the panel, so `HudShell.PointOverUi` answers "the
+   interface" everywhere while a modal is up and the camera rig already declines a press it is
+   told belongs to the interface. The two always-on contrast scrims are explicitly *not*
+   pickable, for the mirror-image reason. `HudShell.Modal()` is the one place a modal is made,
+   and it returns the scrim and the panel as a pair so they cannot get out of step — a scrim
+   left showing over a hidden panel is a screen that eats every click, shows nothing, and
+   cannot be dismissed.
 6. Escape unwinds in order: cancel the active tool, then close the top panel, then open the
    game menu. **Built 2026-09-16**, as far as there is anything to unwind: the order is decided
    by `SettingsDirector.Escape`, in the fast tier, and `SettingsPresenter` does what it says.

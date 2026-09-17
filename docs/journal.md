@@ -2330,3 +2330,84 @@ work itself.
   statistical claims were modelled in Python against the same constants and held over five trials
   of 256 draws, which is not the same as running the test. The fast-tier counts in `CLAUDE.md` are
   deliberately left alone rather than advanced by a guess.
+- **U38, the start screen, 2026-09-17.** Design first (`docs/design/17-start-flow.md`), then an
+  interview, then the code — and the interview is why this unit is not what the plan said it was.
+  `vertical-slice.md` described an in-game menu that Escape would unwind into; the owner's answer
+  was one sentence, *"There is already an in game menu/settings - reuse that"*, and it changed the
+  shape of everything after it. **The plan's row had been written from the panel catalogue rather
+  than from the screen**, and the screen already had a Menu popover and a settings panel with an
+  exit row. So no second in-game menu was built, Save/Load/Quit-to-main-menu joined B17 beside the
+  exit row, the quit half did *not* move out of B17 as the catalogue said it would, and
+  **`SettingsDirector.Escape` gained no case at all** — the thing the plan named as U38's central
+  change turned out to need no change. Both documents were corrected in the same branch rather than
+  left to argue with the code.
+- **What U38 actually is: the screen before the game**, and the project's first true modal.
+  `09-ui-and-input.md` §6 case 5 — "a modal swallows every pointer and key event except its own
+  dismissal" — had been specified since the interface was designed and had never had anything to be
+  true of. **The mechanism is deliberately not a flag.** A pickable element covering the viewport
+  sits under the panel and over everything else, so `PointOverUi` — which asks the panel what is
+  under the cursor — answers "the interface" everywhere, and the camera rig already declines a press
+  it is told belongs to the interface. The two always-on contrast scrims are explicitly *not*
+  pickable, for the mirror-image reason, which is what made this one obvious. The alternative, a
+  modal flag consulted in every input path, is the version that grows a case somebody forgets.
+- **The consistency the owner asked for is enforced rather than remembered.** The instruction was
+  that the new screen keep the existing interface's style *and that this be centralised in the
+  work*. Four seams already did that job — the `Panel`→`Window`→`Popover` factory chain, `HudTheme`
+  checked against `Hud.uss` by a test that parses the sheet, `HudType`'s closed six-step scale, and
+  `Registry.Label` over the content CSV — so the screen was added *to* each rather than beside it:
+  `Modal()` became the fourth link, the scrim became one token, and the title uses the existing
+  `Name` role because the scale is closed and a seventh step fails the fast tier. The screen's rows
+  are `.settings__row`, the same row the stores panel and the Menu popover use. **The one new seam
+  is `SessionCommands`**, the row set as data — key, context, order, and whether it asks twice — so
+  the start screen and the settings panel cannot drift apart. It is the bargain `HudCommands`
+  already makes for the command bar, and `PaletteTools` for the build palette.
+- **Ask-twice had two owners for about an hour, and the table is what found it.** `SettingsDirector`
+  had the exit row's two clicks written into `RequestExit`; adding three more destructive rows would
+  have meant the rule stated twice, in the file whose whole job is to have one. It reads the table
+  now, and `ExitArmed` became `ArmedRow` — one armed row at a time, so pressing Load while Quit is
+  armed stands Quit down. A screen with two rows both asking "are you sure?" is a screen where the
+  second press lands on whichever one the hand reaches first.
+- **`HudDirectors` stopped building the settings and hotkey directors and started taking them.**
+  Nothing in either is a fact about a colony; both are preferences about the machine. They were
+  built and thrown away per session, which was harmless until a screen existed that runs with no
+  session — the start screen's Options row would have opened a panel nothing drove. Two instances
+  would have been the other way out and the wrong one: two answers to "how large is the interface"
+  is a setting that appears not to stick.
+- **Save format 3, and the bug is a good example of what a state hash cannot see.** U38's
+  round-trip test — build, run, save, tear down, rebuild *from the header alone*, load, compare —
+  passed, and then its own follow-up question did not: `SaveRecipe` carried `MapType`, and
+  `MapType.Natural` is three genuinely different boards depending on `Barren` and `Wooded`. So a
+  loaded colony was rebuilt on the wrong board. **The hash agreed because `GridSaveSection` writes
+  every cell of every field and the wrong board is entirely overwritten.** What is not overwritten
+  is everything worldgen returns *beside* the cells: measured on one seed, the wooded board starts a
+  colony at (25,22,L11) with 34 cells marked for work and the default board gives (30,30,L11) and
+  none — and the camera frames a loaded colony on that start cell, so a restored game opened on
+  empty ground a third of the map from the colony it had just restored. Two bools and a format bump;
+  versions 1 and 2 still load, with a hand-built version 2 fixture proving it the way the version 1
+  fixture already did. **The general lesson: a round trip that compares hashes proves the cells
+  survived and says nothing about what generated them.**
+- **`buildOnPlay` defaulting to false is the behaviour change, and the PlayMode tier is where it
+  landed.** Nine rigs assumed `Start` builds a world. They now say so in one line each, which is
+  better than inheriting it — what they were really asserting was "a session exists". Two PlayMode
+  rules genuinely bent and were amended with their reasons rather than loosened: the start screen's
+  root carries no close X, because a window with nothing behind it has nothing to close *to* and an
+  X that does nothing is worse than no X (the exemption is a named list, and the test asserts the
+  exempt window was actually on screen, so the hole cannot widen quietly); and `start` joined the
+  framed-region roll call, since it is built whether or not a colony is.
+- **Two NUnits, and the fast tier's is the newer one — two Unity runs to learn it.**
+  `Assert.Multiple` does not exist under Unity at all, which is a *compile* error and aborts the
+  whole batch before a single test runs, so it reads as a broken build rather than a test problem;
+  and `Has.Count` throws `ArgumentException: Property Count was not found` against an
+  `IReadOnlyList<T>`, while working fine on `List<T>` in the same file. Both are in
+  `docs/lessons.md` now, together with the thing that makes them bite: **the fast tier compiles
+  neither Presentation nor Editor**, so eleven green seconds say nothing about the composition root
+  or the HUD shell.
+- **Three agents ran in parallel on the leaves and the spine stayed single-threaded**, per
+  `lessons.md`. Each owned its own new files and committed nothing; two of the three came back with
+  findings that changed the design rather than just code — the recipe's missing board flags, and the
+  ask-twice drift. Both were reported instead of patched, which is why they were fixed in the right
+  place. One correction they surfaced in passing: `CLAUDE.md`'s "Known gaps" still claimed the
+  designation grid is not saved, and it has been `ISaveable` and `IStateHashable` and in
+  `SaveComponents` for some time. **A stale gap outlives its own fix and sends somebody to build a
+  thing that already exists** — the line is struck through rather than deleted, so the correction is
+  visible.
