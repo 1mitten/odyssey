@@ -2577,3 +2577,46 @@ work itself.
   - **Verified:** fast tier **573 Sim + 193 Hud**, Unity EditMode **1,238 total, 1,229 passed, 0
     failed**, both content gates clean. **Nobody has pressed Play on the red cursor or on the flat
     floor cursor yet**, and no line of U42 is written.
+- **Naming, settled against the recommendation: both say floor (owner, 2026-09-17).** `18-paving.md`
+  §7 asked whether to rename U29's tool to `Slab`, so that "floor" would mean only the covering, and
+  ranked that first. **The owner's answer is that both say floor.** Recorded as a decision rather
+  than left as an open question, so no later session re-opens it: `Structure -> Floor` keeps its
+  name, the coverings keep `Deck plate`, `Grating`, `Tile`, nothing in `icon-keys.csv` moves, and
+  U42 carries no wiki or label rebuild at all.
+
+  **What it costs is written down beside it**, because a decision taken against a recommendation is
+  the kind that gets quietly reversed by somebody who does not know it was taken. Two reachable
+  tools now share a word, so the word cannot be what tells them apart and three other things must:
+  the palette **category** (`Structure` spans and falls, `Floors` is laid on ground — and a covering
+  must never appear under `Structure`, however convenient that looks later), the **descriptions**,
+  which are already written and already published, and the **cursors**, which differ because the
+  rules differ rather than because anyone arranged it — a slab goes red where it cannot stand and a
+  covering almost never will.
+
+  The predicted failure mode is in the doc so that it reads as predicted rather than missed: a
+  player who arms the wrong one of the two gets a nearly identical cursor and a completely different
+  order. If that bites in play, the cheap answer is a clearer readout of which tool is armed, not a
+  rename.
+
+- **The one risk in U42 was measured before any of it was written (2026-09-17).** `18-paving.md` §3
+  named z-fighting as the unit's only real unknown — a covering is a slab in a cell that already has
+  solid ground beneath it, so the drawn slab and the ground block's top face are coplanar — and said
+  to measure it first rather than discover it late and blame something else. `PavingProbe` does
+  exactly that and **needs no part of U42 to exist**: a covering's geometry is decided entirely by
+  where `ChunkMesher.EmitFloor` puts a slab, and that does not care which kind of slab it is, so
+  writing `Floor[]` and `FloorStuff[]` straight over grass produces the pixels U42 would produce.
+  Four shots, at three ranges and one grazing angle, because z-fighting is a depth-precision
+  artefact: a patch that is clean at 18 m can shimmer at 150 m, and 32–160 m is where the slice
+  camera actually sits, so a close-only answer would have been worse than none.
+
+  **It does not fight.** 172 covering cells over open grass, four shots, no shimmer, no speckling
+  and no bleed-through at any range or angle: the prefab's own 0.10 m depth already lifts the drawn
+  slab clear of the plane, so `EmitFloor` needs no covering-specific lift and `SlabBuilt`'s measured
+  1.1 mm seam is left alone. U42's estimate holds at one session with the drawing work struck out.
+
+  **What the probe found instead was not in the estimate: grass grows through paving.** The tufts
+  and the flower scatter still draw on a paved cell, because the scatter is keyed off the terrain
+  and knows nothing about `Floor[]`, and it is unmistakable at every range. One condition where the
+  scatter is gathered, presentation only, in neither a cell nor the save nor the hash — and a good
+  argument for the probe having been worth running, since it is the sort of thing that would
+  otherwise have been found by the owner on the day the feature was declared done.
