@@ -33,34 +33,8 @@ namespace Odyssey.Tests.Sim
     {
         static bool Rebaking => Environment.GetEnvironmentVariable("ODYSSEY_REGOLDEN") == "1";
 
-        /// <summary>
-        /// The simulation's state hash **and the world's cells**, folded together.
-        ///
-        /// <para><b>Why this is not just <c>ComputeStateHash()</c>, which is the surprise this row
-        /// turned up.</b> The cell grid is not in the state hash. `CellGrid` does not implement
-        /// <c>IStateHashable</c> and is never registered, so `ComputeStateHash` covers the seed,
-        /// the tick, the size, the designations, the jobs and the pawns — and not the terrain, the
-        /// floors, the edifices or the flags. It was found here by a control that should have
-        /// failed and did not: making deep water passable changes nine cells' flags on the played
-        /// board and moved no hash at all.</para>
-        ///
-        /// <para><b>It is scoped to the golden rather than fixed in place, deliberately.</b>
-        /// Measured on the played board, `ComputeStateHash()` costs 0.003 ms and the grid
-        /// contribution costs 10.3 ms — three thousand times more. Folding the grid into the
-        /// canonical hash would make the per-tick hash sink that `HashTraceTests` uses take
-        /// minutes over a day's ticks, so it is a real design question (an incremental hash over
-        /// the chunk dirty-tracking the save already has) and not a line to slip into this change.
-        /// A golden runs it twice per case, so here it costs nothing worth naming.</para>
-        ///
-        /// <para>Order is fixed and the state hash goes in first, so the number is reproducible.</para>
-        /// </summary>
-        static ulong FullHash(ColonyWorld colony)
-        {
-            var hash = StateHash.New();
-            hash.Add(colony.World.ComputeStateHash().Value);
-            colony.Grid.ContributeTo(ref hash);
-            return hash.Value;
-        }
+        /// <summary>The state hash and the cells, folded together. See <see cref="Golden.FullHash"/>.</summary>
+        static ulong FullHash(ColonyWorld colony) => Golden.FullHash(colony);
 
         /// <summary>
         /// Build, hash, tick, hash again, and either assert or print.

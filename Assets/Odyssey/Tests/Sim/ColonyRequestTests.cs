@@ -66,7 +66,7 @@ namespace Odyssey.Tests.Sim
             ColonyWorld positional = ColonyWorld.Build(Size, seed: 4242u, ScenarioDef.Bare());
             ColonyWorld requested = ColonyWorld.Build(Request(4242u));
 
-            Assert.That(requested.World.ComputeStateHash(), Is.EqualTo(positional.World.ComputeStateHash()),
+            Assert.That(Golden.FullHash(requested), Is.EqualTo(Golden.FullHash(positional)),
                 "the request path built a different world from the positional one");
             Assert.That(requested.Outcome.GridHash, Is.EqualTo(positional.Outcome.GridHash));
             Assert.That(requested.Placement.Colonists, Is.EqualTo(positional.Placement.Colonists));
@@ -85,7 +85,7 @@ namespace Odyssey.Tests.Sim
             without.World.Tick(120);
             observed.World.Tick(120);
 
-            Assert.That(observed.World.ComputeStateHash(), Is.EqualTo(without.World.ComputeStateHash()),
+            Assert.That(Golden.FullHash(observed), Is.EqualTo(Golden.FullHash(without)),
                 "attaching a presentation mirror moved simulation state — it must only write the frame");
         }
 
@@ -157,7 +157,7 @@ namespace Odyssey.Tests.Sim
             ColonyWorld requested = ColonyWorld.Build(Request());
 
             Assert.That(requested.World.CurrentTick, Is.Zero);
-            Assert.That(requested.World.ComputeStateHash(), Is.EqualTo(plain.World.ComputeStateHash()));
+            Assert.That(Golden.FullHash(requested), Is.EqualTo(Golden.FullHash(plain)));
         }
 
         [Test]
@@ -174,7 +174,7 @@ namespace Odyssey.Tests.Sim
             first.World.Tick(500);
             second.World.Tick(500);
 
-            Assert.That(second.World.ComputeStateHash(), Is.EqualTo(first.World.ComputeStateHash()),
+            Assert.That(Golden.FullHash(second), Is.EqualTo(Golden.FullHash(first)),
                 "two worlds from one seed diverged while both were alive — something is shared between them");
             Assert.That(second.Grid, Is.Not.SameAs(first.Grid));
             Assert.That(second.Pawns, Is.Not.SameAs(first.Pawns));
@@ -235,6 +235,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.SaveComponents, Is.Not.Empty);
 
             colony.World.Tick(500);
+            ulong before = Golden.FullHash(colony);
             byte[] saved = colony.Save();
 
             ColonyRequest again = Request(11u);
@@ -244,8 +245,11 @@ namespace Odyssey.Tests.Sim
             ColonyWorld reloaded = ColonyWorld.Build(again);
             SaveHeader header = reloaded.Load(saved);
 
+            // The full hash, not ComputeStateHash: the cell grid is not in the state hash, so the
+            // plain one would compare the pawns and the designations and be blind to whether the
+            // terrain, the floors and the edifices came back at all. See Golden.FullHash.
             Assert.That(header.Seed, Is.EqualTo(11u));
-            Assert.That(reloaded.World.ComputeStateHash(), Is.EqualTo(colony.World.ComputeStateHash()),
+            Assert.That(Golden.FullHash(reloaded), Is.EqualTo(before),
                 "the scene's own world did not survive a save and load");
         }
     }

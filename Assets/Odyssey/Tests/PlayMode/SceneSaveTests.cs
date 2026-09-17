@@ -52,7 +52,11 @@ namespace Odyssey.Tests.PlayMode
 
             ColonyWorld colony = boot.Colony!;
             byte[] saved = colony.Save();
-            StateHash before = colony.World.ComputeStateHash();
+
+            // The state hash and the cells, folded together. ComputeStateHash alone does not cover
+            // the cell grid, so on its own it would compare the pawns and the designations and be
+            // blind to whether the board came back at all.
+            ulong before = FullHash(colony);
 
             // Built from the request the live world was built from, which is the contract the save
             // format asks for: construct from Defs and a seed exactly as a new game would, then
@@ -75,10 +79,28 @@ namespace Odyssey.Tests.PlayMode
 
             Assert.That(header.Seed, Is.EqualTo(again.Seed));
             Assert.That(header.Size, Is.EqualTo(again.Size));
-            Assert.That(reloaded.World.ComputeStateHash(), Is.EqualTo(before),
+            Assert.That(FullHash(reloaded), Is.EqualTo(before),
                 "the scene's own world did not come back the same");
 
             Object.Destroy(root);
+        }
+
+        /// <summary>
+        /// The simulation's state hash and the world's cells, folded together — the same fold
+        /// <c>Golden.FullHash</c> makes in the fast tier, which cannot be referenced from here
+        /// because the test assemblies are separate.
+        ///
+        /// <para>The cell grid is not in the state hash: <c>CellGrid</c> does not implement
+        /// <c>IStateHashable</c> and is never registered, so <c>ComputeStateHash</c> covers the
+        /// seed, the tick, the size, the designations, the jobs and the pawns, and not the terrain,
+        /// the floors, the edifices or the flags. OQ-50 is the fix.</para>
+        /// </summary>
+        static ulong FullHash(ColonyWorld colony)
+        {
+            var hash = StateHash.New();
+            hash.Add(colony.World.ComputeStateHash().Value);
+            colony.Grid.ContributeTo(ref hash);
+            return hash.Value;
         }
     }
 }
