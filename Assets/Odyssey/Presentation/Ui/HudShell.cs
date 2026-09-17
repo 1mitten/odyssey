@@ -160,6 +160,9 @@ namespace Odyssey.Presentation.Ui
         VisualElement _buildPanel = null!;
         VisualElement _buildTools = null!;
         VisualElement _buildMaterials = null!;
+
+        /// <summary>The always-on row under the palette. See <see cref="PaletteTools.Pinned"/>.</summary>
+        VisualElement _buildPinned = null!;
         int _buildCategory = -1;
         VisualElement _settingsPanel = null!;
         VisualElement _interfaceSection = null!;

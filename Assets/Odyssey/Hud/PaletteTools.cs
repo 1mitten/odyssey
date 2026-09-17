@@ -76,7 +76,7 @@ namespace Odyssey.Hud
         public static readonly (string key, string label, string[] tools)[] Categories =
         {
             ("ui.arch.category.structure", "Structure", new[] { Wall, "ui.arch.tool.door", "ui.arch.tool.stair", "ui.arch.tool.ladder", "ui.arch.tool.roof", "ui.arch.tool.reclaim" }),
-            ("ui.arch.category.orders", "Orders", new[] { Mine, Fell, Cancel, "ui.arch.tool.deconstruct", "ui.arch.tool.forbid", "ui.arch.tool.clearrubble" }),
+            ("ui.arch.category.orders", "Orders", new[] { Mine, Fell, "ui.arch.tool.deconstruct", "ui.arch.tool.forbid", "ui.arch.tool.clearrubble" }),
             ("ui.arch.category.zones", "Zones", new[] { "ui.arch.tool.stockpile", "ui.arch.tool.growzone", "ui.arch.tool.dumping" }),
             ("ui.arch.category.production", "Production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
             ("ui.arch.category.furniture", "Furniture", new[] { "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
@@ -88,12 +88,25 @@ namespace Odyssey.Hud
         };
 
         /// <summary>
+        /// Tools that belong to no category and are always on show, under everything else.
+        ///
+        /// <para><b>Cancel is not a kind of thing to build.</b> Every other chip in this palette
+        /// answers "what would you like to put down"; this one answers "stop", about whatever is
+        /// already on the board, and it is as relevant to a wall as to a mine mark. Filing it under
+        /// Orders was tidy and wrong in practice (owner, 2026-09-17: *"would be a good idea to be
+        /// able to access the cancel button on the build sub menu"*): the moment a player wants it
+        /// is while they are holding <em>another</em> tool, which is exactly when the category row
+        /// is showing something else and reaching for it costs two clicks and a hunt.</para>
+        ///
+        /// <para>It is in no category at all rather than pinned <i>and</i> listed, because the same
+        /// chip appearing twice in one open panel is a question the player has to stop and answer:
+        /// whether the two do the same thing.</para>
+        /// </summary>
+        public static readonly string[] Pinned = { Cancel };
+
+        /// <summary>
         /// The tools that actually do something. Anything absent is drawn disabled, which is most
         /// of the palette until the thing behind a key exists.
-        ///
-        /// <para><b>Order is Mine, Chop, Cancel.</b> Cancel sits beside the two tools whose orders
-        /// it takes off rather than at the end of the row, because it is the one the player reaches
-        /// for immediately after a drag that went wrong.</para>
         /// </summary>
         public static readonly PaletteTool[] Live =
         {
@@ -135,7 +148,7 @@ namespace Odyssey.Hud
         {
             get
             {
-                var keys = new List<string>();
+                var keys = new List<string>(Pinned);
                 foreach (var (key, _, tools) in Categories)
                 {
                     keys.Add(key);

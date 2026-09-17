@@ -339,6 +339,11 @@ namespace Odyssey.Presentation.Ui
             _buildMaterials.style.display = DisplayStyle.None;
             _buildPanel.Add(_buildMaterials);
 
+            // Under everything, always: the tools that belong to no category. Built once rather
+            // than rebuilt with the category, because the whole point of them is that they do not
+            // move when the category does.
+            BuildPinnedRow();
+
             // Open on the first category rather than on an empty second group. The palette's whole
             // shape is two groups, and one of them showing nothing until the player guesses that
             // the chips above are clickable is a panel that has to be explained.
@@ -407,6 +412,37 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
+        /// The row that does not change with the category — Cancel, today, and only Cancel.
+        ///
+        /// <para>A player wants it while they are holding another tool, which is exactly when the
+        /// category row above is showing something else. See <see cref="PaletteTools.Pinned"/> for
+        /// why it is here instead of filed under Orders.</para>
+        /// </summary>
+        void BuildPinnedRow()
+        {
+            _buildPinned = new VisualElement();
+            _buildPinned.AddToClassList("build__pinned");
+
+            foreach (string key in PaletteTools.Pinned)
+            {
+                if (!PaletteTools.TryGet(key, out PaletteTool live)) continue;
+                VisualElement chip = PaletteChip(key, Registry.Label(key));
+                chip.tooltip = Registry.Label(key) + " — drag a box over the world";
+                chip.RegisterCallback<ClickEvent>(_ =>
+                {
+                    if (_directors == null) return;
+                    live.Arm(_directors.Designate);
+                    MarkArmedTool();
+                    // Arming an order puts any build tool down, so the material row goes with it.
+                    BuildMaterialRow();
+                });
+                _buildPinned.Add(chip);
+            }
+
+            _buildPanel.Add(_buildPinned);
+        }
+
+        /// <summary>
         /// Light the chip for whatever is armed, so the palette and the world agree.
         ///
         /// <para>Each chip asks its own row whether it is the one being held. This used to be a
@@ -425,6 +461,17 @@ namespace Odyssey.Presentation.Ui
             {
                 bool on = PaletteTools.TryGet(tool, out PaletteTool live) && live.IsArmed(armed);
                 if (at < _buildTools.childCount) _buildTools[at].EnableInClassList("chip--on", on);
+                at++;
+            }
+
+            // The pinned row lights the same way. It is a separate walk because it is a separate
+            // row, and not marking it would leave the one chip that is always visible as the one
+            // chip that never says whether it is held.
+            at = 0;
+            foreach (string tool in PaletteTools.Pinned)
+            {
+                bool on = PaletteTools.TryGet(tool, out PaletteTool live) && live.IsArmed(armed);
+                if (at < _buildPinned.childCount) _buildPinned[at].EnableInClassList("chip--on", on);
                 at++;
             }
         }

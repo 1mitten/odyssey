@@ -67,14 +67,14 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void EveryLiveToolIsOnAChipSomewhere()
         {
-            var drawn = new HashSet<string>();
+            var drawn = new HashSet<string>(PaletteTools.Pinned);
             foreach (var (_, _, tools) in PaletteTools.Categories)
                 foreach (string tool in tools)
                     drawn.Add(tool);
 
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(drawn, Does.Contain(tool.Key),
-                    $"{tool.Key} arms a tool and is on no category's row, so nothing can click it");
+                    $"{tool.Key} arms a tool and is on no row at all, so nothing can click it");
         }
 
         /// <summary>
@@ -91,13 +91,35 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// Cancel is on the Orders row, beside the two tools whose orders it takes off. Named
-        /// explicitly because "it is somewhere in the palette" is not the claim — the claim is that
-        /// a player who has just dragged a mine order too far finds the undo next to the thing they
-        /// used.
+        /// Cancel is reachable without changing category, because the moment a player wants it is
+        /// while they are holding another tool — which is exactly when the category row is showing
+        /// something else (owner, 2026-09-17).
         /// </summary>
         [Test]
-        public void TheOrdersRowOffersCancelBesideTheOrdersItTakesOff()
+        public void CancelIsReachableFromEveryCategory()
+        {
+            Assert.That(PaletteTools.Pinned, Does.Contain(PaletteTools.Cancel));
+            Assert.That(PaletteTools.TryGet(PaletteTools.Cancel, out _), Is.True,
+                "a pinned chip that arms nothing is a button that does nothing");
+        }
+
+        /// <summary>
+        /// And it is in no category, so it is drawn once. The same chip in two places in one open
+        /// panel is a question the player has to stop and answer — whether the two do the same
+        /// thing — and the answer is never worth the pause.
+        /// </summary>
+        [Test]
+        public void APinnedToolIsNotAlsoFiledUnderACategory()
+        {
+            foreach (string pinned in PaletteTools.Pinned)
+                foreach (var (_, label, tools) in PaletteTools.Categories)
+                    Assert.That(tools, Does.Not.Contain(pinned),
+                        $"{pinned} is pinned and also listed under {label}, so it draws twice");
+        }
+
+        /// <summary>The Orders row keeps the two tools whose orders Cancel takes off.</summary>
+        [Test]
+        public void TheOrdersRowOffersTheOrdersAPlayerGives()
         {
             string[]? orders = null;
             foreach (var (key, _, tools) in PaletteTools.Categories)
@@ -107,7 +129,6 @@ namespace Odyssey.Tests.Hud
             Assert.That(orders, Is.Not.Null, "the palette has an Orders category");
             Assert.That(orders, Does.Contain(PaletteTools.Mine));
             Assert.That(orders, Does.Contain(PaletteTools.Fell));
-            Assert.That(orders, Does.Contain(PaletteTools.Cancel));
         }
 
         /// <summary>
