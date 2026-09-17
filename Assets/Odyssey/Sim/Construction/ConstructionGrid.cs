@@ -134,15 +134,30 @@ namespace Odyssey.Sim.Construction
             return IntentRejection.None;
         }
 
+        /// <summary>
+        /// The site the player means by naming this cell, or -1 where there is none.
+        ///
+        /// <para>The mirror of <see cref="StandingOn"/>, and the one answer to "which site is this
+        /// click about": the site the player can see over a patch of ground is the one standing on
+        /// it, so naming the ground names the site above. Cancelling asked it first and a forced
+        /// order asks it now; both go through here rather than each carrying a copy of the rule,
+        /// because two copies of a lift are how one of them gets fixed on its own.</para>
+        /// </summary>
+        public int SiteAt(CellRef cell)
+        {
+            if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return -1;
+
+            int index = _grid.Index(cell);
+            if (_building[index] == 0) index = StandingOn(index);
+            return _building[index] == 0 ? -1 : index;
+        }
+
         public IntentRejection Cancel(CellRef cell)
         {
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
 
-            // The mirror of StandingOn: the site the player can see over this patch of ground is
-            // the one standing on it, so naming the ground takes it off.
-            int index = _grid.Index(cell);
-            if (_building[index] == 0) index = StandingOn(index);
-            if (_building[index] == 0) return IntentRejection.AlreadyInThatState;
+            int index = SiteAt(cell);
+            if (index < 0) return IntentRejection.AlreadyInThatState;
 
             Refund(index);
             Set(index, BuildingHandle.None, StuffHandle.None);

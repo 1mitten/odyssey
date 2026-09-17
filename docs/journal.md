@@ -2210,3 +2210,66 @@ work itself.
     file-path round trip, and `ColonyWorld.Recipe`). Long tier unaffected (19). Wiki and label
     registries current (no content changed). Not run: the Unity tier — no Unity in this
     environment; it runs on the owner's self-hosted runner via CI on the pull request.
+
+- **Forced orders, steps 1–2: the intent and the legality split, 2026-09-17.** Sim only, and the
+  simulation half of `15-building.md`'s "Forced orders and the context menu". A player who wants
+  *that* wall built *now* still cannot say so — the two steps that would let them say it are
+  presentation's, and are not started — but everything under the words is built and tested.
+
+  - **`Job.PlayerForced` has been saved and hashed since the job record was written, and nothing
+    read it.** It is read now, and by exactly one thing: `JobSystem.HandleForceJob`. A forced order
+    is emphatically not a new kind of job — same def, same `BuildJobDriver`, same toils, same
+    reservation — it is the scan bypassed and the job pushed onto a named colonist.
+  - **`ForceJob(cell, A = job, B = pawn)` is the first intent that names a pawn**, and it has to be.
+    Every other command is about a cell and leaves *who answers it* to the work scan; a forced order
+    is the player overruling that scan for one colonist, so the colonist is half of what is being
+    said.
+  - **The order of operations is the whole of "an illegal order changes nothing".** Legality is
+    asked before the colonist's current job is touched, and the query claims nothing, so a refusal
+    cannot leave a colonist idle, a cell claimed, or an order half given. When it is legal, the
+    current job ends as a **failure** — which is how the mental-break interrupt twenty lines above
+    already takes a job away, because failure is the ending that releases what was held and this
+    class has exactly one release path on purpose.
+  - **The real work was the split, and it was worth doing for a second reason.** Every giver decided
+    legality and claimed its target in one pass, so the only way to ask "could this colonist build
+    that" was to do it. `BuildWorkGiver.CanBuild(pawn, ctx, site, out stand)` answers it and reserves
+    nothing; `JobSystem.CanForce` is the entry point a menu asks, switching on the job def with a
+    default of no — a job nobody has decided the forced meaning of should not acquire one by
+    omission. The A10 command grid needs the same split to grey a command out, and the context menu
+    has to be built *before* the player chooses anything.
+  - **It is the scan's own test, not a second opinion beside it.** `BuildWorkGiver.TryGiveJob` calls
+    `CanBuild` for each candidate, so the offered path and the forced path cannot drift into
+    disagreeing about what a colonist may build — the fault that would show up as a menu offering a
+    command the colonist then refuses. Extracting it moved the cheap distance test ahead of the
+    world reads, which cannot change the winner: a candidate that fails the legality test never
+    moves `bestDistance`, so the order the two are asked in cannot decide anything. No golden moved,
+    and none should have.
+  - **`ConstructionGrid.SiteAt` is an extraction, not a second lookup.** The ground-to-site lift —
+    a click names a surface, an order names a cell — was two lines inside `Cancel`; a forced order
+    needs the same answer, and the menu will too. One copy, and `Cancel` now asks it.
+  - **What the query deliberately does not answer is *why* not.** A greyed command wants a reason,
+    and "nowhere to stand" and "somebody else has it" are not `IntentRejection` values. Inventing
+    that vocabulary now would be inventing it for no reader; A10 is the first thing that can display
+    one.
+  - **The test that would have proved nothing, and what was written instead.** "The forced colonist
+    started building" passes with the feature deleted, because the scan would have started a build
+    anyway. So there is a measured control — `TheScanChoosesTheNearerSiteWhenNobodyForcesAnything`
+    asserts the colonist really does take the nearer of two identical frames — and the claim is then
+    that the far wall goes up **with the near one still standing**. Both were checked by mutation:
+    stubbing `HandleForceJob` to refuse everything fails two tests, and making the query `Reserve`
+    instead of `CanReserve` fails two others.
+  - **A fixture that silently proved nothing, caught the same way.** The unreachable case walls a
+    site into a sealed pocket, and the first version was reachable anyway: `NavGraph.Rebuild` walks
+    dirty blocks and returns immediately when none are, so an edit that never called `MarkDirty`
+    left the region graph certain the wall was not there. The test skipped rather than failed,
+    because the guard was an `Assume`. Those guards are `Assert`s now — a fixture claim that
+    load-bearing should fail loudly, not opt out.
+  - **Verified:** fast tier **542 Sim + 191 Hud** (nine new, `ForcedOrderTests`), Long tier **19**,
+    both content gates `--check` clean — this is plumbing, not named content, so neither the wiki
+    nor the label registry had anything to rebuild. **Not run:** the Unity tier, which this
+    container has no Unity for; CI's self-hosted runner does it on the pull request.
+  - **Next, and explicitly not started:** step 3, separating a right-*click* from the camera rig's
+    orbit-*drag* (half of it shipped with the cancel tool — right-click already puts an armed tool
+    down, and is deliberately inert with nothing armed, reserved for this), and step 4, the menu
+    itself. Nobody has pressed Play on a forced order, and nothing in the running game can send one
+    yet.

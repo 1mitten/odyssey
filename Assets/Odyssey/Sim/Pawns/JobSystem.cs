@@ -366,6 +366,91 @@ namespace Odyssey.Sim.Pawns
             pawn.ClearPath();
             pawn.Destination = -1;
         }
+
+        // ---- forced orders --------------------------------------------------------------------
+        //
+        // The player overruling the scan for one colonist. A forced order is emphatically *not* a
+        // new kind of job: it is the same def, the same driver, the same toils and the same
+        // reservations, with the scan bypassed and the job pushed onto a named pawn rather than
+        // offered to whoever the tree walks to next. `Job.PlayerForced` has been saved and hashed
+        // since the job record was written and this is the first thing that ever sets it.
+
+        /// <summary>
+        /// Could this colonist be given this job on this target right now? Nothing is claimed and
+        /// nothing moves — see <see cref="BuildWorkGiver.CanBuild"/>, which is where the build
+        /// answer lives and which the work scan asks as well.
+        ///
+        /// <para>The switch is the list of jobs a player may force, and it is one long. A default
+        /// of "no" is deliberate: a job that has not been thought about as a forced order is one
+        /// nobody has decided what a forced version of it means, and silently allowing it would be
+        /// deciding by omission.</para>
+        /// </summary>
+        /// <param name="jobDefIndex">A <see cref="JobIndex"/> value.</param>
+        /// <param name="target">The cell the job is about — a site, for a build.</param>
+        /// <param name="stand">Where the colonist would stand to do it, or -1.</param>
+        public static bool CanForce(Pawn pawn, PawnContext ctx, int jobDefIndex, int target, out int stand)
+        {
+            stand = -1;
+            if (pawn == null || ctx == null) return false;
+
+            switch (jobDefIndex)
+            {
+                case JobIndex.Build: return BuildWorkGiver.CanBuild(pawn, ctx, target, out stand);
+                default: return false;
+            }
+        }
+
+        /// <summary>The same question where the stance is not wanted: what a menu asks.</summary>
+        public static bool CanForce(Pawn pawn, PawnContext ctx, int jobDefIndex, int target) =>
+            CanForce(pawn, ctx, jobDefIndex, target, out _);
+
+        /// <summary>
+        /// <c>ForceJob(cell, A = job, B = pawn)</c>: this colonist, this job, this target, now.
+        ///
+        /// <para>Illegal is a no-op with a reason and never a half-done order — the legality query
+        /// above runs first and claims nothing, so a refusal cannot leave a reservation behind,
+        /// and the colonist's current job is not interrupted until the new one is known to be
+        /// takeable. The one remaining way to fail after that is
+        /// <see cref="StartJob"/>'s own all-or-nothing claim, which releases what it took.</para>
+        ///
+        /// <para>The colonist's job ends as a <b>failure</b>, which is how a mental break takes a
+        /// job away a few lines above: failure is the ending that releases what was held, and
+        /// there is exactly one release path in this class on purpose.</para>
+        /// </summary>
+        public IntentRejection HandleForceJob(Intent intent)
+        {
+            CellRef cell = intent.Cell;
+            if (!_ctx.Size.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
+
+            var sites = _ctx.Construction;
+            if (sites == null) return IntentRejection.NotPermitted;
+
+            Pawn? pawn = _ctx.Pawns.Get(new PawnId(intent.B));
+            if (pawn == null) return IntentRejection.NotPermitted;
+
+            // The same lift a build order and a cancellation get: a click names the ground, an
+            // order names the cell standing on it.
+            int site = sites.SiteAt(cell);
+            if (site < 0) return IntentRejection.NotPermitted;
+
+            if (!CanForce(pawn, _ctx, intent.A, site, out int stand)) return IntentRejection.NotPermitted;
+
+            EndJob(pawn, JobStatus.Failed);
+
+            // The pawn's own buffer, which is what the think tree fills and therefore what
+            // `CurrentJob` always points at. Reset after the old job has ended, never before: the
+            // ending reads the def it is counting.
+            Job job = pawn.JobBuffer;
+            BuildWorkGiver.Fill(job, site, stand);
+            job.PlayerForced = true;
+
+            // Intents drain at the top of the tick, before the pawn phase syncs the context, so
+            // the context's tick is still the last one's while the world's is this one's. The
+            // fallback is for a command submitted before the world has ever ticked, when the two
+            // are the same number anyway.
+            int tick = _ctx.World?.CurrentTick ?? _ctx.CurrentTick;
+            return StartJob(pawn, job, tick) ? IntentRejection.None : IntentRejection.NotPermitted;
+        }
     }
 
     // =====================================================================================
