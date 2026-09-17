@@ -18,6 +18,7 @@ namespace Odyssey.Hud
         public CameraDirector Camera { get; } = new CameraDirector();
         public OverlayDirector Overlays { get; } = new OverlayDirector();
         public SettingsDirector Settings { get; } = new SettingsDirector();
+        public HotkeyDirector Hotkeys { get; } = new HotkeyDirector();
 
         /// <summary>
         /// The standing order the player is about to give.

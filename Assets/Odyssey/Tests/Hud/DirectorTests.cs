@@ -331,6 +331,7 @@ namespace Odyssey.Tests.Hud
     {
         readonly System.Collections.Generic.Dictionary<string, bool> _values = new();
         readonly System.Collections.Generic.Dictionary<string, int> _numbers = new();
+        readonly System.Collections.Generic.Dictionary<string, string> _words = new();
 
         public int Writes { get; private set; }
 
@@ -350,9 +351,19 @@ namespace Odyssey.Tests.Hud
             Writes++;
         }
 
+        public string? ReadString(string key) => _words.TryGetValue(key, out string value) ? value : null;
+
+        public void WriteString(string key, string value)
+        {
+            _words[key] = value;
+            Writes++;
+        }
+
         public void Preset(string key, bool value) => _values[key] = value;
 
         public void Preset(string key, int value) => _numbers[key] = value;
+
+        public void Preset(string key, string value) => _words[key] = value;
     }
 
     public class SettingsDirectorTests

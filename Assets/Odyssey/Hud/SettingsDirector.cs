@@ -62,6 +62,15 @@ namespace Odyssey.Hud
         int? ReadInt(string key);
 
         void WriteInt(string key, int value);
+
+        /// <summary>
+        /// The stored word, or null if this machine has never been told. Key bindings are
+        /// words — a binding is a key's <i>name</i>, not a number some parser would have to
+        /// keep in step with an enum it cannot see.
+        /// </summary>
+        string? ReadString(string key);
+
+        void WriteString(string key, string value);
     }
 
     /// <summary>

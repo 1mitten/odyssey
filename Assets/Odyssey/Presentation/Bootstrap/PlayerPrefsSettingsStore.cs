@@ -5,7 +5,8 @@ using UnityEngine;
 namespace Odyssey.Presentation.Bootstrap
 {
     /// <summary>
-    /// Graphics preferences, kept on the machine rather than in the colony.
+    /// Player preferences — the graphics levers and the key bindings — kept on the machine
+    /// rather than in the colony.
     ///
     /// <para><b>Never in the save.</b> A graphics setting is presentation, exactly like the grass
     /// tufts and the axe chips: no cell, no save section, no hash. Putting it in the colony file
@@ -54,6 +55,21 @@ namespace Odyssey.Presentation.Bootstrap
         public void WriteInt(string key, int value)
         {
             PlayerPrefs.SetInt(Prefix + key, value);
+            PlayerPrefs.Save();
+        }
+
+        public string? ReadString(string key)
+        {
+            string name = Prefix + key;
+            // An empty string is a real answer — it is a binding whose every slot was cleared
+            // — so HasKey rather than a default-then-check, the same bargain Read makes.
+            if (!PlayerPrefs.HasKey(name)) return null;
+            return PlayerPrefs.GetString(name);
+        }
+
+        public void WriteString(string key, string value)
+        {
+            PlayerPrefs.SetString(Prefix + key, value);
             PlayerPrefs.Save();
         }
     }
