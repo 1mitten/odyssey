@@ -309,6 +309,42 @@ orders are landing and the **work** is not happening.
 `python3 tools/wiki/build_wiki.py --check` and `python3 tools/wiki/emit_labels.py --check` — before
 either commit, because both PRs change named content.
 
+## 6a. A marked wall is washed red, and why it had no marker at all
+
+Owner, 2026-09-17, having got deconstruct working: *"you need to give a visual marker to what has
+been marked for deconstruction ... maybe use a red cursor or shading on the wall"*. Two faults,
+found together.
+
+**The colour was a two-branch ternary answering a three-kind question.**
+`Kind == Mine ? mine : fell` — so a demolition order was painted in the **felling green**. This is
+the same shape as the palette chip that armed a tool and never lit, and it is the second time it has
+cost a playtest. `OdysseyBootstrap.OrderColour` is total over `DesignationKind` now, and
+`OrderColourTests` walks every value and requires each to be **distinct** — totality alone would be
+satisfied by returning one colour for everything, which is exactly what a switch's fallback branch
+quietly does when a new kind arrives.
+
+**And the mark was drawn where it could not be seen.** `DrawCellMark` paints a flat plate on the
+floor of the cell. That is right for mining and felling, which are read looking down at a face that
+is already there — and wrong for a wall, whose floor is *inside it*. The plate was drawn correctly,
+in the one place the wall's own panels and core block hide it. So even the green one was invisible,
+and the report was the honest reading of the screen: no marker at all.
+
+`ChunkRenderer.DrawCellShade` is the answer: the whole cell washed in the colour, **proud of the
+cell by 3 cm** rather than inset like `DrawCellSlab`, because the problem is the opposite one —
+anything inside the cell is behind an opaque wall. It is **draped, not lifted**, per the rule the
+stepped-wall fault produced, because a run of walls marked together abuts and a lift would step each
+wash against its neighbour by the ground's slope across a cell.
+
+**Progress needed nothing.** A deconstruct order banks work on the cell like any other, and
+`DrawCellCut` already eats down from the top — which is the right direction for a wall coming apart.
+
+**The drag cursor was also falling through** to the cancel red. The right hue by luck, and still
+wrong: the cursor said *cancel* while the player was demolishing, and tuning the cancel colour would
+have silently re-tinted it. It is named now.
+
+**Still unjudged:** whether a 0.38-alpha red wash reads at the camera's working distance, and
+whether 3 cm is enough clearance at the nearest the camera comes.
+
 ## 7. What could make this bigger than it looks
 
 - **The save gap (§4) is the one real unknown.** Handles into the edifice list are described in
