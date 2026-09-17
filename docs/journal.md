@@ -3233,3 +3233,44 @@ work itself.
   **0.22**, water 0.40 → **0.32** — about −2 dB across the beds, present but under the work.
   The floor test still holds (night, the lowest, sits above 0.2), and the generator and the
   committed catalogue carry the same numbers as ever.
+
+- **U27 Materials: the formula got its second term, and only one live stat to give it to,
+  2026-09-17.** `StuffDef.workFactorPerMille` had no offset beside it — `stat = base × factor`,
+  not `+ offset` — so a-04 §3's own formula was half-built. `workOffsetTicks` is the missing
+  term: a plain integer in the base stat's own unit (ticks), added after the factor rather than
+  folded into it as a second per-mille figure, because a fraction added post-multiplication would
+  just be a factor with extra steps. `ConstructionContent.WorkFor` now reads
+  `workToBuild × workFactorPerMille / 1000 + workOffsetTicks`, floored to one tick over the whole
+  sum rather than the factored term alone.
+
+  - **Wood gets 0, stone gets 15 — Odyssey's own numbers, not the reference's.** The offset
+    stands for a cost the factor cannot express: a flat dressing-and-fitting pass a stone block
+    wants regardless of the wall's own size, where wood's per-unit factor already tells its whole
+    story (a-04's own wood row carries no offset either). 15 ticks is a tenth of the wall's own
+    135-tick base — proportionate to the one factor Odyssey chose (1.7×) — rather than copied
+    from a-04's stone rows, which stack a much larger flat offset (+140 on the same 135-tick base)
+    across five or six stone materials each carrying its own steep ×5–6 factor. A stone wall now
+    costs **244 ticks** (229 factored, +15), not 229.
+  - **`hitPointsFactorPerMille` was left factor-only, on purpose.** It has carried a factor since
+    U26 with nothing consuming it — no `BuildingDef.maxHitPoints` exists, and nothing gives a
+    built wall a damage state — so giving it an offset now would add a second unused field with no
+    test able to exercise it. That is the durability stat's job when it lands, not this one's to
+    invent ahead of it.
+  - **Two materials, not three.** The plan allows "two or three"; the natural third is already
+    named in the code (`ConstructionContent.IsBuildable`'s own comment: a salvage line that gives
+    concrete, steel or composite an `item` puts it on the menu with no other change) and is
+    deferred to U28 on purpose, where mining's salvage line is what would actually produce it and
+    a second building would give its own factor and offset something to be tuned against. Inventing
+    a third material's numbers now, with one buildable thing and no source for it, would be tuning
+    against nothing.
+  - **The gap `ConstructionContentDefTests` closes.** `ConstructionContent`'s own class comment and
+    `Buildings.xml`'s own file header both already read as if the XML mirror and the in-code oracle
+    were held together by a test — neither existed. `ConstructionContentDefTests` is that test now:
+    a field-by-field comparison between the two (the arrangement the comments already described)
+    plus a pinned fingerprint over each table, the same double guard `WorldContentDefTests` uses,
+    with the same control proving the walk actually reaches `workOffsetTicks` rather than passing
+    by reaching nothing.
+  - **Verified:** fast tier **504 Sim + 171 Hud** (10 new: 3 in `ConstructionTests` isolating the
+    offset from the factor and the floor from both, 7 in the new `ConstructionContentDefTests`).
+    Not run: the Unity tier — no Unity in this environment; it runs on the owner's self-hosted
+    runner via CI on the pull request.

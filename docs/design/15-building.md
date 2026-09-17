@@ -47,7 +47,7 @@ in-code table as the oracle (the arrangement OQ-16 settled for terrain).
 | | Holds | Indexed by |
 |---|---|---|
 | `BuildingDef` | what it becomes (`edifice`), whether it blocks, `costCount`, `workToBuild`, `minSkill`, `iconKey` | `BuildingHandle` |
-| `StuffDef` | which `Stuff*` value, which `ItemHandle` it is carried as, `workFactorPerMille`, `hitPointsFactorPerMille` | `StuffHandle` |
+| `StuffDef` | which `Stuff*` value, which `ItemHandle` it is carried as, `workFactorPerMille`, `workOffsetTicks`, `hitPointsFactorPerMille` | `StuffHandle` |
 
 A wall is a wall whether it is wood or stone, and wood is wood whether it is a wall or a door.
 Folding them into one table of "wooden wall, stone wall" looks simpler at two of each and multiplies
@@ -73,6 +73,29 @@ table) — the one number that makes the choice of material a decision rather th
 why it is carried in ahead of the rest of the stat block. Factors are per-mille integers, for the
 reason skill experience is stored in thousandths: a factor multiplied into a tick count must give the
 same answer on every machine.
+
+**The formula now has both of its terms (U27): `stat = base × factor + offset`.** Read off a-04 §3
+directly rather than reinvented — the reference's own per-material table is `factor` and `offset`
+columns beside each other, and it needed both because a factor alone can only ever *scale* the base
+stat: it cannot express a cost that is the same whatever the building's own size is. `WorkFor`
+applies the factor first, by integer division, then adds `workOffsetTicks`, and the floor of one
+tick guards the sum of both rather than the factored term alone. **Stone carries the offset, wood
+does not** — a stone block wants a flat dressing-and-fitting pass that a plank does not, so
+`Stuff_Wood.workOffsetTicks` is 0 and `Stuff_Stone.workOffsetTicks` is 15, Odyssey's own number
+rather than the reference's (whose stone rows carry a much larger flat offset, +140 against a base
+of 135, because it is stacked across five or six stone materials each with their own steep factor).
+15 ticks is proportionate to the one factor Odyssey chose: a tenth of the wall's own base, so a stone
+wall now costs 244 ticks (229 factored, +15) rather than 229. **`hitPointsFactorPerMille` stays
+factor-only.** U27 gave the work stat an offset because `WorkFor` already turns `workToBuild` into a
+real number every tick; hit points has no base stat to add to yet — no `BuildingDef.maxHitPoints`
+exists, and nothing gives a built wall a damage state — so an offset there would be a second field
+with nothing to consume it. That is next when a durability stat lands, not invented ahead of it.
+**Two materials, not three:** the plan allows "two or three", but the natural third is already
+named above and deferred on purpose — one of the three reserved-but-unbuildable stuffs (concrete,
+steel, composite) becomes buildable exactly when U28's salvage line gives one of them an `item`,
+and a third material's own factor and offset will have more than one wall's worth of evidence to be
+tuned against once U28 and U29 add more things to build. Adding one now would be inventing numbers
+with nothing yet to differentiate them against.
 
 ## 3. Where the state lives
 
