@@ -100,7 +100,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 files to add itself, five of which should have been extension points. The table and the order are in
 `docs/plans/vertical-slice.md`, "Where the seams are" — **audited against the code on 2026-09-17,
 because it had gone stale and misled a session into recommending work that had already landed.**
-Four of the five chokepoints are now open, the fourth half:
+All five chokepoints named after the mining line are now open:
 
 - **Work givers register themselves** (OQ-44): a giver in the simulation assembly joins by existing.
 - **Content is written once** (OQ-15/OQ-16, finished by OQ-48 and OQ-49 on 2026-09-17). The XML
@@ -117,6 +117,13 @@ Four of the five chokepoints are now open, the fourth half:
   support solve ran, and it assembled no `SaveComponents` — so **the one world a player ran was the
   one world in the project that could not be written to a file.** It now calls
   `ColonyWorld.Build(ColonyRequest)`, and `OdysseyBootstrap.Colony` is what a save is written from.
+- **A terrain kind brings its own meshing** (OQ-46, 2026-09-17). `ChunkMesher.EmitTerrain` was a
+  chain of early returns — water, surface, an exposure gate, stone, earth, a plain block — so every
+  terrain feature was an edit to a file on the do-not-touch list, and both the water line and the
+  mining line edited it anyway. It is now a registered list of `ITerrainContributor`, walked in the
+  chain's order with the first claim winning, and `AddTerrainContributor` inserts ahead of the plain
+  block. **No output moved:** `ChunkMesherTests` passes unedited and OQ-03's counts are identical,
+  512 buckets and 100,000 instances before and after.
 
 **Content values are pinned by fingerprints, and they earn their keep.** `PawnContentDefTests` and
 `WorldContentDefTests` each fold their loaded table into one literal. This is not belt-and-braces:
@@ -124,9 +131,9 @@ the moment the game started reading the world XML, the old oracle was comparing 
 and **editing rock's `workToClear` from 700 to 701 left all 448 tests green** — measured, not
 supposed. A deliberate content change is one line; an accidental one now fails.
 
-**Still open:** mesh contributors for `ChunkMesher` (OQ-46), and the presentation half of
-`OdysseyBootstrap` — every director still wired by hand. That half has no queue row; the rest of the
-file's story is now `MS` below.
+**All five chokepoints are now open.** What is left of the bootstrap row is the **presentation half
+of `OdysseyBootstrap`** — every director still wired by hand. It has no queue row; the rest of that
+file's story is `MS` below.
 
 ### MS, the start flow, is scheduled (owner, 2026-09-17)
 
