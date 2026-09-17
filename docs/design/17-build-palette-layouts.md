@@ -273,6 +273,66 @@ be.
 The floating armed banner is suppressed while the palette is open — it said the same thing, in the
 middle of the screen, over the panel that had just set it.
 
+**And when the palette is shut, the banner wears the same four colours** (owner, 2026-09-17: *"the
+border around the big dialog that appears on-screen when you click on the orders tool should be the
+same colour as that order … chopping should have a green border … make that border much
+thicker"*). Its border is **3 px** of the held order's hue — `HudTheme.ArmedBorderWidth`, read from
+the same `PinnedActionHue` the strip's buttons and the panel's top edge use, so the button pressed,
+the panel and the banner cannot come to disagree about what a colour means. A build tool is not an
+order, has no hue, and keeps the accent.
+
+Two things went with that change, on the same instruction.
+
+- **The second line came off.** It read *"drag over the board · right-click or Esc to stop"* and was
+  the only place in the game the right-click gesture was written down. That is the one thing lost,
+  and it is recorded here rather than glossed: what replaced it is the orders strip, which lights
+  the button that armed the tool and puts it down when pressed again — a way out you can see rather
+  than one you have to be told. If right-click turns out to be undiscoverable in a playtest, this
+  is the sentence that was carrying it.
+- **The banner came down to the bar.** It sat 92 px up, which is 43 px of clear board above a 49 px
+  command bar — far enough to read as floating in the middle of nothing rather than as belonging to
+  the row of controls it is about. It is `HudLayout.ArmedBottom` now, one ordinary panel gap above
+  the bar, derived from the bar's own height so it follows if that moves.
+
+### 7a. One name for one thing (owner, 2026-09-17)
+
+> rename "Cancelling orders" to Cancel … rename this to "Deconstruct" … keep the consistent in the
+> wiki and the language and UI … ensure that consistency can be enforced using a centralised place
+
+The banner was the odd surface out. It said **Chopping, Mining, Deconstructing** and — in a C#
+literal, because cancel has no colonist activity to borrow — **"Cancelling orders"**, while the
+wiki, the palette's breadcrumb and the strip's tooltips all called the same four things **Chop
+trees, Mine, Deconstruct, Cancel**. It reads `Registry.Label` of the `ui.arch.tool.*` keys now,
+through `PaletteTools.OrderWord`, so all four surfaces move together when a name is corrected in
+`icon-keys.csv`.
+
+The rule that settles which word: **an order is an imperative and an activity is a gerund.**
+"Chopping" did not disappear — it is `ui.status.felling`, what a *colonist* is doing, and the
+roster card still draws it. The banner was mixing two namespaces.
+
+**And the centralised place is now enforced, not merely available.**
+`RegistryTests.NoPlayerFacingNameIsWrittenInCSharp` reads every C# file in `Odyssey.Hud` and
+`Odyssey.Presentation` and fails on any string literal that equals a registry name in the six
+namespaces where one thing is named on several surfaces at once — `ui.arch.tool.*`,
+`ui.arch.category.*`, `ui.status.*`, `ui.res.*`, `ui.alert.*`, `ui.job.*`. It is the shape of
+`HopPriceHasOneOwnerTests`: read the source, fail on a second owner, in the fast tier.
+
+**It found two live duplicates on the run that introduced it**, both of which agreed with the
+registry at the time — which is what a silent duplicate looks like until somebody corrects one
+copy:
+
+- the seven Build categories carried their labels in `PaletteTools.Categories` beside the keys that
+  already named them. The tuple is `(key, tools)` now and the shell asks the registry.
+- the armed banner's build fallback said `"Building"` in a literal, beside `ui.status.building`.
+
+**The banner also has a floor now.** `HudLayout.ArmedWidth` is the longest of the four order names
+plus padding and border, so the four orders all draw the same box and the banner stops resizing
+under the eye every time the mode changes. It is a *minimum*, by the owner's own "let it extend
+beyond that" — an armed build reads "Building wall of wood" and is wider than any order. It is
+computed by walking `PaletteTools.Pinned` through `OrderWord` rather than written down: the owner's
+guess was that "Chopping" would be longest and it is "Deconstruct", which is the kind of fact that
+stays true only until the next rename.
+
 ## 8. Persistence and the second control
 
 The layout is stored as `ui.settings.buildlayout` on `SettingsDirector`, beside the interface scale

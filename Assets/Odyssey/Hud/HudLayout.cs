@@ -1157,6 +1157,57 @@ namespace Odyssey.Hud
         public static float PopoverBottom => BarBottom + HudCommands.BarHeight + BarFrame;
 
         /// <summary>
+        /// Where the armed banner sits: one ordinary panel gap above the command bar (owner,
+        /// 2026-09-17: <i>"lower that dialog closer to the toolbar at the bottom"</i>).
+        ///
+        /// <para>It was 92 px, which is 43 px of clear board above a 49 px bar — enough for the
+        /// banner to read as floating in the middle of nothing rather than as belonging to the row
+        /// of controls it is about. Derived from the bar rather than picked, so it follows the bar
+        /// if that ever moves, and one <see cref="Gap"/> rather than flush because the banner is
+        /// not docked on the bar the way a popover is: it is a thing over the board that has come
+        /// down to meet it.</para>
+        /// </summary>
+        public static float ArmedBottom => PopoverBottom + Gap;
+
+        /// <summary>The armed banner's padding, across. Its own, not <see cref="Pad"/>: the banner
+        /// is a pill over the board rather than a panel with rows in it.</summary>
+        public const int ArmedPadX = 14;
+
+        /// <summary>
+        /// The width the armed banner never drops below: the longest order it can name (owner,
+        /// 2026-09-17: <i>"make the dialog a fixed predictable width — as the longest order …
+        /// make it at least this size until further notice (and let it extend beyond that)"</i>).
+        ///
+        /// <para><b>A floor, not a width</b>, which is the owner's own "let it extend beyond
+        /// that": an armed build reads "Building wall of wood" and is wider than any order. What
+        /// the floor buys is that the four orders — the things a player picks up and puts down
+        /// over and over — all draw the same box, so the banner stops resizing under the eye every
+        /// time the mode changes.</para>
+        ///
+        /// <para><b>Computed from the names rather than written down.</b> The owner's guess was
+        /// that "Chopping" would be the longest; it is "Deconstruct", which is the sort of thing
+        /// that is only true until somebody renames something in <c>icon-keys.csv</c>. Walking
+        /// <see cref="PaletteTools.Pinned"/> through <see cref="PaletteTools.OrderWord"/> means a
+        /// rename moves this number with it. The estimate is <see cref="HudCommands.UiAdvance"/>,
+        /// the same deliberately generous advance the command bar's overflow is modelled with —
+        /// generous is the safe direction for a minimum.</para>
+        /// </summary>
+        public static float ArmedWidth
+        {
+            get
+            {
+                float widest = 0f;
+                float size = HudType.Of(HudTextRole.Name).Size;
+                foreach (string key in PaletteTools.Pinned)
+                {
+                    float width = PaletteTools.OrderWord(key).Length * size * HudCommands.UiAdvance;
+                    if (width > widest) widest = width;
+                }
+                return widest + 2 * ArmedPadX + 2 * HudTheme.ArmedBorderWidth;
+            }
+        }
+
+        /// <summary>
         /// Where a popover's left edge goes: under the button that raised it, pushed back on to
         /// the screen if that would hang it off an edge.
         ///

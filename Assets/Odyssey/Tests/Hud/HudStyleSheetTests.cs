@@ -258,6 +258,12 @@ namespace Odyssey.Tests.Hud
             (".settings__row", "height", () => HudLayout.StartRow, "list row"),
             (".menu__row", "height", () => HudLayout.StartRow, "list row"),
 
+            // The armed banner: a thick border in the held order's colour, one gap above the
+            // command bar. Both are the owner's, 2026-09-17, and both are numbers the sheet could
+            // otherwise drift from — the colour is written from code and the border width is not.
+            (".armed", "border-width", () => HudTheme.ArmedBorderWidth, "armed banner border"),
+            (".armed", "bottom", () => HudLayout.ArmedBottom, "armed banner to command bar"),
+
             (".panel", "padding", () => HudLayout.Pad, "panel padding"),
             (".panel", "border-radius", () => HudTheme.PanelRadius, "panel radius"),
             (".panel", "border-width", () => HudTheme.BorderWidth, "panel border"),

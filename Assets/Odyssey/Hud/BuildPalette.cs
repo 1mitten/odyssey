@@ -156,7 +156,7 @@ namespace Odyssey.Hud
 
         public string CategoryKey => PaletteTools.Categories[_category].key;
 
-        public string CategoryLabel => PaletteTools.Categories[_category].label;
+        public string CategoryLabel => Registry.Label(CategoryKey);
 
         /// <summary>The open category's tools, which is what the sub-type tier draws.</summary>
         public IReadOnlyList<string> SubTypes => PaletteTools.Categories[_category].tools;

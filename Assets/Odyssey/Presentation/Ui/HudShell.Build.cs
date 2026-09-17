@@ -164,20 +164,23 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// The header, in two halves: what is selected, and the controls.
+        /// The header, in two halves on one row: what is selected, and the controls.
         ///
-        /// <para><b>Two halves rather than one row, because Rows is 372 px wide.</b> The controls
-        /// were eight buttons — three of switcher, four actions and the way out — and with "BUILD"
-        /// and a three-part breadcrumb in front of them the row came to 426 px and ran off its own
-        /// panel. It is one line in Rail and Bar, which have the width for it, and two stacked
-        /// lines in Rows. The split is here rather than in the stylesheet because a wrapping flex
-        /// row would break wherever it happened to run out of room, which could put the close
-        /// button on a line by itself.</para>
+        /// <para><b>It was two stacked lines in Rows until 2026-09-17.</b> The controls there were
+        /// eight buttons — three of switcher, four actions and the way out — and with "BUILD" and
+        /// a three-part breadcrumb in front of them the row came to 426 px against a 372 px panel.
+        /// Then the four actions left for the orders strip down the right edge
+        /// (<c>HudShell.Orders.cs</c>) and the owner asked for the rest to come back up: <i>"shift
+        /// the toggle view, esc and x onto the same row as the build text — this will tidy that
+        /// up"</i>.</para>
         ///
-        /// <para><b>The four actions left on 2026-09-17</b> for the orders strip down the right
-        /// edge (<c>HudShell.Orders.cs</c>), which is why the split now has room to spare. It is
-        /// kept: a breadcrumb is as long as the longest sub-type name, and "Structure › Roof and
-        /// floor above › Wood" beside "BUILD" and five controls still does not fit 372 px.</para>
+        /// <para><b>The halves stay, and they are what makes one row possible.</b> The identity
+        /// half shrinks and its breadcrumb ellipsises; the controls half does not shrink at all.
+        /// So the longest breadcrumb the content table can produce — "Structure › Roof and floor
+        /// above › Wood", which is not reachable until roofs are built but is in the table today —
+        /// gives way to the switcher and the X rather than pushing them off the end. A single
+        /// wrapping row would instead break wherever it happened to run out of room, which could
+        /// put the close button on a line of its own.</para>
         /// </summary>
         VisualElement BuildPaletteHeader()
         {
@@ -468,7 +471,8 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         VisualElement CategoryTile(int index, string shape)
         {
-            var (key, label, _) = PaletteTools.Categories[index];
+            var (key, _) = PaletteTools.Categories[index];
+            string label = Registry.Label(key);
 
             var tile = new VisualElement { name = "cat-" + key };
             tile.AddToClassList("bp__tile");

@@ -40,7 +40,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(PaletteTools.Categories.Length, Is.EqualTo(7));
 
             var keys = new List<string>();
-            foreach (var (key, _, _) in PaletteTools.Categories) keys.Add(key);
+            foreach (var (key, _) in PaletteTools.Categories) keys.Add(key);
 
             Assert.That(keys, Does.Not.Contain("ui.arch.category.orders"));
             Assert.That(keys, Does.Not.Contain("ui.arch.category.zones"));
@@ -108,11 +108,11 @@ namespace Odyssey.Tests.Hud
         {
             int largest = 0;
             string widest = string.Empty;
-            foreach (var (_, label, tools) in PaletteTools.Categories)
+            foreach (var (key, tools) in PaletteTools.Categories)
                 if (tools.Length > largest)
                 {
                     largest = tools.Length;
-                    widest = label;
+                    widest = Registry.Label(key);
                 }
 
             int needed = HudLayout.BuildRailRowsNeeded(largest);
@@ -263,7 +263,7 @@ namespace Odyssey.Tests.Hud
                 }
 
                 Assert.That(palette.SubType, Is.EqualTo(expected),
-                    $"{PaletteTools.Categories[i].label} opened on the wrong entry");
+                    $"{Registry.Label(PaletteTools.Categories[i].key)} opened on the wrong entry");
             }
         }
 
@@ -469,7 +469,7 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void OnlyAPinnedActionHasAModeColour()
         {
-            foreach (var (key, _, tools) in PaletteTools.Categories)
+            foreach (var (key, tools) in PaletteTools.Categories)
             {
                 Assert.That(HudTheme.PinnedActionHue(key), Is.Null, key);
                 foreach (string tool in tools)
@@ -496,7 +496,7 @@ namespace Odyssey.Tests.Hud
             for (int i = 0; i < HudTheme.BuildCategoryTiers.Length; i++)
             {
                 HudTheme.BuildTier tier = HudTheme.BuildCategoryTiers[i];
-                string name = PaletteTools.Categories[i].label;
+                string name = Registry.Label(PaletteTools.Categories[i].key);
 
                 HudColour restingBackground = HudContrast.Over(tier.Fill,
                     HudContrast.Over(HudTheme.PopoverFill, new HudColour(255, 255, 255)));

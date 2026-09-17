@@ -81,16 +81,25 @@ namespace Odyssey.Hud
         /// question is a palette the player has to read rather than aim at. Zones and Salvage take
         /// nothing live with them. Orders did, and <see cref="Pinned"/> is where its two live
         /// tools went.</para>
+        ///
+        /// <para><b>A category has no label here, and that is the point</b> (owner, 2026-09-17:
+        /// <i>"ensure that consistency can be enforced using a centralised place"</i>). It carried
+        /// one until then — "Structure", "Production", seven words written in C# beside the seven
+        /// keys that already name them — and the two copies happened to agree, which is what a
+        /// silent duplicate looks like right up until somebody corrects one of them.
+        /// <c>Registry.Label(key)</c> is the only answer now, and
+        /// <c>RegistryTests.NoPlayerFacingNameIsWrittenInCSharp</c> is what stops the second copy
+        /// coming back.</para>
         /// </summary>
-        public static readonly (string key, string label, string[] tools)[] Categories =
+        public static readonly (string key, string[] tools)[] Categories =
         {
-            ("ui.arch.category.structure", "Structure", new[] { Wall, "ui.arch.tool.door", "ui.arch.tool.stair", "ui.arch.tool.ladder", "ui.arch.tool.roof", "ui.arch.tool.reclaim" }),
-            ("ui.arch.category.production", "Production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
-            ("ui.arch.category.furniture", "Furniture", new[] { "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
-            ("ui.arch.category.power", "Power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
-            ("ui.arch.category.security", "Security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
-            ("ui.arch.category.floors", "Floors", new[] { "ui.arch.tool.deckplate", "ui.arch.tool.grating", "ui.arch.tool.tile" }),
-            ("ui.arch.category.recreation", "Recreation", new[] { "ui.arch.tool.gamestable", "ui.arch.tool.viewscreen", "ui.arch.tool.planter" }),
+            ("ui.arch.category.structure", new[] { Wall, "ui.arch.tool.door", "ui.arch.tool.stair", "ui.arch.tool.ladder", "ui.arch.tool.roof", "ui.arch.tool.reclaim" }),
+            ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
+            ("ui.arch.category.furniture", new[] { "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
+            ("ui.arch.category.power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
+            ("ui.arch.category.security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
+            ("ui.arch.category.floors", new[] { "ui.arch.tool.deckplate", "ui.arch.tool.grating", "ui.arch.tool.tile" }),
+            ("ui.arch.category.recreation", new[] { "ui.arch.tool.gamestable", "ui.arch.tool.viewscreen", "ui.arch.tool.planter" }),
         };
 
         /// <summary>
@@ -152,6 +161,30 @@ namespace Odyssey.Hud
         public static readonly string[] Pinned = { Fell, Mine, Deconstruct, Cancel };
 
         /// <summary>
+        /// The word the armed banner uses for an order: the order's own name, the one the wiki
+        /// prints, the palette's breadcrumb says and the strip's tooltip repeats.
+        ///
+        /// <para><b>One name for one thing, everywhere</b> (owner, 2026-09-17: <i>"rename
+        /// 'Cancelling orders' to Cancel … rename this to 'Deconstruct' … keep the consistent in
+        /// the wiki and the language and UI"</i>). The banner was the odd one out: it said
+        /// "Chopping", "Mining", "Deconstructing" and — in a C# literal, because cancel has no
+        /// activity to borrow — "Cancelling orders", while every other surface in the game called
+        /// the same four things <b>Chop trees, Mine, Deconstruct, Cancel</b>. It now reads the
+        /// <c>ui.arch.tool.*</c> names, so the wiki, the palette, the strip and the banner cannot
+        /// disagree and a rename in <c>icon-keys.csv</c> reaches all four at once.</para>
+        ///
+        /// <para><b>The gerunds did not go away; they were never this.</b> "Chopping" is what a
+        /// <i>colonist</i> is doing and belongs to <c>ui.status.*</c>, which the roster card
+        /// draws. An order is an imperative and an activity is a gerund — that is the rule the
+        /// banner was breaking by mixing the two namespaces.</para>
+        ///
+        /// <para>This method rather than a bare <c>Registry.Label</c> call at each site, because
+        /// <see cref="HudLayout.ArmedWidth"/> has to walk exactly these words to size the banner
+        /// to the longest of them, and "exactly these words" needs one owner.</para>
+        /// </summary>
+        public static string OrderWord(string key) => Registry.Label(key);
+
+        /// <summary>
         /// The tools that actually do something. Anything absent is drawn disabled, which is most
         /// of the palette until the thing behind a key exists.
         /// </summary>
@@ -197,7 +230,7 @@ namespace Odyssey.Hud
             get
             {
                 var keys = new List<string>(Pinned);
-                foreach (var (key, _, tools) in Categories)
+                foreach (var (key, tools) in Categories)
                 {
                     keys.Add(key);
                     keys.AddRange(tools);

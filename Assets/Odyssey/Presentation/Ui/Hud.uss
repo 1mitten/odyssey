@@ -992,7 +992,13 @@
 
 .bp--rail { width: 840px; }
 
-/* ---- header: BUILD, the mode line, the switcher, ESC, four actions, the way out */
+/* ---- header: BUILD, the mode line, the switcher, ESC, the way out
+
+   One row in all three layouts (owner, 2026-09-17: "shift the toggle view, esc and x onto the same
+   row as the build text — this will tidy that up"). It was two stacked lines in Rows, because the
+   controls there were eight buttons and with a three-part breadcrumb in front of them the row came
+   to 426 px against a 372 px panel. Five of those eight left for the orders strip, and what is
+   left fits. */
 
 .bp__hdr {
     flex-direction: row;
@@ -1017,20 +1023,21 @@
     flex-shrink: 0;
 }
 
-/* Rows is 372px wide and the controls alone are eight buttons, so its header is two stacked
-   lines: what is selected, then what you can press. Rail and Bar have the width for one. */
-.bp--rows .bp__hdr {
-    flex-direction: column;
-    align-items: stretch;
-}
+/* The breadcrumb, and the mode line that replaces it while one of the four orders is held.
+   Its colour is written from code: cyan for a build, the held order's own hue otherwise.
 
-.bp--rows .bp__hdr-ctl { margin-top: 8px; }
-
-/* The breadcrumb, and the mode line that replaces it while one of the four actions is held.
-   Its colour is written from code: cyan for a build, the held action's own hue otherwise. */
+   It is the part of the header that gives. Rows is 372 px and the longest breadcrumb the content
+   table can produce — "Structure > Roof and floor above > Wood" — does not fit beside BUILD and
+   five controls at any width this panel has. So the crumb shrinks and ellipsises rather than
+   pushing the controls off the end: the same treatment a save's name gets in the load list, and
+   the reason the row can be one row at every breadcrumb rather than only at today's. Nothing is
+   lost that is not also on the lit tiles directly underneath. */
 .bp__crumb {
     margin-left: 9px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
 }
 
 .bp__mode-icon {
@@ -1796,24 +1803,32 @@
 
 /* ---------------------------------------------------------------- the drag-select marquee */
 
-/* What the player is holding. Centred over the command bar, out of the way of the board and
-   in the path of anyone about to wonder how to stop. Never a click target: it is a sentence,
-   not a control. */
+/* What the player is holding: one word, in a box whose border is the held order's own colour —
+   green for chopping, blue for mining, amber for deconstructing, red for cancelling (owner,
+   2026-09-17). Centred over the command bar, out of the way of the board. Never a click target.
+
+   The border is three pixels, and the colour is written from code, because the border is the
+   whole of what this says at a glance; the cyan here is the resting value for a build tool, which
+   has no order hue of its own. See HudTheme.ArmedBorderWidth.
+
+   The line under the word — "drag over the board · right-click or Esc to stop" — was removed on
+   the owner's instruction the same day. It was the only place the right-click gesture was written
+   down; the orders strip now lights the button that armed the tool and puts it down when pressed
+   again, which is a way out you can see rather than one you have to be told. */
 .armed {
     position: absolute;
     left: 50%;
     translate: -50% 0;
-    bottom: 92px;
+    bottom: 58px;
     align-items: center;
     padding: 5px 14px;
     background-color: rgba(12, 16, 20, 0.90);
-    border-width: 1px;
+    border-width: 3px;
     border-color: #6fd3e3;
     border-radius: 6px;
 }
 
 .armed__what { color: #dff6fa; }
-.armed__how { color: rgba(255, 255, 255, 0.55); }
 
 
 .marquee {

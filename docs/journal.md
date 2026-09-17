@@ -2821,3 +2821,64 @@ work itself.
   for a button nobody has aimed at, and whether the strip wants to sit lower down that edge —
   nearer the Menu button the owner named in the same sentence — rather than directly under the
   rail.
+
+
+- **The header came back to one row, and the armed banner became the thing that says what mode you
+  are in (owner, 2026-09-17).** Four instructions in one afternoon, all downstream of the orders
+  strip.
+
+  **The palette header is one row again.** *"Shift the toggle view, esc and x onto the same row as
+  the build text — this will tidy that up."* Rows had a `flex-direction: column` override that
+  stacked the header into two lines, and it existed for one reason: the controls were eight buttons
+  and with BUILD and a three-part breadcrumb in front of them the row came to 426 px against a
+  372 px panel. Five of those eight had just left. What makes one row survive the *longest*
+  breadcrumb rather than only today's is that the identity half shrinks and its crumb ellipsises
+  while the controls half does not shrink at all — so "Structure › Roof and floor above › Wood"
+  gives way to the switcher and the X rather than pushing them off the end.
+
+  **The armed banner wears the order's colour, three pixels of it.** *"The border around the big
+  dialog … should be the same colour as that order … make that border much thicker."* It read
+  `HudTheme.PinnedActionHue`, which is what the strip's buttons and the palette's top edge already
+  use, so the button pressed, the panel and the banner cannot come to disagree about what a colour
+  means. **The sub-line came off** on the same instruction — it was the only place in the game the
+  right-click gesture was written down, and that loss is recorded rather than glossed; what covers
+  it now is the strip button staying lit and putting the tool down when pressed again. **And it
+  came down to the bar**, from 92 px to `ArmedBottom` (one panel gap above a 49 px bar), because
+  43 px of clear board made it read as floating rather than as belonging to the controls it is
+  about.
+
+  **One name for one thing, and the centralised place is now enforced.** *"Rename 'Cancelling
+  orders' to Cancel … rename this to 'Deconstruct' … keep the consistent in the wiki and the
+  language and UI … ensure that consistency can be enforced using a centralised place."* The banner
+  was the odd surface out: it said Chopping, Mining, Deconstructing and — in a C# literal, because
+  cancel has no colonist activity to borrow — "Cancelling orders", while the wiki, the palette's
+  breadcrumb and the strip's tooltips all said **Chop trees, Mine, Deconstruct, Cancel**. Both
+  renames the owner asked for were already the registry's own words, so the fix was to stop writing
+  any of the four in C#. The rule underneath: **an order is an imperative and an activity is a
+  gerund** — "Chopping" is `ui.status.felling`, what a *colonist* is doing, and the roster card
+  still draws it; the banner was mixing two namespaces.
+
+  **`RegistryTests.NoPlayerFacingNameIsWrittenInCSharp` is the enforcement**, and it is the shape
+  of `HopPriceHasOneOwnerTests`: read every C# file in `Odyssey.Hud` and `Odyssey.Presentation`,
+  fail on a string literal that equals a registry name in the six namespaces where one thing is
+  named on several surfaces at once. Scoped to those six because "Build" and "Menu" are registry
+  names *and* ordinary words; the scan found **eight hits and no false positives**, so the boundary
+  is measured rather than hoped for. **Two of them were live duplicates**, both agreeing with the
+  registry at the time — which is what a silent duplicate looks like until somebody corrects one
+  copy: the seven Build category labels sat in `PaletteTools.Categories` beside the keys that
+  already named them (the tuple is `(key, tools)` now), and the banner's build fallback said
+  `"Building"` beside `ui.status.building`. The test was verified by planting an offence and
+  watching it fail, then removing it.
+
+  **The banner has a floor, not a width.** *"Make the dialog a fixed predictable width — as the
+  longest order … at least this size until further notice (and let it extend beyond that)."*
+  `HudLayout.ArmedWidth` walks `PaletteTools.Pinned` through `OrderWord` and takes the longest, so
+  a rename moves the number with it — the owner's guess was "Chopping" and it is "Deconstruct".
+  Measured in PlayMode: all four orders draw at **139 px against a 138.5 px floor**, so the four
+  boxes are identical and the banner no longer resizes under the eye as the mode changes. An armed
+  build reads "Building wall of wood" and is allowed past it.
+
+  **All three tiers green** — fast 600 Sim / 288 Hud, EditMode 1351, PlayMode 59 — with three more
+  PlayMode tests: the header is one row in every layout at every category and resolution, the
+  banner wears each of the four colours at the right thickness with exactly one label, and each
+  order's box reaches the floor.

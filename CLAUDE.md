@@ -50,6 +50,16 @@ The HUD reads its labels from the same file: `emit_labels.py` generates `Registr
 `RegistryTests` fails the fast tier on any key the CSV does not know. A content commit runs both
 checks.
 
+**And the reverse is enforced too, since 2026-09-17** (owner: *"keep the consistent in the wiki and
+the language and UI … ensure that consistency can be enforced using a centralised place"*).
+`RegistryTests.NoPlayerFacingNameIsWrittenInCSharp` reads every C# file in `Odyssey.Hud` and
+`Odyssey.Presentation` and fails on a string literal that equals a registry name in the six
+namespaces where one thing is named on several surfaces at once (`ui.arch.tool.*`,
+`ui.arch.category.*`, `ui.status.*`, `ui.res.*`, `ui.alert.*`, `ui.job.*`). **Do not answer it by
+rewording the literal** — call `Registry.Label(key)`, or the wiki and the screen will disagree the
+first time somebody corrects one of the two copies. It found two on the day it was written: the
+seven Build category labels, and the armed banner's `"Building"`.
+
 Both `--check`s are the gate and belong in CI beside the test tiers. Two notes before extending
 it. The registry is hand-authored **only until the Def set covers it**: then `icon-keys.csv` is generated
 one way out of the Defs and committed, so the wiki and the build-gating icon tests share one
@@ -391,7 +401,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **600 Sim + 287 Hud**; Long tier **20**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **600 Sim + 288 Hud**; Long tier **20**.
   **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
   touches the composition root or the HUD shell is unproven until Unity has compiled it, however
   green the 11 seconds look (`docs/lessons.md`).
@@ -488,9 +498,12 @@ no region spans two layers.
   30 px while ADR 0007 says not to draw pixel art below 32 — measured, 30 px reads, 17 px loses the
   grooves, 16 px goes to noise, and a **framed** sheet-06 tile at 17 px is mostly frame
   (`Logs/skill-icons.png`).
-- **Nobody has pressed Play on the orders strip.** It is measured against the rail and the screen
-  edge at three resolutions and drawn in `Logs/palette-rows.png`, which is all anybody has looked
-  at. Two questions a picture cannot answer: whether a 34 px button is the right size for something
+- **Nobody has pressed Play on the orders strip, or on the armed banner it raises.** Both are
+  measured — the strip against the rail and the screen edge at three resolutions, the banner's four
+  colours, its 3 px border and its 139 px box — and `Logs/palette-rows.png` is all anybody has
+  looked at. **The banner lost the line that taught right-click**, which is the one thing to watch
+  for in a playtest: if putting a tool down stops being obvious, that sentence is what was carrying
+  it. Two questions a picture cannot answer: whether a 34 px button is the right size for something
   aimed at without looking, and whether the strip wants to sit **lower** down that edge — nearer
   the Menu button, which the owner named in the same sentence — rather than directly under the
   rail. The **19% coverage ceiling** it cost is in the same basket.
