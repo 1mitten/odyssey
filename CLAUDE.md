@@ -297,6 +297,13 @@ fresh seed: being dealt the same world twice reads as a reroll that does not wor
 screen could tell a player otherwise. **`U40` is unblocked** — both its dependencies are in and the
 screen it hangs off exists.
 
+**The owner played it on 2026-09-17 and it was right first time** (*"works spot on"*), which is the
+first thing on this screen that has been. U38 took four corrections off its own playtest and the
+gesture work before it took three rounds; this took none. Nothing about it is open on the owner's
+side, so the seed, the reroll, the Start row and the order they sit in are **settled** rather than
+merely untested — a later session changing any of them is changing something that was judged, not
+something nobody had looked at.
+
 **Both controls were run rather than assumed.** With the presenter drawing its own seed instead of
 using the one handed to it, exactly `TheWorldIsBuiltFromTheSeedInTheBox` fails; with the usability
 guard removed from `Start()`, exactly `StartRefusesABoxThatNamesNoSeed` does. The first is the only
@@ -474,10 +481,6 @@ no region spans two layers.
   threshold separating a right-*click* from a right-*drag* is the right number — an orbit is a
   deliberate sweep, so it may want to be larger than the left button's. One number, judged at the
   keyboard (`docs/design/16-cancel-and-deconstruct.md` §6).
-- **Nobody has pressed Play on the New game screen.** Both tiers are green and neither can say
-  whether a seed is a thing a player wants to look at before every game, or whether Reroll and Start
-  are in the right order under the box. One judgement, at the keyboard
-  (`docs/design/17-start-flow.md` §11).
 - **Nobody has pressed Play on the interface work either.** The roster card, the docked bars, the
   popovers, the Skills tab and the settings panel's new Keys and Audio tabs are all measured and
   none of them has been looked at. The Keys tab is the tallest panel yet — at 150 per cent

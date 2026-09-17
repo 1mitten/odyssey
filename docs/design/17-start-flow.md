@@ -469,6 +469,21 @@ The last row is the point of having a PlayMode test here at all. Everything abov
 assembly makes; that one is the promise the whole unit exists to keep, and the way to make it bite is
 to type a seed the draw would never have produced and assert the built world carries *that* number.
 
+### 11.4a Played, 2026-09-17 — *"works spot on"*
+
+**The owner played it and nothing came back.** That is worth recording rather than passing over,
+because it is the first thing on this screen that has been right first time: §4's own table lists
+four corrections off U38's playtest, the build gesture before it took three rounds, and the naming
+prompt arrived because the first evening of saving found what §10 had already admitted.
+
+What the verdict settles, and what it does not. It **settles** the four decisions in §11.2 and the
+three words in §11.3 — a later session changing the reroll's freshness, the refusal, the order of
+the two rows or the wording is changing something that was judged, not something nobody had looked
+at, and should say why. It settles nothing about **U40 and U41**, which will put three colonist
+cards into this same fixed box and may well find that the box is the wrong size for them; that is
+their measurement to take, and `StartNewGameHeight` is derived precisely so the question can be
+asked in the fast tier rather than at the keyboard.
+
 ### 11.5 Not in this unit
 
 - **Colonist select and portraits (U40, U41).** They hang off this screen — it is what they were

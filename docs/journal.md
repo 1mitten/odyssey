@@ -2614,3 +2614,12 @@ work itself.
   director, through the bootstrap, to `SimWorld.Seed` — and it is driven through the control rather
   than the director for that reason, typing a number the draw would never have produced so that
   passing cannot be a coincidence.
+- **It was right first time** (owner, 2026-09-17: *"works spot on"*), which is the first thing on
+  this screen that has been — U38 took four corrections off its own playtest, the build gesture
+  before it took three rounds, and the naming prompt exists because one evening of saving found what
+  §10 had already written down. The honest reading is not that this unit was done better. It is that
+  it was **small and had somewhere to stand**: four decisions, three words, one new control, and
+  every one of them made inside seams — the fixed box, `.settings__row`, `.field`, `Registry.Label`,
+  `HudLayout` — that four earlier rounds of correction had already paid for. **Seam work does not
+  show up in the unit that does it; it shows up in the one after**, and this is what that looks
+  like from the other end.
