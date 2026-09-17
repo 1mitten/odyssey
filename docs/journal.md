@@ -3233,3 +3233,114 @@ work itself.
   **0.22**, water 0.40 → **0.32** — about −2 dB across the beds, present but under the work.
   The floor test still holds (night, the lowest, sits above 0.2), and the generator and the
   committed catalogue carry the same numbers as ever.
+
+- **The cancel tool was already built; nobody could find it (2026-09-17, `claude/cancel-tool`).**
+  The owner asked for "a cancel button ... so we can deselect the build". The investigation's whole
+  finding was that the mechanic had been in the game since the designate line landed —
+  `DesignateTool.Cancel` on the **X** key, drawing a box and sending `CancelDesignation` +
+  `CancelBuilding` per cell, with a complete simulation half and its negative controls
+  (`FellJobTests.ACancelledOrderStopsTheJob`, `ConstructionTests.CancellingASiteGivesBackWhatWasCarriedToIt`).
+  **Every way of finding it was missing**: no chip on the palette, though `ui.arch.tool.cancel` has
+  been in the registry all along; no mention of the key anywhere on screen. This is the second time
+  a feature has existed and behaved as though it did not, and the first
+  (`15-building.md` §7, a composition fault) cost two playtests. This one cost none, because the
+  question asked first was *is it there* rather than *how do I build it*.
+  - **The chip said "Harvest" and the owner said "harvesting".** `ui.arch.tool.harvest` — "Take the
+    crop" — was wired to the fell tool, while `ui.arch.tool.fell` sat unused. The label had taught
+    the owner the wrong name for the tool, which is the clearest possible demonstration of what the
+    naming registry is for and of what happens when a chip is pointed at the wrong row of it.
+  - **Chop, not fell** (owner's call). Labels only: `ui.arch.tool.fell` → "Chop trees",
+    `ui.keys.fell` → "Chop tool", `ui.status.felling` → "Chopping", and the axe's description.
+    **Every key is unchanged**, because `ui.status.felling` is one of the nineteen that draws real
+    art off sheet 06 and `icon-map.csv` is keyed the same way — a key rename would have silently
+    dropped an icon back to an outlined square. The C# names (`DesignateTool.Fell`, `FellJobDriver`,
+    `JobHandle.Fell`) are deliberately left alone: internal, about twenty files, and no player ever
+    sees one.
+  - **And the armed banner still said "Felling"**, in C#, which is the failure the registry rule
+    exists to prevent and which the rename made visible in the same hour. Mine and Chop now read
+    `Registry.Label("ui.status.*")` — those keys were *already* phrased as the thing being done, so
+    the voice is unchanged and the next rename carries. Cancel keeps its own words, because there
+    is no activity key for it: no colonist is ever *cancelling*.
+  - **`PaletteTools` moved out of the shell**, for the reason `HudCommands` already lives in
+    `Odyssey.Hud`: the palette is data, and the fast tier can see that assembly and cannot see a
+    `MonoBehaviour`. That move is what made the rest testable — **`EveryPaletteKeyIsARegisteredName`
+    could not have been written before it**, and it now covers every category and chip.
+  - **Arming and lighting are one row now.** `MarkArmedTool` was a hard-coded chain of key
+    comparisons a hundred lines from the table that armed them: two lists of the same three tools,
+    and the symptom when they drifted was not a compile error but *a chip that arms a tool and never
+    lights*, which a player reads as the click having missed. Adding cancel would have been the
+    fourth tool and the first drift. A `PaletteTool` carries arm, is-armed and wants-material or it
+    does not exist.
+  - **Right-click puts the tool down** — input case 5 of `09-ui-and-input.md` §6, and the first half
+    of it built. The rig mirrors, for the right button, the click-versus-drag split the left button
+    has always made: travelled means it was an orbit, and only a press that never travelled disarms.
+    **With nothing armed it is deliberately inert**, because that gesture is reserved for the
+    forced-order context menu. It is *not* routed through `SettingsDirector.Escape`: Escape unwinds
+    tool → panel → menu, right-click means exactly one thing, and merging them would recreate the
+    two-components-one-key fault that rule was written for.
+  - **The arithmetic came out of the rig** as `PressGesture`, UnityEngine-free, because the PlayMode
+    harness still cannot deliver a synthetic mouse — the same lift that made `DesignateDirector`
+    testable. **And it immediately caught a real trap**: `new PressGesture()` runs the implicit
+    all-zeroes struct constructor rather than one declared with optional parameters, so a threshold
+    held as a *field* was zero exactly where it was used and every press read as a drag. Three tests
+    failed on the first run. The threshold is a constant now and the type no longer allows it. This
+    is the whole argument for the lift in one incident: inside the rig it would have shipped, and
+    the symptom would have been "right-drag puts my tool down", diagnosed as a threshold that wanted
+    tuning.
+  - **Verified:** fast tier **494 Sim + 187 Hud** (17 new), Unity EditMode **1138 total, 0 failed**,
+    both content gates green. Deconstruct, and the save gap underneath it, are PR 2 —
+    `docs/design/16-cancel-and-deconstruct.md` §4 and §5.
+
+- **Deconstruct, and the save gap that had to be closed before it could be honest (2026-09-17,
+  `claude/cancel-tool`).** The owner, playing the cancel tool: *"this works good"*, then *"also a
+  deconstruct button as well"*. The button was four lines of palette table. It was blocked on
+  something else entirely, and the plan's §4 had said so as a prediction rather than a fact.
+  - **The prediction was measured first, and both halves held.** `EdificeRoundTripTests` was written
+    to fail before a line of deconstruct existed: a wall a colonist raised on a bare board took
+    handle 0, and after a reload **the restored list had no entries at all** — the cell still said a
+    wall stood there and pointed at nothing. And a **wooden wall and a stone wall in the same cell
+    hashed identically**. `List<PlacedEdifice>` was worldgen's and nobody else's: not an
+    `ISaveable`, not an `IStateHashable`, while `CellGrid` faithfully saved and hashed an *index*
+    into it. The OQ-50 shape one level down, found the same way.
+  - **Where the fix is wired was the only real decision.** `AddColony` creates and hashes
+    `EdificeSaveSection`; `ConstructionGrid` takes it instead of the raw list and hands it on as
+    `.Edifices`, because that is the one class that appends to the list at run time. So the thing
+    that raises a wall and the thing that writes it down cannot be wired up separately.
+    **The guard against forgetting the save is not vigilance**: the list is in the hash, so
+    `WorldRoundTripTests.TheRoundTripReproducesTheStateExactly` fails the moment the save stops
+    covering what the hash covers. Hash coverage plus round-trip equality *is* save coverage.
+  - **The shape was chosen partly because the editor was open.** Threading a new parameter through
+    `AddColony` would have touched 16 call sites, 11 of them in `Assets/Editor/`, which only Unity
+    compiles — unverifiable while the owner was playing. Going through `ConstructionGrid`'s
+    constructor touched one. The better design and the workable one were the same design, which is
+    luck worth noticing rather than a method.
+  - **The whole list is saved, not just the colony's additions.** The generator's stamps could be
+    recovered by regenerating from the seed, which is smaller and makes every save file depend on
+    the generator never changing. A save that describes itself survives a worldgen edit.
+  - **All six golden hashes moved twice in one day, for two different reasons**, and `Golden.cs`
+    carries both sentences. First when the edifice list entered the hash — including the barren
+    meadow with nothing standing on it, because an empty list still contributes its count. Then
+    again when deconstruct added a **tenth job**: `JobSystem` hashes a completed-and-failed tally
+    *per job*, sized from the job table, so one more zero in that walk moves the **pre-tick**
+    number. The failure message points at the generator and the generator was untouched. Anything
+    changing the *length* of a hashed per-job or per-work-type array will do this.
+  - **"Ours only" was not expressible**, which the plan had predicted and the code confirmed in as
+    many words: `ConstructionGrid.Raise`'s own comment says a colonist's wall and the generator's
+    are indistinguishable downstream, **on purpose**. `PlacedEdifice.Built` is the exception that
+    one operation needs. A flag rather than the free proxy — `IsBuildable(stuff)` would have worked
+    today and would have started including city walls the day a salvage line gave steel an item —
+    and it is the same bit Reclaim will flip when it lands.
+  - **The refund is keyed on cell *and tick*, unlike stone yield, and the difference is the point.**
+    Stone is a property of the rock and must answer the same for ever. A refund keyed on the cell
+    alone would make every cell permanently a "2" or a "3": stable, discoverable, then farmable by
+    rebuilding the good ones. `TheSameCellCanRefundDifferentlyAtADifferentMoment` is that argument
+    as a test.
+  - **The falsification probe found a second fault nobody was looking for.** All eight new tests
+    passed first time, which on this project is a reason to check rather than to celebrate. With
+    `DeconstructWorkGiver.TryGiveJob` stubbed to refuse, the end-to-end test failed as it should —
+    and `TheRefundIsPaidInWhatTheThingWasMadeOf` went on **passing**, because it guarded its own
+    claim with `Assume` rather than `Assert`. Inconclusive reported as green: the state-hash defect
+    in miniature, in a test written the same hour by someone who had just written the journal entry
+    about it. It is an `Assert` now.
+  - **Verified:** fast tier **505 Sim + 189 Hud**, Long tier **19**, Unity EditMode **1158 total,
+    0 failed**, both content gates green. Unplayed: deconstruct, right-click and the pinned row.

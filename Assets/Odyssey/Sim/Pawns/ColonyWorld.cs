@@ -106,6 +106,12 @@ namespace Odyssey.Sim.Pawns
                 jobs,
                 designations,
                 construction,
+                // Taken off the construction grid rather than built here, because that is the one
+                // class that appends a building to the list at run time. The guard against
+                // forgetting it is not vigilance: the edifice list is in the state hash, so
+                // `WorldRoundTripTests.TheRoundTripReproducesTheStateExactly` fails the moment the
+                // save stops covering what the hash covers.
+                construction.Edifices,
             };
         }
 

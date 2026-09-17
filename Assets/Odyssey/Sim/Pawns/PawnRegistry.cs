@@ -68,6 +68,7 @@ namespace Odyssey.Sim.Pawns
             new MineJobDriver(),
             new DeliverJobDriver(),
             new BuildJobDriver(),
+            new DeconstructJobDriver(),
         };
 
         // ---- ITickable: registration only, so the hash sees the pawns --------------------

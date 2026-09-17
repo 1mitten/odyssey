@@ -38,10 +38,22 @@ namespace Odyssey.Tests.Sim
             edifices.Add(new PlacedEdifice { CellIndex = tree, Def = NaturalContent.EdificeTreeConifer, Stuff = NaturalContent.StuffWood });
             grid.Edifice[tree] = 0;
 
+            // The ruined city's: a concrete wall the generator stamped, so Built is false.
             int wall = size.Index(5, 3, Layer);
             edifices.Add(new PlacedEdifice { CellIndex = wall, Def = CoreContent.EdificeWall, Stuff = CoreContent.StuffConcrete });
             grid.Edifice[wall] = 1;
             grid.Flags[wall] |= CellFlags.BlockingEdifice;
+
+            // Ours: a wooden wall a colonist raised. The only difference that matters to
+            // deconstruct, and the reason both are on the board.
+            int ours = size.Index(6, 3, Layer);
+            edifices.Add(new PlacedEdifice
+            {
+                CellIndex = ours, Def = CoreContent.EdificeWall,
+                Stuff = NaturalContent.StuffWood, Built = true,
+            });
+            grid.Edifice[ours] = 2;
+            grid.Flags[ours] |= CellFlags.BlockingEdifice;
 
             return (grid, edifices, new DesignationGrid(grid, edifices));
         }
@@ -62,7 +74,10 @@ namespace Odyssey.Tests.Sim
             var (_, _, d) = Board();
             Assert.That(d.Designate(new CellRef(1, 1, 0), DesignationKind.Mine), Is.EqualTo(IntentRejection.None));
             Assert.That(d.Designate(new CellRef(1, 1, Layer), DesignationKind.Mine), Is.EqualTo(IntentRejection.NotPermitted), "air cannot be mined");
-            Assert.That(d.Designate(new CellRef(5, 3, Layer), DesignationKind.Deconstruct), Is.EqualTo(IntentRejection.None));
+            Assert.That(d.Designate(new CellRef(6, 3, Layer), DesignationKind.Deconstruct), Is.EqualTo(IntentRejection.None),
+                "a wall the colony raised is ours to take apart");
+            Assert.That(d.Designate(new CellRef(5, 3, Layer), DesignationKind.Deconstruct), Is.EqualTo(IntentRejection.NotPermitted),
+                "the ruined city is Reclaim's and Salvage's, with their own yields");
             Assert.That(d.Designate(new CellRef(3, 3, Layer), DesignationKind.Deconstruct), Is.EqualTo(IntentRejection.NotPermitted), "a tree is felled, not deconstructed");
         }
 

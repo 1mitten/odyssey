@@ -131,6 +131,7 @@ namespace Odyssey.Sim.Pawns
         public const int Mine = JobHandle.Mine;
         public const int Deliver = JobHandle.Deliver;
         public const int Build = JobHandle.Build;
+        public const int Deconstruct = JobHandle.Deconstruct;
         public const int Count = JobHandle.Count;
     }
 
@@ -557,7 +558,7 @@ namespace Odyssey.Sim.Pawns
                 "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround");
             content.Jobs = ByName<JobDef>(defs,
                 "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine",
-                "Job_Deliver", "Job_Build");
+                "Job_Deliver", "Job_Build", "Job_Deconstruct");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction");
             content.Skills = ByName<SkillDef>(defs,
@@ -624,5 +625,19 @@ namespace Odyssey.Sim.Pawns
         /// stone is the kind of coupling nothing would ever report.
         /// </summary>
         public const uint StoneYield = 0x27D4_EB2F;
+
+        /// <summary>
+        /// The odd unit when a demolished building refunds half of an odd cost.
+        ///
+        /// <para>Drawn from (world seed, <b>cell index ^ tick</b>) — and the tick is the whole
+        /// difference from <see cref="StoneYield"/> above, which deliberately leaves it out.
+        /// Stone is a property of the rock: the same cell must answer the same way for ever, or a
+        /// reload would reroll the map's mineral wealth. A refund is a property of the
+        /// <i>moment</i>. Keyed on the cell alone, every cell on the board would be permanently a
+        /// "2" cell or a "3" cell — stable, discoverable, and then farmable by rebuilding the good
+        /// ones. Keyed on both, it still replays identically from a seed, which is all determinism
+        /// asks.</para>
+        /// </summary>
+        public const uint DeconstructRefund = 0x165667B1;
     }
 }
