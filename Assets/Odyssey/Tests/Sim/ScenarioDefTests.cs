@@ -27,10 +27,53 @@ namespace Odyssey.Tests.Sim
             ColonyWorld.Build(CitySize, seed: 1u, scenario, barren: false, chunks: null,
                 mapType: MapType.RuinedCity);
 
+        /// <summary>
+        /// What the played scenario used to be: a colony with a ring of trees and the nearest
+        /// outcrop already marked.
+        ///
+        /// <para>Kept as a fixture rather than as a shipped scenario since the owner asked for a
+        /// game that starts with nothing ordered. The marking machinery is still the game's — a
+        /// scenario may ask for it, and a later one almost certainly will — so it stays under test
+        /// with a scenario that asks.</para>
+        /// </summary>
+        static ScenarioDef WithStartingOrders() =>
+            new ScenarioDef
+            {
+                defName = "Scenario_Playtest", label = "playtest",
+                startingFellRadius = 10, startingMineRadius = 30, startingMineOutcrops = 3,
+            };
+
+        /// <summary>
+        /// The scene's scenario gives no orders at all (owner, 2026-09-17: *"at the start of game
+        /// there are no orders, until you assign them"*).
+        ///
+        /// <para>Asserted on the <i>world</i> rather than on the def's three fields, because what
+        /// the owner asked for is that a new colony arrives with nothing marked — and a def whose
+        /// radii are zero while something else marked a tree would satisfy the fields and fail the
+        /// request.</para>
+        /// </summary>
         [Test]
-        public void PlaytestMarksEveryTreeNearTheStart()
+        public void ThePlayedScenarioGivesNoOrdersAtAll()
         {
-            ScenarioDef scenario = ScenarioDef.Playtest();
+            ColonyWorld colony = Wooded(ScenarioDef.Playtest());
+
+            Assert.That(colony.MarkedForWork, Is.Zero, "the colony arrived with work already ordered");
+            Assert.That(colony.Designations.Cells, Is.Empty,
+                "a cell is designated on a board nobody has given an order on");
+        }
+
+        /// <summary>
+        /// A scenario that <i>does</i> ask for felling still marks every tree in its radius.
+        ///
+        /// <para>This was <c>PlaytestMarksEveryTreeNearTheStart</c> until the scene stopped giving
+        /// orders. The machinery it covers is unchanged and still reachable — a scenario is what
+        /// asks for it — so the test keeps its subject and brings its own scenario rather than
+        /// being deleted along with the behaviour that used to call it.</para>
+        /// </summary>
+        [Test]
+        public void AScenarioThatAsksForFellingMarksEveryTreeNearTheStart()
+        {
+            ScenarioDef scenario = WithStartingOrders();
             ColonyWorld colony = Wooded(scenario);
             CellRef start = colony.Start;
             int radius = scenario.startingFellRadius;
@@ -55,9 +98,9 @@ namespace Odyssey.Tests.Sim
         public void PlaytestAlsoMarksTheNearestOutcropForMining()
         {
             // Added with the mining MVP: the felling half of this used to assert the colony had
-            // no other orders at all. It cannot any more, and that is the feature — there is
-            // still no tool to give a mining order with, so the scenario gives one.
-            ScenarioDef scenario = ScenarioDef.Playtest();
+            // no other orders at all. It cannot any more, and that is the feature — a scenario
+            // that asks for felling work may ask for mining work beside it.
+            ScenarioDef scenario = WithStartingOrders();
             ColonyWorld colony = Wooded(scenario);
 
             int mine = 0;
@@ -89,7 +132,7 @@ namespace Odyssey.Tests.Sim
 
             for (uint seed = 1; seed <= 5; seed++)
             {
-                ColonyWorld colony = ColonyWorld.Build(playSize, seed, ScenarioDef.Playtest(),
+                ColonyWorld colony = ColonyWorld.Build(playSize, seed, WithStartingOrders(),
                     barren: true, wooded: true);
 
                 int mine = 0;
@@ -133,9 +176,11 @@ namespace Odyssey.Tests.Sim
         public void BothTradesFindTheirOwnWorkOnThePlayedBoard()
         {
             // The behaviour rather than the priorities: within a few thousand ticks somebody is
-            // mining and somebody else is felling, on the board the scene loads.
+            // mining and somebody else is felling, on the board the scene loads. The orders are
+            // given by the scenario here because the trade split is what is under test and an
+            // order is only its precondition; the scene itself gives none any more.
             var playSize = new GridSize(120, 120, 16);
-            ColonyWorld colony = ColonyWorld.Build(playSize, 1u, ScenarioDef.Playtest(),
+            ColonyWorld colony = ColonyWorld.Build(playSize, 1u, WithStartingOrders(),
                 barren: true, wooded: true);
 
             bool sawMining = false, sawFelling = false;

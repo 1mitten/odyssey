@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
@@ -41,6 +42,19 @@ namespace Odyssey.Sim.Pawns
         /// <see cref="ScenarioDef.Playtest"/>.
         /// </summary>
         public ScenarioDef Scenario = ScenarioDef.Bare();
+
+        /// <summary>
+        /// One roll seed per colonist the player chose on the select screen (U40), in the order
+        /// they were shown, or null for a colony nobody chose.
+        ///
+        /// <para>It decides <i>who</i> the colonists are — their passions and starting skills, and
+        /// so the name the interface gives them. It does not decide <i>how many</i>: that is
+        /// <see cref="ScenarioDef.colonists"/>, and a caller wanting the three from the screen and
+        /// nothing else sets both. Null is the ordinary case, and every colonist then rolls from
+        /// this request's own <see cref="Seed"/>, which is what a colony rolled before this
+        /// existed.</para>
+        /// </summary>
+        public IReadOnlyList<uint>? Colonists;
 
         /// <summary>
         /// Flat grass with no rock, ore or bare patches. False gives the full natural generator

@@ -42,6 +42,10 @@ namespace Odyssey.Sim.Pawns
         public Pawn Spawn(int cell)
         {
             var pawn = new Pawn(new PawnId(_nextId++), cell, _ctx.Content);
+            // The world's seed unless a caller says otherwise (U40). This is what keeps every
+            // colony nobody chose rolling exactly what it rolled before pawns had seeds of their
+            // own, so no scenario, headless run or fixture had to change.
+            pawn.RollSeed = _ctx.Seed;
             Adopt(pawn);
             return pawn;
         }
