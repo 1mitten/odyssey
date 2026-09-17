@@ -1769,6 +1769,80 @@ work itself.
     including 200 chunk meshes, **steady submit 0.22 ms a frame**, warm full re-mesh of 200 chunks
     13.38 ms at 0.067 ms a chunk.
   - **Verified:** Unity EditMode **1121 total, 0 failed**.
+
+- **A terrain kind brings its own meshing, and the seams list closes (OQ-46, 2026-09-17).** The last
+  of the five chokepoints the mining line exposed. `ChunkMesher.EmitTerrain` was a chain of early
+  returns — water, then surface, then an exposure gate, then stone, then earth, then a plain block —
+  so every new terrain feature was an edit to a file on the queue's own do-not-touch list. Both the
+  water line and the mining line edited it anyway, which is what a rule the design leaves no way to
+  obey looks like from outside. It is now a registered list of `ITerrainContributor`; a contributor
+  states its own condition and the first to claim a cell ends it.
+  - **The acceptance was "change nothing", and it is met exactly.** `ChunkMesherTests` passes with
+    no edits, and `ChunkBucketScaleTests` reports **512 buckets and 100,000 instances** — the same
+    numbers, to the instance, as before the refactor. That is the reason OQ-03 was done first: a
+    refactor whose whole promise is that output is unchanged needs an oracle that existed before it
+    started, and "about the same" cannot be checked a month later.
+  - **Three things were hoisted, each of which could have moved a pixel.** The tint and the drape
+    are now computed before any contributor is asked, because in the chain water was decided
+    *before* those two lines ran and everything else after, so what was available depended on where
+    in the method you were; both are pure functions of the cell, so the cost is one tint lookup on a
+    water cell. `ShowsAFace` is computed once and **only for solid cells**, which is exactly when
+    the chain computed it — three contributors read it, and letting each work it out would pay for
+    a neighbour scan three times on the mesher's hot path. And `ChunkRenderer.Earth` now forwards
+    to the contributor that owns the switch rather than to a field, which is the failure this change
+    could most easily have introduced: a toggle that silently stops toggling. There is a test that
+    it still reaches the thing it switches.
+  - **The new test was wrong before the code was, and the mistake is the useful part.** It
+    registered a spy and asserted it got asked; it never was, and the message read as a broken seam.
+    The fixture was built with `Solid()`, which defaults to rock, and **`StoneContributor` claims
+    every rock cell before a registered contributor is reached**. So "registered ahead of the plain
+    block" does not mean registered ahead of *everything* — only ahead of the fallback, which is the
+    only place a new contributor can intercept. The test now uses `TerrainFill`, which is solid and
+    neither stone nor earth, and its doc comment records why, including that the first version
+    measured the wrong thing. Fifth time this week that reading the code would have misled and a
+    test caught it.
+  - **`StuffPalette.cs` was in the row's file list and turned out to have no switch in it at all**,
+    so it was not touched. The row was written from a guess about where the branching lived.
+  - **Verified:** Unity EditMode **1125 total, 0 failed**.
+  - **What this leaves.** All five chokepoints named after the mining line are open. The one piece
+    of the bootstrap row still standing is the **presentation half** — every director wired by hand
+    in `OdysseyBootstrap` — and it has no queue row.
+
+- **The session seam: a world can be put down and built again (U35, 2026-09-17).** The first unit of
+  `MS` after U34, and the one `U38`–`U40` are all blocked on. Until now a world existed because
+  `Start` made one and stopped existing because the scene closed; a main screen needs both halves on
+  demand. `Start`'s 214 lines are now `BuildSession()` and `TeardownSession()`, both public, with
+  `buildOnPlay` defaulting true so pressing Play still lands straight in a colony and **every
+  existing PlayMode test passes unedited**, which the row required.
+  - **Teardown drops references rather than only disposing them.** A disposed-but-reachable library
+    would let the next session read a torn-down object and fail somewhere far from the cause, so
+    every field is nulled. It is safe with no session and safe twice, because a menu unwinding and a
+    scene closing both reach it and can arrive in either order. Building over a live session throws
+    instead of silently doubling — that failure would leak a whole world and present as memory
+    rather than as a bug.
+  - **The hash test compares three worlds, not two.** Build → teardown → build, and a separately
+    built rig. Comparing the rebuild only against the first build would pass if both were wrong in
+    the same way, which is exactly what a leaked static does. It is the **full** hash including the
+    board, which only became possible when the world joined the hash the same morning (OQ-50).
+  - **It failed first, and the failure was the test's.** The first version read one hash after a
+    timed warm-up and the other after a different timed warm-up — and the tick counter is *in* the
+    hash, so it compared two worlds of different ages and called the difference a leak. Every hash
+    is now read immediately after an explicit `BuildSession`, with no frame in between.
+  - **The leak half is deferred, honestly, and this is the part worth reading.** It first counted
+    colonist figures and found **zero**: the rig passes no module catalogue, so no character prefab
+    is ever instantiated and the assertion could only ever have seen nothing. Retargeted at meshes —
+    the leak `TeardownSession`'s own comment records, which "leaked the whole cast, every session,
+    until the graphics device was reset" — and measured **45 → 45**. With no catalogue the library
+    resolves every module to one of Unity's built-in shared primitives and bakes nothing, so there
+    is no allocation to give back.
+  - **And it cannot simply be fixed by giving the rig a catalogue**, because that would make a test
+    depend on the licensed packs, against the standing rule that a clone without them still builds
+    and runs. So the check `Assert.Ignore`s with that reason written out. A green tick there would
+    have claimed coverage of exactly the failure it cannot see — the same call made earlier the same
+    day about Mono's GC accounting, and for the same reason.
+  - **Twice in this unit a control refused to let a test pass vacuously**, which is the second and
+    third time today. Guessing what to count was wrong both times; measuring settled it in one run.
+  - **Verified:** PlayMode **35 total, 32 passed, 0 failed**, one ignored with its reason recorded.
 **The split.** `CLAUDE.md` now carries only what is true *now*, in a form a new session can act on.
 This file carries the reasoning behind it. Nothing was deleted in the move except one accidentally
 duplicated entry (the mining bullet appeared twice; the shorter copy was quoted in full by the
