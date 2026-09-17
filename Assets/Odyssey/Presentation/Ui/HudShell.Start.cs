@@ -493,9 +493,44 @@ namespace Odyssey.Presentation.Ui
         /// either side of the swap cancel out for those and only re-point the world-shaped ones.
         /// </para>
         /// </summary>
+        /// <summary>
+        /// The picture behind the main menu (owner, 2026-09-17).
+        ///
+        /// <para>Scaled to cover rather than stretched: the image is 16:9 and the viewport need not
+        /// be, and a starfield squashed to fit would be the one thing a starfield cannot survive.
+        /// Cropping loses edge sky, which is what the edges of this one are.</para>
+        ///
+        /// <para>It never picks. The start screen's own scrim is the pickable full-viewport element
+        /// that makes the menu modal (`17-start-flow.md` §4); a backdrop that also took the pointer
+        /// would be a second answer to the same question.</para>
+        /// </summary>
+        void BuildBackdrop()
+        {
+            _backdrop = new VisualElement { name = "backdrop", pickingMode = PickingMode.Ignore };
+            _backdrop.AddToClassList("backdrop");
+            _backdrop.style.display = DisplayStyle.None;
+
+            var picture = Resources.Load<Texture2D>(MenuBackdropResource);
+            if (picture != null)
+            {
+                _backdrop.style.backgroundImage = new StyleBackground(picture);
+                _backdrop.style.unityBackgroundScaleMode =
+                    new StyleEnum<ScaleMode>(ScaleMode.ScaleAndCrop);
+            }
+
+            _hud.Add(_backdrop);
+        }
+
         void OnSessionChanged()
         {
             HudDirectors? live = _boot!.Directors;
+
+            // The in-game interface belongs to a colony and goes away with it (owner, 2026-09-17).
+            // Before this it was drawn behind the main menu's scrim — dimmed rather than absent,
+            // which read as the game being open behind a dialog it was not open behind.
+            bool playing = live != null;
+            _worldUi.style.display = playing ? DisplayStyle.Flex : DisplayStyle.None;
+            _backdrop.style.display = playing ? DisplayStyle.None : DisplayStyle.Flex;
 
             if (!ReferenceEquals(_directors, live ?? _screenDirectors))
             {

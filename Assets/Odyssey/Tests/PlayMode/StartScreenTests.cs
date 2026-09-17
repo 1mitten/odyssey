@@ -72,6 +72,61 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// <b>The in-game interface is not on screen when there is no game</b> (owner, 2026-09-17).
+        ///
+        /// <para>It used to be: every region was built straight onto the shell root and drawn
+        /// behind the main menu's scrim — dimmed rather than absent, which reads as the game being
+        /// open behind a dialog it is not open behind. They live in one container now and it is put
+        /// away with the session.</para>
+        ///
+        /// <para><b>Asserted on the container and on a region inside it</b>, because either alone
+        /// passes while the other is broken: hiding the parent proves nothing if a panel were
+        /// reparented out of it, and a hidden panel proves nothing about the eleven beside it.</para>
+        ///
+        /// <para>The round trip matters as much as the first half — an interface that hides with no
+        /// colony and never comes back is a game you cannot play.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheInGameInterfaceIsNotDrawnWithNoColony()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell shell, buildOnPlay: false);
+            try
+            {
+                yield return Settle();
+                var doc = boot.GetComponent<UIDocument>();
+
+                VisualElement? world = doc.rootVisualElement.Q("world-ui");
+                Assert.That(world, Is.Not.Null, "the in-game interface has no container to put away");
+                Assert.That(Shown(world), Is.False,
+                    "the in-game interface is drawn over the main menu");
+
+                // And a region inside it, resolved through the tree rather than by class alone, so
+                // the check cannot pass because the element simply does not exist.
+                Assert.That(world!.Q(className: "commandbar"), Is.Not.Null,
+                    "the command bar is not inside the container that gets put away");
+
+                Assert.That(Shown(doc.rootVisualElement.Q("backdrop")), Is.True,
+                    "the menu has no backdrop, so it sits over an empty camera");
+
+                // Start a colony: the interface comes back and the backdrop goes.
+                shell.Menu.Choose(SessionCommands.NewGameKey);
+                yield return Settle();
+                Assert.That(shell.Menu.Start(), Is.True);
+                yield return Settle();
+
+                Assert.That(Shown(doc.rootVisualElement.Q("world-ui")), Is.True,
+                    "the interface never came back, so the colony cannot be played");
+                Assert.That(Shown(doc.rootVisualElement.Q("backdrop")), Is.False,
+                    "the menu backdrop is still up over a running colony");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// The scrim takes the pointer everywhere, which is the whole of "a modal swallows every
         /// pointer event" (09-ui-and-input.md §6 case 5).
         ///

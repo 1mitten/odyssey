@@ -38,7 +38,7 @@ namespace Odyssey.Presentation.Ui
             _railHint.tooltip = "R and F move the slice up and down. Home recentres.";
             rail.Add(_railHint);
 
-            _hud.Add(rail);
+            _worldUi.Add(rail);
         }
 
         /// <summary>
@@ -136,7 +136,7 @@ namespace Odyssey.Presentation.Ui
             // appeared for one frame before the first refresh took it away would be the kind of
             // flicker nobody can reproduce on demand.
             _inspectPanel.style.display = DisplayStyle.None;
-            _hud.Add(_inspectPanel);
+            _worldUi.Add(_inspectPanel);
         }
 
         void RefreshInspect()

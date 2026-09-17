@@ -1672,6 +1672,25 @@
 .settings__row--off { opacity: 0.42; }
 .settings__row--off:hover { background-color: rgba(0, 0, 0, 0); }
 
+/* ---------------------------------------------------------------- the menu backdrop
+
+   Behind everything, and only ever seen when there is no colony — with a world running the backdrop
+   is the world. The picture and its scale mode are set from code, because the file is loaded from
+   Resources and may not be there at all; a clone without the art simply gets the fill. */
+
+.backdrop {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: #05070a;
+}
+
+/* Everything that only means anything with a colony running. One container so it can be put away
+   as one thing: half these regions set display in code, and an inline style beats a rule here. */
+.worldui {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+}
+
 /* ---------------------------------------------------------------- the setup page
 
    The first thing in this project that is not a panel. The owner asked for the inspect pane's whole
