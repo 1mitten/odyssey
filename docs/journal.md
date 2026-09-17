@@ -2385,3 +2385,23 @@ work itself.
     calls — walk speed shown at 100% rather than only when abnormal, support always said, the
     minable clause honest about grass ("about 1s of work") — are exactly the kind of thing the
     owner vetoes from a keyboard, and this pane is now verbose enough to be worth vetoing.
+
+- **The readout's first playtest, 2026-09-17.** The owner pressed Play on the tile answers within
+  the hour and came back with three reports, which is the loop working.
+  - **Meals and scrap showed no cursor.** The item bracket was drawn at the cell the *pick*
+    resolved to — the solid block under a pile on bare ground — so the bracket sat inside the
+    ground, and a no-art module fell through to a ground highlight that never read as "around the
+    object". The thing's own cell is in the snapshot the cursor routine already holds; the bracket
+    and the fall-through both draw there now.
+  - **The tile window reshaped.** Half the width, one fact per row in two fixed columns, order
+    first, then minable, walk speed, floor, support — the same fact always in the same place,
+    where the joined line made every number hunt for its label. The model's readout became rows
+    (`InspectModel.CellRows`) and the pane a narrow variant (`inspect--narrow`, half the constant
+    width, pinned like every other anchor); the colonist pane keeps its full width, because its
+    tabs, needs and skills were sized for the band.
+  - **The readout visibly skipped before settling.** The question was submitted *after* the
+    selection changed, so the pane's first refresh painted the unanswered frame — "Ground", or
+    the previous tile — and the answered one arrived a refresh later. The fix is ordering, not
+    caching: the question is submitted and the view republished *before* `Pick` runs, because
+    `Pick` raises the change whose handlers read the frame. One click, one paint, the right
+    answer — and the same republish that serves the paused world serves the running one.
