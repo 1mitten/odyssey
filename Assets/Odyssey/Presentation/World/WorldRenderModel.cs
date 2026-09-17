@@ -65,6 +65,7 @@ namespace Odyssey.Presentation.World
         readonly int _vaultWallModule;
         readonly int _utilityTapModule;
         readonly int _wallCoreModule;
+        readonly int _waterFallModule;
         readonly int _bedModule;
 
         public WorldRenderModel(GridSize size, ChunkGrid chunks, ModuleLibrary library)
@@ -95,6 +96,7 @@ namespace Odyssey.Presentation.World
             _vaultWallModule = library.Resolve(ModuleIds.VaultWall, ModuleShape.WallPanel);
             _utilityTapModule = library.Resolve(ModuleIds.UtilityTap, ModuleShape.Pillar);
             _wallCoreModule = library.Resolve(ModuleIds.WallCore, ModuleShape.SolidBlock);
+            _waterFallModule = library.Resolve(ModuleIds.WaterFall, ModuleShape.WaterFall);
 
             // The bed's placeholder: a plain block module, because the honest stand-in for absent
             // art is a box the tint colours, not a borrowed tree or wall wearing a bed's name.
@@ -112,6 +114,14 @@ namespace Odyssey.Presentation.World
         /// tint already carries. See <see cref="ModuleIds.WallCore"/>.
         /// </summary>
         public int WallCoreModule => _wallCoreModule;
+
+        /// <summary>
+        /// The sheet a body of water shows where nothing beside it holds it in.
+        ///
+        /// <para>One module rather than one per depth: the mesh is the same sheet either way
+        /// and shallow or deep arrives in the tint, exactly as it does for the surface.</para>
+        /// </summary>
+        public int WaterFallModule => _waterFallModule;
 
         public GridSize Size { get; }
         public ChunkGrid Chunks { get; }
@@ -586,8 +596,13 @@ namespace Odyssey.Presentation.World
                     // library would hand back a smooth cube for variant 0 and chipped lumps for
                     // the other five. One cell in six wrong is the kind of fault that renders
                     // perfectly and gets blamed on the art.
+                    // Water is a surface, not a floor. It asks for a sheet rather than the slab
+                    // every other non-solid terrain gets, because a slab has sides and an
+                    // underside that water — which writes no depth — cannot afford to draw. See
+                    // WaterMesh.
                     RockLook.IsStone((ushort)i) ? ModuleShape.RockBlock
                         : def.solid ? ModuleShape.SolidBlock
+                        : NaturalContent.IsWater((ushort)i) ? ModuleShape.WaterSurface
                         : ModuleShape.FloorSlab);
             }
             return table;

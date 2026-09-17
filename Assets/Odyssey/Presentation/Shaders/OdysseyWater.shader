@@ -59,6 +59,25 @@ Shader "Odyssey/Water"
         // round, because the edge no longer agrees with the grid it was cut on.
         _ShoreWobble("Shore wobble (metres)", Float) = 0.55
         _SunGlint("Sun glint", Range(0, 4)) = 1.1
+
+        // A falling sheet has rock a few centimetres behind it, so the depth of water the eye
+        // looks through is nearly zero and the shore rule above - which exists to dissolve a
+        // shoreline - erased the whole waterfall instead. A face is given a thickness of its own
+        // rather than the measured one. 1.4 m against a 2.0 m fade leaves it substantial but not
+        // opaque: a fall you can still see the rock through, which is what a thin sheet of moving
+        // water does.
+        _FallThickness("Falling sheet thickness (metres)", Float) = 1.4
+
+        // Downward scroll of the streaks, in metres a second. Fast enough to read as falling at
+        // the play camera rather than as a pattern sliding, and it is a *speed* and not a
+        // frequency so it does not change with the streak scale.
+        _FallSpeed("Falling sheet speed (metres/second)", Float) = 2.6
+
+        _FallStreak("Falling sheet streaking", Range(0, 1)) = 0.45
+
+        // Whitening at the foot of the drop, where the sheet breaks up on whatever it lands in.
+        // Over the bottom third of the sheet, which is why the mesh carries a UV at all.
+        _FallFoam("Falling sheet foam at the foot", Range(0, 2)) = 0.7
     }
 
     SubShader
@@ -120,12 +139,20 @@ Shader "Odyssey/Water"
                 float _ShoreFade;
                 float _ShoreWobble;
                 float _SunGlint;
+                float _FallThickness;
+                float _FallSpeed;
+                float _FallStreak;
+                float _FallFoam;
             CBUFFER_END
 
             struct Attributes
             {
                 float4 positionOS : POSITION;
                 float3 normalOS   : NORMAL;
+                // Only the falling sheet reads this, and it reads only v: WaterMesh.Fall runs it
+                // 0 at the foot of the drop to 1 at the lip, whatever the sheet is scaled to, so
+                // "how far down this fall am I" is exact and costs no arithmetic.
+                float2 uv         : TEXCOORD0;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -136,6 +163,7 @@ Shader "Odyssey/Water"
                 float3 normalWS    : TEXCOORD1;
                 float4 screenPos   : TEXCOORD2;
                 float  fogFactor   : TEXCOORD3;
+                float2 uv          : TEXCOORD4;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -153,6 +181,7 @@ Shader "Odyssey/Water"
                 output.normalWS = normals.normalWS;
                 output.screenPos = ComputeScreenPos(positions.positionCS);
                 output.fogFactor = ComputeFogFactor(positions.positionCS.z);
+                output.uv = input.uv;
                 return output;
             }
 
@@ -203,18 +232,23 @@ Shader "Odyssey/Water"
             {
                 UNITY_SETUP_INSTANCE_ID(input);
 
-                // **Top face only.** The tile this shader is given is a box 0.15 m thick, not a
-                // sheet, so it has four sides and an underside. Opaque geometry gets away with
-                // that because a neighbouring tile hides them; translucent geometry with no depth
-                // write does not. Both tiles either side of a shared edge drew their coincident
-                // side faces over the top of each other, each adding its own alpha, and the board
-                // came out ruled into dark squares along every cell boundary.
+                // **There was a top-face-only clip here, and taking it out is the point.**
                 //
-                // Clipping on the *geometric* normal — before the ripple perturbs it — removes
-                // them outright and says the thing that is true: water is a surface, not a slab.
-                // It is one instruction against adding a mesh shape that nothing else would use.
-                clip(input.normalWS.y - 0.5);
-
+                // Water used to be drawn with the shared unit cube squashed to a 0.15 m slab, so
+                // every cell had four side faces and an underside that nothing wanted. Opaque
+                // geometry gets away with that because a neighbouring tile hides them; water
+                // writes no depth, so the coincident side faces of two tiles either side of a
+                // shared edge each added their own alpha and the board came out ruled into dark
+                // squares along every cell boundary. `clip(normalWS.y - 0.5)` removed them for one
+                // instruction, and the comment here called that cheaper than "adding a mesh shape
+                // that nothing else would use".
+                //
+                // It also made a vertical face of water undrawable, which is what a lip and a
+                // cascade both need (owner, 2026-09-17: water "in mid air"). So the mesh shape got
+                // added after all — `WaterMesh` is two sheets, and a sheet has no spurious sides
+                // to clip away. The dark-square fault is now answered by not building the faces
+                // rather than by discarding them, and `WaterContributor` never puts a face between
+                // two water cells, which is the only place two could ever be coincident.
                 float3 viewWS = normalize(GetWorldSpaceViewDir(input.positionWS));
                 float wave;
                 float3 normalWS = RippleNormal(normalize(input.normalWS), input.positionWS, wave);
@@ -238,8 +272,29 @@ Shader "Odyssey/Water"
                 // field breaks the edge off the grid it was cut on, and the corners round
                 // themselves. Smoothstep rather than a linear ramp, so the water thins into the
                 // bank instead of arriving at it.
+                // **Which way this fragment's own geometry faces**, taken before the ripple
+                // perturbs anything — the same geometric normal the old top-face clip used. A
+                // surface points up; a falling sheet does not.
+                //
+                // Sharpened with a smoothstep rather than used raw, and that is not fussiness: the
+                // drape shears the surface by up to about five degrees, so a level tile's normal
+                // is 0.997 and not 1, and a raw classifier would bleed a few thousandths of the
+                // face treatment into every square metre of flat water. At 0.5..0.9 a sheared
+                // surface is exactly 1 and a vertical face exactly 0, so **everything below leaves
+                // the flat water bit-identical**, which matters because the flat water is the part
+                // the owner has already looked at and accepted.
+                float upness = smoothstep(0.5, 0.9, input.normalWS.y);
+
+                // **A falling sheet is not a shoreline, though the arithmetic could not tell.**
+                // `through` is the depth of water between this pixel and whatever was drawn behind
+                // it, and behind a fall is the rock face it is pouring over — a few centimetres.
+                // So the shore rule, which exists to dissolve the hard line where water meets its
+                // bank, was instead erasing every waterfall on the board and leaving a pale pane
+                // of glass (owner, 2026-09-17). A face is therefore given a thickness of its own
+                // and keeps the measured one only where that is actually deeper.
                 float fade = max(_ShoreFade, 1e-3);
-                float shore = smoothstep(0.0, 1.0, saturate((through + wave * _ShoreWobble) / fade));
+                float thickness = lerp(max(through, _FallThickness), through, upness);
+                float shore = smoothstep(0.0, 1.0, saturate((thickness + wave * _ShoreWobble) / fade));
 
                 half4 base = _BaseColor;
                 half3 colour = base.rgb;
@@ -272,6 +327,41 @@ Shader "Odyssey/Water"
                 // Opacity: the palette's own alpha, opened up at the shore and closed towards
                 // grazing angles, where in life you see the sky and not the bottom.
                 half alpha = saturate(base.a * shore + reflectAmount);
+
+                // ---- the falling sheet -------------------------------------------------------
+                //
+                // **The ripple field cannot see a waterfall.** It is a function of
+                // `positionWS.xz`, and on a vertical sheet xz is constant all the way down, so a
+                // fall had no variation whatever along its own length — which is exactly why it
+                // read as a pane of glass rather than as water coming down.
+                //
+                // **This is added to colour and not to the normal, deliberately.** At the play
+                // camera's 48 degree pitch the view sits 42 degrees off a level surface, where the
+                // Fresnel above returns about two per cent; the shading was tuned on the 20 degree
+                // grazing contact sheet, where it returns ten times that. Anything carried by the
+                // normal is therefore invisible at precisely the angle the game is played at, and
+                // only something that moves the *colour* can be seen.
+                //
+                // `along` adds x and z rather than choosing between them because the sheet is
+                // axis-aligned: one of the two is constant across it, so the sum varies along the
+                // sheet and nothing has to know which way it is facing. `down` gains time so a
+                // given crest sits lower each frame — negate it and the water falls upwards, which
+                // is a thing worth stating because it looks plausible either way in a still.
+                float fallAmount = 1.0 - upness;
+                float along = input.positionWS.x + input.positionWS.z;
+                float down  = input.positionWS.y + _Time.y * _FallSpeed;
+
+                float streak = (sin(along * 2.7) * 0.5 + 0.5) *
+                               (sin(down * 3.1 + along * 1.3) * 0.5 + 0.5);
+
+                // The foot of the drop, where the sheet breaks up on what it lands in. The mesh's
+                // v runs 0 at the bottom to 1 at the lip whatever the sheet is scaled to, so this
+                // is the bottom third of *this* fall and not a fixed number of metres.
+                float foot = 1.0 - saturate(input.uv.y * 3.0);
+                float aerate = saturate(streak * _FallStreak + foot * _FallFoam) * fallAmount;
+
+                lit = lerp(lit, half3(1.0, 1.0, 1.0), aerate * 0.75);
+                alpha = saturate(alpha + aerate * 0.35);
 
                 lit = MixFog(lit, input.fogFactor);
                 return half4(lit, alpha);

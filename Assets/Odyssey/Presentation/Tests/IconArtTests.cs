@@ -30,6 +30,8 @@ namespace Odyssey.Tests.Presentation
             "ui.status.felling",
             "ui.status.mining",
             "ui.status.building",
+            "ui.status.hauling",
+            "ui.terrain.grass",
 
             // Twelve of the thirteen skills, cut from sheet 06 by tools/icons/icons.py. Social
             // is not here and is not an oversight: nothing on a survival sheet depicts people

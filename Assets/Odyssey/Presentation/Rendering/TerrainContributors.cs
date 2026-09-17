@@ -114,14 +114,15 @@ namespace Odyssey.Presentation.Rendering
     }
 
     /// <summary>
-    /// Water: one tile, draped like the ground it lies in and raised inside its cell to
-    /// <see cref="ChunkMesher.WaterSurface"/>.
+    /// Water: a surface draped like the ground it lies in and raised inside its cell to
+    /// <see cref="ChunkMesher.WaterSurface"/>, plus a sheet on every side that nothing holds in.
     ///
-    /// <para>It goes in the roof list with the rest of the ground, so a storey above the slice
-    /// drops its water along with its floor, and it carries a water tint code so the renderer
-    /// hands it <c>Odyssey/Water</c> rather than tinting a ground tile blue. No catalogue entry is
-    /// wanted and none is looked for: water has a shader of its own, so a clone without the
-    /// licensed packs draws exactly the same water as a machine with them.</para>
+    /// <para>Both go in the roof list with the rest of the ground, so a storey above the slice
+    /// drops its water along with its floor, and both carry a water tint code so the renderer
+    /// hands them <c>Odyssey/Water</c> rather than tinting a ground tile blue. No catalogue entry
+    /// is wanted and none is looked for: water has a shader of its own and meshes of its own
+    /// (<see cref="WaterMesh"/>), so a clone without the licensed packs draws exactly the same
+    /// water as a machine with them.</para>
     ///
     /// <para><b>Draped, not lifted</b>, and this was got wrong twice. A lifted tile is flat and
     /// takes its height from its own centre, so two neighbours sit at heights differing by the
@@ -135,14 +136,111 @@ namespace Odyssey.Presentation.Rendering
         {
             if (!NaturalContent.IsWater(cell.Terrain)) return false;
 
-            Vector3 centre = CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y)
-                             + Vector3.up * (CellMetrics.SizeY * ChunkMesher.WaterSurface);
+            float lift = CellMetrics.SizeY * ChunkMesher.WaterSurface;
+            Vector3 centre = CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y) + Vector3.up * lift;
+            int tint = TintCode.Daylit(
+                TintCode.Water(cell.Terrain), cell.Model.OpenToTheSky(cell.Index, cell.Y));
 
-            sink.Roof(
-                cell.Module,
-                TintCode.Daylit(TintCode.Water(cell.Terrain), cell.Model.OpenToTheSky(cell.Index, cell.Y)),
-                GroundRelief.Drape(centre));
+            sink.Roof(cell.Module, tint, GroundRelief.Drape(centre));
+            EmitFalls(cell, sink, tint, lift);
             return true;
+        }
+
+        /// <summary>
+        /// The sheet of water on every side of this cell that nothing holds in.
+        ///
+        /// <para><b>Why water needed a side at all</b> (owner, 2026-09-17, four screenshots of a
+        /// stream stepping down the terraced board: water "in mid air", gaps, water that "can't
+        /// handle being at height"). The surface was the only thing drawn, so a water cell was a
+        /// lid hanging 2.16 m over its own bed with open air between and nothing on any side.
+        /// Measured on the board the scene loads, over three seeds: not one water cell floats and
+        /// the stream never drops more than one layer between neighbouring columns, so the
+        /// generator was never at fault — <c>WaterFillPass</c>'s own comment had it right that
+        /// "depth is a rendering problem, not a geometry problem". What the player saw was the
+        /// void under the lid, in plain view wherever the neighbour was lower.</para>
+        ///
+        /// <para><b>One sheet, two reasons, and that is why this is not two features.</b> A face
+        /// goes on a side when the thing beside it is not water at the same level. Where there is
+        /// nothing there, it closes the channel and the lid stops hanging in the air; where the
+        /// water in the next cell is one layer down, the same sheet spans the step and the water
+        /// falls. The two differ only in how far down the sheet reaches.</para>
+        ///
+        /// <para><b>Never between two water cells</b>, and this is the constraint the whole shape
+        /// of the thing is built around. Water writes no depth, so two coincident faces each add
+        /// their own alpha — which is exactly what ruled the board into dark squares along every
+        /// cell boundary when water was a slab with sides, and what the shader's old top-face clip
+        /// was there to remove. An interior face would bring that straight back.</para>
+        ///
+        /// <para>The world boundary holds water in, like <c>ChunkMesher.ExposedSides</c> and for
+        /// its reason: it is not an exposed face, and treating it as one would hang a curtain of
+        /// water round the whole rim of the map.</para>
+        /// </summary>
+        /// <summary>
+        /// How far a falling sheet stands out from the face it pours over, in metres.
+        ///
+        /// <para>Big enough to win the depth test at the far plane and far too small to see: three
+        /// centimetres against a 2.5 m cell is a hundredth of a cell, and the sheet is translucent
+        /// besides. Smaller was not tried in the belief that it would do — the depth range here is
+        /// 0.3 m to 2 km, which is where a 24-bit buffer has the least precision to spare.</para>
+        /// </summary>
+        const float StandOff = 0.015f;
+
+        /// <summary>
+        /// How far the sheet is tucked up behind its own surface, in metres.
+        ///
+        /// <para>Standing the sheet off the rock opens a slot of exactly <see cref="StandOff"/>
+        /// between the two, and at the lip that slot is a line of sight past the top edge of the
+        /// sheet onto the terrace behind it — a hairline of lit grass along the brow of every fall.
+        /// Starting the sheet fractionally above the surface it hangs from closes it, and costs
+        /// nothing, because the overlap is inside the water it is already continuous with.</para>
+        /// </summary>
+        const float Tuck = 0.04f;
+
+        static void EmitFalls(in TerrainCell cell, in MeshSink sink, int tint, float lift)
+        {
+            var model = cell.Model;
+            var size = model.Size;
+
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int nx = cell.X + Directions.DeltaX[dir], nz = cell.Z + Directions.DeltaZ[dir];
+                if (!size.Contains(nx, nz, cell.Y)) continue;
+
+                int neighbour = size.Index(nx, nz, cell.Y);
+                if (model.IsSolid(neighbour)) continue;
+                if (NaturalContent.IsWater(model.Terrain(neighbour))) continue;
+
+                // How far the sheet falls. To the surface of the water one layer down if there is
+                // any — a cascade step, where the drop between two surfaces is exactly one cell
+                // because both stand at the same height inside their own — otherwise only as far
+                // as this cell's own floor, which is the bed it is lying on.
+                bool cascades = cell.Y > 0 &&
+                                NaturalContent.IsWater(
+                                    model.Terrain(size.Index(nx, nz, cell.Y - 1)));
+                float drop = cascades ? CellMetrics.SizeY : lift;
+
+                // **Stood off the face by a few millimetres, and without this most of the sheet
+                // is not there.** A face centre is exactly the plane the terrace riser below it
+                // occupies, so the sheet and the rock it pours over are coplanar — and two
+                // coplanar surfaces under `ZTest LEqual` are two candidates for the same pixel
+                // with nothing to separate them. The depth buffer then picks whichever rounds
+                // higher, which it does per triangle, so a fall came out as a **triangular sliver
+                // of its top corner** with the rest of it losing the test to the rock. It reads as
+                // a small pale wedge rather than as a missing feature, which is why it survived a
+                // contact sheet: proved by tinting the sheet by its own UV, where every visible
+                // fragment came back at the very top of the mesh.
+                //
+                // The same fix and the same reason as `ChunkMesher.CoreRecess`, in the other axis.
+                Vector3 stand = new Vector3(
+                    Directions.DeltaX[dir] * StandOff, 0f, Directions.DeltaZ[dir] * StandOff);
+
+                sink.Roof(
+                    model.WaterFallModule, tint,
+                    GroundRelief.Drape(CellMetrics.FaceCentre(cell.X, cell.Z, cell.Y, dir)
+                                       + Vector3.up * (lift + Tuck) + stand)
+                    * Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f))
+                    * Matrix4x4.Scale(new Vector3(1f, drop + Tuck, 1f)));
+            }
         }
     }
 
