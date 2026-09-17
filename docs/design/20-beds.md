@@ -382,6 +382,41 @@ decision 4 states as unchanged, so it has been left alone and pinned by a test t
 figures out loud. If a night in a bed should feel more decisive than a quarter again, that one
 integer in `Colonist.xml` is the lever.
 
+### The build overlay is the thing and nothing else (owner, 2026-09-18)
+
+*"When we place walls, floors, furniture to build — lets not print the cursor, just the
+shape/outline of what is going to be built because it's difficult to visualize anything and just
+adds noise."* Asked back with the inventory, the answers were: **ghost only** while placing;
+**ghost plus progress** on a placed order; **the ghost turns red** where it cannot be built; and
+the order tools (mine, chop, deconstruct, cancel) **left alone**, because they paint on things
+that already exist and have no thing to ghost.
+
+What a cell carried before, and what it carries now:
+
+| | Before | Now |
+|---|---|---|
+| Hovering | ghost, or a red cell box where refused | ghost, red where refused |
+| Dragging a run | green box over the whole run **+** a ghost per cell | a ghost per cell |
+| Placed order | cell outline **+** filled cell mark **+** ghost **+** progress | ghost **+** progress |
+
+**The two asks are not in conflict, though they look it.** The span box was itself the answer to
+an earlier report — that the cursor was invisible — and it was the right answer *then*, when
+nothing promised what would be built. The ghosts are that promise now, and once they existed the
+box was a second outline of the same run in a different colour, one cell bigger than the wall
+inside it.
+
+**Refusal went per cell**, which reverses a decision `NothingHereWillBeBuilt` had argued for in
+its own remarks: that a run should go red only when not one cell of it would be built, because a
+wall dragged over a meadow routinely crosses a tree and turning the whole thing red would repaint
+something nobody complained about. Per-cell red does not repaint the legal part — the buildable
+cells keep their material colour and only the refused ones go red — so the objection does not
+apply, and the method is deleted.
+
+**`DrawCellSpanBox` and `DrawCellSpanPlate` are kept although nothing calls them.** The geometry
+was judged by the owner when it landed and is held by `BuildCursorTests`; it is one call away if
+the ghosts alone read too sparse. Their remarks say so, so a later session does not delete them as
+tidying — or wonder why they are there.
+
 ## 12. Open
 
 - **Real two-tile bed art** — replaces the placeholder; the only art question in this line.

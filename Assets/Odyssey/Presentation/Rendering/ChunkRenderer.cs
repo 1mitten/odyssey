@@ -1033,6 +1033,16 @@ namespace Odyssey.Presentation.Rendering
         /// one height from one point, and over a six-cell run the far end would float or sink by
         /// the field's slope across fifteen metres. Vertical edges stay vertical under the shear,
         /// so the box stands plumb and full height whatever it is standing on.</para>
+        ///
+        /// <para><b>Nothing calls this today, and it is kept deliberately</b> (2026-09-18). The
+        /// build preview draws the ghosts of the things and nothing else now — the owner's ask was
+        /// <i>"lets not print the cursor, just the shape/outline of what is going to be built …
+        /// it's difficult to visualize anything and just adds noise"</i> — and once every cell
+        /// carried a translucent model of its wall, this box was a second outline of the same run
+        /// in a different colour, one cell bigger than the thing inside it. The geometry is right,
+        /// was judged right by the owner when it landed, and is held by <c>BuildCursorTests</c>;
+        /// it is one call away if the ghosts alone turn out to be too sparse. Delete it only on a
+        /// decision, not as tidying.</para>
         /// </summary>
         public void DrawCellSpanBox(CellRef min, CellRef max, Color colour)
         {
