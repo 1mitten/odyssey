@@ -32,7 +32,7 @@ Written 2026-09-16 from evidence rather than taste: the mining line on `claude/m
 | `Sim/Pawns/PawnContent.cs` | every item, job and work type was a C# constant and a table in code | **done for pawns** (`OQ-15`, `OQ-16`, then `OQ-48` on 2026-09-17). `PawnContent.Core()` and its 163 lines of hand-written tables are gone, so the XML under `Assets/Odyssey/Defs/Core/Pawns` is the only copy and a new item is written once. Every caller goes through `ContentPack.Pawns()`, which finds the pack by walking up to the repository root and caches the parse; a fingerprint guards the content in place of the old field-for-field oracle. **The world half followed the same day** (`OQ-49`): `WorldContent.Table` is the one twenty-one-row terrain table loaded from `Defs/Core/World/Terrain.xml`, both `BuildTerrain` methods are deleted, the core/natural dispatch branch went with them, and the `TODO(content)` in `WorldGenDefs.cs` is gone. ~~Mirrored by `Defs/Core/World/*.xml` that nothing but the oracle test reads~~ — **that was wrong**: everything reads those tables through `TerrainAt()`, which the grep behind the claim never looked for |
 | `Sim/Pawns/JobSystem.cs` | `DefaultGivers()` was a hardcoded array, so a new job was an edit to a shared file | **done** (`OQ-44`). `WorkGiverRegistry` finds every concrete `WorkGiver` in the simulation assembly, so a giver joins the scan by existing; `SimWorldBuilder.AddWorkGiver` takes the ones declared outside it |
 | `Sim.Contracts/Views.cs` | a new thing a pawn can do needed a new field on the published frame | **done** (`OQ-45`). A sparse `PawnAspect` row, `(PawnId, key, int)`, keyed by a name the feature mints for itself, published through the contributor seam that already existed for the frame. No new registration mechanism and no enum to edit. ADR 0004 amended 2026-09-17 |
-| `Presentation/Bootstrap/OdysseyBootstrap.cs` | the composition root wires every system by hand | **open, and the one chokepoint with no queue row.** It already delegates the colony to `ColonyComposition.AddColony`; presentation wants the same treatment. 851 lines on 2026-09-17 |
+| `Presentation/Bootstrap/OdysseyBootstrap.cs` | the composition root wires every system by hand | **half open. The simulation half is done** (`U34`, 2026-09-17): the scene no longer composes its own world. It had forty lines that were a copy of `ColonyWorld.Build`, and the copy had drifted — no connectors registered with the nav graph, no full support solve, and **no `SaveComponents` list, which is why the one world a player ran was the one world that could not be written to a file**. It now calls `ColonyWorld.Build(ColonyRequest)`; the inspector fields become the request. **The presentation half is still open**: every director is still wired by hand, and it is still the chokepoint with no queue row. 849 lines |
 | `Presentation/Rendering/ChunkMesher.cs` | new terrain needs new meshing, and the file is on the queue's do-not-touch list | a mesh contributor per stuff kind, registered rather than switched on. `OQ-46`, open |
 | `docs/design/icon-keys.csv` | a new name | **correct as it is.** This is the one seam that worked: a name added to the CSV reaches the screen with no code change |
 
@@ -43,7 +43,7 @@ The last row is still the point, and closing four of the others has not changed 
 1. ~~**The world tables, the last of content to Defs.**~~ **Done** (`OQ-49`, 2026-09-17). Content is now written once everywhere: pawns and world alike load from XML and no C# table mirrors them. The feared risk — **a terrain index sits in every cell of every save and every hash** — never materialised, because `WorldContent.TerrainOrder` builds the table by name in a fixed order and a test checks all twenty-one names against the constants. The risk that *did* materialise was the opposite one and nobody had named it: with both copies reduced to one, the oracle was comparing the XML against itself, and editing a terrain's work cost passed 448 tests silently. A fingerprint pins it now.
 2. **Mesh contributors** (`OQ-46`), the last item on this list, and the largest. Only the terrain features need it.
 
-**Unscheduled, and worth a row when presentation next grows.** `OdysseyBootstrap.cs` is the fifth chokepoint and the only one nothing is queued against. It is not urgent while presentation is stable; it will be the moment two features want to add a director in the same week.
+**Scheduled now, because presentation grew.** `OdysseyBootstrap.cs` was the fifth chokepoint and the only one nothing was queued against, on the grounds that it would want a row "the moment two features want to add a director in the same week". A menu, a new-game screen and a colonist picker are that moment, so it has one: **`MS` below**, whose first two units are the simulation half (done) and the session half of this chokepoint. The presentation half — every director wired by hand — is still not scheduled and is still the honest description of the file.
 
 **Closed since this section was written.** `OQ-44` made work givers register themselves; `OQ-15`/`OQ-16` moved the content tables to XML, `OQ-48` made the pawn half of that XML the only copy and `OQ-49` did the same for the world half, so content is written once everywhere; and `OQ-45` opened the per-pawn half of the read contract. None needed the feature that motivated it to be rewritten, which is the argument for doing seam work before features rather than after.
 
@@ -140,6 +140,46 @@ critical path.
 | Unit | Size | Depends on | Done when |
 |---|---|---|---|
 | **U33 Environmental audio** | M | U23, U24 | The playback layer, per ADR 0010 and `d-12-audio.md`: one pooled-voice director serving the whole colony (work impacts from the stroke clock's `BlowLanded`, with distance culling, per-sound cooldown and pitch variance), camera-anchored ambience (water measured around the camera's focus from the terrain mirror, one bed per environment, layer-aware), day/night music crossfaded from the tick through `GameClock`, alerts with hysteresis off the published pawn list, five code buses in dB with a persisted settings stub (B17) and alert ducking. A generated catalogue and six synthesised placeholder clips (`AudioSetup`), so a clone without it runs silent; EditMode suites for the math, probe, clock, watcher and director, plus a PlayMode smoke test. Nothing in Sim or Hud gains a UnityEngine reference, and no sound enters the save or the hash. |
+
+---
+
+## MS — The start flow (owner, 2026-09-17)
+
+A main screen with **New game, Load, Options and Quit**; a new game that shows its seed and lets you
+reroll it; three candidate colonists you can reroll individually and lock, each card showing a
+portrait and a readable skill set; and a world you can enter, save, leave and load again.
+
+**Why it is its own milestone and not part of M3.** M3 is the vertical slice and its gate is a
+ten-day headless run; this is session lifecycle, persistence and a screen, and folding it in would
+blur what that gate proves. It sits beside M3 rather than after it, by the owner's decision.
+
+**Where it came from.** `B18 Game menu` has been in `10-ui-panel-catalogue.md` at milestone M0 since
+the catalogue was written and is the one catalogued panel that is completely unbuilt — the Escape
+unwind already wants it and substitutes the settings panel because it does not exist
+(`09-ui-and-input.md` §6 case 6). The new-game and colonist-selection half was named once, in
+`overnight-queue.md` under "Not scheduled and why", where the recorded blocker was *"it also needs a
+start flow that does not exist"*. This is that flow.
+
+**Two things it changes that were written down elsewhere.** Live portraits are refused by
+`09-ui-and-input.md` §4.5, whose argument is about *fifty* of them in the roster bar at 15 Hz while
+the world renders; three, rendered once on reroll with no world behind them, is a different case, and
+§4.5 gets an explicit carve-out rather than a silent exception. And colonists start every skill at 0
+experience — only passions are rolled — so there is nothing to choose between three candidates until
+`U37` lands.
+
+| Unit | Size | Depends on | Done when |
+|---|---|---|---|
+| **U34 The scene builds its world the way everything else does** | M | — | `OdysseyBootstrap` calls `ColonyWorld.Build(ColonyRequest)` instead of its own copy of the wiring, and holds the `SaveComponents` list. **Done 2026-09-17.** |
+| **U35 The session seam** | M | U34 | World build and teardown are callable at runtime; `build → teardown → build` yields the same full hash as a fresh build, and a second world leaves no figures, materials or `PlayableGraph`s from the first. A development flag still lands straight in a world on Play, so every existing PlayMode test passes unedited. |
+| **U36 Save format v2, and files on disk** | M | U34 | The header carries the generation recipe — map type, size, scenario, colony name, day — so the load screen lists a folder from headers alone without parsing a body. Version 1 files still load. Files at `Application.persistentDataPath/Saves`. |
+| **U37 Starting skills** ∥ | S | — | A colonist spawns with rolled skill levels, deterministic on its own generation seed, saved and hashed. Moves every `Simulated` golden and no `Generated` one; re-baked deliberately with `ODYSSEY_REGOLDEN=1`. |
+| **U38 The menu shell (B18)** | M | U35 | New game, Load, Save, Options, Quit. Escape unwinds into it through the one rule in `SettingsDirector.Escape` rather than a second one. The project's first true modal. Options reuses the B17 panel. |
+| **U39 New game and the seed** | S | U35, U36, U38 | A seed you can read, type and reroll. The only exposed knob: size, map type and scenario stay defaults on the request so they are tunable later without new interface. |
+| **U40 Colonist select** | M | U37, U39 | Three cards, per-slot reroll and lock. Skills read through the existing `PawnAspect` seam, so `Sim.Contracts` does not change. |
+| **U41 Portraits** | M | U40 | Three 3D portraits rendered once per roll and cached, released on leaving the screen, under a test that fails if more than a fixed number of render textures are alive at once. `09` §4.5 amended in the same commit. |
+
+**Gate:** both tiers green, a world started from the menu survives save → quit-to-menu → load →
+resume with matching full hashes headless, and `docs/milestones/MS-report.md` written.
 
 ---
 
