@@ -322,6 +322,30 @@ namespace Odyssey.Hud
         /// <summary>Avatar to name on a card's identity row.</summary>
         public const int CardAvatarGap = 8;
 
+        /// <summary>
+        /// The avatar on the world-setup page's detail pane — the one place in the game with room
+        /// for a portrait, and the one moment a player is choosing between people rather than
+        /// glancing at them (<c>docs/design/20-avatars.md</c> §3).
+        ///
+        /// <para><b>Sixty-four is not a new number:</b> ADR 0007 names 32 and 64 as the only two
+        /// sizes interface art may be drawn at, and this is the larger. It is also almost exactly
+        /// the height of the three lines beside it — the name at 26, the trade at 18, the traits
+        /// row at 18 over a 4 px gap, which is 66 — so the portrait and the record it belongs to
+        /// end together.</para>
+        /// </summary>
+        public const int DetailAvatar = 64;
+
+        /// <summary>Portrait to record on the detail pane, at the page's own scale rather than a
+        /// card's: the pane is a thousand pixels wide and an 8 px gap there reads as a mistake.</summary>
+        public const int DetailAvatarGap = 18;
+
+        /// <summary>
+        /// Avatar to name on a candidate row of the world-setup page. The card gap, because it is
+        /// the same relationship at the same distance — a face and the name of the person whose
+        /// face it is.
+        /// </summary>
+        public const int ColonistAvatarGap = CardAvatarGap;
+
         /// <summary>Inside a card, all four sides. Tighter than a panel's <see cref="Pad"/>.</summary>
         public const int CardPad = 8;
 

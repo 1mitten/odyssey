@@ -348,6 +348,14 @@ namespace Odyssey.Presentation.Ui
 
         public const float PlaceholderStroke = Odyssey.Hud.HudTheme.PlaceholderStroke;
 
+        public static readonly Color AvatarInk = Convert(Odyssey.Hud.HudTheme.AvatarInk);
+
+        public const float AvatarInkWidth = Odyssey.Hud.HudTheme.AvatarInkWidth;
+
+        /// <summary>A colonist's own colour, as the appearance derives it.</summary>
+        public static Color Of(Odyssey.Hud.Rgb24 colour) =>
+            new Color(colour.R / 255f, colour.G / 255f, colour.B / 255f, 1f);
+
         /// <summary>The stroke colour for an icon in this category.</summary>
         public static Color Category(Odyssey.Hud.HudCategory category) =>
             Convert(Odyssey.Hud.HudTheme.ColourOf(category));
