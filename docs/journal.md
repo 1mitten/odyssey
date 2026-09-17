@@ -1374,3 +1374,63 @@ work itself.
     Two enumerations of the tick order that could drift apart are worth one test.
   - **Verified:** fast tier **481 Sim + 158 Hud**, Long tier **17**. The benchmark itself is
     `[Explicit]` and never runs in CI, which is why its seam has three ordinary tests beside it.
+
+- **The research lane, seven files in one afternoon (OQ-26 … OQ-35, 2026-09-17).** The last
+  unwritten block of Phase 2 research, run the way the brief says to run it: one subagent per
+  question, a hard cap of twelve searches or fifteen page reads, the fixed format, and the
+  clean-room rule stated as binding rather than assumed. Seven files, one commit each, then the
+  index reconciled last and alone because `INDEX.md` has a single owner.
+  - **Two of them corrected the question they were sent to answer**, which is the argument for
+    asking rather than assuming. `b-timberborn` was asked why Timberborn's slopes are what we chose
+    not to do; its terrain is **cubes**, with no sloped geometry at all, so ADR 0002 has no
+    counter-example there and the row's premise was simply wrong. And `a-16` was expected to
+    describe how the multi-level mods move pawns between levels; what it found is that **movement
+    was never the problem**.
+  - **The single most useful finding is a-16's, and it changes what the vertical slice must prove.**
+    Every generation of multi-level mod succeeded at *traversal* and failed at *queries*. Pawns
+    walked between levels early. Bills, hauling, construction delivery, the right-click menu and
+    reachability all stayed same-map, and the current mod bridges a bench to one other level by
+    hand, per bench — a confession that the general query could not be made layer-aware. None ever
+    delivered cross-layer line of sight or combat. **A colonist climbing a ladder demonstrates
+    nothing anybody struggled with; a bill sourcing its ingredients two layers down is the test.**
+  - **Layer question 3 is answered in both halves, by two files that agree.** Rooms stay **per
+    layer** — DF states outright that a room cannot span z-levels and Going Medieval independently
+    treats each storey as its own — and heat **rises without buoyancy**, as one asymmetric
+    conductance on a vertical opening, about 4:1 up against down. The evidence for the second is
+    negative and all the better for it: Going Medieval merges levels through a stair and averages
+    them, and its own players report the consequence, a tall stack that loses its heat with loft
+    and cellar reading the same. Both files independently ask for the same next artefact — a typed
+    cross-layer **opening** graph built at M3 beside room detection, because temperature is its
+    first consumer and retrofitting means touching detection twice.
+  - **Three findings land directly on code we have or are about to write.** The impressiveness
+    formula uses a natural logarithm, and a `Math.Log` in the mood path is a **cross-runtime hash
+    hazard** now that the world is in the hash and Mono-versus-CoreCLR is a standing test —
+    quantise to an integer tier before anything simulated reads it. "Enclosed" is three booleans
+    with three deliberately disagreeing thresholds, so a single `IsEnclosed` flag will be wrong
+    within a milestone. And Timberborn's ramp-as-object throws our **hop** into relief: ours is
+    priced in three separate seams that our own notes say fail silently when they disagree, and
+    nothing tests that they agree.
+  - **Stonehearth named the counter we should have been watching.** Not frame time — frame time is
+    the lagging indicator everyone watched while that game died — but **pathfinder calls per job
+    assigned**. It is theory-free, which is the point: it would have caught our own falsified
+    pathfinding explanation immediately, because it does not depend on any account of *why*
+    searches are expensive. Its measured largest cost was an item-filter cache invalidated on every
+    item move, scaling with **items and containers rather than agents** — and every benchmark we
+    own scales pawns and map size, so we would not currently see that disease until we had its
+    symptoms.
+  - **Two stale figures were corrected on the way in, by me and not by the agents.** Both the DF
+    and Stonehearth files reason against "our 65% of tick is A-star". That number is the D1 stress
+    harness; `OQ-19` had measured the real tick hours earlier at 37% of a 0.025 ms tick for the
+    whole pawn phase. Each file now carries a dated editor's note, because the advice survives the
+    correction but a session hunting a 65% defect in the running game would be hunting a phantom.
+  - **The clean-room rule held, and two agents demonstrated it rather than claiming it.** The
+    temperature agent found a decompiled source file in its search results and deliberately did not
+    open it. The Goblin Camp agent read GPLv3 source directly — permitted, since the rule is read
+    for technique — and the file it produced contains no code, no identifiers and no transcription,
+    and states explicitly that a permissive licence would not have changed the answer. I checked
+    each file myself for code fences, Def XML and pasted identifiers rather than trusting the
+    summaries.
+  - **One negative source is cited as such.** The top search result for Stonehearth pathfinding
+    optimisation is a post the community publicly flagged as fabricated, whose invented claims
+    search engines now restate as fact. The file cites it as a caution rather than pretending it
+    does not exist, which is the right way to leave a trap for the next reader to find.
