@@ -152,13 +152,23 @@ namespace Odyssey.Tests.Hud
             (".stores", "top", () => HudLayout.Edge, "screen edge margin"),
             (".stores", "width", () => HudLayout.StoresWidth, "stores width"),
 
-            (".rail", "right", () => HudLayout.Edge, "screen edge margin"),
-            (".rail", "top", () => HudLayout.Edge, "screen edge margin"),
-            (".rail", "width", () => HudLayout.RailWidth, "rail width"),
+            // The right-hand gutter, and the two panels stacked in it. The anchor is the
+            // gutter's, not the rail's, since 2026-09-17: the rail and the orders strip are in a
+            // column so that the strip sits under a rail whose height the world decides.
+            (".column-edge", "right", () => HudLayout.Edge, "screen edge margin"),
+            (".column-edge", "top", () => HudLayout.Edge, "screen edge margin"),
+            (".column-edge", "width", () => HudLayout.RailWidth, "rail width"),
             (".rail", "padding-left", () => HudLayout.RailSidePad, "rail side padding"),
             (".rail__cell", "width", () => HudLayout.RailCellWidth, "rail cell"),
             (".rail__cell", "height", () => HudLayout.RailCellHeight, "rail cell"),
             (".rail__cell", "margin-bottom", () => HudLayout.RailCellGap, "rail cell gap"),
+
+            (".orders", "margin-top", () => HudLayout.RailToOrders, "rail to orders strip"),
+            (".orders", "padding-top", () => HudLayout.OrdersPadTop, "orders strip top padding"),
+            (".orders", "padding-left", () => HudLayout.OrdersSidePad, "orders strip side padding"),
+            (".ord__btn", "width", () => HudLayout.OrderButton, "an order button"),
+            (".ord__btn", "height", () => HudLayout.OrderButton, "an order button"),
+            (".ord__btn", "margin-bottom", () => HudLayout.OrderGap, "gap between orders"),
 
             (".column-right", "right", () => HudLayout.Edge + HudLayout.RailWidth + HudLayout.RailToClock,
                 "the rail's width plus its gap, measured from the right edge"),
@@ -189,7 +199,7 @@ namespace Odyssey.Tests.Hud
             (".bp__mat", "height", () => HudLayout.BuildMatRow, "a material button"),
             (".bp__bar-cat", "width", () => HudLayout.BuildBarCat, "a bar category tile"),
             (".bp__bar-sub", "width", () => HudLayout.BuildBarSub, "a bar sub-type tile"),
-            (".bp__action", "width", () => HudLayout.BuildAction, "a header action"),
+            (".bp__action", "width", () => HudLayout.BuildAction, "the header's way out"),
             (".bp__switch-btn", "width", () => HudLayout.BuildSwitchButton, "a switcher button"),
             (".bp__material", "border-width", () => HudTheme.MaterialBorderWidth, "material border"),
             (".bp__material", "border-radius", () => HudTheme.MaterialRadius, "material radius"),
@@ -259,6 +269,12 @@ namespace Odyssey.Tests.Hud
             // fails here the moment one of the three drifts.
             (".settings__row", "height", () => HudLayout.StartRow, "list row"),
             (".menu__row", "height", () => HudLayout.StartRow, "list row"),
+
+            // The armed banner: a thick border in the held order's colour, one gap above the
+            // command bar. Both are the owner's, 2026-09-17, and both are numbers the sheet could
+            // otherwise drift from — the colour is written from code and the border width is not.
+            (".armed", "border-width", () => HudTheme.ArmedBorderWidth, "armed banner border"),
+            (".armed", "bottom", () => HudLayout.ArmedBottom, "armed banner to command bar"),
 
             (".panel", "padding", () => HudLayout.Pad, "panel padding"),
             (".panel", "border-radius", () => HudTheme.PanelRadius, "panel radius"),

@@ -863,6 +863,87 @@ namespace Odyssey.Tests.PlayMode
             }
         }
 
+        /// <summary>
+        /// The palette's header is one row in every layout: BUILD and the breadcrumb on the left,
+        /// the switcher, ESC and the X on the right of the same line (owner, 2026-09-17: <i>"shift
+        /// the toggle view, esc and x onto the same row as the build text — this will tidy that
+        /// up"</i>).
+        ///
+        /// <para>Asserted on the two halves' realised boxes rather than on the resolved flex
+        /// direction, because the direction being a row and the halves still standing one above
+        /// the other is a state this panel has actually been in: Rows stacked them with a
+        /// <c>column</c> override, and the fault a later session would reintroduce is a margin or
+        /// a width that wraps them, which no property reports. Two halves are on one row when
+        /// their vertical spans overlap and the controls end at the right of the identity.</para>
+        ///
+        /// <para>It also checks the row still fits, at every category and in the narrowest layout,
+        /// because one row is only tidy while nothing runs off the end of it — the breadcrumb
+        /// ellipsises, and a category whose name pushed the X off the panel would be the fault
+        /// this replaced.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBuildHeaderIsOneRowInEveryLayout()
+        {
+            foreach (Vector2Int resolution in Resolutions)
+            {
+                GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, resolution);
+                try
+                {
+                    yield return Settle(doc);
+                    yield return OpenPalette(doc);
+
+                    float slack = SlackFor(doc.rootVisualElement.worldBound, resolution);
+
+                    foreach (BuildPaletteLayout layout in BuildPaletteModel.Layouts)
+                    {
+                        yield return SwitchLayout(doc, layout);
+
+                        VisualElement? palette = doc.rootVisualElement.Q(name: "build");
+                        VisualElement? identity = palette!.Q(className: "bp__hdr-id");
+                        VisualElement? controls = palette.Q(className: "bp__hdr-ctl");
+                        VisualElement? header = palette.Q(className: "bp__hdr");
+                        Assert.That(identity, Is.Not.Null, $"{layout} has no header identity");
+                        Assert.That(controls, Is.Not.Null, $"{layout} has no header controls");
+
+                        for (int category = 0; category < PaletteTools.Categories.Length; category++)
+                        {
+                            VisualElement? tile =
+                                palette.Q(name: "cat-" + PaletteTools.Categories[category].key);
+                            if (tile != null)
+                            {
+                                using (var click = ClickEvent.GetPooled())
+                                {
+                                    click.target = tile;
+                                    tile.SendEvent(click);
+                                }
+                                yield return Settle(doc);
+                            }
+
+                            Rect id = identity!.worldBound;
+                            Rect ctl = controls!.worldBound;
+                            Rect box = header!.worldBound;
+
+                            Assert.That(id.yMin, Is.LessThan(ctl.yMax - slack),
+                                $"in {layout} at {resolution.x}x{resolution.y} the controls sit " +
+                                $"below the BUILD line: identity {id}, controls {ctl}");
+                            Assert.That(ctl.yMin, Is.LessThan(id.yMax - slack),
+                                $"in {layout} at {resolution.x}x{resolution.y} the BUILD line sits " +
+                                $"below the controls: identity {id}, controls {ctl}");
+                            Assert.That(ctl.xMin, Is.GreaterThanOrEqualTo(id.xMax - slack),
+                                $"in {layout} the controls start inside the identity half");
+                            Assert.That(ctl.xMax, Is.LessThanOrEqualTo(box.xMax + slack),
+                                $"in {layout} the header's controls run {ctl.xMax - box.xMax:0.#} " +
+                                "px past the end of their own row");
+                        }
+                    }
+                }
+                finally
+                {
+                    Object.Destroy(root);
+                }
+            }
+        }
+
         /// <summary>Every flex row in the palette: the bands, the grids and the bar's two rows.</summary>
         static List<VisualElement> Rows(VisualElement palette)
         {
@@ -1101,6 +1182,229 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// The orders strip stands in the right-hand gutter, against the edge of the screen and
+        /// directly under the depth rail, at every resolution the criteria name (owner,
+        /// 2026-09-17).
+        ///
+        /// <para>Measured on the realised boxes rather than on the model, because the whole claim
+        /// is about a position the model can only describe: the rail's height is the world's to
+        /// decide, and "under it" is therefore a relationship between two boxes rather than a
+        /// number anybody can write down. Nothing is opened first — that is the point of the
+        /// strip.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheOrdersStripSitsInTheGutterUnderTheDepthRail()
+        {
+            foreach (Vector2Int resolution in Resolutions)
+            {
+                GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, resolution);
+                try
+                {
+                    yield return Settle(doc);
+
+                    Rect canvas = doc.rootVisualElement.worldBound;
+                    float slack = SlackFor(canvas, resolution);
+
+                    VisualElement? strip = doc.rootVisualElement.Q(name: "orders");
+                    VisualElement? rail = doc.rootVisualElement.Q(name: "rail");
+                    VisualElement? bar = doc.rootVisualElement.Q(name: "bar");
+                    Assert.That(strip, Is.Not.Null, "the shell built no orders strip");
+                    Assert.That(rail, Is.Not.Null, "the shell built no depth rail");
+                    Assert.That(bar, Is.Not.Null, "the shell built no command bar");
+
+                    Rect box = strip!.worldBound;
+                    Rect railBox = rail!.worldBound;
+                    Debug.Log($"[HudGeometry] orders at {resolution.x}x{resolution.y}: {box}, " +
+                              $"rail {railBox}, canvas {canvas}");
+
+                    Assert.That(box.xMax, Is.EqualTo(canvas.xMax).Within(slack + 0.5f),
+                        $"the orders strip stops {canvas.xMax - box.xMax:0.#} px short of the right " +
+                        $"edge at {resolution.x}x{resolution.y}");
+                    Assert.That(box.xMax, Is.EqualTo(railBox.xMax).Within(slack + 0.5f),
+                        "the orders strip and the depth rail are not in one gutter");
+                    Assert.That(box.yMin, Is.GreaterThanOrEqualTo(railBox.yMax - slack),
+                        $"the orders strip starts at {box.yMin:0.#}, above the rail's bottom at " +
+                        $"{railBox.yMax:0.#} — it is over the depth control rather than under it");
+                    Assert.That(box.yMax, Is.LessThanOrEqualTo(bar!.worldBound.yMin + slack),
+                        $"the orders strip runs {box.yMax - bar.worldBound.yMin:0.#} px into the " +
+                        "command bar");
+                }
+                finally
+                {
+                    Object.Destroy(root);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Every order has a button in the strip, and pressing one arms it with nothing else open.
+        ///
+        /// <para>That last clause is the reason the strip exists (owner, 2026-09-17: <i>"this
+        /// enables us to quickly give orders without having to click the build button"</i>), so it
+        /// is asserted rather than assumed: the palette is never opened in this test, and the tool
+        /// still ends up in the player's hand. Pressing the same button again puts it down, which
+        /// is the toggle every tool in this game obeys.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator PressingAnOrderArmsItWithoutOpeningTheBuildPalette()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                VisualElement? palette = doc.rootVisualElement.Q(name: "build");
+                Assert.That(palette, Is.Not.Null, "the shell built no Build palette");
+                Assert.That(palette!.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                    "the Build palette is open before the test has touched anything");
+
+                foreach (string key in PaletteTools.Pinned)
+                {
+                    VisualElement? button = doc.rootVisualElement.Q(name: "action-" + key);
+                    Assert.That(button, Is.Not.Null, $"the orders strip has no button for {key}");
+                    Assert.That(button!.ClassListContains("ord__btn"), Is.True,
+                        $"{key} is drawn somewhere other than the orders strip");
+
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = button;
+                        button.SendEvent(click);
+                    }
+                    yield return Settle(doc);
+
+                    Assert.That(PaletteTools.TryGet(key, out PaletteTool tool), Is.True,
+                        $"{key} is in the strip and is not a live tool");
+                    Assert.That(tool.IsArmed(boot.Directors!.Designate), Is.True,
+                        $"pressing {key} in the orders strip armed nothing");
+                    Assert.That(palette.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                        $"pressing {key} opened the Build palette, which is the trip the strip " +
+                        "exists to save");
+                    Assert.That(button.ClassListContains("ord__btn--on"), Is.True,
+                        $"the {key} button does not say it is held");
+
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = button;
+                        button.SendEvent(click);
+                    }
+                    yield return Settle(doc);
+
+                    Assert.That(tool.IsArmed(boot.Directors!.Designate), Is.False,
+                        $"pressing {key} a second time did not put it down");
+                    Assert.That(button.ClassListContains("ord__btn--on"), Is.False,
+                        $"the {key} button is still lit with nothing in the player's hand");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// The armed banner wears the held order's colour, in a thick border, one word, just above
+        /// the command bar (owner, 2026-09-17).
+        ///
+        /// <para>Every clause of that is checked, because each is a separate way for it to be
+        /// wrong: the colour comes from the same token the strip's button is painted with, so the
+        /// two cannot disagree about what mode a colour means; the width is the token rather than
+        /// the hairline it was; the second line is gone, so the banner holds exactly one label;
+        /// and it sits within a gap of the bar rather than floating in the middle of the board.
+        /// The colour is read off the <i>resolved</i> border rather than off a class, which is the
+        /// shape the Build cap's fault took — the class set and the fill not following.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheArmedBannerWearsTheHeldOrdersColour()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                float slack = SlackFor(doc.rootVisualElement.worldBound, Resolutions[1]);
+
+                VisualElement? banner = doc.rootVisualElement.Q(name: "armed");
+                Assert.That(banner, Is.Not.Null, "the shell built no armed banner");
+                Assert.That(banner!.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                    "the armed banner is showing with nothing in the player's hand");
+
+                // Every order, so a hue that was written for one and not the others fails here
+                // rather than in a playtest of whichever one nobody tried.
+                foreach (string key in PaletteTools.Pinned)
+                {
+                    VisualElement? button = doc.rootVisualElement.Q(name: "action-" + key);
+                    Assert.That(button, Is.Not.Null, $"the orders strip has no button for {key}");
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = button;
+                        button!.SendEvent(click);
+                    }
+                    yield return Settle(doc);
+
+                    Assert.That(banner.resolvedStyle.display, Is.EqualTo(DisplayStyle.Flex),
+                        $"holding {key} says nothing over the board");
+
+                    Color want = HudTokens.Convert(HudTheme.PinnedActionHue(key)!.Value);
+                    Color edge = banner.resolvedStyle.borderTopColor;
+                    Debug.Log($"[HudGeometry] armed banner for {key}: border {edge}, want {want}");
+                    Assert.That(edge.r, Is.EqualTo(want.r).Within(0.02f),
+                        $"the banner's border is not {key}'s colour");
+                    Assert.That(edge.g, Is.EqualTo(want.g).Within(0.02f),
+                        $"the banner's border is not {key}'s colour");
+                    Assert.That(edge.b, Is.EqualTo(want.b).Within(0.02f),
+                        $"the banner's border is not {key}'s colour");
+
+                    Assert.That(banner.resolvedStyle.borderTopWidth,
+                        Is.EqualTo((float)HudTheme.ArmedBorderWidth).Within(1f),
+                        "the banner's border is not the thick one the owner asked for");
+
+                    int labels = banner.Query<Label>().ToList().Count;
+                    Assert.That(labels, Is.EqualTo(1),
+                        "the armed banner says more than what is held — the second line came off " +
+                        "on 2026-09-17");
+
+                    Label word = banner.Query<Label>().First();
+                    Assert.That(word.text, Is.EqualTo(Registry.Label(key)),
+                        $"the banner calls {key} something the registry does not");
+
+                    // The floor: every order draws at least the width of the longest of them, so
+                    // the banner does not resize under the eye as the mode changes. Reported as
+                    // well as asserted, because whether the four come out *equal* depends on
+                    // whether the modelled advance covers the real face, and the number is worth
+                    // having in the log rather than inferring from a pass.
+                    float width = banner.worldBound.width;
+                    Debug.Log($"[HudGeometry] armed banner for {key}: \"{word.text}\" " +
+                              $"{width:0.#} px against a floor of {HudLayout.ArmedWidth:0.#}");
+                    Assert.That(width, Is.GreaterThanOrEqualTo(HudLayout.ArmedWidth - slack),
+                        $"the banner for {key} is narrower than the longest order");
+
+                    // Down by the controls it is about, not adrift in the middle of the board.
+                    VisualElement? bar = doc.rootVisualElement.Q(name: "bar");
+                    float gap = bar!.worldBound.yMin - banner.worldBound.yMax;
+                    Assert.That(gap, Is.GreaterThanOrEqualTo(0f),
+                        $"the armed banner runs {-gap:0.#} px into the command bar");
+                    Assert.That(gap, Is.LessThanOrEqualTo(HudLayout.Gap * 2f),
+                        $"the armed banner floats {gap:0.#} px above the command bar");
+
+                    // Put it down again, so the next order starts from nothing held.
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = button;
+                        button.SendEvent(click);
+                    }
+                    yield return Settle(doc);
+                }
+
+                Assert.That(banner.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                    "the armed banner is still showing after the last order was put down");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// Opening Build puts away whatever was being inspected, and the palette then sits in the
         /// bottom-left corner: hard against the left edge and on the command bar (owner,
         /// 2026-09-17).
@@ -1171,7 +1475,7 @@ namespace Odyssey.Tests.PlayMode
                 {
                     VisualElement? tile =
                         doc.rootVisualElement.Q(name: "cat-" + PaletteTools.Categories[i].key);
-                    Assert.That(tile, Is.Not.Null, $"Rows has no {PaletteTools.Categories[i].label} tile");
+                    Assert.That(tile, Is.Not.Null, $"Rows has no {Registry.Label(PaletteTools.Categories[i].key)} tile");
                     using (var click = ClickEvent.GetPooled())
                     {
                         click.target = tile;
@@ -1183,14 +1487,14 @@ namespace Odyssey.Tests.PlayMode
                     float height = panel.worldBound.height;
                     if (first < 0f) first = height;
 
-                    Debug.Log($"[HudGeometry] rows {PaletteTools.Categories[i].label}: " +
+                    Debug.Log($"[HudGeometry] rows {Registry.Label(PaletteTools.Categories[i].key)}: " +
                               $"panel {height:0.#}, " +
                               $"subs {panel.Q(className: "bp__subs")?.worldBound.height ?? -1:0.#}, " +
                               $"mats {panel.Q(className: "bp__mats-row")?.worldBound.height ?? -1:0.#}");
 
                     Assert.That(height, Is.EqualTo(first).Within(1f),
                         $"the Rows palette stands {height:0.#} px on " +
-                        $"{PaletteTools.Categories[i].label} against {first:0.#} on the first " +
+                        $"{Registry.Label(PaletteTools.Categories[i].key)} against {first:0.#} on the first " +
                         "category, so opening a category moves the whole control up or down the " +
                         "screen while the player is aiming at it");
                 }
@@ -1220,7 +1524,7 @@ namespace Odyssey.Tests.PlayMode
                 {
                     VisualElement? tile =
                         doc.rootVisualElement.Q(name: "cat-" + PaletteTools.Categories[i].key);
-                    Assert.That(tile, Is.Not.Null, $"the rail has no {PaletteTools.Categories[i].label} row");
+                    Assert.That(tile, Is.Not.Null, $"the rail has no {Registry.Label(PaletteTools.Categories[i].key)} row");
                     using (var click = ClickEvent.GetPooled())
                     {
                         click.target = tile;
@@ -1235,7 +1539,7 @@ namespace Odyssey.Tests.PlayMode
                     // Printed every run, because "it stands the same height" is the whole claim
                     // and a failure that only says which two disagree costs a second run to find
                     // out what the shape of the disagreement is.
-                    Debug.Log($"[HudGeometry] rail {PaletteTools.Categories[i].label}: " +
+                    Debug.Log($"[HudGeometry] rail {Registry.Label(PaletteTools.Categories[i].key)}: " +
                               $"panel {height:0.#}, " +
                               $"subs {panel.Q(className: "bp__sub-grid")?.worldBound.height ?? -1:0.#}, " +
                               $"mats {panel.Q(className: "bp__mat-grid")?.worldBound.height ?? -1:0.#}, " +
@@ -1243,7 +1547,7 @@ namespace Odyssey.Tests.PlayMode
 
                     Assert.That(height, Is.EqualTo(first).Within(1f),
                         $"the Rail palette stands {height:0.#} px on " +
-                        $"{PaletteTools.Categories[i].label} against {first:0.#} on the first " +
+                        $"{Registry.Label(PaletteTools.Categories[i].key)} against {first:0.#} on the first " +
                         "category, so opening a category reflows everything under the panel");
                 }
             }
@@ -1292,11 +1596,17 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
-        /// While one of the four actions is held, the panel says which mode it is in — in that
-        /// action's own colour, with that action's own icon (owner, 2026-09-17).
+        /// While one of the four orders is held, the open palette says which mode it is in — in
+        /// that order's own colour, with that order's own icon (owner, 2026-09-17).
+        ///
+        /// <para>The order is picked up from the strip in the right-hand gutter, which is where
+        /// the four buttons live since they came off the palette's header. That the panel still
+        /// wears the colour is the point of the test: the two are joined by the model rather than
+        /// by being in the same box, and moving the buttons out is exactly the change that could
+        /// have broken it.</para>
         /// </summary>
         [UnityTest]
-        public IEnumerator HoldingAnActionColoursThePanelItIsHeldFrom()
+        public IEnumerator HoldingAnOrderColoursTheOpenPalette()
         {
             GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
             try
@@ -1309,7 +1619,7 @@ namespace Odyssey.Tests.PlayMode
 
                 VisualElement? cancel =
                     doc.rootVisualElement.Q(name: "action-" + PaletteTools.Cancel);
-                Assert.That(cancel, Is.Not.Null, "the header has no Cancel action");
+                Assert.That(cancel, Is.Not.Null, "the orders strip has no Cancel button");
                 using (var click = ClickEvent.GetPooled())
                 {
                     click.target = cancel;

@@ -433,15 +433,31 @@
     white-space: normal;
 }
 
+/* ---------------------------------------------------------------- the right-hand gutter
+
+   One column against the right edge holding the depth rail and, under it, the orders strip
+   (owner, 2026-09-17: "a vertical button strip that sits below the depth control … very close to
+   the screen border"). A column rather than two anchored panels because the rail is the one
+   region the WORLD sizes — its cells shrink to fit the screen, so its height is not a number
+   anyone can write down here — and a strip given a top of its own would sit under a rail of one
+   particular length and float away from every other. This is the same fix, for the same reason,
+   as the clock-and-alerts column: never two panels in one corner with hand-picked tops. */
+
+.column-edge {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 44px;
+}
+
 /* ---------------------------------------------------------------- A11 depth rail
 
    Four pixels of side padding rather than twelve, because the spec asks for 26 px cells in a
    44 px rail and twelve either side would leave twenty. See HudLayout.RailSidePad. */
 
 .rail {
-    right: 0;
-    top: 0;
-    width: 44px;
+    position: relative;
+    width: 100%;
     padding-left: 4px;
     padding-right: 4px;
     border-top-left-radius: 0;
@@ -501,6 +517,45 @@
     height: 14px;
     margin-top: 6px;
 }
+
+/* ---------------------------------------------------------------- the orders strip
+
+   The four verbs a player applies to what is already on the board, in the gutter under the rail.
+   No label row: "DEPTH" fits 44 px and "ORDERS" does not, and the criteria forbid clipped text —
+   every button says what it is in a tooltip instead, as these did when they were 26 px squares in
+   the Build palette's header. Six at the top rather than twelve, because a strip with no text in
+   it would otherwise spend a quarter of its height on air — and none at the bottom, because the
+   last button's own margin is already there. UI Toolkit has no :last-child to cancel it with, and
+   a padding that double-counts a gap is how a model and a sheet come to disagree by six pixels.
+   See HudLayout.Orders*. */
+
+.orders {
+    position: relative;
+    width: 100%;
+    margin-top: 9px;
+    padding-top: 6px;
+    padding-bottom: 0;
+    padding-left: 4px;
+    padding-right: 4px;
+    align-items: center;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+/* The fill and the border are written from code, in the order's own hue (HudTheme.PinnedActionHue)
+   and doubled while it is held — the same treatment, and the same four tokens, the open palette
+   wears along its top edge while that order is in the player's hand. */
+.ord__btn {
+    width: 34px;
+    height: 34px;
+    margin-bottom: 6px;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-radius: 4px;
+}
+
+.ord__btn:hover { background-color: rgba(255, 255, 255, 0.07); }
 
 /* ---------------------------------------------------------------- A9/A10 inspect */
 
@@ -937,7 +992,13 @@
 
 .bp--rail { width: 840px; }
 
-/* ---- header: BUILD, the mode line, the switcher, ESC, four actions, the way out */
+/* ---- header: BUILD, the mode line, the switcher, ESC, the way out
+
+   One row in all three layouts (owner, 2026-09-17: "shift the toggle view, esc and x onto the same
+   row as the build text — this will tidy that up"). It was two stacked lines in Rows, because the
+   controls there were eight buttons and with a three-part breadcrumb in front of them the row came
+   to 426 px against a 372 px panel. Five of those eight left for the orders strip, and what is
+   left fits. */
 
 .bp__hdr {
     flex-direction: row;
@@ -962,20 +1023,21 @@
     flex-shrink: 0;
 }
 
-/* Rows is 372px wide and the controls alone are eight buttons, so its header is two stacked
-   lines: what is selected, then what you can press. Rail and Bar have the width for one. */
-.bp--rows .bp__hdr {
-    flex-direction: column;
-    align-items: stretch;
-}
+/* The breadcrumb, and the mode line that replaces it while one of the four orders is held.
+   Its colour is written from code: cyan for a build, the held order's own hue otherwise.
 
-.bp--rows .bp__hdr-ctl { margin-top: 8px; }
-
-/* The breadcrumb, and the mode line that replaces it while one of the four actions is held.
-   Its colour is written from code: cyan for a build, the held action's own hue otherwise. */
+   It is the part of the header that gives. Rows is 372 px and the longest breadcrumb the content
+   table can produce — "Structure > Roof and floor above > Wood" — does not fit beside BUILD and
+   five controls at any width this panel has. So the crumb shrinks and ellipsises rather than
+   pushing the controls off the end: the same treatment a save's name gets in the load list, and
+   the reason the row can be one row at every breadcrumb rather than only at today's. Nothing is
+   lost that is not also on the lit tiles directly underneath. */
 .bp__crumb {
     margin-left: 9px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
 }
 
 .bp__mode-icon {
@@ -1018,11 +1080,8 @@
 /* ---- the four actions, and the way out. Their colours are written from code, because each
    one is a different hue and the hue is what says which mode you are in. */
 
-.bp__actions {
-    flex-direction: row;
-    flex-shrink: 0;
-}
-
+/* The close button, and nothing else since 2026-09-17: the four order buttons that shared this
+   class moved to the orders strip in the right-hand gutter. */
 .bp__action {
     width: 26px;
     height: 26px;
@@ -1909,24 +1968,32 @@
 
 /* ---------------------------------------------------------------- the drag-select marquee */
 
-/* What the player is holding. Centred over the command bar, out of the way of the board and
-   in the path of anyone about to wonder how to stop. Never a click target: it is a sentence,
-   not a control. */
+/* What the player is holding: one word, in a box whose border is the held order's own colour —
+   green for chopping, blue for mining, amber for deconstructing, red for cancelling (owner,
+   2026-09-17). Centred over the command bar, out of the way of the board. Never a click target.
+
+   The border is three pixels, and the colour is written from code, because the border is the
+   whole of what this says at a glance; the cyan here is the resting value for a build tool, which
+   has no order hue of its own. See HudTheme.ArmedBorderWidth.
+
+   The line under the word — "drag over the board · right-click or Esc to stop" — was removed on
+   the owner's instruction the same day. It was the only place the right-click gesture was written
+   down; the orders strip now lights the button that armed the tool and puts it down when pressed
+   again, which is a way out you can see rather than one you have to be told. */
 .armed {
     position: absolute;
     left: 50%;
     translate: -50% 0;
-    bottom: 92px;
+    bottom: 58px;
     align-items: center;
     padding: 5px 14px;
     background-color: rgba(12, 16, 20, 0.90);
-    border-width: 1px;
+    border-width: 3px;
     border-color: #6fd3e3;
     border-radius: 6px;
 }
 
 .armed__what { color: #dff6fa; }
-.armed__how { color: rgba(255, 255, 255, 0.55); }
 
 
 .marquee {
