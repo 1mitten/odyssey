@@ -70,48 +70,73 @@ namespace Odyssey.Hud
         public const string Deconstruct = "ui.arch.tool.deconstruct";
 
         /// <summary>
-        /// Categories in catalogue order, each with a few of its tools. Every icon key exists in
-        /// the registry; a tool not in <see cref="Live"/> is drawn and disabled, so the shape of
-        /// the game is visible before the thing behind a key exists.
+        /// The seven categories the palette offers, in the order they are drawn, each with a few
+        /// of its tools. Every icon key exists in the registry; a tool not in <see cref="Live"/>
+        /// is drawn and disabled, so the shape of the game is visible before the thing behind a
+        /// key exists.
+        ///
+        /// <para><b>Seven, not ten</b> (specification, 2026-09-17). Orders, Zones and Salvage came
+        /// out. All three were answering a different question from the other seven: those seven
+        /// are kinds of thing to <i>put down</i>, and a palette whose tiles do not all answer one
+        /// question is a palette the player has to read rather than aim at. Zones and Salvage take
+        /// nothing live with them. Orders did, and <see cref="Pinned"/> is where its two live
+        /// tools went.</para>
         /// </summary>
         public static readonly (string key, string label, string[] tools)[] Categories =
         {
             ("ui.arch.category.structure", "Structure", new[] { Wall, "ui.arch.tool.door", "ui.arch.tool.stair", "ui.arch.tool.ladder", "ui.arch.tool.roof", "ui.arch.tool.reclaim" }),
-            ("ui.arch.category.orders", "Orders", new[] { Mine, Fell, "ui.arch.tool.forbid", "ui.arch.tool.clearrubble" }),
-            ("ui.arch.category.zones", "Zones", new[] { "ui.arch.tool.stockpile", "ui.arch.tool.growzone", "ui.arch.tool.dumping" }),
             ("ui.arch.category.production", "Production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
             ("ui.arch.category.furniture", "Furniture", new[] { "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
             ("ui.arch.category.power", "Power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
             ("ui.arch.category.security", "Security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
-            ("ui.arch.category.salvage", "Salvage", new[] { "ui.arch.tool.salvage", "ui.arch.tool.reclaim" }),
             ("ui.arch.category.floors", "Floors", new[] { "ui.arch.tool.deckplate", "ui.arch.tool.grating", "ui.arch.tool.tile" }),
             ("ui.arch.category.recreation", "Recreation", new[] { "ui.arch.tool.gamestable", "ui.arch.tool.viewscreen", "ui.arch.tool.planter" }),
         };
 
         /// <summary>
-        /// Tools that belong to no category and are always on show, under everything else.
+        /// What a thing may be made of, in the order the player meets them — and only what the
+        /// colony can actually build with.
         ///
-        /// <para><b>Cancel is not a kind of thing to build.</b> Every other chip in this palette
-        /// answers "what would you like to put down"; this one answers "stop", about whatever is
-        /// already on the board, and it is as relevant to a wall as to a mine mark. Filing it under
-        /// Orders was tidy and wrong in practice (owner, 2026-09-17: *"would be a good idea to be
-        /// able to access the cancel button on the build sub menu"*): the moment a player wants it
-        /// is while they are holding <em>another</em> tool, which is exactly when the category row
-        /// is showing something else and reaching for it costs two clicks and a hunt.</para>
+        /// <para>Two entries, because <c>ConstructionContent.IsBuildable</c> admits two. The other
+        /// four <see cref="StuffHandle"/> values are what the ruined city is made <i>of</i> rather
+        /// than what a colony builds <i>with</i>; <see cref="BuildLabels.StuffKeys"/> leaves them
+        /// unnamed for the same reason. <see cref="HudTheme.MaterialTintOf"/> already holds tints
+        /// for four, so a third and fourth buildable material is one row here.</para>
+        /// </summary>
+        public static readonly int[] Materials = { StuffHandle.Wood, StuffHandle.Stone };
+
+        /// <summary>
+        /// The tools that belong to no category and are always on show. They are the palette
+        /// header's action buttons.
         ///
-        /// <para><b>Deconstruct joined it</b> (owner, 2026-09-17, having failed to get it to work
-        /// from Orders: <i>"could you put deconstruct next to cancel as a button so we can at least
-        /// deconstruct this way"</i>). It belongs by the same argument, which is worth stating
-        /// because it was filed under Orders on exactly the reasoning that put Cancel there: both
-        /// are about <em>what is already on the board</em> rather than about what to put down next,
-        /// and both are wanted at the moment a player is holding something else. Two chips is also
-        /// the sensible limit — a pinned row that grows is a second palette.</para>
+        /// <para><b>None of these is a kind of thing to build.</b> Every tile in the seven
+        /// categories answers "what would you like to put down"; each of these answers a question
+        /// about <em>what is already on the board</em> — stop that, take that apart, dig that out,
+        /// cut that down — and each is wanted at the moment the player is holding something else,
+        /// which is exactly when the category tier is showing something different and reaching for
+        /// it would cost two clicks and a hunt. Filing them under a category was tidy and wrong in
+        /// practice (owner, 2026-09-17, of Cancel: <i>"would be a good idea to be able to access
+        /// the cancel button on the build sub menu"</i>, and of Deconstruct, having failed to
+        /// reach it from Orders: <i>"could you put deconstruct next to cancel as a button so we
+        /// can at least deconstruct this way"</i>).</para>
+        ///
+        /// <para><b>Chop and Mine joined them when Orders was dropped</b> (2026-09-17). The
+        /// specification takes the Orders category off the palette, and those two were the only
+        /// live tools in it — so taken literally it would have left the game's mining and felling
+        /// reachable by the <c>M</c> and <c>C</c> keys and by nothing a player could see. That is
+        /// not a hypothetical failure: it is precisely what had already happened to Cancel, which
+        /// <i>"was never missing — every way of finding it was missing"</i>, and which cost a
+        /// playtest to find. They belong here on the same test the other two pass, which is the
+        /// reason this list is allowed to have grown rather than an exception to it: all four are
+        /// verbs applied to what is there, not nouns to place.</para>
         ///
         /// <para>They are in no category at all rather than pinned <i>and</i> listed, because the
         /// same chip appearing twice in one open panel is a question the player has to stop and
-        /// answer: whether the two do the same thing.</para>
+        /// answer: whether the two do the same thing. Four is the limit — a pinned row that keeps
+        /// growing is a second palette, and the header has room for four 26 px buttons beside the
+        /// layout switcher and the way out.</para>
         /// </summary>
-        public static readonly string[] Pinned = { Cancel, Deconstruct };
+        public static readonly string[] Pinned = { Fell, Mine, Deconstruct, Cancel };
 
         /// <summary>
         /// The tools that actually do something. Anything absent is drawn disabled, which is most

@@ -98,6 +98,30 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   key is unchanged, because `ui.status.felling` draws real art and `icon-map.csv` is keyed the same
   way. Design, what is still open and the by-hand procedure are
   `docs/design/16-cancel-and-deconstruct.md`.
+  **The Build palette is now three layouts over one selection** (`claude/build-palette-layouts`,
+  2026-09-17) — the owner's 4a *Rows* (the default), 4b *Rail* and 4c *Bar*, switchable from the
+  panel header and from Options › Interface, with the choice stored. Design, the measurements and
+  what nobody has judged are `docs/design/17-build-palette-layouts.md`; **read it before touching
+  `HudShell.Build.cs`, `BuildPalette.cs` or the `bp__*` block of `Hud.uss`.** Three things a later
+  session should not undo by tidying. **Orders, Zones and Salvage came off the palette** as the
+  specification asked, but Orders held Mine and Chop — so both are **pinned in the header** beside
+  Deconstruct and Cancel rather than lost to the `M` and `C` keys, which is the Cancel fault of the
+  day before repeated exactly; `EveryLiveToolIsDrawnSomewhere` is the general form of that rule.
+  **The panel is docked, not floating, and the default is a column** (owner: *"tight and flush to
+  other elements to enable full use of space"*, then *"use the left hand side of the screen instead
+  of the width"*) — the mockups were drawn over a bare board and would have covered the stores panel
+  and the roster strip, and Rows spanning 1920 made seven very wide tiles out of the category row.
+  Rows is 372 px and four tiles across, and its height is **fixed at the widest category's** so the
+  control does not move up and down the screen as categories are opened; only Bar still spans the
+  screen. **Nothing is armed until the player clicks** — the palette model is built when the HUD
+  attaches, and its seeding pass used to arm a wall, so the game began in build mode with a wall on
+  the cursor. The Build cap on the command bar is the indicator of that: outlined at rest, filled
+  **only while a tool is actually held** — an open panel with nothing chosen is not build mode. The
+  palette pins into the bottom-left corner and **closes the inspect pane when it opens**. And **thirty-seven icons are drawn** as `Painter2D` paths in `HudGlyph`'s
+  existing box, because ADR 0007's pipeline covers no architecture key and the specification forbids
+  the placeholder square here; materials keep the game's own sprites, which is the one tier whose
+  art must not change. **Every PlayMode run writes `Logs/palette-{rows,rail,bar}.png`** — the only
+  thing anybody has looked at, and what found the three faults the tests could not see.
   **Deconstruct landed the same day** and closes U26's last outstanding line but one. A colonist
   walks to one of our own walls, takes it apart and leaves **2 or 3 wood of the 5 it cost** — a
   seeded coin flip on the odd unit, keyed on cell *and tick* so a cell cannot become a permanently
@@ -377,9 +401,12 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~12 s, no Unity): **600 Sim + 281 Hud**; Long tier **20**.
-  Unity tier on 2026-09-17: EditMode **1355 total, 1344 passed, 0 failed**; PlayMode **51 total, 48
-  passed, 0 failed** (the rest are pre-existing `[Explicit]` or ignored rows).
+- **Fast tier** (`scripts/test-fast.sh`, ~12 s, no Unity): **600 Sim + 309 Hud**; Long tier **20**.
+  Unity tier on 2026-09-17, on the merge of the Build palette and U39: EditMode **1383 total, 1372
+  passed, 0 failed**; PlayMode **60 total, 57 passed, 0 failed** (the rest are pre-existing
+  `[Explicit]` or ignored rows). The Hud figure is **exactly** 257 + 28 + 24, so neither branch lost
+  a test to the merge — which is the cheapest check there is that a textually clean auto-merge of
+  two files both sides edited was also a correct one.
   **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
   touches the composition root or the HUD shell is unproven until Unity has compiled it, however
   green the 11 seconds look (`docs/lessons.md`).
