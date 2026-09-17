@@ -38,13 +38,19 @@ namespace Odyssey.Hud
         /// blank: a colonist whose aspect went missing should look like somebody, not like a
         /// bug.</para>
         /// </summary>
-        public static string Of(WorldSnapshot snapshot, PawnId id)
-        {
-            uint seed = snapshot != null && snapshot.TryGetPawnAspect(id, RollSeedKey, out int value)
+        public static string Of(WorldSnapshot snapshot, PawnId id) => Of(RollSeedOf(snapshot, id), id);
+
+        /// <summary>
+        /// The seed a colonist in the published frame was rolled from — what every derived identity
+        /// keys on, so it is read in one place rather than in each of them.
+        ///
+        /// <para>Zero when nothing published one, which is a person rather than a blank: a colonist
+        /// whose aspect went missing should look like somebody, not like a bug.</para>
+        /// </summary>
+        public static uint RollSeedOf(WorldSnapshot snapshot, PawnId id) =>
+            snapshot != null && snapshot.TryGetPawnAspect(id, RollSeedKey, out int value)
                 ? unchecked((uint)value)
                 : 0u;
-            return Of(seed, id);
-        }
 
         /// <summary>
         /// The eight promoted from the mockups. Extends to about forty at M2, when pawn

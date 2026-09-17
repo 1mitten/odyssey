@@ -20,26 +20,22 @@ namespace Odyssey.Hud
         Load,
 
         /// <summary>
-        /// New game: the seed, a reroll, and the row that goes on to the colonists (U39).
+        /// New game: the whole setup page — the board's seed, name and size, and the three people
+        /// who will live on it.
         ///
         /// <para>The root's New game row lands here rather than building a world, which is the one
         /// behaviour U38 shipped that U39 changed. A seed that is drawn, used and never shown gives
         /// a world nobody can ask for twice.</para>
         ///
-        /// <para>Its last row is <b>Next</b> rather than Start since U40: the three colonists come
-        /// after the board they will live on.</para>
+        /// <para><b>One screen, not two</b> (owner, 2026-09-17). U40 gave the colonists a screen of
+        /// their own because three cards would not fit the menu's fixed box beside the seed; the
+        /// owner then asked for the whole skills grid on a candidate, which settles it the other
+        /// way — the content is far past what a 420 × 384 panel can hold, so this is not a panel at
+        /// all. It is drawn full-viewport and the menu box is left exactly as it is for Load and
+        /// Settings. <c>docs/design/19-world-setup.md</c>.</para>
         /// </summary>
         NewGame,
 
-        /// <summary>
-        /// The three people you take in, and the row that commits (U40).
-        ///
-        /// <para><b>A screen of its own rather than three more cards under the seed</b>, by the
-        /// owner's decision: the panel is a fixed box and it is centred, so a screen that grew to
-        /// hold them would move every row under the pointer on the way in. The cost is one more
-        /// click per new game and it was taken deliberately.</para>
-        /// </summary>
-        Colonists,
 
         /// <summary>
         /// The settings panel, standing in the start screen's place rather than on top of it.
@@ -71,15 +67,79 @@ namespace Odyssey.Hud
 
         /// <summary>
         /// One roll seed per chosen colonist, in the order they were shown — or null when no
-        /// colonist screen was in the flow, which is a colony the world populates for itself.
+        /// colonist select was in the flow, which is a colony the world populates for itself.
         /// </summary>
         public readonly uint[]? Colonists;
 
-        public NewGameChoice(uint seed, uint[]? colonists)
+        /// <summary>What the player called the colony, or empty to take the request's default.</summary>
+        public readonly string Name;
+
+        /// <summary>Which board size, as an index into <see cref="MapSizes.All"/>.</summary>
+        public readonly int Size;
+
+        public NewGameChoice(uint seed, uint[]? colonists, string? name, int size)
         {
             Seed = seed;
             Colonists = colonists;
+            Name = name ?? string.Empty;
+            Size = size;
         }
+    }
+
+    /// <summary>
+    /// The board sizes the setup page offers (world setup, 2026-09-17).
+    ///
+    /// <para><b>Named rather than numeric.</b> "120 × 120 × 16" is a fact about an array;
+    /// "Standard" is a choice about a game. The numbers are here because the request needs them,
+    /// and the word is what the player picks.</para>
+    ///
+    /// <para>Unity-free, and deliberately not in <c>Odyssey.Sim</c>: a size is three integers the
+    /// simulation will take from anybody, and which three a *menu* offers is an interface
+    /// question.</para>
+    /// </summary>
+    public static class MapSizes
+    {
+        public readonly struct Choice
+        {
+            public readonly string Key;
+            public readonly int X;
+            public readonly int Z;
+            public readonly int Y;
+
+            public Choice(string key, int x, int z, int y)
+            {
+                Key = key;
+                X = x;
+                Z = z;
+                Y = y;
+            }
+
+            /// <summary>The word the player reads, from the naming registry.</summary>
+            public string Label => Registry.Label(Key);
+        }
+
+        public static readonly IReadOnlyList<Choice> All = new[]
+        {
+            new Choice("ui.newgame.size.small", 80, 80, 16),
+            new Choice("ui.newgame.size.standard", 120, 120, 16),
+            new Choice("ui.newgame.size.large", 180, 180, 24),
+        };
+
+        /// <summary>Standard: the board every measurement on record was taken on, and the one the
+        /// scene has always loaded.</summary>
+        public const int Default = 1;
+
+        public static readonly string[] IconKeys = BuildKeys();
+
+        static string[] BuildKeys()
+        {
+            var keys = new string[All.Count];
+            for (int i = 0; i < All.Count; i++) keys[i] = All[i].Key;
+            return keys;
+        }
+
+        public static Choice At(int index) =>
+            All[index < 0 || index >= All.Count ? Default : index];
     }
 
     /// <summary>
@@ -357,11 +417,7 @@ namespace Odyssey.Hud
 
             bool leavingSettings = Screen == MenuScreen.Settings;
 
-            // One step, not all the way home (U40). Every screen but one backs out to the root,
-            // and the colonist screen backs out to the seed it was reached from — anything else
-            // would throw away a seed the player typed on purpose to get here, which is the one
-            // thing on this flow that is expensive to redo.
-            GoTo(Screen == MenuScreen.Colonists ? MenuScreen.NewGame : MenuScreen.Root);
+            GoTo(MenuScreen.Root);
 
             if (leavingSettings) SettingsClosed?.Invoke();
             return true;
@@ -428,49 +484,58 @@ namespace Odyssey.Hud
         /// </summary>
         public bool Start()
         {
-            if (!Showing) return false;
+            if (!Showing || Screen != MenuScreen.NewGame) return false;
             if (!Seed.Usable) return false;
 
-            // The commit moved to the colonist screen when that screen arrived (U40); the seed
-            // screen's last row is Next. A director with no colonist select — a rig, a test that
-            // only cares about the seed — has no such screen, so New game still commits where it
-            // always did rather than leading to a row that cannot exist.
-            MenuScreen commits = Colonists != null ? MenuScreen.Colonists : MenuScreen.NewGame;
-            if (Screen != commits) return false;
-
-            StartRequested?.Invoke(new NewGameChoice(Seed.Seed, Colonists?.ChosenSeeds()));
+            StartRequested?.Invoke(
+                new NewGameChoice(Seed.Seed, Colonists?.ChosenSeeds(), ColonyName, Size));
             return true;
         }
 
         /// <summary>
-        /// Press Next on the New game screen: keep the seed and go on to choose the colonists
-        /// (U40).
+        /// What the colony will be called.
         ///
-        /// <para>Refuses an unusable seed for the reason <see cref="Start"/> does. Walking on to
-        /// pick three people for a board that does not exist would only move the refusal one screen
-        /// later, and by then the player would have made choices to lose.</para>
-        ///
-        /// <para>Deals a fresh three on the way in, and does so <b>before</b> navigating, so the
-        /// screen is never drawn for a frame holding the last visit's people.</para>
+        /// <para><b>Starts at the default rather than empty</b> (owner, 2026-09-17), so the field
+        /// arrives with "The Lost Buckets" in it and a player who wants that types nothing. Clearing
+        /// it is allowed and is not a failure — the bootstrap falls back to the same name, so an
+        /// empty box and the default box give the same colony.</para>
         /// </summary>
-        public bool Next()
-        {
-            if (!Showing || Screen != MenuScreen.NewGame) return false;
-            if (!Seed.Usable || Colonists == null) return false;
+        public string ColonyName { get; private set; } = Registry.Label(SeedField.DefaultColonyKey);
 
-            Colonists.Deal(SeedEntry.Draw);
-            GoTo(MenuScreen.Colonists);
-            return true;
+        public void TypeColonyName(string? name)
+        {
+            string typed = name ?? string.Empty;
+            if (typed == ColonyName) return;
+            ColonyName = typed;
+            Changed?.Invoke();
         }
+
+        /// <summary>Which board size the page is offering. Index into <see cref="MapSizes.All"/>.</summary>
+        public int Size { get; private set; } = MapSizes.Default;
+
+        /// <summary>
+        /// Step to the next size, wrapping. One control rather than three rows: there are three
+        /// sizes and a player picking one is cycling, not navigating.
+        /// </summary>
+        public void NextSize()
+        {
+            Size = (Size + 1) % MapSizes.All.Count;
+            Changed?.Invoke();
+        }
+
+        /// <summary>Raised when something on the setup page that is not the seed or the people has
+        /// changed — the colony's name, or the board size.</summary>
+        public event Action? Changed;
 
         void Perform(string key)
         {
             if (key == SessionCommands.NewGameKey)
             {
-                // A fresh world every time the screen is entered (§11.2 decision 3). The draw
-                // happens before the navigation so the screen is never drawn for a frame holding
-                // the seed of the game somebody decided against.
+                // A fresh world and fresh people every time the page is entered (17 §11.2 decision
+                // 3). Both are drawn before the navigation, so the page is never shown for a frame
+                // holding the game somebody decided against.
                 Seed.Draw();
+                Colonists?.Deal(SeedEntry.Draw);
                 GoTo(MenuScreen.NewGame);
             }
             else if (key == SessionCommands.LoadKey) SavesRequested?.Invoke();

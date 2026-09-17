@@ -24,30 +24,35 @@ namespace Odyssey.Hud
         /// <summary>What they are called, from <see cref="ColonistNames"/>.</summary>
         public readonly string Name;
 
-        /// <summary>The skills worth reading, best first, already cut to what fits.</summary>
-        public readonly IReadOnlyList<CandidateSkill> Skills;
+        /// <summary>How old they are (<see cref="ColonistIdentity"/>).</summary>
+        public readonly int Age;
 
-        public Candidate(uint seed, string name, IReadOnlyList<CandidateSkill>? skills)
+        /// <summary>What they did before the city fell.</summary>
+        public readonly string Occupation;
+
+        /// <summary>
+        /// Every skill, in reading order — <b>the same <see cref="SkillRow"/> the inspect pane's
+        /// Skills tab is drawn from</b>, so one grid draws both and the two cannot disagree about
+        /// ordering, greying or where a passion pip goes.
+        ///
+        /// <para>All thirteen, including the nine nothing simulates yet: the owner asked for the
+        /// whole grid with the inactive ones greyed, and showing four would hide that the rest
+        /// exist.</para>
+        /// </summary>
+        public readonly IReadOnlyList<SkillRow> Skills;
+
+        public Candidate(uint seed, string name, int age, string occupation,
+            IReadOnlyList<SkillRow>? skills)
         {
             Seed = seed;
             Name = name ?? string.Empty;
-            Skills = skills ?? Array.Empty<CandidateSkill>();
+            Age = age;
+            Occupation = occupation ?? string.Empty;
+            Skills = skills ?? Array.Empty<SkillRow>();
         }
-    }
 
-    /// <summary>One line of a candidate's card: a skill's registry key, its name and its level.</summary>
-    public readonly struct CandidateSkill
-    {
-        public readonly string Key;
-        public readonly string Label;
-        public readonly int Level;
-
-        public CandidateSkill(string key, string label, int level)
-        {
-            Key = key;
-            Label = label;
-            Level = level;
-        }
+        /// <summary>"Wrenn, 34" — the line at the top of a card and of the detail beside it.</summary>
+        public string NameAndAge => Age > 0 ? Name + ", " + Age : Name;
     }
 
     /// <summary>
@@ -116,6 +121,32 @@ namespace Odyssey.Hud
         /// <summary>Whether this slot is kept through a reroll.</summary>
         public bool IsLocked(int slot) => slot >= 0 && slot < Slots && _locked[slot];
 
+        /// <summary>
+        /// Which candidate's detail is showing (world setup). The three are always on screen — you
+        /// are choosing between them — and this is the one whose skills are drawn beside them.
+        ///
+        /// <para><b>Selecting and keeping are two gestures, not one.</b> On this page a click
+        /// already means "show me this one", so it cannot also mean "hold on to this one": the
+        /// Keep control is separate. That is the opposite of the little panel U40 built, where a
+        /// card had nothing else to mean.</para>
+        /// </summary>
+        public int Selected { get; private set; }
+
+        /// <summary>Show this one's detail. False for a slot that is not on screen, and a no-op
+        /// when it is already showing.</summary>
+        public bool Select(int slot)
+        {
+            if (slot < 0 || slot >= Slots) return false;
+            if (Selected == slot) return true;
+
+            Selected = slot;
+            Changed?.Invoke();
+            return true;
+        }
+
+        /// <summary>The candidate whose detail is showing.</summary>
+        public Candidate Current => _cards[Selected];
+
         /// <summary>How many are locked, which is what tells a presenter that Reroll would do
         /// nothing.</summary>
         public int LockedCount
@@ -152,6 +183,7 @@ namespace Odyssey.Hud
 
             for (int i = 0; i < Slots; i++) _locked[i] = false;
             for (int i = 0; i < Slots; i++) _cards[i] = DrawUnused(seeds, i);
+            Selected = 0;
             Changed?.Invoke();
         }
 

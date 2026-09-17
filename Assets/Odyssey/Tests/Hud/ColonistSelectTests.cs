@@ -26,8 +26,8 @@ namespace Odyssey.Tests.Hud
 
         /// <summary>A roll that names somebody after their seed, so a test can read the screen.</summary>
         static Candidate Named(uint seed, int slot) =>
-            new Candidate(seed, "person-" + seed,
-                new[] { new CandidateSkill("ui.skill.mining", "Mining", (int)(seed % 20)) });
+            new Candidate(seed, "person-" + seed, 30 + slot, "Scrapper",
+                new[] { new SkillRow { IconKey = "ui.skill.mining", Name = "Mining", Live = true } });
 
         static ColonistSelect Dealt(params uint[] seeds)
         {
@@ -77,7 +77,7 @@ namespace Odyssey.Tests.Hud
             Candidate Recording(uint seed, int slot)
             {
                 asked.Add(slot);
-                return new Candidate(seed, "person-" + slot, Array.Empty<CandidateSkill>());
+                return new Candidate(seed, "person-" + slot, 30, "Scrapper", Array.Empty<SkillRow>());
             }
 
             var select = new ColonistSelect(Recording);
@@ -176,7 +176,7 @@ namespace Odyssey.Tests.Hud
         {
             // A roll that insists on one name until the fourth seed it is handed.
             Candidate Stubborn(uint seed, int slot) =>
-                new Candidate(seed, seed < 4u ? "Wrenn" : "Odile-" + seed, Array.Empty<CandidateSkill>());
+                new Candidate(seed, seed < 4u ? "Wrenn" : "Odile-" + seed, 30, "Scrapper", Array.Empty<SkillRow>());
 
             var select = new ColonistSelect(Stubborn);
             select.Deal(Deals(1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u));
@@ -194,7 +194,7 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void ARollThatOnlyEverAnswersOneNameStillFinishes()
         {
-            Candidate Always(uint seed, int slot) => new Candidate(seed, "Wrenn", Array.Empty<CandidateSkill>());
+            Candidate Always(uint seed, int slot) => new Candidate(seed, "Wrenn", 30, "Scrapper", Array.Empty<SkillRow>());
 
             var select = new ColonistSelect(Always);
             select.Deal(Deals(1u));

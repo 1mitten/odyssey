@@ -105,12 +105,23 @@ before it in *both* columns.
 
 ## 5. What a colonist now is
 
-| Field | From | Saved? | Hashed? |
-|---|---|---|---|
-| skills, passions | `RollSeed` + id (U40) | yes | yes |
-| **age** | `RollSeed` + id, new salt | **no** | **no** |
-| **occupation** | `RollSeed` + id, new salt | **no** | **no** |
-| **backstory** | the occupation | **no** | **no** |
+| Field | From | Lives in | Saved? | Hashed? |
+|---|---|---|---|---|
+| skills, passions | `RollSeed` + id (U40) | `Odyssey.Sim` | yes | yes |
+| **age** | `RollSeed` + id, own salt | `Odyssey.Hud` | **no** | **no** |
+| **occupation** | `RollSeed` + id, own salt | `Odyssey.Hud` | **no** | **no** |
+| ~~backstory~~ | — | — | — | — |
+
+**The backstory line is dropped** (owner, 2026-09-17, on seeing the list): with ninety-two mundane
+job titles the job *is* the story. "Cemetery gravedigger, 41" and "Nepo Rich Kid, 22" need no
+sentence under them, and a pool of ninety-two would have been ninety-two rows of content to review.
+
+**And neither age nor occupation needs the simulation at all.** Both are functions of a seed the
+interface already has — `RollSeed` arrives as a `PawnAspect` — so they sit in `Odyssey.Hud` beside
+`ColonistNames`, which has been exactly this kind of derived, interface-side identity since M1. No
+Sim change, no new save section, no aspect, nothing new to hash. **When ageing, skill decay or
+health read an age, this moves into `Odyssey.Sim`** — one function, so a move rather than a rewrite,
+and the formula goes across unchanged so nobody's colonists change age on the way.
 
 **None of the three is saved or hashed, and that is a decision rather than an oversight.** They are
 pure functions of `RollSeed`, which is already saved and already hashed — so they are *derived
@@ -133,9 +144,21 @@ and would cheerfully tell you the Archivist grew up hauling ore.
 
 ## 6. Content proposed for veto
 
-Fourteen occupations for a ruined sci-fi city, each carrying the one line that is also its backstory.
-Clean room: invented here, nothing lifted. **The owner vetoes or edits any of these in one line each
-in `icon-keys.csv`.**
+**Superseded 2026-09-17: the owner supplied the list.** Ninety-two, and the tone is theirs and is
+better — **mundane pre-collapse jobs**, not invented sci-fi trades. Survivors who used to collect
+trolleys and read gas meters is a more human colony than survivors who were all vault-breakers, and
+`Nepo Rich Kid` and `Sofa Surfer` at the head of the list set that register deliberately. They are
+in `icon-keys.csv` under `ui.occupation.` with no descriptions, per the ruling above.
+
+Ten words were changed and nothing else: `labourer` ×4 for the repo's British English rule, three
+gendered titles neutralised (`Fisherman` → Fisher, `Night watchman` → Night watch, `Hotel maid` →
+Hotel cleaner) and three Americanisms put into the words a British player would use
+(`Garbage collector` → Refuse collector, `Gas station clerk` → Petrol station clerk, `Truck driver`
+→ Lorry driver, `Busser` → Table clearer). `Grocery bagger` and `Cart collector` are left as
+written; they were not in the set the owner approved changing.
+
+~~Fourteen occupations for a ruined sci-fi city, each carrying the one line that is also its
+backstory. Clean room: invented here, nothing lifted.~~ Dropped, and the list below with it:
 
 | Occupation | Line |
 |---|---|

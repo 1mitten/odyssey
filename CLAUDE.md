@@ -470,12 +470,10 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~14 s, no Unity): **608 Sim + 335 Hud**; Long tier **20**.
-  Unity tier on 2026-09-17, on the merge of the orders strip and U40: EditMode **1417 total, 1406
-  passed, 0 failed**; PlayMode **64 total, 61 passed, 0 failed** (the rest are pre-existing
-  `[Explicit]` or ignored rows). The Hud figure is **exactly** 312 + 23, so neither branch lost a
-  test to the merge — the cheapest check there is that a textually clean auto-merge of two files
-  both sides edited was also a correct one.
+- **Fast tier** (`scripts/test-fast.sh`, ~15 s, no Unity): **608 Sim + 348 Hud**; Long tier **20**.
+  Unity tier on 2026-09-17, on the merge of the orders strip, U40 and the world-setup page:
+  EditMode **1430 total, 1419 passed, 0 failed**; PlayMode **65 total, 62 passed, 0 failed** (the
+  rest are pre-existing `[Explicit]` or ignored rows).
   **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
   touches the composition root or the HUD shell is unproven until Unity has compiled it, however
   green the 11 seconds look (`docs/lessons.md`).
