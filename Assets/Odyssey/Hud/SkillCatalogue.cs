@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
@@ -96,6 +97,63 @@ namespace Odyssey.Hud
 
         /// <summary>How many rows a two-column grid of these needs.</summary>
         public static int Rows => (All.Length + 1) / 2;
+
+        static Entry[]? _alphabetical;
+
+        /// <summary>
+        /// The thirteen in the order a player reads them: <b>alphabetical by the word on screen</b>
+        /// (owner, 2026-09-17).
+        ///
+        /// <para><b>By the label, not the key or the internal name.</b> A player scanning for
+        /// "Construction" is scanning the column they are reading, and three of these keys do not
+        /// spell their own label — <c>ui.skill.growing</c> is trained by cutting, and the key is
+        /// the one thing on the row nobody sees.</para>
+        ///
+        /// <para><see cref="All"/> keeps its planning order, because that is what the file is a
+        /// record of and other readers depend on it. This is the presentation order, and it is
+        /// computed once here rather than sorted by each of the two grids that draw it — the whole
+        /// point of the shared component is that the Skills tab and a candidate's card cannot come
+        /// to disagree about what order skills go in.</para>
+        ///
+        /// <para>Ordinal, not culture-aware: a colonist's skills must not reorder themselves
+        /// because the machine is set to Turkish.</para>
+        /// </summary>
+        public static IReadOnlyList<Entry> Alphabetical
+        {
+            get
+            {
+                if (_alphabetical != null) return _alphabetical;
+
+                var sorted = new Entry[All.Length];
+                System.Array.Copy(All, sorted, All.Length);
+                System.Array.Sort(sorted, (a, b) =>
+                    string.Compare(Registry.Label(a.Key), Registry.Label(b.Key),
+                        System.StringComparison.Ordinal));
+                return _alphabetical = sorted;
+            }
+        }
+
+        /// <summary>
+        /// The rows of one column of the two-column grid, in reading order: down the left, then
+        /// down the right (owner, 2026-09-17).
+        ///
+        /// <para>Eight then five, so each column is a run that can be scanned. Across-then-down was
+        /// refused because a skill's position would then depend on how many come before it in
+        /// <i>both</i> columns.</para>
+        /// </summary>
+        public static IReadOnlyList<Entry> Column(int column)
+        {
+            IReadOnlyList<Entry> order = Alphabetical;
+            int rows = Rows;
+            var slice = new List<Entry>(rows);
+
+            for (int row = 0; row < rows; row++)
+            {
+                int index = column * rows + row;
+                if (index < order.Count) slice.Add(order[index]);
+            }
+            return slice;
+        }
 
         /// <summary>The keys, for the registry test that holds every key this panel can draw.</summary>
         public static string[] IconKeys
