@@ -69,6 +69,25 @@
     -->
     <passionMinorPerCent>35</passionMinorPerCent>
     <passionMajorPerCent>15</passionMajorPerCent>
+    <!--
+      Starting skill levels (U37), one independent roll per skill. INVENTED: there is no
+      RimWorld number to take (clean room) and nothing in docs/research or docs/design pins one.
+      Index is the level, value its weight out of the table's sum (100): weighted toward a low
+      baseline — a colonist's life before the crash was mostly not this particular trade — with a
+      thin tail so an occasional colonist starts competent rather than every one of five arriving
+      identical. Mean level 1.16; levels 6 and 7 combined are a 2% roll.
+    -->
+    <startingSkillLevelWeights>
+      <li>40</li>
+      <li>20</li>
+      <li>14</li>
+      <li>10</li>
+      <li>6</li>
+      <li>4</li>
+      <li>3</li>
+      <li>2</li>
+      <li>1</li>
+    </startingSkillLevelWeights>
   </PawnKindDef>
 
   <!--
