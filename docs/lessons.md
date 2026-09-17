@@ -1590,3 +1590,28 @@ reason rather than failing *or* trusting the reading. Two details make the probe
 delta, pooling proofs. Timings are fine; byte counts are not. `PathAllocationTests` carries the
 worked version, and the figures in `docs/adr/0005-simulation-architecture.md` are the CoreCLR ones,
 labelled as such.
+
+## The per-tick allocation budget flakes, and the first reaction is the wrong one
+
+**Seen 2026-09-17**, adding the edifice list to the save and the state hash.
+`PathAllocationTests.ATickThatDoesNothingAllocatesNextToNothing` failed with the colony at **24.6
+bytes a tick against a 16-byte budget** — a 50% overshoot, which looks nothing like noise and
+looks exactly like a change that started allocating. It was noise. The same tier then passed
+**19/19 three times running**, and the filtered test passed three times before that.
+
+**Why the reaction matters.** The obvious next move is to go hunting in the diff for a closure or
+a boxed struct, because that is what the failure message tells you to do and the message is right
+about the usual case. On a change that touches only `ISaveable` and `IStateHashable` — neither of
+which runs in a tick — that hunt is guaranteed to find nothing, and the temptation at the end of it
+is to widen the budget.
+
+**What to do instead, in order.** Re-run the tier two or three times *before* reading the diff: it
+costs ten seconds against a flake and ten seconds against a real regression. Then ask whether
+anything in the change is reachable from `SimWorld.Tick` at all — a component registered with
+`AddHashable` or added to `SaveComponents` is not. Only then go looking.
+
+**Do not widen the budget to make it stable.** The margin is the test: the measured figures are
+1.6 and 3.3 bytes, so 16 is already four times under the 64-byte delegate the test exists to
+forbid, and a budget raised to swallow a flake is a budget that swallows the next real one. If it
+starts flaking often, the window (5,000 ticks) is what to grow, not the threshold — a longer window
+averages the GC timing out rather than hiding what it is measuring.

@@ -39,6 +39,16 @@ namespace Odyssey.Hud
         /// material with it.</para>
         /// </summary>
         Build = 4,
+
+        /// <summary>
+        /// Pull one of our own buildings down, for half of what it cost.
+        ///
+        /// <para>Not the opposite of <see cref="Cancel"/> and deliberately a separate tool: cancel
+        /// removes an order that has not happened yet, and this orders work on something that is
+        /// already standing. One rubber for both would mean a drag that went a row too far could
+        /// demolish a colony.</para>
+        /// </summary>
+        Deconstruct = 5,
     }
 
     /// <summary>

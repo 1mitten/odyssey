@@ -714,8 +714,14 @@ namespace Odyssey.Presentation.Bootstrap
                 CellRef cell = size.FromIndex(orders[i].CellIndex);
                 if (cell.Y < lowest || cell.Y > highest) continue;
 
-                Color tint = orders[i].Kind == (byte)DesignationKind.Mine ? MineOrderColour : FellOrderColour;
-                _renderer.DrawCellMark(cell, tint);
+                var kind = (DesignationKind)orders[i].Kind;
+                Color tint = OrderColour(kind);
+
+                // A wall fills its cell, so the floor plate every other order gets would be drawn
+                // inside the very thing it is marking. See ChunkRenderer.DrawCellShade — this is
+                // the fault the owner reported as "deconstruct has no visual marker".
+                if (kind == DesignationKind.Deconstruct) _renderer.DrawCellShade(cell, tint);
+                else _renderer.DrawCellMark(cell, tint);
 
                 if (orders[i].Progress > 0)
                     _renderer.DrawCellCut(cell, orders[i].Progress / 255f, CutColour);
@@ -847,11 +853,16 @@ namespace Odyssey.Presentation.Bootstrap
             DesignateDirector director = _designate.Director;
             if (!director.TryPreview(out CellRef min, out CellRef max)) return;
 
+            // Deconstruct is named rather than left to fall through. It fell through to the cancel
+            // red, which happens to be the right hue and was still wrong: the cursor said "cancel"
+            // while the player was demolishing, and tuning the cancel colour would have silently
+            // re-tinted it.
             Color tint = director.Tool switch
             {
                 DesignateTool.Build => PreviewBuildColour,
                 DesignateTool.Mine => MineOrderColour,
                 DesignateTool.Fell => FellOrderColour,
+                DesignateTool.Deconstruct => DeconstructOrderColour,
                 _ => PreviewCancelColour,
             };
 
@@ -916,6 +927,37 @@ namespace Odyssey.Presentation.Bootstrap
 
         /// <summary>Marks a tree ordered felled.</summary>
         static readonly Color FellOrderColour = new Color(0.55f, 0.85f, 0.45f, 0.42f);
+
+        /// <summary>
+        /// Marks a building ordered taken apart. Red, which the owner asked for by name and which
+        /// is right for the reason they asked: it is the only standing order that <b>destroys
+        /// something that already exists</b>. Mining and felling take from the world as it was
+        /// found; this takes from what the colony has made.
+        ///
+        /// <para>Deliberately its own constant rather than a reuse of
+        /// <see cref="PreviewCancelColour"/>, although both are red. That one is a cursor following
+        /// the pointer and this one is paint on the board, so they want different alpha — and
+        /// sharing a constant would mean tuning the cursor silently re-tinted every marked wall in
+        /// the colony.</para>
+        /// </summary>
+        static readonly Color DeconstructOrderColour = new Color(0.93f, 0.31f, 0.27f, 0.38f);
+
+        /// <summary>
+        /// What colour a standing order is drawn in.
+        ///
+        /// <para><b>Total over the enum, and that is the point.</b> This was a two-branch ternary —
+        /// <c>Kind == Mine ? mine : fell</c> — answering a three-kind question, so a deconstruct
+        /// order was drawn in the felling green. Exactly the shape of the fault that made a palette
+        /// chip arm a tool and never light, and it will be the shape of the next one unless the
+        /// mapping is total. <c>OrderColoursTests</c> walks every <c>DesignationKind</c>.</para>
+        /// </summary>
+        public static Color OrderColour(DesignationKind kind) => kind switch
+        {
+            DesignationKind.Mine => MineOrderColour,
+            DesignationKind.Fell => FellOrderColour,
+            DesignationKind.Deconstruct => DeconstructOrderColour,
+            _ => BuildOrderColour,
+        };
 
         /// <summary>
         /// Marks a cell ordered built. The interface accent rather than a third warm hue, because

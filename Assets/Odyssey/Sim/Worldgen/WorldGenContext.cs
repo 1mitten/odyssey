@@ -116,6 +116,25 @@ namespace Odyssey.Sim.Worldgen
         public ushort Def;
         public ushort Stuff;
 
+        /// <summary>
+        /// Ours: a colonist raised this, rather than the generator stamping it.
+        ///
+        /// <para><b>Nothing downstream could tell before this field.</b> That is deliberate and
+        /// stated in <c>ConstructionGrid.Raise</c> — a wall a colonist built and a wall the
+        /// generator stamped are the same record on purpose, so the mesher, the picker and the
+        /// solver have one thing to understand. But *deconstruct* is the one operation where the
+        /// difference is the whole rule: the colony may take its own buildings apart, while the
+        /// ruined city is Reclaim's and Salvage's to strip, with their own yields
+        /// (<c>docs/design/16-cancel-and-deconstruct.md</c> §3).</para>
+        ///
+        /// <para><b>A flag rather than a proxy.</b> Our materials are the buildable ones and the
+        /// city's are not, so <c>StuffDef.IsBuildable</c> would have answered this today for free —
+        /// and would have quietly started including city walls the day a salvage line gave steel an
+        /// item. This is also exactly the bit Reclaim flips when it lands: adopting a ruin is
+        /// making it ours.</para>
+        /// </summary>
+        public bool Built;
+
         /// <summary>Set when the damage pass knocks it out. The slot is kept so handles are stable.</summary>
         public bool Removed;
     }
