@@ -200,6 +200,176 @@ namespace Odyssey.Tests.Presentation
             Assert.That(Instances(batch.Body), Is.EqualTo(0));
         }
 
+        /// <summary>
+        /// How far apart two drawn corners may be and still count as the same corner, in metres.
+        ///
+        /// Second order in the relief and nothing else: neighbouring pieces are tangent planes of
+        /// one smooth field, so they part company at a shared corner by roughly
+        /// <c>(A/2) * (2*pi*cell/P)^2</c> — about 11 mm at the board's amplitude and period. Twenty
+        /// millimetres leaves room for that and for float, and is a long way below the 73 mm the
+        /// first-order slope used to open up.
+        /// </summary>
+        const float SeamTolerance = 0.02f;
+
+        /// <summary>One drawn corner: where it ended up, and whether it is a head or a foot.</summary>
+        readonly struct DrawnCorner
+        {
+            public DrawnCorner(Vector3 at, bool head) { At = at; Head = head; }
+            public readonly Vector3 At;
+            public readonly bool Head;
+        }
+
+        /// <summary>Every world corner of every instance in a bucket list.</summary>
+        static List<DrawnCorner> Corners(List<InstanceBucket> buckets)
+        {
+            var points = new List<DrawnCorner>();
+            foreach (InstanceBucket bucket in buckets)
+            for (int i = 0; i < bucket.Count; i++)
+            {
+                Matrix4x4 m = bucket.Matrices[i];
+                // Without a catalogue every module is its fallback primitive, so the bucket matrix
+                // already carries the piece's own size and offset and the corners to walk are the
+                // unit cube's — the same assumption TheChunkBoxContainsEveryCornerOfEveryShearedCell
+                // rests on.
+                for (int corner = 0; corner < 8; corner++)
+                {
+                    bool head = (corner & 2) != 0;
+                    points.Add(new DrawnCorner(m.MultiplyPoint3x4(new Vector3(
+                        (corner & 1) == 0 ? -0.5f : 0.5f,
+                        head ? 0.5f : -0.5f,
+                        (corner & 4) == 0 ? -0.5f : 0.5f)), head));
+                }
+            }
+
+            return points;
+        }
+
+        /// <summary>
+        /// The worst disagreement in height between two drawn corners that stand over the same
+        /// point of the board and are the same end of their piece.
+        ///
+        /// This is the whole of "flush", measured: two pieces of one wall meet along a vertical
+        /// edge, and if their heads do not arrive at the same height the join is a step.
+        ///
+        /// <para>Head is compared with head and foot with foot, and leaving that out is how this
+        /// test first failed: a floor slab is 0.15 m thick, so its own head and its own foot stand
+        /// over the same point of the board and are supposed to differ. A wall panel hid the
+        /// mistake because its two ends are three metres apart.</para>
+        /// </summary>
+        static float WorstSeamGap(List<DrawnCorner> corners)
+        {
+            var worst = 0f;
+            for (int i = 0; i < corners.Count; i++)
+            for (int j = i + 1; j < corners.Count; j++)
+            {
+                DrawnCorner a = corners[i], b = corners[j];
+                if (a.Head != b.Head) continue;
+                if (Mathf.Abs(a.At.x - b.At.x) > 1e-3f || Mathf.Abs(a.At.z - b.At.z) > 1e-3f) continue;
+                worst = Mathf.Max(worst, Mathf.Abs(a.At.y - b.At.y));
+            }
+
+            return worst;
+        }
+
+        /// <summary>
+        /// A run of wall must arrive at each join at one height.
+        ///
+        /// <para>This is the owner's report of 2026-09-17 — the first wall the colony ever
+        /// finished went up stepped, a notch at every cell boundary and at every corner — written
+        /// as arithmetic. The cause was that each panel took a single height from its own centre
+        /// while the ground it stood on rolled underneath: on a field of amplitude 2 m and period
+        /// 150 m, two points 2.5 m apart differ by 73 mm on average and by 220 mm at the worst of
+        /// it. Draping each panel onto the field's tangent plane instead leaves only the
+        /// curvature: measured at these cells, 147 mm of step becomes 1.1 mm.</para>
+        /// </summary>
+        [Test]
+        public void AWallRunMeetsItselfAtOneHeightOnRollingGround()
+        {
+            GroundRelief.Reset();
+            GroundRelief.Amplitude = GroundRelief.BoardAmplitude;
+            try
+            {
+                var world = new RenderTestWorld(12, 12, 3);
+                for (int x = 2; x <= 9; x++) world.Edifice(x, 4, 1, CoreContent.EdificeWall);
+                for (int z = 5; z <= 9; z++) world.Edifice(9, z, 1, CoreContent.EdificeWall);
+                world.Publish();
+
+                ChunkBatch batch = MeshLayer(world, 1);
+                Assert.That(Instances(batch.Body), Is.GreaterThan(0), "there is a wall to check");
+
+                Assert.That(WorstSeamGap(Corners(batch.Body)), Is.LessThan(SeamTolerance),
+                    "two panels sharing a vertical edge must arrive at the same height");
+            }
+            finally
+            {
+                GroundRelief.Reset();
+            }
+        }
+
+        /// <summary>
+        /// And a floor laid across rolling ground must not step either — the same fault, one
+        /// surface down, and the one a player walks over rather than looks at.
+        /// </summary>
+        [Test]
+        public void AFloorMeetsItselfAtOneHeightOnRollingGround()
+        {
+            GroundRelief.Reset();
+            GroundRelief.Amplitude = GroundRelief.BoardAmplitude;
+            try
+            {
+                var world = new RenderTestWorld(12, 12, 3);
+                for (int x = 2; x <= 8; x++)
+                for (int z = 2; z <= 8; z++)
+                    world.Slab(x, z, 1);
+                world.Publish();
+
+                ChunkBatch batch = MeshLayer(world, 1);
+                Assert.That(Instances(batch.Roof), Is.GreaterThan(0), "there is a floor to check");
+
+                Assert.That(WorstSeamGap(Corners(batch.Roof)), Is.LessThan(SeamTolerance),
+                    "two slabs sharing an edge must arrive at the same height");
+            }
+            finally
+            {
+                GroundRelief.Reset();
+            }
+        }
+
+        /// <summary>
+        /// A shear and not a rotation: the wall must stay three metres tall and stand up straight
+        /// however steep the ground under it, or "flush" has been bought by leaning the building
+        /// over.
+        /// </summary>
+        [Test]
+        public void ADrapedWallStaysVerticalAndFullHeight()
+        {
+            GroundRelief.Reset();
+            GroundRelief.Amplitude = GroundRelief.BoardAmplitude;
+            try
+            {
+                var world = new RenderTestWorld(12, 12, 3);
+                for (int x = 2; x <= 9; x++) world.Edifice(x, 4, 1, CoreContent.EdificeWall);
+                world.Publish();
+
+                ChunkBatch batch = MeshLayer(world, 1);
+
+                foreach (InstanceBucket bucket in batch.Body)
+                for (int i = 0; i < bucket.Count; i++)
+                {
+                    Matrix4x4 m = bucket.Matrices[i];
+                    Vector3 up = m.MultiplyVector(Vector3.up);
+                    Assert.That(up.x, Is.EqualTo(0f).Within(1e-4f), "a panel's height is plumb in x");
+                    Assert.That(up.z, Is.EqualTo(0f).Within(1e-4f), "a panel's height is plumb in z");
+                    Assert.That(up.y, Is.EqualTo(CellMetrics.SizeY).Within(1e-3f),
+                        "a panel is a full layer tall wherever it stands");
+                }
+            }
+            finally
+            {
+                GroundRelief.Reset();
+            }
+        }
+
         [Test]
         public void RemeshingAChunkReusesItsBucketsAndDoesNotAccumulate()
         {

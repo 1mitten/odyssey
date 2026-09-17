@@ -1182,3 +1182,42 @@ work itself.
   - **Verified:** fast tier **455 Sim + 117 Hud**, Long tier **15**. Every control run and
     restored. **Not verified locally:** the Unity tier, which is where the cross-runtime half of
     this gate actually gets tested — one committed number that satisfies both CoreCLR and Mono.
+
+
+- **Walls went up stepped, and the fault was not building's (branch `claude/build-pipeline`,
+  2026-09-17).** The owner pressed Play, ordered a room, and the colony built it — which settles
+  §8's unreproduced report: the composition fix was the whole of it. But the finished wall was
+  **not flush**: every panel sat a few centimetres above or below its neighbour, a notch at each
+  cell join and at each corner. Three screenshots, and the cropped one is unambiguous — the outer
+  faces are coplanar, the top edge steps vertically at exactly the cell pitch, no depth offset.
+  - **Nothing about the build pipeline was wrong.** The fault was in `ChunkMesher` and was older
+    than this line: a wall panel was placed with `GroundRelief.Lift`, which takes *one height from
+    one point*. Two panels of one run stand 2.5 m apart on a drawn field of amplitude 2 m and
+    period 150 m, so they differ by the field's slope across a whole cell. **Measured over the
+    board: 73 mm on average, 220 mm at the worst, against a 3 m wall.** At the cells the new test
+    uses, 147 mm.
+  - **The fix is the operation the ground already used.** `GroundRelief.Drape` shears the piece
+    onto the tangent plane of the field at its own centre, so two neighbours are tangent planes of
+    one smooth surface and part company only by its *curvature* — second order. **The same seam
+    measures 1.1 mm.** The shear leaves vertical edges vertical (determinant one, Y sheared by x
+    and z), so the wall stays plumb and a full 3 m tall; only its head and foot rake with the
+    ground, which is what a wall built along a slope does. With relief off, `Drape` is exactly a
+    translate, so the flat board draws byte-identically and no contact sheet moves.
+  - **`EmitWater` had already written the whole argument down**, having got it wrong twice — a
+    lifted tile takes its height from its own centre and neighbours open slivers you can see the
+    riverbed through. The built world was not reading it. The general rule now sits in
+    `ChunkMesher`'s class comment: **anything fixed to the grid is draped; only what moves over it
+    is lifted.** Floors, walls, doors, stairs, ladders, pillars and cell-filling edifices are
+    draped; grass tufts, dropped items, figures and cursors stay lifted, because they stand at a
+    point and share an edge with nothing. `EmitFloor`'s old comment — "a built floor is man-made
+    and stays flat" — was the reasoning that produced the bug: staying flat is exactly what opens
+    the seam.
+  - **What made this quick was refusing to read code for it.** The relief field was re-implemented
+    in twenty lines of Python and the step measured before a line of C# was touched, then measured
+    again after. A fix whose before-and-after numbers are 147 mm and 1.1 mm needs no screenshot to
+    be believed — though it still wants one, because nobody has pressed Play on it.
+  - **Guards:** `ChunkMesherTests.AWallRunMeetsItselfAtOneHeightOnRollingGround` and
+    `.AFloorMeetsItselfAtOneHeightOnRollingGround` walk every drawn corner, pair the ones standing
+    over the same point of the board, and hold their disagreement under 20 mm — which the old code
+    misses by sevenfold. `.ADrapedWallStaysVerticalAndFullHeight` stops the next person buying
+    flushness by leaning the building over.

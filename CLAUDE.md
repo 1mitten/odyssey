@@ -78,9 +78,14 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   building landed 2026-09-17** — a wall can be ordered from the Build palette in wood or
   stone, and colonists carry the material and raise it. Design, the test procedure and what
   is still open are `docs/design/15-building.md`; **read that before touching this line.**
-  It is on `claude/build-pipeline` (PR #63), not yet merged, and the owner reports walls are
-  still not going up in the running game — **unreproduced**, and the rejection log added the
-  same day exists to settle it on the next run rather than by a fourth round of inference.
+  It is on `claude/build-pipeline` (PR #63), not yet merged. **Walls do go up** — the owner
+  played it on 2026-09-17, so the earlier report of silent refusal was the composition fault and
+  is closed. They went up **stepped**, which was not building's fault at all: `ChunkMesher`
+  lifted every panel to one height taken at one point, so neighbours in a run differed by the
+  drawn relief's slope across a cell (73 mm typical, 220 mm worst, against a 3 m wall). They are
+  draped now, like the ground, the banks and the water, and the same seam measures 1.1 mm. **The
+  rule that came out of it: anything fixed to the grid is draped; only what moves over it is
+  lifted.** Nobody has pressed Play on the fix.
 - **Work reaches `main` only through a pull request** with both tiers green, one approving review
   and the branch up to date. Branch protection enforces it, agents included. There is no long-lived
   feature branch — `claude/*` branches are per-change and short-lived.

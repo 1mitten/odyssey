@@ -182,14 +182,44 @@ forgetting is not expressible. The standing guard is
 it is bounds-checked — so every builder and every porter in the game displayed as **idle**. Not a
 compile error; a silent lie. `RegistryTests` holds the table's length to `JobHandle.Count` now.
 
+**And a third, once walls finally went up: they went up stepped** (owner's screenshots, 2026-09-17).
+Every panel of a finished wall sat a few centimetres above or below its neighbour, with a notch at
+each cell join and at each corner. Nothing about building was wrong — the fault was a year older
+than this line and belonged to the drawn ground.
+
+`ChunkMesher` placed a wall panel with `GroundRelief.Lift`, which takes one height from one point.
+Two panels in a run stand 2.5 m apart on a field of amplitude 2 m and period 150 m, so their
+heights differ by the field's slope across a whole cell: **73 mm on average over this board and
+220 mm at the worst of it**, measured, against a 3 m wall. Floors, doors, ladders, stairs and
+pillars were placed the same way and had the same fault waiting.
+
+The fix is `GroundRelief.Drape`, which the ground, the banks and the water already used: the piece
+is sheared onto the tangent plane of the field at its own centre, so two neighbours are tangent
+planes of one smooth surface and part company only by its curvature — **1.1 mm where the step had
+been 147 mm**, on the same cells. The shear leaves vertical edges vertical, so a wall stays plumb
+and a full 3 m tall; only its head and its foot rake with the ground, which is what a wall built
+along a slope does.
+
+**The rule, and it is the general one:** *anything fixed to the grid is draped; only what moves over
+it is lifted.* A tuft, a dropped log, a colonist and a cursor stand at a point and share an edge
+with nothing, so a lift is right for them. Anything that fills a cell or a face abuts an identical
+neighbour, and a lift cannot close that seam. `EmitWater` had already made this argument in full,
+having got it wrong twice; the built world was not reading it.
+
+The guards are `ChunkMesherTests.AWallRunMeetsItselfAtOneHeightOnRollingGround`,
+`.AFloorMeetsItselfAtOneHeightOnRollingGround` — which walk every drawn corner, pair the ones
+standing over the same point of the board and hold their disagreement under 20 mm — and
+`.ADrapedWallStaysVerticalAndFullHeight`, so flushness can never be bought by leaning the building
+over.
+
 ## 8. Open
 
-### The reported fault, unreproduced
+### The reported fault, now reproduced and gone
 
-The owner reports that walls are still not being built after the composition fix (2026-09-17).
-Nothing in the headless suite reproduces it. **The rejection log of §6 exists precisely to settle
-this on the next run** rather than by a fourth round of inference. Until there is a line from a real
-session, any diagnosis is a guess — and reading the code has been wrong every time on this project.
+The owner reported walls still not going up after the composition fix. On the next run they went up
+(screenshots, 2026-09-17), so the composition fix was the whole of it and the rejection log of §6
+was never needed to settle it. It stays, because it costs nothing and the next silent refusal will
+want it.
 
 ### Forced orders and the context menu — the next piece
 
@@ -237,6 +267,46 @@ What it will need, in the order it should be built:
   releases its reservation, like any other job.
 - *By hand:* order two walls, one across the board, right-click the far one with a colonist selected,
   and watch them walk past the near one.
+
+### A wall is hollow and open-topped, and the owner has asked why
+
+Raised by the owner on 2026-09-17, looking at the first finished room. A wall cell is drawn as a
+**panel on each exposed face** — that is what stops a one-cell wall reading as a 2.5 m slab, and it
+is deliberate (`ChunkMesher`'s class comment). But a straight run puts two panels 2.5 m apart with
+**2.25 m of nothing between them and nothing over them**, so from a high camera every wall has a
+black slot down its middle, and a slice or an x-ray looks straight into it.
+
+The owner's questions were three, and they separate:
+
+1. **"Colonists always build from the outside so they don't get stuck."** Already true, and not a
+   drawing question: both `DeliverWorkGiver` and `BuildWorkGiver` pick their stand cell with
+   `FellJobDriver.StandBeside`, and the comment at the delivery site says why in as many words — the
+   site is walkable right up to the moment the wall goes up in it, so standing *in* it would work
+   for the delivery and be exactly wrong for the build that follows. Nothing to do.
+2. **"Eventually build electricity through it."** A conduit in a wall is a second thing in the same
+   cell, which is a simulation question about what a cell can hold, not about how the wall is drawn.
+   Neither option below helps or hinders it.
+3. **"Is it worth making the wall half the size of the cell and making it like a block?"** This is
+   the real question, and it is two questions wearing one coat: *should the cell be filled* and
+   *how thick should a wall look*.
+
+**Fill it, and leave the thickness alone for now.** Keep the panels on the exposed faces, because
+that is where the kit's art is — plaster outside, brick inside — and add two plain stuff-tinted
+boxes: a **cap** across the top of the cell and a **core** filling between the panels. From outside
+the wall is identical to today; from above it has a top; in a cut-away it is solid. No new art, no
+new module ids, no orientation logic, and it is presentation-only, so nothing enters a cell, a save
+or the hash. **A wall already occupies the full 2.5 m of its cell as drawn**, so a cap changes
+nothing about how thick a wall *reads* — it only removes the slot.
+
+**The half-cell wall is a bigger change and should wait for an eye on the capped one.** It buys a
+wall that reads as a wall rather than as a rampart, and it costs: a per-cell run direction (which
+the earth blocks already solve — `GroundMesh.CanonicalExposure` turns all sixteen neighbour
+patterns into five meshes and a rotation, and a wall junction is the same problem), meshes for the
+straight, the corner and the tee, and a decision about the 0.6 m of bare cell it would leave on
+each side, which today's floor slab does not cover because the floor stops at the cell boundary.
+**The cheapest experiment that settles it is the cap:** build it, look at a room, and say whether a
+2.5 m wall is a fortress or just a wall. If it is a fortress, the half-cell block is the answer and
+the core is the only work thrown away.
 
 ### Also open
 

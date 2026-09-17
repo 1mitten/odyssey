@@ -24,6 +24,14 @@ namespace Odyssey.Presentation.Rendering
     ///   would read as an airlock.
     /// - **Stairs climb.** The lower half sits on the floor, the upper half 1.5 m up, both facing
     ///   the direction of travel — which is the kit's native geometry (<c>e-01</c>).
+    /// - **Everything fixed to the grid is draped; only what moves over it is lifted.** A lift
+    ///   takes a single height from a single point, so two neighbouring pieces of one wall or one
+    ///   floor sit at heights differing by the relief's slope across a whole cell and the seam
+    ///   between them steps. A drape is the tangent plane of the same field, so neighbours
+    ///   disagree only by its curvature — second order, about 11 mm — and the seam closes. Ground,
+    ///   banks, water, floors, walls, doors, stairs, ladders and pillars are therefore all draped;
+    ///   grass tufts, dropped items, figures and cursors are lifted, because they stand at a point
+    ///   and share no edge with anything.
     /// </summary>
     public sealed class ChunkMesher
     {
@@ -487,10 +495,10 @@ namespace Odyssey.Presentation.Rendering
             if (_model.IsSolid(index)) return; // a slab inside rock is not visible
             int module = _model.FloorModule(index);
             if (module == 0) return;
-            // A built floor is man-made and stays flat; it is lifted onto the ground, not laid
-            // along it. Only terrain is draped.
+            // Draped, like every other thing that fills a cell - see EmitFacePanels for why a
+            // lift cannot close a seam, and EmitWater for the same argument made about tiles.
             AddRoof(batch, module, TintCode.Stuff(_model.FloorStuff(index)),
-                Matrix4x4.Translate(GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y))));
+                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)));
         }
 
         void EmitEdifice(ChunkBatch batch, int index, int x, int z, int y)
@@ -518,20 +526,43 @@ namespace Odyssey.Presentation.Rendering
                 case CoreContent.EdificePillar:
                 case CoreContent.EdificeUtilityTap:
                     AddBody(batch, module, tint,
-                        Matrix4x4.Translate(GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y))));
+                        GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)));
                     return;
             }
 
             if (shape != ModuleShape.WallPanel)
             {
                 AddBody(batch, module, tint,
-                    Matrix4x4.Translate(GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y))));
+                    GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)));
                 return;
             }
 
             EmitFacePanels(batch, module, tint, index, x, z, y);
         }
 
+        /// <summary>
+        /// A panel on every face of this cell that something can be seen through.
+        ///
+        /// <para><b>Draped, not lifted, and this is what a built wall lives or dies by.</b> A
+        /// lifted panel is flat and takes its height from its own centre, so two panels in a run
+        /// sit at heights that differ by the relief's slope across a whole cell - 73 mm on
+        /// average over this board and 220 mm at the worst of it, against a 3 m wall. That is a
+        /// visible step at every cell join and a notch at every corner, which is exactly what a
+        /// finished wall looked like the first time one went up (owner, 2026-09-17).
+        ///
+        /// A draped panel is sheared onto the tangent plane of the field at its own centre, so
+        /// two panels are tangent planes of one smooth surface and part company at the vertical
+        /// edge they share only by the field's curvature over a cell - about 11 mm, second order,
+        /// and invisible. The shear leaves vertical edges vertical, so the wall does not lean and
+        /// stays a full 3 m everywhere; only its head and its foot rake with the ground, which is
+        /// what a wall built along a slope does. It is the same argument <see cref="EmitWater"/>
+        /// makes about tiles, and it was already the right one there.
+        ///
+        /// The drape is taken at the *face's* own centre rather than the cell's, for the reason
+        /// the lift was: half a cell along a slope is enough for a panel and the cell it belongs
+        /// to to disagree. And it composes on the left of the yaw, so the panel is turned in its
+        /// own space and then sheared in the world's - the order <see cref="EmitBank"/> uses.</para>
+        /// </summary>
         void EmitFacePanels(ChunkBatch batch, int module, int tint, int index, int x, int z, int y)
         {
             var size = _model.Size;
@@ -539,22 +570,18 @@ namespace Odyssey.Presentation.Rendering
             {
                 int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
                 if (size.Contains(nx, nz, y) && _model.OccludesFace(size.Index(nx, nz, y))) continue;
-                // Lifted at the face's own centre, not the cell's. Half a cell along a slope is
-                // enough for a panel and the wall it belongs to to visibly disagree.
-                AddBody(batch, module, tint, Matrix4x4.TRS(
-                    GroundRelief.Lift(CellMetrics.FaceCentre(x, z, y, dir)),
-                    Quaternion.Euler(0f, Directions.Yaw[dir], 0f),
-                    Vector3.one));
+                AddBody(batch, module, tint,
+                    GroundRelief.Drape(CellMetrics.FaceCentre(x, z, y, dir)) *
+                    Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f)));
             }
         }
 
         void EmitDoor(ChunkBatch batch, int module, int tint, int index, int x, int z, int y)
         {
             int dir = FirstOpenDirection(x, z, y);
-            AddBody(batch, module, tint, Matrix4x4.TRS(
-                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)),
-                Quaternion.Euler(0f, Directions.Yaw[dir], 0f),
-                Vector3.one));
+            AddBody(batch, module, tint,
+                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
+                Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f)));
         }
 
         void EmitStair(ChunkBatch batch, int module, int tint, ushort def, int x, int z, int y)
@@ -569,20 +596,18 @@ namespace Odyssey.Presentation.Rendering
             int climb = def == CoreContent.EdificeStairLower ? dir : Directions.Opposite(dir);
             float rise = def == CoreContent.EdificeStairLower ? 0f : CellMetrics.SizeY * 0.5f;
 
-            AddBody(batch, module, tint, Matrix4x4.TRS(
-                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)) + Vector3.up * rise,
-                Quaternion.Euler(0f, Directions.Yaw[climb], 0f),
-                Vector3.one));
+            AddBody(batch, module, tint,
+                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y) + Vector3.up * rise) *
+                Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[climb], 0f)));
         }
 
         void EmitLadder(ChunkBatch batch, int module, int tint, int index, int x, int z, int y)
         {
             int wall = FirstOccludingDirection(x, z, y);
             int facing = wall >= 0 ? Directions.Opposite(wall) : Directions.North;
-            AddBody(batch, module, tint, Matrix4x4.TRS(
-                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)),
-                Quaternion.Euler(0f, Directions.Yaw[facing], 0f),
-                Vector3.one));
+            AddBody(batch, module, tint,
+                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
+                Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[facing], 0f)));
         }
 
         int FirstOpenDirection(int x, int z, int y)
