@@ -146,7 +146,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#colonists">Colonists<b>32</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>37</b></a></li>
-<li><a href="#world">World and interface<b>67</b></a></li>
+<li><a href="#world">World and interface<b>76</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>29</b></a></li>
 </ul></nav>
 <main>
@@ -155,9 +155,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>426</b><i>named entries</i></div>
+<div class="stat"><b>435</b><i>named entries</i></div>
 <div class="stat"><b>265</b><i>with icon art</i></div>
-<div class="stat m"><b>161</b><i>no art yet</i></div>
+<div class="stat m"><b>170</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -2295,7 +2295,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">67 entries</em></h2>
+<h2>World and interface <em class="count">76 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -2726,6 +2726,60 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.settings.audio" data-hay="audio ui.settings.audio how loud each part of the game is. stored on the machine, in decibels " data-gap="1">
+<div class="nm">Audio<span class="k">ui.settings.audio</span></div>
+<div class="dsc">How loud each part of the game is. Stored on the machine, in decibels</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.camspeed" data-hay="camera speed ui.settings.camspeed how fast the camera pans and zooms, as a share of its tuned speed " data-gap="1">
+<div class="nm">Camera speed<span class="k">ui.settings.camspeed</span></div>
+<div class="dsc">How fast the camera pans and zooms, as a share of its tuned speed</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.developer" data-hay="developer overlay ui.settings.developer the frame-time and draw-call readout, kept on the machine between sessions " data-gap="1">
+<div class="nm">Developer overlay<span class="k">ui.settings.developer</span></div>
+<div class="dsc">The frame-time and draw-call readout, kept on the machine between sessions</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.exit" data-hay="exit game ui.settings.exit leave. nothing is saved yet, so the row asks before it goes " data-gap="1">
+<div class="nm">Exit game<span class="k">ui.settings.exit</span></div>
+<div class="dsc">Leave. Nothing is saved yet, so the row asks before it goes</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.volume.master" data-hay="master volume ui.settings.volume.master everything at once " data-gap="1">
+<div class="nm">Master volume<span class="k">ui.settings.volume.master</span></div>
+<div class="dsc">Everything at once</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.volume.music" data-hay="music volume ui.settings.volume.music what plays under the game " data-gap="1">
+<div class="nm">Music volume<span class="k">ui.settings.volume.music</span></div>
+<div class="dsc">What plays under the game</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.volume.ambience" data-hay="ambience volume ui.settings.volume.ambience the sound of the place itself " data-gap="1">
+<div class="nm">Ambience volume<span class="k">ui.settings.volume.ambience</span></div>
+<div class="dsc">The sound of the place itself</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.volume.effects" data-hay="effects volume ui.settings.volume.effects axes, picks and the noises of work " data-gap="1">
+<div class="nm">Effects volume<span class="k">ui.settings.volume.effects</span></div>
+<div class="dsc">Axes, picks and the noises of work</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.settings.volume.alerts" data-hay="alerts volume ui.settings.volume.alerts what asks for attention " data-gap="1">
+<div class="nm">Alerts volume<span class="k">ui.settings.volume.alerts</span></div>
+<div class="dsc">What asks for attention</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 </div>
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
@@ -2915,7 +2969,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 426, "gaps": 161};</script>
+<script>window.WIKI={"total": 435, "gaps": 170};</script>
 <script>
 (function(){
   var D = window.WIKI;
