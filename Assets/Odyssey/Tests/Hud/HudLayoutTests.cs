@@ -107,6 +107,14 @@ namespace Odyssey.Tests.Hud
             Assert.That(HudLayout.StartNewGameHeight,
                 Is.LessThanOrEqualTo(HudLayout.StartListMax),
                 "the New game screen does not fit the region the load list already fits in");
+
+            // The colonist screen (U40) is much the fullest thing this box has had to hold — a
+            // caption, three cards and two rows — so this is where the fixed box is actually
+            // tested rather than merely respected.
+            Assert.That(HudLayout.ColonistScreenHeight,
+                Is.LessThanOrEqualTo(HudLayout.StartListMax),
+                "three colonist cards do not fit the fixed body, so the panel would have to grow " +
+                "and every row would move under the pointer on the way in");
         }
 
         [Test]

@@ -284,6 +284,7 @@ namespace Odyssey.Hud
             { "ui.need.outdoors", "Outdoors" },
             { "ui.need.rest", "Rest" },
             { "ui.need.space", "Space" },
+            { "ui.newgame.next", "Next" },
             { "ui.newgame.reroll", "Reroll" },
             { "ui.newgame.seed", "Seed" },
             { "ui.newgame.start", "Start" },

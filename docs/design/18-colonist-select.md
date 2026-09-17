@@ -166,6 +166,37 @@ same reason.
 
 ---
 
+## 6a. What building it changed about the design above
+
+Written after the code, marked in place rather than folded in, because the wrong version is the
+useful record.
+
+- **The card had to be rolled for the slot it will occupy**, and §4 said so without the seam
+  obeying it: `ColonistSelect` took a `Func<uint, Candidate>` with no slot in it, so every card was
+  rolled as slot 0. Both draws mix the pawn's id in, so two of the three cards would have shown the
+  right name and **the wrong skills**, and the player would have found out after pressing Start.
+  Caught by reading rather than by failing — nothing in the fast tier could have noticed, which is
+  why `EachCardIsRolledForTheSlotItWillOccupy` exists now.
+- **A name could not simply move from the id to the seed.** §2 decision 2 says the name follows the
+  roll, and taken literally that is a hash of the seed — under which **two of five colonists share a
+  name more often than not**, because every colonist a world places itself shares that world's seed
+  and the pool holds eight. The seed chooses where in the pool the colony starts reading and the id
+  says how far along, which keeps the distinctness the id-only scheme gave for free. On the select
+  screen the three carry three different seeds and *can* collide, so `ColonistSelect` draws again —
+  a promise about a screen of three rather than about a name.
+- **Three cards did not fit the fixed box** at a line per skill: 296 against the body's 284. That is
+  §11.4a's own prediction coming true, and the answer was not to grow the box but to put both
+  skills on one line — which is how §5's sketch drew them anyway, and which reads as one fact about
+  a person rather than two. 242 with room to spare.
+- **`PawnContext.Seed` was not populated when placement runs.** It is set by `Sync`, which happens
+  on the first tick; placement is before that. The first version of the seam therefore rolled every
+  colony in the game from **seed zero**, whatever board it was on, and `StartingSkillsTests` caught
+  it as "two different seeds rolled identical starting skills". The context learns the seed at build
+  now — a latent trap closed rather than a U40 bug fixed, since anything else reading `ctx.Seed`
+  before the first tick had the same problem.
+
+---
+
 ## 7. Not in this unit
 
 - **Portraits** (`U41`), and the §4.5 carve-out that comes with them.

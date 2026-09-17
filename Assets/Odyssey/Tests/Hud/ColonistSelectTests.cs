@@ -25,7 +25,7 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>A roll that names somebody after their seed, so a test can read the screen.</summary>
-        static Candidate Named(uint seed) =>
+        static Candidate Named(uint seed, int slot) =>
             new Candidate(seed, "person-" + seed,
                 new[] { new CandidateSkill("ui.skill.mining", "Mining", (int)(seed % 20)) });
 
@@ -43,7 +43,7 @@ namespace Odyssey.Tests.Hud
         {
             ColonistSelect select = Dealt(1u, 2u, 3u);
 
-            Assert.That(select.Cards, Has.Count.EqualTo(ColonistSelect.Slots));
+            Assert.That(select.Cards.Count, Is.EqualTo(ColonistSelect.Slots));
             Assert.That(select.Cards[0].Seed, Is.EqualTo(1u));
             Assert.That(select.Cards[1].Seed, Is.EqualTo(2u));
             Assert.That(select.Cards[2].Seed, Is.EqualTo(3u));
@@ -58,6 +58,33 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(select.ChosenSeeds(), Is.EqualTo(new[] { 11u, 22u, 33u }),
                 "the colony would be built from people the player never saw");
+        }
+
+        /// <summary>
+        /// <b>Each card is rolled for the slot it will occupy.</b> Both draws behind a colonist mix
+        /// the pawn's id in and the id comes from the slot, so the same seed in slot 0 and slot 2 is
+        /// two different people. A screen that rolled every card as slot 0 would show the right
+        /// names and the wrong skills for two of the three, and the player would find out after
+        /// pressing Start.
+        ///
+        /// <para>Caught by reading rather than by failing, which is exactly why it is pinned here:
+        /// the seam took a seed and no slot, and nothing in this file could have noticed.</para>
+        /// </summary>
+        [Test]
+        public void EachCardIsRolledForTheSlotItWillOccupy()
+        {
+            var asked = new List<int>();
+            Candidate Recording(uint seed, int slot)
+            {
+                asked.Add(slot);
+                return new Candidate(seed, "person-" + slot, Array.Empty<CandidateSkill>());
+            }
+
+            var select = new ColonistSelect(Recording);
+            select.Deal(Deals(1u, 2u, 3u));
+
+            Assert.That(asked, Is.EqualTo(new[] { 0, 1, 2 }),
+                "the cards were not rolled for the slots they are drawn in");
         }
 
         // ------------------------------------------------------------------ locks and reroll
@@ -148,7 +175,7 @@ namespace Odyssey.Tests.Hud
         public void NoTwoCandidatesShareAName()
         {
             // A roll that insists on one name until the fourth seed it is handed.
-            Candidate Stubborn(uint seed) =>
+            Candidate Stubborn(uint seed, int slot) =>
                 new Candidate(seed, seed < 4u ? "Wrenn" : "Odile-" + seed, Array.Empty<CandidateSkill>());
 
             var select = new ColonistSelect(Stubborn);
@@ -167,12 +194,12 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void ARollThatOnlyEverAnswersOneNameStillFinishes()
         {
-            Candidate Always(uint seed) => new Candidate(seed, "Wrenn", Array.Empty<CandidateSkill>());
+            Candidate Always(uint seed, int slot) => new Candidate(seed, "Wrenn", Array.Empty<CandidateSkill>());
 
             var select = new ColonistSelect(Always);
             select.Deal(Deals(1u));
 
-            Assert.That(select.Cards, Has.Count.EqualTo(ColonistSelect.Slots));
+            Assert.That(select.Cards.Count, Is.EqualTo(ColonistSelect.Slots));
         }
 
         // ------------------------------------------------------------------ what it tells the screen

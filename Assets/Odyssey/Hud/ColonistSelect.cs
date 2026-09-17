@@ -94,13 +94,20 @@ namespace Odyssey.Hud
 
         readonly Candidate[] _cards = new Candidate[Slots];
         readonly bool[] _locked = new bool[Slots];
-        readonly Func<uint, Candidate> _roll;
+        readonly Func<uint, int, Candidate> _roll;
 
         /// <summary>
-        /// The seam the presenter fills and a test drives: given a seed, the candidate it produces.
-        /// Rolling needs <c>Odyssey.Sim</c>, which this assembly cannot see.
+        /// The seam the presenter fills and a test drives: given a seed <b>and the slot it will
+        /// occupy</b>, the candidate it produces. Rolling needs <c>Odyssey.Sim</c>, which this
+        /// assembly cannot see.
         /// </summary>
-        public ColonistSelect(Func<uint, Candidate> roll) =>
+        /// <remarks>
+        /// <b>The slot is not decoration.</b> Both draws behind a colonist mix the pawn's id in,
+        /// and the id comes from the slot — so the same seed in slot 0 and slot 2 is two different
+        /// people. A card rolled without it would show the right name and the wrong skills for two
+        /// of the three, and the player would only find out after pressing Start.
+        /// </remarks>
+        public ColonistSelect(Func<uint, int, Candidate> roll) =>
             _roll = roll ?? throw new ArgumentNullException(nameof(roll));
 
         /// <summary>The three, in the order they are drawn.</summary>
@@ -193,9 +200,9 @@ namespace Odyssey.Hud
         /// </summary>
         Candidate DrawUnused(Func<uint> seeds, int slot)
         {
-            Candidate drawn = _roll(seeds());
+            Candidate drawn = _roll(seeds(), slot);
             for (int attempt = 0; attempt < 8 && NameIsTaken(drawn.Name, slot); attempt++)
-                drawn = _roll(seeds());
+                drawn = _roll(seeds(), slot);
             return drawn;
         }
 

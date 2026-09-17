@@ -109,6 +109,11 @@ namespace Odyssey.Tests.Hud
             // The New game screen (U39), which introduces no colour of its own either.
             (".startscreen__seedcap", "color", () => HudTheme.TextMeta, "text meta"),
 
+            // The colonist screen (U40). Same two inks as a save row, for the same reason: a name
+            // over a line that tells it apart from the one beside it.
+            (".colonist__name", "color", () => HudTheme.TextPrimary, "text primary"),
+            (".colonist__skills", "color", () => HudTheme.TextMeta, "text meta"),
+
             // The naming prompt, and the project's first text field.
             (".field .unity-base-text-field__input", "color", () => HudTheme.TextPrimary, "text primary"),
             (".field .unity-base-text-field__input", "border-color", () => HudTheme.PanelBorder, "panel border"),
@@ -242,6 +247,8 @@ namespace Odyssey.Tests.Hud
             (".startscreen__back", "margin-top", () => HudLayout.StartRowGap, "start screen row gap"),
             (".startscreen__seedcap", "height", () => HudLayout.StartSeedCaption, "the seed's caption"),
             (".startscreen__seedrows", "margin-top", () => HudLayout.Gap, "the box to the rows under it"),
+            (".colonist", "height", () => HudLayout.ColonistCard, "a candidate's card"),
+            (".colonist", "margin-bottom", () => HudLayout.ColonistCardGap, "card gap"),
 
             (".prompt", "width", () => HudLayout.PromptWidth, "naming prompt width"),
             (".field", "height", () => HudLayout.FieldHeight, "a text field"),

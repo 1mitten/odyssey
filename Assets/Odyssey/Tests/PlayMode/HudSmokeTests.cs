@@ -184,7 +184,7 @@ namespace Odyssey.Tests.PlayMode
                 var doc = root.GetComponentInChildren<UIDocument>();
                 Label? title = doc!.rootVisualElement.Q<Label>(className: "inspect__title");
                 Assert.That(title, Is.Not.Null, "the inspect pane never built a header");
-                Assert.That(title!.text, Is.EqualTo(ColonistNames.Of(pawn)),
+                Assert.That(title!.text, Is.EqualTo(ColonistNames.Of(boot.World.Views.Current, pawn)),
                     "the pane does not show the selected colonist by name");
 
                 // A card click also takes the camera to the colonist: the rig glides to their

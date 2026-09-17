@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
 {
@@ -19,13 +20,26 @@ namespace Odyssey.Hud
         Load,
 
         /// <summary>
-        /// New game: the seed, a reroll, and the row that commits it (U39).
+        /// New game: the seed, a reroll, and the row that goes on to the colonists (U39).
         ///
         /// <para>The root's New game row lands here rather than building a world, which is the one
-        /// behaviour U38 shipped that this unit changes. A seed that is drawn, used and never shown
-        /// gives a world nobody can ask for twice.</para>
+        /// behaviour U38 shipped that U39 changed. A seed that is drawn, used and never shown gives
+        /// a world nobody can ask for twice.</para>
+        ///
+        /// <para>Its last row is <b>Next</b> rather than Start since U40: the three colonists come
+        /// after the board they will live on.</para>
         /// </summary>
         NewGame,
+
+        /// <summary>
+        /// The three people you take in, and the row that commits (U40).
+        ///
+        /// <para><b>A screen of its own rather than three more cards under the seed</b>, by the
+        /// owner's decision: the panel is a fixed box and it is centred, so a screen that grew to
+        /// hold them would move every row under the pointer on the way in. The cost is one more
+        /// click per new game and it was taken deliberately.</para>
+        /// </summary>
+        Colonists,
 
         /// <summary>
         /// The settings panel, standing in the start screen's place rather than on top of it.
@@ -39,6 +53,33 @@ namespace Odyssey.Hud
         /// already had.</para>
         /// </summary>
         Settings,
+    }
+
+    /// <summary>
+    /// Everything the player settled on before pressing Start: the board, and the people (U40).
+    ///
+    /// <para><b>One value rather than two arguments</b>, for the reason
+    /// <see cref="MenuDirector.StartRequested"/> carries the seed at all: a presenter that fetched
+    /// either of these separately could fetch one that had moved since the press, or one that never
+    /// passed the guard saying it was usable. They were chosen together and they travel together.
+    /// </para>
+    /// </summary>
+    public readonly struct NewGameChoice
+    {
+        /// <summary>The world's seed, as the box showed it.</summary>
+        public readonly uint Seed;
+
+        /// <summary>
+        /// One roll seed per chosen colonist, in the order they were shown — or null when no
+        /// colonist screen was in the flow, which is a colony the world populates for itself.
+        /// </summary>
+        public readonly uint[]? Colonists;
+
+        public NewGameChoice(uint seed, uint[]? colonists)
+        {
+            Seed = seed;
+            Colonists = colonists;
+        }
     }
 
     /// <summary>
@@ -185,11 +226,27 @@ namespace Odyssey.Hud
         /// </summary>
         public SeedField Seed { get; }
 
-        public MenuDirector() : this(new SeedField()) { }
+        /// <summary>
+        /// The three colonists the New game flow ends on (U40), or null when nobody has supplied a
+        /// way to roll one.
+        ///
+        /// <para><b>Optional because rolling a candidate needs <c>Odyssey.Sim</c></b>, which this
+        /// assembly cannot see: the presenter hands one in. A director without it still navigates —
+        /// <see cref="Next"/> simply has nowhere to go — so every existing test and every rig that
+        /// only cares about the seed builds one line at a time, as before.</para>
+        /// </summary>
+        public ColonistSelect? Colonists { get; }
+
+        public MenuDirector() : this(new SeedField(), null) { }
 
         /// <summary>The seam a test drives: the seed's randomness handed in.</summary>
-        public MenuDirector(SeedField seed) =>
+        public MenuDirector(SeedField seed) : this(seed, null) { }
+
+        public MenuDirector(SeedField seed, ColonistSelect? colonists)
+        {
             Seed = seed ?? throw new ArgumentNullException(nameof(seed));
+            Colonists = colonists;
+        }
 
         /// <summary>The root screen's rows, top to bottom. One place, shared with the settings
         /// panel, so the two surfaces cannot drift (<see cref="SessionCommands"/>).</summary>
@@ -216,7 +273,7 @@ namespace Odyssey.Hud
         /// says it is readable at all. Here the number that passed <see cref="SeedField.Usable"/>
         /// is the number handed over, in one act.</para>
         /// </summary>
-        public event Action<uint>? StartRequested;
+        public event Action<NewGameChoice>? StartRequested;
 
         /// <summary>Raised when the player has asked to see their saves. The presenter answers by
         /// listing the folder and calling <see cref="ShowSaves"/>.</summary>
@@ -299,7 +356,13 @@ namespace Odyssey.Hud
             if (Screen == MenuScreen.Root) return false;
 
             bool leavingSettings = Screen == MenuScreen.Settings;
-            GoTo(MenuScreen.Root);
+
+            // One step, not all the way home (U40). Every screen but one backs out to the root,
+            // and the colonist screen backs out to the seed it was reached from — anything else
+            // would throw away a seed the player typed on purpose to get here, which is the one
+            // thing on this flow that is expensive to redo.
+            GoTo(Screen == MenuScreen.Colonists ? MenuScreen.NewGame : MenuScreen.Root);
+
             if (leavingSettings) SettingsClosed?.Invoke();
             return true;
         }
@@ -365,10 +428,38 @@ namespace Odyssey.Hud
         /// </summary>
         public bool Start()
         {
-            if (!Showing || Screen != MenuScreen.NewGame) return false;
+            if (!Showing) return false;
             if (!Seed.Usable) return false;
 
-            StartRequested?.Invoke(Seed.Seed);
+            // The commit moved to the colonist screen when that screen arrived (U40); the seed
+            // screen's last row is Next. A director with no colonist select — a rig, a test that
+            // only cares about the seed — has no such screen, so New game still commits where it
+            // always did rather than leading to a row that cannot exist.
+            MenuScreen commits = Colonists != null ? MenuScreen.Colonists : MenuScreen.NewGame;
+            if (Screen != commits) return false;
+
+            StartRequested?.Invoke(new NewGameChoice(Seed.Seed, Colonists?.ChosenSeeds()));
+            return true;
+        }
+
+        /// <summary>
+        /// Press Next on the New game screen: keep the seed and go on to choose the colonists
+        /// (U40).
+        ///
+        /// <para>Refuses an unusable seed for the reason <see cref="Start"/> does. Walking on to
+        /// pick three people for a board that does not exist would only move the refusal one screen
+        /// later, and by then the player would have made choices to lose.</para>
+        ///
+        /// <para>Deals a fresh three on the way in, and does so <b>before</b> navigating, so the
+        /// screen is never drawn for a frame holding the last visit's people.</para>
+        /// </summary>
+        public bool Next()
+        {
+            if (!Showing || Screen != MenuScreen.NewGame) return false;
+            if (!Seed.Usable || Colonists == null) return false;
+
+            Colonists.Deal(SeedEntry.Draw);
+            GoTo(MenuScreen.Colonists);
             return true;
         }
 

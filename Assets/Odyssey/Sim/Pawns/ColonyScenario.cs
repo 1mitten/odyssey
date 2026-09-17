@@ -133,6 +133,22 @@ namespace Odyssey.Sim.Pawns
             };
 
         /// <summary>
+        /// This scenario with a different number of colonists (U40).
+        ///
+        /// <para>A copy rather than an assignment, because <see cref="Playtest"/> and
+        /// <see cref="Bare"/> hand out fresh objects but a caller may perfectly well be holding one
+        /// that something else also holds — a scenario is a Def, and a Def is shared. The select
+        /// screen changing the population of every other colony in the process would be a memorable
+        /// afternoon.</para>
+        /// </summary>
+        public virtual ScenarioDef WithColonists(int count)
+        {
+            var copy = (ScenarioDef)MemberwiseClone();
+            copy.colonists = count < 0 ? 0 : count;
+            return copy;
+        }
+
+        /// <summary>
         /// The same colony with no standing orders. Bare of orders, not of trees: the terrain is
         /// the map generator's business. What the headless runs and the tests measure, since an
         /// order nobody gave is not part of the simulation they are proving.
