@@ -444,8 +444,20 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly ushort WorkToClear;
 
+        /// <summary>
+        /// The tier the bed standing here finished at, 1–5, or 0 where there is no bed — which is
+        /// every wall, for ever. Sparse like the row it rides: most cells answer nothing.
+        /// </summary>
+        public readonly byte EdificeQuality;
+
+        /// <summary>
+        /// The <c>PawnId</c> of the colonist the bed standing here belongs to, or 0 where it is
+        /// nobody's — 0 being a value no pawn has, ids being 1-based.
+        /// </summary>
+        public readonly int EdificeOwner;
+
         public CellDetail(int cellIndex, byte terrain, byte edifice, byte floorStuff, byte support,
-            ushort moveCostPerMille, ushort workToClear)
+            ushort moveCostPerMille, ushort workToClear, byte edificeQuality = 0, int edificeOwner = 0)
         {
             CellIndex = cellIndex;
             Terrain = terrain;
@@ -454,6 +466,8 @@ namespace Odyssey.Sim.Contracts
             Support = support;
             MoveCostPerMille = moveCostPerMille;
             WorkToClear = workToClear;
+            EdificeQuality = edificeQuality;
+            EdificeOwner = edificeOwner;
         }
     }
 

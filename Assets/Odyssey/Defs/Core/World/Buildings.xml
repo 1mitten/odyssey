@@ -49,7 +49,7 @@
   </BuildingDef>
 
   <!--
-    THE FIRST FURNITURE (docs/design/20-beds.md). edifice 10 is CoreContent.EdificeBed.
+    THE FIRST FURNITURE (docs/design/20-beds.md). edifice 12 is CoreContent.EdificeBed - 12, not 10, because ten and eleven are the trees' (NaturalContent.FirstEdifice).
 
     footprint 2: one record, two cells - the second is derived from the facing at placement
     (EdificeFootprint), never stored, so the record cannot disagree with itself about where its
@@ -69,7 +69,7 @@
   <BuildingDef>
     <defName>Building_Bed</defName>
     <label>bed</label>
-    <edifice>10</edifice>
+    <edifice>12</edifice>
     <blocking>false</blocking>
     <footprint>2</footprint>
     <rotates>true</rotates>

@@ -553,6 +553,16 @@ namespace Odyssey.Presentation.Ui
                 view.Value = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__rowvalue");
                 view.Root.Add(view.Name);
                 view.Root.Add(view.Value);
+
+                // Registered once for every row and armed per tile by IsPick below: the pane's
+                // rows are reused across facts, so the one row that does something is the one
+                // whose fact it is holding, decided on the model's word rather than the element's.
+                CellRowView captured = view;
+                view.Root.RegisterCallback<ClickEvent>(_ =>
+                {
+                    if (captured.IsPick) ToggleBedPicker(captured.Root);
+                });
+
                 _cellRowsGrid.Add(view.Root);
                 _cellRows.Add(view);
             }
@@ -576,7 +586,87 @@ namespace Odyssey.Presentation.Ui
                     view.LastValue = row.Value;
                     HudText.Set(view.Value, row.Value, HudTextRole.Meta);
                 }
+
+                // The owner row is pickable exactly while the tile says it is a bed's (the model
+                // clears the flag every refresh, so the affordance cannot outlive the bed).
+                bool pick = row.Name == "owner" && _inspect.BedUnderPane;
+                if (view.IsPick != pick)
+                {
+                    view.IsPick = pick;
+                    view.Root.EnableInClassList("inspect__row--pick", pick);
+                    view.Root.tooltip = pick ? "Choose whose bed this is" : null;
+                }
             }
+        }
+
+        // ---- the bed's owner picker: the pane's first interactive fact ------------------------
+
+        VisualElement? _bedPicker;
+        VisualElement? _bedPickerRows;
+
+        /// <summary>
+        /// Raise the colonist picker over the owner row, or put it down if it is already up.
+        ///
+        /// <para>Built once, filled on every open: who is alive to be given a bed changes more
+        /// often than the popover is built and less often than it is opened, and a picker that
+        /// listed a dead colonist is the kind of stale a rebuild-on-open cannot be.</para>
+        ///
+        /// <para><b>The pick is an intent, not a write.</b> The pane never mutates the world; it
+        /// names the cell and the colonist and the simulation decides, at a tick boundary, the
+        /// way every command in the game does — so an assignment made while the clock is paused
+        /// lands on unpause, exactly as a build order does.</para>
+        /// </summary>
+        void ToggleBedPicker(VisualElement anchor)
+        {
+            var world = _boot?.World;
+            if (world == null) return;
+
+            if (_bedPicker == null)
+            {
+                _bedPicker = Popover("bedowner", "Give this bed to", CloseBedPicker, "bedowner");
+                _bedPickerRows = new VisualElement();
+                _bedPickerRows.AddToClassList("bedowner__rows");
+                _bedPicker.Add(_bedPickerRows);
+                _hud.Add(_bedPicker);
+            }
+
+            if (_bedPicker.style.display == DisplayStyle.Flex)
+            {
+                CloseBedPicker();
+                return;
+            }
+
+            _bedPickerRows!.Clear();
+            _bedPickerRows.Add(BedPickerRow("No owner", -1));
+            var pawns = world.Views.Current.Pawns;
+            for (int i = 0; i < pawns.Length; i++)
+                _bedPickerRows.Add(BedPickerRow(
+                    ColonistNames.Of(pawns[i].Id), pawns[i].Id.Value));
+
+            _bedPicker.style.display = DisplayStyle.Flex;
+            PlacePopover(_bedPicker, anchor);
+        }
+
+        void CloseBedPicker()
+        {
+            if (_bedPicker != null) _bedPicker.style.display = DisplayStyle.None;
+        }
+
+        VisualElement BedPickerRow(string label, int pawnId)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("bedowner__row");
+            row.Add(HudText.Make(label, HudTextRole.Body, ussClass: "bedowner__name"));
+
+            CellRef cell = _inspect.Cell;
+            int pick = pawnId;
+            row.tooltip = pick < 0 ? "Leave the bed unowned" : "Give this bed to " + label;
+            row.RegisterCallback<ClickEvent>(_ =>
+            {
+                _boot?.World?.Intents.Submit(new Intent(IntentKind.AssignBedOwner, cell, pick));
+                CloseBedPicker();
+            });
+            return row;
         }
 
         VisualElement ActionButton(InspectCommand command)

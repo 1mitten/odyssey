@@ -2018,3 +2018,21 @@
     border-color: rgba(255, 255, 255, 0.9);
     background-color: rgba(255, 255, 255, 0.12);
 }
+
+/* The bed's owner row: the readout's one pickable fact. The affordance is the value brightening
+   on hover and the pointer, nothing louder — a row that shouted would be a button wearing a
+   row's clothes, and the pane's rule is that it reads first and acts where a fact is a choice. */
+.inspect__row--pick { cursor: pointer; }
+.inspect__row--pick:hover .inspect__rowvalue { color: rgba(255, 255, 255, 0.92); }
+
+/* The picker it raises: one row per colonist plus the release, over the row that raised it. */
+.bedowner { width: 220px; }
+.bedowner__rows { margin-top: 2px; }
+.bedowner__row {
+    flex-direction: row;
+    align-items: center;
+    height: 24px;
+    padding-left: 10px;
+}
+.bedowner__row:hover { background-color: rgba(255, 255, 255, 0.05); }
+.bedowner__name { color: rgba(255, 255, 255, 0.72); }

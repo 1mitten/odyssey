@@ -38,9 +38,11 @@ namespace Odyssey.Tests.Sim
         /// <summary>
         /// The building table as it stands. Update this only when you meant to change what can be
         /// built, and say what moved in the commit message. Moved 2026-09-17 by the bed: the
-        /// table's third row, `Building_Bed` (footprint 2, passable, rotatable, takes quality).
+        /// table's third row, `Building_Bed` (footprint 2, passable, rotatable, takes quality) —
+        /// twice in one day, the second time for its edifice id: 10 is the conifer's, and the bed
+        /// moved to the next free id, 12.
         /// </summary>
-        const ulong BuildingFingerprint = 14464343702532602950UL;
+        const ulong BuildingFingerprint = 13807022649514515704UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

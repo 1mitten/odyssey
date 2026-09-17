@@ -105,7 +105,14 @@ namespace Odyssey.Sim.Contracts
         public const int TreeConifer = 10;
         public const int TreeBroadleaf = 11;
 
-        public const int Count = 12;
+        /// <summary>
+        /// The bed, and the first edifice id the interface names that no generator stamps: 12,
+        /// after the trees' ten and eleven. See <c>CoreContent.EdificeBed</c> for why it is a
+        /// literal and not an offset.
+        /// </summary>
+        public const int Bed = 12;
+
+        public const int Count = 13;
     }
 
     /// <summary>

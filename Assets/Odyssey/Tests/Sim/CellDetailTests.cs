@@ -99,12 +99,16 @@ namespace Odyssey.Tests.Sim
             Assert.That(TerrainHandle.DeepWater, Is.EqualTo(NaturalContent.TerrainDeepWater));
             Assert.That(TerrainHandle.Marsh, Is.EqualTo(NaturalContent.TerrainMarsh));
 
-            Assert.That(EdificeHandle.Count, Is.EqualTo(NaturalContent.EdificeCount));
+            // The bed is the one edifice past the generators' own numbering: CoreContent's ids
+            // end at 9, the trees continue from 10, and the bed takes the next free id rather
+            // than either family's next offset — see CoreContent.EdificeBed for why 12 and not 10.
+            Assert.That(EdificeHandle.Count, Is.EqualTo(CoreContent.EdificeBed + 1));
             Assert.That(EdificeHandle.Wall, Is.EqualTo(CoreContent.EdificeWall));
             Assert.That(EdificeHandle.Door, Is.EqualTo(CoreContent.EdificeDoor));
             Assert.That(EdificeHandle.Ladder, Is.EqualTo(CoreContent.EdificeLadder));
             Assert.That(EdificeHandle.TreeConifer, Is.EqualTo(NaturalContent.EdificeTreeConifer));
             Assert.That(EdificeHandle.TreeBroadleaf, Is.EqualTo(NaturalContent.EdificeTreeBroadleaf));
+            Assert.That(EdificeHandle.Bed, Is.EqualTo(CoreContent.EdificeBed));
         }
 
         // ---- the answer -------------------------------------------------------------------

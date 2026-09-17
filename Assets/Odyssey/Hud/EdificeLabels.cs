@@ -27,6 +27,7 @@ namespace Odyssey.Hud
             "ui.arch.tool.wall", "ui.arch.tool.door", "", "ui.arch.tool.pillar",
             "ui.arch.tool.stair", "ui.arch.tool.stair", "ui.arch.tool.ladder", "", "",
             "ui.terrain.tree.conifer", "ui.terrain.tree.broadleaf",
+            "ui.arch.tool.bed",
         };
 
         public static string IconKey(int edifice) =>

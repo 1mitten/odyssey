@@ -336,6 +336,13 @@ namespace Odyssey.Presentation.Ui
             public Label Value = null!;
             public string LastName = string.Empty;
             public string LastValue = string.Empty;
+
+            /// <summary>
+            /// Whether this row is, for the tile currently held, the owner picker — the pane's one
+            /// interactive fact. Rows are reused across tiles, so the affordance travels with the
+            /// row's current meaning rather than being built into the element.
+            /// </summary>
+            public bool IsPick;
         }
 
         void Awake()

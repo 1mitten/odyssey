@@ -238,6 +238,7 @@ namespace Odyssey.Hud
         {
             Tabs.Clear();
             Commands.Clear();
+            _bedUnderPane = false;
 
             if (Subject == InspectSubject.Colonist)
             {
@@ -490,6 +491,24 @@ namespace Odyssey.Hud
         int _cellRowsWork;
         int _cellRowsOrderKind;
         int _cellRowsOrderPercent;
+        int _cellRowsQuality;
+        int _cellRowsOwner;
+
+        /// <summary>
+        /// Whether the tile under the pane is a bed whose owner row can be pressed — the pane's
+        /// first interactive fact, and the one thing a tile readout can do rather than only say
+        /// (design 20 §8). Cleared every refresh and set only by <see cref="SetCellRows"/>, so a
+        /// stale true cannot outlive the bed it described.
+        /// </summary>
+        public bool BedUnderPane => _bedUnderPane;
+
+        bool _bedUnderPane;
+
+        /// <summary>
+        /// The cell the pane is describing, for whoever must name it back to the world — the
+        /// owner picker's pick is an intent about this cell.
+        /// </summary>
+        public CellRef Cell => _cell;
 
         /// <summary>
         /// The tile's facts, one row each, in a fixed order so a fact is always in the same
@@ -519,7 +538,9 @@ namespace Odyssey.Hud
                 && _cellRowsSupport == detail.Support
                 && _cellRowsWork == detail.WorkToClear
                 && _cellRowsOrderKind == (ordered ? kind : 0)
-                && _cellRowsOrderPercent == (ordered ? orderPercent : 0)) return;
+                && _cellRowsOrderPercent == (ordered ? orderPercent : 0)
+                && _cellRowsQuality == detail.EdificeQuality
+                && _cellRowsOwner == detail.EdificeOwner) return;
 
             _cellRowsFor = detail.CellIndex;
             _cellRowsCost = detail.MoveCostPerMille;
@@ -529,6 +550,8 @@ namespace Odyssey.Hud
             _cellRowsWork = detail.WorkToClear;
             _cellRowsOrderKind = ordered ? kind : 0;
             _cellRowsOrderPercent = ordered ? orderPercent : 0;
+            _cellRowsQuality = detail.EdificeQuality;
+            _cellRowsOwner = detail.EdificeOwner;
 
             // Written in place, like the skills list: the count is a handful and changes rarely,
             // so the list never churns while a tile is held.
@@ -537,6 +560,20 @@ namespace Odyssey.Hud
                 Row(n++, OrderVerb(kind), orderPercent + "% done");
             else if (detail.WorkToClear > 0)
                 Row(n++, "minable", "about " + Seconds(detail.WorkToClear) + " of work");
+
+            // A bed's own two facts, beside what it is (design 20 §8): how well it was made, and
+            // whose it is. The owner row is the pane's first interactive row — the shell turns a
+            // press on it into the assign popover — so it is said even where nobody owns the bed
+            // yet, because "give this to somebody" is the actionable clause and the actionable
+            // clause leads.
+            if (detail.EdificeQuality > 0)
+            {
+                _bedUnderPane = true;
+                Row(n++, "quality", QualityLabels.Label(detail.EdificeQuality));
+                Row(n++, "owner", detail.EdificeOwner > 0
+                    ? ColonistNames.Of(new PawnId(detail.EdificeOwner))
+                    : "—");
+            }
 
             Row(n++, "walk speed", detail.MoveCostPerMille == 0
                 ? "cannot walk"

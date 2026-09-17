@@ -105,8 +105,10 @@ namespace Odyssey.Tests.Hud
 
         static CellDetail Detail(byte terrain = TerrainHandle.Grass, byte edifice = EdificeHandle.None,
             byte floorStuff = StuffHandle.None, byte support = 0,
-            ushort moveCost = 1000, ushort workToClear = 0) =>
-            new CellDetail(Size.Index(At), terrain, edifice, floorStuff, support, moveCost, workToClear);
+            ushort moveCost = 1000, ushort workToClear = 0,
+            byte quality = 0, int owner = 0) =>
+            new CellDetail(Size.Index(At), terrain, edifice, floorStuff, support, moveCost, workToClear,
+                quality, owner);
 
         /// <summary>The rows as one readable line, in order: "walk speed=33%" and friends.</summary>
         static string Rows(InspectModel model)
@@ -175,6 +177,47 @@ namespace Odyssey.Tests.Hud
             Assert.That(model.Title, Is.EqualTo("Conifer"));
             Assert.That(Rows(model), Is.EqualTo("walk speed=100%"));
             Assert.That(model.CellIconKey, Is.EqualTo("ui.terrain.tree.conifer"));
+        }
+
+        /// <summary>
+        /// A bed's own two facts, beside what it is (design 20 §8): how well it was made, and
+        /// whose it is. The owner row is said even where nobody owns the bed yet, because it is
+        /// the pane's one pickable fact — the actionable clause leads, the same rule a rock's
+        /// minable clause follows.
+        /// </summary>
+        [Test]
+        public void ABedSaysItsTierAndWhoseItIs()
+        {
+            InspectModel model = Looking(FrameWith(
+                Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Bed,
+                    quality: QualityHandle.Decent, owner: 2)));
+
+            Assert.That(model.Title, Is.EqualTo("Bed"), "the bed's own icon key names it");
+            Assert.That(Rows(model), Is.EqualTo(
+                "quality=decent | owner=" + ColonistNames.Of(new PawnId(2)) + " | walk speed=100%"));
+            Assert.That(model.BedUnderPane, Is.True, "the shell arms the owner row on this word");
+        }
+
+        [Test]
+        public void AnUnownedBedOffersItsOwnerRowAsADash()
+        {
+            InspectModel model = Looking(FrameWith(
+                Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Bed, quality: QualityHandle.Normal)));
+
+            Assert.That(Rows(model), Is.EqualTo("quality=normal | owner=— | walk speed=100%"));
+            Assert.That(model.BedUnderPane, Is.True);
+        }
+
+        /// <summary>The control for the two above: no quality, no bed facts, no pickable row.</summary>
+        [Test]
+        public void AWallSaysNothingAboutQualityOrOwners()
+        {
+            InspectModel model = Looking(FrameWith(
+                Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Wall)));
+
+            Assert.That(Rows(model), Is.EqualTo("walk speed=100%"));
+            Assert.That(model.BedUnderPane, Is.False,
+                "the pickable affordance cannot outlive the bed it described");
         }
 
         /// <summary>
