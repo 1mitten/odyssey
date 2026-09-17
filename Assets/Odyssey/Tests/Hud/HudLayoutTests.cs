@@ -100,6 +100,13 @@ namespace Odyssey.Tests.Hud
             Assert.That(HudLayout.StartListHeight(HudLayout.StartSavesBeforeScrolling + 1),
                 Is.GreaterThan(HudLayout.StartListMax),
                 "one more save than the ceiling allows still fits, so the ceiling is not the ceiling");
+
+            // The New game screen (U39) sits where the list sits, with the same row beneath it.
+            // Four controls in a body sized for six save rows is obviously true right up until
+            // somebody adds a fifth, which is exactly why it is asserted rather than eyeballed.
+            Assert.That(HudLayout.StartNewGameHeight,
+                Is.LessThanOrEqualTo(HudLayout.StartListMax),
+                "the New game screen does not fit the region the load list already fits in");
         }
 
         [Test]

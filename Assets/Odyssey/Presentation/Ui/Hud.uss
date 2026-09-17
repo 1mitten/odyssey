@@ -1287,6 +1287,28 @@
 .save--bad:hover { background-color: rgba(0, 0, 0, 0); }
 .save--bad .save__meta { color: #e8b55c; }
 
+/* ---------------------------------------------------------------- the New game screen (U39)
+
+   The seed, a reroll and the row that commits, in the region the load list sits in. It introduces
+   no control either: a caption, the .field the naming prompt already restyled, and two
+   .settings__row. The only new rule with any weight is the disabled row, which is how the screen
+   says that what is in the box does not name a seed. */
+
+/* The word over the box, in the quiet ink every figure in this interface is introduced by. */
+.startscreen__seedcap {
+    color: rgba(255, 255, 255, 0.66);
+    height: 18px;
+}
+
+/* Reroll and Start, set off from the field above them by the gap the field itself already keeps. */
+.startscreen__seedrows { margin-top: 9px; }
+
+/* A row that cannot be pressed, in the idiom .menu__row--off and .chip--off already use. It is
+   drawn rather than hidden, because a Start that vanishes while you are mid-edit is a screen that
+   looks broken; faint and inert says "not yet" where absent says "never". */
+.settings__row--off { opacity: 0.42; }
+.settings__row--off:hover { background-color: rgba(0, 0, 0, 0); }
+
 /* The row that goes back, set apart from the list above it the way the settings panel's exit row
    is set apart from the tabs. */
 .startscreen__back {

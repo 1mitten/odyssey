@@ -6,6 +6,7 @@ using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Ui;
+using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Saving;
 using UnityEngine;
 using UnityEngine.TestTools;
@@ -133,10 +134,19 @@ namespace Odyssey.Tests.PlayMode
                 yield return Settle();
                 var doc = boot.GetComponent<UIDocument>();
 
+                // Two presses since U39: New game opens the screen that shows the seed, and Start
+                // is what commits. Driven through the director rather than by synthesising a
+                // click, as the note above says.
                 shell.Menu.Choose(SessionCommands.NewGameKey);
                 yield return Settle();
 
-                Assert.That(boot.HasSession, Is.True, "New game built no world");
+                Assert.That(boot.HasSession, Is.False,
+                    "opening the New game screen built a world before anything was chosen");
+
+                Assert.That(shell.Menu.Start(), Is.True);
+                yield return Settle();
+
+                Assert.That(boot.HasSession, Is.True, "Start built no world");
                 Assert.That(boot.Directors, Is.Not.Null, "a session exists with no directors");
                 Assert.That(Shown(Screen(doc)), Is.False,
                     "the start screen is still up over a running colony");
@@ -149,6 +159,104 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(boot.HasSession, Is.False, "the session survived its own teardown");
                 Assert.That(Shown(Screen(doc)), Is.True,
                     "quitting to the menu left no screen to be on");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// <b>The claim U39 exists to keep: the number on screen is the number the world was built
+        /// from.</b>
+        ///
+        /// <para>No fast-tier test can make it. <c>SeedFieldTests</c> proves the box parses,
+        /// <c>MenuDirectorTests</c> proves the press carries the seed it parsed, and neither can
+        /// see <c>ColonyRequest</c> — the seam runs from a <c>TextField</c> in the presentation
+        /// assembly, through the director, through the bootstrap, to a <c>SimWorld</c>, and it is
+        /// exactly the middle of that chain where a unit like this goes wrong.</para>
+        ///
+        /// <para><b>It is driven through the control rather than the director</b>, unlike the test
+        /// above, because the field is the one part of this screen whose wiring nothing else
+        /// checks. And the seed is typed rather than accepted: a drawn one would pass this test
+        /// against a build that ignored the box entirely.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheWorldIsBuiltFromTheSeedInTheBox()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell shell, buildOnPlay: false);
+            try
+            {
+                yield return Settle();
+                var doc = boot.GetComponent<UIDocument>();
+
+                shell.Menu.Choose(SessionCommands.NewGameKey);
+                yield return Settle();
+
+                var box = doc.rootVisualElement.Q<TextField>("seed");
+                Assert.That(box, Is.Not.Null, "the New game screen has no seed field");
+                Assert.That(box!.value, Is.EqualTo(SeedEntry.Format(shell.Menu.Seed.Seed)),
+                    "the box is not showing the seed the screen is holding");
+
+                // A number the draw would never have produced, so passing cannot be a coincidence.
+                box.value = "4242";
+                yield return Settle();
+
+                Assert.That(shell.Menu.Seed.Seed, Is.EqualTo(4242u),
+                    "typing in the field did not reach the director");
+                Assert.That(shell.Menu.Start(), Is.True);
+                yield return Settle();
+
+                Assert.That(boot.World, Is.Not.Null, "Start built no world");
+                Assert.That(boot.World!.Seed, Is.EqualTo(4242u),
+                    "the colony was built from a seed the player never saw");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// A box that does not name a seed builds nothing, and says so by drawing Start inert.
+        ///
+        /// <para>The director's half is a fast-tier test; this is the half a player can see, and
+        /// the two are asserted together on purpose — a Start that refused silently would look
+        /// exactly like a Start that was broken.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ASeedThatIsNotANumberBuildsNothing()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell shell, buildOnPlay: false);
+            try
+            {
+                yield return Settle();
+                var doc = boot.GetComponent<UIDocument>();
+
+                shell.Menu.Choose(SessionCommands.NewGameKey);
+                yield return Settle();
+
+                var box = doc.rootVisualElement.Q<TextField>("seed");
+                box!.value = "twelve";
+                yield return Settle();
+
+                Assert.That(shell.Menu.Seed.Usable, Is.False);
+                Assert.That(shell.Menu.Start(), Is.False);
+                Assert.That(boot.HasSession, Is.False,
+                    "a world was built from a box that does not name a seed");
+
+                VisualElement? commit = doc.rootVisualElement.Q(className: "settings__row--off");
+                Assert.That(commit, Is.Not.Null,
+                    "Start is still drawn pressable over a seed that cannot be used");
+
+                // And back, so the disabling is a state rather than a one-way door.
+                box.value = "77";
+                yield return Settle();
+
+                Assert.That(doc.rootVisualElement.Q(className: "settings__row--off"), Is.Null,
+                    "Start stayed inert over a seed that is perfectly good");
             }
             finally
             {
@@ -376,6 +484,22 @@ namespace Odyssey.Tests.PlayMode
                     "under the pointer moved");
                 Assert.That(atLoad.x, Is.EqualTo(atRoot.x).Within(0.5f));
                 Assert.That(atLoad.y, Is.EqualTo(atRoot.y).Within(0.5f));
+
+                // And the New game screen (U39), which is the third thing this box has had to hold
+                // and the first one added after the height was fixed.
+                shell.Menu.Back();
+                shell.Menu.Choose(SessionCommands.NewGameKey);
+                yield return Settle();
+                Assert.That(shell.Menu.Screen, Is.EqualTo(MenuScreen.NewGame));
+
+                Rect atNewGame = Screen(doc)!.worldBound;
+                Assert.That(atNewGame.width, Is.EqualTo(atRoot.width).Within(0.5f),
+                    "the panel changed width on the New game screen");
+                Assert.That(atNewGame.height, Is.EqualTo(atRoot.height).Within(0.5f),
+                    "the panel changed height on the New game screen, so every row under the " +
+                    "pointer moved");
+                Assert.That(atNewGame.x, Is.EqualTo(atRoot.x).Within(0.5f));
+                Assert.That(atNewGame.y, Is.EqualTo(atRoot.y).Within(0.5f));
             }
             finally
             {
