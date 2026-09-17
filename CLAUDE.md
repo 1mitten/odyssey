@@ -155,7 +155,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~10 s, no Unity): **455 Sim + 117 Hud**; Long tier **15**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **461 Sim + 117 Hud**; Long tier **15**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
@@ -213,18 +213,24 @@ Felled trees, mined cells and climbs are not in the save (the designation grid i
 collapses nothing. There is no fog of war, so a sealed cavern is visible if the player scrolls the
 layer down.
 
-**The cell grid is not in the state hash** (found 2026-09-17 by OQ-05's own control, which should
-have failed and did not). `CellGrid` does not implement `IStateHashable` and is never registered, so
-`SimWorld.ComputeStateHash()` covers the seed, the tick, the grid *size*, the designations, the jobs
-and the pawns — **not the terrain, floors, edifices or flags**. Mining a cell, felling a tree and a
-collapse therefore move no hash, and `WorldRoundTripTests` proves a save round-trips "exactly" by
-comparing hashes that cannot see the world. It is not a quick fix: hashing the grid costs 10.3 ms
-against the current 0.003 ms, so the per-tick sink would take minutes over a day. `OQ-50` holds the
-real fix (an incremental hash over the chunk dirty-tracking the save already keeps). **Until then,
-`GoldenMasterTests` is the only test that sees the world**, via a composite it folds itself.
+**The state hash covers the world** (OQ-50, ADR 0005 amended 2026-09-17). It did not until then —
+`CellGrid` is neither a tickable nor a system, which were the only two lists `ComputeStateHash`
+walked, so mining a cell or felling a tree moved no hash and `WorldRoundTripTests` proved a save
+round-tripped "exactly" using numbers that could not see the map. Found by OQ-05's own control,
+which should have failed and did not. `SimWorldBuilder.AddHashable` is the third list;
+`StateHashCoverageTests` names each field and requires an edit to move the hash, and asserts
+`Support` stays *out* because it is derived and rebuilt on load.
+
+**It recomputes the whole grid per call, deliberately.** The cell arrays are public and written
+directly from dozens of places, so an incrementally maintained hash would be silently wrong the
+first time anyone assigned to `Terrain[i]` without telling it — and a hash that wrongly says two
+worlds are the same is worse than the gap it replaced. **The cost lands on the hash trace:** a
+traced tick on a 60 × 60 × 16 colony is 2,803 µs against a 3.34 µs plain tick, so trace a window
+rather than a day. Nothing in an ordinary run asks for the hash.
+`HashTraceTests.TheCostOfTracingIsMeasuredRatherThanAssumed` prints the figure every run.
 
 Cross-runtime determinism is now a standing test rather than a one-off measurement: the golden table
-is asserted under CoreCLR in the fast tier and Mono in the Unity tier.
+is asserted under CoreCLR in the fast tier and Mono in the Unity tier, and passes in both.
 
 ## Read this before losing an hour
 

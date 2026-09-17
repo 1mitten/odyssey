@@ -1,6 +1,6 @@
 # ADR 0005 — Simulation architecture
 
-**Status: accepted 2026-09-15.** The criteria below were fixed before the benchmark ran; the decision applies them to the measured result.
+**Status: accepted 2026-09-15**; amended 2026-09-17, when the state hash the whole decision rests on turned out not to cover the world (see the amendment below). The criteria below were fixed before the benchmark ran; the decision applies them to the measured result.
 
 The gates, weighted criteria and tie-break below were written before either candidate had run. Choosing how to judge after seeing the numbers is how a benchmark becomes a justification for whatever one already preferred, so they are left exactly as they were written.
 
@@ -166,6 +166,44 @@ ECS loses on the criterion it was strongest on paper for — raw throughput — 
 6. **Modders patch ordinary C#.** The three seams in `07-modding.md` — Defs, registries, and not preventing Harmony — all remain viable, which they would not have been under ECS.
 7. **The frame budget is a pathfinding problem, and it is now the project's top technical risk.** Plain has 3.8 ms of frame left for rendering at a 3× discount and none at 4×. The fix is not architectural: 65% of the tick is A-star. The reason recorded here at first — that most of that was futile searches for unreachable targets — was falsified by a follow-up experiment: only 14% of budget exhaustions were unreachable, under 1% on a structured map. The district-id reachability check from `d-04-pathfinding.md`, measured in M2, is still the first and cheapest experiment, now for the right reason: it makes reachability free for the job-giver scans that ask it thousands of times per tick. The actual replan win came from the abstract region stage and a better heuristic (`05-ai-and-jobs.md` §6).
 8. **Burst compilation must be synchronous in benchmarks and tests**, or asynchronous compilation bleeds into the measured window — it inflated phase 1 from 0.283 ms to 0.498 ms mean with a 3.927 ms maximum before this was set.
+
+## Amendment, 2026-09-17 — the state hash covers the world, and pays for it
+
+This ADR rests on determinism: "same seed → same state hash" is the property that makes a
+single-threaded fixed-tick simulation testable and a save resumable. It never said what the hash
+covers, and the answer turned out to be **not the world**. `CellGrid` is neither an `ITickable` nor
+an `IWorldSystem`, and those were the only two lists `SimWorld.ComputeStateHash` walked, so terrain,
+floors, edifices and cell flags contributed nothing. Mining a cell, felling a tree and a collapse
+all moved no hash, and `WorldRoundTripTests` proved a save round-tripped "exactly" by comparing
+numbers that could not see the map. It went unnoticed for months because every hash test compares a
+run against another run of the same build, and both sides were equally blind. It was found by a
+golden-master control that should have failed and did not (OQ-05).
+
+**The grid is now hashed**, through a third registration list — `SimWorldBuilder.AddHashable`, for
+state that belongs in the hash but neither ticks nor is a system — and `ColonyComposition` registers
+it first, ahead of anything derived from it. `StateHashCoverageTests` names each field and requires
+an edit to it to move the hash; `Support` is asserted to stay *out*, because it is derived and
+rebuilt on load, and hashing it would make every load look like a desync.
+
+**It recomputes the whole grid on every call, and that is the safe choice rather than the lazy one.**
+The cell arrays are public and written directly from dozens of places — every generator pass, the
+support solver, mining, felling. A hash maintained incrementally on write would be silently wrong
+the first time anybody assigned to `Terrain[i]` without telling it, and a hash that wrongly says two
+different worlds are the same is a worse failure than the one being fixed. Recomputation cannot
+drift. Chunk-level caching over the save's existing dirty-tracking remains available if the cost
+ever justifies the invariant, but it buys nothing today.
+
+**The cost is real, measured, and falls where it hurts most.** On a 60 × 60 × 16 colony a plain tick
+is 3.34 µs and a *traced* tick — one that asks for the hash — went from roughly that to **2,803
+µs**, which `HashTraceTests.TheCostOfTracingIsMeasuredRatherThanAssumed` prints on every run. Nothing
+in an ordinary run asks for the hash, so the game and the tests are unaffected; what is affected is
+the **hash trace**, the tool for binary-searching the first tick two runs disagree on. Tracing a
+full day of a real colony is now minutes rather than seconds. That is the trade this amendment
+makes: the diagnostic got slower, and in exchange it can now see the thing it was blind to. Trace a
+window rather than a day.
+
+**Flip condition.** If tracing a real desync becomes impractical, the answer is a cheaper *trace*
+hash rather than a cheaper state hash — the canonical number should stay the complete one.
 
 ## What would make us revisit this
 
