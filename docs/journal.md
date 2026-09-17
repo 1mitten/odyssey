@@ -1807,3 +1807,39 @@ work itself.
   - **What this leaves.** All five chokepoints named after the mining line are open. The one piece
     of the bootstrap row still standing is the **presentation half** — every director wired by hand
     in `OdysseyBootstrap` — and it has no queue row.
+
+- **The session seam: a world can be put down and built again (U35, 2026-09-17).** The first unit of
+  `MS` after U34, and the one `U38`–`U40` are all blocked on. Until now a world existed because
+  `Start` made one and stopped existing because the scene closed; a main screen needs both halves on
+  demand. `Start`'s 214 lines are now `BuildSession()` and `TeardownSession()`, both public, with
+  `buildOnPlay` defaulting true so pressing Play still lands straight in a colony and **every
+  existing PlayMode test passes unedited**, which the row required.
+  - **Teardown drops references rather than only disposing them.** A disposed-but-reachable library
+    would let the next session read a torn-down object and fail somewhere far from the cause, so
+    every field is nulled. It is safe with no session and safe twice, because a menu unwinding and a
+    scene closing both reach it and can arrive in either order. Building over a live session throws
+    instead of silently doubling — that failure would leak a whole world and present as memory
+    rather than as a bug.
+  - **The hash test compares three worlds, not two.** Build → teardown → build, and a separately
+    built rig. Comparing the rebuild only against the first build would pass if both were wrong in
+    the same way, which is exactly what a leaked static does. It is the **full** hash including the
+    board, which only became possible when the world joined the hash the same morning (OQ-50).
+  - **It failed first, and the failure was the test's.** The first version read one hash after a
+    timed warm-up and the other after a different timed warm-up — and the tick counter is *in* the
+    hash, so it compared two worlds of different ages and called the difference a leak. Every hash
+    is now read immediately after an explicit `BuildSession`, with no frame in between.
+  - **The leak half is deferred, honestly, and this is the part worth reading.** It first counted
+    colonist figures and found **zero**: the rig passes no module catalogue, so no character prefab
+    is ever instantiated and the assertion could only ever have seen nothing. Retargeted at meshes —
+    the leak `TeardownSession`'s own comment records, which "leaked the whole cast, every session,
+    until the graphics device was reset" — and measured **45 → 45**. With no catalogue the library
+    resolves every module to one of Unity's built-in shared primitives and bakes nothing, so there
+    is no allocation to give back.
+  - **And it cannot simply be fixed by giving the rig a catalogue**, because that would make a test
+    depend on the licensed packs, against the standing rule that a clone without them still builds
+    and runs. So the check `Assert.Ignore`s with that reason written out. A green tick there would
+    have claimed coverage of exactly the failure it cannot see — the same call made earlier the same
+    day about Mono's GC accounting, and for the same reason.
+  - **Twice in this unit a control refused to let a test pass vacuously**, which is the second and
+    third time today. Guessing what to count was wrong both times; measuring settled it in one run.
+  - **Verified:** PlayMode **35 total, 32 passed, 0 failed**, one ignored with its reason recorded.
