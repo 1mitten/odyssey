@@ -60,11 +60,20 @@ namespace Odyssey.Tests.Hud
 
         // ------------------------------------------------------------------ occupation
 
+        /// <summary>
+        /// The occupations are whatever the CSV holds under <c>ui.occupation.</c>, and there are a
+        /// lot of them.
+        ///
+        /// <para><b>A floor rather than an exact count.</b> The owner adds to this list — it went
+        /// from 92 to 174 within the hour — and a test that pinned the number would fail on every
+        /// addition while telling nobody anything. What matters is that the reading works and that
+        /// the list is big enough for three candidates to be visibly different people.</para>
+        /// </summary>
         [Test]
-        public void TheOccupationsAreTheRegistrysAndThereAreNinetyTwo()
+        public void TheOccupationsAreTheRegistrysAndThereArePlenty()
         {
-            Assert.That(ColonistIdentity.Occupations.Count, Is.EqualTo(92),
-                "the owner's list is ninety-two; the CSV and this disagree");
+            Assert.That(ColonistIdentity.Occupations.Count, Is.GreaterThan(100),
+                "the CSV holds barely any occupations, so three candidates will look alike");
 
             foreach (string key in ColonistIdentity.Occupations)
             {
@@ -131,41 +140,41 @@ namespace Odyssey.Tests.Hud
         // ------------------------------------------------------------------ the fingerprint
 
         /// <summary>
-        /// <b>The guard on everything above.</b> Age and occupation are derived and stored nowhere,
-        /// so no save, no hash and no golden would notice the formula changing — every colonist in
-        /// every existing colony would quietly become somebody else. This folds the first hundred
-        /// seeds into one number.
+        /// <b>The guard on the age formula.</b> Age is derived and stored nowhere, so no save, no
+        /// hash and no golden would notice the formula changing — every colonist in every existing
+        /// colony would quietly become a different age. This folds the first hundred seeds into one
+        /// number.
         ///
-        /// <para>A deliberate change to either formula is one line here and a sentence in the
-        /// commit. An accidental one fails.</para>
+        /// <para><b>Age only, and occupation deliberately not.</b> The first version folded both in
+        /// and was wrong within the hour: the owner added eighty-two occupations, every index
+        /// moved, and the test failed for a change that was entirely intended. **A fingerprint over
+        /// content the owner is actively editing is a tripwire across their own doorway.** Age is a
+        /// closed formula over a fixed range and cannot move except by somebody editing it, which
+        /// is exactly what wants catching.</para>
+        ///
+        /// <para><b>What that leaves uncovered is real and is accepted:</b> adding an occupation
+        /// reshuffles which trade every existing colonist has, because the draw is an index into a
+        /// list that just got longer. Nothing anywhere is protected from that, and nothing should
+        /// be — the alternative is a stored occupation, which is the save-and-hash cost §5 of the
+        /// design exists to avoid. A colonist's trade is flavour, and flavour that shifts when the
+        /// owner adds a job is a bargain worth making.</para>
         /// </summary>
         [Test]
-        public void TheDerivationIsPinned()
+        public void TheAgeFormulaIsPinned()
         {
             unchecked
             {
                 ulong fingerprint = 14695981039346656037UL;
                 for (uint seed = 0; seed < 100; seed++)
                 for (int id = 1; id <= 3; id++)
-                {
-                    var who = new PawnId(id);
-                    fingerprint = (fingerprint ^ (ulong)ColonistIdentity.Age(seed, who)) * 1099511628211UL;
-                    fingerprint = (fingerprint ^ (ulong)IndexOf(ColonistIdentity.OccupationKey(seed, who)))
+                    fingerprint = (fingerprint ^ (ulong)ColonistIdentity.Age(seed, new PawnId(id)))
                                   * 1099511628211UL;
-                }
 
-                Assert.That(fingerprint, Is.EqualTo(7510490284011483811UL),
-                    "the age or occupation formula moved. Every colonist in every existing colony " +
-                    "just became somebody else; if that was deliberate, re-bake this literal and " +
-                    "say so in the commit message.");
+                Assert.That(fingerprint, Is.EqualTo(13184693428060220248UL),
+                    "the age formula moved. Every colonist in every existing colony just became a " +
+                    "different age; if that was deliberate, re-bake this literal and say so in the " +
+                    "commit message.");
             }
-        }
-
-        static int IndexOf(string key)
-        {
-            for (int i = 0; i < ColonistIdentity.Occupations.Count; i++)
-                if (ColonistIdentity.Occupations[i] == key) return i;
-            return -1;
         }
 
         // ------------------------------------------------------------------ alphabetical skills
