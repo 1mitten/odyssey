@@ -5,18 +5,27 @@ using System.Collections.Generic;
 namespace Odyssey.Hud
 {
     /// <summary>
-    /// Which of the main screen's two screens is showing.
+    /// Which of the main screen's screens is showing.
     ///
-    /// <para>Two, and that is the whole of the navigation (`17-start-flow.md` §4): the root column
-    /// of rows, and the load screen listing what is in the saves folder. There is no third, because
-    /// Options opens the settings panel that already exists rather than a screen of its own, and
-    /// the New game screen with its seed and its candidate colonists is U39 to U41 and hangs off
-    /// the root row, not off this enum.</para>
+    /// <para>The whole of the navigation (`17-start-flow.md` §4 and §11): the root column of rows,
+    /// the load screen listing what is in the saves folder, the settings panel standing in this
+    /// screen's place, and the New game screen where the seed is read and rerolled. Every one of
+    /// them is the same box — <c>HudLayout.StartBody</c> — so moving between them moves no row
+    /// under the pointer.</para>
     /// </summary>
     public enum MenuScreen
     {
         Root,
         Load,
+
+        /// <summary>
+        /// New game: the seed, a reroll, and the row that commits it (U39).
+        ///
+        /// <para>The root's New game row lands here rather than building a world, which is the one
+        /// behaviour U38 shipped that this unit changes. A seed that is drawn, used and never shown
+        /// gives a world nobody can ask for twice.</para>
+        /// </summary>
+        NewGame,
 
         /// <summary>
         /// The settings panel, standing in the start screen's place rather than on top of it.
@@ -108,8 +117,8 @@ namespace Odyssey.Hud
     }
 
     /// <summary>
-    /// The main screen: whether it is showing, which of its two screens is up, which destructive
-    /// row is armed, and what the player has asked for.
+    /// The main screen: whether it is showing, which of its screens is up, which destructive row is
+    /// armed, and what the player has asked for.
     ///
     /// <para><b>It raises and never performs.</b> New game builds a world, Load reads a file, Quit
     /// closes the application and Options opens a panel — every one of those needs Unity, a
@@ -166,6 +175,22 @@ namespace Odyssey.Hud
         /// <summary>The listing the load screen is drawing, as it was handed in.</summary>
         public IReadOnlyList<SaveRow> Saves => _saves;
 
+        /// <summary>
+        /// The seed the New game screen is holding (U39).
+        ///
+        /// <para><b>Exposed rather than wrapped</b>, because typing and rerolling change a box and
+        /// nothing else: there is no world to protect from them, and three forwarding methods here
+        /// would only be three more places for the two to disagree. The act that has a consequence
+        /// — <see cref="Start"/> — is this director's, and it is the one that is guarded.</para>
+        /// </summary>
+        public SeedField Seed { get; }
+
+        public MenuDirector() : this(new SeedField()) { }
+
+        /// <summary>The seam a test drives: the seed's randomness handed in.</summary>
+        public MenuDirector(SeedField seed) =>
+            Seed = seed ?? throw new ArgumentNullException(nameof(seed));
+
         /// <summary>The root screen's rows, top to bottom. One place, shared with the settings
         /// panel, so the two surfaces cannot drift (<see cref="SessionCommands"/>).</summary>
         public static IReadOnlyList<SessionCommand> Rows =>
@@ -180,9 +205,18 @@ namespace Odyssey.Hud
         /// <summary>Raised when a destructive row arms or stands down.</summary>
         public event Action? ArmedChanged;
 
-        /// <summary>Raised when the player has asked for a new colony. Building one is the
-        /// bootstrap's job (U35's <c>BuildSession</c>), not this type's.</summary>
-        public event Action? NewGameRequested;
+        /// <summary>
+        /// Raised when the player has committed to a new colony, with the seed to build it from
+        /// (U39). Building one is the bootstrap's job (U35's <c>BuildSession</c>), not this type's.
+        ///
+        /// <para><b>It carries the seed rather than leaving the presenter to read it back</b>, and
+        /// that is the whole difference between this and the <c>NewGameRequested</c> it replaces.
+        /// A presenter that fetched the number separately could fetch a different one — the field
+        /// having moved between the press and the read, or having been read before the guard that
+        /// says it is readable at all. Here the number that passed <see cref="SeedField.Usable"/>
+        /// is the number handed over, in one act.</para>
+        /// </summary>
+        public event Action<uint>? StartRequested;
 
         /// <summary>Raised when the player has asked to see their saves. The presenter answers by
         /// listing the folder and calling <see cref="ShowSaves"/>.</summary>
@@ -251,10 +285,10 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// Back out of the load or settings screen to the root. The one navigation this director
-        /// performs by itself, because it is the one that needs nothing from outside. False on the
-        /// root screen, which is where a presenter learns that Escape has nothing left to unwind
-        /// here.
+        /// Back out of the load, settings or New game screen to the root. The one navigation this
+        /// director performs by itself, because it is the one that needs nothing from outside.
+        /// False on the root screen, which is where a presenter learns that Escape has nothing left
+        /// to unwind here.
         ///
         /// <para>Leaving the settings screen also raises <see cref="SettingsClosed"/>, because the
         /// panel it stands in for is somebody else's to close: this director owns which screen is
@@ -318,9 +352,36 @@ namespace Odyssey.Hud
             return true;
         }
 
+        /// <summary>
+        /// Press Start on the New game screen: build a world from the seed in the box (U39).
+        ///
+        /// <para>Returns true when it asked for a world, false when it did not — because the screen
+        /// is away, because this is not the New game screen, or because the box does not name a
+        /// seed. <b>The last of those is the rule this unit is built around</b>: a press that
+        /// started seed 4242 while the field read <c>twelve</c> would be the screen lying about the
+        /// one number it exists to show. The presenter draws the row disabled from
+        /// <see cref="SeedField.Usable"/>, and this refuses as well, because a rule kept only by
+        /// whoever draws it is a rule the next caller does not have.</para>
+        /// </summary>
+        public bool Start()
+        {
+            if (!Showing || Screen != MenuScreen.NewGame) return false;
+            if (!Seed.Usable) return false;
+
+            StartRequested?.Invoke(Seed.Seed);
+            return true;
+        }
+
         void Perform(string key)
         {
-            if (key == SessionCommands.NewGameKey) NewGameRequested?.Invoke();
+            if (key == SessionCommands.NewGameKey)
+            {
+                // A fresh world every time the screen is entered (§11.2 decision 3). The draw
+                // happens before the navigation so the screen is never drawn for a frame holding
+                // the seed of the game somebody decided against.
+                Seed.Draw();
+                GoTo(MenuScreen.NewGame);
+            }
             else if (key == SessionCommands.LoadKey) SavesRequested?.Invoke();
             else if (key == SessionCommands.QuitKey) QuitRequested?.Invoke();
             else if (key == SessionCommands.OptionsKey)

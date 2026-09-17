@@ -344,29 +344,56 @@ the one it was written on. **The state hash could not have caught it** — the l
 cell, so the hashes agreed; what differed was the start cell the camera frames a loaded colony on,
 so a restored game opened on empty ground a third of the map away. Versions 1 and 2 still load.
 
-**`U38` is the one thing blocking the rest of the chain, and it has not moved.** `HudShell.Bar.cs`
-still carries the comment that the B18 menu "does not exist yet", and there is no menu panel
-anywhere in the presentation assembly — so there is nowhere for `U39`'s screen to attach.
-**Check the code, not the plan's table, before starting anything downstream**: that table listed
-`U36` and `U37` as available while both were still open, and then both landed mid-afternoon on
-2026-09-17 while a branch was in flight against the earlier reading.
+**`U39` is done, 2026-09-17, and `U37` was already done before it started.** The plan's table said
+otherwise about both — it had `U39` "blocked on U38, which has not moved" hours after U38 merged as
+PR #92, and `U37` carried no done marker although `StartingSkillsSystem` had landed at `0baa37f`.
+**Check the code, not the plan's table, before starting anything downstream.** That is now the third
+time that table has misled a session, and both rows say so in place.
 
-**`U39`'s seed logic landed without its screen** (2026-09-17): `SeedEntry` in
+**`U39`'s seed logic had landed first, without its screen**: `SeedEntry` in
 `Odyssey.Sim.Contracts` draws a seed, rerolls to one guaranteed different, formats it as plain
-decimal and reads back what the player typed — the half of `U39` that needs no interface, and the
-half that would otherwise live in a text field's callback where the fast tier could never reach it.
-A seed is decimal because that is already the form the project prints one in; **free-text seeds in
-the Minecraft idiom were considered and not taken**, because they only work if the typed text is
-kept beside the number — now a `SaveRecipe` field, so it is a live question rather than a blocked
-one. It is the one deliberately non-deterministic code in the simulation assemblies, confined to
-two methods and reachable from no tick path.
+decimal and reads back what the player typed — the half that needs no interface, and the half that
+would otherwise live in a text field's callback where the fast tier could never reach it. A seed is
+decimal because that is already the form the project prints one in; **free-text seeds in the
+Minecraft idiom were considered and not taken**, because they only work if the typed text is kept
+beside the number — now a `SaveRecipe` field, so it is a live question rather than a blocked one. It
+is the one deliberately non-deterministic code in the simulation assemblies, confined to two methods
+and reachable from no tick path.
 
-Three things a later session should not re-litigate. **Live portraits** are refused by
+**The screen it was written for is now a fourth screen of the start menu** —
+`docs/design/17-start-flow.md` §11. A caption, the seed in a text field, Reroll and Start, inside
+the *same* fixed box as the root, the load list and settings, so the panel still does not move
+between them. The root's New game row **navigates instead of building**, which is the one behaviour
+U38 shipped that this changes: before it, a seed was drawn, used and shown to nobody, so the world a
+player got was unrepeatable by construction. `SeedField` holds the text, the parsed seed and
+`Usable` in the `SavePrompt` idiom, so every rule is a fast-tier test rather than something judged
+with a finger on the keyboard. **A box that does not name a seed refuses to start** — it does not
+quietly build the last good number, which would be this screen lying about the only thing it exists
+to show — and `MenuDirector.Start()` enforces that as well as drawing the row inert, because a rule
+kept only by whoever draws it is a rule the next caller does not have. Entering the screen draws a
+fresh seed: being dealt the same world twice reads as a reroll that does not work, and nothing on
+screen could tell a player otherwise. **`U40` is unblocked** — both its dependencies are in and the
+screen it hangs off exists.
+
+**The owner played it on 2026-09-17 and it was right first time** (*"works spot on"*), which is the
+first thing on this screen that has been. U38 took four corrections off its own playtest and the
+gesture work before it took three rounds; this took none. Nothing about it is open on the owner's
+side, so the seed, the reroll, the Start row and the order they sit in are **settled** rather than
+merely untested — a later session changing any of them is changing something that was judged, not
+something nobody had looked at.
+
+**Both controls were run rather than assumed.** With the presenter drawing its own seed instead of
+using the one handed to it, exactly `TheWorldIsBuiltFromTheSeedInTheBox` fails; with the usability
+guard removed from `Start()`, exactly `StartRefusesABoxThatNamesNoSeed` does. The first is the only
+claim here no fast-tier test can make, because it spans a `TextField`, the director, the bootstrap
+and `ColonyRequest`.
+
+Two things a later session should not re-litigate. **Live portraits** are refused by
 `09-ui-and-input.md` §4.5 — but that argument is about fifty of them in the roster bar at 15 Hz
 while the world renders, and the select screen is three, rendered once, with no world behind them;
-§4.5 gets an explicit carve-out in `U41` rather than a silent exception. **Colonists start every
+§4.5 gets an explicit carve-out in `U41` rather than a silent exception. ~~**Colonists start every
 skill at 0 experience** — only passions are rolled — so there is nothing to choose between three
-candidates until `U37`.
+candidates until `U37`.~~ **`U37` landed 2026-09-17**, so there is now something to choose between.
 
 ### What runs today
 
@@ -436,7 +463,14 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **626 Sim + 293 Hud**; Long tier **20**.
+- **Fast tier** (`scripts/test-fast.sh`, ~13 s, no Unity): **628 Sim + 317 Hud**; Long tier **20**.
+  Unity tier on 2026-09-17, on the merge of U29's floors into the Build palette and U39: EditMode
+  **1431 total, 1420 passed, 0 failed**; PlayMode last measured **60 total, 57
+  passed, 0 failed** (the rest are pre-existing `[Explicit]` or ignored rows). The same arithmetic
+  check as the merge before it, and it holds in both directions: Hud is main's 309 plus this
+  branch's 8, and this branch's 293 plus main's 24. Neither side lost a test to the merge, which is
+  the cheapest check there is that a textually clean auto-merge of files both sides edited was also
+  a correct one.
   **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
   touches the composition root or the HUD shell is unproven until Unity has compiled it, however
   green the 11 seconds look (`docs/lessons.md`).

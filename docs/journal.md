@@ -2759,6 +2759,52 @@ work itself.
   tiers and the gap is recorded here rather than papered over.
 
   **Nobody has pressed Play on any of it.** The portraits are the only thing anyone has looked at.
+- **The seed became something you can see, 2026-09-17 (U39).** `HudShell.OnNewGame` was one line —
+  `BuildSession(SeedEntry.Draw(), null)` — so every colony came from a number that was drawn, used
+  and shown to nobody. **The world a player got was unrepeatable by construction**, and nothing was
+  broken: there was simply nowhere to read the number and nowhere to type it back. It is a fourth
+  screen of the start menu now, in the same fixed box as the other three, and the root's New game
+  row navigates rather than building.
+- **The plan's table was wrong about this unit in two directions at once, which is why the first
+  half hour went on reading code.** It said `U39` was "blocked on U38, which has not moved" — U38
+  had merged as PR #92 the same afternoon — and it left `U37` with no done marker although
+  `StartingSkillsSystem` had landed at `0baa37f` that morning. Both rows now say so in place rather
+  than being quietly corrected, because **the third time a table misleads a session is the time to
+  record that it does**, not the time to fix one cell. The check that settles it in a minute is to
+  grep for the type the row describes.
+- **The interesting decision was what an unreadable box does.** `SeedEntry.TryParse` was written to
+  refuse rather than guess and to leave the caller holding the seed it already had, which sounds
+  like a convenience and is really a trap: the obvious reading of it is "keep the old seed and carry
+  on", and that produces a screen showing `twelve` over a world built from 3829174463. So `Usable`
+  is false, Start refuses, and the row draws inert. **It is enforced twice on purpose** — in
+  `MenuDirector.Start` as well as in the drawing — because a rule kept only by whoever draws it is
+  a rule the next caller does not have, and the next caller here is U40's colonist screen.
+- **Entering the screen deals a fresh seed rather than keeping the last one.** The cost is a typed
+  seed lost by backing out and coming in again, which is a keystroke. The other mistake costs more
+  and is invisible: press New game twice, get the same world both times, and the only available
+  conclusion is that the reroll button does not work. A player cannot see that a repeat was chance.
+- **The seed rides on the event rather than being read back off the field.** `StartRequested(uint)`
+  replaced `NewGameRequested`, which carried nothing. A presenter that fetched the number separately
+  could fetch a different one — the field having moved between the press and the read, or having
+  been read without the guard that says it names a seed at all — and that whole class of bug is
+  removed by making the number that passed the guard the number that is handed over, in one act.
+- **Both controls were run.** With the presenter drawing its own seed instead of using the one it
+  was given, exactly `TheWorldIsBuiltFromTheSeedInTheBox` goes red; with the guard removed from
+  `Start()`, exactly `StartRefusesABoxThatNamesNoSeed` does. The first is the only claim in the unit
+  no fast-tier test can make — it runs from a `TextField` in the presentation assembly, through the
+  director, through the bootstrap, to `SimWorld.Seed` — and it is driven through the control rather
+  than the director for that reason, typing a number the draw would never have produced so that
+  passing cannot be a coincidence.
+- **It was right first time** (owner, 2026-09-17: *"works spot on"*), which is the first thing on
+  this screen that has been — U38 took four corrections off its own playtest, the build gesture
+  before it took three rounds, and the naming prompt exists because one evening of saving found what
+  §10 had already written down. The honest reading is not that this unit was done better. It is that
+  it was **small and had somewhere to stand**: four decisions, three words, one new control, and
+  every one of them made inside seams — the fixed box, `.settings__row`, `.field`, `Registry.Label`,
+  `HudLayout` — that four earlier rounds of correction had already paid for. **Seam work does not
+  show up in the unit that does it; it shows up in the one after**, and this is what that looks
+  like from the other end.
+
 
 - **U29 floors and collapse, 2026-09-17.** The unit the project exists to prove, and on inspection
   mostly wiring: the support physics was built in M1 and switched off. `SupportSolver` had computed
@@ -3294,4 +3340,3 @@ recesses — and `SM_Bld_Base_Floor_01`, the two-triangle flat quad that looked 
 option on paper, is **wooden planks**. `Half_01` is the plainest of the five and is what stone
 uses. A flat stone slab is a genuine gap of the kind `CLAUDE.md` reserves Blender for; nobody has
 been asked yet.
-

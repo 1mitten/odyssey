@@ -337,10 +337,10 @@ ignores with its reason in the rig without a module catalogue); Load restores a 
 
 ## 9. Deliberately not in this unit
 
-- **The seed you can read and reroll (U39's screen half).** `SeedEntry` exists and is tested; the
+- ~~**The seed you can read and reroll (U39's screen half).** `SeedEntry` exists and is tested; the
   text field it belongs in sits on a New game screen that this unit does not build. New game here
   starts a world on a drawn seed. **This is the next unit and it now has somewhere to attach**,
-  which was the whole reason U38 came first.
+  which was the whole reason U38 came first.~~ **Built 2026-09-17 — §11.**
 - **Colonist select and portraits (U40, U41).** They hang off the New game screen, not off this one.
 - **A Resume row.** There is no world to resume to: the main screen only exists when no session is
   built, by decision (5).
@@ -378,3 +378,120 @@ Three things the code knows are unfinished, named so the next session does not r
    and a policy about what it is allowed to overwrite, and none of those is a menu.
 3. **The load list has a ceiling and no search.** Eight rows before it scrolls, newest first. A
    folder of two hundred saves is a scroll.
+
+---
+
+## 11. The New game screen and the seed (U39, 2026-09-17)
+
+**This is `U39` of the `MS` milestone**, and it is the second half of a unit whose first half landed
+a day early: `SeedEntry` — draw, reroll, format, parse — has been in `Odyssey.Sim.Contracts` with 17
+fast-tier tests since U38's branch, because those rules need no screen and would otherwise have been
+written inside a text field's callback where the fast tier could never reach them. What follows is
+the screen they were written for.
+
+**What it replaces.** `HudShell.OnNewGame` was one line — `BuildSession(SeedEntry.Draw(), null)` —
+so a seed was drawn, used, and never shown to anybody. The world a player got was unrepeatable by
+construction: there was nowhere to read the number that made it and nowhere to type it back.
+
+### 11.1 The screen
+
+A fourth screen of the same box, between the root and the world.
+
+```
++------------------------+       Root                 New game
+|      O D Y S S E Y     |       ----                 --------
+|                        |       New game  ------->   Seed  [ 3829174463 ]
+|   Seed                 |                            Reroll
+|   [ 3829174463    ]    |                            Start
+|                        |                            Back  <-------+
+|   >  Reroll            |                                          |
+|      Start             |       Back on the root screen does nothing;
+|      Back              |       Back here returns to the root.
++------------------------+
+```
+
+**It is the same `StartBody`.** Four controls in a box sized for six save rows, so the panel's height
+does not move between the root, this screen, the load list and settings — the rule the owner asked
+for in §4 and the reason the body became a constant. `StartNewGameHeight` is *derived* from the
+parts it is made of, and a fast-tier test asserts it fits inside `StartBody` rather than trusting
+that four rows are fewer than seven.
+
+### 11.2 Four decisions, and what would change each
+
+**1. The seed's state lives in `Odyssey.Hud`, not in the text field.** `SeedField` is a small
+Unity-free director in the `SavePrompt` idiom: it holds the text, the parsed seed and whether the
+text names one, it raises `Changed`, and it performs nothing. The presenter owns the `TextField` and
+echoes every keystroke into it, exactly as the naming prompt already does. That is what makes every
+rule below a fast-tier test instead of something judged once with a finger on the keyboard.
+
+**2. An unreadable seed refuses to start, rather than starting something else.**
+`SeedEntry.TryParse` was written to return false and leave the caller holding the seed it already
+had — so the honest reading is that the field and the world can disagree, and the screen must not
+resolve that disagreement silently. If the box says `twelve` and Start builds seed 3829174463, the
+player has been lied to about the one number this screen exists to show. So `SeedField.Usable` is
+false, `Start()` refuses, and the row is drawn disabled — the same three-part answer
+`SavePrompt.CanConfirm` already gives an unusable name, including the part that matters: the rule is
+enforced in the director as well as in the drawing, because a rule kept only by whoever draws it is
+a rule the next caller does not have.
+
+**3. Entering the screen draws a fresh seed.** Not "keep what was there": pressing New game twice
+and getting the same world both times reads as a reroll that does not work, and there is no way to
+tell that from the outside. The cost is a typed seed lost by backing out and coming in again, which
+is a keystroke; the other mistake is a player who cannot tell whether the game is random.
+
+**4. The seed is the only knob, and that is the plan's own instruction.** Size, map type and
+scenario stay defaults on `ColonyRequest`, so they remain tunable later without any new interface to
+unpick. A board chooser is `MS`'s business after U41, not a row somebody adds here because the space
+was free.
+
+### 11.3 Three words, and why one of them is new
+
+| Key | Word | Why not reuse something |
+|---|---|---|
+| `ui.newgame.seed` | Seed | the field's label; nothing else in the game names a seed |
+| `ui.newgame.reroll` | Reroll | ditto |
+| `ui.newgame.start` | Start | **the interesting one.** `ui.session.newgame` is on the root row and means *open this screen*; this means *build this world from this number*. One opens a question and the other answers it, and giving both the words "New game" would put the same label twice in one navigation — the player could not tell which press committed them |
+
+Every one goes in `docs/design/icon-keys.csv` with the wiki and `Registry.g.cs` regenerated in the
+same commit, per the standing content rule. Nothing on this screen is named in C#.
+
+### 11.4 How it is tested
+
+| Claim | Where |
+|---|---|
+| draw, reroll, format, parse | `SeedEntryTests` — already green since U38's branch |
+| the field holds text, parses it, refuses what is not a seed, rerolls to something different | `SeedFieldTests`, fast tier |
+| New game navigates rather than building; Start raises the seed; Back returns; the seed is redrawn on entry | `MenuDirectorTests`, fast tier |
+| four rows fit the fixed body | `HudLayoutTests`, fast tier |
+| **the number on screen is the number the world was built from** | `StartScreenTests`, PlayMode — the one claim no fast-tier test can make, because it spans the field, the director, the bootstrap and `ColonyRequest` |
+
+The last row is the point of having a PlayMode test here at all. Everything above it is a promise one
+assembly makes; that one is the promise the whole unit exists to keep, and the way to make it bite is
+to type a seed the draw would never have produced and assert the built world carries *that* number.
+
+### 11.4a Played, 2026-09-17 — *"works spot on"*
+
+**The owner played it and nothing came back.** That is worth recording rather than passing over,
+because it is the first thing on this screen that has been right first time: §4's own table lists
+four corrections off U38's playtest, the build gesture before it took three rounds, and the naming
+prompt arrived because the first evening of saving found what §10 had already admitted.
+
+What the verdict settles, and what it does not. It **settles** the four decisions in §11.2 and the
+three words in §11.3 — a later session changing the reroll's freshness, the refusal, the order of
+the two rows or the wording is changing something that was judged, not something nobody had looked
+at, and should say why. It settles nothing about **U40 and U41**, which will put three colonist
+cards into this same fixed box and may well find that the box is the wrong size for them; that is
+their measurement to take, and `StartNewGameHeight` is derived precisely so the question can be
+asked in the fast tier rather than at the keyboard.
+
+### 11.5 Not in this unit
+
+- **Colonist select and portraits (U40, U41).** They hang off this screen — it is what they were
+  waiting for — but a candidate is not worth showing until rolled skills are on it, and `U37` landed
+  on 2026-09-17, so U40 is unblocked the moment this merges.
+- **Free-text seeds in the Minecraft idiom.** `SeedEntry` records the argument: they only work if the
+  typed text is kept beside the number, which is a `SaveRecipe` field now — so it is a live question
+  and deliberately still not answered, because a second representation arriving before anything
+  stores one is how two sources of truth start.
+- **A named world.** The colony's name is still the scenario's. Naming it belongs with the same
+  screen as choosing a board, and both wait for the rest of `MS`.
