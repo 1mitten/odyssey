@@ -56,6 +56,7 @@ ui.need.beauty,Beauty,ui.need,M2,How the surroundings look to them
 ui.need.space,Space,ui.need,M2,Room to move. Cramped quarters grate
 ui.need.outdoors,Outdoors,ui.need,M2,"Time under open sky. Some need it, some dread it"
 ui.need.hygiene,Cleanliness,ui.need,M2,Filth underfoot and in the air
+ui.need.mood,Mood,ui.need,M2,How good this colonist feels overall
 ui.mood.content,Content,ui.mood,M2,Mood is comfortable
 ui.mood.strained,Strained,ui.mood,M2,Mood is falling. Watch this one
 ui.mood.breaking,Breaking,ui.mood,M2,At the threshold of a mental break

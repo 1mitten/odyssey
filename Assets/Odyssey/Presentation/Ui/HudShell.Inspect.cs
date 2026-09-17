@@ -309,9 +309,7 @@ namespace Odyssey.Presentation.Ui
 
             float percent = Percent(thousandths);
             view.Fill.style.width = Length.Percent(percent);
-            Color band = HudTokens.NeedBand(thousandths);
-            view.Fill.style.backgroundColor = band;
-            view.Swatch.style.backgroundColor = band;
+            view.Fill.style.backgroundColor = HudTokens.NeedBand(thousandths);
 
             // A need moves by fractions of a per cent between refreshes, so the label is rebuilt
             // only when the whole number it prints has actually changed.
@@ -459,9 +457,9 @@ namespace Odyssey.Presentation.Ui
 
                 var grid = new VisualElement();
                 grid.AddToClassList("needs");
-                _needs.Add(Need(grid, "Food"));
-                _needs.Add(Need(grid, "Rest"));
-                _needs.Add(Need(grid, "Mood"));
+                _needs.Add(Need(grid, "Food", "ui.need.food"));
+                _needs.Add(Need(grid, "Rest", "ui.need.rest"));
+                _needs.Add(Need(grid, "Mood", "ui.need.mood"));
                 _needRows = (_needs.Count + 1) / 2;
                 _needsGrid = grid;
                 _inspectBody.Add(grid);
@@ -494,7 +492,7 @@ namespace Odyssey.Presentation.Ui
             return button;
         }
 
-        static NeedView Need(VisualElement grid, string name)
+        static NeedView Need(VisualElement grid, string name, string iconKey)
         {
             var view = new NeedView();
 
@@ -503,11 +501,11 @@ namespace Odyssey.Presentation.Ui
 
             var line = new VisualElement();
             line.AddToClassList("need__line");
-            view.Swatch = new VisualElement();
-            view.Swatch.AddToClassList("need__swatch");
+            view.Icon = new IconBadge(iconKey, IconBadge.RowSize);
+            view.Icon.Inherit(HudTokens.TextMeta);
             view.Name = HudText.Make(name, HudTextRole.Body, ussClass: "need__name");
             view.Value = HudText.Make(string.Empty, HudTextRole.Meta, numeric: true, "need__value");
-            line.Add(view.Swatch);
+            line.Add(view.Icon);
             line.Add(view.Name);
             line.Add(view.Value);
             view.Root.Add(line);

@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-76 entries, 53 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+76 entries, 51 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -68,11 +68,11 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
-| **Build** | `ui.tab.build` | Build, dig and zone — the palette of placement tools | no art | M1 |
-| **Work** | `ui.tab.work` | The priority grid | sheet 06 (action tiles), med | M1 |
-| **Schedule** | `ui.tab.schedule` | Who does what, and when | sheet 06 (action tiles), med | M1 |
+| **Build** | `ui.tab.build` | Build, dig and zone — the palette of placement tools | sheet 06 (action tiles), high | M1 |
+| **Work** | `ui.tab.work` | The priority grid | sheet 06 (action tiles), high | M1 |
+| **Schedule** | `ui.tab.schedule` | Who does what, and when | sheet 06 (action tiles), high | M1 |
 | **Research** | `ui.tab.research` | The tree, and what is being worked on | sheet 06 (action tiles), high | M1 |
-| **Colonists** | `ui.tab.colonists` | Everyone, at a glance <br>**Needs:** a group of people. Blocked on the missing human figure | no art | M1 |
+| **Colonists** | `ui.tab.colonists` | Everyone, at a glance | sheet 06 (action tiles), high | M1 |
 | **Animals** | `ui.tab.animals` | Tame beasts and their training | sheet 06 (action tiles), high | M1 |
 | **Wildlife** | `ui.tab.wildlife` | What is out there | sheet 06 (action tiles), med | M1 |
 | **Bills** | `ui.tab.bills` | Standing production orders | sheet 04 (manufactured), high | M1 |

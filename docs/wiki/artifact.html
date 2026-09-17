@@ -143,7 +143,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#buildings">Buildings and orders<b>81</b></a></li>
 <li><a href="#commands">Commands<b>48</b></a></li>
 <li><a href="#work">Work and skills<b>35</b></a></li>
-<li><a href="#colonists">Colonists<b>33</b></a></li>
+<li><a href="#colonists">Colonists<b>34</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>37</b></a></li>
 <li><a href="#world">World and interface<b>76</b></a></li>
@@ -155,9 +155,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>436</b><i>named entries</i></div>
-<div class="stat"><b>265</b><i>with icon art</i></div>
-<div class="stat m"><b>171</b><i>no art yet</i></div>
+<div class="stat"><b>437</b><i>named entries</i></div>
+<div class="stat"><b>268</b><i>with icon art</i></div>
+<div class="stat m"><b>169</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -1671,7 +1671,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">33 entries</em></h2>
+<h2>Colonists <em class="count">34 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -1725,7 +1725,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row" id="ui.need.food" data-hay="food ui.need.food how hungry this colonist is " data-gap="0">
 <div class="nm">Food<span class="k">ui.need.food</span></div>
 <div class="dsc">How hungry this colonist is</div>
-<div class="art"><span class="pill">high</span> food</div>
+<div class="art"><span class="pill">high</span> anatomy</div>
 <div class="ms">M2</div>
 </div>
 <div class="row" id="ui.need.rest" data-hay="rest ui.need.rest sleep debt " data-gap="0">
@@ -1768,6 +1768,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="nm">Cleanliness<span class="k">ui.need.hygiene</span></div>
 <div class="dsc">Filth underfoot and in the air</div>
 <div class="art"><span class="pill">med</span> salvage gear</div>
+<div class="ms">M2</div>
+</div>
+<div class="row" id="ui.need.mood" data-hay="mood ui.need.mood how good this colonist feels overall " data-gap="0">
+<div class="nm">Mood<span class="k">ui.need.mood</span></div>
+<div class="dsc">How good this colonist feels overall</div>
+<div class="art"><span class="pill">high</span> anatomy</div>
 <div class="ms">M2</div>
 </div>
 </div>
@@ -2562,22 +2568,22 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <h3 class="nsh">Tabs</h3>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
-<div class="row gap" id="ui.tab.build" data-hay="build ui.tab.build build, dig and zone — the palette of placement tools " data-gap="1">
+<div class="row" id="ui.tab.build" data-hay="build ui.tab.build build, dig and zone — the palette of placement tools " data-gap="0">
 <div class="nm">Build<span class="k">ui.tab.build</span></div>
 <div class="dsc">Build, dig and zone — the palette of placement tools</div>
-<div class="art"><span class="pill no">no art</span></div>
+<div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M1</div>
 </div>
 <div class="row" id="ui.tab.work" data-hay="work ui.tab.work the priority grid " data-gap="0">
 <div class="nm">Work<span class="k">ui.tab.work</span></div>
 <div class="dsc">The priority grid</div>
-<div class="art"><span class="pill">med</span> action tiles</div>
+<div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M1</div>
 </div>
 <div class="row" id="ui.tab.schedule" data-hay="schedule ui.tab.schedule who does what, and when " data-gap="0">
 <div class="nm">Schedule<span class="k">ui.tab.schedule</span></div>
 <div class="dsc">Who does what, and when</div>
-<div class="art"><span class="pill">med</span> action tiles</div>
+<div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M1</div>
 </div>
 <div class="row" id="ui.tab.research" data-hay="research ui.tab.research the tree, and what is being worked on " data-gap="0">
@@ -2586,10 +2592,10 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M1</div>
 </div>
-<div class="row gap" id="ui.tab.colonists" data-hay="colonists ui.tab.colonists everyone, at a glance a group of people. blocked on the missing human figure" data-gap="1">
+<div class="row" id="ui.tab.colonists" data-hay="colonists ui.tab.colonists everyone, at a glance " data-gap="0">
 <div class="nm">Colonists<span class="k">ui.tab.colonists</span></div>
-<div class="dsc">Everyone, at a glance<span class="need">Needs drawing: a group of people. Blocked on the missing human figure</span></div>
-<div class="art"><span class="pill no">no art</span></div>
+<div class="dsc">Everyone, at a glance</div>
+<div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M1</div>
 </div>
 <div class="row" id="ui.tab.animals" data-hay="animals ui.tab.animals tame beasts and their training " data-gap="0">
@@ -2975,7 +2981,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 436, "gaps": 171};</script>
+<script>window.WIKI={"total": 437, "gaps": 169};</script>
 <script>
 (function(){
   var D = window.WIKI;

@@ -25,7 +25,7 @@ ui.res.paper,04,,,rolled paper,high,mapped
 ui.res.rations,02,,,sealed food packet,high,mapped
 ui.res.meal,02,,,bowl of cooked food,high,mapped
 ui.res.protein,02,,,carton or tub,med,mapped
-ui.res.meat,07,,,raw meat slab,high,mapped
+ui.res.meat,07,,,"raw meat slab — the owner's own icon, not sheet 07's cell",high,mapped
 ui.res.produce,02,,,carrot and potato,high,mapped
 ui.res.wood,-,,,"a short stack of logs, cut ends showing",-,gap
 ui.res.stone,-,,,"a few angular grey rocks with fresh broken faces",-,gap
@@ -48,8 +48,9 @@ ui.res.credit,08,,,coin,high,mapped
 ui.res.relic,08,,,old photographs,med,mapped
 ui.res.smokes,08,,,cigarette packet,med,mapped
 ui.res.curio,08,,,teddy bear,high,mapped
-ui.need.food,02,,,bread loaf,high,mapped
-ui.need.rest,08,,,mattress,high,mapped
+ui.need.food,07,,,"raw meat slab — the owner's own icon, shared with ui.res.meat",high,shared
+ui.need.rest,08,,,"bed — the owner's own icon, not sheet 08's cell",high,mapped
+ui.need.mood,07,,,"person silhouette — the owner's own icon, not sheet 07's cell",high,mapped
 ui.need.joy,-,,,"something unmistakably recreational: dice, cards, a games board",-,gap
 ui.need.comfort,-,,,"an armchair or cushion, read as comfort rather than as furniture",-,gap
 ui.need.beauty,06,,,paint brush tile,low,mapped
@@ -311,10 +312,11 @@ ui.overlay.power,08,,,battery,high,shared
 ui.overlay.salvage,05,,,powered drill,med,shared
 ui.overlay.support,04,,,"metal beam, I-section",med,shared
 ui.overlay.traffic,-,,,footfall. An abstract with no obvious source,-,gap
-ui.tab.work,06,,,hammer and tools tile,med,shared
-ui.tab.schedule,06,,,hourglass tile,med,shared
-ui.tab.research,06,,,book tile,high,shared
-ui.tab.colonists,-,,,a group of people. Blocked on the missing human figure,-,gap
+ui.tab.build,06,,,"hammer and tools tile — the owner's own icon, shared with ui.status.building",high,shared
+ui.tab.work,06,,,"claw glove tile — the owner's own icon, not sheet 06's cell",high,mapped
+ui.tab.schedule,06,,,"calendar grid tile — the owner's own icon, not sheet 06's cell",high,mapped
+ui.tab.research,06,,,"book tile — the owner's own icon, not sheet 06's cell",high,mapped
+ui.tab.colonists,06,,,"three-person silhouette tile — the owner's own icon, not sheet 06's cell",high,mapped
 ui.tab.animals,06,,,paw print tile,high,shared
 ui.tab.wildlife,06,,,boar,med,shared
 ui.tab.bills,04,,,rolled paper,high,shared
