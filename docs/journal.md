@@ -1279,3 +1279,51 @@ work itself.
     thing the panel has held (19 rows in five groups); at 150 per cent interface scale on a
     1080p screen it is within a few pixels of the screen height, and if it clips, the window
     wants a max-height and a scroll, which no panel here has yet.
+
+- **The region graph is measured, and it corrects the file that predicted it (OQ-18, 2026-09-17).**
+  `docs/research/d-04-pathfinding.md` reasoned about forty layers from the map dimensions and said
+  so in its own Confidence section; its "Could not be determined" list named the gap — the real
+  distribution of live chunks at our dimensions, "needed to turn the region-count estimate from an
+  upper bound into a budget". Both generators and the graph exist now, so
+  `NavGraphStatisticsTests` builds each map at 250 × 250 × 40 and walks the graph.
+  - **The budget was right and its stated reason was wrong**, which is the kind of result only a
+    measurement produces. "Low tens of thousands, not the theoretical 50 k-plus" holds: 24,141
+    regions on the wilderness, 23,240 on the city. But d-04 credited that to uniformity —
+    "most chunks in a ruined-city column are all-air or all-solid; those allocate no regions at
+    all" — and **all-solid is precisely the case that allocates here.** `RegionKind.Impassable`
+    exists on purpose, so rooms and atmosphere have a substrate; underground rock therefore fills
+    every block with exactly one region. The city is 35.0% live blocks and the wilderness
+    **92.1%**, a factor of eight between two maps that are both correct.
+  - **What actually bounds the count is the block.** A region is a connected part of one 10 × 10
+    block of one layer, so the largest region on either map is exactly 100 cells and the floor is
+    one region per live block. The ceiling is blocks × layers, 25,000, and both maps land just
+    under it from below. The estimate would have been right whatever the generators did.
+  - **The number that matters to the top technical risk is the walkable fraction, and it is
+    small**: 1,649 of 24,141 regions on the wilderness (6.8%) and 9,006 of 23,240 on the city
+    (38.8%). Impassable regions carry no links and are excluded from the district flood, so the
+    hierarchical search d-04 recommends traverses far less than the region totals imply. Worth
+    having before attacking the 65% of tick that is A-star rather than after.
+  - **Three things nobody had asked for and the walk handed over anyway.** Falls are the city's
+    dominant edge — 11,408 of 20,761 links, 55%, which puts a number behind "collapsed floors are
+    the signature feature". Traverse mode changes connectivity only where there is architecture:
+    colonists see 3,291 districts on the city and haulers, barred from ladders, see 3,628 — 337
+    places reachable only by ladder — while all four modes see 37 on the wilderness. And the
+    wilderness is **not one connected place**: 37 districts on a map with no buildings, which is
+    the sealed caverns and ledges the generator makes.
+  - **The assertion that failed first is the reason the test is worth its runtime.** It was written
+    to encode d-04's uniformity claim, and it failed on the wilderness at 23,031 of 25,000 live
+    blocks. The claim, not the code, was wrong. The uniformity figure is now recorded and not
+    asserted — it is a generator property that differs eightfold between two correct maps, and an
+    assertion on it would fail the day cavern density is tuned. What replaced it are the two
+    structural guarantees the layered design rests on, checked over all 2.5 million cells of each
+    board: **no region spans two layers**, and no region outgrows its block.
+  - **Nothing in `NavGraph` was widened for this.** There is no public link enumerator, so links
+    are counted by walking each live region's adjacency and de-duplicating by id. Adding an
+    accessor for a test's convenience is the habit the seam work exists to break.
+  - **Verified:** fast tier **478 Sim + 158 Hud**, Long tier **17** in 8 s — the two new cases add
+    about 0.9 s. Full rebuild at the scale target: 168 ms wilderness, 124 ms city, the all-dirty
+    worst case and not a per-tick cost.
+  - **Found on the way:** `CLAUDE.md` on `main` recorded **461 Sim + 117 Hud** while `main` in fact
+    ran 478 + 158. That line is edited by every branch that adds a test and is therefore wrong
+    most of the time; PR #69 carries its own different number for the same line. It is a shared
+    counter with no owner, and it will keep going stale until it is either generated or dropped.
