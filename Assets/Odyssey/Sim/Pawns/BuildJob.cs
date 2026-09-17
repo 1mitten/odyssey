@@ -144,23 +144,15 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < cells.Count; i++)
             {
                 int site = cells[i];
-                if (!sites.IsFrame(site)) continue;
 
-                // A thing a colonist is not skilled enough to make is not offered to it, rather
-                // than offered and botched: the reference gates a few defs on a construction level
-                // and a wall is not one of them, so this costs nothing today and is the hook the
-                // first gated thing needs.
-                if (pawn.SkillLevel(SkillIndex.Construction) <
-                    ConstructionContent.BuildingAt(sites.At(site)).minSkill) continue;
-
-                long key = ReservationManager.Key(ReservationTargetKind.Cell, site);
-                if (!ctx.Reservations.CanReserve(pawn.Id, key)) continue;
-
+                // Distance first, because it is arithmetic and everything below it reads the
+                // world: a candidate that cannot beat the best so far need not be judged at all.
+                // The winner is unchanged either way — a candidate that fails the legality test
+                // never moves `bestDistance`, so the order the two are asked in cannot decide it.
                 int distance = ctx.Distance(pawn.Cell, site);
                 if (distance >= bestDistance) continue;
 
-                int stand = FellJobDriver.StandBeside(ctx, pawn, site);
-                if (stand < 0) continue;
+                if (!CanBuild(pawn, ctx, site, out int stand)) continue;
 
                 bestDistance = distance;
                 best = site;
@@ -169,10 +161,76 @@ namespace Odyssey.Sim.Pawns
 
             if (best < 0) return false;
 
-            job.Reset(JobIndex.Build);
-            job.TargetCell = bestStand;
-            job.DestCell = best;
+            Fill(job, best, bestStand);
             return true;
+        }
+
+        /// <summary>
+        /// Could this colonist legally take a build job on this site <em>right now</em>, and where
+        /// would it stand to do it? Nothing is claimed, nothing is started and no field moves.
+        ///
+        /// <para><b>The split is the point.</b> Until this existed every giver decided legality and
+        /// claimed the target in one pass, so the only way to ask "could it" was to do it. A forced
+        /// order needs the question asked of one named colonist rather than answered by the scan,
+        /// and the A10 command grid needs it asked for a menu that is built <em>before</em> the
+        /// player chooses anything (<c>docs/design/15-building.md</c>, "Forced orders and the
+        /// context menu"). A query that reserved would grey out a command by claiming the thing the
+        /// command is about.</para>
+        ///
+        /// <para>It is the scan's own test, not a second opinion beside it:
+        /// <see cref="TryGiveJob"/> calls this for every candidate, so the forced path and the
+        /// offered path cannot come to disagree about what a colonist may build. <c>WillWork</c> is
+        /// in it because the forced path has no think tree above it to have asked already — for the
+        /// scan it is always true by the time <c>WorkThinkNode</c> has called.</para>
+        ///
+        /// <para>What it does <em>not</em> answer is why not. A greyed command wants a reason, and
+        /// the reason wants a vocabulary that does not exist yet — "nowhere to stand" and "somebody
+        /// else has it" are not <see cref="IntentRejection"/> values. That belongs with A10, which
+        /// is the first thing that can display one.</para>
+        /// </summary>
+        public static bool CanBuild(Pawn pawn, PawnContext ctx, int site, out int stand)
+        {
+            stand = -1;
+
+            var sites = ctx.Construction;
+            if (sites == null) return false;
+            if ((uint)site >= (uint)ctx.Size.CellCount) return false;
+
+            // Asleep or in a mental break: the break handler would take a forced job straight back
+            // off the colonist on the next tick, so offering it is worse than refusing it.
+            if (!pawn.WillWork()) return false;
+
+            // A site still waiting for its wood is the deliverer's, not the builder's. It is also
+            // what the driver's own first guard asks, so a job forced onto a blueprint would fail
+            // on the tick it started.
+            if (!sites.IsFrame(site)) return false;
+
+            // A thing a colonist is not skilled enough to make is not offered to it, rather
+            // than offered and botched: the reference gates a few defs on a construction level
+            // and a wall is not one of them, so this costs nothing today and is the hook the
+            // first gated thing needs.
+            if (pawn.SkillLevel(SkillIndex.Construction) <
+                ConstructionContent.BuildingAt(sites.At(site)).minSkill) return false;
+
+            long key = ReservationManager.Key(ReservationTargetKind.Cell, site);
+            if (!ctx.Reservations.CanReserve(pawn.Id, key)) return false;
+
+            // Last, because it is the dearest: eight neighbours, each asked whether this pawn could
+            // get to it. It is also the reachability test — a stance nobody can walk to is not a
+            // stance — so a site in a sealed pocket answers no here and nowhere earlier.
+            stand = FellJobDriver.StandBeside(ctx, pawn, site);
+            return stand >= 0;
+        }
+
+        /// <summary>
+        /// Write a build job for a site and a stance. One place, so the scan and a forced order
+        /// produce the same job rather than two jobs that happen to look alike.
+        /// </summary>
+        public static void Fill(Job job, int site, int stand)
+        {
+            job.Reset(JobIndex.Build);
+            job.TargetCell = stand;
+            job.DestCell = site;
         }
     }
 

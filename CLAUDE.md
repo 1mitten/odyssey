@@ -110,6 +110,16 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   one. The gesture took three rounds because the first two fixed the *number* and the fault was
   that the gate latched. What nobody has judged yet is the site marks, the blueprint readout and
   the computed hammer swing (`docs/design/15-building.md` §8).
+  **Forced orders have their simulation half** (`claude/forced-orders-intent`, 2026-09-17): steps 1
+  and 2 of that section's four. `ForceJob(cell, A = job, B = pawn)` is the first intent that names a
+  colonist, and `Job.PlayerForced` — saved and hashed since the job record was written, and read by
+  nothing until now — is what it sets. A forced order is **not a new job kind**: the same
+  `BuildJobDriver`, with the scan bypassed and the job pushed onto the named pawn. The piece that
+  mattered is the split: `BuildWorkGiver.CanBuild` answers "could this colonist build that" and
+  **reserves nothing**, `JobSystem.CanForce` is what a menu asks, and `TryGiveJob` calls the same
+  query — so the offered path and the forced path cannot come to disagree. **Steps 3 and 4 are not
+  started** (the right-click/drag split, and the context-menu panel), so nothing in the running game
+  can send one yet and nobody has pressed Play on it.
 - **Work reaches `main` only through a pull request** with both tiers green, one approving review
   and the branch up to date. Branch protection enforces it, agents included. There is no long-lived
   feature branch — `claude/*` branches are per-change and short-lived.
@@ -261,7 +271,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **505 Sim + 191 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **542 Sim + 191 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
