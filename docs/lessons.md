@@ -663,6 +663,40 @@ minutes and a couple of gigabytes; run it in the background and do something els
 Remove the junction with `rmdir` (not `Remove-Item -Recurse`, which on some shells follows the link
 and would delete the real packs).
 
+**And not `git worktree remove` either — that is the same trap and it is not obvious** (2026-09-17,
+and it cost the packs). Tearing down a junctioned worktree with
+
+```
+git worktree remove --force .claude/worktrees/<name>
+```
+
+made git walk the tree deleting as it went, **follow the junction, and empty the real
+`D:\code\odyssey\Assets\Synty`** — 15,868 files, 1.54 GB, gone, and the command then failed with
+`Permission denied` so it looked like nothing had happened. Every other junctioned worktree
+(`odyssey-look`, `odyssey-ui`) went dark at the same moment, because they all point at the one real
+copy. Nothing goes to the recycle bin.
+
+**The order that is safe:** remove the junction first, then the worktree.
+
+```
+cmd /c rmdir "<worktree>\Assets\Synty"      # unlinks; does NOT touch the target
+git worktree remove --force .claude/worktrees/<name>
+```
+
+Before deleting any tree that a worktree owns, ask whether anything under it is a reparse point:
+
+```
+Get-ChildItem <path> -Recurse -Force -Directory | Where-Object { $_.LinkType }
+```
+
+**If it has already happened**, the packs are recoverable without re-downloading: `D:\code\odyssey-audio`
+holds a *real* copy rather than a junction. `robocopy <source> <dest> /E /COPY:DAT /DCOPY:DAT` restores
+it byte for byte in about ten seconds, and the `.meta` files come with it, so the GUIDs are the ones
+`ModuleCatalogue.asset` already refers to — check one before believing it, e.g. that
+`PolygonGeneric\Prefabs\Base\SM_Bld_Base_Wall_01.prefab.meta` still reads
+`guid: d6b56504304c325419b598fe3ddb95ed`. **Keeping one real copy somewhere is what made that
+possible**, so do not "tidy" `odyssey-audio` into a junction as well.
+
 ## Per-cell geometry cracks where a continuous field does not
 
 Written after giving earth its own mesh (`GroundMesh`, `06-rendering-and-camera.md` §2c). The
