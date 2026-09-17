@@ -257,11 +257,13 @@ namespace Odyssey.Tests.Hud
         {
             var director = new DesignateDirector();
             director.ArmBuild(BuildingHandle.Wall);
+            // Far enough across to be a deliberate area, so this asks its own question rather than
+            // re-asking the widening gate's.
             director.Begin(At(2, 7));
-            director.DragTo(At(4, 9));
+            director.DragTo(At(5, 10));
 
             Assert.That(director.TryPreview(out CellRef min, out CellRef max), Is.True);
-            Assert.That(director.PreviewCount, Is.EqualTo(9));
+            Assert.That(director.PreviewCount, Is.EqualTo(16));
 
             var previewed = new List<CellRef>();
             for (int z = min.Z; z <= max.Z; z++)
@@ -308,6 +310,13 @@ namespace Odyssey.Tests.Hud
             Assert.That(director.Widened, Is.False);
             Assert.That(director.PreviewCount, Is.EqualTo(6),
                 "six cells of wall in one row, not twelve in two");
+
+            // Two cells across as well, which is where the threshold used to be and where the
+            // owner was still getting double walls on a long drag (second report, 2026-09-17).
+            director.DragTo(At(8, 5));
+            Assert.That(director.Widened, Is.False);
+            Assert.That(director.PreviewCount, Is.EqualTo(6));
+
             Assert.That(director.Commit(), Is.EqualTo(new[]
             {
                 At(3, 3), At(4, 3), At(5, 3), At(6, 3), At(7, 3), At(8, 3),
@@ -325,10 +334,10 @@ namespace Odyssey.Tests.Hud
             var director = new DesignateDirector();
             director.ArmBuild(BuildingHandle.Wall);
             director.Begin(At(3, 3));
-            director.DragTo(At(8, 5));
+            director.DragTo(At(8, 6));
 
             Assert.That(director.Widened, Is.True);
-            Assert.That(director.PreviewCount, Is.EqualTo(18), "six by three");
+            Assert.That(director.PreviewCount, Is.EqualTo(24), "six by four");
         }
 
         /// <summary>
@@ -336,8 +345,13 @@ namespace Odyssey.Tests.Hud
         ///
         /// <para>With a single threshold a pointer resting on the boundary would flicker the box
         /// between one row and two every frame, which is worse than either. Widened, the box stays
-        /// widened while the drag is still across the run; it re-arms only on the way home, at the
-        /// anchor's own row, where a one-row box is what is being drawn anyway.</para>
+        /// widened while the drag is still well across the run; it re-arms on the way home, within
+        /// a cell of the anchor's row, where a one-row box is what is being drawn anyway.</para>
+        ///
+        /// <para><b>Re-arming near the row rather than on it is the fix for the second report.</b>
+        /// A gate that needed the exact row made a trip permanent in practice — a pointer that has
+        /// strayed three cells rarely comes back to precisely the row it left — so one wander
+        /// anywhere in a long drag left the player letting go over a rectangle.</para>
         /// </summary>
         [Test]
         public void OnceWidenedTheBoxDoesNotFlickerBackOnTheBoundary()
@@ -346,18 +360,18 @@ namespace Odyssey.Tests.Hud
             director.ArmBuild(BuildingHandle.Wall);
             director.Begin(At(3, 3));
 
-            director.DragTo(At(8, 5));
+            director.DragTo(At(8, 6));
             Assert.That(director.Widened, Is.True);
+            Assert.That(director.PreviewCount, Is.EqualTo(24), "six by four");
 
-            director.DragTo(At(8, 4));
+            director.DragTo(At(8, 5));
             Assert.That(director.Widened, Is.True, "one back from the boundary is not a retreat");
-            Assert.That(director.PreviewCount, Is.EqualTo(12), "six by two");
-
-            director.DragTo(At(8, 3));
-            Assert.That(director.Widened, Is.False, "home to the anchor's row re-arms the gate");
+            Assert.That(director.PreviewCount, Is.EqualTo(18), "six by three");
 
             director.DragTo(At(8, 4));
-            Assert.That(director.PreviewCount, Is.EqualTo(6), "and one cell across is an accident again");
+            Assert.That(director.Widened, Is.False,
+                "back within a cell of the row re-arms it, without having to land on the row");
+            Assert.That(director.PreviewCount, Is.EqualTo(6));
         }
 
         /// <summary>

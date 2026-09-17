@@ -1350,3 +1350,23 @@ work itself.
     compiles headlessly against the mirror DLLs and its new tests were *run* outside Unity through a
     throwaway `net8.0` NUnit project, which is `docs/lessons.md`'s trick used for the first time on
     tests rather than on a number. **Nobody has pressed Play on it.**
+
+- **The widening gate was loosened the same day it landed, and the second fault was the
+  interesting one (branch `claude/build-pipeline`, 2026-09-17).** The owner played the first
+  version in this worktree's own editor — checked, rather than assumed, against
+  `docs/lessons.md`'s "confirm delivery before diagnosing" — and reported it was still too easy to
+  create double walls.
+  - **The threshold was the obvious half.** Two cells clear is five metres of board, which sounds
+    generous until twenty metres of wall is drawn at a camera looking down a slope. It is three now.
+  - **The gate was also sticky, and that is what made it fail in practice.** It re-armed only on the
+    anchor's *exact* row, so a single wander anywhere in a long drag latched the box wide for the
+    rest of it — and a pointer that has strayed three cells rarely returns to precisely the row it
+    left. The player would let go over a rectangle without ever having seen the moment it widened.
+    Re-arming within one cell of the row instead keeps the two thresholds that stop the flicker
+    while making a trip recoverable.
+  - **Worth keeping in mind as a shape of bug:** a latch and a threshold are two separate decisions,
+    and tuning the threshold alone would have made the same complaint come back quieter. The first
+    version's own test — "once widened it does not flicker back on the boundary" — was passing and
+    was pinning the sticky behaviour as if it were the feature.
+  - **Verified:** fast tier 478 Sim + 146 Hud, unchanged in count because the three tests that
+    encoded the old numbers were re-aimed rather than added to.

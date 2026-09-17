@@ -161,10 +161,19 @@ namespace Odyssey.Hud
         /// simply stop making.</para>
         ///
         /// <para>The rule is hysteresis rather than a snap, so that a rectangle of wall is still
-        /// one gesture: the box widens when the drag has gone <see cref="WidenAcross"/> cells
-        /// clear across the run, and the gate re-arms only when it comes back to the anchor's own
-        /// row. Two thresholds, which is what stops a box flickering between one row and two while
-        /// the pointer sits on the boundary — one threshold would do exactly that.</para>
+        /// one gesture: the box widens when the drag has gone <see cref="WidenAcross"/> cells clear
+        /// across the run, and narrows again when it is back within <see cref="NarrowAcross"/>. Two
+        /// thresholds, which is what stops a box flickering between one row and two while the
+        /// pointer sits on the boundary — one threshold would do exactly that.</para>
+        ///
+        /// <para><b>It was loosened once, on a second report</b> (owner, 2026-09-17: still "too
+        /// easy to create double walls"). Two faults, not one. The threshold was two cells, which
+        /// is five metres of board and sounds like a lot until you drag twenty metres of wall at a
+        /// camera looking down a slope. And the gate was <em>sticky</em>: it re-armed only on the
+        /// anchor's exact row, so a single wander anywhere in a long drag latched the box wide for
+        /// the rest of it, and the player would let go over a rectangle without ever seeing the
+        /// moment it widened. Three to widen, back within one to narrow — so a trip recovers as
+        /// soon as the pointer comes near the row again, rather than having to hit it exactly.</para>
         ///
         /// <para><b>Build only.</b> Mine, fell and cancel are area tools: a box one cell wider than
         /// intended marks one more cell to dig, which is a rounding error, while a wall one row
@@ -183,23 +192,37 @@ namespace Odyssey.Hud
             // gesture and the player never said which axis was the run.
             int across = Math.Min(Math.Abs(cell.X - _anchor.X), Math.Abs(cell.Z - _anchor.Z));
             if (across >= WidenAcross) _wide = true;
-            else if (across == 0) _wide = false;
+            else if (across <= NarrowAcross) _wide = false;
         }
 
         /// <summary>
         /// How many cells clear of the anchor's row a build drag must travel before the box widens
         /// into a rectangle.
         ///
-        /// <para>Two, because one is the accident. A single cell across is what a pointer picks up
-        /// from perspective, from the terrain under the cursor changing which cell a screen point
-        /// names, and from the hand; two is a movement of a whole 2.5 m of board that nothing but
-        /// intent produces.</para>
+        /// <para>Three — seven and a half metres of board. One cell is what a pointer picks up on
+        /// its own from perspective, from the hand, and from the terrain under the cursor changing
+        /// which cell a screen point names; two turned out to be inside what a long drag wanders
+        /// by anyway. Three is a deliberate movement, and the cost of it being too coarse is only
+        /// that an area of wall wants a slightly bigger gesture, while the cost of it being too
+        /// fine is a wall nobody asked for and the wood to build it.</para>
         /// </summary>
-        public const int WidenAcross = 2;
+        public const int WidenAcross = 3;
+
+        /// <summary>
+        /// How near the anchor's row the drag must come back for the gate to re-arm.
+        ///
+        /// <para>The second threshold, and the one that stops a box being latched wide by a wander
+        /// it has long since recovered from. Not zero: requiring the exact row made a trip
+        /// permanent in practice, because a pointer that has strayed three cells rarely returns to
+        /// precisely the row it left. Not two either, or it would meet
+        /// <see cref="WidenAcross"/> and the hysteresis would collapse back to one threshold and
+        /// its flicker.</para>
+        /// </summary>
+        public const int NarrowAcross = 1;
 
         /// <summary>
         /// Whether this build drag has been widened on purpose. Per drag, cleared by
-        /// <see cref="Begin"/> and by coming back to the anchor's row.
+        /// <see cref="Begin"/> and by coming back within <see cref="NarrowAcross"/> of the row.
         /// </summary>
         bool _wide;
 

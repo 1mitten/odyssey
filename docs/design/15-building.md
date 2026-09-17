@@ -155,11 +155,21 @@ meant one. At this camera, on a board drawn in perspective, one cell of wander i
 player can simply stop making.
 
 The rule is **hysteresis, not a snap to a line** (`DesignateDirector.DragTo`), so that a rectangle of
-wall is still one gesture: the box widens when the drag has gone `WidenAcross` = 2 cells clear
-across the run, and the gate re-arms only when the drag comes home to the anchor's own row. Two
-thresholds rather than one, because a single threshold makes the box flicker between one row and two
-while the pointer rests on the boundary. The gated axis is whichever one has travelled less, decided
-afresh each frame, so a drag that turns a corner is still one gesture.
+wall is still one gesture: the box widens when the drag has gone `WidenAcross` = **3** cells clear
+across the run, and narrows again once it is back within `NarrowAcross` = **1**. Two thresholds
+rather than one, because a single threshold makes the box flicker between one row and two while the
+pointer rests on the boundary. The gated axis is whichever one has travelled less, decided afresh
+each frame, so a drag that turns a corner is still one gesture.
+
+**Both numbers were loosened on a second report** — still "too easy to create double walls" (owner,
+2026-09-17, playing the first version). There were two faults, and the threshold was only one of
+them. Two cells is five metres of board, which sounds like plenty until you draw twenty metres of
+wall at a camera looking down a slope. The other was that the gate was **sticky**: re-arming only on
+the anchor's exact row made a trip effectively permanent, because a pointer that has strayed rarely
+comes back to precisely the row it left — so one wander anywhere in a long drag left the player
+releasing over a rectangle, having never seen the moment it widened. Three up and one down fixes
+both: a bigger deliberate movement to widen, and recovery as soon as the pointer is near the row
+again.
 
 **Build only.** Mine, fell and cancel keep every cell their box covers. The same slip does not cost
 the same thing: one more cell marked to dig is a rounding error, and one more row of wall is a wall.
