@@ -82,6 +82,11 @@ namespace Odyssey.Sim.Pawns
                 .AddHashable(edificeSave)
                 .AddSystem(_ => support)
                 .AddSystem(_ => new NavigationSystem(nav, support))
+                // Starting skills (U37), before Needs and the job pipeline for the same reason
+                // they run: a colonist should not be scanned for work on the first tick it is
+                // ever ticked with the zero skills its constructor gave it, when its rolled ones
+                // are one order earlier in the same phase.
+                .AddSystem(_ => new StartingSkillsSystem(pawns))
                 .AddSystem(_ => new NeedsSystem(pawns))
                 // Inside the lambda, not before it: the factory runs during Build(), so a giver
                 // registered after this call is still picked up. Outside it, AddColony would have

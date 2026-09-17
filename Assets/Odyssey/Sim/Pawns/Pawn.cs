@@ -313,6 +313,60 @@ namespace Odyssey.Sim.Pawns
             }
         }
 
+        /// <summary>
+        /// Roll this pawn's starting skill levels from the world seed and its own id (U37), one
+        /// independent draw per skill against <see cref="PawnKindDef.startingSkillLevelWeights"/>
+        /// — a separate stream from <see cref="RollPassions"/>, so adding this roll cannot shift
+        /// a single passion anywhere.
+        ///
+        /// <para><b>Called from the world's first tick, deliberately not from placement.</b>
+        /// Placement runs inside <see cref="ColonyWorld.Build"/>, before the golden-master gate's
+        /// "Generated" hash is taken; rolling here would move that hash as well as "Simulated",
+        /// which is not what the plan asks for. Waiting one tick keeps a freshly built,
+        /// never-ticked world's skills at the constructor's zero — exactly the state before this
+        /// unit existed — and it is also the truer shape of the thing: nobody has any standing
+        /// before the clock has run at all. <see cref="StartingSkillsSystem"/> is what calls it,
+        /// once, and never again for a pawn already carrying experience.</para>
+        ///
+        /// <para><b>A skill already holding experience is left alone.</b> The draw is still made
+        /// for it, so the sequence a later skill reads never depends on which earlier ones were
+        /// already decided, but the result is only written into a skill still at the
+        /// constructor's zero. In the game that is every skill, every time — nothing sets
+        /// experience before the first tick — but a fixture that spawns a pawn and assigns it a
+        /// skill directly, to test something the roll has nothing to do with, is common in this
+        /// suite, and a roll that stamped over it after the fact would fail tests that predate
+        /// this unit for a reason that has nothing to do with what they check.</para>
+        /// </summary>
+        public virtual void RollStartingSkills(uint seed)
+        {
+            var kind = Content.Kind;
+            int[] weights = kind.startingSkillLevelWeights;
+            if (weights.Length == 0) return;
+
+            int total = 0;
+            for (int i = 0; i < weights.Length; i++) total += weights[i];
+            if (total <= 0) return;
+
+            var rng = DeterministicRandom.ForTick(seed, Id.Value, PawnPurpose.StartingSkill);
+            for (int skill = 0; skill < Skills.Length; skill++)
+            {
+                int roll = rng.NextInt(total);
+                int level = weights.Length - 1;
+                int cumulative = 0;
+                for (int l = 0; l < weights.Length; l++)
+                {
+                    cumulative += weights[l];
+                    if (roll < cumulative) { level = l; break; }
+                }
+
+                if (Skills[skill] != 0) continue;
+
+                var def = Content.Skills[skill];
+                if (level > def.maxLevel) level = def.maxLevel;
+                Skills[skill] = def.ExperienceForLevel(level);
+            }
+        }
+
         // ---- thoughts --------------------------------------------------------------------
 
         /// <summary>

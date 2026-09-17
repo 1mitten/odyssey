@@ -55,8 +55,12 @@ namespace Odyssey.Tests.Sim
         /// no work type and no skill — taking a wall apart is the builder's knowledge and trains
         /// construction, because the colonist who put it up is the one who knows where it comes
         /// apart.</para>
+        ///
+        /// <para>Moved a third time by U37, merged on top of deconstruct: <c>PawnKindDef</c>
+        /// gained <c>startingSkillLevelWeights</c>, the invented distribution starting skill
+        /// levels are rolled from.</para>
         /// </summary>
-        const ulong ContentFingerprint = 12769135167210924725UL;
+        const ulong ContentFingerprint = 5084181885077166016UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()
