@@ -468,6 +468,117 @@ namespace Odyssey.Hud
 
         public const int SkillRowGap = 4;
 
+        // ------------------------------------------------------------------ the start screen
+
+        /// <summary>
+        /// How wide the start screen's column is.
+        ///
+        /// <para>Twenty pixels wider than the settings panel's three hundred, and for one reason:
+        /// this panel has to hold "Quit to main menu" on a single line, and the acceptance
+        /// criteria allow an ellipsis on a colonist's name and on nothing else. Everything narrower
+        /// than the longest row it must carry is a panel that will one day clip a word.</para>
+        /// </summary>
+        public const int StartWidth = 320;
+
+        /// <summary>
+        /// The title block: the game's own name, set at <see cref="HudTextRole.Name"/>.
+        ///
+        /// <para>The type scale is closed at six steps and a seventh would fail
+        /// <c>HudTypeTests</c>, so the largest word-face step in the interface is what a title
+        /// gets. It is the same size as a colonist's name in the inspect pane, which is smaller
+        /// than a title usually is and is the honest consequence of having a scale at all: a
+        /// bigger one is a deliberate change to <see cref="HudType"/>, not a literal written
+        /// here.</para>
+        /// </summary>
+        public const int StartTitle = 26;
+
+        /// <summary>Title to the first row.</summary>
+        public const int StartTitleGap = 14;
+
+        /// <summary>
+        /// One row of the start screen — deliberately <see cref="RowHeight"/>, the same row the
+        /// stores panel, the Menu popover and the settings panel are all built from. The start
+        /// screen introduces no new control; it arranges the ones the interface already has.
+        /// </summary>
+        public const int StartRow = RowHeight;
+
+        public const int StartRowGap = 4;
+
+        /// <summary>
+        /// One row of the load list: a colony's name on one line and the line that identifies it —
+        /// day, map, and for a file this build cannot open, why — under it. Two lines, so it
+        /// stands taller than the plain row above.
+        /// </summary>
+        public const int StartSaveRow = 44;
+
+        public const int StartSaveGap = 4;
+
+        /// <summary>
+        /// How tall the load list may stand before it scrolls.
+        ///
+        /// <para><b>The first region in this interface with a real ceiling on it</b>, because it is
+        /// the first whose length is set by the player rather than by the game: a folder can hold
+        /// any number of saves. The Keys tab was already noted in <c>CLAUDE.md</c> as the panel
+        /// that would want this first; the load list simply got here before it, and the scroller
+        /// it uses is the one the Build palette already restyled.</para>
+        ///
+        /// <para>360 is eight rows: enough that scrolling is rare, short enough that the whole
+        /// screen still fits a 1280 x 720 canvas, which is what 150 per cent interface scale
+        /// produces on a 1080p monitor and therefore the smallest canvas this game draws.</para>
+        /// </summary>
+        public const int StartListMax = 360;
+
+        /// <summary>The start screen's height for a given number of rows.</summary>
+        public static float StartHeight(int rows) =>
+            Frame + Pad + StartTitle + StartTitleGap +
+            Math.Max(0, rows) * StartRow + Math.Max(0, rows - 1) * StartRowGap + Pad;
+
+        /// <summary>
+        /// The load screen's height: the same chrome, with the list in place of the rows, capped
+        /// at <see cref="StartListMax"/>, plus the row that goes back.
+        /// </summary>
+        public static float StartLoadHeight(int saves)
+        {
+            float list = saves <= 0
+                ? StartSaveRow                                   // the "nothing here yet" line
+                : saves * StartSaveRow + (saves - 1) * StartSaveGap;
+            // The back row's own hairline is counted: it is a border on that row, not on the
+            // panel, so Frame does not already contain it. One pixel, and leaving it out is
+            // exactly the constant drift the PlayMode box comparison exists to catch.
+            return Frame + Pad + StartTitle + StartTitleGap +
+                   Math.Min(StartListMax, list) + StartRowGap + HudTheme.BorderWidth +
+                   StartRow + Pad;
+        }
+
+        /// <summary>
+        /// Where the start screen sits: centred, both axes.
+        ///
+        /// <para><b>Not part of <see cref="Solve"/>, and that is deliberate.</b> Solve places the
+        /// regions of the playing HUD and its test asks whether any two of them overlap. The start
+        /// screen is never on screen with any of them — it exists precisely when no session is
+        /// built, so there is no stores panel, no roster and no command bar to overlap. Putting it
+        /// in that dictionary would be asking a question about a screen nobody will ever see. What
+        /// it does owe the fast tier is <see cref="StartScreenFits"/>.</para>
+        /// </summary>
+        public static HudRect StartScreen(float width, float height, float panelHeight) =>
+            new HudRect((width - StartWidth) * 0.5f, (height - panelHeight) * 0.5f,
+                StartWidth, panelHeight);
+
+        /// <summary>
+        /// Whether the start screen stands entirely inside the canvas.
+        ///
+        /// <para>The question the overlap test answers for the playing HUD, asked the only way it
+        /// can be asked of a screen with nothing beside it. A modal that runs off the top of a
+        /// small canvas hides its own first row, and the row a start screen hides first is New
+        /// game.</para>
+        /// </summary>
+        public static bool StartScreenFits(float width, float height, float panelHeight)
+        {
+            HudRect box = StartScreen(width, height, panelHeight);
+            return box.X >= 0f && box.Y >= 0f &&
+                   box.X + box.Width <= width && box.Y + box.Height <= height;
+        }
+
 
         // ================================================================== solve
 

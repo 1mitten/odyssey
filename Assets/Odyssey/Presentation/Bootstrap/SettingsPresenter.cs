@@ -133,7 +133,13 @@ namespace Odyssey.Presentation.Bootstrap
         void Attach()
         {
             if (_director != null) return;
-            SettingsDirector? director = _bootstrap?.Directors?.Settings;
+
+            // The bootstrap's own preferences, not the session's (U38). They are the same object
+            // while a session exists — the composition root hands this pair to every HudDirectors
+            // it builds — and the difference is that these exist with no session at all, which is
+            // when the start screen's Options row opens this panel. Waiting for Directors would
+            // have left that row opening a panel nothing drove.
+            SettingsDirector? director = _bootstrap?.Preferences;
             if (director == null) return;
 
             _director = director;

@@ -357,11 +357,23 @@ namespace Odyssey.Presentation.Ui
             BuildPalette();
             BuildSettings();
 
+            // B18, last, so it is the top-most element in the tree and its scrim covers everything
+            // above. Built whether or not a session exists, because the state it belongs to is the
+            // one where none does.
+            BuildStartScreen();
+
             _hud.RegisterCallback<GeometryChangedEvent>(_ => OnResized());
+
+            // A session coming or going is the one thing that decides whether the start screen is
+            // on screen, so it is driven by the event rather than polled: Update returns early
+            // with no world, which is exactly when the start screen has to be visible.
+            _boot!.SessionChanged += OnSessionChanged;
+            OnSessionChanged();
         }
 
         void OnDestroy()
         {
+            if (_boot != null) _boot.SessionChanged -= OnSessionChanged;
             Detach();
             if (_topRamp != null) DestroyImmediate(_topRamp);
             if (_bottomRamp != null) DestroyImmediate(_bottomRamp);
@@ -386,6 +398,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.DeveloperOverlayChanged += OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged += OnBusDbChanged;
             _directors.Settings.ExitChanged += OnExitChanged;
+            _directors.Settings.RowRequested += OnSessionRow;
             _directors.Hotkeys.BindingChanged += OnBindingChanged;
             _directors.Hotkeys.ListenChanged += OnListenChanged;
             _directors.Hotkeys.ConflictNoted += OnHotkeyConflict;
@@ -417,6 +430,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.DeveloperOverlayChanged -= OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged -= OnBusDbChanged;
             _directors.Settings.ExitChanged -= OnExitChanged;
+            _directors.Settings.RowRequested -= OnSessionRow;
             _directors.Hotkeys.BindingChanged -= OnBindingChanged;
             _directors.Hotkeys.ListenChanged -= OnListenChanged;
             _directors.Hotkeys.ConflictNoted -= OnHotkeyConflict;

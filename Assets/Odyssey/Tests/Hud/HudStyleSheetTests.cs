@@ -81,8 +81,17 @@ namespace Odyssey.Tests.Hud
             (".settings__keycap", "color", () => HudTheme.TextMeta, "text meta"),
             (".settings__keycap--listening", "border-color", () => HudTheme.Accent, "accent"),
             (".settings__keycap--listening", "color", () => HudTheme.Accent, "accent"),
-            (".settings__exit--armed", "background-color", () => HudTheme.ActiveTabFill, "active tab fill"),
-            (".settings__exit--armed .settings__label", "color", () => HudTheme.Accent, "accent"),
+            (".row--armed", "background-color", () => HudTheme.ActiveTabFill, "active tab fill"),
+            (".row--armed .settings__label", "color", () => HudTheme.Accent, "accent"),
+
+            // B18, the start screen. The scrim is the only colour this screen introduces; every
+            // other line here is the screen proving it introduced none.
+            (".modal-scrim", "background-color", () => HudTheme.ModalScrim, "modal scrim"),
+            (".startscreen__title", "color", () => HudTheme.TextPrimary, "text primary"),
+            (".save__name", "color", () => HudTheme.TextPrimary, "text primary"),
+            (".save__meta", "color", () => HudTheme.TextMeta, "text meta"),
+            (".startscreen__back", "border-top-color", () => HudTheme.Divider, "divider"),
+            (".save--bad .save__meta", "color", () => HudTheme.Warn, "warn"),
         };
 
         [Test]
@@ -163,6 +172,22 @@ namespace Odyssey.Tests.Hud
             (".cmd", "margin-right", () => HudCommands.ItemGap, "command item gap"),
             (".commandbar__divider", "height", () => HudCommands.DividerHeight, "divider height"),
             (".commandbar__divider", "width", () => HudCommands.DividerWidth, "divider width"),
+
+            // B18, the start screen.
+            (".startscreen", "width", () => HudLayout.StartWidth, "start screen width"),
+            (".startscreen__title", "height", () => HudLayout.StartTitle, "start screen title"),
+            (".startscreen__rows", "margin-top", () => HudLayout.StartTitleGap, "title to first row"),
+            (".startscreen__list", "margin-top", () => HudLayout.StartTitleGap, "title to first row"),
+            (".startscreen__list", "max-height", () => HudLayout.StartListMax, "the load list's ceiling"),
+            (".save", "height", () => HudLayout.StartSaveRow, "a save row"),
+            (".save", "margin-bottom", () => HudLayout.StartSaveGap, "save row gap"),
+            (".startscreen__back", "margin-top", () => HudLayout.StartRowGap, "start screen row gap"),
+
+            // The row the start screen reuses rather than reinventing. Pinned in both places it is
+            // already used, so "the start screen is built from rows the interface already has"
+            // fails here the moment one of the three drifts.
+            (".settings__row", "height", () => HudLayout.StartRow, "list row"),
+            (".menu__row", "height", () => HudLayout.StartRow, "list row"),
 
             (".panel", "padding", () => HudLayout.Pad, "panel padding"),
             (".panel", "border-radius", () => HudTheme.PanelRadius, "panel radius"),

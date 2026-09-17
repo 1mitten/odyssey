@@ -11,6 +11,7 @@ using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pawns;
+using Odyssey.Sim.Saving;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
@@ -56,6 +57,9 @@ namespace Odyssey.Presentation.Bootstrap
         public int sizeZ = 120;
         public int layers = 16;
         public uint seed = 1;
+
+        [Tooltip("What a colony started from this scene is called. The save header carries it, so the load list can say which colony a file is. Naming one is the New game screen's job (U39); this is what it is called until then.")]
+        public string colonyName = "Landfall";
 
         [Tooltip("Natural wilderness is the prototype default (ADR 0008). RuinedCity is kept and still works.")]
         public MapType mapType = MapType.Natural;
@@ -140,10 +144,20 @@ namespace Odyssey.Presentation.Bootstrap
         public int maxTicksPerFrame = 8;
 
         /// <summary>
-        /// Build a world the moment Play starts. True until a menu exists to ask for one (U35);
-        /// turning it off is how a session begins at a screen instead of in a colony.
+        /// Build a world the moment Play starts, skipping the start screen.
+        ///
+        /// <para><b>False since U38 (2026-09-17), which is the change of behaviour in that unit
+        /// rather than a detail of it.</b> Pressing Play now lands on the start screen, and a
+        /// colony exists only once somebody has asked for one. U35 built this flag for exactly
+        /// this day, and it stays rather than being deleted: it is the development loop — press
+        /// Play, be in a colony — and it is what lets every PlayMode test written before the start
+        /// screen existed carry on assuming <c>Start</c> builds a world, by setting it explicitly
+        /// in the rig instead of relying on the default.</para>
+        ///
+        /// <para>A test that relies on the <i>default</i> being true will fail, and should: what
+        /// it was really asserting was that a session exists, and it can say so in one line.</para>
         /// </summary>
-        public bool buildOnPlay = true;
+        public bool buildOnPlay;
 
 
         SimWorld? _world;
@@ -216,6 +230,21 @@ namespace Odyssey.Presentation.Bootstrap
         /// the start layer. The rig, the pick presenter and the HUD shell all realise these.
         /// </summary>
         public HudDirectors? Directors { get; private set; }
+
+        /// <summary>
+        /// The preferences that outlive a session: the settings panel's levers and the key
+        /// bindings (U38).
+        ///
+        /// <para>Held here rather than inside <see cref="HudDirectors"/>, which is built and thrown
+        /// away with each colony. The start screen's Options row opens the settings panel with no
+        /// session built at all, so the panel behind it cannot be a thing a session owns — and a
+        /// player who quits to the menu and starts again has not asked for their interface scale,
+        /// their volumes or their key bindings to be reconsidered.</para>
+        /// </summary>
+        public SettingsDirector Preferences { get; } = new SettingsDirector();
+
+        /// <summary>The key bindings, for the life of the game rather than of a colony.</summary>
+        public HotkeyDirector Keys { get; } = new HotkeyDirector();
         public WorldRenderModel? Model => _model;
         public ChunkRenderer? Renderer => _renderer;
 
@@ -242,7 +271,21 @@ namespace Odyssey.Presentation.Bootstrap
         /// silently doubled world: the second call would leak the first world's meshes and
         /// figures, which is exactly the failure this unit exists to make impossible.</para>
         /// </summary>
-        public void BuildSession()
+        public void BuildSession() => BuildSession(null, null);
+
+        /// <summary>
+        /// Build a session, optionally on a seed and a shape that are not the scene's (U38).
+        ///
+        /// <para><b>Both overrides exist for one caller each.</b> <paramref name="seedOverride"/>
+        /// is New game: everything else about the request stays a default on the inspector, so
+        /// size, map type and scenario remain tunable later without new interface, which is what
+        /// the plan's U39 row asks for. <paramref name="from"/> is Load: a save refuses to open
+        /// into a world of a different seed or size (<c>WorldSave.Load</c> checks both), so a
+        /// loaded session is built from the header rather than from whatever the inspector happens
+        /// to say — and if the header does not carry enough to rebuild the same world, the load
+        /// fails loudly here rather than producing a world that quietly differs.</para>
+        /// </summary>
+        public void BuildSession(uint? seedOverride, SaveHeader? from)
         {
             if (HasSession)
                 throw new System.InvalidOperationException(
@@ -256,7 +299,10 @@ namespace Odyssey.Presentation.Bootstrap
             GroundRelief.Amplitude = groundRelief;
             GroundRelief.Period = groundReliefPeriod;
 
-            var size = new GridSize(sizeX, sizeZ, layers);
+            // A loaded session takes its shape from the file, not from the inspector. WorldSave
+            // refuses a save whose seed or size differs from the world it is opened into, so this
+            // is not a convenience — it is the only way a load can succeed at all.
+            GridSize size = from != null ? from.Size : new GridSize(sizeX, sizeZ, layers);
             var chunks = new ChunkGrid(size);
 
             // The render model is built before the world, because the mirror the world publishes
@@ -277,17 +323,31 @@ namespace Odyssey.Presentation.Bootstrap
             // The prototype starts on empty natural ground and the colony builds from nothing
             // (ADR 0008). The ruined-city generator is still here and still tested; switch
             // mapType to reach it.
-            ScenarioDef scenarioDef = scenario == StartingScenario.Bare ? ScenarioDef.Bare() : ScenarioDef.Playtest();
+            ScenarioDef scenarioDef = ScenarioFor(from);
+            uint sessionSeed = from != null ? from.Seed : seedOverride ?? seed;
+            MapType sessionMap = from != null && from.Recipe.Map != MapType.Unknown
+                ? from.Recipe.Map
+                : mapType;
             var generation = Stopwatch.StartNew();
             ColonyWorld colony = ColonyWorld.Build(new ColonyRequest
             {
                 Size = size,
-                Seed = seed,
+                Seed = sessionSeed,
                 Scenario = scenarioDef,
-                Barren = barrenMap,
-                Wooded = woodedMap,
-                Map = mapType,
+                // From the file when loading, for the reason SaveRecipe.Barren sets out: three
+                // different boards answer to MapType.Natural, and rebuilding the wrong one would
+                // put a restored colony's camera on empty ground far from the colony.
+                Barren = from != null ? from.Recipe.Barren : barrenMap,
+                Wooded = from != null ? from.Recipe.Wooded : woodedMap,
+                Map = sessionMap,
                 Chunks = chunks,
+
+                // A colony keeps the name it was saved under. Nothing names one yet — that is the
+                // New game screen's, in U39 — so a fresh session takes the request's default and
+                // only a loaded one carries a name here.
+                Name = from != null && from.Recipe.ColonyName.Length > 0
+                    ? from.Recipe.ColonyName
+                    : colonyName,
 
                 // Noon, and it belongs to the build rather than to a call after it: a colony that
                 // starts at tick 0 starts at midnight, SimWorld.StartAtTick refuses a clock that
@@ -345,10 +405,15 @@ namespace Odyssey.Presentation.Bootstrap
             //
             // None of it enters the simulation and none of it is saved: nothing is stored, because
             // the same inputs are re-derived. See ColonistAppearance.
+            // The *session's* seed, not the inspector's: a loaded colony has to deal the same
+            // people it was saved with, and a new game on a rolled seed has to deal that seed's
+            // people rather than seed 1's. Reading the field here would have made every world look
+            // like the scene's default one, which is the sort of fault that reads as "the save
+            // lost my colonists' faces".
             uint castSeed =
                 colonistLookSeed != 0 ? (uint)colonistLookSeed :
                 randomCastEachSession ? (uint)UnityEngine.Random.Range(1, int.MaxValue) :
-                seed;
+                sessionSeed;
             var appearances = new ColonistAppearanceBook(castSeed, moduleCatalogue);
             // One ink line in the game, not two. Characters draw their own hull because they are
             // absent from the depth texture the world's outline pass reads, so the colour and
@@ -401,7 +466,9 @@ namespace Odyssey.Presentation.Bootstrap
                 World = _model,
             };
 
-            Directors = new HudDirectors(size.SizeY, outcome.StartCell.Y);
+            // Over the preferences this component has held since it woke, not over fresh ones:
+            // the same settings panel and the same key bindings serve every session.
+            Directors = new HudDirectors(size.SizeY, outcome.StartCell.Y, Preferences, Keys);
             Directors.Slice.LayerChanged += OnActiveLayerChanged;
 
             // Sound, built once beside the figures: one director serves the whole colony, reading
@@ -451,8 +518,10 @@ namespace Odyssey.Presentation.Bootstrap
                 : $"catalogue {moduleCatalogue.name}: {moduleCatalogue.ResolvedPrefabCount()}/" +
                   $"{moduleCatalogue.Entries.Count} rows have art";
 
+            SessionChanged?.Invoke();
+
             Debug.Log(
-                $"[Odyssey] world {size} seed {seed} generated in {generation.ElapsedMilliseconds} ms. " +
+                $"[Odyssey] world {size} seed {sessionSeed} generated in {generation.ElapsedMilliseconds} ms. " +
                 $"{(outcome.Natural != null ? outcome.Natural.Report.ToString() : outcome.City!.Report.ToString())}. {_catalogueNote}. " +
                 $"Modules with art: {library.ArtBackedCount()}/{library.Count - 1}" +
                 (library.MissingArt.Count == 0
@@ -1149,6 +1218,119 @@ namespace Odyssey.Presentation.Bootstrap
         /// world — the next world is perfectly correct — it just costs the memory twice, which is
         /// why the check for it is a test that counts rather than an eye that looks.</para>
         /// </summary>
+        /// <summary>
+        /// The scenario a session runs: the file's, when loading, and the scene's otherwise.
+        ///
+        /// <para>Matched by <c>defName</c> rather than by index, because an index is a number that
+        /// means something different the day a scenario is inserted before another — and the
+        /// header carries the name for exactly this reason. A name this build does not know falls
+        /// back to the scene's scenario and says so, rather than refusing to open a colony over a
+        /// starting condition that has already happened: the scenario places things at tick zero,
+        /// and a save is a world long past it.</para>
+        /// </summary>
+        ScenarioDef ScenarioFor(SaveHeader? from)
+        {
+            ScenarioDef scene = scenario == StartingScenario.Bare ? ScenarioDef.Bare() : ScenarioDef.Playtest();
+            if (from == null || from.Recipe.Scenario.Length == 0) return scene;
+
+            foreach (ScenarioDef known in new[] { ScenarioDef.Bare(), ScenarioDef.Playtest() })
+                if (string.Equals(known.defName, from.Recipe.Scenario, StringComparison.Ordinal))
+                    return known;
+
+            Debug.LogWarning($"[Odyssey] save names scenario '{from.Recipe.Scenario}', which this " +
+                             $"build does not know; opening it on {scene.defName} instead. The " +
+                             "scenario only acts at tick zero, so a loaded world is unaffected.");
+            return scene;
+        }
+
+        /// <summary>Raised when a session has been built, and when one has been torn down. The
+        /// start screen shows itself on the second and hides on the first.</summary>
+        public event Action? SessionChanged;
+
+        /// <summary>
+        /// Write the running colony to a path (U38).
+        ///
+        /// <para>The day is computed here rather than in Sim, which has no calendar:
+        /// <c>GameClock</c> lives in the Hud assembly and <c>SaveRecipe</c>'s own doc comment
+        /// names this as the caller's job.</para>
+        ///
+        /// <para><b>Taken between ticks, not during one.</b> The menu is a HUD click, so this runs
+        /// inside a frame's update and the world is at rest — but that is a property of where it
+        /// is called from rather than of this method, so it is asserted rather than assumed.</para>
+        /// </summary>
+        public string SaveSession()
+        {
+            string path = SaveFiles.PathFor(CurrentRecipe());
+            SaveSession(path);
+            return path;
+        }
+
+        /// <summary>The same, to a path of the caller's choosing. What a test uses.</summary>
+        public void SaveSession(string path)
+        {
+            if (_colony == null || _world == null)
+                throw new InvalidOperationException("there is no session to save");
+
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+            _colony.SaveToFile(path, CurrentRecipe());
+        }
+
+        SaveRecipe CurrentRecipe()
+        {
+            if (_colony == null || _world == null)
+                throw new InvalidOperationException("there is no session to describe");
+            return _colony.Recipe(GameClock.DayOfMonthsStart(_world.CurrentTick));
+        }
+
+        /// <summary>
+        /// Put down whatever is running and open a save in its place (U38).
+        ///
+        /// <para><b>Three steps, and the order is the whole of it:</b> tear the session down, read
+        /// the header, and build a world from <i>the header</i> before restoring into it.
+        /// <c>WorldSave.Load</c> refuses a file whose seed or size differs from the world it is
+        /// given, so building from the inspector and loading over the top would fail on any save
+        /// not made by the current scene settings — which is every save, the moment a seed can be
+        /// rolled.</para>
+        /// </summary>
+        public void LoadSession(string path)
+        {
+            SaveHeader header = WorldSave.ReadHeaderOnly(path);
+
+            TeardownSession();
+            BuildSession(null, header);
+
+            // The colony was built from the header, so this cannot mismatch; if it ever does, the
+            // exception from WorldSave says which of seed or size disagreed, and that is a fault
+            // in the rebuild above rather than in the file.
+            _colony!.LoadFromFile(path);
+            RefreshAfterLoad();
+        }
+
+        /// <summary>
+        /// What a loaded world needs before it is drawn: the derived state the save deliberately
+        /// does not carry, and one tick to publish a frame.
+        ///
+        /// <para><c>ColonyWorld.RebuildDerived</c> is where support and the region graph come back
+        /// (OQ-37) — the save omits both because they are derived, and a grid loaded without them
+        /// has zero support everywhere.</para>
+        ///
+        /// <para><b>The full mirror refresh is the part that is easy to leave out and hard to
+        /// diagnose.</b> The mirror primes itself with <c>RefreshAll</c> on the first publish and
+        /// uses <c>RefreshDirty</c> for every one after, and a load writes the cell arrays
+        /// wholesale without going through anything that marks a chunk dirty. A tick alone would
+        /// therefore publish a frame drawn from the *pre-load* world — the colony would be right
+        /// and the board would be the one you left. <c>RefreshAll</c> is also the only thing that
+        /// maintains <c>LowestOutdoorLayer</c>, which decides how far the slice view reaches down,
+        /// so a load without it would draw a correct board at the wrong depth.</para>
+        /// </summary>
+        void RefreshAfterLoad()
+        {
+            _colony!.RebuildDerived();
+            _model!.RefreshAll(_colony.Grid, _colony.Outcome.Edifices);
+            _world!.Tick();
+            SessionChanged?.Invoke();
+        }
+
         public void TeardownSession()
         {
             if (cameraRig != null)
@@ -1185,6 +1367,10 @@ namespace Odyssey.Presentation.Bootstrap
             Directors = null;
             _accumulator = 0d;
             _tickAlpha = 0f;
+
+            // Last, and after everything is null: whoever listens is about to ask whether a
+            // session exists, and the answer has to already be no.
+            SessionChanged?.Invoke();
         }
     }
 }

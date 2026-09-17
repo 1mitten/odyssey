@@ -1126,9 +1126,109 @@
     border-top-color: rgba(255, 255, 255, 0.09);
 }
 
-.settings__exit--armed { background-color: rgba(111, 211, 227, 0.12); }
+/* A row that has been pressed once and is asking to be sure. Not named for the exit row any more
+   (U38): the settings panel grew Load and Quit-to-main-menu beside it, and the start screen has
+   its own Quit, and all of them ask the same question in the same voice. One class, so the answer
+   to "what does a row look like when it is waiting for a second press" has one place. */
+.row--armed { background-color: rgba(111, 211, 227, 0.12); }
 
-.settings__exit--armed .settings__label { color: #6fd3e3; }
+.row--armed .settings__label { color: #6fd3e3; }
+
+/* ---------------------------------------------------------------- the modal scrim
+
+   The third scrim, and the only one that is not always on. The two at the top and bottom of the
+   screen are ramps carrying the HUD's text contrast; this one is flat, covers the viewport, and
+   says that what is behind it is not available. Flat rather than a ramp, so it needs no generated
+   texture and can live here as a plain fill.
+
+   It is a pointer target on purpose, which is the whole of "a modal swallows every pointer event"
+   (09-ui-and-input.md section 6, case 5): a full-viewport element under the panel and over
+   everything else absorbs what would otherwise reach the world. */
+
+.modal-scrim {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(8, 11, 14, 0.66);
+}
+
+/* ---------------------------------------------------------------- B18 the start screen
+
+   The screen before the game: the only one that exists when no world is built. Centred like the
+   settings panel, and for the same reason — it belongs to no button, so there is nothing to anchor
+   it to. It is a window, so it takes the opaque fill and the close X from .window; the X is
+   suppressed on the root screen, which has nothing to close to.
+
+   It introduces no control of its own. A row here is a .settings__row, which is the same row the
+   stores panel, the Menu popover and the settings panel are built from. */
+
+.startscreen {
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    width: 320px;
+}
+
+/* The game's own name, at the largest word-face step the type scale has. An explicit box with
+   middle alignment, like every other label that shares a column, so its leading falls outside the
+   box rather than pushing the rows below it down. */
+.startscreen__title {
+    color: #eef3f6;
+    height: 26px;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+.startscreen__rows { margin-top: 14px; }
+
+/* The saves, when the load screen is showing. A max height and a scroll, which is the first
+   ceiling any region in this interface has carried — and it is here first because this is the
+   first region whose length is set by the player rather than by the game. The scroller itself is
+   restyled by the .build__scroll rules above; this list wears the same class so there is one
+   scrollbar in the project rather than two. */
+.startscreen__list {
+    flex-grow: 0;
+    flex-shrink: 0;
+    min-height: 0;
+    max-height: 360px;
+    margin-top: 14px;
+}
+
+.save {
+    flex-direction: column;
+    justify-content: center;
+    height: 44px;
+    margin-bottom: 4px;
+    padding: 0 8px;
+    border-radius: 3px;
+}
+
+.save:hover { background-color: rgba(255, 255, 255, 0.07); }
+
+.save__name {
+    color: #eef3f6;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+/* Day, map, and — for a file this build cannot open — the reason. Listed rather than hidden: a
+   save that vanishes from the list is a colony the player concludes is gone. */
+.save__meta {
+    color: rgba(255, 255, 255, 0.66);
+    white-space: nowrap;
+}
+
+.save--bad { opacity: 0.42; }
+.save--bad:hover { background-color: rgba(0, 0, 0, 0); }
+.save--bad .save__meta { color: #e8b55c; }
+
+/* The row that goes back, set apart from the list above it the way the settings panel's exit row
+   is set apart from the tabs. */
+.startscreen__back {
+    margin-top: 4px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.09);
+}
 
 /* ---------------------------------------------------------------- the drag-select marquee */
 
