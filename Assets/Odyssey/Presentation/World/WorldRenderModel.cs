@@ -277,6 +277,33 @@ namespace Odyssey.Presentation.World
         /// <summary>Whether this cell is the head of the bed that stands in it — the half that draws.</summary>
         public bool BedHead(int index) => _bedHead[index];
 
+        /// <summary>
+        /// The head cell of the bed occupying this one, or -1 where there is no bed.
+        ///
+        /// <para>Either half answers, because a bed is one record behind two cells and everything
+        /// about how it is drawn — the shape, the selection bracket, the sleeper laid in it — is
+        /// measured from the head. A four-neighbour look: only a cell directly beside this one can
+        /// be the head of a two-cell thing that claims it.</para>
+        /// </summary>
+        public int BedHeadAt(int index)
+        {
+            if ((uint)index >= (uint)_bedHead.Length) return -1;
+            if (EdificeDef(index) != CoreContent.EdificeBed) return -1;
+            if (_bedHead[index]) return index;
+
+            CellRef at = Size.FromIndex(index);
+            for (int f = 0; f < Directions.Count; f++)
+            {
+                int x = at.X + Directions.DeltaX[f], z = at.Z + Directions.DeltaZ[f];
+                if (!Size.Contains(x, z, at.Y)) continue;
+
+                int neighbour = Size.Index(x, z, at.Y);
+                if (EdificeDef(neighbour) == CoreContent.EdificeBed && _bedHead[neighbour])
+                    return neighbour;
+            }
+            return -1;
+        }
+
         /// <summary>The module index for whatever edifice stands in this cell, or 0.</summary>
         public int EdificeModule(int index) => ModuleForEdificeAt(index, _edifice[index]);
 

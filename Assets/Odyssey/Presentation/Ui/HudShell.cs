@@ -337,6 +337,9 @@ namespace Odyssey.Presentation.Ui
             public string LastName = string.Empty;
             public string LastValue = string.Empty;
 
+            /// <summary>The type role the value was last set in, so weight follows pickability.</summary>
+            public HudTextRole LastRole = HudTextRole.Meta;
+
             /// <summary>
             /// Whether this row is, for the tile currently held, the owner picker — the pane's one
             /// interactive fact. Rows are reused across tiles, so the affordance travels with the
@@ -349,6 +352,12 @@ namespace Odyssey.Presentation.Ui
 
             /// <summary>The "this row does something" chevron, shown only while <see cref="IsPick"/>.</summary>
             public Label Chevron = null!;
+
+            /// <summary>The box the value sits in, styled as a button while <see cref="IsPick"/>.</summary>
+            public VisualElement PickBox = null!;
+
+            /// <summary>The bed glyph before the value, shown only while <see cref="IsPick"/>.</summary>
+            public HudGlyph Glyph = null!;
         }
 
         void Awake()

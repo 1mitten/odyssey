@@ -1848,3 +1848,57 @@ named the cause. The class's own remarks claimed a test held the two tables toge
 assembly can see both. `RegistryTests` already did it for `BuildLabels`, `JobLabels` and
 `ItemLabels`; `BuildShapes` is now beside them. A handle added past the end of such an array does
 not throw — it reads as the default, which is the silently wrong answer.
+
+## Hover is not an affordance
+
+Two rounds were paid for this on the bed's owner row (2026-09-17, then again 2026-09-18). The row
+submitted an intent and had done since it was written; what it looked like at rest was a pointer
+cursor, then a hover brighten, then a border and a chevron. The owner could not find it either
+time, and said so in the same words both times: *"I couldn't work out how to assign a colonist to
+a bed."*
+
+A player does not hover a row to find out whether it is a control; they scan the panel and see
+facts. **A control has to look like one while the pointer is somewhere else entirely** — a filled
+box, an icon, and weight. The row also has to *name the action*: it read "—" for an unowned bed,
+which says there is nothing here, and a fast-tier test had pinned that em dash in place.
+
+## A simulation that works and cannot be seen is a simulation that is reported broken
+
+Same round, and the more expensive half. The owner reported that colonists would not use spare
+beds and stood outside instead. A probe on exactly that case — nobody owning anything, one spare
+bed, one tired colonist — walked the colonist into the bed and slept there. `TrySleep` was correct
+and always had been.
+
+Nothing in the whole of presentation knew a pawn could be asleep, so a colonist in a bed was drawn
+**standing bolt upright in it**. The bug report was accurate about what was on screen and wrong
+about what it meant, and it would have been perfectly reasonable to go and "fix" the sleep chooser.
+
+**Measure the behaviour before believing a behavioural bug report**, especially about a system with
+no visual state of its own. And when a feature ships whose whole evidence is a pose, a sprite or a
+readout — check that the thing exists, because its absence looks exactly like the feature not
+working.
+
+## Integer division silently collapses a tier table
+
+Found in the same measurement. Rest gain was `base * effectiveness / 100` with a base of 6, so the
+five quality tiers and the ground produced 4.8, 5.1, 6.0, 6.72, 7.5, 8.4 — truncated to 4, 5, 6,
+**6**, 7, 8. A Decent bed was worth exactly a Normal one. Nothing failed; every number was a good
+number.
+
+Where content is a percentage of a small integer, **assert the ladder** — each step strictly better
+than the one below — rather than the values. The fix is to spend the fractional part rather than
+discard it; a Bresenham step over an index the world already stores keeps it out of the save and
+the hash, where a carried remainder field would not.
+
+## A multiply-and-shift hash has no usable low bits, and `% small` reads only those
+
+The sleep posture is chosen with `% 4`, from a hash of the pawn id. The first cut was the ordinary
+Knuth multiply plus one shift — `h = id * 2654435761; h ^= h >> 15` — which is a perfectly good
+hash everywhere except in its bottom bits, and the bottom two bits were the only ones `% 4` ever
+looked at. **Every colonist in the colony came out in the same posture**, which is exactly the
+one-shape outcome the posture table exists to prevent.
+
+Where a hash feeds a small modulus, use a full avalanche (murmur3's `fmix32`: shift-xor, multiply,
+shift-xor, multiply, shift-xor) so the low bits carry the whole input. And test the *distribution
+over consecutive ids*, because consecutive is what a colony actually has — a test over scattered
+ids would have passed.

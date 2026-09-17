@@ -234,7 +234,37 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>Rest recovered per interval, scaled by what the pawn is lying on.</summary>
         public virtual int RestGainPerInterval(int bedEffectiveness) =>
-            Content.Kind.restGainPerInterval * bedEffectiveness / 100;
+            RestGainPerInterval(bedEffectiveness, 0);
+
+        /// <summary>
+        /// Rest recovered in one interval, at a given bed effectiveness.
+        ///
+        /// <para><b>The dither is not a nicety; without it two of the five quality tiers do
+        /// nothing.</b> The base gain is 6 and the tiers are percentages, so the products are
+        /// 4.8, 5.1, 6.0, 6.72, 7.5 and 8.4 — and integer division flattened those to 4, 5, 6,
+        /// <b>6</b>, 7, 8. A Decent bed recovered rest at exactly the rate of a Normal one, which
+        /// is to say the tier a colonist rolled was worth nothing at all. Measured, not supposed:
+        /// <c>RestGainTests</c> walks the table.</para>
+        ///
+        /// <para><b>Carried on the interval index rather than in a field</b>, which is what keeps
+        /// this out of the save and out of the hash. The fractional part is spent by a Bresenham
+        /// step over <paramref name="intervalIndex"/>: over any hundred intervals a tier gains
+        /// exactly its own percentage, and the sequence is a pure function of a number the world
+        /// already stores. A remainder kept on the pawn would have been one more field to save,
+        /// hash and round-trip for a fifth of a point of rest.</para>
+        /// </summary>
+        public virtual int RestGainPerInterval(int bedEffectiveness, int intervalIndex)
+        {
+            int scaled = Content.Kind.restGainPerInterval * bedEffectiveness;
+            int whole = scaled / 100;
+            int fraction = scaled % 100;
+            if (fraction == 0) return whole;
+
+            // The accumulator this step lands on. It wrapped iff it is below the amount added,
+            // and a wrap is the extra point.
+            int accumulator = (int)((long)intervalIndex * fraction % 100);
+            return accumulator < fraction ? whole + 1 : whole;
+        }
 
         /// <summary>Mood drift toward the target. Rising is faster than falling, as it should be.</summary>
         public virtual int MoodDriftPerInterval(bool rising) =>

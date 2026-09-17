@@ -1690,7 +1690,7 @@ namespace Odyssey.Presentation.Bootstrap
             // from, whichever half was clicked, so either end selects the same box.
             if (_model.EdificeDef(index) == CoreContent.EdificeBed)
             {
-                int head = _model.BedHead(index) ? index : HeadOfBedAt(index);
+                int head = _model.BedHeadAt(index);
                 if (head >= 0)
                 {
                     CellRef at = _model.Size.FromIndex(head);
@@ -1709,29 +1709,6 @@ namespace Odyssey.Presentation.Bootstrap
             }
 
             _renderer.DrawFloorBracket(cell, colour);
-        }
-
-        /// <summary>
-        /// The head cell of the bed occupying this one, or -1. A four-neighbour look, the mirror
-        /// of <c>ConstructionGrid.HeadClaimingSite</c> on the drawing side: only a cell directly
-        /// beside this one can be the head of a two-cell thing that claims it.
-        /// </summary>
-        int HeadOfBedAt(int index)
-        {
-            if (_model == null) return -1;
-
-            GridSize size = _model.Size;
-            CellRef at = size.FromIndex(index);
-            for (int f = 0; f < Directions.Count; f++)
-            {
-                int x = at.X + Directions.DeltaX[f], z = at.Z + Directions.DeltaZ[f];
-                if (!size.Contains(x, z, at.Y)) continue;
-
-                int neighbour = size.Index(x, z, at.Y);
-                if (_model.EdificeDef(neighbour) == CoreContent.EdificeBed && _model.BedHead(neighbour))
-                    return neighbour;
-            }
-            return -1;
         }
 
         void OnGUI()

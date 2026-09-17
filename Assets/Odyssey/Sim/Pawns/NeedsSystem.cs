@@ -72,8 +72,15 @@ namespace Odyssey.Sim.Pawns
             {
                 var rest = content.Needs[NeedIndex.Rest];
                 int effectiveness = RestEffectiveness(pawn.Cell);
-                pawn.Needs[NeedIndex.Rest] =
-                    System.Math.Min(rest.max, pawn.Needs[NeedIndex.Rest] + pawn.RestGainPerInterval(effectiveness));
+
+                // The interval this pawn is on, which is what spends the fractional part of the
+                // gain — see Pawn.RestGainPerInterval for why a tier is worth nothing without it.
+                // Derived from the tick and the id, exactly as the phase spreading above is, so it
+                // is a pure function of state the world already keeps.
+                int intervalIndex = (tick + pawn.Id.Value) / interval;
+                pawn.Needs[NeedIndex.Rest] = System.Math.Min(
+                    rest.max,
+                    pawn.Needs[NeedIndex.Rest] + pawn.RestGainPerInterval(effectiveness, intervalIndex));
             }
             else
             {

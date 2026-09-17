@@ -551,15 +551,32 @@ namespace Odyssey.Presentation.Ui
 
                 view.Name = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__rowname");
                 view.Value = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__rowvalue");
-                // The chevron that says the row is a control. Built for every row and shown only
-                // on the one that is pickable, because rows are reused across facts and the
-                // affordance has to travel with the row's meaning rather than its element.
+                // The value sits in a box with a glyph before it and a chevron after, and the box
+                // is styled as a button on the one row that is pickable. Built for every row and
+                // shown only where it means something, because rows are reused across facts and
+                // the affordance has to travel with the row's current meaning rather than being
+                // built into an element.
+                //
+                // Two rounds of this were too quiet to find (owner, 2026-09-17 and again after):
+                // a pointer cursor, then a hover brighten and a border. A row that is a control
+                // has to look like one with the pointer somewhere else entirely, which means an
+                // icon and weight, not a treatment that only appears once you are already on it.
+                view.PickBox = new VisualElement();
+                view.PickBox.AddToClassList("inspect__rowbox");
+
+                view.Glyph = new HudGlyph(HudGlyphKind.ToolBunk, 13f, HudTokens.Accent);
+                view.Glyph.AddToClassList("inspect__rowglyph");
+                view.Glyph.style.display = DisplayStyle.None;
+
                 view.Chevron = HudText.Make("›", HudTextRole.Meta, ussClass: "inspect__rowchevron");
                 view.Chevron.style.display = DisplayStyle.None;
 
+                view.PickBox.Add(view.Glyph);
+                view.PickBox.Add(view.Value);
+                view.PickBox.Add(view.Chevron);
+
                 view.Root.Add(view.Name);
-                view.Root.Add(view.Value);
-                view.Root.Add(view.Chevron);
+                view.Root.Add(view.PickBox);
 
                 // Registered once for every row and armed per tile by IsPick below: the pane's
                 // rows are reused across facts, so the one row that does something is the one
@@ -588,10 +605,19 @@ namespace Odyssey.Presentation.Ui
                     view.LastName = row.Name;
                     HudText.Set(view.Name, row.Name, HudTextRole.Meta);
                 }
-                if (view.LastValue != row.Value)
+
+                // The owner row is pickable exactly while the tile says it is a bed's (the model
+                // clears the flag every refresh, so the affordance cannot outlive the bed).
+                bool pick = row.Name == "owner" && _inspect.BedUnderPane;
+                // The pickable row's value is set in the heavier Row role, which is where weight
+                // lives: the stylesheet may not set type (TheSheetSetsNoTypeAtAll), so "make the
+                // assign button bolder" is a role here rather than a font-style there.
+                HudTextRole role = pick ? HudTextRole.Row : HudTextRole.Meta;
+                if (view.LastValue != row.Value || view.LastRole != role)
                 {
                     view.LastValue = row.Value;
-                    HudText.Set(view.Value, row.Value, HudTextRole.Meta);
+                    view.LastRole = role;
+                    HudText.Set(view.Value, row.Value, role);
                     // HudText.Set writes the role's own colour, so a tint that was applied before
                     // has just been overwritten and has to be laid on again.
                     view.LastTint = null;
@@ -608,14 +634,12 @@ namespace Odyssey.Presentation.Ui
                     else view.Value.style.color = StyleKeyword.Null;
                 }
 
-                // The owner row is pickable exactly while the tile says it is a bed's (the model
-                // clears the flag every refresh, so the affordance cannot outlive the bed).
-                bool pick = row.Name == "owner" && _inspect.BedUnderPane;
                 if (view.IsPick != pick)
                 {
                     view.IsPick = pick;
                     view.Root.EnableInClassList("inspect__row--pick", pick);
                     view.Chevron.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
+                    view.Glyph.style.display = pick ? DisplayStyle.Flex : DisplayStyle.None;
                     view.Root.tooltip = pick ? "Choose whose bed this is" : null;
                 }
             }

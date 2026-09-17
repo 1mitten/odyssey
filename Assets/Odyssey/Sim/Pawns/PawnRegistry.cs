@@ -157,7 +157,8 @@ namespace Odyssey.Sim.Pawns
                     workFocus >= 0,
                     workFocus >= 0 ? size.FromIndex(workFocus) : cell,
                     pawn.Gesture,
-                    pawn.GestureSerial));
+                    pawn.GestureSerial,
+                    pawn.Asleep));
 
                 // Skills go out as pawn aspects rather than as fields on the view, which is what
                 // that mechanism is for: nothing in Sim.Contracts had to learn that skills exist.

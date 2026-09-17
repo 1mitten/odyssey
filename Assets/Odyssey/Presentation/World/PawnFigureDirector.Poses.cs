@@ -242,6 +242,7 @@ namespace Odyssey.Presentation.World
             LeglessFigures = 0;
             MeasuredFootReach = 0f;
             SwimmingFigures = 0;
+            SleepingFigures = 0;
             MeasuredSwimPitch = 0f;
             MeasuredToolDrift = 0f;
 
@@ -256,11 +257,18 @@ namespace Odyssey.Presentation.World
                 // order, for ever.
                 if (figure.WorkWeight <= 0.001f)
                 {
-                    // Swimming comes first of the three, because it is the only one that is a
+                    // Sleep comes before all of them. Every other pose here describes a colonist
+                    // on its feet — swimming, climbing, a one-shot gesture — and none of them
+                    // means anything about a body that is lying down. It is also the only one
+                    // that has already moved the root, so a pose laid on top of it would be
+                    // writing arms onto a figure that is no longer where it thinks.
+                    if (figure.SleepWeight > 0.001f)
+                        ApplySleepPose(figure);
+                    // Swimming comes first of the rest, because it is the only one that is a
                     // statement about where the colonist *is* rather than about what it is doing:
                     // a figure in the water is in the water whatever else it had in mind, and the
                     // other two poses both assume feet on the ground.
-                    if (figure.SwimWeight > 0.001f)
+                    else if (figure.SwimWeight > 0.001f)
                         ApplySwimPose(figure);
                     else if (figure.ClimbPhase >= 0f && figure.ClimbFace != Vector3.zero)
                         ApplyClimbPose(figure);
@@ -441,6 +449,53 @@ namespace Odyssey.Presentation.World
 
             SwimmingFigures++;
         }
+
+        /// <summary>
+        /// Lay a sleeper's limbs down, on top of whatever the standing idle clip is doing.
+        ///
+        /// <para><b>The clip underneath is a standing idle, and that is the whole problem this
+        /// solves.</b> A standing idle holds the arms clear of the body and the legs apart, which
+        /// once the figure is on its back is a colonist lying with its limbs out in the air. The
+        /// root placement alone gets a plank; the limbs are what make it a person asleep.</para>
+        ///
+        /// <para>Which posture is <see cref="SleepPose.PostureFor"/>'s, derived from the pawn id so
+        /// a colonist lies the same way every night and a barracks does not read as stamped.</para>
+        /// </summary>
+        void ApplySleepPose(Figure figure)
+        {
+            float weight = Mathf.Clamp01(figure.SleepWeight);
+            SleepPose.Posture posture = SleepPose.PostureFor(figure.Pawn);
+            Vector3 axis = SwingAxis(figure.Transform, 0f);
+
+            if (figure.RightUpperArm != null && figure.LeftUpperArm != null)
+            {
+                Pitch(figure.RightUpperArm, axis, posture.RightArm * weight);
+                Pitch(figure.LeftUpperArm, axis, posture.LeftArm * weight);
+                Pitch(figure.RightLowerArm, axis, posture.RightElbow * weight);
+                Pitch(figure.LeftLowerArm, axis, posture.LeftElbow * weight);
+            }
+
+            if (figure.RightUpperLeg != null && figure.LeftUpperLeg != null)
+            {
+                Pitch(figure.RightUpperLeg, axis, posture.Hip * weight);
+                Pitch(figure.LeftUpperLeg, axis, posture.Hip * weight);
+                Pitch(figure.RightLowerLeg, axis, posture.Knee * weight);
+                Pitch(figure.LeftLowerLeg, axis, posture.Knee * weight);
+            }
+
+            // Breathing, which is the one thing that keeps a sleeper from reading as a corpse.
+            // Small on purpose: at this camera height anything larger is a figure heaving.
+            if (figure.Spine != null)
+            {
+                float breath = SleepPose.Breath(SleepPose.Phase(figure.SleepClock));
+                Pitch(figure.Spine, axis, breath * SleepPose.BreathDegrees * weight);
+            }
+
+            SleepingFigures++;
+        }
+
+        /// <summary>Figures laid down asleep this pass. Diagnostic, for tests and the overlay.</summary>
+        public int SleepingFigures { get; private set; }
 
         /// <summary>Figures posed as swimmers this pass. Diagnostic, for tests and the overlay.</summary>
         public int SwimmingFigures { get; private set; }

@@ -336,6 +336,52 @@ Three changes, all of them about saying it is a control while the pointer is sti
 3. **A chevron** sits after it, shown only on the pickable row, so the *owned* case says it is a
    control too, where there is no "…" to carry it.
 
+### What the owner's second look changed (2026-09-18)
+
+Two reports. Both turned out to be about **drawing**, and the second one was the more serious
+mistake this line has made: a simulation that was right, reported as broken, because there was
+no way to see it working.
+
+**"I couldn't assign anyone with a bed."** Second time of asking. The row had a pointer cursor,
+a hover brighten, a border and a chevron, and was still not found. The lesson, written down
+because two rounds of it were paid for: **hover is not an affordance.** A control has to look
+like one while the pointer is somewhere else entirely. The value now sits in a filled, accent
+box with a **bed glyph** before it and a chevron after, and is set in the heavier `Row` type role
+(weight is `HudType`'s, never the stylesheet's — `TheSheetSetsNoTypeAtAll` enforces that).
+
+**"Colonists stand outside rather than getting into a spare bed."** *They do not.* Measured
+before changing anything: a probe on the owner's own case — nobody owning anything, one spare
+bed, one tired colonist — walked the colonist into the bed and slept there (`inBed=True`).
+`TrySleep` picks the nearest reachable unowned bed and always did.
+
+What was wrong is that **nothing in the whole of presentation knew a pawn could be asleep**, so
+a colonist in a bed was drawn standing bolt upright in it, all night. `PawnView.Asleep` and
+`SleepPose` are the fix — a computed lying pose in the idiom `WorkSwing`, `ClimbPose` and
+`SwimPose` established, because no pack contains a sleep clip. It lies **in a bed and on the
+floor** (the owner's own second ask), because a colonist who could not reach a bed lies down
+where it is, which is `SleptOnGround` made visible.
+
+**Four postures, not one and not ten.** From the owner's reference sheet: on the back, on the
+back with the arms up, and two sides, one curled and one loose. Which one a colonist takes is
+derived from its pawn id, so it is the same every night and after a load and costs no state —
+the bargain the colonist palette already makes. One posture would read as a morgue; ten cannot be
+reached honestly from a standing idle clip by rotating the root and pitching six bones.
+
+**And a third fault fell out of measuring the first two: two of the five quality tiers did
+nothing.** The base gain is 6 and the tiers are percentages, so the products are 4.8, 5.1, 6.0,
+6.72, 7.5, 8.4 — and integer division flattened them to 4, 5, 6, **6**, 7, 8. **A Decent bed
+recovered rest at exactly the rate of a Normal one**, which is to say the tier a colonist rolled
+was worth nothing. The fractional part is now spent by a Bresenham step over the interval index,
+which is derived from the tick and the pawn id — so it stays out of the save and out of the hash,
+where a remainder field would not have. No golden moved: no colonist gets tired inside those
+windows.
+
+**What is not changed, and is the owner's call.** A plain bed recovers rest **1.25x** as fast as
+the floor and an Epic one **1.75x**. Those follow from `groundRestEffectiveness = 80`, which §2's
+decision 4 states as unchanged, so it has been left alone and pinned by a test that says the
+figures out loud. If a night in a bed should feel more decisive than a quarter again, that one
+integer in `Colonist.xml` is the lever.
+
 ## 12. Open
 
 - **Real two-tile bed art** — replaces the placeholder; the only art question in this line.

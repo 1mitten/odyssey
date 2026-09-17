@@ -2021,35 +2021,57 @@
 
 /* The bed's owner row: the readout's one pickable fact.
 
-   It used to be the pointer and a hover brighten and nothing else, on the argument that a row
-   which shouted would be a button wearing a row's clothes. That was too quiet to find: the row
-   looked exactly like the facts above and below it, and the owner could not work out how to
-   assign a bed at all (2026-09-17). Hover is not an affordance on a row nobody suspects.
+   Two rounds of this were too quiet to find. First a pointer cursor and a hover brighten, on the
+   argument that a row which shouted would be a button wearing a row's clothes; then a border and
+   a chevron. The owner could not assign a bed either time (2026-09-17, and again after). The
+   lesson is that hover is not an affordance — a control has to look like one while the pointer is
+   somewhere else entirely — so the value now sits in a filled box with a bed glyph before it and
+   its text in the accent colour at full weight. It is a button, and it is dressed as one.
 
-   So the value now carries a faint boxed fill and a chevron, which is the least that says "this
-   one does something" while it is sitting still — and the model writes "Assign…" rather than an
-   em dash where nobody owns the bed, because the word is what actually names the action. */
+   The box is a plain container on every other row, which is what keeps one row structure for
+   facts and for the one control among them. */
+.inspect__rowbox {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+}
+
 .inspect__row--pick { cursor: pointer; }
-.inspect__row--pick .inspect__rowvalue {
-    color: rgba(238, 243, 246, 0.92);
-    background-color: rgba(255, 255, 255, 0.07);
+
+.inspect__row--pick .inspect__rowbox {
+    background-color: rgba(111, 211, 227, 0.14);
     border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.16);
+    border-color: rgba(111, 211, 227, 0.45);
     border-radius: 3px;
-    padding-left: 6px;
+    padding-left: 5px;
     padding-right: 4px;
+    flex-grow: 0;
+    align-self: center;
 }
-.inspect__row--pick:hover .inspect__rowvalue {
-    color: rgb(255, 255, 255);
-    background-color: rgba(111, 211, 227, 0.16);
-    border-color: rgba(111, 211, 227, 0.55);
+
+/* Weight is HudType's and not the sheet's (TheSheetSetsNoTypeAtAll): the value is re-set in the
+   heavier Row role when the row becomes pickable, and the sheet keeps colour, space and state. */
+.inspect__row--pick .inspect__rowvalue {
+    color: rgb(111, 211, 227);
+    flex-grow: 0;
+    padding-left: 4px;
 }
-.inspect__row--pick .inspect__rowchevron {
-    color: rgba(255, 255, 255, 0.5);
+
+.inspect__row--pick:hover .inspect__rowbox {
+    background-color: rgba(111, 211, 227, 0.26);
+    border-color: rgb(111, 211, 227);
+}
+
+.inspect__row--pick:hover .inspect__rowvalue { color: rgb(238, 250, 253); }
+
+.inspect__rowglyph { margin-right: 1px; }
+
+.inspect__rowchevron {
+    color: rgba(111, 211, 227, 0.75);
     -unity-text-align: middle-center;
-    padding-left: 3px;
+    padding-left: 4px;
 }
-.inspect__row--pick:hover .inspect__rowchevron { color: rgba(111, 211, 227, 0.9); }
+.inspect__row--pick:hover .inspect__rowchevron { color: rgb(238, 250, 253); }
 
 /* The picker it raises: one row per colonist plus the release, over the row that raised it. */
 .bedowner { width: 220px; }

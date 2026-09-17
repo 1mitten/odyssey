@@ -64,6 +64,13 @@ namespace Odyssey.Presentation.Rendering
             new Vector3(0f, 0.80f, -1.55f), // pillow: 0.67 .. 0.93, z = -2.03 .. -1.08
         };
 
+        /// <summary>
+        /// The height of the mattress's top surface above the bed's own floor — what a sleeper
+        /// lies on. Derived from the mattress's own box rather than written down beside it, so
+        /// tuning the mattress moves the sleeper with it.
+        /// </summary>
+        public static float MattressTop => Centres[1].y + Sizes[1].y * 0.5f;
+
         /// <summary>The overall box a bed occupies, for a selection bracket to be drawn round.</summary>
         public static Vector3 Size => new Vector3(Sizes[0].x, Centres[2].y + Sizes[2].y * 0.5f, Sizes[0].z);
 

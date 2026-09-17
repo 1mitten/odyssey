@@ -4347,3 +4347,47 @@ and the ghost being drawn at an unseen layer — the owner's own guess, disprove
     module's size divided out and its centre at the origin, and four assertions failed over a bed
     whose numbers were right. A new test failing is not by itself a fault in the code under test,
     and "fixing" the bed to satisfy it would have shipped the wrong geometry.
+
+- **The bed's second look, 2026-09-18.** Two reports from the owner, and both turned out to be
+  about *drawing*. One of them was the most instructive mistake this line has produced.
+  - **"I couldn't assign anyone with a bed"**, for the second time. The row had a pointer cursor,
+    a hover brighten, a border and a chevron by then, and was still not found. **Hover is not an
+    affordance**: a player does not hover a row to discover whether it is a control, they scan a
+    panel and see facts. It is a filled accent box with a bed glyph, the word "Assign…" and a
+    chevron now, set in the heavier `Row` type role — weight being `HudType`'s and never the
+    stylesheet's, which `TheSheetSetsNoTypeAtAll` caught the moment the first attempt reached for
+    `-unity-font-style`.
+  - **"Colonists stand outside rather than getting into a spare bed."** They do not, and this was
+    measured before anything was changed: a probe on the owner's exact case — nobody owning
+    anything, one spare bed, one tired colonist — walked the colonist into the bed and slept
+    there. `TrySleep` picks the nearest reachable unowned bed and always had.
+    **Nothing in the whole of presentation knew a pawn could be asleep**, so a colonist in a bed
+    was drawn standing bolt upright in it, all night. The report was exactly right about what was
+    on screen and the cause was one layer over from where it looked; taking it at face value would
+    have meant rewriting a sleep chooser that was correct. **A simulation that works and cannot be
+    seen is a simulation that gets reported broken.**
+  - **`SleepPose` is the fix** — a computed lying pose in the idiom `WorkSwing`, `ClimbPose` and
+    `SwimPose` established, because no pack contains a sleep clip. It lies in a bed and on the
+    floor, the owner's own second ask, because a colonist who cannot reach a bed lies down where it
+    is — `SleptOnGround` made visible. **Four postures** off the owner's reference sheet, chosen
+    from the pawn id so a colonist lies the same way every night and after a load, at no cost in
+    state.
+  - **The posture hash was broken and its own test caught it.** The choice is `% 4`, so only the
+    bottom two bits are ever read — and those are exactly the bits a Knuth multiply-and-shift
+    leaves unmixed. Every colonist came out in one posture, which is the morgue the table exists to
+    avoid. A full avalanche fixes it; the test now asserts all four appear among a dozen
+    *consecutive* ids, because consecutive is what a colony has.
+  - **And measuring the first two found a third fault nobody had asked about: two of the five
+    quality tiers did nothing.** Rest gain is `6 x effectiveness / 100`, giving 4.8, 5.1, 6.0,
+    6.72, 7.5, 8.4 — truncated to 4, 5, 6, **6**, 7, 8. A Decent bed recovered rest at exactly a
+    Normal bed's rate, so the tier a colonist rolled was worth nothing. The fractional part is
+    spent by a Bresenham step over the interval index, which is derived from the tick and the pawn
+    id and therefore stays out of the save and the hash. No golden moved: no colonist gets tired
+    inside those windows.
+  - **What was deliberately left alone.** A plain bed is 1.25x the floor and an Epic one 1.75x,
+    which follows from `groundRestEffectiveness = 80` — a number design 20 §2 records as the
+    owner's. It is pinned by a test that states both figures out loud rather than changed quietly.
+  - Three of the tests written this round failed on their first run and were right to every time,
+    and all three assert a **relation** rather than a value: the pillow rests on the mattress, each
+    tier beats the one below, neighbouring colonists differ. Each fault had left every individual
+    number looking perfectly reasonable.

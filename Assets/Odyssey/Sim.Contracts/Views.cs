@@ -121,12 +121,37 @@ namespace Odyssey.Sim.Contracts
         /// </summary>
         public readonly byte GestureSerial;
 
+        /// <summary>
+        /// Whether this pawn is asleep — so that it can be <b>drawn</b> asleep.
+        ///
+        /// <para><b>A field here rather than a <see cref="PawnAspect"/>, and the reason is the one
+        /// the aspect seam itself gives:</b> aspects are selection-scoped, published for the pawn
+        /// the interface asked about and no other, and every colonist on screen has to be drawn
+        /// in the right pose whether anybody has selected them or not. It sits beside
+        /// <see cref="Working"/> because it is the same kind of fact — a pose input, which is
+        /// precisely why that field is on this view too.</para>
+        ///
+        /// <para><b>Written because a sleeping colonist was drawn standing up.</b> Nothing in the
+        /// whole of presentation knew this, so a colonist who had walked to a bed and gone to
+        /// sleep in it stood bolt upright in it all night — and the owner, watching, reported that
+        /// colonists would not use the beds at all and stood outside instead (2026-09-18). They
+        /// were in the beds. The simulation was measured and is correct; there was no way to see
+        /// it.</para>
+        ///
+        /// <para>The direction to lie in is not carried: the pawn is in the bed's own cell and
+        /// presentation already knows which way that bed faces, so a second field would be a
+        /// second copy of an answer.</para>
+        /// </summary>
+        public readonly bool Asleep;
+
         public PawnView(
             PawnId id, CellRef cell, int food, int rest, int mood,
             int jobDef = -1, CellRef nextCell = default, int movePercent = 0,
             bool working = false, CellRef workCell = default,
-            PawnGesture gesture = PawnGesture.None, byte gestureSerial = 0)
+            PawnGesture gesture = PawnGesture.None, byte gestureSerial = 0,
+            bool asleep = false)
         {
+            Asleep = asleep;
             Gesture = gesture;
             GestureSerial = gestureSerial;
             Id = id;
