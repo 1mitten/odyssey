@@ -133,6 +133,19 @@
     <stonePerRock>8</stonePerRock>
     <stoneChanceOneIn>1</stoneChanceOneIn>
     <orePerCell>15</orePerCell>
+
+    <!--
+      How long a colonist takes to pick something up off the ground, and how far into that the
+      thing changes hands. 48 ticks is 0.8 s at sixty a second, which is what the drawn gesture
+      (Gesture.Lift) has always taken; until 2026-09-17 the simulation spent none of it, so the
+      figure was still straightening as its pawn set off walking. Owner: "there should be time
+      spent motion down, picking up object and standing up".
+
+      The grasp is the middle of the gesture's hold, so the pile shrinks while the hands are on
+      it rather than as the colonist begins to bend or after it is upright again.
+    -->
+    <liftTicks>48</liftTicks>
+    <liftGraspTicks>24</liftGraspTicks>
   </PawnTuningDef>
 
 </Defs>

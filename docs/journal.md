@@ -3038,6 +3038,7 @@ work itself.
   so three new tests were green in eleven seconds and red in the gate. `docs/lessons.md` has had
   this written down since the morning of the same day.
 
+
 - **Beds, the first furniture, 2026-09-17** (`docs/design/20-beds.md`, interview in
   `docs/research/beds-interview.md`). The owner asked for the whole loop in one breath — bed
   from the Build palette, a rotatable two-tile outline on R, built through the pipeline, a
@@ -3936,6 +3937,212 @@ and the ghost being drawn at an unseen layer — the owner's own guess, disprove
     `15-building.md` (its tick figures become rate-relative), and a dated note on
     `a-08-plants-growing-food.md` recording that its own recommendation was never carried out.
 
+- **Picking something up costs time again, 2026-09-17**, and the decision it reverses is a year old
+  by the project's own clock — one day. The owner played it and said *"when picking up — it happens
+  quickly in a stride — I think there should be time spent motion down, picking up object and
+  standing up"*. **The motion was never missing.** `Gesture.Lift` has been a solved crouch of
+  exactly 0.8 s since the gesture line landed: pelvis down, both legs IK'd back to the feet the
+  gait had already put down, down fast, hold, up slow. What was missing is that the simulation
+  spent none of it — `TakeUp` was one tick — so the pawn's next toil began while its figure was
+  still straightening, and the figure walked away mid-rise. `TakeUp`'s own doc comment said so, in
+  as many words, and called it *the accepted price of the owner's decision (2026-09-16) to keep the
+  duration out of the simulation*. It stopped being accepted when somebody watched it.
+- **A comment admitting a fault is not a defence against the fault.** This is the second time in two
+  days that the thing the owner reported was already written down beside the code causing it — the
+  first was `ScenarioDef.Playtest`'s note promising to stop giving starting orders "when the
+  designate tool lands", months after it had. The pattern is worth naming: a note saying what to do
+  when a thing changes does not do it, and neither does a note explaining why something looks
+  wrong.
+- **It became a toil rather than a number.** The instant `TakeUp` is gone entirely, replaced by
+  `JobDriver.LiftToil` — stoop, grasp, rise — and there is deliberately no instant form left,
+  because a driver that wanted one would be a driver whose colonist acquires things by magic while
+  standing upright. Both carriers (haul, delivery) are one line each, so they cannot come to spend
+  different amounts of time on the same motion. **The grasp is in the middle**, at 24 of 48 ticks,
+  which is the middle of the drawn gesture's hold window: transfer at the start and the pile
+  vanishes while the colonist is still upright; transfer at the end and it vanishes after they are
+  upright again. Both are the magic the stoop exists to prevent, arrived at from opposite sides.
+- **The number is a simulation constant chosen to cover a drawing constant**, which is the same
+  uncomfortable coupling `JobDef.settleTicks` already carries and was argued out at the time. The
+  alternative is presentation reaching into job timing. It lives on the colonist rather than on a
+  job, because a lift is a lift — a harvest and a butcher's will want this number, not their own.
+- **All three goldens moved and the re-bake was checked rather than trusted.** Every `Simulated`
+  value moved; **no `Generated` one did**, which is the signature the change should have — the
+  duration is content, content is not hashed, placement is untouched. Verified by running the table
+  before re-baking and reading *which* assertion failed: all three failed on the second, and the
+  second only fires once the first has passed. A moved `Generated` would have meant something else
+  had come along for the ride.
+
+- **The jolting near water: the first suspect was measured and it is not the answer, 2026-09-17.**
+  The owner reported colonists that *"keep snapping in 2 directions quickly"*, mostly near water.
+  Reading the code gave two candidates and the standing rule is that reading code has been wrong
+  every time, so `WalkHeadingMeasurementTests` measured the likelier one first. The argument was
+  good: `PathFinder` is orthogonal-only by design, there is **no path smoothing anywhere** in
+  `Odyssey.Sim.Pathing`, and a drawn bearing is the raw step vector — so a diagonal journey should
+  come out as a staircase and the figure should turn ninety degrees every cell.
+- **It does not.** Open ground, 30 by 30 diagonal: **60 steps, 5 turns**. Forced along a diagonal
+  band of impassable cells, which is what a stream looks like to a path: **60 steps, 7 turns**. A
+  turn every fourteen to twenty seconds of walking is not what anybody saw. The reason is that on a
+  4-connected grid every monotone path between two points costs exactly the same, so the search is
+  free to break ties however it likes — and it spends that freedom on long straight runs. **A
+  correct-sounding mechanism that the code genuinely contains can still produce none of the
+  behaviour it predicts**, and the only way to know was to count.
+- **What is left is the second suspect**, and it is per-step rather than per-journey:
+  `PawnPose.OnTheDrawnGround` chooses which cell's relief the figure stands on with
+  `CellRef over = t < 0.5f ? pawn.Cell : pawn.NextCell` — a hard switch at the midpoint of every
+  step. Where that clamp is active it snaps the drawn height, and `ObserveSpeed` differences
+  position frame to frame, so one snapped frame can kick the gait blend as well. It clusters at
+  shorelines because that is where banks and water cells meet, which is the "around water" in the
+  report. Measuring it needs a `WorldRenderModel`, so it is a Unity-tier measurement.
+
+- **The second suspect was measured, and it was the fault. 2026-09-17.** `WalkOnReliefTests`:
+  **81.9 mm of drawn height in a single sample, at phase 0.495 of the step**, on open rolling
+  ground with no bank anywhere near it — against the **25 mm** an honest frame of walking carries a
+  colonist. Three and a quarter frames of travel, vertically, once a step, on every cell of the
+  board. `PawnPose.OnTheDrawnGround` was comparing the walker's own height — sampled where she is —
+  against the ground height sampled at the **centre of whichever cell she was over**, and `over`
+  flips at the midpoint. Sampling the relief where the walker is instead took it to **1.6 mm**, and
+  the worst sample moved off the midpoint entirely, to phase 0.175, which is just ordinary
+  ground-following.
+- **Why five thorough tests never saw it, which is the part worth keeping.** `BankFootingTests`
+  owns this exact question, measures it with this exact instrument — four hundred samples a step —
+  and covers five crossings of a terrace. And `GroundRelief.Reset()` sets `Amplitude` to zero,
+  every one of those cases inherits it from the fixture, and at zero amplitude `GroundRelief.Lift`
+  returns its argument unchanged. **The whole continuity suite has only ever run on a perfectly
+  flat field**, while the board the game loads has a 2 m one everywhere. The one test in that file
+  that does switch the field on asks where a *standing* figure is, not whether a walking one moves
+  smoothly. A fixture-wide default is a silent precondition on every test in the file, and this one
+  disabled the thing the file exists to measure.
+- **A smaller, older thing was found beside it and deliberately not folded in.** Crossing between a
+  bank cell and the flat ground next to it jumps **28.7 mm** with the field on — and **30.0 mm with
+  it off**, so the relief is not the cause and is marginally kinder. That one belongs to the bank
+  surface, predates all of this, and sits under the 50 mm budget `BankFootingTests` has always
+  asserted, which is why nothing has ever reported it. It is about one and a fifth frames of
+  walking against the fault's three and a quarter. The test that found it asserts **"the rolling
+  field adds nothing"** rather than an absolute budget, because an absolute budget at one frame of
+  travel fails on the flat control too — it would have been a test that blamed the relief for
+  something the relief does not do. The 30 mm is recorded as its own open question.
+- **The control was measured because it was cheap, not because it was expected to matter.** It
+  reversed the reading of the number entirely: without the flat comparison, 28.7 mm looks like a
+  second relief bug and somebody spends an afternoon on it.
+
+- **The water depth experiment was run, 2026-09-17** — `WaterDepthCheck`, the first item in the
+  swimming design's own order of work, photographing a 1.8 m post standing on the bed of a stream
+  beside a second post of the same height on the bank, at four surface heights. 0.72 (ships) is
+  2.16 m and over a colonist's head; 0.50 is chest deep; 0.30 is 0.90 m and waist deep; 0.15 is
+  knee deep. **If the owner takes 0.30, shallow water is waded upright and only deep water needs a
+  swim pose**, which is half the work in that design.
+- **Three framings were wrong before one was right, and the reasons are worth having.** A low
+  camera near a stream looks *through* the bank, because a stream is cut into a channel — 12
+  degrees at 10 m and 14 at 9 m both put the lens inside the ground. The post was banded over its
+  lower metre, which is under every waterline being compared, so at 0.30 every band was submerged
+  and the post read as plain and at 0.72 it read as absent; it is banded the whole way up now. And
+  both posts were the same colour, so the one visible post could not be identified from the
+  picture. **A photograph taken to answer a question has to be checked for whether it answers it**,
+  which is the same discipline as re-running a test after a fix.
+- **And the tool turned up a correction to the design it was written for.** Shallow water is not
+  free to cross and never has been: `CostClassShallowWater` is 200, making a shallow cell 300
+  against a flat cell's 100 — *exactly a third speed*, with a comment in `NaturalContent` saying
+  so. The cost model already has a place for "water is slow" and uses it. What it has no place for
+  is what a colonist *looks like* while being slowed, which is the whole of what is actually
+  missing.
+
+- **Colonists float and swim now, 2026-09-17, and the owner had to report it twice to get there.**
+  After the depth experiment came back as four photographs and an open question, they played again:
+  *"I saw someone walk under water again when it was 1 deep? — it's meant to float when this shallow
+  if possible."* The first round had measured the problem carefully and **built nothing**, which is
+  the right call when a decision is genuinely the owner's and the wrong one when the decision was
+  only ever about how deep to draw the water. The ruling settled it in the other direction: do not
+  lower the water, float in shallow too.
+- **And the second ruling is what made it small.** *"Float is how it looks; shallow stays
+  crossable"* — so in shallow water the float is a drawing and nothing else. No Def change, no cost
+  change, **no golden moved**, nothing in the save or the hash. The entire shallow-water half is
+  `WaterLine`, `SwimPose` and one branch in the director's pose dispatch. The alternative reading —
+  that a swimmer is a swimmer everywhere — would have made every brook on the played board a wall
+  that haulers route around, which is a large change to how a colony moves and was worth one
+  question to avoid guessing at.
+- **The draught was wrong by a hip height, and a photograph is what said so.** It is measured to the
+  figure's root, which is at the feet; the pose tips the body about the **hips**, roughly 0.9 m
+  higher. Reasoning "a floating body sits just under the surface" gave 0.25 m, which is true of the
+  body and false of the root: the torso ended 0.65 m clear of the water and the colonist lay on the
+  stream like a raft. 1.0 m sinks it to the waterline, head and shoulders out, legs visible
+  trailing under the surface. **Nothing in the test suite could have caught this** — every
+  assertion was about the root, and the root was exactly where it was asked to be.
+- **The first sheet photographed the pose on grass with the weight forced on, and that answered half
+  the question.** It showed the shape is a swim; it could not show how the shape sits against the
+  waterline, which is the whole of what was reported — and a prone figure floating over a meadow
+  reads as a body rather than as a swimmer, inviting a judgement the picture had no business
+  inviting. Re-shot with a colonist spawned in a real stream. **Pinned there every tick**, because a
+  colonist with nothing to do wanders and walks out of the water within seconds, which is correct
+  behaviour and the wrong photograph.
+- **The gait had to be told to stop walking, which is the climb's old fault arriving from the other
+  side.** A swimmer *has* ground speed, and the mixer reads speed, so without a fade the figure
+  strides along the surface of the water. The climb had the mirror image: a purely vertical step has
+  *no* ground speed, so the mixer played the idle and a colonist went up a shaft standing to
+  attention until the legs were bound. **Ground speed is a poor proxy for what the legs are doing,
+  and every pose that is not walking has to say so.**
+
+- **Getting out of the water, 2026-09-17.** The owner played the float: *"getting into the water
+  looks fine, but getting out — the colonist ends up clipped and sunk half way into a terrain tile
+  — is it possible the lift out of the water happens earlier or reaches the edge and pulls up"*.
+  The cause was that the float was **added on top of** the ordinary ground clamp, and the two
+  disagreed about when the step happens: the float decayed evenly across the step while the clamp
+  jumped to the arriving cell at the midpoint. So a colonist leaving a channel spent the first half
+  of the step *below* the bank, inside it, and the second half *above* it, having overshot by the
+  float it had not yet lost. **Two faults from one composition, and the owner saw the first.**
+- **The rule that replaced it is the owner's own sentence turned into arithmetic.** A step with
+  water at either end is drawn by interpolating its two *resting heights*, because **between a
+  waterline and the bank above it there is no drawn surface to follow** — ground-following is the
+  right answer everywhere it has ground and there is none here. And the whole vertical change
+  happens in the **water half** of the step: risen by the edge on the way out, not started until the
+  edge on the way in. Both are what a person does, and both are exactly what keeps the figure out of
+  the block it is climbing.
+- **Measured on a generated board rather than a fixture, and the fixture is why.** Across **all 341
+  places a colonist can climb out** on a 64 × 64 wooded map, the deepest it is ever inside the
+  ground of the cell it is climbing into, while over that cell, is **0 cm**. The hand-built flat
+  fixture could not have said so: with the bed at the same layer as the land beside it the waterline
+  stands *above* the bank, so climbing out is a descent there and every claim about not overshooting
+  is inverted — which is how the first version of that test failed. The crossing tests moved to a
+  cut channel.
+- **The pull-up is fast and the rate is not a free choice.** Finishing by the midpoint is what keeps
+  the figure out of the block, so the rate falls out of the geometry: median 55 mm a frame, worst
+  106 mm on a 3.53 m exit. Slowing it means finishing later, which puts the figure back inside the
+  bank. The lever, if it ever needs one, is the step's own duration in the simulation.
+- **The second report was the interesting one, because the obvious answer is wrong.** The owner also
+  saw snapping *"as the colonist walks along the shoreline it just came out of"*. Drawn height was
+  the obvious culprit and it is **falsified**: profiled across every one of 223 steps along a real
+  generated shore, the worst step is a perfectly even ramp — 31.45 m to 31.61 m in identical 0.031 m
+  samples — and the hand-over gap to the next step is **0.0 mm**. Thirty-one millimetres a frame is
+  walking up a slope, and the 25 mm "one frame of walking" yardstick measures *horizontal* travel,
+  so a slope beats it honestly. **A budget borrowed from one axis will accuse the other of a fault
+  it does not have.**
+- **What is left is the footing hand-over, and it was a genuine binary.** `ApplyFooting` skipped the
+  whole pass while the swim weight was above a threshold, so the footing arrived **complete on one
+  frame** as a colonist came ashore: hips dropping and both feet planting between one frame and the
+  next, every time. It is multiplied by `1 - SwimWeight` now. **It is a hypothesis, not a
+  demonstration** — the drawn-height explanation was measured and killed, and this one cannot be
+  measured the same way because it is a rig pose rather than arithmetic. It wants a playtest.
+
+- **Swimming is designed and not built, 2026-09-17** — `docs/design/20-swimming-and-water.md`. The
+  owner asked whether colonists could float on top of the water, *"still vulnerable"*, with a
+  paddling animation. **They are not walking through water, they are walking along the bottom of
+  it:** both water rows are `solid=false` so the bed is the floor, and `ChunkMesher.WaterSurface`
+  is 0.72 of a 3 m cell — **2.16 m of water over a 1.8 m person.** Deep water's `impassable` is the
+  only thing that has been keeping them out of the middle of lakes.
+- Four decisions taken: float and paddle rather than wade; deep water passable **but priced so a
+  route round almost always wins**; slow and helpless with no drowning; and a load never goes into
+  the water.
+- **The last two fit machinery that already exists, which is the useful find.** `TraverseMode.Hauler`
+  is there precisely because *what a colonist is carrying changes where it may go* — it forbids
+  ladders. Deep water is the second instance, so "a colonist will not swim while carrying" is one
+  mode rule: a haul path is planned in `Hauler` mode and therefore never crosses water, there is no
+  drop-on-the-bank step to write, and a load cannot end up in a lake by accident. Swimming is
+  likewise **not** a pawn state with a flag — the cell is already the authority, and a flag would be
+  a second copy of a fact that can fall out of step with where the pawn actually is.
+- **And the design found a question the owner has not been asked.** At 2.16 m, *shallow* water is
+  over a colonist's head too, so on these decisions both depths are swum. Lowering `WaterSurface`
+  to about 0.3 would make shallow water genuinely shallow and wadeable upright, leaving only deep
+  water swum — one number, and it would halve the pose work. It is the first item in the design's
+  order of work for that reason.
 - **The beds merge, and reviewing it, 2026-09-17.** `claude/beds` went conflicting against main
   after U29's floors, U42's paving, U43's ladders and the rates design all landed. Fifteen
   conflicts; eleven were unions and four were real.

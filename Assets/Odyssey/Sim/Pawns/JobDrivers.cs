@@ -49,15 +49,10 @@ namespace Odyssey.Sim.Pawns
                 }
 
                 case 1:
-                {
-                    if (item.Cell != Pawn.Cell) return JobStatus.Failed;
-                    // Taken up rather than merely moved: TakeUp is where the stoop is reported,
-                    // so that every job which ever lifts anything gets it without being asked.
-                    TakeUp(ctx, item);
-                    Job.CarriedItem = item.Id.Value;
-                    NextToil();
-                    return JobStatus.Ongoing;
-                }
+                    // Taken up rather than merely moved, and it takes time: LiftToil is the stoop,
+                    // the grasp and the rise, so every job which ever lifts anything gets all three
+                    // without being asked.
+                    return LiftToil(ctx, item);
 
                 case 2:
                 {

@@ -137,13 +137,14 @@ namespace Odyssey.Tests.Sim
         }
 
         [Test]
-        public void ABedOrderIntoSolidGroundIsRefusedNotLifted()
+        public void ABedOrderIntoSolidGroundIsLiftedExactlyAsAWallIs()
         {
             ColonyWorld colony = Fresh();
 
             // A solid cell with open air above it: exactly the cell a wall order names when it is
-            // lifted by StandingOn. A bed must refuse it instead, because lifting one end of a
-            // two-cell thing is an order whose shape the player cannot see.
+            // lifted by StandingOn, and exactly the cell the picker answers a click on grass with.
+            // A bed is lifted the same way — see StandingOn for why refusing it, as the first cut
+            // did, made the bed unorderable by pointing at anything.
             CellRef start = colony.Start;
             for (int radius = 1; radius < 8; radius++)
             for (int dz = -radius; dz <= radius; dz++)
@@ -164,12 +165,19 @@ namespace Odyssey.Tests.Sim
 
                 Assert.That(
                     colony.Construction.Place(Size.FromIndex(index), BuildingHandle.Bed, StuffHandle.Wood, 0),
-                    Is.EqualTo(IntentRejection.NotPermitted),
-                    "a two-cell order is never lifted onto the cell above the ground it named");
-                Assert.That(
-                    colony.Construction.Place(Size.FromIndex(index), BuildingHandle.Wall, StuffHandle.Wood),
                     Is.EqualTo(IntentRejection.None),
-                    "the control: a wall order on the same ground is lifted, as it always was");
+                    "a bed named at the ground is lifted onto it, or no bed can be ordered by "
+                    + "pointing at grass — which is every bed a player will ever order");
+
+                Assert.That(colony.Construction.At(above), Is.EqualTo(BuildingHandle.Bed),
+                    "and it landed in the air cell, not in the block");
+
+                // Both ends on one layer is the whole of why the lift is safe: the far cell is
+                // derived from the head AFTER the lift, so a bed can never straddle two layers.
+                int foot = EdificeFootprint.SecondCell(above, CoreContent.EdificeBed, 0, Size);
+                Assert.That(foot, Is.GreaterThanOrEqualTo(0));
+                Assert.That(Size.FromIndex(foot).Y, Is.EqualTo(Size.FromIndex(above).Y),
+                    "both ends of the bed are on one layer");
                 return;
             }
 

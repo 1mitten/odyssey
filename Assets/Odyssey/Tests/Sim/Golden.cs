@@ -75,7 +75,21 @@ namespace Odyssey.Tests.Sim
     /// moved <b>nothing here</b>, because every case below builds on <c>ScenarioDef.Bare</c>, which
     /// has never given any.</para>
     ///
-    /// <para><b>Moved a <b>fifth</b> time, on the merge, by the beds, and only the two boards with
+    /// <para><b>Moved a fifth time, 2026-09-17, by the pickup gaining a duration</b> (owner: "there
+    /// should be time spent motion down, picking up object and standing up"). A colonist now spends
+    /// <c>PawnContent.LiftTicks</c> — 48, the 0.8 s the drawn gesture always took — stooping,
+    /// taking the thing and straightening up, where before that was one tick. Every haul and every
+    /// delivery in these windows is therefore 47 ticks longer, so the colonies reach a different
+    /// state.</para>
+    ///
+    /// <para><b>All three <see cref="Case.Simulated"/> values moved and no <see cref="Case.Generated"/>
+    /// one did, which is the signature that says the re-bake is what it claims.</b> The duration is
+    /// content, content is not hashed, and nothing about placement changed — so a moved
+    /// <c>Generated</c> here would have meant something else had come along with it. Checked by
+    /// running the table before re-baking and reading which assertion failed: all three failed on
+    /// the second, which is the one that fires only after the first has passed.</para>
+    ///
+    /// <para><b>Moved a <b>sixth</b> time, in the same breath, by the beds, and only the two boards with
     /// something standing.</b> <c>PlacedEdifice</c> gained <c>Facing</c>, <c>Quality</c> and
     /// <c>Owner</c>, all hashed by <c>EdificeSaveSection</c>, and a construction site gained a
     /// hashed facing byte. The barren meadow did not move at all — it has an empty edifice list
@@ -83,6 +97,16 @@ namespace Odyssey.Tests.Sim
     /// says the generator itself is untouched. The wooded board's trees and the city's walls are
     /// generator-stamped records, and every one of them now contributes three more zeros to the
     /// walk; rebaked once on top of U40's numbers, not twice — see the values below.</para>
+    ///
+    /// <para><b>The two landed together and were baked once, and the shape of the re-bake is what
+    /// says it is honest.</b> The pickup duration and the bed's three edifice fields reached this
+    /// file from opposite branches. Read what moved: <b>the barren meadow did not move at all</b>
+    /// — it keeps the number main gave it — because it has an empty edifice list and never places
+    /// a site, so the beds contribute nothing to it. The wooded and city boards' <c>Generated</c>
+    /// values are <b>exactly the beds branch's own</b>, unchanged by the merge, because a duration
+    /// is content and content cannot move a hash taken before the first tick. Only their
+    /// <c>Simulated</c> numbers are new to both branches, which is the one place two changes could
+    /// combine. Any other pattern would have meant something had come along uninvited.</para>
     /// </summary>
     public static class Golden
     {
@@ -138,7 +162,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = false,
             Generated = 7415324713255390796UL,
-            Simulated = 4123229251212493599UL,
+            Simulated = 3128752858895027949UL,
         };
 
         /// <summary>
@@ -155,7 +179,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = true,
             Generated = 15662665231234558495UL,
-            Simulated = 5650568380305483581UL,
+            Simulated = 3319942754904635200UL,
         };
 
         /// <summary>
@@ -171,7 +195,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.RuinedCity,
             Wooded = false,
             Generated = 13030130651254543899UL,
-            Simulated = 15570532284057775623UL,
+            Simulated = 10435990758459796433UL,
         };
     }
 }

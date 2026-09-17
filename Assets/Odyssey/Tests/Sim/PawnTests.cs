@@ -305,6 +305,57 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Ctx.Items.LooseItems, Is.Empty, "a stored thing is no longer haulable");
         }
 
+        /// <summary>
+        /// Picking a thing up takes time, and the thing changes hands in the middle of it (owner,
+        /// 2026-09-17: "there should be time spent motion down, picking up object and standing up").
+        ///
+        /// <para>Three claims, and each of them is a fault that has to be observable from the
+        /// simulation side or it is only observable by looking. <b>The thing is still on the
+        /// ground</b> while the colonist bends, or the pile vanishes from under a standing figure.
+        /// <b>It is in the colonist's arms before the toil ends</b>, or the rise is drawn empty.
+        /// And <b>the whole motion costs</b> <see cref="PawnContent.LiftTicks"/>, which is what
+        /// stops the pawn setting off walking while its figure is still straightening — the thing
+        /// that was wrong before this existed, when a pickup was one tick.</para>
+        /// </summary>
+        [Test]
+        public void PickingSomethingUpTakesTimeAndTheGraspIsInTheMiddleOfIt()
+        {
+            var colony = Colony.Build();
+            var pawn = colony.Ctx.Pawns.Spawn(colony.Cell(2, 2, 0));
+            colony.Stockpile(1, colony.Cell(12, 12, 0));
+
+            ThingId scrap = colony.Ctx.Items.Spawn(ItemIndex.Salvage, colony.Cell(6, 4, 0));
+            var item = colony.Ctx.Items.Get(scrap)!;
+
+            // Walk until the colonist is standing on the thing with the lift toil running. The
+            // haul's toil 1 IS the lift, so reaching it is what "arrived" means here.
+            for (int i = 0; i < 3_000 && !InLiftToil(pawn); i++) colony.World.Tick();
+            Assert.That(InLiftToil(pawn), Is.True, "the hauler never reached the thing");
+
+            int total = colony.Ctx.Content.LiftTicks;
+            int grasp = colony.Ctx.Content.LiftGraspTicks;
+
+            // The toil is entered by the walk toil's own last tick, so none of the lift is spent
+            // yet: after N more ticks the motion is N ticks old.
+            colony.World.Tick(grasp - 1);
+            Assert.That(item.Cell, Is.GreaterThanOrEqualTo(0),
+                "the thing left the ground before the hands reached it");
+
+            colony.World.Tick(1);
+            Assert.That(item.Cell, Is.EqualTo(-1), "the thing was not taken up at the grasp");
+            Assert.That(pawn.CurrentJob!.CarriedItem, Is.EqualTo(scrap.Value));
+
+            // Still rising, and still on the same toil: the colonist has not set off walking.
+            colony.World.Tick(total - grasp - 1);
+            Assert.That(InLiftToil(pawn), Is.True, "the lift ended at the grasp instead of at the rise");
+
+            colony.World.Tick(1);
+            Assert.That(InLiftToil(pawn), Is.False, "the lift outlasted its own duration");
+        }
+
+        static bool InLiftToil(Pawn pawn) =>
+            pawn.Driver is HaulJobDriver driver && driver.ToilIndex == 1;
+
         [Test]
         public void HaulersPreferTheHigherPriorityStockpile()
         {

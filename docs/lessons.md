@@ -71,6 +71,39 @@ form Unity accepts**, and that includes the test code. Neither of these is catch
 both are one `scripts/unity.sh test editmode` away, so run it before saying a test suite is done
 rather than after.
 
+**A fixture-wide default is a silent precondition on every test in the file, and it can switch off
+the thing the file exists to measure.** Found 2026-09-17, and it had been hiding a real fault for
+as long as the fault existed. `BankFootingTests` measures whether a walking figure's drawn height
+is continuous — five crossings of a terrace, four hundred samples a step, with a comment saying
+these are the tests that matter because a height that jumps reads as a teleport and would be blamed
+on the animation. Its `[SetUp]`/`[TearDown]` call `GroundRelief.Reset()`, which sets `Amplitude` to
+**zero**, and at zero amplitude `GroundRelief.Lift` returns its argument unchanged. So every one of
+those cases ran on a perfectly flat field, while the board the game loads carries a 2 m one
+everywhere — and an 81.9 mm per-frame snap sat under them, undetected, until somebody measured the
+same thing with the field switched on.
+
+The cheap guard is a **control that fails if the fixture is inert**: one test that asserts the
+condition being varied is actually varied (`WalkOnReliefTests.TheFieldIsOnAtAll` checks two
+neighbouring cells are drawn at different heights). Without it, "twelve tests pass" and "twelve
+tests are vacuous" look identical from the outside. Ask of any fixture that resets global state:
+*what does this reset turn off, and is it the thing I am testing?*
+
+**Measure the control even when you are sure, because it can reverse the reading of the number.**
+Same day, same file. A second, smaller jump turned up at bank boundaries — 28.7 mm with the relief
+on. Taken alone it reads as a second relief bug. The same crossing on a flat field is **30.0 mm**,
+so the relief is not the cause and is marginally kinder, and the number belongs to the bank surface
+and predates everything being worked on. The control cost one extra call in a test that was already
+running. Without it, an afternoon goes on the wrong thing.
+
+**A photograph taken to answer a question has to be checked for whether it answers it.** Found
+2026-09-17 building `WaterDepthCheck`, which took three unusable sets of shots first. A low camera
+near a stream looks *through* the bank, because a stream is cut into a channel — 12° at 10 m and
+14° at 9 m both put the lens inside the ground. A scale post banded over its lower metre is useless
+for comparing waterlines that are all above a metre: every band was submerged. And two reference
+objects the same colour cannot be told apart in the resulting picture. This is the same discipline
+as re-running a test after a fix: an artefact produced to settle a question is not done until it
+has been looked at with that question in mind.
+
 **A frame is not a tick, and waiting one frame for a simulation effect is a flake.** Found
 2026-09-17, one failure in three PlayMode runs. `OdysseyBootstrap` accumulates real time and steps
 the simulation only when it has a tick's worth, so **a Unity frame contains zero or more ticks

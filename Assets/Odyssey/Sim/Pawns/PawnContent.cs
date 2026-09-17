@@ -450,6 +450,8 @@ namespace Odyssey.Sim.Pawns
         public int stonePerRock = 8;
         public int stoneChanceOneIn = 1;
         public int orePerCell = 15;
+        public int liftTicks = 48;
+        public int liftGraspTicks = 24;
     }
 
     /// <summary>
@@ -533,6 +535,46 @@ namespace Odyssey.Sim.Pawns
         public int StandDownTicks = 120;
 
         /// <summary>
+        /// How long it takes a colonist to stoop, take something off the ground and straighten up
+        /// again — 48 ticks, which is 0.8 s at sixty a second.
+        ///
+        /// <para><b>This used to be nothing at all</b> (owner, 2026-09-16), and the owner reversed
+        /// it on 2026-09-17: <i>"when picking up — it happens quickly in a stride — I think there
+        /// should be time spent motion down, picking up object and standing up"</i>. The motion was
+        /// always drawn: <c>Gesture.Lift</c> is a solved crouch of exactly 0.8 s. What was missing
+        /// is that the simulation moved the pawn on in the same tick, so the figure was still
+        /// straightening while its pawn walked away — which <see cref="TakeUp"/>'s own note called
+        /// the accepted price of keeping the duration out of the simulation. It is no longer
+        /// accepted, so the duration is here.</para>
+        ///
+        /// <para><b>The number is not free taste: it must match the drawn gesture.</b> This is the
+        /// same uncomfortable coupling <see cref="JobDef.settleTicks"/> already carries and for the
+        /// same reason — the alternative is presentation reaching into job timing. Shorter than the
+        /// gesture and the colonist walks off mid-rise, which is the fault being fixed; longer and
+        /// it stands finished over the thing it has already picked up.</para>
+        ///
+        /// <para>It belongs to the colonist rather than to a job, because a lift is a lift: the
+        /// haul and the delivery both use it today and a harvest or a butcher's will want the same
+        /// number rather than their own.</para>
+        /// </summary>
+        public int LiftTicks = 48;
+
+        /// <summary>
+        /// How far into <see cref="LiftTicks"/> the thing actually changes hands — 24 ticks, the
+        /// middle of the drawn gesture's hold.
+        ///
+        /// <para>Without it the owner's three beats are two: the item would vanish off the ground
+        /// either as the colonist began to bend or after it was already upright. <c>Gesture.Lift</c>
+        /// holds the hands at the floor between phase 0.4 and 0.55 — 19 to 26 ticks of 48 — and
+        /// this is the middle of that window, so the pile shrinks while the hands are on it.</para>
+        ///
+        /// <para>Clamped into the lift by <c>JobDriver.LiftToil</c> rather than trusted, because a
+        /// grasp later than the lift itself would be a thing picked up after the job had moved
+        /// on.</para>
+        /// </summary>
+        public int LiftGraspTicks = 24;
+
+        /// <summary>
         /// The Def types this content is made of, registered on a loader in one place so that a
         /// caller cannot load half of it. Adding a pawn Def type and forgetting to register it
         /// gives "unknown Def type" at load, which is the right failure but the wrong place to
@@ -598,6 +640,8 @@ namespace Odyssey.Sim.Pawns
             content.StonePerRock = tuning.stonePerRock;
             content.StoneChanceOneIn = tuning.stoneChanceOneIn;
             content.OrePerCell = tuning.orePerCell;
+            content.LiftTicks = tuning.liftTicks;
+            content.LiftGraspTicks = tuning.liftGraspTicks;
 
             return content;
         }

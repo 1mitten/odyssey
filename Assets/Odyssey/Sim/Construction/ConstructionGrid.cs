@@ -137,10 +137,9 @@ namespace Odyssey.Sim.Construction
         ///
         /// <para><c>facing</c> is the rotation a rotatable thing was given at the ghost; ignored,
         /// and expected zero, for everything that does not rotate. A multi-cell thing must have
-        /// all of its cells: both are validated here, and the one rule it does <b>not</b> share
-        /// with a wall is <see cref="StandingOn"/>'s lift — a two-cell thing is never lifted onto
-        /// the cell above solid ground, because lifting one end of a bed into the air while the
-        /// other stays put is an order whose shape the player cannot see.</para>
+        /// <b>all</b> of its cells and both are validated here — but it is lifted exactly as a
+        /// wall is, and the far cell is derived after the lift, so a bed can never straddle two
+        /// layers. <see cref="StandingOn"/> carries why the first cut's refusal was wrong.</para>
         /// </summary>
         public IntentRejection Place(CellRef cell, int building, int stuff, int facing = 0)
         {
@@ -264,11 +263,6 @@ namespace Odyssey.Sim.Construction
 
             BuildingDef what = ConstructionContent.BuildingAt(building);
 
-            // A multi-cell thing is never lifted. Lifting one end of a bed onto the cell above
-            // solid ground while the other end stays put is an order whose shape the player cannot
-            // see, so the click names the cell and nothing moves it (docs/design/20-beds.md).
-            if (what.footprint > 1) return index;
-
             // A covering takes the WALL's lift, not the slab's: a click on grass names the ground
             // block and paving goes in the air cell above it, which is exactly what StandingOn
             // already does. Only structure is lifted over things that fill a cell (U42).
@@ -291,6 +285,17 @@ namespace Odyssey.Sim.Construction
         /// <para>Only where the cell above can actually take a site, so a click on rock with more
         /// rock above it is still a refusal rather than an order placed a layer away from where it
         /// was asked for.</para>
+        ///
+        /// <para><b>A two-cell thing is lifted too, and the argument against it was wrong.</b> The
+        /// bed was written to refuse the lift, on the reasoning that raising one end of a bed into
+        /// the air while the other stayed put is an order whose shape the player cannot see. That
+        /// case cannot arise: the far cell is derived from the head <i>after</i> the lift, so both
+        /// ends are always on one layer, and a far cell with nothing under it fails
+        /// <see cref="Allows"/> and refuses the whole order. What the rule did instead was make the
+        /// bed unorderable — the picker answers a click on grass with the ground block, so every
+        /// bed a player could point at was <c>NotPermitted</c> and the tool armed, dragged,
+        /// previewed and did nothing. Measured at the picker-to-order seam
+        /// (<c>FloorToolReachTests</c>), which is the only place the two halves meet.</para>
         /// </summary>
         int StandingOn(int index)
         {

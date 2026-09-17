@@ -244,8 +244,22 @@ assertions. All four pass; the feature was right, the tests were not asking.
 
 **`ABedOrderIntoSolidGroundIsRefusedNotLifted` ignored itself on every run.** It searched for a
 solid cell at `start.Y`, which is the layer a colonist *stands in* — the ground is the layer
-below — so it found nothing anywhere and took its `Assert.Ignore` branch every time. The rule it
-guards is a real one and it holds; it had simply never been checked.
+below — so it found nothing anywhere and took its `Assert.Ignore` branch every time. Fixing the
+search is what exposed the next fault, because the rule it was guarding turned out to be the
+wrong rule.
+
+**A bed could not be ordered by pointing at anything.** The seam test above is what found it, and
+it is the same fault U29's floor tool had: `Place` refused the lift for anything wider than one
+cell, on the reasoning that raising one end of a bed while the other stayed put is an order whose
+shape the player cannot see — while `SlicePicker` answers a click on bare grass with the ground
+*block*. Put together, **every bed a player could point at was `NotPermitted`**, and the tool
+armed, dragged, previewed and did nothing. The reasoning was wrong as well as costly: the far cell
+is derived from the head **after** the lift, so both ends are always on one layer and a far cell
+with nothing under it refuses the whole order anyway. A bed now takes the wall's lift, exactly as
+paving does. This was not one of §2's owner decisions and is not in §5 — it was a choice made in
+`Place`, justified in a comment, and pinned by `ABedOrderIntoSolidGroundIsRefusedNotLifted`, a test
+that ignored itself on every run since it was written. That test is now
+`ABedOrderIntoSolidGroundIsLiftedExactlyAsAWallIs` and it asserts both ends land on one layer.
 
 **The ghost knew nothing about beds.** The build cursor and the waiting-site ghost both arrived
 from the build-cursor work after this design was written, and both drew one cell-filling module
