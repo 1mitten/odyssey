@@ -1514,3 +1514,168 @@ work itself.
     at-rest story and in fact no part of it at all. Fourth time this week.
   - **Verified:** fast tier **484 Sim + 158 Hud**, Long tier **19**, no golden moved — caching a
     delegate cannot change behaviour, and the goldens agree.
+
+- **Walls went up stepped, and the fault was not building's (branch `claude/build-pipeline`,
+  2026-09-17).** The owner pressed Play, ordered a room, and the colony built it — which settles
+  §8's unreproduced report: the composition fix was the whole of it. But the finished wall was
+  **not flush**: every panel sat a few centimetres above or below its neighbour, a notch at each
+  cell join and at each corner. Three screenshots, and the cropped one is unambiguous — the outer
+  faces are coplanar, the top edge steps vertically at exactly the cell pitch, no depth offset.
+  - **Nothing about the build pipeline was wrong.** The fault was in `ChunkMesher` and was older
+    than this line: a wall panel was placed with `GroundRelief.Lift`, which takes *one height from
+    one point*. Two panels of one run stand 2.5 m apart on a drawn field of amplitude 2 m and
+    period 150 m, so they differ by the field's slope across a whole cell. **Measured over the
+    board: 73 mm on average, 220 mm at the worst, against a 3 m wall.** At the cells the new test
+    uses, 147 mm.
+  - **The fix is the operation the ground already used.** `GroundRelief.Drape` shears the piece
+    onto the tangent plane of the field at its own centre, so two neighbours are tangent planes of
+    one smooth surface and part company only by its *curvature* — second order. **The same seam
+    measures 1.1 mm.** The shear leaves vertical edges vertical (determinant one, Y sheared by x
+    and z), so the wall stays plumb and a full 3 m tall; only its head and foot rake with the
+    ground, which is what a wall built along a slope does. With relief off, `Drape` is exactly a
+    translate, so the flat board draws byte-identically and no contact sheet moves.
+  - **`EmitWater` had already written the whole argument down**, having got it wrong twice — a
+    lifted tile takes its height from its own centre and neighbours open slivers you can see the
+    riverbed through. The built world was not reading it. The general rule now sits in
+    `ChunkMesher`'s class comment: **anything fixed to the grid is draped; only what moves over it
+    is lifted.** Floors, walls, doors, stairs, ladders, pillars and cell-filling edifices are
+    draped; grass tufts, dropped items, figures and cursors stay lifted, because they stand at a
+    point and share an edge with nothing. `EmitFloor`'s old comment — "a built floor is man-made
+    and stays flat" — was the reasoning that produced the bug: staying flat is exactly what opens
+    the seam.
+  - **What made this quick was refusing to read code for it.** The relief field was re-implemented
+    in twenty lines of Python and the step measured before a line of C# was touched, then measured
+    again after. A fix whose before-and-after numbers are 147 mm and 1.1 mm needs no screenshot to
+    be believed — though it still wants one, because nobody has pressed Play on it.
+  - **Guards:** `ChunkMesherTests.AWallRunMeetsItselfAtOneHeightOnRollingGround` and
+    `.AFloorMeetsItselfAtOneHeightOnRollingGround` walk every drawn corner, pair the ones standing
+    over the same point of the board, and hold their disagreement under 20 mm — which the old code
+    misses by sevenfold. `.ADrapedWallStaysVerticalAndFullHeight` stops the next person buying
+    flushness by leaning the building over.
+
+- **And the wall was hollow, which is a different fault the same screenshots showed (same branch,
+  same day).** The owner, looking at the first finished room: *"the walls should be filled in with
+  a top as well."* They were not. A wall cell is drawn as a panel on each face something can be
+  seen through — which is what stops a one-cell wall reading as a 2.5 m slab and is deliberate —
+  but a straight run puts two panels 2.5 m apart with 2.25 m of nothing between them and nothing
+  over them. From a high camera every wall had a black slot down its middle.
+  - **The owner's three questions came apart, and two of them were already answered.** "Colonists
+    always build from the outside so they don't get stuck" is true today and is not a drawing
+    question: both `DeliverWorkGiver` and `BuildWorkGiver` take their stand cell from
+    `FellJobDriver.StandBeside`, and the comment at the delivery site says why — the site is
+    walkable right up to the moment the wall goes up in it, so standing *in* it would work for the
+    delivery and be exactly wrong for the build that follows. "Build electricity through it" is a
+    question about what a cell may hold, which neither answer below changes.
+  - **The third — "is it worth making the wall half the size of the cell and making it like a
+    block?" — is two questions in one coat:** should the cell be filled, and how thick should a
+    wall look. **They separate because a wall already occupied the full 2.5 m of its cell as
+    drawn**, two faces of it and a hole. Filling it changes nothing about how thick a wall *reads*.
+  - **Filled, thickness left alone (owner, 2026-09-17).** One block per wall cell behind the
+    panels, `ModuleIds.WallCore`, core and cap in one. No art (it falls back to the cell-shaped
+    primitive and wears the wall's own stuff tint, so it matches the panels in colour if not in
+    texture), no orientation logic, one extra instance per wall cell. Recessed 1 cm below the
+    panels' heads, because a panel straddles its face and 0.125 m of it stands inside the cell —
+    the two tops would otherwise be coplanar, and a z-fight along the head of every wall in the
+    colony is a shimmering line the camera cannot get away from. A centimetre is sub-pixel at 32 m,
+    the nearest the camera comes. A window keeps its hollow.
+  - **Held open: the half-cell wall.** It buys a wall that reads as a wall rather than as a
+    rampart, and costs a per-cell run direction — which the earth blocks already solve, since
+    `GroundMesh.CanonicalExposure` turns all sixteen neighbour patterns into five meshes and a
+    rotation and a wall junction is the same problem — plus meshes for the straight, the corner and
+    the tee, and something to cover the 0.6 m of bare cell it would leave each side, which today's
+    floor slab does not reach. **The cap is the cheap experiment that settles it:** look at a room
+    and say whether 2.5 m is a fortress or just a wall.
+
+- **The build line caught up with `main`, and the golden re-bake was made to say why (branch
+  `claude/build-pipeline`, 2026-09-17).** PR #63 had gone conflicting: `main` had baked new golden
+  hashes when `CellGrid` joined the state hash (OQ-50) while the branch had baked its own on the
+  old scheme, so neither side's numbers could survive. The merge is otherwise unremarkable — the
+  journal's two appended entries both kept, `main`'s first because it finishes the bullet the
+  branch's interrupted.
+  - **The re-bake was not taken on trust.** The obvious story was "the construction grid is new
+    hashed state, of course the number moved". A **control run** with `ConstructionGrid`'s
+    `AddTickable` registration removed came back at 17805151056309647682 — not `main`'s
+    13449042641056873599 — so the construction grid was *not* the whole of it. The rest is
+    `Skill_Construction`: a new skill widens every pawn's skill array, which moves the generated
+    hash before a tick has run. Two causes, both deliberate, and the second would have been
+    invisible under a re-bake that stopped at the first plausible explanation.
+  - **Both tiers green for the first time on this branch** (run 35194913924, and again after a
+    second merge): fast tier 478 Sim + 134 Hud, Long 15, Unity 1,055 EditMode and 27 PlayMode, plus
+    the headless day. The PR's "unrun: `unity.sh test editmode`" caveat is retired.
+  - **Worth noticing for next time:** both grids register for the hash by being an `ITickable` with
+    `TickGroup.Never`, a trick that pre-dates `SimWorldBuilder.AddHashable` and that `AddHashable`
+    now exists to replace. Left alone here — moving them would shift every golden again for no
+    behaviour — but the next person to touch either file should use the third list.
+
+- **The build cursor became the wall, and a build box stopped widening by accident (branch
+  `claude/build-pipeline`, 2026-09-17).** Two owner reports from the first playtest that built
+  anything, and they are the same gesture seen from its two ends.
+  - **"Use a cube instead, with all lines showing."** A build drag drew the selection bracket —
+    eight corner stubs — once per cell, which along a six-cell run reads as a dotted line and says
+    "these are things you have picked". It now draws one closed wireframe box, all twelve edges,
+    spanning the whole run. The box is **draped** rather than lifted, so it shears onto the tangent
+    plane of the drawn field at its own centre exactly as the wall it is promising will: the rule
+    from the stepped-wall fault, applied to the cursor. Lifted, a fifteen-metre box takes one height
+    from one point and floats at its far end.
+  - **A run that steps up a riser is one box per level.** A build order is lifted onto the cell
+    standing on solid ground, decided per column, so a run across a terrace stands on two layers and
+    one box around all of it would be a box around neither. `BuildPreview.Gather` does that split in
+    `Odyssey.Hud`, where the fast tier can hold it, with the lift passed in as a function of the
+    column.
+  - **"The building is a tad sensitive and by accident you can build dual walls."** A wall dragged
+    along one axis with the pointer a single cell off the row covered two rows — two parallel walls,
+    ordered, carried to and paid for, out of a gesture that meant one. The owner chose **hysteresis
+    over a snap to a line**, so a rectangle of wall is still one gesture: the box widens at two
+    cells clear across the run and the gate re-arms only back at the anchor's own row. Two
+    thresholds, because one makes the box flicker between one row and two while the pointer sits on
+    the boundary. Build only — one more cell marked to dig is a rounding error and one more row of
+    wall is a wall.
+  - **`Matrix4x4.TRS` was written out by hand**, and that is not a micro-optimisation. No bar of a
+    box is rotated, so the quaternion is an identity multiplied through for nothing — but the real
+    reason is that `TRS` is an engine call that throws outside the player, and with it in the way
+    the cursor's geometry could only be checked by looking at it. Written out, the twelve edges are
+    measured in a test: four per axis, each the full length of its side, every corner a three-way
+    joint, and a draped box plumb, full height, and raking with the field's own slope at a point
+    measured to be near the steepest the board gets.
+  - **Control run:** with the edges shortened back to bracket stubs, three of the five cursor tests
+    fail; with the box gate disabled, three of the six drag tests fail. Restored, both green.
+  - **Verified:** fast tier **478 Sim + 146 Hud** (up 12), Long tier 15. The Presentation assembly
+    compiles headlessly against the mirror DLLs and its new tests were *run* outside Unity through a
+    throwaway `net8.0` NUnit project, which is `docs/lessons.md`'s trick used for the first time on
+    tests rather than on a number. **Nobody has pressed Play on it.**
+
+- **The widening gate was loosened the same day it landed, and the second fault was the
+  interesting one (branch `claude/build-pipeline`, 2026-09-17).** The owner played the first
+  version in this worktree's own editor — checked, rather than assumed, against
+  `docs/lessons.md`'s "confirm delivery before diagnosing" — and reported it was still too easy to
+  create double walls.
+  - **The threshold was the obvious half.** Two cells clear is five metres of board, which sounds
+    generous until twenty metres of wall is drawn at a camera looking down a slope. It is three now.
+  - **The gate was also sticky, and that is what made it fail in practice.** It re-armed only on the
+    anchor's *exact* row, so a single wander anywhere in a long drag latched the box wide for the
+    rest of it — and a pointer that has strayed three cells rarely returns to precisely the row it
+    left. The player would let go over a rectangle without ever having seen the moment it widened.
+    Re-arming within one cell of the row instead keeps the two thresholds that stop the flicker
+    while making a trip recoverable.
+  - **Worth keeping in mind as a shape of bug:** a latch and a threshold are two separate decisions,
+    and tuning the threshold alone would have made the same complaint come back quieter. The first
+    version's own test — "once widened it does not flicker back on the boundary" — was passing and
+    was pinning the sticky behaviour as if it were the feature.
+  - **Verified:** fast tier 478 Sim + 146 Hud, unchanged in count because the three tests that
+    encoded the old numbers were re-aimed rather than added to.
+
+- **The build line was played and accepted (branch `claude/build-pipeline`, 2026-09-17).** The owner
+  ordered walls in the running game with the loosened gate and reported it works. That closes the
+  gesture: three rounds in one day — the box widening on a one-cell wander, then on a two-cell one,
+  then not. **Both rounds were answered by changing what the rule *is*, not only its number**, and
+  the second one would have been missed by tuning alone.
+  - **What the playtests have actually judged** is ordering a wall, the material row, the cursor and
+    the widening gate. The drape and the fill were in the same build and drew no complaint, which is
+    weaker than a judgement and is written down as such. The site marks, the blueprint readout in
+    the inspect pane and the computed hammer swing are in the build and nobody has said anything
+    about them either way; `docs/design/15-building.md` §8 names them so the next session does not
+    mistake silence for approval.
+  - **The branch was merged with `main` three times in the day** — 27 commits in one of them — and
+    the merges are the reason to notice how fast parallel branches are landing. A PR that sits for a
+    few hours is a PR that conflicts, and when it conflicts GitHub stops scheduling its checks
+    altogether, so the first symptom is not a red tick but no tick at all.

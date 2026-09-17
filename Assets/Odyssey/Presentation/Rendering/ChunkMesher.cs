@@ -24,6 +24,14 @@ namespace Odyssey.Presentation.Rendering
     ///   would read as an airlock.
     /// - **Stairs climb.** The lower half sits on the floor, the upper half 1.5 m up, both facing
     ///   the direction of travel — which is the kit's native geometry (<c>e-01</c>).
+    /// - **Everything fixed to the grid is draped; only what moves over it is lifted.** A lift
+    ///   takes a single height from a single point, so two neighbouring pieces of one wall or one
+    ///   floor sit at heights differing by the relief's slope across a whole cell and the seam
+    ///   between them steps. A drape is the tangent plane of the same field, so neighbours
+    ///   disagree only by its curvature — second order, about 11 mm — and the seam closes. Ground,
+    ///   banks, water, floors, walls, doors, stairs, ladders and pillars are therefore all draped;
+    ///   grass tufts, dropped items, figures and cursors are lifted, because they stand at a point
+    ///   and share no edge with anything.
     /// </summary>
     public sealed class ChunkMesher
     {
@@ -487,10 +495,10 @@ namespace Odyssey.Presentation.Rendering
             if (_model.IsSolid(index)) return; // a slab inside rock is not visible
             int module = _model.FloorModule(index);
             if (module == 0) return;
-            // A built floor is man-made and stays flat; it is lifted onto the ground, not laid
-            // along it. Only terrain is draped.
+            // Draped, like every other thing that fills a cell - see EmitFacePanels for why a
+            // lift cannot close a seam, and EmitWater for the same argument made about tiles.
             AddRoof(batch, module, TintCode.Stuff(_model.FloorStuff(index)),
-                Matrix4x4.Translate(GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y))));
+                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)));
         }
 
         void EmitEdifice(ChunkBatch batch, int index, int x, int z, int y)
@@ -500,7 +508,16 @@ namespace Odyssey.Presentation.Rendering
             int module = _model.EdificeModule(index);
             if (module == 0) return;
 
-            int tint = TintCode.Stuff(_model.EdificeStuff(index));
+            // **The stuff tint says what a thing was *built* from, and a tree was not built.**
+            // A tree is placed with NaturalContent.StuffWood because that is what it is made of,
+            // and it wears its own pack material — green canopy, brown trunk, already right. So
+            // long as the wood tint was white the conflation cost nothing; the moment wood became
+            // a brown multiply, so that a wooden wall stopped coming out as cream plaster, every
+            // tree on the board would have been multiplied brown with it. A natural edifice takes
+            // no stuff tint at all.
+            int tint = TintCode.Stuff(def >= NaturalContent.FirstEdifice
+                ? CoreContent.StuffNone
+                : _model.EdificeStuff(index));
             var shape = _model.Library[module].Shape;
 
             switch (def)
@@ -518,20 +535,88 @@ namespace Odyssey.Presentation.Rendering
                 case CoreContent.EdificePillar:
                 case CoreContent.EdificeUtilityTap:
                     AddBody(batch, module, tint,
-                        Matrix4x4.Translate(GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y))));
+                        GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)));
                     return;
             }
 
             if (shape != ModuleShape.WallPanel)
             {
                 AddBody(batch, module, tint,
-                    Matrix4x4.Translate(GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y))));
+                    GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)));
                 return;
             }
 
             EmitFacePanels(batch, module, tint, index, x, z, y);
+            EmitWallCore(batch, tint, def, x, z, y);
         }
 
+        /// <summary>
+        /// How far the core's head sits below the panels', in metres.
+        ///
+        /// Only to keep two opaque surfaces off the same plane. A panel straddles its face, so
+        /// 0.125 m of it stands inside the cell and its top would otherwise be exactly coplanar
+        /// with the core's over that strip — which is a z-fight, and a z-fight along the whole
+        /// head of every wall in the colony is a shimmering line the camera cannot get away from.
+        /// A centimetre is sub-pixel from 32 m up, the nearest the camera comes, and where the
+        /// panels do frame the core it reads as a coping rather than as a mistake.
+        /// </summary>
+        const float CoreRecess = 0.01f;
+
+        /// <summary>
+        /// The mass a wall is made of: one cell-shaped block behind the panels on its faces.
+        ///
+        /// <para><b>Why a wall needed one at all.</b> Panels are drawn on faces, which is what
+        /// stops a one-cell wall reading as a 2.5 m slab — but a straight run puts two panels
+        /// 2.5 m apart with 2.25 m of nothing between them and nothing over them. From a high
+        /// camera every wall had a black slot down its middle, and a slice or an x-ray looked
+        /// straight into it (owner, 2026-09-17). This fills the cell and caps it.</para>
+        ///
+        /// <para>It changes nothing about how thick a wall <i>reads</i>, and that is worth saying
+        /// because it is the usual objection: a wall already occupied the full 2.5 m of its cell
+        /// as drawn, two faces of it and a hole. A thinner wall is a different question and is
+        /// kept in <c>15-building.md</c>.</para>
+        ///
+        /// <para>Hidden wherever it should be. A panel covers its whole face and stands 0.125 m
+        /// proud of it, so on any face something can see through, the panel is what is seen; on
+        /// any face it cannot, the neighbour is. Two cores in a run touch exactly, so a wall is
+        /// one continuous mass and not a row of boxes.</para>
+        ///
+        /// <para><b>Not a window.</b> A window cell keeps its hollow, because filling it in is
+        /// the one thing a window must not do.</para>
+        /// </summary>
+        void EmitWallCore(ChunkBatch batch, int tint, ushort def, int x, int z, int y)
+        {
+            if (def == CoreContent.EdificeWindow) return;
+            int core = _model.WallCoreModule;
+            if (core == 0) return;
+
+            AddBody(batch, core, tint, GroundRelief.Drape(
+                CellMetrics.FloorCentre(x, z, y) - Vector3.up * CoreRecess));
+        }
+
+        /// <summary>
+        /// A panel on every face of this cell that something can be seen through.
+        ///
+        /// <para><b>Draped, not lifted, and this is what a built wall lives or dies by.</b> A
+        /// lifted panel is flat and takes its height from its own centre, so two panels in a run
+        /// sit at heights that differ by the relief's slope across a whole cell - 73 mm on
+        /// average over this board and 220 mm at the worst of it, against a 3 m wall. That is a
+        /// visible step at every cell join and a notch at every corner, which is exactly what a
+        /// finished wall looked like the first time one went up (owner, 2026-09-17).
+        ///
+        /// A draped panel is sheared onto the tangent plane of the field at its own centre, so
+        /// two panels are tangent planes of one smooth surface and part company at the vertical
+        /// edge they share only by the field's curvature over a cell - about 11 mm, second order,
+        /// and invisible. The shear leaves vertical edges vertical, so the wall does not lean and
+        /// stays a full 3 m everywhere; only its head and its foot rake with the ground, which is
+        /// what a wall built along a slope does. It is the same argument <see cref="EmitWater"/>
+        /// makes about tiles, and it was already the right one there.
+        ///
+        /// The drape is taken at the *face's* own centre rather than the cell's, for the reason
+        /// the lift was: half a cell along a slope is enough for a panel and the cell it belongs
+        /// to to disagree. And it composes on the left of the yaw, so the panel is turned in its
+        /// own space and then sheared in the world's - the order <see cref="EmitBank"/> uses.</para>
+        /// </summary>
         void EmitFacePanels(ChunkBatch batch, int module, int tint, int index, int x, int z, int y)
         {
             var size = _model.Size;
@@ -539,22 +624,18 @@ namespace Odyssey.Presentation.Rendering
             {
                 int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
                 if (size.Contains(nx, nz, y) && _model.OccludesFace(size.Index(nx, nz, y))) continue;
-                // Lifted at the face's own centre, not the cell's. Half a cell along a slope is
-                // enough for a panel and the wall it belongs to to visibly disagree.
-                AddBody(batch, module, tint, Matrix4x4.TRS(
-                    GroundRelief.Lift(CellMetrics.FaceCentre(x, z, y, dir)),
-                    Quaternion.Euler(0f, Directions.Yaw[dir], 0f),
-                    Vector3.one));
+                AddBody(batch, module, tint,
+                    GroundRelief.Drape(CellMetrics.FaceCentre(x, z, y, dir)) *
+                    Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f)));
             }
         }
 
         void EmitDoor(ChunkBatch batch, int module, int tint, int index, int x, int z, int y)
         {
             int dir = FirstOpenDirection(x, z, y);
-            AddBody(batch, module, tint, Matrix4x4.TRS(
-                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)),
-                Quaternion.Euler(0f, Directions.Yaw[dir], 0f),
-                Vector3.one));
+            AddBody(batch, module, tint,
+                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
+                Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[dir], 0f)));
         }
 
         void EmitStair(ChunkBatch batch, int module, int tint, ushort def, int x, int z, int y)
@@ -569,20 +650,18 @@ namespace Odyssey.Presentation.Rendering
             int climb = def == CoreContent.EdificeStairLower ? dir : Directions.Opposite(dir);
             float rise = def == CoreContent.EdificeStairLower ? 0f : CellMetrics.SizeY * 0.5f;
 
-            AddBody(batch, module, tint, Matrix4x4.TRS(
-                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)) + Vector3.up * rise,
-                Quaternion.Euler(0f, Directions.Yaw[climb], 0f),
-                Vector3.one));
+            AddBody(batch, module, tint,
+                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y) + Vector3.up * rise) *
+                Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[climb], 0f)));
         }
 
         void EmitLadder(ChunkBatch batch, int module, int tint, int index, int x, int z, int y)
         {
             int wall = FirstOccludingDirection(x, z, y);
             int facing = wall >= 0 ? Directions.Opposite(wall) : Directions.North;
-            AddBody(batch, module, tint, Matrix4x4.TRS(
-                GroundRelief.Lift(CellMetrics.FloorCentre(x, z, y)),
-                Quaternion.Euler(0f, Directions.Yaw[facing], 0f),
-                Vector3.one));
+            AddBody(batch, module, tint,
+                GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
+                Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[facing], 0f)));
         }
 
         int FirstOpenDirection(int x, int z, int y)

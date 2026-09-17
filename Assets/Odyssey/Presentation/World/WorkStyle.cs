@@ -447,8 +447,8 @@ namespace Odyssey.Presentation.World
         /// <see cref="IndexForJob"/>, and nothing else". It cost a static, a recipe and a
         /// catalogue row. The claim holds.</para>
         ///
-        /// <para>It is reached only through <c>PawnFigureDirector.StyleOverride</c>, which is the
-        /// harness's way in and is not used by the game.</para>
+        /// <para><c>PawnFigureDirector.StyleOverride</c> is still the harness's way in, and is what
+        /// <c>SwingCheck</c> photographs the stroke with; it is no longer the only way in.</para>
         ///
         /// <para><b>Two-handed, on the owner's "akin to chopping".</b> A framing hammer swung at a
         /// wall with both fists is the axe's motion with a shorter tool, and it reuses every part

@@ -527,6 +527,17 @@ backslashes dies on `MSB4025: hexadecimal value 0x0C is an invalid character` �
 segment. **Write every path in a generated csproj with forward slashes**; MSBuild accepts them and
 the error message points nowhere near the cause.
 
+**Presentation tests can be *run* the same way, not merely compiled** (2026-09-17). Point a throwaway
+`net8.0` project with NUnit and the test adapter at the test file, reference the DLL the paragraph
+above builds plus `UnityEngine.CoreModule.dll`, and `dotnet test` runs them in about a second while
+the editor holds the project. **What stops it is an engine ECall**: anything implemented natively
+throws `SecurityException: ECall methods must be packaged into a system module` outside the player.
+`Matrix4x4.TRS` is one of them; `Matrix4x4.identity`, `operator *`, `MultiplyVector`, `GetColumn`,
+`Mathf` and the vector types are managed and work. So a value that is only ever scaled and
+translated is better built by writing the seven fields out — it is one multiply cheaper, and it is
+the difference between geometry that can be measured in a test and geometry that can only be looked
+at. `GroundRelief.Drape` had already made the same choice for its shear.
+
 And a shell trap that is not a documentation error: the user PATH does put Python 3.13 ahead of
 `WindowsApps`, but a shell started before that change inherits the old environment, so `python3`
 resolves to the Microsoft Store stub and answers *"Python was not found"* to everything —
@@ -662,6 +673,40 @@ minutes and a couple of gigabytes; run it in the background and do something els
 
 Remove the junction with `rmdir` (not `Remove-Item -Recurse`, which on some shells follows the link
 and would delete the real packs).
+
+**And not `git worktree remove` either — that is the same trap and it is not obvious** (2026-09-17,
+and it cost the packs). Tearing down a junctioned worktree with
+
+```
+git worktree remove --force .claude/worktrees/<name>
+```
+
+made git walk the tree deleting as it went, **follow the junction, and empty the real
+`D:\code\odyssey\Assets\Synty`** — 15,868 files, 1.54 GB, gone, and the command then failed with
+`Permission denied` so it looked like nothing had happened. Every other junctioned worktree
+(`odyssey-look`, `odyssey-ui`) went dark at the same moment, because they all point at the one real
+copy. Nothing goes to the recycle bin.
+
+**The order that is safe:** remove the junction first, then the worktree.
+
+```
+cmd /c rmdir "<worktree>\Assets\Synty"      # unlinks; does NOT touch the target
+git worktree remove --force .claude/worktrees/<name>
+```
+
+Before deleting any tree that a worktree owns, ask whether anything under it is a reparse point:
+
+```
+Get-ChildItem <path> -Recurse -Force -Directory | Where-Object { $_.LinkType }
+```
+
+**If it has already happened**, the packs are recoverable without re-downloading: `D:\code\odyssey-audio`
+holds a *real* copy rather than a junction. `robocopy <source> <dest> /E /COPY:DAT /DCOPY:DAT` restores
+it byte for byte in about ten seconds, and the `.meta` files come with it, so the GUIDs are the ones
+`ModuleCatalogue.asset` already refers to — check one before believing it, e.g. that
+`PolygonGeneric\Prefabs\Base\SM_Bld_Base_Wall_01.prefab.meta` still reads
+`guid: d6b56504304c325419b598fe3ddb95ed`. **Keeping one real copy somewhere is what made that
+possible**, so do not "tidy" `odyssey-audio` into a junction as well.
 
 ## Per-cell geometry cracks where a continuous field does not
 

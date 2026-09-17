@@ -22,6 +22,53 @@ namespace Odyssey.Tests.Presentation
     /// are peering <em>through</em> the world, and nothing is over an outdoor surface. So a cell
     /// with no slab and no solid cell anywhere above it is exempt, and everything else is not.</para>
     /// </summary>
+    /// <summary>
+    /// What the material a thing is built from does to its colour.
+    /// </summary>
+    public class StuffTintTests
+    {
+        /// <summary>
+        /// A wooden wall must read as wood.
+        ///
+        /// <para>It did not. The wood entry was white, so a wall built of wood drew the plaster of
+        /// the concrete wall prefab untouched and came out cream — the owner's report of
+        /// 2026-09-17. White is the one value that cannot be a mistake in any other entry and is
+        /// always a mistake in this one, because over Synty art <c>_BaseColor</c> is a multiply:
+        /// white means "leave the concrete alone".</para>
+        ///
+        /// <para>The assertion is the shape of the colour and not the numbers themselves, so the
+        /// tint can be tuned off a screenshot without breaking a test — which is exactly how it
+        /// was arrived at. What it will not allow is wood going neutral again.</para>
+        /// </summary>
+        [Test]
+        public void WoodTintsTheArtBrownRatherThanLeavingItAlone()
+        {
+            Color wood = StuffPalette.StuffTint(NaturalContent.StuffWood);
+
+            Assert.That(wood.r, Is.LessThan(0.99f), "white is a multiply that changes nothing");
+            Assert.That(wood.r, Is.GreaterThan(wood.g), "brown is red over green");
+            Assert.That(wood.g, Is.GreaterThan(wood.b), "and green over blue");
+            Assert.That(wood.r - wood.b, Is.GreaterThan(0.2f),
+                "far enough apart to read as timber and not as dirty cream");
+        }
+
+        /// <summary>
+        /// And stone must not follow it. The two are the only things a colony can build with, so
+        /// a change that browned both would leave the player unable to tell them apart — which is
+        /// the whole job of this table.
+        /// </summary>
+        [Test]
+        public void StoneStaysCoolWhileWoodIsWarm()
+        {
+            Color wood = StuffPalette.StuffTint(NaturalContent.StuffWood);
+            Color stone = StuffPalette.StuffTint(NaturalContent.StuffStone);
+
+            Assert.That(stone.b, Is.GreaterThanOrEqualTo(stone.r), "stone is grey or cooler");
+            Assert.That(wood.r - wood.b, Is.GreaterThan(stone.r - stone.b),
+                "and the two are told apart by warmth, not only by lightness");
+        }
+    }
+
     public class DaylightTintTests
     {
         static ChunkBatch MeshLayer(RenderTestWorld world, int layer)

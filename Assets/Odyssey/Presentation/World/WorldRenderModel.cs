@@ -54,6 +54,7 @@ namespace Odyssey.Presentation.World
         readonly int[] _naturalEdificeModule;
         readonly int _vaultWallModule;
         readonly int _utilityTapModule;
+        readonly int _wallCoreModule;
 
         public WorldRenderModel(GridSize size, ChunkGrid chunks, ModuleLibrary library)
         {
@@ -79,7 +80,18 @@ namespace Odyssey.Presentation.World
             _naturalEdificeModule = ResolveNaturalEdifices(library);
             _vaultWallModule = library.Resolve(ModuleIds.VaultWall, ModuleShape.WallPanel);
             _utilityTapModule = library.Resolve(ModuleIds.UtilityTap, ModuleShape.Pillar);
+            _wallCoreModule = library.Resolve(ModuleIds.WallCore, ModuleShape.SolidBlock);
         }
+
+        /// <summary>
+        /// The block that fills a wall cell behind its face panels, and caps it.
+        ///
+        /// One module for every wall in the world rather than one per template: it is the mass
+        /// inside a wall, it is tinted by the stuff the wall is made of like everything else, and
+        /// a template that wanted its own would be asking for a different *material*, which the
+        /// tint already carries. See <see cref="ModuleIds.WallCore"/>.
+        /// </summary>
+        public int WallCoreModule => _wallCoreModule;
 
         public GridSize Size { get; }
         public ChunkGrid Chunks { get; }
