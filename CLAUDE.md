@@ -91,8 +91,24 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   outstanding success roll**; furniture carries quality, walls never do), ownable from the
   pane's first interactive row, and slept in at its tier's own rest rate. One `PlacedEdifice`
   behind two `Edifice[]` slots, the second cell derived from the facing and never stored;
-  save format 3. Placeholder art (three scaled boxes) stands in until real two-tile art
+  **save format 4**. Placeholder art (three scaled boxes) stands in until real two-tile art
   exists; the room bonus is a seam. Nobody has pressed Play on any of it.
+  **`BuildingHandle.Bed` is 5, not 2** — U29's floor, U42's paving and U43's ladder reached
+  main first and took 2, 3 and 4, and a handle position is a save contract. The renumbering's
+  one silent casualty is the general lesson: **a hand-written table parallel to a handle set
+  does not conflict when the handles move.** `BuildShapes` was untouched by main, merged in
+  silence with three entries, and the bed became a one-cell thing that could not be turned;
+  `RegistryTests.EveryBuildableHasAShapeOfItsOwn` is the length check whose absence allowed it.
+  **Reviewing that merge found three things both tiers were green over**, recorded in
+  `20-beds.md` §10a: four of the six ownership tests were never running (a helper raised a bed
+  without ordering one, and every one of them ended on an `Assume`, which reports
+  *Inconclusive* — so `dotnet test` prints `Passed!` and counts it in neither total); a fifth
+  ignored itself on every run since it was written, searching for solid ground one layer too
+  high; and **the build cursor knew nothing about beds**, drawing one cell-filling cube at the
+  head cell, so turning the ghost with R changed nothing visible. `BedShape` now owns the three
+  boxes and the mesher and both ghost paths ask it. `AssignBedOwner` joined
+  `PausedIntents.AppliesWhilePaused` in the same pass, because the pane that offers the choice
+  is one you open while paused.
 - **M3 is under way:** designations, felling, stockpiles and mining are in, and **U26
   building landed 2026-09-17** — a wall can be ordered from the Build palette in wood or
   stone, and colonists carry the material and raise it. Design, the test procedure and what

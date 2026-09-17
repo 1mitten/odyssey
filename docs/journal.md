@@ -3935,3 +3935,41 @@ and the ghost being drawn at an unseen layer — the owner's own guess, disprove
     `10-ui-panel-catalogue.md` (the Skills tab gains what a level is worth),
     `15-building.md` (its tick figures become rate-relative), and a dated note on
     `a-08-plants-growing-food.md` recording that its own recommendation was never carried out.
+
+- **The beds merge, and reviewing it, 2026-09-17.** `claude/beds` went conflicting against main
+  after U29's floors, U42's paving, U43's ladders and the rates design all landed. Fifteen
+  conflicts; eleven were unions and four were real.
+  - **The bed's handle moved from 2 to 5.** It had been written as the next number after the
+    wall; the floor, the deck plate and the ladder reached main first and took 2, 3 and 4. A
+    handle position is a save contract and positions are append-only, so the later branch is the
+    one that moves — safe here only because no save with a bed in it had ever left the branch.
+    Save format is 4 for the same reason: the start flow took 3.
+  - **The renumbering's one silent casualty is the lesson worth keeping.** `BuildShapes` is a
+    hand-written two-array table in the Hud assembly, parallel to `BuildingHandle`. Main never
+    touched the file, so it was **not a conflict**: three entries merged in silence and the bed
+    quietly became a one-cell thing that could not be turned. Three `DesignateDirector` tests
+    failed and none of them named the cause. The class's own remarks claimed "the two tables are
+    held together the same way the labels are — a test walks both", and no such test existed.
+    The general form: **a parallel table needs a length assertion against the handle set's
+    `Count`, or renumbering breaks it with no conflict to warn anybody.**
+  - **`WhereItWouldLand` is where the bed's "never lifted" rule belongs.** It had been written
+    inline in `Place`; main had since lifted that arithmetic out precisely so the cursor and the
+    order could not disagree. Leaving it behind would have drawn the bed's ghost with the wall's
+    lift — the same class of fault the method was created to close.
+  - **Then the review found three things both tiers were green over.** Four of the six ownership
+    tests were never running: `RaiseABed` called `Raise` without placing a site, `Raise` returns
+    at once when there is none, and each test ended on an `Assume` that an unbuilt bed could be
+    given an owner. **A failed `Assume` is Inconclusive**, which `dotnet test` reports as neither
+    a pass nor a skip — the console says `Passed! Failed: 0, Skipped: 0` and the test is simply
+    absent from the totals. The whole of the ownership feature had been untested since the day it
+    was written. A fifth test ignored itself on every run, searching for solid ground at
+    `start.Y` when the ground is the layer below. The feature was right; the tests were not
+    asking. Nineteen bed tests now, none skipped.
+  - **And the build cursor knew nothing about beds.** Both ghost paths arrived from the
+    build-cursor work after the bed design was written, and both drew one cell-filling module at
+    the head cell. A bed ordered on grass was a block — and **R changed nothing anybody could
+    see, because a cube looks the same all four ways round**, which is the feature the design's
+    §5 exists to prove. `BedShape` owns the three boxes now; the mesher and both ghosts ask it.
+    The seam test that would have caught it is in `FloorToolReachTests`, beside the one written
+    when U29's floor tool turned out to be armable, draggable and inert: **point at bare grass
+    and a bed must be ordered in the air above it.**
