@@ -36,6 +36,14 @@ namespace Odyssey.Sim.Pawns
         public static readonly AspectKey[] Passion = Mint("passion");
         public static readonly AspectKey[] Experience = Mint("experience");
 
+        /// <summary>
+        /// The name a colonist's own roll seed goes out under (U40). Not a skill and so not under
+        /// <see cref="Prefix"/>, but minted the same way and travelling through the same channel —
+        /// which is the argument for the aspect seam rather than a field on <c>PawnView</c>: a
+        /// feature mints the name it needs and <c>Sim.Contracts</c> never hears about it.
+        /// </summary>
+        public static readonly AspectKey RollSeed = AspectKey.Of("odyssey.pawn.rollseed");
+
         static AspectKey[] Mint(string value)
         {
             var keys = new AspectKey[SkillIndex.Count];

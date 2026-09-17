@@ -244,7 +244,7 @@ namespace Odyssey.Hud
                 if (snapshot.TryGetPawn(Pawn, out PawnView pawn))
                 {
                     Tombstoned = false;
-                    Title = ColonistNames.Of(pawn.Id);
+                    Title = ColonistNames.Of(snapshot, pawn.Id);
                     Subtitle = "colonist";
                     Job = JobLabels.Label(pawn.JobDef);
                     JobIconKey = JobLabels.IconKey(pawn.JobDef);

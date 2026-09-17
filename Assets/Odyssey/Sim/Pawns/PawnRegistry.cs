@@ -150,6 +150,13 @@ namespace Odyssey.Sim.Pawns
                     writer.AddPawnAspect(pawn.Id, SkillAspects.Passion[s], pawn.Passions[s]);
                     writer.AddPawnAspect(pawn.Id, SkillAspects.Experience[s], pawn.Skills[s]);
                 }
+
+                // The seed this colonist was rolled from (U40), which is what the interface names
+                // them by: a reroll on the select screen has to give you a different person rather
+                // than the same person with different numbers, and a name keyed on the pawn id
+                // could only ever give the second. Reinterpreted rather than converted — an aspect
+                // carries an int and a seed is a uint, and every bit of it matters.
+                writer.AddPawnAspect(pawn.Id, SkillAspects.RollSeed, unchecked((int)pawn.RollSeed));
             }
 
             var items = _ctx.Items.Items;

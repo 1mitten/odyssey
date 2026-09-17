@@ -125,6 +125,34 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// The seed reaches the interface, under the name the interface spells for itself.
+        ///
+        /// <para>The Hud assembly cannot reference this one, so the two halves of
+        /// <c>odyssey.pawn.rollseed</c> are two string literals that have to agree. This is the Sim
+        /// half — that the aspect is published at all, with the pawn's real seed in it — and
+        /// <c>ColonistSelectTests</c> is the other, which pins the spelling from a project that
+        /// cannot see this one.</para>
+        /// </summary>
+        [Test]
+        public void TheSeedIsPublishedToTheInterface()
+        {
+            uint[] chosen = { 11u, 22u, 33u };
+            ColonyWorld colony = BuiltWith(chosen);
+            colony.World.Tick();
+
+            WorldSnapshot frame = colony.World.Views.Current;
+            AspectKey key = AspectKey.Of("odyssey.pawn.rollseed");
+
+            for (int slot = 0; slot < chosen.Length; slot++)
+            {
+                PawnId id = ColonistDraw.IdForSlot(slot);
+                Assert.That(frame.TryGetPawnAspect(id, key, out int published), Is.True,
+                    $"slot {slot} publishes no roll seed, so the interface cannot name them");
+                Assert.That(unchecked((uint)published), Is.EqualTo(chosen[slot]));
+            }
+        }
+
+        /// <summary>
         /// Fewer seeds than colonists covers the ones it names and leaves the rest alone, rather
         /// than refusing — the scenario decides how many colonists there are, and the screen only
         /// decides who some of them are.

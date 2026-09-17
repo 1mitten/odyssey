@@ -51,20 +51,61 @@ namespace Odyssey.Tests.Hud
 
     public class ColonistNamesTests
     {
+        /// <summary>
+        /// A seed and an id together name somebody, and the same pair always names the same
+        /// somebody. Seed zero is the pool read from the top, which is the old id-only behaviour
+        /// and is what a pawn with no published seed falls back to.
+        /// </summary>
         [Test]
         public void NamesAreStableAndStartWithThePromotedPool()
         {
-            Assert.That(ColonistNames.Of(new PawnId(1)), Is.EqualTo("Wrenn"));
-            Assert.That(ColonistNames.Of(new PawnId(8)), Is.EqualTo("Nyx"));
-            Assert.That(ColonistNames.Of(new PawnId(1)), Is.EqualTo(ColonistNames.Of(new PawnId(1))),
-                "the same id must always answer the same name");
+            Assert.That(ColonistNames.Of(0u, new PawnId(1)), Is.EqualTo("Wrenn"));
+            Assert.That(ColonistNames.Of(0u, new PawnId(8)), Is.EqualTo("Nyx"));
+            Assert.That(ColonistNames.Of(7u, new PawnId(1)), Is.EqualTo(ColonistNames.Of(7u, new PawnId(1))),
+                "the same seed and id must always answer the same name");
         }
 
         [Test]
         public void PastThePoolTheCycleNumberIsAppendedNotInvented()
         {
-            Assert.That(ColonistNames.Of(new PawnId(9)), Is.EqualTo("Wrenn 2"));
-            Assert.That(ColonistNames.Of(new PawnId(0)), Is.EqualTo("nobody"));
+            Assert.That(ColonistNames.Of(0u, new PawnId(9)), Is.EqualTo("Wrenn 2"));
+            Assert.That(ColonistNames.Of(0u, new PawnId(0)), Is.EqualTo("nobody"));
+        }
+
+        /// <summary>
+        /// <b>The guarantee that survived the move from id to seed (U40).</b> Every colonist a
+        /// world places itself shares that world's seed, so the id is what has to walk them apart
+        /// — and a plain hash of the pair would have called two of five the same thing better than
+        /// half the time. Checked over many seeds rather than one, because one lucky seed proves
+        /// nothing about the scheme.
+        /// </summary>
+        [Test]
+        public void ColonistsOfOneColonyNeverShareAName()
+        {
+            for (uint seed = 0; seed < 200; seed++)
+            {
+                var seen = new System.Collections.Generic.HashSet<string>();
+                for (int id = 1; id <= 8; id++)
+                    Assert.That(seen.Add(ColonistNames.Of(seed, new PawnId(id))), Is.True,
+                        $"world seed {seed} names two of its eight colonists the same thing");
+            }
+        }
+
+        /// <summary>
+        /// A reroll is meant to hand you a different person, so the name has to move with the
+        /// seed — not on every single draw, since a pool of eight will repeat, but plainly more
+        /// often than not.
+        /// </summary>
+        [Test]
+        public void ADifferentSeedUsuallyMeansADifferentName()
+        {
+            string first = ColonistNames.Of(0u, new PawnId(1));
+            int moved = 0;
+            for (uint seed = 1; seed <= 100; seed++)
+                if (ColonistNames.Of(seed, new PawnId(1)) != first) moved++;
+
+            Assert.That(moved, Is.GreaterThan(70),
+                "rerolling barely changes the name, so the pool is not being reached into");
         }
     }
 
