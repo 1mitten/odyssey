@@ -28,6 +28,56 @@ namespace Odyssey.Tests.Sim
     public class PathAllocationTests
     {
         /// <summary>
+        /// Can this runtime's <see cref="GC.GetTotalMemory(bool)"/> actually see a small
+        /// allocation, or does it report in chunks too coarse to attribute one?
+        ///
+        /// <para><b>Why the instrument gets calibrated before it is believed.</b> These tests
+        /// passed on CoreCLR in the fast tier and failed under Mono in the Unity tier, on a
+        /// difference in the *measuring device* rather than in the thing measured: Mono's
+        /// collector hands out nursery space in blocks, so the reported total can sit still
+        /// through thousands of small allocations and then jump. A per-request figure taken from
+        /// that is not a smaller number, it is a meaningless one — and, worse, an under-reporting
+        /// runtime would make the budget assertion below <i>pass</i> for the wrong reason.</para>
+        ///
+        /// <para>So: allocate a known quantity, and if the runtime cannot report it to within a
+        /// factor of two, ignore the test rather than fail it or, worse, trust it. The measurement
+        /// still runs everywhere the instrument works, which is where the figures in ADR 0005 came
+        /// from.</para>
+        /// </summary>
+        static bool AccountingIsFineGrained()
+        {
+            // The same shape and roughly the same total as what the tests below measure — a few
+            // thousand short-lived arrays of a couple of hundred bytes, allocated and dropped.
+            // **Dropped, not kept**, deliberately: the allocations these tests care about are
+            // discarded every tick, and a runtime that reuses that space rather than growing its
+            // heap is precisely the case being detected. Retaining them would make the probe
+            // easier to satisfy than the thing it stands in for, which would be worse than having
+            // no probe.
+            const int Count = 2_000;
+            const int Length = 64;
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            long before = GC.GetTotalMemory(false);
+            int gen0 = GC.CollectionCount(0);
+
+            for (int i = 0; i < Count; i++)
+            {
+                var tmp = new int[Length];
+                GC.KeepAlive(tmp);
+            }
+
+            long reported = GC.GetTotalMemory(false) - before;
+            if (GC.CollectionCount(0) != gen0) return false;
+
+            // An int[64] is 256 bytes of payload plus a header; 24 is the usual 64-bit figure and
+            // the exact value does not matter at a factor-of-two tolerance.
+            long expected = (long)Count * (Length * sizeof(int) + 24);
+            return reported > expected / 2 && reported < expected * 2;
+        }
+
+        /// <summary>
         /// A flat open board with a floor under every cell, so a path is limited only by the
         /// distance asked for and never by geometry.
         /// </summary>
@@ -91,6 +141,11 @@ namespace Odyssey.Tests.Sim
         {
             const int Requests = 2_000;
 
+            if (!AccountingIsFineGrained())
+                Assert.Ignore("this runtime reports heap growth too coarsely to attribute a " +
+                              "per-request figure; the attribution in ADR 0005 was measured where " +
+                              "it can be");
+
             (double shortBytes, int shortCells) = PerRequest(side: 64, span: 4, Requests);
             (double longBytes, int longCells) = PerRequest(side: 64, span: 40, Requests);
 
@@ -148,6 +203,11 @@ namespace Odyssey.Tests.Sim
             // Generous against a measured 1.6 and 3.3, and still four times under the 64-byte
             // delegate this test exists to keep out.
             const double Budget = 16.0;
+
+            // Without this the test would pass most loudly on exactly the runtimes that cannot
+            // see the allocation it exists to forbid.
+            if (!AccountingIsFineGrained())
+                Assert.Ignore("this runtime reports heap growth too coarsely for a per-tick budget");
 
             double empty = BytesPerTick(Ticks, withColony: false);
             double colony = BytesPerTick(Ticks, withColony: true);
