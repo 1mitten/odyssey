@@ -67,6 +67,13 @@ and offering them would be offering an order that can never be filled. They keep
 because every stamped wall carries one. A salvage line that turned rubble into steel would give one
 an item and put it on the menu, with no other change anywhere.
 
+**Note added 2026-09-17.** Every tick figure below is **work at the standard rate**, and it has
+been an exact statement of elapsed time only because every colonist works at that rate. `U42`–`U44`
+(`17-rates-and-stats.md`) make it a rate-relative figure: a skilled builder beats these numbers and
+a novice does not reach them. Nothing here changes — the costs are content and content does not
+move — but the *reading* does. `minSkill` on `BuildingDef` is the other half and is already
+enforced (`BuildJob.cs:213`), inert at 0 on everything shipped.
+
 **Numbers, and where they came from.** A wall is 5 units and 135 ticks, both the reference's own
 (a-04 §6). Stone is **1.7× the work and 1.5× the hit points** of wood (a-04 §3, read off its material
 table) — the one number that makes the choice of material a decision rather than a colour, which is

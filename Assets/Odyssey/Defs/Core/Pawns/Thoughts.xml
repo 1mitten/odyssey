@@ -26,4 +26,20 @@
     <durationTicks>15000</durationTicks>
   </ThoughtDef>
 
+  <!--
+    U29. Riding a floor down when it collapses. Worse than a night on the ground and shorter
+    lived, because it is a fright rather than a grievance; it stacks twice, so a colonist caught
+    in a cascade is badly shaken and not indefinitely so.
+
+    It stands in for an injury that cannot exist yet: a-02 has the fall-damage number and there
+    is no health model to apply it to (owner, 2026-09-17). When there is, this thought stays -
+    being dropped through a floor is worth remembering whether or not it broke anything.
+  -->
+  <ThoughtDef>
+    <defName>Thought_Fell</defName>
+    <moodOffset>-60</moodOffset>
+    <durationTicks>20000</durationTicks>
+    <stackLimit>2</stackLimit>
+  </ThoughtDef>
+
 </Defs>

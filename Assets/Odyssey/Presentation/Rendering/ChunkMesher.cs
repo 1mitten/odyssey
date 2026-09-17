@@ -236,7 +236,19 @@ namespace Odyssey.Presentation.Rendering
             if (!_model.IsSolid(index)) return;
 
             var size = _model.Size;
-            if (y + 1 < size.SizeY && _model.IsSolid(index + size.LayerStride)) return;
+            if (y + 1 < size.SizeY)
+            {
+                int above = index + size.LayerStride;
+
+                // Something solid stacked on it — the original rule.
+                if (_model.IsSolid(above)) return;
+
+                // Or a floor laid over it, which is the same argument and was found by the same
+                // sort of picture: paving drew correctly and the grass went on growing straight
+                // through it (`PavingProbe`, 2026-09-17, U42). The kind is not examined, because a
+                // built floor, a stamped deck and a deck plate all equally hide what is beneath.
+                if (_model.Floor(above) != CoreContent.SlabNone) return;
+            }
 
             EnsureScatterModules();
             if (_scatterModules.Length == 0) return;

@@ -19,6 +19,18 @@ namespace Odyssey.Hud
         GrassTufts,
         GroundRelief,
         SeeThrough,
+
+        /// <summary>
+        /// Cut the roof off the layer you are working on, so you can see into the rooms on it.
+        ///
+        /// <para><b>The one option that is off by default</b>, and the reason is the owner's report
+        /// (2026-09-17): *"I expected to see and be able to build at least floor above from my
+        /// current height."* The cut-away is what made a floor built directly overhead invisible
+        /// and unclickable, because a surface that is not drawn must not be a pointer target.
+        /// Seeing what you have just built is the commoner need; seeing who is indoors without
+        /// changing depth is the specialist one, so it is the specialist that asks.</para>
+        /// </summary>
+        CutAwayCeiling,
     }
 
     /// <summary>
@@ -168,6 +180,7 @@ namespace Odyssey.Hud
             GraphicsOption.GrassTufts,
             GraphicsOption.GroundRelief,
             GraphicsOption.SeeThrough,
+            GraphicsOption.CutAwayCeiling,
         };
 
         /// <summary>
@@ -191,6 +204,7 @@ namespace Odyssey.Hud
             "ui.settings.grass",
             "ui.settings.relief",
             "ui.settings.seethrough",
+            "ui.settings.cutaway",
             "ui.settings.volume.master",
             "ui.settings.volume.music",
             "ui.settings.volume.ambience",
@@ -343,9 +357,19 @@ namespace Odyssey.Hud
 
         public SettingsDirector()
         {
-            foreach (GraphicsOption option in Order) _on[option] = true;
+            foreach (GraphicsOption option in Order) _on[option] = DefaultOn(option);
             foreach (SettingsBus bus in Buses) _db[bus] = 0;
         }
+
+        /// <summary>
+        /// Whether an option starts on.
+        ///
+        /// <para>Everything here has always started on, because every option so far has been a
+        /// piece of the world that should be there unless a slow machine wants it gone. The
+        /// ceiling cut-away is the first that is not: it <em>removes</em> something, and removing
+        /// the floor a player has just built is the surprise it was reported as.</para>
+        /// </summary>
+        public static bool DefaultOn(GraphicsOption option) => option != GraphicsOption.CutAwayCeiling;
 
         /// <summary>The options, in the order they are drawn.</summary>
         public static IReadOnlyList<GraphicsOption> All => Order;
@@ -457,6 +481,7 @@ namespace Odyssey.Hud
             GraphicsOption.GrassTufts => "ui.settings.grass",
             GraphicsOption.GroundRelief => "ui.settings.relief",
             GraphicsOption.SeeThrough => "ui.settings.seethrough",
+            GraphicsOption.CutAwayCeiling => "ui.settings.cutaway",
             _ => "ui.settings.panel",
         };
 

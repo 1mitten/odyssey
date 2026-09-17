@@ -187,6 +187,60 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   query — so the offered path and the forced path cannot come to disagree. **Steps 3 and 4 are not
   started** (the right-click/drag split, and the context-menu panel), so nothing in the running game
   can send one yet and nobody has pressed Play on it.
+- **U29 is built — floors, roofs and collapse** (2026-09-17), the unit the plan calls the one the
+  project exists to prove. A floor is `Building_Wall` with one field changed (`BuildingDef.slab`)
+  through the same pipeline; a slab is written to `Floor[cell]` as `CoreContent.SlabBuilt`, which is
+  `PlacedEdifice.Built`'s argument one level down and costs no new state. **The support physics was
+  already built and switched off**: `SupportSolver` had computed collapses since M1 and the deferred
+  lambda that should have acted on them was empty. It acts now — what stood on a falling slab drops
+  to the first real floor below, keeps a memory of it, and the debris lands as rubble that must be
+  cleared before anything is rebuilt. **An order that could not stand is refused**
+  (`SupportIfSlabAt`), so a bridge reaches as far as `S_max` and no further, and the three
+  "support is deliberately not marked dirty" comments in `Raise`, `Demolish` and `MineCell` are
+  closed together as all three demanded. **Fall damage is deferred and said so**: `a-02` has the
+  number and there is no health model to apply it to. Design and the eleven owner decisions:
+  `docs/design/17-floors-and-collapse.md`.
+  **In review the tool turned out to be armable, draggable and inert** (2026-09-17, measured):
+  `SlicePicker` answers a click on a wall with the wall's *own* cell, a floor ordered there was
+  `NotPermitted`, and the one cell that accepted an order — the cell above a wall — could not be
+  named by pointing at anything. Every U29 test named its site in C# and so could not see it.
+  `ConstructionGrid.StandingOver` is the fix: **a slab ordered at anything that fills a cell means
+  the boundary on top of it**, which is what decision 4 of the design asked for in the first place
+  (*"the same lift a wall order gets"*). The cursor was lifted by the same rule.
+  **The picker-to-order seam is now tested as a seam** — `FloorToolReachTests` feeds the picker's
+  answer straight into the order, in the one assembly that can see both halves.
+  **Two cursor rules came out of the owner playing it (2026-09-17).** A floor cursor is a flat
+  plate laid on the boundary the slab will occupy, not a cell-tall box — the cursor is the shape of
+  the thing. And **the build cursor goes red when the simulation would refuse every cell of the
+  drag**, asking `ConstructionGrid.Allows`, the same method the order calls. It had to: on the
+  played meadow only **21 of the 441 cells within ten of the start** will take a slab, and the
+  cursor was green over all of it.
+  **A floor you lay on the ground is a different feature, and it is `U42`, built 2026-09-17**
+  (`docs/design/18-paving.md`). `Building_DeckPlate` is `Building_Floor` with one more field:
+  `covering` inverts exactly one question, so paving wants a cell that **has** a floor and **never
+  asks the support rule**, because the ground holds it and it cannot fall. A fifth slab kind in
+  `Floor[]`, so **no new save state and no hash change**; it takes the *wall's* lift and
+  `WorkingLayer` stays null for it. Grass no longer grows through a paved cell.
+  **Paving does nothing yet** — walking speed, cleanliness and beauty do not exist — so it is a
+  surface that looks different and that is all.
+  **The two are called `Slab` and `Floor`** (owner, 2026-09-17, reversing "both say floor" the same
+  afternoon after three rounds of confusion). Keys did not move; only labels. **Paving is offered in
+  `Floors` and in `Structure` both**, because a wall, its floor and the slab over it are one job —
+  the slab stays in `Structure` alone, and a test pins all of it. Note the asymmetry:
+  `BuildingHandle.Floor` is still the **slab** and `BuildingHandle.DeckPlate` is still paving, because
+  handle values are a save contract and a swap would compile in silence.
+  **`U43` is the way up, built 2026-09-17.** Before it, every slab in the game measured **walkable
+  and unreachable** — U29 shipped floors and collapse and a colony could never stand on a second
+  storey. Vertical movement goes through a `Pathing.Connector` and connectors only came from
+  worldgen; `ConstructionGrid.RefreshLadder` registers one at run time, idempotently, from every
+  place either end can change. **No save-format change**: the connector is derived from the edifice
+  list by `RebuildDerived`, like support and the region graph. **A hauler cannot climb a ladder**
+  (`Connector`'s own long-standing rule), so a colonist can get up but cannot carry material up —
+  which is why **stairs are the next unit rather than a maybe**.
+  **Nothing tests that a click reaches the game**, and that is why this line of work has had three
+  silent failures: a PlayMode test cannot press a button (input update type `Editor`, so
+  `wasPressedThisFrame` never fires), which `FloorToolClickTests` and `InputHarnessTests` both carry
+  as ignored tests. Un-ignore them together the day the harness can.
 - **Work reaches `main` only through a pull request** with both tiers green, one approving review
   and the branch up to date. Branch protection enforces it, agents included. There is no long-lived
   feature branch — `claude/*` branches are per-change and short-lived.
@@ -211,7 +265,13 @@ All five chokepoints named after the mining line are now open:
   thousandths of a clear crossing — published for the one asked-about cell by a sim-side
   contributor every colony gets. The question is a `QueryCell` intent, and **a paused world answers
   it by republishing the view without spending a tick** — the first time "intents flush while the
-  clock is paused" (ADR 0004's own Decision) has been true of anything but a speed change. This is
+  clock is paused" (ADR 0004's own Decision) was true of anything but a speed change.
+  **It is no longer only questions** (2026-09-17): a slab ordered while paused sat in the queue and
+  drew nothing until the clock started, because only `QueryCell` was drained off-boundary.
+  `PausedIntents.AppliesWhilePaused` names the set — the questions plus the player's orders over a
+  cell or a colonist — on the ground that while the clock is stopped nothing else runs, so an order
+  applied at once gives exactly the state the next tick's drain would have given. Chop and mine
+  orders had the same hole. A save written while paused now contains them. This is
   U16's readback arriving two milestones late: the pane had shipped the placeholder "cell readout
   arrives with cell inspection" since M1, and the owner's reports (rocks indistinguishable from
   grass, water silent about being water, piles generic with no count) are what opened it. The same
@@ -426,6 +486,50 @@ while the world renders, and the select screen is three, rendered once, with no 
 skill at 0 experience** — only passions are rolled — so there is nothing to choose between three
 candidates until `U37`.~~ **`U37` landed 2026-09-17**, so there is now something to choose between.
 
+### WS, rates, is designed and planned — nothing is built (owner, 2026-09-17)
+
+**A skill level buys nothing a player can feel.** Experience is complete — earned per work tick,
+scaled by passion, capped daily, decaying above ten, saved and hashed — and **no rate reads it**:
+felling, mining, building and deconstructing each bank exactly `1` per tick whoever is working
+(`MineJob.cs:342` and its three siblings), so a level-20 miner and a level-0 miner clear the same
+rock in the same 700 ticks. **One read does exist and it is a gate, not a rate** — `minSkill` at
+`BuildJob.cs:213`, inert because everything shipped is 0 — which is the reference's own division:
+a skill drives either what you may attempt or how fast you do it. We had the first and not the
+second. **Move speed is worse than absent**: `movePerTick` is `1`
+against a cell cost of `100`, so the only speeds expressible are 1.5, 3.0 and 4.5 m/s and there is
+no room to vary within — which `Colonist.xml:36` had already written down.
+
+Both are one mechanism and one design, `docs/design/17-rates-and-stats.md` — **read it before
+touching this line**, and in particular do not take the reference's curves out of it without §3b.
+A rate is an integer in thousandths where 1,000 is today's speed; **the accumulator scales and the
+content does not**, so no authored number moves, no path changes and both content fingerprints
+hold. The research behind it (`docs/research/work-speed-and-stats.md`) **corrected one of our own
+files in passing**: every work-speed slope in the reference is chosen so level 8 reads exactly
+100%, which falsifies `a-04`'s construction figure (struck through there). The finding that shaped
+the design is that **our colonists are not the reference's** — its curves are anchored on level 8
+and our roll means 1.16, so taking them verbatim would put a 5–6× brake on the whole game. The
+curves are re-anchored on our own average colonist instead.
+
+Planned as `U42`–`U45` (`vertical-slice.md` §WS) and `OQ-51`–`OQ-54`, **beside M3 rather than
+inside it** because it moves the economy M3's ten-day gate measures. `U42` lands alone and its
+done criterion is that **nothing changes**.
+
+**Three owner decisions on 2026-09-17, so a later session does not re-open them.** The proposed
+curve anchor is **accepted as a starting point** — a novice at 0.55–0.7×, a master at about 2.5×,
+mining steeper than building, eight Def integers to be judged at the keyboard. **Condition bites
+both rates**, not movement alone: one shared consciousness-like `ConditionPerMille()`, which makes
+`U44`'s soak comparison a done criterion rather than a formality. **Follow-up research then split
+that in two and the design followed it:** starvation slows a colonist — as an *injury* offsetting
+one scalar that both rates read, never as a need touching either rate directly — while
+**exhaustion slows nothing and collapses you instead**, because in the reference a condition
+either does nothing to your rate or produces a visible discrete event, never an invisible
+percentage. That is a departure from the literal answer and is flagged for veto in §7, not
+assumed.
+**Running is held** — the capability is free to leave unbuilt and nobody is to invent an urgency
+model to justify building it. The governing rule for the whole line is the owner's: *use the
+reference roughly* — shape, structure and intent taken, constants re-anchored where our colonists
+differ from its own, never a name or a line of text.
+
 ### What runs today
 
 **Simulation** (`Odyssey.Sim`, `Odyssey.Sim.Contracts`, both UnityEngine-free) — grid, support
@@ -470,6 +574,14 @@ skin are repainted by rewriting the atlas swatch rectangles each vertex is alrea
 so a world deals the same people every load. **`OdysseyBootstrap.randomCastEachSession` defaults
 on** while the palette is being judged, which means pressing Play deals new faces each time; switch
 it off for a stable cast.
+
+**The floor above you is drawn, and the cut-away is opt-in** (owner, 2026-09-17). The active layer
+used to be drawn roofless always, so a floor built one layer up was invisible and — because a
+surface that is not drawn must not be a pointer target — unclickable with it. `GraphicsOption.CutAwayCeiling`
+is the switch and is **the first option in the panel that starts off**: seeing what you have just
+built is the commoner need, so the specialist one (watching colonists indoors without changing
+depth) asks. An explicit `Full`, the exterior view, still refuses to cut away even with the option
+on, which is the invariant the test now asserts deliberately rather than by accident.
 
 **What the player can see is decided by how deep they are.** At or above the surface, every layer
 above is drawn solid; below it, one layer above is x-rayed and every layer below is drawn. Anything
@@ -523,10 +635,11 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~15 s, no Unity): **608 Sim + 348 Hud**; Long tier **20**.
-  Unity tier on 2026-09-17, on the merge of the orders strip, U40 and the world-setup page:
-  EditMode **1430 total, 1419 passed, 0 failed**; PlayMode **65 total, 62 passed, 0 failed** (the
-  rest are pre-existing `[Explicit]` or ignored rows).
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **641 Sim + 358 Hud**; Long tier **20**.
+  Unity tier on 2026-09-17, on the merge of U29's floors into the orders strip, U40 and the
+  world-setup page: EditMode **1486 total, 1474 passed, 0 failed**; PlayMode **69 total, 64 passed,
+  0 failed** (the rest are pre-existing `[Explicit]` or ignored rows). The Hud figure is main's 348
+  plus this branch's 10, so neither side lost a test to the merge.
   **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
   touches the composition root or the HUD shell is unproven until Unity has compiled it, however
   green the 11 seconds look (`docs/lessons.md`).
@@ -681,8 +794,11 @@ saved; the construction grid is).~~ **That was stale and is struck rather than q
 round-trip. **Check a claim in this section against the code before repeating it**; that one
 outlived its own fix and would have sent somebody to build a thing that exists.
 
-Mining collapses nothing. There is no fog of war, so a sealed cavern is visible if the player
-scrolls the layer down.
+**Mining collapses things** (U29, 2026-09-17) — this section said it did not, and the three places
+that deliberately declined to mark support dirty are all wired now. What is still missing is the
+*injury*: a colonist rides a floor down, keeps a memory of it and is otherwise unharmed, because
+there is no health model for `a-02`'s fall-damage number to act on. There is no fog of war, so a
+sealed cavern is visible if the player scrolls the layer down.
 
 **The scenario table is written twice** (U38): `OdysseyBootstrap.ScenarioFor` and
 `SessionRoundTripTests.ScenarioByName` each map two `defName`s to a `ScenarioDef` by hand, because

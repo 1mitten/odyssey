@@ -186,15 +186,56 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// <b>Paving is in two categories on purpose, and this test is here so nobody tidies it
+        /// away.</b>
+        ///
+        /// <para>It belongs in <c>Floors</c>, which is what it is. It is also in <c>Structure</c>
+        /// beside the wall and the slab, because that is where a player already is when they are
+        /// building — the owner asked for it by name (2026-09-17): *"it won't be painful having to
+        /// go backwards and forwards between menus"*. A wall, its floor and the slab over it are
+        /// one job and should be one row.</para>
+        ///
+        /// <para>Not a new idea in this table: <c>ui.arch.tool.reclaim</c> has sat in both
+        /// <c>Structure</c> and <c>Salvage</c> since it was written, and <see cref="PaletteTools.TryGet"/>
+        /// is keyed by the tool rather than by where it is drawn, so a key in two lists arms one
+        /// tool and lights in both places.</para>
+        /// </summary>
+        [Test]
+        public void PavingIsOfferedInBothFloorsAndStructure()
+        {
+            string[]? structure = null, floors = null;
+            foreach (var (key, tools) in PaletteTools.Categories)
+            {
+                if (key == "ui.arch.category.structure") structure = tools;
+                if (key == "ui.arch.category.floors") floors = tools;
+            }
+
+            Assert.That(floors, Does.Contain(PaletteTools.Paving), "paving is what the Floors row is for");
+            Assert.That(structure, Does.Contain(PaletteTools.Paving),
+                "and it is beside the wall too, so building a room is not two menus");
+            Assert.That(structure, Does.Contain(PaletteTools.Slab),
+                "the slab stays in Structure and nowhere else: it is structure");
+            Assert.That(floors, Does.Not.Contain(PaletteTools.Slab),
+                "a slab under Floors would be the confusion this rename was meant to end");
+        }
+
+        /// <summary>
         /// Only a thing made of something offers a material. An order is a verb applied to what is
         /// already there, so a "made of" row under the cancel tool would be asking what to cancel
         /// it out of.
+        ///
+        /// <para>The list is spelled out rather than derived from <c>WantsMaterial</c> itself,
+        /// which would assert that a field equals itself. Three things are built out of something
+        /// today — a wall, a slab and paving — and a fourth arriving should have to be written
+        /// here.</para>
         /// </summary>
         [Test]
         public void OnlyAThingMadeOfSomethingAsksWhatItIsMadeOf()
         {
             foreach (PaletteTool tool in PaletteTools.Live)
-                Assert.That(tool.WantsMaterial, Is.EqualTo(tool.Key == PaletteTools.Wall),
+                Assert.That(tool.WantsMaterial,
+                    Is.EqualTo(tool.Key == PaletteTools.Wall || tool.Key == PaletteTools.Slab
+                        || tool.Key == PaletteTools.Paving || tool.Key == PaletteTools.Ladder),
                     $"{tool.Key} disagrees with itself about whether it is built out of something");
         }
 
@@ -205,6 +246,38 @@ namespace Odyssey.Tests.Hud
             var seen = new HashSet<string>();
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(seen.Add(tool.Key), Is.True, $"{tool.Key} is in the live table twice");
+        }
+
+        /// <summary>
+        /// Every chip the Build palette offers actually arms something.
+        ///
+        /// <para>The build cursor vanished for walls and floors alike after two merges rebuilt the
+        /// palette (owner, 2026-09-17), and the first thing to rule out is the simplest: that
+        /// pressing a chip no longer arms the tool at all. Nothing drawn in the world can be right
+        /// if <c>Director.Tool</c> is still None, because the rig gates hover, the press and the
+        /// preview on a tool being armed.</para>
+        ///
+        /// <para>Every key in every category, not the four this line of work touched: a palette is
+        /// a table and the way a table breaks is one row at a time.</para>
+        /// </summary>
+        [Test]
+        public void EveryChipInEveryCategoryArmsItsTool()
+        {
+            foreach (var (category, tools) in PaletteTools.Categories)
+            foreach (string key in tools)
+            {
+                if (!PaletteTools.TryGet(key, out PaletteTool tool)) continue;
+
+                var director = new DesignateDirector();
+                Assume.That(director.Tool, Is.EqualTo(DesignateTool.None));
+
+                tool.Arm(director);
+
+                Assert.That(director.Tool, Is.Not.EqualTo(DesignateTool.None),
+                    $"{key} in {category} armed nothing, so the world would show no cursor for it");
+                Assert.That(tool.IsArmed(director), Is.True,
+                    $"{key} in {category} armed a tool it does not then recognise as its own");
+            }
         }
     }
 }

@@ -110,6 +110,50 @@ namespace Odyssey.Sim.World
         public int DirtyCount => _dirtyCount;
 
         /// <summary>
+        /// What support a slab would have if one were built here — asked before it is, and
+        /// changing nothing.
+        ///
+        /// <para><b>This is what makes the support rule playable rather than punitive.</b> Without
+        /// it a colony can order a slab anywhere, carry the material across the map, build it, and
+        /// watch it fall on the tick it is finished. With it the order is refused where it could
+        /// not stand, which is the argument <c>ConstructionGrid.Allows</c> already makes about a
+        /// wall hanging in the air: the player never gives an order that cannot be carried out.</para>
+        ///
+        /// <para>The rule, unchanged from the solver's own: full support over something solid,
+        /// otherwise the best of the four horizontal neighbours on this boundary minus one. So a
+        /// colonist bridges out from a wall for <see cref="MaxSupport"/> minus one cells and the
+        /// next one is refused — the overhang is not a number anybody tuned, it is the rule seen
+        /// from the side.</para>
+        ///
+        /// <para>Reads <see cref="CellGrid.Support"/> for the neighbours, which is the settled
+        /// value from the last solve. That is the right thing to read and not a shortcut: support
+        /// is resolved once per tick, so during a tick every neighbour's value is the one the
+        /// world agrees on.</para>
+        /// </summary>
+        public int SupportIfSlabAt(int index)
+        {
+            if ((uint)index >= (uint)_cellCount) return 0;
+            if (IsGrounded(index)) return _sMax;
+
+            GridSize size = _grid.Size;
+            CellRef at = size.FromIndex(index);
+            int best = 0;
+
+            if (at.X > 0) best = Higher(best, index - 1);
+            if (at.X < size.SizeX - 1) best = Higher(best, index + 1);
+            if (at.Z > 0) best = Higher(best, index - size.SizeX);
+            if (at.Z < size.SizeZ - 1) best = Higher(best, index + size.SizeX);
+
+            return best > 0 ? best - 1 : 0;
+        }
+
+        int Higher(int best, int neighbour)
+        {
+            int value = _grid.Support[neighbour];
+            return value > best ? value : best;
+        }
+
+        /// <summary>
         /// What the last solve brought down, in ascending cell index order. The list is reused:
         /// consume it before the next solve. Collapse clears the slab and nothing else — rubble,
         /// falling things and fall damage belong to the caller, applied deferred.

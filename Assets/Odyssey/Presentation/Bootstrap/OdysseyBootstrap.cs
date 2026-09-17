@@ -8,6 +8,7 @@ using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim;
+using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pawns;
@@ -273,6 +274,35 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         /// <summary>
+        /// The presenter is a sibling component, not a thing a session owns.
+        ///
+        /// <para><b>It used to be dropped by <c>TeardownSession</c> along with the renderer, the
+        /// mirror and the colony, and it was the only line in that list that was wrong.</b> Those
+        /// are built by a session and must not outlive one; this is a component on the same
+        /// GameObject, found once in <c>Start</c> and alive for as long as the object is. Nulling
+        /// it meant the reference was gone and nothing ever looked for it again, because
+        /// <c>Start</c> does not run twice.</para>
+        ///
+        /// <para><b>What that cost.</b> <c>DrawToolPreview</c> begins
+        /// <c>if (_renderer == null || _designate == null) return;</c>, so from the first teardown
+        /// onwards the build cursor, the drag box and the run's ghosts all stopped being drawn —
+        /// and nothing said so, because every diagnostic in that path lives further down a method
+        /// that was no longer being reached. It did not matter while a session was built once at
+        /// <c>Start</c> and never torn down. The start menu made a teardown-and-rebuild the normal
+        /// way into every game, so the cursor vanished on every New game and every Load, on every
+        /// branch that has the menu (owner, 2026-09-17: *"this is happening on other builds - did
+        /// the new menus bust something? it used to highlight the wall immediately onto the
+        /// placement area"*).</para>
+        ///
+        /// <para>Re-found on build as well as kept, so a session built after the component was
+        /// added at runtime still has it.</para>
+        /// </summary>
+        void FindTheSiblingPresenters()
+        {
+            if (_designate == null) _designate = GetComponent<DesignatePresenter>();
+        }
+
+        /// <summary>
         /// Build a world and everything that draws it, now, rather than at <c>Start</c> (U35).
         ///
         /// <para><b>Why this is a method and not a lifecycle hook.</b> A menu has to be able to
@@ -518,6 +548,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Over the preferences this component has held since it woke, not over fresh ones:
             // the same settings panel and the same key bindings serve every session.
+            FindTheSiblingPresenters();
             Directors = new HudDirectors(size.SizeY, outcome.StartCell.Y, Preferences, Keys);
             Directors.Slice.LayerChanged += OnActiveLayerChanged;
 
@@ -637,11 +668,13 @@ namespace Odyssey.Presentation.Bootstrap
                 // only for a speed change: layer changes are presentation state and can wait, so a
                 // player scrolling through layers while paused does not advance the simulation.
                 //
-                // A question about a cell is the one thing that cannot wait, because inspecting a
-                // stopped world is exactly when it is asked. It is answered by republishing the
-                // view over the same settled world — no tick, no system, no hash — which the
-                // intent's kind permits because a question changes nothing the simulation owns.
-                if (_world.Intents.HasPending(IntentKind.QueryCell))
+                // A question about a cell was once the only thing that could not wait. An order
+                // cannot wait either, and that gap was real: a slab laid while paused sat in the
+                // queue and drew nothing at all until the clock started (owner, 2026-09-17). The
+                // player pauses in order to give orders, so both are settled here by republishing
+                // the view over the same settled world — no tick, no system, no hash moved at a
+                // boundary. PausedIntents.AppliesWhilePaused names the set and says why it is safe.
+                if (_world.Intents.HasAnyPending(PausedIntents.AppliesWhilePaused))
                     _world.RepublishViews();
                 if (_speedChangePending)
                 {
@@ -864,10 +897,18 @@ namespace Odyssey.Presentation.Bootstrap
         /// answers, and one bar would merge them (<c>SiteView</c> says the same thing from the
         /// simulation's side).</para>
         ///
-        /// <para>Deliberately a mark and a slab rather than a ghost of the finished wall. A ghost
-        /// wants the mesher to place a module it has not been asked for, which is the mesh
-        /// contributor seam (OQ-46) and a larger change than this; the mark and the fill are the
-        /// precedent standing orders already set, cost one instanced cube each, and read.</para>
+        /// <para><b>A ghost of the finished thing, since 2026-09-17.</b> This used to be a mark and
+        /// a fill and nothing else, and the reason written here was that "a ghost wants the mesher
+        /// to place a module it has not been asked for". That reason has gone:
+        /// <see cref="ChunkRenderer.DrawGhost"/> was built for the build cursor and places a module
+        /// without touching the mesher or a chunk batch at all. The owner asked for the two to
+        /// match — *"keep the same selection tool graphics, wall stays the wall"* — and they are
+        /// now literally the same call, so what you saw under the pointer is what stands on the
+        /// board while it waits.</para>
+        ///
+        /// <para>The mark stays underneath it. A ghost says <em>what</em> and the plate says
+        /// <em>which cell</em>, which is the thing that reads from directly above when a ghost is
+        /// foreshortened to nothing.</para>
         /// </summary>
         void DrawBuildingSites(WorldSnapshot snapshot)
         {
@@ -885,16 +926,115 @@ namespace Odyssey.Presentation.Bootstrap
                 CellRef cell = size.FromIndex(sites[i].CellIndex);
                 if (cell.Y < lowest || cell.Y > highest) continue;
 
-                // The outline first, because a site is a thing that is going to fill the cell and a
-                // plate on the floor reads as a path drawn on the grass. The plate stays under it:
-                // it is what says which cell, at a glance, from directly above.
+                // The mark first and underneath: a ghost seen from directly above is foreshortened
+                // to nothing, and the plate is what still says which cell.
                 _renderer.DrawCellOutline(cell, BuildOrderColour);
                 _renderer.DrawCellMark(cell, BuildOrderColour);
 
-                if (sites[i].Progress > 0)
+                DrawSiteGhost(cell, sites[i].Building, sites[i].Stuff);
+
+                // **A slab does not rise, so it must not be drawn rising** (owner, 2026-09-17:
+                // "these little gaps or white lines appearing on the builds"). DrawCellFill grows
+                // a bone-coloured box out of the cell floor because that is how a wall is built —
+                // and a floor's cell floor is exactly the plane the finished slab occupies, so a
+                // slab a few per cent built is a thin pale plate lying in the deck, reading as a
+                // bright hairline between the boards around it. Two contact sheets came back clean
+                // trying to reproduce it, and that was the evidence: both stamped finished slabs
+                // with no site in progress anywhere.
+                //
+                // The ghost above already says what is coming and where. A slab's progress is the
+                // one thing left unsaid, and a wrong picture is worse than none until there is a
+                // right one.
+                if (sites[i].Progress > 0 && !ConstructionContent.BuildingAt(sites[i].Building).slab)
                     _renderer.DrawCellFill(cell, sites[i].Progress / 255f, FrameColour);
             }
         }
+
+        /// <summary>
+        /// The waiting thing, drawn as the thing it will be.
+        ///
+        /// <para>The same module, tint and placement the build cursor uses, so a wall ordered looks
+        /// like the wall the cursor promised and a slab like the slab. Fainter than the cursor:
+        /// the cursor follows the pointer and has to be found instantly, while a site sits on the
+        /// board for as long as it takes a colonist to walk over, and a colony of them at cursor
+        /// weight would read as a finished town.</para>
+        /// </summary>
+        void DrawSiteGhost(CellRef cell, int building, int stuff)
+        {
+            if (_renderer == null || _model == null || _grid == null) return;
+            if (!ConstructionContent.IsBuilding(building)) return;
+
+            int index = _grid.Index(cell);
+            BuildingDef what = ConstructionContent.BuildingAt(building);
+            ushort material = ConstructionContent.StuffAt(stuff).stuff;
+            int module = GhostModuleFor(index, what, material);
+
+            Color tint = StuffPalette.For(material, overArt: true);
+            tint.a = SiteGhostAlpha;
+
+            _renderer.DrawGhost(module, tint,
+                GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y)));
+        }
+
+        /// <summary>
+        /// The things a pending run would build, drawn as themselves inside its box.
+        ///
+        /// <para><b>The wireframe alone was a step backwards</b> (owner, 2026-09-17: *"it switches
+        /// back to square"*). Moving the pointer with a tool armed shows a ghost of the thing; the
+        /// moment a run was anchored that became a bare box, so the player lost sight of what they
+        /// were placing at exactly the point they were deciding how much of it to place.</para>
+        ///
+        /// <para><b>Capped, because a drag can cover the board.</b> Beyond the cap the box alone is
+        /// the honest summary — a thousand translucent walls would be a wall of fog, and one
+        /// instanced submission each is a cost worth bounding on a frame that is already drawing a
+        /// preview every frame of a drag.</para>
+        /// </summary>
+        void DrawRunGhosts(PreviewBox box, int building, int stuff)
+        {
+            if (box.Cells > MaxRunGhosts) return;
+
+            for (int z = box.Min.Z; z <= box.Max.Z; z++)
+            for (int x = box.Min.X; x <= box.Max.X; x++)
+                DrawSiteGhost(new CellRef(x, z, box.Min.Y), building, stuff);
+        }
+
+        /// <summary>
+        /// How many cells of a pending run are drawn as the thing rather than as a box. A run
+        /// longer than this is being judged by its extent, not by its contents.
+        /// </summary>
+        const int MaxRunGhosts = 64;
+
+        /// <summary>
+        /// Which module stands in for a thing that is not there yet.
+        ///
+        /// <para>Its own, for everything except a wall. A ladder ghosts as a ladder and a door as a
+        /// door, which is the whole of what the owner asked for — *"wall stays the wall, and same
+        /// goes for floor, slab and anything else"*.</para>
+        ///
+        /// <para><b>A wall is the exception and stays one.</b> A finished wall is drawn as panels on
+        /// whichever faces something can be seen through, chosen from what stands beside it — and a
+        /// ghost has no neighbours, because it is not in the grid. Reproducing that choice for a
+        /// thing that does not exist would be a second copy of the mesher's hardest rule.
+        /// <c>WallCore</c> is the cell-filling block and is exactly "a wall-shaped thing of this
+        /// material" (`19-build-cursor.md` §2).</para>
+        /// </summary>
+        int GhostModuleFor(int index, BuildingDef what, ushort stuff)
+        {
+            if (_model == null) return 0;
+            // The material, not just the handle: a slab's art now varies by what it is made of,
+            // and a ghost that showed the wood deck for a stone order would be lying about the
+            // one thing the cursor exists to say.
+            if (what.slab) return _model.SlabModuleFor(index, stuff);
+            return what.edifice == CoreContent.EdificeWall
+                ? _model.WallCoreModule
+                : _model.ModuleForEdificeAt(index, what.edifice);
+        }
+
+        /// <summary>
+        /// How solid a waiting site is. Half the cursor's, for the reason above: one of these
+        /// follows your pointer and a hundred of them sit on the board at once.
+        /// </summary>
+        const float SiteGhostAlpha = 0.22f;
 
         /// <summary>
         /// Say out loud when the simulation refuses a command.
@@ -977,7 +1117,11 @@ namespace Odyssey.Presentation.Bootstrap
             if (_renderer == null || _designate == null) return;
 
             DesignateDirector director = _designate.Director;
-            if (!director.TryPreview(out CellRef min, out CellRef max)) return;
+            if (!director.TryPreview(out CellRef min, out CellRef max))
+            {
+                DrawHoverGhost(director);
+                return;
+            }
 
             // Deconstruct is named rather than left to fall through. It fell through to the cancel
             // red, which happens to be the right hue and was still wrong: the cursor said "cancel"
@@ -999,9 +1143,26 @@ namespace Odyssey.Presentation.Bootstrap
             if (director.Tool == DesignateTool.Build)
             {
                 _previewLayer = min.Y;
+                _previewIsSlab = ConstructionContent.BuildingAt(director.Building).slab;
                 BuildPreview.Gather(min, max, _previewLayerAt ??= PreviewLayerAt, _previewBoxes);
+
+                // Red when the simulation would refuse every last cell of it — see
+                // NothingHereWillBeBuilt. Green otherwise, unchanged, so a drag that does anything
+                // looks exactly as it did.
+                if (NothingHereWillBeBuilt(director.Building)) tint = PreviewRefusedColour;
+
+                // A wall is a box and a floor is a plate, because the cursor is the shape of the
+                // thing. See ChunkRenderer.DrawCellSpanPlate for why a cell-tall box drawn for a
+                // slab is not merely ugly: it hides the tile it is promising and gives no way to
+                // tell which of two layers it means.
                 for (int i = 0; i < _previewBoxes.Count; i++)
-                    _renderer.DrawCellSpanBox(_previewBoxes[i].Min, _previewBoxes[i].Max, tint);
+                {
+                    PreviewBox box = _previewBoxes[i];
+                    if (_previewIsSlab) _renderer.DrawCellSpanPlate(box.Min, box.Max, tint);
+                    else _renderer.DrawCellSpanBox(box.Min, box.Max, tint);
+                    DrawRunGhosts(box, director.Building, director.Stuff);
+                }
+
                 return;
             }
 
@@ -1011,12 +1172,178 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         /// <summary>
+        /// The thing under the pointer, before any button has been pressed.
+        ///
+        /// <para><b>This is the answer to "I don't know what I'm going to build is going to
+        /// land"</b> (owner, 2026-09-17). Until now nothing at all was drawn between arming a tool
+        /// and pressing: the board looked exactly as it had, and a player found out where a wall
+        /// went by placing one. See `19-build-cursor.md`.</para>
+        ///
+        /// <para><b>Only for a build tool.</b> Mine, chop and cancel are verbs applied to what is
+        /// already there — the thing they act on is drawn, and a ghost of it would be a second copy
+        /// of something the player is already looking at.</para>
+        ///
+        /// <para>The cell comes from <see cref="DesignateDirector.Hover"/> rather than being worked
+        /// out here, so the ghost and the order it promises are the same object's answer.</para>
+        /// </summary>
+        void DrawHoverGhost(DesignateDirector director)
+        {
+            if (_renderer == null || _model == null || _grid == null)
+            {
+                WhyNoCursor("the session's renderer, render mirror or grid is missing");
+                return;
+            }
+            if (director.Tool != DesignateTool.Build)
+            {
+                WhyNoCursor($"no build tool is armed (tool is {director.Tool})");
+                return;
+            }
+
+            // Split from the line above rather than folded into it with `||`: definite assignment
+            // across a short-circuit and a negated pattern is the sort of thing that compiles on
+            // one C# version and not the next, and the owner has the editor open on this worktree.
+            if (director.Hover is not CellRef hover)
+            {
+                WhyNoCursor(cameraRig != null && cameraRig.PointerWasOverInterface
+                    ? "the interface claims the pointer, so the rig raises no hover — "
+                      + "something in the HUD is picking over the whole screen"
+                    : "the pointer is over no cell, so the rig raises no hover");
+                return;
+            }
+
+            ConstructionGrid? sites = _colony?.Construction;
+            if (sites == null)
+            {
+                WhyNoCursor("the session has no construction grid");
+                return;
+            }
+
+            // Where the order would land, asked of the grid that will land it rather than guessed:
+            // a wall is lifted onto the ground it was clicked on, a slab onto whatever fills the
+            // cell, and paving into the air over the block. WhereItWouldLand is that one answer.
+            int cell = sites.WhereItWouldLand(_grid.Index(hover), director.Building);
+            CellRef at = _grid.Size.FromIndex(cell);
+
+            bool allowed = sites.Allows(cell, director.Building);
+            BuildingDef what = ConstructionContent.BuildingAt(director.Building);
+
+            // **Never inside something, but never silent either.** StandingOn lifts a wall order
+            // over solid terrain and not over an edifice, so pointing a ladder at a wall resolves
+            // to the wall's own cell and the ghost was drawn inside it (owner, 2026-09-17: "the
+            // ladder placement does appear inside the walls, which is odd").
+            //
+            // The first fix returned here and drew nothing at all, and the comment claimed the
+            // refusal still read "because the cursor is red". It did not: this is the only thing
+            // hover draws, so the pointer went blank over every wall and the player got no answer
+            // to "can I build here" — which is worse than the wrong answer it replaced, and is
+            // what "I couldn't build a floor" felt like from the other side of the screen.
+            //
+            // So the thing is not drawn and the refusal is. A plate for a slab and a box for an
+            // edifice, in the drag's own refused red, which is the shape and the colour the player
+            // already knows from dragging a run that will do nothing.
+            if (_grid.IsSolidTerrain(cell) || _grid.Edifice[cell] >= 0)
+            {
+                if (what.slab) _renderer.DrawCellSpanPlate(at, at, PreviewRefusedColour);
+                else _renderer.DrawCellSpanBox(at, at, PreviewRefusedColour);
+                return;
+            }
+
+            ushort material = ConstructionContent.StuffAt(director.Stuff).stuff;
+            int module = GhostModuleFor(cell, what, material);
+
+            // ChunkRenderer.DrawGhost returns on module <= 0 and says nothing, which is the last
+            // silent way for this cursor to vanish.
+            if (module <= 0)
+            {
+                WhyNoCursor($"no module resolved for building {director.Building} at cell {at}");
+                return;
+            }
+
+            // Its own material when it can be built, which is the affirmative signal - it looks
+            // like the wooden wall you asked for - and red when it cannot. Green is deliberately
+            // not used for yes: looking right IS yes.
+            Color tint = allowed
+                ? StuffPalette.For(material, overArt: true)
+                : PreviewRefusedColour;
+            tint.a = GhostAlpha;
+
+            // Draped, like everything fixed to the grid, and placed where the mesher would put it.
+            _renderer.DrawGhost(module, tint, GroundRelief.Drape(CellMetrics.FloorCentre(at.X, at.Z, at.Y)));
+
+            // Drawn — so if it still cannot be seen, it is being drawn somewhere the player is not
+            // looking. The owner's own guess (2026-09-17: "maybe it's a depth issue?") is the one
+            // thing the guards above cannot answer, because a ghost drawn at the wrong layer looks
+            // exactly like a ghost not drawn at all. Reported on change, so moving the pointer
+            // across a flat field says this once.
+            WhyNoCursor(null);
+            ReportCursorLayer(hover, at, director);
+        }
+
+        /// <summary>
+        /// Say once why the build cursor is not being drawn, and say it again only when the answer
+        /// changes.
+        ///
+        /// <para><b>This exists because the cursor went missing and could not be found by reading.</b>
+        /// The owner reported it after loading a game (2026-09-17); the rig's hover branch, the
+        /// preview gate, the director's state machine and the session's field lifecycle were all
+        /// walked through and all of them were sound, which is the point at which
+        /// <c>docs/lessons.md</c> says to stop reasoning and measure. Every early return in
+        /// <see cref="DrawHoverGhost"/> was silent, so a cursor that did not appear looked
+        /// identical whichever of five reasons was the true one.</para>
+        ///
+        /// <para>Rate-limited by the message rather than by a timer: a reason that holds for a
+        /// thousand frames logs once, and the log is the transition. Passing null means the cursor
+        /// drew, which arms the next report.</para>
+        /// </summary>
+        void WhyNoCursor(string? reason)
+        {
+            if (reason == _lastCursorComplaint) return;
+            _lastCursorComplaint = reason;
+            if (reason != null) Debug.Log($"[Cursor] no build cursor: {reason}");
+        }
+
+        string? _lastCursorComplaint;
+
+        /// <summary>
+        /// Where the cursor is being drawn, against where the camera is slicing.
+        ///
+        /// <para>The cell the pointer is over, the cell the order would land in, the layer the ghost
+        /// is drawn at, and the layer the rig is showing. If the last two disagree the cursor is
+        /// real and out of sight, and the fault is the working layer or the slice rather than
+        /// anything in the drawing.</para>
+        /// </summary>
+        void ReportCursorLayer(CellRef hover, CellRef at, DesignateDirector director)
+        {
+            int active = cameraRig != null ? cameraRig.ActiveLayer : -1;
+            string note = $"pointer L{hover.Y} -> ghost L{at.Y}, camera L{active}, " +
+                          $"working layer {(director.WorkingLayer is int w ? w.ToString() : "none")}";
+            if (note == _lastCursorNote) return;
+            _lastCursorNote = note;
+            Debug.Log($"[Cursor] drawn: {note}");
+        }
+
+        string? _lastCursorNote;
+
+        /// <summary>
+        /// How solid the build ghost is. Enough to read its shape and its material, not enough to
+        /// be mistaken for a building that is already standing — which is the one way this cursor
+        /// could mislead rather than help.
+        /// </summary>
+        const float GhostAlpha = 0.45f;
+
+        /// <summary>
         /// Which layer a build order dragged over this column would actually stand on.
         ///
         /// <para>The simulation lifts an order named at solid ground onto the cell above it
         /// (<c>ConstructionGrid.StandingOn</c>), because a click on grass names the ground
         /// <em>block</em> and a wall goes in the air. The cursor has to be lifted by the same rule
         /// or it draws one layer below the wall it is promising.</para>
+        ///
+        /// <para><b>A floor is lifted over more than a wall is</b>, and the cursor has to know
+        /// which is armed. <c>ConstructionGrid.StandingOver</c> puts a slab on top of anything
+        /// that fills a cell, a wall included, because the first slab of a storey rests on the
+        /// walls of the one below. Asking the solid-terrain question for a floor drawn over a run
+        /// of walls put the green box one layer under the floor it was promising.</para>
         ///
         /// <para>A method and a cached delegate rather than a lambda, because this is handed to
         /// <see cref="BuildPreview.Gather"/> on every frame of a drag and a closure over
@@ -1025,14 +1352,76 @@ namespace Odyssey.Presentation.Bootstrap
         int PreviewLayerAt(int x, int z)
         {
             int y = _previewLayer;
-            if (_grid == null) return y;
+            if (_grid == null || !_grid.Contains(x, z, y) || y + 1 >= _grid.Size.SizeY) return y;
 
-            var cell = new CellRef(x, z, y);
-            return _grid.Contains(x, z, y) && _grid.IsSolidTerrain(_grid.Index(cell))
-                   && y + 1 < _grid.Size.SizeY
-                ? y + 1
-                : y;
+            int index = _grid.Index(new CellRef(x, z, y));
+            bool fills = _grid.IsSolidTerrain(index)
+                || (_previewIsSlab && _grid.Edifice[index] >= 0);
+            return fills ? y + 1 : y;
         }
+
+        /// <summary>
+        /// Is the armed build tool a floor? Read once when the preview is gathered rather than per
+        /// column, because it is the same answer for every cell of one box.
+        /// </summary>
+        bool _previewIsSlab;
+
+        /// <summary>
+        /// Would this drag build nothing at all?
+        ///
+        /// <para><b>The answer to "nothing happens when I try to lay down a floor"</b> (owner,
+        /// 2026-09-17, with a console full of <c>4725 x PlaceBuilding: NotPermitted</c>). It was not
+        /// a fault: on the played meadow only 2,386 of 14,400 cells on the working layer will take
+        /// a slab, and within ten cells of the start it is <b>21 of 441</b> — the ground under your
+        /// feet has a floor already and open air over a drop has no support. Every one of those
+        /// refusals was correct, and the cursor was bright green over all of them.</para>
+        ///
+        /// <para><b>It asks the simulation rather than knowing the rule.</b>
+        /// <c>ConstructionGrid.Allows</c> is the same method <c>Place</c> calls a moment later, so
+        /// the cursor and the order cannot come to disagree — which is the fault this whole line of
+        /// work has now hit twice. <c>DesignatePresenter</c> deliberately filters nothing for the
+        /// same reason; this does not filter either, it only reports.</para>
+        ///
+        /// <para><b>Red only when not one cell would be built</b>, rather than whenever any cell
+        /// would be refused. A wall dragged across a meadow routinely covers a tree or a stream and
+        /// is expected to, and the run gesture was played and accepted as it is; turning it amber
+        /// for an ordinary drag would be re-tinting something nobody complained about. What has no
+        /// defence is a green cursor over an order that does nothing.</para>
+        ///
+        /// <para>Costs one <c>Allows</c> per cell of the box, on frames where a build drag is live.
+        /// It is a handful of array reads each and it stops at the first cell that can be built,
+        /// so the common case is one call.</para>
+        /// </summary>
+        bool NothingHereWillBeBuilt(int building)
+        {
+            ConstructionGrid? sites = _colony?.Construction;
+            if (sites == null || _grid == null) return false;
+
+            for (int i = 0; i < _previewBoxes.Count; i++)
+            {
+                PreviewBox box = _previewBoxes[i];
+                for (int z = box.Min.Z; z <= box.Max.Z; z++)
+                for (int x = box.Min.X; x <= box.Max.X; x++)
+                {
+                    if (!_grid.Contains(x, z, box.Min.Y)) continue;
+                    if (sites.Allows(_grid.Index(new CellRef(x, z, box.Min.Y)), building)) return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// The build cursor over a run that will build nothing.
+        ///
+        /// <para>The cancel cursor's own red at the build cursor's own alpha. Both halves are
+        /// deliberate: the hue is one a player has already seen mean "this takes something away or
+        /// does nothing", and the alpha matches the green it replaces so the cursor changes colour
+        /// without changing weight. Its own constant rather than a reuse of
+        /// <see cref="PreviewCancelColour"/> for the reason <see cref="DeconstructOrderColour"/> is
+        /// its own — tuning the cancel cursor should not silently re-tint this.</para>
+        /// </summary>
+        static readonly Color PreviewRefusedColour = new Color(0.95f, 0.38f, 0.34f, 0.70f);
 
         int _previewLayer;
         Func<int, int, int>? _previewLayerAt;
@@ -1580,7 +1969,6 @@ namespace Odyssey.Presentation.Bootstrap
             _figures = null;
             _colonistMaterials = null;
             _renderer = null;
-            _designate = null;
             _actorMaterial = null;
             _model = null;
             _colony = null;
