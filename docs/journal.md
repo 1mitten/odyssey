@@ -2573,3 +2573,44 @@ work itself.
     it has thresholds, and below 30% consciousness the colonist is unconscious. We have no downed
     state to fall through, so 700 stands in for one and should give way to a threshold the day
     health exists.
+- **The rates design audited against the code, and it was wrong in five places (2026-09-17).** Asked
+  to check the documentation for gaps, the useful move was not to read the documents against each
+  other but to read them against the code. The design had been written from the simulation's side
+  alone and had named none of what follows.
+  - **`minSkill` already reads a skill level, so "nothing reads a level" was false.**
+    `BuildWorkGiver.CanBuild` refuses to offer a site to a colonist below the building's `minSkill`
+    (`BuildJob.cs:213`). It is inert — every shipped building is `minSkill = 0` — but it is not
+    nothing, and it matters because it is a **gate, not a rate**. That is the reference's own
+    division: a skill drives either what you may attempt or how fast you do it, and they are two
+    mechanisms. This game had the first and not the second, which is a better description of the
+    gap than the one three documents were carrying. Corrected in the design, in `15-skills.md` and
+    in `15-building.md`.
+  - **Scaling an internal accumulator by 1,000 breaks four things outside `Sim`, and all four are
+    silent.** `CellDetail.WorkToClear` is a **`ushort`** and the dearest terrain costs 2,400, so
+    ×1,000 wraps. `SiteView.WorkDone`/`WorkTotal` are documented as "real ticks" and drive *"about
+    12s left"* in the pane, so publishing milliwork multiplies every estimate in the interface by a
+    thousand. `DesignationGrid.Fraction()` divides banked work by a cost that lives in another
+    class, so one side scales and the other does not and every progress bar fills a thousand times
+    too fast. And `PawnRegistry`'s `movePercent = MoveProgress × 100 / MoveStepCost` is a **ratio**
+    whose halves are assigned in different files — scale one and every figure teleports.
+  - **So the rule the design needed and did not have: the scale stops at the contract.** Internally
+    thousandths; across the sim→UI seam and in front of a human, ticks-at-standard-rate. Written up
+    as §2bb and folded into `U42`'s done criteria, which now include every Hud readout test.
+  - **One consequence is a wording question rather than a bug.** The tile readout has said
+    `walk speed = 100%` since cell inspection shipped, and it is a fact about the **cell** — the
+    terrain's crossing cost — not about anybody standing on it. A per-pawn move rate under the same
+    words would put two meanings of "walk speed" in one interface, which is the double-counting
+    trap in user-facing form. The cell keeps the phrase; the pawn wants different words. And
+    *"about 12s of work"*, exact since the day it shipped, becomes "for a standard colonist".
+  - **The lesson that generalises is in `lessons.md`:** a recommendation in a research file is
+    enforced by nothing — `a-08` had written the instruction to do this work and it went unread for
+    months — and **a design that changes a unit has to be walked to every place that unit is read**,
+    which is ten minutes with `git grep` against a session spent discovering a `ushort` by watching
+    a progress bar wrap.
+  - **Cross-references added so the next session finds this from wherever it starts:**
+    `05-ai-and-jobs.md` (the cost-prices-the-cell twin of the terrain-cost trap),
+    `04-data-model.md` (where the new Def fields land, and that the scale reaches none of them),
+    `08-milestones.md` (M2 delivered skills and a level still has no consequence),
+    `10-ui-panel-catalogue.md` (the Skills tab gains what a level is worth),
+    `15-building.md` (its tick figures become rate-relative), and a dated note on
+    `a-08-plants-growing-food.md` recording that its own recommendation was never carried out.

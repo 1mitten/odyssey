@@ -50,15 +50,22 @@ Every claim in this table was read off the code on 2026-09-17.
 | **Level** | Read off experience by a Def table, never stored; decays above level 10 on the Long cadence. Saved and hashed. | `PawnContent.cs` `SkillDef`, `SkillSystem.cs` |
 | **Starting level** | Rolled once on the first tick from a weighted table, deterministic on `(world seed, pawn id)`. **Mean level 1.16**; levels 6–7 together are a 2% roll. | `StartingSkillsSystem.cs`, `Colonist.xml:80` |
 | **Work rate** | **Does not exist.** Every work tick adds exactly **1**, whoever is working and whatever they know. | `MineJob.cs:342`, `BuildJob.cs:403`, `DeconstructJob.cs:124`, `JobDrivers.cs:281` |
+| **Skill as a gate** | **One read exists, and it is not a rate.** `BuildWorkGiver.CanBuild` refuses to offer a site to a colonist below the building's `minSkill` — a thing you cannot make is not offered rather than offered and botched. **Inert today**, because every shipped building is `minSkill = 0`. Found 2026-09-17 by auditing this document against the code, and it corrects this document's own first draft, which said nothing read a level at all. | `BuildJob.cs:213` |
 | **Move rate** | A single content constant shared by every colonist: `movePerTick = 1` against a flat crossing of 100, i.e. 1.5 m/s. | `Pawn.cs:226`, `Colonist.xml:43` |
 | **Condition** | Needs, mood and thoughts all run. **Health does not exist** — a pawn cannot be hurt, so there are no capacities to read. | `NeedsSystem.cs`; `a-02-health.md` is research only |
 | **The swing** | Presentation, and decorative. `figure.SwingClock += deltaTime` against a fixed `StrokeSeconds` per tool, jittered per pawn so a work gang does not beat in unison. It is not derived from, and does not affect, the work being done. | `PawnFigureDirector.cs:924`, `WorkStyle.cs:138` |
 
 **So the owner's reading of the game is exactly right and the gap is one-sided.** A colonist does
 get better at chopping — the number goes up, it is saved, it survives a reload, and `U40`'s
-candidate cards will show it. It buys nothing. A level-20 miner and a level-0 miner clear the same
-rock in the same 700 ticks, swinging at the same rate, and the only thing a skill has ever changed
-in this game is how fast the *next* point of that skill arrives.
+candidate cards will show it. It buys nothing that can be felt. A level-20 miner and a level-0
+miner clear the same rock in the same 700 ticks, swinging at the same rate.
+
+**The one exception is worth keeping in view, because it is the shape the rest should follow.**
+`minSkill` gates *eligibility*, not speed: below the bar the job is never offered. That is the
+reference's own division — **a skill drives either your rate or what you are allowed to attempt,
+and the two are separate mechanisms** — and it means this work is adding the missing half rather
+than the only half. It also means the hook for "a novice may not attempt the reactor" already
+exists and needs nothing from this design.
 
 **It was foreseen and then not done.** `a-08-plants-growing-food.md` §"Recommendation" already
 says: *"when OQ-14 lands skills, the felling driver multiplies work by the plant-work-speed
@@ -124,6 +131,36 @@ are untouched, so no path changes, no golden path checksum moves, and
 `HopPriceHasOneOwnerTests` — which fails the fast tier if any file but `NavGraph` names the hop
 constants — stays green and is not fought with. **Two saved integers change scale, `_work[cell]`
 and `MoveProgress`, and nothing else does.**
+
+### 2bb. Where the scale stops — and four places that would break if it did not
+
+**Audited against the code on 2026-09-17**, after this design was first written and found to have
+named none of them. The rule that settles all four:
+
+> **The scale is internal. `_work[cell]` and `MoveProgress` count thousandths; everything that
+> crosses the sim→UI contract, and everything a human reads, stays in ticks-at-standard-rate.**
+
+Without that rule, in the order a session would hit them:
+
+1. **`CellDetail.WorkToClear` is a `ushort`.** The dearest terrain in `Terrain.xml` costs 2,400,
+   and 2,400 × 1,000 does not fit in sixteen bits. The published field is the terrain's *cost*, not
+   banked work, so it stays in ticks and the overflow never happens — but only because the rule
+   above is followed, and it would be a silent wrap if it were not.
+2. **`SiteView.WorkDone` / `WorkTotal` are documented as "real ticks"** in `Views.cs`, and
+   `InspectModel` turns them into *"about 12s left"*. Publishing milliwork through them would
+   multiply every estimate in the interface by a thousand. They are divided back at publish.
+3. **`DesignationGrid.Fraction()`** divides banked work by `WorkFor()`. One side scales and the
+   other does not, so the denominator gains the `× 1,000` or every progress bar fills a thousand
+   times too fast. This is the one that is easiest to miss, because the wrongness is invisible
+   until something is half dug.
+4. **`PawnRegistry` publishes `movePercent = MoveProgress × 100 / MoveStepCost`**, which is how
+   presentation glides a figure across a step. It is a ratio, so it is only correct if **both**
+   sides scale — and `MoveStepCost` is assigned the raw nav cost and defaults to
+   `MoveCost.Orthogonal`. Scale `MoveProgress` alone and every colonist teleports.
+
+**The consequence for the interface is a wording question, not a bug** (§5): once a rate exists,
+*"about 12s of work"* means *for a colonist working at the standard rate*, and a good miner will
+beat it. It has been an exact statement of fact since the readout shipped and it stops being one.
 
 ### 2c. Integers, one place, fixed order
 
@@ -479,6 +516,20 @@ reverse.**
 
 - **Two new aspects**, `odyssey.pawn.rate.work` and `odyssey.pawn.rate.move`, per mille, published
   by `PawnRegistry` beside the nine skill rows it already publishes. Two more rows a colonist.
+- **"Walk speed" is already taken, and by the other thing.** The tile readout has said
+  `walk speed = 100%` since cell inspection shipped, and it is a fact about the **cell** — the
+  terrain's crossing cost — not about anybody standing on it. A pawn move rate arriving under the
+  same words would put two different meanings of "walk speed" in one interface, which is §4g's
+  double-counting trap in its user-facing form. **The cell keeps the phrase** (it was there first
+  and it is the more surprising fact), and the pawn's own figure wants different words — *pace*,
+  or the stat name from `ui.stat.moveSpeed`. Decide it when `U44` writes the row, and do not let
+  the two meet unlabelled.
+- **Two work estimates stop being exact** (§2bb): *"minable — about 12s of work"* on a tile and
+  *"about 12s left"* on a build site. Both are computed from a work total in ticks and have been
+  precisely true; once colonists differ they become *"for a standard colonist"*. Either say so, or
+  compute the estimate against the selected colonist's rate when there is one. The second is
+  nicer and is not free — it makes a tile's readout depend on the selection, which is a change to
+  what the pane is.
 - **The inspect pane's Skills tab** gains the thing that makes it worth opening: a skill row can
   say what its level is *worth* ("mining · 6 · 1.20×"), which is the first time a level in this
   game has had a consequence to state.

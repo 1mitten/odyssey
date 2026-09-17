@@ -34,6 +34,13 @@ Two further facts worth having in front of you:
   levels above ten and that is the whole of it. A Skills tab is therefore honest about a number
   that currently has no consequence.
 
+  **Corrected 2026-09-17, on an audit against the code:** one thing does read a level, and it is
+  `BuildWorkGiver.CanBuild`, which will not offer a site to a colonist below the building's
+  `minSkill` (`BuildJob.cs:213`). It is **inert** — every shipped building is `minSkill = 0` — but
+  it is not nothing, and it matters to the sentence above because it is a *gate*, not a rate. A
+  skill drives either what you are allowed to attempt or how fast you do it, and those are two
+  mechanisms; this game had the first and not the second.
+
   **Scheduled 2026-09-17** — the owner asked why chopping is not faster for a skilled colonist, and
   the answer to "what would make the level mean something" is now designed in
   `17-rates-and-stats.md` and planned as `U42`–`U45` (`vertical-slice.md` §WS). It reads

@@ -1615,3 +1615,43 @@ anything in the change is reachable from `SimWorld.Tick` at all — a component 
 forbid, and a budget raised to swallow a flake is a budget that swallows the next real one. If it
 starts flaking often, the window (5,000 ticks) is what to grow, not the threshold — a longer window
 averages the GC timing out rather than hiding what it is measuring.
+
+## A recommendation in a research file is enforced by nothing, and one sat unread for months
+
+`a-08-plants-growing-food.md` ended with an instruction as clear as any in this repository:
+*"when OQ-14 lands skills, the felling driver multiplies work by the plant-work-speed curve"*.
+`OQ-14` landed. The multiplication did not. Nobody noticed until the owner asked, months later,
+why a better woodcutter is not faster — and the answer was that every work tick in the game adds
+exactly `1`, in four separate drivers, whoever is swinging.
+
+**Nothing was broken and nothing could have caught it.** The fast tier was green, the Unity gate
+was green, the ten-day soak ran clean on three seeds, and every one of them would have stayed green
+for ever, because there was no defect — there was an absence, and an absence that nothing had ever
+written down as a requirement. `15-skills.md` §1 even *stated* it as a fact — "Nothing reads a
+skill level yet. Not work speed, not yield, not quality" — and stated it in a document about icons,
+where it read as background rather than as a debt.
+
+**Three things follow, and they cost nothing to apply.**
+
+- **A research file's Recommendation section is a claim about the future, and the future has no
+  test.** When a research row recommends work, the recommendation belongs in `overnight-queue.md`
+  or `vertical-slice.md` **in the same session**, as a row with done criteria, even if the row is
+  opened `blocked`. Prose in `docs/research/` is a finding; a row is an obligation.
+- **When a queue row closes, re-read what asked for it.** `OQ-14` was "skills: experience, passion,
+  levels, decay" and it did all four correctly. The row was written from the design, and the
+  *other* file that wanted something from skills was never consulted at closing time. A one-line
+  grep for the unit's own id across `docs/research/` would have found it.
+- **"Nothing reads X yet" is the sentence to search for.** It is how this repository honestly
+  records a half-built thing, which means it is also where the half-built things are listed. It is
+  worth grepping before planning any milestone: `git grep -n "reads .* yet"` and its neighbours
+  cost one command and name real gaps in the owner's own words.
+
+**The related failure, from the same afternoon:** the design written to close this gap was
+complete, argued and wrong in four specific places, because it had been written from the
+simulation's side alone. Scaling an internal accumulator by 1,000 silently breaks a `ushort` in the
+published contract, two "about 12s of work" readouts in the interface, a progress fraction whose
+denominator lives in a different class, and a `movePercent` **ratio** whose two halves are assigned
+in different files. None of them are in `Sim`. **A design that changes a unit has to be walked to
+every place that unit is read**, including across the sim→UI contract, and the walk takes ten
+minutes with `git grep` — considerably less than the session that would otherwise discover the
+`ushort` by watching a progress bar wrap.

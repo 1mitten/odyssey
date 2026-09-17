@@ -225,11 +225,14 @@ table, mean 1.16.
 
 ### WS, rates, is designed and planned — nothing is built (owner, 2026-09-17)
 
-**A skill level has never had a consequence.** Experience is complete — earned per work tick,
-scaled by passion, capped daily, decaying above ten, saved and hashed — and **nothing reads a level
-back out**: felling, mining, building and deconstructing each bank exactly `1` per tick whoever is
-working (`MineJob.cs:342` and its three siblings), so a level-20 miner and a level-0 miner clear
-the same rock in the same 700 ticks. **Move speed is worse than absent**: `movePerTick` is `1`
+**A skill level buys nothing a player can feel.** Experience is complete — earned per work tick,
+scaled by passion, capped daily, decaying above ten, saved and hashed — and **no rate reads it**:
+felling, mining, building and deconstructing each bank exactly `1` per tick whoever is working
+(`MineJob.cs:342` and its three siblings), so a level-20 miner and a level-0 miner clear the same
+rock in the same 700 ticks. **One read does exist and it is a gate, not a rate** — `minSkill` at
+`BuildJob.cs:213`, inert because everything shipped is 0 — which is the reference's own division:
+a skill drives either what you may attempt or how fast you do it. We had the first and not the
+second. **Move speed is worse than absent**: `movePerTick` is `1`
 against a cell cost of `100`, so the only speeds expressible are 1.5, 3.0 and 4.5 m/s and there is
 no room to vary within — which `Colonist.xml:36` had already written down.
 
