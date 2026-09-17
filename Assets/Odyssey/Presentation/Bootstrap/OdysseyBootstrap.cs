@@ -1124,7 +1124,10 @@ namespace Odyssey.Presentation.Bootstrap
             // one C# version and not the next, and the owner has the editor open on this worktree.
             if (director.Hover is not CellRef hover)
             {
-                WhyNoCursor("the pointer is not over a cell: the rig has raised no hover");
+                WhyNoCursor(cameraRig != null && cameraRig.PointerWasOverInterface
+                    ? "the interface claims the pointer, so the rig raises no hover — "
+                      + "something in the HUD is picking over the whole screen"
+                    : "the pointer is over no cell, so the rig raises no hover");
                 return;
             }
 
@@ -1168,6 +1171,14 @@ namespace Odyssey.Presentation.Bootstrap
             ushort material = ConstructionContent.StuffAt(director.Stuff).stuff;
             int module = GhostModuleFor(cell, what, material);
 
+            // ChunkRenderer.DrawGhost returns on module <= 0 and says nothing, which is the last
+            // silent way for this cursor to vanish.
+            if (module <= 0)
+            {
+                WhyNoCursor($"no module resolved for building {director.Building} at cell {at}");
+                return;
+            }
+
             // Its own material when it can be built, which is the affirmative signal - it looks
             // like the wooden wall you asked for - and red when it cannot. Green is deliberately
             // not used for yes: looking right IS yes.
@@ -1178,7 +1189,14 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Draped, like everything fixed to the grid, and placed where the mesher would put it.
             _renderer.DrawGhost(module, tint, GroundRelief.Drape(CellMetrics.FloorCentre(at.X, at.Z, at.Y)));
+
+            // Drawn — so if it still cannot be seen, it is being drawn somewhere the player is not
+            // looking. The owner's own guess (2026-09-17: "maybe it's a depth issue?") is the one
+            // thing the guards above cannot answer, because a ghost drawn at the wrong layer looks
+            // exactly like a ghost not drawn at all. Reported on change, so moving the pointer
+            // across a flat field says this once.
             WhyNoCursor(null);
+            ReportCursorLayer(hover, at, director);
         }
 
         /// <summary>
@@ -1205,6 +1223,26 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         string? _lastCursorComplaint;
+
+        /// <summary>
+        /// Where the cursor is being drawn, against where the camera is slicing.
+        ///
+        /// <para>The cell the pointer is over, the cell the order would land in, the layer the ghost
+        /// is drawn at, and the layer the rig is showing. If the last two disagree the cursor is
+        /// real and out of sight, and the fault is the working layer or the slice rather than
+        /// anything in the drawing.</para>
+        /// </summary>
+        void ReportCursorLayer(CellRef hover, CellRef at, DesignateDirector director)
+        {
+            int active = cameraRig != null ? cameraRig.ActiveLayer : -1;
+            string note = $"pointer L{hover.Y} -> ghost L{at.Y}, camera L{active}, " +
+                          $"working layer {(director.WorkingLayer is int w ? w.ToString() : "none")}";
+            if (note == _lastCursorNote) return;
+            _lastCursorNote = note;
+            Debug.Log($"[Cursor] drawn: {note}");
+        }
+
+        string? _lastCursorNote;
 
         /// <summary>
         /// How solid the build ghost is. Enough to read its shape and its material, not enough to

@@ -247,5 +247,37 @@ namespace Odyssey.Tests.Hud
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(seen.Add(tool.Key), Is.True, $"{tool.Key} is in the live table twice");
         }
+
+        /// <summary>
+        /// Every chip the Build palette offers actually arms something.
+        ///
+        /// <para>The build cursor vanished for walls and floors alike after two merges rebuilt the
+        /// palette (owner, 2026-09-17), and the first thing to rule out is the simplest: that
+        /// pressing a chip no longer arms the tool at all. Nothing drawn in the world can be right
+        /// if <c>Director.Tool</c> is still None, because the rig gates hover, the press and the
+        /// preview on a tool being armed.</para>
+        ///
+        /// <para>Every key in every category, not the four this line of work touched: a palette is
+        /// a table and the way a table breaks is one row at a time.</para>
+        /// </summary>
+        [Test]
+        public void EveryChipInEveryCategoryArmsItsTool()
+        {
+            foreach (var (category, tools) in PaletteTools.Categories)
+            foreach (string key in tools)
+            {
+                if (!PaletteTools.TryGet(key, out PaletteTool tool)) continue;
+
+                var director = new DesignateDirector();
+                Assume.That(director.Tool, Is.EqualTo(DesignateTool.None));
+
+                tool.Arm(director);
+
+                Assert.That(director.Tool, Is.Not.EqualTo(DesignateTool.None),
+                    $"{key} in {category} armed nothing, so the world would show no cursor for it");
+                Assert.That(tool.IsArmed(director), Is.True,
+                    $"{key} in {category} armed a tool it does not then recognise as its own");
+            }
+        }
     }
 }

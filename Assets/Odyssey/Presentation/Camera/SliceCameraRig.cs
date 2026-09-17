@@ -154,6 +154,16 @@ namespace Odyssey.Presentation.CameraRig
         public Func<Vector2, bool>? PointerOverInterface { get; set; }
 
         /// <summary>
+        /// What <see cref="PointerOverInterface"/> answered on the last frame it was asked.
+        ///
+        /// <para>Here so that a missing build cursor can name its own cause. The interface claiming
+        /// the pointer and the pointer being over no cell both end in the same place — the rig
+        /// raises no hover, the director's Hover goes null, and nothing draws — and they want
+        /// completely different fixes. See <c>OdysseyBootstrap.WhyNoCursor</c>.</para>
+        /// </summary>
+        public bool PointerWasOverInterface { get; private set; }
+
+        /// <summary>
         /// Ask for a game speed from anywhere the keyboard cannot reach — the HUD's speed
         /// buttons, later a menu. Raises the same event the keys do, so the composition root's
         /// paused-clock handling stays in one place.
@@ -388,6 +398,7 @@ namespace Odyssey.Presentation.CameraRig
 
             Vector2 pointer = mouse.position.ReadValue();
             bool overInterface = PointerOverInterface != null && PointerOverInterface(pointer);
+            PointerWasOverInterface = overInterface;
 
             // Case 8 of design 09 section 6: scroll over a panel scrolls the panel, scroll over
             // the world zooms the camera. Until this guard the wheel did both at once — a scroll
