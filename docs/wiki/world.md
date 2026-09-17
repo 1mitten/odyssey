@@ -68,11 +68,11 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
-| **Build** | `ui.tab.build` | Build, dig and zone — the palette of placement tools | sheet 06 (action tiles),  shared with ui.status.building | M1 |
-| **Work** | `ui.tab.work` | The priority grid | sheet - (?), high | M1 |
-| **Schedule** | `ui.tab.schedule` | Who does what, and when | sheet - (?), high | M1 |
-| **Research** | `ui.tab.research` | The tree, and what is being worked on | sheet - (?), high | M1 |
-| **Colonists** | `ui.tab.colonists` | Everyone, at a glance | sheet - (?), high | M1 |
+| **Build** | `ui.tab.build` | Build, dig and zone — the palette of placement tools | sheet 06 (action tiles), high | M1 |
+| **Work** | `ui.tab.work` | The priority grid | sheet 06 (action tiles), high | M1 |
+| **Schedule** | `ui.tab.schedule` | Who does what, and when | sheet 06 (action tiles), high | M1 |
+| **Research** | `ui.tab.research` | The tree, and what is being worked on | sheet 06 (action tiles), high | M1 |
+| **Colonists** | `ui.tab.colonists` | Everyone, at a glance | sheet 06 (action tiles), high | M1 |
 | **Animals** | `ui.tab.animals` | Tame beasts and their training | sheet 06 (action tiles), high | M1 |
 | **Wildlife** | `ui.tab.wildlife` | What is out there | sheet 06 (action tiles), med | M1 |
 | **Bills** | `ui.tab.bills` | Standing production orders | sheet 04 (manufactured), high | M1 |
