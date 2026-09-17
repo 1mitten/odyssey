@@ -158,6 +158,9 @@ namespace Odyssey.Presentation.Bootstrap
                 director.Seed(GraphicsOption.GrassTufts, _bootstrap.grassScatter > 0);
                 director.Seed(GraphicsOption.GroundRelief, _bootstrap.groundRelief > 0f);
                 director.Seed(GraphicsOption.SeeThrough, _bootstrap.seeThroughToSelection);
+                director.Seed(GraphicsOption.CutAwayCeiling,
+                    _bootstrap.cameraRig != null && _bootstrap.cameraRig.slice != null
+                    && _bootstrap.cameraRig.slice.suppressActiveCeiling);
             }
 
             director.OptionChanged += Apply;
@@ -250,6 +253,15 @@ namespace Odyssey.Presentation.Bootstrap
                     // live, so clicking follows the ground without anything further here.
                     GroundRelief.Amplitude = on ? _reliefAmplitude : 0f;
                     Redraw(renderer);
+                    break;
+
+                case GraphicsOption.CutAwayCeiling:
+                    // The slice's own rule, and nothing has to be re-meshed: SuppressCeilingAt is
+                    // asked afresh every frame by the renderer's layer loop and by the picker's
+                    // band, so the floor overhead appears and becomes clickable on the next frame.
+                    if (_bootstrap != null && _bootstrap.cameraRig != null
+                        && _bootstrap.cameraRig.slice != null)
+                        _bootstrap.cameraRig.slice.suppressActiveCeiling = on;
                     break;
 
                 case GraphicsOption.SeeThrough:

@@ -355,6 +355,12 @@ namespace Odyssey.Tests.Presentation
                 .Publish();
 
             SliceSettings slice = Depth(1);
+
+            // Switched on by hand since 2026-09-17: the cut-away is opt-in now
+            // (GraphicsOption.CutAwayCeiling), because always dropping the ceiling meant the floor
+            // a player had just built one layer up was invisible and — by this very rule —
+            // unclickable. The pairing below is untouched and is the point of the test.
+            slice.suppressActiveCeiling = true;
             Assert.That(slice.SuppressCeilingAt(1), Is.True, "the fixture must actually be suppressing");
 
             bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, 1, slice, out CellRef cell);

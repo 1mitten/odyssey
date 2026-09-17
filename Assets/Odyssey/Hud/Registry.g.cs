@@ -348,6 +348,7 @@ namespace Odyssey.Hud
             { "ui.res.wood", "Wood" },
             { "ui.settings.audio", "Audio" },
             { "ui.settings.camspeed", "Camera speed" },
+            { "ui.settings.cutaway", "Cut away the ceiling" },
             { "ui.settings.developer", "Developer overlay" },
             { "ui.settings.exit", "Exit game" },
             { "ui.settings.graphics", "Graphics" },

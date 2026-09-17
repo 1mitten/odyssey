@@ -2,7 +2,7 @@
 
 Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.
 
-76 entries, 53 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+77 entries, 54 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Terrain
 
@@ -103,6 +103,7 @@ Weather, the data overlays, the layer controls and the rest of the interface fur
 | **Grass tufts** | `ui.settings.grass` | Tufts strewn over the meadow. Decoration, in no cell and no save | no art | M1 |
 | **Ground relief** | `ui.settings.relief` | The roll of the drawn ground. The cells underneath stay flat | no art | M1 |
 | **See through to selection** | `ui.settings.seethrough` | Fade whatever stands between the camera and a selected colonist | no art | M1 |
+| **Cut away the ceiling** | `ui.settings.cutaway` | See into rooms on this layer. Off shows the floor above you | no art | M3 |
 | **Keys** | `ui.settings.keys` | Every key the game reads, and what each one may be changed to | no art | M3 |
 | **Reset keys to defaults** | `ui.settings.resetkeys` | Put every action back on the key it shipped with | no art | M3 |
 | **Audio** | `ui.settings.audio` | How loud each part of the game is. Stored on the machine, in decibels | no art | M3 |

@@ -405,6 +405,7 @@ ui.settings.surround,Surrounding land,ui.settings,M1,"The land carried past the 
 ui.settings.grass,Grass tufts,ui.settings,M1,"Tufts strewn over the meadow. Decoration, in no cell and no save"
 ui.settings.relief,Ground relief,ui.settings,M1,"The roll of the drawn ground. The cells underneath stay flat"
 ui.settings.seethrough,See through to selection,ui.settings,M1,"Fade whatever stands between the camera and a selected colonist"
+ui.settings.cutaway,Cut away the ceiling,ui.settings,M3,"See into rooms on this layer. Off shows the floor above you"
 ui.settings.keys,Keys,ui.settings,M3,"Every key the game reads, and what each one may be changed to"
 ui.settings.resetkeys,Reset keys to defaults,ui.settings,M3,"Put every action back on the key it shipped with"
 ui.keys.forward,Camera forward,ui.keys,M3,"Move the camera up the screen"

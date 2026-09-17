@@ -310,6 +310,14 @@ so a world deals the same people every load. **`OdysseyBootstrap.randomCastEachS
 on** while the palette is being judged, which means pressing Play deals new faces each time; switch
 it off for a stable cast.
 
+**The floor above you is drawn, and the cut-away is opt-in** (owner, 2026-09-17). The active layer
+used to be drawn roofless always, so a floor built one layer up was invisible and — because a
+surface that is not drawn must not be a pointer target — unclickable with it. `GraphicsOption.CutAwayCeiling`
+is the switch and is **the first option in the panel that starts off**: seeing what you have just
+built is the commoner need, so the specialist one (watching colonists indoors without changing
+depth) asks. An explicit `Full`, the exterior view, still refuses to cut away even with the option
+on, which is the invariant the test now asserts deliberately rather than by accident.
+
 **What the player can see is decided by how deep they are.** At or above the surface, every layer
 above is drawn solid; below it, one layer above is x-rayed and every layer below is drawn. Anything
 drawn solid is clickable at any depth; a ghost never is. Whatever hides a selected colonist fades to
