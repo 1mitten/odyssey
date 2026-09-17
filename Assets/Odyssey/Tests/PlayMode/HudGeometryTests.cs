@@ -542,7 +542,9 @@ namespace Odyssey.Tests.PlayMode
                 string longestName = string.Empty;
                 for (int id = 1; id <= 96; id++)
                 {
-                    string name = ColonistNames.Of(new PawnId(id));
+                    // Seed zero reads the pool from the top, so this still walks every name the
+                    // pool holds — which is what the widest-name measurement is after (U40).
+                    string name = ColonistNames.Of(0u, new PawnId(id));
                     float w = Draws(nameLabel!, name);
                     if (w <= widestName) continue;
                     widestName = w;

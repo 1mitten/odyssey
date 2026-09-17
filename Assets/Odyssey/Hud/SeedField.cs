@@ -61,6 +61,16 @@ namespace Odyssey.Hud
         public const string StartKey = "ui.newgame.start";
 
         /// <summary>
+        /// The registry key naming the row that goes on to the colonists (U40).
+        ///
+        /// <para>The seed screen's last row was <see cref="StartKey"/> until colonist select landed
+        /// and took the commit with it. The word had to move rather than be shared: a Start on the
+        /// seed screen and a Start two screens later would be two presses with one name, and the
+        /// player could not tell which of them was the one that could not be undone.</para>
+        /// </summary>
+        public const string NextKey = "ui.newgame.next";
+
+        /// <summary>
         /// Every key this screen can put on screen, so <c>RegistryTests</c> can hold it to the
         /// naming CSV the way it already holds the session table and the naming prompt. A label
         /// invented in C# is a label the owner cannot correct.
@@ -70,6 +80,7 @@ namespace Odyssey.Hud
             SeedKey,
             RerollKey,
             StartKey,
+            NextKey,
         };
 
         public SeedField() : this(SeedEntry.Draw) { }

@@ -143,6 +143,12 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(boot.HasSession, Is.False,
                     "opening the New game screen built a world before anything was chosen");
 
+                // Three presses since U40: New game, Next to the colonists, Start.
+                Assert.That(shell.Menu.Next(), Is.True);
+                yield return Settle();
+                Assert.That(boot.HasSession, Is.False,
+                    "walking on to the colonists built a world before anybody was chosen");
+
                 Assert.That(shell.Menu.Start(), Is.True);
                 yield return Settle();
 
@@ -205,12 +211,21 @@ namespace Odyssey.Tests.PlayMode
 
                 Assert.That(shell.Menu.Seed.Seed, Is.EqualTo(4242u),
                     "typing in the field did not reach the director");
+
+                Assert.That(shell.Menu.Next(), Is.True, "the typed seed did not survive the way on");
+                yield return Settle();
                 Assert.That(shell.Menu.Start(), Is.True);
                 yield return Settle();
 
                 Assert.That(boot.World, Is.Not.Null, "Start built no world");
                 Assert.That(boot.World!.Seed, Is.EqualTo(4242u),
                     "the colony was built from a seed the player never saw");
+
+                // And the colony is the three that were on the colonist screen (U40) — the same
+                // claim one level up, and the one no fast-tier test can make because it spans the
+                // screen, the director, the bootstrap and ColonyRequest.
+                Assert.That(boot.Colony!.Pawns.Pawns.Count, Is.EqualTo(ColonistSelect.Slots),
+                    "the colony is not the size the screen offered");
             }
             finally
             {
@@ -243,7 +258,8 @@ namespace Odyssey.Tests.PlayMode
                 yield return Settle();
 
                 Assert.That(shell.Menu.Seed.Usable, Is.False);
-                Assert.That(shell.Menu.Start(), Is.False);
+                Assert.That(shell.Menu.Next(), Is.False,
+                    "a box that names no seed still walked on to pick people for it");
                 Assert.That(boot.HasSession, Is.False,
                     "a world was built from a box that does not name a seed");
 

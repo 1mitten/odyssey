@@ -1731,6 +1731,39 @@
 .settings__row--off { opacity: 0.42; }
 .settings__row--off:hover { background-color: rgba(0, 0, 0, 0); }
 
+/* ---------------------------------------------------------------- the colonist screen (U40)
+
+   Three candidates, each a name and one line of skills. A card is clicked to keep it through a
+   reroll, and a kept one wears .row--armed — the same lit treatment every "this is on" in the
+   interface uses, so nothing new has to be learned. */
+
+.colonists { flex-shrink: 0; }
+
+.colonist {
+    flex-direction: column;
+    justify-content: center;
+    height: 47px;
+    margin-bottom: 6px;
+    padding: 0 8px;
+    border-radius: 3px;
+}
+
+.colonist:hover { background-color: rgba(255, 255, 255, 0.07); }
+
+.colonist__name {
+    color: #eef3f6;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+/* What they are good at, on one line: three cards of two lines each came to 296 against the fixed
+   body's 284. Measured by HudLayoutTests rather than found on screen. */
+.colonist__skills {
+    color: rgba(255, 255, 255, 0.66);
+    white-space: nowrap;
+}
+
 /* The row that goes back, set apart from the list above it the way the settings panel's exit row
    is set apart from the tabs. */
 .startscreen__back {

@@ -459,7 +459,7 @@ namespace Odyssey.Tests.Hud
             MenuDirector menu = OnNewGame(4242u);
             uint built = 0;
             int starts = 0;
-            menu.StartRequested += seed => { built = seed; starts++; };
+            menu.StartRequested += choice => { built = choice.Seed; starts++; };
 
             Assert.That(menu.Start(), Is.True);
 
@@ -472,7 +472,7 @@ namespace Odyssey.Tests.Hud
         {
             MenuDirector menu = OnNewGame(4242u);
             uint built = 0;
-            menu.StartRequested += seed => built = seed;
+            menu.StartRequested += choice => built = choice.Seed;
 
             menu.Seed.Type("77");
             Assert.That(menu.Start(), Is.True);
@@ -485,7 +485,7 @@ namespace Odyssey.Tests.Hud
         {
             MenuDirector menu = OnNewGame(1u, 2u);
             uint built = 0;
-            menu.StartRequested += seed => built = seed;
+            menu.StartRequested += choice => built = choice.Seed;
 
             menu.Seed.Reroll();
             Assert.That(menu.Start(), Is.True);
@@ -562,6 +562,128 @@ namespace Odyssey.Tests.Hud
             menu.Choose(SessionCommands.NewGameKey);
 
             Assert.That(menu.Seed.Seed, Is.EqualTo(2u));
+        }
+
+        // ------------------------------------------------ the colonist screen (U40)
+
+        /// <summary>A menu with the whole New game flow: a seed, and three people to choose.</summary>
+        static MenuDirector WithColonists(params uint[] seeds)
+        {
+            int next = 0;
+            var select = new ColonistSelect(
+                (seed, slot) => new Candidate(seed, "person-" + seed, System.Array.Empty<CandidateSkill>()));
+            var menu = new MenuDirector(
+                new SeedField(() => seeds[next < seeds.Length ? next++ : seeds.Length - 1]), select);
+            menu.Show();
+            return menu;
+        }
+
+        [Test]
+        public void NextGoesOnToTheColonistsAndDealsThree()
+        {
+            MenuDirector menu = WithColonists(4242u);
+            menu.Choose(SessionCommands.NewGameKey);
+
+            Assert.That(menu.Next(), Is.True);
+
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.Colonists));
+            Assert.That(menu.Colonists!.Cards.Count, Is.EqualTo(ColonistSelect.Slots));
+        }
+
+        /// <summary>
+        /// The seed screen no longer commits when there is a colonist screen after it. Pressing
+        /// Start there would skip a choice the player has not been offered yet.
+        /// </summary>
+        [Test]
+        public void StartDoesNothingOnTheSeedScreenOnceThereAreColonistsToChoose()
+        {
+            MenuDirector menu = WithColonists(4242u);
+            menu.Choose(SessionCommands.NewGameKey);
+
+            int starts = 0;
+            menu.StartRequested += _ => starts++;
+
+            Assert.That(menu.Start(), Is.False);
+            Assert.That(starts, Is.Zero);
+        }
+
+        [Test]
+        public void StartOnTheColonistScreenCarriesTheBoardAndThePeople()
+        {
+            MenuDirector menu = WithColonists(4242u);
+            menu.Choose(SessionCommands.NewGameKey);
+            menu.Next();
+
+            NewGameChoice chosen = default;
+            int starts = 0;
+            menu.StartRequested += choice => { chosen = choice; starts++; };
+
+            Assert.That(menu.Start(), Is.True);
+
+            Assert.That(starts, Is.EqualTo(1));
+            Assert.That(chosen.Seed, Is.EqualTo(4242u), "the board is not the one the box showed");
+            Assert.That(chosen.Colonists, Is.EqualTo(menu.Colonists!.ChosenSeeds()),
+                "the colony would be built from people the player never saw");
+        }
+
+        /// <summary>
+        /// Walking on to pick three people for a board that does not exist would only move the
+        /// refusal one screen later, by which time the player has made choices to lose.
+        /// </summary>
+        [Test]
+        public void NextRefusesABoxThatNamesNoSeed()
+        {
+            MenuDirector menu = WithColonists(4242u);
+            menu.Choose(SessionCommands.NewGameKey);
+            menu.Seed.Type("twelve");
+
+            Assert.That(menu.Next(), Is.False);
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.NewGame));
+        }
+
+        /// <summary>
+        /// Back from the colonists returns to the seed, not to the root — and the seed the player
+        /// typed to get there is still in the box, which is the whole reason it is one step rather
+        /// than all the way home.
+        /// </summary>
+        [Test]
+        public void BackFromTheColonistsReturnsToTheSeedStillHoldingIt()
+        {
+            MenuDirector menu = WithColonists(4242u);
+            menu.Choose(SessionCommands.NewGameKey);
+            menu.Seed.Type("77");
+            menu.Next();
+
+            Assert.That(menu.Back(), Is.True);
+
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.NewGame));
+            Assert.That(menu.Seed.Seed, Is.EqualTo(77u), "backing out threw away the typed seed");
+        }
+
+        [Test]
+        public void ComingBackToTheColonistsDealsAFreshThree()
+        {
+            MenuDirector menu = WithColonists(4242u);
+            menu.Choose(SessionCommands.NewGameKey);
+            menu.Next();
+            uint[] first = menu.Colonists!.ChosenSeeds();
+
+            menu.Back();
+            menu.Next();
+
+            Assert.That(menu.Colonists.ChosenSeeds(), Is.Not.EqualTo(first),
+                "the screen came back holding the people the player walked away from");
+        }
+
+        [Test]
+        public void NextDoesNothingFromAnyOtherScreen()
+        {
+            MenuDirector menu = WithColonists(4242u);
+
+            Assert.That(menu.Next(), Is.False, "from the root");
+
+            menu.ShowSaves(TwoSaves());
+            Assert.That(menu.Next(), Is.False, "from the load list");
         }
 
         [Test]

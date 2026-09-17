@@ -2925,3 +2925,63 @@ work itself.
   PlayMode tests: the header is one row in every layout at every category and resolution, the
   banner wears each of the four colours at the right thickness with exactly one label, and each
   order's box reaches the floor.
+- **A new colony stopped arriving with its work already ordered, 2026-09-17** (owner: *"at the start
+  of game there are no orders, until you assign them for the time being"*). The interesting part is
+  that `ScenarioDef.Playtest`'s own doc comment had promised exactly this: *"the colony has felling
+  work the moment it exists, because there is no tool to give the order with yet. When the UI line's
+  designate tool lands, the scene moves to `Bare` and the player gives the first order."* That tool
+  landed in M3; the cancel tool and the Build palette landed after it; and this sat there through
+  all of it, so every new colony still opened with a ring of trees marked and colonists already
+  walking off to chop them. **A note saying what to do when a thing lands does not do it**, and the
+  note was accurate, specific and completely inert for a milestone. The same shape as `17`'s §10
+  admitting that Save always wrote a new file — except that one lasted an evening because somebody
+  was using it.
+- **Three tests were quietly living off those pre-marked trees.** They asserted a colony had felled
+  something, and what they were really proving was "the scenario gives orders and the colony carries
+  them out". They give the orders themselves now, which is both honest and closer to what the game
+  does. Worth noticing as a class: a fixture that supplies a precondition for free will be depended
+  on by tests that never mention it, and the day it changes they all fail for a reason none of them
+  is about.
+- **A colonist rolls from its own seed, 2026-09-17 (U40).** Skills and passions were already pure
+  functions of `(world seed, pawn id)` — which is why a candidate can be shown before any world
+  exists — but the seed was the *world's*, so there was no way to say "this one, differently".
+  `Pawn.RollSeed` is the smallest thing that makes one person rerollable while leaving the board
+  alone, and it defaults to the world's so that nothing which nobody chose moved at all.
+- **The test written first caught the thing reading the code would not have.** `PawnContext.Seed`
+  is populated by `Sync`, which runs on the first tick, and placement runs before any tick — so the
+  first version of the seam rolled **every colony in the game from seed zero**, whatever board it
+  was on. It presented as `StartingSkillsTests` reporting "two different seeds rolled identical
+  starting skills", which is about as clear as a failure gets. The fix closes a latent trap rather
+  than a U40 bug: anything else that read `ctx.Seed` before the first tick had the same problem.
+- **The goldens moved both numbers this time, and that is the diagnosis working.** U37's roll happens
+  on the world's first tick and so moved only `Simulated`; a seed is assigned at *placement*, which
+  runs before `Generated` is taken. Nothing about those three worlds changed — the skills are
+  byte-for-byte yesterday's — and what moved is that the hash can now see the number they were
+  rolled from. The failure message points at the generator and says to check the grid hash before
+  believing it, which is precisely the case it was written for.
+- **"The name follows the roll" could not be taken literally.** The owner's ruling was that a reroll
+  gives you a different person rather than the same person with different numbers, and the obvious
+  reading is a hash of the seed. Measured: every colonist a world places itself shares that world's
+  seed, and against a pool of eight that calls **two of five the same thing more often than not**.
+  Two people called Wrenn in a colony of five is not a naming scheme. The seed chooses where in the
+  pool the colony starts reading and the id says how far along — so the distinctness the id-only
+  scheme gave for free survives, and the name still moves when the seed does. The select screen's
+  three carry three *different* seeds and can still collide, so that guarantee lives on the screen
+  rather than in the name, where it belongs.
+- **The card has to be rolled for the slot it will occupy**, and the seam did not take one. Both
+  draws mix the pawn's id in, the id comes from the slot, so every card rolled as slot 0 would have
+  shown the right name and the **wrong skills** for two of the three — a screen that promises a
+  miner and hands over a cook, with both halves individually correct and nothing wrong enough to
+  throw. Caught by reading the code rather than by a failure, which is the uncomfortable kind: the
+  fast tier could not have noticed, and the PlayMode test only checks the count.
+- **The fixed box finally bit, and it was right to.** Three cards at a line per skill came to 296
+  against the body's 284 — the first thing that has not fitted since the owner fixed the panel's
+  height, and exactly the possibility `17-start-flow.md` §11.4a named when it said U40 might find
+  the box the wrong size. It is not: both skills on one line is how the design's own sketch drew
+  them, reads as one fact about a person rather than two, and comes to 242. **A constraint that
+  eventually refuses something is the only kind worth having**, and the useful thing is that it
+  refused in a fast-tier assertion rather than on screen.
+- **The two NUnits disagreed again**, and it still cost a Unity run. `Has.Count` throws on an
+  interface-typed collection under Unity's bundled version while the fast tier is perfectly happy,
+  so three new tests were green in eleven seconds and red in the gate. `docs/lessons.md` has had
+  this written down since the morning of the same day.

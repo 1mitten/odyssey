@@ -273,6 +273,9 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         public void BuildSession() => BuildSession(null, null);
 
+        public void BuildSession(uint? seedOverride, SaveHeader? from) =>
+            BuildSession(seedOverride, from, null);
+
         /// <summary>
         /// Build a session, optionally on a seed and a shape that are not the scene's (U38).
         ///
@@ -284,8 +287,14 @@ namespace Odyssey.Presentation.Bootstrap
         /// loaded session is built from the header rather than from whatever the inspector happens
         /// to say — and if the header does not carry enough to rebuild the same world, the load
         /// fails loudly here rather than producing a world that quietly differs.</para>
+        ///
+        /// <para><paramref name="colonists"/> is the third caller, colonist select (U40): one roll
+        /// seed per person the player kept. It decides <i>who</i> they are, and the scenario's own
+        /// colonist count is overridden to match, because the owner's ruling is that a new game
+        /// starts with exactly the three that were chosen. Null leaves both alone, which is every
+        /// other caller.</para>
         /// </summary>
-        public void BuildSession(uint? seedOverride, SaveHeader? from)
+        public void BuildSession(uint? seedOverride, SaveHeader? from, uint[]? colonists)
         {
             if (HasSession)
                 throw new System.InvalidOperationException(
@@ -324,6 +333,14 @@ namespace Odyssey.Presentation.Bootstrap
             // (ADR 0008). The ruined-city generator is still here and still tested; switch
             // mapType to reach it.
             ScenarioDef scenarioDef = ScenarioFor(from);
+
+            // A new game starts with exactly the people that were chosen (U40, owner's decision 3).
+            // The count is taken off the chosen list rather than written down again, so the screen
+            // and the colony cannot come to disagree about how many there are — and a load leaves
+            // it alone, because a saved colony's population is a fact about the file.
+            if (colonists != null && colonists.Length > 0 && from == null)
+                scenarioDef = scenarioDef.WithColonists(colonists.Length);
+
             uint sessionSeed = from != null ? from.Seed : seedOverride ?? seed;
             MapType sessionMap = from != null && from.Recipe.Map != MapType.Unknown
                 ? from.Recipe.Map
@@ -348,6 +365,10 @@ namespace Odyssey.Presentation.Bootstrap
                 Name = from != null && from.Recipe.ColonyName.Length > 0
                     ? from.Recipe.ColonyName
                     : colonyName,
+
+                // Who they are (U40). Null for a loaded session, whose colonists come out of the
+                // file with their seeds already on them, and for every caller that never asked.
+                Colonists = from == null ? colonists : null,
 
                 // Noon, and it belongs to the build rather than to a call after it: a colony that
                 // starts at tick 0 starts at midnight, SimWorld.StartAtTick refuses a clock that

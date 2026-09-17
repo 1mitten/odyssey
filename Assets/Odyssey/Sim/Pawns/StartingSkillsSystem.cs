@@ -39,7 +39,9 @@ namespace Odyssey.Sim.Pawns
             if (world.CurrentTick != 0) return;
 
             var pawns = _ctx.Pawns.All;
-            for (int i = 0; i < pawns.Count; i++) pawns[i].RollStartingSkills(world.Seed);
+            // Each from its own seed since U40, which is the world's for every colonist the world
+            // placed itself and the candidate's for one chosen on the select screen.
+            for (int i = 0; i < pawns.Count; i++) pawns[i].RollStartingSkills();
         }
     }
 }

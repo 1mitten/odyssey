@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Saving;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -28,7 +29,12 @@ namespace Odyssey.Presentation.Ui
     /// </summary>
     public sealed partial class HudShell
     {
-        readonly MenuDirector _menu = new MenuDirector();
+        /// <summary>
+        /// The main screen's director, with the colonist select the presenter has to supply
+        /// (U40) — rolling a candidate needs <c>Odyssey.Sim</c>, which <c>Odyssey.Hud</c> cannot
+        /// reference.
+        /// </summary>
+        readonly MenuDirector _menu = new MenuDirector(new SeedField(), new ColonistSelect(RollCandidate));
 
         /// <summary>
         /// The start screen's own director, which the shell owns rather than the session does —
@@ -41,10 +47,53 @@ namespace Odyssey.Presentation.Ui
         ScrollView _startList = null!;
         VisualElement _startBack = null!;
 
-        // The New game screen (U39): the seed, the reroll and the row that commits.
+        // The New game screen (U39): the seed, the reroll and the row that goes on.
         VisualElement _startNewGame = null!;
         TextField _seedBox = null!;
         VisualElement _startCommit = null!;
+
+        // The colonist screen (U40): three cards, and the row that commits.
+        VisualElement _startColonists = null!;
+        VisualElement _colonistCards = null!;
+        VisualElement _colonistReroll = null!;
+
+        /// <summary>
+        /// Roll one candidate for the select screen — the presenter's half of U40's seam.
+        ///
+        /// <para>It calls <c>ColonistDraw</c>, which is the same roll the colony runs, so the card
+        /// and the colonist cannot come to disagree. What it adds is the interface's own two
+        /// questions: what this person is called, and which of their skills are worth the space.
+        /// </para>
+        ///
+        /// <para><b>Best first and cut short.</b> Thirteen skills times three cards is a screen of
+        /// numbers nobody reads, and the question a player is answering is "what are these three
+        /// good at" — so the card carries the top few. The count comes from what fits, in
+        /// <c>HudLayout</c>, rather than from a literal here.</para>
+        /// </summary>
+        static Candidate RollCandidate(uint seed, int slot)
+        {
+            Pawn rolled = ColonistDraw.Roll(seed, slot);
+
+            var best = new List<CandidateSkill>();
+            foreach (SkillCatalogue.Entry entry in SkillCatalogue.All)
+            {
+                // Only the skills the simulation actually trains. The catalogue carries thirteen
+                // against four that are live, and a candidate whose card promised Cooking would be
+                // promising something no colonist can do yet.
+                if (entry.Skill == SkillCatalogue.NotSimulated) continue;
+
+                int index = System.Array.IndexOf(SkillIndex.Names, entry.Skill);
+                if (index < 0) continue;
+
+                best.Add(new CandidateSkill(entry.Key, Registry.Label(entry.Key), rolled.SkillLevel(index)));
+            }
+
+            best.Sort((a, b) => b.Level.CompareTo(a.Level));
+            if (best.Count > HudLayout.ColonistCardSkills)
+                best.RemoveRange(HudLayout.ColonistCardSkills, best.Count - HudLayout.ColonistCardSkills);
+
+            return new Candidate(seed, ColonistNames.Of(seed, ColonistDraw.IdForSlot(slot)), best);
+        }
         readonly Dictionary<string, VisualElement> _startRowByKey = new Dictionary<string, VisualElement>();
 
         /// <summary>
@@ -99,6 +148,9 @@ namespace Odyssey.Presentation.Ui
             _startNewGame = BuildNewGameScreen();
             body.Add(_startNewGame);
 
+            _startColonists = BuildColonistScreen();
+            body.Add(_startColonists);
+
             // The saves, when the load screen is showing. A scroll view because a folder can hold
             // any number of colonies, wearing the Build palette's scroller class so there is one
             // scrollbar in the project rather than two.
@@ -124,6 +176,7 @@ namespace Odyssey.Presentation.Ui
             _menu.ScreenChanged += _ => RefreshStartScreen();
             _menu.ArmedChanged += RefreshStartArming;
             _menu.Seed.Changed += RefreshSeed;
+            _menu.Colonists!.Changed += RefreshColonists;
             _menu.StartRequested += OnStartNewGame;
             _menu.SavesRequested += OnListSaves;
             _menu.SettingsRequested += () => _boot!.Preferences.SetOpen(true);
@@ -200,11 +253,105 @@ namespace Odyssey.Presentation.Ui
             rows.AddToClassList("startscreen__seedrows");
             rows.Add(SeedRow(SeedField.RerollKey, () => _menu.Seed.Reroll()));
 
-            _startCommit = SeedRow(SeedField.StartKey, () => _menu.Start());
+            // Next since U40, not Start: the commit moved to the colonist screen after it.
+            _startCommit = SeedRow(SeedField.NextKey, () => _menu.Next());
             rows.Add(_startCommit);
 
             screen.Add(rows);
             return screen;
+        }
+
+        /// <summary>
+        /// The colonist screen (U40): three cards, a reroll and the row that commits. Design is
+        /// <c>docs/design/18-colonist-select.md</c>.
+        ///
+        /// <para><b>A card is clicked to keep it.</b> There is no separate lock control, because a
+        /// per-card reroll and a lock are the same thing said twice — keeping the two you like and
+        /// pressing Reroll is the same act as rerolling the third, with one rule to learn instead
+        /// of two.</para>
+        /// </summary>
+        VisualElement BuildColonistScreen()
+        {
+            var screen = new VisualElement();
+            screen.style.display = DisplayStyle.None;
+
+            screen.Add(HudText.Make(Registry.Label(ColonistSelect.TitleKey), HudTextRole.Meta,
+                ussClass: "startscreen__seedcap"));
+
+            _colonistCards = new VisualElement();
+            _colonistCards.AddToClassList("colonists");
+            screen.Add(_colonistCards);
+
+            for (int slot = 0; slot < ColonistSelect.Slots; slot++)
+            {
+                int index = slot;
+
+                var card = new VisualElement();
+                card.AddToClassList("colonist");
+                card.Add(HudText.Make(string.Empty, HudTextRole.Row, ussClass: "colonist__name"));
+                card.Add(HudText.Make(string.Empty, HudTextRole.Meta, numeric: true,
+                    ussClass: "colonist__skills"));
+                card.RegisterCallback<ClickEvent>(_ => _menu.Colonists!.ToggleLock(index));
+                _colonistCards.Add(card);
+            }
+
+            var rows = new VisualElement();
+            rows.AddToClassList("startscreen__seedrows");
+
+            _colonistReroll = SeedRow(ColonistSelect.RerollKey, () => _menu.Colonists!.Reroll(SeedEntry.Draw));
+            rows.Add(_colonistReroll);
+            rows.Add(SeedRow(SeedField.StartKey, () => _menu.Start()));
+
+            screen.Add(rows);
+            return screen;
+        }
+
+        /// <summary>
+        /// Draw the three candidates, and which of them the player has kept.
+        ///
+        /// <para>A kept card wears <c>row--armed</c>, the same lit treatment every "this one is on"
+        /// in the interface uses — the palette's armed chip, the settings panel's asking row. One
+        /// idiom, so a player who has seen it anywhere has seen it here.</para>
+        /// </summary>
+        void RefreshColonists()
+        {
+            ColonistSelect? select = _menu.Colonists;
+            if (select == null) return;
+
+            for (int slot = 0; slot < ColonistSelect.Slots && slot < _colonistCards.childCount; slot++)
+            {
+                VisualElement card = _colonistCards[slot];
+                Candidate who = select.Cards[slot];
+
+                HudText.Set((Label)card[0], who.Name, HudTextRole.Row);
+                HudText.Set((Label)card[1], SkillLine(who), HudTextRole.Meta);
+                card.EnableInClassList("row--armed", select.IsLocked(slot));
+                card.tooltip = select.IsLocked(slot)
+                    ? who.Name + " stays through a reroll. Click to let them go"
+                    : "Click to keep " + who.Name + " through a reroll";
+            }
+
+            // Inert when there is nothing left to reroll, rather than accepting the press and
+            // sitting there — the same answer the Start row gives an unusable seed.
+            _colonistReroll.EnableInClassList("settings__row--off", !select.CanReroll);
+        }
+
+        /// <summary>
+        /// A candidate's skills on one line — "Mining 6 · Cutting 3".
+        ///
+        /// <para>One line rather than one per skill because three cards of two lines each did not
+        /// fit the fixed box: 296 against 284, measured by <c>HudLayoutTests</c> rather than
+        /// discovered on screen. It also reads better, as one fact about a person.</para>
+        /// </summary>
+        static string SkillLine(Candidate who)
+        {
+            var line = new System.Text.StringBuilder();
+            for (int i = 0; i < who.Skills.Count; i++)
+            {
+                if (line.Length > 0) line.Append(" · ");
+                line.Append(who.Skills[i].Label).Append(' ').Append(who.Skills[i].Level);
+            }
+            return line.ToString();
         }
 
         /// <summary>
@@ -269,9 +416,11 @@ namespace Odyssey.Presentation.Ui
             bool root = _menu.Screen == MenuScreen.Root;
             bool newGame = _menu.Screen == MenuScreen.NewGame;
             bool load = _menu.Screen == MenuScreen.Load;
+            bool colonists = _menu.Screen == MenuScreen.Colonists;
 
             _startRows.style.display = root ? DisplayStyle.Flex : DisplayStyle.None;
             _startNewGame.style.display = newGame ? DisplayStyle.Flex : DisplayStyle.None;
+            _startColonists.style.display = colonists ? DisplayStyle.Flex : DisplayStyle.None;
             _startList.style.display = load ? DisplayStyle.Flex : DisplayStyle.None;
 
             // The way out of every screen but the root, which has nowhere to go back to.
@@ -279,6 +428,7 @@ namespace Odyssey.Presentation.Ui
 
             if (load) FillSaveList();
             if (newGame) RefreshSeed();
+            if (colonists) RefreshColonists();
             RefreshStartArming();
         }
 
@@ -393,7 +543,8 @@ namespace Odyssey.Presentation.Ui
         /// type and scenario — which is what the plan's U39 row asks for: the seed is the only knob
         /// exposed, so the rest stay tunable later without new interface.</para>
         /// </summary>
-        void OnStartNewGame(uint seed) => _boot!.BuildSession(seed, null);
+        void OnStartNewGame(NewGameChoice choice) =>
+            _boot!.BuildSession(choice.Seed, null, choice.Colonists);
 
         // ============================================================ naming a save
 
