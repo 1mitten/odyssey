@@ -172,6 +172,159 @@ namespace Odyssey.Tests.Sim
                 "a wall ordered on a wall is refused: only a slab goes on top of one");
         }
 
+        // ---- paving: a floor laid on ground that is already there (U42) ----------------------
+
+        /// <summary>
+        /// <b>The owner's report, as a test.</b> <i>"I should be able to just build a floor but
+        /// nothing happens."</i> They armed the floor tool and dragged over the grass in front of
+        /// them, and every cell was refused — correctly, because a structural slab wants a cell
+        /// with nothing under it and the ground is something. This is the other thing, and the
+        /// cell they clicked is the cell it goes in.
+        /// </summary>
+        [Test]
+        public void PavingIsLaidOnTheGroundYouAreStandingOn()
+        {
+            ColonyWorld colony = Board();
+            int ground = GroundLevelCellNear(colony, 3);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+
+            // The cell the picker names for a click on grass is the ground BLOCK, one down.
+            var clicked = Size.FromIndex(ground - Size.LayerStride);
+
+            Assert.That(colony.Construction.Place(clicked, BuildingHandle.Floor, StuffHandle.Wood),
+                Is.EqualTo(IntentRejection.NotPermitted),
+                "a structural slab is refused here, which is the whole of the owner's report");
+            Assert.That(colony.Construction.Place(clicked, BuildingHandle.DeckPlate, StuffHandle.Stone),
+                Is.EqualTo(IntentRejection.None),
+                "and paving is not: it wants exactly the floor the slab refused it for having");
+            Assert.That(colony.Construction.At(ground), Is.EqualTo(BuildingHandle.DeckPlate),
+                "the site is in the cell you walk in, over the block you clicked");
+        }
+
+        /// <summary>
+        /// The whole journey, as the wall's and the floor's are: ordered, fed, worked, walked on.
+        /// If paving needed anything the other two did not, "one field on a BuildingDef" would be
+        /// false for the second time.
+        /// </summary>
+        [Test]
+        public void PavingIsFedWorkedAndLaid()
+        {
+            ColonyWorld colony = Board();
+            int site = GroundLevelCellNear(colony, 3);
+            Assume.That(site, Is.GreaterThanOrEqualTo(0));
+
+            int pile = colony.Pawns.Items.NearestCellWithSpace(
+                colony.Grid, site, ItemIndex.Stone, 20, JobDriver.DropSearchRadius);
+            Assume.That(pile, Is.GreaterThanOrEqualTo(0));
+            colony.Pawns.Items.Spawn(ItemIndex.Stone, pile, 20);
+
+            colony.World.Intents.Submit(new Intent(
+                IntentKind.PlaceBuilding, Size.FromIndex(site), BuildingHandle.DeckPlate, StuffHandle.Stone));
+            colony.World.Tick();
+            Assume.That(colony.Construction.At(site), Is.EqualTo(BuildingHandle.DeckPlate));
+
+            int laidAt = -1;
+            for (int tick = 0; tick < 20_000 && laidAt < 0; tick++)
+            {
+                colony.World.Tick();
+                if (colony.Grid.Floor[site] != CoreContent.SlabNone) laidAt = tick;
+            }
+
+            Assert.That(laidAt, Is.GreaterThanOrEqualTo(0), "a colonist laid the paving");
+            Assert.That(colony.Grid.Floor[site], Is.EqualTo(CoreContent.SlabPaved),
+                "and it is paving, not a structural floor: the two must stay tellable apart");
+            Assert.That(colony.Grid.IsWalkable(site), Is.True, "you can still stand on it");
+            Assert.That(OnTheGround(colony, ItemIndex.Stone), Is.EqualTo(17), "three stone went into it");
+        }
+
+        /// <summary>
+        /// <b>Paving cannot fall, and this says so rather than the absence of a test saying it.</b>
+        /// The support rule is never asked about a covering, so the guarantee is not "support
+        /// happens to be high" but "the ground is holding it". Take the ground away and it goes —
+        /// which is the control proving the first half meant something.
+        /// </summary>
+        [Test]
+        public void PavingNeverCollapsesBecauseTheGroundHoldsIt()
+        {
+            ColonyWorld colony = Board();
+            int site = GroundLevelCellNear(colony, 3);
+            Assume.That(site, Is.GreaterThanOrEqualTo(0));
+
+            RaiseNow(colony, site, BuildingHandle.DeckPlate, StuffHandle.Stone);
+            for (int i = 0; i < 4; i++) colony.World.Tick();
+
+            Assert.That(colony.Grid.Floor[site], Is.EqualTo(CoreContent.SlabPaved), "it is still there");
+            Assert.That(colony.Grid.Support[site], Is.EqualTo(colony.Pawns.Support!.MaxSupport),
+                "and it has full support without anybody asking the rule for it");
+
+            // The control, and it has to be wide. Taking the ground from under this one cell
+            // proves nothing: the ground on every side of it is still grounded and still carries
+            // load sideways, so the paving is held at S_max - 1 and correctly stays up. That was
+            // the first version of this test and it failed, which is the rule working. To orphan
+            // the middle, the ground has to go from further away than support can reach.
+            CellRef at = Size.FromIndex(site);
+            int reach = colony.Pawns.Support!.MaxSupport;
+            for (int dz = -reach - 1; dz <= reach + 1; dz++)
+            for (int dx = -reach - 1; dx <= reach + 1; dx++)
+            {
+                int x = at.X + dx, z = at.Z + dz;
+                if (!Size.Contains(x, z, at.Y - 1)) continue;
+
+                int below = Size.Index(x, z, at.Y - 1);
+                colony.Grid.Terrain[below] = CoreContent.TerrainAir;
+                colony.Grid.Flags[below] &= ~CellFlags.SolidTerrain;
+                colony.Pawns.MarkStructureChanged(below);
+            }
+
+            for (int i = 0; i < 8; i++) colony.World.Tick();
+
+            Assert.That(colony.Grid.Floor[site], Is.EqualTo(CoreContent.SlabNone),
+                "take the ground away from under all of it and the paving goes too, " +
+                "so the first half was the ground holding it rather than luck");
+        }
+
+        /// <summary>
+        /// Paving over paving, and paving over one of our floors, are both orders with nothing to
+        /// do. The kind is deliberately not examined — a slab is a slab for this question.
+        /// </summary>
+        [Test]
+        public void ThereIsNothingToLayPavingOnIfSomethingIsAlreadyThere()
+        {
+            ColonyWorld colony = Board();
+            int site = GroundLevelCellNear(colony, 3);
+            Assume.That(site, Is.GreaterThanOrEqualTo(0));
+
+            RaiseNow(colony, site, BuildingHandle.DeckPlate, StuffHandle.Stone);
+
+            Assert.That(colony.Construction.Allows(site, BuildingHandle.DeckPlate), Is.False,
+                "paving over paving is an order with nothing to do");
+            Assert.That(colony.Construction.Allows(site, BuildingHandle.Floor), Is.False,
+                "and a structural slab still refuses it, for having a floor");
+        }
+
+        /// <summary>
+        /// Paving is ours, so it comes up again — and it is priced as a deck plate rather than as a
+        /// floor, which is why the resolver asks which kind it is instead of assuming.
+        /// </summary>
+        [Test]
+        public void PavingComesUpAgainAndIsPricedAsPaving()
+        {
+            ColonyWorld colony = Board();
+            int site = GroundLevelCellNear(colony, 3);
+            Assume.That(site, Is.GreaterThanOrEqualTo(0));
+
+            RaiseNow(colony, site, BuildingHandle.DeckPlate, StuffHandle.Stone);
+
+            Assert.That(colony.Designations.TryTakeApart(site, out int building, out int stuff), Is.True,
+                "paving is ours to take up");
+            Assert.That(building, Is.EqualTo(BuildingHandle.DeckPlate), "and it is priced as paving");
+            Assert.That(stuff, Is.EqualTo(StuffHandle.Stone));
+
+            Assert.That(colony.Construction.RemoveSlab(colony.Pawns, site, out ushort was), Is.True);
+            Assert.That(was, Is.EqualTo(NaturalContent.StuffStone));
+            Assert.That(colony.Grid.Floor[site], Is.EqualTo(CoreContent.SlabNone));
+        }
+
         // ---- the support rule, seen from the side ---------------------------------------------
 
         /// <summary>

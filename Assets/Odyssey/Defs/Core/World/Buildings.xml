@@ -78,6 +78,44 @@
   </BuildingDef>
 
   <!--
+    U42. A floor you lay on ground that is already there, which is what "just build a floor" means
+    and is NOT what Building_Floor is. The two are one field apart and opposite about one question:
+    a floor wants a cell with nothing under it and must satisfy the support rule; a deck plate wants
+    a cell that is already floored and asks the support rule nothing, because the ground is holding
+    it up and it can never fall. docs/design/18-paving.md has the measurement that produced it.
+
+    costCount 3 and workToBuild 60, the cheapest and quickest thing in the table: it is a surface,
+    not a structure, it carries no load and it is laid over an area rather than a line. Against a
+    floor's 4 and 120 and a wall's 5 and 135. Neither number derives from anything and nothing
+    derives from them; they are the owner's to tune.
+
+    edifice 0 and blocking false, as a floor is: nothing stands in the cell, and you walk on it.
+    slab true because it IS a slab - written to the cell's lower boundary through exactly the same
+    Raise - and covering true is the one field that inverts the rule.
+
+    Built of wood or stone like everything else, because those are the only two stuffs a colonist
+    can carry (ConstructionContent.IsBuildable). The four with no item are what the ruined city is
+    made of, and steel is one of them - so a steel deck plate is an order that could never be
+    filled until a salvage line gives steel an item.
+
+    One covering rather than three. Grating and tile are a row each when they are wanted, and
+    grating is not a covering at all - "see and fall through" is a slab you can see through, which
+    wants something below worth seeing.
+  -->
+  <BuildingDef>
+    <defName>Building_DeckPlate</defName>
+    <label>deck plate</label>
+    <edifice>0</edifice>
+    <slab>true</slab>
+    <covering>true</covering>
+    <blocking>false</blocking>
+    <costCount>3</costCount>
+    <workToBuild>60</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.deckplate</iconKey>
+  </BuildingDef>
+
+  <!--
     The four stuffs with no item are what the ruined city is MADE OF, not what a colony builds
     with: nothing produces them, no colonist can carry one, and offering them would be offering an
     order that can never be filled. They keep their indices, because every stamped wall in the city

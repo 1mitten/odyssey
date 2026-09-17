@@ -148,8 +148,18 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   drag**, asking `ConstructionGrid.Allows`, the same method the order calls. It had to: on the
   played meadow only **21 of the 441 cells within ten of the start** will take a slab, and the
   cursor was green over all of it.
-  **A floor you lay on the ground is a different feature and does not exist.** `U42` and
-  `docs/design/18-paving.md` scope it; nothing is built.
+  **A floor you lay on the ground is a different feature, and it is `U42`, built 2026-09-17**
+  (`docs/design/18-paving.md`). `Building_DeckPlate` is `Building_Floor` with one more field:
+  `covering` inverts exactly one question, so paving wants a cell that **has** a floor and **never
+  asks the support rule**, because the ground holds it and it cannot fall. A fifth slab kind in
+  `Floor[]`, so **no new save state and no hash change**; it takes the *wall's* lift and
+  `WorkingLayer` stays null for it. Grass no longer grows through a paved cell.
+  **Paving does nothing yet** — walking speed, cleanliness and beauty do not exist — so it is a
+  surface that looks different and that is all.
+  **Nothing tests that a click reaches the game**, and that is why this line of work has had three
+  silent failures: a PlayMode test cannot press a button (input update type `Editor`, so
+  `wasPressedThisFrame` never fires), which `FloorToolClickTests` and `InputHarnessTests` both carry
+  as ignored tests. Un-ignore them together the day the harness can.
 - **Work reaches `main` only through a pull request** with both tiers green, one approving review
   and the branch up to date. Branch protection enforces it, agents included. There is no long-lived
   feature branch — `claude/*` branches are per-change and short-lived.
@@ -301,7 +311,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **573 Sim + 191 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **578 Sim + 193 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and

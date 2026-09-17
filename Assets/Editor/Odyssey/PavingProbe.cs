@@ -82,8 +82,9 @@ namespace Odyssey.EditorTools
                 var model = new WorldRenderModel(size, chunks, library);
                 model.RefreshAll(grid, result.Edifices);
 
-                // Pave a patch of open grass: a slab in a cell that already has solid ground under
-                // it, which is precisely what U42 would write and precisely the coplanar case.
+                // Pave a patch of open grass. Since U42 landed this writes the real kind through
+                // the real field, so the picture is paving rather than a stand-in for it - and the
+                // grass fix the first run of this probe found is in shot with it.
                 CellRef start = result.StartCell;
                 int laid = 0, skipped = 0;
                 for (int j = 0; j < Patch; j++)
@@ -104,8 +105,8 @@ namespace Odyssey.EditorTools
                         continue;
                     }
 
-                    grid.Floor[cell] = CoreContent.SlabBuilt;
-                    grid.FloorStuff[cell] = CoreContent.StuffSteel;
+                    grid.Floor[cell] = CoreContent.SlabPaved;
+                    grid.FloorStuff[cell] = NaturalContent.StuffWood;
                     laid++;
                 }
 

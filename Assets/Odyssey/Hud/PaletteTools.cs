@@ -71,6 +71,13 @@ namespace Odyssey.Hud
         /// so the label moved and the key did not (U29).
         /// </summary>
         public const string Floor = "ui.arch.tool.roof";
+
+        /// <summary>
+        /// Paving: a floor laid on ground that is already there (U42). Under <c>Floors</c> and
+        /// never under <c>Structure</c> — with both tools saying "floor", the category is what
+        /// tells a player which one they are holding (`18-paving.md` §7).
+        /// </summary>
+        public const string DeckPlate = "ui.arch.tool.deckplate";
         public const string Mine = "ui.arch.tool.mine";
         public const string Fell = "ui.arch.tool.fell";
         public const string Cancel = "ui.arch.tool.cancel";
@@ -91,7 +98,7 @@ namespace Odyssey.Hud
             ("ui.arch.category.power", "Power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
             ("ui.arch.category.security", "Security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
             ("ui.arch.category.salvage", "Salvage", new[] { "ui.arch.tool.salvage", "ui.arch.tool.reclaim" }),
-            ("ui.arch.category.floors", "Floors", new[] { "ui.arch.tool.deckplate", "ui.arch.tool.grating", "ui.arch.tool.tile" }),
+            ("ui.arch.category.floors", "Floors", new[] { DeckPlate, "ui.arch.tool.grating", "ui.arch.tool.tile" }),
             ("ui.arch.category.recreation", "Recreation", new[] { "ui.arch.tool.gamestable", "ui.arch.tool.viewscreen", "ui.arch.tool.planter" }),
         };
 
@@ -133,6 +140,10 @@ namespace Odyssey.Hud
             new PaletteTool(Floor,
                 d => d.ArmBuild(BuildingHandle.Floor),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Floor,
+                wantsMaterial: true),
+            new PaletteTool(DeckPlate,
+                d => d.ArmBuild(BuildingHandle.DeckPlate),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.DeckPlate,
                 wantsMaterial: true),
             new PaletteTool(Mine, Toggle(DesignateTool.Mine), Holding(DesignateTool.Mine)),
             new PaletteTool(Fell, Toggle(DesignateTool.Fell), Holding(DesignateTool.Fell)),

@@ -151,15 +151,17 @@ namespace Odyssey.Tests.Hud
         /// it out of.
         ///
         /// <para>The list is spelled out rather than derived from <c>WantsMaterial</c> itself,
-        /// which would assert that a field equals itself. Two things are built out of something
-        /// today — a wall and a floor — and a third arriving should have to be written here.</para>
+        /// which would assert that a field equals itself. Three things are built out of something
+        /// today — a wall, a floor and a deck plate — and a fourth arriving should have to be
+        /// written here.</para>
         /// </summary>
         [Test]
         public void OnlyAThingMadeOfSomethingAsksWhatItIsMadeOf()
         {
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(tool.WantsMaterial,
-                    Is.EqualTo(tool.Key == PaletteTools.Wall || tool.Key == PaletteTools.Floor),
+                    Is.EqualTo(tool.Key == PaletteTools.Wall || tool.Key == PaletteTools.Floor
+                        || tool.Key == PaletteTools.DeckPlate),
                     $"{tool.Key} disagrees with itself about whether it is built out of something");
         }
 

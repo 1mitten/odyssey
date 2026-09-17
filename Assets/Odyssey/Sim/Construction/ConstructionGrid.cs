@@ -134,8 +134,11 @@ namespace Odyssey.Sim.Construction
 
             // A click names a surface and an order names a cell, for a floor exactly as for a
             // wall — only the surfaces differ. See StandingOn and StandingOver.
-            bool slab = ConstructionContent.BuildingAt(building).slab;
-            int index = slab
+            // A covering takes the WALL's lift, not the slab's: a click on grass names the ground
+            // block and paving goes in the air cell above it, which is exactly what StandingOn
+            // already does. Only structure is lifted over things that fill a cell (U42).
+            BuildingDef what = ConstructionContent.BuildingAt(building);
+            int index = what.slab && !what.covering
                 ? StandingOver(_grid.Index(cell), building)
                 : StandingOn(_grid.Index(cell));
 
@@ -263,7 +266,9 @@ namespace Odyssey.Sim.Construction
             // of debris is cleared before anything is built on it.
             if (!NaturalContent.TerrainAt(_grid.Terrain[index]).buildable) return false;
 
-            return ConstructionContent.BuildingAt(building).slab
+            BuildingDef def = ConstructionContent.BuildingAt(building);
+            return def.covering ? AllowsCovering(index)
+                : def.slab
                 ? AllowsSlab(index)
                 // Something underfoot. A wall hanging in the air is the fault the whole support
                 // model exists to prevent, and refusing it at the order is far better than
@@ -291,6 +296,31 @@ namespace Odyssey.Sim.Construction
             if (_grid.Floor[index] != CoreContent.SlabNone) return false;
             if (_grid.HasFloor(index)) return false;
             return _support == null || _support.SupportIfSlabAt(index) > 0;
+        }
+
+        /// <summary>
+        /// Whether a <b>covering</b> may be laid here: paving, on ground that is already there.
+        ///
+        /// <para><b><see cref="AllowsSlab"/> turned inside out, and it is two lines because that is
+        /// genuinely the whole difference.</b> A structural slab wants a cell with nothing beneath
+        /// it and has to satisfy the support rule; a covering wants a cell that is <em>already</em>
+        /// floored — that floor is what it is laid on — and asks the support rule nothing at all,
+        /// because whatever holds the ground up is holding the covering up too. It can never
+        /// collapse, so there is no rule here saying it cannot.</para>
+        ///
+        /// <para><b>Nothing laid yet</b>, which is the one question the two share: a covering over a
+        /// covering, or over a floor we built, is an order with nothing to do. The kind is not
+        /// examined — a slab is a slab for this purpose — so paving a built floor is refused for
+        /// the same reason paving paving is.</para>
+        ///
+        /// <para>This is what the owner was reaching for when they reported that "nothing happens"
+        /// (U42, 2026-09-17). Ordinary ground answers yes here and no to
+        /// <see cref="AllowsSlab"/>, which is the whole of why the floor tool looked broken.</para>
+        /// </summary>
+        bool AllowsCovering(int index)
+        {
+            if (_grid.Floor[index] != CoreContent.SlabNone) return false;
+            return _grid.HasFloor(index);
         }
 
         /// <summary>Material has arrived. Returns what the site now holds.</summary>
@@ -384,7 +414,7 @@ namespace Odyssey.Sim.Construction
 
             // 1. The thing itself — a slab at the cell's lower boundary, or an edifice standing in
             //    the cell. One `if`, because everything else about the two is identical.
-            if (def.slab) RaiseSlab(cell, stuff);
+            if (def.slab) RaiseSlab(cell, stuff, def.covering);
             else RaiseEdifice(cell, def, stuff);
 
             // 2. The cell and everything touching it must be re-meshed: a wall changes how its
@@ -410,9 +440,9 @@ namespace Odyssey.Sim.Construction
         /// can be asked. It is <see cref="PlacedEdifice.Built"/>'s argument one level down, and it
         /// costs no new state: <c>Floor[]</c> has always been saved and always been hashed.</para>
         /// </summary>
-        void RaiseSlab(int cell, ushort stuff)
+        void RaiseSlab(int cell, ushort stuff, bool covering)
         {
-            _grid.Floor[cell] = CoreContent.SlabBuilt;
+            _grid.Floor[cell] = covering ? CoreContent.SlabPaved : CoreContent.SlabBuilt;
             _grid.FloorStuff[cell] = stuff;
         }
 
@@ -446,7 +476,7 @@ namespace Odyssey.Sim.Construction
         {
             stuff = CoreContent.StuffNone;
             if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
-            if (_grid.Floor[cell] != CoreContent.SlabBuilt) return false;
+            if (!ConstructionContent.IsOurs(_grid.Floor[cell])) return false;
 
             stuff = _grid.FloorStuff[cell];
             _grid.Floor[cell] = CoreContent.SlabNone;

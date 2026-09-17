@@ -41,7 +41,10 @@ namespace Odyssey.Tests.Sim
         /// </summary>
         // U29 added Building_Floor: a slab at the cell's lower boundary, 4 stuff and 120 ticks,
         // and the `slab` field that tells Raise which of the two kinds of thing it is making.
-        const ulong BuildingFingerprint = 14174525753986816333UL;
+        // U42 added Building_DeckPlate: the same slab laid on ground that is already there, 3
+        // stuff and 60 ticks, and the `covering` field that inverts one question — it wants a cell
+        // that IS floored and never asks the support rule, because it cannot fall.
+        const ulong BuildingFingerprint = 12120782433794582000UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

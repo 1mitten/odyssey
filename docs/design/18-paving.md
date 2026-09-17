@@ -1,8 +1,9 @@
 # 18 — Paving: a floor you lay on the ground
 
-**Status: scoped, not built.** Written 2026-09-17 after the owner played U29 and reported *"I should
-be able to just build a floor but nothing happens."* This is the scope and the cost; nothing here is
-implemented, and no code should be written against it until the owner has approved the shape.
+**Status: built, 2026-09-17.** Written after the owner played U29 and reported *"I should be able to
+just build a floor but nothing happens"*, then built when they reported it a second time. The scope
+below is what was implemented, amended in place where reality differed; §10 records what changed
+between the scope and the code.
 
 Design and mechanics only. Names live in `docs/design/icon-keys.csv`, and three of them are already
 there — see §6.
@@ -146,6 +147,9 @@ are a `BuildingDef` row each afterwards, and grating in particular is not a cove
 and fall through"* is a slab you can see through and stand on, which is a different thing wearing the
 same category, and it should wait until there is something below worth seeing.
 
+**Built: `Building_DeckPlate` alone**, as recommended. Grating and tile are a `BuildingDef` row
+each when they are wanted.
+
 **Deliberately not in scope:** what a covering is *for*. Walking speed, cleanliness, beauty and room
 stats are the reason paving exists in the genre and none of those systems exist here, so a first
 covering is a surface that looks different and does nothing else. That is worth saying out loud
@@ -206,3 +210,43 @@ save state, a hash change or a wiki edit.
 The slab, its support rule, its collapse and its cursor are all untouched. A covering is a fifth
 value in an array that four values already live in, and every system that reads `Floor[]` keeps
 reading it the same way.
+
+## 10. What changed between the scope and the code
+
+Written the same day, so the differences are small — but they are the honest record of where a
+scope written from reading was wrong about the code under it.
+
+- **Steel was scoped and wood or stone were built.** §6 said "deck plate in steel is the whole
+  mechanic". Steel is one of the four stuffs with **no item**: nothing produces it, no colonist can
+  carry one, and `ConstructionContent.IsBuildable` keeps it off the menu precisely so that an order
+  that can never be filled cannot be given. Caught by the compiler, not by thought — `ItemIndex`
+  has no `Steel` at all. Paving builds from wood or stone like everything else, and a steel deck
+  plate becomes possible the day a salvage line gives steel an item.
+- **`ConstructionContent.IsOurs` and `BuildingForSlab` are new** and were not in the scope. §5
+  assumed `RemoveSlab` "already removes whatever our slab kinds are"; it tested for `SlabBuilt`
+  exactly. Two kinds needed one place that answers "is this ours", for the reason
+  `PlacedEdifice.Built` is one place for a wall — and a second question beside it, because a deck
+  plate refunds 3 and a floor 4, so taking one up has to ask *which*.
+- **The grass fix went where the scatter already refuses to draw**, not into a new rule.
+  `EmitScatter` had a guard for "a grass cell with something solid stacked on it is a cell nobody
+  can see the top of"; a floor laid over it is the same argument, so it is one more condition in the
+  same `if` rather than a rule of its own. The kind is not examined: a built floor, a stamped deck
+  and a deck plate all equally hide what is under them.
+- **A control had to grow before it meant anything.** `PavingNeverCollapsesBecauseTheGroundHoldsIt`
+  first took the ground from under a single paved cell and asserted it fell. It did not, and it was
+  right not to: the ground on every side is still grounded and still carries load sideways, so the
+  paving was held at `S_max - 1`. The control now clears the ground for `S_max + 1` cells around,
+  which is the distance support can actually reach. A test that fails for the right reason is worth
+  more than one that passes for the wrong one.
+
+## 11. What is still not done
+
+- **Grating and tile.** One `BuildingDef` row each. Grating is not a covering at all — *"see and
+  fall through"* is a slab you can see through and stand on, and it wants something below worth
+  seeing.
+- **Paving does nothing.** It is a surface that looks different, and that is all, because walking
+  speed, cleanliness, beauty and room stats do not exist. Said in §6 before it was built and still
+  true after.
+- **Nobody has pressed Play on it.** The rule, the pipeline, the removal and the drawing are all
+  measured; whether a paved courtyard *reads* as a paved courtyard is a look judgement, and
+  `PavingProbe` is the harness for it.

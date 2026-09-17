@@ -308,6 +308,22 @@ namespace Odyssey.Sim.Worldgen
         /// </summary>
         public const ushort SlabBuilt = 4;
 
+        /// <summary>
+        /// A floor covering the colony laid on ground that was already there (U42) — paving, not
+        /// structure.
+        ///
+        /// A fifth kind rather than a reuse of <see cref="SlabBuilt"/>, for the reason SlabBuilt is
+        /// not a reuse of the generator's three: it is the only way to ask "is this ours, and is it
+        /// holding something up or only being walked on?" A line that strips paving without
+        /// touching floors needs that question to exist, and a collapse must never take it — which
+        /// it cannot, since a covering over ground is grounded and its support is never zero.
+        ///
+        /// Costs no new state and nothing in presentation has to know, exactly as SlabBuilt did:
+        /// Floor[] is already saved and already hashed, and WorldRenderModel.FloorModule draws any
+        /// non-zero floor in its stuff's own tint.
+        /// </summary>
+        public const ushort SlabPaved = 5;
+
         // Stuff indices. 0 = none.
         public const ushort StuffNone = 0;
         public const ushort StuffConcrete = 1;

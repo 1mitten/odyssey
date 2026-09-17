@@ -60,7 +60,14 @@ namespace Odyssey.Sim.Contracts
         /// beneath it. One thing, of a material — see docs/design/17-floors-and-collapse.md.
         /// </summary>
         public const int Floor = 2;
-        public const int Count = 3;
+
+        /// <summary>
+        /// A floor covering laid on ground that is already there (U42). A slab like
+        /// <see cref="Floor"/>, and the opposite of it about what must be underneath: this one
+        /// wants a floor already and never asks the support rule, because it cannot fall.
+        /// </summary>
+        public const int DeckPlate = 3;
+        public const int Count = 4;
     }
 
     /// <summary>

@@ -355,11 +355,14 @@ namespace Odyssey.Sim.Designations
                 return building != BuildingHandle.None;
             }
 
-            if ((uint)index < (uint)_grid.Size.CellCount && _grid.Floor[index] == CoreContent.SlabBuilt)
+            if ((uint)index < (uint)_grid.Size.CellCount
+                && ConstructionContent.IsOurs(_grid.Floor[index]))
             {
-                building = BuildingHandle.Floor;
+                // Which of ours it is decides the refund and the work, so it is asked rather than
+                // assumed: a deck plate costs 3 and a floor 4 (U42).
+                building = ConstructionContent.BuildingForSlab(_grid.Floor[index]);
                 stuff = ConstructionContent.StuffForValue(_grid.FloorStuff[index]);
-                return true;
+                return building != BuildingHandle.None;
             }
 
             building = BuildingHandle.None;

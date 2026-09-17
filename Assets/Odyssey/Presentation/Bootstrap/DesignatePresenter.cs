@@ -124,9 +124,14 @@ namespace Odyssey.Presentation.Bootstrap
         void TellTheDirectorWhichLayerItIsWorkingOn()
         {
             DesignateDirector director = Director;
-            bool slab = director.Tool == DesignateTool.Build
-                && ConstructionContent.BuildingAt(director.Building).slab;
-            director.WorkingLayer = slab && _rig != null ? _rig.ActiveLayer : (int?)null;
+            BuildingDef what = ConstructionContent.BuildingAt(director.Building);
+
+            // **Structure only, and a covering is explicitly not it.** A slab takes its layer from
+            // the slice because a pointer cannot name open air. Paving is always laid on a surface,
+            // which is the one thing a pointer *can* name, so forcing it onto the slice layer would
+            // break it the moment the player scrolled a layer up (U42, `18-paving.md` §4).
+            bool structure = director.Tool == DesignateTool.Build && what.slab && !what.covering;
+            director.WorkingLayer = structure && _rig != null ? _rig.ActiveLayer : (int?)null;
         }
 
         void OnToolDragCancelled() => Director.Abandon();

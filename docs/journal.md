@@ -2620,3 +2620,56 @@ work itself.
   scatter is gathered, presentation only, in neither a cell nor the save nor the hash — and a good
   argument for the probe having been worth running, since it is the sort of thing that would
   otherwise have been found by the owner on the day the feature was declared done.
+- **U42, paving: the floor you lay on the ground (2026-09-17).** The owner reported a second time
+  that they could not place a floor, with no rejection log this time. Two things came out of it.
+
+  **First, a coverage gap that explains why this class of fault keeps escaping.** Nothing in the
+  project tests that a *click* reaches the game. The Sim tier proves `ConstructionGrid.Place`, the
+  EditMode tier proves `SlicePicker` and the seam between them, and between the two sit a rig, a
+  presenter, a director and a gesture, any of which can swallow a press in silence.
+  `FloorToolClickTests` was written to close it and **is ignored, because it cannot pass**: a
+  PlayMode test's input update type is `Editor` and every edge property is gated on a player update,
+  so `wasPressedThisFrame` never fires for game code — `MouseHarness` failure four, which
+  `InputHarnessTests` has carried an ignored test about since `OQ-40`. `SliceCameraRig` reads exactly
+  that edge. **Written and ignored rather than not written**, paired to the existing one, so the day
+  the harness can press a button there is something to un-ignore. The control failing first is what
+  proved it was the harness and not the game: had only the floor test failed, the obvious reading
+  would have been the opposite and wrong.
+
+  **Second, and the actual answer: paving.** A U29 floor is a structural slab and refuses a cell that
+  already has a floor, which is what the ground is. What *"just build a floor"* means is a covering,
+  and `docs/design/18-paving.md` had already scoped it. Built now, as `Building_DeckPlate`:
+
+  - **The rule is `AllowsSlab` turned inside out and is genuinely two lines.** A covering wants a
+    cell that **has** a floor — that floor is what it is laid on — and **never asks the support rule
+    at all**, because whatever holds the ground up holds the covering up. It cannot fall, so there is
+    no rule saying it cannot.
+  - **No new state.** A fifth slab kind in `Floor[]`, which has always been saved and always been
+    hashed. No new array, no save section, no hash coverage change, no catalogue row and no mesher
+    edit — `FloorModule` draws any non-zero floor in its stuff's own tint.
+  - **It takes the wall's lift, not the slab's.** A click on grass names the ground *block* and the
+    covering goes in the air cell above it, which is what `StandingOn` already did. `WorkingLayer`
+    stays **null** for it, or paving would break the moment the player scrolled a layer up.
+  - **Grass no longer grows through it.** Found by `PavingProbe` before the unit was written and
+    fixed where `EmitScatter` already refuses to draw under something solid, because a floor over a
+    cell is the same argument. The kind is not examined: a built floor, a stamped deck and a deck
+    plate all equally hide what is beneath.
+
+  **Three places where the scope was wrong about the code, all recorded in `18` §10.** Steel was
+  scoped and is not buildable at all — it is one of the four stuffs with no item, so a steel deck
+  plate is an order that could never be filled; paving builds from wood or stone like everything
+  else. `IsOurs` and `BuildingForSlab` are new, because `RemoveSlab` tested for `SlabBuilt` exactly
+  and two kinds need one place that answers "is this ours" and a second that answers "which",
+  since a deck plate refunds 3 and a floor 4. And a control had to grow before it meant anything:
+  taking the ground from under one paved cell left it standing at `S_max - 1`, correctly, because
+  the ground on every side still carries load sideways — it now clears `S_max + 1` cells around.
+  **A test that fails for the right reason is worth more than one that passes for the wrong one.**
+
+  - **Verified:** fast tier **578 Sim + 193 Hud** (five new), Unity EditMode **1,243 total, 1,234
+    passed, 0 failed**, both content gates clean, the building fingerprint re-baked deliberately
+    with what moved written beside it. `PavingProbe` re-shot against the real kind: a clean wooden
+    deck at every range, no z-fighting, and the grass gone from the paved cells with the trees
+    keeping their own unpaved squares.
+  - **Still true and worth not forgetting: paving does nothing.** Walking speed, cleanliness, beauty
+    and room stats are why it exists in the genre and none of them exist here, so it is a surface
+    that looks different and that is all. Said in the scope before it was built and still true.
