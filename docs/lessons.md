@@ -1721,3 +1721,40 @@ in different files. None of them are in `Sim`. **A design that changes a unit ha
 every place that unit is read**, including across the sim→UI contract, and the walk takes ten
 minutes with `git grep` — considerably less than the session that would otherwise discover the
 `ushort` by watching a progress bar wrap.
+
+## A failed `Assume` is invisible, and `dotnet test` still prints "Passed!"
+
+Found 2026-09-17 reviewing the beds merge. Four tests covering the whole of bed ownership were
+not running: a helper raised a bed without first ordering one, so no bed stood, and each test
+ended on `Assume.That(assign(...), Is.EqualTo(IntentRejection.None))`. NUnit reports a failed
+assumption as **Inconclusive**, VSTest records it as `NotExecuted`, and the console summary
+counts it as neither passed nor skipped — the run says `Passed! - Failed: 0, Skipped: 0` and
+the test simply is not in the totals. The tier had been green over an untested feature since the
+day it was written.
+
+Two habits that catch it:
+
+- **Count the tests, not the word "Passed".** A total that does not grow when you add a test is
+  the symptom. `--logger "trx;LogFileName=x.trx"` then grep the TRX for `outcome="NotExecuted"`
+  lists every one with its reason; a run with no filter should show only `Long`/`Benchmark` rows.
+- **`Assume` is for the board, not for the code under test.** "This seed happened to put a
+  buildable cell near the start" is an assumption. "The intent I just submitted was accepted" is
+  an assertion — if it can fail, the test must fail with it.
+
+The same run found `Assert.Ignore` hiding a second one: a test searched for solid ground at
+`start.Y`, which is the layer a colonist *stands in*, found none anywhere and ignored itself on
+every run since it was written. An `Ignore` with a plausible reason reads as an honest skip; check
+that the reason can ever be false.
+
+## A hand-written table parallel to a handle set will not conflict when the handles renumber
+
+Same merge. `BuildingHandle.Bed` moved from 2 to 5 to make room for three buildings that reached
+main first. `BuildShapes` — a two-array table in the Hud assembly, parallel to `BuildingHandle` —
+was not touched by main, so git merged it in silence with three entries, and the bed became a
+one-cell thing that could not be turned. Three `DesignateDirector` tests failed and none of them
+named the cause. The class's own remarks claimed a test held the two tables together; none did.
+
+**Every parallel table needs a length assertion against the handle set's `Count`**, in whichever
+assembly can see both. `RegistryTests` already did it for `BuildLabels`, `JobLabels` and
+`ItemLabels`; `BuildShapes` is now beside them. A handle added past the end of such an array does
+not throw — it reads as the default, which is the silently wrong answer.

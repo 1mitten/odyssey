@@ -156,19 +156,44 @@ instances are not clipped by their bucket, so it renders correctly — written h
 
 ## 10. Save, hash, goldens, merge order
 
-`PlacedEdifice`'s four new fields ride `EdificeSaveSection`; older files load with the
-defaults (`CellIndexB = −1`, `Quality = 0`, `Owner = −1`, `Facing = 0`), so an old world loads
-with its behaviour unchanged. The format version bumps once, **on top of whatever merges
-first**: main sits at 2, the unmerged start-flow branch takes 3, and beds takes the next
-number after the branch it lands on. The golden re-bake (`ODYSSEY_REGOLDEN=1`, the printed
-pairs read before pasting, `Generated` checked byte-identical) is deliberate and journaled.
+`PlacedEdifice`'s three new fields — `Facing`, `Quality`, `Owner` — ride `EdificeSaveSection`;
+an older file reads none of them and every restored building comes back facing north, of no
+quality and owned by nobody, which is what those colonies *were*. (`CellIndexB` was a fourth
+field in the first cut and went: Unity compiles C# 9, where struct field initializers do not
+exist, so a `= -1` default would have passed every fast-tier run and broken the Unity tier.
+The second cell is derived from the facing instead.)
 
-Two in-flight branches touch the same files and the merge order is expected, not a surprise:
-`claude/floors-review` appends `Building_Floor`, `Building_DeckPlate` and `Building_Ladder` to
-`BuildingOrder` and `Buildings.xml` and edits `ConstructionGrid`; beds appends `Building_Bed`
-and edits `ConstructionGrid` again for multi-cell. Whichever merges second rebases — the same
-dance the building line and OQ-50's re-bake already recorded. `vertical-slice.md` rows for
-beds are added in the pull request, not now, for the same reason.
+### What the merge actually did (2026-09-17)
+
+This section predicted the dance and both halves of the prediction came true, so here is the
+record rather than the forecast.
+
+**Beds merged second, and the bed's handle moved.** `BuildingHandle.Bed` was written as 2, the
+next number after the wall. U29's floor, U42's paving and U43's ladder reached main first and
+took 2, 3 and 4, so the bed is **5** and `Count` is **6**. A handle position is a save contract
+and positions are append-only — the later branch is the one that moves, and that was only safe
+because no save with a bed in it had ever left the branch. `BuildingOrder`, `Buildings.xml`,
+`BuildLabels.BuildingKeys` and `BuildShapes` all follow the number.
+
+**Save format is 4, not 3.** The start flow took 3 for the recipe's `Barren`/`Wooded` fields.
+Versions 1, 2 and 3 all still load.
+
+**The renumbering's one silent casualty was `BuildShapes`.** It is a hand-written table parallel
+to `BuildingHandle`, main had never touched the file, and so it was *not* a merge conflict: its
+three entries merged in silence and the bed quietly became a one-cell thing that could not be
+turned. The class's own remarks claimed "the two tables are held together the same way the
+labels are — a test walks both", and no such test existed.
+`RegistryTests.EveryBuildableHasAShapeOfItsOwn` is that test now. **The general rule: a
+hand-written table parallel to a handle set needs a length assertion, or renumbering the handles
+breaks it without a conflict to warn anybody.**
+
+**Three seams needed a real merge rather than a union.** `ConstructionGrid`'s constructor takes
+both new arguments (the pawn list a bed's owner is validated against, and U29's support solver).
+`Raise` keeps main's `RaiseSlab`/`RaiseEdifice` split, and `RaiseEdifice` took the second cell,
+the facing and the quality, so both cells still point at the one record. And **the bed's "never
+lifted" rule moved out of `Place` into `WhereItWouldLand`**, which main had written precisely so
+the cursor and the order could not disagree — leaving it in `Place` would have drawn the bed's
+ghost with the wall's lift.
 
 ## 11. Test procedure
 
@@ -201,6 +226,36 @@ seam and nothing from the foot cell.
 By hand (owner or PlayMode rig): order a bed, rotate it, place it, watch it delivered and
 built, assign an owner from the pane, see them sleep there through a night and wake; deconstruct
 it and see the owner released.
+
+### What the review found afterwards (2026-09-17)
+
+Three faults that both tiers were green over, found reviewing the merge rather than by a test
+failing.
+
+**Four of the six ownership tests were never running.** `RaiseABed` called
+`ConstructionGrid.Raise` without placing a site first, and `Raise` reads the site out of
+`_building[cell]` and returns at once when there is none — so no bed stood, and each of the four
+ended on an `Assume` that a bed they had never ordered could be given an owner. A failed `Assume`
+is **Inconclusive, not a failure**: `dotnet test` prints `Passed!` and does not count it in the
+skip total, so the whole of §7 — walk past a nearer bed to your own, release the old bed, the
+owner surviving a save — was untested while the tier read green. The helper now places the order
+and asserts a bed is standing afterwards, and the three `Assume`s that swallowed it are
+assertions. All four pass; the feature was right, the tests were not asking.
+
+**`ABedOrderIntoSolidGroundIsRefusedNotLifted` ignored itself on every run.** It searched for a
+solid cell at `start.Y`, which is the layer a colonist *stands in* — the ground is the layer
+below — so it found nothing anywhere and took its `Assert.Ignore` branch every time. The rule it
+guards is a real one and it holds; it had simply never been checked.
+
+**The ghost knew nothing about beds.** The build cursor and the waiting-site ghost both arrived
+from the build-cursor work after this design was written, and both drew one cell-filling module
+at the head cell: a bed ordered on the grass appeared as a block, and — worse for the feature
+§5 exists to prove — **turning the ghost with R changed nothing anybody could see**, because a
+cube looks the same all four ways round. `BedShape` now owns the three boxes and the mesher and
+both ghost paths ask it, so what is under the pointer is what stands on the board.
+`FloorToolReachTests.PointingAtBareGroundOrdersABedInTheAirAboveIt` is the seam test that the
+bed is orderable by pointing at grass at all — the one question neither assembly's own tests can
+ask, and the one that caught U29's floor tool being armable, draggable and inert.
 
 ## 12. Open
 

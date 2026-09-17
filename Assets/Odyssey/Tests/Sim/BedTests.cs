@@ -153,7 +153,11 @@ namespace Odyssey.Tests.Sim
                 int x = start.X + dx, z = start.Z + dz;
                 if (!Size.Contains(x, z, start.Y)) continue;
 
-                int index = Size.Index(x, z, start.Y);
+                // start.Y is the layer a colonist STANDS in, so the ground is the layer below it.
+                // Searching at start.Y found nothing solid anywhere and the test ignored itself
+                // on every run, which is how the rule below went unverified.
+                if (start.Y == 0) continue;
+                int index = Size.Index(x, z, start.Y - 1);
                 if (!colony.Grid.IsSolidTerrain(index)) continue;
                 int above = index + Size.LayerStride;
                 if (above >= Size.CellCount || !colony.Construction.Allows(above)) continue;
@@ -304,7 +308,10 @@ namespace Odyssey.Tests.Sim
             // which is a success for our purposes and not worth making every caller branch on.
             IntentRejection placed = colony.Construction.Place(
                 Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, facing: 0);
-            Assume.That(placed, Is.AnyOf(IntentRejection.None, IntentRejection.AlreadyInThatState),
+            // Not Is.AnyOf: Unity's NUnit is older than the fast tier's and has no such member,
+            // which is a compile error and so aborts the whole batch (docs/lessons.md).
+            Assume.That(placed,
+                Is.EqualTo(IntentRejection.None).Or.EqualTo(IntentRejection.AlreadyInThatState),
                 "the bed could be ordered at this cell");
 
             colony.Construction.Raise(colony.Pawns, head, quality);
@@ -358,6 +365,37 @@ namespace Odyssey.Tests.Sim
 
             Assert.That(Assign(colony, head, -1), Is.EqualTo(IntentRejection.None));
             Assert.That(colony.Construction.BedOwnerAt(head), Is.EqualTo(0), "taken back: 0 is nobody");
+        }
+
+        /// <summary>
+        /// <b>A bed given an owner on a paused world has that owner, without a tick being spent.</b>
+        ///
+        /// <para>The pane that offers the choice is a thing you open while paused — pausing to plan
+        /// is the genre's central interaction — so an assignment that sits in the queue leaves the
+        /// popover picked and the row still reading "nobody" until the player presses play. That is
+        /// the slab fault of the same day told again (<c>PausedIntents</c>), and it is why
+        /// <c>AssignBedOwner</c> is on that list.</para>
+        ///
+        /// <para>Not a tick is spent here, deliberately: ticking would pass whether the intent were
+        /// on the paused list or not.</para>
+        /// </summary>
+        [Test]
+        public void ABedGivenAnOwnerOnAPausedWorldHasOneWithoutATick()
+        {
+            ColonyWorld colony = Fresh();
+            var pawn = colony.Pawns.Pawns.All[0];
+            int head = OpenFootprint(colony, out _);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+            RaiseABed(colony, head);
+
+            int before = colony.World.CurrentTick;
+            colony.World.Intents.Submit(new Intent(
+                IntentKind.AssignBedOwner, Size.FromIndex(head), pawn.Id.Value));
+            colony.World.RepublishViews();
+
+            Assert.That(colony.World.CurrentTick, Is.EqualTo(before), "a paused world spent a tick");
+            Assert.That(colony.Construction.BedOwnerAt(head), Is.EqualTo(pawn.Id.Value),
+                "the pick was taken, and did not wait for the clock to start");
         }
 
         [Test]

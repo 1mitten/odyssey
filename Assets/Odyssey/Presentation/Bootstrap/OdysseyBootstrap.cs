@@ -947,7 +947,7 @@ namespace Odyssey.Presentation.Bootstrap
                     }
                 }
 
-                DrawSiteGhost(cell, sites[i].Building, sites[i].Stuff);
+                DrawSiteGhost(cell, sites[i].Building, sites[i].Stuff, sites[i].Facing);
 
                 // **A slab does not rise, so it must not be drawn rising** (owner, 2026-09-17:
                 // "these little gaps or white lines appearing on the builds"). DrawCellFill grows
@@ -975,7 +975,7 @@ namespace Odyssey.Presentation.Bootstrap
         /// board for as long as it takes a colonist to walk over, and a colony of them at cursor
         /// weight would read as a finished town.</para>
         /// </summary>
-        void DrawSiteGhost(CellRef cell, int building, int stuff)
+        void DrawSiteGhost(CellRef cell, int building, int stuff, int facing = 0)
         {
             if (_renderer == null || _model == null || _grid == null) return;
             if (!ConstructionContent.IsBuilding(building)) return;
@@ -987,6 +987,32 @@ namespace Odyssey.Presentation.Bootstrap
 
             Color tint = StuffPalette.For(material, overArt: true);
             tint.a = SiteGhostAlpha;
+
+            DrawThingGhost(module, what, tint, cell, facing);
+        }
+
+        /// <summary>
+        /// The armed or waiting thing, drawn where it will stand — one module in a cell, or a
+        /// bed's own three boxes across the two cells its facing claims.
+        ///
+        /// <para><b>The bed is why this is not one line.</b> Every other buildable fills its cell,
+        /// so a module dropped on the cell floor is the whole picture. A bed is two cells long and
+        /// low, and drawn as a single cell-filling cube it said nothing about either — and turning
+        /// it with <b>R</b> changed nothing the player could see, because a cube looks the same
+        /// all four ways round. <c>BedShape</c> is the mesher's own geometry, asked here so the
+        /// ghost and the built thing cannot come to disagree.</para>
+        /// </summary>
+        void DrawThingGhost(int module, BuildingDef what, Color tint, CellRef cell, int facing)
+        {
+            if (_renderer == null) return;
+
+            if (what.edifice == CoreContent.EdificeBed)
+            {
+                Matrix4x4 root = BedShape.Root(cell.X, cell.Z, cell.Y, facing);
+                for (int part = 0; part < BedShape.PartCount; part++)
+                    _renderer.DrawGhost(module, tint, BedShape.Part(root, facing, part));
+                return;
+            }
 
             _renderer.DrawGhost(module, tint,
                 GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y)));
@@ -1005,9 +1031,23 @@ namespace Odyssey.Presentation.Bootstrap
         /// instanced submission each is a cost worth bounding on a frame that is already drawing a
         /// preview every frame of a drag.</para>
         /// </summary>
-        void DrawRunGhosts(PreviewBox box, int building, int stuff)
+        void DrawRunGhosts(PreviewBox box, int building, int stuff, int facing)
         {
             if (box.Cells > MaxRunGhosts) return;
+
+            // A multi-cell thing is one ghost, not one per cell. Its preview box IS its footprint
+            // — the director draws the shape of the thing rather than the shape of the drag — so
+            // walking the box would stamp a whole bed in each of the two cells it occupies.
+            // The head is whichever end the facing points away from.
+            if (BuildShapes.CellsOf(building) > 1)
+            {
+                var head = new CellRef(
+                    facing == 3 ? box.Max.X : box.Min.X,
+                    facing == 2 ? box.Max.Z : box.Min.Z,
+                    box.Min.Y);
+                DrawSiteGhost(head, building, stuff, facing);
+                return;
+            }
 
             for (int z = box.Min.Z; z <= box.Max.Z; z++)
             for (int x = box.Min.X; x <= box.Max.X; x++)
@@ -1176,7 +1216,7 @@ namespace Odyssey.Presentation.Bootstrap
                     PreviewBox box = _previewBoxes[i];
                     if (_previewIsSlab) _renderer.DrawCellSpanPlate(box.Min, box.Max, tint);
                     else _renderer.DrawCellSpanBox(box.Min, box.Max, tint);
-                    DrawRunGhosts(box, director.Building, director.Stuff);
+                    DrawRunGhosts(box, director.Building, director.Stuff, director.Facing);
                 }
 
                 return;
@@ -1284,7 +1324,8 @@ namespace Odyssey.Presentation.Bootstrap
             tint.a = GhostAlpha;
 
             // Draped, like everything fixed to the grid, and placed where the mesher would put it.
-            _renderer.DrawGhost(module, tint, GroundRelief.Drape(CellMetrics.FloorCentre(at.X, at.Z, at.Y)));
+            // The facing is the director's, so R turns the thing under the pointer.
+            DrawThingGhost(module, what, tint, at, director.Facing);
 
             // Drawn — so if it still cannot be seen, it is being drawn somewhere the player is not
             // looking. The owner's own guess (2026-09-17: "maybe it's a depth issue?") is the one

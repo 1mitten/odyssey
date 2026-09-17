@@ -667,25 +667,14 @@ namespace Odyssey.Presentation.Rendering
             if (!_model.BedHead(index)) return;
 
             int facing = _model.BedFacing(index);
-            var yaw = Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[facing], 0f));
 
-            Vector3 centre = CellMetrics.FloorCentre(x, z, y)
-                + new Vector3(Directions.DeltaX[facing], 0f, Directions.DeltaZ[facing])
-                    * CellMetrics.HalfXZ;
-            Matrix4x4 draped = GroundRelief.Drape(centre);
-
-            BedPart(batch, module, tint, draped, yaw,
-                offset: new Vector3(0f, 0.195f, 0f), scale: new Vector3(0.80f, 0.13f, 0.97f));
-            BedPart(batch, module, tint, draped, yaw,
-                offset: new Vector3(0f, 0.54f, 0.05f), scale: new Vector3(0.66f, 0.10f, 0.86f));
-            BedPart(batch, module, tint, draped, yaw,
-                offset: new Vector3(0f, 0.57f, -1.75f), scale: new Vector3(0.46f, 0.06f, 0.13f));
+            // The three boxes come from BedShape, which the cursor's ghost asks as well: a bed
+            // drawn one way under the pointer and another way on the board is how the build
+            // cursor's whole bargain comes undone.
+            Matrix4x4 root = BedShape.Root(x, z, y, facing);
+            for (int part = 0; part < BedShape.PartCount; part++)
+                AddBody(batch, module, tint, BedShape.Part(root, facing, part));
         }
-
-        /// <summary>One box of the bed: the block module, scaled about its centre and set at a local offset.</summary>
-        void BedPart(ChunkBatch batch, int module, int tint, Matrix4x4 at, Matrix4x4 yaw,
-            Vector3 offset, Vector3 scale) =>
-            AddBody(batch, module, tint, at * yaw * Matrix4x4.Translate(offset) * Matrix4x4.Scale(scale));
 
         int FirstOpenDirection(int x, int z, int y)
         {

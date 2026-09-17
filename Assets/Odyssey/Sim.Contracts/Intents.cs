@@ -122,6 +122,12 @@ namespace Odyssey.Sim.Contracts
             IntentKind.PlaceBuilding => true,
             IntentKind.CancelBuilding => true,
             IntentKind.ForceJob => true,
+            // Assigning a bed's owner is a player's order over a cell and meets the test above
+            // exactly: it writes state the player authored and needs no system to finish it.
+            // It matters more than most, because the pane that offers it is a thing you open
+            // while paused — and a popover you pick a colonist from that leaves the row still
+            // reading "nobody" until you press play is the slab fault told again.
+            IntentKind.AssignBedOwner => true,
             _ => false,
         };
     }

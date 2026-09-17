@@ -70,9 +70,11 @@ namespace Odyssey.Sim.Saving
                 writer.Write((uint)placed.Stuff);
                 writer.Write(placed.Built);
                 writer.Write(placed.Removed);
-                // Version 3 (beds): the three fields a bed carries that a wall never does. A
-                // version 2 reader would stop before them and misparse everything after; a
-                // version 3 reader of a version 2 file reads none of them (see Load).
+                // Version 4 (beds): the three fields a bed carries that a wall never does. An
+                // older reader would stop before them and misparse everything after; a version 4
+                // reader of an older file reads none of them (see Load). It was written as
+                // version 3 and became 4 on the merge, because the start flow's Barren/Wooded
+                // recipe fields reached main first and took that number.
                 writer.Write(placed.Facing);
                 writer.Write(placed.Quality);
                 writer.Write(placed.Owner);
