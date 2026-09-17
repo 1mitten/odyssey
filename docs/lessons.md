@@ -527,6 +527,17 @@ backslashes dies on `MSB4025: hexadecimal value 0x0C is an invalid character` �
 segment. **Write every path in a generated csproj with forward slashes**; MSBuild accepts them and
 the error message points nowhere near the cause.
 
+**Presentation tests can be *run* the same way, not merely compiled** (2026-09-17). Point a throwaway
+`net8.0` project with NUnit and the test adapter at the test file, reference the DLL the paragraph
+above builds plus `UnityEngine.CoreModule.dll`, and `dotnet test` runs them in about a second while
+the editor holds the project. **What stops it is an engine ECall**: anything implemented natively
+throws `SecurityException: ECall methods must be packaged into a system module` outside the player.
+`Matrix4x4.TRS` is one of them; `Matrix4x4.identity`, `operator *`, `MultiplyVector`, `GetColumn`,
+`Mathf` and the vector types are managed and work. So a value that is only ever scaled and
+translated is better built by writing the seven fields out — it is one multiply cheaper, and it is
+the difference between geometry that can be measured in a test and geometry that can only be looked
+at. `GroundRelief.Drape` had already made the same choice for its shear.
+
 And a shell trap that is not a documentation error: the user PATH does put Python 3.13 ahead of
 `WindowsApps`, but a shell started before that change inherits the old environment, so `python3`
 resolves to the Microsoft Store stub and answers *"Python was not found"* to everything —

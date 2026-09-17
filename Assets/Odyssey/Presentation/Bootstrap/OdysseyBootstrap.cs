@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Odyssey.Hud;
@@ -805,7 +806,6 @@ namespace Odyssey.Presentation.Bootstrap
             DesignateDirector director = _designate.Director;
             if (!director.TryPreview(out CellRef min, out CellRef max)) return;
 
-            bool build = director.Tool == DesignateTool.Build;
             Color tint = director.Tool switch
             {
                 DesignateTool.Build => PreviewBuildColour,
@@ -814,23 +814,51 @@ namespace Odyssey.Presentation.Bootstrap
                 _ => PreviewCancelColour,
             };
 
+            // A build drag draws the wall, not the cells: one closed box over the whole run, and
+            // one per layer where the run steps up a riser (BuildPreview). The area tools keep
+            // their per-cell plate, because a mine order is read as paint on a face that is
+            // already there and a box round each cell would be a cage round the hillside.
+            if (director.Tool == DesignateTool.Build)
+            {
+                _previewLayer = min.Y;
+                BuildPreview.Gather(min, max, _previewLayerAt ??= PreviewLayerAt, _previewBoxes);
+                for (int i = 0; i < _previewBoxes.Count; i++)
+                    _renderer.DrawCellSpanBox(_previewBoxes[i].Min, _previewBoxes[i].Max, tint);
+                return;
+            }
+
             for (int z = min.Z; z <= max.Z; z++)
             for (int x = min.X; x <= max.X; x++)
-            {
-                var cell = new CellRef(x, z, min.Y);
-
-                // A build order is lifted onto the cell above solid ground by the simulation
-                // (ConstructionGrid.StandingOn), because a click on grass names the block and a
-                // wall goes in the air. The preview has to be lifted the same way or it is drawn
-                // one layer below the wall it is promising.
-                if (build && _grid != null && _grid.Contains(x, z, min.Y)
-                    && _grid.IsSolidTerrain(_grid.Index(cell)) && min.Y + 1 < _grid.Size.SizeY)
-                    cell = new CellRef(x, z, min.Y + 1);
-
-                if (build) _renderer.DrawCellOutline(cell, tint);
-                else _renderer.DrawCellMark(cell, tint);
-            }
+                _renderer.DrawCellMark(new CellRef(x, z, min.Y), tint);
         }
+
+        /// <summary>
+        /// Which layer a build order dragged over this column would actually stand on.
+        ///
+        /// <para>The simulation lifts an order named at solid ground onto the cell above it
+        /// (<c>ConstructionGrid.StandingOn</c>), because a click on grass names the ground
+        /// <em>block</em> and a wall goes in the air. The cursor has to be lifted by the same rule
+        /// or it draws one layer below the wall it is promising.</para>
+        ///
+        /// <para>A method and a cached delegate rather than a lambda, because this is handed to
+        /// <see cref="BuildPreview.Gather"/> on every frame of a drag and a closure over
+        /// <c>min.Y</c> would allocate on each one.</para>
+        /// </summary>
+        int PreviewLayerAt(int x, int z)
+        {
+            int y = _previewLayer;
+            if (_grid == null) return y;
+
+            var cell = new CellRef(x, z, y);
+            return _grid.Contains(x, z, y) && _grid.IsSolidTerrain(_grid.Index(cell))
+                   && y + 1 < _grid.Size.SizeY
+                ? y + 1
+                : y;
+        }
+
+        int _previewLayer;
+        Func<int, int, int>? _previewLayerAt;
+        readonly List<PreviewBox> _previewBoxes = new List<PreviewBox>();
 
         /// <summary>
         /// The box being dragged with a build tool. Green: the colour of a thing about to be added,

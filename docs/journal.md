@@ -1313,3 +1313,40 @@ work itself.
     `TickGroup.Never`, a trick that pre-dates `SimWorldBuilder.AddHashable` and that `AddHashable`
     now exists to replace. Left alone here — moving them would shift every golden again for no
     behaviour — but the next person to touch either file should use the third list.
+
+- **The build cursor became the wall, and a build box stopped widening by accident (branch
+  `claude/build-pipeline`, 2026-09-17).** Two owner reports from the first playtest that built
+  anything, and they are the same gesture seen from its two ends.
+  - **"Use a cube instead, with all lines showing."** A build drag drew the selection bracket —
+    eight corner stubs — once per cell, which along a six-cell run reads as a dotted line and says
+    "these are things you have picked". It now draws one closed wireframe box, all twelve edges,
+    spanning the whole run. The box is **draped** rather than lifted, so it shears onto the tangent
+    plane of the drawn field at its own centre exactly as the wall it is promising will: the rule
+    from the stepped-wall fault, applied to the cursor. Lifted, a fifteen-metre box takes one height
+    from one point and floats at its far end.
+  - **A run that steps up a riser is one box per level.** A build order is lifted onto the cell
+    standing on solid ground, decided per column, so a run across a terrace stands on two layers and
+    one box around all of it would be a box around neither. `BuildPreview.Gather` does that split in
+    `Odyssey.Hud`, where the fast tier can hold it, with the lift passed in as a function of the
+    column.
+  - **"The building is a tad sensitive and by accident you can build dual walls."** A wall dragged
+    along one axis with the pointer a single cell off the row covered two rows — two parallel walls,
+    ordered, carried to and paid for, out of a gesture that meant one. The owner chose **hysteresis
+    over a snap to a line**, so a rectangle of wall is still one gesture: the box widens at two
+    cells clear across the run and the gate re-arms only back at the anchor's own row. Two
+    thresholds, because one makes the box flicker between one row and two while the pointer sits on
+    the boundary. Build only — one more cell marked to dig is a rounding error and one more row of
+    wall is a wall.
+  - **`Matrix4x4.TRS` was written out by hand**, and that is not a micro-optimisation. No bar of a
+    box is rotated, so the quaternion is an identity multiplied through for nothing — but the real
+    reason is that `TRS` is an engine call that throws outside the player, and with it in the way
+    the cursor's geometry could only be checked by looking at it. Written out, the twelve edges are
+    measured in a test: four per axis, each the full length of its side, every corner a three-way
+    joint, and a draped box plumb, full height, and raking with the field's own slope at a point
+    measured to be near the steepest the board gets.
+  - **Control run:** with the edges shortened back to bracket stubs, three of the five cursor tests
+    fail; with the box gate disabled, three of the six drag tests fail. Restored, both green.
+  - **Verified:** fast tier **478 Sim + 146 Hud** (up 12), Long tier 15. The Presentation assembly
+    compiles headlessly against the mirror DLLs and its new tests were *run* outside Unity through a
+    throwaway `net8.0` NUnit project, which is `docs/lessons.md`'s trick used for the first time on
+    tests rather than on a number. **Nobody has pressed Play on it.**

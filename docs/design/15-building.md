@@ -126,6 +126,44 @@ The Hud assembly cannot see `Odyssey.Sim` (ADR 0003), so `BuildLabels` is a tabl
 survive the catalogue growing** — ten categories and eighty tools — at which point the registry key
 belongs on the published view beside the handle, or the whole set comes out of the Defs.
 
+## 5a. The cursor, and the gesture that draws it
+
+Both of these are the owner's, from the first playtest that built anything (2026-09-17).
+
+**The cursor is the wall, not the cells.** A build drag draws one closed wireframe box — all twelve
+edges — spanning the whole run, where it used to draw the selection bracket's corner stubs once per
+cell. Along six cells the stubs read as a dotted line and say "these are things you have picked",
+which is the wrong sentence: what a player wants to see before letting go of the button is where
+the wall starts, where it ends and how tall it will stand.
+
+The box is **draped, not lifted** (`ChunkRenderer.DrawWireBox`), so it shears onto the tangent plane
+of the drawn ground at its own centre exactly as the finished wall does — §7's rule, applied to the
+thing that promises the wall as well as to the wall. Lifted, a fifteen-metre box would take one
+height from one point and float or sink at its far end by the field's slope across the whole run.
+Vertical edges stay vertical under a shear, so the cursor stands plumb and full height on a slope.
+
+**A run that steps up a riser is one box per level.** A build order is lifted onto the cell standing
+on solid ground, decided per column (`ConstructionGrid.StandingOn`), so a run crossing a terrace
+stands on two layers at once and one box around all of it would be a box around neither.
+`BuildPreview.Gather` is that split, in `Odyssey.Hud` and covered by the fast tier, with the lift
+supplied as a function of the column because this assembly cannot see a grid.
+
+**A build box does not widen by accident.** *"The building is a tad sensitive and by accident you
+can build dual walls"*: a wall dragged along one axis with the pointer a single cell off the row
+covered two rows, and two parallel walls were ordered, carried to and paid for out of a gesture that
+meant one. At this camera, on a board drawn in perspective, one cell of wander is not a mistake a
+player can simply stop making.
+
+The rule is **hysteresis, not a snap to a line** (`DesignateDirector.DragTo`), so that a rectangle of
+wall is still one gesture: the box widens when the drag has gone `WidenAcross` = 2 cells clear
+across the run, and the gate re-arms only when the drag comes home to the anchor's own row. Two
+thresholds rather than one, because a single threshold makes the box flicker between one row and two
+while the pointer rests on the boundary. The gated axis is whichever one has travelled less, decided
+afresh each frame, so a drag that turns a corner is still one gesture.
+
+**Build only.** Mine, fell and cancel keep every cell their box covers. The same slip does not cost
+the same thing: one more cell marked to dig is a rounding error, and one more row of wall is a wall.
+
 ## 6. How to test it
 
 ### Headless, in the fast tier
@@ -147,7 +185,9 @@ once passed every test in the repository while doing nothing in the game (§7).
 1. Let some trees come down — `ScenarioDef.Playtest` marks every tree within 10 cells before the first
    tick, and one tree is 27 wood, enough for five walls.
 2. **B** opens the palette, **Wall**, then wood or stone.
-3. Drag a run over open grass. The box previews in green while you drag.
+3. Drag a run over open grass. A green box closes around the **whole run** while you drag — see
+   §5a. Wander the pointer a cell off the row: the box should not widen. Take it two cells clear
+   and it should.
 4. **Click a blueprint.** The inspect pane says what it is, what of, and either
    "*2 of 5 wood delivered*" or "*about 2s left*".
 5. **Esc** puts the tool down; the banner above the command bar says so while it is held.

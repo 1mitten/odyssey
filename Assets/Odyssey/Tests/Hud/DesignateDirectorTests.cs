@@ -286,6 +286,129 @@ namespace Odyssey.Tests.Hud
             Assert.That(director.PreviewCount, Is.Zero);
         }
 
+        // ---- a build box does not widen by accident -------------------------------
+
+        /// <summary>
+        /// The owner's report, in one test: "the building is a tad sensitive and by accident you
+        /// can build dual walls" (2026-09-17).
+        ///
+        /// <para>A wall dragged along x with the pointer one cell off the row used to cover two
+        /// rows — two parallel walls, ordered, delivered to and paid for out of a gesture that
+        /// meant one. One cell across is what perspective and the hand produce on their own, so
+        /// the box holds its row until the drag has gone <c>WidenAcross</c> clear.</para>
+        /// </summary>
+        [Test]
+        public void AWallDoesNotWidenBecauseThePointerWandered()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+            director.Begin(At(3, 3));
+            director.DragTo(At(8, 4));
+
+            Assert.That(director.Widened, Is.False);
+            Assert.That(director.PreviewCount, Is.EqualTo(6),
+                "six cells of wall in one row, not twelve in two");
+            Assert.That(director.Commit(), Is.EqualTo(new[]
+            {
+                At(3, 3), At(4, 3), At(5, 3), At(6, 3), At(7, 3), At(8, 3),
+            }));
+        }
+
+        /// <summary>
+        /// The other half, and the reason this is hysteresis rather than a snap to a line: a
+        /// rectangle of wall is still one gesture. A drag that goes a clear two cells across says
+        /// something a wandering pointer does not.
+        /// </summary>
+        [Test]
+        public void AWallWidensWhenTheDragGoesClearAcross()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+            director.Begin(At(3, 3));
+            director.DragTo(At(8, 5));
+
+            Assert.That(director.Widened, Is.True);
+            Assert.That(director.PreviewCount, Is.EqualTo(18), "six by three");
+        }
+
+        /// <summary>
+        /// Two thresholds, not one, and this is what the second one buys.
+        ///
+        /// <para>With a single threshold a pointer resting on the boundary would flicker the box
+        /// between one row and two every frame, which is worse than either. Widened, the box stays
+        /// widened while the drag is still across the run; it re-arms only on the way home, at the
+        /// anchor's own row, where a one-row box is what is being drawn anyway.</para>
+        /// </summary>
+        [Test]
+        public void OnceWidenedTheBoxDoesNotFlickerBackOnTheBoundary()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+            director.Begin(At(3, 3));
+
+            director.DragTo(At(8, 5));
+            Assert.That(director.Widened, Is.True);
+
+            director.DragTo(At(8, 4));
+            Assert.That(director.Widened, Is.True, "one back from the boundary is not a retreat");
+            Assert.That(director.PreviewCount, Is.EqualTo(12), "six by two");
+
+            director.DragTo(At(8, 3));
+            Assert.That(director.Widened, Is.False, "home to the anchor's row re-arms the gate");
+
+            director.DragTo(At(8, 4));
+            Assert.That(director.PreviewCount, Is.EqualTo(6), "and one cell across is an accident again");
+        }
+
+        /// <summary>
+        /// Build only. The same slip does not cost the same thing: a mine box one cell wider than
+        /// intended marks one more cell to dig, and a build box one row wider is a second wall.
+        /// </summary>
+        [Test]
+        public void TheGateIsForBuildingAndNotForTheAreaTools()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.Mine };
+            director.Begin(At(3, 3));
+            director.DragTo(At(8, 4));
+
+            Assert.That(director.PreviewCount, Is.EqualTo(12),
+                "mine, fell and cancel are area tools and keep every cell the box covers");
+        }
+
+        /// <summary>
+        /// The gate is across the run and never along it, so the shortest wall anybody would
+        /// actually drag — two cells — is still two cells.
+        /// </summary>
+        [Test]
+        public void TheGateNeverShortensTheRunItself()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+            director.Begin(At(3, 3));
+            director.DragTo(At(4, 3));
+
+            Assert.That(director.Commit(), Is.EqualTo(new[] { At(3, 3), At(4, 3) }));
+        }
+
+        /// <summary>
+        /// A drag that turns a corner is one gesture and the player never said which axis was the
+        /// run, so the gated axis is decided afresh from the travel rather than latched at the
+        /// first movement.
+        /// </summary>
+        [Test]
+        public void TheRunAxisIsWhicheverOneTheDragHasTravelledFurther()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+            director.Begin(At(3, 3));
+
+            director.DragTo(At(7, 4));
+            Assert.That(director.PreviewCount, Is.EqualTo(5), "east, so the run is along x");
+
+            director.DragTo(At(4, 9));
+            Assert.That(director.PreviewCount, Is.EqualTo(7), "north now, so the run is along z");
+        }
+
         static List<CellRef> Cover(CellRef from, CellRef to)
         {
             var director = new DesignateDirector { Tool = DesignateTool.Mine };
