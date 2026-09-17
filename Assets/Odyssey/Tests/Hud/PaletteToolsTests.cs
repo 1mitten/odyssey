@@ -69,7 +69,7 @@ namespace Odyssey.Tests.Hud
         public void EveryLiveToolIsOnAChipSomewhere()
         {
             var drawn = new HashSet<string>(PaletteTools.Pinned);
-            foreach (var (_, _, tools) in PaletteTools.Categories)
+            foreach (var (_, tools) in PaletteTools.Categories)
                 foreach (string tool in tools)
                     drawn.Add(tool);
 
@@ -134,9 +134,9 @@ namespace Odyssey.Tests.Hud
         public void APinnedToolIsNotAlsoFiledUnderACategory()
         {
             foreach (string pinned in PaletteTools.Pinned)
-                foreach (var (_, label, tools) in PaletteTools.Categories)
+                foreach (var (key, tools) in PaletteTools.Categories)
                     Assert.That(tools, Does.Not.Contain(pinned),
-                        $"{pinned} is pinned and also listed under {label}, so it draws twice");
+                        $"{pinned} is pinned and also listed under {Registry.Label(key)}, so it draws twice");
         }
 
         /// <summary>
@@ -176,7 +176,7 @@ namespace Odyssey.Tests.Hud
             {
                 bool pinned = Array.IndexOf(PaletteTools.Pinned, tool.Key) >= 0;
                 bool filed = false;
-                foreach (var (_, _, tools) in PaletteTools.Categories)
+                foreach (var (_, tools) in PaletteTools.Categories)
                     if (Array.IndexOf(tools, tool.Key) >= 0) filed = true;
 
                 Assert.That(pinned || filed, Is.True,

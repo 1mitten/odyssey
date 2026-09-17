@@ -752,6 +752,11 @@ namespace Odyssey.Presentation.Ui
                             : "Click, then press a key. Default: " + HotkeyDirector.Display(def);
                 }
             }
+
+            // The orders strip names a key in every tooltip, read from the same binding map, so a
+            // rebind that stopped here would leave four buttons promising a key that no longer
+            // arms anything.
+            RefreshOrderTooltips();
         }
 
         /// <summary>

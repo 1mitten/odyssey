@@ -2804,3 +2804,124 @@ work itself.
   `HudLayout` — that four earlier rounds of correction had already paid for. **Seam work does not
   show up in the unit that does it; it shows up in the one after**, and this is what that looks
   like from the other end.
+- **The orders strip: Chop, Mine, Deconstruct and Cancel left the Build palette for the right-hand
+  gutter (owner, 2026-09-17; design `docs/design/14-hud-layout.md` §5.4, code
+  `HudShell.Orders.cs`).** The owner's words: *"the small buttons on the build menu for Chop Trees,
+  Mine, Deconstruct, Cancel should be a vertical button strip that sits below the depth control and
+  menu button — to the right hand side of the screen very close to the screen border … as this
+  enables us to quickly give orders without having to click the build button — we can use this in
+  future for more orders."*
+
+  **The fault was in the phrase the old design used about them.** `PaletteTools.Pinned` called them
+  "always on show" — always on show *inside a panel that is usually shut*, so giving an order cost
+  opening the palette first and the cost was paid on every order. That is the third turn of one
+  screw: Cancel *"was never missing — every way of finding it was missing"*, then Chop and Mine had
+  to be caught as the Orders category was dropped, and now the way of finding all four was behind a
+  button. They **moved** rather than being copied: the same verb reachable from two places is a
+  question the player has to stop and answer, and `EveryLiveToolIsDrawnSomewhere` is satisfied by
+  the strip.
+
+  **The rail and the strip are one column, and that is the part worth keeping.** The depth rail is
+  the one region the *world* sizes — its cells shrink to fit the screen — so its height is not a
+  number anybody can write down, and a strip anchored at a top of its own would sit under a rail of
+  one particular length and float away from or run into every other. They share an absolutely
+  positioned gutter and stack inside it, which is the clock-and-alerts fix again and the same rule:
+  never two panels in one corner with hand-picked tops. `RailPitch` gives the strip's room up
+  *before* it divides what is left among the layers, so the rail is still the region that gives.
+  Measured on the real panel: the rail ends at 412 and the strip runs 421 to 589 at 1920 × 1080,
+  against a command bar starting at 1031.
+
+  **The coverage ceiling moved from 18% to 19%, and it is the owner's to reverse.** The strip is
+  0.80% of a 1280 × 720 canvas — the smallest the game draws, which is what 150 per cent interface
+  scale gives on a 1080p monitor — and it took the model's worst resting case there from 17.75% to
+  **18.55%**. The precedent in this file is the opposite one: two rows of colonist cards were 8.1%
+  and `StripHeightShare` clamped the *region* rather than spending the budget. That worked because
+  the strip had a variable height to clamp; this one is four fixed buttons, and even at the 26 px
+  squares it wore in the palette header it measures 0.65%, so the choice was the control or the
+  number. Per region at 720p: command bar 6.81%, colonist strip 3.81%, stores 2.59%, clock 2.57%,
+  depth rail 1.97%, orders 0.80%. **The bar is the largest single spend** and it is full-width by
+  the owner's own instruction where the specification drew a centred pill — that is where to look
+  first if the number has to come back down. On the real panel the resting HUD still measures
+  10.8–11.0%; the 18.55% is the model's arithmetic at the smallest canvas with the stores panel
+  open and a colony past what the strip will draw.
+
+  **Four is no longer the ceiling**, which is the half of the owner's instruction that was about
+  the future rather than about today. `HudLayout.OrdersHeight` reads the length of
+  `PaletteTools.Pinned` rather than a number beside it, so a fifth order is one entry in that table
+  and one hue in `HudTheme.PinnedActionHue`; each further one costs 0.19% of a 720p canvas, which
+  is the budget to watch rather than the width. The palette header is the switcher, ESC and the X
+  now, and `RaiseBuildLayout` lost the hand-written re-index that put the header's four buttons
+  back into the lit-state map after every layout rebuild.
+
+  **Both tiers are green** — fast 600 Sim / 287 Hud, EditMode 1350, PlayMode 57 — with three new
+  PlayMode tests: the strip is against the right edge and under the rail at all three resolutions,
+  pressing a button arms the tool **without the palette opening**, and the open palette still wears
+  the held order's colour when the order is picked up from the strip. `HudSmokeTests` counts eleven
+  framed regions now rather than ten.
+
+  **Nobody has pressed Play on it.** `Logs/palette-rows.png` shows the strip in the gutter and is
+  the only thing anyone has looked at. What a picture cannot say: whether 34 px is the right size
+  for a button nobody has aimed at, and whether the strip wants to sit lower down that edge —
+  nearer the Menu button the owner named in the same sentence — rather than directly under the
+  rail.
+
+
+- **The header came back to one row, and the armed banner became the thing that says what mode you
+  are in (owner, 2026-09-17).** Four instructions in one afternoon, all downstream of the orders
+  strip.
+
+  **The palette header is one row again.** *"Shift the toggle view, esc and x onto the same row as
+  the build text — this will tidy that up."* Rows had a `flex-direction: column` override that
+  stacked the header into two lines, and it existed for one reason: the controls were eight buttons
+  and with BUILD and a three-part breadcrumb in front of them the row came to 426 px against a
+  372 px panel. Five of those eight had just left. What makes one row survive the *longest*
+  breadcrumb rather than only today's is that the identity half shrinks and its crumb ellipsises
+  while the controls half does not shrink at all — so "Structure › Roof and floor above › Wood"
+  gives way to the switcher and the X rather than pushing them off the end.
+
+  **The armed banner wears the order's colour, three pixels of it.** *"The border around the big
+  dialog … should be the same colour as that order … make that border much thicker."* It read
+  `HudTheme.PinnedActionHue`, which is what the strip's buttons and the palette's top edge already
+  use, so the button pressed, the panel and the banner cannot come to disagree about what a colour
+  means. **The sub-line came off** on the same instruction — it was the only place in the game the
+  right-click gesture was written down, and that loss is recorded rather than glossed; what covers
+  it now is the strip button staying lit and putting the tool down when pressed again. **And it
+  came down to the bar**, from 92 px to `ArmedBottom` (one panel gap above a 49 px bar), because
+  43 px of clear board made it read as floating rather than as belonging to the controls it is
+  about.
+
+  **One name for one thing, and the centralised place is now enforced.** *"Rename 'Cancelling
+  orders' to Cancel … rename this to 'Deconstruct' … keep the consistent in the wiki and the
+  language and UI … ensure that consistency can be enforced using a centralised place."* The banner
+  was the odd surface out: it said Chopping, Mining, Deconstructing and — in a C# literal, because
+  cancel has no colonist activity to borrow — "Cancelling orders", while the wiki, the palette's
+  breadcrumb and the strip's tooltips all said **Chop trees, Mine, Deconstruct, Cancel**. Both
+  renames the owner asked for were already the registry's own words, so the fix was to stop writing
+  any of the four in C#. The rule underneath: **an order is an imperative and an activity is a
+  gerund** — "Chopping" is `ui.status.felling`, what a *colonist* is doing, and the roster card
+  still draws it; the banner was mixing two namespaces.
+
+  **`RegistryTests.NoPlayerFacingNameIsWrittenInCSharp` is the enforcement**, and it is the shape
+  of `HopPriceHasOneOwnerTests`: read every C# file in `Odyssey.Hud` and `Odyssey.Presentation`,
+  fail on a string literal that equals a registry name in the six namespaces where one thing is
+  named on several surfaces at once. Scoped to those six because "Build" and "Menu" are registry
+  names *and* ordinary words; the scan found **eight hits and no false positives**, so the boundary
+  is measured rather than hoped for. **Two of them were live duplicates**, both agreeing with the
+  registry at the time — which is what a silent duplicate looks like until somebody corrects one
+  copy: the seven Build category labels sat in `PaletteTools.Categories` beside the keys that
+  already named them (the tuple is `(key, tools)` now), and the banner's build fallback said
+  `"Building"` beside `ui.status.building`. The test was verified by planting an offence and
+  watching it fail, then removing it.
+
+  **The banner has a floor, not a width.** *"Make the dialog a fixed predictable width — as the
+  longest order … at least this size until further notice (and let it extend beyond that)."*
+  `HudLayout.ArmedWidth` walks `PaletteTools.Pinned` through `OrderWord` and takes the longest, so
+  a rename moves the number with it — the owner's guess was "Chopping" and it is "Deconstruct".
+  Measured in PlayMode: all four orders draw at **139 px against a 138.5 px floor**, so the four
+  boxes are identical and the banner no longer resizes under the eye as the mode changes. An armed
+  build reads "Building wall of wood" and is allowed past it.
+
+  **All three tiers green** — fast 600 Sim / 288 Hud, EditMode 1351, PlayMode 59 — with three more
+  PlayMode tests: the header is one row in every layout at every category and resolution, the
+  banner wears each of the four colours at the right thickness with exactly one label, and each
+  order's box reaches the floor.

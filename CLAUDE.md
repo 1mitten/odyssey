@@ -50,6 +50,16 @@ The HUD reads its labels from the same file: `emit_labels.py` generates `Registr
 `RegistryTests` fails the fast tier on any key the CSV does not know. A content commit runs both
 checks.
 
+**And the reverse is enforced too, since 2026-09-17** (owner: *"keep the consistent in the wiki and
+the language and UI … ensure that consistency can be enforced using a centralised place"*).
+`RegistryTests.NoPlayerFacingNameIsWrittenInCSharp` reads every C# file in `Odyssey.Hud` and
+`Odyssey.Presentation` and fails on a string literal that equals a registry name in the six
+namespaces where one thing is named on several surfaces at once (`ui.arch.tool.*`,
+`ui.arch.category.*`, `ui.status.*`, `ui.res.*`, `ui.alert.*`, `ui.job.*`). **Do not answer it by
+rewording the literal** — call `Registry.Label(key)`, or the wiki and the screen will disagree the
+first time somebody corrects one of the two copies. It found two on the day it was written: the
+seven Build category labels, and the armed banner's `"Building"`.
+
 Both `--check`s are the gate and belong in CI beside the test tiers. Two notes before extending
 it. The registry is hand-authored **only until the Def set covers it**: then `icon-keys.csv` is generated
 one way out of the Defs and committed, so the wiki and the build-gating icon tests share one
@@ -98,6 +108,22 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   key is unchanged, because `ui.status.felling` draws real art and `icon-map.csv` is keyed the same
   way. Design, what is still open and the by-hand procedure are
   `docs/design/16-cancel-and-deconstruct.md`.
+  **The four orders are a strip down the right-hand gutter** (`claude/build-palette-layouts`,
+  2026-09-17). Chop, Mine, Deconstruct and Cancel left the Build palette's header for a column of
+  34 px buttons under the depth rail, against the right edge of the screen (owner: *"a vertical
+  button strip that sits below the depth control … this enables us to quickly give orders without
+  having to click the build button — we can use this in future for more orders"*). They **moved**,
+  they were not copied. Design is `docs/design/14-hud-layout.md` §5.4; code is
+  `HudShell.Orders.cs`. Three things not to undo by tidying. **The rail and the strip are one
+  column** — the rail is the region the *world* sizes, so a strip with a top of its own would float
+  away from it, and `RailPitch` gives the strip's room up before dividing what is left among the
+  layers. **Four is no longer the ceiling**: `HudLayout.OrdersHeight` reads the length of
+  `PaletteTools.Pinned`, so a fifth order is one row of that table and one hue. And **the coverage
+  ceiling went from 18% to 19%** — the strip is 0.80% of the smallest canvas the game draws and
+  took the model's worst resting case there to 18.55%; `HudLayout.CoverageCeiling` carries the
+  per-region measurement and the argument, and **it is the owner's to reverse**. Nobody has pressed
+  Play on it.
+
   **The Build palette is now three layouts over one selection** (`claude/build-palette-layouts`,
   2026-09-17) — the owner's 4a *Rows* (the default), 4b *Rail* and 4c *Bar*, switchable from the
   panel header and from Options › Interface, with the choice stored. Design, the measurements and
@@ -107,6 +133,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   specification asked, but Orders held Mine and Chop — so both are **pinned in the header** beside
   Deconstruct and Cancel rather than lost to the `M` and `C` keys, which is the Cancel fault of the
   day before repeated exactly; `EveryLiveToolIsDrawnSomewhere` is the general form of that rule.
+  (All four then left the header for the orders strip, above — the rule is what followed them.)
   **The panel is docked, not floating, and the default is a column** (owner: *"tight and flush to
   other elements to enable full use of space"*, then *"use the left hand side of the screen instead
   of the width"*) — the mockups were drawn over a bare board and would have covered the stores panel
@@ -401,12 +428,13 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~12 s, no Unity): **600 Sim + 309 Hud**; Long tier **20**.
-  Unity tier on 2026-09-17, on the merge of the Build palette and U39: EditMode **1383 total, 1372
-  passed, 0 failed**; PlayMode **60 total, 57 passed, 0 failed** (the rest are pre-existing
-  `[Explicit]` or ignored rows). The Hud figure is **exactly** 257 + 28 + 24, so neither branch lost
-  a test to the merge — which is the cheapest check there is that a textually clean auto-merge of
-  two files both sides edited was also a correct one.
+- **Fast tier** (`scripts/test-fast.sh`, ~12 s, no Unity): **600 Sim + 312 Hud**; Long tier
+  **20**. Unity tier on 2026-09-17, on the merge of the orders strip and U39: EditMode
+  **1386 total, 1375 passed, 0 failed**; PlayMode **65 total,
+  61 passed, 0 failed** (the rest are pre-existing `[Explicit]` or ignored rows). The
+  Hud figure is **exactly** 309 + 3, so neither branch lost a test to the merge — which is the
+  cheapest check there is that a textually clean auto-merge of two files both sides edited was also
+  a correct one.
   **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
   touches the composition root or the HUD shell is unproven until Unity has compiled it, however
   green the 11 seconds look (`docs/lessons.md`).
@@ -503,6 +531,15 @@ no region spans two layers.
   30 px while ADR 0007 says not to draw pixel art below 32 — measured, 30 px reads, 17 px loses the
   grooves, 16 px goes to noise, and a **framed** sheet-06 tile at 17 px is mostly frame
   (`Logs/skill-icons.png`).
+- **Nobody has pressed Play on the orders strip, or on the armed banner it raises.** Both are
+  measured — the strip against the rail and the screen edge at three resolutions, the banner's four
+  colours, its 3 px border and its 139 px box — and `Logs/palette-rows.png` is all anybody has
+  looked at. **The banner lost the line that taught right-click**, which is the one thing to watch
+  for in a playtest: if putting a tool down stops being obvious, that sentence is what was carrying
+  it. Two questions a picture cannot answer: whether a 34 px button is the right size for something
+  aimed at without looking, and whether the strip wants to sit **lower** down that edge — nearer
+  the Menu button, which the owner named in the same sentence — rather than directly under the
+  rail. The **19% coverage ceiling** it cost is in the same basket.
 - **Nobody has pressed Play on the cancel tool or on right-click.** Both tiers are green and
   neither can say whether right-click disarms when the hand expects it to, or whether the six-pixel
   threshold separating a right-*click* from a right-*drag* is the right number — an orbit is a
