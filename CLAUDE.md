@@ -215,6 +215,16 @@ That rule is load-bearing; keep it.
 Frame time under the real player loop, against a 5 ms budget: meadow ~0.99 ms, city ~1.56 ms on an
 RTX 5070 Ti at 640 x 480. The city's move from 0.88 to 1.56 ms is **unexplained** and still open.
 
+**The instancing is bounded by variety, not quantity, and that is now measured** (OQ-03,
+2026-09-17, `ChunkBucketScaleTests`). 20,000 wall cells of four stuffs over 64 chunks give **512
+buckets** — exactly chunks x kinds x tints — and **100,000 instances**, 195 per bucket. The played
+meadow submits `1502 draw calls, 34,961 instances, 104 chunks`, steady submit **0.22 ms a frame**.
+**One inconsistency found and left alone:** the mesher draws five instances per wall cell whatever
+is beside it, while the grid has 79,600 exposed faces rather than 80,000 — the 400 missing point
+off the edge of the board. `TheWorldBoundaryIsNotAnExposedFace` applies that rule to terrain and
+not to edifice walls. It is 0.4% of instances and costs nothing; the test pins today's numbers so
+OQ-46 has a before, and so a deliberate fix reads as deliberate.
+
 ### Fixed decisions
 
 - **Cell size: 2.5 × 2.5 × 3.0 m** (ADR 0002), irreversible. Half-heights and slopes are a drawing

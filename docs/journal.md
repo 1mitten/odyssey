@@ -1734,3 +1734,38 @@ work itself.
     `Tests and gates` line conflicted for the reason recorded that morning — it is a shared
     counter with no owner — and took main's number before being re-measured. Verified after the
     merge: fast tier **494 Sim + 170 Hud**, Long tier **19**, both content gates green.
+
+- **The instancing holds at scale, and the scale found a boundary the small fixtures could not
+  (OQ-03, 2026-09-17).** The rendering design rests on one structural property: a draw bucket is
+  one *(module, part, tint)* within one chunk, so submission is bounded by the **variety** on the
+  board and not by the **quantity**. Every mesher test until now used an eight-by-eight board,
+  where that distinction cannot appear at all.
+  - **Measured: 20,000 wall cells of four stuffs over 64 chunks give 512 buckets and 100,000
+    instances**, 195 instances per bucket. 512 is exactly 64 × 2 kinds × 4 tints — the bound is
+    *met*, not merely respected, because this board carries every combination in every chunk. The
+    claim holds.
+  - **A checkerboard rather than a solid field, deliberately.** Twenty thousand walls packed solid
+    would have almost no exposed faces: it would stress the bucket count and leave the instance
+    count flat, and the instance count is the half that is supposed to grow. Islands give every
+    wall four exposed sides.
+  - **What the scale found.** The mesher draws **exactly five instances per wall cell** — four side
+    panels and one fill-and-cap — whether or not a side is exposed. Counting faces independently
+    off the grid gives **79,600**, not 80,000: the 400 missing are the faces that point off the
+    edge of the board, 100 along each side, and the mesher draws them anyway.
+    `TheWorldBoundaryIsNotAnExposedFace` establishes exactly that rule — *"there is no outside of
+    the map, so there is nowhere those faces could be seen from"* — for **terrain**, and it is not
+    applied to **edifice walls**. On an eight-by-eight fixture the difference is a handful of
+    instances and invisible; at scale it is 400 of 100,000.
+  - **0.4%, and recorded rather than fixed.** It costs nothing; it is an inconsistency between two
+    kinds of geometry rather than a performance problem. This row may not touch
+    `Presentation/Rendering/` and `ChunkMesher` is the owner's live file, so the test pins the
+    behaviour **as it is**, with a failure message saying that a deliberate edge-culling fix should
+    move the number. Drift fails; an intended change reads as intended.
+  - **Both figures are exact on purpose**, because this is the *before* half of `OQ-46`, whose
+    acceptance is that mesh contributors leave the bucket counts identical. "About the same" cannot
+    be compared a month later.
+  - **The slice measurement the row asks for**, on the played meadow at 120 × 120 × 16:
+    `draw calls 1502, instances 34961, chunks drawn 104, materials 19`; first slice 56.03 ms
+    including 200 chunk meshes, **steady submit 0.22 ms a frame**, warm full re-mesh of 200 chunks
+    13.38 ms at 0.067 ms a chunk.
+  - **Verified:** Unity EditMode **1121 total, 0 failed**.
