@@ -280,7 +280,7 @@ namespace Odyssey.Sim.Construction
         /// </summary>
         public static readonly string[] BuildingOrder =
         {
-            "Building_None", "Building_Wall", "Building_Floor", "Building_DeckPlate",
+            "Building_None", "Building_Wall", "Building_Floor", "Building_DeckPlate", "Building_Ladder",
         };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
@@ -350,6 +350,17 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_DeckPlate", label = "deck plate", edifice = CoreContent.EdificeNone,
                     slab = true, covering = true, blocking = false, costCount = 3, workToBuild = 60,
                     minSkill = 0, iconKey = "ui.arch.tool.deckplate",
+                },
+
+                // The way up (U43). An edifice like a wall, and `blocking = false` is what makes it
+                // one you can stand in: a ladder you cannot enter is a decoration. The connector
+                // that actually joins the two layers is registered by ConstructionGrid.Raise,
+                // because a NavGraph is not something a content table can reach.
+                new BuildingDef
+                {
+                    defName = "Building_Ladder", label = "ladder", edifice = CoreContent.EdificeLadder,
+                    blocking = false, costCount = 4, workToBuild = 90, minSkill = 0,
+                    iconKey = "ui.arch.tool.ladder",
                 },
             };
         }

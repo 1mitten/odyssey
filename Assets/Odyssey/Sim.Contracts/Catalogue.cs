@@ -67,7 +67,17 @@ namespace Odyssey.Sim.Contracts
         /// wants a floor already and never asks the support rule, because it cannot fall.
         /// </summary>
         public const int DeckPlate = 3;
-        public const int Count = 4;
+
+        /// <summary>
+        /// A ladder: the first thing a colony can build that goes <b>up</b>. One cell, joining the
+        /// floor it stands on to the floor directly above it.
+        ///
+        /// <para>Until U43 a second storey was decorative — measured, every slab came back
+        /// walkable and unreachable — because vertical movement goes through a
+        /// <c>Pathing.Connector</c> and connectors only ever came from worldgen.</para>
+        /// </summary>
+        public const int Ladder = 4;
+        public const int Count = 5;
     }
 
     /// <summary>

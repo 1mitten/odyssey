@@ -116,6 +116,37 @@
   </BuildingDef>
 
   <!--
+    U43. The way up, and the first thing a colony can build that goes anywhere but sideways.
+
+    Until this existed a second storey was decorative: every slab measured walkable and
+    UNREACHABLE, because vertical movement in this game goes through a Pathing.Connector and
+    connectors only ever came out of worldgen. A ladder is the cheapest honest fix - one cell,
+    joining the floor it stands on to the floor directly above it.
+
+    blocking false, and that is the whole of what makes it work: a ladder you cannot stand in is
+    a decoration. edifice 7 is CoreContent.EdificeLadder, the same record the ruined city stamps,
+    so a ladder a colonist built and a ladder the generator left are the same thing to the mesher,
+    the picker and the nav graph.
+
+    costCount 4 and workToBuild 90: between a floor's 4/120 and a wall's 5/135. It is less material
+    than a wall and quicker to put up than a floor, and like both of those neither number derives
+    from anything. The owner's to tune.
+
+    Stairs are deliberately NOT here yet. A stair is two cells and rises 1.5 m per cell, so it
+    carries a placement rule of its own; a ladder needs none.
+  -->
+  <BuildingDef>
+    <defName>Building_Ladder</defName>
+    <label>ladder</label>
+    <edifice>7</edifice>
+    <blocking>false</blocking>
+    <costCount>4</costCount>
+    <workToBuild>90</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.ladder</iconKey>
+  </BuildingDef>
+
+  <!--
     The four stuffs with no item are what the ruined city is MADE OF, not what a colony builds
     with: nothing produces them, no colonist can carry one, and offering them would be offering an
     order that can never be filled. They keep their indices, because every stamped wall in the city

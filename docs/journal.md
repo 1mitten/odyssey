@@ -2705,3 +2705,52 @@ work itself.
 
   - **Verified:** fast tier **578 Sim + 195 Hud**, Unity EditMode **1,247 total, 1,238 passed, 0
     failed**, both content gates clean.
+- **U43, the ladder: a second storey you can stand on (2026-09-17).** The owner played the build
+  and asked the question that had not occurred to anybody: *"how do you even get up on the slab?"*
+
+  **Measured before answering, and the answer was worse than "later work".** Every slab in the game
+  came back **walkable and unreachable** — a lone slab on a wall, the corner of a roof, the middle
+  of a roof. U29 shipped floors, collapse, rubble and a support model, and a colony could build a
+  second storey, pull it down on itself, and never once stand on it. **Second storeys were
+  decorative and nothing said so.**
+
+  **Why:** vertical movement goes through a `Pathing.Connector`, connectors were produced by
+  worldgen and registered once at world build, and nothing created one at run time. Stairs and
+  ladders existed as edifices the generator stamps, with the climb pose live in presentation — but
+  `BuildingOrder` held None, Wall, Floor, DeckPlate, so neither could be built, and the plan had no
+  row for it because the vertical slice assumed the ruined city's own stairs. Fine for a city;
+  useless on a meadow.
+
+  **It was far cheaper than feared.** `NavGraph.AddConnector` and `RemoveConnector` already existed
+  and already mark their cells dirty, so the incremental rebuild picks a new one up on its own. The
+  unit is one `BuildingDef`, `blocking = false` so the cell can be stood in, and one idempotent
+  `RefreshLadder` called from every place either end can change — the ladder going up, the floor
+  above it going in, and either coming out. **Called from all four on purpose**: a player may build
+  the ladder first or the floor first, and a rule that only worked in one order is a fault nobody
+  could describe.
+
+  **No save-format change, and that is the interesting half.** A built ladder is an edifice and
+  edifices are saved; its connector is **derived**, rebuilt from the edifice list by
+  `ColonyWorld.RebuildDerived` — the same argument that file already makes about structural support
+  and the region graph. `NavGraph.OneCellConnectorAt` asks the graph rather than keeping a map from
+  cell to connector id, because such a map would be empty after a load and the demolish path would
+  quietly leave a portal behind wherever a loaded ladder used to be. `AWayUpSurvivesASaveAndALoad`
+  is the test.
+
+  **The wrong diagnosis it cost, recorded because it will happen again.** The first run of the
+  headline test failed: the connector was registered, both ends walkable, and a full `Rebuild` did
+  not help. Instrumenting rather than reading found it in one go — **`pawn mode Hauler`**.
+  `Pawn.Mode` is the *current job's* mode and the colonist was mid-haul; `Connector` has always
+  excluded haulers from a ladder (*"a hauler's bulky load and an animal's lack of hands both rule a
+  ladder out"*). The feature was working and the test was asking in the wrong mode.
+
+  **And that exclusion is a real consequence, not a detail.** A colonist can climb to an upper
+  storey and **cannot carry building material up one**, so nothing can be built up there with a
+  ladder alone. `AHaulerCannotClimbALadderSoNothingCanBeCarriedUpOne` pins it, so the next person
+  reads the rule instead of rediscovering it the same way. **That is what makes stairs the next
+  unit rather than a maybe** — `ConnectorKind.Stair` carries `AllMask`, and a stair is two cells
+  rising 1.5 m each, so it wants a placement rule of its own.
+
+  - **Verified:** fast tier **585 Sim + 199 Hud** (six new, `LadderTests`), both content gates
+    clean, the building fingerprint re-baked deliberately with what moved beside it. **Nobody has
+    pressed Play on a built ladder.**

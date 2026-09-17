@@ -178,6 +178,14 @@ namespace Odyssey.Sim.Pawns
         public void RebuildDerived()
         {
             _solver.SolveFull();
+
+            // A built ladder's connector is derived, not saved — the same argument as support, one
+            // level along (U43). The edifice comes back with the save; the portal it opens between
+            // two layers is worked out again here, before the rebuild that turns it into an edge.
+            // Worldgen's own ladders are already registered, because the board is regenerated from
+            // its seed before a save is read over it.
+            Construction.RebuildLadderConnectors(Pawns);
+
             _nav.Rebuild();
         }
 

@@ -195,7 +195,7 @@ namespace Odyssey.Tests.Hud
             foreach (PaletteTool tool in PaletteTools.Live)
                 Assert.That(tool.WantsMaterial,
                     Is.EqualTo(tool.Key == PaletteTools.Wall || tool.Key == PaletteTools.Slab
-                        || tool.Key == PaletteTools.Paving),
+                        || tool.Key == PaletteTools.Paving || tool.Key == PaletteTools.Ladder),
                     $"{tool.Key} disagrees with itself about whether it is built out of something");
         }
 

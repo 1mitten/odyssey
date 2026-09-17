@@ -87,6 +87,12 @@ namespace Odyssey.Hud
         /// <see cref="Slab"/> gives about handle values.
         /// </summary>
         public const string Paving = "ui.arch.tool.deckplate";
+
+        /// <summary>
+        /// The way up (U43). Under <c>Structure</c>, beside the wall and the slab, because a wall,
+        /// its floor and the ladder onto it are one job.
+        /// </summary>
+        public const string Ladder = "ui.arch.tool.ladder";
         public const string Mine = "ui.arch.tool.mine";
         public const string Fell = "ui.arch.tool.fell";
         public const string Cancel = "ui.arch.tool.cancel";
@@ -99,7 +105,7 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly (string key, string label, string[] tools)[] Categories =
         {
-            ("ui.arch.category.structure", "Structure", new[] { Wall, Paving, "ui.arch.tool.door", "ui.arch.tool.stair", "ui.arch.tool.ladder", Slab, "ui.arch.tool.reclaim" }),
+            ("ui.arch.category.structure", "Structure", new[] { Wall, Paving, "ui.arch.tool.door", "ui.arch.tool.stair", Ladder, Slab, "ui.arch.tool.reclaim" }),
             ("ui.arch.category.orders", "Orders", new[] { Mine, Fell, "ui.arch.tool.forbid", "ui.arch.tool.clearrubble" }),
             ("ui.arch.category.zones", "Zones", new[] { "ui.arch.tool.stockpile", "ui.arch.tool.growzone", "ui.arch.tool.dumping" }),
             ("ui.arch.category.production", "Production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
@@ -153,6 +159,10 @@ namespace Odyssey.Hud
             new PaletteTool(Paving,
                 d => d.ArmBuild(BuildingHandle.DeckPlate),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.DeckPlate,
+                wantsMaterial: true),
+            new PaletteTool(Ladder,
+                d => d.ArmBuild(BuildingHandle.Ladder),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Ladder,
                 wantsMaterial: true),
             new PaletteTool(Mine, Toggle(DesignateTool.Mine), Holding(DesignateTool.Mine)),
             new PaletteTool(Fell, Toggle(DesignateTool.Fell), Holding(DesignateTool.Fell)),

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.Saving;
 using Odyssey.Sim.World;
@@ -527,6 +528,74 @@ namespace Odyssey.Sim.Construction
             //    it full support; a slab raised is itself a medium that carries load sideways to
             //    the slabs beside it.
             ctx.MarkStructureChanged(cell);
+
+            // 5. A ladder joins two layers, and a slab is what gives a ladder somewhere to arrive.
+            //    Both are refreshed here because either can be the one that completes the pair.
+            RefreshLadder(ctx, cell);
+            RefreshLadder(ctx, cell - _grid.Size.LayerStride);
+        }
+
+        /// <summary>
+        /// Make the connector under this cell agree with what is actually standing there.
+        ///
+        /// <para><b>This is the line that makes an upper storey somewhere you can go.</b> Measured
+        /// before it existed: every slab in the game came back <c>walkable = true, reachable =
+        /// false</c> — a lone slab, a roof corner, a roof middle. Vertical movement goes through a
+        /// <c>Pathing.Connector</c>, and connectors only ever came out of worldgen, so a colony
+        /// could build a second storey and never stand on it (U43).</para>
+        ///
+        /// <para><b>Idempotent, and called from everywhere either end can change</b> — the ladder
+        /// going up, the floor above it going in, and either coming out again. That is deliberate:
+        /// a player may build the ladder first or the floor first, and a rule that only worked in
+        /// one order would be a fault nobody could describe.</para>
+        ///
+        /// <para>A connector wants both ends walkable, which is the registrar's own rule. So a
+        /// ladder with nothing above it registers nothing and is simply a thing on a wall until a
+        /// floor arrives over it.</para>
+        /// </summary>
+        void RefreshLadder(PawnContext ctx, int cell)
+        {
+            if ((uint)cell >= (uint)_grid.Size.CellCount) return;
+
+            bool wanted = IsLadder(cell);
+            int above = cell + _grid.Size.LayerStride;
+            if (wanted)
+                wanted = above < _grid.Size.CellCount
+                    && _grid.IsWalkable(cell) && _grid.IsWalkable(above);
+
+            int existing = ctx.Nav.OneCellConnectorAt(cell);
+            if (wanted == (existing >= 0)) return;
+
+            if (wanted) ctx.Nav.AddConnector(ConnectorKind.Ladder, new[] { cell }, new[] { above });
+            else ctx.Nav.RemoveConnector(existing);
+        }
+
+        /// <summary>
+        /// Re-derive every ladder's connector, for a colony that has just been loaded.
+        ///
+        /// <para>A built ladder is an edifice and edifices are saved; its connector is <b>not</b>
+        /// saved, because it is derived — the same argument <c>ColonyWorld.RebuildDerived</c>
+        /// already makes about structural support and the region graph, and the reason this unit
+        /// needs no save-format change at all. Worldgen's own ladders come back when the seed is
+        /// regenerated; these are the ones a colony added afterwards.</para>
+        /// </summary>
+        public void RebuildLadderConnectors(PawnContext ctx)
+        {
+            for (int i = 0; i < _edifices.Count; i++)
+            {
+                PlacedEdifice placed = _edifices[i];
+                if (placed.Removed || placed.Def != CoreContent.EdificeLadder) continue;
+                RefreshLadder(ctx, placed.CellIndex);
+            }
+        }
+
+        /// <summary>Is a ladder standing in this cell, whoever put it there?</summary>
+        bool IsLadder(int cell)
+        {
+            int handle = _grid.Edifice[cell];
+            if (handle < 0 || handle >= _edifices.Count) return false;
+            PlacedEdifice placed = _edifices[handle];
+            return !placed.Removed && placed.Def == CoreContent.EdificeLadder;
         }
 
         /// <summary>
@@ -588,6 +657,9 @@ namespace Odyssey.Sim.Construction
             // This is the line that lets a player pull the last support out of a room and watch it
             // come down, which is what the unit is for.
             ctx.MarkStructureChanged(cell);
+
+            // And a ladder below has just lost the landing it arrived at (U43).
+            RefreshLadder(ctx, cell - _grid.Size.LayerStride);
             return true;
         }
 
@@ -641,6 +713,11 @@ namespace Odyssey.Sim.Construction
             //    one line: pull a wall out of a stamped building and the slab it was carrying has
             //    to earn its support like anything else.
             ctx.MarkStructureChanged(cell);
+
+            // 5. A ladder taken down takes its connector with it, and so does whatever was holding
+            //    a ladder up one layer below (U43).
+            RefreshLadder(ctx, cell);
+            RefreshLadder(ctx, cell - _grid.Size.LayerStride);
             return true;
         }
 

@@ -44,7 +44,9 @@ namespace Odyssey.Tests.Sim
         // U42 added Building_DeckPlate: the same slab laid on ground that is already there, 3
         // stuff and 60 ticks, and the `covering` field that inverts one question — it wants a cell
         // that IS floored and never asks the support rule, because it cannot fall.
-        const ulong BuildingFingerprint = 12120782433794582000UL;
+        // U43 added Building_Ladder: an edifice like a wall, blocking false so it can be stood in,
+        // 4 stuff and 90 ticks. It is the first buildable thing that goes up rather than sideways.
+        const ulong BuildingFingerprint = 7086526741654431591UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

@@ -162,6 +162,14 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   the slab stays in `Structure` alone, and a test pins all of it. Note the asymmetry:
   `BuildingHandle.Floor` is still the **slab** and `BuildingHandle.DeckPlate` is still paving, because
   handle values are a save contract and a swap would compile in silence.
+  **`U43` is the way up, built 2026-09-17.** Before it, every slab in the game measured **walkable
+  and unreachable** — U29 shipped floors and collapse and a colony could never stand on a second
+  storey. Vertical movement goes through a `Pathing.Connector` and connectors only came from
+  worldgen; `ConstructionGrid.RefreshLadder` registers one at run time, idempotently, from every
+  place either end can change. **No save-format change**: the connector is derived from the edifice
+  list by `RebuildDerived`, like support and the region graph. **A hauler cannot climb a ladder**
+  (`Connector`'s own long-standing rule), so a colonist can get up but cannot carry material up —
+  which is why **stairs are the next unit rather than a maybe**.
   **Nothing tests that a click reaches the game**, and that is why this line of work has had three
   silent failures: a PlayMode test cannot press a button (input update type `Editor`, so
   `wasPressedThisFrame` never fires), which `FloorToolClickTests` and `InputHarnessTests` both carry
@@ -317,7 +325,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **578 Sim + 195 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **585 Sim + 199 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
