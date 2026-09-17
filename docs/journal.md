@@ -1222,6 +1222,463 @@ work itself.
   - **Verified:** fast tier **461 Sim + 117 Hud** in 11 s — the same wall-clock as before the
     change, after the trace measurement was trimmed — and Long tier **15**.
 
+- **The settings panel grows up, 2026-09-17.** Keybindings, the audio faders, a camera-speed
+  ladder, a developer-overlay toggle and a two-click exit landed in B17, on `feat/front-ui`
+  ahead of a PR.
+
+  - **`HotkeyDirector` exists at last.** Design 09 §3 row 23 had reserved it since the input
+    spec was written; every key in the game was a hardcoded `Keyboard.current.xKey` poll in
+    four files. It is Unity-free in `Odyssey.Hud`, holds bindings as **actions with two
+    slots** (a primary and an alternate — the honest shape for a game that pans on WASD *or*
+    arrows and steps the slice on R/F *or* PgUp/PgDn), refuses a key another action owns
+    rather than silently swapping it (§6's rule), and persists as key-name strings under
+    `odyssey.ui.keys.*` through `ISettingsStore`, which grew `ReadString/WriteString`.
+    **One context, for now**: no key in the game means two things today, so the first cut is
+    a single global map; contexts arrive with `InputRouter` the day a key earns a second
+    meaning. Escape and Shift stay fixed and unbindable — the unwind rule and the fast
+    modifier — and the function keys stay out because the command bar has promised them to
+    panels.
+  - **`HotkeyClashTests` changed shape, not job.** It still greps the Presentation assembly,
+    but what it asserts now is that *no key is read by name at all*: the only whitelisted
+    reads are `escapeKey` (the unwind rule), `allKeys` (the rebind capture, which names no
+    key) and the two shift modifiers. The reserved set a command cap is checked against is
+    read out of the binding map's own defaults — the hand-written list this test replaced in
+    its last life was wrong in exactly the way its own doc comment describes.
+  - **While a slot is listening, every key press belongs to the rebind.** The three pollers
+    (rig, designate, bar) sit the frame out when `Listening != null`, so offering M to a
+    slot cannot arm the mine tool on the way past. Escape cancels the wait *before* the
+    unwind order runs — the rule lives in `HotkeyDirector.ConsumeEscape`, decided in the
+    fast tier.
+  - **The faders found the panel that was promised them.** `AudioSettingsStore` has held
+    five dB faders, persisted and applied at boot, since the sound work landed — its own doc
+    said they "belong in that panel beside them when B17 grows an audio section". The
+    section is a dB rung ladder per bus (Mute, −36, −24, −16, −10, −5, 0), the Hud-side
+    `SettingsBus` mirroring `SoundBus` across the ADR 0003 seam, and the presenter writes
+    through the existing store — no second copy of a volume anywhere. **Rungs, not sliders,
+    everywhere**, for the reason the interface scale set: honest answers, no fractional
+    states, and the ladder idiom the panel already owns.
+  - **Camera speed and the developer readout came along because they were free.** The speed
+    is a three-rung multiplier (0.6×, 1×, 1.5×) on the rig's tuned pan/zoom — translation
+    only, like shift, leaving orbit's mouse-delta mapping alone. The developer overlay is
+    now a persisted toggle seeded from the overlay director: the backquote key still flips
+    it, and the preference follows, because the key never wrote anything down and the row
+    does.
+  - **Exit is two clicks, pinned under the tabs.** Nothing is saved, so one click in a
+    panel a player reaches across for the close button would be a trap; the first click arms
+    the row ("Quit? Click again"), the second raises `ExitRequested`, which the presenter
+    answers with `Application.Quit()` — stop-play in the editor, or a quit button that
+    silently does nothing teaches the player not to trust it. Closing the panel stands the
+    row down. It lives in B17 "for now"; B18's game menu is its documented home when that
+    exists.
+  - **One pre-existing red was retired on the way in** (fix-before-features rule): the
+    building-work tripwire in `WorkSwingTests` fired — `JobHandle.Build` now maps to the
+    hammer style — and the test's own comment says what to do when it does. Both the row and
+    the tripwire are gone.
+  - **Verified:** fast tier **158 Hud** (472 Sim), Unity EditMode **1064**, PlayMode **27**,
+    both content gates `--check`. **Not verified:** a human eye — the Keys tab is the tallest
+    thing the panel has held (19 rows in five groups); at 150 per cent interface scale on a
+    1080p screen it is within a few pixels of the screen height, and if it clips, the window
+    wants a max-height and a scroll, which no panel here has yet.
+
+- **The region graph is measured, and it corrects the file that predicted it (OQ-18, 2026-09-17).**
+  `docs/research/d-04-pathfinding.md` reasoned about forty layers from the map dimensions and said
+  so in its own Confidence section; its "Could not be determined" list named the gap — the real
+  distribution of live chunks at our dimensions, "needed to turn the region-count estimate from an
+  upper bound into a budget". Both generators and the graph exist now, so
+  `NavGraphStatisticsTests` builds each map at 250 × 250 × 40 and walks the graph.
+  - **The budget was right and its stated reason was wrong**, which is the kind of result only a
+    measurement produces. "Low tens of thousands, not the theoretical 50 k-plus" holds: 24,141
+    regions on the wilderness, 23,240 on the city. But d-04 credited that to uniformity —
+    "most chunks in a ruined-city column are all-air or all-solid; those allocate no regions at
+    all" — and **all-solid is precisely the case that allocates here.** `RegionKind.Impassable`
+    exists on purpose, so rooms and atmosphere have a substrate; underground rock therefore fills
+    every block with exactly one region. The city is 35.0% live blocks and the wilderness
+    **92.1%**, a factor of eight between two maps that are both correct.
+  - **What actually bounds the count is the block.** A region is a connected part of one 10 × 10
+    block of one layer, so the largest region on either map is exactly 100 cells and the floor is
+    one region per live block. The ceiling is blocks × layers, 25,000, and both maps land just
+    under it from below. The estimate would have been right whatever the generators did.
+  - **The number that matters to the top technical risk is the walkable fraction, and it is
+    small**: 1,649 of 24,141 regions on the wilderness (6.8%) and 9,006 of 23,240 on the city
+    (38.8%). Impassable regions carry no links and are excluded from the district flood, so the
+    hierarchical search d-04 recommends traverses far less than the region totals imply. Worth
+    having before attacking the 65% of tick that is A-star rather than after.
+  - **Three things nobody had asked for and the walk handed over anyway.** Falls are the city's
+    dominant edge — 11,408 of 20,761 links, 55%, which puts a number behind "collapsed floors are
+    the signature feature". Traverse mode changes connectivity only where there is architecture:
+    colonists see 3,291 districts on the city and haulers, barred from ladders, see 3,628 — 337
+    places reachable only by ladder — while all four modes see 37 on the wilderness. And the
+    wilderness is **not one connected place**: 37 districts on a map with no buildings, which is
+    the sealed caverns and ledges the generator makes.
+  - **The assertion that failed first is the reason the test is worth its runtime.** It was written
+    to encode d-04's uniformity claim, and it failed on the wilderness at 23,031 of 25,000 live
+    blocks. The claim, not the code, was wrong. The uniformity figure is now recorded and not
+    asserted — it is a generator property that differs eightfold between two correct maps, and an
+    assertion on it would fail the day cavern density is tuned. What replaced it are the two
+    structural guarantees the layered design rests on, checked over all 2.5 million cells of each
+    board: **no region spans two layers**, and no region outgrows its block.
+  - **Nothing in `NavGraph` was widened for this.** There is no public link enumerator, so links
+    are counted by walking each live region's adjacency and de-duplicating by id. Adding an
+    accessor for a test's convenience is the habit the seam work exists to break.
+  - **Verified:** fast tier **478 Sim + 158 Hud**, Long tier **17** in 8 s — the two new cases add
+    about 0.9 s. Full rebuild at the scale target: 168 ms wilderness, 124 ms city, the all-dirty
+    worst case and not a per-tick cost.
+  - **Found on the way:** `CLAUDE.md` on `main` recorded **461 Sim + 117 Hud** while `main` in fact
+    ran 478 + 158. That line is edited by every branch that adds a test and is therefore wrong
+    most of the time; PR #69 carries its own different number for the same line. It is a shared
+    counter with no owner, and it will keep going stale until it is either generated or dropped.
+
+- **The real tick is measured, and the estimate it replaces was conservative by half (OQ-19,
+  2026-09-17; ADR 0005 addendum).** The ADR's margin table — "the most important number in the
+  benchmark", by its own description — came from the D1 spike, a program that *mirrored* the tick
+  rather than being it, and its post-hierarchical figure of 0.88 ms was arithmetic: the 2.4×
+  pathfinder win applied by hand to the spike's phase 3. The ADR asked for the re-run in as many
+  words. `TickBenchmarkTests` does it on the real `SimWorld.Tick`.
+  - **The first run measured the wrong thing, and the number was the clue.** Fifty pawns on a
+    250 × 250 × 40 board came out at **0.021 ms a tick** — forty times cheaper than the estimate.
+    Not a triumph: a colony left to itself barely paths at all, because wandering picks a target
+    a few cells away on its own layer and then walks a route it already has, while the D1 workload
+    replans constantly. Publishing that as the replacement figure would have "confirmed" a 40×
+    improvement that was really a change of workload.
+  - **So there are two arms and they bracket the answer.** The second lays D1's request rate over
+    the same world — one long-range path per tick, ±40 cells and ±3 layers, enqueued by a
+    registered thing and served by the same `PathService` the pawns use, inside `MovementSystem`,
+    inside the tick. **0.438 ms a tick, p95 1.253, Pawns 97.1% of it**, and the queue ends empty
+    so every request really was served.
+  - **The verdict in the margin table reverses.** Three ticks at the replan rate cost 1.31 ms;
+    discounted 4× for the target laptop, 5.26 ms, leaving **11.3 ms of a 16.6 ms frame** for
+    rendering. The row that read "discounted 4× — none, over budget" is no longer true. The frame
+    budget was a pathfinding problem, the pathfinding was fixed, and this is the measurement
+    saying so instead of the estimate.
+  - **Three numbers, so nobody has to guess which one is "the" tick**: 0.003 ms for `OneDay` on the
+    board the scene actually loads, 0.025 ms for fifty pawns on a board seven times larger, and
+    0.438 ms for that board under a stress workload no colony has yet generated.
+  - **Allocation is not zero, and the row asked for zero.** The D1 spike recorded a true
+    `alloc_bytes_per_tick=0.000`; the real tick grows the heap by **76.7 bytes at rest and 284.6
+    under replan pressure**, with no collection of any generation across either window — so those
+    growth figures are the allocation figures and not a lower bound. The delta divides to about
+    208 bytes per served path request, which *points at* the served path's cell array without
+    demonstrating it, because nobody has measured where it comes from. About 17 MB over a day.
+    Recorded as a finding and as a row to write, not quietly asserted away.
+  - **Per-phase timing needed a seam, and there was already a shape for it.** `SimWorld.PhaseSink`
+    is an opt-in diagnostic beside `HashSink`, null in every ordinary run, one branch per phase
+    when unattached. It went on `SimWorld` rather than into the benchmark because the phase order
+    lives in `Tick()` and `WorldSystemSchedule`'s run methods are internal — a benchmark that timed
+    the phases by calling them itself would have been a second copy of the tick order, which is the
+    defect U34 had just finished deleting out of the composition root. Two tests hold it honest:
+    attaching a sink cannot change the state hash, and detaching one stops it recording.
+  - **A name collision caught a real risk.** `Odyssey.Sim.TickPhase` already existed — the three
+    phases a *system* may register in. The timing enum needs all seven, including the ones no
+    system may join, so it is `TickSegment`, **numbered to match** where the two overlap, with a
+    test asserting the values agree and that every registerable phase is a segment something times.
+    Two enumerations of the tick order that could drift apart are worth one test.
+  - **Verified:** fast tier **481 Sim + 158 Hud**, Long tier **17**. The benchmark itself is
+    `[Explicit]` and never runs in CI, which is why its seam has three ordinary tests beside it.
+
+- **The research lane, seven files in one afternoon (OQ-26 … OQ-35, 2026-09-17).** The last
+  unwritten block of Phase 2 research, run the way the brief says to run it: one subagent per
+  question, a hard cap of twelve searches or fifteen page reads, the fixed format, and the
+  clean-room rule stated as binding rather than assumed. Seven files, one commit each, then the
+  index reconciled last and alone because `INDEX.md` has a single owner.
+  - **Two of them corrected the question they were sent to answer**, which is the argument for
+    asking rather than assuming. `b-timberborn` was asked why Timberborn's slopes are what we chose
+    not to do; its terrain is **cubes**, with no sloped geometry at all, so ADR 0002 has no
+    counter-example there and the row's premise was simply wrong. And `a-16` was expected to
+    describe how the multi-level mods move pawns between levels; what it found is that **movement
+    was never the problem**.
+  - **The single most useful finding is a-16's, and it changes what the vertical slice must prove.**
+    Every generation of multi-level mod succeeded at *traversal* and failed at *queries*. Pawns
+    walked between levels early. Bills, hauling, construction delivery, the right-click menu and
+    reachability all stayed same-map, and the current mod bridges a bench to one other level by
+    hand, per bench — a confession that the general query could not be made layer-aware. None ever
+    delivered cross-layer line of sight or combat. **A colonist climbing a ladder demonstrates
+    nothing anybody struggled with; a bill sourcing its ingredients two layers down is the test.**
+  - **Layer question 3 is answered in both halves, by two files that agree.** Rooms stay **per
+    layer** — DF states outright that a room cannot span z-levels and Going Medieval independently
+    treats each storey as its own — and heat **rises without buoyancy**, as one asymmetric
+    conductance on a vertical opening, about 4:1 up against down. The evidence for the second is
+    negative and all the better for it: Going Medieval merges levels through a stair and averages
+    them, and its own players report the consequence, a tall stack that loses its heat with loft
+    and cellar reading the same. Both files independently ask for the same next artefact — a typed
+    cross-layer **opening** graph built at M3 beside room detection, because temperature is its
+    first consumer and retrofitting means touching detection twice.
+  - **Three findings land directly on code we have or are about to write.** The impressiveness
+    formula uses a natural logarithm, and a `Math.Log` in the mood path is a **cross-runtime hash
+    hazard** now that the world is in the hash and Mono-versus-CoreCLR is a standing test —
+    quantise to an integer tier before anything simulated reads it. "Enclosed" is three booleans
+    with three deliberately disagreeing thresholds, so a single `IsEnclosed` flag will be wrong
+    within a milestone. And Timberborn's ramp-as-object throws our **hop** into relief: ours is
+    priced in three separate seams that our own notes say fail silently when they disagree, and
+    nothing tests that they agree.
+  - **Stonehearth named the counter we should have been watching.** Not frame time — frame time is
+    the lagging indicator everyone watched while that game died — but **pathfinder calls per job
+    assigned**. It is theory-free, which is the point: it would have caught our own falsified
+    pathfinding explanation immediately, because it does not depend on any account of *why*
+    searches are expensive. Its measured largest cost was an item-filter cache invalidated on every
+    item move, scaling with **items and containers rather than agents** — and every benchmark we
+    own scales pawns and map size, so we would not currently see that disease until we had its
+    symptoms.
+  - **Two stale figures were corrected on the way in, by me and not by the agents.** Both the DF
+    and Stonehearth files reason against "our 65% of tick is A-star". That number is the D1 stress
+    harness; `OQ-19` had measured the real tick hours earlier at 37% of a 0.025 ms tick for the
+    whole pawn phase. Each file now carries a dated editor's note, because the advice survives the
+    correction but a session hunting a 65% defect in the running game would be hunting a phantom.
+  - **The clean-room rule held, and two agents demonstrated it rather than claiming it.** The
+    temperature agent found a decompiled source file in its search results and deliberately did not
+    open it. The Goblin Camp agent read GPLv3 source directly — permitted, since the rule is read
+    for technique — and the file it produced contains no code, no identifiers and no transcription,
+    and states explicitly that a permissive licence would not have changed the answer. I checked
+    each file myself for code fences, Def XML and pasted identifiers rather than trusting the
+    summaries.
+  - **One negative source is cited as such.** The top search result for Stonehearth pathfinding
+    optimisation is a post the community publicly flagged as fabricated, whose invented claims
+    search engines now restate as fact. The file cites it as a caution rather than pretending it
+    does not exist, which is the right way to leave a trap for the next reader to find.
+
+- **The hop price gets one owner, and the warning becomes a test (2026-09-17).** `CLAUDE.md` has
+  carried a sentence since the hop landed — *"a price the planner and the mover disagree about
+  fails silently"* — earned the hard way: the mover once read a hop's price off connectors, found
+  none, and fell through to `MoveCost.Fall`, which is 100,000 and means forbidden. The pawn did not
+  throw and did not re-plan. It stood in the cell before the step holding a legal path, earning
+  about one unit of progress a tick against a bill of a hundred thousand, and was still there after
+  10,000 ticks. Nothing enforced the sentence. Today's Timberborn research arrived at the same
+  recommendation from the outside — their ramp is an object in a cell, so one row answers the
+  planner, the mover and the renderer at once — which is what moved this up the queue.
+  - **Nothing was disagreeing, and that is the finding.** All three seams — `PathFinder`'s
+    relaxation, `NavGraph.TryHopEdges` and `MovementSystem.StepCost` — arrived at the same number,
+    because each named `MoveCost.JumpUp` and `MoveCost.Drop` for itself and the constants happened
+    to be identical everywhere. **Agreement by coincidence**, which holds exactly until the price
+    stops being a constant: a hop onto ice, a hop while carrying, a hop for a different traverse
+    mode. Then two of the three would silently keep the old number and the failure would present as
+    a colonist standing still.
+  - **`NavGraph.HopCost` is now the only expression of the rule**, with a second overload taking a
+    direction rather than two `CellRef`s. That overload exists for a measured reason: the search's
+    inner loop walks cell indices and would have paid a division per neighbour to recover a
+    `CellRef` it does not need. Pathfinding is the hot path, so the one-owner rule had to be free
+    to obey or it would have been disobeyed for a good reason. The price is asked once per search
+    and held in a local.
+  - **The guard is a source grep, because what it forbids leaves no trace in IL.** Naming a
+    constant compiles to the same instruction as calling a method that returns it, so there is
+    nothing to inspect after the fact. `HopPriceHasOneOwnerTests` walks `Assets/Odyssey/Sim`,
+    strips comments — a comment may *discuss* the price, only code may not *decide* it — and fails
+    on any file but `NavGrid.cs` (which defines the constants) and `NavGraph.cs` (which owns the
+    rule). Beside it, a test that reads the price off a **built region graph** rather than off the
+    source, so a future `TryHopEdges` routed through a different rule fails even if it never names
+    a constant.
+  - **Controlled, not assumed.** Putting `MoveCost.JumpUp` back into `PathFinder` fails the guard
+    with the exact offending file and line; restoring it passes. The failure message names the
+    10,000-tick incident, so whoever trips it in two years learns why the rule exists rather than
+    just that it does.
+  - **No golden moved**, which is the point: who computes the number changed and the number did
+    not. Verified fast tier **484 Sim + 158 Hud**, Long tier **17**.
+  - **One fixture error worth recording.** The first region-graph test looked for the hop edge by
+    its two cells and found nothing. `TryHopEdges` keys by *region pair* and stores whichever cell
+    pair it met first, so asking for our own two cells was asking the wrong question. Found by the
+    test failing rather than by reading the code — which is the third time this week that reading
+    the code would have been wrong.
+
+- **The tick's allocation is attributed, and most of it was a defect (2026-09-17).** `OQ-19` had
+  left a loose end: the real tick grows the heap by 76.7 bytes at rest and 284.6 under replan
+  pressure, against the D1 spike's true zero, and the ADR said the difference *pointed at* the
+  served path's cell array without demonstrating it. This closes it, and the answer was not what
+  the pointing suggested.
+  - **The at-rest cost was not the colony, and bracketing is what showed it.** An *empty* world —
+    no systems, no pawns, no snapshot contributors — allocated **67.4 bytes a tick**, and adding a
+    whole colony of five with needs, jobs and movement added **nothing measurable**. A cost that
+    scales with neither pawns nor systems nor contributors cannot be any of them, which narrowed
+    it to the tick machinery in one measurement instead of a hunt.
+  - **It was `Intents.Drain(HandleIntent)`.** `Drain` takes a `Func<Intent, IntentRejection>`, and
+    a method group converts to a **fresh delegate on every call** — 64 bytes a tick, for a handler
+    that never changes, paid by every tick of every game whether or not one intent was submitted.
+    Holding it in a `readonly` field took the empty world to **1.6 bytes a tick** and the colony to
+    3.3; on the real benchmark the colony went from **76.7 to 11.0**, about 4.6 MB a day down to
+    0.66 MB. One field.
+  - **The per-path half is now demonstrated rather than pointed at.** Serving the same request at
+    two path lengths gives 53.4 bytes for 5 cells and 197.4 for 41 — **exactly 4.00 bytes per extra
+    cell**, an `int`, so a request costs `≈32 + 4 × cells`. That reproduces the 208 the benchmark
+    saw, which is the check that the attribution is the whole story and not a coincidence.
+  - **The remaining 214 bytes a request is kept deliberately, and the reason is a hazard rather
+    than a cost.** Pooling the served array would make `ServedPath.Cells` valid only until the next
+    `Serve()`. It is safe *today* — `MovementSystem` is the only consumer and `Pawn.AdoptPath`
+    copies into the pawn's own buffer, which I checked rather than assumed — but `Served` is
+    public, and the first future consumer to hold the array would be silently reading somebody
+    else's path. **The project has already decided this shape of question once**, on the state hash
+    (OQ-50): an honest cost beats a silent wrongness. Same answer. It stays until pooling can be
+    made safe *by construction* rather than safe by inspection.
+  - **Controlled both ways.** Putting the method group back restores 67.4 bytes a tick and fails
+    the new guard with the message naming the cause; restoring the field passes. The guard's budget
+    is a loose 16 bytes on purpose — its job is to keep a 64-byte-per-tick delegate out, not to pin
+    11.
+  - **Reading the code would have found the delegate too, and would probably have found the array
+    first and stopped.** The measurement is what said the array was the *smaller* half of the
+    at-rest story and in fact no part of it at all. Fourth time this week.
+  - **Verified:** fast tier **484 Sim + 158 Hud**, Long tier **19**, no golden moved — caching a
+    delegate cannot change behaviour, and the goldens agree.
+
+- **Walls went up stepped, and the fault was not building's (branch `claude/build-pipeline`,
+  2026-09-17).** The owner pressed Play, ordered a room, and the colony built it — which settles
+  §8's unreproduced report: the composition fix was the whole of it. But the finished wall was
+  **not flush**: every panel sat a few centimetres above or below its neighbour, a notch at each
+  cell join and at each corner. Three screenshots, and the cropped one is unambiguous — the outer
+  faces are coplanar, the top edge steps vertically at exactly the cell pitch, no depth offset.
+  - **Nothing about the build pipeline was wrong.** The fault was in `ChunkMesher` and was older
+    than this line: a wall panel was placed with `GroundRelief.Lift`, which takes *one height from
+    one point*. Two panels of one run stand 2.5 m apart on a drawn field of amplitude 2 m and
+    period 150 m, so they differ by the field's slope across a whole cell. **Measured over the
+    board: 73 mm on average, 220 mm at the worst, against a 3 m wall.** At the cells the new test
+    uses, 147 mm.
+  - **The fix is the operation the ground already used.** `GroundRelief.Drape` shears the piece
+    onto the tangent plane of the field at its own centre, so two neighbours are tangent planes of
+    one smooth surface and part company only by its *curvature* — second order. **The same seam
+    measures 1.1 mm.** The shear leaves vertical edges vertical (determinant one, Y sheared by x
+    and z), so the wall stays plumb and a full 3 m tall; only its head and foot rake with the
+    ground, which is what a wall built along a slope does. With relief off, `Drape` is exactly a
+    translate, so the flat board draws byte-identically and no contact sheet moves.
+  - **`EmitWater` had already written the whole argument down**, having got it wrong twice — a
+    lifted tile takes its height from its own centre and neighbours open slivers you can see the
+    riverbed through. The built world was not reading it. The general rule now sits in
+    `ChunkMesher`'s class comment: **anything fixed to the grid is draped; only what moves over it
+    is lifted.** Floors, walls, doors, stairs, ladders, pillars and cell-filling edifices are
+    draped; grass tufts, dropped items, figures and cursors stay lifted, because they stand at a
+    point and share an edge with nothing. `EmitFloor`'s old comment — "a built floor is man-made
+    and stays flat" — was the reasoning that produced the bug: staying flat is exactly what opens
+    the seam.
+  - **What made this quick was refusing to read code for it.** The relief field was re-implemented
+    in twenty lines of Python and the step measured before a line of C# was touched, then measured
+    again after. A fix whose before-and-after numbers are 147 mm and 1.1 mm needs no screenshot to
+    be believed — though it still wants one, because nobody has pressed Play on it.
+  - **Guards:** `ChunkMesherTests.AWallRunMeetsItselfAtOneHeightOnRollingGround` and
+    `.AFloorMeetsItselfAtOneHeightOnRollingGround` walk every drawn corner, pair the ones standing
+    over the same point of the board, and hold their disagreement under 20 mm — which the old code
+    misses by sevenfold. `.ADrapedWallStaysVerticalAndFullHeight` stops the next person buying
+    flushness by leaning the building over.
+
+- **And the wall was hollow, which is a different fault the same screenshots showed (same branch,
+  same day).** The owner, looking at the first finished room: *"the walls should be filled in with
+  a top as well."* They were not. A wall cell is drawn as a panel on each face something can be
+  seen through — which is what stops a one-cell wall reading as a 2.5 m slab and is deliberate —
+  but a straight run puts two panels 2.5 m apart with 2.25 m of nothing between them and nothing
+  over them. From a high camera every wall had a black slot down its middle.
+  - **The owner's three questions came apart, and two of them were already answered.** "Colonists
+    always build from the outside so they don't get stuck" is true today and is not a drawing
+    question: both `DeliverWorkGiver` and `BuildWorkGiver` take their stand cell from
+    `FellJobDriver.StandBeside`, and the comment at the delivery site says why — the site is
+    walkable right up to the moment the wall goes up in it, so standing *in* it would work for the
+    delivery and be exactly wrong for the build that follows. "Build electricity through it" is a
+    question about what a cell may hold, which neither answer below changes.
+  - **The third — "is it worth making the wall half the size of the cell and making it like a
+    block?" — is two questions in one coat:** should the cell be filled, and how thick should a
+    wall look. **They separate because a wall already occupied the full 2.5 m of its cell as
+    drawn**, two faces of it and a hole. Filling it changes nothing about how thick a wall *reads*.
+  - **Filled, thickness left alone (owner, 2026-09-17).** One block per wall cell behind the
+    panels, `ModuleIds.WallCore`, core and cap in one. No art (it falls back to the cell-shaped
+    primitive and wears the wall's own stuff tint, so it matches the panels in colour if not in
+    texture), no orientation logic, one extra instance per wall cell. Recessed 1 cm below the
+    panels' heads, because a panel straddles its face and 0.125 m of it stands inside the cell —
+    the two tops would otherwise be coplanar, and a z-fight along the head of every wall in the
+    colony is a shimmering line the camera cannot get away from. A centimetre is sub-pixel at 32 m,
+    the nearest the camera comes. A window keeps its hollow.
+  - **Held open: the half-cell wall.** It buys a wall that reads as a wall rather than as a
+    rampart, and costs a per-cell run direction — which the earth blocks already solve, since
+    `GroundMesh.CanonicalExposure` turns all sixteen neighbour patterns into five meshes and a
+    rotation and a wall junction is the same problem — plus meshes for the straight, the corner and
+    the tee, and something to cover the 0.6 m of bare cell it would leave each side, which today's
+    floor slab does not reach. **The cap is the cheap experiment that settles it:** look at a room
+    and say whether 2.5 m is a fortress or just a wall.
+
+- **The build line caught up with `main`, and the golden re-bake was made to say why (branch
+  `claude/build-pipeline`, 2026-09-17).** PR #63 had gone conflicting: `main` had baked new golden
+  hashes when `CellGrid` joined the state hash (OQ-50) while the branch had baked its own on the
+  old scheme, so neither side's numbers could survive. The merge is otherwise unremarkable — the
+  journal's two appended entries both kept, `main`'s first because it finishes the bullet the
+  branch's interrupted.
+  - **The re-bake was not taken on trust.** The obvious story was "the construction grid is new
+    hashed state, of course the number moved". A **control run** with `ConstructionGrid`'s
+    `AddTickable` registration removed came back at 17805151056309647682 — not `main`'s
+    13449042641056873599 — so the construction grid was *not* the whole of it. The rest is
+    `Skill_Construction`: a new skill widens every pawn's skill array, which moves the generated
+    hash before a tick has run. Two causes, both deliberate, and the second would have been
+    invisible under a re-bake that stopped at the first plausible explanation.
+  - **Both tiers green for the first time on this branch** (run 35194913924, and again after a
+    second merge): fast tier 478 Sim + 134 Hud, Long 15, Unity 1,055 EditMode and 27 PlayMode, plus
+    the headless day. The PR's "unrun: `unity.sh test editmode`" caveat is retired.
+  - **Worth noticing for next time:** both grids register for the hash by being an `ITickable` with
+    `TickGroup.Never`, a trick that pre-dates `SimWorldBuilder.AddHashable` and that `AddHashable`
+    now exists to replace. Left alone here — moving them would shift every golden again for no
+    behaviour — but the next person to touch either file should use the third list.
+
+- **The build cursor became the wall, and a build box stopped widening by accident (branch
+  `claude/build-pipeline`, 2026-09-17).** Two owner reports from the first playtest that built
+  anything, and they are the same gesture seen from its two ends.
+  - **"Use a cube instead, with all lines showing."** A build drag drew the selection bracket —
+    eight corner stubs — once per cell, which along a six-cell run reads as a dotted line and says
+    "these are things you have picked". It now draws one closed wireframe box, all twelve edges,
+    spanning the whole run. The box is **draped** rather than lifted, so it shears onto the tangent
+    plane of the drawn field at its own centre exactly as the wall it is promising will: the rule
+    from the stepped-wall fault, applied to the cursor. Lifted, a fifteen-metre box takes one height
+    from one point and floats at its far end.
+  - **A run that steps up a riser is one box per level.** A build order is lifted onto the cell
+    standing on solid ground, decided per column, so a run across a terrace stands on two layers and
+    one box around all of it would be a box around neither. `BuildPreview.Gather` does that split in
+    `Odyssey.Hud`, where the fast tier can hold it, with the lift passed in as a function of the
+    column.
+  - **"The building is a tad sensitive and by accident you can build dual walls."** A wall dragged
+    along one axis with the pointer a single cell off the row covered two rows — two parallel walls,
+    ordered, carried to and paid for, out of a gesture that meant one. The owner chose **hysteresis
+    over a snap to a line**, so a rectangle of wall is still one gesture: the box widens at two
+    cells clear across the run and the gate re-arms only back at the anchor's own row. Two
+    thresholds, because one makes the box flicker between one row and two while the pointer sits on
+    the boundary. Build only — one more cell marked to dig is a rounding error and one more row of
+    wall is a wall.
+  - **`Matrix4x4.TRS` was written out by hand**, and that is not a micro-optimisation. No bar of a
+    box is rotated, so the quaternion is an identity multiplied through for nothing — but the real
+    reason is that `TRS` is an engine call that throws outside the player, and with it in the way
+    the cursor's geometry could only be checked by looking at it. Written out, the twelve edges are
+    measured in a test: four per axis, each the full length of its side, every corner a three-way
+    joint, and a draped box plumb, full height, and raking with the field's own slope at a point
+    measured to be near the steepest the board gets.
+  - **Control run:** with the edges shortened back to bracket stubs, three of the five cursor tests
+    fail; with the box gate disabled, three of the six drag tests fail. Restored, both green.
+  - **Verified:** fast tier **478 Sim + 146 Hud** (up 12), Long tier 15. The Presentation assembly
+    compiles headlessly against the mirror DLLs and its new tests were *run* outside Unity through a
+    throwaway `net8.0` NUnit project, which is `docs/lessons.md`'s trick used for the first time on
+    tests rather than on a number. **Nobody has pressed Play on it.**
+
+- **The widening gate was loosened the same day it landed, and the second fault was the
+  interesting one (branch `claude/build-pipeline`, 2026-09-17).** The owner played the first
+  version in this worktree's own editor — checked, rather than assumed, against
+  `docs/lessons.md`'s "confirm delivery before diagnosing" — and reported it was still too easy to
+  create double walls.
+  - **The threshold was the obvious half.** Two cells clear is five metres of board, which sounds
+    generous until twenty metres of wall is drawn at a camera looking down a slope. It is three now.
+  - **The gate was also sticky, and that is what made it fail in practice.** It re-armed only on the
+    anchor's *exact* row, so a single wander anywhere in a long drag latched the box wide for the
+    rest of it — and a pointer that has strayed three cells rarely returns to precisely the row it
+    left. The player would let go over a rectangle without ever having seen the moment it widened.
+    Re-arming within one cell of the row instead keeps the two thresholds that stop the flicker
+    while making a trip recoverable.
+  - **Worth keeping in mind as a shape of bug:** a latch and a threshold are two separate decisions,
+    and tuning the threshold alone would have made the same complaint come back quieter. The first
+    version's own test — "once widened it does not flicker back on the boundary" — was passing and
+    was pinning the sticky behaviour as if it were the feature.
+  - **Verified:** fast tier 478 Sim + 146 Hud, unchanged in count because the three tests that
+    encoded the old numbers were re-aimed rather than added to.
+
+- **The build line was played and accepted (branch `claude/build-pipeline`, 2026-09-17).** The owner
+  ordered walls in the running game with the loosened gate and reported it works. That closes the
+  gesture: three rounds in one day — the box widening on a one-cell wander, then on a two-cell one,
+  then not. **Both rounds were answered by changing what the rule *is*, not only its number**, and
+  the second one would have been missed by tuning alone.
+  - **What the playtests have actually judged** is ordering a wall, the material row, the cursor and
+    the widening gate. The drape and the fill were in the same build and drew no complaint, which is
+    weaker than a judgement and is written down as such. The site marks, the blueprint readout in
+    the inspect pane and the computed hammer swing are in the build and nobody has said anything
+    about them either way; `docs/design/15-building.md` §8 names them so the next session does not
+    mistake silence for approval.
+  - **The branch was merged with `main` three times in the day** — 27 commits in one of them — and
+    the merges are the reason to notice how fast parallel branches are landing. A PR that sits for a
+    few hours is a PR that conflicts, and when it conflicts GitHub stops scheduling its checks
+    altogether, so the first symptom is not a red tick but no tick at all.
 - **The scene could not save, and the reason was structural (U34, 2026-09-17).** `WorldSave` has
   been complete, versioned and tested for weeks. Every caller of it was a test. The composition root
   had forty lines that were a copy of `ColonyWorld.Build`, so it never built the `SaveComponents`
@@ -1265,3 +1722,15 @@ work itself.
     failed**, PlayMode **29 passed, 0 failed** — including two new ones that ask the half only Unity
     can ask: that the live bootstrap, having started for real, is holding that world rather than a
     private copy of the wiring.
+
+  - **Brought up to date 2026-09-17, after fifty-five commits had landed on `main` underneath it.**
+    The merge was not mechanical, because the build line (`#63`) had meanwhile added the
+    construction grid to **exactly the hand-rolled block this change deletes**. Resolved as a
+    union rather than a choice: the composition root keeps U34's `ColonyRequest` build, and
+    `ColonyWorld.Build` carries main's construction grid through it — so the scene now gets a
+    construction grid that is registered, hashed and in `SaveComponents`, which the bootstrap's
+    own copy had been discarding with `out _`. Checked that presentation reads construction
+    through the snapshot and not by holding the grid, so nothing needed rewiring. The
+    `Tests and gates` line conflicted for the reason recorded that morning — it is a shared
+    counter with no owner — and took main's number before being re-measured. Verified after the
+    merge: fast tier **494 Sim + 170 Hud**, Long tier **19**, both content gates green.

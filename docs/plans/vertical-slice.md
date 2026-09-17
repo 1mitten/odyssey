@@ -121,7 +121,7 @@ At the end of M2, three pawns live in a ruined shell: they walk upstairs, sleep,
 | Unit | Size | Depends on | Done when |
 |---|---|---|---|
 | **U25 Designations** ∥ | M | U21, U07 | Mine, deconstruct, build, cancel, forbid/allow — as intents, validated and rejectable with a reason. |
-| **U26 Build pipeline** | L | U25, U22 | Blueprint → materials hauled → frame → work applied → built thing, with a success roll at completion. Deconstruct refunds half. |
+| **U26 Build pipeline** | L | U25, U22 | Blueprint → materials hauled → frame → work applied → built thing, with a success roll at completion. Deconstruct refunds half. **First slice built 2026-09-17 on `claude/build-pipeline` (PR #63): walls, wood and stone, ordered from the Build palette. Design and the test procedure are `docs/design/15-building.md`. Not done: the success roll, deconstruct, and the owner reports it still does not build in the running game — read the rejection log first (§6).** |
 | **U27 Materials** ∥ | M | U04, U26 | Two or three materials with `stat = base × factor + offset`. Quality tiers explicitly deferred. |
 | **U28 Mining and salvage** | M | U25 | Three speeds by target: breach a slab, clear rubble, mine rock. Yields salvage into the world. |
 | **U29 Roofs as floors** | L | U26, U10 | Building a slab creates the floor above; removing support collapses it, cascading, with rubble and fall damage. **This is the unit the whole project exists to prove** — test it hard, including the ruined-shell case where mining a wall orphans a pre-existing slab. |

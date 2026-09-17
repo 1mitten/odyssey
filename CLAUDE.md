@@ -74,7 +74,24 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   one-day run), switched on by the repository variable `UNITY_RUNNER=1`.
 - **M1 and M2 are done and reported** — `docs/milestones/M1-report.md`,
   `docs/milestones/M2-report.md`. Both went further than the plan asked.
-- **M3 is under way:** designations, felling, stockpiles and mining are in.
+- **M3 is under way:** designations, felling, stockpiles and mining are in, and **U26
+  building landed 2026-09-17** — a wall can be ordered from the Build palette in wood or
+  stone, and colonists carry the material and raise it. Design, the test procedure and what
+  is still open are `docs/design/15-building.md`; **read that before touching this line.**
+  It is on `claude/build-pipeline` (PR #63), not yet merged. **Walls do go up** — the owner
+  played it on 2026-09-17, so the earlier report of silent refusal was the composition fault and
+  is closed. They went up **stepped**, which was not building's fault at all: `ChunkMesher`
+  lifted every panel to one height taken at one point, so neighbours in a run differed by the
+  drawn relief's slope across a cell (73 mm typical, 220 mm worst, against a 3 m wall). They are
+  draped now, like the ground, the banks and the water, and the same seam measures 1.1 mm. **The
+  rule that came out of it: anything fixed to the grid is draped; only what moves over it is
+  lifted.** A hollow wall was filled and capped in the same round.
+  **The build cursor and the drag gesture were then played and accepted** (owner, 2026-09-17): a
+  build drag draws one closed wireframe box over the whole run, draped as the wall will be, and a
+  box widens into a rectangle only after three cells clear across the run — narrowing again within
+  one. The gesture took three rounds because the first two fixed the *number* and the fault was
+  that the gate latched. What nobody has judged yet is the site marks, the blueprint readout and
+  the computed hammer swing (`docs/design/15-building.md` §8).
 - **Work reaches `main` only through a pull request** with both tiers green, one approving review
   and the branch up to date. Branch protection enforces it, agents included. There is no long-lived
   feature branch — `claude/*` branches are per-change and short-lived.
@@ -152,6 +169,15 @@ pawn can be in has something under it. A hop is three seams that must agree — 
 (`MovementSystem.StepCost`); **a price the planner and the mover disagree about fails silently.**
 Ladders are still climbed, so the climb *pose* is live presentation code.
 
+**That warning is now enforced rather than remembered (2026-09-17).** `NavGraph.HopCost` is the
+only place the price of a hop is decided, and all three seams call it —
+`HopPriceHasOneOwnerTests` fails the fast tier if any other file in `Odyssey.Sim` names
+`MoveCost.JumpUp` or `MoveCost.Drop` in code, and checks the built region graph prices a hop at the
+owner's number rather than reading it off the source. Nothing was disagreeing when this landed:
+all three named the constants for themselves and agreed **by coincidence**, which survives exactly
+until the price stops being a constant. No golden moved, because who computes the number changed
+and the number did not.
+
 **Presentation** — instanced chunk rendering (no GameObject per cell), a slice camera rig, the HUD,
 audio, a day/night cycle and golden-hour grading. No pack contains a work animation, so the axe,
 pick and hammer strokes are **computed** (`WorkSwing`, `WorkStyle`) and stand in for art we do not
@@ -180,7 +206,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **471 Sim + 117 Hud**; Long tier **15**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **494 Sim + 170 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
@@ -202,11 +228,44 @@ RTX 5070 Ti at 640 x 480. The city's move from 0.88 to 1.56 ms is **unexplained*
 
 ### Top technical risk
 
-**Pathfinding cost:** 65% of the measured tick is A-star. The once-recorded explanation — futile
-searches for unreachable targets — was **falsified by its own follow-up experiment** (only 14% of
-budget exhaustions were unreachable, under 1% on a structured map). The fix is hierarchical search
-plus a better heuristic, with the district-id reachability check (`d-04-pathfinding.md`) measured
-first.
+**Pathfinding cost, and it is smaller than this section used to say.** 65% of the tick was A-star
+on the D1 spike; the once-recorded explanation — futile searches for unreachable targets — was
+**falsified by its own follow-up experiment** (only 14% of budget exhaustions were unreachable,
+under 1% on a structured map), and the fix that worked was hierarchical search plus a better
+heuristic.
+
+**The re-run the ADR asked for has happened** (OQ-19, 2026-09-17; `TickBenchmarkTests`, ADR 0005
+addendum). Measured on the real `SimWorld.Tick` rather than on a spike that mirrored it: a colony
+of 50 on a 250 × 250 × 40 board costs **0.025 ms a tick**, and the same world under D1's replan
+rate — one long-range path per tick — costs **0.438 ms, p95 1.253, with Pawns at 97.1%**. That is
+**half the 0.88 ms the ADR estimated**, and it reverses the margin table's verdict: three ticks
+discounted 4× for the target laptop leave 11.3 ms of a 16.6 ms frame rather than nothing. For
+scale, `OneDay` on the board the scene actually loads runs at 0.003 ms a tick. Pathfinding is still
+where the tick goes under load, but it is no longer a threat to the frame budget.
+
+**What the same run found instead: the tick allocated, and most of it was a defect** (attributed
+2026-09-17, `PathAllocationTests`, ADR 0005 addendum). The at-rest cost was **not the colony**: an
+empty world with no systems, no pawns and no contributors allocated 67.4 bytes a tick and adding a
+whole colony added nothing. It was `Intents.Drain(HandleIntent)` — a method group converting to a
+**fresh 64-byte delegate every tick**, for a handler that never changes, paid by every tick of every
+game. Holding it in a field took the colony from **76.7 to 11.0 bytes a tick** (about 4.6 MB a day
+down to 0.66 MB). The rest is the served path's cell array, now demonstrated rather than guessed:
+allocation rises with path length at **exactly 4.00 bytes per extra cell**, so a request costs
+`≈32 + 4 × cells`. That one is **kept on purpose** — pooling it would make `ServedPath.Cells` valid
+only until the next `Serve()`, which is safe by inspection today and would be silently wrong for the
+first consumer who held it.
+
+**The graph that search would run on is now measured** (OQ-18, 2026-09-17;
+`NavGraphStatisticsTests`, and `d-04-pathfinding.md` §"Measured 2026-09-17"). At 250 × 250 × 40 the
+region graph holds **24,141 regions on the wilderness and 23,240 on the city** — inside d-04's
+"low tens of thousands" budget — but **only 6.8% and 38.8% of them are walkable**; the rest is
+impassable rock kept as a substrate for rooms and atmosphere, carrying no links and excluded from
+the district flood. An abstract search is therefore cheaper than the totals suggest. A full rebuild
+is 168 ms (wilderness) and 124 ms (city), which is the all-dirty worst case and not a per-tick cost.
+**d-04's stated reason for the budget was wrong** — it credited all-solid chunks allocating nothing,
+and all-solid is exactly what allocates here; what really bounds the count is that a region never
+leaves its 10 × 10 block, now asserted over every cell of both boards along with the guarantee that
+no region spans two layers.
 
 ### Waiting on the owner
 
@@ -225,7 +284,10 @@ first.
   grooves, 16 px goes to noise, and a **framed** sheet-06 tile at 17 px is mostly frame
   (`Logs/skill-icons.png`).
 - **Nobody has pressed Play on the interface work either.** The roster card, the docked bars, the
-  popovers and the Skills tab are all measured and none of them has been looked at.
+  popovers, the Skills tab and the settings panel's new Keys and Audio tabs are all measured and
+  none of them has been looked at. The Keys tab is the tallest panel yet — at 150 per cent
+  interface scale on a 1080p screen it is within pixels of the screen height and may want the
+  first max-height-and-scroll any panel here has carried.
 - **The 29 proposed proper nouns** in `docs/design/proper-nouns.csv` await approval or veto.
 - **Marsh reads as a sandy bank** — re-tint it greener or rename it.
 - **The audio listener is on the camera**, 32–160 m up, while the catalogue authors ranges as ground
@@ -234,9 +296,9 @@ first.
 
 ### Known gaps
 
-Felled trees, mined cells and climbs are not in the save (the designation grid is not saved). Mining
-collapses nothing. There is no fog of war, so a sealed cavern is visible if the player scrolls the
-layer down.
+Felled trees, mined cells and building sites are not in the save (the designation grid is not
+saved; the construction grid is). Mining collapses nothing. There is no fog of war, so a sealed
+cavern is visible if the player scrolls the layer down.
 
 **The state hash covers the world** (OQ-50, ADR 0005 amended 2026-09-17). It did not until then —
 `CellGrid` is neither a tickable nor a system, which were the only two lists `ComputeStateHash`

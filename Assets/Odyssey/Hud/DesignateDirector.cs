@@ -28,6 +28,17 @@ namespace Odyssey.Hud
 
         /// <summary>Take the order off, whatever it was.</summary>
         Cancel = 3,
+
+        /// <summary>
+        /// Put it here. See <see cref="DesignateDirector.Building"/> and
+        /// <see cref="DesignateDirector.Stuff"/> for what, and what of.
+        ///
+        /// <para>The one tool that is not fully described by its own name. Mine and Fell are verbs
+        /// applied to whatever is already in a cell, so a tool is all there is to say; a build
+        /// order names a thing that is not there yet and has to carry which thing and which
+        /// material with it.</para>
+        /// </summary>
+        Build = 4,
     }
 
     /// <summary>
@@ -72,6 +83,52 @@ namespace Odyssey.Hud
 
         DesignateTool _tool = DesignateTool.None;
 
+        /// <summary>
+        /// What <see cref="DesignateTool.Build"/> would put down, as a <c>BuildingHandle</c> value.
+        /// Meaningless under any other tool, and deliberately left alone when the tool changes: a
+        /// player who puts the wall tool down and picks it up again wants the wall back.
+        /// </summary>
+        public int Building { get; private set; } = BuildingHandle.Wall;
+
+        /// <summary>
+        /// What to build it of, as a <c>StuffHandle</c> value. Wood by default because it is what a
+        /// colony has first — felling is the job that works from the day it lands, and a stone wall
+        /// needs a mine before it needs a builder.
+        /// </summary>
+        public int Stuff { get; private set; } = StuffHandle.Wood;
+
+        /// <summary>Raised when the thing or the material changes, so the palette can mark it.</summary>
+        public event Action<int, int>? BuildChoiceChanged;
+
+        /// <summary>
+        /// Arm the build tool on a thing, keeping the material already chosen. Pressing the same
+        /// thing again puts the tool down, which is how every other tool behaves.
+        /// </summary>
+        public void ArmBuild(int building)
+        {
+            if (_tool == DesignateTool.Build && Building == building)
+            {
+                Tool = DesignateTool.None;
+                return;
+            }
+
+            Building = building;
+            BuildChoiceChanged?.Invoke(Building, Stuff);
+            Tool = DesignateTool.Build;
+        }
+
+        /// <summary>
+        /// Choose the material. It does <b>not</b> arm the tool: picking stone is a statement about
+        /// the next wall, not an order to place one, and a material button that also armed a tool
+        /// would leave the player holding something they only meant to configure.
+        /// </summary>
+        public void ChooseStuff(int stuff)
+        {
+            if (Stuff == stuff) return;
+            Stuff = stuff;
+            BuildChoiceChanged?.Invoke(Building, Stuff);
+        }
+
         /// <summary>Is a box being drawn right now?</summary>
         public bool Dragging { get; private set; }
 
@@ -87,16 +144,90 @@ namespace Odyssey.Hud
             if (_tool == DesignateTool.None) return false;
             _anchor = cell;
             _head = cell;
+            _wide = false;
             Dragging = true;
             return true;
         }
 
-        /// <summary>Move the far corner. Ignored unless a drag is running.</summary>
+        /// <summary>
+        /// Move the far corner. Ignored unless a drag is running.
+        ///
+        /// <para><b>A build box does not widen until it is meant to.</b> The owner reported that
+        /// building is "a tad sensitive and by accident you can build dual walls" (2026-09-17): a
+        /// wall is dragged along one axis, the pointer wanders a single cell across it, and the
+        /// rectangle quietly becomes two rows — two parallel walls, ordered and paid for, from a
+        /// gesture that meant one. At this camera a cell is a small distance on screen and the
+        /// board is drawn in perspective, so wandering one cell is not a mistake a player can
+        /// simply stop making.</para>
+        ///
+        /// <para>The rule is hysteresis rather than a snap, so that a rectangle of wall is still
+        /// one gesture: the box widens when the drag has gone <see cref="WidenAcross"/> cells clear
+        /// across the run, and narrows again when it is back within <see cref="NarrowAcross"/>. Two
+        /// thresholds, which is what stops a box flickering between one row and two while the
+        /// pointer sits on the boundary — one threshold would do exactly that.</para>
+        ///
+        /// <para><b>It was loosened once, on a second report</b> (owner, 2026-09-17: still "too
+        /// easy to create double walls"). Two faults, not one. The threshold was two cells, which
+        /// is five metres of board and sounds like a lot until you drag twenty metres of wall at a
+        /// camera looking down a slope. And the gate was <em>sticky</em>: it re-armed only on the
+        /// anchor's exact row, so a single wander anywhere in a long drag latched the box wide for
+        /// the rest of it, and the player would let go over a rectangle without ever seeing the
+        /// moment it widened. Three to widen, back within one to narrow — so a trip recovers as
+        /// soon as the pointer comes near the row again, rather than having to hit it exactly.</para>
+        ///
+        /// <para><b>Build only.</b> Mine, fell and cancel are area tools: a box one cell wider than
+        /// intended marks one more cell to dig, which is a rounding error, while a wall one row
+        /// wider than intended is a second wall built out of material the colony had to carry.
+        /// The cost of the same slip is not the same, so the rule is not applied to the same
+        /// tools.</para>
+        /// </summary>
         public void DragTo(CellRef cell)
         {
             if (!Dragging) return;
             _head = cell;
+            if (_tool != DesignateTool.Build) return;
+
+            // Across the run, not along it: the gated axis is whichever one has travelled less,
+            // decided afresh every frame, because a drag that starts east and turns north is one
+            // gesture and the player never said which axis was the run.
+            int across = Math.Min(Math.Abs(cell.X - _anchor.X), Math.Abs(cell.Z - _anchor.Z));
+            if (across >= WidenAcross) _wide = true;
+            else if (across <= NarrowAcross) _wide = false;
         }
+
+        /// <summary>
+        /// How many cells clear of the anchor's row a build drag must travel before the box widens
+        /// into a rectangle.
+        ///
+        /// <para>Three — seven and a half metres of board. One cell is what a pointer picks up on
+        /// its own from perspective, from the hand, and from the terrain under the cursor changing
+        /// which cell a screen point names; two turned out to be inside what a long drag wanders
+        /// by anyway. Three is a deliberate movement, and the cost of it being too coarse is only
+        /// that an area of wall wants a slightly bigger gesture, while the cost of it being too
+        /// fine is a wall nobody asked for and the wood to build it.</para>
+        /// </summary>
+        public const int WidenAcross = 3;
+
+        /// <summary>
+        /// How near the anchor's row the drag must come back for the gate to re-arm.
+        ///
+        /// <para>The second threshold, and the one that stops a box being latched wide by a wander
+        /// it has long since recovered from. Not zero: requiring the exact row made a trip
+        /// permanent in practice, because a pointer that has strayed three cells rarely returns to
+        /// precisely the row it left. Not two either, or it would meet
+        /// <see cref="WidenAcross"/> and the hysteresis would collapse back to one threshold and
+        /// its flicker.</para>
+        /// </summary>
+        public const int NarrowAcross = 1;
+
+        /// <summary>
+        /// Whether this build drag has been widened on purpose. Per drag, cleared by
+        /// <see cref="Begin"/> and by coming back within <see cref="NarrowAcross"/> of the row.
+        /// </summary>
+        bool _wide;
+
+        /// <summary>Is the box being dragged an area rather than a run? For the tests, and for a readout.</summary>
+        public bool Widened => _wide;
 
         /// <summary>
         /// Finish the box and hand back every cell it covers, or an empty span when there was no
@@ -122,6 +253,7 @@ namespace Odyssey.Hud
         {
             if (!Dragging) return;
             Dragging = false;
+            _wide = false;
             _anchor = default;
             _head = default;
         }
@@ -131,6 +263,12 @@ namespace Odyssey.Hud
         ///
         /// <para>Corners in either order, because a player drags in whatever direction suits them
         /// and a box drawn from the bottom right is the same box.</para>
+        ///
+        /// <para>This is where a build box is held to one row until it has earned its width — see
+        /// <see cref="DragTo"/>. It is done here rather than in <see cref="DragTo"/> so that the
+        /// head keeps the cell the pointer is actually over: the gate is about what the box
+        /// <em>covers</em>, and a drag that has been narrowed must still be able to widen when the
+        /// pointer goes on across, which it could not do if its own head had been rewritten.</para>
         /// </summary>
         public bool TryPreview(out CellRef min, out CellRef max)
         {
@@ -138,8 +276,14 @@ namespace Odyssey.Hud
             max = default;
             if (!Dragging) return false;
 
-            min = new CellRef(Math.Min(_anchor.X, _head.X), Math.Min(_anchor.Z, _head.Z), _anchor.Y);
-            max = new CellRef(Math.Max(_anchor.X, _head.X), Math.Max(_anchor.Z, _head.Z), _anchor.Y);
+            CellRef head = _head;
+            if (_tool == DesignateTool.Build && !_wide)
+                head = Math.Abs(head.X - _anchor.X) >= Math.Abs(head.Z - _anchor.Z)
+                    ? new CellRef(head.X, _anchor.Z, head.Y)
+                    : new CellRef(_anchor.X, head.Z, head.Y);
+
+            min = new CellRef(Math.Min(_anchor.X, head.X), Math.Min(_anchor.Z, head.Z), _anchor.Y);
+            max = new CellRef(Math.Max(_anchor.X, head.X), Math.Max(_anchor.Z, head.Z), _anchor.Y);
             return true;
         }
 

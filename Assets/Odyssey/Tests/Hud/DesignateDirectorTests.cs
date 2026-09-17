@@ -148,6 +148,281 @@ namespace Odyssey.Tests.Hud
             Assert.That(director.Commit(), Is.EqualTo(new[] { At(0, 0), At(1, 0) }));
         }
 
+        // ---- the build tool ---------------------------------------------------------
+
+        /// <summary>
+        /// The one tool that is not fully described by its own name: a build order names a
+        /// thing that is not there yet, so it carries which thing and which material.
+        /// </summary>
+        [Test]
+        public void ArmingTheBuildToolRemembersWhatAndWhatOf()
+        {
+            var director = new DesignateDirector();
+
+            Assert.That(director.Building, Is.EqualTo(BuildingHandle.Wall));
+            Assert.That(director.Stuff, Is.EqualTo(StuffHandle.Wood), "wood is what a colony has first");
+
+            director.ArmBuild(BuildingHandle.Wall);
+
+            Assert.That(director.Tool, Is.EqualTo(DesignateTool.Build));
+            Assert.That(director.Building, Is.EqualTo(BuildingHandle.Wall));
+        }
+
+        [Test]
+        public void ArmingTheSameThingAgainPutsTheToolDown()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+
+            director.ArmBuild(BuildingHandle.Wall);
+
+            Assert.That(director.Tool, Is.EqualTo(DesignateTool.None),
+                "a tool picked up by pressing a button is put down by pressing it again");
+        }
+
+        /// <summary>
+        /// Choosing a material is a statement about the next wall, not an order to place one.
+        /// A material button that also armed a tool would leave the player holding something
+        /// they only meant to configure.
+        /// </summary>
+        [Test]
+        public void ChoosingAMaterialDoesNotArmAnything()
+        {
+            var director = new DesignateDirector();
+
+            director.ChooseStuff(StuffHandle.Stone);
+
+            Assert.That(director.Stuff, Is.EqualTo(StuffHandle.Stone));
+            Assert.That(director.Tool, Is.EqualTo(DesignateTool.None));
+        }
+
+        /// <summary>
+        /// A player who puts the wall tool down and picks it up again wants the wall back,
+        /// in the material they chose. The choice outlives the tool deliberately.
+        /// </summary>
+        [Test]
+        public void TheChoiceSurvivesPuttingTheToolDown()
+        {
+            var director = new DesignateDirector();
+            director.ChooseStuff(StuffHandle.Stone);
+            director.ArmBuild(BuildingHandle.Wall);
+
+            director.Tool = DesignateTool.None;
+            director.ArmBuild(BuildingHandle.Wall);
+
+            Assert.That(director.Stuff, Is.EqualTo(StuffHandle.Stone));
+            Assert.That(director.Tool, Is.EqualTo(DesignateTool.Build));
+        }
+
+        [Test]
+        public void TheBuildChoiceIsAnnouncedSoThePaletteCanMarkIt()
+        {
+            var director = new DesignateDirector();
+            var seen = new List<(int building, int stuff)>();
+            director.BuildChoiceChanged += (b, s) => seen.Add((b, s));
+
+            director.ChooseStuff(StuffHandle.Stone);
+            director.ChooseStuff(StuffHandle.Stone);
+
+            Assert.That(seen, Is.EqualTo(new[] { (BuildingHandle.Wall, StuffHandle.Stone) }),
+                "choosing the material already chosen announced a change");
+        }
+
+        [Test]
+        public void TheBuildToolDrawsABoxLikeAnyOtherTool()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+
+            Assert.That(director.Begin(At(3, 3)), Is.True);
+            director.DragTo(At(5, 3));
+
+            Assert.That(director.Commit(), Is.EqualTo(new[] { At(3, 3), At(4, 3), At(5, 3) }),
+                "a wall is dragged out as a run, which is the whole reason to drag one");
+        }
+
+        // ---- the live preview ------------------------------------------------------
+
+        /// <summary>
+        /// The preview and the order are the same object's answer a frame apart.
+        ///
+        /// <para>This is what the live preview is worth: <c>TryPreview</c> was written for
+        /// drawing the box and nothing ever called it, so a player saw no feedback at all
+        /// between pressing and releasing (owner, 2026-09-17). Driving the director live and
+        /// drawing its own preview is what makes the picture and the order impossible to
+        /// disagree, and this pins that they do not.</para>
+        /// </summary>
+        [Test]
+        public void ThePreviewCoversExactlyWhatTheCommitPlaces()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+            // Far enough across to be a deliberate area, so this asks its own question rather than
+            // re-asking the widening gate's.
+            director.Begin(At(2, 7));
+            director.DragTo(At(5, 10));
+
+            Assert.That(director.TryPreview(out CellRef min, out CellRef max), Is.True);
+            Assert.That(director.PreviewCount, Is.EqualTo(16));
+
+            var previewed = new List<CellRef>();
+            for (int z = min.Z; z <= max.Z; z++)
+            for (int x = min.X; x <= max.X; x++)
+                previewed.Add(new CellRef(x, z, min.Y));
+
+            Assert.That(director.Commit(), Is.EqualTo(previewed));
+        }
+
+        /// <summary>A drag abandoned mid-way leaves nothing to draw, so the box vanishes with it.</summary>
+        [Test]
+        public void AnAbandonedDragHasNoPreviewToDraw()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+            director.Begin(At(1, 1));
+            director.DragTo(At(3, 3));
+
+            director.Abandon();
+
+            Assert.That(director.TryPreview(out _, out _), Is.False);
+            Assert.That(director.PreviewCount, Is.Zero);
+        }
+
+        // ---- a build box does not widen by accident -------------------------------
+
+        /// <summary>
+        /// The owner's report, in one test: "the building is a tad sensitive and by accident you
+        /// can build dual walls" (2026-09-17).
+        ///
+        /// <para>A wall dragged along x with the pointer one cell off the row used to cover two
+        /// rows — two parallel walls, ordered, delivered to and paid for out of a gesture that
+        /// meant one. One cell across is what perspective and the hand produce on their own, so
+        /// the box holds its row until the drag has gone <c>WidenAcross</c> clear.</para>
+        /// </summary>
+        [Test]
+        public void AWallDoesNotWidenBecauseThePointerWandered()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+            director.Begin(At(3, 3));
+            director.DragTo(At(8, 4));
+
+            Assert.That(director.Widened, Is.False);
+            Assert.That(director.PreviewCount, Is.EqualTo(6),
+                "six cells of wall in one row, not twelve in two");
+
+            // Two cells across as well, which is where the threshold used to be and where the
+            // owner was still getting double walls on a long drag (second report, 2026-09-17).
+            director.DragTo(At(8, 5));
+            Assert.That(director.Widened, Is.False);
+            Assert.That(director.PreviewCount, Is.EqualTo(6));
+
+            Assert.That(director.Commit(), Is.EqualTo(new[]
+            {
+                At(3, 3), At(4, 3), At(5, 3), At(6, 3), At(7, 3), At(8, 3),
+            }));
+        }
+
+        /// <summary>
+        /// The other half, and the reason this is hysteresis rather than a snap to a line: a
+        /// rectangle of wall is still one gesture. A drag that goes a clear two cells across says
+        /// something a wandering pointer does not.
+        /// </summary>
+        [Test]
+        public void AWallWidensWhenTheDragGoesClearAcross()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+            director.Begin(At(3, 3));
+            director.DragTo(At(8, 6));
+
+            Assert.That(director.Widened, Is.True);
+            Assert.That(director.PreviewCount, Is.EqualTo(24), "six by four");
+        }
+
+        /// <summary>
+        /// Two thresholds, not one, and this is what the second one buys.
+        ///
+        /// <para>With a single threshold a pointer resting on the boundary would flicker the box
+        /// between one row and two every frame, which is worse than either. Widened, the box stays
+        /// widened while the drag is still well across the run; it re-arms on the way home, within
+        /// a cell of the anchor's row, where a one-row box is what is being drawn anyway.</para>
+        ///
+        /// <para><b>Re-arming near the row rather than on it is the fix for the second report.</b>
+        /// A gate that needed the exact row made a trip permanent in practice — a pointer that has
+        /// strayed three cells rarely comes back to precisely the row it left — so one wander
+        /// anywhere in a long drag left the player letting go over a rectangle.</para>
+        /// </summary>
+        [Test]
+        public void OnceWidenedTheBoxDoesNotFlickerBackOnTheBoundary()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+            director.Begin(At(3, 3));
+
+            director.DragTo(At(8, 6));
+            Assert.That(director.Widened, Is.True);
+            Assert.That(director.PreviewCount, Is.EqualTo(24), "six by four");
+
+            director.DragTo(At(8, 5));
+            Assert.That(director.Widened, Is.True, "one back from the boundary is not a retreat");
+            Assert.That(director.PreviewCount, Is.EqualTo(18), "six by three");
+
+            director.DragTo(At(8, 4));
+            Assert.That(director.Widened, Is.False,
+                "back within a cell of the row re-arms it, without having to land on the row");
+            Assert.That(director.PreviewCount, Is.EqualTo(6));
+        }
+
+        /// <summary>
+        /// Build only. The same slip does not cost the same thing: a mine box one cell wider than
+        /// intended marks one more cell to dig, and a build box one row wider is a second wall.
+        /// </summary>
+        [Test]
+        public void TheGateIsForBuildingAndNotForTheAreaTools()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.Mine };
+            director.Begin(At(3, 3));
+            director.DragTo(At(8, 4));
+
+            Assert.That(director.PreviewCount, Is.EqualTo(12),
+                "mine, fell and cancel are area tools and keep every cell the box covers");
+        }
+
+        /// <summary>
+        /// The gate is across the run and never along it, so the shortest wall anybody would
+        /// actually drag — two cells — is still two cells.
+        /// </summary>
+        [Test]
+        public void TheGateNeverShortensTheRunItself()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+            director.Begin(At(3, 3));
+            director.DragTo(At(4, 3));
+
+            Assert.That(director.Commit(), Is.EqualTo(new[] { At(3, 3), At(4, 3) }));
+        }
+
+        /// <summary>
+        /// A drag that turns a corner is one gesture and the player never said which axis was the
+        /// run, so the gated axis is decided afresh from the travel rather than latched at the
+        /// first movement.
+        /// </summary>
+        [Test]
+        public void TheRunAxisIsWhicheverOneTheDragHasTravelledFurther()
+        {
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Wall);
+            director.Begin(At(3, 3));
+
+            director.DragTo(At(7, 4));
+            Assert.That(director.PreviewCount, Is.EqualTo(5), "east, so the run is along x");
+
+            director.DragTo(At(4, 9));
+            Assert.That(director.PreviewCount, Is.EqualTo(7), "north now, so the run is along z");
+        }
+
         static List<CellRef> Cover(CellRef from, CellRef to)
         {
             var director = new DesignateDirector { Tool = DesignateTool.Mine };

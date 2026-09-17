@@ -985,13 +985,200 @@ namespace Odyssey.Presentation.Rendering
                 Matrix4x4.TRS(centre, Quaternion.identity, size));
         }
 
+        /// <summary>
+        /// The outline of a whole cell, for a thing that is going to fill one.
+        ///
+        /// <para><b>A box rather than the floor plate <see cref="DrawCellMark"/> draws</b>, and the
+        /// shape is the whole point. A mine order and a fell order are read looking down at a face
+        /// that is already there, so paint on the floor says everything. A wall is not there yet
+        /// and stands three metres tall: marked with a plate, a row of ordered walls reads as a
+        /// path drawn on the grass. The owner asked for "some kind of outline" and this is it
+        /// (2026-09-17).</para>
+        ///
+        /// <para>The same corner brackets a selected thing gets, so an outlined cell and an
+        /// outlined colonist are recognisably the same language — one says "this is what you
+        /// picked", the other "this is what you asked for".</para>
+        /// </summary>
+        public void DrawCellOutline(CellRef cell, Color colour)
+        {
+            Vector3 centre = GroundRelief.Lift(CellMetrics.Centre(cell.X, cell.Z, cell.Y));
+            var size = new Vector3(
+                CellMetrics.SizeXZ - OutlineInset * 2f,
+                CellMetrics.SizeY - OutlineInset * 2f,
+                CellMetrics.SizeXZ - OutlineInset * 2f);
+
+            DrawSelectionBracket(centre, size, colour);
+        }
+
+        /// <summary>
+        /// The run of cells a build drag covers, drawn as one closed box: every one of its twelve
+        /// edges, sheared onto the ground the way the wall itself will be.
+        ///
+        /// <para><b>Not the selection cursor, and that is the point of it</b> (owner, 2026-09-17).
+        /// A bracket is eight corner stubs and says "this is the thing you picked"; along a run of
+        /// six cells it says it six times and reads as a dotted line. What a player wants to see
+        /// before letting go of the button is <em>the wall</em> — where it starts, where it ends,
+        /// how tall it will stand — so the cursor becomes the shape of the thing, closed on all
+        /// twelve edges and spanning the whole run at once.</para>
+        ///
+        /// <para><b>Draped, not lifted</b>, which is the rule the stepped-wall fault settled: a
+        /// thing that fills cells is sheared onto the tangent plane of the drawn ground at its own
+        /// centre, so it lies along a slope the way the finished wall will. Lifting it would take
+        /// one height from one point, and over a six-cell run the far end would float or sink by
+        /// the field's slope across fifteen metres. Vertical edges stay vertical under the shear,
+        /// so the box stands plumb and full height whatever it is standing on.</para>
+        /// </summary>
+        public void DrawCellSpanBox(CellRef min, CellRef max, Color colour)
+        {
+            SpanBox(min, max, out Vector3 centre, out Vector3 size);
+            DrawWireBox(centre, size, colour);
+        }
+
+        /// <summary>
+        /// The box a span of cells occupies: its centre and its extent, held in from the cell
+        /// edges by <see cref="OutlineInset"/> so it never z-fights whatever it is drawn beside.
+        /// </summary>
+        public static void SpanBox(CellRef min, CellRef max, out Vector3 centre, out Vector3 size)
+        {
+            Vector3 low = CellMetrics.Centre(min.X, min.Z, min.Y);
+            Vector3 high = CellMetrics.Centre(max.X, max.Z, max.Y);
+            centre = (low + high) * 0.5f;
+
+            size = new Vector3(
+                (max.X - min.X + 1) * CellMetrics.SizeXZ - OutlineInset * 2f,
+                (max.Y - min.Y + 1) * CellMetrics.SizeY - OutlineInset * 2f,
+                (max.Z - min.Z + 1) * CellMetrics.SizeXZ - OutlineInset * 2f);
+        }
+
+        /// <summary>
+        /// A closed wireframe box: twelve bars, one per edge, placed by the ground's own drape at
+        /// the box's centre.
+        ///
+        /// <para>Each bar is a unit cube stretched along its edge and left at
+        /// <see cref="WireThickness"/> on the other two axes, and runs a thickness long so that
+        /// three bars meeting at a corner close it rather than leaving a notch. The whole box goes
+        /// in one instanced submission, as the bracket does.</para>
+        /// </summary>
+        public void DrawWireBox(Vector3 centre, Vector3 size, Color colour)
+        {
+            Material material = BracketMaterial(colour);
+            var rp = new RenderParams(material)
+            {
+                layer = GameObjectLayer,
+                shadowCastingMode = ShadowCastingMode.Off,
+                receiveShadows = false,
+            };
+
+            // The drape is an object-to-world matrix about the centre, so every bar is positioned
+            // in the box's own coordinates and carried onto the ground by it.
+            int n = WireBoxEdges(size, GroundRelief.Drape(centre), _wireMatrices);
+
+            if (SubmitToGpu)
+                Graphics.RenderMeshInstanced(rp, PrimitiveMeshes.UnitCube, 0, _wireMatrices, n);
+            DrawCalls++;
+            InstancesDrawn += n;
+        }
+
+        /// <summary>
+        /// The twelve bars of a closed box, in the placement's own space: four along each axis, at
+        /// the four combinations of the other two axes' signs.
+        ///
+        /// <para>Separated from the draw so the geometry can be asserted rather than looked at. A
+        /// cursor that is a box only when somebody presses Play is a cursor nobody can hold to
+        /// twelve edges, to a full span or to standing plumb on a slope.</para>
+        ///
+        /// <para>Each bar overruns its edge by one thickness so that the three meeting at a corner
+        /// close it instead of leaving a notch at every corner of every box.</para>
+        /// </summary>
+        public static int WireBoxEdges(Vector3 size, Matrix4x4 place, Matrix4x4[] into)
+        {
+            Vector3 half = size * 0.5f;
+            int n = 0;
+
+            for (int axis = 0; axis < 3; axis++)
+            {
+                int b = (axis + 1) % 3;
+                int c = (axis + 2) % 3;
+
+                for (int corner = 0; corner < 4; corner++)
+                {
+                    var offset = Vector3.zero;
+                    offset[b] = (corner & 1) == 0 ? -half[b] : half[b];
+                    offset[c] = (corner & 2) == 0 ? -half[c] : half[c];
+
+                    var scale = new Vector3(WireThickness, WireThickness, WireThickness);
+                    scale[axis] = size[axis] + WireThickness;
+
+                    into[n++] = place * ScaledAt(offset, scale);
+                }
+            }
+
+            return n;
+        }
+
+        /// <summary>
+        /// A scale and a translation, written out rather than asked of <c>Matrix4x4.TRS</c>.
+        ///
+        /// <para>No bar of a box is rotated, so the quaternion in a TRS is an identity being
+        /// multiplied through for nothing. The reason it is worth a method is the other half:
+        /// <c>TRS</c> is an engine call and throws outside the player, so a box built with it can
+        /// only be checked by looking at it, while this one can be measured in a test. The same
+        /// argument <c>GroundRelief.Drape</c> makes for writing its own shear out by hand.</para>
+        /// </summary>
+        static Matrix4x4 ScaledAt(Vector3 offset, Vector3 scale)
+        {
+            var m = new Matrix4x4();
+            m.m00 = scale.x;
+            m.m11 = scale.y;
+            m.m22 = scale.z;
+            m.m33 = 1f;
+            m.m03 = offset.x;
+            m.m13 = offset.y;
+            m.m23 = offset.z;
+            return m;
+        }
+
+        /// <summary>
+        /// Twelve edges, and the array is held rather than allocated because this is drawn every
+        /// frame a build drag is running.
+        /// </summary>
+        readonly Matrix4x4[] _wireMatrices = new Matrix4x4[12];
+
+        /// <summary>
+        /// Thinner than a selection bracket's stub. A bracket has twenty-four short bars and has to
+        /// be found at a glance; this has twelve long ones and would read as a solid crate at the
+        /// same weight.
+        /// </summary>
+        public const float WireThickness = 0.05f;
+
+        /// <summary>
+        /// Held in from the cell edges so that two outlined cells side by side read as two, and so
+        /// the box never z-fights the faces of whatever is standing next to it.
+        /// </summary>
+        const float OutlineInset = 0.12f;
+
         /// <summary>Clear of the face it is laid on, or it z-fights with it.</summary>
         const float MarkLift = 0.05f;
 
         /// <summary>A plate, not a box. Thin enough to read as paint rather than as a thing.</summary>
         const float MarkThickness = 0.04f;
 
-        public void DrawCellCut(CellRef cell, float fraction, Color colour)
+        public void DrawCellCut(CellRef cell, float fraction, Color colour) =>
+            DrawCellSlab(cell, fraction, colour, fromTheFloor: false);
+
+        /// <summary>
+        /// A slab growing out of the floor, for a thing being built.
+        ///
+        /// <para>The same slab as <see cref="DrawCellCut"/> the other way up, and the direction is
+        /// the whole of the difference: a cut eats down from the top of the rock because that is
+        /// where the pick lands, and a wall rises from the floor because that is how a wall is
+        /// built. Drawn with a cut's downward fill, a wall at nine tenths would read as a wall with
+        /// its bottom missing.</para>
+        /// </summary>
+        public void DrawCellFill(CellRef cell, float fraction, Color colour) =>
+            DrawCellSlab(cell, fraction, colour, fromTheFloor: true);
+
+        void DrawCellSlab(CellRef cell, float fraction, Color colour, bool fromTheFloor)
         {
             if (fraction <= 0.02f) return;
             if (fraction > 1f) fraction = 1f;
@@ -1012,7 +1199,8 @@ namespace Odyssey.Presentation.Rendering
                 CellMetrics.SizeXZ - Inset * 2f, height, CellMetrics.SizeXZ - Inset * 2f);
 
             Vector3 centre = CellMetrics.Centre(cell.X, cell.Z, cell.Y);
-            centre.y += (CellMetrics.SizeY - height) * 0.5f;
+            float offset = (CellMetrics.SizeY - height) * 0.5f;
+            centre.y += fromTheFloor ? -offset : offset;
 
             Graphics.RenderMesh(in rp, PrimitiveMeshes.UnitCube, 0,
                 Matrix4x4.TRS(centre, Quaternion.identity, size));

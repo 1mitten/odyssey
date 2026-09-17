@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Worldgen;
+using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
 
 namespace Odyssey.Tests.Presentation
@@ -86,8 +87,8 @@ namespace Odyssey.Tests.Presentation
 
             ChunkBatch batch = MeshLayer(world, 1);
 
-            Assert.That(Instances(batch.Body), Is.EqualTo(4),
-                "a wall cell with four open neighbours shows four faces");
+            Assert.That(Instances(batch.Body), Is.EqualTo(5),
+                "a wall cell with four open neighbours shows four faces, over one core");
         }
 
         [Test]
@@ -106,8 +107,110 @@ namespace Odyssey.Tests.Presentation
             var mesher = new ChunkMesher(world.Model);
             mesher.Mesh(batch, world.Chunks.ChunksX * world.Chunks.ChunksZ * 1);
 
-            // Three cells: the two ends show three faces each, the middle shows two.
-            Assert.That(Instances(batch.Body), Is.EqualTo(8));
+            // Three cells: the two ends show three faces each, the middle shows two — and each
+            // cell carries the core that fills it, so eight panels and three blocks.
+            Assert.That(Instances(batch.Body), Is.EqualTo(11));
+        }
+
+        /// <summary>
+        /// A wall cell is solid and has a top.
+        ///
+        /// <para>Panels are drawn on faces, so before the core existed a straight run was two
+        /// panels 2.5 m apart with nothing between them and nothing over them: a black slot down
+        /// the middle of every wall from a high camera, and a clear view into the cavity from a
+        /// slice (owner, 2026-09-17). The test is stated over the cell's own centre line, which is
+        /// exactly where a panel never reaches and a core always does.</para>
+        /// </summary>
+        [Test]
+        public void AWallCellIsFilledAndCapped()
+        {
+            GroundRelief.Reset();
+            var world = new RenderTestWorld(8, 8, 3)
+                .Edifice(3, 3, 1, CoreContent.EdificeWall)
+                .Publish();
+
+            ChunkBatch batch = MeshLayer(world, 1);
+
+            Vector3 middle = CellMetrics.FloorCentre(3, 3, 1);
+            float head = float.MinValue;
+            foreach (InstanceBucket bucket in batch.Body)
+            for (int i = 0; i < bucket.Count; i++)
+            {
+                Bounds box = BoxOf(bucket.Matrices[i]);
+                if (middle.x <= box.min.x || middle.x >= box.max.x) continue;
+                if (middle.z <= box.min.z || middle.z >= box.max.z) continue;
+                head = Mathf.Max(head, box.max.y);
+            }
+
+            Assert.That(head, Is.GreaterThan(float.MinValue),
+                "something fills the middle of a wall cell; a hollow wall is what this replaced");
+            Assert.That(head, Is.EqualTo(middle.y + CellMetrics.SizeY).Within(0.05f),
+                "and it reaches the head of the cell, so the wall is capped");
+        }
+
+        /// <summary>
+        /// And a window is the one wall cell that must stay hollow, or it is a wall.
+        /// </summary>
+        [Test]
+        public void AWindowIsNotFilledIn()
+        {
+            GroundRelief.Reset();
+            var world = new RenderTestWorld(8, 8, 3)
+                .Edifice(3, 3, 1, CoreContent.EdificeWindow)
+                .Publish();
+
+            ChunkBatch batch = MeshLayer(world, 1);
+
+            Assert.That(Instances(batch.Body), Is.EqualTo(4),
+                "four panels and no core");
+        }
+
+        /// <summary>The world-space box an instance of the fallback unit cube occupies.</summary>
+        static Bounds BoxOf(Matrix4x4 m)
+        {
+            var box = new Bounds();
+            for (int corner = 0; corner < 8; corner++)
+            {
+                Vector3 at = m.MultiplyPoint3x4(new Vector3(
+                    (corner & 1) == 0 ? -0.5f : 0.5f,
+                    (corner & 2) == 0 ? -0.5f : 0.5f,
+                    (corner & 4) == 0 ? -0.5f : 0.5f));
+                if (corner == 0) box = new Bounds(at, Vector3.zero);
+                else box.Encapsulate(at);
+            }
+
+            return box;
+        }
+
+        /// <summary>
+        /// A tree is not tinted by the stuff it is made of, and a wall is.
+        ///
+        /// <para>Both are placed with <c>NaturalContent.StuffWood</c> — one because it was built
+        /// from wood, the other because it *is* wood — and while the wood tint was white that
+        /// conflation cost nothing. It stopped being free on 2026-09-17, when wood became a brown
+        /// multiply so that a wooden wall would stop drawing as cream plaster: the same multiply
+        /// would have gone over every tree's own pack material, which is already the right green
+        /// and brown. The stuff tint says what a thing was built from, and a tree was not built.</para>
+        /// </summary>
+        [Test]
+        public void ATreeTakesNoStuffTintAndAWoodenWallTakesOne()
+        {
+            GroundRelief.Reset();
+            var world = new RenderTestWorld(8, 8, 3)
+                .Edifice(2, 2, 1, NaturalContent.EdificeTreeBroadleaf, NaturalContent.StuffWood,
+                    blocking: false)
+                .Edifice(5, 5, 1, CoreContent.EdificeWall, NaturalContent.StuffWood)
+                .Publish();
+
+            ChunkBatch batch = MeshLayer(world, 1);
+
+            var codes = new HashSet<int>();
+            foreach (InstanceBucket bucket in batch.Body) codes.Add(TintCode.Value(bucket.Tint));
+
+            Assert.That(codes, Does.Contain((int)CoreContent.StuffNone),
+                "the tree draws untinted, in the material the pack gave it");
+            Assert.That(codes, Does.Contain((int)NaturalContent.StuffWood),
+                "and the wall carries the wood tint, which is what browns it");
         }
 
         [Test]
@@ -121,9 +224,10 @@ namespace Odyssey.Tests.Presentation
 
             ChunkBatch batch = MeshLayer(world, 1);
 
-            // Two walls at three faces each (the face towards the door is hidden by the door),
-            // plus exactly one door leaf.
-            Assert.That(Instances(batch.Body), Is.EqualTo(7));
+            // Two walls at three faces and one core each (the face towards the door is hidden by
+            // the door), plus exactly one door leaf. A door has no core: it is a leaf in an
+            // opening, not a piece of wall.
+            Assert.That(Instances(batch.Body), Is.EqualTo(9));
         }
 
         [Test]
@@ -198,6 +302,176 @@ namespace Odyssey.Tests.Presentation
 
             Assert.That(Instances(batch.Roof), Is.EqualTo(2));
             Assert.That(Instances(batch.Body), Is.EqualTo(0));
+        }
+
+        /// <summary>
+        /// How far apart two drawn corners may be and still count as the same corner, in metres.
+        ///
+        /// Second order in the relief and nothing else: neighbouring pieces are tangent planes of
+        /// one smooth field, so they part company at a shared corner by roughly
+        /// <c>(A/2) * (2*pi*cell/P)^2</c> — about 11 mm at the board's amplitude and period. Twenty
+        /// millimetres leaves room for that and for float, and is a long way below the 73 mm the
+        /// first-order slope used to open up.
+        /// </summary>
+        const float SeamTolerance = 0.02f;
+
+        /// <summary>One drawn corner: where it ended up, and whether it is a head or a foot.</summary>
+        readonly struct DrawnCorner
+        {
+            public DrawnCorner(Vector3 at, bool head) { At = at; Head = head; }
+            public readonly Vector3 At;
+            public readonly bool Head;
+        }
+
+        /// <summary>Every world corner of every instance in a bucket list.</summary>
+        static List<DrawnCorner> Corners(List<InstanceBucket> buckets)
+        {
+            var points = new List<DrawnCorner>();
+            foreach (InstanceBucket bucket in buckets)
+            for (int i = 0; i < bucket.Count; i++)
+            {
+                Matrix4x4 m = bucket.Matrices[i];
+                // Without a catalogue every module is its fallback primitive, so the bucket matrix
+                // already carries the piece's own size and offset and the corners to walk are the
+                // unit cube's — the same assumption TheChunkBoxContainsEveryCornerOfEveryShearedCell
+                // rests on.
+                for (int corner = 0; corner < 8; corner++)
+                {
+                    bool head = (corner & 2) != 0;
+                    points.Add(new DrawnCorner(m.MultiplyPoint3x4(new Vector3(
+                        (corner & 1) == 0 ? -0.5f : 0.5f,
+                        head ? 0.5f : -0.5f,
+                        (corner & 4) == 0 ? -0.5f : 0.5f)), head));
+                }
+            }
+
+            return points;
+        }
+
+        /// <summary>
+        /// The worst disagreement in height between two drawn corners that stand over the same
+        /// point of the board and are the same end of their piece.
+        ///
+        /// This is the whole of "flush", measured: two pieces of one wall meet along a vertical
+        /// edge, and if their heads do not arrive at the same height the join is a step.
+        ///
+        /// <para>Head is compared with head and foot with foot, and leaving that out is how this
+        /// test first failed: a floor slab is 0.15 m thick, so its own head and its own foot stand
+        /// over the same point of the board and are supposed to differ. A wall panel hid the
+        /// mistake because its two ends are three metres apart.</para>
+        /// </summary>
+        static float WorstSeamGap(List<DrawnCorner> corners)
+        {
+            var worst = 0f;
+            for (int i = 0; i < corners.Count; i++)
+            for (int j = i + 1; j < corners.Count; j++)
+            {
+                DrawnCorner a = corners[i], b = corners[j];
+                if (a.Head != b.Head) continue;
+                if (Mathf.Abs(a.At.x - b.At.x) > 1e-3f || Mathf.Abs(a.At.z - b.At.z) > 1e-3f) continue;
+                worst = Mathf.Max(worst, Mathf.Abs(a.At.y - b.At.y));
+            }
+
+            return worst;
+        }
+
+        /// <summary>
+        /// A run of wall must arrive at each join at one height.
+        ///
+        /// <para>This is the owner's report of 2026-09-17 — the first wall the colony ever
+        /// finished went up stepped, a notch at every cell boundary and at every corner — written
+        /// as arithmetic. The cause was that each panel took a single height from its own centre
+        /// while the ground it stood on rolled underneath: on a field of amplitude 2 m and period
+        /// 150 m, two points 2.5 m apart differ by 73 mm on average and by 220 mm at the worst of
+        /// it. Draping each panel onto the field's tangent plane instead leaves only the
+        /// curvature: measured at these cells, 147 mm of step becomes 1.1 mm.</para>
+        /// </summary>
+        [Test]
+        public void AWallRunMeetsItselfAtOneHeightOnRollingGround()
+        {
+            GroundRelief.Reset();
+            GroundRelief.Amplitude = GroundRelief.BoardAmplitude;
+            try
+            {
+                var world = new RenderTestWorld(12, 12, 3);
+                for (int x = 2; x <= 9; x++) world.Edifice(x, 4, 1, CoreContent.EdificeWall);
+                for (int z = 5; z <= 9; z++) world.Edifice(9, z, 1, CoreContent.EdificeWall);
+                world.Publish();
+
+                ChunkBatch batch = MeshLayer(world, 1);
+                Assert.That(Instances(batch.Body), Is.GreaterThan(0), "there is a wall to check");
+
+                Assert.That(WorstSeamGap(Corners(batch.Body)), Is.LessThan(SeamTolerance),
+                    "two panels sharing a vertical edge must arrive at the same height");
+            }
+            finally
+            {
+                GroundRelief.Reset();
+            }
+        }
+
+        /// <summary>
+        /// And a floor laid across rolling ground must not step either — the same fault, one
+        /// surface down, and the one a player walks over rather than looks at.
+        /// </summary>
+        [Test]
+        public void AFloorMeetsItselfAtOneHeightOnRollingGround()
+        {
+            GroundRelief.Reset();
+            GroundRelief.Amplitude = GroundRelief.BoardAmplitude;
+            try
+            {
+                var world = new RenderTestWorld(12, 12, 3);
+                for (int x = 2; x <= 8; x++)
+                for (int z = 2; z <= 8; z++)
+                    world.Slab(x, z, 1);
+                world.Publish();
+
+                ChunkBatch batch = MeshLayer(world, 1);
+                Assert.That(Instances(batch.Roof), Is.GreaterThan(0), "there is a floor to check");
+
+                Assert.That(WorstSeamGap(Corners(batch.Roof)), Is.LessThan(SeamTolerance),
+                    "two slabs sharing an edge must arrive at the same height");
+            }
+            finally
+            {
+                GroundRelief.Reset();
+            }
+        }
+
+        /// <summary>
+        /// A shear and not a rotation: the wall must stay three metres tall and stand up straight
+        /// however steep the ground under it, or "flush" has been bought by leaning the building
+        /// over.
+        /// </summary>
+        [Test]
+        public void ADrapedWallStaysVerticalAndFullHeight()
+        {
+            GroundRelief.Reset();
+            GroundRelief.Amplitude = GroundRelief.BoardAmplitude;
+            try
+            {
+                var world = new RenderTestWorld(12, 12, 3);
+                for (int x = 2; x <= 9; x++) world.Edifice(x, 4, 1, CoreContent.EdificeWall);
+                world.Publish();
+
+                ChunkBatch batch = MeshLayer(world, 1);
+
+                foreach (InstanceBucket bucket in batch.Body)
+                for (int i = 0; i < bucket.Count; i++)
+                {
+                    Matrix4x4 m = bucket.Matrices[i];
+                    Vector3 up = m.MultiplyVector(Vector3.up);
+                    Assert.That(up.x, Is.EqualTo(0f).Within(1e-4f), "a panel's height is plumb in x");
+                    Assert.That(up.z, Is.EqualTo(0f).Within(1e-4f), "a panel's height is plumb in z");
+                    Assert.That(up.y, Is.EqualTo(CellMetrics.SizeY).Within(1e-3f),
+                        "a panel is a full layer tall wherever it stands");
+                }
+            }
+            finally
+            {
+                GroundRelief.Reset();
+            }
         }
 
         [Test]

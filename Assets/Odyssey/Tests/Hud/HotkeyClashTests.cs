@@ -19,11 +19,18 @@ namespace Odyssey.Tests.Hud
     /// memory is a reserved list that is wrong the moment somebody binds a key without updating
     /// it.</para>
     ///
-    /// <para>So the reserved set is <b>read out of the source</b>. Every
-    /// <c>keys.somethingKey</c> in the Presentation assembly is a key the game reads, and the only
-    /// ones a command may claim are the ones its own component reads on its behalf. It is an
-    /// unusual shape of test — it greps the codebase — and it is the only shape that can answer
-    /// the question at all without a running game and a person pressing keys.</para>
+    /// <para>Since <see cref="HotkeyDirector"/> landed (2026-09-17) the game reads no key by name
+    /// at all: every poller asks the binding map for an action, and a clash between two actions is
+    /// a state the director refuses to build. So this guard's question has changed shape once
+    /// more. It still reads the source — the one place the question can be answered without a
+    /// running game and a person pressing keys — but what it looks for now is a <i>regression</i>:
+    /// a <c>keys.somethingKey</c> read is a key read past the binding map, and the only two left
+    /// on purpose are Escape, which is the unwind rule and not bindable, and the capture loop,
+    /// which offers every key to the rebind and names none of them.</para>
+    ///
+    /// <para>And the reserved set a command's cap is checked against is read out of the binding
+    /// map's own defaults, so a cap cannot drift out of step with the keys the game actually
+    /// ships reading.</para>
     /// </summary>
     public class HotkeyClashTests
     {
@@ -34,52 +41,89 @@ namespace Odyssey.Tests.Hud
         };
 
         /// <summary>
-        /// The commands that are allowed to be read, and the one file each is read in. Anything
-        /// else reading these is the clash this test is for.
+        /// The named key reads the game is allowed to keep, and the one file each is read in.
+        /// A read anywhere else is a binding made behind the map's back.
+        ///
+        /// <para>Three reads, two reasons. Escape is the unwind rule (09 §6 case 6) and is not
+        /// bindable; the capture loop offers every key to a rebind and names none; and Shift is
+        /// the one modifier the game keeps for itself — the fast multiplier and the
+        /// additive-selection modifier — which <see cref="HudKey"/>'s docs already refuse to
+        /// bind.</para>
         /// </summary>
         static readonly Dictionary<string, string> Owners = new Dictionary<string, string>
         {
-            { "bKey", "HudShell.Bar.cs" },          // opens the Build palette
-            { "escapeKey", "SettingsPresenter.cs" },// opens Menu, per 09 §6 case 6
+            { "escapeKey", "SettingsPresenter.cs" },  // the unwind rule, 09 §6 case 6 — fixed, not bindable
+            { "allKeys", "SettingsPresenter.cs" },    // the rebind capture: every key offered, none named
+            { "leftShiftKey", "SliceCameraRig.cs" },  // Shift: the fast modifier, deliberately unbindable
+            { "rightShiftKey", "SliceCameraRig.cs" },
         };
 
         [Test]
-        public void NoCommandHotkeyIsAlreadyBoundToSomethingElse()
+        public void NoKeyIsReadByNameExceptEscapeAndTheCapture()
         {
             List<(string File, string Key)> reads = ScanForKeyReads();
             Assert.That(reads, Is.Not.Empty,
                 "no keyboard reads were found in the source at all, so this test is scanning the " +
                 "wrong place and proving nothing");
 
-            foreach (HudCommand command in HudCommands.All)
+            foreach ((string file, string key) in reads)
             {
-                string? property = InputSystemProperty(command.Hotkey);
-                if (property == null) continue;   // a cap this test cannot map is reported below
+                Owners.TryGetValue(key, out string? owner);
 
-                foreach ((string file, string key) in reads)
-                {
-                    if (key != property) continue;
-                    Owners.TryGetValue(property, out string? owner);
-
-                    Assert.That(file, Is.EqualTo(owner),
-                        $"the command bar offers {command.Hotkey} for '{command.Label}', and " +
-                        $"{file} reads {key} as well. Two things on one key is a binding the " +
-                        "player cannot use and a bug that presents as one of them intermittently " +
-                        "not working.");
-                }
+                Assert.That(owner, Is.Not.Null,
+                    $"{file} reads {key} by name. Read the binding map's actions instead: a named " +
+                    "key read is a binding the player cannot change and a clash the director " +
+                    "cannot see. If the key genuinely must be fixed, say so here and in " +
+                    "HotkeyDirector's docs, as Escape does.");
+                Assert.That(file, Is.EqualTo(owner),
+                    $"{key} is read in {file} as well, and one key with two owners is the fault " +
+                    "this test has stood against since the command bar shipped with five hotkeys " +
+                    "already taken");
             }
         }
 
         [Test]
         public void EveryHotkeyCapIsOneThisTestCanCheck()
         {
-            // A cap this test cannot map to an Input System property is a cap it silently skips,
-            // which is how the last version of this guard came to pass while five hotkeys clashed.
+            // A cap this test cannot map to a binding-map key is a cap it silently skips, which
+            // is how the last version of this guard came to pass while five hotkeys clashed.
             foreach (HudCommand command in HudCommands.All)
-                Assert.That(InputSystemProperty(command.Hotkey), Is.Not.Null,
-                    $"'{command.Hotkey}' on {command.Key} is not a cap this test knows how to " +
-                    "check for clashes. Teach InputSystemProperty about it rather than leaving it " +
-                    "unchecked.");
+                Assert.That(CapIsCheckable(command.Hotkey), Is.True,
+                    $"'{command.Hotkey}' on {command.Key} is neither a key the binding map can " +
+                    "name nor one of the caps this test knows it may not bind. Teach one or the " +
+                    "other rather than leaving it unchecked.");
+        }
+
+        [Test]
+        public void NoCommandCapNamesAKeyAnActionDefaultsTo()
+        {
+            var hotkeys = new HotkeyDirector();
+            foreach (HudCommand command in HudCommands.All)
+            {
+                HotkeyAction? owner = DefaultOwnerOfCap(hotkeys, command.Hotkey);
+                if (owner == null) continue;   // F1 to F9, Esc: keys the map will not bind
+
+                Assert.That(owner, Is.EqualTo(HotkeyAction.BuildPalette),
+                    $"the command bar offers {command.Hotkey} for '{command.Label}', and the " +
+                    "binding map ships it to another action. Two things on one key is a binding " +
+                    "the player cannot use and a bug that presents as one of them intermittently " +
+                    "not working.");
+                Assert.That(command.Key, Is.EqualTo(HudCommands.BuildKey),
+                    "Build is the one command whose cap is a binding, so its cap and its action " +
+                    "cannot be strangers");
+            }
+        }
+
+        [Test]
+        public void TheBuildCapSaysTheKeyTheBindingMapShips()
+        {
+            var hotkeys = new HotkeyDirector();
+            foreach (HudCommand command in HudCommands.All)
+                if (command.Key == HudCommands.BuildKey)
+                    Assert.That(command.Hotkey,
+                        Is.EqualTo(HotkeyDirector.Display(hotkeys.Key(HotkeyAction.BuildPalette, 0))),
+                        "the Build cap is a legend of a real binding; if the default moves, the " +
+                        "cap moves with it or it is a lie on the bar");
         }
 
         [Test]
@@ -104,18 +148,47 @@ namespace Odyssey.Tests.Hud
         {
             var keys = new SortedSet<string>();
             foreach ((string _, string key) in ScanForKeyReads()) keys.Add(key);
-            TestContext.WriteLine("The game reads: " + string.Join(", ", keys));
+            TestContext.WriteLine("The game reads by name: " + string.Join(", ", keys));
             Assert.That(keys, Is.Not.Empty);
         }
 
-        /// <summary>The Input System property for a hotkey cap, or null if this test cannot say.</summary>
-        static string? InputSystemProperty(string cap)
+        /// <summary>
+        /// Whether a cap is one this test can hold to the binding map: either it names a key
+        /// the map could bind — so <see cref="DefaultOwnerOfCap"/> can check it against the
+        /// defaults — or it is one of the caps the map refuses on purpose, which may not be
+        /// claimed because nothing can be bound to them.
+        /// </summary>
+        static bool CapIsCheckable(string cap)
         {
-            if (string.IsNullOrEmpty(cap)) return null;
-            if (cap == "Esc") return "escapeKey";
-            if (cap.Length == 1 && char.IsLetter(cap[0])) return char.ToLowerInvariant(cap[0]) + "Key";
-            if (cap.Length == 1 && char.IsDigit(cap[0])) return "digit" + cap + "Key";
-            if (Regex.IsMatch(cap, @"^F[1-9]$|^F1[0-2]$")) return cap.ToLowerInvariant() + "Key";
+            if (string.IsNullOrEmpty(cap)) return false;
+            if (cap == "Esc") return true;                       // the unwind key, fixed
+            if (Regex.IsMatch(cap, @"^F[1-9]$|^F1[0-2]$")) return true; // promised to panels
+            return CapToKey(cap).HasValue;
+        }
+
+        /// <summary>
+        /// The binding-map key a cap names, or null when the cap is not a single key this map
+        /// can display.
+        /// </summary>
+        static HudKey? CapToKey(string cap)
+        {
+            foreach (HudKey key in Enum.GetValues(typeof(HudKey)))
+                if (key != HudKey.None && HotkeyDirector.Display(key) == cap) return key;
+            return null;
+        }
+
+        /// <summary>
+        /// The action whose default a cap names, or null when no action ships on it — the
+        /// reserved set, read out of the binding map rather than out of somebody's memory.
+        /// </summary>
+        static HotkeyAction? DefaultOwnerOfCap(HotkeyDirector hotkeys, string cap)
+        {
+            HudKey? key = CapToKey(cap);
+            if (key == null) return null;
+
+            foreach (HotkeyAction action in HotkeyDirector.All)
+                for (int slot = 0; slot < HotkeyDirector.SlotCount; slot++)
+                    if (hotkeys.Key(action, slot) == key) return action;
             return null;
         }
 

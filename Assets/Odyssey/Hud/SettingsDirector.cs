@@ -62,25 +62,58 @@ namespace Odyssey.Hud
         int? ReadInt(string key);
 
         void WriteInt(string key, int value);
+
+        /// <summary>
+        /// The stored word, or null if this machine has never been told. Key bindings are
+        /// words — a binding is a key's <i>name</i>, not a number some parser would have to
+        /// keep in step with an enum it cannot see.
+        /// </summary>
+        string? ReadString(string key);
+
+        void WriteString(string key, string value);
     }
 
     /// <summary>
     /// The sections of the settings panel.
     ///
-    /// <para>Two, because there are now two kinds of thing in it and they answer different
-    /// questions: <see cref="Interface"/> is how the HUD itself is drawn, <see cref="Graphics"/>
-    /// is how the world is. The panel held only the second until 2026-09-16, when the owner
-    /// reported the HUD's type reading too small on a 4K monitor and the fix was a setting rather
-    /// than a constant.</para>
+    /// <para>Four, because there are four kinds of thing in it and they answer different
+    /// questions: <see cref="Interface"/> is how the HUD and the camera are handled,
+    /// <see cref="Graphics"/> is how the world is drawn, <see cref="Audio"/> is how it
+    /// sounds, and <see cref="Keys"/> is what the keyboard does. The panel held only the
+    /// second until 2026-09-16, when the owner reported the HUD's type reading too small on
+    /// a 4K monitor and the fix was a setting rather than a constant; the other two arrived
+    /// together on 2026-09-17, when the keybindings became a binding map and the audio
+    /// faders, waiting in their store since the sound work landed, finally had a panel to
+    /// live in.</para>
     /// </summary>
     public enum SettingsTab
     {
         Interface,
         Graphics,
+        Audio,
+        Keys,
     }
 
     /// <summary>
-    /// The settings panel: whether it is open, and the graphics options it holds.
+    /// One volume fader. Mirrors the sound buses the Presentation assembly keeps — the same
+    /// five, in the same order — because the Hud assembly cannot see
+    /// <c>Odyssey.Presentation.Audio.SoundBus</c> and must not (ADR 0003). The map between
+    /// them is one cast in the presenter, and a bus added on one side is a compile error on
+    /// the other the moment the panel loop reaches it.
+    /// </summary>
+    public enum SettingsBus
+    {
+        Master,
+        Music,
+        Ambience,
+        Effects,
+        Alerts,
+    }
+
+    /// <summary>
+    /// The settings panel: whether it is open, and the levers it holds — the graphics
+    /// options, the interface and camera speeds, the developer readout, the volume faders,
+    /// and the way out.
     ///
     /// <para><b>Why a director owns this at all.</b> Until now every graphics lever was a field on
     /// <c>OdysseyBootstrap</c>, which means stopping play, changing a number and pressing play
@@ -113,6 +146,18 @@ namespace Odyssey.Hud
         /// <summary>The registry key naming the interface-scale row.</summary>
         public const string UiScaleKey = "ui.settings.uiscale";
 
+        /// <summary>The registry key naming the audio section.</summary>
+        public const string AudioKey = "ui.settings.audio";
+
+        /// <summary>The registry key naming the camera-speed row.</summary>
+        public const string CamSpeedKey = "ui.settings.camspeed";
+
+        /// <summary>The registry key naming the developer-overlay row.</summary>
+        public const string DeveloperKey = "ui.settings.developer";
+
+        /// <summary>The registry key naming the exit row.</summary>
+        public const string ExitKey = "ui.settings.exit";
+
         static readonly GraphicsOption[] Order =
         {
             GraphicsOption.Shadows,
@@ -133,11 +178,41 @@ namespace Odyssey.Hud
             GraphicsKey,
             InterfaceKey,
             UiScaleKey,
+            AudioKey,
+            CamSpeedKey,
+            DeveloperKey,
+            ExitKey,
             "ui.settings.shadows",
             "ui.settings.surround",
             "ui.settings.grass",
             "ui.settings.relief",
             "ui.settings.seethrough",
+            "ui.settings.volume.master",
+            "ui.settings.volume.music",
+            "ui.settings.volume.ambience",
+            "ui.settings.volume.effects",
+            "ui.settings.volume.alerts",
+        };
+
+        /// <summary>The registry key naming one volume row.</summary>
+        public static string VolumeKey(SettingsBus bus) => bus switch
+        {
+            SettingsBus.Master => "ui.settings.volume.master",
+            SettingsBus.Music => "ui.settings.volume.music",
+            SettingsBus.Ambience => "ui.settings.volume.ambience",
+            SettingsBus.Effects => "ui.settings.volume.effects",
+            SettingsBus.Alerts => "ui.settings.volume.alerts",
+            _ => AudioKey,
+        };
+
+        /// <summary>The registry key naming one tab chip.</summary>
+        public static string TabKey(SettingsTab tab) => tab switch
+        {
+            SettingsTab.Interface => InterfaceKey,
+            SettingsTab.Graphics => GraphicsKey,
+            SettingsTab.Audio => AudioKey,
+            SettingsTab.Keys => HotkeyDirector.KeysKey,
+            _ => PanelKey,
         };
 
         /// <summary>
@@ -151,10 +226,40 @@ namespace Odyssey.Hud
         ///
         /// <para><b>Above 100 the HUD covers more of the board</b>, which is the trade the player
         /// is making: the coverage ceiling the interface was built to is stated at 100, and at 150
-        /// on a 16:9 screen the HUD occupies about a quarter of it rather than an
+        /// on a 16:9 screen the HUD occupies about a quarter of it rather than a
         /// ninth.</para>
         /// </summary>
         public static readonly int[] UiScales = { 80, 90, 100, 110, 125, 150 };
+
+        /// <summary>
+        /// The camera speeds the panel offers, as percentages of the speeds the rig was tuned
+        /// at. A ladder for the same reason the interface scale is one: three honest answers
+        /// rather than a continuous knob nobody asked to fine-tune, and the rungs snap, so a
+        /// stored value from an older ladder can never leave the panel showing a speed none
+        /// of its own buttons can reproduce.
+        /// </summary>
+        public static readonly int[] CameraSpeeds = { 60, 100, 150 };
+
+        /// <summary>
+        /// The volume ladder every bus shares, in dB: silence at the bottom, unity at the
+        /// top, whole decibels between. The mute rung is −80 because that is
+        /// <c>AudioMath.SilenceDb</c> in the Presentation assembly — the fader's own floor,
+        /// restated here so the panel and the audio code cannot disagree about where silence
+        /// starts. A ladder rather than a slider because a slider position is a lie about
+        /// loudness: equal steps of dB are equal steps of hearing, and the rungs say what
+        /// they are.
+        /// </summary>
+        public static readonly int[] VolumeDbRungs = { -80, -36, -24, -16, -10, -5, 0 };
+
+        /// <summary>The buses, in the order the panel draws them.</summary>
+        public static readonly SettingsBus[] Buses =
+        {
+            SettingsBus.Master,
+            SettingsBus.Music,
+            SettingsBus.Ambience,
+            SettingsBus.Effects,
+            SettingsBus.Alerts,
+        };
 
         /// <summary>The scale a screen this tall should start at, before any stored preference.
         ///
@@ -180,12 +285,14 @@ namespace Odyssey.Hud
             screenHeight >= 1440 ? 110 : 100;
 
         readonly Dictionary<GraphicsOption, bool> _on = new();
+        readonly Dictionary<SettingsBus, int> _db = new();
 
         ISettingsStore? _store;
 
         public SettingsDirector()
         {
             foreach (GraphicsOption option in Order) _on[option] = true;
+            foreach (SettingsBus bus in Buses) _db[bus] = 0;
         }
 
         /// <summary>The options, in the order they are drawn.</summary>
@@ -201,6 +308,17 @@ namespace Odyssey.Hud
         /// <see cref="UiScales"/>.</summary>
         public int UiScale { get; private set; } = 100;
 
+        /// <summary>How fast the camera moves and zooms, as a percentage of the tuned speeds.
+        /// Always a member of <see cref="CameraSpeeds"/>.</summary>
+        public int CameraSpeed { get; private set; } = 100;
+
+        /// <summary>Whether the developer readout is drawn. Seeded from the overlay director,
+        /// so the row describes the screen rather than dictating to it.</summary>
+        public bool DeveloperOverlay { get; private set; }
+
+        /// <summary>Whether the exit row has been clicked once and is asking to be sure.</summary>
+        public bool ExitArmed { get; private set; }
+
         /// <summary>Raised when the panel opens or closes.</summary>
         public event Action? Changed;
 
@@ -212,6 +330,25 @@ namespace Odyssey.Hud
 
         /// <summary>Raised when one option's value changes, with the option that changed.</summary>
         public event Action<GraphicsOption>? OptionChanged;
+
+        /// <summary>Raised when the camera speed changes, with the new percentage.</summary>
+        public event Action<int>? CameraSpeedChanged;
+
+        /// <summary>Raised when the developer overlay is switched by the panel.</summary>
+        public event Action? DeveloperOverlayChanged;
+
+        /// <summary>Raised when one bus's volume changes, with the bus that changed.</summary>
+        public event Action<SettingsBus>? BusDbChanged;
+
+        /// <summary>Raised when the exit row arms or stands down.</summary>
+        public event Action? ExitChanged;
+
+        /// <summary>
+        /// Raised when the player has asked twice to leave. Not performed here because
+        /// quitting is the engine's to do — and because "the panel asked the game to leave"
+        /// is a sentence the fast tier can assert without one.
+        /// </summary>
+        public event Action? ExitRequested;
 
         public bool IsOn(GraphicsOption option) => _on.TryGetValue(option, out bool on) && on;
 
@@ -237,6 +374,14 @@ namespace Odyssey.Hud
         {
             if (Open == open) return;
             Open = open;
+            // The armed exit row lives only in this panel, so the panel going away stands it
+            // down. A "quit?" that survived its own panel would be a trap armed across the
+            // whole screen.
+            if (!open && ExitArmed)
+            {
+                ExitArmed = false;
+                ExitChanged?.Invoke();
+            }
             Changed?.Invoke();
         }
 
@@ -256,7 +401,7 @@ namespace Odyssey.Hud
         /// </summary>
         public void SetUiScale(int percent)
         {
-            int snapped = Nearest(percent);
+            int snapped = Nearest(UiScales, percent);
             if (UiScale == snapped) return;
             UiScale = snapped;
             _store?.WriteInt(UiScaleKey, snapped);
@@ -267,15 +412,15 @@ namespace Odyssey.Hud
         public void StepUiScale(int rungs)
         {
             int at = Array.IndexOf(UiScales, UiScale);
-            if (at < 0) at = Array.IndexOf(UiScales, Nearest(UiScale));
+            if (at < 0) at = Array.IndexOf(UiScales, Nearest(UiScales, UiScale));
             SetUiScale(UiScales[Math.Max(0, Math.Min(UiScales.Length - 1, at + rungs))]);
         }
 
-        static int Nearest(int percent)
+        static int Nearest(int[] rungs, int value)
         {
-            int best = UiScales[0];
-            foreach (int rung in UiScales)
-                if (Math.Abs(rung - percent) < Math.Abs(best - percent)) best = rung;
+            int best = rungs[0];
+            foreach (int rung in rungs)
+                if (Math.Abs(rung - value) < Math.Abs(best - value)) best = rung;
             return best;
         }
 
@@ -288,6 +433,73 @@ namespace Odyssey.Hud
         }
 
         public void Toggle(GraphicsOption option) => Set(option, !IsOn(option));
+
+        /// <summary>
+        /// Move the camera speed. Anything not on the ladder snaps to the nearest rung —
+        /// the same bargain <see cref="SetUiScale"/> makes, for the same reason.
+        /// </summary>
+        public void SetCameraSpeed(int percent)
+        {
+            int snapped = Nearest(CameraSpeeds, percent);
+            if (CameraSpeed == snapped) return;
+            CameraSpeed = snapped;
+            _store?.WriteInt(CamSpeedKey, snapped);
+            CameraSpeedChanged?.Invoke(snapped);
+        }
+
+        /// <summary>
+        /// Switch the developer readout from the panel. The backquote key reaches the same
+        /// lever through the overlay director, so this writes the preference down — the key
+        /// never did, which is why the readout was off again every session.
+        /// </summary>
+        public void SetDeveloperOverlay(bool on)
+        {
+            if (DeveloperOverlay == on) return;
+            DeveloperOverlay = on;
+            _store?.Write(DeveloperKey, on);
+            DeveloperOverlayChanged?.Invoke();
+        }
+
+        /// <summary>
+        /// Move one bus's volume. Anything not on the ladder snaps to the nearest rung.
+        /// Not written to <see cref="ISettingsStore"/>: the volumes keep their own store in
+        /// the Presentation assembly (<c>AudioSettingsStore</c>, in dB, under its own prefix,
+        /// since before this panel existed), and the presenter writes through to it so the
+        /// two stores never hold one fader between them.
+        /// </summary>
+        public void SetBusDb(SettingsBus bus, int db)
+        {
+            int snapped = Nearest(VolumeDbRungs, db);
+            if (_db[bus] == snapped) return;
+            _db[bus] = snapped;
+            BusDbChanged?.Invoke(bus);
+        }
+
+        /// <summary>One bus's volume, in dB. Always a member of <see cref="VolumeDbRungs"/>.</summary>
+        public int BusDb(SettingsBus bus) => _db[bus];
+
+        /// <summary>
+        /// The exit row: click once to arm, twice to leave.
+        ///
+        /// <para>Two clicks because nothing is saved — there is no save system yet — so the
+        /// row must not be a key the player can hit by reaching past it for the close button.
+        /// No timeout, because a clock the director does not have would be a clock it could
+        /// not test; the armed row says what it wants and the panel closing stands it
+        /// down.</para>
+        /// </summary>
+        public void RequestExit()
+        {
+            if (!ExitArmed)
+            {
+                ExitArmed = true;
+                ExitChanged?.Invoke();
+                return;
+            }
+
+            ExitArmed = false;
+            ExitRequested?.Invoke();
+            ExitChanged?.Invoke();
+        }
 
         /// <summary>
         /// Record what the scene was already configured to do, without raising anything and
@@ -306,7 +518,28 @@ namespace Odyssey.Hud
         /// stored preference is laid over it by <see cref="UseStore"/>, so the machine beats the
         /// screen and the screen beats nothing at all.
         /// </summary>
-        public void SeedUiScale(int percent) => UiScale = Nearest(percent);
+        public void SeedUiScale(int percent) => UiScale = Nearest(UiScales, percent);
+
+        /// <summary>
+        /// Record the camera speed the rig was tuned at, without raising anything — the same
+        /// bargain every seed here makes. A stored preference is laid over it by
+        /// <see cref="UseStore"/>.
+        /// </summary>
+        public void SeedCameraSpeed(int percent) => CameraSpeed = Nearest(CameraSpeeds, percent);
+
+        /// <summary>
+        /// Record whether the developer readout is already on screen, so the row describes
+        /// the screen rather than changing it by existing. Whatever armed it — the backquote
+        /// key, a stored preference from last session — the row starts telling the truth.
+        /// </summary>
+        public void SeedDeveloperOverlay(bool on) => DeveloperOverlay = on;
+
+        /// <summary>
+        /// Record one bus's volume as the audio store left it, without raising anything. The
+        /// presenter lays <c>AudioSettingsStore.Load()</c> in through this, so the panel opens
+        /// describing what the game is already playing at.
+        /// </summary>
+        public void SeedBusDb(SettingsBus bus, int db) => _db[bus] = Nearest(VolumeDbRungs, db);
 
         /// <summary>
         /// Attach the place preferences are kept, and apply anything this machine has already been
@@ -324,6 +557,12 @@ namespace Odyssey.Hud
 
             int? scale = store.ReadInt(UiScaleKey);
             if (scale.HasValue) SetUiScale(scale.Value);
+
+            int? speed = store.ReadInt(CamSpeedKey);
+            if (speed.HasValue) SetCameraSpeed(speed.Value);
+
+            bool? developer = store.Read(DeveloperKey);
+            if (developer.HasValue) SetDeveloperOverlay(developer.Value);
         }
 
         /// <summary>

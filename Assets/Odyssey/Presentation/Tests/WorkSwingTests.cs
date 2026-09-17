@@ -531,19 +531,20 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
-        public void BuildingCanBeReachedOnlyByOverridingTheStyle()
+        public void BuildingIsTheStyleABuilderIsSeenIn()
         {
-            // Nothing in the simulation builds: there is no JobHandle.Build, so no job maps to this
-            // style and no colonist will be seen in it during play. It is reached from SwingCheck
-            // through PawnFigureDirector.StyleOverride and nowhere else.
+            // This replaces a tripwire. Until the build pipeline landed nothing in the simulation
+            // built, the hammer was reachable only through PawnFigureDirector.StyleOverride, and a
+            // test asserted that no job mapped to it — with a message saying to add the row to
+            // IndexForJob and delete the test the day building became real. It has, the row is
+            // there, and the tripwire fired on 2026-09-17 exactly as it was written to.
             //
-            // **This test is a tripwire, not a rule.** The day building becomes a real job, add the
-            // row to IndexForJob and delete this.
-            for (int job = 0; job < JobHandle.Count; job++)
-            {
-                Assert.That(WorkStyle.IndexForJob(job), Is.Not.EqualTo(WorkStyle.BuildingIndex),
-                    $"job {job} now maps to building; give it a row in IndexForJob and drop this test");
-            }
+            // What is worth asserting now is the row itself, and that it is the *only* one: an
+            // `IndexForJob` that answered building for everything would satisfy the first half.
+            Assert.That(WorkStyle.IndexForJob(JobHandle.Build), Is.EqualTo(WorkStyle.BuildingIndex),
+                "a colonist raising a wall swings the hammer");
+            Assert.That(WorkStyle.IndexForJob(JobHandle.Mine), Is.EqualTo(WorkStyle.MiningIndex),
+                "and a miner still swings the pick");
         }
 
         [Test]

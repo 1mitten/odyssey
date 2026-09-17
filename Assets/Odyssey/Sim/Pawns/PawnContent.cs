@@ -129,6 +129,8 @@ namespace Odyssey.Sim.Pawns
         public const int Wait = JobHandle.Wait;
         public const int Fell = JobHandle.Fell;
         public const int Mine = JobHandle.Mine;
+        public const int Deliver = JobHandle.Deliver;
+        public const int Build = JobHandle.Build;
         public const int Count = JobHandle.Count;
     }
 
@@ -198,7 +200,12 @@ namespace Odyssey.Sim.Pawns
         public const int Haul = 0;
         public const int Cutting = 1;
         public const int Mining = 2;
-        public const int Count = 3;
+
+        /// <summary>Carrying material to a building site, and working at one. Both, deliberately:
+        /// fetching the wood is part of building the wall, not a haul that happens to help.</summary>
+        public const int Construction = 3;
+
+        public const int Count = 4;
     }
 
     /// <summary>
@@ -214,7 +221,8 @@ namespace Odyssey.Sim.Pawns
         public const int Hauling = 0;
         public const int Cutting = 1;
         public const int Mining = 2;
-        public const int Count = 3;
+        public const int Construction = 3;
+        public const int Count = 4;
 
         /// <summary>
         /// The names skills are published under, parallel to the indices above.
@@ -224,7 +232,7 @@ namespace Odyssey.Sim.Pawns
         /// assembly or sharing an enum with it. The prefix is the project's, the middle is this
         /// feature's, and the leaf is the value — the same shape as an icon key.</para>
         /// </summary>
-        public static readonly string[] Names = { "hauling", "cutting", "mining" };
+        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction" };
     }
 
     /// <summary>
@@ -548,9 +556,12 @@ namespace Odyssey.Sim.Pawns
             content.Thoughts = ByName<ThoughtDef>(defs,
                 "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround");
             content.Jobs = ByName<JobDef>(defs,
-                "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine");
-            content.WorkTypes = ByName<WorkTypeDef>(defs, "Work_Haul", "Work_Cutting", "Work_Mining");
-            content.Skills = ByName<SkillDef>(defs, "Skill_Hauling", "Skill_Cutting", "Skill_Mining");
+                "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine",
+                "Job_Deliver", "Job_Build");
+            content.WorkTypes = ByName<WorkTypeDef>(defs,
+                "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction");
+            content.Skills = ByName<SkillDef>(defs,
+                "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction");
             content.Items = ByName<ItemDef>(defs,
                 "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal");
 

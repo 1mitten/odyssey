@@ -527,6 +527,17 @@ backslashes dies on `MSB4025: hexadecimal value 0x0C is an invalid character` �
 segment. **Write every path in a generated csproj with forward slashes**; MSBuild accepts them and
 the error message points nowhere near the cause.
 
+**Presentation tests can be *run* the same way, not merely compiled** (2026-09-17). Point a throwaway
+`net8.0` project with NUnit and the test adapter at the test file, reference the DLL the paragraph
+above builds plus `UnityEngine.CoreModule.dll`, and `dotnet test` runs them in about a second while
+the editor holds the project. **What stops it is an engine ECall**: anything implemented natively
+throws `SecurityException: ECall methods must be packaged into a system module` outside the player.
+`Matrix4x4.TRS` is one of them; `Matrix4x4.identity`, `operator *`, `MultiplyVector`, `GetColumn`,
+`Mathf` and the vector types are managed and work. So a value that is only ever scaled and
+translated is better built by writing the seven fields out — it is one multiply cheaper, and it is
+the difference between geometry that can be measured in a test and geometry that can only be looked
+at. `GroundRelief.Drape` had already made the same choice for its shear.
+
 And a shell trap that is not a documentation error: the user PATH does put Python 3.13 ahead of
 `WindowsApps`, but a shell started before that change inherits the old environment, so `python3`
 resolves to the Microsoft Store stub and answers *"Python was not found"* to everything —
@@ -662,6 +673,40 @@ minutes and a couple of gigabytes; run it in the background and do something els
 
 Remove the junction with `rmdir` (not `Remove-Item -Recurse`, which on some shells follows the link
 and would delete the real packs).
+
+**And not `git worktree remove` either — that is the same trap and it is not obvious** (2026-09-17,
+and it cost the packs). Tearing down a junctioned worktree with
+
+```
+git worktree remove --force .claude/worktrees/<name>
+```
+
+made git walk the tree deleting as it went, **follow the junction, and empty the real
+`D:\code\odyssey\Assets\Synty`** — 15,868 files, 1.54 GB, gone, and the command then failed with
+`Permission denied` so it looked like nothing had happened. Every other junctioned worktree
+(`odyssey-look`, `odyssey-ui`) went dark at the same moment, because they all point at the one real
+copy. Nothing goes to the recycle bin.
+
+**The order that is safe:** remove the junction first, then the worktree.
+
+```
+cmd /c rmdir "<worktree>\Assets\Synty"      # unlinks; does NOT touch the target
+git worktree remove --force .claude/worktrees/<name>
+```
+
+Before deleting any tree that a worktree owns, ask whether anything under it is a reparse point:
+
+```
+Get-ChildItem <path> -Recurse -Force -Directory | Where-Object { $_.LinkType }
+```
+
+**If it has already happened**, the packs are recoverable without re-downloading: `D:\code\odyssey-audio`
+holds a *real* copy rather than a junction. `robocopy <source> <dest> /E /COPY:DAT /DCOPY:DAT` restores
+it byte for byte in about ten seconds, and the `.meta` files come with it, so the GUIDs are the ones
+`ModuleCatalogue.asset` already refers to — check one before believing it, e.g. that
+`PolygonGeneric\Prefabs\Base\SM_Bld_Base_Wall_01.prefab.meta` still reads
+`guid: d6b56504304c325419b598fe3ddb95ed`. **Keeping one real copy somewhere is what made that
+possible**, so do not "tidy" `odyssey-audio` into a junction as well.
 
 ## Per-cell geometry cracks where a continuous field does not
 
@@ -1405,6 +1450,35 @@ Two things generalise:
   hid six dead mining tests, the loose tolerance that made a test prove nothing — are the same
   shape.
 
+## An optional parameter is how a composition root forgets
+
+`ColonyComposition.AddColony` gained the build pipeline's construction grid as
+`ConstructionGrid? construction = null`. Every one of the twelve existing call sites went on
+compiling, and eleven of them — including `OdysseyBootstrap`, the one the game actually runs —
+silently built a colony with **no intent handler for `PlaceBuilding`, no sites, and both
+construction work givers answering no for ever**.
+
+Every test passed, because every test builds its world through `ColonyWorld`, the twelfth call
+site, which did pass one. So the feature was green in the fast tier, green in the Long tier, and
+did nothing at all in the only build a player can touch. It was found by the owner dragging a wall
+across the meadow, watching the preview draw and watching nothing be built.
+
+`ColonyComposition`'s own class comment had predicted it: *"a designation grid that one of them
+forgot to attach would be a player command that silently did nothing in that build. So the list
+lives here, once."* The comment was right and the signature undid it.
+
+**The rule: a composition root's parameters are not optional.** If a new piece of colony state has
+a sensible default of "absent", every existing caller takes that default and the omission is
+invisible. Either make the parameter required — the compiler then names every site that has to
+think about it — or, better, build the thing inside the composition so there is nothing to pass.
+`AddColony` now takes the edifice list and hands the grid back through an `out`, so forgetting is
+not expressible.
+
+**And the standing guard is a test over the enum**, not over one command:
+`ConstructionTests.EveryIntentTheInterfaceCanSendIsAnsweredByTheColony` walks every `IntentKind`
+and asserts the colony answers it. The next command will arrive the same way — an enum value
+somebody adds and a handler somebody means to attach.
+
 **The price, met on 2026-09-16: a guard keyed by filename fails when a file is split.** Cutting
 `HudShell.cs` into partial-class files moved `keys.bKey` into `HudShell.Bar.cs`, and the ownership
 map still named `HudShell.cs`, so the tidy-up broke a test that had nothing to do with hotkeys. That
@@ -1482,3 +1556,37 @@ guarding anything.
 **A timing assertion on a shared runner is worth having, but only in this shape:** a wide band
 justified by the size of the defect, the measured figures for both states written down beside it,
 and a failure message that tells the next person which of the two they are probably looking at.
+
+## `GC.GetTotalMemory` sees nothing under Mono, and a byte budget passes loudest where it is blind
+
+**Symptom.** An allocation test measured cleanly in the fast tier — 4.00 bytes per extra path cell,
+exactly one `int`, reproducible run to run — and failed in the Unity tier with
+`0.0 bytes per request` for *both* arms of the comparison. Same code, same assertions, opposite
+verdicts.
+
+**Cause.** `GC.GetTotalMemory(false)` does not mean the same thing on the two runtimes we ship
+against. On CoreCLR it moves with allocation. On Mono it reports the heap the collector owns, and
+the collector hands out nursery space in blocks and reuses it for short-lived objects — so a couple
+of thousand arrays of a couple of hundred bytes each, allocated and dropped, can move the number
+**not at all**. Roughly 400 KB of allocation reported as zero.
+
+**The half that matters more than the failure.** The same run had a *second* test asserting that an
+idle tick allocates under a 16-byte budget. Under Mono it read zero and **passed** — a guard against
+a 64-byte-per-tick delegate, reporting success on the one runtime where it could not have seen one.
+A test that fails on a blind instrument is an annoyance. A test that passes on a blind instrument is
+the state-hash defect again: an oracle comparing numbers that cannot see the thing they are about.
+
+**What to do.** Calibrate the instrument inside the test before believing it. Allocate a known
+quantity, and if the runtime cannot report it to within a factor of two, `Assert.Ignore` with the
+reason rather than failing *or* trusting the reading. Two details make the probe honest:
+
+- **Allocate the same shape and total** as the thing being measured. A probe that allocates a
+  megabyte proves nothing about whether a few hundred bytes are visible.
+- **Discard, do not retain.** Retained allocations force heap growth that a real per-tick
+  allocation never forces, so a retaining probe is easier to satisfy than the measurement it stands
+  in for — which reproduces exactly the false pass you were trying to prevent.
+
+**Where this bites next.** Any figure in bytes: allocation budgets, save sizes measured by heap
+delta, pooling proofs. Timings are fine; byte counts are not. `PathAllocationTests` carries the
+worked version, and the figures in `docs/adr/0005-simulation-architecture.md` are the CoreCLR ones,
+labelled as such.

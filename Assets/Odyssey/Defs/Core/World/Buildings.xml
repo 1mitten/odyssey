@@ -1,0 +1,116 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+  What can be built, and what out of.
+
+  TWO TABLES, NOT ONE. A wall is a wall whether it is wood or stone, and wood is wood whether it
+  is a wall or a door. Folding them into one table of "wooden wall, stone wall" looks simpler
+  while there are two of each and multiplies the moment there are six. It is also the shape
+  PlacedEdifice has carried since the ruined city was written: a def and a stuff, side by side.
+
+  THE HANDLE ORDER IS THE CONTRACT, as it is for terrain. A BuildingDef's position is a
+  BuildingHandle value and a StuffDef's is a StuffHandle value; both are written into the
+  published frame and into every save, so a row that moved would make an existing colony read as
+  building something else. ConstructionContent's in-code tables are the oracle and
+  ConstructionContentDefTests walks the two against each other field by field.
+
+  FACTORS ARE IN THOUSANDTHS, for the reason skill experience is: a factor multiplied into a tick
+  count has to give the same answer on every machine, and integer arithmetic is the only way to
+  promise that. Nothing here is a float, so it all hashes without a rounding question.
+-->
+<Defs>
+
+  <!-- 0 is "nothing", matching the grid's zero default, exactly as TerrainAir is 0. -->
+  <BuildingDef>
+    <defName>Building_None</defName>
+    <label>nothing</label>
+    <edifice>0</edifice>
+  </BuildingDef>
+
+  <!--
+    costCount 5 and workToBuild 135 are the reference's own wall (a-04-building-and-materials.md
+    section 6). The cost is quoted in STUFF, so a wooden wall costs five wood and a stone wall five
+    stone rather than five of some third thing.
+
+    135 ticks is deliberately short beside felling's 800: the interesting part of building a wall
+    is fetching the wood for it, and a wall that took a morning to raise would make a hut a week's
+    work. edifice 1 is CoreContent.EdificeWall - the same record the ruined city stamps, so a wall
+    a colonist built and a wall the generator laid are indistinguishable to the mesher, the picker
+    and the support solver.
+  -->
+  <BuildingDef>
+    <defName>Building_Wall</defName>
+    <label>wall</label>
+    <edifice>1</edifice>
+    <blocking>true</blocking>
+    <costCount>5</costCount>
+    <workToBuild>135</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.wall</iconKey>
+  </BuildingDef>
+
+  <!--
+    The four stuffs with no item are what the ruined city is MADE OF, not what a colony builds
+    with: nothing produces them, no colonist can carry one, and offering them would be offering an
+    order that can never be filled. They keep their indices, because every stamped wall in the city
+    carries one, and ConstructionContent.IsBuildable is what keeps them off the menu. A salvage
+    line that turned rubble into steel would give one an item and put it there, with no other
+    change anywhere.
+  -->
+  <StuffDef>
+    <defName>Stuff_None</defName>
+    <label>nothing</label>
+    <stuff>0</stuff>
+    <item>-1</item>
+  </StuffDef>
+
+  <StuffDef>
+    <defName>Stuff_Concrete</defName>
+    <label>concrete</label>
+    <stuff>1</stuff>
+    <item>-1</item>
+  </StuffDef>
+
+  <StuffDef>
+    <defName>Stuff_Steel</defName>
+    <label>steel</label>
+    <stuff>2</stuff>
+    <item>-1</item>
+  </StuffDef>
+
+  <StuffDef>
+    <defName>Stuff_Composite</defName>
+    <label>composite</label>
+    <stuff>3</stuff>
+    <item>-1</item>
+  </StuffDef>
+
+  <!-- item 2 is ItemHandle.Wood: what felling a tree leaves on the ground. -->
+  <StuffDef>
+    <defName>Stuff_Wood</defName>
+    <label>wood</label>
+    <stuff>4</stuff>
+    <item>2</item>
+    <workFactorPerMille>1000</workFactorPerMille>
+    <hitPointsFactorPerMille>1000</hitPointsFactorPerMille>
+    <iconKey>ui.res.wood</iconKey>
+  </StuffDef>
+
+  <!--
+    item 3 is ItemHandle.Stone: what mining a rock cell leaves.
+
+    1.7x the work and 1.5x the hit points is the reference's own relation between a wooden wall and
+    a stone one (a-04 section 3, read off its material table). It is the one number that makes the
+    choice of material a decision rather than a colour, which is why it is carried in ahead of the
+    rest of the stat block.
+  -->
+  <StuffDef>
+    <defName>Stuff_Stone</defName>
+    <label>stone</label>
+    <stuff>5</stuff>
+    <item>3</item>
+    <workFactorPerMille>1700</workFactorPerMille>
+    <hitPointsFactorPerMille>1500</hitPointsFactorPerMille>
+    <iconKey>ui.res.stone</iconKey>
+  </StuffDef>
+
+</Defs>

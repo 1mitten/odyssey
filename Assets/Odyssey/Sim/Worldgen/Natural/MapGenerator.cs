@@ -109,7 +109,20 @@ namespace Odyssey.Sim.Worldgen.Natural
         public MapType Type { get; }
 
         /// <summary>Everything standing in a cell, whichever generator placed it. Handles in <c>CellGrid.Edifice</c> index this list.</summary>
-        public System.Collections.Generic.IReadOnlyList<PlacedEdifice> Edifices =>
+        public System.Collections.Generic.IReadOnlyList<PlacedEdifice> Edifices => Placements;
+
+        /// <summary>
+        /// The same list, writable, for the one thing that adds to it after generation: a colonist
+        /// finishing a building (<c>ConstructionGrid.Raise</c>).
+        ///
+        /// <para>Deliberately a second, narrower door rather than widening <see cref="Edifices"/>.
+        /// Every other reader of this list — the mesher, the picker, the designation grid — is
+        /// asking what is standing where and has no business appending, and handles into it are
+        /// indices held in <c>CellGrid.Edifice</c>, so an insert or a removal anywhere but the end
+        /// would silently repoint every cell after it. Growing it is therefore a privilege, not an
+        /// ordinary capability, and it is worth one line to make that visible.</para>
+        /// </summary>
+        public System.Collections.Generic.List<PlacedEdifice> Placements =>
             City != null ? City.Context.Edifices : Natural!.Context.Edifices;
 
         /// <summary>Set when <see cref="Type"/> is <see cref="MapType.Natural"/>.</summary>

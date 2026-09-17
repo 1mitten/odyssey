@@ -85,28 +85,10 @@ namespace Odyssey.Sim.Pawns
             }
         }
 
-        public override void Cleanup(PawnContext ctx, JobStatus status)
-        {
-            // A job that fails mid-carry must put the thing down somewhere real. Anything else
-            // deletes it, and a ten-day run would quietly eat the colony's stores. Where the
-            // pawn stands is the first choice, then the nearest cell that can take the load;
-            // it used to fall back to the cell the thing was carried from, which is -1 while
-            // it is carried, and the thing then existed nowhere at all.
-            if (Job.CarriedItem < 0) return;
-            var item = ctx.Items.Get(new ThingId(Job.CarriedItem));
-            Job.CarriedItem = -1;
-            if (item == null) return;
-
-            int at = ctx.Items.NearestCellWithSpace(ctx.Cells, Pawn.Cell, item.DefIndex, item.Stack, DropSearchRadius);
-            // A board with no room within that radius is packed solid with things, which
-            // nothing in the game can produce; losing the load is the least bad answer, because
-            // putting it down on top of something else would corrupt the cell index.
-            if (at >= 0) ctx.Items.Drop(item, at);
-            else ctx.Items.Despawn(item);
-        }
-
-        /// <summary>Cells to search outward for somewhere to put a failed haul's load down.</summary>
-        public const int DropSearchRadius = 8;
+        // The drop-what-you-are-holding rule moved to JobDriver.DropCarried when delivery to a
+        // building site became the second job that carries something: two copies of it would have
+        // been two places to forget that a lost load is a hole in the colony's stores.
+        public override void Cleanup(PawnContext ctx, JobStatus status) => DropCarried(ctx);
     }
 
     /// <summary>Walk to food, eat it, remember having done so.</summary>

@@ -103,4 +103,9 @@
     <label>mining</label>
   </SkillDef>
 
+  <SkillDef ParentName="SkillBase">
+    <defName>Skill_Construction</defName>
+    <label>construction</label>
+  </SkillDef>
+
 </Defs>

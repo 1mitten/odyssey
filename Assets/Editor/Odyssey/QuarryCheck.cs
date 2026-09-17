@@ -108,7 +108,7 @@ namespace Odyssey.EditorTools
                     .WithSeed(1u)
                     .WithSize(size)
                     .AddSnapshotContributor(mirror)
-                    .AddColony(pawns, designations, support, nav)
+                    .AddColony(pawns, designations, support, nav, result.Placements, out _)
                     .Build();
 
                 // Bare, so nothing is marked and nobody walks off to a job in the middle of the

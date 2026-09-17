@@ -26,11 +26,26 @@ namespace Odyssey.Sim
             new Dictionary<IntentKind, Func<Intent, IntentRejection>>();
         ISnapshotContributor[] _contributors = Array.Empty<ISnapshotContributor>();
 
+        /// <summary>
+        /// The intent handler, held as a delegate rather than converted from a method group at
+        /// every tick.
+        ///
+        /// <para><b>This was the whole of the tick's at-rest allocation.</b> `Intents.Drain` takes
+        /// a <see cref="Func{T, TResult}"/>, and writing `Drain(HandleIntent)` builds a fresh
+        /// delegate object each call — 64 bytes on a 64-bit runtime, paid by every tick of every
+        /// game whether or not a single intent was submitted. Measured at 67.4 bytes a tick on an
+        /// *empty* world, with a colony adding nothing, which is what pointed here: the cost
+        /// scaled with neither pawns nor systems nor contributors, so it could not be any of
+        /// them.</para>
+        /// </summary>
+        readonly Func<Intent, IntentRejection> _handleIntent;
+
         internal SimWorld(uint seed, GridSize size)
         {
             Seed = seed;
             Size = size;
             CurrentTick = 0;
+            _handleIntent = HandleIntent;
             _byGroup = new[]
             {
                 new List<ITickable>(), // Normal
@@ -65,6 +80,18 @@ namespace Odyssey.Sim
         /// </summary>
         public Diagnostics.ITickHashSink? HashSink { get; set; }
 
+        /// <summary>
+        /// Optional, and null in every ordinary run: something that wants the duration of each
+        /// phase of each tick. <see cref="Diagnostics.PhaseTrace"/> is the implementation.
+        ///
+        /// <para>It lives here because the phase order lives here and
+        /// <see cref="WorldSystemSchedule"/>'s run methods are internal, so a caller that timed
+        /// the phases itself would be keeping a second copy of the order. When null the whole
+        /// mechanism is one branch per phase; when attached it is two timestamp reads per phase,
+        /// which is small against the phases but not nothing, and is why it is opt-in.</para>
+        /// </summary>
+        public Diagnostics.ITickPhaseSink? PhaseSink { get; set; }
+
         public IReadOnlyList<ITickable> Tickables => _tickables;
 
         /// <summary>
@@ -96,19 +123,28 @@ namespace Odyssey.Sim
         /// <summary>Advance exactly one tick, in the fixed phase order.</summary>
         public void Tick()
         {
+            // Null in an ordinary run, in which case Mark below does nothing at all. Read once so
+            // that a sink attached mid-tick cannot time half the phases.
+            Diagnostics.ITickPhaseSink? phases = PhaseSink;
+            long mark = phases != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
+
             // 1. Intents from the UI, in submission order.
-            Intents.Drain(HandleIntent);
+            Intents.Drain(_handleIntent);
+            Mark(phases, Diagnostics.TickSegment.Intents, ref mark);
 
             // 2. World systems: grid propagation, support solving, region rebuild.
             Systems.RunWorldSystems(this);
+            Mark(phases, Diagnostics.TickSegment.WorldSystems, ref mark);
 
             // 3. Things, by tick group.
             TickGroupMembers(_byGroup[0], (int)TickGroup.Normal);
             TickGroupMembers(_byGroup[1], (int)TickGroup.Rare);
             TickGroupMembers(_byGroup[2], (int)TickGroup.Long);
+            Mark(phases, Diagnostics.TickSegment.Things, ref mark);
 
             // 4. Pawns: needs, think tree, job execution, movement.
             Systems.RunPawnSystems(this);
+            Mark(phases, Diagnostics.TickSegment.Pawns, ref mark);
 
             // 5. Deferred structural events, applied at one point.
             if (_deferred.Count > 0)
@@ -118,16 +154,32 @@ namespace Odyssey.Sim
                 _deferred.Clear();
                 foreach (var action in toRun) action(this);
             }
+            Mark(phases, Diagnostics.TickSegment.Deferred, ref mark);
 
             // 6. Publish the snapshot, after every system has finished mutating the world.
             Views.Publish(this, _contributors);
+            Mark(phases, Diagnostics.TickSegment.Snapshot, ref mark);
 
             // 7. The hash trace, when one is attached. Recorded before the counter moves, so the
             // entry is labelled with the tick that produced the state — which is the tick to
             // re-run when two traces part here.
             HashSink?.Record(CurrentTick, ComputeStateHash().Value);
+            Mark(phases, Diagnostics.TickSegment.Hash, ref mark);
 
             CurrentTick++;
+        }
+
+        /// <summary>
+        /// Hand one phase's duration to the sink and start the next one. Kept to a single
+        /// null-check when nothing is attached, which is every ordinary run.
+        /// </summary>
+        void Mark(Diagnostics.ITickPhaseSink? sink, Diagnostics.TickSegment phase, ref long since)
+        {
+            if (sink == null) return;
+
+            long now = System.Diagnostics.Stopwatch.GetTimestamp();
+            sink.Record(CurrentTick, phase, now - since);
+            since = now;
         }
 
         /// <summary>

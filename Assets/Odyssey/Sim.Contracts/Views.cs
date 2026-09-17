@@ -310,6 +310,72 @@ namespace Odyssey.Sim.Contracts
         }
     }
 
+
+    /// <summary>
+    /// A building site: something the player has asked for that is not there yet.
+    ///
+    /// <para>Its own channel rather than a sixth <c>DesignationKind</c>, because an order is a
+    /// verb applied to a cell and a site is a <i>thing in waiting</i> — it has a def, a material
+    /// and two independent measures of how far along it is. Sparse for the same reason
+    /// <see cref="OrderView"/> is: a colony has tens of sites and a layer has thousands of
+    /// cells.</para>
+    ///
+    /// <para><b>Two fractions, not one.</b> A site fills with material and then is worked, and a
+    /// player needs to tell "nobody has brought the wood yet" from "it is half built" — they are
+    /// different problems with different answers, and a single bar would merge them.</para>
+    /// </summary>
+    public readonly struct SiteView
+    {
+        /// <summary>The cell, as a whole-world index. <c>GridSize.FromIndex</c> unpacks it.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>What is being built, as a <see cref="BuildingHandle"/> value. Never 0.</summary>
+        public readonly byte Building;
+
+        /// <summary>What of, as a <see cref="StuffHandle"/> value.</summary>
+        public readonly byte Stuff;
+
+        /// <summary>Units of material that have arrived.</summary>
+        public readonly ushort Delivered;
+
+        /// <summary>Units the site wants in total.</summary>
+        public readonly ushort Cost;
+
+        /// <summary>Ticks of work applied.</summary>
+        public readonly int WorkDone;
+
+        /// <summary>Ticks of work the thing costs, in this material.</summary>
+        public readonly int WorkTotal;
+
+        /// <summary>
+        /// Real counts and real ticks, where <see cref="OrderView.Progress"/> is a quantised byte —
+        /// and the difference is not an inconsistency.
+        ///
+        /// <para>An order's progress is <i>a picture</i>: what reads on screen is whether a face is
+        /// barely scratched or nearly through, and a byte says that to a tenth of a per cent. A
+        /// site is asked a <i>question</i> — the player clicks it and expects to be told what is
+        /// going up, whether the wood has arrived, and how much longer. "Three of five wood" and
+        /// "about nine seconds left" cannot be recovered from a fraction, and the alternative is
+        /// the interface keeping its own copy of the cost table, which is two sources for one
+        /// number.</para>
+        /// </summary>
+        public float Progress => WorkTotal <= 0 ? 0f : (float)WorkDone / WorkTotal;
+
+        /// <summary>Has every unit arrived, so that the thing can be worked on?</summary>
+        public bool IsFrame => Delivered >= Cost;
+
+        public SiteView(int cellIndex, byte building, byte stuff,
+            ushort delivered, ushort cost, int workDone, int workTotal)
+        {
+            CellIndex = cellIndex;
+            Building = building;
+            Stuff = stuff;
+            Delivered = delivered;
+            Cost = cost;
+            WorkDone = workDone;
+            WorkTotal = workTotal;
+        }
+    }
     /// <summary>
     /// One published frame of world state: everything presentation may read, and nothing else.
     ///
@@ -324,6 +390,8 @@ namespace Odyssey.Sim.Contracts
         ThingView[] _things = Array.Empty<ThingView>();
         byte[] _sliceCells = Array.Empty<byte>();
         OrderView[] _orders = Array.Empty<OrderView>();
+        SiteView[] _sites = Array.Empty<SiteView>();
+
         PawnAspect[] _aspects = Array.Empty<PawnAspect>();
 
         public int Tick { get; private set; }
@@ -374,6 +442,9 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many standing orders the colony has, anywhere in the world.</summary>
         public int OrderCount { get; private set; }
 
+        /// <summary>How many building sites <see cref="Sites"/> holds.</summary>
+        public int SiteCount { get; private set; }
+
         /// <summary>How many aspects every feature published this frame, over all pawns.</summary>
         public int AspectCount { get; private set; }
 
@@ -392,6 +463,9 @@ namespace Odyssey.Sim.Contracts
         /// Empty when the world has no designation grid.
         /// </summary>
         public ReadOnlySpan<OrderView> Orders => new ReadOnlySpan<OrderView>(_orders, 0, OrderCount);
+
+        /// <summary>Every building site in the world, in cell-index order. See <see cref="SiteView"/>.</summary>
+        public ReadOnlySpan<SiteView> Sites => new ReadOnlySpan<SiteView>(_sites, 0, SiteCount);
 
         /// <summary>
         /// Everything features published about pawns this frame, in the order they published it.
@@ -453,6 +527,8 @@ namespace Odyssey.Sim.Contracts
             ThingCount = 0;
             SliceCellCount = 0;
             OrderCount = 0;
+            SiteCount = 0;
+
             AspectCount = 0;
         }
 
@@ -479,6 +555,12 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _orders, OrderCount + 1);
             _orders[OrderCount++] = view;
+        }
+
+        internal void AddSite(in SiteView view)
+        {
+            Grow(ref _sites, SiteCount + 1);
+            _sites[SiteCount++] = view;
         }
 
         internal void AddPawnAspect(in PawnAspect aspect)

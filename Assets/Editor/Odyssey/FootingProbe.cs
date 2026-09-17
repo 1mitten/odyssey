@@ -51,7 +51,7 @@ namespace Odyssey.EditorTools
             SimWorld world = new SimWorldBuilder()
                 .WithSeed(1u)
                 .WithSize(size)
-                .AddColony(pawns, designations, support, nav)
+                .AddColony(pawns, designations, support, nav, result.Placements, out _)
                 .Build();
 
             ScenarioDef scenario = ScenarioDef.Playtest();
