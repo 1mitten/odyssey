@@ -74,6 +74,67 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
+        /// What a building <b>is</b>, as opposed to the fact that one is there.
+        ///
+        /// <para><c>CellGrid.Edifice[cell]</c> is an index, and the test above only proves the
+        /// index is hashed. Until 2026-09-17 the record it points at was not: a wooden wall and a
+        /// stone wall in the same cell hashed identically, so every determinism gate in the project
+        /// was blind to what the colony had built out of. These three name the fields, the way the
+        /// cell tests above name theirs.</para>
+        /// </summary>
+        [Test]
+        public void WhatAStandingBuildingIsMadeOfMovesTheHash()
+        {
+            ColonyWorld colony = Build();
+            var edifices = colony.Construction.Edifices.Records;
+            Assume.That(edifices, Is.Not.Empty, "the fixture has nothing standing on it to edit");
+
+            ulong before = Hash(colony);
+            PlacedEdifice placed = edifices[0];
+            edifices[0] = new PlacedEdifice
+            {
+                CellIndex = placed.CellIndex,
+                Def = placed.Def,
+                Stuff = (ushort)(placed.Stuff + 1),
+                Built = placed.Built,
+                Removed = placed.Removed,
+            };
+
+            Assert.That(Hash(colony), Is.Not.EqualTo(before));
+        }
+
+        [Test]
+        public void WhetherABuildingIsOursMovesTheHash()
+        {
+            ColonyWorld colony = Build();
+            var edifices = colony.Construction.Edifices.Records;
+            Assume.That(edifices, Is.Not.Empty);
+
+            ulong before = Hash(colony);
+            PlacedEdifice placed = edifices[0];
+            placed.Built = !placed.Built;
+            edifices[0] = placed;
+
+            Assert.That(Hash(colony), Is.Not.EqualTo(before),
+                "Built decides what deconstruct may be pointed at, so it is state like any other");
+        }
+
+        [Test]
+        public void RaisingAWallMovesTheHash()
+        {
+            ColonyWorld colony = Build();
+            ulong before = Hash(colony);
+
+            int cell = SomeSolidCell(colony.Grid) + colony.Grid.Size.LayerStride;
+            Assume.That(colony.Construction.Allows(cell), Is.True, "somewhere a wall could stand");
+            Assume.That(colony.Construction.Place(colony.Grid.Size.FromIndex(cell),
+                BuildingHandle.Wall, StuffHandle.Wood), Is.EqualTo(IntentRejection.None));
+            colony.Construction.Raise(colony.Pawns, cell);
+
+            Assert.That(Hash(colony), Is.Not.EqualTo(before));
+        }
+
+        /// <summary>
         /// The exact case that exposed the gap: deep water's impassable bit reaches the hash only
         /// through <see cref="CellFlags"/>, and flags were the field most obviously missing.
         /// </summary>

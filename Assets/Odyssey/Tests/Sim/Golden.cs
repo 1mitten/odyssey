@@ -30,12 +30,36 @@ namespace Odyssey.Tests.Sim
     /// commit message what you changed and why the numbers moved. A golden updated without that
     /// sentence is a golden that has stopped being a test.</para>
     ///
-    /// <para><b>Moved 2026-09-17 by U37, starting skills, and only the way the plan asked.</b>
-    /// Every <c>Simulated</c> value below moved and every <c>Generated</c> one did not — proof
-    /// that the roll (<see cref="Pawns.StartingSkillsSystem"/>) happens on the world's first
-    /// tick rather than during <c>ColonyScenario.Place</c>, which runs before <c>Generated</c> is
-    /// taken. See <c>StartingSkillsTests</c> for the direct, non-hash evidence of the same
-    /// thing.</para>
+    /// <para><b>All six numbers moved on 2026-09-17, and here is the sentence.</b> The list of
+    /// standing buildings entered the state hash (<c>EdificeSaveSection</c>): what a wall is made
+    /// of was outside it until then, so a wooden wall and a stone wall in the same cell hashed
+    /// identically — measured, not supposed, by
+    /// <c>EdificeRoundTripTests.AWallsMaterialIsInTheStateHash</c>. <b>Both</b> numbers moved in
+    /// every case, including the barren meadow that has nothing standing on it at all, which is
+    /// the expected shape rather than a surprise: an empty list still contributes its count.
+    /// Nothing about how any of these worlds is generated or simulated changed — the hash simply
+    /// sees more of what was always there, which is the same thing that happened to all of them
+    /// when OQ-50 put the cell grid in.</para>
+    ///
+    /// <para><b>And moved again the same day, for a second reason worth separating from the
+    /// first.</b> Deconstruct added a tenth job. <c>JobSystem</c> hashes a completed-and-failed
+    /// tally <i>per job</i>, sized from the job table, so a tenth job adds one more zero to that
+    /// walk — which moves the <see cref="Case.Generated"/> number before a single tick has run.
+    /// It looks alarming and is not: the failure message points at the generator, and the
+    /// generator is untouched. Anything that changes the <i>length</i> of a hashed per-job or
+    /// per-work-type array will do this, and the way to tell it apart from a real generator change
+    /// is that the grid's own hash is unmoved.</para>
+    ///
+    /// <para><b>Moved a third time the same day by U37, starting skills, merged on top of
+    /// deconstruct — and only the way the plan asked.</b> Every <c>Simulated</c> value below moved
+    /// again and no <c>Generated</c> one did on top of the merge, proof that the roll
+    /// (<see cref="Pawns.StartingSkillsSystem"/>) happens on the world's first tick rather than
+    /// during <c>ColonyScenario.Place</c>, which runs before <c>Generated</c> is taken. See
+    /// <c>StartingSkillsTests</c> for the direct, non-hash evidence of the same thing. Rebaked
+    /// once, on top of deconstruct's numbers, not twice: the values below are the merge's own,
+    /// not U37's original branch numbers, because those were baked against a
+    /// <c>StartingSkill</c> salt that collided with <c>DeconstructRefund</c> — see
+    /// <c>PawnPurpose</c>.</para>
     /// </summary>
     public static class Golden
     {
@@ -90,8 +114,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 7633281305254602338UL,
-            Simulated = 1732213831916796565UL,
+            Generated = 1445231422113309842UL,
+            Simulated = 14285869242397174845UL,
         };
 
         /// <summary>
@@ -107,8 +131,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 10240930215320707382UL,
-            Simulated = 10640879307114233262UL,
+            Generated = 4423472815424028544UL,
+            Simulated = 8316998138846647460UL,
         };
 
         /// <summary>
@@ -123,8 +147,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 15938833264199567841UL,
-            Simulated = 17807929989781465493UL,
+            Generated = 624141440131264568UL,
+            Simulated = 17545013022261745430UL,
         };
     }
 }

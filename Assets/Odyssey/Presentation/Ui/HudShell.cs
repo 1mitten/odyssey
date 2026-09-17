@@ -160,6 +160,9 @@ namespace Odyssey.Presentation.Ui
         VisualElement _buildPanel = null!;
         VisualElement _buildTools = null!;
         VisualElement _buildMaterials = null!;
+
+        /// <summary>The always-on row under the palette. See <see cref="PaletteTools.Pinned"/>.</summary>
+        VisualElement _buildPinned = null!;
         int _buildCategory = -1;
         VisualElement _settingsPanel = null!;
         VisualElement _interfaceSection = null!;
@@ -661,18 +664,29 @@ namespace Odyssey.Presentation.Ui
             _armedFor = armed;
             _armedStuffFor = stuff;
 
+            // Mine and Chop are the registry's own words, taken from the activity keys because
+            // those are already phrased as the thing being done — so renaming the tool in
+            // `icon-keys.csv` moves the chip and this banner together, which is the whole point of
+            // the registry. "Felling" was written out here in C# and quietly disagreed with the
+            // palette the day the chip became "Chop trees".
+            //
+            // Cancel keeps its own words: there is no activity key for it, because no colonist is
+            // ever *cancelling* — it is a thing the player does, not work anybody carries out.
             string what = armed switch
             {
-                DesignateTool.Mine => "Mining",
-                DesignateTool.Fell => "Felling",
+                DesignateTool.Mine => Registry.Label("ui.status.mining"),
+                DesignateTool.Fell => Registry.Label("ui.status.felling"),
                 DesignateTool.Cancel => "Cancelling orders",
+                DesignateTool.Deconstruct => Registry.Label("ui.status.deconstructing"),
                 _ => BuildLabels.Building(tool.Building) is { Length: > 0 } name
                     ? "Building " + name.ToLowerInvariant() + " of " + BuildLabels.Stuff(stuff)
                     : "Building",
             };
 
             HudText.Set(_armedWhat, what, HudTextRole.Name);
-            HudText.Set(_armedHow, "drag over the board · Esc to stop", HudTextRole.Meta);
+            // The banner is the only place the right-click gesture is written down. Nothing else on
+            // screen could teach it, and a gesture nobody is told about is one nobody uses.
+            HudText.Set(_armedHow, "drag over the board · right-click or Esc to stop", HudTextRole.Meta);
         }
 
         DesignateTool _armedFor = DesignateTool.None;

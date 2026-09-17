@@ -81,7 +81,30 @@ namespace Odyssey.Sim.Construction
         /// </summary>
         public int workFactorPerMille = 1000;
 
-        /// <summary>The material's effect on how much punishment the finished thing takes, in thousandths.</summary>
+        /// <summary>
+        /// A flat addition to the factored work, in ticks — the second term of U27's
+        /// <c>stat = base × factor + offset</c> (a-04-building-and-materials.md section 3).
+        ///
+        /// <para>In the same unit as <see cref="BuildingDef.workToBuild"/>, deliberately, rather
+        /// than another per-mille figure: it is added after the factor has already turned ticks
+        /// into ticks, so a second fraction would just be a factor with extra steps. It stands for
+        /// a cost the <em>factor</em> cannot express — a fixed dressing-and-fitting pass that a
+        /// stone block wants and a plank does not, paid once per site whatever the building's own
+        /// size, where the factor alone would only ever scale with it.</para>
+        /// </summary>
+        public int workOffsetTicks;
+
+        /// <summary>
+        /// The material's effect on how much punishment the finished thing takes, in thousandths.
+        ///
+        /// <para><b>Factor-only, still, and deliberately.</b> U27 gave <see cref="workOffsetTicks"/>
+        /// a base stat to add to because <see cref="ConstructionContent.WorkFor"/> already turns
+        /// <see cref="BuildingDef.workToBuild"/> into a real number every tick. Hit points has no
+        /// such consumer yet — no <c>BuildingDef.maxHitPoints</c> exists and nothing gives a built
+        /// wall a damage state — so an offset here would be a second field with nothing to add to
+        /// and no test that could exercise it. It is next when a durability stat lands, not
+        /// invented ahead of it.</para>
+        /// </summary>
         public int hitPointsFactorPerMille = 1000;
 
         /// <summary>The registry key the interface names it by.</summary>
@@ -126,20 +149,78 @@ namespace Odyssey.Sim.Construction
         public static bool IsBuildable(int handle) =>
             handle > StuffHandle.None && handle < StuffTable.Length && StuffTable[handle].item >= 0;
 
+        /// <summary>What one site of this thing, in this material, costs in ticks of work.</summary>
+        public static int WorkFor(int building, int stuff) => WorkFor(BuildingAt(building), StuffAt(stuff));
+
         /// <summary>
-        /// What one site of this thing, in this material, costs in ticks of work.
+        /// As <see cref="WorkFor(int, int)"/>, on the defs directly rather than on handles into the
+        /// shipped tables — the seam a test uses to exercise the formula on values of its own,
+        /// without a fixture needing a place in <see cref="BuildingOrder"/> or
+        /// <see cref="StuffOrder"/>.
         ///
-        /// <para>Integer division, so it is the same number on every machine. The floor of one tick
-        /// is not defensive tidiness: a factor small enough to round to nothing would make a site
-        /// that can never be finished, because the driver compares work done against the total and
-        /// would find it already met before the first swing — a colonist standing at a wall that
-        /// never goes up, which is the exact shape of the hop bug that stopped mining dead.</para>
+        /// <para><c>stat = base × factor + offset</c> (U27, a-04 section 3): the factor is applied
+        /// first, by integer division so it is the same number on every machine, and the offset is
+        /// added to the result rather than folded into the multiplication — it is a flat cost the
+        /// factor cannot express, not a second factor. The floor of one tick applies after both
+        /// terms and is not defensive tidiness: a total small enough to round to nothing would make
+        /// a site that can never be finished, because the driver compares work done against the
+        /// total and would find it already met before the first swing — a colonist standing at a
+        /// wall that never goes up, which is the exact shape of the hop bug that stopped mining
+        /// dead.</para>
         /// </summary>
-        public static int WorkFor(int building, int stuff)
+        public static int WorkFor(BuildingDef building, StuffDef stuff)
         {
-            int work = BuildingAt(building).workToBuild * StuffAt(stuff).workFactorPerMille / 1000;
+            int work = building.workToBuild * stuff.workFactorPerMille / 1000 + stuff.workOffsetTicks;
             return work < 1 ? 1 : work;
         }
+
+        /// <summary>
+        /// Which building this edifice is, or <see cref="BuildingHandle.None"/>.
+        ///
+        /// <para>The reverse of <see cref="BuildingDef.edifice"/>, and it exists because a wall
+        /// that is <i>standing</i> is a <c>PlacedEdifice</c> and has forgotten which row of this
+        /// table raised it. Building never needed to ask; deconstruct does, because what it costs
+        /// and what it gives back are both priced off that row. A linear walk over a table of two,
+        /// called once when a job is given rather than per tick.</para>
+        /// </summary>
+        public static int BuildingForEdifice(ushort edifice)
+        {
+            for (int i = 1; i < BuildingTable.Length; i++)
+                if (BuildingTable[i].edifice == edifice) return i;
+            return BuildingHandle.None;
+        }
+
+        /// <summary>
+        /// Which material this is, or <see cref="StuffHandle.None"/>. The reverse of
+        /// <see cref="StuffDef.stuff"/>, and here for the same reason as
+        /// <see cref="BuildingForEdifice"/>: a refund is paid in the material the thing was made
+        /// of, and a standing building carries the raw value rather than the handle.
+        /// </summary>
+        public static int StuffForValue(ushort stuff)
+        {
+            for (int i = 1; i < StuffTable.Length; i++)
+                if (StuffTable[i].stuff == stuff) return i;
+            return StuffHandle.None;
+        }
+
+        /// <summary>
+        /// What taking this thing apart costs in ticks.
+        ///
+        /// <para>Derived from what it took to build rather than given its own number, so a thing
+        /// that is expensive to raise is slow to pull down without anyone maintaining two figures
+        /// that have to agree. The clamp is the reference's (<c>a-04</c> §1): nothing is instant,
+        /// and nothing takes a day. With one building in the game neither bound can be reached, and
+        /// the shape is right before it can be reached rather than after.</para>
+        /// </summary>
+        public static int WorkToDeconstruct(int building, int stuff)
+        {
+            int work = WorkFor(building, stuff);
+            if (work < MinDeconstructTicks) return MinDeconstructTicks;
+            return work > MaxDeconstructTicks ? MaxDeconstructTicks : work;
+        }
+
+        public const int MinDeconstructTicks = 20;
+        public const int MaxDeconstructTicks = 3000;
 
         /// <summary>See <c>PawnContent.Register</c>: the Def types this content is made of.</summary>
         public static DefLoader Register(DefLoader loader) =>
@@ -208,22 +289,33 @@ namespace Odyssey.Sim.Construction
                 new StuffDef { defName = "Stuff_Steel", label = "steel", stuff = CoreContent.StuffSteel },
                 new StuffDef { defName = "Stuff_Composite", label = "composite", stuff = CoreContent.StuffComposite },
 
+                // Wood carries no offset: nailing and lashing a plank into place has no separate
+                // fitting step for the factor to leave out, so the whole of wood's cost is the
+                // factor (U27; a-04's own wood row carries no offset either).
                 new StuffDef
                 {
                     defName = "Stuff_Wood", label = "wood", stuff = NaturalContent.StuffWood,
-                    item = ItemHandle.Wood, workFactorPerMille = 1000, hitPointsFactorPerMille = 1000,
-                    iconKey = "ui.res.wood",
+                    item = ItemHandle.Wood, workFactorPerMille = 1000, workOffsetTicks = 0,
+                    hitPointsFactorPerMille = 1000, iconKey = "ui.res.wood",
                 },
 
                 // 1.7x the work and 1.5x the hit points: the reference's own relation between a
                 // wooden wall and a stone one (a-04 section 3, read off its material table). It is
                 // the one number that makes the choice of material a decision rather than a colour,
                 // which is why it is carried in ahead of the rest of the stat block.
+                //
+                // workOffsetTicks 15 (U27) is Odyssey's own number, not the reference's: a flat
+                // dressing-and-fitting pass a stone block wants regardless of the wall it joins,
+                // on top of the 1.7x per-unit factor. The reference's own stone rows carry a much
+                // larger offset (+140 against a base of 135 — roughly the whole of the base again)
+                // because it is stacked with a x5-6 factor across many more stone materials; 15
+                // ticks is proportionate to the one factor Odyssey chose (a tenth of the wall's own
+                // base, about a tenth of the factored total) rather than copied from it.
                 new StuffDef
                 {
                     defName = "Stuff_Stone", label = "stone", stuff = NaturalContent.StuffStone,
-                    item = ItemHandle.Stone, workFactorPerMille = 1700, hitPointsFactorPerMille = 1500,
-                    iconKey = "ui.res.stone",
+                    item = ItemHandle.Stone, workFactorPerMille = 1700, workOffsetTicks = 15,
+                    hitPointsFactorPerMille = 1500, iconKey = "ui.res.stone",
                 },
             };
         }

@@ -291,22 +291,11 @@ namespace Odyssey.Presentation.Ui
         // ============================================================ A7 build palette
 
         /// <summary>
-        /// Categories in catalogue order, each with a few of its tools. Every icon key exists in
-        /// the registry; every control is display-only until placement tools land in M3.
+        /// Categories in catalogue order, each with a few of its tools — <see cref="PaletteTools"/>
+        /// owns the table, for the reason <see cref="HudCommands"/> owns the command bar's: it is
+        /// data, and the fast tier can see that assembly and cannot see this one.
         /// </summary>
-        static readonly (string key, string label, string[] tools)[] BuildCategories =
-        {
-            ("ui.arch.category.structure", "Structure", new[] { "ui.arch.tool.wall", "ui.arch.tool.door", "ui.arch.tool.stair", "ui.arch.tool.ladder", "ui.arch.tool.roof", "ui.arch.tool.reclaim" }),
-            ("ui.arch.category.orders", "Orders", new[] { "ui.arch.tool.mine", "ui.arch.tool.deconstruct", "ui.arch.tool.harvest", "ui.arch.tool.forbid", "ui.arch.tool.clearrubble" }),
-            ("ui.arch.category.zones", "Zones", new[] { "ui.arch.tool.stockpile", "ui.arch.tool.growzone", "ui.arch.tool.dumping" }),
-            ("ui.arch.category.production", "Production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
-            ("ui.arch.category.furniture", "Furniture", new[] { "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
-            ("ui.arch.category.power", "Power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
-            ("ui.arch.category.security", "Security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
-            ("ui.arch.category.salvage", "Salvage", new[] { "ui.arch.tool.salvage", "ui.arch.tool.deconstruct", "ui.arch.tool.reclaim" }),
-            ("ui.arch.category.floors", "Floors", new[] { "ui.arch.tool.deckplate", "ui.arch.tool.grating", "ui.arch.tool.tile" }),
-            ("ui.arch.category.recreation", "Recreation", new[] { "ui.arch.tool.gamestable", "ui.arch.tool.viewscreen", "ui.arch.tool.planter" }),
-        };
+        static (string key, string label, string[] tools)[] BuildCategories => PaletteTools.Categories;
 
         /// <summary>
         /// The palette, opened by the Build command and closed by Escape.
@@ -350,6 +339,11 @@ namespace Odyssey.Presentation.Ui
             _buildMaterials.style.display = DisplayStyle.None;
             _buildPanel.Add(_buildMaterials);
 
+            // Under everything, always: the tools that belong to no category. Built once rather
+            // than rebuilt with the category, because the whole point of them is that they do not
+            // move when the category does.
+            BuildPinnedRow();
+
             // Open on the first category rather than on an empty second group. The palette's whole
             // shape is two groups, and one of them showing nothing until the player guesses that
             // the chips above are clickable is a panel that has to be explained.
@@ -384,23 +378,6 @@ namespace Odyssey.Presentation.Ui
             }
         }
 
-        /// <summary>
-        /// The tools that actually do something, keyed the way everything in this interface
-        /// is keyed. Anything not in here is drawn and disabled, which is the whole palette
-        /// until the thing behind a key exists.
-        ///
-        /// <para>A table rather than a switch so the palette and the simulation agree by
-        /// construction: a key that arms a tool is one line, and a key that does not is
-        /// absent.</para>
-        /// </summary>
-        static readonly Dictionary<string, Action<DesignateDirector>> LiveTools =
-            new Dictionary<string, Action<DesignateDirector>>
-            {
-                { "ui.arch.tool.wall", d => d.ArmBuild(BuildingHandle.Wall) },
-                { "ui.arch.tool.mine", d => d.Tool = d.Tool == DesignateTool.Mine ? DesignateTool.None : DesignateTool.Mine },
-                { "ui.arch.tool.harvest", d => d.Tool = d.Tool == DesignateTool.Fell ? DesignateTool.None : DesignateTool.Fell },
-            };
-
         /// <summary>What a wall may be made of, in the order the player meets them.</summary>
         static readonly (int stuff, string key)[] BuildMaterials =
         {
@@ -434,7 +411,46 @@ namespace Odyssey.Presentation.Ui
             }
         }
 
-        /// <summary>Light the chip for whatever is armed, so the palette and the world agree.</summary>
+        /// <summary>
+        /// The row that does not change with the category — Cancel, today, and only Cancel.
+        ///
+        /// <para>A player wants it while they are holding another tool, which is exactly when the
+        /// category row above is showing something else. See <see cref="PaletteTools.Pinned"/> for
+        /// why it is here instead of filed under Orders.</para>
+        /// </summary>
+        void BuildPinnedRow()
+        {
+            _buildPinned = new VisualElement();
+            _buildPinned.AddToClassList("build__pinned");
+
+            foreach (string key in PaletteTools.Pinned)
+            {
+                if (!PaletteTools.TryGet(key, out PaletteTool live)) continue;
+                VisualElement chip = PaletteChip(key, Registry.Label(key));
+                chip.tooltip = Registry.Label(key) + " — drag a box over the world";
+                chip.RegisterCallback<ClickEvent>(_ =>
+                {
+                    if (_directors == null) return;
+                    live.Arm(_directors.Designate);
+                    MarkArmedTool();
+                    // Arming an order puts any build tool down, so the material row goes with it.
+                    BuildMaterialRow();
+                });
+                _buildPinned.Add(chip);
+            }
+
+            _buildPanel.Add(_buildPinned);
+        }
+
+        /// <summary>
+        /// Light the chip for whatever is armed, so the palette and the world agree.
+        ///
+        /// <para>Each chip asks its own row whether it is the one being held. This used to be a
+        /// chain of key comparisons with one branch per live tool, written out a hundred lines away
+        /// from the table that armed them — two lists of the same tools, and when they drifted the
+        /// symptom was not a compile error but a chip that arms a tool and never lights, which
+        /// reads to a player as the click having missed.</para>
+        /// </summary>
         void MarkArmedTool()
         {
             if (_directors == null || _buildCategory < 0) return;
@@ -443,12 +459,19 @@ namespace Odyssey.Presentation.Ui
             int at = 0;
             foreach (string tool in BuildCategories[_buildCategory].tools)
             {
-                bool on = tool == "ui.arch.tool.wall"
-                    ? armed.Tool == DesignateTool.Build && armed.Building == BuildingHandle.Wall
-                    : tool == "ui.arch.tool.mine" ? armed.Tool == DesignateTool.Mine
-                    : tool == "ui.arch.tool.harvest" && armed.Tool == DesignateTool.Fell;
-
+                bool on = PaletteTools.TryGet(tool, out PaletteTool live) && live.IsArmed(armed);
                 if (at < _buildTools.childCount) _buildTools[at].EnableInClassList("chip--on", on);
+                at++;
+            }
+
+            // The pinned row lights the same way. It is a separate walk because it is a separate
+            // row, and not marking it would leave the one chip that is always visible as the one
+            // chip that never says whether it is held.
+            at = 0;
+            foreach (string tool in PaletteTools.Pinned)
+            {
+                bool on = PaletteTools.TryGet(tool, out PaletteTool live) && live.IsArmed(armed);
+                if (at < _buildPinned.childCount) _buildPinned[at].EnableInClassList("chip--on", on);
                 at++;
             }
         }
@@ -464,16 +487,17 @@ namespace Odyssey.Presentation.Ui
                 // The label is the registry's, never a two-letter sigil derived from the key: the
                 // acceptance criteria strike out every three-letter placeholder on the screen.
                 VisualElement chip = PaletteChip(tool, Registry.Label(tool));
-                if (LiveTools.TryGetValue(tool, out Action<DesignateDirector> arm))
+                if (PaletteTools.TryGet(tool, out PaletteTool live))
                 {
-                    string key = tool;
                     chip.tooltip = Registry.Label(tool) + " — drag a box over the world";
                     chip.RegisterCallback<ClickEvent>(_ =>
                     {
                         if (_directors == null) return;
-                        arm(_directors.Designate);
+                        live.Arm(_directors.Designate);
                         MarkArmedTool();
-                        if (key == "ui.arch.tool.wall") BuildMaterialRow();
+                        // Only a thing made of something has a material row to refresh; the row
+                        // asks the table rather than this method knowing which tool that is.
+                        if (live.WantsMaterial) BuildMaterialRow();
                     });
                 }
                 else
