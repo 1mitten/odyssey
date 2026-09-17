@@ -106,6 +106,9 @@ namespace Odyssey.Tests.Hud
             (".startscreen__back", "border-top-color", () => HudTheme.Divider, "divider"),
             (".save--bad .save__meta", "color", () => HudTheme.Warn, "warn"),
 
+            // The New game screen (U39), which introduces no colour of its own either.
+            (".startscreen__seedcap", "color", () => HudTheme.TextMeta, "text meta"),
+
             // The naming prompt, and the project's first text field.
             (".field .unity-base-text-field__input", "color", () => HudTheme.TextPrimary, "text primary"),
             (".field .unity-base-text-field__input", "border-color", () => HudTheme.PanelBorder, "panel border"),
@@ -237,6 +240,8 @@ namespace Odyssey.Tests.Hud
             (".save", "height", () => HudLayout.StartSaveRow, "a save row"),
             (".save", "margin-bottom", () => HudLayout.StartSaveGap, "save row gap"),
             (".startscreen__back", "margin-top", () => HudLayout.StartRowGap, "start screen row gap"),
+            (".startscreen__seedcap", "height", () => HudLayout.StartSeedCaption, "the seed's caption"),
+            (".startscreen__seedrows", "margin-top", () => HudLayout.Gap, "the box to the rows under it"),
 
             (".prompt", "width", () => HudLayout.PromptWidth, "naming prompt width"),
             (".field", "height", () => HudLayout.FieldHeight, "a text field"),

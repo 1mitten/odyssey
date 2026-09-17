@@ -748,6 +748,35 @@ namespace Odyssey.Hud
         /// </summary>
         public const int StartListMax = StartBody - StartRowGap - HudTheme.BorderWidth - StartRow;
 
+        // ------------------------------------------------------------- the New game screen (U39)
+
+        /// <summary>
+        /// The caption over the seed box — the word "Seed", set at <see cref="HudTextRole.Meta"/>,
+        /// the same quiet label every figure in this interface is introduced by.
+        /// </summary>
+        public const int StartSeedCaption = 18;
+
+        /// <summary>
+        /// The New game screen's content: a caption, the box the seed is typed in, and the two rows
+        /// under it — Reroll, then Start.
+        ///
+        /// <para><b>Derived rather than written down, and measured against
+        /// <see cref="StartListMax"/> rather than against the panel</b>, because this screen sits in
+        /// exactly the region the load list sits in, with the row that goes back beneath it. The
+        /// panel's height is fixed for every screen (§4), so what a new screen owes the fast tier is
+        /// not "how tall am I" but "do I fit in the box that already exists" — and four controls in
+        /// a body sized for six save rows is the kind of thing that is obviously true until somebody
+        /// adds a fifth.</para>
+        ///
+        /// <para>The two gaps are <see cref="Gap"/> because that is what <c>.field</c> already
+        /// carries above itself in the naming prompt, and a text field that stood closer to its
+        /// caption here than there would be the same control at two spacings.</para>
+        /// </summary>
+        public const float StartNewGameHeight =
+            StartSeedCaption + Gap                          // Seed
+            + FieldHeight + Gap                             // the box
+            + StartRow + StartRow;                          // Reroll, Start
+
         /// <summary>
         /// How tall the content of one screen <i>would</i> be, for a given number of rows — which
         /// is no longer the panel's height, and is kept because it is what decides whether a screen
