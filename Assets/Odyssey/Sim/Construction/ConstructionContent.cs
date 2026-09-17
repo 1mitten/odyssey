@@ -26,6 +26,18 @@ namespace Odyssey.Sim.Construction
         public bool blocking = true;
 
         /// <summary>
+        /// Is the finished thing a <b>slab at the cell's lower boundary</b> rather than an edifice
+        /// standing in the cell?
+        ///
+        /// <para>This one bool is the whole difference between building a wall and building a
+        /// floor. Everything else — the order, the material carried to it, the work applied, the
+        /// reservation, the two work givers, the cancel, the refund — is the same pipeline, which
+        /// is the point of having the tables at all (U29). <c>ConstructionGrid.Raise</c> is the one
+        /// place that reads it.</para>
+        /// </summary>
+        public bool slab;
+
+        /// <summary>
         /// Units of stuff a site swallows before any work can start.
         ///
         /// <para>Five for a wall, which is the reference's number for a wall of any material
@@ -231,7 +243,7 @@ namespace Odyssey.Sim.Construction
         /// <see cref="BuildingHandle"/> value, written into the published frame and into every
         /// save, so this list — never the table's own sorted order — is what resolves a name.
         /// </summary>
-        public static readonly string[] BuildingOrder = { "Building_None", "Building_Wall" };
+        public static readonly string[] BuildingOrder = { "Building_None", "Building_Wall", "Building_Floor" };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
         public static readonly string[] StuffOrder =
@@ -276,6 +288,18 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Wall", label = "wall", edifice = CoreContent.EdificeWall,
                     blocking = true, costCount = 5, workToBuild = 135, minSkill = 0,
                     iconKey = "ui.arch.tool.wall",
+                },
+
+                // A slab at the cell's lower boundary rather than an edifice in the cell (U29), and
+                // `slab` is the whole of the difference: no edifice, nothing to walk into, and the
+                // same order-deliver-work-raise pipeline that builds a wall. Less material and less
+                // work than a wall, because a slab is less of both — neither number derives from
+                // anything and nothing derives from them.
+                new BuildingDef
+                {
+                    defName = "Building_Floor", label = "floor", edifice = CoreContent.EdificeNone,
+                    slab = true, blocking = false, costCount = 4, workToBuild = 120, minSkill = 0,
+                    iconKey = "ui.arch.tool.roof",
                 },
             };
         }

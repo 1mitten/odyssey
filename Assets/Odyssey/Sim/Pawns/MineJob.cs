@@ -394,6 +394,12 @@ namespace Odyssey.Sim.Pawns
 
             // 5. What the cell was made of, if it left anything.
             SpawnYield(ctx, cell, terrain);
+
+            // 6. And what was resting on it. Rock holds up the boundary above it exactly as a wall
+            //    does, so cutting it away is a structural edit — the third of the three places that
+            //    said "support is deliberately not marked dirty, and U29 should wire all three
+            //    together rather than let one of them quietly acquire behaviour the others lack".
+            ctx.MarkStructureChanged(cell);
         }
 
         static void MarkChunksAround(PawnContext ctx, int cell)

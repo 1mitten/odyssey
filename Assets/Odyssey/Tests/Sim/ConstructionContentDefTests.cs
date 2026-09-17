@@ -39,7 +39,9 @@ namespace Odyssey.Tests.Sim
         /// The building table as it stands. Update this only when you meant to change what can be
         /// built, and say what moved in the commit message.
         /// </summary>
-        const ulong BuildingFingerprint = 522030547396613218UL;
+        // U29 added Building_Floor: a slab at the cell's lower boundary, 4 stuff and 120 ticks,
+        // and the `slab` field that tells Raise which of the two kinds of thing it is making.
+        const ulong BuildingFingerprint = 14174525753986816333UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

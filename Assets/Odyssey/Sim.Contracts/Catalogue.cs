@@ -54,7 +54,13 @@ namespace Odyssey.Sim.Contracts
     {
         public const int None = 0;
         public const int Wall = 1;
-        public const int Count = 2;
+
+        /// <summary>
+        /// A slab at the cell's lower boundary: the floor you stand on and the roof of whatever is
+        /// beneath it. One thing, of a material — see docs/design/17-floors-and-collapse.md.
+        /// </summary>
+        public const int Floor = 2;
+        public const int Count = 3;
     }
 
     /// <summary>

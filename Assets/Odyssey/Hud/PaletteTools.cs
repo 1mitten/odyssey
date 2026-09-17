@@ -64,6 +64,13 @@ namespace Odyssey.Hud
         // The keys the shell and the tests need by name. Everything else is a string in the table
         // below and is never compared against.
         public const string Wall = "ui.arch.tool.wall";
+
+        /// <summary>
+        /// The floor tool, under the catalogue's own key for it. The key says "roof" because a slab
+        /// is both — it floors the layer it is in and roofs the one below — and keys are forever,
+        /// so the label moved and the key did not (U29).
+        /// </summary>
+        public const string Floor = "ui.arch.tool.roof";
         public const string Mine = "ui.arch.tool.mine";
         public const string Fell = "ui.arch.tool.fell";
         public const string Cancel = "ui.arch.tool.cancel";
@@ -122,6 +129,10 @@ namespace Odyssey.Hud
             new PaletteTool(Wall,
                 d => d.ArmBuild(BuildingHandle.Wall),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Wall,
+                wantsMaterial: true),
+            new PaletteTool(Floor,
+                d => d.ArmBuild(BuildingHandle.Floor),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Floor,
                 wantsMaterial: true),
             new PaletteTool(Mine, Toggle(DesignateTool.Mine), Holding(DesignateTool.Mine)),
             new PaletteTool(Fell, Toggle(DesignateTool.Fell), Holding(DesignateTool.Fell)),

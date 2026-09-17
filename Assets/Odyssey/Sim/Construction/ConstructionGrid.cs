@@ -29,6 +29,15 @@ namespace Odyssey.Sim.Construction
     public sealed class ConstructionGrid : ITickable, IStateHashable, ISaveable, ISnapshotContributor
     {
         readonly CellGrid _grid;
+
+        /// <summary>
+        /// The structural solver, when the world has one, asked one question only: what support a
+        /// slab would have if one were built here. Null in a fixture with no structure, in which
+        /// case a slab order is judged on everything except its support — which is the right answer
+        /// for a test that never built a solver, and would be the wrong one in a game.
+        /// </summary>
+        readonly SupportSolver? _support;
+
         readonly EdificeSaveSection _edificeSave;
         readonly List<PlacedEdifice> _edifices;
         readonly ColonyItems _items;
@@ -45,12 +54,14 @@ namespace Odyssey.Sim.Construction
         /// here means the thing that raises a wall and the thing that writes it down cannot be
         /// wired up separately: <see cref="Edifices"/> hands it on to whoever assembles the save.
         /// </summary>
-        public ConstructionGrid(CellGrid grid, EdificeSaveSection edifices, ColonyItems items)
+        public ConstructionGrid(CellGrid grid, EdificeSaveSection edifices, ColonyItems items,
+            SupportSolver? support = null)
         {
             _grid = grid ?? throw new ArgumentNullException(nameof(grid));
             _edificeSave = edifices ?? throw new ArgumentNullException(nameof(edifices));
             _edifices = edifices.Records;
             _items = items ?? throw new ArgumentNullException(nameof(items));
+            _support = support;
             _building = new byte[grid.Size.CellCount];
             _stuff = new byte[grid.Size.CellCount];
             _delivered = new int[grid.Size.CellCount];
@@ -121,10 +132,16 @@ namespace Odyssey.Sim.Construction
             if (!ConstructionContent.IsBuilding(building)) return IntentRejection.NotPermitted;
             if (!ConstructionContent.IsBuildable(stuff)) return IntentRejection.NotPermitted;
 
-            int index = StandingOn(_grid.Index(cell));
+            // A slab is not lifted. The lift exists because a click names a surface and a wall goes
+            // in the air above it; a floor ordered on solid ground is asking for a floor where
+            // there is already ground, which the rule below refuses either way — so lifting it
+            // would only move the refusal one cell and make it harder to read.
+            bool slab = ConstructionContent.BuildingAt(building).slab;
+            int index = slab ? _grid.Index(cell) : StandingOn(_grid.Index(cell));
+
             if (_building[index] == building && _stuff[index] == stuff)
                 return IntentRejection.AlreadyInThatState;
-            if (!Allows(index)) return IntentRejection.NotPermitted;
+            if (!Allows(index, building)) return IntentRejection.NotPermitted;
 
             // A site that is replaced gives back whatever had been carried to it, exactly as a
             // cancelled one does: the player changing their mind about the material is not a
@@ -196,17 +213,52 @@ namespace Odyssey.Sim.Construction
         /// one <c>DesignationGrid.Allows</c> wrote down in advance for this: <i>a cell you can wade
         /// through is still not one you can put a wall in</i>.</para>
         /// </summary>
-        public bool Allows(int index)
+        public bool Allows(int index) => Allows(index, BuildingHandle.Wall);
+
+        /// <summary>
+        /// Whether <em>this</em> thing may be built in this cell. An edifice and a slab want
+        /// opposite answers to the same question about the floor, so the building has to be named.
+        /// </summary>
+        public bool Allows(int index, int building)
         {
             if ((uint)index >= (uint)_grid.Size.CellCount) return false;
             if (_grid.IsSolidTerrain(index)) return false;
             if (NaturalContent.IsWater(_grid.Terrain[index])) return false;
             if (_grid.Edifice[index] >= 0) return false;
 
-            // Something underfoot. A wall hanging in the air is the fault the whole support model
-            // exists to prevent, and refusing it at the order is far better than collapsing it
-            // afterwards: the player never gave an order that could not be carried out.
-            return _grid.HasFloor(index);
+            // Rubble, and nothing else today. The flag has existed on TerrainDef since the tables
+            // were written and had no reader until a collapse started leaving a mess (U29): a heap
+            // of debris is cleared before anything is built on it.
+            if (!NaturalContent.TerrainAt(_grid.Terrain[index]).buildable) return false;
+
+            return ConstructionContent.BuildingAt(building).slab
+                ? AllowsSlab(index)
+                // Something underfoot. A wall hanging in the air is the fault the whole support
+                // model exists to prevent, and refusing it at the order is far better than
+                // collapsing it afterwards: the player never gave an order that could not be
+                // carried out.
+                : _grid.HasFloor(index);
+        }
+
+        /// <summary>
+        /// Whether a slab may be built at this cell's lower boundary.
+        ///
+        /// <para>The mirror of the edifice rule: a wall wants something under it and a floor is the
+        /// something. So the cell must have <b>no floor already</b> — neither a slab nor solid
+        /// ground beneath it — because a floor over a floor is an order with nothing to do.</para>
+        ///
+        /// <para><b>And the support rule must permit it</b>, which is the line that makes the whole
+        /// mechanic playable rather than punitive. Without it a colony can order a slab anywhere,
+        /// carry four wood across the map, build it, and watch it fall on the tick it is finished.
+        /// With it a colonist bridges out from a wall as far as support reaches and the next order
+        /// is refused with a reason — the overhang is not a number anybody tuned, it is the support
+        /// rule seen from the side.</para>
+        /// </summary>
+        bool AllowsSlab(int index)
+        {
+            if (_grid.Floor[index] != CoreContent.SlabNone) return false;
+            if (_grid.HasFloor(index)) return false;
+            return _support == null || _support.SupportIfSlabAt(index) > 0;
         }
 
         /// <summary>Material has arrived. Returns what the site now holds.</summary>
@@ -282,11 +334,11 @@ namespace Odyssey.Sim.Construction
         /// <para>Everything that changes is listed here in one place rather than discovered one bug
         /// at a time, which is the shape <c>MineCell</c> settled on.</para>
         ///
-        /// <para><b>Support is deliberately not marked dirty.</b> Nothing collapses yet — mining a
-        /// load-bearing wall out of a stamped shell does not bring it down either — so marking it
-        /// would start the solver running over edits whose consequences U29 has not written. The
-        /// omission is the same one mining makes, and the two should be wired together when U29
-        /// lands rather than one of them quietly acquiring behaviour the other lacks.</para>
+        /// <para><b>Support is marked dirty since U29.</b> It deliberately was not, while nothing
+        /// collapsed: marking it would have started the solver running over edits whose
+        /// consequences were not written. Mining and demolition made the same omission and carried
+        /// the same warning — that the three should be wired together rather than one of them
+        /// quietly acquiring behaviour the others lack — and all three are wired here.</para>
         /// </summary>
         public void Raise(PawnContext ctx, int cell)
         {
@@ -298,18 +350,10 @@ namespace Odyssey.Sim.Construction
 
             Clear(cell);
 
-            // 1. The thing itself, as the record the ruined city's own walls are kept in, so that a
-            //    wall a colonist built and a wall the generator stamped are indistinguishable to
-            //    everything downstream — the mesher, the picker, deconstruction and the solver.
-            // Built = true: ours, and the only place in the game that says so. Everything the
-            // generator stamps leaves it false, which is what makes "deconstruct our own buildings
-            // and not the ruined city's" a rule that can be asked rather than guessed at.
-            _edifices.Add(new PlacedEdifice
-            {
-                CellIndex = cell, Def = def.edifice, Stuff = stuff, Built = true,
-            });
-            _grid.Edifice[cell] = _edifices.Count - 1;
-            if (def.blocking) _grid.Flags[cell] |= CellFlags.BlockingEdifice;
+            // 1. The thing itself — a slab at the cell's lower boundary, or an edifice standing in
+            //    the cell. One `if`, because everything else about the two is identical.
+            if (def.slab) RaiseSlab(cell, stuff);
+            else RaiseEdifice(cell, def, stuff);
 
             // 2. The cell and everything touching it must be re-meshed: a wall changes how its
             //    neighbours draw their own faces, and the vertical neighbours are in other chunks.
@@ -319,6 +363,73 @@ namespace Odyssey.Sim.Construction
             ctx.Nav.MarkDirty(cell);
             int above = cell + _grid.Size.LayerStride;
             if (above < _grid.Size.CellCount) ctx.Nav.MarkDirty(above);
+
+            // 4. And what holds the boundary above this cell up. A wall raised gives the slab over
+            //    it full support; a slab raised is itself a medium that carries load sideways to
+            //    the slabs beside it.
+            ctx.MarkStructureChanged(cell);
+        }
+
+        /// <summary>
+        /// A floor: the slab kind and the material, written into the cell's lower boundary.
+        ///
+        /// <para><c>CoreContent.SlabBuilt</c> and never one of the generator's three kinds, because
+        /// that is what makes "take our own floors apart and not the ruined city's" a question that
+        /// can be asked. It is <see cref="PlacedEdifice.Built"/>'s argument one level down, and it
+        /// costs no new state: <c>Floor[]</c> has always been saved and always been hashed.</para>
+        /// </summary>
+        void RaiseSlab(int cell, ushort stuff)
+        {
+            _grid.Floor[cell] = CoreContent.SlabBuilt;
+            _grid.FloorStuff[cell] = stuff;
+        }
+
+        /// <summary>
+        /// A wall, as the record the ruined city's own walls are kept in, so that a wall a colonist
+        /// built and a wall the generator stamped are indistinguishable to everything downstream —
+        /// the mesher, the picker, deconstruction and the solver.
+        ///
+        /// <para><c>Built = true</c>: ours, and the only place in the game that says so. Everything
+        /// the generator stamps leaves it false.</para>
+        /// </summary>
+        void RaiseEdifice(int cell, BuildingDef def, ushort stuff)
+        {
+            _edifices.Add(new PlacedEdifice
+            {
+                CellIndex = cell, Def = def.edifice, Stuff = stuff, Built = true,
+            });
+            _grid.Edifice[cell] = _edifices.Count - 1;
+            if (def.blocking) _grid.Flags[cell] |= CellFlags.BlockingEdifice;
+        }
+
+        /// <summary>
+        /// Take a floor of ours back out, and say whether there was one.
+        ///
+        /// <para><see cref="Demolish"/>'s twin, beside it for the same reason <see cref="Raise"/>
+        /// keeps both halves together. Only <c>SlabBuilt</c>: a stamped deck belongs to the city
+        /// and to whatever line of work claims ruins, and the check is here as well as in the
+        /// designation rule because this is the method that does the damage.</para>
+        /// </summary>
+        public bool RemoveSlab(PawnContext ctx, int cell, out ushort stuff)
+        {
+            stuff = CoreContent.StuffNone;
+            if ((uint)cell >= (uint)_grid.Size.CellCount) return false;
+            if (_grid.Floor[cell] != CoreContent.SlabBuilt) return false;
+
+            stuff = _grid.FloorStuff[cell];
+            _grid.Floor[cell] = CoreContent.SlabNone;
+            _grid.FloorStuff[cell] = CoreContent.StuffNone;
+
+            MarkChunksAround(ctx, cell);
+            ctx.Nav.MarkDirty(cell);
+            int above = cell + _grid.Size.LayerStride;
+            if (above < _grid.Size.CellCount) ctx.Nav.MarkDirty(above);
+
+            // The floor that has just gone was holding up whatever was beside it on this boundary.
+            // This is the line that lets a player pull the last support out of a room and watch it
+            // come down, which is what the unit is for.
+            ctx.MarkStructureChanged(cell);
+            return true;
         }
 
         /// <summary>
@@ -331,9 +442,10 @@ namespace Odyssey.Sim.Construction
         /// the kind of corruption that shows up three saves later as a wall made of the wrong
         /// thing.</para>
         ///
-        /// <para><b>Support is deliberately not marked dirty</b>, the same omission <see cref="Raise"/>
-        /// and <c>MineCell</c> both make. Nothing collapses yet; U29 wires all three together, and
-        /// none of the three should quietly acquire behaviour the others lack.</para>
+        /// <para><b>Support is marked dirty since U29</b>, as it is in <see cref="Raise"/> and in
+        /// <c>MineCell</c>. All three deliberately did not while nothing collapsed, and all three
+        /// carried the warning that they should be wired together rather than one of them quietly
+        /// acquiring behaviour the others lack.</para>
         ///
         /// <para>What it was is returned, so the caller can pay the refund without asking the world
         /// a question whose answer it has just destroyed.</para>
@@ -365,6 +477,11 @@ namespace Odyssey.Sim.Construction
             ctx.Nav.MarkDirty(cell);
             int above = cell + _grid.Size.LayerStride;
             if (above < _grid.Size.CellCount) ctx.Nav.MarkDirty(above);
+
+            // 4. And what was holding the boundary above it up. This is the ruined-shell case in
+            //    one line: pull a wall out of a stamped building and the slab it was carrying has
+            //    to earn its support like anything else.
+            ctx.MarkStructureChanged(cell);
             return true;
         }
 

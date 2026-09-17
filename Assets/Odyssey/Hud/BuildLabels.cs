@@ -22,7 +22,7 @@ namespace Odyssey.Hud
     public static class BuildLabels
     {
         /// <summary>Parallel to <see cref="BuildingHandle"/>: None, Wall.</summary>
-        public static readonly string[] BuildingKeys = { "", "ui.arch.tool.wall" };
+        public static readonly string[] BuildingKeys = { "", "ui.arch.tool.wall", "ui.arch.tool.roof" };
 
         /// <summary>
         /// Parallel to <see cref="StuffHandle"/>: None, Concrete, Steel, Composite, Wood, Stone.

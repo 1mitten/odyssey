@@ -149,12 +149,17 @@ namespace Odyssey.Tests.Hud
         /// Only a thing made of something offers a material. An order is a verb applied to what is
         /// already there, so a "made of" row under the cancel tool would be asking what to cancel
         /// it out of.
+        ///
+        /// <para>The list is spelled out rather than derived from <c>WantsMaterial</c> itself,
+        /// which would assert that a field equals itself. Two things are built out of something
+        /// today — a wall and a floor — and a third arriving should have to be written here.</para>
         /// </summary>
         [Test]
         public void OnlyAThingMadeOfSomethingAsksWhatItIsMadeOf()
         {
             foreach (PaletteTool tool in PaletteTools.Live)
-                Assert.That(tool.WantsMaterial, Is.EqualTo(tool.Key == PaletteTools.Wall),
+                Assert.That(tool.WantsMaterial,
+                    Is.EqualTo(tool.Key == PaletteTools.Wall || tool.Key == PaletteTools.Floor),
                     $"{tool.Key} disagrees with itself about whether it is built out of something");
         }
 

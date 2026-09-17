@@ -131,7 +131,7 @@ ui.arch.tool.door,Door,ui.arch.tool,M3,"Passable, and holds a room's air"
 ui.arch.tool.stair,Stair,ui.arch.tool,M3,Two cells. The fast way between layers
 ui.arch.tool.ladder,Ladder,ui.arch.tool,M3,"One cell. Slow, cheap, no hauling"
 ui.arch.tool.pillar,Support pillar,ui.arch.tool,M3,Extends how far a roof can span
-ui.arch.tool.roof,Roof and floor above,ui.arch.tool,M3,Roofs this layer and floors the next
+ui.arch.tool.roof,Floor,ui.arch.tool,M3,"A slab you walk on. It roofs the layer beneath"
 ui.arch.tool.reclaim,Reclaim shell,ui.arch.tool,M3,Adopt existing ruined structure as ours
 ui.arch.tool.window,Window,ui.arch.tool,M3,"Light through a wall, less insulation"
 ui.arch.tool.hatch,Hatch,ui.arch.tool,M3,A door in a floor

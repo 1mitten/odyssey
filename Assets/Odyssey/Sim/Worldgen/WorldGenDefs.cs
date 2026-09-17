@@ -44,6 +44,21 @@ namespace Odyssey.Sim.Worldgen
         public bool buildable = true;
 
         /// <summary>
+        /// May a Mine order clear this, although it is not solid?
+        ///
+        /// <para>Mining asks for solid terrain, which is right for rock and wrong for the one
+        /// thing a collapse leaves behind: rubble is a heap on a floor, not a face to cut, and
+        /// without this there was no way to get rid of it (U29). A flag rather than a rule —
+        /// "any non-solid terrain with work to clear" would have offered the player a Mine order
+        /// on open water, marsh and the soil band under the city, all of which are non-solid and
+        /// all of which carry the default workToClear.</para>
+        ///
+        /// <para>This is `vertical-slice.md`'s U28 line "breach a slab, clear rubble, mine rock",
+        /// whose middle speed has been missing since mining landed.</para>
+        /// </summary>
+        public bool clearable;
+
+        /// <summary>
         /// Whether a bridge may be built over it: the complement of <see cref="buildable"/> for
         /// water, and false for everything else. A bridge spans what cannot be built on, and
         /// bridging solid ground is not a thing.
@@ -280,6 +295,18 @@ namespace Odyssey.Sim.Worldgen
         public const ushort SlabStructural = 1;
         public const ushort SlabDeck = 2;
         public const ushort SlabRoof = 3;
+
+        /// <summary>
+        /// A floor the colony built (U29). The three above are all the generator's — structural
+        /// decks, plaza decks and roofs, stamped by SurfacePasses and DepthPasses — so a fourth
+        /// kind is what makes "take our own floors apart and not the ruined city's" a question
+        /// that can be asked rather than guessed at. It is PlacedEdifice.Built's argument one
+        /// level down, and it needs no new state: Floor[] is already saved and already hashed.
+        ///
+        /// Nothing in presentation has to know: WorldRenderModel.FloorModule returns the stuff
+        /// group's slab module for any non-zero floor and never looks at the kind.
+        /// </summary>
+        public const ushort SlabBuilt = 4;
 
         // Stuff indices. 0 = none.
         public const ushort StuffNone = 0;

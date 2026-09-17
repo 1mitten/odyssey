@@ -82,7 +82,10 @@ namespace Odyssey.Sim.Pawns
         public const int Catharsis = 0;
         public const int AteMeal = 1;
         public const int SleptOnGround = 2;
-        public const int Count = 3;
+
+        /// <summary>Rode a floor down when it collapsed (U29).</summary>
+        public const int Fell = 3;
+        public const int Count = 4;
     }
 
     /// <summary>
@@ -569,7 +572,7 @@ namespace Odyssey.Sim.Pawns
 
             content.Needs = ByName<NeedDef>(defs, "Need_Food", "Need_Rest", "Need_Joy");
             content.Thoughts = ByName<ThoughtDef>(defs,
-                "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround");
+                "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround", "Thought_Fell");
             content.Jobs = ByName<JobDef>(defs,
                 "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine",
                 "Job_Deliver", "Job_Build", "Job_Deconstruct");

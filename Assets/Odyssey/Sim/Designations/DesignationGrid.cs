@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Saving;
 using Odyssey.Sim.World;
@@ -234,7 +235,14 @@ namespace Odyssey.Sim.Designations
         /// </summary>
         public bool CanMine(int index)
         {
-            if (!_grid.IsSolidTerrain(index)) return false;
+            // Solid rock to cut, or a heap to clear. `clearable` is set by exactly one terrain —
+            // rubble — and it is a flag rather than a rule because "any non-solid terrain with work
+            // to clear" would have offered a Mine order on open water, marsh and the soil band
+            // under the city, all of which are non-solid and all of which carry the default
+            // workToClear. This is `vertical-slice.md`'s U28 line "breach a slab, clear rubble,
+            // mine rock", whose middle speed had nothing to clear until a collapse made some.
+            if (!_grid.IsSolidTerrain(index) && !NaturalContent.TerrainAt(_grid.Terrain[index]).clearable)
+                return false;
             if (_grid.Terrain[index] == NaturalContent.TerrainBedrock) return false;
 
             int above = index + _grid.Size.LayerStride;
@@ -321,7 +329,43 @@ namespace Odyssey.Sim.Designations
         /// <para>Trees need no separate exclusion — a tree is the generator's, so it is never
         /// <c>Built</c>, and felling remains the way one comes down.</para>
         /// </summary>
-        public bool CanDeconstruct(int index) => TryEdifice(index, out PlacedEdifice placed) && placed.Built;
+        public bool CanDeconstruct(int index) => TryTakeApart(index, out _, out _);
+
+        /// <summary>
+        /// What this cell holds that is ours to take apart, as the building and material handles
+        /// that price the work and the refund, or false.
+        ///
+        /// <para><b>One resolver, two kinds of thing.</b> A wall is an edifice standing in the cell
+        /// and a floor is a slab at its lower boundary, and the deconstruct line wants exactly the
+        /// same two numbers from either — so the giver, the driver and the rule all ask here rather
+        /// than each learning the difference.</para>
+        ///
+        /// <para><b>Only what we built</b>, in both cases and by the same argument.
+        /// <see cref="PlacedEdifice.Built"/> says so for a wall; <c>CoreContent.SlabBuilt</c> says
+        /// so for a floor, because the generator's three slab kinds are stamped and this fourth one
+        /// is only ever written by <c>ConstructionGrid.Raise</c>. The ruined city stays Reclaim's
+        /// and Salvage's, decks included.</para>
+        /// </summary>
+        public bool TryTakeApart(int index, out int building, out int stuff)
+        {
+            if (TryEdifice(index, out PlacedEdifice placed) && placed.Built)
+            {
+                building = ConstructionContent.BuildingForEdifice(placed.Def);
+                stuff = ConstructionContent.StuffForValue(placed.Stuff);
+                return building != BuildingHandle.None;
+            }
+
+            if ((uint)index < (uint)_grid.Size.CellCount && _grid.Floor[index] == CoreContent.SlabBuilt)
+            {
+                building = BuildingHandle.Floor;
+                stuff = ConstructionContent.StuffForValue(_grid.FloorStuff[index]);
+                return true;
+            }
+
+            building = BuildingHandle.None;
+            stuff = StuffHandle.None;
+            return false;
+        }
 
         /// <summary>
         /// The building standing in this cell, or false. Public because deconstruct needs more than

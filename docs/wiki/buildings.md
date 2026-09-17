@@ -28,7 +28,7 @@ Everything on the architect menu: what can be built, and the one-off orders that
 | **Stair** | `ui.arch.tool.stair` | Two cells. The fast way between layers <br>**Needs:** a staircase. M1 needs it and no sheet has one | no art | M3 |
 | **Ladder** | `ui.arch.tool.ladder` | One cell. Slow, cheap, no hauling <br>**Needs:** a ladder. M1 needs it and no sheet has one | no art | M3 |
 | **Support pillar** | `ui.arch.tool.pillar` | Extends how far a roof can span | sheet 04 (manufactured), low | M3 |
-| **Roof and floor above** | `ui.arch.tool.roof` | Roofs this layer and floors the next <br>**Needs:** a roof or ceiling panel seen from below. Central to the layer model | no art | M3 |
+| **Floor** | `ui.arch.tool.roof` | A slab you walk on. It roofs the layer beneath <br>**Needs:** a roof or ceiling panel seen from below. Central to the layer model | no art | M3 |
 | **Reclaim shell** | `ui.arch.tool.reclaim` | Adopt existing ruined structure as ours <br>**Needs:** adopting existing ruined structure. Our own invention, nothing to borrow | no art | M3 |
 | **Window** | `ui.arch.tool.window` | Light through a wall, less insulation | sheet 04 (manufactured), high | M3 |
 | **Hatch** | `ui.arch.tool.hatch` | A door in a floor <br>**Needs:** a hatch in a floor | no art | M3 |

@@ -98,7 +98,7 @@ namespace Odyssey.Hud
             { "ui.arch.tool.reclaimer", "Reclaimer" },
             { "ui.arch.tool.removefloor", "Remove floor" },
             { "ui.arch.tool.researchbench", "Research bench" },
-            { "ui.arch.tool.roof", "Roof and floor above" },
+            { "ui.arch.tool.roof", "Floor" },
             { "ui.arch.tool.salvage", "Salvage" },
             { "ui.arch.tool.sandbag", "Sandbags" },
             { "ui.arch.tool.sculpture", "Sculpture" },
