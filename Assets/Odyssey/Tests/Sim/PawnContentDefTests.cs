@@ -60,7 +60,9 @@ namespace Odyssey.Tests.Sim
         /// gained <c>startingSkillLevelWeights</c>, the invented distribution starting skill
         /// levels are rolled from.</para>
         /// </summary>
-        const ulong ContentFingerprint = 5084181885077166016UL;
+        // U29 added Thought_Fell: the memory a colonist keeps of riding a floor down. It stands in
+        // for an injury that cannot exist until there is a health model to apply one to.
+        const ulong ContentFingerprint = 13610108137465437640UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

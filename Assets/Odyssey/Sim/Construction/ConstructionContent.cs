@@ -26,6 +26,35 @@ namespace Odyssey.Sim.Construction
         public bool blocking = true;
 
         /// <summary>
+        /// Is the finished thing a <b>slab at the cell's lower boundary</b> rather than an edifice
+        /// standing in the cell?
+        ///
+        /// <para>This one bool is the whole difference between building a wall and building a
+        /// floor. Everything else — the order, the material carried to it, the work applied, the
+        /// reservation, the two work givers, the cancel, the refund — is the same pipeline, which
+        /// is the point of having the tables at all (U29). <c>ConstructionGrid.Raise</c> is the one
+        /// place that reads it.</para>
+        /// </summary>
+        public bool slab;
+
+        /// <summary>
+        /// Is this slab a <b>covering</b> — laid on ground that is already there — rather than
+        /// structure spanning a gap?
+        ///
+        /// <para>Only meaningful with <see cref="slab"/>, and it inverts exactly one question.
+        /// A structural slab wants a cell with <b>no</b> floor and asks the support rule whether it
+        /// could stand; a covering wants a cell that <b>has</b> one and asks nothing, because
+        /// something is already holding it up and it can never fall. Everything else — the order,
+        /// the material, the work, the refund, the drawing — is untouched (U42,
+        /// <c>docs/design/18-paving.md</c>).</para>
+        ///
+        /// <para>The owner's report that produced it: <i>"I should be able to just build a
+        /// floor."</i> On the played board only 21 of the 441 cells within ten of the start will
+        /// take a structural slab, and none of them is the grass you are standing on.</para>
+        /// </summary>
+        public bool covering;
+
+        /// <summary>
         /// Cells the finished thing occupies, in a line along its facing. One for everything
         /// until the bed; two for the bed, whose one record both cells point at
         /// (<c>EdificeFootprint</c> derives the second, so nothing stores it twice).
@@ -170,6 +199,24 @@ namespace Odyssey.Sim.Construction
         /// salvage line that turns rubble into steel is what would give one an item and put it
         /// there, and it would need no other change.</para>
         /// </summary>
+        /// <summary>
+        /// Is this slab kind one the colony laid, rather than one the generator stamped?
+        ///
+        /// <para>The question `PlacedEdifice.Built` answers for a wall, one level down. The
+        /// generator's three — structural decks, plaza decks, roofs — belong to the ruined city and
+        /// to whatever line of work claims ruins; a floor we built and paving we laid are ours to
+        /// take up again. One place, so deconstruct's rule and its edit cannot come to disagree
+        /// about which is which (U42 added the second kind).</para>
+        /// </summary>
+        public static bool IsOurs(ushort slab) =>
+            slab == CoreContent.SlabBuilt || slab == CoreContent.SlabPaved;
+
+        /// <summary>Which building a slab kind of ours came from, or <see cref="BuildingHandle.None"/>.</summary>
+        public static int BuildingForSlab(ushort slab) =>
+            slab == CoreContent.SlabBuilt ? BuildingHandle.Floor
+            : slab == CoreContent.SlabPaved ? BuildingHandle.DeckPlate
+            : BuildingHandle.None;
+
         public static bool IsBuildable(int handle) =>
             handle > StuffHandle.None && handle < StuffTable.Length && StuffTable[handle].item >= 0;
 
@@ -255,7 +302,11 @@ namespace Odyssey.Sim.Construction
         /// <see cref="BuildingHandle"/> value, written into the published frame and into every
         /// save, so this list — never the table's own sorted order — is what resolves a name.
         /// </summary>
-        public static readonly string[] BuildingOrder = { "Building_None", "Building_Wall", "Building_Bed" };
+        public static readonly string[] BuildingOrder =
+        {
+            "Building_None", "Building_Wall", "Building_Floor", "Building_DeckPlate", "Building_Ladder",
+            "Building_Bed",
+        };
 
         /// <summary>As <see cref="BuildingOrder"/>, for <see cref="StuffHandle"/>.</summary>
         public static readonly string[] StuffOrder =
@@ -300,6 +351,41 @@ namespace Odyssey.Sim.Construction
                     defName = "Building_Wall", label = "wall", edifice = CoreContent.EdificeWall,
                     blocking = true, costCount = 5, workToBuild = 135, minSkill = 0,
                     iconKey = "ui.arch.tool.wall",
+                },
+
+                // A slab at the cell's lower boundary rather than an edifice in the cell (U29), and
+                // `slab` is the whole of the difference: no edifice, nothing to walk into, and the
+                // same order-deliver-work-raise pipeline that builds a wall. Less material and less
+                // work than a wall, because a slab is less of both — neither number derives from
+                // anything and nothing derives from them.
+                new BuildingDef
+                {
+                    defName = "Building_Floor", label = "floor", edifice = CoreContent.EdificeNone,
+                    slab = true, blocking = false, costCount = 4, workToBuild = 120, minSkill = 0,
+                    iconKey = "ui.arch.tool.roof",
+                },
+
+                // Paving: the same slab, laid on ground that is already there (U42). `covering` is
+                // the one field that separates it from the floor above, and it inverts exactly one
+                // question — this wants a cell that IS floored and never asks the support rule,
+                // because the ground holds it up and it cannot fall. Cheapest and quickest in the
+                // table: a surface carries no load and is laid over an area rather than a line.
+                new BuildingDef
+                {
+                    defName = "Building_DeckPlate", label = "deck plate", edifice = CoreContent.EdificeNone,
+                    slab = true, covering = true, blocking = false, costCount = 3, workToBuild = 60,
+                    minSkill = 0, iconKey = "ui.arch.tool.deckplate",
+                },
+
+                // The way up (U43). An edifice like a wall, and `blocking = false` is what makes it
+                // one you can stand in: a ladder you cannot enter is a decoration. The connector
+                // that actually joins the two layers is registered by ConstructionGrid.Raise,
+                // because a NavGraph is not something a content table can reach.
+                new BuildingDef
+                {
+                    defName = "Building_Ladder", label = "ladder", edifice = CoreContent.EdificeLadder,
+                    blocking = false, costCount = 4, workToBuild = 90, minSkill = 0,
+                    iconKey = "ui.arch.tool.ladder",
                 },
 
                 // The first furniture (docs/design/20-beds.md). Two cells, passable, rotatable at

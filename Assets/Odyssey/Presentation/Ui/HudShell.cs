@@ -577,7 +577,15 @@ namespace Odyssey.Presentation.Ui
         {
             if (_hud == null || _hud.panel == null) return false;
             VisualElement? hit = _hud.panel.Pick(ToPanel(screenPosition));
-            return hit != null && hit != _hud;
+            if (hit == null || hit == _hud) return false;
+
+            // **The panel's root is not interface, it is the canvas the interface sits on.** It
+            // covers the whole screen and is pickable by default, so counting it made every point
+            // on the screen "over the interface" — and the rig gates hover, scroll and the left
+            // press on exactly that answer, which is a build cursor that never appears anywhere
+            // (owner, 2026-09-17: "the build cursor doesn't appear for walls, floors etc"). `_hud`
+            // was already excluded for this reason; its parent needs excluding for the same one.
+            return hit != hit.panel.visualTree;
         }
 
         /// <summary>Close the Build palette. The Escape half, called by <c>SettingsPresenter</c>.</summary>

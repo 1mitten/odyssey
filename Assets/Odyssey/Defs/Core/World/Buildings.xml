@@ -49,6 +49,104 @@
   </BuildingDef>
 
   <!--
+    U29. A roof is a floor is a slab: one thing, of a material, at the boundary between two layers,
+    stored on the upper cell. So this is not a second pipeline - it is Building_Wall with one field
+    changed, and `slab` is that field.
+
+    costCount 4 and workToBuild 120 against a wall's 5 and 135: slightly less of both, because a
+    slab is less material than a 3 m wall and because the interesting part of building either is
+    fetching the stuff. Neither number is derived from anything and nothing derives from them; they
+    are the owner's to tune.
+
+    blocking false: you walk on a floor. edifice 0, because a floor is not an edifice at all -
+    ConstructionGrid.Raise writes CoreContent.SlabBuilt into Floor[cell] and the material into
+    FloorStuff[cell], and the cell itself stays empty.
+
+    iconKey is the catalogue's existing ui.arch.tool.roof. The key is unchanged and only its label
+    moved, because icon-map.csv is keyed the same way and a key is forever.
+  -->
+  <BuildingDef>
+    <defName>Building_Floor</defName>
+    <label>floor</label>
+    <edifice>0</edifice>
+    <slab>true</slab>
+    <blocking>false</blocking>
+    <costCount>4</costCount>
+    <workToBuild>120</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.roof</iconKey>
+  </BuildingDef>
+
+  <!--
+    U42. A floor you lay on ground that is already there, which is what "just build a floor" means
+    and is NOT what Building_Floor is. The two are one field apart and opposite about one question:
+    a floor wants a cell with nothing under it and must satisfy the support rule; a deck plate wants
+    a cell that is already floored and asks the support rule nothing, because the ground is holding
+    it up and it can never fall. docs/design/18-paving.md has the measurement that produced it.
+
+    costCount 3 and workToBuild 60, the cheapest and quickest thing in the table: it is a surface,
+    not a structure, it carries no load and it is laid over an area rather than a line. Against a
+    floor's 4 and 120 and a wall's 5 and 135. Neither number derives from anything and nothing
+    derives from them; they are the owner's to tune.
+
+    edifice 0 and blocking false, as a floor is: nothing stands in the cell, and you walk on it.
+    slab true because it IS a slab - written to the cell's lower boundary through exactly the same
+    Raise - and covering true is the one field that inverts the rule.
+
+    Built of wood or stone like everything else, because those are the only two stuffs a colonist
+    can carry (ConstructionContent.IsBuildable). The four with no item are what the ruined city is
+    made of, and steel is one of them - so a steel deck plate is an order that could never be
+    filled until a salvage line gives steel an item.
+
+    One covering rather than three. Grating and tile are a row each when they are wanted, and
+    grating is not a covering at all - "see and fall through" is a slab you can see through, which
+    wants something below worth seeing.
+  -->
+  <BuildingDef>
+    <defName>Building_DeckPlate</defName>
+    <label>deck plate</label>
+    <edifice>0</edifice>
+    <slab>true</slab>
+    <covering>true</covering>
+    <blocking>false</blocking>
+    <costCount>3</costCount>
+    <workToBuild>60</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.deckplate</iconKey>
+  </BuildingDef>
+
+  <!--
+    U43. The way up, and the first thing a colony can build that goes anywhere but sideways.
+
+    Until this existed a second storey was decorative: every slab measured walkable and
+    UNREACHABLE, because vertical movement in this game goes through a Pathing.Connector and
+    connectors only ever came out of worldgen. A ladder is the cheapest honest fix - one cell,
+    joining the floor it stands on to the floor directly above it.
+
+    blocking false, and that is the whole of what makes it work: a ladder you cannot stand in is
+    a decoration. edifice 7 is CoreContent.EdificeLadder, the same record the ruined city stamps,
+    so a ladder a colonist built and a ladder the generator left are the same thing to the mesher,
+    the picker and the nav graph.
+
+    costCount 4 and workToBuild 90: between a floor's 4/120 and a wall's 5/135. It is less material
+    than a wall and quicker to put up than a floor, and like both of those neither number derives
+    from anything. The owner's to tune.
+
+    Stairs are deliberately NOT here yet. A stair is two cells and rises 1.5 m per cell, so it
+    carries a placement rule of its own; a ladder needs none.
+  -->
+  <BuildingDef>
+    <defName>Building_Ladder</defName>
+    <label>ladder</label>
+    <edifice>7</edifice>
+    <blocking>false</blocking>
+    <costCount>4</costCount>
+    <workToBuild>90</workToBuild>
+    <minSkill>0</minSkill>
+    <iconKey>ui.arch.tool.ladder</iconKey>
+  </BuildingDef>
+
+  <!--
     THE FIRST FURNITURE (docs/design/20-beds.md). edifice 12 is CoreContent.EdificeBed - 12, not 10, because ten and eleven are the trees' (NaturalContent.FirstEdifice).
 
     footprint 2: one record, two cells - the second is derived from the facing at placement

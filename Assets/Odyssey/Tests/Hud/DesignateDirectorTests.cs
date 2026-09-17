@@ -86,6 +86,188 @@ namespace Odyssey.Tests.Hud
                 Assert.That(cell.Y, Is.EqualTo(4), $"{cell} left the anchor's layer");
         }
 
+        /// <summary>
+        /// <b>A floor is ordered on the layer being worked, not the one under the pointer.</b>
+        ///
+        /// <para>The picker can only ever name a surface — it stops the ray at the first thing
+        /// that occludes it — so it cannot express the cell a floor is for, which is open air over
+        /// a room with nothing beneath it to aim at. Measured on the real renderer on 2026-09-17:
+        /// every click over a roofed room's interior named the floor of the room or missed
+        /// outright, so a room's middle could not be roofed at all. The layer therefore comes from
+        /// the slice, and only the column comes from the pointer.</para>
+        ///
+        /// <para>Set by whoever knows the slice and the content, which is not this assembly; what
+        /// is tested here is the substitution, which is all that lives here.</para>
+        /// </summary>
+        [Test]
+        public void AWorkingLayerOverridesTheLayerThePointerNamed()
+        {
+            var director = new DesignateDirector { WorkingLayer = 9 };
+            director.ArmBuild(BuildingHandle.Floor);
+
+            director.Begin(At(2, 2, y: 3));
+            director.DragTo(At(5, 2, y: 1));
+
+            IReadOnlyList<CellRef> cells = director.Commit();
+            Assert.That(cells, Is.Not.Empty);
+            foreach (CellRef cell in cells)
+                Assert.That(cell.Y, Is.EqualTo(9),
+                    $"{cell} took the pointer's layer instead of the slice's");
+        }
+
+        /// <summary>
+        /// <b>And it only ever lifts.</b> The working layer is a floor under the order, not an
+        /// override of it — a pointer that names something already <em>above</em> the slice keeps
+        /// its own layer.
+        ///
+        /// <para>This is the owner's third report in one assertion. It overrode unconditionally,
+        /// and the played board is terraced across five layers, so a click on a wall one terrace
+        /// above the slice was rewritten down into the hillside and refused. The tool worked only
+        /// where the ground happened to sit at exactly the slice's height.</para>
+        /// </summary>
+        [Test]
+        public void TheWorkingLayerOnlyEverLiftsAnOrderAndNeverDropsIt()
+        {
+            var director = new DesignateDirector { WorkingLayer = 2 };
+            director.ArmBuild(BuildingHandle.Floor);
+
+            // The pointer names a wall standing two layers above the slice.
+            director.Begin(At(2, 2, y: 4));
+
+            IReadOnlyList<CellRef> cells = director.Commit();
+            Assert.That(cells, Has.Count.EqualTo(1));
+            Assert.That(cells[0].Y, Is.EqualTo(4),
+                "a slice below what the pointer named must not drag the order down into the ground");
+        }
+
+        /// <summary>
+        /// And with no working layer set, nothing changes. Every other tool aims at what the
+        /// pointer is over, and this rule must not leak into them — a mine order on the layer the
+        /// camera happens to be at, rather than on the rock the player clicked, would be the
+        /// misclick fault ADR 0006 was written against.
+        /// </summary>
+        [Test]
+        public void WithNoWorkingLayerTheAnchorStillDecides()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.Mine };
+
+            director.Begin(At(2, 2, y: 3));
+            director.DragTo(At(5, 5, y: 9));
+
+            foreach (CellRef cell in director.Commit())
+                Assert.That(cell.Y, Is.EqualTo(3), $"{cell} left the anchor's layer");
+        }
+
+        /// <summary>
+        /// <b>One click places one cell and closes the run.</b> (Owner, 2026-09-17: *"it should
+        /// just place the ladder with a click, no need to do many"*.)
+        ///
+        /// <para><b>Click-move-click was tried and taken out again.</b> For a few hours a click
+        /// placed its cell and left the run open for a second click to extend. It reads well and it
+        /// cost the player the cursor: while a run is open <c>TryPreview</c> succeeds, so the
+        /// composition root draws the run's box and never calls <c>DrawHoverGhost</c>. So a single
+        /// click swapped the cursor that follows the pointer for a box anchored to the last thing
+        /// placed, for as long as the player did not happen to click again — and when they did, it
+        /// placed the whole line between. The owner reported the cursor simply missing, which is
+        /// what that looks like from the other side of the screen.</para>
+        ///
+        /// <para>A run is still a run: press, move, release is a drag and arrives through
+        /// <c>Drag</c>. What is gone is the gesture that stayed open with nothing but a box to say
+        /// so.</para>
+        /// </summary>
+        [Test]
+        public void AClickPlacesOneCellAndLeavesNoRunOpen()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.Mine };
+
+            Assert.That(director.Click(At(2, 2)), Is.EqualTo(new[] { At(2, 2) }),
+                "a click places the cell it landed on");
+            Assert.That(director.Dragging, Is.False, "and leaves no run open behind it");
+            Assert.That(director.AwaitingSecondClick, Is.False);
+
+            // The cursor's own gate: with nothing open, the hover ghost is what gets drawn.
+            Assert.That(director.TryPreview(out _, out _), Is.False,
+                "a run left open here is exactly what hides the build cursor");
+        }
+
+        /// <summary>
+        /// A second click is a second thing, not the far end of a line from the first.
+        ///
+        /// <para>The failure this pins is the one the owner met: two separate ladders placed a few
+        /// cells apart became a solid run of ladders between them.</para>
+        /// </summary>
+        [Test]
+        public void TwoClicksApartPlaceTwoCellsAndNotTheLineBetween()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.Mine };
+
+            Assert.That(director.Click(At(2, 2)), Is.EqualTo(new[] { At(2, 2) }));
+            director.HoverAt(At(5, 2));
+            Assert.That(director.Click(At(5, 2)), Is.EqualTo(new[] { At(5, 2) }),
+                "the second click placed the line between the two rather than one cell");
+        }
+
+        /// <summary>
+        /// <b>The press that opens a box has usually opened it already.</b> While a button is down
+        /// the rig reports the pointer every frame, so by the time the release arrives a box exists
+        /// even for a click that never moved a pixel. If that counted as the <em>second</em> click
+        /// it would close the run, and click-move-click would not exist: every click would be a
+        /// complete gesture and the pointer could never travel.
+        /// </summary>
+        [Test]
+        public void APressThatAlreadyOpenedTheBoxStillPlacesOnlyItsOwnCell()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.Fell };
+
+            // What the rig does while the button is held, before the release.
+            director.Begin(At(3, 3));
+            director.DragTo(At(3, 3));
+            Assume.That(director.Dragging, Is.True);
+
+            Assert.That(director.Click(At(3, 3)), Is.EqualTo(new[] { At(3, 3) }),
+                "the release of the anchoring press places that one cell and no more");
+            Assert.That(director.Dragging, Is.False, "and closes the run it opened");
+            Assert.That(director.AwaitingSecondClick, Is.False);
+        }
+
+        /// <summary>
+        /// Both ways in still work and the hand decides which: a press that travels is a held drag
+        /// and is finished by letting go, exactly as it always has been. A player reaching for the
+        /// old gesture is never punished.
+        /// </summary>
+        [Test]
+        public void AHeldDragStillFinishesOnItsOwnRelease()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.Mine };
+
+            director.Begin(At(1, 1));
+            director.DragTo(At(3, 1));
+            IReadOnlyList<CellRef> cells = director.Commit();
+
+            Assert.That(cells.Count, Is.EqualTo(3), "a held drag commits on release as before");
+            Assert.That(director.AwaitingSecondClick, Is.False, "and leaves nothing waiting");
+        }
+
+        /// <summary>
+        /// Right-click, and Escape, unwind one step at a time: the half-drawn run goes first and
+        /// the tool stays in hand, so a misjudged anchor costs one click rather than a trip back to
+        /// the palette. The answer is what tells the caller whether to unwind further.
+        /// </summary>
+        [Test]
+        public void CancellingTakesThePendingRunFirstAndTheToolAfter()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.Mine };
+            director.Click(At(2, 2));
+            Assume.That(director.AwaitingSecondClick, Is.True);
+
+            Assert.That(director.CancelPending(), Is.True, "there was a run to throw away");
+            Assert.That(director.Dragging, Is.False);
+            Assert.That(director.Tool, Is.EqualTo(DesignateTool.Mine), "and the tool is still held");
+
+            Assert.That(director.CancelPending(), Is.False,
+                "with nothing pending the caller is told to unwind the next step itself");
+        }
+
         [Test]
         public void TheBoxCanBeThrownAway()
         {

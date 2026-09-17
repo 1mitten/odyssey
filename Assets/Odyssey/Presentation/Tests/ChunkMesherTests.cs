@@ -581,18 +581,40 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
-        /// Solid above is not the same as the `full` mode, although it draws the same. The active
-        /// layer stays roofless, because that is its own decision and the default has no business
-        /// reversing it — while an explicit `full`, the exterior view, keeps its lid.
+        /// The ceiling cut-away: off unless asked for, and never applied to the exterior view.
+        ///
+        /// <para><b>The default flipped on 2026-09-17 and the reason is worth keeping.</b> The
+        /// active layer used to be drawn roofless always, which let a player see into the rooms on
+        /// their own layer — and meant the floor they had just built one layer up was invisible and,
+        /// because a surface that is not drawn must not be a pointer target, unclickable too. The
+        /// owner reported exactly that: *"I expected to see and be able to build at least floor
+        /// above from my current height."* Seeing what you have built is the commoner need, so the
+        /// specialist one asks: <c>GraphicsOption.CutAwayCeiling</c>, the first option in the panel
+        /// that starts off.</para>
+        ///
+        /// <para>The invariant underneath is untouched and is the half that still has teeth: an
+        /// explicit <c>Full</c> is the exterior and screenshot view, and it must never cut away a
+        /// storey <em>even when the cut-away is switched on</em>. That is asserted with the option
+        /// on, or it would pass for the wrong reason now that the default is off.</para>
         /// </summary>
         [Test]
-        public void TheDefaultKeepsTheActiveLayerRooflessAndExplicitFullDoesNot()
+        public void TheCeilingCutAwayIsOffByDefaultAndNeverAppliesToTheExteriorView()
         {
             var byDepth = new SliceSettings { surfaceLayer = 5 };
             Assert.That(byDepth.AboveAt(5), Is.EqualTo(AboveMode.Full));
-            Assert.That(byDepth.SuppressCeilingAt(5), Is.True, "the default lidded the active layer");
+            Assert.That(byDepth.SuppressCeilingAt(5), Is.False,
+                "out of the box the floor overhead is drawn, which is what the owner expected");
 
-            var chosen = new SliceSettings { followDepth = false, above = AboveMode.Full };
+            // Switched on, the depth-following view does cut away — that is what the option is.
+            byDepth.suppressActiveCeiling = true;
+            Assert.That(byDepth.SuppressCeilingAt(5), Is.True,
+                "with the option on, the active layer is roofless again");
+
+            // And the exterior view still refuses it, which is the assertion that matters.
+            var chosen = new SliceSettings
+            {
+                followDepth = false, above = AboveMode.Full, suppressActiveCeiling = true,
+            };
             Assert.That(chosen.SuppressCeilingAt(5), Is.False,
                 "the exterior view cut away the storey above, which is the one thing it must not");
         }

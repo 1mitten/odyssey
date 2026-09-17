@@ -125,12 +125,40 @@ namespace Odyssey.Sim.Contracts
         public const int Wall = 1;
 
         /// <summary>
-        /// The first furniture: two cells, passable, rotatable, finished at a rolled quality
-        /// (docs/design/20-beds.md). Beside the wall rather than after it because handle order is
-        /// the save contract and positions are append-only.
+        /// A slab at the cell's lower boundary: the floor you stand on and the roof of whatever is
+        /// beneath it. One thing, of a material — see docs/design/17-floors-and-collapse.md.
         /// </summary>
-        public const int Bed = 2;
-        public const int Count = 3;
+        public const int Floor = 2;
+
+        /// <summary>
+        /// A floor covering laid on ground that is already there (U42). A slab like
+        /// <see cref="Floor"/>, and the opposite of it about what must be underneath: this one
+        /// wants a floor already and never asks the support rule, because it cannot fall.
+        /// </summary>
+        public const int DeckPlate = 3;
+
+        /// <summary>
+        /// A ladder: the first thing a colony can build that goes <b>up</b>. One cell, joining the
+        /// floor it stands on to the floor directly above it.
+        ///
+        /// <para>Until U43 a second storey was decorative — measured, every slab came back
+        /// walkable and unreachable — because vertical movement goes through a
+        /// <c>Pathing.Connector</c> and connectors only ever came from worldgen.</para>
+        /// </summary>
+        public const int Ladder = 4;
+
+        /// <summary>
+        /// The first furniture: two cells, passable, rotatable, finished at a rolled quality
+        /// (docs/design/20-beds.md).
+        ///
+        /// <para><b>Five, not two.</b> The bed was written against a table that ended at the wall
+        /// and took the next number; U29's floor, U42's paving and U43's ladder reached main first
+        /// and took 2, 3 and 4. Handle order is the save contract and positions are append-only,
+        /// so the later branch is the one that moves — which is only safe because no save written
+        /// with a bed in it has ever left this branch.</para>
+        /// </summary>
+        public const int Bed = 5;
+        public const int Count = 6;
     }
 
     /// <summary>

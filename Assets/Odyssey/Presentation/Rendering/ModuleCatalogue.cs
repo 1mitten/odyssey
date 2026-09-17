@@ -384,6 +384,22 @@ namespace Odyssey.Presentation.Rendering
         public const string Slab = Prefix + "slab";
 
         /// <summary>
+        /// The slab art for one material, when that material deserves its own.
+        ///
+        /// <para>A slab took its mesh from the template's group and its colour from a stuff tint,
+        /// which works while every material is a shade of concrete and fails the moment two of
+        /// them are not. Every floor id in the catalogue resolved to the same wooden deck mesh, so
+        /// a stone floor was wooden planks multiplied by a near-white grey — indistinguishable
+        /// from the wood one beside it (owner, 2026-09-17). A tint cannot fix that: multiply only
+        /// darkens, and brown times grey is browner.</para>
+        ///
+        /// <para>No row is required. An id with no art falls back, and
+        /// <c>WorldRenderModel</c> takes the group's slab instead — so a clone without the
+        /// licensed packs draws exactly what it drew before.</para>
+        /// </summary>
+        public static string SlabOf(string material) => Prefix + "slab." + material;
+
+        /// <summary>
         /// The mass a wall is made of, behind the panels on its faces.
         ///
         /// A wall cell is drawn as a panel on each face something can be seen through, which is

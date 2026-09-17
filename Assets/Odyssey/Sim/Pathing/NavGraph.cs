@@ -1056,6 +1056,34 @@ namespace Odyssey.Sim.Pathing
 
         public Connector? GetConnector(int id) => id >= 0 && id < _connectors.Count ? _connectors[id] : null;
 
+        /// <summary>
+        /// The one-cell connector standing in this cell, or -1.
+        ///
+        /// <para><b>Asked rather than remembered</b>, which is the point. A built ladder is an
+        /// edifice in the save and its connector is not: the connector is derived, rebuilt from the
+        /// edifice list when a colony loads, exactly as support and the region graph are. A map from
+        /// cell to connector id kept alongside would be a second copy of that fact, empty after a
+        /// load, and the demolish path would quietly leave a portal behind wherever a loaded ladder
+        /// used to be.</para>
+        ///
+        /// <para>Scoped to the block's own connector list rather than scanning them all, so the cost
+        /// is the handful that could possibly be here (U43).</para>
+        /// </summary>
+        public int OneCellConnectorAt(int lowerCell)
+        {
+            if ((uint)lowerCell >= (uint)Size.CellCount) return -1;
+            if (!_connectorsByBlock.TryGetValue(BlockIndexOfCell(lowerCell), out List<int>? ids)) return -1;
+
+            for (int i = 0; i < ids.Count; i++)
+            {
+                Connector? con = GetConnector(ids[i]);
+                if (con == null) continue;
+                if (con.LowerCells.Length == 1 && con.LowerCells[0] == lowerCell) return con.Id;
+            }
+
+            return -1;
+        }
+
         // =====================================================================================
         // Doors and hazards — the sticky flags
         // =====================================================================================

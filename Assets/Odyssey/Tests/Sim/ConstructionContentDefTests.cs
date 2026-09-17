@@ -42,7 +42,17 @@ namespace Odyssey.Tests.Sim
         /// twice in one day, the second time for its edifice id: 10 is the conifer's, and the bed
         /// moved to the next free id, 12.
         /// </summary>
-        const ulong BuildingFingerprint = 13807022649514515704UL;
+        // U29 added Building_Floor: a slab at the cell's lower boundary, 4 stuff and 120 ticks,
+        // and the `slab` field that tells Raise which of the two kinds of thing it is making.
+        // U42 added Building_DeckPlate: the same slab laid on ground that is already there, 3
+        // stuff and 60 ticks, and the `covering` field that inverts one question — it wants a cell
+        // that IS floored and never asks the support rule, because it cannot fall.
+        // U43 added Building_Ladder: an edifice like a wall, blocking false so it can be stood in,
+        // 4 stuff and 90 ticks. It is the first buildable thing that goes up rather than sideways.
+        // U45 appended Building_Bed at handle 5 — two cells, rotatable, quality-bearing, 5 stuff
+        // and 180 ticks. It was written at handle 2 and moved here on the merge: the three above
+        // reached main first and a handle position is a save contract.
+        const ulong BuildingFingerprint = 1601939814383435364UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

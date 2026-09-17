@@ -52,6 +52,39 @@ namespace Odyssey.Sim.Pawns
         public Construction.ConstructionGrid? Construction { get; set; }
 
         /// <summary>
+        /// The structural solver, when the world has one. Null in a bare pawn fixture, exactly as
+        /// <see cref="Designations"/> and <see cref="Construction"/> are.
+        ///
+        /// <para><b>It is here so that a job which edits the world can say the structure changed.</b>
+        /// Raising a wall, pulling one down and mining rock out all alter what holds the boundary
+        /// above them up, and all three of them said so in a comment and did nothing about it —
+        /// each naming U29 and each warning that the three should be wired together rather than
+        /// one of them quietly acquiring behaviour the others lack. This is the wire.</para>
+        /// </summary>
+        public World.SupportSolver? Support { get; set; }
+
+        /// <summary>
+        /// The structure of this cell changed, so the boundary above it has to be re-judged.
+        ///
+        /// <para>Both the cell and the one above it, always, because they are two different
+        /// questions: the cell's own support may have changed, and the slab resting on top of it
+        /// has certainly lost or gained a source. Over-marking costs a recompute of a handful of
+        /// cells; under-marking is a floor that stays up because nobody asked.</para>
+        ///
+        /// <para>Silent when there is no solver, like every other optional seam here: a fixture
+        /// that never meant to have structure does not have to acquire one to call a job driver.</para>
+        /// </summary>
+        public void MarkStructureChanged(int cell)
+        {
+            if (Support == null) return;
+            if ((uint)cell >= (uint)Size.CellCount) return;
+
+            Support.MarkDirty(cell);
+            int above = cell + Size.LayerStride;
+            if (above < Size.CellCount) Support.MarkDirty(above);
+        }
+
+        /// <summary>
         /// The presentation chunk grid, when a renderer is attached, so a job that edits the world
         /// can say which chunk to re-mesh. Null for a purely headless run.
         /// </summary>

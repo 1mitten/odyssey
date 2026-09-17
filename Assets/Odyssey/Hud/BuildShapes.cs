@@ -18,15 +18,15 @@ namespace Odyssey.Hud
     {
         /// <summary>
         /// Cells the thing occupies, in a line along its facing. Parallel to
-        /// <see cref="BuildingHandle"/>: nothing, wall, bed.
+        /// <see cref="BuildingHandle"/>: nothing, wall, floor, deck plate, ladder, bed.
         /// </summary>
-        public static readonly int[] Cells = { 1, 1, 2 };
+        public static readonly int[] Cells = { 1, 1, 1, 1, 1, 2 };
 
         /// <summary>
         /// Whether the ghost may be turned with the rotate key before placing. Parallel to
-        /// <see cref="BuildingHandle"/>: nothing, wall, bed.
+        /// <see cref="BuildingHandle"/>: nothing, wall, floor, deck plate, ladder, bed.
         /// </summary>
-        public static readonly bool[] Rotates = { false, false, true };
+        public static readonly bool[] Rotates = { false, false, false, false, false, true };
 
         public static int CellsOf(int building) =>
             (uint)building < (uint)Cells.Length ? Cells[building] : 1;

@@ -154,6 +154,16 @@ namespace Odyssey.Presentation.CameraRig
         public Func<Vector2, bool>? PointerOverInterface { get; set; }
 
         /// <summary>
+        /// What <see cref="PointerOverInterface"/> answered on the last frame it was asked.
+        ///
+        /// <para>Here so that a missing build cursor can name its own cause. The interface claiming
+        /// the pointer and the pointer being over no cell both end in the same place — the rig
+        /// raises no hover, the director's Hover goes null, and nothing draws — and they want
+        /// completely different fixes. See <c>OdysseyBootstrap.WhyNoCursor</c>.</para>
+        /// </summary>
+        public bool PointerWasOverInterface { get; private set; }
+
+        /// <summary>
         /// Ask for a game speed from anywhere the keyboard cannot reach — the HUD's speed
         /// buttons, later a menu. Raises the same event the keys do, so the composition root's
         /// paused-clock handling stays in one place.
@@ -393,6 +403,7 @@ namespace Odyssey.Presentation.CameraRig
 
             Vector2 pointer = mouse.position.ReadValue();
             bool overInterface = PointerOverInterface != null && PointerOverInterface(pointer);
+            PointerWasOverInterface = overInterface;
 
             // Case 8 of design 09 section 6: scroll over a panel scrolls the panel, scroll over
             // the world zooms the camera. Until this guard the wheel did both at once — a scroll
@@ -478,9 +489,15 @@ namespace Odyssey.Presentation.CameraRig
                 // turn a half-drawn selection box into an order.
                 if (WorldToolArmed != null && WorldToolArmed())
                 {
-                    if (CellAt(start, out CellRef anchor) && CellAt(_draggedTo, out CellRef head))
-                        ToolDrag?.Invoke(anchor, head);
-                    else ToolDragCancelled?.Invoke();
+                    // **A press that travelled is a drag; one that did not is a click.** They are
+                    // two different gestures and the owner asked for both (2026-09-17): hold and
+                    // drag finishes on release, and a plain click anchors a run that the next
+                    // click finishes. The rig cannot tell them apart any later than this, because
+                    // `_boxActive` is the only record that the pointer ever moved.
+                    if (!CellAt(start, out CellRef anchor) || !CellAt(_draggedTo, out CellRef head))
+                        ToolDragCancelled?.Invoke();
+                    else if (wasBox) ToolDrag?.Invoke(anchor, head);
+                    else ToolClick?.Invoke(head);
                 }
                 else if (wasBox)
                 {
@@ -493,7 +510,46 @@ namespace Odyssey.Presentation.CameraRig
                     PickAt(_draggedTo);
                 }
             }
+            else if (WorldToolArmed != null && WorldToolArmed() && !_orbiting && !overInterface
+                     && CellAt(pointer, out CellRef hovered))
+            {
+                ToolHover?.Invoke(hovered);
+            }
+            else
+            {
+                ToolHoverLost?.Invoke();
+            }
         }
+
+        /// <summary>
+        /// The cell under the pointer while a build tool is armed and no button is down.
+        ///
+        /// <para><b>There was no such thing until 2026-09-17, and its absence was the whole of the
+        /// owner's report</b> that they could not tell where a wall or floor would land: with a tool
+        /// armed and the button up, nothing was drawn anywhere. A player found out where a thing
+        /// went by placing it. See `19-build-cursor.md`.</para>
+        ///
+        /// <para>Gated exactly as a press is — not orbiting, not over the interface — so that
+        /// swinging the camera round with a tool still in hand does not trail a ghost across the
+        /// board, and so a pointer over a panel shows nothing in the world beneath it. The last
+        /// branch is deliberate: whenever any of that stops being true the cursor is told to go
+        /// away, rather than being left behind wherever it last was.</para>
+        /// </summary>
+        public event Action<CellRef>? ToolHover;
+
+        /// <summary>Nothing is under the pointer, or nothing should be: put the cursor away.</summary>
+        public event Action? ToolHoverLost;
+
+        /// <summary>
+        /// A left press on the world that never travelled, with a tool armed.
+        ///
+        /// <para>Distinct from <see cref="ToolDrag"/> because the two gestures now mean different
+        /// things: a drag is a run drawn with the button held and finished by letting go, and a
+        /// click anchors a run that a second click finishes (owner, 2026-09-17). Both produce the
+        /// same box in the end, which is why the difference stops here and the director owns the
+        /// rest.</para>
+        /// </summary>
+        public event Action<CellRef>? ToolClick;
 
         /// <summary>
         /// The one place a screen position becomes a ray. Shared so that a tool drag and a

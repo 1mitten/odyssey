@@ -56,14 +56,27 @@ namespace Odyssey.Tests.Presentation
         /// And stone must not follow it. The two are the only things a colony can build with, so
         /// a change that browned both would leave the player unable to tell them apart — which is
         /// the whole job of this table.
+        ///
+        /// <para><b>This asked for "grey or cooler" until 2026-09-17, and that half was wrong.</b>
+        /// It was written to separate stone from wood, which it does, and nothing in it had ever
+        /// looked at steel — so the cool end it permitted was where steel already was, and stone
+        /// sat there, brighter, reading as polished metal (owner: *"the stone floor looks more
+        /// like steel"*). The guarantee this test exists for is unharmed: wood is warm, stone is
+        /// not, and they are still told apart by warmth rather than only by lightness. What it no
+        /// longer does is push stone into steel's corner to achieve that.</para>
+        ///
+        /// <para>Near-neutral rather than cool, then, with the direction left to
+        /// <c>StuffPaletteTests</c>, which is where stone is compared with the materials it has to
+        /// be distinguished from rather than only with the one it must not resemble.</para>
         /// </summary>
         [Test]
-        public void StoneStaysCoolWhileWoodIsWarm()
+        public void StoneStaysNeutralWhileWoodIsWarm()
         {
             Color wood = StuffPalette.StuffTint(NaturalContent.StuffWood);
             Color stone = StuffPalette.StuffTint(NaturalContent.StuffStone);
 
-            Assert.That(stone.b, Is.GreaterThanOrEqualTo(stone.r), "stone is grey or cooler");
+            Assert.That(Mathf.Abs(stone.r - stone.b), Is.LessThan(0.08f),
+                $"stone {stone} has a colour cast; it is a grey");
             Assert.That(wood.r - wood.b, Is.GreaterThan(stone.r - stone.b),
                 "and the two are told apart by warmth, not only by lightness");
         }

@@ -124,8 +124,8 @@ At the end of M2, three pawns live in a ruined shell: they walk upstairs, sleep,
 | **U26 Build pipeline** | L | U25, U22 | Blueprint → materials hauled → frame → work applied → built thing, with a success roll at completion. Deconstruct refunds half. **Built 2026-09-17. Walls in wood and stone, ordered from the Build palette, played and accepted; design and test procedure `docs/design/15-building.md`. Deconstruct landed the same day on `claude/cancel-tool` and refunds half with a seeded flip on the odd unit — `docs/design/16-cancel-and-deconstruct.md`. Still not done: the success roll at completion.** |
 | **U27 Materials** ∥ | M | U04, U26 | Two or three materials with `stat = base × factor + offset`. Quality tiers explicitly deferred. |
 | **U45 Beds, the first furniture** | M | U26, U19 | A two-cell bed from the Build palette: rotatable ghost (R, the game's first context key — design 09 §6 case 9), one order per click, built through the pipeline, finished at a rolled quality of five tiers closing **U26's outstanding success roll**, ownable from its pane's first interactive row, and slept in at its tier's own rest rate. **Built 2026-09-17** on `claude/beds`, sim through drawing, 586 + 219 fast-tier green and a local C# 9 gate over the Presentation assembly; design, interview and departures `docs/design/20-beds.md`. Placeholder art is three scaled boxes until real two-tile art exists (the only asset in any pack is one cell wide); the room bonus is a recorded seam, and nobody has pressed Play. |
-| **U28 Mining and salvage** | M | U25 | Three speeds by target: breach a slab, clear rubble, mine rock. Yields salvage into the world. |
-| **U29 Roofs as floors** | L | U26, U10 | Building a slab creates the floor above; removing support collapses it, cascading, with rubble and fall damage. **This is the unit the whole project exists to prove** — test it hard, including the ruined-shell case where mining a wall orphans a pre-existing slab. |
+| **U28 Mining and salvage** | M | U25 | Three speeds by target: breach a slab, clear rubble, mine rock. Yields salvage into the world. **Clearing rubble landed with U29**, which is what first produces any at run time: `TerrainDef.clearable` is set by rubble alone and `CanMine` accepts it, so a heap on a floor is a Mine order although it is not a face to cut. |
+| **U29 Roofs as floors** | L | U26, U10 | Building a slab creates the floor above; removing support collapses it, cascading, with rubble and fall damage. **This is the unit the whole project exists to prove** — test it hard, including the ruined-shell case where mining a wall orphans a pre-existing slab. **Built 2026-09-17**, design and the eleven owner decisions in `docs/design/17-floors-and-collapse.md`. A floor is `Building_Wall` with `slab = true` through the same pipeline; a bridge reaches as far as `S_max` and the next order is refused; the three "support is deliberately not marked dirty" omissions in `Raise`, `Demolish` and `MineCell` are closed together; a collapse drops what stood on it, leaves rubble that must be cleared, and cascades. **Fall damage is deferred, and said so**: `a-02` has the number and there is no health model to apply it to, so a colonist keeps a memory and no injury. Nobody has pressed Play on any of it. |
 | **U30 Stockpiles** | M | U22, U04 | Zones **per layer** with priority and filter; stacking; haul-to-best by filter → space → priority → distance; named storage groups sharing one settings record across layers. Per `a-14-bills-stockpiles-inventory.md`. |
 | **U31 Support preview** ∥ | S | U29, U15 | The build preview shows support values and highlights cells a deconstruction would orphan. Cheap now, and the thing that stops the collapse rule feeling arbitrary. |
 | **U32 The ten-day run** | M | all of M3 | Five pawns, 600,000 ticks, unattended, headless, zero errors, reproducible from seed. Determinism and resume-equivalence gates pass. `docs/milestones/M3-report.md` written. |
@@ -141,6 +141,11 @@ critical path.
 | Unit | Size | Depends on | Done when |
 |---|---|---|---|
 | **U33 Environmental audio** | M | U23, U24 | The playback layer, per ADR 0010 and `d-12-audio.md`: one pooled-voice director serving the whole colony (work impacts from the stroke clock's `BlowLanded`, with distance culling, per-sound cooldown and pitch variance), camera-anchored ambience (water measured around the camera's focus from the terrain mirror, one bed per environment, layer-aware), day/night music crossfaded from the tick through `GameClock`, alerts with hysteresis off the published pawn list, five code buses in dB with a persisted settings stub (B17) and alert ducking. A generated catalogue and six synthesised placeholder clips (`AudioSetup`), so a clone without it runs silent; EditMode suites for the math, probe, clock, watcher and director, plus a PlayMode smoke test. Nothing in Sim or Hud gains a UnityEngine reference, and no sound enters the save or the hash. |
+
+| **U42 Paving — built 2026-09-17** | M | U29 | A floor **covering** laid on ground that is already there — the thing "just build a floor" means, and not what U29 built. The mirror of the slab rule: the cell must *have* a floor and no covering yet, and there is no support check because a covering over ground is grounded by definition and can never fall. Stored as a fifth slab kind in `Floor[]`, so **no new save state and no hash change**; drawn by `FloorModule` with no catalogue row. It takes the wall's lift (`StandingOn`), not the slab's, and `WorkingLayer` must stay null for it. The three names already exist and are already published — `deckplate`, `grating`, `tile` — so no wiki content moves. **Scoped 2026-09-17 after the owner played U29 and found paving missing: `docs/design/18-paving.md`, with the measurement that within ten cells of the start only 21 of 441 cells will take a slab.** **Naming settled 2026-09-17: both say floor** — the rename to `Slab` was recommended and overruled, so the palette category and the tool descriptions carry the whole distinction and no key or label moves. Build **deck plate alone** first; grating is a see-through slab wearing the same category and wants something below worth seeing. **Paving is cosmetic until rooms are**, and that is said out loud in the doc rather than discovered. One session. **The z-fight risk was measured first and came back clean** (`PavingProbe`, 2026-09-17): the prefab's 0.10 m depth lifts the slab clear, so no mesher lift is needed. The same probe found the one thing the estimate missed — **grass grows through paving**, because the scatter is keyed off terrain and knows nothing about `Floor[]` — fixed where `EmitScatter` already refuses to draw under something solid. **Built:** `Building_DeckPlate` in wood or stone (steel was scoped and is not buildable at all — no item), five new tests, fast tier 578 + 193, EditMode 1,243. **Paving does nothing yet** and will not until rooms do. |
+
+| **U43 The way up — built 2026-09-17** | M | U29 | A buildable **ladder**, because U29's second storeys were **decorative**: every slab measured walkable and *unreachable*, since vertical movement goes through a `Pathing.Connector` and connectors only ever came out of worldgen. `blocking = false` so the cell can be stood in, and one idempotent `RefreshLadder` called from all four places either end can change — the ladder up, the floor above it in, and either out. **No save-format change**: the connector is derived from the edifice list by `RebuildDerived`, exactly as support and the region graph are, and `NavGraph.OneCellConnectorAt` asks the graph rather than keeping a map that would be empty after a load. Six tests, reachability not edifice-existence, with the control measured unreachable first. **A hauler cannot climb a ladder** — `Connector`'s own rule, *"a hauler's bulky load ... rule a ladder out"* — so a colonist can get up and cannot carry material up, and **nothing can be built on an upper storey with a ladder alone**. |
+| **U44 Stairs** | M | U43 | Two cells rising 1.5 m each, `ConnectorKind.Stair` with `AllMask`, so a **hauler** can use one. This is what makes an upper storey somewhere a colony can actually build, and U43's hauler exclusion is the argument for it. The two-cell footprint wants a placement rule a ladder did not need. |
 
 ---
 
@@ -181,6 +186,53 @@ experience — only passions are rolled — so there is nothing to choose betwee
 
 **Gate:** both tiers green, a world started from the menu survives save → quit-to-menu → load →
 resume with matching full hashes headless, and `docs/milestones/MS-report.md` written.
+
+---
+
+## WS — Skill and condition become a rate (owner, 2026-09-17)
+
+A colonist's standing changes how fast they work and how fast they walk. **Design:
+`docs/design/17-rates-and-stats.md` — read it before starting any unit here**, and do not take the
+reference's curves out of it without reading §3b.
+
+**Where it came from.** Two owner questions in one conversation: chopping should be faster for a
+skilled colonist and should visibly swing faster, with experience rising as they do it; and move
+speed should vary between characters and depend on their condition and health. The first is
+**half built** — experience is complete and correct (OQ-14) and **nothing reads a level back
+out**; the second **cannot be built as the numbers stand**, because `movePerTick` is `1` against a
+cell cost of `100` and the only speeds expressible are 1.5, 3.0 and 4.5 m/s.
+
+**Why it is one milestone and not two features.** Both are the same missing thing — a per-pawn,
+per-activity rate in thousandths, multiplied into an accumulator — and both need the same
+one-off change to make integers work at all: **the accumulator scales by 1,000 and no authored
+content number moves.** Doing them separately would pay that cost twice and risk two answers to
+the same question.
+
+**Why it is beside M3 and not inside it.** M3's gate is a ten-day headless run, and this changes
+how fast every colonist does everything, so it moves that run's economy. It is sequenced **after**
+M3's gate is taken, or M3's gate measures a moving target. `U42` alone is safe to land at any time,
+because its done criterion is that nothing changes.
+
+**The standing risk, named once.** Every golden hash moves at `U43` and again at `U44`. That is
+expected and deliberate; it is a re-bake with `ODYSSEY_REGOLDEN=1`, the reason written into
+`Golden.cs` the way OQ-50 and the edifice-save change established. **`U42` is what makes those
+re-bakes readable**: it proves the mechanism moves nothing, so everything that moves afterwards is
+tuning.
+
+| Unit | Size | Depends on | Done when |
+|---|---|---|---|
+| **U42 The rate seam** | M | — | `Pawn.WorkRatePerMille(workType)`, `Pawn.MoveRatePerMille()` and `Pawn.ConditionPerMille()` exist, virtual, and all return a constant 1,000. `_work[cell]` (designations and construction alike) and `Pawn.MoveProgress` count thousandths; every comparison reads `cost × 1,000`; **no authored number in `Terrain.xml`, `Jobs.xml`, `ConstructionContent` or `MoveCost` changes**, so both content fingerprints hold. **The scale stops at the contract** (design §2bb, audited against the code 2026-09-17): `CellDetail.WorkToClear` stays in ticks *because it is a `ushort` and 2,400 × 1,000 does not fit*; `SiteView.WorkDone`/`WorkTotal` stay in ticks or every "about 12s left" in the interface is multiplied by a thousand; `DesignationGrid.Fraction()` gains the `× 1,000` on its denominator or every progress bar fills a thousand times too fast; and `PawnRegistry`'s `movePercent = MoveProgress × 100 / MoveStepCost` is a **ratio**, so `MoveStepCost` scales with it or every figure teleports. **The done criterion is that nothing moves:** every golden hash, every path checksum, the one-day run and every HUD readout test identical before and after, and the save reads a v1/v2 file by scaling the old value. A control sets a rate to 500 and requires a job to take twice as long. |
+| **U43 Work speed from skill** ∥ | M | U42 | `rate = base + slope × level`, floored, as three Def fields per work type, anchored per design §3b (eight proposed integers, INVENTED — the owner's call; hauling is flat 1.0, which is both the reference's answer and `15-skills.md` §6's). Felling, mining, building and deconstruction all pay at the pawn's rate; a level-20 colonist finishes a fixed cell in a ratio of ticks that equals the curve exactly; two colonists of different skill sharing one cell sum their contributions in one unit. `odyssey.pawn.rate.work` published as a `PawnAspect`, so `Sim.Contracts` does not change. **Presentation scales the stroke clock by it** (`PawnFigureDirector.cs:924`, one line) so a fast worker visibly swings faster. Goldens re-baked deliberately; the ten-day soak re-run on three seeds and **its economy compared against the previous run, not merely checked for errors**. |
+| **U44 Move speed, and condition on both rates** | M | U42, U43 | An innate factor rolled once from `(world seed, pawn id)` on its own `PawnPurpose`, **capped at ±15%** because the drawn walk cycle blends the run clip in above ~2 m/s (design §4b). **One shared `ConditionPerMille()` multiplying the work rate as well as the move rate** (owner, 2026-09-17: *"if exhausted, starving etc, all has an effect"*) — a single consciousness-like scalar that starvation offsets by −100/−200/−300, floored at 700 and **ceilinged at 1,000**, so neither rate ever learns that hunger exists and M4's capacities substitute for it rather than rewriting it. **Exhaustion is a collapse, not a number** (design §4c, from follow-up research: tiredness slows nothing in the reference, it drops you where you stand) — at zero rest a colonist sleeps where it is, with the control that a merely tired one still walks to a bed. `odyssey.pawn.rate.move` published as an aspect. **Terrain cost stays in the step cost and is not touched** (§4g) — a test asserts the planner's chosen route is unchanged by a pawn's rate. **The soak is the done criterion, not a formality:** three seeds, ten days, against a run with the condition factors disabled, both economies recorded, proving no starvation spiral. |
+| **U45 Running** | S | U44 | **Held, not scheduled (owner, 2026-09-17: "not sure yet").** The capability is a multiplier on a rate `U44` already produces, and the gait blend already turns it into a run above ~2 m/s with no new clip and no new state — so nothing is lost by waiting for a reason to run. **The standing rule while it is held: do not invent an urgency model.** When it is taken: a PlayMode test that the run clip's weight rises, with the control that at the ordinary rate it does not; nothing in the save or the hash. |
+
+**Gate:** both tiers green; `U42`'s "nothing moved" control passing on the same commit as `U43`'s
+re-bake, so the diff shows which change moved what; the ten-day run green on three seeds with its
+economy written down beside the previous one; and the owner has played it and judged the anchor.
+
+**Not in scope, and §6 of the design says why for each:** quality, yield, the passion mood buff,
+traits, health capacities, carried load, and the skill-table reshuffle `15-skills.md` §6 leaves
+open.
 
 ---
 

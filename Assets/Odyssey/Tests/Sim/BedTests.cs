@@ -285,8 +285,35 @@ namespace Odyssey.Tests.Sim
             return -1;
         }
 
-        static void RaiseABed(ColonyWorld colony, int head) => colony.Construction.Raise(
-            colony.Pawns, head, (byte)QualityHandle.Normal);
+        /// <summary>
+        /// Put a bed up at this cell: order it, then finish it at the given tier.
+        ///
+        /// <para><b>The order is why this helper exists.</b> <c>Raise</c> reads the site out of
+        /// <c>_building[cell]</c> and returns at once when there is none, so calling it without
+        /// placing first is a no-op that raises nothing and says nothing. Four tests did exactly
+        /// that and every one of them ended on an <c>Assume</c> that a bed they had never ordered
+        /// could be assigned an owner — which reports Inconclusive, not a failure, so the fast
+        /// tier stayed green and the whole of the ownership feature went untested.</para>
+        ///
+        /// <para>The assertion at the end is the guard against that happening again: a helper
+        /// named "raise a bed" now fails loudly when no bed is standing afterwards.</para>
+        /// </summary>
+        static void RaiseABed(ColonyWorld colony, int head, byte quality = (byte)QualityHandle.Normal)
+        {
+            // Place unless the caller already did: an identical order answers AlreadyInThatState,
+            // which is a success for our purposes and not worth making every caller branch on.
+            IntentRejection placed = colony.Construction.Place(
+                Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, facing: 0);
+            Assume.That(placed, Is.AnyOf(IntentRejection.None, IntentRejection.AlreadyInThatState),
+                "the bed could be ordered at this cell");
+
+            colony.Construction.Raise(colony.Pawns, head, quality);
+
+            int handle = colony.Grid.Edifice[head];
+            Assert.That(handle, Is.GreaterThanOrEqualTo(0), "a bed stands at the cell it was raised at");
+            Assert.That(colony.Construction.Edifices.Records[handle].Def,
+                Is.EqualTo(CoreContent.EdificeBed), "and the thing standing there is a bed");
+        }
 
         static IntentRejection Assign(ColonyWorld colony, int anyBedCell, int pawnId)
         {
@@ -345,7 +372,7 @@ namespace Odyssey.Tests.Sim
             RaiseABed(colony, first);
             RaiseABed(colony, secondBed);
 
-            Assume.That(Assign(colony, first, pawn.Id.Value), Is.EqualTo(IntentRejection.None));
+            Assert.That(Assign(colony, first, pawn.Id.Value), Is.EqualTo(IntentRejection.None));
             Assert.That(Assign(colony, secondBed, pawn.Id.Value), Is.EqualTo(IntentRejection.None));
             Assert.That(colony.Construction.BedOwnerAt(first), Is.EqualTo(0),
                 "one bed per colonist, kept by the handler rather than hoped for by the interface");
@@ -388,7 +415,7 @@ namespace Odyssey.Tests.Sim
             Assume.That(far, Is.GreaterThanOrEqualTo(0));
             RaiseABed(colony, near);
             RaiseABed(colony, far);
-            Assume.That(Assign(colony, far, owner.Id.Value), Is.EqualTo(IntentRejection.None));
+            Assert.That(Assign(colony, far, owner.Id.Value), Is.EqualTo(IntentRejection.None));
 
             owner.Needs[NeedIndex.Rest] = 40;
             for (int i = 0; i < 6_000 && !owner.Asleep; i++) colony.World.Tick();
@@ -536,8 +563,8 @@ namespace Odyssey.Tests.Sim
             Assume.That(high, Is.GreaterThanOrEqualTo(0),
                 "the terraced board has a reachable footprint above the start");
 
-            colony.Construction.Raise(colony.Pawns, high, (byte)QualityHandle.Epic);
-            Assume.That(Assign(colony, high, owner.Id.Value), Is.EqualTo(IntentRejection.None));
+            RaiseABed(colony, high, (byte)QualityHandle.Epic);
+            Assert.That(Assign(colony, high, owner.Id.Value), Is.EqualTo(IntentRejection.None));
 
             owner.Needs[NeedIndex.Rest] = 60;
             for (int i = 0; i < 8_000 && !owner.Asleep; i++) colony.World.Tick();
@@ -626,7 +653,7 @@ namespace Odyssey.Tests.Sim
             int head = OpenFootprint(original, out _);
             Assume.That(head, Is.GreaterThanOrEqualTo(0));
             RaiseABed(original, head);
-            Assume.That(Assign(original, head, pawn.Id.Value), Is.EqualTo(IntentRejection.None));
+            Assert.That(Assign(original, head, pawn.Id.Value), Is.EqualTo(IntentRejection.None));
 
             ColonyWorld restored = Fresh();
             restored.Load(original.Save());

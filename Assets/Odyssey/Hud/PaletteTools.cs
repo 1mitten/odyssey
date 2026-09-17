@@ -64,6 +64,36 @@ namespace Odyssey.Hud
         // The keys the shell and the tests need by name. Everything else is a string in the table
         // below and is never compared against.
         public const string Wall = "ui.arch.tool.wall";
+
+        /// <summary>
+        /// The <b>slab</b>: an upper floor, on a wall or bridging out from one. Never on the
+        /// ground, which is already a floor.
+        ///
+        /// <para>The key says "roof" because a slab is both — it floors the layer it is in and
+        /// roofs the one below — and keys are forever, so only the label has ever moved (U29, then
+        /// again when it stopped being called "Floor" in 2026-09-17's rename).</para>
+        ///
+        /// <para><b>Named `Slab` here and not `Floor`, deliberately.</b> The identifier the player
+        /// sees and the identifier in the code used to disagree, which cost three rounds of
+        /// confusion in one afternoon. Note that <c>BuildingHandle.Floor</c> is still this one:
+        /// handle <i>values</i> are a save contract and were not worth the risk of a swap that
+        /// would compile silently and mean the other thing.</para>
+        /// </summary>
+        public const string Slab = "ui.arch.tool.roof";
+
+        /// <summary>
+        /// <b>Paving</b>, which is what the player simply calls a floor: laid on ground that is
+        /// already there (U42). <c>BuildingHandle.DeckPlate</c> behind it, for the reason
+        /// <see cref="Slab"/> gives about handle values.
+        /// </summary>
+        public const string Paving = "ui.arch.tool.deckplate";
+
+        /// <summary>
+        /// The way up (U43). Under <c>Structure</c>, beside the wall and the slab, because a wall,
+        /// its floor and the ladder onto it are one job.
+        /// </summary>
+        public const string Ladder = "ui.arch.tool.ladder";
+
         public const string Bed = "ui.arch.tool.bed";
         public const string Mine = "ui.arch.tool.mine";
         public const string Fell = "ui.arch.tool.fell";
@@ -94,12 +124,12 @@ namespace Odyssey.Hud
         /// </summary>
         public static readonly (string key, string[] tools)[] Categories =
         {
-            ("ui.arch.category.structure", new[] { Wall, "ui.arch.tool.door", "ui.arch.tool.stair", "ui.arch.tool.ladder", "ui.arch.tool.roof", "ui.arch.tool.reclaim" }),
+            ("ui.arch.category.structure", new[] { Wall, Paving, "ui.arch.tool.door", "ui.arch.tool.stair", Ladder, Slab, "ui.arch.tool.reclaim" }),
             ("ui.arch.category.production", new[] { "ui.arch.tool.fabricator", "ui.arch.tool.galley", "ui.arch.tool.reclaimer", "ui.arch.tool.bench" }),
             ("ui.arch.category.furniture", new[] { Bed, "ui.arch.tool.bunk", "ui.arch.tool.table", "ui.arch.tool.lamp", "ui.arch.tool.shelf" }),
             ("ui.arch.category.power", new[] { "ui.arch.tool.conduit", "ui.arch.tool.battery", "ui.arch.tool.generator", "ui.arch.tool.reactor" }),
             ("ui.arch.category.security", new[] { "ui.arch.tool.turret", "ui.arch.tool.trap", "ui.arch.tool.barricade" }),
-            ("ui.arch.category.floors", new[] { "ui.arch.tool.deckplate", "ui.arch.tool.grating", "ui.arch.tool.tile" }),
+            ("ui.arch.category.floors", new[] { Paving, "ui.arch.tool.grating", "ui.arch.tool.tile" }),
             ("ui.arch.category.recreation", new[] { "ui.arch.tool.gamestable", "ui.arch.tool.viewscreen", "ui.arch.tool.planter" }),
         };
 
@@ -194,6 +224,18 @@ namespace Odyssey.Hud
             new PaletteTool(Wall,
                 d => d.ArmBuild(BuildingHandle.Wall),
                 d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Wall,
+                wantsMaterial: true),
+            new PaletteTool(Slab,
+                d => d.ArmBuild(BuildingHandle.Floor),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Floor,
+                wantsMaterial: true),
+            new PaletteTool(Paving,
+                d => d.ArmBuild(BuildingHandle.DeckPlate),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.DeckPlate,
+                wantsMaterial: true),
+            new PaletteTool(Ladder,
+                d => d.ArmBuild(BuildingHandle.Ladder),
+                d => d.Tool == DesignateTool.Build && d.Building == BuildingHandle.Ladder,
                 wantsMaterial: true),
 
             // The first furniture, and the palette's first single-placement, rotatable thing:
