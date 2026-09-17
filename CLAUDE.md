@@ -84,6 +84,15 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   one-day run), switched on by the repository variable `UNITY_RUNNER=1`.
 - **M1 and M2 are done and reported** — `docs/milestones/M1-report.md`,
   `docs/milestones/M2-report.md`. Both went further than the plan asked.
+- **Beds, the first furniture, landed 2026-09-17** (`claude/beds`, design `20-beds.md`): a
+  two-cell bed ordered from the Build palette, rotated with R (the game's first context key —
+  the tool claims the slice-up press while a rotatable ghost is armed, design 09 §6 case 9),
+  built through the pipeline, finished at a rolled quality of five tiers (**closing U26's
+  outstanding success roll**; furniture carries quality, walls never do), ownable from the
+  pane's first interactive row, and slept in at its tier's own rest rate. One `PlacedEdifice`
+  behind two `Edifice[]` slots, the second cell derived from the facing and never stored;
+  save format 3. Placeholder art (three scaled boxes) stands in until real two-tile art
+  exists; the room bonus is a seam. Nobody has pressed Play on any of it.
 - **M3 is under way:** designations, felling, stockpiles and mining are in, and **U26
   building landed 2026-09-17** — a wall can be ordered from the Build palette in wood or
   stone, and colonists carry the material and raise it. Design, the test procedure and what
