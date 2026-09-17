@@ -602,6 +602,8 @@ namespace Odyssey.Presentation.Rendering
                 case ModuleShape.GroundBlock: mesh = GroundMesh.Turf(meshVariant); break;
                 case ModuleShape.GroundFace: mesh = GroundMesh.FaceBySlot(meshVariant); break;
                 case ModuleShape.Bank: mesh = BankMesh.For(meshVariant); break;
+                case ModuleShape.WaterSurface: mesh = WaterMesh.Surface; break;
+                case ModuleShape.WaterFall: mesh = WaterMesh.Fall; break;
                 default: mesh = PrimitiveMeshes.UnitCube; break;
             }
 
@@ -699,6 +701,19 @@ namespace Odyssey.Presentation.Rendering
                 case ModuleShape.Ladder:
                     size = new Vector3(0.6f, CellMetrics.SizeY, 0.14f);
                     centre = new Vector3(0f, CellMetrics.SizeY * 0.5f, 0f);
+                    return;
+                case ModuleShape.WaterSurface:
+                    // A cell across in plan and flat: the mesh sits at local y = 0, so the height
+                    // here scales nothing. One, rather than zero, so the box is never degenerate.
+                    size = new Vector3(CellMetrics.SizeXZ, 1f, CellMetrics.SizeXZ);
+                    centre = Vector3.zero;
+                    return;
+                case ModuleShape.WaterFall:
+                    // A cell across and **one metre** tall, so that the instance matrix's Y scale
+                    // reads directly as the drop in metres. Anything else here would make the
+                    // caller multiply by a constant it had to go and look up.
+                    size = new Vector3(CellMetrics.SizeXZ, 1f, 1f);
+                    centre = Vector3.zero;
                     return;
                 case ModuleShape.RockBlock:
                 case ModuleShape.GroundBlock:

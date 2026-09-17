@@ -480,6 +480,43 @@ layers, whichever is lower, because the surface is terraced and spans five layer
 budget is a cue for looking *through* something. A pit somebody digs is still governed by the
 budget; a hillside never was.
 
+**Water is a body, not a lid** (`docs/research/d-15-water-body-rendering.md`, 2026-09-17). The
+owner reported water "in mid air" on the terraced board; measured over three seeds, **no water cell
+floats and no stream drops more than one layer between neighbouring columns**, so the generator and
+ADR 0009 were both exactly right and it was entirely a drawing fault. A water cell drew only its
+surface — a lid 2.16 m above its own bed with open air between and no sides — so the void was in
+plain view wherever the neighbour was lower. Water now emits a **face on any side where the thing
+beside it is not water at the same level**, dropped to the bed, or to the surface one layer down at
+a cascade so the water falls. **Never between two water cells**: water writes no depth, and two
+coincident translucent faces are what once ruled the board into dark squares.
+
+That fault is also why `OdysseyWater.shader` carried `clip(normalWS.y - 0.5)` — discard anything not
+facing up — which **would have silently discarded every new face**. The surface is a `WaterMesh`
+sheet now rather than the unit cube squashed to a 0.15 m slab, so there are no spurious sides to
+clip, the clip is gone, and the drawn surface sits exactly at `WaterSurface` (0.15 m lower than
+before, which was the old slab's thickness). **No test can see whether a face is actually drawn** —
+matrices stay green with the quad wound backwards or the clip left in — so `WaterCheck` shoots the
+contact sheets, and it very nearly reported a working feature as broken because it had framed a spot
+with no cascade in it. **The bank ramps beside the channel are a separate and still-open fault;**
+see "Waiting on the owner".
+
+**The falls are drawn in colour, not in normals, and they are stood off the rock** (2026-09-17,
+second round; owner asked for "a sense of flow/stream"). Two faults, one after the other. A falling
+sheet has rock a few centimetres behind it, so `through` was near zero and the **shore rule erased
+every waterfall** — a face now takes `_FallThickness` instead of the measured depth. And the sheets
+sat exactly in the plane of the terrace riser they poured over, so under `ZTest LEqual` each one was
+**reduced to a triangular sliver of its top corner**, which reads as a small odd decoration rather
+than as a bug and cost two rounds of tuning the wrong thing. They stand off 15 mm now and are tucked
+40 mm up behind their own surface, lengthened to match, or a hairline of lit grass shows along the
+brow of every fall.
+
+**Motion is in the colour because the normal cannot carry it here.** At the play camera's 48° the
+Fresnel returns **2.2%**; at the 20° grazing shot the shading was tuned on, **23%**. Anything carried
+by the normal is invisible where the game is played. So the falls get downward-scrolling streaks and
+foam at the foot, and `upness` is a `smoothstep(0.5, 0.9)` rather than the raw normal so the drape's
+5° shear still reads as exactly level and **the flat water is bit-identical**. Tunables:
+`_FallThickness`, `_FallSpeed`, `_FallStreak`, `_FallFoam`.
+
 **Nothing in presentation is in a cell, a save or the hash** — grass tufts, ground relief, banks,
 chips, the surrounding land, sound and the see-through fade are all drawn and none are simulated.
 That rule is load-bearing; keep it.
@@ -611,6 +648,24 @@ no region spans two layers.
   interface scale on a 1080p screen it is within pixels of the screen height and may want the
   first max-height-and-scroll any panel here has carried.
 - **The 29 proposed proper nouns** in `docs/design/proper-nouns.csv` await approval or veto.
+- **Nobody has seen the falls move.** They draw correctly now and carry downward-scrolling
+  streaks and foam at the foot, but **whether that reads as falling water or as a pattern sliding
+  down a pane cannot be judged in a still**, and stills are all anybody has looked at
+  (`scripts/unity.sh shot Odyssey.EditorTools.WaterCheck.Run` writes
+  `Logs/water-{stream,river}-{play,grazing,close,waterline,cascade,lip,nobanks}.png`). `_FallSpeed`,
+  `_FallStreak` and `_FallFoam` are the dials.
+- **The shallow stream still reads pale at the play camera, and the bed is the better lever.** It is
+  not the shore fade, which reaches 1 across most of the body at 48°: it is `StuffPalette`'s shallow
+  water, `(0.28, 0.52, 0.55, 0.62)`, over a bright dry-looking sand bed. Raising the alpha is the
+  obvious fix; **darkening the submerged bed is the better one**, because shallow water over pale
+  sand genuinely is pale and what looks wrong is that the sand under water looks dry. An owner call
+  — it changes water that has already been looked at.
+- **The bank ramps draw as large diagonal sheets standing proud of the meadow**, and this is the
+  owner's "diagonal wedge" from the water playtest — **it was never water**. Proved by shooting one
+  frame with `BankLayout.Enabled = false`, which removes every wedge and leaves clean terrace
+  risers: `Logs/water-lip.png` against `Logs/water-nobanks.png`. Left unfixed on purpose — it is
+  `BankLayout`/`BankMesh`'s own design and wants its own look at, not a fix folded into a water
+  change. It is the most visible thing on the board right now.
 - **Marsh reads as a sandy bank** — re-tint it greener or rename it.
 - **The audio listener is on the camera**, 32–160 m up, while the catalogue authors ranges as ground
   distances. Either move the listener to the camera's focus or re-author the ranges; it changes how

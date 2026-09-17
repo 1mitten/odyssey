@@ -3037,3 +3037,126 @@ work itself.
   interface-typed collection under Unity's bundled version while the fast tier is perfectly happy,
   so three new tests were green in eleven seconds and red in the gate. `docs/lessons.md` has had
   this written down since the morning of the same day.
+
+- **Water got sides, and the thing everybody was looking at turned out not to be water (owner
+  report, 2026-09-17; `docs/research/d-15-water-body-rendering.md`).** The report came with four
+  screenshots of a stream stepping down the terraced board: water "in mid air", strange gaps, water
+  that "can't handle being at height", and - the owner's own guess - "maybe it's just a visual
+  problem".
+  - **The generator was innocent, and measuring it first is what made the rest cheap.** A throwaway
+    probe over `MakeWooded()` at 120 x 120 x 16 on three seeds: **0 water cells with air beneath**
+    on every seed, and the **greatest drop between adjacent water columns is 1 layer**, also on
+    every seed. Both of ADR 0009's invariants hold exactly as decision 4 claims. `WaterFillPass`'s
+    own comment had already said it - *"Depth is a rendering problem, not a geometry problem"* -
+    and the measurement is what made it safe to believe rather than merely quote. The probe was
+    deleted; its numbers are in `d-15`.
+  - **The cause was one line.** `WorldRenderModel.ResolveTerrain` gives every non-solid terrain
+    `ModuleShape.FloorSlab`, water is non-solid, so water was a floor slab - raised to 0.72 of its
+    cell by `WaterContributor` and given no sides. What was drawn for a water cell was a lid
+    **2.16 m above its own bed with open air between**. The void is walled only where the neighbour
+    is a dry bank, which the generator puts exactly one layer up; wherever the neighbour is lower,
+    the void is in plain view. That is the whole of "water in mid air", and the dry 3 m between two
+    lids at a step is the whole of "water should fall down".
+  - **One skirt, two triggers, because they are the same geometry.** A face goes on a side when the
+    thing beside it is not water at the same level: with nothing there it closes the channel, and
+    with water one layer down the same sheet spans the step. It is the `GroundFace` idiom - ground
+    already has a separate shape for "the same block where a side of it can be seen" - rather than
+    a new mechanism.
+  - **The shader would have eaten the entire feature in silence.** `OdysseyWater.shader` carried
+    `clip(input.normalWS.y - 0.5)`: discard every fragment whose geometric normal is not pointing
+    up. It was there for a real fault - the surface was the unit cube squashed to a 0.15 m slab, so
+    each cell had four side faces and an underside, and two coincident translucent faces either
+    side of a shared edge each added their own alpha and **ruled the board into dark squares along
+    every cell boundary**. Its comment weighed one instruction against "adding a mesh shape that
+    nothing else would use" and took the instruction. The answer now is the mesh shape after all:
+    `WaterMesh` is two **sheets**, a sheet has no spurious sides, so the clip is gone and the
+    dark-square fault is answered by not building the faces rather than by discarding them. The
+    drawn surface drops 0.15 m in the process, to exactly where `WaterSurface` always said it was -
+    the old slab's *top* was what the player saw.
+  - **Both guards were proved by control rather than by assertion.** Removing the
+    "never between two water cells" test fails exactly `NoFaceIsDrawnBetweenTwoWaterCells` and
+    nothing else; forcing the cascade drop back to the lip's fails exactly
+    `WaterOverWaterFallsAFullCell` and nothing else.
+  - **No test can see whether a face is actually drawn, and this nearly cost the feature.** The face
+    tests assert matrices, which is the half that can be right while the sheet is invisible - a quad
+    wound backwards, a normal the wrong way, the clip left in. So `WaterCheck` shoots contact
+    sheets. Its **first three came back showing no change at all**, a pixel diff against the same
+    frame with faces disabled was black, and the falls were very nearly written off as not drawing.
+    They were drawing: the tool had **framed a spot with no cascade in it**, because it scored
+    candidate sites by how much water lay nearby and so picked the middle of the widest pool. It
+    scores by nearby *steps* now. The lesson is the old one in a new costume - the measurement was
+    fine and the thing being measured was not what was believed.
+  - **What it emits, measured afterwards: exactly 44 faces on seed 1, one per stepped pair, and not
+    one lip.** The lip branch is correct and currently unreachable on the played board; it fires the
+    first time somebody mines beside water, which is when it is wanted.
+  - **And the owner's diagonal wedge was never water.** `d-15` had listed it as the one thing it
+    could not determine. `Logs/water-lip.png` reproduces it - large diagonal green sheets standing
+    proud of the meadow beside the channel - and shooting the identical frame with
+    `BankLayout.Enabled = false` (`Logs/water-nobanks.png`) removes every one of them and leaves
+    clean terrace risers. They are **bank ramps**: a channel cut through terraced ground grows one
+    at practically every step, which is why they cluster along a stream and read as part of the
+    water fault. **Left unfixed on purpose** - it is `BankLayout`/`BankMesh`'s own design, it is not
+    what the question asked, and the owner should see the two apart. The paired shots are kept in
+    the tool so the next session can tell a bank fault from a water one in one run.
+  - **Verified:** fast tier 611 Sim and 349 Hud; EditMode **1443 total, 1432 passed, 0 failed**;
+    PlayMode **66 total, 62 passed, 0 failed**. **Not verified:** frame time, and whether a vertical
+    sheet carrying a ripple, glint and Fresnel authored for a horizontal surface reads as moving
+    water or as a pane of glass. Nobody has pressed Play.
+
+- **The falling water was mostly not being drawn, and it looked like a design problem rather than a
+  bug (owner, 2026-09-17, second round on water).** The owner played the new water faces and said
+  they read as not buggy but not water either: *"can it be made to be more water like ... a sense of
+  flow/stream"*. Two options were agreed - **A**, stop the falls dissolving, and **B**, make them
+  fall - with the flow work held back until those had been looked at.
+  - **A: a falling sheet is not a shoreline, but the arithmetic could not tell.** Opacity is
+    `base.a * shore`, and `shore` comes from `through` — the depth of water between the pixel and
+    whatever was drawn behind it. Behind a fall is the rock face it pours over, a few centimetres
+    away, so `through` is near zero and the shore rule — which exists to dissolve the hard line
+    where water meets its bank — was erasing every waterfall on the board instead. A face now takes
+    a thickness of its own (`_FallThickness`, 1.4 m against the 2.0 m fade) and keeps the measured
+    one only where that is deeper.
+  - **B: the ripple field cannot see a waterfall.** It is a function of `positionWS.xz`, which on a
+    vertical sheet is constant the whole way down, so a fall had no variation along its own length
+    at all. There are now streaks scrolling downward at `_FallSpeed`, and whitening over the bottom
+    third of each sheet.
+  - **Both are applied to colour and not to the normal, and the number is why.** At the play
+    camera's 48 degrees the view sits 42 degrees off a level surface, where the Fresnel term returns
+    `(1 - 0.743)^2.5 x 0.66` = **2.2%**; at the 20-degree grazing shot the shading was originally
+    tuned on it returns **23%**. The one cue the shader's own comment calls "the one cue that
+    separates water from coloured glass" barely fires at the angle the game is played at, so
+    anything carried by the normal was never going to be the answer.
+  - **`upness` is a smoothstep and not the raw normal, so the flat water is bit-identical.** The
+    drape shears a surface by up to about five degrees, so a level tile's normal is 0.997 rather
+    than 1; classifying on the raw value would bleed a few thousandths of the face treatment into
+    every square metre of water the owner had already accepted.
+  - **Then the real fault: the sheets were z-fighting with the rock they poured over, and losing.**
+    A face centre is exactly the plane of the terrace riser below it, and two coplanar surfaces
+    under `ZTest LEqual` are two candidates for the same pixel; the depth buffer picks whichever
+    rounds higher, per triangle, so each 2.5 x 3 m sheet was reduced to **a triangular sliver of its
+    own top corner**. That is why it read as a small pale wedge rather than as a missing feature,
+    and why it survived several contact sheets — and why two rounds of shader tuning were spent on
+    the foam term, which was working correctly the whole time and simply had no visible sheet to
+    appear on.
+  - **Settled in one run by tinting the sheet by its own UV.** Every visible fragment came back at
+    `v = 1`, the top edge of the mesh. A debug tint is one line and cannot be argued with, where
+    three rounds of squinting at a 2x crop had produced two confident and opposite readings of which
+    end the foam was on. `docs/lessons.md` carries the general form.
+  - **The fix is a 15 mm stand-off, and it opens a second-order fault worth knowing.** Standing a
+    sheet off its wall leaves a slot between the two, and at the brow of the fall that slot is a line
+    of sight onto the terrace behind it — a hairline of lit grass along the top of every waterfall.
+    It is closed by starting the sheet 40 mm *above* its own surface and lengthening it by the same
+    amount; lengthening is the half that is easy to forget, and a sheet tucked without being
+    lengthened stops short at the bottom. Both halves are held by tests that assert **where the
+    sheet's bottom edge lands** rather than how long it is, and removing the lengthening fails
+    exactly those two.
+  - **What this did not fix, and it is the next decision.** The shallow stream still reads pale at
+    the play camera. That is not the shore fade, which reaches 1 across most of the body at this
+    pitch: it is `StuffPalette`'s shallow water, `(0.28, 0.52, 0.55, 0.62)` — a light tint at 62%
+    opacity over a bright, dry-looking sand bed. Raising the alpha is the obvious move and the less
+    interesting one; **the bed is the better lever**, because real shallow water over pale sand *is*
+    pale, and what is wrong is that the sand under water looks dry. `WaterFillPass` already writes
+    a distinct terrain under water, so a wetter, darker submerged bed would fix the milkiness
+    without making shallow water less legible.
+  - **Verified:** fast tier 611 Sim and 349 Hud; EditMode **1443 total, 1432 passed, 0 failed**.
+    **Not verified:** whether the downward scroll reads as falling rather than as a pattern sliding,
+    which is the whole of B and cannot be judged in a still.

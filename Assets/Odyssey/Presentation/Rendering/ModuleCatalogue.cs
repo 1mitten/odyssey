@@ -71,6 +71,25 @@ namespace Odyssey.Presentation.Rendering
         /// <see cref="BankMesh"/>.
         /// </summary>
         Bank = 10,
+
+        /// <summary>
+        /// The surface of a body of water: one sheet in plan at the height the water stands at,
+        /// facing up.
+        ///
+        /// A sheet and not a slab, which is the difference that lets water have a side at all —
+        /// see <see cref="WaterMesh"/> for why a box forced the shader to clip every vertical
+        /// fragment, and what that cost.
+        /// </summary>
+        WaterSurface = 11,
+
+        /// <summary>
+        /// The face a body of water shows where nothing beside it holds it in: the side of the
+        /// channel at a lip, and the falling sheet at a cascade step.
+        ///
+        /// One local unit tall, hanging from its origin, so the instance matrix decides how far it
+        /// falls. See <see cref="WaterMesh.Fall"/>.
+        /// </summary>
+        WaterFall = 12,
     }
 
     /// <summary>
@@ -382,6 +401,14 @@ namespace Odyssey.Presentation.Rendering
         public const string Stair = Prefix + "stair";
         public const string Ladder = Prefix + "ladder";
         public const string Slab = Prefix + "slab";
+
+        /// <summary>
+        /// The face a body of water shows where nothing holds it in.
+        ///
+        /// One id for both water depths, because the mesh is the same sheet and shallow or deep is
+        /// carried by the tint — the same bargain the surface itself makes.
+        /// </summary>
+        public const string WaterFall = Prefix + "water.fall";
 
         /// <summary>
         /// The mass a wall is made of, behind the panels on its faces.

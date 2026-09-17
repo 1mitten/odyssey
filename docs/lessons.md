@@ -1659,3 +1659,61 @@ anything in the change is reachable from `SimWorld.Tick` at all — a component 
 forbid, and a budget raised to swallow a flake is a budget that swallows the next real one. If it
 starts flaking often, the window (5,000 ticks) is what to grow, not the threshold — a longer window
 averages the GC timing out rather than hiding what it is measuring.
+
+## A contact sheet proves nothing until you know the subject is in frame (2026-09-17)
+
+Adding faces to water produced three contact sheets identical to the "before" pair, and a pixel
+difference against them was black. The obvious reading - the feature is not drawing - was wrong. The
+geometry was being emitted (44 instances, logged), placed correctly (positions, drop and normals all
+logged and exactly right), and drawn. **The camera was pointed at a stretch of stream with no
+cascade in it**, because the tool picked its subject by scoring how much water lay nearby, which
+selects the middle of the widest pool - the one place a step is guaranteed *not* to be.
+
+Two rules out of it.
+
+**When a picture shows no change, prove the subject is in frame before concluding anything about the
+feature.** The cheapest proof is to aim the camera at a coordinate you have logged from the thing
+itself, rather than at one you computed independently. That is what settled it here in one run,
+after three had been spent on the hypothesis that the geometry was wrong.
+
+**A shot-picking heuristic is a measurement and can be wrong like any other.** "Most water nearby"
+sounds like "the most interesting bit of river" and is in fact "the flattest bit of river". Score
+for the feature you are photographing, not for its surroundings.
+
+## A shader can delete a feature and leave every test green (2026-09-17)
+
+`OdysseyWater.shader` carried `clip(input.normalWS.y - 0.5)` - discard every fragment not facing up
+- for a good reason from a year of the project nobody involved remembered. Any vertical water face
+added afterwards would have been discarded in the fragment shader, with the mesh built, the matrices
+correct, the instances submitted and **every assertion passing**.
+
+Before adding geometry in a new orientation, read the shader it will be drawn with. Grep the
+fragment for `clip`, `discard`, and any test against a normal, a position or a facing. The class of
+fault is "the geometry is perfect and the pixels are thrown away", and no test that inspects meshes
+or matrices can see it - only a picture can.
+
+## A coplanar transparent quad loses most of itself, and reads as a small feature rather than a broken one (2026-09-17)
+
+The water faces were placed on the cell face, which is exactly the plane the terrace riser below
+them occupies. Two coplanar surfaces under `ZTest LEqual` are two candidates for the same pixel with
+nothing to separate them, and the depth buffer picks whichever rounds higher - **per triangle**, so a
+2.5 x 3 m sheet came out as a triangular sliver of its own top corner, split along the quad's
+diagonal.
+
+**The reason this is worth a lesson is that it did not look like a bug.** A missing feature is
+obvious; a feature reduced to a third of itself just looks like a small, pale, slightly odd
+decoration, and it survived several contact sheets and a round of tuning aimed at the wrong thing
+(the foam term, which was in fact working and simply had no visible sheet to appear on). Two rounds
+were spent adjusting shader constants for a geometry fault.
+
+**How it was settled in one shot:** tint the suspect geometry by its own UV and look. Every visible
+fragment came back at `v = 1`, the top edge of the mesh, which says "you are seeing the top sliver
+of this quad and nothing else" and cannot be argued with. A debug tint costs one line and one run,
+and it is the fastest way to find out which *part* of a mesh is reaching the screen.
+
+The fix is a stand-off of a centimetre or two, the same trick and the same reason as
+`ChunkMesher.CoreRecess`. Note the second-order fault it opens: standing a sheet off its wall leaves
+a slot between the two, and at the top edge that slot is a line of sight onto whatever is behind -
+a hairline of lit ground along the brow of every waterfall. Close it by extending the sheet *into*
+the surface it hangs from, and lengthen it by the same amount or it stops short at the bottom, which
+is the half-right version of the fix.
