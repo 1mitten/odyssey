@@ -44,7 +44,22 @@ namespace Odyssey.Tests.Sim
             /// <summary>Trees, streams and ore, as the played board has. False is the bare board.</summary>
             public bool Wooded;
 
-            /// <summary>The hash of the generated world, before the first tick.</summary>
+            /// <summary>
+            /// The hash of the whole world <b>before the first tick</b>: the generated board and
+            /// the colony placed on it, which is what <c>GoldenMasterTests.FullHash</c> covers.
+            ///
+            /// <para><b>Not worldgen alone, despite the name</b>, and that matters when it moves.
+            /// It folds in <c>SimWorld.ComputeStateHash</c>, so anything hashed by any component —
+            /// a pawn, its skills, the designation grid, the construction grid — moves this number
+            /// without a single generator pass having changed. Measured 2026-09-17: the build
+            /// pipeline moved all three cases here while the grid hash alone stayed byte-identical
+            /// to main on all three boards.</para>
+            ///
+            /// <para>The pair is still a diagnosis, one step weaker than the class comment claims:
+            /// if only <see cref="Simulated"/> moved, nothing about the starting world changed and a
+            /// system did. If this one moved, compare the grid hash by hand before concluding the
+            /// generator changed.</para>
+            /// </summary>
             public ulong Generated;
 
             /// <summary>The hash after <see cref="Ticks"/> ticks.</summary>
@@ -68,8 +83,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 4080089633444642687UL,
-            Simulated = 8297344399725461794UL,
+            Generated = 9018047728549680434UL,
+            Simulated = 11445817444308316440UL,
         };
 
         /// <summary>
@@ -85,8 +100,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 4407845158991406433UL,
-            Simulated = 14879698257109829449UL,
+            Generated = 10966701061063906442UL,
+            Simulated = 16650643146507109033UL,
         };
 
         /// <summary>
@@ -101,8 +116,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 5993771996868782858UL,
-            Simulated = 10722009446905916853UL,
+            Generated = 14684518721141350564UL,
+            Simulated = 8796170603677095916UL,
         };
     }
 }

@@ -95,8 +95,9 @@ namespace Odyssey.Tests.Sim
             // Worldgen first. When both have moved this is the one that explains the other, and
             // asserting it first means the failure names the cause rather than the consequence.
             Assert.That(generated, Is.EqualTo(golden.Generated),
-                $"{golden.Name}: the generated world differs before a single tick ran, so worldgen " +
-                "changed. Everything below follows from it. Re-bake with ODYSSEY_REGOLDEN=1 if that was deliberate.");
+                $"{golden.Name}: the world differs before a single tick ran. This covers the generated " +
+                "board AND the colony placed on it, so check the grid hash alone before concluding " +
+                "the generator changed. Re-bake with ODYSSEY_REGOLDEN=1 if that was deliberate.");
 
             Assert.That(simulated, Is.EqualTo(golden.Simulated),
                 $"{golden.Name}: the board generated identically and the colony then ran to a " +
