@@ -101,7 +101,12 @@ namespace Odyssey.Sim.Pawns
                 .AddTickable(_ => new SkillSystem(pawns))
                 .AddTickable(_ => pawns.Pawns)
                 .AddSnapshotContributor(pawns.Pawns)
-                .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden);
+                .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden)
+                // The one command that names a colonist rather than only a cell. It belongs to the
+                // pipeline because starting and ending jobs is what the pipeline is, and because a
+                // second path into `StartJob` would be a second path out of it — which is where a
+                // reservation leak comes from.
+                .AddIntentHandler(IntentKind.ForceJob, pipeline.HandleForceJob);
             designations.Attach(builder);
             construction.Attach(builder);
             return builder;
