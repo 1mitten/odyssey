@@ -159,8 +159,15 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// <b>Click, move, click.</b> The default gesture (owner, 2026-09-17): one click anchors a
-        /// run, the pointer then moves with nothing held, and a second click places it.
+        /// <b>Click, move, click.</b> The default gesture (owner, 2026-09-17): a click places the
+        /// cell under it <em>and</em> opens a run, the pointer then moves with nothing held, and a
+        /// second click places the rest.
+        ///
+        /// <para>The first click placing is the later half of the same conversation — *"it should
+        /// just place the ladder with a click, no need to do many"* — because a ladder, a door and
+        /// a bench are all one cell and runs are the exception. The anchor cell is ordered twice
+        /// and that costs nothing: the simulation answers <c>AlreadyInThatState</c>, which is what
+        /// that rejection is for.</para>
         ///
         /// <para>Holding a button while steering a pointer precisely across a board drawn in
         /// perspective is the awkward part of the old gesture, and it is awkward in a way practice
@@ -171,8 +178,10 @@ namespace Odyssey.Tests.Hud
         {
             var director = new DesignateDirector { Tool = DesignateTool.Mine };
 
-            Assert.That(director.Click(At(2, 2)), Is.Empty, "the first click only anchors");
-            Assert.That(director.AwaitingSecondClick, Is.True);
+            // One click places one thing, and leaves the run open behind it.
+            Assert.That(director.Click(At(2, 2)), Is.EqualTo(new[] { At(2, 2) }),
+                "a click places the cell it landed on");
+            Assert.That(director.AwaitingSecondClick, Is.True, "and the run is still open");
 
             // Free movement with nothing held.
             director.DragTo(At(5, 2));
@@ -188,8 +197,9 @@ namespace Odyssey.Tests.Hud
         /// <summary>
         /// <b>The press that opens a box has usually opened it already.</b> While a button is down
         /// the rig reports the pointer every frame, so by the time the release arrives a box exists
-        /// even for a click that never moved a pixel. If that counted as the <em>second</em> click,
-        /// every single click would place a one-cell order and the gesture would not exist.
+        /// even for a click that never moved a pixel. If that counted as the <em>second</em> click
+        /// it would close the run, and click-move-click would not exist: every click would be a
+        /// complete gesture and the pointer could never travel.
         /// </summary>
         [Test]
         public void APressThatAlreadyOpenedTheBoxStillOnlyAnchorsIt()
@@ -201,8 +211,8 @@ namespace Odyssey.Tests.Hud
             director.DragTo(At(3, 3));
             Assume.That(director.Dragging, Is.True);
 
-            Assert.That(director.Click(At(3, 3)), Is.Empty,
-                "the release of the anchoring press must not place anything");
+            Assert.That(director.Click(At(3, 3)), Is.EqualTo(new[] { At(3, 3) }),
+                "the release of the anchoring press places that one cell and no more");
             Assert.That(director.AwaitingSecondClick, Is.True, "it is now waiting for the second");
         }
 

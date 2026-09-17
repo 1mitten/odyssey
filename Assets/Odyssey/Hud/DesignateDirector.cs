@@ -196,20 +196,42 @@ namespace Odyssey.Hud
             if (!Dragging)
             {
                 if (!Begin(cell)) return Array.Empty<CellRef>();
-                AwaitingSecondClick = true;
-                return Array.Empty<CellRef>();
+                return Anchored();
             }
 
-            if (!AwaitingSecondClick)
-            {
-                AwaitingSecondClick = true;
-                return Array.Empty<CellRef>();
-            }
+            if (!AwaitingSecondClick) return Anchored();
 
             DragTo(cell);
             AwaitingSecondClick = false;
             return Commit();
         }
+
+        /// <summary>
+        /// The anchoring click: <b>place the one cell under the pointer, and keep the run open.</b>
+        ///
+        /// <para><b>One click places one thing</b> (owner, 2026-09-17: *"it should just place the
+        /// ladder with a click, no need to do many"*). Anchoring without placing made a single
+        /// ladder cost two clicks, which is most of what anybody places — a ladder, a door, a
+        /// bench are all one cell, and runs are the exception rather than the rule.</para>
+        ///
+        /// <para><b>And the run is still open</b>, so click-move-click is untouched: the second
+        /// click places from this cell to wherever the pointer went. This cell is ordered twice and
+        /// that costs nothing — the simulation answers <c>AlreadyInThatState</c> the second time,
+        /// which is the whole reason that rejection exists.</para>
+        ///
+        /// <para><b>The wrinkle, said out loud rather than discovered:</b> a right-click after this
+        /// throws away the <em>rest</em> of the run, and the cell this click placed stays placed.
+        /// A click placed it; cancelling something that has not happened yet cannot unplace
+        /// something that has. Cancel takes it off like any other order.</para>
+        /// </summary>
+        IReadOnlyList<CellRef> Anchored()
+        {
+            AwaitingSecondClick = true;
+            _oneCell[0] = _anchor;
+            return _oneCell;
+        }
+
+        readonly CellRef[] _oneCell = new CellRef[1];
 
         /// <summary>
         /// Right-click, or Escape: throw away the half-drawn box and say whether there was one.

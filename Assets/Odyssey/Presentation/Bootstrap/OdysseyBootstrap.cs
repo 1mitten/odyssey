@@ -894,6 +894,34 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         /// <summary>
+        /// The things a pending run would build, drawn as themselves inside its box.
+        ///
+        /// <para><b>The wireframe alone was a step backwards</b> (owner, 2026-09-17: *"it switches
+        /// back to square"*). Moving the pointer with a tool armed shows a ghost of the thing; the
+        /// moment a run was anchored that became a bare box, so the player lost sight of what they
+        /// were placing at exactly the point they were deciding how much of it to place.</para>
+        ///
+        /// <para><b>Capped, because a drag can cover the board.</b> Beyond the cap the box alone is
+        /// the honest summary — a thousand translucent walls would be a wall of fog, and one
+        /// instanced submission each is a cost worth bounding on a frame that is already drawing a
+        /// preview every frame of a drag.</para>
+        /// </summary>
+        void DrawRunGhosts(PreviewBox box, int building, int stuff)
+        {
+            if (box.Cells > MaxRunGhosts) return;
+
+            for (int z = box.Min.Z; z <= box.Max.Z; z++)
+            for (int x = box.Min.X; x <= box.Max.X; x++)
+                DrawSiteGhost(new CellRef(x, z, box.Min.Y), building, stuff);
+        }
+
+        /// <summary>
+        /// How many cells of a pending run are drawn as the thing rather than as a box. A run
+        /// longer than this is being judged by its extent, not by its contents.
+        /// </summary>
+        const int MaxRunGhosts = 64;
+
+        /// <summary>
         /// Which module stands in for a thing that is not there yet.
         ///
         /// <para>Its own, for everything except a wall. A ladder ghosts as a ladder and a door as a
@@ -1046,6 +1074,7 @@ namespace Odyssey.Presentation.Bootstrap
                     PreviewBox box = _previewBoxes[i];
                     if (_previewIsSlab) _renderer.DrawCellSpanPlate(box.Min, box.Max, tint);
                     else _renderer.DrawCellSpanBox(box.Min, box.Max, tint);
+                    DrawRunGhosts(box, director.Building, director.Stuff);
                 }
 
                 return;
@@ -1092,6 +1121,13 @@ namespace Odyssey.Presentation.Bootstrap
 
             bool allowed = sites.Allows(cell, director.Building);
             BuildingDef what = ConstructionContent.BuildingAt(director.Building);
+
+            // **Never inside something.** StandingOn lifts a wall order over solid terrain and not
+            // over an edifice, so pointing a ladder at a wall resolves to the wall's own cell — and
+            // the ghost was being drawn inside it (owner, 2026-09-17: "the ladder placement does
+            // appear inside the walls, which is odd"). There is nowhere to put it, so nothing is
+            // drawn; the refusal still reads, because the cursor is red.
+            if (_grid.IsSolidTerrain(cell) || _grid.Edifice[cell] >= 0) return;
 
             int module = GhostModuleFor(cell, what);
 
