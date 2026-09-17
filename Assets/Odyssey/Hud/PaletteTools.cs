@@ -106,8 +106,8 @@ namespace Odyssey.Hud
         public static readonly int[] Materials = { StuffHandle.Wood, StuffHandle.Stone };
 
         /// <summary>
-        /// The tools that belong to no category and are always on show. They are the palette
-        /// header's action buttons.
+        /// The tools that belong to no category and are always on show. They are the orders strip
+        /// down the right-hand gutter, under the depth rail.
         ///
         /// <para><b>None of these is a kind of thing to build.</b> Every tile in the seven
         /// categories answers "what would you like to put down"; each of these answers a question
@@ -132,9 +132,22 @@ namespace Odyssey.Hud
         ///
         /// <para>They are in no category at all rather than pinned <i>and</i> listed, because the
         /// same chip appearing twice in one open panel is a question the player has to stop and
-        /// answer: whether the two do the same thing. Four is the limit — a pinned row that keeps
-        /// growing is a second palette, and the header has room for four 26 px buttons beside the
-        /// layout switcher and the way out.</para>
+        /// answer: whether the two do the same thing.</para>
+        ///
+        /// <para><b>They left the palette header on 2026-09-17</b> (owner: <i>"the small buttons
+        /// on the build menu for Chop Trees, Mine, Deconstruct, Cancel should be a vertical button
+        /// strip that sits below the depth control … this enables us to quickly give orders
+        /// without having to click the build button — we can use this in future for more
+        /// orders"</i>). In the header they were always on show <i>within a panel that was
+        /// usually shut</i>, so giving an order cost opening the palette first and the cost was
+        /// paid on every order. They are a column in the right-hand gutter now, on screen whether
+        /// or not anything else is.</para>
+        ///
+        /// <para><b>And that lifted the ceiling.</b> Four was the limit while this was a row in a
+        /// header with a switcher and a way out beside it; a column down an otherwise empty
+        /// gutter is bounded by the screen. Adding a fifth order is one entry here and one in
+        /// <see cref="HudTheme.PinnedActionHue"/>, and <see cref="HudLayout.OrdersHeight"/> reads
+        /// the length of this array rather than a number somebody wrote down beside it.</para>
         /// </summary>
         public static readonly string[] Pinned = { Fell, Mine, Deconstruct, Cancel };
 

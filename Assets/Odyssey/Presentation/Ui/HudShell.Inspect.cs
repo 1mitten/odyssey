@@ -25,7 +25,10 @@ namespace Odyssey.Presentation.Ui
     {
         // ============================================================ A11 depth rail
 
-        void BuildRail()
+        /// <summary>
+        /// The rail, into the right-hand gutter it shares with the orders strip.
+        /// </summary>
+        void BuildRail(VisualElement gutter)
         {
             VisualElement rail = Panel("rail", "rail");
             Header(rail, "Depth", out _);
@@ -38,7 +41,7 @@ namespace Odyssey.Presentation.Ui
             _railHint.tooltip = "R and F move the slice up and down. Home recentres.";
             rail.Add(_railHint);
 
-            _hud.Add(rail);
+            gutter.Add(rail);
         }
 
         /// <summary>

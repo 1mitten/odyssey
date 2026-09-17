@@ -35,15 +35,32 @@ nothing a player could see — which is not a hypothetical, it is precisely what
 to Cancel: *"the tool was never missing; every way of finding it was missing"*, and it cost a
 playtest to find (`16-cancel-and-deconstruct.md` §1).
 
-So Chop, Mine, Deconstruct and Cancel are all **pinned in the panel header**, as 26 px icon
-buttons. They pass the same test the first two already passed: all four are *verbs applied to what
-is already on the board*, not nouns to place, and all four are wanted at the moment the player is
-holding something else. `EveryLiveToolIsDrawnSomewhere` is the general form of the rule, so a third
-occurrence cannot be silent.
+So Chop, Mine, Deconstruct and Cancel are all **always on show**. They pass the same test the first
+two already passed: all four are *verbs applied to what is already on the board*, not nouns to
+place, and all four are wanted at the moment the player is holding something else.
+`EveryLiveToolIsDrawnSomewhere` is the general form of the rule, so a third occurrence cannot be
+silent.
 
-Four is the ceiling. The header has room for four beside the switcher and the way out; a fifth
-starts pushing something off a 1280-wide screen, and a pinned row that keeps growing is a second
-palette.
+**They were pinned in this panel's header, as 26 px icon buttons, until 2026-09-17.** The owner
+then moved them out to a vertical strip in the right-hand gutter, under the depth rail — the design
+is `14-hud-layout.md` §5.4 and the code is `HudShell.Orders.cs`:
+
+> the small buttons on the build menu for Chop Trees, Mine, Deconstruct, Cancel should be a
+> vertical button strip that sits below the depth control and menu button … as this enables us to
+> quickly give orders without having to click the build button — we can use this in future for more
+> orders
+
+The header was the wrong home for the reason the header itself made plain: *always on show* inside
+a panel that is usually **shut**. Giving an order cost opening the palette first, on every order,
+and the palette is a list of things to put down. **Four was the ceiling here** — the header had
+room for four beside the switcher and the way out, and a fifth would have pushed something off a
+1280-wide screen. In a column down an otherwise empty gutter that limit is gone.
+
+Two things that did not change with the move. The panel still wears the held order's colour (§7),
+because the two are joined by `BuildPaletteModel` rather than by being in the same box — and the
+PlayMode test that proves it now picks the order up from the strip, which is the change that could
+have broken it. And `PaletteTools.Pinned` kept its name: it is still the list of tools that belong
+to no category and are always on show, and what it is pinned *to* is now the screen's edge.
 
 ## 3. The tiers
 
@@ -311,7 +328,12 @@ checked on the resolved fill and not only on the class, because the class being 
 following is the shape that fault took first; and **all three layouts pin into the bottom-left
 corner**, against the left edge of the screen and on the command bar.
 
-**Not judged by anybody.** Three portraits are written to `Logs/palette-{rows,rail,bar}.png` on every
+**Not judged by anybody**, and that now includes **where the orders strip sits**: it is measured
+against the rail and the screen edge at three resolutions, and whether its four buttons are the
+right size, in the right place and far enough from the Menu button at the other end of that edge is
+an eye's question.
+
+Three portraits are written to `Logs/palette-{rows,rail,bar}.png` on every
 PlayMode run for exactly this reason, and they are the only reason the mode colours, the hue set and
 the line art are not pure assertion. What a picture still cannot say:
 

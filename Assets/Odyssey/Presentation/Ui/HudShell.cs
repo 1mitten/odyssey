@@ -171,7 +171,6 @@ namespace Odyssey.Presentation.Ui
         // ---- panels over the board
         VisualElement _buildPanel = null!;
 
-        /// <summary>The always-on row under the palette. See <see cref="PaletteTools.Pinned"/>.</summary>
         VisualElement _settingsPanel = null!;
         VisualElement _interfaceSection = null!;
         VisualElement _graphicsSection = null!;
@@ -375,7 +374,7 @@ namespace Odyssey.Presentation.Ui
             BuildStores();
             BuildStrip();
             BuildRightColumn();
-            BuildRail();
+            BuildGutter();
             BuildInspect();
             BuildBar();
             BuildPalette();
@@ -586,6 +585,7 @@ namespace Odyssey.Presentation.Ui
 
             UpdateMarquee();
             UpdateArmedBanner();
+            MarkOrders();
             ReadBarKeys();
 
             // The roster sweep ends when the button does, wherever the pointer happens to be when

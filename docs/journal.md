@@ -2759,3 +2759,65 @@ work itself.
   tiers and the gap is recorded here rather than papered over.
 
   **Nobody has pressed Play on any of it.** The portraits are the only thing anyone has looked at.
+
+
+- **The orders strip: Chop, Mine, Deconstruct and Cancel left the Build palette for the right-hand
+  gutter (owner, 2026-09-17; design `docs/design/14-hud-layout.md` §5.4, code
+  `HudShell.Orders.cs`).** The owner's words: *"the small buttons on the build menu for Chop Trees,
+  Mine, Deconstruct, Cancel should be a vertical button strip that sits below the depth control and
+  menu button — to the right hand side of the screen very close to the screen border … as this
+  enables us to quickly give orders without having to click the build button — we can use this in
+  future for more orders."*
+
+  **The fault was in the phrase the old design used about them.** `PaletteTools.Pinned` called them
+  "always on show" — always on show *inside a panel that is usually shut*, so giving an order cost
+  opening the palette first and the cost was paid on every order. That is the third turn of one
+  screw: Cancel *"was never missing — every way of finding it was missing"*, then Chop and Mine had
+  to be caught as the Orders category was dropped, and now the way of finding all four was behind a
+  button. They **moved** rather than being copied: the same verb reachable from two places is a
+  question the player has to stop and answer, and `EveryLiveToolIsDrawnSomewhere` is satisfied by
+  the strip.
+
+  **The rail and the strip are one column, and that is the part worth keeping.** The depth rail is
+  the one region the *world* sizes — its cells shrink to fit the screen — so its height is not a
+  number anybody can write down, and a strip anchored at a top of its own would sit under a rail of
+  one particular length and float away from or run into every other. They share an absolutely
+  positioned gutter and stack inside it, which is the clock-and-alerts fix again and the same rule:
+  never two panels in one corner with hand-picked tops. `RailPitch` gives the strip's room up
+  *before* it divides what is left among the layers, so the rail is still the region that gives.
+  Measured on the real panel: the rail ends at 412 and the strip runs 421 to 589 at 1920 × 1080,
+  against a command bar starting at 1031.
+
+  **The coverage ceiling moved from 18% to 19%, and it is the owner's to reverse.** The strip is
+  0.80% of a 1280 × 720 canvas — the smallest the game draws, which is what 150 per cent interface
+  scale gives on a 1080p monitor — and it took the model's worst resting case there from 17.75% to
+  **18.55%**. The precedent in this file is the opposite one: two rows of colonist cards were 8.1%
+  and `StripHeightShare` clamped the *region* rather than spending the budget. That worked because
+  the strip had a variable height to clamp; this one is four fixed buttons, and even at the 26 px
+  squares it wore in the palette header it measures 0.65%, so the choice was the control or the
+  number. Per region at 720p: command bar 6.81%, colonist strip 3.81%, stores 2.59%, clock 2.57%,
+  depth rail 1.97%, orders 0.80%. **The bar is the largest single spend** and it is full-width by
+  the owner's own instruction where the specification drew a centred pill — that is where to look
+  first if the number has to come back down. On the real panel the resting HUD still measures
+  10.8–11.0%; the 18.55% is the model's arithmetic at the smallest canvas with the stores panel
+  open and a colony past what the strip will draw.
+
+  **Four is no longer the ceiling**, which is the half of the owner's instruction that was about
+  the future rather than about today. `HudLayout.OrdersHeight` reads the length of
+  `PaletteTools.Pinned` rather than a number beside it, so a fifth order is one entry in that table
+  and one hue in `HudTheme.PinnedActionHue`; each further one costs 0.19% of a 720p canvas, which
+  is the budget to watch rather than the width. The palette header is the switcher, ESC and the X
+  now, and `RaiseBuildLayout` lost the hand-written re-index that put the header's four buttons
+  back into the lit-state map after every layout rebuild.
+
+  **Both tiers are green** — fast 600 Sim / 287 Hud, EditMode 1350, PlayMode 57 — with three new
+  PlayMode tests: the strip is against the right edge and under the rail at all three resolutions,
+  pressing a button arms the tool **without the palette opening**, and the open palette still wears
+  the held order's colour when the order is picked up from the strip. `HudSmokeTests` counts eleven
+  framed regions now rather than ten.
+
+  **Nobody has pressed Play on it.** `Logs/palette-rows.png` shows the strip in the gutter and is
+  the only thing anyone has looked at. What a picture cannot say: whether 34 px is the right size
+  for a button nobody has aimed at, and whether the strip wants to sit lower down that edge —
+  nearer the Menu button the owner named in the same sentence — rather than directly under the
+  rail.

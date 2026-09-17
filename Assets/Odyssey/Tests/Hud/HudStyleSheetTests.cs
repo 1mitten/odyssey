@@ -144,13 +144,23 @@ namespace Odyssey.Tests.Hud
             (".stores", "top", () => HudLayout.Edge, "screen edge margin"),
             (".stores", "width", () => HudLayout.StoresWidth, "stores width"),
 
-            (".rail", "right", () => HudLayout.Edge, "screen edge margin"),
-            (".rail", "top", () => HudLayout.Edge, "screen edge margin"),
-            (".rail", "width", () => HudLayout.RailWidth, "rail width"),
+            // The right-hand gutter, and the two panels stacked in it. The anchor is the
+            // gutter's, not the rail's, since 2026-09-17: the rail and the orders strip are in a
+            // column so that the strip sits under a rail whose height the world decides.
+            (".column-edge", "right", () => HudLayout.Edge, "screen edge margin"),
+            (".column-edge", "top", () => HudLayout.Edge, "screen edge margin"),
+            (".column-edge", "width", () => HudLayout.RailWidth, "rail width"),
             (".rail", "padding-left", () => HudLayout.RailSidePad, "rail side padding"),
             (".rail__cell", "width", () => HudLayout.RailCellWidth, "rail cell"),
             (".rail__cell", "height", () => HudLayout.RailCellHeight, "rail cell"),
             (".rail__cell", "margin-bottom", () => HudLayout.RailCellGap, "rail cell gap"),
+
+            (".orders", "margin-top", () => HudLayout.RailToOrders, "rail to orders strip"),
+            (".orders", "padding-top", () => HudLayout.OrdersPadTop, "orders strip top padding"),
+            (".orders", "padding-left", () => HudLayout.OrdersSidePad, "orders strip side padding"),
+            (".ord__btn", "width", () => HudLayout.OrderButton, "an order button"),
+            (".ord__btn", "height", () => HudLayout.OrderButton, "an order button"),
+            (".ord__btn", "margin-bottom", () => HudLayout.OrderGap, "gap between orders"),
 
             (".column-right", "right", () => HudLayout.Edge + HudLayout.RailWidth + HudLayout.RailToClock,
                 "the rail's width plus its gap, measured from the right edge"),
@@ -181,7 +191,7 @@ namespace Odyssey.Tests.Hud
             (".bp__mat", "height", () => HudLayout.BuildMatRow, "a material button"),
             (".bp__bar-cat", "width", () => HudLayout.BuildBarCat, "a bar category tile"),
             (".bp__bar-sub", "width", () => HudLayout.BuildBarSub, "a bar sub-type tile"),
-            (".bp__action", "width", () => HudLayout.BuildAction, "a header action"),
+            (".bp__action", "width", () => HudLayout.BuildAction, "the header's way out"),
             (".bp__switch-btn", "width", () => HudLayout.BuildSwitchButton, "a switcher button"),
             (".bp__material", "border-width", () => HudTheme.MaterialBorderWidth, "material border"),
             (".bp__material", "border-radius", () => HudTheme.MaterialRadius, "material radius"),

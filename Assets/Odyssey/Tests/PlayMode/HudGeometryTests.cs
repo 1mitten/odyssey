@@ -1099,6 +1099,126 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// The orders strip stands in the right-hand gutter, against the edge of the screen and
+        /// directly under the depth rail, at every resolution the criteria name (owner,
+        /// 2026-09-17).
+        ///
+        /// <para>Measured on the realised boxes rather than on the model, because the whole claim
+        /// is about a position the model can only describe: the rail's height is the world's to
+        /// decide, and "under it" is therefore a relationship between two boxes rather than a
+        /// number anybody can write down. Nothing is opened first — that is the point of the
+        /// strip.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheOrdersStripSitsInTheGutterUnderTheDepthRail()
+        {
+            foreach (Vector2Int resolution in Resolutions)
+            {
+                GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, resolution);
+                try
+                {
+                    yield return Settle(doc);
+
+                    Rect canvas = doc.rootVisualElement.worldBound;
+                    float slack = SlackFor(canvas, resolution);
+
+                    VisualElement? strip = doc.rootVisualElement.Q(name: "orders");
+                    VisualElement? rail = doc.rootVisualElement.Q(name: "rail");
+                    VisualElement? bar = doc.rootVisualElement.Q(name: "bar");
+                    Assert.That(strip, Is.Not.Null, "the shell built no orders strip");
+                    Assert.That(rail, Is.Not.Null, "the shell built no depth rail");
+                    Assert.That(bar, Is.Not.Null, "the shell built no command bar");
+
+                    Rect box = strip!.worldBound;
+                    Rect railBox = rail!.worldBound;
+                    Debug.Log($"[HudGeometry] orders at {resolution.x}x{resolution.y}: {box}, " +
+                              $"rail {railBox}, canvas {canvas}");
+
+                    Assert.That(box.xMax, Is.EqualTo(canvas.xMax).Within(slack + 0.5f),
+                        $"the orders strip stops {canvas.xMax - box.xMax:0.#} px short of the right " +
+                        $"edge at {resolution.x}x{resolution.y}");
+                    Assert.That(box.xMax, Is.EqualTo(railBox.xMax).Within(slack + 0.5f),
+                        "the orders strip and the depth rail are not in one gutter");
+                    Assert.That(box.yMin, Is.GreaterThanOrEqualTo(railBox.yMax - slack),
+                        $"the orders strip starts at {box.yMin:0.#}, above the rail's bottom at " +
+                        $"{railBox.yMax:0.#} — it is over the depth control rather than under it");
+                    Assert.That(box.yMax, Is.LessThanOrEqualTo(bar!.worldBound.yMin + slack),
+                        $"the orders strip runs {box.yMax - bar.worldBound.yMin:0.#} px into the " +
+                        "command bar");
+                }
+                finally
+                {
+                    Object.Destroy(root);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Every order has a button in the strip, and pressing one arms it with nothing else open.
+        ///
+        /// <para>That last clause is the reason the strip exists (owner, 2026-09-17: <i>"this
+        /// enables us to quickly give orders without having to click the build button"</i>), so it
+        /// is asserted rather than assumed: the palette is never opened in this test, and the tool
+        /// still ends up in the player's hand. Pressing the same button again puts it down, which
+        /// is the toggle every tool in this game obeys.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator PressingAnOrderArmsItWithoutOpeningTheBuildPalette()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                VisualElement? palette = doc.rootVisualElement.Q(name: "build");
+                Assert.That(palette, Is.Not.Null, "the shell built no Build palette");
+                Assert.That(palette!.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                    "the Build palette is open before the test has touched anything");
+
+                foreach (string key in PaletteTools.Pinned)
+                {
+                    VisualElement? button = doc.rootVisualElement.Q(name: "action-" + key);
+                    Assert.That(button, Is.Not.Null, $"the orders strip has no button for {key}");
+                    Assert.That(button!.ClassListContains("ord__btn"), Is.True,
+                        $"{key} is drawn somewhere other than the orders strip");
+
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = button;
+                        button.SendEvent(click);
+                    }
+                    yield return Settle(doc);
+
+                    Assert.That(PaletteTools.TryGet(key, out PaletteTool tool), Is.True,
+                        $"{key} is in the strip and is not a live tool");
+                    Assert.That(tool.IsArmed(boot.Directors!.Designate), Is.True,
+                        $"pressing {key} in the orders strip armed nothing");
+                    Assert.That(palette.resolvedStyle.display, Is.EqualTo(DisplayStyle.None),
+                        $"pressing {key} opened the Build palette, which is the trip the strip " +
+                        "exists to save");
+                    Assert.That(button.ClassListContains("ord__btn--on"), Is.True,
+                        $"the {key} button does not say it is held");
+
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = button;
+                        button.SendEvent(click);
+                    }
+                    yield return Settle(doc);
+
+                    Assert.That(tool.IsArmed(boot.Directors!.Designate), Is.False,
+                        $"pressing {key} a second time did not put it down");
+                    Assert.That(button.ClassListContains("ord__btn--on"), Is.False,
+                        $"the {key} button is still lit with nothing in the player's hand");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// Opening Build puts away whatever was being inspected, and the palette then sits in the
         /// bottom-left corner: hard against the left edge and on the command bar (owner,
         /// 2026-09-17).
@@ -1290,11 +1410,17 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
-        /// While one of the four actions is held, the panel says which mode it is in — in that
-        /// action's own colour, with that action's own icon (owner, 2026-09-17).
+        /// While one of the four orders is held, the open palette says which mode it is in — in
+        /// that order's own colour, with that order's own icon (owner, 2026-09-17).
+        ///
+        /// <para>The order is picked up from the strip in the right-hand gutter, which is where
+        /// the four buttons live since they came off the palette's header. That the panel still
+        /// wears the colour is the point of the test: the two are joined by the model rather than
+        /// by being in the same box, and moving the buttons out is exactly the change that could
+        /// have broken it.</para>
         /// </summary>
         [UnityTest]
-        public IEnumerator HoldingAnActionColoursThePanelItIsHeldFrom()
+        public IEnumerator HoldingAnOrderColoursTheOpenPalette()
         {
             GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
             try
@@ -1307,7 +1433,7 @@ namespace Odyssey.Tests.PlayMode
 
                 VisualElement? cancel =
                     doc.rootVisualElement.Q(name: "action-" + PaletteTools.Cancel);
-                Assert.That(cancel, Is.Not.Null, "the header has no Cancel action");
+                Assert.That(cancel, Is.Not.Null, "the orders strip has no Cancel button");
                 using (var click = ClickEvent.GetPooled())
                 {
                     click.target = cancel;

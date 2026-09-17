@@ -98,6 +98,22 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   key is unchanged, because `ui.status.felling` draws real art and `icon-map.csv` is keyed the same
   way. Design, what is still open and the by-hand procedure are
   `docs/design/16-cancel-and-deconstruct.md`.
+  **The four orders are a strip down the right-hand gutter** (`claude/build-palette-layouts`,
+  2026-09-17). Chop, Mine, Deconstruct and Cancel left the Build palette's header for a column of
+  34 px buttons under the depth rail, against the right edge of the screen (owner: *"a vertical
+  button strip that sits below the depth control … this enables us to quickly give orders without
+  having to click the build button — we can use this in future for more orders"*). They **moved**,
+  they were not copied. Design is `docs/design/14-hud-layout.md` §5.4; code is
+  `HudShell.Orders.cs`. Three things not to undo by tidying. **The rail and the strip are one
+  column** — the rail is the region the *world* sizes, so a strip with a top of its own would float
+  away from it, and `RailPitch` gives the strip's room up before dividing what is left among the
+  layers. **Four is no longer the ceiling**: `HudLayout.OrdersHeight` reads the length of
+  `PaletteTools.Pinned`, so a fifth order is one row of that table and one hue. And **the coverage
+  ceiling went from 18% to 19%** — the strip is 0.80% of the smallest canvas the game draws and
+  took the model's worst resting case there to 18.55%; `HudLayout.CoverageCeiling` carries the
+  per-region measurement and the argument, and **it is the owner's to reverse**. Nobody has pressed
+  Play on it.
+
   **The Build palette is now three layouts over one selection** (`claude/build-palette-layouts`,
   2026-09-17) — the owner's 4a *Rows* (the default), 4b *Rail* and 4c *Bar*, switchable from the
   panel header and from Options › Interface, with the choice stored. Design, the measurements and
@@ -107,6 +123,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   specification asked, but Orders held Mine and Chop — so both are **pinned in the header** beside
   Deconstruct and Cancel rather than lost to the `M` and `C` keys, which is the Cancel fault of the
   day before repeated exactly; `EveryLiveToolIsDrawnSomewhere` is the general form of that rule.
+  (All four then left the header for the orders strip, above — the rule is what followed them.)
   **The panel is docked, not floating, and the default is a column** (owner: *"tight and flush to
   other elements to enable full use of space"*, then *"use the left hand side of the screen instead
   of the width"*) — the mockups were drawn over a bare board and would have covered the stores panel
@@ -374,7 +391,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **600 Sim + 285 Hud**; Long tier **20**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **600 Sim + 287 Hud**; Long tier **20**.
   **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
   touches the composition root or the HUD shell is unproven until Unity has compiled it, however
   green the 11 seconds look (`docs/lessons.md`).
@@ -471,6 +488,12 @@ no region spans two layers.
   30 px while ADR 0007 says not to draw pixel art below 32 — measured, 30 px reads, 17 px loses the
   grooves, 16 px goes to noise, and a **framed** sheet-06 tile at 17 px is mostly frame
   (`Logs/skill-icons.png`).
+- **Nobody has pressed Play on the orders strip.** It is measured against the rail and the screen
+  edge at three resolutions and drawn in `Logs/palette-rows.png`, which is all anybody has looked
+  at. Two questions a picture cannot answer: whether a 34 px button is the right size for something
+  aimed at without looking, and whether the strip wants to sit **lower** down that edge — nearer
+  the Menu button, which the owner named in the same sentence — rather than directly under the
+  rail. The **19% coverage ceiling** it cost is in the same basket.
 - **Nobody has pressed Play on the cancel tool or on right-click.** Both tiers are green and
   neither can say whether right-click disarms when the hand expects it to, or whether the six-pixel
   threshold separating a right-*click* from a right-*drag* is the right number — an orbit is a
