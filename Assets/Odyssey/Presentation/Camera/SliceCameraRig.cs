@@ -361,9 +361,10 @@ namespace Odyssey.Presentation.CameraRig
             }
             if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.FrameMap)) Frame();
 
-            // The developer overlay sits on the picture, so it is off until asked for.
-            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.DeveloperOverlay))
-                _directors.Overlays.ToggleDeveloper();
+            // Opens the debug menu rather than the overlay directly since 2026-09-17 — the overlay
+            // is that menu's first row now, not a second thing the same key does.
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.DebugMenu))
+                _directors.Debug.Toggle();
         }
 
         /// <summary>

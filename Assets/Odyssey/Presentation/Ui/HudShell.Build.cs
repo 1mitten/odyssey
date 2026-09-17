@@ -97,7 +97,7 @@ namespace Odyssey.Presentation.Ui
             // sentence about the three most basic gestures in the game, printed permanently over
             // the board, and a player who needs it needs it once. The tooltips on every tile still
             // say what a drag does.
-            _hud.Add(_buildPanel);
+            _worldUi.Add(_buildPanel);
         }
 
         /// <summary>

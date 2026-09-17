@@ -72,6 +72,61 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// <b>The in-game interface is not on screen when there is no game</b> (owner, 2026-09-17).
+        ///
+        /// <para>It used to be: every region was built straight onto the shell root and drawn
+        /// behind the main menu's scrim — dimmed rather than absent, which reads as the game being
+        /// open behind a dialog it is not open behind. They live in one container now and it is put
+        /// away with the session.</para>
+        ///
+        /// <para><b>Asserted on the container and on a region inside it</b>, because either alone
+        /// passes while the other is broken: hiding the parent proves nothing if a panel were
+        /// reparented out of it, and a hidden panel proves nothing about the eleven beside it.</para>
+        ///
+        /// <para>The round trip matters as much as the first half — an interface that hides with no
+        /// colony and never comes back is a game you cannot play.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheInGameInterfaceIsNotDrawnWithNoColony()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell shell, buildOnPlay: false);
+            try
+            {
+                yield return Settle();
+                var doc = boot.GetComponent<UIDocument>();
+
+                VisualElement? world = doc.rootVisualElement.Q("world-ui");
+                Assert.That(world, Is.Not.Null, "the in-game interface has no container to put away");
+                Assert.That(Shown(world), Is.False,
+                    "the in-game interface is drawn over the main menu");
+
+                // And a region inside it, resolved through the tree rather than by class alone, so
+                // the check cannot pass because the element simply does not exist.
+                Assert.That(world!.Q(className: "commandbar"), Is.Not.Null,
+                    "the command bar is not inside the container that gets put away");
+
+                Assert.That(Shown(doc.rootVisualElement.Q("backdrop")), Is.True,
+                    "the menu has no backdrop, so it sits over an empty camera");
+
+                // Start a colony: the interface comes back and the backdrop goes.
+                shell.Menu.Choose(SessionCommands.NewGameKey);
+                yield return Settle();
+                Assert.That(shell.Menu.Start(), Is.True);
+                yield return Settle();
+
+                Assert.That(Shown(doc.rootVisualElement.Q("world-ui")), Is.True,
+                    "the interface never came back, so the colony cannot be played");
+                Assert.That(Shown(doc.rootVisualElement.Q("backdrop")), Is.False,
+                    "the menu backdrop is still up over a running colony");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// The scrim takes the pointer everywhere, which is the whole of "a modal swallows every
         /// pointer event" (09-ui-and-input.md §6 case 5).
         ///
@@ -143,6 +198,9 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(boot.HasSession, Is.False,
                     "opening the New game screen built a world before anything was chosen");
 
+                // Two presses: New game opens the setup page with a board and three people
+                // already dealt, and Start commits. It was briefly three, when the colonists had
+                // a screen of their own; the whole setup is one page now.
                 Assert.That(shell.Menu.Start(), Is.True);
                 yield return Settle();
 
@@ -205,12 +263,19 @@ namespace Odyssey.Tests.PlayMode
 
                 Assert.That(shell.Menu.Seed.Seed, Is.EqualTo(4242u),
                     "typing in the field did not reach the director");
+
                 Assert.That(shell.Menu.Start(), Is.True);
                 yield return Settle();
 
                 Assert.That(boot.World, Is.Not.Null, "Start built no world");
                 Assert.That(boot.World!.Seed, Is.EqualTo(4242u),
                     "the colony was built from a seed the player never saw");
+
+                // And the colony is the three that were on the setup page — the same
+                // claim one level up, and the one no fast-tier test can make because it spans the
+                // screen, the director, the bootstrap and ColonyRequest.
+                Assert.That(boot.Colony!.Pawns.Pawns.Count, Is.EqualTo(ColonistSelect.Slots),
+                    "the colony is not the size the screen offered");
             }
             finally
             {
@@ -243,7 +308,8 @@ namespace Odyssey.Tests.PlayMode
                 yield return Settle();
 
                 Assert.That(shell.Menu.Seed.Usable, Is.False);
-                Assert.That(shell.Menu.Start(), Is.False);
+                Assert.That(shell.Menu.Start(), Is.False,
+                    "a world was started from a box that does not name a seed");
                 Assert.That(boot.HasSession, Is.False,
                     "a world was built from a box that does not name a seed");
 
@@ -485,21 +551,31 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(atLoad.x, Is.EqualTo(atRoot.x).Within(0.5f));
                 Assert.That(atLoad.y, Is.EqualTo(atRoot.y).Within(0.5f));
 
-                // And the New game screen (U39), which is the third thing this box has had to hold
-                // and the first one added after the height was fixed.
+                // New game is not one of this box's screens any more, and that is the point of the
+                // setup page: rather than growing the panel to hold three candidates and a skills
+                // grid, New game leaves it entirely. So the panel goes away and the page stands in
+                // its place — asserted here because "the box never changes size" is now kept by
+                // there being nothing in it to change size for.
                 shell.Menu.Back();
                 shell.Menu.Choose(SessionCommands.NewGameKey);
                 yield return Settle();
                 Assert.That(shell.Menu.Screen, Is.EqualTo(MenuScreen.NewGame));
 
-                Rect atNewGame = Screen(doc)!.worldBound;
-                Assert.That(atNewGame.width, Is.EqualTo(atRoot.width).Within(0.5f),
-                    "the panel changed width on the New game screen");
-                Assert.That(atNewGame.height, Is.EqualTo(atRoot.height).Within(0.5f),
-                    "the panel changed height on the New game screen, so every row under the " +
-                    "pointer moved");
-                Assert.That(atNewGame.x, Is.EqualTo(atRoot.x).Within(0.5f));
-                Assert.That(atNewGame.y, Is.EqualTo(atRoot.y).Within(0.5f));
+                Assert.That(Shown(Screen(doc)), Is.False,
+                    "the menu panel is still up underneath the setup page");
+                VisualElement? page = doc.rootVisualElement.Q("setup");
+                Assert.That(Shown(page), Is.True, "the setup page is not on screen");
+
+                // Back, and the box is exactly where it was — which is the half that would strand
+                // a player if the page did not put the panel back.
+                shell.Menu.Back();
+                yield return Settle();
+
+                Rect returned = Screen(doc)!.worldBound;
+                Assert.That(returned.width, Is.EqualTo(atRoot.width).Within(0.5f));
+                Assert.That(returned.height, Is.EqualTo(atRoot.height).Within(0.5f));
+                Assert.That(returned.x, Is.EqualTo(atRoot.x).Within(0.5f));
+                Assert.That(returned.y, Is.EqualTo(atRoot.y).Within(0.5f));
             }
             finally
             {

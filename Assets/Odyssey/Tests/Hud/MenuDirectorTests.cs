@@ -459,7 +459,7 @@ namespace Odyssey.Tests.Hud
             MenuDirector menu = OnNewGame(4242u);
             uint built = 0;
             int starts = 0;
-            menu.StartRequested += seed => { built = seed; starts++; };
+            menu.StartRequested += choice => { built = choice.Seed; starts++; };
 
             Assert.That(menu.Start(), Is.True);
 
@@ -472,7 +472,7 @@ namespace Odyssey.Tests.Hud
         {
             MenuDirector menu = OnNewGame(4242u);
             uint built = 0;
-            menu.StartRequested += seed => built = seed;
+            menu.StartRequested += choice => built = choice.Seed;
 
             menu.Seed.Type("77");
             Assert.That(menu.Start(), Is.True);
@@ -485,7 +485,7 @@ namespace Odyssey.Tests.Hud
         {
             MenuDirector menu = OnNewGame(1u, 2u);
             uint built = 0;
-            menu.StartRequested += seed => built = seed;
+            menu.StartRequested += choice => built = choice.Seed;
 
             menu.Seed.Reroll();
             Assert.That(menu.Start(), Is.True);
@@ -564,10 +564,199 @@ namespace Odyssey.Tests.Hud
             Assert.That(menu.Seed.Seed, Is.EqualTo(2u));
         }
 
-        [Test]
-        public void PuttingTheScreenAwayLeavesTheNewGameScreenToo()
+        // ------------------------------------------------ the setup page (world setup)
+
+        /// <summary>A menu with the whole New game flow: a seed, and three people to choose.</summary>
+        static MenuDirector WithColonists(params uint[] seeds)
         {
-            MenuDirector menu = OnNewGame(4242u);
+            int next = 0;
+            var select = new ColonistSelect(
+                (seed, slot) => new Candidate(seed, "person-" + seed, 30 + slot, "Scrapper",
+                    System.Array.Empty<SkillRow>()));
+            var menu = new MenuDirector(
+                new SeedField(() => seeds[next < seeds.Length ? next++ : seeds.Length - 1]), select);
+            menu.Show();
+            return menu;
+        }
+
+        /// <summary>
+        /// <b>One page, not two.</b> U40 gave the colonists a screen of their own and the seed
+        /// screen a Next row; the owner then asked for the whole skills grid on a candidate, which
+        /// settled it the other way — the content is far past what a panel holds, so New game is a
+        /// full page and everything is on it. Pressing New game therefore deals a seed *and* three
+        /// people, and the next press is Start.
+        /// </summary>
+        [Test]
+        public void NewGameDealsTheBoardAndThePeopleTogether()
+        {
+            MenuDirector menu = WithColonists(4242u);
+
+            Assert.That(menu.Choose(SessionCommands.NewGameKey), Is.True);
+
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.NewGame));
+            Assert.That(menu.Seed.Seed, Is.EqualTo(4242u));
+            Assert.That(menu.Colonists!.Cards.Count, Is.EqualTo(ColonistSelect.Slots));
+            Assert.That(menu.Colonists.Selected, Is.Zero, "nobody's record is showing");
+        }
+
+        [Test]
+        public void StartCarriesTheBoardThePeopleTheNameAndTheSize()
+        {
+            MenuDirector menu = WithColonists(4242u);
+            menu.Choose(SessionCommands.NewGameKey);
+            menu.TypeColonyName("Ashford");
+            menu.NextSize();
+
+            NewGameChoice chosen = default;
+            int starts = 0;
+            menu.StartRequested += choice => { chosen = choice; starts++; };
+
+            Assert.That(menu.Start(), Is.True);
+
+            Assert.That(starts, Is.EqualTo(1));
+            Assert.That(chosen.Seed, Is.EqualTo(4242u));
+            Assert.That(chosen.Colonists, Is.EqualTo(menu.Colonists!.ChosenSeeds()),
+                "the colony would be built from people the player never saw");
+            Assert.That(chosen.Name, Is.EqualTo("Ashford"));
+            Assert.That(chosen.Size, Is.EqualTo(menu.Size));
+        }
+
+        [Test]
+        public void StartStillRefusesABoxThatNamesNoSeed()
+        {
+            MenuDirector menu = WithColonists(4242u);
+            menu.Choose(SessionCommands.NewGameKey);
+            menu.Seed.Type("twelve");
+
+            int starts = 0;
+            menu.StartRequested += _ => starts++;
+
+            Assert.That(menu.Start(), Is.False);
+            Assert.That(starts, Is.Zero);
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.NewGame), "and it left the page too");
+        }
+
+        [Test]
+        public void EnteringThePageDealsFreshPeopleEveryTime()
+        {
+            MenuDirector menu = WithColonists(1u, 2u);
+
+            menu.Choose(SessionCommands.NewGameKey);
+            uint[] first = menu.Colonists!.ChosenSeeds();
+
+            menu.Back();
+            menu.Choose(SessionCommands.NewGameKey);
+
+            Assert.That(menu.Colonists.ChosenSeeds(), Is.Not.EqualTo(first),
+                "the page came back holding the people the player walked away from");
+        }
+
+        // ------------------------------------------------ the colony's name and the board size
+
+        /// <summary>
+        /// The field arrives already holding the default (owner, 2026-09-17), so a player who wants
+        /// it types nothing — and the word comes from the naming CSV rather than from a literal
+        /// here, which is what stops the page and the bootstrap disagreeing about what an unnamed
+        /// colony is called.
+        /// </summary>
+        [Test]
+        public void ItStartsOnTheDefaultNameAndTheStandardBoard()
+        {
+            MenuDirector menu = WithColonists(1u);
+
+            Assert.That(menu.ColonyName, Is.EqualTo("The Lost Buckets"));
+            Assert.That(menu.ColonyName,
+                Is.EqualTo(Registry.Label(SeedField.DefaultColonyKey)),
+                "the default name is written somewhere other than the naming CSV");
+
+            Assert.That(menu.Size, Is.EqualTo(MapSizes.Default));
+            Assert.That(MapSizes.At(menu.Size).Label, Is.EqualTo("Standard"));
+        }
+
+        [Test]
+        public void TheNameIsWhatWasTypedAndTypingNothingNewChangesNothing()
+        {
+            MenuDirector menu = WithColonists(1u);
+            int changes = 0;
+            menu.Changed += () => changes++;
+
+            menu.TypeColonyName("Ashford");
+            Assert.That(menu.ColonyName, Is.EqualTo("Ashford"));
+            Assert.That(changes, Is.EqualTo(1));
+
+            menu.TypeColonyName("Ashford");
+            Assert.That(changes, Is.EqualTo(1), "an echoed keystroke redrew the page");
+        }
+
+        /// <summary>
+        /// The size control cycles rather than navigating: three sizes, one press each, and it
+        /// comes back round rather than stopping at the end.
+        /// </summary>
+        [Test]
+        public void TheSizeCyclesThroughAllThreeAndWraps()
+        {
+            MenuDirector menu = WithColonists(1u);
+            var seen = new List<int>();
+
+            for (int press = 0; press < MapSizes.All.Count; press++)
+            {
+                seen.Add(menu.Size);
+                menu.NextSize();
+            }
+
+            Assert.That(seen, Has.Count.EqualTo(MapSizes.All.Count));
+            Assert.That(menu.Size, Is.EqualTo(MapSizes.Default), "it did not come back round");
+            for (int i = 1; i < seen.Count; i++)
+                Assert.That(seen[i], Is.Not.EqualTo(seen[i - 1]));
+        }
+
+        [Test]
+        public void EverySizeIsARegisteredNameAndADifferentBoard()
+        {
+            var boards = new HashSet<string>();
+            foreach (MapSizes.Choice size in MapSizes.All)
+            {
+                Assert.That(Registry.Labels, Does.ContainKey(size.Key), size.Key + " is not named");
+                Assert.That(boards.Add($"{size.X}x{size.Z}x{size.Y}"), Is.True,
+                    "two sizes are the same board with different words");
+                Assert.That(size.X, Is.GreaterThan(0));
+                Assert.That(size.Y, Is.GreaterThan(0));
+            }
+
+            Assert.That(MapSizes.At(-1).Key, Is.EqualTo(MapSizes.All[MapSizes.Default].Key),
+                "an index off the end does not fall back to the standard board");
+            Assert.That(MapSizes.At(99).Key, Is.EqualTo(MapSizes.All[MapSizes.Default].Key));
+        }
+
+        // ------------------------------------------------ choosing which one to read
+
+        [Test]
+        public void SelectingACandidateShowsThatOne()
+        {
+            MenuDirector menu = WithColonists(1u);
+            menu.Choose(SessionCommands.NewGameKey);
+
+            Assert.That(menu.Colonists!.Select(2), Is.True);
+            Assert.That(menu.Colonists.Selected, Is.EqualTo(2));
+            Assert.That(menu.Colonists.Current.Seed, Is.EqualTo(menu.Colonists.Cards[2].Seed));
+        }
+
+        [Test]
+        public void ASlotThatIsNotOnScreenCannotBeShown()
+        {
+            MenuDirector menu = WithColonists(1u);
+            menu.Choose(SessionCommands.NewGameKey);
+
+            Assert.That(menu.Colonists!.Select(-1), Is.False);
+            Assert.That(menu.Colonists.Select(ColonistSelect.Slots), Is.False);
+            Assert.That(menu.Colonists.Selected, Is.Zero);
+        }
+
+        [Test]
+        public void PuttingTheScreenAwayLeavesTheSetupPageToo()
+        {
+            MenuDirector menu = WithColonists(4242u);
+            menu.Choose(SessionCommands.NewGameKey);
 
             menu.Hide();
 

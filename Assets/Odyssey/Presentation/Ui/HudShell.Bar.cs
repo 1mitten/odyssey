@@ -34,7 +34,7 @@ namespace Odyssey.Presentation.Ui
             _bar = new VisualElement { name = "bar" };
             _bar.AddToClassList("commandbar");
             _barRow.Add(_bar);
-            _hud.Add(_barRow);
+            _worldUi.Add(_barRow);
 
             IReadOnlyList<HudCommand> commands = HudCommands.All;
             for (int i = 0; i < commands.Count; i++)
@@ -259,7 +259,7 @@ namespace Odyssey.Presentation.Ui
             });
             _menuPopup.Add(settings);
 
-            _hud.Add(_menuPopup);
+            _worldUi.Add(_menuPopup);
         }
 
         VisualElement MenuRow(HudCommand command)
@@ -408,8 +408,6 @@ namespace Odyssey.Presentation.Ui
 
             BuildCameraSpeedRow();
             BuildLayoutRow();
-            BuildDeveloperRow();
-
             _settingsPanel.Add(_interfaceSection);
         }
 
@@ -499,31 +497,6 @@ namespace Odyssey.Presentation.Ui
                 ladder.Add(rung);
             }
             _interfaceSection.Add(ladder);
-        }
-
-        /// <summary>
-        /// The developer readout: the one toggle in Interface that is about the HUD's own
-        /// drawing rather than the world. A pip row like the graphics ones, seeded from
-        /// whatever state the backquote key left the overlay in.
-        /// </summary>
-        void BuildDeveloperRow()
-        {
-            _developerRow = new VisualElement();
-            _developerRow.AddToClassList("settings__row");
-            var icon = new IconBadge(SettingsDirector.DeveloperKey, IconBadge.RowSize);
-            icon.Inherit(HudTokens.TextMeta);
-            _developerRow.Add(icon);
-            _developerRow.Add(HudText.Make(Registry.Label(SettingsDirector.DeveloperKey),
-                HudTextRole.Row, ussClass: "settings__label"));
-
-            var pip = new VisualElement { pickingMode = PickingMode.Ignore };
-            pip.AddToClassList("settings__pip");
-            _developerRow.Add(pip);
-
-            _developerRow.tooltip = "The frame-time readout. Also the ` key, and kept between sessions";
-            _developerRow.RegisterCallback<ClickEvent>(_ =>
-                _directors?.Settings.SetDeveloperOverlay(!_directors.Settings.DeveloperOverlay));
-            _interfaceSection.Add(_developerRow);
         }
 
         void BuildGraphicsSection()
@@ -668,7 +641,7 @@ namespace Odyssey.Presentation.Ui
             }),
             ("Interface", new[]
             {
-                HotkeyAction.BuildPalette, HotkeyAction.DeveloperOverlay,
+                HotkeyAction.BuildPalette, HotkeyAction.DebugMenu,
             }),
         };
 
@@ -807,12 +780,6 @@ namespace Odyssey.Presentation.Ui
         {
             foreach (var entry in _layoutRungs)
                 entry.Value.EnableInClassList("rung--on", entry.Key == layout);
-        }
-
-        void OnDeveloperOverlayChanged()
-        {
-            if (_directors == null) return;
-            _developerRow.EnableInClassList("settings__row--on", _directors.Settings.DeveloperOverlay);
         }
 
         void OnBusDbChanged(SettingsBus bus)
@@ -960,7 +927,11 @@ namespace Odyssey.Presentation.Ui
         {
             bool open = _directors != null && _directors.Settings.Open;
             _settingsPanel.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
-            if (open) ToggleMenu(false);
+            if (open)
+            {
+                ToggleMenu(false);
+                _directors?.Debug.SetOpen(false);
+            }
         }
 
         void OnSettingChanged(GraphicsOption option)

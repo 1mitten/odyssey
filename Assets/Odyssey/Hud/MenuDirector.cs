@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
 {
@@ -19,13 +20,22 @@ namespace Odyssey.Hud
         Load,
 
         /// <summary>
-        /// New game: the seed, a reroll, and the row that commits it (U39).
+        /// New game: the whole setup page — the board's seed, name and size, and the three people
+        /// who will live on it.
         ///
         /// <para>The root's New game row lands here rather than building a world, which is the one
-        /// behaviour U38 shipped that this unit changes. A seed that is drawn, used and never shown
-        /// gives a world nobody can ask for twice.</para>
+        /// behaviour U38 shipped that U39 changed. A seed that is drawn, used and never shown gives
+        /// a world nobody can ask for twice.</para>
+        ///
+        /// <para><b>One screen, not two</b> (owner, 2026-09-17). U40 gave the colonists a screen of
+        /// their own because three cards would not fit the menu's fixed box beside the seed; the
+        /// owner then asked for the whole skills grid on a candidate, which settles it the other
+        /// way — the content is far past what a 420 × 384 panel can hold, so this is not a panel at
+        /// all. It is drawn full-viewport and the menu box is left exactly as it is for Load and
+        /// Settings. <c>docs/design/19-world-setup.md</c>.</para>
         /// </summary>
         NewGame,
+
 
         /// <summary>
         /// The settings panel, standing in the start screen's place rather than on top of it.
@@ -39,6 +49,97 @@ namespace Odyssey.Hud
         /// already had.</para>
         /// </summary>
         Settings,
+    }
+
+    /// <summary>
+    /// Everything the player settled on before pressing Start: the board, and the people (U40).
+    ///
+    /// <para><b>One value rather than two arguments</b>, for the reason
+    /// <see cref="MenuDirector.StartRequested"/> carries the seed at all: a presenter that fetched
+    /// either of these separately could fetch one that had moved since the press, or one that never
+    /// passed the guard saying it was usable. They were chosen together and they travel together.
+    /// </para>
+    /// </summary>
+    public readonly struct NewGameChoice
+    {
+        /// <summary>The world's seed, as the box showed it.</summary>
+        public readonly uint Seed;
+
+        /// <summary>
+        /// One roll seed per chosen colonist, in the order they were shown — or null when no
+        /// colonist select was in the flow, which is a colony the world populates for itself.
+        /// </summary>
+        public readonly uint[]? Colonists;
+
+        /// <summary>What the player called the colony, or empty to take the request's default.</summary>
+        public readonly string Name;
+
+        /// <summary>Which board size, as an index into <see cref="MapSizes.All"/>.</summary>
+        public readonly int Size;
+
+        public NewGameChoice(uint seed, uint[]? colonists, string? name, int size)
+        {
+            Seed = seed;
+            Colonists = colonists;
+            Name = name ?? string.Empty;
+            Size = size;
+        }
+    }
+
+    /// <summary>
+    /// The board sizes the setup page offers (world setup, 2026-09-17).
+    ///
+    /// <para><b>Named rather than numeric.</b> "120 × 120 × 16" is a fact about an array;
+    /// "Standard" is a choice about a game. The numbers are here because the request needs them,
+    /// and the word is what the player picks.</para>
+    ///
+    /// <para>Unity-free, and deliberately not in <c>Odyssey.Sim</c>: a size is three integers the
+    /// simulation will take from anybody, and which three a *menu* offers is an interface
+    /// question.</para>
+    /// </summary>
+    public static class MapSizes
+    {
+        public readonly struct Choice
+        {
+            public readonly string Key;
+            public readonly int X;
+            public readonly int Z;
+            public readonly int Y;
+
+            public Choice(string key, int x, int z, int y)
+            {
+                Key = key;
+                X = x;
+                Z = z;
+                Y = y;
+            }
+
+            /// <summary>The word the player reads, from the naming registry.</summary>
+            public string Label => Registry.Label(Key);
+        }
+
+        public static readonly IReadOnlyList<Choice> All = new[]
+        {
+            new Choice("ui.newgame.size.small", 80, 80, 16),
+            new Choice("ui.newgame.size.standard", 120, 120, 16),
+            new Choice("ui.newgame.size.large", 180, 180, 24),
+        };
+
+        /// <summary>Standard: the board every measurement on record was taken on, and the one the
+        /// scene has always loaded.</summary>
+        public const int Default = 1;
+
+        public static readonly string[] IconKeys = BuildKeys();
+
+        static string[] BuildKeys()
+        {
+            var keys = new string[All.Count];
+            for (int i = 0; i < All.Count; i++) keys[i] = All[i].Key;
+            return keys;
+        }
+
+        public static Choice At(int index) =>
+            All[index < 0 || index >= All.Count ? Default : index];
     }
 
     /// <summary>
@@ -185,11 +286,27 @@ namespace Odyssey.Hud
         /// </summary>
         public SeedField Seed { get; }
 
-        public MenuDirector() : this(new SeedField()) { }
+        /// <summary>
+        /// The three colonists the New game flow ends on (U40), or null when nobody has supplied a
+        /// way to roll one.
+        ///
+        /// <para><b>Optional because rolling a candidate needs <c>Odyssey.Sim</c></b>, which this
+        /// assembly cannot see: the presenter hands one in. A director without it still navigates —
+        /// <see cref="Next"/> simply has nowhere to go — so every existing test and every rig that
+        /// only cares about the seed builds one line at a time, as before.</para>
+        /// </summary>
+        public ColonistSelect? Colonists { get; }
+
+        public MenuDirector() : this(new SeedField(), null) { }
 
         /// <summary>The seam a test drives: the seed's randomness handed in.</summary>
-        public MenuDirector(SeedField seed) =>
+        public MenuDirector(SeedField seed) : this(seed, null) { }
+
+        public MenuDirector(SeedField seed, ColonistSelect? colonists)
+        {
             Seed = seed ?? throw new ArgumentNullException(nameof(seed));
+            Colonists = colonists;
+        }
 
         /// <summary>The root screen's rows, top to bottom. One place, shared with the settings
         /// panel, so the two surfaces cannot drift (<see cref="SessionCommands"/>).</summary>
@@ -216,7 +333,7 @@ namespace Odyssey.Hud
         /// says it is readable at all. Here the number that passed <see cref="SeedField.Usable"/>
         /// is the number handed over, in one act.</para>
         /// </summary>
-        public event Action<uint>? StartRequested;
+        public event Action<NewGameChoice>? StartRequested;
 
         /// <summary>Raised when the player has asked to see their saves. The presenter answers by
         /// listing the folder and calling <see cref="ShowSaves"/>.</summary>
@@ -299,7 +416,9 @@ namespace Odyssey.Hud
             if (Screen == MenuScreen.Root) return false;
 
             bool leavingSettings = Screen == MenuScreen.Settings;
+
             GoTo(MenuScreen.Root);
+
             if (leavingSettings) SettingsClosed?.Invoke();
             return true;
         }
@@ -368,18 +487,55 @@ namespace Odyssey.Hud
             if (!Showing || Screen != MenuScreen.NewGame) return false;
             if (!Seed.Usable) return false;
 
-            StartRequested?.Invoke(Seed.Seed);
+            StartRequested?.Invoke(
+                new NewGameChoice(Seed.Seed, Colonists?.ChosenSeeds(), ColonyName, Size));
             return true;
         }
+
+        /// <summary>
+        /// What the colony will be called.
+        ///
+        /// <para><b>Starts at the default rather than empty</b> (owner, 2026-09-17), so the field
+        /// arrives with "The Lost Buckets" in it and a player who wants that types nothing. Clearing
+        /// it is allowed and is not a failure — the bootstrap falls back to the same name, so an
+        /// empty box and the default box give the same colony.</para>
+        /// </summary>
+        public string ColonyName { get; private set; } = Registry.Label(SeedField.DefaultColonyKey);
+
+        public void TypeColonyName(string? name)
+        {
+            string typed = name ?? string.Empty;
+            if (typed == ColonyName) return;
+            ColonyName = typed;
+            Changed?.Invoke();
+        }
+
+        /// <summary>Which board size the page is offering. Index into <see cref="MapSizes.All"/>.</summary>
+        public int Size { get; private set; } = MapSizes.Default;
+
+        /// <summary>
+        /// Step to the next size, wrapping. One control rather than three rows: there are three
+        /// sizes and a player picking one is cycling, not navigating.
+        /// </summary>
+        public void NextSize()
+        {
+            Size = (Size + 1) % MapSizes.All.Count;
+            Changed?.Invoke();
+        }
+
+        /// <summary>Raised when something on the setup page that is not the seed or the people has
+        /// changed — the colony's name, or the board size.</summary>
+        public event Action? Changed;
 
         void Perform(string key)
         {
             if (key == SessionCommands.NewGameKey)
             {
-                // A fresh world every time the screen is entered (§11.2 decision 3). The draw
-                // happens before the navigation so the screen is never drawn for a frame holding
-                // the seed of the game somebody decided against.
+                // A fresh world and fresh people every time the page is entered (17 §11.2 decision
+                // 3). Both are drawn before the navigation, so the page is never shown for a frame
+                // holding the game somebody decided against.
                 Seed.Draw();
+                Colonists?.Deal(SeedEntry.Draw);
                 GoTo(MenuScreen.NewGame);
             }
             else if (key == SessionCommands.LoadKey) SavesRequested?.Invoke();

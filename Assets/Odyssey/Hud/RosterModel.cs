@@ -51,7 +51,7 @@ namespace Odyssey.Hud
                 Cards.Add(new RosterCard
                 {
                     Id = pawn.Id,
-                    Name = ColonistNames.Of(pawn.Id),
+                    Name = ColonistNames.Of(snapshot, pawn.Id),
                     Mood = pawn.Mood,
                     Food = pawn.Food,
                     Rest = pawn.Rest,

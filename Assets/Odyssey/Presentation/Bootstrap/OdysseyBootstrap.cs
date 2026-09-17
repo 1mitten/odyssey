@@ -59,8 +59,22 @@ namespace Odyssey.Presentation.Bootstrap
         public int layers = 16;
         public uint seed = 1;
 
-        [Tooltip("What a colony started from this scene is called. The save header carries it, so the load list can say which colony a file is. Naming one is the New game screen's job (U39); this is what it is called until then.")]
-        public string colonyName = "Landfall";
+        [Tooltip("What a colony started from this scene is called, when the setup page did not ask. Leave it empty to take the naming registry's default, which is the one the setup page prefills and the one place that word is written.")]
+        public string colonyName = string.Empty;
+
+        /// <summary>
+        /// What to call a colony nobody named: this scene's own word if the inspector carries one,
+        /// and the naming registry's otherwise (owner, 2026-09-17: <i>"The Lost Buckets"</i>).
+        ///
+        /// <para><b>One word, in the CSV, reached from both places that want it.</b> The setup
+        /// page prefills its field from the same key, so a player who types nothing and a scene
+        /// that asks nobody end up with the same colony rather than with "The Lost Buckets" and
+        /// "Landfall" depending on how the world was started.</para>
+        /// </summary>
+        string DefaultColonyName =>
+            string.IsNullOrWhiteSpace(colonyName)
+                ? Registry.Label(SeedField.DefaultColonyKey)
+                : colonyName;
 
         [Tooltip("Natural wilderness is the prototype default (ADR 0008). RuinedCity is kept and still works.")]
         public MapType mapType = MapType.Natural;
@@ -303,6 +317,12 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         public void BuildSession() => BuildSession(null, null);
 
+        public void BuildSession(uint? seedOverride, SaveHeader? from) =>
+            BuildSession(seedOverride, from, null);
+
+        public void BuildSession(uint? seedOverride, SaveHeader? from, uint[]? colonists) =>
+            BuildSession(seedOverride, from, colonists, null, null);
+
         /// <summary>
         /// Build a session, optionally on a seed and a shape that are not the scene's (U38).
         ///
@@ -314,8 +334,20 @@ namespace Odyssey.Presentation.Bootstrap
         /// loaded session is built from the header rather than from whatever the inspector happens
         /// to say — and if the header does not carry enough to rebuild the same world, the load
         /// fails loudly here rather than producing a world that quietly differs.</para>
+        ///
+        /// <para><paramref name="colonists"/> is the third caller, colonist select (U40): one roll
+        /// seed per person the player kept. It decides <i>who</i> they are, and the scenario's own
+        /// colonist count is overridden to match, because the owner's ruling is that a new game
+        /// starts with exactly the three that were chosen. Null leaves both alone, which is every
+        /// other caller.</para>
+        ///
+        /// <para><paramref name="name"/> and <paramref name="sizeOverride"/> are the setup page's
+        /// other two knobs. Both are null for every caller that does not ask, and both are ignored
+        /// on a load — a saved colony's name and board are facts about the file, and
+        /// <c>WorldSave.Load</c> refuses a world of a different size anyway.</para>
         /// </summary>
-        public void BuildSession(uint? seedOverride, SaveHeader? from)
+        public void BuildSession(uint? seedOverride, SaveHeader? from, uint[]? colonists,
+            string? name, GridSize? sizeOverride)
         {
             if (HasSession)
                 throw new System.InvalidOperationException(
@@ -354,6 +386,14 @@ namespace Odyssey.Presentation.Bootstrap
             // (ADR 0008). The ruined-city generator is still here and still tested; switch
             // mapType to reach it.
             ScenarioDef scenarioDef = ScenarioFor(from);
+
+            // A new game starts with exactly the people that were chosen (U40, owner's decision 3).
+            // The count is taken off the chosen list rather than written down again, so the screen
+            // and the colony cannot come to disagree about how many there are — and a load leaves
+            // it alone, because a saved colony's population is a fact about the file.
+            if (colonists != null && colonists.Length > 0 && from == null)
+                scenarioDef = scenarioDef.WithColonists(colonists.Length);
+
             uint sessionSeed = from != null ? from.Seed : seedOverride ?? seed;
             MapType sessionMap = from != null && from.Recipe.Map != MapType.Unknown
                 ? from.Recipe.Map
@@ -361,7 +401,10 @@ namespace Odyssey.Presentation.Bootstrap
             var generation = Stopwatch.StartNew();
             ColonyWorld colony = ColonyWorld.Build(new ColonyRequest
             {
-                Size = size,
+                // The setup page's choice when there is one, the inspector's otherwise, and never
+                // on a load: a save is refused outright if the world it opens into is a different
+                // size, so taking the page's here would turn a mismatch into a confusing refusal.
+                Size = from == null && sizeOverride.HasValue ? sizeOverride.Value : size,
                 Seed = sessionSeed,
                 Scenario = scenarioDef,
                 // From the file when loading, for the reason SaveRecipe.Barren sets out: three
@@ -375,9 +418,16 @@ namespace Odyssey.Presentation.Bootstrap
                 // A colony keeps the name it was saved under. Nothing names one yet — that is the
                 // New game screen's, in U39 — so a fresh session takes the request's default and
                 // only a loaded one carries a name here.
+                // The file's when loading; the setup page's when the player typed one; the scene's
+                // otherwise. An empty typed name is not a name, so it falls through rather than
+                // making a colony called nothing.
                 Name = from != null && from.Recipe.ColonyName.Length > 0
                     ? from.Recipe.ColonyName
-                    : colonyName,
+                    : !string.IsNullOrWhiteSpace(name) ? name!.Trim() : DefaultColonyName,
+
+                // Who they are (U40). Null for a loaded session, whose colonists come out of the
+                // file with their seeds already on them, and for every caller that never asked.
+                Colonists = from == null ? colonists : null,
 
                 // Noon, and it belongs to the build rather than to a call after it: a colony that
                 // starts at tick 0 starts at midnight, SimWorld.StartAtTick refuses a clock that
@@ -1602,13 +1652,43 @@ namespace Odyssey.Presentation.Bootstrap
                 $"WASD pan - Q/E orbit - wheel zoom - R/F layer - V above-mode - B below-mode - " +
                 $"space pause - 1/2/3 speed - Home frame\n{_catalogueNote}";
 
-            // Drawn below the ledger rather than over it: this is the developer overlay (A15),
-            // the one region immediate mode is permitted in, and it must not sit on the HUD's
-            // top-left region when both are visible.
+            // This is the developer overlay (A15), the one region immediate mode is permitted in.
+            // It sat under the HUD's top-left ledger until 2026-09-17; the owner asked for it much
+            // bigger, which put it back on top of that ledger at the old position, so it now anchors
+            // to the bottom of the screen instead — clear of the top-left panels regardless of size,
+            // and clear of the command bar and orders strip along the bottom edge.
+            //
+            // Font size is roughly six times the default GUI.skin.label size (owner, 2026-09-17,
+            // first pass: "much much much bigger... cannot be read"; second pass, after judging the
+            // first: move it toward the bottom and make it bigger again). Still unjudged past this
+            // second pass.
+            GUIStyle style = DeveloperOverlayStyle();
+            int lines = 1;
+            for (int i = 0; i < text.Length; i++) if (text[i] == '\n') lines++;
+            float lineHeight = style.fontSize * 1.3f;
+            float height = lines * lineHeight;
+            float x = 10f;
+            float y = Screen.height - height - 96f;
+            var rect = new Rect(x, y, Screen.width - 2f * x, height);
+            var shadow = new Rect(x + 1f, y + 1f, rect.width, rect.height);
+
             GUI.color = Color.black;
-            GUI.Label(new Rect(11f, 181f, 1400f, 128f), text);
+            GUI.Label(shadow, text, style);
             GUI.color = Color.white;
-            GUI.Label(new Rect(10f, 180f, 1400f, 128f), text);
+            GUI.Label(rect, text, style);
+        }
+
+        GUIStyle? _developerOverlayStyle;
+
+        /// <summary>
+        /// Built lazily and cached: <see cref="GUIStyle"/> may only be constructed inside a GUI
+        /// callback, and OnGUI runs every frame the overlay is visible, so the style is made once
+        /// rather than allocated per frame.
+        /// </summary>
+        GUIStyle DeveloperOverlayStyle()
+        {
+            _developerOverlayStyle ??= new GUIStyle(GUI.skin.label) { fontSize = 56, wordWrap = false };
+            return _developerOverlayStyle;
         }
 
         void OnDestroy() => TeardownSession();
@@ -1693,7 +1773,7 @@ namespace Odyssey.Presentation.Bootstrap
             // "riverbend-day-12" and a near-identical twin of it.
             return _colony != null
                 ? SaveCatalogue.SuggestedName(CurrentRecipe())
-                : colonyName;
+                : DefaultColonyName;
         }
 
         /// <summary>

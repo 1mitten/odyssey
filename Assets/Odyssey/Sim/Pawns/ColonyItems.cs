@@ -306,6 +306,35 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
+        /// Debug menu: <c>IntentKind.GiveResource</c>. <c>A</c> is the item def index, <c>B</c> the
+        /// count; the cell is where to try first. <see cref="NearestCellWithSpace"/> is the same
+        /// widening search a delivered or dropped item already uses, so a granted stack behaves
+        /// like any other item arriving rather than a second, debug-only way for one to appear.
+        ///
+        /// <para>Takes the grid rather than holding one, because <see cref="ColonyItems"/> itself
+        /// does not — every other caller of <see cref="NearestCellWithSpace"/> already hands its
+        /// own <c>CellGrid</c> in, and a field kept only for this handler would be a second copy of
+        /// something <see cref="PawnContext"/> already owns.</para>
+        /// </summary>
+        public IntentRejection HandleGiveResource(Intent intent, CellGrid cells)
+        {
+            int defIndex = intent.A;
+            int amount = intent.B;
+            if (defIndex < 0 || defIndex >= Content.Items.Length) return IntentRejection.OutOfBounds;
+            if (amount <= 0) return IntentRejection.NotPermitted;
+
+            CellRef at = intent.Cell;
+            if (!cells.Size.Contains(at.X, at.Z, at.Y)) return IntentRejection.OutOfBounds;
+
+            int origin = cells.Size.Index(at);
+            int cell = NearestCellWithSpace(cells, origin, defIndex, amount, maxRadius: 3);
+            if (cell < 0) return IntentRejection.NotPermitted;
+
+            Spawn(defIndex, cell, amount);
+            return IntentRejection.None;
+        }
+
+        /// <summary>
         /// Approximate travel cost between two cells: Manhattan on the layer plus a per-layer
         /// charge. An item three metres away horizontally but ten storeys down is not close, and
         /// a Euclidean measure would say it was.

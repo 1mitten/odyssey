@@ -238,8 +238,8 @@ namespace Odyssey.Presentation.Ui
             _topRamp = HudTokens.VerticalRamp(clear, new Color(ink.r, ink.g, ink.b, HudTheme.TopScrimAlpha));
             _bottomRamp = HudTokens.VerticalRamp(new Color(ink.r, ink.g, ink.b, HudTheme.BottomScrimAlpha), clear);
 
-            _hud.Add(Scrim("scrim-top", _topRamp, top: true, HudTheme.TopScrimHeight));
-            _hud.Add(Scrim("scrim-bottom", _bottomRamp, top: false, HudTheme.BottomScrimHeight));
+            _worldUi.Add(Scrim("scrim-top", _topRamp, top: true, HudTheme.TopScrimHeight));
+            _worldUi.Add(Scrim("scrim-bottom", _bottomRamp, top: false, HudTheme.BottomScrimHeight));
         }
 
         static VisualElement Scrim(string name, Texture2D ramp, bool top, int height)
@@ -278,7 +278,7 @@ namespace Odyssey.Presentation.Ui
             _storesRows = new VisualElement();
             _storesRows.AddToClassList("stores__rows");
             _storesPanel.Add(_storesRows);
-            _hud.Add(_storesPanel);
+            _worldUi.Add(_storesPanel);
         }
 
         void ToggleStores()
@@ -378,7 +378,7 @@ namespace Odyssey.Presentation.Ui
             // then describes what the engine will do rather than competing with it.
             _strip = new VisualElement { name = "strip", pickingMode = PickingMode.Ignore };
             _strip.AddToClassList("strip");
-            _hud.Add(_strip);
+            _worldUi.Add(_strip);
         }
 
         void RefreshStrip()
@@ -532,7 +532,7 @@ namespace Odyssey.Presentation.Ui
         {
             var column = new VisualElement { name = "right-column", pickingMode = PickingMode.Ignore };
             column.AddToClassList("column-right");
-            _hud.Add(column);
+            _worldUi.Add(column);
 
             // ---- clock and speed, one panel
             VisualElement clock = Panel("clock", "clock");

@@ -60,6 +60,20 @@ namespace Odyssey.Tests.Sim
     /// not U37's original branch numbers, because those were baked against a
     /// <c>StartingSkill</c> salt that collided with <c>DeconstructRefund</c> — see
     /// <c>PawnPurpose</c>.</para>
+    ///
+    /// <para><b>Moved a fourth time by U40, and this one moved <i>both</i> numbers — which is the
+    /// interesting part.</b> A pawn now carries its own <c>RollSeed</c>, and that seed is in
+    /// <c>Pawn.ContributeTo</c>. U37's roll happens on the first tick and so moved only
+    /// <c>Simulated</c>; the seed is assigned at <b>placement</b>, inside <c>ColonyScenario.Place</c>,
+    /// which runs before <c>Generated</c> is taken — so every value below moved. Nothing about any
+    /// of these worlds changed: each colonist's seed here is the world's own, which is what it
+    /// always rolled from, and the skills these colonies come to are byte-for-byte the ones they
+    /// came to yesterday. What changed is that the hash can now see the number they were rolled
+    /// from. <c>StartingSkillsTests</c> carries the non-hash evidence.</para>
+    ///
+    /// <para>The same commit stopped <c>ScenarioDef.Playtest</c> giving starting orders, and that
+    /// moved <b>nothing here</b>, because every case below builds on <c>ScenarioDef.Bare</c>, which
+    /// has never given any.</para>
     /// </summary>
     public static class Golden
     {
@@ -114,8 +128,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 1445231422113309842UL,
-            Simulated = 14285869242397174845UL,
+            Generated = 7415324713255390796UL,
+            Simulated = 4123229251212493599UL,
         };
 
         /// <summary>
@@ -131,8 +145,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 4423472815424028544UL,
-            Simulated = 8316998138846647460UL,
+            Generated = 8029423938199474119UL,
+            Simulated = 15223569115139054285UL,
         };
 
         /// <summary>
@@ -147,8 +161,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 624141440131264568UL,
-            Simulated = 17545013022261745430UL,
+            Generated = 2695749815698818099UL,
+            Simulated = 13999314917987038887UL,
         };
     }
 }

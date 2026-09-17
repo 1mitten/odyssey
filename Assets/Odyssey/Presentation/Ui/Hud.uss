@@ -1419,6 +1419,16 @@
     width: 300px;
 }
 
+/* The debug menu (backtick). Centred exactly like Settings and mutually exclusive with it
+   (HudShell.Debug.cs / HudShell.Bar.cs each close the other on open), so reusing the same spot
+   costs nothing and needs no second layout to judge. */
+.debug {
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    width: 280px;
+}
+
 .settings__tabs {
     flex-direction: row;
     margin-top: 6px;
@@ -1730,6 +1740,155 @@
    looks broken; faint and inert says "not yet" where absent says "never". */
 .settings__row--off { opacity: 0.42; }
 .settings__row--off:hover { background-color: rgba(0, 0, 0, 0); }
+
+/* The debug menu's own inert-row look, identical to .settings__row--off but its own class: that
+   one is queried by name in StartScreenTests to find the disabled Start row specifically, and a
+   second row sharing it would make that query ambiguous the moment both panels exist at once. */
+.debug__row--off { opacity: 0.42; }
+.debug__row--off:hover { background-color: rgba(0, 0, 0, 0); }
+
+/* ---------------------------------------------------------------- the menu backdrop
+
+   Behind everything, and only ever seen when there is no colony — with a world running the backdrop
+   is the world. The picture and its scale mode are set from code, because the file is loaded from
+   Resources and may not be there at all; a clone without the art simply gets the fill. */
+
+.backdrop {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: #05070a;
+}
+
+/* Everything that only means anything with a colony running. One container so it can be put away
+   as one thing: half these regions set display in code, and an inline style beats a rule here. */
+.worldui {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+}
+
+/* ---------------------------------------------------------------- the setup page
+
+   The first thing in this project that is not a panel. The owner asked for the inspect pane's whole
+   skills grid on a candidate; that grid is 900px wide, so three candidates with a detail beside them
+   is not something a 420x384 box can hold. New game leaves the box rather than stretching it, and
+   the box is left exactly as it is for Load and Settings. docs/design/19-world-setup.md. */
+
+.setup {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    padding: 40px 56px;
+}
+
+.setup__title {
+    color: #eef3f6;
+    height: 26px;
+    margin-bottom: 18px;
+}
+
+/* The board, across the top: what it is called, what number it came from, and how big it is. */
+.setup__board {
+    flex-direction: row;
+    align-items: flex-end;
+    margin-bottom: 18px;
+}
+
+.setup__field {
+    flex-direction: column;
+    width: 220px;
+    margin-right: 18px;
+}
+
+.setup__size {
+    flex-direction: column;
+    width: 140px;
+    margin-left: 18px;
+}
+
+.setup__sizevalue {
+    color: #eef3f6;
+    height: 30px;
+    -unity-text-align: middle-left;
+}
+
+.setup__size:hover .setup__sizevalue { color: #6fd3e3; }
+
+/* A row used inline rather than in a column: Reroll beside the seed, Back and Start along the
+   bottom. Same .settings__row underneath, so nothing new is introduced. */
+.setup__inline {
+    width: 160px;
+    flex-grow: 0;
+}
+
+.setup__people {
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+/* The one being read, beside the three. */
+.setup__detail {
+    flex-grow: 1;
+    margin-left: 32px;
+}
+
+.detail__name { color: #eef3f6; height: 26px; }
+.detail__trade { color: rgba(255, 255, 255, 0.66); height: 18px; }
+.detail__traits { color: rgba(255, 255, 255, 0.50); height: 18px; margin-top: 4px; }
+
+.setup__footer {
+    flex-direction: row;
+    margin-top: 18px;
+}
+
+.colonists__rows { margin-top: 9px; }
+
+/* ---------------------------------------------------------------- the colonist screen (U40)
+
+   Three candidates, each a name and one line of skills. A card is clicked to keep it through a
+   reroll, and a kept one wears .row--armed — the same lit treatment every "this is on" in the
+   interface uses, so nothing new has to be learned. */
+
+.colonists {
+    flex-shrink: 0;
+    width: 260px;
+}
+
+.colonist {
+    flex-direction: column;
+    justify-content: center;
+    height: 47px;
+    margin-bottom: 6px;
+    padding: 0 8px;
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: rgba(0, 0, 0, 0);
+}
+
+.colonist:hover { background-color: rgba(255, 255, 255, 0.07); }
+
+/* The one whose record is showing on the right. A different question from "kept", which wears
+   .row--armed, so it needs a different mark: an outline rather than a fill. */
+.colonist--on { border-color: #6fd3e3; }
+
+.colonist__trade {
+    color: rgba(255, 255, 255, 0.66);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.colonist__name {
+    color: #eef3f6;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+/* What they are good at, on one line: three cards of two lines each came to 296 against the fixed
+   body's 284. Measured by HudLayoutTests rather than found on screen. */
+.colonist__skills {
+    color: rgba(255, 255, 255, 0.66);
+    white-space: nowrap;
+}
 
 /* The row that goes back, set apart from the list above it the way the settings panel's exit row
    is set apart from the tabs. */

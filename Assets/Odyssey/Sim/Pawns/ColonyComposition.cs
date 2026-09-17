@@ -117,7 +117,12 @@ namespace Odyssey.Sim.Pawns
                 // pipeline because starting and ending jobs is what the pipeline is, and because a
                 // second path into `StartJob` would be a second path out of it — which is where a
                 // reservation leak comes from.
-                .AddIntentHandler(IntentKind.ForceJob, pipeline.HandleForceJob);
+                .AddIntentHandler(IntentKind.ForceJob, pipeline.HandleForceJob)
+                // The debug menu's two rows. Neither is player content — see the doc comments on
+                // the intents themselves — so both live beside the ordinary handlers rather than in
+                // a debug-only wiring path a real colony would not otherwise get.
+                .AddIntentHandler(IntentKind.SpawnPawn, pawns.Pawns.HandleSpawnPawn)
+                .AddIntentHandler(IntentKind.GiveResource, intent => pawns.Items.HandleGiveResource(intent, pawns.Cells));
             designations.Attach(builder);
             construction.Attach(builder);
             return builder;

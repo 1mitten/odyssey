@@ -112,6 +112,11 @@ namespace Odyssey.Sim.Pawns
                 // `WorldRoundTripTests.TheRoundTripReproducesTheStateExactly` fails the moment the
                 // save stops covering what the hash covers.
                 construction.Edifices,
+                // After the pawn registry, because it writes into pawns that registry has just
+                // rebuilt (U40). A save written before this section existed simply has no entry
+                // here, and every restored colonist keeps the world seed — which is what that
+                // colony was.
+                new PawnSeedSection(pawns.Pawns),
             };
         }
 
@@ -280,8 +285,19 @@ namespace Odyssey.Sim.Pawns
             // random stream. A start tick of zero is inert, so nothing baked moves.
             if (request.StartTick > 0) world.StartAtTick(request.StartTick);
 
+            // The context learns the seed here rather than on the first tick, which is where
+            // `Sync` would have given it (U40). Placement runs before any tick and spawns every
+            // colonist, and a pawn's own roll seed defaults to the context's — so without this
+            // line every colony in the game would roll its people from seed zero, whatever board
+            // it was on. Found by `StartingSkillsTests`: two different world seeds produced
+            // identical colonists. Only the seed is set, not the world and the tick `Sync` also
+            // carries, because `PawnContext.Defer` uses a non-null world to mean "a tick is in
+            // progress" and one is not.
+            pawns.Seed = seed;
+
             ScenarioDef scenario = request.Scenario;
-            ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed, scenario);
+            ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed,
+                scenario, request.Colonists);
             int marked = ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenario);
 
             var built = new ColonyWorld(grid, pawns, designations, construction, world, outcome, scenario, placement,
