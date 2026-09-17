@@ -199,6 +199,7 @@ anchored to a screen edge or centred; nothing is placed at a computed offset.
 | **Clock + speed** | `right 76, top 20, w 266` | one panel — the merge *is* the fix for A3/A4 overlapping |
 | **Alerts** | under the clock in the same column, 9 px gap | hidden outright when empty |
 | **Depth rail** | `right 20, top 20, w 44` | one 26 × 16 cell a layer; shrinks rather than overflowing |
+| **Orders strip** | under the rail in the same gutter, 9 px gap, `w 44` | one 34 px button an order; four today (§5.4) |
 | **Inspect** | `left 20, bottom 84, w 560` | 43 px tall with nothing selected, 164 with a colonist |
 | **Command bar** | centred, `bottom 20` | 38 px items, one row, overflow into Menu |
 
@@ -260,7 +261,12 @@ match-0.5 scaling keeps the canvas *area* almost constant across aspect ratios t
 answers the criterion for every screen.
 
 **Measured at 10.8 to 11.0% at rest** — by `HudGeometryTests`, on the real panel at all three
-resolutions — against an 18% ceiling. The "roughly 31% before" figure quoted throughout this
+resolutions — against a **19%** ceiling, 18% until the orders strip arrived on 2026-09-17. The
+strip is 0.80% of a 1280 × 720 canvas and took the model's worst resting case there from 17.75% to
+18.55%; `HudLayout.CoverageCeiling` carries the measurement, the per-region breakdown and the
+argument for moving the number rather than the control. **The largest single spend is the command
+bar at 6.81%**, which is a full-width docked bar by the owner's instruction where the specification
+drew a centred pill — that is where to look first if this ever has to come back down. The "roughly 31% before" figure quoted throughout this
 document is the **specification's own**, not a measurement made here: the old HUD had no geometry
 model and no test that could produce one, which is most of why this pass exists. The reduction is
 therefore real but its size is the specification's claim. The scrims are excluded and
@@ -268,6 +274,41 @@ that is a decision rather than an oversight: they are 370 rows between them, the
 gradients whose whole job is to carry text contrast so the panels can stay small, and counting them
 would make the target unreachable by construction while measuring the opposite of what the criterion
 is about — how much of the board the interface hides.
+
+---
+
+### 5.4 The orders strip (owner, 2026-09-17)
+
+> the small buttons on the build menu for Chop Trees, Mine, Deconstruct, Cancel should be a
+> vertical button strip that sits below the depth control and menu button — to the right hand side
+> of the screen very close to the screen border … as this enables us to quickly give orders without
+> having to click the build button — we can use this in future for more orders
+
+Four 34 px buttons in a column at the right edge, directly under the depth rail. They were the
+Build palette's header actions (`17-build-palette-layouts.md` §2), where they were *always on show
+inside a panel that is usually shut* — so every order a player gave cost opening the palette first.
+
+Three things this pass decided that a later session should not undo by tidying.
+
+- **They moved; they were not copied.** The same verb reachable from two places is a question the
+  player has to stop and answer. `EveryLiveToolIsDrawnSomewhere` is satisfied by the strip, and the
+  palette's header is the switcher, ESC and the X.
+- **The rail and the strip are one column, not two anchored panels.** The rail is the one region
+  the *world* sizes, so its height is not a number anyone can write down; a strip given a top of
+  its own would sit under a rail of one particular length and float away from every other. This is
+  the clock-and-alerts fix again, and the same rule: never two panels in one corner with
+  hand-picked tops. `RailPitch` gives the strip's room up before it divides what is left among the
+  layers, so the rail is still the region that gives.
+- **No label row.** "DEPTH" fits a 44 px gutter and "ORDERS" does not, and the criteria forbid
+  clipped text. Each button carries its name, its key and what a drag does in a tooltip, exactly as
+  the 26 px squares in the palette header did.
+
+**Four is no longer the ceiling.** It was, while this was a row in a header beside a switcher and a
+way out. A column down an otherwise empty gutter is bounded by the screen, and
+`HudLayout.OrdersHeight` reads the length of `PaletteTools.Pinned` rather than a number written
+down beside it — so a fifth order is one entry in that table and one hue in
+`HudTheme.PinnedActionHue`. Each further order costs 0.19% of a 720p canvas against the coverage
+ceiling, which is the budget to watch rather than the width.
 
 ---
 

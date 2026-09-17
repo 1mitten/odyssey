@@ -52,7 +52,6 @@ namespace Odyssey.Presentation.Ui
         VisualElement _buildSwitch = null!;
         Label _buildCrumb = null!;
         VisualElement _buildModeIcon = null!;
-        VisualElement _buildActions = null!;
 
         /// <summary>Every tile currently on screen that has a lit state, by the thing it stands
         /// for. Rebuilt with the layout and walked on every repaint, so a repaint never has to
@@ -82,8 +81,9 @@ namespace Odyssey.Presentation.Ui
             _buildPanel = Popover("build", "Build", () => SetBuildPalette(false), "bp");
 
             // The header the specification describes is not the one Popover builds — it carries a
-            // breadcrumb, a switcher and four action buttons — so the stock one is taken back out
-            // and replaced. Going through Popover first is still worth it: the fill, the docking
+            // breadcrumb and a layout switcher — so the stock one is taken back out and replaced.
+            // It carried the four order buttons too until they left for the strip in the
+            // right-hand gutter (HudShell.Orders.cs). Going through Popover first is still worth it: the fill, the docking
             // and the Escape contract are the parts that must not differ between panels.
             if (_buildPanel.childCount > 0) _buildPanel.RemoveAt(0);
             _buildPanel.Insert(0, BuildPaletteHeader());
@@ -164,15 +164,23 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// The header, in two halves: what is selected, and the controls.
+        /// The header, in two halves on one row: what is selected, and the controls.
         ///
-        /// <para><b>Two halves rather than one row, because Rows is 372 px wide.</b> The controls
-        /// alone are eight buttons — three of switcher, four actions and the way out — and with
-        /// "BUILD" and a three-part breadcrumb in front of them the row came to 426 px and ran off
-        /// its own panel. It is one line in Rail and Bar, which have the width for it, and two
-        /// stacked lines in Rows. The split is here rather than in the stylesheet because a
-        /// wrapping flex row would break wherever it happened to run out of room, which could put
-        /// the close button on a line by itself.</para>
+        /// <para><b>It was two stacked lines in Rows until 2026-09-17.</b> The controls there were
+        /// eight buttons — three of switcher, four actions and the way out — and with "BUILD" and
+        /// a three-part breadcrumb in front of them the row came to 426 px against a 372 px panel.
+        /// Then the four actions left for the orders strip down the right edge
+        /// (<c>HudShell.Orders.cs</c>) and the owner asked for the rest to come back up: <i>"shift
+        /// the toggle view, esc and x onto the same row as the build text — this will tidy that
+        /// up"</i>.</para>
+        ///
+        /// <para><b>The halves stay, and they are what makes one row possible.</b> The identity
+        /// half shrinks and its breadcrumb ellipsises; the controls half does not shrink at all.
+        /// So the longest breadcrumb the content table can produce — "Structure › Roof and floor
+        /// above › Wood", which is not reachable until roofs are built but is in the table today —
+        /// gives way to the switcher and the X rather than pushing them off the end. A single
+        /// wrapping row would instead break wherever it happened to run out of room, which could
+        /// put the close button on a line of its own.</para>
         /// </summary>
         VisualElement BuildPaletteHeader()
         {
@@ -217,11 +225,6 @@ namespace Odyssey.Presentation.Ui
 
             controls.Add(HudText.Make("ESC", HudTextRole.Hotkey, ussClass: "bp__esc"));
 
-            _buildActions = new VisualElement();
-            _buildActions.AddToClassList("bp__actions");
-            foreach (string key in PaletteTools.Pinned) _buildActions.Add(BuildActionButton(key));
-            controls.Add(_buildActions);
-
             var close = new VisualElement();
             close.AddToClassList("bp__action");
             close.AddToClassList("bp__action--close");
@@ -236,37 +239,6 @@ namespace Odyssey.Presentation.Ui
 
             header.Add(controls);
             return header;
-        }
-
-        /// <summary>
-        /// One of the four actions, as a 26 px square in its own colour.
-        ///
-        /// <para>Icon and tooltip rather than a labelled button in the body (specification): these
-        /// are escape hatches, not primary actions, and as full-width rows they were competing
-        /// with the build tiers for the eye and pushing the panel over its width.</para>
-        /// </summary>
-        VisualElement BuildActionButton(string key)
-        {
-            var button = new VisualElement { name = "action-" + key };
-            button.AddToClassList("bp__action");
-
-            HudColour hue = HudTheme.PinnedActionHue(key) ?? HudTheme.TextMeta;
-            button.style.borderTopColor = button.style.borderRightColor =
-                button.style.borderBottomColor = button.style.borderLeftColor =
-                    HudTokens.Convert(hue.WithAlpha(0.45f));
-            button.style.backgroundColor = HudTokens.Convert(hue.WithAlpha(0.12f));
-            button.Add(new HudGlyph(PaletteGlyphs.For(key), 15f, HudTokens.Convert(hue)));
-
-            string name = Registry.Label(key);
-            button.tooltip = name + HotkeyLegend(key) + " — drag a box over the world";
-            button.RegisterCallback<ClickEvent>(_ =>
-            {
-                _palette?.TogglePinned(key);
-                MarkBuildState();
-            });
-
-            _buildTiles[key] = button;
-            return button;
         }
 
         /// <summary>The key that arms a tool, if it has one, as " (M)". Read from the binding map
@@ -321,12 +293,6 @@ namespace Odyssey.Presentation.Ui
             _buildTiles.Clear();
             _buildCategoryTiles.Clear();
             _buildMaterialTiles.Clear();
-
-            // The action buttons live in the header and survive the rebuild, so they go back into
-            // the lit-state index by hand.
-            foreach (VisualElement action in _buildActions.Children())
-                if (action.name.StartsWith("action-", StringComparison.Ordinal))
-                    _buildTiles[action.name.Substring("action-".Length)] = action;
 
             _buildPanel.EnableInClassList("bp--rows", _palette.Layout == BuildPaletteLayout.Rows);
             _buildPanel.EnableInClassList("bp--rail", _palette.Layout == BuildPaletteLayout.Rail);
@@ -505,7 +471,8 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         VisualElement CategoryTile(int index, string shape)
         {
-            var (key, label, _) = PaletteTools.Categories[index];
+            var (key, _) = PaletteTools.Categories[index];
+            string label = Registry.Label(key);
 
             var tile = new VisualElement { name = "cat-" + key };
             tile.AddToClassList("bp__tile");
@@ -690,17 +657,9 @@ namespace Odyssey.Presentation.Ui
             _buildPanel.style.borderTopColor = HudTokens.Convert(mode ?? HudTheme.PanelBorder);
             _buildPanel.style.borderTopWidth = mode.HasValue ? 2f : HudTheme.BorderWidth;
 
-            // --- the four actions
-            foreach (string key in PaletteTools.Pinned)
-            {
-                if (!_buildTiles.TryGetValue(key, out VisualElement button)) continue;
-                bool on = key == armedAction;
-                HudColour hue = HudTheme.PinnedActionHue(key) ?? HudTheme.TextMeta;
-                button.style.backgroundColor = HudTokens.Convert(hue.WithAlpha(on ? 0.30f : 0.12f));
-                button.style.borderTopColor = button.style.borderRightColor =
-                    button.style.borderBottomColor = button.style.borderLeftColor =
-                        HudTokens.Convert(hue.WithAlpha(on ? 1f : 0.45f));
-            }
+            // The four order buttons are painted by MarkOrders, in the strip they now live in.
+            // They are deliberately not repainted from here as well: two painters for one button
+            // is the drift this file spends its comments avoiding.
 
             // --- the switcher
             int at = 0;

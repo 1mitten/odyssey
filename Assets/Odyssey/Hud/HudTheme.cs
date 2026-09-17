@@ -219,6 +219,19 @@ namespace Odyssey.Hud
         public const int ChipRadius = 3;
         public const int BorderWidth = 1;
 
+        /// <summary>
+        /// The armed banner's border, which is not a hairline (owner, 2026-09-17: <i>"make that
+        /// border much thicker"</i>).
+        ///
+        /// <para>It is three pixels because the border is the whole of what that banner says at a
+        /// glance: it is drawn in the held order's own hue — green for chopping, blue for mining,
+        /// amber for deconstructing, red for cancelling — and at one pixel a colour is a detail
+        /// rather than a signal. The panel's top edge wears the same idea at two pixels while the
+        /// palette is open (<c>docs/design/17-build-palette-layouts.md</c> §7), and this one is
+        /// over the board with nothing else around it.</para>
+        /// </summary>
+        public const int ArmedBorderWidth = 3;
+
         /// <summary>The width of the neutral square drawn where a real glyph does not exist yet.</summary>
         public const float PlaceholderStroke = 1.6f;
 

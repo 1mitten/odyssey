@@ -47,6 +47,7 @@ namespace Odyssey.Hud
         Clock,
         Alerts,
         DepthRail,
+        OrdersStrip,
         Inspect,
         CommandBar,
     }
@@ -396,6 +397,70 @@ namespace Odyssey.Hud
         /// </summary>
         public const int RailSidePad = 4;
 
+        // ------------------------------------------------------------------ orders strip
+
+        /*
+         * The orders strip: the four verbs a player applies to what is already on the board —
+         * chop, mine, deconstruct, cancel — as a column of icon buttons in the right-hand gutter,
+         * directly under the depth rail (owner, 2026-09-17: "a vertical button strip that sits
+         * below the depth control … to the right hand side of the screen very close to the screen
+         * border … this enables us to quickly give orders without having to click the build
+         * button").
+         *
+         * They were four 26 px buttons in the Build palette's header until then, which made every
+         * order cost opening the palette first. The strip is the same gutter and the same width as
+         * the rail, so the right edge of the screen reads as one column rather than as two panels
+         * that happen to be near each other; it is what OrdersCount rows of it are tall, and it
+         * grows downwards as more orders are added, which is why the count is a length here rather
+         * than a written-down number.
+         */
+
+        /// <summary>The strip shares the rail's gutter, so the right edge is one column.</summary>
+        public const int OrdersWidth = RailWidth;
+
+        /// <summary><inheritdoc cref="RailSidePad"/></summary>
+        public const int OrdersSidePad = RailSidePad;
+
+        /// <summary>One order button: a square, larger than the 26 px it was in the palette header
+        /// because the gutter has the width for it and a 36 px gutter would otherwise be mostly
+        /// padding.</summary>
+        public const int OrderButton = 34;
+
+        /// <summary>Between two order buttons.</summary>
+        public const int OrderGap = BuildTileGap;
+
+        /// <summary>
+        /// The strip's own padding above its first button.
+        ///
+        /// <para>Not <see cref="Pad"/>: the strip carries no label and no text, so twelve either
+        /// end would be a quarter of its height spent on air. And it is the top only — the last
+        /// button's own <see cref="OrderGap"/> is the bottom padding, because UI Toolkit has no
+        /// <c>:last-child</c> to cancel that gap with and a padding that double-counts it is how a
+        /// model and a stylesheet come to disagree by six pixels.</para>
+        /// </summary>
+        public const int OrdersPadTop = 6;
+
+        /// <summary>Rail to strip, the ordinary gap between two panels in a column.</summary>
+        public const int RailToOrders = Gap;
+
+        /// <summary>
+        /// How many orders the strip draws.
+        ///
+        /// <para>Read off <see cref="PaletteTools.Pinned"/> rather than written down, because the
+        /// whole point of the strip is that a fifth order is one row of that table: the ceiling
+        /// the palette header imposed — four buttons beside a switcher and a way out — is what
+        /// moving them here lifts.</para>
+        /// </summary>
+        public static int OrdersCount => PaletteTools.Pinned.Length;
+
+        /// <summary>The strip's height, for <see cref="OrdersCount"/> buttons — each of which
+        /// carries its own gap under it, including the last.</summary>
+        public static float OrdersHeight =>
+            Frame + OrdersPadTop + OrdersCount * (OrderButton + OrderGap);
+
+        /// <summary>The whole right-hand gutter under the rail: the gap and the strip.</summary>
+        public static float OrdersBlock => RailToOrders + OrdersHeight;
+
         // ------------------------------------------------------------------ build palette
 
         /*
@@ -569,7 +634,9 @@ namespace Odyssey.Hud
 
         public const int BuildBandPadX = 14;
 
-        /// <summary>A header action button — the four pinned tools and the way out.</summary>
+        /// <summary>The header's way out. It was this and the four pinned tools until they left
+        /// for the orders strip on 2026-09-17, and the close button kept the size rather than
+        /// being resized for the sake of it — it is the same 26 px box every window's X is.</summary>
         public const int BuildAction = 26;
 
         /// <summary>One button of the layout switcher.</summary>
@@ -850,6 +917,13 @@ namespace Odyssey.Hud
             boxes[HudRegion.DepthRail] =
                 new HudRect(width - Edge - RailWidth, Edge, RailWidth, railHeight);
 
+            // ---- the orders strip, in the same gutter directly under it. Its top is the rail's
+            // bottom rather than a figure of its own: the rail is the one region the world sizes,
+            // so anything below it in that column has to be placed from where it actually ended.
+            boxes[HudRegion.OrdersStrip] = new HudRect(
+                width - Edge - OrdersWidth, Edge + railHeight + RailToOrders,
+                OrdersWidth, OrdersHeight);
+
             // ---- clock, just inside the rail
             float clockX = width - Edge - RailWidth - RailToClock - ClockWidth;
             boxes[HudRegion.Clock] = new HudRect(clockX, Edge, ClockWidth, ClockHeight);
@@ -955,8 +1029,13 @@ namespace Odyssey.Hud
             // at to reach under the right-hand column, so a rail measured against the screen edge
             // runs behind it — which is how a thirty-two layer board at 720p put its deepest
             // layers under the Build button.
+            //
+            // And since 2026-09-17 the orders strip stands between the two, in the same gutter,
+            // so the rail gives that room up as well. The rail is the region that gives, here as
+            // everywhere: the strip is four fixed buttons and cannot be squeezed into fewer.
             float room = viewportHeight - Edge - RailChrome - RailCellGap
-                         - (BarBottom + HudCommands.BarHeight + Frame + Gap);
+                         - (BarBottom + HudCommands.BarHeight + Frame + Gap)
+                         - OrdersBlock;
             return Math.Max(MinRailPitch, Math.Min(ideal, room / layers));
         }
 
@@ -1107,6 +1186,57 @@ namespace Odyssey.Hud
         public static float PopoverBottom => BarBottom + HudCommands.BarHeight + BarFrame;
 
         /// <summary>
+        /// Where the armed banner sits: one ordinary panel gap above the command bar (owner,
+        /// 2026-09-17: <i>"lower that dialog closer to the toolbar at the bottom"</i>).
+        ///
+        /// <para>It was 92 px, which is 43 px of clear board above a 49 px bar — enough for the
+        /// banner to read as floating in the middle of nothing rather than as belonging to the row
+        /// of controls it is about. Derived from the bar rather than picked, so it follows the bar
+        /// if that ever moves, and one <see cref="Gap"/> rather than flush because the banner is
+        /// not docked on the bar the way a popover is: it is a thing over the board that has come
+        /// down to meet it.</para>
+        /// </summary>
+        public static float ArmedBottom => PopoverBottom + Gap;
+
+        /// <summary>The armed banner's padding, across. Its own, not <see cref="Pad"/>: the banner
+        /// is a pill over the board rather than a panel with rows in it.</summary>
+        public const int ArmedPadX = 14;
+
+        /// <summary>
+        /// The width the armed banner never drops below: the longest order it can name (owner,
+        /// 2026-09-17: <i>"make the dialog a fixed predictable width — as the longest order …
+        /// make it at least this size until further notice (and let it extend beyond that)"</i>).
+        ///
+        /// <para><b>A floor, not a width</b>, which is the owner's own "let it extend beyond
+        /// that": an armed build reads "Building wall of wood" and is wider than any order. What
+        /// the floor buys is that the four orders — the things a player picks up and puts down
+        /// over and over — all draw the same box, so the banner stops resizing under the eye every
+        /// time the mode changes.</para>
+        ///
+        /// <para><b>Computed from the names rather than written down.</b> The owner's guess was
+        /// that "Chopping" would be the longest; it is "Deconstruct", which is the sort of thing
+        /// that is only true until somebody renames something in <c>icon-keys.csv</c>. Walking
+        /// <see cref="PaletteTools.Pinned"/> through <see cref="PaletteTools.OrderWord"/> means a
+        /// rename moves this number with it. The estimate is <see cref="HudCommands.UiAdvance"/>,
+        /// the same deliberately generous advance the command bar's overflow is modelled with —
+        /// generous is the safe direction for a minimum.</para>
+        /// </summary>
+        public static float ArmedWidth
+        {
+            get
+            {
+                float widest = 0f;
+                float size = HudType.Of(HudTextRole.Name).Size;
+                foreach (string key in PaletteTools.Pinned)
+                {
+                    float width = PaletteTools.OrderWord(key).Length * size * HudCommands.UiAdvance;
+                    if (width > widest) widest = width;
+                }
+                return widest + 2 * ArmedPadX + 2 * HudTheme.ArmedBorderWidth;
+            }
+        }
+
+        /// <summary>
         /// Where a popover's left edge goes: under the button that raised it, pushed back on to
         /// the screen if that would hang it off an edge.
         ///
@@ -1161,8 +1291,32 @@ namespace Odyssey.Hud
             return area / (width * height);
         }
 
-        /// <summary>The ceiling the acceptance criteria put on <see cref="Coverage"/> with nothing
-        /// selected. The HUD this replaces measured about 0.31.</summary>
-        public const float CoverageCeiling = 0.18f;
+        /// <summary>
+        /// The ceiling the acceptance criteria put on <see cref="Coverage"/> with nothing
+        /// selected. The HUD this replaces measured about 0.31.
+        ///
+        /// <para><b>Nineteen per cent since 2026-09-17, and the one per cent is the orders strip.</b>
+        /// It was eighteen, which is the figure the interface specification names. The strip is
+        /// four always-on buttons in the right-hand gutter — the owner's answer to giving an order
+        /// costing a trip through the Build palette first — and it is <b>0.80%</b> of a 1280 x 720
+        /// canvas, which took the resting HUD there from 17.75% to <b>18.55%</b>.</para>
+        ///
+        /// <para><b>Why the ceiling moved rather than the strip.</b> The precedent in this file is
+        /// the opposite one: two rows of colonist cards were 8.1% at 720p and
+        /// <see cref="StripHeightShare"/> clamped the region rather than spending the budget. That
+        /// worked because the strip had a variable height to clamp. This one has four buttons, and
+        /// even at the 26 px squares it wore in the palette header it measures 0.65% — so the
+        /// choice here is the control or the number, not a cheaper version of the control. The
+        /// smallest canvas the game draws is the only one affected: 1280 x 720 is what 150 per
+        /// cent interface scale gives on a 1080p monitor, and at the reference canvas the resting
+        /// HUD is well under either figure.</para>
+        ///
+        /// <para>Per region at 1280 x 720, with the strip clamped to the one row it gets there:
+        /// command bar 6.81%, colonist strip 3.81%, stores 2.59%, clock 2.57%, depth rail 1.97%,
+        /// orders 0.80%. <b>The bar is the largest single spend</b> and it is a full-width docked
+        /// bar by the owner's instruction, where the specification drew a centred pill; that is
+        /// where to look first if this ever has to come back down.</para>
+        /// </summary>
+        public const float CoverageCeiling = 0.19f;
     }
 }
