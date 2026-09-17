@@ -77,9 +77,16 @@ namespace Odyssey.Presentation.Ui
             // none, and Window() takes a null for exactly this.
             _startScreen = Modal("start", Registry.Label("ui.start.screen"), null, "startscreen");
 
+            // One body of a fixed height, whatever screen is inside it (owner, 2026-09-17). Every
+            // screen's content goes in here rather than straight into the panel, so the panel's
+            // height is a constant rather than a consequence of what is showing.
+            var body = new VisualElement();
+            body.AddToClassList("startscreen__body");
+            _startScreen.Panel.Add(body);
+
             _startRows = new VisualElement();
             _startRows.AddToClassList("startscreen__rows");
-            _startScreen.Panel.Add(_startRows);
+            body.Add(_startRows);
 
             foreach (SessionCommand command in SessionCommands.For(SessionContext.MainScreen))
                 _startRows.Add(StartRow(command));
@@ -91,7 +98,7 @@ namespace Odyssey.Presentation.Ui
             _startList.AddToClassList("startscreen__list");
             _startList.AddToClassList("build__scroll");
             _startList.style.display = DisplayStyle.None;
-            _startScreen.Panel.Add(_startList);
+            body.Add(_startList);
 
             _startBack = new VisualElement();
             _startBack.AddToClassList("settings__row");
@@ -103,7 +110,7 @@ namespace Odyssey.Presentation.Ui
                 ussClass: "settings__label"));
             _startBack.RegisterCallback<ClickEvent>(_ => _menu.Back());
             _startBack.style.display = DisplayStyle.None;
-            _startScreen.Panel.Add(_startBack);
+            body.Add(_startBack);
 
             _menu.ShowingChanged += RefreshStartScreen;
             _menu.ScreenChanged += _ => RefreshStartScreen();
@@ -111,8 +118,10 @@ namespace Odyssey.Presentation.Ui
             _menu.NewGameRequested += OnNewGame;
             _menu.SavesRequested += OnListSaves;
             _menu.SettingsRequested += () => _boot!.Preferences.SetOpen(true);
+            _menu.SettingsClosed += () => _boot!.Preferences.SetOpen(false);
             _menu.QuitRequested += Quit;
             _menu.LoadRequested += OnLoadSave;
+            _boot.Preferences.Changed += OnPreferencesChanged;
         }
 
         /// <summary>One row of the root screen, in the idiom every list row in this HUD uses.</summary>
@@ -156,8 +165,22 @@ namespace Odyssey.Presentation.Ui
 
         void RefreshStartScreen()
         {
-            _startScreen.Show(_menu.Showing);
-            if (!_menu.Showing) return;
+            if (!_menu.Showing)
+            {
+                _startScreen.Show(false);
+                return;
+            }
+
+            // The settings screen is the settings panel standing where this one was, not on top of
+            // it (owner, 2026-09-17). The scrim stays, because the state is still modal and there
+            // is still no world behind any of it.
+            if (_menu.Screen == MenuScreen.Settings)
+            {
+                _startScreen.ShowScrimOnly();
+                return;
+            }
+
+            _startScreen.Show(true);
 
             bool root = _menu.Screen == MenuScreen.Root;
             _startRows.style.display = root ? DisplayStyle.Flex : DisplayStyle.None;
@@ -166,6 +189,20 @@ namespace Odyssey.Presentation.Ui
 
             if (!root) FillSaveList();
             RefreshStartArming();
+        }
+
+        /// <summary>
+        /// The settings panel was closed — by its X, by Escape, or by anything else — so the start
+        /// screen comes back.
+        ///
+        /// <para>Driven by the panel rather than by the row that opened it, because the ways out of
+        /// that panel already exist and this must be all of them. <see cref="MenuDirector.Back"/>
+        /// raises <c>SettingsClosed</c>, which asks the panel to close again; that is a no-op, since
+        /// <c>SetOpen</c> returns early when nothing changes.</para>
+        /// </summary>
+        void OnPreferencesChanged()
+        {
+            if (_menu.Screen == MenuScreen.Settings && !_boot!.Preferences.Open) _menu.Back();
         }
 
         void RefreshStartArming()
@@ -201,9 +238,12 @@ namespace Odyssey.Presentation.Ui
                 row.AddToClassList("save");
                 row.Add(HudText.Make(save.Colony, HudTextRole.Row, ussClass: "save__name"));
 
-                // A figure, so mono, like every other figure on this screen.
+                // Day, board and when it was written — the line that tells two saves of the same
+                // colony apart, which is what a folder of them mostly contains. Asked for by the
+                // owner after playing it (2026-09-17). A figure, so mono, like every other figure
+                // on this screen.
                 row.Add(HudText.Make(
-                    save.Readable ? $"Day {save.Day} · {save.Map}" : save.Problem,
+                    save.Readable ? $"Day {save.Day} · {save.Map} · {save.When}" : save.Problem,
                     HudTextRole.Meta, numeric: save.Readable, "save__meta"));
 
                 if (save.Readable)
@@ -240,9 +280,11 @@ namespace Odyssey.Presentation.Ui
                 _savePathById[entry.Path] = entry.Path;
                 rows.Add(entry.IsReadable
                     ? new SaveRow(entry.Path, SaveFiles.TitleOf(entry), entry.Header!.Recipe.Day,
-                        entry.Header.Recipe.Map.ToString())
+                        entry.Header.Recipe.Map.ToString(), problem: string.Empty,
+                        when: SaveFiles.WhenOf(entry))
                     : new SaveRow(entry.Path, SaveFiles.TitleOf(entry), 0, string.Empty,
-                        entry.Problem ?? Registry.Label("ui.start.unreadable")));
+                        entry.Problem ?? Registry.Label("ui.start.unreadable"),
+                        when: SaveFiles.WhenOf(entry)));
             }
 
             _menu.ShowSaves(rows);

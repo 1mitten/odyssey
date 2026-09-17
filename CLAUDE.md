@@ -221,6 +221,21 @@ rows beside it would have been two answers to one question. `HudDirectors` no lo
 settings and hotkey directors, it **takes** them — they are preferences about the machine, not facts
 about a colony, and the start screen exists precisely when no colony does.
 
+**The owner played it on 2026-09-17 and four things came back, all now in.** (1) A worktree has no
+art until `Assets/Synty/` is **junctioned** — gitignored, so a fresh worktree draws everything as
+primitives; the procedure is in `docs/lessons.md` and **the junction must be removed with `rmdir`
+before the worktree is, or a recursive delete follows it and empties the real packs.** (2) **The
+view is in the save now** — camera focus, yaw, pitch and distance, the slice layer, the selected
+colonist and the game speed, as a `"view"` section that is `ISaveable` and deliberately **not**
+`IStateHashable`. The rule that nothing in presentation reaches the save was aimed at determinism,
+and determinism is the hash's business; where the camera points cannot affect a tick. `SliceCameraRig`
+gained `RestorePose`, because yaw and distance are lerped toward *private* targets and assigning the
+public fields alone holds for one frame and then swings back. (3) **Settings is a screen of the start
+menu**, not a panel over it — both are centred, so one landed on the other. (4) **The panel is a
+fixed box**, 420 × 384, because a centred panel that resizes moves every row under the pointer; the
+load list's ceiling is derived from that box rather than written down beside it, and a save row now
+carries the date and time, since a folder is mostly repeated attempts at the same colony.
+
 **Save format is 3.** The recipe gained `Barren` and `Wooded`, because U38's round-trip test found
 that `MapType` says "Natural" for three genuinely different boards and a header could not rebuild
 the one it was written on. **The state hash could not have caught it** — the load overwrites every

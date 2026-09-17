@@ -17,6 +17,19 @@ namespace Odyssey.Hud
     {
         Root,
         Load,
+
+        /// <summary>
+        /// The settings panel, standing in the start screen's place rather than on top of it.
+        ///
+        /// <para><b>Added after the owner played it</b> (2026-09-17): *"when I clicked on settings
+        /// it appeared below the menu — it would [be] cleaner if main menu disappeared and settings
+        /// appeared but could navigate back to main menu"*. Both panels are centred, so one landed
+        /// over the other and the pair read as a stack of two things rather than as one screen
+        /// showing what you asked for. It is a screen of this menu now, and
+        /// <see cref="MenuDirector.Back"/> is the way out of it, the same way out the load screen
+        /// already had.</para>
+        /// </summary>
+        Settings,
     }
 
     /// <summary>
@@ -52,13 +65,30 @@ namespace Odyssey.Hud
         /// <summary>Why this file cannot be opened, or empty when it can.</summary>
         public readonly string Problem;
 
-        public SaveRow(string id, string colony, int day, string map, string problem = "")
+        /// <summary>
+        /// When the file was written, already formatted by whoever could see the disk.
+        ///
+        /// <para><b>A string rather than a <c>DateTime</c>, deliberately.</b> Formatting a date is a
+        /// question about the player's machine — their locale, their clock, their idea of what
+        /// "yesterday" means — and this assembly is compiled without any of that in mind. The
+        /// presenter that read the file's timestamp is the one that knows; here it is a few words
+        /// to draw, like the colony's name beside it.</para>
+        ///
+        /// <para>Asked for by the owner after playing it (2026-09-17): a list of colonies all
+        /// called the same thing, on days that read alike, is a list you cannot choose from. The
+        /// day says how far the colony got; this says which attempt it was.</para>
+        /// </summary>
+        public readonly string When;
+
+        public SaveRow(string id, string colony, int day, string map, string problem = "",
+            string when = "")
         {
             Id = id ?? string.Empty;
             Colony = colony ?? string.Empty;
             Day = day;
             Map = map ?? string.Empty;
             Problem = problem ?? string.Empty;
+            When = when ?? string.Empty;
         }
 
         /// <summary>Whether this row can be chosen.</summary>
@@ -154,6 +184,12 @@ namespace Odyssey.Hud
         /// panel as in game, unchanged, which is the point of reusing it.</summary>
         public event Action? SettingsRequested;
 
+        /// <summary>
+        /// The settings screen was left for the root. The presenter closes the panel; this director
+        /// only ever says which screen is showing.
+        /// </summary>
+        public event Action? SettingsClosed;
+
         /// <summary>Raised when the player has asked twice to leave. Not performed here, for the
         /// reason <see cref="SettingsDirector.ExitRequested"/> is not: quitting is the engine's to
         /// do, and "the screen asked the game to leave" is a sentence the fast tier can assert
@@ -203,14 +239,22 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
-        /// Back out of the load screen to the root. The one navigation this director performs by
-        /// itself, because it is the one that needs nothing from outside. False on the root screen,
-        /// which is where a presenter learns that Escape has nothing left to unwind here.
+        /// Back out of the load or settings screen to the root. The one navigation this director
+        /// performs by itself, because it is the one that needs nothing from outside. False on the
+        /// root screen, which is where a presenter learns that Escape has nothing left to unwind
+        /// here.
+        ///
+        /// <para>Leaving the settings screen also raises <see cref="SettingsClosed"/>, because the
+        /// panel it stands in for is somebody else's to close: this director owns which screen is
+        /// showing and knows nothing about the panel itself.</para>
         /// </summary>
         public bool Back()
         {
             if (Screen == MenuScreen.Root) return false;
+
+            bool leavingSettings = Screen == MenuScreen.Settings;
             GoTo(MenuScreen.Root);
+            if (leavingSettings) SettingsClosed?.Invoke();
             return true;
         }
 
@@ -266,8 +310,15 @@ namespace Odyssey.Hud
         {
             if (key == SessionCommands.NewGameKey) NewGameRequested?.Invoke();
             else if (key == SessionCommands.LoadKey) SavesRequested?.Invoke();
-            else if (key == SessionCommands.OptionsKey) SettingsRequested?.Invoke();
             else if (key == SessionCommands.QuitKey) QuitRequested?.Invoke();
+            else if (key == SessionCommands.OptionsKey)
+            {
+                // The screen moves first, then the panel is asked for. The other order would show
+                // the settings panel for one frame with the menu still under it, which is the
+                // stacked look this screen exists to avoid.
+                GoTo(MenuScreen.Settings);
+                SettingsRequested?.Invoke();
+            }
         }
 
         void GoTo(MenuScreen screen)

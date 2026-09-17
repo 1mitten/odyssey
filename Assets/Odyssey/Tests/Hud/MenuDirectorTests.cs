@@ -102,6 +102,82 @@ namespace Odyssey.Tests.Hud
             Assert.That(newGame + saves + quit, Is.Zero);
         }
 
+        /// <summary>
+        /// Settings takes the menu's place rather than appearing on top of it, and Back returns.
+        ///
+        /// <para>The owner played it and reported the two panels stacking: *"when I clicked on
+        /// settings - it appeared below the menu - it would [be] cleaner if main menu disappeared
+        /// and settings appeared but could navigate back to main menu"*. Both are centred, so one
+        /// landed over the other. Settings is a screen of this menu now.</para>
+        ///
+        /// <para><b>The order inside <c>Perform</c> matters and is asserted:</b> the screen has to
+        /// move <i>before</i> the panel is asked for, or there is a frame in which the settings
+        /// panel is up and the menu is still under it — which is the stacked look, arrived at a
+        /// different way.</para>
+        /// </summary>
+        [Test]
+        public void SettingsStandsInTheMenusPlaceAndBackReturnsToIt()
+        {
+            MenuDirector menu = Showing();
+            var order = new List<string>();
+            menu.ScreenChanged += screen => order.Add("screen:" + screen);
+            menu.SettingsRequested += () => order.Add("panel");
+            menu.SettingsClosed += () => order.Add("closed");
+
+            Assert.That(menu.Choose(SessionCommands.OptionsKey), Is.True);
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.Settings));
+            Assert.That(order, Is.EqualTo(new List<string> { "screen:Settings", "panel" }),
+                "the panel was asked for before the screen moved, so the menu is briefly under it");
+
+            Assert.That(menu.Back(), Is.True);
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.Root));
+            Assert.That(order[order.Count - 1], Is.EqualTo("closed"),
+                "leaving the settings screen did not ask for the panel to close");
+        }
+
+        /// <summary>
+        /// No root row can be pressed from the settings screen — the same rule the load screen
+        /// already has, and for the same reason: the rows are not on screen, so a press that
+        /// reached them would be a press at nothing.
+        /// </summary>
+        [Test]
+        public void NoRootRowIsPressableFromTheSettingsScreen()
+        {
+            MenuDirector menu = Showing();
+            menu.Choose(SessionCommands.OptionsKey);
+
+            int anything = 0;
+            menu.NewGameRequested += () => anything++;
+            menu.SavesRequested += () => anything++;
+            menu.QuitRequested += () => anything++;
+
+            Assert.That(menu.Choose(SessionCommands.NewGameKey), Is.False);
+            Assert.That(menu.Choose(SessionCommands.LoadKey), Is.False);
+            Assert.That(menu.Choose(SessionCommands.QuitKey), Is.False);
+            Assert.That(anything, Is.Zero);
+        }
+
+        /// <summary>
+        /// Leaving the <i>load</i> screen does not claim the settings panel was closed.
+        ///
+        /// <para>The negative control for <c>SettingsClosed</c>: a `Back()` that raised it from
+        /// every screen would ask the presenter to close a panel that was never open, which on the
+        /// start screen is harmless and on the day something else listens is not.</para>
+        /// </summary>
+        [Test]
+        public void BackingOutOfTheLoadScreenDoesNotSayTheSettingsPanelClosed()
+        {
+            MenuDirector menu = Showing();
+            int closed = 0;
+            menu.SettingsClosed += () => closed++;
+
+            menu.ShowSaves(new[] { new SaveRow("a", "Ashford", 4, "Natural") });
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.Load));
+            Assert.That(menu.Back(), Is.True);
+
+            Assert.That(closed, Is.Zero, "backing out of the load screen closed a settings panel");
+        }
+
         [Test]
         public void ARowTheMainScreenDoesNotDrawDoesNothing()
         {

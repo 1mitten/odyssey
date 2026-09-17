@@ -2411,3 +2411,41 @@ work itself.
   `SaveComponents` for some time. **A stale gap outlives its own fix and sends somebody to build a
   thing that already exists** — the line is struck through rather than deleted, so the correction is
   visible.
+- **The owner played the start screen, 2026-09-17, and four things came back.** Worth recording as a
+  set, because three of them were plainly right on sight and none of them was reachable by any tier.
+  **(1) The worktree had no art** — not a design fault at all: `Assets/Synty/` is gitignored, so a
+  worktree has none until it is junctioned, which `docs/lessons.md` already says and this session had
+  not done. **(2) The camera and the view were not saved.** **(3) The settings panel appeared under
+  the menu** rather than in its place. **(4) The panel resized between screens**, and the save rows
+  could not be told apart.
+- **The view is in the save now, and the rule that kept it out was being read too literally.**
+  `CLAUDE.md` says nothing in presentation is in a cell, a save or the hash, and that rule is
+  load-bearing — but **its purpose is determinism, and determinism is the hash's business, not the
+  save's**. Where the camera is pointing cannot affect a tick. So there is a `"view"` section
+  carrying the camera, the slice layer, the selection and the game speed, and what makes it safe is
+  stated rather than assumed: it is `ISaveable` and **not** `IStateHashable`, so it cannot move the
+  state hash, desync a load or appear in a determinism gate. Two properties that are not obvious:
+  reading and applying are separate phases, because the section is read while the world is still
+  being restored and the camera has not been pointed anywhere yet; and floats are written as exact
+  bits rather than rounded, because **a camera that drifts slightly on every save-and-load round
+  trip is a bug nobody notices for weeks and then cannot reproduce.**
+- **Two centred panels stack, which is obvious once somebody sees it and was invisible in every
+  test.** The settings panel and the start screen are both centred, so Options put one over the
+  other and the pair read as a pile rather than as one screen showing what was asked for. Settings
+  became a third *screen* of the menu — `MenuScreen.Settings`, with `Back()` as the way out, the
+  same way out the load screen already had — and the scrim stays while it shows, because the state
+  is still modal. **Closing the panel by any means returns to the menu**, driven by the panel rather
+  than by the row that opened it: the ways out of that panel already existed, and this had to be all
+  of them rather than the one the new code knew about.
+- **A fixed panel, because a centred one that resizes moves every row under the pointer.** The
+  screen sized itself to its content, so the menu and the load list were different boxes, and
+  navigating between them shifted everything. `StartPanelHeight` is a constant now and the load
+  list's ceiling is *derived* from the one body rather than written down beside it, so the two
+  cannot disagree. The cost is air under the root screen's four rows, which is the cheaper of the
+  two mistakes: the alternative is a list that scrolls at four.
+- **A folder of saves is mostly repeated attempts at the same colony**, so "Ashford, Day 12" does not
+  tell two rows apart — the owner asked for the date and time. It is formatted in `SaveFiles`, in
+  the player's local time, and reaches `MenuDirector` as a **string**: formatting a date is a
+  question about the player's machine, and the Hud assembly is compiled without any of that in
+  mind. The panel widened 320 → 420 to carry the longer line rather than cutting a word, since the
+  acceptance criteria allow an ellipsis on a colonist's name and on nothing else.

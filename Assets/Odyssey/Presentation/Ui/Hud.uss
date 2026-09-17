@@ -1161,11 +1161,24 @@
    It introduces no control of its own. A row here is a .settings__row, which is the same row the
    stores panel, the Menu popover and the settings panel are built from. */
 
+/* A fixed box, and fixed is the point (owner, 2026-09-17: "keep it fixed width and height because
+   it becomes hard to read between loading and saving screens"). It used to size itself to its
+   content, so the root screen and the load screen gave two different boxes — and since the panel is
+   centred, moving between them moved every row under the pointer. A menu whose items walk away as
+   you navigate is a menu you have to re-find each time. */
 .startscreen {
     top: 50%;
     left: 50%;
     translate: -50% -50%;
-    width: 320px;
+    width: 420px;
+    height: 384px;
+}
+
+/* Everything under the title. One height for every screen this panel shows, which is what makes
+   the panel's own height a constant rather than a consequence. */
+.startscreen__body {
+    height: 318px;
+    margin-top: 14px;
 }
 
 /* The game's own name, at the largest word-face step the type scale has. An explicit box with
@@ -1178,19 +1191,21 @@
     white-space: nowrap;
 }
 
-.startscreen__rows { margin-top: 14px; }
+/* Top-aligned in a body that is taller than they are. The air below is deliberate: the alternative
+   to a fixed body is a list that scrolls at four rows. */
+.startscreen__rows { flex-shrink: 0; }
 
 /* The saves, when the load screen is showing. A max height and a scroll, which is the first
    ceiling any region in this interface has carried — and it is here first because this is the
    first region whose length is set by the player rather than by the game. The scroller itself is
    restyled by the .build__scroll rules above; this list wears the same class so there is one
-   scrollbar in the project rather than two. */
+   scrollbar in the project rather than two. Six rows, which is what the fixed body leaves once the
+   row that goes back has taken its share. */
 .startscreen__list {
     flex-grow: 0;
     flex-shrink: 0;
     min-height: 0;
-    max-height: 360px;
-    margin-top: 14px;
+    max-height: 284px;
 }
 
 .save {

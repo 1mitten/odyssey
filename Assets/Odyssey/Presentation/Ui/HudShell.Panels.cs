@@ -42,6 +42,21 @@ namespace Odyssey.Presentation.Ui
             Scrim.style.display = display;
             Panel.style.display = display;
         }
+
+        /// <summary>
+        /// Take the panel away and leave the scrim, for when another window stands in its place.
+        ///
+        /// <para>The one case where the two halves legitimately differ, and it is not the failure
+        /// this class exists to prevent: that one is a scrim with <i>nothing</i> over it, which
+        /// eats every click and shows no reason why. Here the state is still modal and something is
+        /// still on screen — the start screen's Options row puts the settings panel where the menu
+        /// was, rather than on top of it (owner, 2026-09-17).</para>
+        /// </summary>
+        public void ShowScrimOnly()
+        {
+            Scrim.style.display = DisplayStyle.Flex;
+            Panel.style.display = DisplayStyle.None;
+        }
     }
 
 

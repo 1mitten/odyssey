@@ -36,6 +36,72 @@ namespace Odyssey.Tests.Hud
         /// tallest that region ever gets.</summary>
         const int AllStoreRows = 6;
 
+        /// <summary>
+        /// The start screen stands entirely inside the canvas, at every resolution and every
+        /// interface scale.
+        ///
+        /// <para>The question the overlap test asks of the playing HUD, asked the only way it can
+        /// be asked of a screen with nothing beside it. <b>The smallest canvas this game draws is
+        /// 1280 x 720</b>, which is what 150 per cent interface scale produces on a 1080p monitor —
+        /// so it is checked at a literal 1280 x 720 <i>and</i> at every scale's reference canvas,
+        /// because those are two different ways of arriving at the same small box and only one of
+        /// them is obvious.</para>
+        ///
+        /// <para>A modal that runs off the top of a small canvas hides its own first row, and the
+        /// row a start screen hides first is New game.</para>
+        /// </summary>
+        [Test]
+        public void TheStartScreenFitsEveryCanvasThisGameDraws()
+        {
+            foreach ((int width, int height) in Resolutions)
+                Assert.That(HudLayout.StartScreenFits(width, height), Is.True,
+                    $"the start screen does not fit {width}x{height}");
+
+            foreach (int percent in SettingsDirector.UiScales)
+            {
+                (int width, int height) = HudLayout.ReferenceFor(percent);
+                Assert.That(HudLayout.StartScreenFits(width, height), Is.True,
+                    $"the start screen does not fit the {width}x{height} canvas that {percent}% " +
+                    "interface scale produces");
+            }
+        }
+
+        /// <summary>
+        /// The panel is the same box whatever screen is showing (owner, 2026-09-17: *"keep it fixed
+        /// width and height because it becomes hard to read between loading and saving screens"*).
+        ///
+        /// <para>It is centred, so a panel that changed height would move every row under the
+        /// pointer on the way from the root screen to the load screen. The box is a constant now,
+        /// and the body inside it is what the screens share — so this test is really asking whether
+        /// the body can still hold each screen without the panel having to grow.</para>
+        /// </summary>
+        [Test]
+        public void EveryStartScreenFitsTheOneFixedBody()
+        {
+            int rootRows = 0;
+            foreach (SessionCommand _ in SessionCommands.For(SessionContext.MainScreen)) rootRows++;
+
+            Assert.That(HudLayout.StartRowsHeight(rootRows),
+                Is.LessThanOrEqualTo(HudLayout.StartBody),
+                "the root screen's own rows do not fit the fixed body");
+
+            // The load screen is the list at its ceiling plus the row that goes back, which is how
+            // StartBody was derived — so this is the arithmetic closing on itself, and it fails the
+            // day somebody changes one of the two without the other.
+            float load = HudLayout.StartListMax + HudLayout.StartRowGap + 1 + HudLayout.StartRow;
+            Assert.That(load, Is.EqualTo((float)HudLayout.StartBody),
+                "the load screen's list and its back row do not add up to the body they sit in");
+
+            Assert.That(HudLayout.StartSavesBeforeScrolling, Is.GreaterThanOrEqualTo(5),
+                "a load list that scrolls at four rows is a list, not a screen");
+            Assert.That(HudLayout.StartListHeight(HudLayout.StartSavesBeforeScrolling),
+                Is.LessThanOrEqualTo(HudLayout.StartListMax),
+                "the number of saves said to fit does not fit");
+            Assert.That(HudLayout.StartListHeight(HudLayout.StartSavesBeforeScrolling + 1),
+                Is.GreaterThan(HudLayout.StartListMax),
+                "one more save than the ceiling allows still fits, so the ceiling is not the ceiling");
+        }
+
         [Test]
         public void NoTwoPanelsOverlapAtAnyOfTheThreeResolutions()
         {

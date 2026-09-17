@@ -1,13 +1,22 @@
 # 17 — The start flow: a main screen, and a session you can put down
 
-**Status: built, all three tiers green, and nobody has pressed Play on it.** Written 2026-09-17 on
+**Status: built, played once, and revised on what that found.** Written 2026-09-17 on
 `claude/start-flow` before the code, as `15-building.md` was, and amended in the same branch where
-the building of it proved the design wrong. Those amendments are marked **Corrected** in place
-rather than silently applied, because the wrong version is the more useful record.
+first the building and then the **playing** of it proved the design wrong. Those amendments are
+marked **Corrected** in place rather than silently applied, because the wrong version is the more
+useful record.
 
-**What no tier can say** is in §10: whether a start screen at 320 px reads as a start screen,
-whether a 19 px title is a title, whether landing on a menu instead of a colony is what the owner
-wants every time they press Play. This is **U38** of the `MS` milestone in `docs/plans/vertical-slice.md`, and
+**The owner played it on 2026-09-17 and four things came back**, all of them things no tier could
+have said and three of them plainly right on sight:
+
+| What they said | Where it went |
+|---|---|
+| the worktree had no art | not a design fault — the licensed packs are gitignored, so a worktree has none until it is junctioned (`docs/lessons.md`). Linked. |
+| *"it didn't save where the camera was and the exact state of where I was at"* | §5a, a view section in the save |
+| *"when I clicked on settings it appeared below the menu"* | §4, settings is a screen of this menu now |
+| *"keep it fixed width and height"* and *"add the date/time in a longer row"* | §4 |
+
+**What no tier can still say** is in §10. This is **U38** of the `MS` milestone in `docs/plans/vertical-slice.md`, and
 it absorbs the half of **U36** that never landed — the `Saves` folder on disk, which U36's own
 commit message left to "the caller (a menu)". This is that menu.
 
@@ -137,7 +146,34 @@ row is an icon, a label and an optional hotkey cap, which is what a `.menu__row`
 +==========================================================+
 ```
 
-**Two screens, not one.** The root screen above, and a **load screen** listing the saves folder —
+**Three screens, not one, and the panel is the same box on all of them.** Corrected after the owner
+played it on 2026-09-17; the first version had two screens and sized itself to its content.
+
+- *"keep it fixed width and height because it becomes hard to read between loading and saving
+  screens"* — the panel is centred, so a panel that changed height moved every row under the
+  pointer on the way from the menu to the load list. **A menu whose items walk away as you navigate
+  is a menu you have to re-find each time.** `HudLayout.StartPanelHeight` is a constant now and
+  `StartBody` is the one box every screen fills; the load list's ceiling is *derived* from it rather
+  than written down, so the two cannot disagree. The root screen's four rows sit at the top and
+  leave air below, which is the cheaper of the two mistakes — the alternative is a list that
+  scrolls at four.
+- *"when I clicked on settings - it appeared below the menu - it would [be] cleaner if main menu
+  disappeared and settings appeared but could navigate back to main menu"* — both panels are
+  centred, so one landed over the other and the pair read as a stack rather than as one screen
+  showing what was asked for. **Settings is a third screen of this menu**, `MenuScreen.Settings`,
+  and `Back()` is the way out of it — the same way out the load screen already had. The scrim
+  stays while it shows, because the state is still modal and there is still no world behind any of
+  it; `HudModal.ShowScrimOnly()` is the one sanctioned case where the two halves differ. Closing
+  the panel by *any* means returns to the menu, because the ways out of that panel already existed
+  and this has to be all of them.
+- *"add the date/time in a longer row"* — a folder is mostly repeated attempts at the same colony,
+  so "Ashford, Day 12" does not tell two rows apart. The meta line is now **day, board and when the
+  file was written**, and the panel widened from 320 to 420 to carry it without cutting a word.
+  The date is formatted in the player's local time in `SaveFiles`, and reaches `MenuDirector` as a
+  **string** — formatting a date is a question about the player's machine, and `Odyssey.Hud` is
+  compiled without any of that in mind.
+
+**The root screen** above, and a **load screen** listing the saves folder —
 one row per file, showing colony name, day and map, read from the header alone through
 `WorldSave.ReadHeaderOnly` with no body parsed. The load screen is reached from the root and backs
 out to it; that is the whole of the navigation, and it is the `MenuDirector`'s entire state.
@@ -172,6 +208,32 @@ and in the fast tier:
   or future-version file is **listed with its reason rather than hidden**. A save the build cannot
   open is a thing the player needs to be told about; silently omitting it is how a player concludes
   their colony is gone.
+
+## 5a. The view is saved too
+
+**Added after the owner played it** (2026-09-17): *"it didn't save where the camera was and the
+exact state of where I was at - which it should do."* They are right, and the omission was a
+consequence of a rule read too literally. `CLAUDE.md` says **nothing in presentation is in a cell, a
+save or the hash**, and that rule is load-bearing — but its purpose is determinism, and determinism
+is the *hash's* business, not the save's. Where the camera was pointing cannot affect a tick.
+
+So the save carries a **`"view"` section**, and the thing that makes it safe is stated rather than
+assumed: it is `ISaveable` and **not `IStateHashable`**, so it cannot move the state hash, cannot
+desync a load, and cannot appear in a determinism gate. It holds the camera's focus, yaw, pitch and
+distance; the slice layer; the selected colonist; and the game speed, paused included.
+
+**Three properties it has to have, none of which is obvious:**
+
+- **It lives in the Presentation assembly.** Sim cannot see a camera, and must not learn to.
+- **Reading and applying are two phases.** The section is read while the world is still being
+  restored, and the camera has not been pointed anywhere yet; applying it during `Load` would
+  fight the build that follows.
+- **Floats are written as exact bits, not rounded.** A camera that drifts a little on each
+  save-and-load round trip is a bug nobody notices for weeks and then cannot reproduce.
+
+**A save without the section is not an error.** `WorldSave` already skips a section a build does not
+recognise, so an older file simply loads without a view and keeps the generated start position —
+which is exactly what it did before this existed.
 
 **Loading is not a special path.** `WorldSave.Load`'s own contract is that the world is built from
 Defs and a seed first, exactly as a new game would be, and then has its state laid over the top.
@@ -269,10 +331,9 @@ ignores with its reason in the rig without a module catalogue); Load restores a 
 **Nobody has pressed Play on any of it.** Every claim below the line in §6 is a test result. These
 are not:
 
-- **Whether a 320 px column reads as a start screen**, or as a settings panel that has wandered
-  into the middle of an empty scene. It is the width the longest row needs and no more, which is
-  this interface's rule everywhere else and may be wrong for the one screen that has nothing beside
-  it to be economical against.
+- **Whether a 420 × 384 box reads as a start screen**, or as a settings panel that has wandered into
+  the middle of an empty scene. It is fixed now, at the owner's request, which means it is also the
+  size of the *emptiest* screen it shows — the root's four rows leave a good deal of air under them.
 - **Whether a 19 px title is a title.** The type scale is closed at six steps, so the game's name
   is set at the same size as a colonist's name in the inspect pane. A bigger one is a deliberate
   change to `HudType`, not a literal — but it is a change somebody may well want.

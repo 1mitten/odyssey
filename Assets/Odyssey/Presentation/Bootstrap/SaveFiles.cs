@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using Odyssey.Sim.Saving;
 using UnityEngine;
@@ -74,6 +75,26 @@ namespace Odyssey.Presentation.Bootstrap
             foreach (SaveEntry entry in SaveCatalogue.Read(folder)) taken.Add(entry.FileName);
 
             return Path.Combine(folder, SaveCatalogue.FileNameFor(recipe, taken));
+        }
+
+        /// <summary>
+        /// When a save was written, as a row in the load list should say it (owner, 2026-09-17).
+        ///
+        /// <para><b>In the player's own local time and their own short formats</b>, not the UTC the
+        /// catalogue records: the file's timestamp is a fact about the disk, and what the player
+        /// wants to know is which evening this was. Formatting is done here, in the assembly that is
+        /// allowed to know about a machine, and handed to <c>MenuDirector</c> as words — that is why
+        /// <c>SaveRow.When</c> is a string.</para>
+        ///
+        /// <para>Date and time rather than "3 hours ago": a relative time is only readable while it
+        /// is small, and the row it shares is already carrying the colony's own calendar in "Day
+        /// 12". Two clocks in one line want to be told apart, not blurred together.</para>
+        /// </summary>
+        public static string WhenOf(SaveEntry entry)
+        {
+            if (entry == null) throw new ArgumentNullException(nameof(entry));
+            DateTime local = entry.ModifiedUtc.ToLocalTime();
+            return local.ToString("d MMM HH:mm", CultureInfo.CurrentCulture);
         }
 
         /// <summary>

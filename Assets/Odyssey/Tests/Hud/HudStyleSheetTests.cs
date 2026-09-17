@@ -175,9 +175,10 @@ namespace Odyssey.Tests.Hud
 
             // B18, the start screen.
             (".startscreen", "width", () => HudLayout.StartWidth, "start screen width"),
+            (".startscreen", "height", () => HudLayout.StartPanelHeight, "start screen height"),
             (".startscreen__title", "height", () => HudLayout.StartTitle, "start screen title"),
-            (".startscreen__rows", "margin-top", () => HudLayout.StartTitleGap, "title to first row"),
-            (".startscreen__list", "margin-top", () => HudLayout.StartTitleGap, "title to first row"),
+            (".startscreen__body", "height", () => HudLayout.StartBody, "start screen body"),
+            (".startscreen__body", "margin-top", () => HudLayout.StartTitleGap, "title to body"),
             (".startscreen__list", "max-height", () => HudLayout.StartListMax, "the load list's ceiling"),
             (".save", "height", () => HudLayout.StartSaveRow, "a save row"),
             (".save", "margin-bottom", () => HudLayout.StartSaveGap, "save row gap"),

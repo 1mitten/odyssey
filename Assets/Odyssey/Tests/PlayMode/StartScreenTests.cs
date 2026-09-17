@@ -155,6 +155,48 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// The panel is the same box on every screen it shows (owner, 2026-09-17: *"keep it fixed
+        /// width and height because it becomes hard to read between loading and saving
+        /// screens"*).
+        ///
+        /// <para>Measured on the realised boxes rather than on the model, because the model already
+        /// says so by construction — <c>HudLayoutTests</c> proves the arithmetic, and this proves
+        /// the shell built what the arithmetic describes. That pair is the same division of labour
+        /// the rest of the HUD's geometry uses.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ThePanelIsTheSameBoxOnEveryScreen()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell shell, buildOnPlay: false);
+            try
+            {
+                yield return Settle();
+                var doc = boot.GetComponent<UIDocument>();
+
+                Rect atRoot = Screen(doc)!.worldBound;
+                Assert.That(atRoot.width, Is.GreaterThan(1f), "the panel has not been laid out yet");
+
+                shell.Menu.Choose(SessionCommands.LoadKey);
+                yield return Settle();
+                Assert.That(shell.Menu.Screen, Is.EqualTo(MenuScreen.Load));
+
+                Rect atLoad = Screen(doc)!.worldBound;
+                Assert.That(atLoad.width, Is.EqualTo(atRoot.width).Within(0.5f),
+                    "the panel changed width between the menu and the load list");
+                Assert.That(atLoad.height, Is.EqualTo(atRoot.height).Within(0.5f),
+                    "the panel changed height between the menu and the load list, so every row " +
+                    "under the pointer moved");
+                Assert.That(atLoad.x, Is.EqualTo(atRoot.x).Within(0.5f));
+                Assert.That(atLoad.y, Is.EqualTo(atRoot.y).Within(0.5f));
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// The settings panel works with no session, which is the reason the preferences were
         /// hoisted out of <c>HudDirectors</c> in the first place.
         ///
@@ -183,6 +225,23 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(boot.Preferences.Open, Is.True, "the panel's director was not opened");
                 Assert.That(Shown(doc.rootVisualElement.Q("settings")), Is.True,
                     "Options opened nothing, so the preferences are still session-shaped");
+
+                // The owner's report: the two panels stacked, because both are centred. Settings
+                // stands in the menu's place now — the menu goes, the scrim stays, because the
+                // state is still modal and there is still no world behind any of it.
+                Assert.That(Shown(Screen(doc)), Is.False,
+                    "the menu is still under the settings panel, which is the stack the owner saw");
+                Assert.That(Shown(Scrim(doc)), Is.True,
+                    "the scrim went with the menu, so the settings panel is no longer modal");
+
+                // And back, by the panel's own close — not by the row that opened it, because the
+                // ways out of that panel already existed and this has to be all of them.
+                boot.Preferences.SetOpen(false);
+                yield return Settle();
+
+                Assert.That(Shown(Screen(doc)), Is.True,
+                    "closing settings left no menu to come back to");
+                Assert.That(shell.Menu.Screen, Is.EqualTo(MenuScreen.Root));
             }
             finally
             {

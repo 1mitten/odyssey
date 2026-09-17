@@ -373,7 +373,13 @@ namespace Odyssey.Presentation.Ui
 
         void OnDestroy()
         {
-            if (_boot != null) _boot.SessionChanged -= OnSessionChanged;
+            if (_boot != null)
+            {
+                _boot.SessionChanged -= OnSessionChanged;
+                // The preferences outlive every session and this component, so a subscription left
+                // on them is a leak that survives the scene.
+                _boot.Preferences.Changed -= OnPreferencesChanged;
+            }
             Detach();
             if (_topRamp != null) DestroyImmediate(_topRamp);
             if (_bottomRamp != null) DestroyImmediate(_bottomRamp);
