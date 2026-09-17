@@ -32,7 +32,7 @@ What the colony stockpiles, hauls, cooks and trades. Salvage tiers replace the o
 | **Rations** | `ui.res.rations` | Sealed pre-collapse food. Never spoils, nobody enjoys it | sheet 02 (food), high | M1 |
 | **Meal** | `ui.res.meal` | Cooked at a galley. Mood as well as nutrition | sheet 02 (food), high | M1 |
 | **Protein paste** | `ui.res.protein` | Reclaimed nutrition. Edible; that is all | sheet 02 (food), med | M1 |
-| **Raw meat** | `ui.res.meat` | Butchered. Spoils without cold | sheet 07 (anatomy), high | M1 |
+| **Raw meat** | `ui.res.meat` | Butchered. Spoils without cold | sheet - (?), high | M1 |
 | **Produce** | `ui.res.produce` | Grown food, uncooked | sheet 02 (food), high | M1 |
 | **Wood** | `ui.res.wood` | Felled timber. The first thing the colony builds with <br>**Needs:** a short stack of logs, cut ends showing | no art | M3 |
 | **Stone** | `ui.res.stone` | Broken rock from a mined face. Heavy, and there is always more <br>**Needs:** a few angular grey rocks with fresh broken faces | no art | M3 |

@@ -277,6 +277,7 @@ namespace Odyssey.Hud
             { "ui.need.food", "Food" },
             { "ui.need.hygiene", "Cleanliness" },
             { "ui.need.joy", "Recreation" },
+            { "ui.need.mood", "Mood" },
             { "ui.need.outdoors", "Outdoors" },
             { "ui.need.rest", "Rest" },
             { "ui.need.space", "Space" },

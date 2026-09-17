@@ -268,7 +268,7 @@ namespace Odyssey.Presentation.Ui
         sealed class NeedView
         {
             public VisualElement Root = null!;
-            public VisualElement Swatch = null!;
+            public IconBadge Icon = null!;
             public Label Name = null!;
             public Label Value = null!;
             public VisualElement Fill = null!;

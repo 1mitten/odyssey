@@ -685,13 +685,6 @@
     height: 17px;
 }
 
-.need__swatch {
-    width: 7px;
-    height: 7px;
-    border-radius: 1px;
-    flex-shrink: 0;
-}
-
 .need__name {
     flex-grow: 1;
     margin-left: 8px;

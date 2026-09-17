@@ -2,7 +2,7 @@
 
 Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.
 
-32 entries, 15 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
+33 entries, 15 without art. Names are what the player sees; the key beside each is the stable identifier — cite it when proposing a change.
 
 ## Kinds of pawn
 
@@ -20,14 +20,15 @@ Who is on the map, what they need, how they feel and what they are doing right n
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
-| **Food** | `ui.need.food` | How hungry this colonist is | sheet 02 (food), high | M2 |
-| **Rest** | `ui.need.rest` | Sleep debt | sheet 08 (salvage gear), high | M2 |
+| **Food** | `ui.need.food` | How hungry this colonist is | sheet - (?),  shared with ui.res.meat | M2 |
+| **Rest** | `ui.need.rest` | Sleep debt | sheet - (?), high | M2 |
 | **Recreation** | `ui.need.joy` | Time spent on anything enjoyable <br>**Needs:** something unmistakably recreational: dice, cards, a games board | no art | M2 |
 | **Comfort** | `ui.need.comfort` | Quality of what they sit and sleep on <br>**Needs:** an armchair or cushion, read as comfort rather than as furniture | no art | M2 |
 | **Beauty** | `ui.need.beauty` | How the surroundings look to them | sheet 06 (action tiles), low | M2 |
 | **Space** | `ui.need.space` | Room to move. Cramped quarters grate <br>**Needs:** an abstract for room to move. Hardest of the needs to draw | no art | M2 |
 | **Outdoors** | `ui.need.outdoors` | Time under open sky. Some need it, some dread it | sheet 06 (action tiles), med | M2 |
 | **Cleanliness** | `ui.need.hygiene` | Filth underfoot and in the air | sheet 08 (salvage gear), med | M2 |
+| **Mood** | `ui.need.mood` | How good this colonist feels overall | sheet - (?), high | M2 |
 
 ## Mood states
 
