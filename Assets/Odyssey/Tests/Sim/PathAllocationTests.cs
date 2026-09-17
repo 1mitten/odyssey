@@ -229,7 +229,43 @@ namespace Odyssey.Tests.Sim
                 "boxed struct or list growth in a system's Tick.");
         }
 
-        static double BytesPerTick(int ticks, bool withColony)
+        /// <summary>
+        /// A tick that is answering a cell question allocates nothing either — measured, not
+        /// assumed, because the answered publish runs on <i>every</i> tick for as long as a tile
+        /// is selected, which is most of a session someone is inspecting in.
+        ///
+        /// <para><b>What would fail this.</b> The row is a blittable struct written into a pooled
+        /// array, so the publish adds no heap traffic. The day someone makes
+        /// <c>CellDetail</c> a class, or the contributor builds a string or a boxed enum per
+        /// publish, this is the test that says so — and at 60 ticks a second that is 60 objects a
+        /// second that the GC would then own for exactly one frame each.</para>
+        /// </summary>
+        [Test, Category("Long")]
+        public void AStandingQuestionCostsTheTickNothing()
+        {
+            const int Ticks = 5_000;
+            const double Budget = 16.0;
+
+            if (!AccountingIsFineGrained())
+                Assert.Ignore("this runtime reports heap growth too coarsely for a per-tick budget");
+
+            double plain = BytesPerTick(Ticks, withColony: true);
+            double asked = BytesPerTick(Ticks, withColony: true, standingQuestion: true);
+
+            TestContext.WriteLine(
+                $"colony:            {plain:F1} bytes per tick\n" +
+                $"colony, asked:     {asked:F1} bytes per tick\n" +
+                $"the standing question adds {asked - plain:F1}");
+
+            Assert.That(plain, Is.GreaterThanOrEqualTo(0), "a collection ran in the plain window");
+            Assert.That(asked, Is.GreaterThanOrEqualTo(0), "a collection ran in the asked window");
+            Assert.That(asked, Is.LessThan(Budget),
+                "answering a cell question started allocating. The publish phase is allocation-free " +
+                "in steady state; look for a per-publish string, box or list growth in " +
+                "CellDetailContributor.");
+        }
+
+        static double BytesPerTick(int ticks, bool withColony, bool standingQuestion = false)
         {
             var size = new GridSize(32, 32, 3);
             var grid = new CellGrid(size);
@@ -255,6 +291,14 @@ namespace Odyssey.Tests.Sim
                     .Build();
 
                 for (int p = 0; p < 5; p++) pawns.Pawns.Spawn(size.Index(4 + p, 4, 1));
+
+                if (standingQuestion)
+                {
+                    // Submitted before the warm-up, so the intent drains on the first warm-up tick
+                    // and the question stands for the whole measured window. The row is asserted
+                    // below so the measurement cannot silently measure a question nobody asked.
+                    world.Intents.Submit(new Intent(IntentKind.QueryCell, new CellRef(4, 4, 1)));
+                }
             }
             else
             {
@@ -262,6 +306,10 @@ namespace Odyssey.Tests.Sim
             }
 
             world.Tick(200);
+
+            if (standingQuestion)
+                Assert.That(world.Views.Current.CellDetailCount, Is.EqualTo(1),
+                    "the fixture is wrong: the question never stood, so the window measured nothing");
 
             GC.Collect();
             GC.WaitForPendingFinalizers();

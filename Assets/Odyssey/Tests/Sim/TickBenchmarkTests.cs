@@ -70,16 +70,43 @@ namespace Odyssey.Tests.Sim
         [Test, Explicit, Category("Benchmark")]
         public void TheSameWorldAtTheD1ReplanRate() => Measure("D1 replan rate", replanPressure: true);
 
-        void Measure(string label, bool replanPressure)
+        /// <summary>
+        /// The colony at rest with a cell question standing — the inspect pane's steady state
+        /// while a tile is selected, which on the scale target is a 2.5-million-cell world
+        /// answering with one O(1) row. This arm exists so that claim is a measurement: the
+        /// snapshot phase it reports is the same publish a click spends on
+        /// <c>RepublishViews</c>, so it prices both the per-tick answer and the per-click
+        /// republish at once.
+        /// </summary>
+        [Test, Explicit, Category("Benchmark")]
+        public void TheColonyAnsweringACellQuestion() =>
+            Measure("colony answering a cell question", replanPressure: false, standingQuestion: true);
+
+        void Measure(string label, bool replanPressure, bool standingQuestion = false)
         {
             var setup = Stopwatch.StartNew();
             Colony colony = BuildColony(seed: 12345u, replanPressure);
             setup.Stop();
 
+            // A question submitted before the warm-up drains on the warm-up's first tick and
+            // then stands for every tick of the measured window — answered sixty times a second,
+            // the way it is while a player holds a tile selected.
+            if (standingQuestion)
+            {
+                colony.World.Intents.Submit(new Intent(IntentKind.QueryCell, new CellRef(10, 10, 2)));
+                Assert.That(colony.World.Intents.PendingCount, Is.EqualTo(1),
+                    "the fixture is wrong: the question never queued");
+            }
+
             // Warm up first: the JIT compiles the think tree, the job drivers and the pathfinder
             // on their first pass, and the A-star scratch arrays are allocated once. Measuring
             // that would be measuring startup.
             colony.World.Tick(WarmUp);
+
+            if (standingQuestion)
+                Assert.That(colony.World.Views.Current.CellDetailCount, Is.EqualTo(1),
+                    "the fixture is wrong: the question was never answered, so the window " +
+                    "measured an ordinary tick");
 
             var trace = new PhaseTrace(Ticks);
             colony.World.PhaseSink = trace;
@@ -107,6 +134,9 @@ namespace Odyssey.Tests.Sim
 
             var report = new StringBuilder();
             report.AppendLine($"--- {label}: {SizeX} x {SizeZ} x {SizeY}, {colony.Spawned} pawns, {Ticks} ticks ---");
+            if (standingQuestion)
+                report.AppendLine("a cell question stood for every tick; the Snapshot line below is " +
+                                  "the answered publish, and is also what one click's RepublishViews costs");
             report.AppendLine($"setup {setup.ElapsedMilliseconds} ms (generate, nav rebuild, spawn); " +
                               $"warm-up {WarmUp} ticks discarded");
             report.AppendLine($"wall clock {wall.Elapsed.TotalMilliseconds:F1} ms for {Ticks} ticks " +

@@ -376,6 +376,74 @@ namespace Odyssey.Sim.Contracts
             WorkTotal = workTotal;
         }
     }
+
+    /// <summary>
+    /// The answer to "what is this cell": one row, published for the one cell the interface has
+    /// asked about and for no other.
+    ///
+    /// <para><b>Selection-scoped, like <see cref="PawnAspect"/> and for the same reason.</b> The
+    /// per-cell channel the snapshot already carries is one byte per cell of the active layer,
+    /// which was published deliberately minimal. A readout is a <i>question</i> the player asks of
+    /// one cell at a time, so a row for the asked cell costs nothing while nothing is selected,
+    /// and — unlike a layer-shaped channel — it answers for a cell on any layer, including the
+    /// outcrop above the slice that a click can already reach (the lesson <see cref="OrderView"/>
+    /// was widened for).</para>
+    ///
+    /// <para><b>Real values, not quantised</b>, by <see cref="SiteView"/>'s own argument: the
+    /// player clicks a cell and expects to be told what it is made of and what crossing it costs,
+    /// and "a third speed" cannot be recovered from a category byte. The movement cost is in
+    /// thousandths of a clear crossing — 1000 is firm ground, 1400 bog, 3000 wading — because that
+    /// is the ratio a player reads; the simulation's own per-cell addends stay in the simulation,
+    /// which is where the arithmetic is done.</para>
+    ///
+    /// <para><b>Not saved and not hashed</b>, exactly as <see cref="PawnAspect"/> is not. The row
+    /// is a report derived from state the grid already owns; hashing the report would make a
+    /// question part of the determinism contract.</para>
+    /// </summary>
+    public readonly struct CellDetail
+    {
+        /// <summary>The cell asked about, as a whole-world index. <c>GridSize.FromIndex</c> unpacks it.</summary>
+        public readonly int CellIndex;
+
+        /// <summary>What the cell is made of, as a <see cref="TerrainHandle"/> value.</summary>
+        public readonly byte Terrain;
+
+        /// <summary>What stands in it, as an <see cref="EdificeHandle"/> value. 0 = nothing.</summary>
+        public readonly byte Edifice;
+
+        /// <summary>The material of the slab at its lower boundary, as a <c>StuffHandle</c> value. 0 = bare.</summary>
+        public readonly byte FloorStuff;
+
+        /// <summary>Cached structural support, 0 to 4, as the support solver computes it.</summary>
+        public readonly byte Support;
+
+        /// <summary>
+        /// The cost of crossing this cell, in thousandths of a clear crossing. 1000 is firm
+        /// ground, 1400 is bog, 3000 is wading. Zero means it cannot be crossed at all: impassable
+        /// water, or a cell with nothing to stand on.
+        /// </summary>
+        public readonly ushort MoveCostPerMille;
+
+        /// <summary>
+        /// Ticks of work to take this cell's terrain out of the world, or 0 when there is nothing
+        /// to clear. The honest measure of "how long is this rock", as <see cref="SiteView.WorkTotal"/>
+        /// is the honest measure of a build.
+        /// </summary>
+        public readonly ushort WorkToClear;
+
+        public CellDetail(int cellIndex, byte terrain, byte edifice, byte floorStuff, byte support,
+            ushort moveCostPerMille, ushort workToClear)
+        {
+            CellIndex = cellIndex;
+            Terrain = terrain;
+            Edifice = edifice;
+            FloorStuff = floorStuff;
+            Support = support;
+            MoveCostPerMille = moveCostPerMille;
+            WorkToClear = workToClear;
+        }
+    }
+
     /// <summary>
     /// One published frame of world state: everything presentation may read, and nothing else.
     ///
@@ -393,6 +461,7 @@ namespace Odyssey.Sim.Contracts
         SiteView[] _sites = Array.Empty<SiteView>();
 
         PawnAspect[] _aspects = Array.Empty<PawnAspect>();
+        CellDetail[] _cellDetails = Array.Empty<CellDetail>();
 
         public int Tick { get; private set; }
         public int SliceLayer { get; private set; }
@@ -448,6 +517,9 @@ namespace Odyssey.Sim.Contracts
         /// <summary>How many aspects every feature published this frame, over all pawns.</summary>
         public int AspectCount { get; private set; }
 
+        /// <summary>How many cells the interface asked about this frame. Zero or one today.</summary>
+        public int CellDetailCount { get; private set; }
+
         public ReadOnlySpan<PawnView> Pawns => new ReadOnlySpan<PawnView>(_pawns, 0, PawnCount);
         public ReadOnlySpan<ThingView> Things => new ReadOnlySpan<ThingView>(_things, 0, ThingCount);
 
@@ -475,6 +547,12 @@ namespace Odyssey.Sim.Contracts
         /// compared between two runs at all.</para>
         /// </summary>
         public ReadOnlySpan<PawnAspect> PawnAspects => new ReadOnlySpan<PawnAspect>(_aspects, 0, AspectCount);
+
+        /// <summary>
+        /// The cells the interface asked about, in the order they were asked. See
+        /// <see cref="CellDetail"/> for why this is a handful of rows rather than a channel.
+        /// </summary>
+        public ReadOnlySpan<CellDetail> CellDetails => new ReadOnlySpan<CellDetail>(_cellDetails, 0, CellDetailCount);
 
         /// <summary>Find a pawn by id. Returns false when it is gone, which callers must handle.</summary>
         public bool TryGetPawn(PawnId id, out PawnView view)
@@ -513,6 +591,23 @@ namespace Odyssey.Sim.Contracts
             return false;
         }
 
+        /// <summary>
+        /// Read back the row for one cell. False when no question stands, which callers must
+        /// handle: the row arrives the publish after the question, and is withdrawn the publish
+        /// after the question is withdrawn.
+        /// </summary>
+        public bool TryGetCellDetail(int cellIndex, out CellDetail detail)
+        {
+            for (int i = 0; i < CellDetailCount; i++)
+            {
+                if (_cellDetails[i].CellIndex != cellIndex) continue;
+                detail = _cellDetails[i];
+                return true;
+            }
+            detail = default;
+            return false;
+        }
+
         // ---- writing side, used only by the simulation while building the back buffer ----
 
         internal void BeginWrite(int tick, GridSize size, int sliceLayer, int gameSpeed = 1,
@@ -530,6 +625,7 @@ namespace Odyssey.Sim.Contracts
             SiteCount = 0;
 
             AspectCount = 0;
+            CellDetailCount = 0;
         }
 
         internal void AddPawn(in PawnView view)
@@ -567,6 +663,12 @@ namespace Odyssey.Sim.Contracts
         {
             Grow(ref _aspects, AspectCount + 1);
             _aspects[AspectCount++] = aspect;
+        }
+
+        internal void AddCellDetail(in CellDetail detail)
+        {
+            Grow(ref _cellDetails, CellDetailCount + 1);
+            _cellDetails[CellDetailCount++] = detail;
         }
 
         static void Grow<T>(ref T[] array, int needed)

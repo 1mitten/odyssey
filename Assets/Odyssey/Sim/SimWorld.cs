@@ -208,9 +208,44 @@ namespace Odyssey.Sim
                     GameSpeed = intent.A;
                     return IntentRejection.None;
 
+                case IntentKind.QueryCell:
+                    // A question, not a command: it touches nothing but the view, so it has no
+                    // state worth rejecting against. Re-asking the cell already asked, and asking
+                    // a cell off the board, are quietly no-ops — a re-click is ordinary play and a
+                    // pick that resolved off-board never had a subject to show.
+                    if (intent.A < 0)
+                    {
+                        Views.QueryCell = -1;
+                    }
+                    else if (Size.Contains(intent.Cell))
+                    {
+                        Views.QueryCell = Size.Index(intent.Cell);
+                    }
+                    return IntentRejection.None;
+
                 default:
                     return IntentRejection.UnknownIntent;
             }
+        }
+
+        /// <summary>
+        /// Answer view questions and republish, without advancing the world by a single tick.
+        ///
+        /// <para><b>This exists because a paused world never reaches a tick boundary.</b> The
+        /// player inspects a stopped world more than a running one, so a question queued as an
+        /// intent would go unanswered exactly when it is most likely to be asked. Only view
+        /// intents are drained here — a question changes no state the simulation owns, so
+        /// applying it off-boundary cannot desync a hash or a replay; a command left pending
+        /// stays pending, and is applied at the next real tick as always.</para>
+        ///
+        /// <para>The publish is the same one <see cref="Tick"/> ends with, over the same settled
+        /// world, so the frame it produces is indistinguishable from a tick's apart from the
+        /// question it now answers. Nothing is hashed and the tick counter does not move.</para>
+        /// </summary>
+        public void RepublishViews()
+        {
+            Intents.DrainWhere(i => i.Kind == IntentKind.QueryCell, _handleIntent);
+            Views.Publish(this, _contributors);
         }
 
         public void Tick(int count)

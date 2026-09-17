@@ -88,8 +88,16 @@ namespace Odyssey.Hud
         /// </summary>
         public readonly int SkillRows;
 
+        /// <summary>
+        /// Rows of the cell readout, when a tile (or a pile on one) is selected instead of a
+        /// colonist. The readout pane is narrower than the colonist pane — half its width — and
+        /// one fact per row, so the same fact is always in the same column (owner, 2026-09-17:
+        /// the joined line made every number hunt for its label).
+        /// </summary>
+        public readonly int CellRows;
+
         public HudContent(int colonists, int storeRows, int alerts, int layers, int needRows,
-                          int skillRows = 0)
+                          int skillRows = 0, int cellRows = 0)
         {
             Colonists = Math.Max(0, colonists);
             StoreRows = Math.Max(0, storeRows);
@@ -97,6 +105,7 @@ namespace Odyssey.Hud
             Layers = Math.Max(1, layers);
             NeedRows = Math.Max(0, needRows);
             SkillRows = Math.Max(0, skillRows);
+            CellRows = Math.Max(0, cellRows);
         }
 
         /// <summary>The state the coverage criterion is stated against: a colony running, nothing
@@ -431,6 +440,25 @@ namespace Odyssey.Hud
 
         public const int InspectWidth = 560;
 
+        /// <summary>
+        /// The tile readout's width: half the colonist pane's. The tile pane says short facts in
+        /// rows and needs no tabs, needs or skills, so it takes a column rather than a band
+        /// (owner, 2026-09-17).
+        /// </summary>
+        public const int InspectNarrowWidth = InspectWidth / 2;
+
+        /// <summary>One fact row of the cell readout: a label and its value on one line.</summary>
+        public const int CellRow = 20;
+
+        public const int CellRowGap = 4;
+
+        /// <summary>
+        /// The label column of the readout. A width rather than a gap so the values line up
+        /// whatever the labels are — "walk speed" and "support" both start their values at the
+        /// same x, which is what makes the column predictable.
+        /// </summary>
+        public const int CellRowName = 92;
+
         /// <summary>The pane's clearance over the command bar, which cannot grow taller than one row.</summary>
         public const int InspectToBar = 14;
 
@@ -516,10 +544,11 @@ namespace Odyssey.Hud
 
             // ---- inspect, bottom left, clear of the bar. Nothing selected, no pane: an empty
             // rect, which is how every other region says "I am not on screen" here.
-            float inspectHeight = InspectHeight(content.NeedRows, content.SkillRows);
+            float inspectHeight = InspectHeight(content.NeedRows, content.SkillRows, content.CellRows);
             boxes[HudRegion.Inspect] = inspectHeight <= 0f
                 ? new HudRect(Edge, height - InspectBottom, 0f, 0f)
-                : new HudRect(Edge, height - InspectBottom - inspectHeight, InspectWidth, inspectHeight);
+                : new HudRect(Edge, height - InspectBottom - inspectHeight,
+                              content.CellRows > 0 ? InspectNarrowWidth : InspectWidth, inspectHeight);
 
             // ---- command bar, the full width of the screen (owner, 2026-09-17)
             //
@@ -632,20 +661,24 @@ namespace Odyssey.Hud
         public static float InspectHeight(int needRows) => InspectHeight(needRows, 0);
 
         /// <summary>
-        /// The pane's height with a given tab showing. Exactly one of the two counts is non-zero
-        /// when a colonist is selected: the pane shows one tab's body at a time, and its height
-        /// is that body's plus the chrome above and below it.
+        /// The pane's height with a given tab showing. Exactly one of the three counts is
+        /// non-zero when something is selected: a colonist shows one tab's body at a time, and a
+        /// tile shows the readout rows instead — no tab strip, so its chrome is the header alone.
         /// </summary>
-        public static float InspectHeight(int needRows, int skillRows)
+        public static float InspectHeight(int needRows, int skillRows, int cellRows = 0)
         {
-            float body = skillRows > 0
-                ? skillRows * SkillRow + (skillRows - 1) * SkillRowGap
-                : needRows <= 0
-                    ? 0f
-                    : needRows * NeedRow + (needRows - 1) * NeedRowGap;
+            float body;
+            if (cellRows > 0)
+                body = cellRows * CellRow + (cellRows - 1) * CellRowGap;
+            else if (skillRows > 0)
+                body = skillRows * SkillRow + (skillRows - 1) * SkillRowGap;
+            else if (needRows > 0)
+                body = needRows * NeedRow + (needRows - 1) * NeedRowGap;
+            else
+                return 0f;
 
-            return body <= 0f
-                ? 0f
+            return cellRows > 0
+                ? Frame + Pad + InspectHeader + InspectHeaderGap + body + Pad
                 : Frame + Pad + InspectHeader + InspectHeaderGap + InspectTabs + InspectTabGap +
                   body + Pad;
         }
