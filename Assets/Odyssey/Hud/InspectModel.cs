@@ -571,7 +571,7 @@ namespace Odyssey.Hud
                 _bedUnderPane = true;
                 Row(n++, "quality", QualityLabels.Label(detail.EdificeQuality));
                 Row(n++, "owner", detail.EdificeOwner > 0
-                    ? ColonistNames.Of(new PawnId(detail.EdificeOwner))
+                    ? ColonistNames.Of(snapshot, new PawnId(detail.EdificeOwner))
                     : "—");
             }
 

@@ -638,10 +638,11 @@ namespace Odyssey.Presentation.Ui
 
             _bedPickerRows!.Clear();
             _bedPickerRows.Add(BedPickerRow("No owner", -1));
-            var pawns = world.Views.Current.Pawns;
+            var frame = world.Views.Current;
+            var pawns = frame.Pawns;
             for (int i = 0; i < pawns.Length; i++)
                 _bedPickerRows.Add(BedPickerRow(
-                    ColonistNames.Of(pawns[i].Id), pawns[i].Id.Value));
+                    ColonistNames.Of(frame, pawns[i].Id), pawns[i].Id.Value));
 
             _bedPicker.style.display = DisplayStyle.Flex;
             PlacePopover(_bedPicker, anchor);

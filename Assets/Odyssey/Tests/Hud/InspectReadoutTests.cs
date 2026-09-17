@@ -188,13 +188,14 @@ namespace Odyssey.Tests.Hud
         [Test]
         public void ABedSaysItsTierAndWhoseItIs()
         {
-            InspectModel model = Looking(FrameWith(
+            WorldSnapshot frame = FrameWith(
                 Detail(terrain: TerrainHandle.Air, edifice: EdificeHandle.Bed,
-                    quality: QualityHandle.Decent, owner: 2)));
+                    quality: QualityHandle.Decent, owner: 2));
+            InspectModel model = Looking(frame);
 
             Assert.That(model.Title, Is.EqualTo("Bed"), "the bed's own icon key names it");
             Assert.That(Rows(model), Is.EqualTo(
-                "quality=decent | owner=" + ColonistNames.Of(new PawnId(2)) + " | walk speed=100%"));
+                "quality=decent | owner=" + ColonistNames.Of(frame, new PawnId(2)) + " | walk speed=100%"));
             Assert.That(model.BedUnderPane, Is.True, "the shell arms the owner row on this word");
         }
 
