@@ -142,6 +142,14 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   (*"the same lift a wall order gets"*). The cursor was lifted by the same rule.
   **The picker-to-order seam is now tested as a seam** — `FloorToolReachTests` feeds the picker's
   answer straight into the order, in the one assembly that can see both halves.
+  **Two cursor rules came out of the owner playing it (2026-09-17).** A floor cursor is a flat
+  plate laid on the boundary the slab will occupy, not a cell-tall box — the cursor is the shape of
+  the thing. And **the build cursor goes red when the simulation would refuse every cell of the
+  drag**, asking `ConstructionGrid.Allows`, the same method the order calls. It had to: on the
+  played meadow only **21 of the 441 cells within ten of the start** will take a slab, and the
+  cursor was green over all of it.
+  **A floor you lay on the ground is a different feature and does not exist.** `U42` and
+  `docs/design/18-paving.md` scope it; nothing is built.
 - **Work reaches `main` only through a pull request** with both tiers green, one approving review
   and the branch up to date. Branch protection enforces it, agents included. There is no long-lived
   feature branch — `claude/*` branches are per-change and short-lived.

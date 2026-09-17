@@ -2536,3 +2536,44 @@ work itself.
   - **Verified:** fast tier **573 Sim + 193 Hud**, Unity EditMode **1,238 total, 1,229 passed, 0
     failed**. Still nobody has pressed Play on the plate itself — the owner is playing the worktree
     `D:\code\odyssey-floors`, which is where U29 exists.
+- **"4725 x PlaceBuilding: NotPermitted", and every one of them was right (2026-09-17).** The owner
+  opened the worktree, armed the floor tool, dragged over the meadow and pasted a console full of
+  refusals. `ReportRejections` aggregates over a one-second window, so that is one or two
+  board-sized drags rather than a loop.
+
+  **Measured before diagnosing, and the first hypothesis died.** The guess was "no cell on a bare
+  board will take a floor". Wrong: on the played wooded meadow, at the layer the slice starts on,
+  **2,386 of 14,400 cells will take one.** The rule that refuses the rest is not one rule but two —
+  **2,408 already have a floor** (the ground under your feet) and **9,198 have no support** (open
+  air with nothing grounded within reach). The number that actually explains the report is the
+  local one: **within ten cells of the start, 21 of 441**. The legal cells are the lips of terrace
+  drops, scattered over the whole board, and a player drags where they are standing.
+
+  So the feature was correct and unusable, and the interface was lying: the cursor was bright green
+  over all 95% of it. **`NothingHereWillBeBuilt` asks `ConstructionGrid.Allows`** — the same method
+  `Place` calls a moment later, so the cursor and the order cannot come to disagree, which is the
+  fault this line of work has now hit twice — and the cursor goes red when **not one cell** of the
+  drag would be built. Only then: a wall dragged across a meadow routinely covers a tree and is
+  expected to, and that gesture was played and accepted as it is. What has no defence is a green
+  cursor over an order that does nothing.
+
+  **And the report's real content was a missing feature.** *"I should be able to just build a
+  floor"* means paving — a covering laid on ground that is already there. U29 built the structural
+  slab, and the two share one English word only because this project promoted the roof to a real
+  thing. `docs/design/18-paving.md` scopes it and `U42` carries it: the mirror of the slab rule,
+  **no support check at all** because a covering over ground is grounded by definition, stored as a
+  fifth kind in `Floor[]` so **no new save state and no hash change**, drawn by `FloorModule` with
+  no catalogue row, and taking the *wall's* lift rather than the slab's. The three names were
+  already in `icon-keys.csv` and already published, so nothing in the wiki moves.
+
+  Three things put in the doc rather than left to be found. **Paving will be cosmetic until rooms
+  are** — walking speed, cleanliness and beauty are why it exists in the genre and none of them
+  exist here. **The one real risk is drawing, not data:** a covering is coplanar with the top face
+  of the ground beneath it, so `EmitFloor` may z-fight, and that is the first thing to measure.
+  And **the naming**: `Structure -> Floor` and `Floors -> Deck plate` will sit two clicks apart
+  meaning different things, so the recommendation is to rename U29's tool to `Slab`, key unchanged
+  because a key is forever.
+
+  - **Verified:** fast tier **573 Sim + 193 Hud**, Unity EditMode **1,238 total, 1,229 passed, 0
+    failed**, both content gates clean. **Nobody has pressed Play on the red cursor or on the flat
+    floor cursor yet**, and no line of U42 is written.
