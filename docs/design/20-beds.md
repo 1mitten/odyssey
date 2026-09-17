@@ -205,6 +205,8 @@ it and see the owner released.
 ## 12. Open
 
 - **Real two-tile bed art** — replaces the placeholder; the only art question in this line.
+  The palette chip borrows the bunk's drawn shape until the bed has one of its own (the merged
+  palette specification forbids the placeholder square, and a bunk reads as a bed at 17 px).
 - **Crossing-cost surcharge** for walking over a bed — one number, one seam, deferred with the
   number undecided.
 - **Drag-running several beds** — a later gesture in the ToolDirector's set.

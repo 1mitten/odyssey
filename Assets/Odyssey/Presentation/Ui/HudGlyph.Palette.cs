@@ -423,6 +423,11 @@ namespace Odyssey.Presentation.Ui
             { "ui.arch.tool.reclaimer", HudGlyphKind.ToolReclaimer },
             { "ui.arch.tool.bench", HudGlyphKind.ToolBench },
 
+            // The bed borrows the bunk's shape until its own is drawn: a bunk is a bed, the
+            // shape reads as one at 17 px, and a wrong-shaped bed is a lesser wrong than the
+            // placeholder square the specification forbids. Its own path joins here the day
+            // one is drawn (design 20 §12).
+            { "ui.arch.tool.bed", HudGlyphKind.ToolBunk },
             { "ui.arch.tool.bunk", HudGlyphKind.ToolBunk },
             { "ui.arch.tool.table", HudGlyphKind.ToolTable },
             { "ui.arch.tool.lamp", HudGlyphKind.ToolLamp },
