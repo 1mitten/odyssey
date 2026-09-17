@@ -86,8 +86,8 @@ namespace Odyssey.Tests.Presentation
 
             ChunkBatch batch = MeshLayer(world, 1);
 
-            Assert.That(Instances(batch.Body), Is.EqualTo(4),
-                "a wall cell with four open neighbours shows four faces");
+            Assert.That(Instances(batch.Body), Is.EqualTo(5),
+                "a wall cell with four open neighbours shows four faces, over one core");
         }
 
         [Test]
@@ -106,8 +106,79 @@ namespace Odyssey.Tests.Presentation
             var mesher = new ChunkMesher(world.Model);
             mesher.Mesh(batch, world.Chunks.ChunksX * world.Chunks.ChunksZ * 1);
 
-            // Three cells: the two ends show three faces each, the middle shows two.
-            Assert.That(Instances(batch.Body), Is.EqualTo(8));
+            // Three cells: the two ends show three faces each, the middle shows two — and each
+            // cell carries the core that fills it, so eight panels and three blocks.
+            Assert.That(Instances(batch.Body), Is.EqualTo(11));
+        }
+
+        /// <summary>
+        /// A wall cell is solid and has a top.
+        ///
+        /// <para>Panels are drawn on faces, so before the core existed a straight run was two
+        /// panels 2.5 m apart with nothing between them and nothing over them: a black slot down
+        /// the middle of every wall from a high camera, and a clear view into the cavity from a
+        /// slice (owner, 2026-09-17). The test is stated over the cell's own centre line, which is
+        /// exactly where a panel never reaches and a core always does.</para>
+        /// </summary>
+        [Test]
+        public void AWallCellIsFilledAndCapped()
+        {
+            GroundRelief.Reset();
+            var world = new RenderTestWorld(8, 8, 3)
+                .Edifice(3, 3, 1, CoreContent.EdificeWall)
+                .Publish();
+
+            ChunkBatch batch = MeshLayer(world, 1);
+
+            Vector3 middle = CellMetrics.FloorCentre(3, 3, 1);
+            float head = float.MinValue;
+            foreach (InstanceBucket bucket in batch.Body)
+            for (int i = 0; i < bucket.Count; i++)
+            {
+                Bounds box = BoxOf(bucket.Matrices[i]);
+                if (middle.x <= box.min.x || middle.x >= box.max.x) continue;
+                if (middle.z <= box.min.z || middle.z >= box.max.z) continue;
+                head = Mathf.Max(head, box.max.y);
+            }
+
+            Assert.That(head, Is.GreaterThan(float.MinValue),
+                "something fills the middle of a wall cell; a hollow wall is what this replaced");
+            Assert.That(head, Is.EqualTo(middle.y + CellMetrics.SizeY).Within(0.05f),
+                "and it reaches the head of the cell, so the wall is capped");
+        }
+
+        /// <summary>
+        /// And a window is the one wall cell that must stay hollow, or it is a wall.
+        /// </summary>
+        [Test]
+        public void AWindowIsNotFilledIn()
+        {
+            GroundRelief.Reset();
+            var world = new RenderTestWorld(8, 8, 3)
+                .Edifice(3, 3, 1, CoreContent.EdificeWindow)
+                .Publish();
+
+            ChunkBatch batch = MeshLayer(world, 1);
+
+            Assert.That(Instances(batch.Body), Is.EqualTo(4),
+                "four panels and no core");
+        }
+
+        /// <summary>The world-space box an instance of the fallback unit cube occupies.</summary>
+        static Bounds BoxOf(Matrix4x4 m)
+        {
+            var box = new Bounds();
+            for (int corner = 0; corner < 8; corner++)
+            {
+                Vector3 at = m.MultiplyPoint3x4(new Vector3(
+                    (corner & 1) == 0 ? -0.5f : 0.5f,
+                    (corner & 2) == 0 ? -0.5f : 0.5f,
+                    (corner & 4) == 0 ? -0.5f : 0.5f));
+                if (corner == 0) box = new Bounds(at, Vector3.zero);
+                else box.Encapsulate(at);
+            }
+
+            return box;
         }
 
         [Test]
@@ -121,9 +192,10 @@ namespace Odyssey.Tests.Presentation
 
             ChunkBatch batch = MeshLayer(world, 1);
 
-            // Two walls at three faces each (the face towards the door is hidden by the door),
-            // plus exactly one door leaf.
-            Assert.That(Instances(batch.Body), Is.EqualTo(7));
+            // Two walls at three faces and one core each (the face towards the door is hidden by
+            // the door), plus exactly one door leaf. A door has no core: it is a leaf in an
+            // opening, not a piece of wall.
+            Assert.That(Instances(batch.Body), Is.EqualTo(9));
         }
 
         [Test]

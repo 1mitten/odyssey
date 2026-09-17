@@ -268,7 +268,7 @@ What it will need, in the order it should be built:
 - *By hand:* order two walls, one across the board, right-click the far one with a colonist selected,
   and watch them walk past the near one.
 
-### A wall is hollow and open-topped, and the owner has asked why
+### A wall was hollow and open-topped; it is filled and capped now
 
 Raised by the owner on 2026-09-17, looking at the first finished room. A wall cell is drawn as a
 **panel on each exposed face** — that is what stops a one-cell wall reading as a 2.5 m slab, and it
@@ -290,13 +290,20 @@ The owner's questions were three, and they separate:
    the real question, and it is two questions wearing one coat: *should the cell be filled* and
    *how thick should a wall look*.
 
-**Fill it, and leave the thickness alone for now.** Keep the panels on the exposed faces, because
-that is where the kit's art is — plaster outside, brick inside — and add two plain stuff-tinted
-boxes: a **cap** across the top of the cell and a **core** filling between the panels. From outside
-the wall is identical to today; from above it has a top; in a cut-away it is solid. No new art, no
-new module ids, no orientation logic, and it is presentation-only, so nothing enters a cell, a save
-or the hash. **A wall already occupies the full 2.5 m of its cell as drawn**, so a cap changes
-nothing about how thick a wall *reads* — it only removes the slot.
+**Filled, thickness left alone** (owner's call, 2026-09-17). The panels stay on the exposed faces,
+because that is where the kit's art is — plaster outside, brick inside — and behind them the cell
+carries one block, `ModuleIds.WallCore`, which is both the core and the cap. From outside the wall
+is identical to before; from above it has a top; in a cut-away it is solid. No new art (it falls
+back to the cell-shaped primitive and wears the wall's own stuff tint), no orientation logic, one
+extra instance per wall cell, and it is presentation-only, so nothing enters a cell, a save or the
+hash. It sits 1 cm below the panels' heads so that two opaque surfaces are never coplanar — a
+z-fight along the head of every wall in the colony is a shimmer the camera cannot get away from,
+and a centimetre is sub-pixel at the nearest the camera comes. A window keeps its hollow, which is
+the one thing a window must not lose.
+
+**A wall already occupied the full 2.5 m of its cell as drawn**, so the core changes nothing about
+how thick a wall *reads* — it only removes the slot. That is worth saying because it is the usual
+objection, and because it is what makes the thickness question separable.
 
 **The half-cell wall is a bigger change and should wait for an eye on the capped one.** It buys a
 wall that reads as a wall rather than as a rampart, and it costs: a per-cell run direction (which
@@ -304,9 +311,13 @@ the earth blocks already solve — `GroundMesh.CanonicalExposure` turns all sixt
 patterns into five meshes and a rotation, and a wall junction is the same problem), meshes for the
 straight, the corner and the tee, and a decision about the 0.6 m of bare cell it would leave on
 each side, which today's floor slab does not cover because the floor stops at the cell boundary.
-**The cheapest experiment that settles it is the cap:** build it, look at a room, and say whether a
-2.5 m wall is a fortress or just a wall. If it is a fortress, the half-cell block is the answer and
-the core is the only work thrown away.
+**The cheapest experiment that settles it is the cap, and it is now built:** look at a room and say
+whether a 2.5 m wall is a fortress or just a wall. If it is a fortress, the half-cell block is the
+answer and the core is the only work thrown away.
+
+Guards: `ChunkMesherTests.AWallCellIsFilledAndCapped` states the claim over the cell's own centre
+line, which is exactly where a panel never reaches and a core always does, and
+`.AWindowIsNotFilledIn` holds the exception.
 
 ### Also open
 

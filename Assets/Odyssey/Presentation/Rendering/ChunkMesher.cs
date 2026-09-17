@@ -538,6 +538,51 @@ namespace Odyssey.Presentation.Rendering
             }
 
             EmitFacePanels(batch, module, tint, index, x, z, y);
+            EmitWallCore(batch, tint, def, x, z, y);
+        }
+
+        /// <summary>
+        /// How far the core's head sits below the panels', in metres.
+        ///
+        /// Only to keep two opaque surfaces off the same plane. A panel straddles its face, so
+        /// 0.125 m of it stands inside the cell and its top would otherwise be exactly coplanar
+        /// with the core's over that strip — which is a z-fight, and a z-fight along the whole
+        /// head of every wall in the colony is a shimmering line the camera cannot get away from.
+        /// A centimetre is sub-pixel from 32 m up, the nearest the camera comes, and where the
+        /// panels do frame the core it reads as a coping rather than as a mistake.
+        /// </summary>
+        const float CoreRecess = 0.01f;
+
+        /// <summary>
+        /// The mass a wall is made of: one cell-shaped block behind the panels on its faces.
+        ///
+        /// <para><b>Why a wall needed one at all.</b> Panels are drawn on faces, which is what
+        /// stops a one-cell wall reading as a 2.5 m slab — but a straight run puts two panels
+        /// 2.5 m apart with 2.25 m of nothing between them and nothing over them. From a high
+        /// camera every wall had a black slot down its middle, and a slice or an x-ray looked
+        /// straight into it (owner, 2026-09-17). This fills the cell and caps it.</para>
+        ///
+        /// <para>It changes nothing about how thick a wall <i>reads</i>, and that is worth saying
+        /// because it is the usual objection: a wall already occupied the full 2.5 m of its cell
+        /// as drawn, two faces of it and a hole. A thinner wall is a different question and is
+        /// kept in <c>15-building.md</c>.</para>
+        ///
+        /// <para>Hidden wherever it should be. A panel covers its whole face and stands 0.125 m
+        /// proud of it, so on any face something can see through, the panel is what is seen; on
+        /// any face it cannot, the neighbour is. Two cores in a run touch exactly, so a wall is
+        /// one continuous mass and not a row of boxes.</para>
+        ///
+        /// <para><b>Not a window.</b> A window cell keeps its hollow, because filling it in is
+        /// the one thing a window must not do.</para>
+        /// </summary>
+        void EmitWallCore(ChunkBatch batch, int tint, ushort def, int x, int z, int y)
+        {
+            if (def == CoreContent.EdificeWindow) return;
+            int core = _model.WallCoreModule;
+            if (core == 0) return;
+
+            AddBody(batch, core, tint, GroundRelief.Drape(
+                CellMetrics.FloorCentre(x, z, y) - Vector3.up * CoreRecess));
         }
 
         /// <summary>

@@ -1221,3 +1221,36 @@ work itself.
     over the same point of the board, and hold their disagreement under 20 mm — which the old code
     misses by sevenfold. `.ADrapedWallStaysVerticalAndFullHeight` stops the next person buying
     flushness by leaning the building over.
+
+- **And the wall was hollow, which is a different fault the same screenshots showed (same branch,
+  same day).** The owner, looking at the first finished room: *"the walls should be filled in with
+  a top as well."* They were not. A wall cell is drawn as a panel on each face something can be
+  seen through — which is what stops a one-cell wall reading as a 2.5 m slab and is deliberate —
+  but a straight run puts two panels 2.5 m apart with 2.25 m of nothing between them and nothing
+  over them. From a high camera every wall had a black slot down its middle.
+  - **The owner's three questions came apart, and two of them were already answered.** "Colonists
+    always build from the outside so they don't get stuck" is true today and is not a drawing
+    question: both `DeliverWorkGiver` and `BuildWorkGiver` take their stand cell from
+    `FellJobDriver.StandBeside`, and the comment at the delivery site says why — the site is
+    walkable right up to the moment the wall goes up in it, so standing *in* it would work for the
+    delivery and be exactly wrong for the build that follows. "Build electricity through it" is a
+    question about what a cell may hold, which neither answer below changes.
+  - **The third — "is it worth making the wall half the size of the cell and making it like a
+    block?" — is two questions in one coat:** should the cell be filled, and how thick should a
+    wall look. **They separate because a wall already occupied the full 2.5 m of its cell as
+    drawn**, two faces of it and a hole. Filling it changes nothing about how thick a wall *reads*.
+  - **Filled, thickness left alone (owner, 2026-09-17).** One block per wall cell behind the
+    panels, `ModuleIds.WallCore`, core and cap in one. No art (it falls back to the cell-shaped
+    primitive and wears the wall's own stuff tint, so it matches the panels in colour if not in
+    texture), no orientation logic, one extra instance per wall cell. Recessed 1 cm below the
+    panels' heads, because a panel straddles its face and 0.125 m of it stands inside the cell —
+    the two tops would otherwise be coplanar, and a z-fight along the head of every wall in the
+    colony is a shimmering line the camera cannot get away from. A centimetre is sub-pixel at 32 m,
+    the nearest the camera comes. A window keeps its hollow.
+  - **Held open: the half-cell wall.** It buys a wall that reads as a wall rather than as a
+    rampart, and costs a per-cell run direction — which the earth blocks already solve, since
+    `GroundMesh.CanonicalExposure` turns all sixteen neighbour patterns into five meshes and a
+    rotation and a wall junction is the same problem — plus meshes for the straight, the corner and
+    the tee, and something to cover the 0.6 m of bare cell it would leave each side, which today's
+    floor slab does not reach. **The cap is the cheap experiment that settles it:** look at a room
+    and say whether 2.5 m is a fortress or just a wall.

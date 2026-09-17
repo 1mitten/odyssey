@@ -383,6 +383,21 @@ namespace Odyssey.Presentation.Rendering
         public const string Ladder = Prefix + "ladder";
         public const string Slab = Prefix + "slab";
 
+        /// <summary>
+        /// The mass a wall is made of, behind the panels on its faces.
+        ///
+        /// A wall cell is drawn as a panel on each face something can be seen through, which is
+        /// what stops a one-cell wall reading as a 2.5 m slab. It also left the cell hollow and
+        /// open at the top, so from a high camera every wall had a black slot down its middle and
+        /// a slice looked straight into it (owner, 2026-09-17). This fills the cell behind the
+        /// panels and caps it.
+        ///
+        /// No row is expected and none is needed: it falls back to the cell-shaped primitive and
+        /// takes the wall's own stuff tint, so it matches the panels in colour if not in texture.
+        /// The day a capping course is worth art, a row here is all it takes.
+        /// </summary>
+        public const string WallCore = Prefix + "wall.core";
+
         // Edifices worldgen places outside a template.
         public const string VaultWall = Prefix + "wall.vault";
         public const string UtilityTap = Prefix + "utility.tap";
