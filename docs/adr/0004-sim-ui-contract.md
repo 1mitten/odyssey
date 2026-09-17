@@ -1,7 +1,8 @@
 # ADR 0004 — Snapshot-read, intent-write: the contract between simulation and interface
 
 - **Status:** accepted, and stated as a **constraint on the not-yet-written architecture ADR**;
-  amended 2026-09-17, when the per-pawn half of the read contract was opened (see the amendment below)
+  amended 2026-09-17, when the per-pawn half of the read contract was opened, and again the same
+  day for the per-cell half (see the amendments below)
 - **Date:** 2026-09-15
 - **Deciders:** owner, with the design in `docs/design/09-ui-and-input.md` §2
 - **Related:** `docs/adr/0003-ui-framework.md`; brief §5 Lane D1 and Lane D5
@@ -96,6 +97,47 @@ into the thousands per frame, or an interface doing a lookup per pawn per name i
 the retreat is in this order: sort the rows by pawn and hand a reader the span for one pawn, and
 only then build the subscription scoping this ADR asked for. The measurement that triggers it is
 the publish budget above: 0.8 ms per tick, against 0.186 ms measured for a full slice.
+
+## Amendment 2, 2026-09-17 — the per-cell half: one row for the asked-about cell, answered while paused
+
+The first amendment opened the read contract for pawns. Cells had a different gap: the pane could
+be *clicked onto* a cell since U16's plumbing landed, but the frame's whole answer to "what is on
+this layer" was one byte per cell of the active layer with four meanings — the deliberately minimal
+slice channel. So a click on rock read identically to a click on grass, a water tile said nothing
+about being water, and the pane shipped the placeholder "cell readout arrives with cell inspection"
+for two milestones (owner, 2026-09-17: rocks indistinguishable, water silent, piles generic).
+
+**There is now a sparse `CellDetail` row, one per asked-about cell**, written through
+`SnapshotWriter.AddCellDetail` and read with `WorldSnapshot.TryGetCellDetail`, published by a
+sim-side contributor (`CellDetailContributor`, registered in `ColonyComposition` beside the
+designation and construction grids). It carries real values, not categories — terrain kind, what
+stands in the cell, the floor's material, support, the work to clear, and the crossing cost in
+thousandths of a clear crossing — by the same argument `SiteView` made: the player clicks and
+expects to be told, and "a third speed" cannot be recovered from a byte.
+
+**Selection-scoped rather than layer-shaped, deliberately.** The tempting alternative was widening
+the slice channel to a terrain byte per cell. Rejected on the lesson `OrderView` paid for: a click
+reaches above the slice (the outcrop the owner could see and not mine), so any layer-shaped channel
+either misses those cells or publishes the whole drawn band every frame. A question is about one
+cell; a row per question costs nothing while nothing is asked and answers on any layer.
+
+**The question is an intent — `QueryCell` — and this is the part the original ADR had already
+promised.** "Intents flush while the clock is paused," the Decision says, and the implementation
+honoured that exactly never: a paused world spends a tick only for a speed change, so everything
+else queued waits for an unpause that may not come. That was tolerable for commands (an order given
+while paused applying on unpause is sensible) and wrong for the first intent that is a *question*,
+because inspecting a stopped world is when inspection happens. So: a paused world answers a
+`QueryCell` by republishing the view over the same settled world (`SimWorld.RepublishViews`) — no
+tick spent, no system run, no hash computed, the counter unmoved — which the intent's kind permits
+because a question changes nothing the simulation owns. `IntentBus.DrainWhere` exists for this and
+nothing else; a command must never cross the boundary out of turn, because a command applied
+off-boundary is a replay that cannot be reproduced.
+
+**The line, restated for cells.** A per-cell channel of dense state (terrain for every cell, every
+frame) would be the retreat, not the design: it is what the minimap and overlays of later
+milestones may eventually justify, priced then. Until a reader wants more than the handful of rows
+a selection asks for, the sparse question-and-answer shape holds, and the flip condition is the
+same F1 as the pawn half.
 
 ## Rationale
 

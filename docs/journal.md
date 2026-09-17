@@ -2330,3 +2330,58 @@ work itself.
   statistical claims were modelled in Python against the same constants and held over five trials
   of 256 draws, which is not the same as running the test. The fast-tier counts in `CLAUDE.md` are
   deliberately left alone rather than advanced by a guess.
+
+- **The tile answers, 2026-09-17.** Three owner reports, one session: a wood pile read as a
+  generic placeholder with no amount, rocks could be clicked but not told from grass, and a water
+  tile did not say it was water. Behind all three sat the same fact: **U16 "cell inspection" was
+  marked done with M1 and only its click plumbing had landed** — the pane's own state line for a
+  bare cell was the literal string "cell readout arrives with cell inspection", a promise shipped
+  as a placeholder through two milestones and one M1 report claiming the unit existed and was
+  tested. The readback's criteria (terrain, floor, edifice, support) were never built because no
+  queue row and no milestone gate asked for them again; the M1 report measured the plumbing.
+  - **The seam chose itself, mostly.** A layer-shaped terrain channel was the tempting widening —
+    the slice channel already publishes one byte per cell of the active layer — and it is wrong for
+    the same reason `OrderView` was widened: a click reaches above the slice (the outcrop the
+    owner could see and not mine), so a layer-shaped answer either misses those cells or costs the
+    whole drawn band every frame. What shipped is the `PawnAspect` shape applied to cells: **a
+    sparse `CellDetail` row for the one asked-about cell** — terrain, edifice, floor stuff,
+    support, work to clear, and the crossing cost in thousandths of a clear crossing — written by a
+    sim-side contributor every colony gets through `ColonyComposition`, asked by a `QueryCell`
+    intent, withdrawn by one. ADR 0004 gained its second amendment for the per-cell half.
+  - **The crossing cost is worldgen's own number, restated once.** `NaturalContent.ApplyCostClasses`
+    owns "+40 is boggy, +200 is wading" and fills the contributor's table the same way it fills the
+    nav grid's; the pane reads 1000 / 1400 / 3000 — thousandths, the ratio a player reads — so
+    there is one source for the addends and no second copy anywhere to drift. Zero is published as
+    *cannot walk* for impassable water and for a cell with nothing to stand on, which is a
+    different answer from slow and not an extreme of it.
+  - **The paused world was the discovery of the session.** ADR 0004's Decision says "intents flush
+    while the clock is paused", and the implementation honoured that exactly never: a paused world
+    spends a tick only for a speed change, everything else queued waits for an unpause. Tolerable
+    for commands (an order given while paused applying on unpause is sensible) and wrong for the
+    first intent that is a question — inspecting a stopped world is when inspection happens. The
+    answer is `SimWorld.RepublishViews`: apply the queued view intents and publish over the same
+    settled world — no tick, no system, no hash, the counter unmoved. It is safe because a
+    question owns no state, which is also why `IntentBus.DrainWhere` is documented as being for
+    view intents and nothing else: a command applied off-boundary is a replay that cannot be
+    reproduced.
+  - **Two picking bugs fell out of the same reports, and both were ownership questions rather
+    than arithmetic.** Water fills its cell but is not solid, so a pond click reached the bed and
+    the block-below rule answered with rock the player cannot see — water owns its own floor now,
+    with a slab still checked first (a bridge is walked on, not waded through). And a pile on bare
+    ground sits in the air cell above the solid block the picker resolves to, so `ThingAt`'s exact
+    match missed every pile not on a built slab — the director looks one cell up now, and the
+    direct-cell match still wins where it applies.
+  - **Content moved a little, by the wiki's own rules.** Three icon keys were added (packed
+    gravel, the two trees — `ui.terrain.*`, M3); ore terrain reuses the resource's own name
+    ("Iron ore" on a rock face is what the player needs to read there); the pane's hard-coded
+    "Salvage" became **Scrap**, the word the ledger and the wiki already settled on; and the
+    city's finished surfaces (pavement, cracked pavement, soil, engineered fill, the buried seam)
+    are deliberately unnamed until the city map is loadable — the registry test tolerates blanks
+    and nothing invents content to describe tiles a player cannot click.
+  - **Measured:** fast tier **570 Sim + 209 Hud** green, Unity EditMode **1242 passed, 0 failed**
+    of 1251, including a board-wide test that clicks every water column on the played map and a
+    paused-world test proving the answer arrives with the tick counter unmoved and a queued
+    command still queued. **Not measured: nobody has pressed Play.** The readout's judgement
+    calls — walk speed shown at 100% rather than only when abnormal, support always said, the
+    minable clause honest about grass ("about 1s of work") — are exactly the kind of thing the
+    owner vetoes from a keyboard, and this pane is now verbose enough to be worth vetoing.
