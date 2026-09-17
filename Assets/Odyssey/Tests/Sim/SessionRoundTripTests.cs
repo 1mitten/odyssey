@@ -128,6 +128,7 @@ namespace Odyssey.Tests.Sim
         static ulong PlayAndSave(string path)
         {
             ColonyWorld colony = ColonyWorld.Build(NewGame());
+            GiveTheOrdersAPlayerWould(colony);
             colony.World.Tick(Ticks);
 
             AssertTheColonyDidRealWork(colony);
@@ -136,6 +137,25 @@ namespace Odyssey.Tests.Sim
             colony.SaveToFile(path, colony.Recipe(SavedOnDay));
             return hash;
         }
+
+        /// <summary>
+        /// Mark some trees and rock, the way a player does on their first morning.
+        ///
+        /// <para><b>The test gives the orders now because the game does</b> (owner, 2026-09-17: a
+        /// new colony arrives with nothing marked). Before that, <see cref="ScenarioDef.Playtest"/>
+        /// pre-marked a ring of trees and this test quietly lived off them — which is worth saying
+        /// out loud, because it means what it was really proving was "the scenario gives orders and
+        /// the colony carries them out". Giving them here is both the honest shape and the closer
+        /// one to the game: an order arrives, somebody works, and the save has to carry the result.
+        /// </para>
+        /// </summary>
+        static void GiveTheOrdersAPlayerWould(ColonyWorld colony) =>
+            ColonyScenario.GiveStartingOrders(colony.Designations, colony.Outcome.StartCell,
+                new ScenarioDef
+                {
+                    defName = "Scenario_Playtest", label = "playtest",
+                    startingFellRadius = 10, startingMineRadius = 30, startingMineOutcrops = 3,
+                });
 
         /// <summary>
         /// Without this the round trip could hold over a world nothing had happened to, and would

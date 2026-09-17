@@ -42,6 +42,10 @@ namespace Odyssey.Sim.Pawns
         public Pawn Spawn(int cell)
         {
             var pawn = new Pawn(new PawnId(_nextId++), cell, _ctx.Content);
+            // The world's seed unless a caller says otherwise (U40). This is what keeps every
+            // colony nobody chose rolling exactly what it rolled before pawns had seeds of their
+            // own, so no scenario, headless run or fixture had to change.
+            pawn.RollSeed = _ctx.Seed;
             Adopt(pawn);
             return pawn;
         }
@@ -50,7 +54,8 @@ namespace Odyssey.Sim.Pawns
         /// Debug menu: <c>IntentKind.SpawnPawn</c>. A cell that is not walkable is refused rather
         /// than spawning a colonist nobody can reach or path out of.
         ///
-        /// <para>Passions are rolled here, off the world seed, exactly as
+        /// <para>Passions are rolled here off <see cref="Spawn"/>'s own <c>RollSeed</c> (the world's,
+        /// since nothing here asks for one of its own — U40), exactly as
         /// <see cref="ColonyScenario.Place"/> rolls them for a starting colonist — a debug-spawned
         /// pawn is otherwise indistinguishable from one dealt at tick zero. Skill levels are not:
         /// <see cref="StartingSkillsSystem"/> rolls them for any pawn still at the constructor's
@@ -63,7 +68,7 @@ namespace Odyssey.Sim.Pawns
             int index = _ctx.Size.Index(cell);
             if (!_ctx.Cells.IsWalkable(index)) return IntentRejection.OutOfBounds;
             Pawn pawn = Spawn(index);
-            pawn.RollPassions(_ctx.Seed);
+            pawn.RollPassions();
             return IntentRejection.None;
         }
 
@@ -167,6 +172,13 @@ namespace Odyssey.Sim.Pawns
                     writer.AddPawnAspect(pawn.Id, SkillAspects.Passion[s], pawn.Passions[s]);
                     writer.AddPawnAspect(pawn.Id, SkillAspects.Experience[s], pawn.Skills[s]);
                 }
+
+                // The seed this colonist was rolled from (U40), which is what the interface names
+                // them by: a reroll on the select screen has to give you a different person rather
+                // than the same person with different numbers, and a name keyed on the pawn id
+                // could only ever give the second. Reinterpreted rather than converted — an aspect
+                // carries an int and a seed is a uint, and every bit of it matters.
+                writer.AddPawnAspect(pawn.Id, SkillAspects.RollSeed, unchecked((int)pawn.RollSeed));
             }
 
             var items = _ctx.Items.Items;

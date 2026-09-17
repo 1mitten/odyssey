@@ -844,6 +844,46 @@ namespace Odyssey.Hud
             + FieldHeight + Gap                             // the box
             + StartRow + StartRow;                          // Reroll, Start
 
+        // ------------------------------------------------ the colonist screen (U40)
+
+        /// <summary>
+        /// How many skills a candidate's card carries, best first.
+        ///
+        /// <para>Thirteen skills times three cards is a screen of numbers nobody reads, and the
+        /// question a player is answering is "what are these three good at". Two fits the card
+        /// below with the name, and the number lives here rather than in the presenter so that
+        /// <see cref="ColonistCard"/> and what is actually drawn cannot disagree.</para>
+        /// </summary>
+        public const int ColonistCardSkills = 2;
+
+        /// <summary>
+        /// A candidate's card: the name line, and <b>one</b> line under it carrying both skills.
+        ///
+        /// <para><b>One line and not one per skill, and the arithmetic is what decided it.</b> A
+        /// line each came to 296 against the body's 284 — the first thing that has not fitted the
+        /// fixed box since the owner fixed it, and the possibility `17-start-flow.md` §11.4a named
+        /// when it said U40 might find the box the wrong size. It is not: "Mining 6 · Cutting 3"
+        /// reads as one fact about a person rather than two, which is also how the design's own
+        /// sketch drew it, and the screen comes to 242 with room to spare.</para>
+        /// </summary>
+        public const int ColonistCard = StartRow + StartSeedCaption;
+
+        public const int ColonistCardGap = 6;
+
+        /// <summary>
+        /// The colonist screen's content: a caption, three cards, and the two rows under them —
+        /// Reroll, then Start.
+        ///
+        /// <para>Measured against <see cref="StartListMax"/> like the New game screen, because it
+        /// sits in the same region with the same row that goes back beneath it. <b>This is the
+        /// screen that tests whether the fixed box was the right call</b>, being much the fullest
+        /// thing it has had to hold, so the assertion is the point rather than a formality.</para>
+        /// </summary>
+        public const float ColonistScreenHeight =
+            StartSeedCaption + StartRowGap                                      // Your colonists
+            + 3 * ColonistCard + 2 * ColonistCardGap + Gap                      // the three
+            + StartRow + StartRow;                                              // Reroll, Start
+
         /// <summary>
         /// How tall the content of one screen <i>would</i> be, for a given number of rows — which
         /// is no longer the panel's height, and is kept because it is what decides whether a screen

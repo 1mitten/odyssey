@@ -61,6 +61,32 @@ namespace Odyssey.Hud
         public const string StartKey = "ui.newgame.start";
 
         /// <summary>
+        /// The registry key naming the setup page itself — the heading over the whole thing.
+        ///
+        /// <para>This was <c>ui.newgame.next</c> for about an hour, when the colonists briefly had
+        /// a screen of their own and the seed's last row said Next. The whole setup is one page
+        /// now, so there is nothing to go on to and the word is a title instead.</para>
+        /// </summary>
+        public const string TitleKey = "ui.newgame.title";
+
+        /// <summary>The registry key naming the colony-name field.</summary>
+        public const string ColonyKey = "ui.newgame.colony";
+
+        /// <summary>
+        /// The registry key whose label is what a colony is called when nobody names it (owner,
+        /// 2026-09-17: <i>"The Lost Buckets"</i>).
+        ///
+        /// <para><b>A key rather than a literal, and one key rather than two.</b> It is a name a
+        /// player reads, so it belongs in the CSV like every other — and it is wanted in two places,
+        /// prefilled into the setup page's field and used by the bootstrap when nothing was typed.
+        /// Two literals would be two things to rename and one of them would be missed.</para>
+        /// </summary>
+        public const string DefaultColonyKey = "ui.newgame.defaultcolony";
+
+        /// <summary>The registry key naming the board-size control.</summary>
+        public const string SizeKey = "ui.newgame.size";
+
+        /// <summary>
         /// Every key this screen can put on screen, so <c>RegistryTests</c> can hold it to the
         /// naming CSV the way it already holds the session table and the naming prompt. A label
         /// invented in C# is a label the owner cannot correct.
@@ -70,6 +96,10 @@ namespace Odyssey.Hud
             SeedKey,
             RerollKey,
             StartKey,
+            TitleKey,
+            ColonyKey,
+            DefaultColonyKey,
+            SizeKey,
         };
 
         public SeedField() : this(SeedEntry.Draw) { }

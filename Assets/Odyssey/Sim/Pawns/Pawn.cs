@@ -32,6 +32,27 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class Pawn
     {
+        /// <summary>
+        /// The seed this pawn's own draws come from — its passions and its starting skills, and
+        /// nothing else (U40).
+        ///
+        /// <para><b>It is the world's seed unless somebody says otherwise</b>, which is what
+        /// <see cref="PawnRegistry.Spawn"/> sets, so a colony nobody chose — every headless run,
+        /// every test, every scenario placement — rolls exactly what it rolled before this field
+        /// existed. The pawn's id is still mixed into both draws, so five colonists on one world
+        /// seed still differ from each other and from the map.</para>
+        ///
+        /// <para><b>Why a pawn needs one at all.</b> Before U40 there was no way to say "this
+        /// colonist, differently": rerolling one candidate on a select screen would have meant
+        /// changing the seed of the whole board. A per-pawn seed is the smallest thing that makes
+        /// one person rerollable while leaving the world alone.</para>
+        ///
+        /// <para>Saved in a section of its own and in the state hash — see
+        /// <c>docs/design/18-colonist-select.md</c> §3, which also says why it is not in the pawn
+        /// record.</para>
+        /// </summary>
+        public uint RollSeed;
+
         public Pawn(PawnId id, int cell, PawnContent content)
         {
             Id = id;
@@ -296,14 +317,19 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Roll this pawn's passions from the world seed and its own id, so that the same seed
-        /// gives the same colonists and adding a roll elsewhere cannot shift them. Called once,
-        /// at placement; a load reads the saved bytes instead.
+        /// Roll this pawn's passions from <see cref="RollSeed"/> and its own id, so that the same
+        /// seed gives the same colonists and adding a roll elsewhere cannot shift them. Called
+        /// once, at placement; a load reads the saved bytes instead.
+        ///
+        /// <para><b>It reads the pawn's seed rather than taking the world's</b> since U40. For every
+        /// colonist the world places itself those are the same number, so nothing about this draw
+        /// moved; what changed is that a colonist chosen on a select screen can carry a seed of its
+        /// own, and be rerolled without touching the board.</para>
         /// </summary>
-        public virtual void RollPassions(uint seed)
+        public virtual void RollPassions()
         {
             var kind = Content.Kind;
-            var rng = DeterministicRandom.ForTick(seed, Id.Value, PawnPurpose.Passion);
+            var rng = DeterministicRandom.ForTick(RollSeed, Id.Value, PawnPurpose.Passion);
             for (int skill = 0; skill < Passions.Length; skill++)
             {
                 int roll = rng.NextInt(100);
@@ -314,10 +340,10 @@ namespace Odyssey.Sim.Pawns
         }
 
         /// <summary>
-        /// Roll this pawn's starting skill levels from the world seed and its own id (U37), one
-        /// independent draw per skill against <see cref="PawnKindDef.startingSkillLevelWeights"/>
-        /// — a separate stream from <see cref="RollPassions"/>, so adding this roll cannot shift
-        /// a single passion anywhere.
+        /// Roll this pawn's starting skill levels from <see cref="RollSeed"/> and its own id (U37),
+        /// one independent draw per skill against
+        /// <see cref="PawnKindDef.startingSkillLevelWeights"/> — a separate stream from
+        /// <see cref="RollPassions"/>, so adding this roll cannot shift a single passion anywhere.
         ///
         /// <para><b>Called from the world's first tick, deliberately not from placement.</b>
         /// Placement runs inside <see cref="ColonyWorld.Build"/>, before the golden-master gate's
@@ -337,7 +363,7 @@ namespace Odyssey.Sim.Pawns
         /// suite, and a roll that stamped over it after the fact would fail tests that predate
         /// this unit for a reason that has nothing to do with what they check.</para>
         /// </summary>
-        public virtual void RollStartingSkills(uint seed)
+        public virtual void RollStartingSkills()
         {
             var kind = Content.Kind;
             int[] weights = kind.startingSkillLevelWeights;
@@ -347,7 +373,7 @@ namespace Odyssey.Sim.Pawns
             for (int i = 0; i < weights.Length; i++) total += weights[i];
             if (total <= 0) return;
 
-            var rng = DeterministicRandom.ForTick(seed, Id.Value, PawnPurpose.StartingSkill);
+            var rng = DeterministicRandom.ForTick(RollSeed, Id.Value, PawnPurpose.StartingSkill);
             for (int skill = 0; skill < Skills.Length; skill++)
             {
                 int roll = rng.NextInt(total);
@@ -450,6 +476,9 @@ namespace Odyssey.Sim.Pawns
         {
             hash.Add(Id.Value);
             hash.Add(Cell);
+            // U40. Saved state that is not derived belongs in the hash (OQ-50), and this decides
+            // what a pawn is. Every Simulated golden moved when it arrived, deliberately.
+            hash.Add(unchecked((int)RollSeed));
             for (int i = 0; i < Needs.Length; i++) hash.Add(Needs[i]);
             hash.Add(Mood);
             hash.Add(MoodTarget);

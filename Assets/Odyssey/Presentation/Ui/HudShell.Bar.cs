@@ -34,7 +34,7 @@ namespace Odyssey.Presentation.Ui
             _bar = new VisualElement { name = "bar" };
             _bar.AddToClassList("commandbar");
             _barRow.Add(_bar);
-            _hud.Add(_barRow);
+            _worldUi.Add(_barRow);
 
             IReadOnlyList<HudCommand> commands = HudCommands.All;
             for (int i = 0; i < commands.Count; i++)
@@ -259,7 +259,7 @@ namespace Odyssey.Presentation.Ui
             });
             _menuPopup.Add(settings);
 
-            _hud.Add(_menuPopup);
+            _worldUi.Add(_menuPopup);
         }
 
         VisualElement MenuRow(HudCommand command)

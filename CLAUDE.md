@@ -364,7 +364,49 @@ fresh seed: being dealt the same world twice reads as a reroll that does not wor
 screen could tell a player otherwise. **`U40` is unblocked** — both its dependencies are in and the
 screen it hangs off exists.
 
-**The owner played it on 2026-09-17 and it was right first time** (*"works spot on"*), which is the
+**`U40`, colonist select, is done — 2026-09-17.** Read `docs/design/18-colonist-select.md`; §2 holds
+the owner's three decisions and §6a what building it changed about that design. A fourth screen of
+the start menu — Seed → **Next** → Colonists → **Start** — because three cards do not fit beside the
+seed and the box is fixed on purpose. A lock rather than a per-slot reroll: the two are the same
+control said twice, so Reroll is one row and you keep the ones you like. **A new game starts with
+exactly the three chosen**; the headless ten-day gate keeps its own five-colonist scenario, so M3's
+gate is untouched.
+
+**The one real change underneath is that a pawn rolls from its own seed.** `Pawn.RollSeed` defaults
+to the world's at spawn, so every colony nobody chose — every headless run, every test, every
+scenario — rolls exactly what it always did, and the id is still mixed in so five colonists still
+differ from each other. It is saved in a **section of its own** rather than in the pawn record,
+because sections are skippable and a save written before this simply has no entry, leaving every
+restored colonist on the world seed, which is what that colony *was*. No format bump.
+**All six goldens re-baked, and `Generated` moved as well as `Simulated` this time** — U37's roll
+happens on the first tick, but a seed is assigned at placement, which runs before that hash is
+taken. Nothing about those worlds changed; the hash can now see the number they were rolled from.
+
+**A colonist's name follows the roll, not the slot**, so a reroll gives a different person rather
+than the same person with different numbers. It could not be a plain hash of the seed: every
+colonist a world places itself shares that world's seed, and a pool of eight would then call **two
+of five the same thing more often than not**. The seed chooses where in the pool the colony starts
+reading and the id says how far along — distinctness within a colony is asserted over 200 seeds.
+The seed reaches the HUD as a `PawnAspect`, which is what OQ-45 built that seam for.
+
+**Three things building it changed about its own design**, recorded in §6a rather than folded away:
+the card had to be rolled for the **slot** it will occupy (both draws mix the id in, so two of three
+cards would have shown the right name and the wrong skills); three cards did **not** fit the fixed
+box at a line per skill, 296 against 284, which is §11.4a's own prediction coming true and was
+answered by putting both skills on one line rather than by growing the box; and `PawnContext.Seed`
+turned out to be unset until the first tick, so the first version rolled **every colony in the game
+from seed zero** until `StartingSkillsTests` caught it.
+
+**A new colony now starts with no orders at all** (owner, 2026-09-17: *"at the start of game there
+are no orders, until you assign them for the time being"*). This is a change `ScenarioDef.Playtest`'s
+own comment had promised — *"when the UI line's designate tool lands, the scene moves to Bare"* —
+and that tool landed in M3, so a new colony had gone on arriving with a ring of trees marked and
+colonists already walking off to chop them. **A note saying what to do when a thing lands does not
+do it.** `Playtest` keeps `miners`, which is an inclination rather than an order, so it is still not
+`Bare`; three tests that had been living off those pre-marked trees give the orders themselves now.
+No golden moved, because every golden case builds on `Bare`.
+
+**The owner played `U39` on 2026-09-17 and it was right first time** (*"works spot on"*), which is the
 first thing on this screen that has been. U38 took four corrections off its own playtest and the
 gesture work before it took three rounds; this took none. Nothing about it is open on the owner's
 side, so the seed, the reroll, the Start row and the order they sit in are **settled** rather than
@@ -444,13 +486,10 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~12 s, no Unity): **600 Sim + 312 Hud**; Long tier
-  **20**. Unity tier on 2026-09-17, on the merge of the orders strip and U39: EditMode
-  **1386 total, 1375 passed, 0 failed**; PlayMode **65 total,
-  61 passed, 0 failed** (the rest are pre-existing `[Explicit]` or ignored rows). The
-  Hud figure is **exactly** 309 + 3, so neither branch lost a test to the merge — which is the
-  cheapest check there is that a textually clean auto-merge of two files both sides edited was also
-  a correct one.
+- **Fast tier** (`scripts/test-fast.sh`, ~15 s, no Unity): **608 Sim + 348 Hud**; Long tier **20**.
+  Unity tier on 2026-09-17, on the merge of the orders strip, U40 and the world-setup page:
+  EditMode **1430 total, 1419 passed, 0 failed**; PlayMode **65 total, 62 passed, 0 failed** (the
+  rest are pre-existing `[Explicit]` or ignored rows).
   **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
   touches the composition root or the HUD shell is unproven until Unity has compiled it, however
   green the 11 seconds look (`docs/lessons.md`).

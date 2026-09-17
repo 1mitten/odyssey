@@ -82,6 +82,26 @@ namespace Odyssey.Presentation.Ui
 
         // ---- roots
         VisualElement _hud = null!;
+
+        /// <summary>
+        /// Everything that only means anything with a colony running — the bars, the panels, the
+        /// rail, the two contrast scrims. Put away as one thing when no session is built.
+        /// </summary>
+        VisualElement _worldUi = null!;
+
+        /// <summary>The picture behind the main menu, and the only thing on screen when there is
+        /// no world to be the backdrop itself.</summary>
+        VisualElement _backdrop = null!;
+
+        /// <summary>
+        /// Where the menu's backdrop is loaded from.
+        ///
+        /// <para><c>Resources</c> rather than a serialised field, because scenes here are generated
+        /// by editor scripts and a field somebody has to remember to drag an image into is a field
+        /// that is empty in every scene but the one they did it in. A missing file is not an error:
+        /// the menu simply has no picture, which is what a clone without the art gets.</para>
+        /// </summary>
+        public const string MenuBackdropResource = "Odyssey/menu-backdrop";
         VisualElement _marquee = null!;
         VisualElement _armedBanner = null!;
         Label _armedWhat = null!;
@@ -349,6 +369,23 @@ namespace Odyssey.Presentation.Ui
             _hud.AddToClassList("hud");
             root.Add(_hud);
 
+            // Behind everything, and only ever seen when there is no colony: with a world running
+            // the backdrop is the world.
+            BuildBackdrop();
+
+            // Everything that is only meaningful with a colony running lives in here, so it can be
+            // put away as one thing (owner, 2026-09-17: the in-game interface was showing through
+            // the main menu's scrim).
+            //
+            // **A container rather than a class on the shell**, and the reason is mechanical: half
+            // these regions set `style.display` in code as they come and go, and an inline style
+            // beats a stylesheet rule in UI Toolkit — so `.hud--noworld .inspect { display: none }`
+            // would be quietly ignored by exactly the panels most likely to be showing. Hiding the
+            // parent cannot be argued with.
+            _worldUi = new VisualElement { name = "world-ui", pickingMode = PickingMode.Ignore };
+            _worldUi.AddToClassList("worldui");
+            _hud.Add(_worldUi);
+
             BuildScrims();
 
             // The marquee is a picture, not a decision: it polls the rig's rect every frame rather
@@ -357,7 +394,7 @@ namespace Odyssey.Presentation.Ui
             _marquee = new VisualElement { name = "marquee", pickingMode = PickingMode.Ignore };
             _marquee.AddToClassList("marquee");
             _marquee.style.display = DisplayStyle.None;
-            _hud.Add(_marquee);
+            _worldUi.Add(_marquee);
 
             // What the player is holding, and how to stop holding it. Above the command
             // bar, where the eye already goes for the bar and its popovers.
@@ -373,7 +410,7 @@ namespace Odyssey.Presentation.Ui
             // names in the content registry, and a literal in the sheet would be a second copy of
             // an answer a rename can change.
             _armedBanner.style.minWidth = HudLayout.ArmedWidth;
-            _hud.Add(_armedBanner);
+            _worldUi.Add(_armedBanner);
 
             BuildStores();
             BuildStrip();

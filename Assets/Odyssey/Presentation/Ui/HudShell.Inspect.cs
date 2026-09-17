@@ -139,7 +139,7 @@ namespace Odyssey.Presentation.Ui
             // appeared for one frame before the first refresh took it away would be the kind of
             // flicker nobody can reproduce on demand.
             _inspectPanel.style.display = DisplayStyle.None;
-            _hud.Add(_inspectPanel);
+            _worldUi.Add(_inspectPanel);
         }
 
         void RefreshInspect()
@@ -285,10 +285,21 @@ namespace Odyssey.Presentation.Ui
             return view;
         }
 
-        void SetSkill(int index, in SkillRow row)
+        void SetSkill(int index, in SkillRow row) => SetSkillLine(_skills, index, row);
+
+        /// <summary>
+        /// Draw one line of a skills grid — <b>any</b> skills grid.
+        ///
+        /// <para>Taking the view list rather than reaching for <c>_skills</c> is what lets the
+        /// setup page's candidate detail be the same control as this pane's Skills tab rather than
+        /// a second one that looks like it. The two are read side by side by a player comparing a
+        /// candidate with a colonist they already have, so a difference in ordering, greying or
+        /// pip placement would read as a bug in the simulation rather than in a stylesheet.</para>
+        /// </summary>
+        static void SetSkillLine(List<SkillLineView> views, int index, in SkillRow row)
         {
-            if (index >= _skills.Count) return;
-            SkillLineView view = _skills[index];
+            if (index >= views.Count) return;
+            SkillLineView view = views[index];
 
             if (view.LastKey != row.IconKey)
             {
