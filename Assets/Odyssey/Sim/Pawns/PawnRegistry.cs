@@ -129,6 +129,20 @@ namespace Odyssey.Sim.Pawns
                     workFocus >= 0 ? size.FromIndex(workFocus) : cell,
                     pawn.Gesture,
                     pawn.GestureSerial));
+
+                // Skills go out as pawn aspects rather than as fields on the view, which is what
+                // that mechanism is for: nothing in Sim.Contracts had to learn that skills exist.
+                // Every colonist, not only whoever is selected — the snapshot has no notion of
+                // selection, that belongs to presentation — and the rows go into a reused buffer,
+                // so a steady-state publish still allocates nothing. The level is published as
+                // well as the experience because the ladder that derives one from the other is
+                // simulation content and is not published.
+                for (int s = 0; s < SkillIndex.Count; s++)
+                {
+                    writer.AddPawnAspect(pawn.Id, SkillAspects.Level[s], pawn.SkillLevel(s));
+                    writer.AddPawnAspect(pawn.Id, SkillAspects.Passion[s], pawn.Passions[s]);
+                    writer.AddPawnAspect(pawn.Id, SkillAspects.Experience[s], pawn.Skills[s]);
+                }
             }
 
             var items = _ctx.Items.Items;

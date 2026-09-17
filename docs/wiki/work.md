@@ -35,18 +35,18 @@ The work types a colonist can be assigned, in priority order of urgency, and the
 
 | Name | Key | What it is | Art | Milestone |
 |---|---|---|---|---|
-| **Construction** | `ui.skill.construction` | Building, and the quality of what is built | sheet 06 (action tiles), med | M2 |
-| **Mining** | `ui.skill.mining` | Digging, rubble clearance and salvage extraction | sheet 05 (tools and weapons), high | M2 |
-| **Salvage** | `ui.skill.salvage` | Stripping a shell without wrecking what is in it | sheet 05 (tools and weapons), med | M2 |
+| **Construction** | `ui.skill.construction` | Building, and the quality of what is built | sheet 06 (action tiles), high | M2 |
+| **Mining** | `ui.skill.mining` | Digging, rubble clearance and salvage extraction | sheet 06 (action tiles), high | M2 |
+| **Salvage** | `ui.skill.salvage` | Stripping a shell without wrecking what is in it | sheet 06 (action tiles), high | M2 |
 | **Cooking** | `ui.skill.cooking` | Meal quality, and food poisoning avoided | sheet 06 (action tiles), high | M2 |
 | **Growing** | `ui.skill.growing` | Yield and harvest speed | sheet 06 (action tiles), high | M2 |
 | **Animals** | `ui.skill.animals` | Taming, training and husbandry | sheet 06 (action tiles), high | M2 |
-| **Crafting** | `ui.skill.crafting` | Bench work and item quality | sheet 03 (camp and crafting), high | M2 |
-| **Fabrication** | `ui.skill.fabrication` | Advanced production. Gates the best gear | sheet 06 (action tiles), med | M2 |
+| **Crafting** | `ui.skill.crafting` | Bench work and item quality | sheet 06 (action tiles), high | M2 |
+| **Fabrication** | `ui.skill.fabrication` | Advanced production. Gates the best gear | sheet 06 (action tiles), high | M2 |
 | **Medicine** | `ui.skill.medicine` | Tending, surgery and survival odds | sheet 06 (action tiles), high | M2 |
 | **Social** | `ui.skill.social` | Negotiation, recruitment and warden work | sheet 08 (salvage gear), low | M2 |
 | **Shooting** | `ui.skill.shooting` | Ranged accuracy | sheet 06 (action tiles), high | M2 |
-| **Melee** | `ui.skill.melee` | Close combat, hit and parry | sheet 05 (tools and weapons), high | M2 |
+| **Melee** | `ui.skill.melee` | Close combat, hit and parry | sheet 06 (action tiles), high | M2 |
 | **Intellect** | `ui.skill.intellect` | Research speed | sheet 06 (action tiles), high | M2 |
 
 ---

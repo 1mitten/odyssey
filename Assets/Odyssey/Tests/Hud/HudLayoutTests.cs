@@ -151,9 +151,119 @@ namespace Odyssey.Tests.Hud
 
                 Assert.That(HudLayout.FirstOverlap(boxes), Is.Null,
                     $"a colony of forty overflows the strip at {width}x{height}");
-                Assert.That(HudLayout.VisibleCards(width, 40), Is.GreaterThan(0),
+                Assert.That(HudLayout.VisibleCards(width, height, 40), Is.GreaterThan(0),
                     $"no colonist card fits at all at {width}x{height}");
             }
+        }
+
+        /// <summary>
+        /// The strip wraps to a second row and stops there (owner, 2026-09-17: dock the bars to
+        /// the screen edges "so many more could fit across 2 rows potentially").
+        ///
+        /// <para>The clamp is the part worth a test. The strip is the one region with no ceiling
+        /// of its own, so a colony of forty over an unbounded number of rows would paper the
+        /// screen and every other guarantee here — no overlap, the coverage ceiling — would be
+        /// true only for the colony sizes somebody happened to try.</para>
+        /// </summary>
+        [Test]
+        public void TheStripGrowsToASecondRowAndNoFurther()
+        {
+            foreach ((int width, int height) in Resolutions)
+            {
+                int perRow = HudLayout.CardsPerRow(width);
+                int allowed = HudLayout.StripRowsAllowed(height);
+                Assert.That(perRow, Is.GreaterThan(0), $"no card fits at all at {width}x{height}");
+
+                Assert.That(HudLayout.StripRowsUsed(width, height, perRow), Is.EqualTo(1),
+                    "a full first row should not have started a second");
+                Assert.That(HudLayout.StripRowsUsed(width, height, perRow + 1), Is.EqualTo(allowed),
+                    "one card past a full row belongs on a second row wherever there is room for one");
+                Assert.That(HudLayout.StripRowsUsed(width, height, perRow * 5), Is.EqualTo(allowed),
+                    "the strip must stop at its row cap however large the colony is");
+
+                Assert.That(HudLayout.VisibleCards(width, height, 500),
+                    Is.EqualTo(perRow * allowed),
+                    "a colony past what the strip holds shows what fits and no more");
+
+                // The box is as wide as the widest row, not as the whole colony laid end to end.
+                var full = new HudContent(colonists: 500, storeRows: AllStoreRows, alerts: 3,
+                    layers: Layers, needRows: 2);
+                var boxes = HudLayout.Solve(width, height, full);
+                HudRect strip = boxes[HudRegion.ColonistStrip];
+
+                Assert.That(strip.Height,
+                    Is.EqualTo(HudLayout.StripHeight(allowed)).Within(0.01f));
+                Assert.That(strip.Height,
+                    Is.LessThanOrEqualTo(height * HudLayout.StripHeightShare + 0.01f),
+                    $"the strip stands in more than its share of a {width}x{height} screen");
+                Assert.That(strip.Width, Is.LessThanOrEqualTo(HudLayout.StripRoom(width) + 0.01f),
+                    $"the strip is wider than the room it may occupy at {width}x{height}");
+                Assert.That(HudLayout.FirstOverlap(boxes), Is.Null,
+                    $"two rows of cards run into another region at {width}x{height}");
+
+                // The ceiling is stated against the resting HUD, as the criteria are — but with
+                // the colony that fills both rows rather than the three the other coverage test
+                // uses, because a region that can double in height is exactly the one that could
+                // spend the budget without anybody selecting anything.
+                var resting = HudContent.NothingSelected(colonists: 500, storeRows: 3, layers: Layers);
+                Assert.That(HudLayout.Coverage(HudLayout.Solve(width, height, resting), width, height),
+                    Is.LessThanOrEqualTo(HudLayout.CoverageCeiling),
+                    $"a full two-row strip puts the resting HUD over its coverage ceiling at {width}x{height}");
+            }
+        }
+
+        /// <summary>
+        /// The command bar is the full width of the screen and sits on its bottom edge (owner,
+        /// 2026-09-17), and a popover raised from it lands on top of it with no gap.
+        /// </summary>
+        [Test]
+        public void TheBarSpansTheScreenAndItsPopoversSitOnIt()
+        {
+            foreach ((int width, int height) in Resolutions)
+            foreach (HudContent content in Cases())
+            {
+                var boxes = HudLayout.Solve(width, height, content);
+                HudRect bar = boxes[HudRegion.CommandBar];
+
+                Assert.That(bar.X, Is.EqualTo(0f).Within(0.01f), $"the bar starts inset at {width}x{height}");
+                Assert.That(bar.Width, Is.EqualTo((float)width).Within(0.01f),
+                    $"the bar is {bar.Width:0.#} px on a {width} px screen");
+                Assert.That(bar.Bottom, Is.EqualTo((float)height).Within(0.01f),
+                    "the bar is not on the bottom edge of the screen");
+
+                // A popover's bottom is measured from the bottom of the screen, so it equals the
+                // bar's height exactly when the two are flush.
+                Assert.That(height - HudLayout.PopoverBottom, Is.EqualTo(bar.Y).Within(0.01f),
+                    $"a popover would sit {bar.Y - (height - HudLayout.PopoverBottom):0.#} px " +
+                    "away from the bar it was raised from");
+            }
+        }
+
+        /// <summary>
+        /// A popover lines up with the button that raised it, and is pushed back on to the screen
+        /// rather than hanging off it.
+        /// </summary>
+        [Test]
+        public void APopoverFollowsItsButtonAndStaysOnTheScreen()
+        {
+            const float screen = 1920f;
+            const float popover = 420f;
+
+            Assert.That(HudLayout.PopoverLeft(0f, popover, screen), Is.EqualTo(0f),
+                "a popover raised by the leftmost button starts at the left edge");
+            Assert.That(HudLayout.PopoverLeft(300f, popover, screen), Is.EqualTo(300f),
+                "a popover in the middle of the bar lines up with its button");
+
+            Assert.That(HudLayout.PopoverLeft(1800f, popover, screen), Is.EqualTo(screen - popover),
+                "a popover raised near the right edge is pushed back rather than hanging off");
+            Assert.That(HudLayout.PopoverLeft(1800f, popover, screen) + popover,
+                Is.EqualTo(screen).Within(0.01f),
+                "and lands flush with the right edge, like the bar under it");
+
+            Assert.That(HudLayout.PopoverLeft(200f, 3000f, screen), Is.EqualTo(0f),
+                "a popover wider than the screen starts at the left edge rather than negative");
+            Assert.That(HudLayout.PopoverLeft(-50f, popover, screen), Is.EqualTo(0f),
+                "and never off the left edge either");
         }
 
         [Test]
@@ -180,6 +290,13 @@ namespace Odyssey.Tests.Hud
             yield return new HudContent(Colonists, AllStoreRows, 3, Layers, 2);     // and in trouble
             yield return new HudContent(0, 0, 0, Layers, 0);                        // nobody left
             yield return new HudContent(8, AllStoreRows, 1, 32, 4);                 // a deeper, fuller game
+
+            // The Skills tab, which is the tallest body the pane has: seven rows of the design's
+            // thirteen skills in two columns, against the needs tab's two.
+            yield return new HudContent(Colonists, AllStoreRows, 0, Layers, needRows: 0,
+                                        skillRows: SkillCatalogue.Rows);
+            yield return new HudContent(8, AllStoreRows, 3, 32, needRows: 0,
+                                        skillRows: SkillCatalogue.Rows);
         }
     }
 

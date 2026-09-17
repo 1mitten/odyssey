@@ -1,0 +1,53 @@
+{
+ "generator": "tools/icons/icons.py",
+ "icons": {
+  "ui.skill.animals": {
+   "scale": 2,
+   "size": 64
+  },
+  "ui.skill.construction": {
+   "scale": 2,
+   "size": 64
+  },
+  "ui.skill.cooking": {
+   "scale": 2,
+   "size": 64
+  },
+  "ui.skill.crafting": {
+   "scale": 2,
+   "size": 64
+  },
+  "ui.skill.fabrication": {
+   "scale": 2,
+   "size": 64
+  },
+  "ui.skill.growing": {
+   "scale": 2,
+   "size": 64
+  },
+  "ui.skill.intellect": {
+   "scale": 2,
+   "size": 64
+  },
+  "ui.skill.medicine": {
+   "scale": 2,
+   "size": 64
+  },
+  "ui.skill.melee": {
+   "scale": 2,
+   "size": 64
+  },
+  "ui.skill.mining": {
+   "scale": 2,
+   "size": 64
+  },
+  "ui.skill.salvage": {
+   "scale": 2,
+   "size": 64
+  },
+  "ui.skill.shooting": {
+   "scale": 2,
+   "size": 64
+  }
+ }
+}

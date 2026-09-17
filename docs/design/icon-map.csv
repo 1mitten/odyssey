@@ -60,19 +60,19 @@ ui.mood.content,-,,,"mood face, content. No sheet has a human face at all",-,gap
 ui.mood.strained,-,,,"mood face, strained",-,gap
 ui.mood.breaking,-,,,"mood face, at the break threshold",-,gap
 ui.mood.broken,-,,,"mood face, in a break",-,gap
-ui.skill.construction,06,,,hammer and tools tile,med,mapped
-ui.skill.mining,05,,,pickaxe,high,mapped
-ui.skill.salvage,05,,,powered drill,med,mapped
-ui.skill.cooking,06,,,cooking pot tile,high,mapped
-ui.skill.growing,06,,,ploughed field tile,high,mapped
-ui.skill.animals,06,,,paw print tile,high,mapped
-ui.skill.crafting,03,,,anvil,high,mapped
-ui.skill.fabrication,06,,,gears tile,med,mapped
-ui.skill.medicine,06,,,medical cross tile,high,mapped
+ui.skill.construction,06,4,6,mallet and cog on a workbench,high,mapped
+ui.skill.mining,06,1,0,pickaxe on dark rock,high,mapped
+ui.skill.salvage,06,1,4,drill bit biting a riveted plate,high,mapped
+ui.skill.cooking,06,0,1,stew pot over a fire,high,mapped
+ui.skill.growing,06,3,0,"sack of seed, leaf-marked",high,mapped
+ui.skill.animals,06,3,6,paw print in mud,high,mapped
+ui.skill.crafting,06,2,5,hammer striking an anvil,high,mapped
+ui.skill.fabrication,06,3,1,crucible pouring molten metal,high,mapped
+ui.skill.medicine,06,3,7,"first-aid case, pills spilling",high,mapped
 ui.skill.social,08,,,two-way radio,low,mapped
-ui.skill.shooting,06,,,crosshair tile,high,mapped
-ui.skill.melee,05,,,blade,high,mapped
-ui.skill.intellect,06,,,book tile,high,mapped
+ui.skill.shooting,06,5,0,scope reticle over a landscape,high,mapped
+ui.skill.melee,06,3,4,broad axe with slash marks,high,mapped
+ui.skill.intellect,06,6,6,"open book, lightbulb above",high,mapped
 ui.pawn.colonist,-,,,"a human figure. No sheet contains one, and this is the most-used icon in the HUD",-,gap
 ui.pawn.visitor,-,,,"human figure, neutral",-,gap
 ui.pawn.hostile,-,,,"human figure, hostile",-,gap
