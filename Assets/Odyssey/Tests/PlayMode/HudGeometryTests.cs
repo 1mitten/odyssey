@@ -416,9 +416,13 @@ namespace Odyssey.Tests.PlayMode
                     string text = label.text;
                     if (string.IsNullOrEmpty(text)) continue;
 
-                    // A hotkey cap is a legend, not a word, and a colonist's initial is one
-                    // letter. What is forbidden is an upper-case fragment of two or three letters
-                    // standing in for a name.
+                    // A hotkey cap is a legend, not a word. What is forbidden is an upper-case
+                    // fragment of two or three letters standing in for a name.
+                    //
+                    // The colonist-initial exemption went on 2026-09-18 with the letter it
+                    // excused: a roster card draws that colonist's own face now
+                    // (docs/design/20-avatars.md), so there is no initial to let through. A rule
+                    // that shrinks as the interface improves is the shape this one should have.
                     //
                     // The caps excuse themselves by their role rather than by this list naming
                     // every place one is drawn — HudText.Apply adds HudText.KeyCapClass to
@@ -426,7 +430,6 @@ namespace Odyssey.Tests.PlayMode
                     // Build palette's ESC hint would have been a fourth; a rule that has to be
                     // extended every time it is obeyed is a rule that eventually is not.
                     if (label.ClassListContains(HudText.KeyCapClass)) continue;
-                    if (label.ClassListContains("card__initial")) continue;
                     if (label.ClassListContains("rail__hint")) continue;
 
                     bool shout = text.Length is 2 or 3 && text == text.ToUpperInvariant() &&

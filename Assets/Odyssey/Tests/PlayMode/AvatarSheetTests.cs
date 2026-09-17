@@ -3,6 +3,8 @@ using System.Collections;
 using System.IO;
 using NUnit.Framework;
 using Odyssey.Hud;
+using Odyssey.Presentation.Bootstrap;
+using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Ui;
 using Odyssey.Sim.Contracts;
 using UnityEngine;
@@ -102,6 +104,61 @@ namespace Odyssey.Tests.PlayMode
             finally { Object.DestroyImmediate(root); }
         }
 
+        /// <summary>
+        /// And the page the choosing happens on, with the faces in it — the three candidate rows
+        /// and the portrait beside the record. `Logs/setup-page.png`.
+        ///
+        /// <para>The sheet above says whether an avatar is a person; this says whether it belongs
+        /// where it has been put, which is a different question and the one the owner's decision 6
+        /// is really about. No assertion, deliberately: it passes if it managed to take the
+        /// picture.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator PhotographTheSetupPage()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell shell, buildOnPlay: false);
+            try
+            {
+                for (int i = 0; i < 8; i++) yield return null;
+
+                shell.Menu.Choose(SessionCommands.NewGameKey);
+                for (int i = 0; i < 8; i++) yield return null;
+
+                var doc = boot.GetComponent<UIDocument>();
+                Assert.That(doc, Is.Not.Null, "the rig built no HUD document");
+
+                PanelSettings settings = Object.Instantiate(doc!.panelSettings);
+                var target = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32,
+                    RenderTextureReadWrite.sRGB)
+                {
+                    antiAliasing = 2,
+                };
+
+                settings.clearColor = true;
+                settings.colorClearValue = new Color(0.36f, 0.58f, 0.22f);
+                settings.targetTexture = target;
+                doc.panelSettings = settings;
+
+                for (int i = 0; i < 10; i++) yield return null;
+
+                RenderTexture previous = RenderTexture.active;
+                RenderTexture.active = target;
+                var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+                image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                image.Apply();
+                RenderTexture.active = previous;
+
+                Directory.CreateDirectory(Path.GetFullPath("Logs"));
+                File.WriteAllBytes(Path.GetFullPath("Logs/setup-page.png"), image.EncodeToPNG());
+
+                RenderTexture.active = null;
+                target.Release();
+                Object.DestroyImmediate(target);
+            }
+            finally { Object.Destroy(root); }
+        }
+
         /// <summary>One crown on one build, all in the same three colours.</summary>
         static ColonistFace Silhouette(int index) =>
             new ColonistFace(
@@ -127,10 +184,6 @@ namespace Odyssey.Tests.PlayMode
                 avatar.SetFace(faces(i));
                 avatar.style.marginRight = 6;
                 avatar.style.marginBottom = 6;
-                avatar.style.borderTopLeftRadius = 4;
-                avatar.style.borderTopRightRadius = 4;
-                avatar.style.borderBottomLeftRadius = 4;
-                avatar.style.borderBottomRightRadius = 4;
                 strip.Add(avatar);
             }
 

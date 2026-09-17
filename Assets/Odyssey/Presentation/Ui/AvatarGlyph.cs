@@ -82,6 +82,15 @@ namespace Odyssey.Presentation.Ui
             style.height = size;
             style.flexShrink = 0;
 
+            // Rounded here rather than per site. An avatar is the same object on a roster card, in
+            // the inspect header and on the setup page, so a corner radius written three times in
+            // the stylesheet would be three chances to disagree — the same argument HudLayout
+            // makes about every other number it owns.
+            style.borderTopLeftRadius = HudTheme.ControlRadius;
+            style.borderTopRightRadius = HudTheme.ControlRadius;
+            style.borderBottomLeftRadius = HudTheme.ControlRadius;
+            style.borderBottomRightRadius = HudTheme.ControlRadius;
+
             // The figure runs to the bottom edge of the box, so at the rounded corners it would
             // otherwise paint outside its own tile.
             style.overflow = Overflow.Hidden;

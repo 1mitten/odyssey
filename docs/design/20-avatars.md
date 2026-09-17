@@ -223,6 +223,42 @@ has stopped fitting in the box that was already there and the change wants rerea
 
 ---
 
+## 7a. What building it changed about the design above
+
+Written after the code and marked in place rather than folded in, because the wrong version is the
+useful record.
+
+- **`AvatarGlyph` is not a `HudGlyph` subclass**, which §4 said it would be. That class paints from
+  a handler subscribed privately in its constructor and dispatches on `HudGlyphKind`, an enum of one
+  shape per value; an avatar is six values at once. Making its paint virtual would have loosened the
+  chrome set's contract for a case that does not share it — an avatar is all fills and no strokes,
+  so the stroke rule that makes a 17 px row icon and a 30 px one read as one set does not apply.
+  It keeps the box, the scale and the `P` mapping, which is what makes it sit beside them.
+- **`ColonistAppearanceBook` moved too**, and §6 now says so with the reason.
+- **Two of §4's numbers were wrong and the contact sheet said so**, which is decision 6 earning
+  itself on the first run. The three builds were 5.0, 6.3 and 7.6 half-units against a flare of
+  2.4, which put every bust between 14.8 and 20.0 units wide in a 24-unit box — three builds that
+  were one build. They are 4.0, 5.6 and 7.2 against a flare of 1.9 now, so the busts come out 11.8,
+  15.0 and 18.2. The *long* and *ponytail* crowns reached 0.62 of the head's radius and read as
+  sideburns; they reach the shoulders now.
+- **`Painter2D.Arc` is not used**, and the reason is worth keeping: its angles are measured in the
+  element's own space, where y runs down, so every "over the top of the head" would be written back
+  to front and come out as a chin. The crowns are sampled into polygons at sixteen steps a
+  half-turn, which is under a tenth of a pixel of chord error at 64 px.
+- **The candidate row's text column is 200.6 px and its widest trade is 138.9** — *Cemetery
+  gravedigger*, measured by `ACandidateRowHoldsItsTradeBesideTheFace` with the real text engine
+  over all 174 occupations. §3 predicted 206 px from arithmetic and was close, but the rule at stake
+  (only a name may be cut short) is not one to settle with arithmetic about a font.
+- **`Odyssey.Editor` did not reference `Odyssey.Hud`.** Nothing in the fast tier could know:
+  380 tests were green and the project did not compile. It is `docs/lessons.md`'s standing warning
+  happening again, and the reason the Unity run came before the commit rather than after it.
+- **The roster card's initial letter is gone, and so are its two exemptions** — the
+  `.card__initial` rule, its entry in the stylesheet anchor table, and the carve-out in
+  `NoLabelIsAThreeLetterPlaceholder` that let a one-letter label through. A rule that shrinks as
+  the interface improves is the right shape for that rule.
+
+---
+
 ## 8. By-hand test procedure
 
 1. Run the contact sheet and look at it before anything else (decision 6). Twenty-four colonists at

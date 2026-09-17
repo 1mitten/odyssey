@@ -172,14 +172,24 @@ namespace Odyssey.Presentation.Ui
 
             // The avatar follows the answer rather than the click: a tile whose face is mined
             // through, or a pile that changes hands, swaps its icon without a rebuild.
-            string avatarKey = _inspect.Subject == InspectSubject.Colonist ? "ui.pawn.colonist"
-                : _inspect.Subject == InspectSubject.Item ? _inspect.ItemIconKey
-                : _inspect.CellIconKey;
+            bool colonist = _inspect.Subject == InspectSubject.Colonist;
+            string avatarKey = _inspect.Subject == InspectSubject.Item ? _inspect.ItemIconKey
+                : _inspect.Subject == InspectSubject.Cell ? _inspect.CellIconKey
+                : "ui.pawn.colonist";
             if (avatarKey != _inspectAvatarKey)
             {
                 _inspectAvatarKey = avatarKey;
                 _inspectAvatar.SetKey(avatarKey);
             }
+
+            // Whoever is in the slot, only one of the two is in it. The badge is not hidden for a
+            // colonist and left keyed at ui.pawn.colonist — it is hidden and *unkeyed by the line
+            // above*, so the one key in the registry that has never had art is no longer asked
+            // for by anything on this screen.
+            _inspectAvatar.style.display = colonist ? DisplayStyle.None : DisplayStyle.Flex;
+            _inspectFace.style.display = colonist ? DisplayStyle.Flex : DisplayStyle.None;
+            if (colonist && _boot?.World != null)
+                _inspectFace.SetFace(ColonistFace.Of(_boot.World.Views.Current, _inspect.Pawn));
 
             // The two header lines are interpolated, and the pane refreshes fifteen times a
             // second, so they are rebuilt only when one of the values they quote has moved. The
@@ -432,12 +442,20 @@ namespace Odyssey.Presentation.Ui
             var header = new VisualElement();
             header.AddToClassList("inspect__hdr");
 
-            _inspectAvatarKey = _inspect.Subject == InspectSubject.Colonist ? "ui.pawn.colonist"
-                : _inspect.Subject == InspectSubject.Item ? _inspect.ItemIconKey
-                : _inspect.CellIconKey;
+            // Two elements, one slot, and only ever one of them showing. A colonist gets their own
+            // face (docs/design/20-avatars.md); a tile or a pile keeps the keyed badge, which is
+            // the only kind of thing an icon key can describe. They are both built here rather
+            // than swapped in on selection, because the header is rebuilt on a change of *shape*
+            // and a colonist replacing a rock is not one.
+            _inspectAvatarKey = _inspect.Subject == InspectSubject.Item ? _inspect.ItemIconKey
+                : _inspect.Subject == InspectSubject.Cell ? _inspect.CellIconKey
+                : "ui.pawn.colonist";
             _inspectAvatar = new IconBadge(_inspectAvatarKey, IconBadge.AvatarSize);
             _inspectAvatar.Inherit(HudTokens.TextPrimary);
+            _inspectFace = new AvatarGlyph(HudLayout.Avatar);
+            _inspectFace.AddToClassList("inspect__face");
             header.Add(_inspectAvatar);
+            header.Add(_inspectFace);
 
             var titles = new VisualElement();
             titles.AddToClassList("inspect__titles");
