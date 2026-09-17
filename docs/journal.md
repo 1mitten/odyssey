@@ -1865,3 +1865,57 @@ work itself.
   - **Verified:** fast tier **494 Sim + 187 Hud** (17 new), Unity EditMode **1138 total, 0 failed**,
     both content gates green. Deconstruct, and the save gap underneath it, are PR 2 —
     `docs/design/16-cancel-and-deconstruct.md` §4 and §5.
+
+- **Deconstruct, and the save gap that had to be closed before it could be honest (2026-09-17,
+  `claude/cancel-tool`).** The owner, playing the cancel tool: *"this works good"*, then *"also a
+  deconstruct button as well"*. The button was four lines of palette table. It was blocked on
+  something else entirely, and the plan's §4 had said so as a prediction rather than a fact.
+  - **The prediction was measured first, and both halves held.** `EdificeRoundTripTests` was written
+    to fail before a line of deconstruct existed: a wall a colonist raised on a bare board took
+    handle 0, and after a reload **the restored list had no entries at all** — the cell still said a
+    wall stood there and pointed at nothing. And a **wooden wall and a stone wall in the same cell
+    hashed identically**. `List<PlacedEdifice>` was worldgen's and nobody else's: not an
+    `ISaveable`, not an `IStateHashable`, while `CellGrid` faithfully saved and hashed an *index*
+    into it. The OQ-50 shape one level down, found the same way.
+  - **Where the fix is wired was the only real decision.** `AddColony` creates and hashes
+    `EdificeSaveSection`; `ConstructionGrid` takes it instead of the raw list and hands it on as
+    `.Edifices`, because that is the one class that appends to the list at run time. So the thing
+    that raises a wall and the thing that writes it down cannot be wired up separately.
+    **The guard against forgetting the save is not vigilance**: the list is in the hash, so
+    `WorldRoundTripTests.TheRoundTripReproducesTheStateExactly` fails the moment the save stops
+    covering what the hash covers. Hash coverage plus round-trip equality *is* save coverage.
+  - **The shape was chosen partly because the editor was open.** Threading a new parameter through
+    `AddColony` would have touched 16 call sites, 11 of them in `Assets/Editor/`, which only Unity
+    compiles — unverifiable while the owner was playing. Going through `ConstructionGrid`'s
+    constructor touched one. The better design and the workable one were the same design, which is
+    luck worth noticing rather than a method.
+  - **The whole list is saved, not just the colony's additions.** The generator's stamps could be
+    recovered by regenerating from the seed, which is smaller and makes every save file depend on
+    the generator never changing. A save that describes itself survives a worldgen edit.
+  - **All six golden hashes moved twice in one day, for two different reasons**, and `Golden.cs`
+    carries both sentences. First when the edifice list entered the hash — including the barren
+    meadow with nothing standing on it, because an empty list still contributes its count. Then
+    again when deconstruct added a **tenth job**: `JobSystem` hashes a completed-and-failed tally
+    *per job*, sized from the job table, so one more zero in that walk moves the **pre-tick**
+    number. The failure message points at the generator and the generator was untouched. Anything
+    changing the *length* of a hashed per-job or per-work-type array will do this.
+  - **"Ours only" was not expressible**, which the plan had predicted and the code confirmed in as
+    many words: `ConstructionGrid.Raise`'s own comment says a colonist's wall and the generator's
+    are indistinguishable downstream, **on purpose**. `PlacedEdifice.Built` is the exception that
+    one operation needs. A flag rather than the free proxy — `IsBuildable(stuff)` would have worked
+    today and would have started including city walls the day a salvage line gave steel an item —
+    and it is the same bit Reclaim will flip when it lands.
+  - **The refund is keyed on cell *and tick*, unlike stone yield, and the difference is the point.**
+    Stone is a property of the rock and must answer the same for ever. A refund keyed on the cell
+    alone would make every cell permanently a "2" or a "3": stable, discoverable, then farmable by
+    rebuilding the good ones. `TheSameCellCanRefundDifferentlyAtADifferentMoment` is that argument
+    as a test.
+  - **The falsification probe found a second fault nobody was looking for.** All eight new tests
+    passed first time, which on this project is a reason to check rather than to celebrate. With
+    `DeconstructWorkGiver.TryGiveJob` stubbed to refuse, the end-to-end test failed as it should —
+    and `TheRefundIsPaidInWhatTheThingWasMadeOf` went on **passing**, because it guarded its own
+    claim with `Assume` rather than `Assert`. Inconclusive reported as green: the state-hash defect
+    in miniature, in a test written the same hour by someone who had just written the journal entry
+    about it. It is an `Assert` now.
+  - **Verified:** fast tier **505 Sim + 189 Hud**, Long tier **19**, Unity EditMode **1158 total,
+    0 failed**, both content gates green. Unplayed: deconstruct, right-click and the pinned row.

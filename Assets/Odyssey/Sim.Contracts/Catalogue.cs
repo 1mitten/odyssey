@@ -25,7 +25,10 @@ namespace Odyssey.Sim.Contracts
         /// <summary>Work at a site that has its materials, until the thing stands.</summary>
         public const int Build = 8;
 
-        public const int Count = 9;
+        /// <summary>Take one of our own buildings apart, for half of what it cost.</summary>
+        public const int Deconstruct = 9;
+
+        public const int Count = 10;
     }
 
     /// <summary>See <see cref="JobHandle"/>: item def indices as <see cref="ThingView"/> carries them.</summary>

@@ -1,13 +1,16 @@
 # 16 — Cancelling orders, chopping trees, and taking things apart
 
-**Status: PR 1 built and unplayed; PR 2 planned, not built.** Written 2026-09-17 on
-`claude/cancel-tool`. The owner's decisions are §3 and they are settled, not proposals. This
-completes **U26**, whose row in `docs/plans/vertical-slice.md` still carries "Deconstruct refunds
-half" as outstanding; that row changes when PR 2 lands, not before.
+**Status: both built. Cancel and the chip have been played; deconstruct has not.** Written
+2026-09-17 on `claude/cancel-tool`. The owner's decisions are §3 and they are settled, not
+proposals. This closes **U26**'s "deconstruct refunds half" line; only the success roll at
+completion remains outstanding on that row.
 
-**Nobody has pressed Play on PR 1.** Both tiers are green and both gates pass, and neither can say
-whether right-click disarms when the hand expects it to or whether six pixels is the right number.
-The by-hand procedure is §6.
+**What has been judged and what has not.** The owner played the cancel tool and reported it works,
+and asked for it on the build sub-menu — which is why it is pinned (§5, PR 1). **Nobody has pressed
+Play on deconstruct, on right-click, or on the pinned row.** Both tiers are green and both gates
+pass, and no tier can say whether right-click disarms when the hand expects it to, whether six
+pixels is the right threshold for a button that is usually held and swept, or whether a wall coming
+down reads as a wall coming down. The by-hand procedure is §6.
 
 Read `15-building.md` first for the order pipeline this cancels, and `09-ui-and-input.md` §6 for
 the input rules the right-click change lands in.
@@ -187,9 +190,30 @@ arithmetic, and the fast tier cannot see it inside a `MonoBehaviour` — the Pla
 cannot deliver a synthetic mouse. It goes into `Odyssey.Hud` as a small press-tracker with its own
 test, the same lift that made `DesignateDirector` testable, leaving only the wiring untested.
 
-### PR 2 — Deconstruct
+### PR 2 — Deconstruct — **built**
 
-Ordered so that each step is provable before the next is written.
+Ordered so that each step was provable before the next was written, and it went as planned with two
+things worth recording.
+
+**§4's predictions both held, and the fix was bigger than a bool.** The edifice list became a saved,
+hashed component (`EdificeSaveSection`). Where it is wired was the one real decision: `AddColony`
+creates and hashes it, and `ConstructionGrid` takes it instead of the raw list and hands it on as
+`.Edifices`, because that is the one class that *appends* to the list at run time. The thing that
+raises a wall and the thing that writes it down can no longer be wired up separately — and **the
+guard against forgetting the save is not vigilance**: the list is in the hash, so
+`WorldRoundTripTests.TheRoundTripReproducesTheStateExactly` fails the moment the save stops covering
+what the hash covers. This shape also touched **no editor call site**, where threading a new
+parameter through `AddColony` would have touched eleven.
+
+**All six golden hashes moved twice in one day, for two different reasons**, and `Golden.cs` carries
+both sentences. The second is the one that will catch somebody out: adding a tenth job moved the
+*pre-tick* number, because `JobSystem` hashes a per-job tally array sized from the job table. The
+failure message points at the generator and the generator was untouched.
+
+**The falsification probe earned its keep.** With the work giver disabled, the end-to-end test
+failed as it should — and `TheRefundIsPaidInWhatTheThingWasMadeOf` went on **passing**, because it
+guarded its own claim with `Assume` rather than `Assert`. Inconclusive reported as green, which is
+the state-hash defect in miniature. It is an `Assert` now.
 
 1. **Step 0's answer.** If the edifice record is unsaved and unhashed, it becomes a saveable and a
    hashable here, with `StateHashCoverageTests` extended field by field. Nothing below is correct

@@ -669,6 +669,7 @@ namespace Odyssey.Presentation.Ui
                 DesignateTool.Mine => Registry.Label("ui.status.mining"),
                 DesignateTool.Fell => Registry.Label("ui.status.felling"),
                 DesignateTool.Cancel => "Cancelling orders",
+                DesignateTool.Deconstruct => Registry.Label("ui.status.deconstructing"),
                 _ => BuildLabels.Building(tool.Building) is { Length: > 0 } name
                     ? "Building " + name.ToLowerInvariant() + " of " + BuildLabels.Stuff(stuff)
                     : "Building",

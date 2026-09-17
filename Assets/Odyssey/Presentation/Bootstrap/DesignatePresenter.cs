@@ -215,6 +215,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             int a = tool == DesignateTool.Mine ? (int)DesignationKind.Mine
                   : tool == DesignateTool.Fell ? (int)DesignationKind.Fell
+                  : tool == DesignateTool.Deconstruct ? (int)DesignationKind.Deconstruct
                   : 0;
 
             for (int i = 0; i < cells.Count; i++)

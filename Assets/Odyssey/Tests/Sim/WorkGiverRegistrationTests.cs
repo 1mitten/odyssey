@@ -106,8 +106,14 @@ namespace Odyssey.Tests.Sim
             // Construction leads because a site is work already begun, and delivery leads within it
             // because a site cannot be worked until it has been fed. Cutting, mining and hauling
             // keep the order they have always had, relative to each other.
+            //
+            // Deconstruct is last within construction, and that is the decision this line records:
+            // a colony that pulls a wall down while a half-ordered hut waits for its last plank
+            // finishes neither, and demolition is the one job here that is never urgent — the thing
+            // being removed is already standing and already doing its job.
             var names = Shipped().Givers.Select(g => g.Name).ToArray();
-            Assert.That(names, Is.EqualTo(new[] { "Deliver", "Build", "Fell", "Mine", "Haul" }));
+            Assert.That(names, Is.EqualTo(
+                new[] { "Deliver", "Build", "Deconstruct", "Fell", "Mine", "Haul" }));
         }
 
         [Test]

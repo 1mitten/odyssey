@@ -306,6 +306,53 @@ namespace Odyssey.Sim.Construction
             if (above < _grid.Size.CellCount) ctx.Nav.MarkDirty(above);
         }
 
+        /// <summary>
+        /// Take a standing building out of the world: <see cref="Raise"/>'s list, inverted, and
+        /// beside it on purpose so the two cannot drift.
+        ///
+        /// <para><b>The record keeps its slot and is marked removed</b> rather than being dropped.
+        /// Handles are positions in this list and are part of the determinism contract — every cell
+        /// that points at a later entry would otherwise be pointing at the wrong building, which is
+        /// the kind of corruption that shows up three saves later as a wall made of the wrong
+        /// thing.</para>
+        ///
+        /// <para><b>Support is deliberately not marked dirty</b>, the same omission <see cref="Raise"/>
+        /// and <c>MineCell</c> both make. Nothing collapses yet; U29 wires all three together, and
+        /// none of the three should quietly acquire behaviour the others lack.</para>
+        ///
+        /// <para>What it was is returned, so the caller can pay the refund without asking the world
+        /// a question whose answer it has just destroyed.</para>
+        /// </summary>
+        public bool Demolish(PawnContext ctx, int cell, out PlacedEdifice was)
+        {
+            int handle = _grid.Edifice[cell];
+            if (handle < 0 || handle >= _edifices.Count)
+            {
+                was = default;
+                return false;
+            }
+
+            was = _edifices[handle];
+            if (was.Removed) return false;
+
+            // 1. The thing itself.
+            _grid.RemoveEdifice(cell);
+            PlacedEdifice gone = was;
+            gone.Removed = true;
+            _edifices[handle] = gone;
+
+            // 2. The cell and everything touching it must be re-meshed: a wall coming down changes
+            //    how its neighbours draw their own faces, and the vertical neighbours are in other
+            //    chunks.
+            MarkChunksAround(ctx, cell);
+
+            // 3. What is walkable changed here, and in the cell above through the floor rule.
+            ctx.Nav.MarkDirty(cell);
+            int above = cell + _grid.Size.LayerStride;
+            if (above < _grid.Size.CellCount) ctx.Nav.MarkDirty(above);
+            return true;
+        }
+
         static void MarkChunksAround(PawnContext ctx, int cell)
         {
             if (ctx.Chunks == null) return;

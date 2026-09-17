@@ -386,6 +386,7 @@ namespace Odyssey.Hud
             { "ui.status.bleeding", "Bleeding" },
             { "ui.status.building", "Building" },
             { "ui.status.burning", "On fire" },
+            { "ui.status.deconstructing", "Deconstructing" },
             { "ui.status.downed", "Downed" },
             { "ui.status.drafted", "Drafted" },
             { "ui.status.eating", "Eating" },

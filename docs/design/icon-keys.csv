@@ -82,6 +82,7 @@ ui.pawn.synth,Synth,ui.pawn,M2,"Machine intelligence. Not alive, not harmless"
 ui.pawn.corpse,Corpse,ui.pawn,M2,"Rots, upsets people, can be buried or worse"
 ui.status.hauling,Hauling,ui.status,M2,Carrying something to storage
 ui.status.building,Building,ui.status,M2,Working a frame or blueprint
+ui.status.deconstructing,Deconstructing,ui.status,M3,Taking one of our own buildings apart
 ui.status.mining,Mining,ui.status,M2,"Cutting into rubble, concrete or rock"
 ui.status.felling,Chopping,ui.status,M3,Cutting a tree down for wood
 ui.status.sleeping,Sleeping,ui.status,M2,"Asleep, and should stay that way"

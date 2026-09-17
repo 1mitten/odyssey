@@ -95,9 +95,13 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   saying "Harvest" — which is what had taught the owner to call it harvesting. Labels only: every
   key is unchanged, because `ui.status.felling` draws real art and `icon-map.csv` is keyed the same
   way. Design, what is still open and the by-hand procedure are
-  `docs/design/16-cancel-and-deconstruct.md`. **Deconstruct is PR 2 and is not built**; §4 of that
-  file carries a prediction that must be measured first — a wall a colonist built is probably in
-  neither the save nor the state hash.
+  `docs/design/16-cancel-and-deconstruct.md`.
+  **Deconstruct landed the same day** and closes U26's last outstanding line but one. A colonist
+  walks to one of our own walls, takes it apart and leaves **2 or 3 wood of the 5 it cost** — a
+  seeded coin flip on the odd unit, keyed on cell *and tick* so a cell cannot become a permanently
+  generous one. **Only what we built**: `PlacedEdifice.Built` is set by `ConstructionGrid.Raise`
+  and nowhere else, so the ruined city stays Reclaim's and Salvage's. Getting there first required
+  fixing the save and hash gap above, which was found by a test written to fail.
   **The build cursor and the drag gesture were then played and accepted** (owner, 2026-09-17): a
   build drag draws one closed wireframe box over the whole run, draped as the wall will be, and a
   box widens into a rectangle only after three cells clear across the run — narrowing again within
@@ -225,7 +229,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **497 Sim + 189 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **505 Sim + 189 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and

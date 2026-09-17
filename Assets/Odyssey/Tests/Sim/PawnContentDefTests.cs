@@ -50,8 +50,13 @@ namespace Odyssey.Tests.Sim
         /// <para>Moved 2026-09-17 by the build pipeline: two jobs (<c>Job_Deliver</c>,
         /// <c>Job_Build</c>), a work type (<c>Work_Construction</c>, which also renumbered the other
         /// three so it could scan first) and a skill (<c>Skill_Construction</c>).</para>
+        ///
+        /// <para>Moved again the same day by deconstruct: one job, <c>Job_Deconstruct</c>. It adds
+        /// no work type and no skill — taking a wall apart is the builder's knowledge and trains
+        /// construction, because the colonist who put it up is the one who knows where it comes
+        /// apart.</para>
         /// </summary>
-        const ulong ContentFingerprint = 5563497223069918341UL;
+        const ulong ContentFingerprint = 12769135167210924725UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()
