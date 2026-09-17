@@ -126,6 +126,25 @@ namespace Odyssey.Tests.Hud
                 "a refused key changes nothing");
             Assert.That(hotkeys.OwnerOf(HudKey.E), Is.EqualTo(HotkeyAction.CameraTurnRight),
                 "the panel can still say who has the key");
+            Assert.That(hotkeys.Listening, Is.EqualTo((HotkeyAction.CameraTurnLeft, 0)),
+                "a refused key is a wrong answer, not the end of the question");
+            Assert.That(hotkeys.LastResult, Is.EqualTo(RebindResult.Conflict));
+            Assert.That(hotkeys.LastConflictOwner, Is.EqualTo(HotkeyAction.CameraTurnRight),
+                "the panel can name the owner without asking the map again");
+        }
+
+        [Test]
+        public void TheDefaultsStayReadableWhateverThePlayerDidToThem()
+        {
+            var hotkeys = new HotkeyDirector();
+            hotkeys.Listen(HotkeyAction.SliceUp, 0);
+            hotkeys.Capture(HudKey.Z);
+
+            Assert.That(hotkeys.Key(HotkeyAction.SliceUp, 0), Is.EqualTo(HudKey.Z));
+            Assert.That(HotkeyDirector.DefaultKey(HotkeyAction.SliceUp, 0), Is.EqualTo(HudKey.R),
+                "the default is a fact about the shipped game, not about this machine");
+            Assert.That(HotkeyDirector.DefaultKey(HotkeyAction.SliceUp, 1), Is.EqualTo(HudKey.PageUp));
+            Assert.That(HotkeyDirector.DefaultKey(HotkeyAction.Pause, 1), Is.EqualTo(HudKey.None));
         }
 
         [Test]

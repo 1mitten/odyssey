@@ -184,6 +184,18 @@ namespace Odyssey.Hud
         public HudKey Key(HotkeyAction action, int slot) => _bindings[action][slot];
 
         /// <summary>
+        /// The key an action ships on, whatever the player has since done to it. The panel
+        /// says this in a tooltip — "default: W" — so a binding can always be traced back to
+        /// the key the game installed.
+        /// </summary>
+        public static HudKey DefaultKey(HotkeyAction action, int slot)
+        {
+            foreach ((HotkeyAction row, HudKey primary, HudKey alternate) in Defaults)
+                if (row == action) return slot == 0 ? primary : alternate;
+            return HudKey.None;
+        }
+
+        /// <summary>
         /// The action that owns a key right now, or null when nobody does. Two actions on
         /// one key is a state this director refuses to build, so the answer is single.
         /// </summary>
@@ -200,6 +212,17 @@ namespace Odyssey.Hud
         public (HotkeyAction Action, int Slot)? Listening { get; private set; }
 
         /// <summary>
+        /// What came of the last <see cref="Capture"/>, for the panel that has to say why a
+        /// key did not take. Set before <see cref="ListenChanged"/> is raised, so a handler
+        /// reads it in the same breath.
+        /// </summary>
+        public RebindResult LastResult { get; private set; }
+
+        /// <summary>The action that owned the refused key, when <see cref="LastResult"/> is
+        /// <see cref="RebindResult.Conflict"/>.</summary>
+        public HotkeyAction? LastConflictOwner { get; private set; }
+
+        /// <summary>
         /// Slots a stored preference was refused for, from the last <see cref="UseStore"/>.
         /// Reported rather than silently resolved — a key two lines claim, or a line that
         /// claims a key a default ships on, is a file worth knowing about, and the slot
@@ -212,6 +235,12 @@ namespace Odyssey.Hud
 
         /// <summary>Raised when the panel starts or stops waiting for a key.</summary>
         public event Action? ListenChanged;
+
+        /// <summary>
+        /// Raised when a key was offered to a listening slot and refused because another
+        /// action owns it, with the action that was refused and the one that holds the key.
+        /// </summary>
+        public event Action<HotkeyAction, HotkeyAction>? ConflictNoted;
 
         /// <summary>The registry key naming this action. Never a word: words live in the CSV.</summary>
         public static string KeyOf(HotkeyAction action) => action switch
@@ -310,18 +339,34 @@ namespace Odyssey.Hud
         /// </summary>
         public RebindResult Capture(HudKey key)
         {
-            if (Listening == null || !KeyIsKnown(key)) return RebindResult.UnknownKey;
+            if (Listening == null || !KeyIsKnown(key))
+            {
+                LastResult = RebindResult.UnknownKey;
+                LastConflictOwner = null;
+                return RebindResult.UnknownKey;
+            }
             (HotkeyAction action, int slot) = Listening.Value;
 
             if (_bindings[action][slot] == key)
             {
                 // Pressing the key the slot already holds is a no-op with the door closed.
+                LastResult = RebindResult.Bound;
+                LastConflictOwner = null;
                 CancelListen();
                 return RebindResult.Bound;
             }
 
             HotkeyAction? owner = OwnerOf(key);
-            if (owner != null && owner != action) return RebindResult.Conflict;
+            if (owner != null && owner != action)
+            {
+                // The slot keeps listening: a refused key is a wrong answer to a question
+                // still being asked, not the end of it, and the player should be able to
+                // offer the next key without clicking the slot open again.
+                LastResult = RebindResult.Conflict;
+                LastConflictOwner = owner;
+                ConflictNoted?.Invoke(action, owner.Value);
+                return RebindResult.Conflict;
+            }
 
             if (owner == action)
                 _bindings[action][OtherSlot(slot)] = HudKey.None;
@@ -329,6 +374,8 @@ namespace Odyssey.Hud
             _bindings[action][slot] = key;
             Write(action);
             BindingChanged?.Invoke(action);
+            LastResult = RebindResult.Bound;
+            LastConflictOwner = null;
             CancelListen();
             return RebindResult.Bound;
         }

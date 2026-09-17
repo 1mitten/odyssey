@@ -78,6 +78,11 @@ namespace Odyssey.Tests.Hud
             (".card__ring", "border-color", () => HudTheme.SelectedRing, "selection ring"),
             (".inspect__tabs", "border-bottom-color", () => HudTheme.Divider, "divider"),
             (".commandbar__divider", "background-color", () => HudTheme.Divider, "divider"),
+            (".settings__keycap", "color", () => HudTheme.TextMeta, "text meta"),
+            (".settings__keycap--listening", "border-color", () => HudTheme.Accent, "accent"),
+            (".settings__keycap--listening", "color", () => HudTheme.Accent, "accent"),
+            (".settings__exit--armed", "background-color", () => HudTheme.ActiveTabFill, "active tab fill"),
+            (".settings__exit--armed .settings__label", "color", () => HudTheme.Accent, "accent"),
         };
 
         [Test]
