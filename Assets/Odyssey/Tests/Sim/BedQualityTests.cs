@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
@@ -103,7 +104,7 @@ namespace Odyssey.Tests.Sim
                 Assume.That(grid!.Place(colony.Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, 0),
                     Is.EqualTo(IntentRejection.None));
                 grid.Raise(colony.Ctx, head, (byte)tier);
-                Assume.That(colony.Ctx.Items.Beds, Does.Contain(head));
+                Assume.That(colony.Ctx.Items.Beds.Contains(head), Is.True);
             }
 
             for (int i = 0; i < 3_000 && !pawn.Asleep; i++) colony.World.Tick();

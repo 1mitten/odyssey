@@ -1,4 +1,5 @@
 #nullable enable
+using System.Linq;
 using NUnit.Framework;
 using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
@@ -239,7 +240,7 @@ namespace Odyssey.Tests.Sim
             Assume.That(colony.Construction.Place(Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, 0),
                 Is.EqualTo(IntentRejection.None));
             colony.Construction.Raise(colony.Pawns, head);
-            Assume.That(colony.Pawns.Items.Beds, Does.Contain(head),
+            Assume.That(colony.Pawns.Items.Beds.Contains(head), Is.True,
                 "a finished bed's head cell joins the list the sleep chooser scans");
 
             // Taken apart by naming the far cell: the half the player clicked is not the half the
@@ -251,7 +252,7 @@ namespace Odyssey.Tests.Sim
             Assert.That(colony.Grid.Edifice[second], Is.EqualTo(-1), "the far half went with it");
             Assert.That(colony.Outcome.Edifices[handle].Removed, Is.True,
                 "the record is marked out rather than dropped, so every other handle stays valid");
-            Assert.That(colony.Pawns.Items.Beds, Does.Not.Contain(head),
+            Assert.That(colony.Pawns.Items.Beds.Contains(head), Is.False,
                 "a demolished bed is not slept in");
         }
 
