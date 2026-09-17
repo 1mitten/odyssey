@@ -33,8 +33,16 @@ namespace Odyssey.Tests.Sim
     {
         static bool Rebaking => Environment.GetEnvironmentVariable("ODYSSEY_REGOLDEN") == "1";
 
-        /// <summary>The state hash and the cells, folded together. See <see cref="Golden.FullHash"/>.</summary>
-        static ulong FullHash(ColonyWorld colony) => Golden.FullHash(colony);
+        /// <summary>
+        /// The world's state hash.
+        ///
+        /// <para>This used to fold the cell grid in by hand, because the grid was not in
+        /// <c>ComputeStateHash</c> and a golden that could not see the world would have been
+        /// worse than none — it was this table's own control that found that gap. `OQ-50` put the
+        /// grid where it belongs, so the composite is gone and the golden pins the same number
+        /// everything else in the project compares.</para>
+        /// </summary>
+        static ulong FullHash(ColonyWorld colony) => colony.World.ComputeStateHash().Value;
 
         /// <summary>
         /// Build, hash, tick, hash again, and either assert or print.

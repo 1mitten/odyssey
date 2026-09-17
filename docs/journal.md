@@ -1182,6 +1182,45 @@ work itself.
   - **Verified:** fast tier **455 Sim + 117 Hud**, Long tier **15**. Every control run and
     restored. **Not verified locally:** the Unity tier, which is where the cross-runtime half of
     this gate actually gets tested — one committed number that satisfies both CoreCLR and Mono.
+    **It passed there:** all five golden tests ran under Mono, including both 10,000-tick Long
+    cases, against numbers baked under CoreCLR. Cross-runtime determinism stops being a
+    measurement someone took once and becomes a standing test.
+
+- **The world is in the state hash (OQ-50, 2026-09-17; ADR 0005 amended).** `CellGrid` now
+  implements `IStateHashable` and `ColonyComposition` registers it through a new third list,
+  `SimWorldBuilder.AddHashable`, for state that belongs in the hash but neither ticks nor is a
+  system. `CellGrid.ContributeTo` had existed all along; nothing but the generators' own worldgen
+  check had ever called it.
+  - **The approach is the opposite of what the row predicted, and the reason is the code rather
+    than taste.** The row assumed an incremental hash maintained over the save's chunk
+    dirty-tracking, because 10 ms a call sounded unaffordable. Then the cell arrays turned out to
+    be **public and written directly from dozens of places** — every generator pass, the support
+    solver, mining, felling. A maintained hash would be silently wrong the first time anybody
+    assigned to `Terrain[i]` without telling it, and **a hash that wrongly says two different
+    worlds are the same is a worse failure than the one being fixed.** Recomputation cannot drift.
+    The public arrays are what make the cheap option unsafe and the expensive one correct.
+  - **The cost is real and lands on the diagnostic.** On a 60 x 60 x 16 colony a plain tick is
+    3.34 µs; a *traced* tick — one asking for the hash every tick — is now **2,803 µs**. Nothing in
+    an ordinary run asks for the hash, so the game and the tests are untouched; what got slower is
+    the hash trace, the tool for binary-searching the first tick two runs disagree on. A full day
+    of a real colony is minutes now rather than seconds, so trace a window. The saving grace is
+    that the project had already built the instrument that measures this —
+    `HashTraceTests.TheCostOfTracingIsMeasuredRatherThanAssumed` prints the figure on every run, so
+    the trade is visible rather than folklore. Its colony arm dropped from 2,000 ticks to 300,
+    which measures the same per-tick number and gives the fast tier back five seconds.
+  - **`WorldRoundTripTests` passed immediately**, which is the quietly good news: the save had been
+    round-tripping the grid correctly all along, and simply had nothing checking it. The gap was in
+    the verification, not in the save.
+  - **`StateHashCoverageTests` names each field** — mining a cell away, a floor, an edifice, a cell
+    flag — rather than asserting the vague "the hash changes when the world changes". It also
+    asserts `Support` stays *out*: it is derived and rebuilt on load, so hashing it would make
+    every load look like a desync. That is the half a careless "hash everything" would break.
+  - **Control run and restored:** with the registration removed, exactly the four field tests and
+    the meadow golden fail, while `SupportStaysOutOfTheHash` and the ask-twice control still pass.
+  - **The golden lost its bespoke composite.** OQ-05 folded the grid in by hand precisely because
+    the canonical hash could not see it; one day later it pins the same number as everything else.
+  - **Verified:** fast tier **461 Sim + 117 Hud** in 11 s — the same wall-clock as before the
+    change, after the trace measurement was trimmed — and Long tier **15**.
 
 - **The scene could not save, and the reason was structural (U34, 2026-09-17).** `WorldSave` has
   been complete, versioned and tested for weeks. Every caller of it was a test. The composition root
@@ -1207,12 +1246,14 @@ work itself.
     not reference, so the caller converts. Zero is inert, which is what lets every baked hash stay
     where it was; there is a test asserting exactly that, because the alternative is moving every
     golden value in the repository by accident.
-  - **The assertions were weaker than they read, and the golden had already found out why.** Every
-    new test said "the same world" and compared `ComputeStateHash`, which **cannot see the cell
-    grid** — `CellGrid` does not implement `IStateHashable` and is never registered. A save round
-    trip asserted with it is blind to whether the board came back at all. The golden-master gate had
-    discovered this the day before and folded its own composite; that fold moved to
-    `Golden.FullHash` so there is one of it, and these tests use it. `OQ-50` is still the real fix.
+  - **The assertions were weaker than they read, and then the ground moved under them.** Every new
+    test said "the same world" and compared `ComputeStateHash`, which at the time **could not see
+    the cell grid** — so a save round trip asserted with it was blind to whether the board came back
+    at all. This branch worked around it by lifting the golden's bespoke composite into
+    `Golden.FullHash` and using that. **`OQ-50` landed on `main` the same evening** and put the grid
+    in the canonical hash, so the workaround was obsolete before it merged: the fold is gone again,
+    the tests are back on `ComputeStateHash`, and it now means what they always claimed. Worth
+    recording because the branch was right about the problem and wrong about how long it would last.
   - **One claim was checked rather than inherited.** `RebuildDerived`'s doc comment has always said
     a full solve reproduces what worldgen settled. Nobody had measured it against the board the
     scene loads. It holds, and there is now a test that says so.

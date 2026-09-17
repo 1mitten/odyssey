@@ -19,6 +19,7 @@ namespace Odyssey.Sim
     public sealed class SimWorld
     {
         readonly List<ITickable> _tickables = new List<ITickable>();
+        IStateHashable[] _hashables = Array.Empty<IStateHashable>();
         readonly List<ITickable>[] _byGroup;
         readonly List<Action<SimWorld>> _deferred = new List<Action<SimWorld>>();
         readonly Dictionary<IntentKind, Func<Intent, IntentRejection>> _intentHandlers =
@@ -198,6 +199,13 @@ namespace Odyssey.Sim
             hash.Add(Size.SizeX);
             hash.Add(Size.SizeZ);
             hash.Add(Size.SizeY);
+
+            // State that is neither a tickable nor a system, of which the cell grid is the whole
+            // point: the world itself is not a thing that ticks, and until 2026-09-17 that meant
+            // it was in no hash at all. Registered first and in registration order, so it lands
+            // ahead of anything derived from it.
+            for (int i = 0; i < _hashables.Length; i++) _hashables[i].ContributeTo(ref hash);
+
             for (int i = 0; i < _tickables.Count; i++)
                 if (_tickables[i] is IStateHashable hashable)
                     hashable.ContributeTo(ref hash);
@@ -219,6 +227,8 @@ namespace Odyssey.Sim
         }
 
         internal void SetSnapshotContributors(ISnapshotContributor[] contributors) => _contributors = contributors;
+
+        internal void SetHashables(IStateHashable[] hashables) => _hashables = hashables;
 
         internal void SetIntentHandler(IntentKind kind, Func<Intent, IntentRejection> handler)
         {
@@ -278,6 +288,7 @@ namespace Odyssey.Sim
         readonly List<(IntentKind kind, Func<Intent, IntentRejection> handler)> _intentHandlers =
             new List<(IntentKind, Func<Intent, IntentRejection>)>();
         readonly List<Pawns.WorkGiver> _workGivers = new List<Pawns.WorkGiver>();
+        readonly List<IStateHashable> _hashables = new List<IStateHashable>();
         uint _seed = 1;
         GridSize _size = GridSize.ScaleTarget;
 
@@ -306,6 +317,21 @@ namespace Odyssey.Sim
         public SimWorldBuilder AddSnapshotContributor(ISnapshotContributor contributor)
         {
             _contributors.Add(contributor ?? throw new ArgumentNullException(nameof(contributor)));
+            return this;
+        }
+
+        /// <summary>
+        /// Add state that belongs in the world hash but neither ticks nor is a system.
+        ///
+        /// <para>The cell grid is why this exists. Every other hashable reaches
+        /// <see cref="SimWorld.ComputeStateHash"/> by also being an <c>ITickable</c> or an
+        /// <c>IWorldSystem</c>, and the world itself is neither — so the terrain, floors, edifices
+        /// and flags were in no hash at all until this was added. Registration order is part of
+        /// the determinism contract, as it is for the other two lists.</para>
+        /// </summary>
+        public SimWorldBuilder AddHashable(IStateHashable hashable)
+        {
+            _hashables.Add(hashable ?? throw new ArgumentNullException(nameof(hashable)));
             return this;
         }
 
@@ -356,6 +382,7 @@ namespace Odyssey.Sim
             foreach (var (kind, handler) in _intentHandlers) world.SetIntentHandler(kind, handler);
             foreach (var factory in _factories) world.Register(factory(world));
             world.SetSnapshotContributors(_contributors.ToArray());
+            world.SetHashables(_hashables.ToArray());
 
             var systems = new List<IWorldSystem>();
             foreach (var factory in _systemFactories) systems.Add(factory(world));

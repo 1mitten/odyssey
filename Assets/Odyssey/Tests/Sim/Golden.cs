@@ -57,35 +57,6 @@ namespace Odyssey.Tests.Sim
         }
 
         /// <summary>
-        /// The simulation's state hash **and the world's cells**, folded together.
-        ///
-        /// <para><b>Why this is not just <c>ComputeStateHash()</c>.</b> The cell grid is not in the
-        /// state hash. <c>CellGrid</c> does not implement <c>IStateHashable</c> and is never
-        /// registered, so <c>ComputeStateHash</c> covers the seed, the tick, the size, the
-        /// designations, the jobs and the pawns — and not the terrain, the floors, the edifices or
-        /// the flags. It was found by a control that should have failed and did not: making deep
-        /// water passable changes nine cells' flags on the played board and moved no hash at all.
-        /// OQ-50 is the real fix, an incremental hash over the chunk dirty-tracking the save
-        /// already maintains; until then, any test that means "the whole world came back" has to
-        /// fold the grid in for itself.</para>
-        ///
-        /// <para><b>Not folded into the canonical hash, deliberately.</b> Measured on the played
-        /// board, <c>ComputeStateHash()</c> costs 0.003 ms and the grid contribution costs 10.3 ms
-        /// — three thousand times more — which would make the per-tick sink <c>HashTraceTests</c>
-        /// uses take minutes over a day's ticks. A test that runs it twice pays nothing worth
-        /// naming.</para>
-        ///
-        /// <para>Order is fixed and the state hash goes in first, so the number is reproducible.</para>
-        /// </summary>
-        public static ulong FullHash(ColonyWorld colony)
-        {
-            var hash = StateHash.New();
-            hash.Add(colony.World.ComputeStateHash().Value);
-            colony.Grid.ContributeTo(ref hash);
-            return hash.Value;
-        }
-
-        /// <summary>
         /// The one that runs on every save. Small and short on purpose: the fast tier is a thing
         /// people run while working, and a gate nobody waits for is a gate nobody runs.
         /// </summary>
@@ -97,8 +68,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 4080089633444642687UL,
-            Simulated = 8297344399725461794UL,
+            Generated = 13449042641056873599UL,
+            Simulated = 17620425191032474815UL,
         };
 
         /// <summary>
@@ -114,8 +85,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 4407845158991406433UL,
-            Simulated = 14879698257109829449UL,
+            Generated = 545303012395077803UL,
+            Simulated = 4037971380253130273UL,
         };
 
         /// <summary>
@@ -130,8 +101,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 5993771996868782858UL,
-            Simulated = 10722009446905916853UL,
+            Generated = 11350740491233283268UL,
+            Simulated = 11831035356810792670UL,
         };
     }
 }
