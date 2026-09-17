@@ -1263,13 +1263,43 @@ namespace Odyssey.Presentation.Bootstrap
                 $"WASD pan - Q/E orbit - wheel zoom - R/F layer - V above-mode - B below-mode - " +
                 $"space pause - 1/2/3 speed - Home frame\n{_catalogueNote}";
 
-            // Drawn below the ledger rather than over it: this is the developer overlay (A15),
-            // the one region immediate mode is permitted in, and it must not sit on the HUD's
-            // top-left region when both are visible.
+            // This is the developer overlay (A15), the one region immediate mode is permitted in.
+            // It sat under the HUD's top-left ledger until 2026-09-17; the owner asked for it much
+            // bigger, which put it back on top of that ledger at the old position, so it now anchors
+            // to the bottom of the screen instead — clear of the top-left panels regardless of size,
+            // and clear of the command bar and orders strip along the bottom edge.
+            //
+            // Font size is roughly six times the default GUI.skin.label size (owner, 2026-09-17,
+            // first pass: "much much much bigger... cannot be read"; second pass, after judging the
+            // first: move it toward the bottom and make it bigger again). Still unjudged past this
+            // second pass.
+            GUIStyle style = DeveloperOverlayStyle();
+            int lines = 1;
+            for (int i = 0; i < text.Length; i++) if (text[i] == '\n') lines++;
+            float lineHeight = style.fontSize * 1.3f;
+            float height = lines * lineHeight;
+            float x = 10f;
+            float y = Screen.height - height - 96f;
+            var rect = new Rect(x, y, Screen.width - 2f * x, height);
+            var shadow = new Rect(x + 1f, y + 1f, rect.width, rect.height);
+
             GUI.color = Color.black;
-            GUI.Label(new Rect(11f, 181f, 1400f, 128f), text);
+            GUI.Label(shadow, text, style);
             GUI.color = Color.white;
-            GUI.Label(new Rect(10f, 180f, 1400f, 128f), text);
+            GUI.Label(rect, text, style);
+        }
+
+        GUIStyle? _developerOverlayStyle;
+
+        /// <summary>
+        /// Built lazily and cached: <see cref="GUIStyle"/> may only be constructed inside a GUI
+        /// callback, and OnGUI runs every frame the overlay is visible, so the style is made once
+        /// rather than allocated per frame.
+        /// </summary>
+        GUIStyle DeveloperOverlayStyle()
+        {
+            _developerOverlayStyle ??= new GUIStyle(GUI.skin.label) { fontSize = 56, wordWrap = false };
+            return _developerOverlayStyle;
         }
 
         void OnDestroy() => TeardownSession();

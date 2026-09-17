@@ -167,6 +167,24 @@ namespace Odyssey.Tests.PlayMode
                     Object.Destroy(shot);
                 }
 
+                // And the debug menu (2026-09-17), backtick's own panel now — the same argument as
+                // the settings panel above: judged by eye, not by an assertion.
+                var debugPanel = doc.rootVisualElement.Q(className: "debug");
+                if (debugPanel != null)
+                {
+                    if (panel != null) panel.style.display = DisplayStyle.None;
+                    debugPanel.style.display = DisplayStyle.Flex;
+                    for (int i = 0; i < 10; i++) yield return null;
+
+                    RenderTexture.active = target;
+                    var shot = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+                    shot.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                    shot.Apply();
+                    RenderTexture.active = previous;
+                    File.WriteAllBytes(Path.GetFullPath("Logs/hud-debug.png"), shot.EncodeToPNG());
+                    Object.Destroy(shot);
+                }
+
                 Object.Destroy(image);
                 Object.Destroy(target);
                 Object.Destroy(settings);

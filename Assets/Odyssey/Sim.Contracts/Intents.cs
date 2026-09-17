@@ -51,6 +51,21 @@ namespace Odyssey.Sim.Contracts
         /// twice is ordinary play, not an error to surface.</para>
         /// </summary>
         QueryCell,
+
+        /// <summary>
+        /// Debug-menu-only: put a fresh colonist at <see cref="Intent.Cell"/>. Not player content —
+        /// no scenario, no starting kit — because the debug menu is testing the colony that already
+        /// exists, not dealing a new one. <c>A</c> and <c>B</c> are unused.
+        /// </summary>
+        SpawnPawn,
+
+        /// <summary>
+        /// Debug-menu-only: grant <c>B</c> units of the item def indexed by <c>A</c> near
+        /// <see cref="Intent.Cell"/>. Widens outward from the cell for one with room the way an
+        /// ordinary drop does, so it behaves like any other item arriving rather than inventing a
+        /// second way for one to appear.
+        /// </summary>
+        GiveResource,
     }
 
     /// <summary>

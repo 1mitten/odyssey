@@ -50,6 +50,28 @@ namespace Odyssey.Sim.Pawns
             return pawn;
         }
 
+        /// <summary>
+        /// Debug menu: <c>IntentKind.SpawnPawn</c>. A cell that is not walkable is refused rather
+        /// than spawning a colonist nobody can reach or path out of.
+        ///
+        /// <para>Passions are rolled here off <see cref="Spawn"/>'s own <c>RollSeed</c> (the world's,
+        /// since nothing here asks for one of its own — U40), exactly as
+        /// <see cref="ColonyScenario.Place"/> rolls them for a starting colonist — a debug-spawned
+        /// pawn is otherwise indistinguishable from one dealt at tick zero. Skill levels are not:
+        /// <see cref="StartingSkillsSystem"/> rolls them for any pawn still at the constructor's
+        /// zero, on the very next tick, which this pawn is.</para>
+        /// </summary>
+        public IntentRejection HandleSpawnPawn(Intent intent)
+        {
+            CellRef cell = intent.Cell;
+            if (!_ctx.Size.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
+            int index = _ctx.Size.Index(cell);
+            if (!_ctx.Cells.IsWalkable(index)) return IntentRejection.OutOfBounds;
+            Pawn pawn = Spawn(index);
+            pawn.RollPassions();
+            return IntentRejection.None;
+        }
+
         /// <summary>Register a pawn subclass. The seam a mod would use to add a pawn kind.</summary>
         public Pawn Adopt(Pawn pawn)
         {

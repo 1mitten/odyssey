@@ -191,11 +191,11 @@ namespace Odyssey.Presentation.Ui
         VisualElement _buildPanel = null!;
 
         VisualElement _settingsPanel = null!;
+        VisualElement _debugPanel = null!;
         VisualElement _interfaceSection = null!;
         VisualElement _graphicsSection = null!;
         VisualElement _audioSection = null!;
         VisualElement _keysSection = null!;
-        VisualElement _developerRow = null!;
         VisualElement _exitRow = null!;
         Label _exitLabel = null!;
         readonly Dictionary<GraphicsOption, VisualElement> _settingRows = new();
@@ -420,6 +420,7 @@ namespace Odyssey.Presentation.Ui
             BuildBar();
             BuildPalette();
             BuildSettings();
+            BuildDebug();
 
             // B18, last, so it is the top-most element in the tree and its scrim covers everything
             // above. Built whether or not a session exists, because the state it belongs to is the
@@ -474,6 +475,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.BusDbChanged += OnBusDbChanged;
             _directors.Settings.ExitChanged += OnExitChanged;
             _directors.Settings.RowRequested += OnSessionRow;
+            _directors.Debug.Changed += OnDebugChanged;
             _directors.Hotkeys.BindingChanged += OnBindingChanged;
             _directors.Hotkeys.ListenChanged += OnListenChanged;
             _directors.Hotkeys.ConflictNoted += OnHotkeyConflict;
@@ -496,6 +498,7 @@ namespace Odyssey.Presentation.Ui
             OnExitChanged();
             foreach (GraphicsOption option in SettingsDirector.All) OnSettingChanged(option);
             RefreshKeyCaps();
+            OnDebugChanged();
         }
 
         void Detach()
@@ -513,6 +516,7 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.BusDbChanged -= OnBusDbChanged;
             _directors.Settings.ExitChanged -= OnExitChanged;
             _directors.Settings.RowRequested -= OnSessionRow;
+            _directors.Debug.Changed -= OnDebugChanged;
             _directors.Hotkeys.BindingChanged -= OnBindingChanged;
             _directors.Hotkeys.ListenChanged -= OnListenChanged;
             _directors.Hotkeys.ConflictNoted -= OnHotkeyConflict;
