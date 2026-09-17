@@ -60,10 +60,10 @@ the edifice list; a bed points both of its cells at the *same* record. `PlacedEd
 
 | Field | Type | Meaning |
 |---|---|---|
-| `CellIndexB` | int | the second cell; −1 for every single-cell edifice (walls unchanged) |
-| `Facing` | byte | 0–3, the rotation as placed |
+| *(none — derived)* | int | the second cell is **not stored**: it is always this cell plus the facing offset, and `EdificeFootprint` derives it on demand. The first cut of this design stored a `CellIndexB`, and the reason it went is a language fact worth recording: Unity compiles C# 9, where struct field initializers do not exist, so a `= -1` default cannot be spelled — and cell 0 is a real cell. Zero-safe by construction beat a sentinel that only the fast tier (compiled at `latest`) could enforce |
+| `Facing` | byte | 0–3, the rotation as placed; zero on everything that does not rotate |
 | `Quality` | byte | 0 = none (walls); 1–5 = Poor…Epic |
-| `Owner` | int | `PawnId`, −1 = unowned |
+| `Owner` | int | `PawnId`, 0 = unowned — 0 being a value no pawn ever has, ids being 1-based, which is what makes a bare struct default say "nobody" |
 
 The alternative — the stairs' two paired records — was rejected on purpose: worldgen's stair
 halves are *different defs* that pair by convention; a bed's halves are the same thing, and two

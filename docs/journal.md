@@ -3037,3 +3037,79 @@ work itself.
   interface-typed collection under Unity's bundled version while the fast tier is perfectly happy,
   so three new tests were green in eleven seconds and red in the gate. `docs/lessons.md` has had
   this written down since the morning of the same day.
+
+- **Beds, the first furniture, 2026-09-17** (`docs/design/20-beds.md`, interview in
+  `docs/research/beds-interview.md`). The owner asked for the whole loop in one breath — bed
+  from the Build palette, a rotatable two-tile outline on R, built through the pipeline, a
+  skill-rolled quality of Poor/Normal/Decent/Uber/Epic, a colonist assigned to own it and sleep
+  in it — and the interview settled the four decisions that shaped it: two tiles with computed
+  placeholder art; R rotates only while a rotatable ghost is armed; assignment from the bed's
+  own pane; the tiers scale rest effectiveness now, numbers provisional in XML.
+  - **The ground found more standing than expected.** A "bed" already existed as an invisible
+    scenario cell — the sleep chooser scans a list of them and rest already splits 100 in a
+    bed against 80 on the ground — so the bed upgraded a notion rather than inventing one. The
+    build pipeline turned out to be generic over the thing built, so a bed site flows through
+    delivery and construction untouched. And nothing existed for the rest: no multi-cell
+    edifice, no rotation input, no ownership state, no quality field.
+  - **One record behind two slots, and the second cell is not stored.** Both cells'
+    `Edifice[]` point at the same `PlacedEdifice`, whose facing says where the far cell is —
+    derived by `EdificeFootprint`, never stored, so the record cannot disagree with itself. The
+    first cut stored a `CellIndexB = -1`, and the reason it went is a language fact worth the
+    journal: **Unity compiles C# 9, where struct field initializers do not exist**, while the
+    dotnet mirror compiles `latest` — so `= -1` defaults would have passed every fast-tier run
+    and broken the Unity tier, and cell 0 is a real cell besides. Facing, Quality and Owner are
+    all zero-safe instead: facing 0 is north-and-meaningless, quality 0 is none, and owner 0 is
+    nobody because pawn ids are 1-based.
+  - **The bed's edifice id is 12, not 10, and the trees are why.** `NaturalContent.FirstEdifice`
+    reserved 10 and 11 for conifer and broadleaf; the first cut took 10 anyway and would have
+    drawn every bed as a conifer, named it one in the pane, and — because the render model
+    routes ids ≥ 10 to the natural table — indexed past the natural module array. The contract
+    weld test (`CellDetailTests`) caught it in the fast tier before Unity ever saw it, which is
+    what it is for. The mesher's stuff-tint rule now asks `IsTree(def)` rather than an id
+    range, so a wooden bed keeps its timber tint above the trees' ids.
+  - **Quality closed U26's outstanding success roll** — rolled once, at completion, by the
+    finishing colonist's Construction skill, on a bell whose weight falls off two a step from
+    the tier the skill has earned: a novice never reaches Epic, a master never falls to Poor,
+    and the tests pin exactly those endpoints, never a draw. The tiers are content
+    (Quality.xml, fingerprinted beside the buildings) and the rest numbers — 85/100/112/125/140
+    per cent of a plain bed, the owner's own — replaced the hardcoded 100 the needs system
+    carried. The roll draws from (world seed, cell ^ tick) on a new `BuildQuality` salt: the
+    refund's shape, not the yield's, because a bed rebuilt on the same spot is a new bed and
+    may finish better, where a cell mined twice is not a thing that happens.
+  - **Ownership lives on the bed record and nowhere else** — no pawn-side field, riding the
+    edifice list into the save and the hash instead. `AssignBedOwner` is the handler's to keep
+    honest: one bed per colonist is enforced by releasing the old bed in the same breath, a
+    pawn who does not exist is refused, and either half of a bed names it. The sleep chooser
+    learned the same rule — a bed that is somebody's is theirs and nobody else checks in, and
+    a colonist's own bed wins outright however far away it is, measured by test: the owner
+    walks past a nearer unowned bed, and the second colonist takes the unowned one.
+  - **R is the game's first context rule.** R was already the slice's, and the owner's answer
+    was R anyway — so instead of a second `HotkeyAction` (a clash the binding map refuses by
+    design) the two consumers agree on one predicate, `DesignateDirector.RotatableArmed`,
+    decided in the fast tier: the tool claims the slice-up key's press while a rotatable thing
+    is armed, PageUp is never claimed, and design 09 §6 gained case 9 with its own "no key
+    means two things today" line amended — the day one does has arrived, and this is how it
+    was solved without breaking the one-key-one-action invariant.
+  - **The pane's first interactive fact.** A bed's readout says its tier and its owner, and the
+    owner row opens the colonist popover — built once, filled on open, a pick submitting
+    `AssignBedOwner` exactly as every command is submitted, landing on the next tick or on
+    unpause. The affordance is armed by `InspectModel.BedUnderPane`, cleared every refresh so
+    it cannot outlive the bed.
+  - **The placeholder is three scaled boxes** — frame, mattress, pillow — instances of a plain
+    block module tinted by the bed's stuff, drawn once from the head cell, rotated by the
+    stored facing, centred on the seam of the two cells and draped there: a bed is one thing
+    fixed to the grid across two cells, and the rule the stepped walls settled is that
+    anything fixed to the grid is draped. One catalogue row on `odyssey.module.bed` upgrades
+    every bed the day real two-tile art exists.
+  - **Two gates were built for this line.** A local C# 9 syntax gate — the whole Presentation
+    assembly, Unity-side tests included, compiled against the installed Unity's own DLLs —
+    because the fast tier cannot see Presentation at all and it caught `GroundRelief.Drape`
+    returning a matrix where the first cut read a point. And a version-2 save fixture built by
+    hand, proving the bed's three new record fields read back as zeros from a file the day-old
+    build wrote. Save format is 3 on this branch; whichever of start-flow and beds merges
+    second takes 4.
+  - **Verified:** fast tier 586 Sim + 219 Hud green, one ignored (a board shape the solid-cell
+    search could not find), both content gates green, the C# 9 gate clean. Not run: the Unity
+    tier — it runs on the owner's self-hosted runner against the pull request. **Not measured:
+    nobody has pressed Play.** The bed's placeholder art, the popover's reach and the R claim
+    are all judgements for the keyboard, and design 20 §12 already lists what is open.
