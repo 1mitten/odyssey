@@ -73,6 +73,67 @@ namespace Odyssey.Tests.Sim
             return total;
         }
 
+        // ---- a paused world takes orders -----------------------------------------------------
+
+        /// <summary>
+        /// A slab ordered while the clock is stopped is there before the clock starts.
+        ///
+        /// <para>The owner, playtesting (2026-09-17): *"if I pause the game, go up a depth and
+        /// create a slab, I place the slab but then nothing appears until I press play."* The
+        /// order was reaching the queue and the queue was only drained by a tick, so a paused
+        /// world took the command and showed nothing for it. Pausing to plan is the whole of how
+        /// this genre is played.</para>
+        ///
+        /// <para>Not a tick is spent here, deliberately: <c>Tick</c> would pass whether the bug
+        /// were fixed or not.</para>
+        /// </summary>
+        [Test]
+        public void ASlabOrderedOnAPausedWorldIsThereWithoutATick()
+        {
+            ColonyWorld colony = Board();
+            int ground = GroundLevelCellNear(colony, 3);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+
+            // A storey up, over a wall, which is the owner's case: open ground is already a floor
+            // and AllowsSlab refuses it there, correctly.
+            RaiseNow(colony, ground, BuildingHandle.Wall);
+            CellRef cell = Size.FromIndex(Above(ground));
+            int before = colony.World.CurrentTick;
+
+            colony.World.Intents.Submit(new Intent(IntentKind.PlaceBuilding, cell,
+                BuildingHandle.Floor, StuffHandle.Wood));
+            colony.World.RepublishViews();
+
+            Assert.That(colony.World.CurrentTick, Is.EqualTo(before), "a paused world spent a tick");
+            Assert.That(colony.Construction.SiteAt(cell), Is.GreaterThanOrEqualTo(0),
+                "the order was taken and no site appeared until the clock started");
+        }
+
+        /// <summary>
+        /// And the world the player is looking at says so. The site existing in the grid is half
+        /// of it; the published view is what the screen is drawn from, and a fix that settled the
+        /// order without republishing would leave the same blank cell on screen.
+        /// </summary>
+        [Test]
+        public void ThePausedViewIsRepublishedWithTheOrderInIt()
+        {
+            ColonyWorld colony = Board();
+            int ground = GroundLevelCellNear(colony, 3);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+
+            RaiseNow(colony, ground, BuildingHandle.Wall);
+            CellRef cell = Size.FromIndex(Above(ground));
+            colony.World.RepublishViews();
+            int published = colony.World.Views.PublishCount;
+
+            colony.World.Intents.Submit(new Intent(IntentKind.PlaceBuilding, cell,
+                BuildingHandle.Floor, StuffHandle.Wood));
+            colony.World.RepublishViews();
+
+            Assert.That(colony.World.Views.PublishCount, Is.GreaterThan(published),
+                "the view was not republished, so the screen would not have changed");
+        }
+
         // ---- a second storey stands on the first ---------------------------------------------
 
         /// <summary>

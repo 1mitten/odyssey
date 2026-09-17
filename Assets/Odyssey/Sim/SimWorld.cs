@@ -40,12 +40,18 @@ namespace Odyssey.Sim
         /// </summary>
         readonly Func<Intent, IntentRejection> _handleIntent;
 
+        /// <summary>Held for the same reason as <see cref="_handleIntent"/>: a lambda written at
+        /// the call site is a fresh allocation every call, and this one runs on every paused
+        /// frame the player is doing anything at all.</summary>
+        readonly Func<Intent, bool> _appliesWhilePaused;
+
         internal SimWorld(uint seed, GridSize size)
         {
             Seed = seed;
             Size = size;
             CurrentTick = 0;
             _handleIntent = HandleIntent;
+            _appliesWhilePaused = i => PausedIntents.AppliesWhilePaused(i.Kind);
             _byGroup = new[]
             {
                 new List<ITickable>(), // Normal
@@ -232,11 +238,16 @@ namespace Odyssey.Sim
         /// Answer view questions and republish, without advancing the world by a single tick.
         ///
         /// <para><b>This exists because a paused world never reaches a tick boundary.</b> The
-        /// player inspects a stopped world more than a running one, so a question queued as an
-        /// intent would go unanswered exactly when it is most likely to be asked. Only view
-        /// intents are drained here — a question changes no state the simulation owns, so
-        /// applying it off-boundary cannot desync a hash or a replay; a command left pending
-        /// stays pending, and is applied at the next real tick as always.</para>
+        /// player inspects and orders a stopped world more than a running one, so anything queued
+        /// as an intent would wait exactly when it is most likely to be sent.</para>
+        ///
+        /// <para><b>It used to drain questions only</b>, on the argument that a command must wait
+        /// for a tick boundary. That was too strict and the owner found the hole in it on
+        /// 2026-09-17: a slab laid while paused produced no site at all until the clock started.
+        /// <see cref="PausedIntents.AppliesWhilePaused"/> now names the set and carries the
+        /// reasoning — briefly, while the clock is stopped nothing else runs, so applying a
+        /// player's order at once gives exactly the state the next tick's drain would have given,
+        /// and the boundary the hash is taken at is unchanged.</para>
         ///
         /// <para>The publish is the same one <see cref="Tick"/> ends with, over the same settled
         /// world, so the frame it produces is indistinguishable from a tick's apart from the
@@ -244,7 +255,7 @@ namespace Odyssey.Sim
         /// </summary>
         public void RepublishViews()
         {
-            Intents.DrainWhere(i => i.Kind == IntentKind.QueryCell, _handleIntent);
+            Intents.DrainWhere(_appliesWhilePaused, _handleIntent);
             Views.Publish(this, _contributors);
         }
 

@@ -3462,3 +3462,48 @@ recesses — and `SM_Bld_Base_Floor_01`, the two-triangle flat quad that looked 
 option on paper, is **wooden planks**. `Half_01` is the plainest of the five and is what stone
 uses. A flat stone slab is a genuine gap of the kind `CLAUDE.md` reserves Blender for; nobody has
 been asked yet.
+
+### A paused world would not take an order (2026-09-17)
+
+The owner: *"if I pause the game, go up a depth and create a slab, I place the slab but then
+nothing appears until I press play - I can see the build selection for the slab."*
+
+Not a rendering fault and not the construction grid. `SimWorld.RepublishViews` — the escape hatch
+built so a paused world could answer a question about a cell — drained `QueryCell` and nothing
+else, on an argument it stated outright: *"a command left pending stays pending, and is applied at
+the next real tick as always."* So the order reached the queue, the queue was only drained by a
+tick, and a paused world took the command and showed nothing for it. The build cursor still drew,
+because the cursor is presentation and never asked the simulation anything — which is exactly why
+it looked like a rendering bug from the outside.
+
+**The caution in that sentence was right; its scope was too wide.** A question cannot desync a hash
+because it changes nothing. A command does change hashed state — but while the clock is stopped
+*nothing else runs*, so applying a player's order the moment it is given produces exactly the state
+the next tick's drain would have produced, and the boundary the hash is taken at is unchanged. One
+thing genuinely improves: a save written while paused now contains the orders the player has just
+given, which it did not before.
+
+`PausedIntents.AppliesWhilePaused` names the set rather than growing a second special case beside
+`QueryCell`. In it: the questions, and the player's orders over a cell or a colonist — `Designate`,
+`CancelDesignation`, `SetForbidden`, `PlaceBuilding`, `CancelBuilding`, `ForceJob`. The test is
+whether an intent writes state the player authored and needs no system to finish it. Out of it:
+`SetGameSpeed`, which keeps its own path because unpausing is what spends the tick and routing it
+here would be circular, and `SetSliceLayer`, which is presentation state the simulation need never
+hear about off-boundary.
+
+`ASlabOrderedOnAPausedWorldIsThereWithoutATick` spends no tick on purpose — a tick would pass
+whether the bug were fixed or not — and it was checked the only way worth checking: put the old
+one-kind predicate back and it fails, restore the fix and it passes. Its first version failed for
+the wrong reason and that was useful too: it ordered the slab on open ground, which `AllowsSlab`
+refuses because ground already is a floor. The owner's case is a storey up, over a wall.
+
+**And the meta-file warning, which is not the hitch.** *"Asset
+Packages/com.unity.render-pipelines.universal/Tests/Editor/.../ReadonlyMaterialConverterTests.*.cs
+has no meta file, but it's in an immutable folder."* Counted across every log in the project: 14
+occurrences, of exactly two files, both URP's own editor-test sources. It fires on asset-database
+refresh and not per frame, so it cannot be what stops or hitches a running game. Nothing in this
+repository can fix it either — the folder is immutable by definition, and the consequence is that
+two URP test files are ignored, which is what we want. If the noise is unwelcome, letting Unity
+re-resolve the package (remove its `Library/PackageCache` folder and reopen) is the remedy; the
+hitching wants measuring in PlayMode, where frame time is the only place it is ever measured.
+

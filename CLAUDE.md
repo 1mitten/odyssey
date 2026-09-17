@@ -249,7 +249,13 @@ All five chokepoints named after the mining line are now open:
   thousandths of a clear crossing — published for the one asked-about cell by a sim-side
   contributor every colony gets. The question is a `QueryCell` intent, and **a paused world answers
   it by republishing the view without spending a tick** — the first time "intents flush while the
-  clock is paused" (ADR 0004's own Decision) has been true of anything but a speed change. This is
+  clock is paused" (ADR 0004's own Decision) was true of anything but a speed change.
+  **It is no longer only questions** (2026-09-17): a slab ordered while paused sat in the queue and
+  drew nothing until the clock started, because only `QueryCell` was drained off-boundary.
+  `PausedIntents.AppliesWhilePaused` names the set — the questions plus the player's orders over a
+  cell or a colonist — on the ground that while the clock is stopped nothing else runs, so an order
+  applied at once gives exactly the state the next tick's drain would have given. Chop and mine
+  orders had the same hole. A save written while paused now contains them. This is
   U16's readback arriving two milestones late: the pane had shipped the placeholder "cell readout
   arrives with cell inspection" since M1, and the owner's reports (rocks indistinguishable from
   grass, water silent about being water, piles generic with no count) are what opened it. The same
@@ -490,9 +496,9 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~13 s, no Unity): **628 Sim + 320 Hud**; Long tier
+- **Fast tier** (`scripts/test-fast.sh`, ~13 s, no Unity): **630 Sim + 320 Hud**; Long tier
   **20**. Unity tier on 2026-09-17, on the merge of U29's floors into the orders strip and U39:
-  EditMode **1434 total, 1423 passed, 0 failed**; PlayMode last measured **65 total,
+  EditMode **1436 total, 1425 passed, 0 failed**; PlayMode last measured **65 total,
   61 passed, 0 failed** (the rest are pre-existing `[Explicit]` or ignored rows). The
   Hud figure is **exactly** 309 + 8 + 3 — the base, this branch's, and the orders strip's — so no
   branch lost a test to either merge, which is the

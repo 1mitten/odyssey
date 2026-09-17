@@ -588,11 +588,13 @@ namespace Odyssey.Presentation.Bootstrap
                 // only for a speed change: layer changes are presentation state and can wait, so a
                 // player scrolling through layers while paused does not advance the simulation.
                 //
-                // A question about a cell is the one thing that cannot wait, because inspecting a
-                // stopped world is exactly when it is asked. It is answered by republishing the
-                // view over the same settled world — no tick, no system, no hash — which the
-                // intent's kind permits because a question changes nothing the simulation owns.
-                if (_world.Intents.HasPending(IntentKind.QueryCell))
+                // A question about a cell was once the only thing that could not wait. An order
+                // cannot wait either, and that gap was real: a slab laid while paused sat in the
+                // queue and drew nothing at all until the clock started (owner, 2026-09-17). The
+                // player pauses in order to give orders, so both are settled here by republishing
+                // the view over the same settled world — no tick, no system, no hash moved at a
+                // boundary. PausedIntents.AppliesWhilePaused names the set and says why it is safe.
+                if (_world.Intents.HasAnyPending(PausedIntents.AppliesWhilePaused))
                     _world.RepublishViews();
                 if (_speedChangePending)
                 {
