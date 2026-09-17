@@ -129,10 +129,35 @@ namespace Odyssey.Tests.Hud
             (".speed", "margin-top", () => HudLayout.ClockGap, "clock to speed"),
             (".speed__btn", "height", () => HudLayout.SpeedButton, "speed button"),
 
-            (".build", "width", () => HudLayout.BuildWidth, "build palette width"),
-            (".build__scroll", "max-height", () => HudLayout.BuildCatHeight, "category group height"),
-            (".chip", "height", () => HudLayout.BuildChip, "a palette chip"),
-            (".chip", "margin", () => HudLayout.BuildChipMargin, "chip margin"),
+            // The Build palette, in three layouts. Rows and Bar take their left and right from
+            // code, because they span the screen and their bottom depends on what is docked
+            // under them, so what is checkable here is every fixed box in all three.
+            (".bp--rail", "width", () => HudLayout.BuildRailWidth, "rail layout width"),
+            (".bp__rail", "width", () => HudLayout.BuildRailColumn, "rail category column"),
+            (".bp__rail-row", "height", () => HudLayout.BuildRailRow, "a rail category row"),
+            (".bp__rail-row", "border-left-width", () => HudLayout.BuildRailMark, "selected rail mark"),
+            (".bp__sub-tile", "height", () => HudLayout.BuildRailSubTile, "a rail sub-type tile"),
+            (".bp__sub-grid", "height", () => HudLayout.BuildRailSubGrid, "rail sub-type grid"),
+            (".bp__mat-grid", "height", () => HudLayout.BuildRailMatGrid, "rail material grid"),
+            (".bp__mat-tile", "height", () => HudLayout.BuildRailMatTile, "a rail material tile"),
+            (".bp__cat", "height", () => HudLayout.BuildCatTile, "a category tile"),
+            (".bp__sub", "height", () => HudLayout.BuildSubRow, "a sub-type button"),
+            (".bp__mat", "height", () => HudLayout.BuildMatRow, "a material button"),
+            (".bp__mats-label", "width", () => HudLayout.BuildMatLabelColumn, "the MATERIAL column"),
+            (".bp__bar-cat", "width", () => HudLayout.BuildBarCat, "a bar category tile"),
+            (".bp__bar-sub", "width", () => HudLayout.BuildBarSub, "a bar sub-type tile"),
+            (".bp__action", "width", () => HudLayout.BuildAction, "a header action"),
+            (".bp__switch-btn", "width", () => HudLayout.BuildSwitchButton, "a switcher button"),
+            (".bp__material", "border-width", () => HudTheme.MaterialBorderWidth, "material border"),
+            (".bp__material", "border-radius", () => HudTheme.MaterialRadius, "material radius"),
+
+            // "The same value on every labelled button, no exceptions" (specification). Four
+            // selectors, one number, and a fifth that drifted would fail here rather than read as
+            // a tile that looks very slightly wrong.
+            (".bp__tile-label", "margin-left", () => HudLayout.BuildIconGap, "icon to label"),
+            (".bp__material-label", "margin-left", () => HudLayout.BuildIconGap, "icon to label"),
+            (".bp__crumb", "margin-left", () => HudLayout.BuildIconGap, "icon to label"),
+            (".bp__mode-icon", "margin-left", () => HudLayout.BuildIconGap, "icon to label"),
 
             (".inspect", "left", () => HudLayout.Edge, "screen edge margin"),
             (".inspect", "bottom", () => HudLayout.InspectBottom, "inspect bottom offset"),

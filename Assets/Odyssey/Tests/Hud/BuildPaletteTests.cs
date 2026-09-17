@@ -93,6 +93,36 @@ namespace Odyssey.Tests.Hud
             }
         }
 
+        /// <summary>
+        /// Rail's sub-type grid is tall enough for the largest category.
+        ///
+        /// <para><b>This is the fast-tier half of a PlayMode failure.</b> Rail's only claim is
+        /// that its height does not change when the category does, and it did: the panel measured
+        /// 376 px on Structure and 343 on Production, because the grid sized itself to whatever
+        /// was in it. The fix is a fixed grid, and a fixed grid is a number that can go stale —
+        /// so this is the test that fails the moment a category outgrows it, which costs eleven
+        /// seconds rather than a PlayMode run, and which says what to change.</para>
+        /// </summary>
+        [Test]
+        public void TheRailGridIsTallEnoughForTheLargestCategory()
+        {
+            int largest = 0;
+            string widest = string.Empty;
+            foreach (var (_, label, tools) in PaletteTools.Categories)
+                if (tools.Length > largest)
+                {
+                    largest = tools.Length;
+                    widest = label;
+                }
+
+            int needed = HudLayout.BuildRailRowsNeeded(largest);
+            Assert.That(HudLayout.BuildRailSubRows, Is.EqualTo(needed),
+                $"{widest} has {largest} sub-types, which is {needed} rows of " +
+                $"{HudLayout.BuildRailColumns}, and the Rail grid is fixed at " +
+                $"{HudLayout.BuildRailSubRows}. Either the grid is too short and the category's " +
+                "last tiles are cut off, or it is too tall and the panel carries dead space.");
+        }
+
         // ---------------------------------------------------------------- layout
 
         /// <summary>A profile that has never been told opens in Rows.</summary>

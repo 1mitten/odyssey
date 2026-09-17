@@ -389,43 +389,151 @@ namespace Odyssey.Hud
 
         // ------------------------------------------------------------------ build palette
 
+        /*
+         * The Build palette, in three layouts (`docs/design/17-build-palette-layouts.md`).
+         *
+         * Every number below is from the owner's 4a/4b/4c specification, and the arrangement is
+         * the one place the specification was overruled. It drew all three floating at a 28 px
+         * margin with the panel's own top-left corner in the top-left of the screen — over a bare
+         * board, with no HUD behind it. The real screen has the stores panel down the left edge
+         * and the roster strip across the top, and a panel there covers both. The owner's answer,
+         * asked directly: "tight and flush to other elements to enable full use of space". So the
+         * margins are gone, Rows and Bar span the screen edge to edge, and all three dock flush on
+         * whatever is under them, which is the rule the bar and the popovers already follow.
+         */
+
         /// <summary>
-        /// How wide the Build popover is.
+        /// How wide Rail is, and the one layout that keeps a width of its own.
         ///
-        /// <para><b>420 until 2026-09-17</b>, when the owner asked the first group to "use the
-        /// horizontal space … giving more room for the second group". Ten category chips with
-        /// their full words come to about eight hundred pixels of chip; at 420 they wrapped to
-        /// five rows and the tools under them got what was left of a 320 px panel, which was
-        /// almost nothing. Wider is the cheap half of the answer, and it costs nothing now that a
-        /// popover is anchored to its button rather than centred on the screen.</para>
+        /// <para>Rows and Bar span the screen, because their whole argument is that a row of seven
+        /// tiles should use the horizontal space rather than wrap. Rail's argument is the opposite
+        /// one — <i>its height never changes when you switch category, so nothing below it
+        /// reflows</i> — and that only holds if the pane beside the rail is a fixed size.</para>
         /// </summary>
-        public const int BuildWidth = 560;
+        public const int BuildRailWidth = 840;
+
+        /// <summary>The 186 px column of category rows down Rail's left edge.</summary>
+        public const int BuildRailColumn = 186;
+
+        /// <summary>A category row in Rail: 34 px, an 18 px icon and a label.</summary>
+        public const int BuildRailRow = 34;
+
+        /// <summary>The inset bar in the selected Rail row's own hue, on its left edge.</summary>
+        public const int BuildRailMark = 2;
+
+        /// <summary>A sub-type tile in Rail's four-column grid.</summary>
+        public const int BuildRailSubTile = 66;
+
+        /// <summary>A material tile in Rail's four-column grid. The one place a material is drawn
+        /// large enough for its name to be the loudest thing on the button.</summary>
+        public const int BuildRailMatTile = 86;
+
+        /// <summary>How many columns Rail's two grids are wide.</summary>
+        public const int BuildRailColumns = 4;
 
         /// <summary>
-        /// One row of category or tool chips, pitch included: the chip's own height plus the
-        /// margin under it. Written down rather than left to the content, because it is what
-        /// <see cref="BuildCatRows"/> is a count of.
-        /// </summary>
-        public const int BuildChipRow = BuildChip + 2 * BuildChipMargin;
-
-        /// <summary>A chip's own box, without its margins.</summary>
-        public const int BuildChip = 30;
-
-        public const int BuildChipMargin = 2;
-
-        /// <summary>
-        /// How many rows of categories the first group may take before it scrolls.
+        /// How many rows Rail's sub-type grid stands, whatever category is open.
         ///
-        /// <para><b>The cap is the real fix, not the width.</b> The category list was
-        /// <c>flex-grow: 1</c>, so it took every pixel the panel had and the tools got the
-        /// remainder — which meant the group the player is actually reaching into shrank as the
-        /// group above it grew. Two rows, and anything past them scrolls: the scroll view was
-        /// already there for exactly this and was never reached.</para>
+        /// <para><b>This is the number that makes Rail worth having.</b> Its whole claim is that
+        /// the panel's height never changes when you switch category, so nothing below it
+        /// reflows — and the grid is the only part of it that would otherwise vary, because
+        /// Structure has six sub-types and Security has three. Sized to the largest category and
+        /// left ragged for the rest, so the promise is kept by the layout rather than by the
+        /// contents happening to be even.</para>
+        ///
+        /// <para>It was not kept at first: the panel measured 376 px on Structure and 343 on
+        /// Production, and the PlayMode test written for the claim is what said so.
+        /// <see cref="BuildRailRowsNeeded"/> is checked against the real table in the fast tier,
+        /// so a seventh tool in a category fails loudly rather than quietly reflowing.</para>
         /// </summary>
-        public const int BuildCatRows = 2;
+        public const int BuildRailSubRows = 2;
 
-        /// <summary>How tall the category group is allowed to stand.</summary>
-        public const int BuildCatHeight = BuildCatRows * BuildChipRow;
+        /// <summary>How tall that grid stands.</summary>
+        public const int BuildRailSubGrid =
+            BuildRailSubRows * BuildRailSubTile + (BuildRailSubRows - 1) * BuildTileGap;
+
+        /// <summary>
+        /// How tall Rail's material grid stands, whether or not it has anything in it.
+        ///
+        /// <para><b>Reserved rather than collapsed, and this was the second half of the same
+        /// bug.</b> Fixing the sub-type grid was not enough: a category that opens on a tool which
+        /// is not built out of anything — which is five of the seven, because their tools are all
+        /// still drawn-disabled — hides the material buttons, and a hidden row takes its height
+        /// with it. Measured: the pane stood 317 px on Structure and 290 on Production, and the
+        /// panel followed. So the material band keeps its row whether it is showing buttons or
+        /// not.</para>
+        ///
+        /// <para>The cost is an empty band under the word MATERIAL while an order is armed. That
+        /// is the honest price of the promise this layout is built on, and it is only visible in
+        /// Rail: Rows and Bar let the band collapse, because neither of them ever claimed its
+        /// height would hold still.</para>
+        /// </summary>
+        public const int BuildRailMatGrid = BuildRailMatTile + BuildTileGap;
+
+        /// <summary>How many rows the largest category really needs, for the test that holds
+        /// <see cref="BuildRailSubRows"/> to it.</summary>
+        public static int BuildRailRowsNeeded(int largestCategory) =>
+            (largestCategory + BuildRailColumns - 1) / BuildRailColumns;
+
+        // --- Rows
+
+        /// <summary>A category tile in the Rows band: a 20 px icon over a label, both centred.</summary>
+        public const int BuildCatTile = 62;
+
+        /// <summary>A sub-type button in the Rows band.</summary>
+        public const int BuildSubRow = 34;
+
+        /// <summary>A material button in the Rows band.</summary>
+        public const int BuildMatRow = 40;
+
+        /// <summary>The column the word MATERIAL sits in, so the buttons beside it start at the
+        /// same x whatever the label does.</summary>
+        public const int BuildMatLabelColumn = 66;
+
+        // --- Bar
+
+        /// <summary>An icon-only category tile in Bar.</summary>
+        public const int BuildBarCat = 36;
+
+        /// <summary>An icon-only sub-type tile in Bar. Larger than the category above it, because
+        /// it is the tier the player is actually aiming at.</summary>
+        public const int BuildBarSub = 42;
+
+        // --- shared
+
+        /// <summary>The gap between two tiles, in every layout and every tier.</summary>
+        public const int BuildTileGap = 6;
+
+        /// <summary>A band's padding: 12 down, 14 across.</summary>
+        public const int BuildBandPadY = 12;
+
+        public const int BuildBandPadX = 14;
+
+        /// <summary>A header action button — the four pinned tools and the way out.</summary>
+        public const int BuildAction = 26;
+
+        /// <summary>One button of the layout switcher.</summary>
+        public const int BuildSwitchButton = 22;
+
+        /// <summary>
+        /// How far under the panel the hint line sits: its own line plus the gap above it.
+        ///
+        /// <para>The hint is <i>outside</i> the panel (specification), because it is an
+        /// instruction about the world rather than a part of the control surface — so it is not
+        /// panel area, it does not count towards coverage, and it must not be allowed to push the
+        /// panel up off the bar.</para>
+        /// </summary>
+        public const int BuildHintBlock = 18;
+
+        /// <summary>
+        /// The gap between two icons and the label beside them, which the specification fixes at
+        /// "the same value on every labelled button, no exceptions".
+        ///
+        /// <para>It is the same 9 px <see cref="RowIconGap"/> the rest of the HUD already uses, so
+        /// the exception the specification was guarding against cannot arise: there is one number
+        /// and it was already here.</para>
+        /// </summary>
+        public const int BuildIconGap = RowIconGap;
 
         // ------------------------------------------------------------------ inspect
 

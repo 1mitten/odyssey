@@ -25,6 +25,63 @@ namespace Odyssey.Presentation.Ui
 
         AlertTriangle,
         Info,
+
+        // ---------------------------------------------------------------- Build palette
+        //
+        // Thirty-seven more, drawn for the same reason the eleven above are and under the same
+        // rule: the palette's specification asks for "1.8px-stroke line art on a 24px grid,
+        // single colour inheriting the label colour" and forbids the placeholder square anywhere
+        // in the panel, and there is no sheet in the ADR 0007 pipeline that covers a single one
+        // of these keys. The keys are still the contract — PaletteGlyphs.For maps one to a shape
+        // here, and the day a sheet does cover them IconBadge takes the slot back with nothing
+        // about the layout moving.
+        //
+        // The materials are deliberately absent. They keep the sprites the game already draws.
+
+        CategoryStructure,
+        CategoryProduction,
+        CategoryFurniture,
+        CategoryPower,
+        CategorySecurity,
+        CategoryFloors,
+        CategoryRecreation,
+
+        ToolWall,
+        ToolDoor,
+        ToolStair,
+        ToolLadder,
+        ToolRoof,
+        ToolReclaim,
+        ToolFabricator,
+        ToolGalley,
+        ToolReclaimer,
+        ToolBench,
+        ToolBunk,
+        ToolTable,
+        ToolLamp,
+        ToolShelf,
+        ToolConduit,
+        ToolBattery,
+        ToolGenerator,
+        ToolReactor,
+        ToolTurret,
+        ToolTrap,
+        ToolBarricade,
+        ToolDeckplate,
+        ToolGrating,
+        ToolTile,
+        ToolGamesTable,
+        ToolViewscreen,
+        ToolPlanter,
+
+        ToolFell,
+        ToolMine,
+        ToolDeconstruct,
+        ToolCancel,
+
+        LayoutRows,
+        LayoutRail,
+        LayoutBar,
     }
 
     /// <summary>
@@ -50,7 +107,7 @@ namespace Odyssey.Presentation.Ui
     /// 17 px row icon and a 30 px avatar have strokes of the same weight — which is what makes a
     /// screen of them read as one set rather than as one drawing enlarged.</para>
     /// </summary>
-    public class HudGlyph : VisualElement
+    public partial class HudGlyph : VisualElement
     {
         /// <summary>Lucide's design box. Every path below is written in it.</summary>
         const float Box = 24f;
@@ -206,6 +263,12 @@ namespace Odyssey.Presentation.Ui
                     Dot(painter, P(12, 7.9f), Mathf.Max(0.9f, 1.15f * scale));
                     return;
             }
+
+            // Everything the chrome set does not claim is a Build palette shape, drawn in
+            // HudGlyph.Palette.cs. Split by file rather than by class so that the two sets share
+            // one box, one stroke rule and one set of path helpers — which is what makes a
+            // category tile and a play button read as belonging to the same interface.
+            PaintPalette(painter, P, scale);
         }
 
         static void Polyline(Painter2D painter, bool stroke, params Vector2[] points)
@@ -281,6 +344,8 @@ namespace Odyssey.Presentation.Ui
 
         public static readonly Color ScrimInk = Convert(Odyssey.Hud.HudTheme.ScrimInk);
 
+        public static readonly Color HeaderNeutralInk = Convert(Odyssey.Hud.HudTheme.HeaderNeutralInk);
+
         public const float PlaceholderStroke = Odyssey.Hud.HudTheme.PlaceholderStroke;
 
         /// <summary>The stroke colour for an icon in this category.</summary>
@@ -295,7 +360,17 @@ namespace Odyssey.Presentation.Ui
         public static Color NeedBand(int thousandths) =>
             thousandths >= 600 ? Good : thousandths >= 400 ? Warn : Bad;
 
-        static Color Convert(Odyssey.Hud.HudColour colour) =>
+        /// <summary>
+        /// One <see cref="Odyssey.Hud.HudColour"/> as a Unity colour.
+        ///
+        /// <para><b>Public since the Build palette</b>, which is the first part of the HUD whose
+        /// colours cannot be written in the stylesheet: seven category hues and four material
+        /// tints, each with four states derived from it, is forty-four declarations of colours
+        /// that are already arithmetic on a token. Those are set inline from
+        /// <see cref="Odyssey.Hud.HudTheme"/> instead — which is still not a literal in the
+        /// Presentation assembly, and that is the rule that matters.</para>
+        /// </summary>
+        public static Color Convert(Odyssey.Hud.HudColour colour) =>
             new Color(colour.R / 255f, colour.G / 255f, colour.B / 255f, colour.A);
 
         /// <summary>

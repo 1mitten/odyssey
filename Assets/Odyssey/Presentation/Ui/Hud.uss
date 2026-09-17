@@ -840,98 +840,377 @@
 
 /* ---------------------------------------------------------------- A7 build palette
 
-   Opened by the Build command and closed by Escape. It used to be a column pinned to the left
-   edge and permanently open, competing with the stores panel for a column that could not hold
-   both. */
+   Three layouts over one set of contents, to `docs/design/17-build-palette-layouts.md`.
 
-.build {
-    width: 560px;
-    max-height: 320px;
+   WHAT IS NOT IN HERE. Seven category hues and four material tints, each with four states
+   derived from it, is forty-four colour declarations for colours that are already arithmetic on
+   a token — so those are set inline from HudTheme by HudShell.Build.cs. That is not a literal
+   escaping into the Presentation assembly: the tokens are still the only source, and BuildTier
+   is what does the deriving. What is left below is the geometry and the neutral states, which
+   are the parts a stylesheet is good at and which HudStyleSheetTests can check.
+
+   WHERE THE PANEL SITS. Docked, not floating. The specification drew all three at a 28px margin
+   over a bare board; the real screen has stores down the left edge and the roster strip across
+   the top. "Tight and flush to other elements to enable full use of space" (owner, 2026-09-17),
+   so Rows and Bar span edge to edge and the bottom is written from code, because what is under
+   the panel is the command bar or the inspect pane's collapsed header depending on whether
+   anything is selected. */
+
+.bp {
+    /* Rows and Bar take their left and right from code; Rail takes a width. Square at the
+       bottom, because that edge meets whatever it is docked on. */
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    padding: 0;
 }
 
-/* The category group is capped at two rows and the tools take what is left (owner, 2026-09-17:
-   "the first group should use the horizontal space … giving more room for the second group — it's
-   using too much vertical space"). It was flex-grow:1, so it took every pixel the panel had and
-   the tools got the remainder — which meant the group the player is actually reaching into shrank
-   as the group above it grew. Anything past two rows scrolls, which is what the scroll view was
-   put here for and never reached. 68px is HudLayout.BuildCatHeight. */
-.build__scroll {
-    flex-grow: 0;
-    flex-shrink: 0;
-    min-height: 0;
-    max-height: 68px;
-    margin-top: 9px;
-}
+.bp--rail { width: 840px; }
 
-/* Unity's default scroller is a light-grey bar with two arrow buttons, which against a near-black
-   panel reads as something broken rather than as a way to see the rest of the list. */
-.build__scroll .unity-scroller--vertical {
-    width: 8px;
-    background-color: rgba(0, 0, 0, 0);
-    border-width: 0;
-    margin-left: 2px;
-}
+/* ---- header: BUILD, the mode line, the switcher, ESC, four actions, the way out */
 
-.build__scroll .unity-scroller--vertical .unity-repeat-button { display: none; }
-
-.build__scroll .unity-scroller--vertical .unity-base-slider__tracker {
-    background-color: rgba(0, 0, 0, 0);
-    border-width: 0;
-}
-
-.build__scroll .unity-scroller--vertical .unity-base-slider__dragger {
-    width: 6px;
-    background-color: rgba(255, 255, 255, 0.13);
-    border-width: 0;
-    border-radius: 3px;
-    margin-left: 0;
-}
-
-.build__scroll .unity-scroller--vertical .unity-base-slider__dragger:hover {
-    background-color: #6fd3e3;
-}
-
-.build__cats {
+.bp__hdr {
     flex-direction: row;
-    flex-wrap: wrap;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.10);
+    flex-shrink: 0;
 }
 
-.build__tools {
+/* The breadcrumb, and the mode line that replaces it while one of the four actions is held.
+   Its colour is written from code: cyan for a build, the held action's own hue otherwise. */
+.bp__crumb {
+    margin-left: 9px;
+    white-space: nowrap;
+}
+
+.bp__mode-icon {
+    margin-left: 9px;
+    flex-shrink: 0;
+}
+
+.bp__cost { color: rgba(255, 255, 255, 0.66); }
+
+.bp__esc {
+    margin-left: 9px;
+    margin-right: 9px;
+}
+
+/* ---- the layout switcher */
+
+.bp__switch {
+    flex-direction: row;
+    flex-shrink: 0;
+}
+
+.bp__switch-btn {
+    width: 22px;
+    height: 22px;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    margin-left: 3px;
+}
+
+.bp__switch-btn:hover { border-color: #6fd3e3; }
+
+.bp__switch-btn--on {
+    background-color: #6fd3e3;
+    border-color: #6fd3e3;
+}
+
+/* ---- the four actions, and the way out. Their colours are written from code, because each
+   one is a different hue and the hue is what says which mode you are in. */
+
+.bp__actions {
+    flex-direction: row;
+    flex-shrink: 0;
+}
+
+.bp__action {
+    width: 26px;
+    height: 26px;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-radius: 4px;
+    margin-left: 6px;
+}
+
+.bp__action--close {
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.bp__action--close:hover { border-color: #e06a5c; }
+
+/* ---- bands, which is what Rows is made of */
+
+.bp__body { flex-shrink: 0; }
+
+.bp__band {
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 14px;
+    flex-shrink: 0;
+}
+
+.bp__divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.10);
+    margin-left: 14px;
+    margin-right: 14px;
+    flex-shrink: 0;
+}
+
+/* ---- a tile, in every tier and every layout */
+
+.bp__tile {
+    flex-direction: row;
+    align-items: center;
+    border-width: 1px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.bp__tile-label {
+    margin-left: 9px;
+    white-space: nowrap;
+}
+
+/* Neutral tier: the sub-types. The categories and the materials paint themselves from code. */
+.bp__sub, .bp__sub-tile, .bp__bar-sub {
+    background-color: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+.bp__sub:hover, .bp__sub-tile:hover, .bp__bar-sub:hover {
+    background-color: rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.26);
+}
+
+.bp__tile--on {
+    background-color: rgba(111, 211, 227, 0.14);
+    border-color: #6fd3e3;
+}
+
+.bp__tile--on .bp__tile-label { color: #6fd3e3; }
+
+.bp__tile--off {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.07);
+    cursor: initial;
+}
+
+.bp__tile--off:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.07);
+}
+
+.bp__tile--off .bp__tile-label { color: rgba(255, 255, 255, 0.35); }
+
+/* ---- 4a, Rows */
+
+/* Seven equal columns. UI Toolkit has no grid, and it does not need one here: seven tiles that
+   each grow equally in a row is the same thing, and it is what makes the band fill the width. */
+.bp__cats { align-items: stretch; }
+
+.bp__cat {
+    height: 62px;
+    flex-grow: 1;
+    flex-basis: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+}
+
+/* An icon over a label, both centred, so the label's own left margin has to come off. */
+.bp__cat .bp__tile-label {
+    margin-left: 0;
+    margin-top: 4px;
+}
+
+.bp__subs { flex-wrap: wrap; }
+
+.bp__sub {
+    height: 34px;
+    padding: 0 13px 0 11px;
+    margin-right: 6px;
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
+.bp__mats-label {
+    width: 66px;
+    flex-shrink: 0;
+}
+
+.bp__mat {
+    height: 40px;
+    padding: 0 13px 0 11px;
+    margin-right: 8px;
+}
+
+/* ---- 4b, Rail */
+
+.bp__split { flex-direction: row; }
+
+.bp__rail {
+    width: 186px;
+    flex-shrink: 0;
+    padding: 12px 10px;
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.10);
+}
+
+.bp__rail-row {
+    height: 34px;
+    padding: 0 10px;
+    margin-bottom: 4px;
+    border-left-width: 2px;
+}
+
+.bp__pane {
+    flex-grow: 1;
+    padding: 12px 14px;
+}
+
+.bp__pane-label { margin-bottom: 8px; }
+
+/* Four columns of tiles, and they are allowed to end in a ragged row rather than close up:
+   this layout's whole point is that its height does not move when the category does. The grid
+   is sized for the largest category and stays that size, which is the only version of that
+   promise the layout keeps by itself — see HudLayout.BuildRailSubRows for the measurement that
+   showed it was not being kept. */
+.bp__sub-grid, .bp__mat-grid {
     flex-direction: row;
     flex-wrap: wrap;
     align-content: flex-start;
+}
+
+.bp__sub-grid {
+    height: 138px;
+    flex-shrink: 0;
+}
+
+/* Reserved even while it is empty. A category whose first buildable tool is not made of anything
+   hides these buttons, and a hidden row takes its height with it — which moved the panel by 27px
+   and broke the one promise this layout makes. */
+.bp__mat-grid {
+    height: 92px;
+    flex-shrink: 0;
+}
+
+.bp__sub-tile {
+    height: 66px;
+    width: 23%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+
+.bp__sub-tile .bp__tile-label {
+    margin-left: 0;
+    margin-top: 4px;
+}
+
+.bp__mat-tile {
+    height: 86px;
+    width: 23%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+
+.bp__mat-tile .bp__material-label {
+    margin-left: 0;
+    margin-top: 6px;
+}
+
+/* ---- 4c, Bar */
+
+.bp__bar-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 14px;
+    flex-shrink: 0;
+}
+
+.bp__bar-cat {
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    margin-right: 4px;
+}
+
+.bp__bar-subs {
+    flex-direction: row;
+    flex-shrink: 0;
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.10);
+    padding-right: 12px;
+    margin-right: 12px;
+}
+
+.bp__bar-sub {
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    margin-right: 4px;
+}
+
+.bp__bar-mats {
+    flex-direction: row;
     flex-grow: 1;
-    min-height: 0;
-    margin-top: 9px;
-    border-top-width: 1px;
-    border-top-color: rgba(255, 255, 255, 0.09);
-    padding-top: 9px;
 }
 
-/* The material row, under the tools and shown only while something made of a material is
-   armed: a material is a property of the order being given, not a category of its own. */
-.build__materials {
-    flex-direction: row;
-    align-items: center;
-    flex-shrink: 0;
-    margin-top: 7px;
-    border-top-width: 1px;
-    border-top-color: rgba(255, 255, 255, 0.09);
-    padding-top: 7px;
+.bp__bar-hint { color: rgba(255, 255, 255, 0.50); }
+
+/* ---- materials, in every layout
+
+   Two pixels of border where everything else has one, because a material is the panel's terminal
+   choice. The fill, the border colour and the ink are written from code: a tinted button always
+   means buildable, and an untinted one never does, which is what lets the stock state be read
+   without putting a number on the button. */
+
+.bp__material {
+    border-width: 2px;
+    border-radius: 5px;
 }
 
-/* The pinned row, under everything and never hidden: the tools that belong to no category
-   because they are about whatever is already on the board rather than about what to put down.
-   A heavier rule above it than the material row's, because this one separates two kinds of
-   thing rather than two parts of one order. */
-.build__pinned {
-    flex-direction: row;
-    align-items: center;
-    flex-shrink: 0;
-    margin-top: 8px;
-    border-top-width: 1px;
-    border-top-color: rgba(255, 255, 255, 0.16);
-    padding-top: 8px;
+.bp__material-label {
+    margin-left: 9px;
+    white-space: nowrap;
+}
+
+.bp__material--on {
+    border-bottom-width: 4px;
+}
+
+/* ---- the hint, outside the panel */
+
+.bp__hint {
+    position: absolute;
+    color: rgba(255, 255, 255, 0.50);
+}
+
+/* ---- the inspect pane, collapsed while the palette is open
+
+   The palette docks on whatever is under it, so this is not only tidiness: without it a selected
+   colonist's needs would push the palette up over the board. */
+
+.inspect--collapsed .inspect__tabs,
+.inspect--collapsed .needs,
+.inspect--collapsed .skills {
+    display: none;
 }
 
 /* ---------------------------------------------------------------- B17 settings
