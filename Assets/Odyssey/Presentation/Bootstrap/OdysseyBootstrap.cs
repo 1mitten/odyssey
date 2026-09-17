@@ -877,6 +877,11 @@ namespace Odyssey.Presentation.Bootstrap
                 _previewIsSlab = ConstructionContent.BuildingAt(director.Building).slab;
                 BuildPreview.Gather(min, max, _previewLayerAt ??= PreviewLayerAt, _previewBoxes);
 
+                // Red when the simulation would refuse every last cell of it — see
+                // NothingHereWillBeBuilt. Green otherwise, unchanged, so a drag that does anything
+                // looks exactly as it did.
+                if (NothingHereWillBeBuilt(director.Building)) tint = PreviewRefusedColour;
+
                 // A wall is a box and a floor is a plate, because the cursor is the shape of the
                 // thing. See ChunkRenderer.DrawCellSpanPlate for why a cell-tall box drawn for a
                 // slab is not merely ugly: it hides the tile it is promising and gives no way to
@@ -930,6 +935,63 @@ namespace Odyssey.Presentation.Bootstrap
         /// column, because it is the same answer for every cell of one box.
         /// </summary>
         bool _previewIsSlab;
+
+        /// <summary>
+        /// Would this drag build nothing at all?
+        ///
+        /// <para><b>The answer to "nothing happens when I try to lay down a floor"</b> (owner,
+        /// 2026-09-17, with a console full of <c>4725 x PlaceBuilding: NotPermitted</c>). It was not
+        /// a fault: on the played meadow only 2,386 of 14,400 cells on the working layer will take
+        /// a slab, and within ten cells of the start it is <b>21 of 441</b> — the ground under your
+        /// feet has a floor already and open air over a drop has no support. Every one of those
+        /// refusals was correct, and the cursor was bright green over all of them.</para>
+        ///
+        /// <para><b>It asks the simulation rather than knowing the rule.</b>
+        /// <c>ConstructionGrid.Allows</c> is the same method <c>Place</c> calls a moment later, so
+        /// the cursor and the order cannot come to disagree — which is the fault this whole line of
+        /// work has now hit twice. <c>DesignatePresenter</c> deliberately filters nothing for the
+        /// same reason; this does not filter either, it only reports.</para>
+        ///
+        /// <para><b>Red only when not one cell would be built</b>, rather than whenever any cell
+        /// would be refused. A wall dragged across a meadow routinely covers a tree or a stream and
+        /// is expected to, and the run gesture was played and accepted as it is; turning it amber
+        /// for an ordinary drag would be re-tinting something nobody complained about. What has no
+        /// defence is a green cursor over an order that does nothing.</para>
+        ///
+        /// <para>Costs one <c>Allows</c> per cell of the box, on frames where a build drag is live.
+        /// It is a handful of array reads each and it stops at the first cell that can be built,
+        /// so the common case is one call.</para>
+        /// </summary>
+        bool NothingHereWillBeBuilt(int building)
+        {
+            ConstructionGrid? sites = _colony?.Construction;
+            if (sites == null || _grid == null) return false;
+
+            for (int i = 0; i < _previewBoxes.Count; i++)
+            {
+                PreviewBox box = _previewBoxes[i];
+                for (int z = box.Min.Z; z <= box.Max.Z; z++)
+                for (int x = box.Min.X; x <= box.Max.X; x++)
+                {
+                    if (!_grid.Contains(x, z, box.Min.Y)) continue;
+                    if (sites.Allows(_grid.Index(new CellRef(x, z, box.Min.Y)), building)) return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// The build cursor over a run that will build nothing.
+        ///
+        /// <para>The cancel cursor's own red at the build cursor's own alpha. Both halves are
+        /// deliberate: the hue is one a player has already seen mean "this takes something away or
+        /// does nothing", and the alpha matches the green it replaces so the cursor changes colour
+        /// without changing weight. Its own constant rather than a reuse of
+        /// <see cref="PreviewCancelColour"/> for the reason <see cref="DeconstructOrderColour"/> is
+        /// its own — tuning the cancel cursor should not silently re-tint this.</para>
+        /// </summary>
+        static readonly Color PreviewRefusedColour = new Color(0.95f, 0.38f, 0.34f, 0.70f);
 
         int _previewLayer;
         Func<int, int, int>? _previewLayerAt;
