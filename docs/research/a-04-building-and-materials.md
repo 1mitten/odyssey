@@ -84,7 +84,7 @@ Breadth examples: stony stuff also sets Door Opening Speed ×0.45 and Melee Cool
 
 ### 4. Construction skill, speed, success and quality
 
-- **Construction Speed** = 50 % at skill 0, +15 percentage points per level (skill 8 → 170 %, skill 20 → 350 %), further scaled by Manipulation and global work speed.
+- ~~**Construction Speed** = 50 % at skill 0, +15 percentage points per level (skill 8 → 170 %, skill 20 → 350 %), further scaled by Manipulation and global work speed.~~ **Corrected 2026-09-17 by `work-speed-and-stats.md`: 30 % at skill 0, +8.75 points per level (skill 8 → 100 %, skill 20 → 205 %).** The two readings are decidable without a third source — every work-speed stat's slope is chosen so that **level 8 lands on exactly 100 %**, and the figures struck through here put it at 170 %. Nothing was built on the old number; it had never been read by any code.
 - **Construct Success Chance** per completed build, by skill 0→8: 75, 80, 85, 87.5, 90, 92.5, 95, 97.5, **100 %** (capped at 100; skill 8+ never fails). Manipulation contributes at 30 % importance uncapped, Sight at 20 % importance capped at 100 %. Failure ("botch") wastes all work and some resources.
 - **Base work amounts** (ticks; 60 ticks = 1 s): wall 135, barricade 320, animal bed 400, bookcase 500, bedroll 600, bed 800, battery 800, column 750, autodoor 1,100, billiards table 12,000, armchair 14,000, autocannon turret 15,000.
 - **Costs**: wall 5 stuff, column 20 stuff (column deconstructs to 10, destroys to 5).

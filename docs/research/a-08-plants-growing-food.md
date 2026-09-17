@@ -89,6 +89,16 @@ A note on one figure: the tool's extract of the rice page reported "0.175 nutrit
 
 ## Recommendation
 
+**Followed up 2026-09-17.** The instruction in item 1 below — *"when OQ-14 lands skills, the
+felling driver multiplies work by the plant-work-speed curve"* — **was never carried out.**
+OQ-14 landed in the overnight queue and the multiplication did not, and nothing noticed for
+months, because a recommendation in a research file is prose and no test can fail on it. It is
+now designed (`docs/design/17-rates-and-stats.md`) and scheduled (`U42`-`U45`). Two corrections
+that came with the follow-up research: the curve is **not** taken verbatim, because every
+reference curve is anchored on a level-8 colonist and ours start at level 1 (see that design's
+§3b); and the phrasing *"base work at plant work speed 100%"* below is right, but 100% is the
+reference's average colonist, not ours.
+
 1. **Replace the two ASSUMED numbers with `workTicks = 800` and `WoodPerTree = 27`** — the pine/birch/poplar class, which is the modal vanilla tree and the wooded meadow's only species. State them as *base work at plant work speed 100%* and *base yield at full growth*; when OQ-14 lands skills, the felling driver multiplies work by the plant-work-speed curve (8% + 11.5%/level, floor 10%) and yield by a harvest-yield factor. One stack (75) still clears the tree in one haul. If a second species is ever drawn, oak-class is 1,400 / 46 and both fit the same two Def fields. Medium confidence on the 800, high on the 27.
 2. **Make the ration pack worth 0.9 nutrition (900 units)** so the food economy is measured in vanilla units, and **declare it rot-free**, which the survival-meal precedent supports. Then re-measure the ten-day burn (expect ≈ 90 meals for five) and shrink the pantry to 120 with the surplus as the buffer, or keep 240 and say so.
 3. **The minimum food economy for a self-feeding colony is the number to design M3 around:** 16.5 soil tiles or 1.5 four-cell basins of rice-class crop per colonist, a cooking station (campfire at 600 ticks per meal until a stove exists), and a six-day pantry to bridge the first sowing. The Farm pack's 2 × 2-cell field tiles (`e-03-other-packs.md`) make a 9 × 9 field a 5 × 5 stamp, which is a sensible growing-zone unit.

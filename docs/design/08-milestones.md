@@ -64,7 +64,7 @@ Remaining scope:
 | Region graph | Regions per layer with portal edges for stairs, ladders and holes; incremental rebuild on world edits, tested against a full rebuild. Per `d-04-pathfinding.md`. |
 | Pathfinding | Layer-aware A-star over the region graph with deterministic tie-breaks; per-agent replan budget; paths invalidated by edits. |
 | Needs and mood | Food, rest, minimal joy on the 150-tick cadence; mood from a small thought set with drift; one mental-break behaviour. |
-| Skills | 0–20 with experience gain from work and a passion multiplier. |
+| Skills | 0–20 with experience gain from work and a passion multiplier. **Note added 2026-09-17: M2 delivered this and it is the whole of what a skill does — nothing reads a level back out, so a level has no consequence.** Giving it one is `§WS` of `vertical-slice.md` (`U42`–`U45`, design `17-rates-and-stats.md`), sequenced **after** M3's gate because it moves the economy that gate measures. |
 | Jobs, first pass | Think tree, work givers, job drivers and toils, reservations. Haul and the needs-driven eat and sleep jobs. |
 | Characters | Synty rig with the animation set from `e-02-characters-animation.md`: idle and walk from Base Locomotion, the six missing clips retargeted from Mixamo into `Assets/Art/` (never into `Assets/Synty/`). |
 | Presentation | Pawns render, animate and are visible only on the drawn layers. |

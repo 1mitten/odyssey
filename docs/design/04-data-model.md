@@ -94,6 +94,7 @@ Enough for the vertical slice, in dependency order. Types marked ○ are defined
 | 10 | `SkillDef` | Experience curve, passion multipliers, decay |
 | 11 | `PawnKindDef` | Starting skills, needs, appearance set, rig |
 | 12 | `WorkTypeDef` | Label, natural order, required skills, capacities |
+| | | **Plus, when `U42`–`U44` land** (`17-rates-and-stats.md`): the work-speed curve — base, slope per level and floor, per work type — on `WorkTypeDef` or `JobDef`; the innate move-speed band and the condition offsets on `PawnKindDef` or `MovementDef`. All per mille, all integers, **and every one of them a number the content is authored in rather than a number the accumulator is scaled by** — the scale is internal and reaches no Def and no saved content value. |
 | 13 | `WorkGiverDef` | Giver class, parent work type, intra-type priority, emergency flag, scan mode |
 | 14 | `JobDef` | Driver class, report string, interruptibility, expiry |
 | 15 | `ThinkTreeDef` | Nested node tree with insertion tags and priorities |

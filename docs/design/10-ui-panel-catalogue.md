@@ -437,7 +437,7 @@ All are floating windows over a live world. None is a full-screen takeover.
 | | |
 |---|---|
 | Purpose | Everything about one colonist |
-| Contents | Seven tabs: **Needs** (bars with current value and decay rate), **Thoughts** (active memories with expiry and mood contribution), **Skills** (level, passion, learning rate), **Social** (opinions, relationships), **Gear** (equipment, inventory, apparel condition), **Health** (see B1a), **Log** (recent jobs and events) |
+| Contents | Seven tabs: **Needs** (bars with current value and decay rate), **Thoughts** (active memories with expiry and mood contribution), **Skills** (level, passion, learning rate — and, from `U43`, **what the level is worth**: a row reads "mining · 6 · 1.20×", which is the first time a level in this game has had a consequence to state, `17-rates-and-stats.md` §5), **Social** (opinions, relationships), **Gear** (equipment, inventory, apparel condition), **Health** (see B1a), **Log** (recent jobs and events) |
 | Reads | `ColonistDetail` — subscription-scoped, filled only while open |
 | Emits | `SetOutfit`, `DropItem`, `Prioritise`, `SetMedicalCare` |
 | Cadence | 15 Hz for needs, 1 Hz for the rest |
