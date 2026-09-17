@@ -530,10 +530,22 @@ namespace Odyssey.Tests.Presentation
                 Is.GreaterThan(WorkStyle.Felling.AimFromCentre));
         }
 
-        // Building was once reachable only through PawnFigureDirector.StyleOverride, and a
-        // tripwire test here asserted no job mapped to it. The build pipeline landed
-        // JobHandle.Build and the row in IndexForJob, the tripwire fired, and both were
-        // retired on 2026-09-17 — the test's own instruction.
+        [Test]
+        public void BuildingIsTheStyleABuilderIsSeenIn()
+        {
+            // This replaces a tripwire. Until the build pipeline landed nothing in the simulation
+            // built, the hammer was reachable only through PawnFigureDirector.StyleOverride, and a
+            // test asserted that no job mapped to it — with a message saying to add the row to
+            // IndexForJob and delete the test the day building became real. It has, the row is
+            // there, and the tripwire fired on 2026-09-17 exactly as it was written to.
+            //
+            // What is worth asserting now is the row itself, and that it is the *only* one: an
+            // `IndexForJob` that answered building for everything would satisfy the first half.
+            Assert.That(WorkStyle.IndexForJob(JobHandle.Build), Is.EqualTo(WorkStyle.BuildingIndex),
+                "a colonist raising a wall swings the hammer");
+            Assert.That(WorkStyle.IndexForJob(JobHandle.Mine), Is.EqualTo(WorkStyle.MiningIndex),
+                "and a miner still swings the pick");
+        }
 
         [Test]
         public void TimberIsItsOwnRecipeAndNotFellingChips()

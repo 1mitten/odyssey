@@ -25,10 +25,22 @@ namespace Odyssey.Presentation.Rendering
             new Color(0.92f, 0.91f, 0.88f),            // concrete
             new Color(0.82f, 0.86f, 0.92f),            // steel
             new Color(0.88f, 0.92f, 0.94f),            // composite
-            // Wood continues the table at NaturalContent.StuffWood. White: a tree wears its own
-            // pack material, which is already the right green and brown, and a built wooden wall
-            // will get its own art rather than a tinted concrete one.
-            Color.white,                               // wood
+            // Wood continues the table at NaturalContent.StuffWood.
+            //
+            // **This was white, and a wooden wall came out cream** (owner, 2026-09-17): the entry
+            // was left white on the argument that a built wooden wall would get art of its own
+            // rather than a tinted concrete one. True, and still the better answer — the packs
+            // have SM_Bld_Fort_Wall_01/02 in PolygonWesternFrontier — but until somebody chooses
+            // it, white means a wooden wall draws the plaster of SM_Bld_Base_Wall_01 untouched.
+            //
+            // The number is measured off the board rather than picked. In the owner's screenshot
+            // the wall's sunlit face renders at sRGB (170, 141, 110) while a log pile lying in the
+            // same light renders at (155, 110, 65) on its sawn end — which is what wood looks like
+            // in this game, under this sun, at this time of day. The ratio of those two in *linear*
+            // space, which is where _BaseColor multiplies, is (0.76, 0.59, 0.34). The brick on the
+            // inner face goes from (72, 43, 30) to about (63, 32, 14) under it: darker timber, not
+            // the black a stronger multiply would have crushed it to.
+            new Color(0.76f, 0.59f, 0.34f),            // wood
             // Stone is the second thing a colony can build with (NaturalContent.StuffStone). A
             // grey against the concrete's warm cream, so a stone wall reads as cut rock rather
             // than as poured slab; it takes the rock material, which is already close.

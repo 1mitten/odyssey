@@ -527,6 +527,17 @@ backslashes dies on `MSB4025: hexadecimal value 0x0C is an invalid character` �
 segment. **Write every path in a generated csproj with forward slashes**; MSBuild accepts them and
 the error message points nowhere near the cause.
 
+**Presentation tests can be *run* the same way, not merely compiled** (2026-09-17). Point a throwaway
+`net8.0` project with NUnit and the test adapter at the test file, reference the DLL the paragraph
+above builds plus `UnityEngine.CoreModule.dll`, and `dotnet test` runs them in about a second while
+the editor holds the project. **What stops it is an engine ECall**: anything implemented natively
+throws `SecurityException: ECall methods must be packaged into a system module` outside the player.
+`Matrix4x4.TRS` is one of them; `Matrix4x4.identity`, `operator *`, `MultiplyVector`, `GetColumn`,
+`Mathf` and the vector types are managed and work. So a value that is only ever scaled and
+translated is better built by writing the seven fields out — it is one multiply cheaper, and it is
+the difference between geometry that can be measured in a test and geometry that can only be looked
+at. `GroundRelief.Drape` had already made the same choice for its shear.
+
 And a shell trap that is not a documentation error: the user PATH does put Python 3.13 ahead of
 `WindowsApps`, but a shell started before that change inherits the old environment, so `python3`
 resolves to the Microsoft Store stub and answers *"Python was not found"* to everything —
@@ -662,6 +673,40 @@ minutes and a couple of gigabytes; run it in the background and do something els
 
 Remove the junction with `rmdir` (not `Remove-Item -Recurse`, which on some shells follows the link
 and would delete the real packs).
+
+**And not `git worktree remove` either — that is the same trap and it is not obvious** (2026-09-17,
+and it cost the packs). Tearing down a junctioned worktree with
+
+```
+git worktree remove --force .claude/worktrees/<name>
+```
+
+made git walk the tree deleting as it went, **follow the junction, and empty the real
+`D:\code\odyssey\Assets\Synty`** — 15,868 files, 1.54 GB, gone, and the command then failed with
+`Permission denied` so it looked like nothing had happened. Every other junctioned worktree
+(`odyssey-look`, `odyssey-ui`) went dark at the same moment, because they all point at the one real
+copy. Nothing goes to the recycle bin.
+
+**The order that is safe:** remove the junction first, then the worktree.
+
+```
+cmd /c rmdir "<worktree>\Assets\Synty"      # unlinks; does NOT touch the target
+git worktree remove --force .claude/worktrees/<name>
+```
+
+Before deleting any tree that a worktree owns, ask whether anything under it is a reparse point:
+
+```
+Get-ChildItem <path> -Recurse -Force -Directory | Where-Object { $_.LinkType }
+```
+
+**If it has already happened**, the packs are recoverable without re-downloading: `D:\code\odyssey-audio`
+holds a *real* copy rather than a junction. `robocopy <source> <dest> /E /COPY:DAT /DCOPY:DAT` restores
+it byte for byte in about ten seconds, and the `.meta` files come with it, so the GUIDs are the ones
+`ModuleCatalogue.asset` already refers to — check one before believing it, e.g. that
+`PolygonGeneric\Prefabs\Base\SM_Bld_Base_Wall_01.prefab.meta` still reads
+`guid: d6b56504304c325419b598fe3ddb95ed`. **Keeping one real copy somewhere is what made that
+possible**, so do not "tidy" `odyssey-audio` into a junction as well.
 
 ## Per-cell geometry cracks where a continuous field does not
 
@@ -1485,3 +1530,63 @@ hand-built grid was going to reproduce five surface layers and their woodland. A
 case in the Sim fast tier printed the column histogram in nine seconds (`Assert.Fail` with a
 `StringBuilder`, since the runner swallows `Console.WriteLine`), which is how the 6,140-of-14,400
 figure exists at all. Delete the probe before committing.
+
+## A performance threshold calibrated on your own machine is a gate that fails on everyone else's
+
+`DesignationProgressTests.PublishingCostsWhatTheOrdersCostRatherThanWhatTheLayerCosts` asserted a
+tick cost under **0.012 ms**, chosen as "five times the measured figure" on the author's machine.
+On 2026-09-17 it failed CI **twice in an hour, on two unrelated pull requests** — one that touched
+no simulation code at all and one that was a stylesheet and a HUD control. Measured on the
+GitHub-hosted Linux runner: **0.0164 ms** and **0.0125 ms**. The same commit measured **0.0029 ms**
+locally. Nothing was slow; the runner is.
+
+**The rule that would have avoided it: pick the number from the bug, not from the noise.** The
+defect this test guards costs twenty-six times the fixed figure (0.057 against 0.0022, both
+recorded in the test). Anything comfortably under that still catches it. The threshold is now
+0.030 — about twice the slowest honest reading, and about a tenth of what the bug would cost on
+the same machine — so there is headroom on both sides and the sentence saying so is in the test.
+
+**Two cheaper diagnostics before you believe a timing failure.** Re-run the job: a real regression
+repeats and noise usually does not. And run the test locally and read the printed figure — this
+one prints `[progress] … ms/tick` to `TestContext`, which is what turned "is my change slow?" into
+"the runner is slow" in one command. **Do not re-bake a timing number because CI is red** without
+one of those two; the first instinct of loosening it until it passes is how a gate quietly stops
+guarding anything.
+
+**A timing assertion on a shared runner is worth having, but only in this shape:** a wide band
+justified by the size of the defect, the measured figures for both states written down beside it,
+and a failure message that tells the next person which of the two they are probably looking at.
+
+## `GC.GetTotalMemory` sees nothing under Mono, and a byte budget passes loudest where it is blind
+
+**Symptom.** An allocation test measured cleanly in the fast tier — 4.00 bytes per extra path cell,
+exactly one `int`, reproducible run to run — and failed in the Unity tier with
+`0.0 bytes per request` for *both* arms of the comparison. Same code, same assertions, opposite
+verdicts.
+
+**Cause.** `GC.GetTotalMemory(false)` does not mean the same thing on the two runtimes we ship
+against. On CoreCLR it moves with allocation. On Mono it reports the heap the collector owns, and
+the collector hands out nursery space in blocks and reuses it for short-lived objects — so a couple
+of thousand arrays of a couple of hundred bytes each, allocated and dropped, can move the number
+**not at all**. Roughly 400 KB of allocation reported as zero.
+
+**The half that matters more than the failure.** The same run had a *second* test asserting that an
+idle tick allocates under a 16-byte budget. Under Mono it read zero and **passed** — a guard against
+a 64-byte-per-tick delegate, reporting success on the one runtime where it could not have seen one.
+A test that fails on a blind instrument is an annoyance. A test that passes on a blind instrument is
+the state-hash defect again: an oracle comparing numbers that cannot see the thing they are about.
+
+**What to do.** Calibrate the instrument inside the test before believing it. Allocate a known
+quantity, and if the runtime cannot report it to within a factor of two, `Assert.Ignore` with the
+reason rather than failing *or* trusting the reading. Two details make the probe honest:
+
+- **Allocate the same shape and total** as the thing being measured. A probe that allocates a
+  megabyte proves nothing about whether a few hundred bytes are visible.
+- **Discard, do not retain.** Retained allocations force heap growth that a real per-tick
+  allocation never forces, so a retaining probe is easier to satisfy than the measurement it stands
+  in for — which reproduces exactly the false pass you were trying to prevent.
+
+**Where this bites next.** Any figure in bytes: allocation budgets, save sizes measured by heap
+delta, pooling proofs. Timings are fine; byte counts are not. `PathAllocationTests` carries the
+worked version, and the figures in `docs/adr/0005-simulation-architecture.md` are the CoreCLR ones,
+labelled as such.

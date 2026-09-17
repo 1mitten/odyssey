@@ -90,7 +90,51 @@ It is also, on inspection, the *right* discomfort rather than an architectural p
 
 **Update, 2026-09-15: the experiment was run and it partly falsified the explanation above.** The attributed cause — that the failures were searches for unreachable targets — is wrong: only 14% of targets are district-unreachable on this workload, and under 1% on a structured one. The real fix was the hierarchical abstract-region stage plus a better heuristic. Measured at full scale: **2,189 ms → 896 ms, a 2.4× improvement, with budget exhaustion down from 826 to 77.** Pathfinding therefore falls from roughly 65% of the tick to roughly 45%, not to nothing. Full detail and the corrected reasoning in `docs/design/05-ai-and-jobs.md` §6.
 
-Applying that 2.4× to the measured phase 3 gives an estimated tick of about **0.88 ms**, which changes the margin table above materially: three ticks cost ~2.6 ms here, ~7.9 ms at a 3× discount leaving ~8.7 ms of frame for rendering, and ~10.6 ms at 4× leaving ~6 ms. Tight is now merely tight rather than impossible. This estimate should be replaced by a re-run of the full benchmark once the pathfinder is wired into the tick.
+Applying that 2.4× to the measured phase 3 gives an estimated tick of about **0.88 ms**, which changes the margin table above materially: three ticks cost ~2.6 ms here, ~7.9 ms at a 3× discount leaving ~8.7 ms of frame for rendering, and ~10.6 ms at 4× leaving ~6 ms. Tight is now merely tight rather than impossible. ~~This estimate should be replaced by a re-run of the full benchmark once the pathfinder is wired into the tick.~~ **It was, on 2026-09-17: see the addendum below, which measures 0.438 ms rather than the 0.88 ms estimated here.**
+
+### Addendum, 2026-09-17: the real tick, measured (OQ-19)
+
+The figures above come from the D1 spike, which *mirrored* the tick rather than being it, and the 0.88 ms is an estimate — the 2.4× pathfinder improvement applied by hand to the spike's phase 3. `TickBenchmarkTests` (`[Explicit]`, `Category("Benchmark")`) now runs the real `SimWorld.Tick` on the same 250 × 250 × 40 structured world of rooms and doorways, with 50 pawns and 1,500 ticks after a 200-tick warm-up. Per-phase timings come from `SimWorld.PhaseSink`, an opt-in diagnostic beside the hash sink, so the phase order is measured where it is defined rather than copied into a benchmark. **AMD Ryzen 7 9800X3D, .NET 8 CoreCLR, fast tier.**
+
+**Two arms, because one would have misled.** A colony left to itself barely paths at all — it mostly walks a route it already has — while the D1 workload replans constantly. Reporting only the first would have "replaced" the estimate with a number 40× more optimistic on the strength of a changed workload rather than a changed cost. The second lays D1's request rate over the same world: one long-range path per tick (±40 cells, ±3 layers), enqueued by a registered thing and served by the same `PathService` the pawns use, inside `MovementSystem`, inside the tick. Every request was served — the queue ends empty.
+
+| mean ms | colony at rest | D1 replan rate |
+|---|---|---|
+| Intents | 0.000 | 0.000 |
+| WorldSystems | 0.000 | 0.000 |
+| Things | 0.000 | 0.000 |
+| **Pawns** | **0.009** (36.9%) | **0.425** (97.1%) |
+| Deferred | 0.000 | 0.000 |
+| Snapshot | 0.016 (62.3%) | 0.012 (2.8%) |
+| Hash | 0.000 | 0.000 |
+| **tick mean** | **0.025** | **0.438** |
+| **tick p95** | 0.038 | 1.253 |
+| pawns max | 0.353 | 3.314 |
+| heap growth per tick | 76.7 bytes | 284.6 bytes |
+| collections (gen0/1/2) | 0 / 0 / 0 | 0 / 0 / 0 |
+
+**The margin table above is superseded, and the verdict reverses.** At the D1 replan rate three ticks cost **1.31 ms**, leaving 15.3 ms of a 16.6 ms frame; discounted 3× that is 3.94 ms and 4× is 5.26 ms, still leaving **11.3 ms** for rendering. The row that read "discounted 4× — none, over budget" is no longer true. The frame budget was a pathfinding problem, the pathfinding was fixed, and the measurement now says so rather than estimating it.
+
+**Set beside the real game.** `SoakRunTests.OneDay` — the board the scene actually loads, 120 × 120 × 16 with five colonists over a full 60,000-tick day — runs at **0.003 ms per tick, p95 0.004**. The three numbers bracket the question: 0.003 ms for the game as it is today, 0.025 ms for fifty pawns on a board seven times larger, and 0.438 ms for that board with a stress workload no colony has yet generated.
+
+**One thing the row asked for and did not get: allocation is not zero.** The D1 spike recorded a true `alloc_bytes_per_tick=0.000`; the real tick grows the heap by **76.7 bytes per tick at rest and 284.6 under replan pressure**. No collection of any generation ran across either window, so those growth figures are the allocation figures rather than a lower bound. The delta divides to roughly 208 bytes per served path request, which points at the served path's cell array — *points at*, not demonstrates; nobody has measured where it comes from. It is small, and over a 60,000-tick day it is still about 17 MB, which will provoke gen0 collections in a long session. Worth a row of its own; it is not a reason to hold this one.
+
+### Addendum, 2026-09-17: the allocation, attributed and mostly removed
+
+Both figures above are now measured rather than guessed at, by `PathAllocationTests`. One of them was a defect and is gone.
+
+**The at-rest cost was the tick machinery, not the colony.** Bracketing found an *empty* world — no systems, no pawns, no contributors — allocating **67.4 bytes a tick**, and adding a whole colony added **nothing**. A cost that scales with neither pawns nor systems nor contributors cannot be any of them. It was `Intents.Drain(HandleIntent)`: `Drain` takes a delegate, and a method group converts to a fresh one on every call — 64 bytes a tick, for a handler that never changes, paid by every tick of every game whether or not a single intent was submitted. Holding it in a field fixed it.
+
+**The per-path cost is the served cell array, and that is now demonstrated rather than pointed at.** Allocation per request rises with path length at **exactly 4.00 bytes per extra cell** — an `int` — measured by serving the same request at two path lengths: 5 cells for 53.4 bytes, 41 cells for 197.4. The shape is `≈32 + 4 × cells`, which reproduces the 208 bytes the benchmark saw at typical path length.
+
+| bytes per tick | before | after |
+|---|---|---|
+| colony at rest | 76.7 | **11.0** |
+| D1 replan rate | 284.6 | **224.7** |
+
+Over a 60,000-tick day the at-rest figure falls from about 4.6 MB to 0.66 MB. `ATickThatDoesNothingAllocatesNextToNothing` holds it there with a loose 16-byte budget — loose on purpose, since its job is to keep a 64-byte delegate out rather than to pin 11.
+
+**The remaining ~214 bytes per request is not being removed, and the reason is a hazard rather than a cost.** Pooling the served array would mean `ServedPath.Cells` stayed valid only until the next `Serve()`. Today that is safe — `MovementSystem` is the only consumer and `Pawn.AdoptPath` copies into the pawn's own buffer — but `PathService.Served` is public, and a future consumer that held the array would be silently reading someone else's path. This project has decided once already that a silent wrongness is worse than an honest cost (OQ-50, on the state hash). The same answer applies: **keep the allocation until pooling can be made safe by construction**, not merely safe by inspection.
 
 Two consequences either way: the frame budget is a **pathfinding** problem, not an architecture problem, and it must not be used to choose between the candidates unless they differ materially on phase 3 for structural reasons.
 

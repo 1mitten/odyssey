@@ -78,9 +78,20 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   building landed 2026-09-17** — a wall can be ordered from the Build palette in wood or
   stone, and colonists carry the material and raise it. Design, the test procedure and what
   is still open are `docs/design/15-building.md`; **read that before touching this line.**
-  It is on `claude/build-pipeline` (PR #63), not yet merged, and the owner reports walls are
-  still not going up in the running game — **unreproduced**, and the rejection log added the
-  same day exists to settle it on the next run rather than by a fourth round of inference.
+  It is on `claude/build-pipeline` (PR #63), not yet merged. **Walls do go up** — the owner
+  played it on 2026-09-17, so the earlier report of silent refusal was the composition fault and
+  is closed. They went up **stepped**, which was not building's fault at all: `ChunkMesher`
+  lifted every panel to one height taken at one point, so neighbours in a run differed by the
+  drawn relief's slope across a cell (73 mm typical, 220 mm worst, against a 3 m wall). They are
+  draped now, like the ground, the banks and the water, and the same seam measures 1.1 mm. **The
+  rule that came out of it: anything fixed to the grid is draped; only what moves over it is
+  lifted.** A hollow wall was filled and capped in the same round.
+  **The build cursor and the drag gesture were then played and accepted** (owner, 2026-09-17): a
+  build drag draws one closed wireframe box over the whole run, draped as the wall will be, and a
+  box widens into a rectangle only after three cells clear across the run — narrowing again within
+  one. The gesture took three rounds because the first two fixed the *number* and the fault was
+  that the gate latched. What nobody has judged yet is the site marks, the blueprint readout and
+  the computed hammer swing (`docs/design/15-building.md` §8).
 - **Work reaches `main` only through a pull request** with both tiers green, one approving review
   and the branch up to date. Branch protection enforces it, agents included. There is no long-lived
   feature branch — `claude/*` branches are per-change and short-lived.
@@ -89,7 +100,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 files to add itself, five of which should have been extension points. The table and the order are in
 `docs/plans/vertical-slice.md`, "Where the seams are" — **audited against the code on 2026-09-17,
 because it had gone stale and misled a session into recommending work that had already landed.**
-Three of the five chokepoints are now open:
+Four of the five chokepoints are now open, the fourth half:
 
 - **Work givers register themselves** (OQ-44): a giver in the simulation assembly joins by existing.
 - **Content is written once** (OQ-15/OQ-16, finished by OQ-48 and OQ-49 on 2026-09-17). The XML
@@ -100,6 +111,12 @@ Three of the five chokepoints are now open:
   `ContentPack.UseRoot` is the tested seam for the day something does.
 - **A feature can describe a pawn without widening `PawnView`** (OQ-45, ADR 0004 amended): a sparse
   `PawnAspect` row keyed by a name the feature mints for itself.
+- **The scene composes its world the way everything else does** (U34, 2026-09-17), which is the
+  simulation half of the bootstrap chokepoint. It had forty lines that were a copy of
+  `ColonyWorld.Build`, and the copy had drifted: no connectors reached the nav graph, no full
+  support solve ran, and it assembled no `SaveComponents` — so **the one world a player ran was the
+  one world in the project that could not be written to a file.** It now calls
+  `ColonyWorld.Build(ColonyRequest)`, and `OdysseyBootstrap.Colony` is what a save is written from.
 
 **Content values are pinned by fingerprints, and they earn their keep.** `PawnContentDefTests` and
 `WorldContentDefTests` each fold their loaded table into one literal. This is not belt-and-braces:
@@ -107,8 +124,27 @@ the moment the game started reading the world XML, the old oracle was comparing 
 and **editing rock's `workToClear` from 700 to 701 left all 448 tests green** — measured, not
 supposed. A deliberate content change is one line; an accidental one now fails.
 
-**Still open:** mesh contributors for `ChunkMesher` (OQ-46), and `OdysseyBootstrap` wiring every
-presentation system by hand — the one chokepoint with no queue row.
+**Still open:** mesh contributors for `ChunkMesher` (OQ-46), and the presentation half of
+`OdysseyBootstrap` — every director still wired by hand. That half has no queue row; the rest of the
+file's story is now `MS` below.
+
+### MS, the start flow, is scheduled (owner, 2026-09-17)
+
+A main screen with **New game, Load, Options and Quit**; a seed you can see and reroll; three
+candidate colonists with per-slot reroll and locks, each card showing a portrait and a readable
+skill set; and a world you can enter, save, leave and load again. Eight units, `U34`–`U41`, in
+`docs/plans/vertical-slice.md` — **beside M3 rather than inside it**, because M3's gate is a ten-day
+headless run and this is session lifecycle, persistence and a screen. Seam work first, then the
+menu on top, by the owner's decision. **`U34` is done.**
+
+Three things a later session should not re-litigate. **Live portraits** are refused by
+`09-ui-and-input.md` §4.5 — but that argument is about fifty of them in the roster bar at 15 Hz
+while the world renders, and the select screen is three, rendered once, with no world behind them;
+§4.5 gets an explicit carve-out in `U41` rather than a silent exception. **Colonists start every
+skill at 0 experience** — only passions are rolled — so there is nothing to choose between three
+candidates until `U37`. And **the save header records only seed, size and tick**, not the map type,
+so a save reloaded against a different generator would load cell data over a differently generated
+world; `U36` is where that is fixed.
 
 ### What runs today
 
@@ -132,6 +168,15 @@ pawn can be in has something under it. A hop is three seams that must agree — 
 (`PathFinder.RelaxHop`), the region graph (`NavGraph.TryHopEdges`) and the mover's price
 (`MovementSystem.StepCost`); **a price the planner and the mover disagree about fails silently.**
 Ladders are still climbed, so the climb *pose* is live presentation code.
+
+**That warning is now enforced rather than remembered (2026-09-17).** `NavGraph.HopCost` is the
+only place the price of a hop is decided, and all three seams call it —
+`HopPriceHasOneOwnerTests` fails the fast tier if any other file in `Odyssey.Sim` names
+`MoveCost.JumpUp` or `MoveCost.Drop` in code, and checks the built region graph prices a hop at the
+owner's number rather than reading it off the source. Nothing was disagreeing when this landed:
+all three named the constants for themselves and agreed **by coincidence**, which survives exactly
+until the price stops being a constant. No golden moved, because who computes the number changed
+and the number did not.
 
 **Presentation** — instanced chunk rendering (no GameObject per cell), a slice camera rig, the HUD,
 audio, a day/night cycle and golden-hour grading. No pack contains a work animation, so the axe,
@@ -161,7 +206,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **461 Sim + 117 Hud**; Long tier **15**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **494 Sim + 170 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
@@ -169,6 +214,16 @@ That rule is load-bearing; keep it.
 
 Frame time under the real player loop, against a 5 ms budget: meadow ~0.99 ms, city ~1.56 ms on an
 RTX 5070 Ti at 640 x 480. The city's move from 0.88 to 1.56 ms is **unexplained** and still open.
+
+**The instancing is bounded by variety, not quantity, and that is now measured** (OQ-03,
+2026-09-17, `ChunkBucketScaleTests`). 20,000 wall cells of four stuffs over 64 chunks give **512
+buckets** — exactly chunks x kinds x tints — and **100,000 instances**, 195 per bucket. The played
+meadow submits `1502 draw calls, 34,961 instances, 104 chunks`, steady submit **0.22 ms a frame**.
+**One inconsistency found and left alone:** the mesher draws five instances per wall cell whatever
+is beside it, while the grid has 79,600 exposed faces rather than 80,000 — the 400 missing point
+off the edge of the board. `TheWorldBoundaryIsNotAnExposedFace` applies that rule to terrain and
+not to edifice walls. It is 0.4% of instances and costs nothing; the test pins today's numbers so
+OQ-46 has a before, and so a deliberate fix reads as deliberate.
 
 ### Fixed decisions
 
@@ -183,11 +238,44 @@ RTX 5070 Ti at 640 x 480. The city's move from 0.88 to 1.56 ms is **unexplained*
 
 ### Top technical risk
 
-**Pathfinding cost:** 65% of the measured tick is A-star. The once-recorded explanation — futile
-searches for unreachable targets — was **falsified by its own follow-up experiment** (only 14% of
-budget exhaustions were unreachable, under 1% on a structured map). The fix is hierarchical search
-plus a better heuristic, with the district-id reachability check (`d-04-pathfinding.md`) measured
-first.
+**Pathfinding cost, and it is smaller than this section used to say.** 65% of the tick was A-star
+on the D1 spike; the once-recorded explanation — futile searches for unreachable targets — was
+**falsified by its own follow-up experiment** (only 14% of budget exhaustions were unreachable,
+under 1% on a structured map), and the fix that worked was hierarchical search plus a better
+heuristic.
+
+**The re-run the ADR asked for has happened** (OQ-19, 2026-09-17; `TickBenchmarkTests`, ADR 0005
+addendum). Measured on the real `SimWorld.Tick` rather than on a spike that mirrored it: a colony
+of 50 on a 250 × 250 × 40 board costs **0.025 ms a tick**, and the same world under D1's replan
+rate — one long-range path per tick — costs **0.438 ms, p95 1.253, with Pawns at 97.1%**. That is
+**half the 0.88 ms the ADR estimated**, and it reverses the margin table's verdict: three ticks
+discounted 4× for the target laptop leave 11.3 ms of a 16.6 ms frame rather than nothing. For
+scale, `OneDay` on the board the scene actually loads runs at 0.003 ms a tick. Pathfinding is still
+where the tick goes under load, but it is no longer a threat to the frame budget.
+
+**What the same run found instead: the tick allocated, and most of it was a defect** (attributed
+2026-09-17, `PathAllocationTests`, ADR 0005 addendum). The at-rest cost was **not the colony**: an
+empty world with no systems, no pawns and no contributors allocated 67.4 bytes a tick and adding a
+whole colony added nothing. It was `Intents.Drain(HandleIntent)` — a method group converting to a
+**fresh 64-byte delegate every tick**, for a handler that never changes, paid by every tick of every
+game. Holding it in a field took the colony from **76.7 to 11.0 bytes a tick** (about 4.6 MB a day
+down to 0.66 MB). The rest is the served path's cell array, now demonstrated rather than guessed:
+allocation rises with path length at **exactly 4.00 bytes per extra cell**, so a request costs
+`≈32 + 4 × cells`. That one is **kept on purpose** — pooling it would make `ServedPath.Cells` valid
+only until the next `Serve()`, which is safe by inspection today and would be silently wrong for the
+first consumer who held it.
+
+**The graph that search would run on is now measured** (OQ-18, 2026-09-17;
+`NavGraphStatisticsTests`, and `d-04-pathfinding.md` §"Measured 2026-09-17"). At 250 × 250 × 40 the
+region graph holds **24,141 regions on the wilderness and 23,240 on the city** — inside d-04's
+"low tens of thousands" budget — but **only 6.8% and 38.8% of them are walkable**; the rest is
+impassable rock kept as a substrate for rooms and atmosphere, carrying no links and excluded from
+the district flood. An abstract search is therefore cheaper than the totals suggest. A full rebuild
+is 168 ms (wilderness) and 124 ms (city), which is the all-dirty worst case and not a per-tick cost.
+**d-04's stated reason for the budget was wrong** — it credited all-solid chunks allocating nothing,
+and all-solid is exactly what allocates here; what really bounds the count is that a region never
+leaves its 10 × 10 block, now asserted over every cell of both boards along with the guarantee that
+no region spans two layers.
 
 ### Waiting on the owner
 
