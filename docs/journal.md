@@ -1843,3 +1843,10 @@ work itself.
   - **Twice in this unit a control refused to let a test pass vacuously**, which is the second and
     third time today. Guessing what to count was wrong both times; measuring settled it in one run.
   - **Verified:** PlayMode **35 total, 32 passed, 0 failed**, one ignored with its reason recorded.
+
+- **CLAUDE.md's status caught up with `main`, 2026-09-17.** Two lines had gone stale in the way
+  this file warns its own readers about: U26 (building) still read "on `claude/build-pipeline`
+  (PR #63), not yet merged" after the merge had happened and been reconciled against OQ-50's golden
+  re-bake, and the `MS` section still said only "`U34` is done" after `U35` (the session seam)
+  merged as PR #83. Both corrected in place rather than left for the next session to trip over.
+  Nothing here changed the game; no wiki or registry rebuild applies.

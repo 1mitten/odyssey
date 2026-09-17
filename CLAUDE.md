@@ -78,7 +78,9 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   building landed 2026-09-17** — a wall can be ordered from the Build palette in wood or
   stone, and colonists carry the material and raise it. Design, the test procedure and what
   is still open are `docs/design/15-building.md`; **read that before touching this line.**
-  It is on `claude/build-pipeline` (PR #63), not yet merged. **Walls do go up** — the owner
+  It merged as PR #63 on `main` (it had gone conflicting against OQ-50's golden re-bake; the
+  journal for 2026-09-17 records why the number moved and how the re-bake was checked rather
+  than trusted). **Walls do go up** — the owner
   played it on 2026-09-17, so the earlier report of silent refusal was the composition fault and
   is closed. They went up **stepped**, which was not building's fault at all: `ChunkMesher`
   lifted every panel to one height taken at one point, so neighbours in a run differed by the
@@ -142,7 +144,13 @@ candidate colonists with per-slot reroll and locks, each card showing a portrait
 skill set; and a world you can enter, save, leave and load again. Eight units, `U34`–`U41`, in
 `docs/plans/vertical-slice.md` — **beside M3 rather than inside it**, because M3's gate is a ten-day
 headless run and this is session lifecycle, persistence and a screen. Seam work first, then the
-menu on top, by the owner's decision. **`U34` is done.**
+menu on top, by the owner's decision. **`U34` and `U35` are done.** `U35` (2026-09-17) made world
+build and teardown callable at runtime — `BuildSession()`/`TeardownSession()` — with the full hash
+(board included, since OQ-50) proved equal across build → teardown → build against a separately
+built rig. One half is deferred rather than faked: the figure-leak check cannot run in the rig with
+no module catalogue (everything resolves to a shared Unity primitive, so there is nothing to leak),
+and giving it a real catalogue would make a test depend on the licensed packs — so it `Assert.Ignore`s
+with that reason recorded. `U36` (save format v2) is next in the `MS` chain and still open.
 
 Three things a later session should not re-litigate. **Live portraits** are refused by
 `09-ui-and-input.md` §4.5 — but that argument is about fifty of them in the roster bar at 15 Hz
