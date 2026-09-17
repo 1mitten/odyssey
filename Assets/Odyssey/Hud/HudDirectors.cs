@@ -18,6 +18,9 @@ namespace Odyssey.Hud
         public CameraDirector Camera { get; } = new CameraDirector();
         public OverlayDirector Overlays { get; } = new OverlayDirector();
 
+        /// <summary>Whether the debug menu is open. Session state — see the class doc.</summary>
+        public DebugDirector Debug { get; } = new DebugDirector();
+
         /// <summary>
         /// The settings panel's levers — and <b>handed in rather than made here since U38</b>,
         /// because they are not session state.

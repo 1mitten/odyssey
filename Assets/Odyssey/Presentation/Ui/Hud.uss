@@ -1419,6 +1419,16 @@
     width: 300px;
 }
 
+/* The debug menu (backtick). Centred exactly like Settings and mutually exclusive with it
+   (HudShell.Debug.cs / HudShell.Bar.cs each close the other on open), so reusing the same spot
+   costs nothing and needs no second layout to judge. */
+.debug {
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    width: 280px;
+}
+
 .settings__tabs {
     flex-direction: row;
     margin-top: 6px;
@@ -1730,6 +1740,12 @@
    looks broken; faint and inert says "not yet" where absent says "never". */
 .settings__row--off { opacity: 0.42; }
 .settings__row--off:hover { background-color: rgba(0, 0, 0, 0); }
+
+/* The debug menu's own inert-row look, identical to .settings__row--off but its own class: that
+   one is queried by name in StartScreenTests to find the disabled Start row specifically, and a
+   second row sharing it would make that query ambiguous the moment both panels exist at once. */
+.debug__row--off { opacity: 0.42; }
+.debug__row--off:hover { background-color: rgba(0, 0, 0, 0); }
 
 /* The row that goes back, set apart from the list above it the way the settings panel's exit row
    is set apart from the tabs. */

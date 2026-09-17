@@ -2925,3 +2925,54 @@ work itself.
   PlayMode tests: the header is one row in every layout at every category and resolution, the
   banner wears each of the four colours at the right thickness with exactly one label, and each
   order's box reaches the floor.
+
+  **Backtick opens a debug menu now instead of toggling the developer overlay directly**
+  (`claude/build-palette-layouts`, 2026-09-17, owner: *"we need a debug menu … currently \` is
+  taken for the developer overlay. Instead create a new menu in the style, and format of all the
+  other menus … include various things we can debug in game in future"*). `DebugDirector` is the
+  new director — `Open`/`Toggle`/`Changed`, nothing else, because "is the panel open" is the only
+  state a director needed to add; the two action rows submit intents straight from the presenter
+  the way every other click in this HUD already does, and the overlay toggle stayed exactly where
+  its persisted state lives (`SettingsDirector.DeveloperOverlay`), only its row moved. **The row
+  moved rather than being copied**: it used to live in Settings' Interface tab, and this project has
+  already paid twice for a control drawn in two places (`EveryLiveToolIsDrawnSomewhere`), so it has
+  one home now, in the panel the key actually opens.
+
+  Two cheats went in because both wrap sim APIs that already existed and touch no new mechanics:
+  `IntentKind.SpawnPawn` wraps `PawnRegistry.Spawn`, `IntentKind.GiveResource` wraps
+  `ColonyItems.Spawn` by way of the same `NearestCellWithSpace` an ordinary drop already uses, and
+  both are registered in `ColonyComposition.AddColony` beside `ForceJob` — the fourth and fifth
+  intent handlers to land there, none of them a new chokepoint. **What did not go in, on purpose**:
+  a real "invoke event" (there is no repeatable event system in the sim at all, only a scenario that
+  acts once at tick zero — the row is a visible, disabled placeholder with a tooltip saying so) and
+  kill/damage/heal a colonist (`Pawn` has no health or injury model of any kind yet, so a debug
+  "kill" would be inventing a mechanic rather than shortcutting one). Both are named in
+  `docs/design/18-debug-menu.md` as the two things a real feature would have to land before this
+  panel could grow into them.
+
+  **The overlay text went bigger twice, and moved on the second pass.** First: *"make the text much
+  much much bigger for the developer overlay in game as it cannot be read"* — `OdysseyBootstrap`'s
+  `OnGUI` drew it through a cached `GUIStyle` at 28 pt, roughly triple the previous default, at its
+  original top-left position. The owner played that and asked for a second pass the same day: *"move
+  that developer overlay further (towards the bottom of the screen) and make the text much bigger."*
+  56 pt now, and anchored to the bottom of the screen — `Screen.height` minus the text's own measured
+  height minus a fixed clearance for the command bar — rather than a fixed top-left offset, because
+  doubling the size again at the old position would have put it back on top of the HUD's own
+  top-left ledger. Word wrap is off, so the line count the height is measured from stays exactly the
+  number of `\n`s already in the string.
+
+  **Two existing PlayMode tests broke and both were the debug panel colliding with something that
+  already used the name it reached for.** `HudSmokeTests` hard-codes the HUD's framed-region names;
+  a thirteenth region needed adding to the list, the same as every panel before it. The sharper one:
+  the debug menu's disabled "Invoke event" row reused `.settings__row--off`, the exact class
+  `StartScreenTests` queries globally to find the seed screen's own disabled Start row — with both
+  panels built at startup, the query started matching two elements and the seed test's "and back to
+  usable" assertion broke on an unrelated row it had never known existed. Fixed by giving the debug
+  menu its own `.debug__row--off`, identical in style, so a class used as a test hook is not shared
+  by two panels that have no reason to agree about it. Found by running the Unity tier rather than
+  reasoning about it — the fast tier cannot compile `Odyssey.Presentation` at all and would have
+  said nothing.
+
+  All three tiers green: fast 603 Sim / 313 Hud, EditMode 1390 (1379 passed, 11 pre-existing
+  explicit/ignored), PlayMode 65 (61 passed). `Logs/hud-debug.png` is the one picture anybody has
+  taken of it; nobody has pressed Play.

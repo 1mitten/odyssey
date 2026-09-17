@@ -67,10 +67,13 @@ namespace Odyssey.Tests.PlayMode
                 // "orders" is the strip in the right-hand gutter under the rail (2026-09-17): the
                 // four order buttons left the Build palette's header, so they are a framed region
                 // of their own now rather than eight pixels of somebody else's.
+                // "debug" is the debug menu (2026-09-17), backtick's own panel now rather than a
+                // direct toggle of the developer overlay: built and hidden at startup exactly as
+                // "settings" is, so it too is a framed region whatever the colony is doing.
                 string[] expected =
                 {
                     "stores", "clock", "alerts", "rail", "orders", "inspect", "build", "menu",
-                    "settings", "start", "saveprompt",
+                    "settings", "debug", "start", "saveprompt",
                 };
                 var regions = doc.rootVisualElement.Query(className: "region").ToList();
                 var names = regions.ConvertAll(r => r.name);

@@ -161,6 +161,22 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   one. The gesture took three rounds because the first two fixed the *number* and the fault was
   that the gate latched. What nobody has judged yet is the site marks, the blueprint readout and
   the computed hammer swing (`docs/design/15-building.md` §8).
+  **Backtick opens a debug menu now, not the developer overlay directly**
+  (`claude/build-palette-layouts`, 2026-09-17). Design, what's on it, what's deliberately not, and
+  the by-hand test procedure are `docs/design/18-debug-menu.md`; **read that before touching
+  `HudShell.Debug.cs` or `DebugDirector`.** The overlay toggle moved there wholesale from Settings'
+  Interface tab rather than being duplicated. Its text went bigger twice the same day: first to
+  28 pt at its original top-left spot, then — after the owner played that and asked again — to
+  56 pt, anchored to the bottom of the screen so doubling the size again did not put it back on top
+  of the HUD's top-left ledger. Two cheats went in because both wrap sim APIs that already existed
+  with no new mechanic: `IntentKind.SpawnPawn` (`PawnRegistry.Spawn`) and `IntentKind.GiveResource`
+  (`ColonyItems.Spawn` via the existing `NearestCellWithSpace`), the fourth and fifth intent handlers
+  registered in `ColonyComposition.AddColony` beside `ForceJob`. A disabled "Invoke event" row stands
+  in for the row a real feature would earn — there is no repeatable event system in the sim, only a
+  scenario that acts once at tick zero — and kill/heal is left out entirely, since `Pawn` has no
+  health or injury model of any kind yet. **Nobody has pressed Play on the panel itself past the
+  overlay's own two rounds of feedback.**
+
   **Forced orders have their simulation half** (`claude/forced-orders-intent`, 2026-09-17): steps 1
   and 2 of that section's four. `ForceJob(cell, A = job, B = pawn)` is the first intent that names a
   colonist, and `Job.PlayerForced` — saved and hashed since the job record was written, and read by
@@ -531,6 +547,11 @@ no region spans two layers.
   30 px while ADR 0007 says not to draw pixel art below 32 — measured, 30 px reads, 17 px loses the
   grooves, 16 px goes to noise, and a **framed** sheet-06 tile at 17 px is mostly frame
   (`Logs/skill-icons.png`).
+- **Nobody has pressed Play on the debug menu itself.** The overlay text and its position went
+  through two rounds of owner feedback the same day and are settled for now (28 pt then 56 pt at the
+  bottom of the screen), but whether the two cheats land sensibly near the camera rather than in
+  rock or through a wall, and whether the panel wants to look different from Settings at all, are
+  still open — `docs/design/18-debug-menu.md` §"By-hand test procedure" has the checklist.
 - **Nobody has pressed Play on the orders strip, or on the armed banner it raises.** Both are
   measured — the strip against the rail and the screen edge at three resolutions, the banner's four
   colours, its 3 px border and its 139 px box — and `Logs/palette-rows.png` is all anybody has

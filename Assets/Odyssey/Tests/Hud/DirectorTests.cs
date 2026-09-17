@@ -356,6 +356,27 @@ namespace Odyssey.Tests.Hud
             Assert.That(raised, Is.EqualTo(2));
         }
     }
+
+    public class DebugDirectorTests
+    {
+        [Test]
+        public void TheDebugMenuIsClosedUntilToggledAndAnnouncesEachChange()
+        {
+            var debug = new DebugDirector();
+            int raised = 0;
+            debug.Changed += () => raised++;
+
+            Assert.That(debug.Open, Is.False);
+            debug.Toggle();
+            Assert.That(debug.Open, Is.True);
+            Assert.That(raised, Is.EqualTo(1));
+            debug.SetOpen(true);
+            Assert.That(raised, Is.EqualTo(1), "setting what is already set says nothing");
+            debug.Toggle();
+            Assert.That(debug.Open, Is.False);
+            Assert.That(raised, Is.EqualTo(2));
+        }
+    }
 }
 
 namespace Odyssey.Tests.Hud
