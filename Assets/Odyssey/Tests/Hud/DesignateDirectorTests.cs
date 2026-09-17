@@ -116,6 +116,31 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// <b>And it only ever lifts.</b> The working layer is a floor under the order, not an
+        /// override of it — a pointer that names something already <em>above</em> the slice keeps
+        /// its own layer.
+        ///
+        /// <para>This is the owner's third report in one assertion. It overrode unconditionally,
+        /// and the played board is terraced across five layers, so a click on a wall one terrace
+        /// above the slice was rewritten down into the hillside and refused. The tool worked only
+        /// where the ground happened to sit at exactly the slice's height.</para>
+        /// </summary>
+        [Test]
+        public void TheWorkingLayerOnlyEverLiftsAnOrderAndNeverDropsIt()
+        {
+            var director = new DesignateDirector { WorkingLayer = 2 };
+            director.ArmBuild(BuildingHandle.Floor);
+
+            // The pointer names a wall standing two layers above the slice.
+            director.Begin(At(2, 2, y: 4));
+
+            IReadOnlyList<CellRef> cells = director.Commit();
+            Assert.That(cells, Has.Count.EqualTo(1));
+            Assert.That(cells[0].Y, Is.EqualTo(4),
+                "a slice below what the pointer named must not drag the order down into the ground");
+        }
+
+        /// <summary>
         /// And with no working layer set, nothing changes. Every other tool aims at what the
         /// pointer is over, and this rule must not leak into them — a mine order on the layer the
         /// camera happens to be at, rather than on the rock the player clicked, would be the

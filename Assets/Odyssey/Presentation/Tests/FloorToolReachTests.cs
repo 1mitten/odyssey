@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections.Generic;
 using NUnit.Framework;
+using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Construction;
@@ -111,6 +112,86 @@ namespace Odyssey.Tests.Presentation
             Assert.That(construction.At(world.Index(6, 6, 1)), Is.EqualTo(BuildingHandle.None));
             Assert.That(construction.At(world.Index(6, 6, 2)), Is.EqualTo(BuildingHandle.None),
                 "and nothing was ordered in the air above it either");
+        }
+
+        /// <summary>
+        /// <b>A wall that is not on the slice's own layer, which on the played board is most of
+        /// them.</b>
+        ///
+        /// <para>The owner's third report: <i>"I can't place any structure floor/slab on anything
+        /// with anything — it never wants to build."</i> This is why. The floor tool takes its layer
+        /// from the slice (<c>DesignateDirector.WorkingLayer</c>, added so that a pointer could name
+        /// open air over a room), and it took it <b>unconditionally</b> — so a click on a wall
+        /// standing one terrace up was rewritten down to the slice's layer, landing inside the
+        /// hillside, and refused.</para>
+        ///
+        /// <para>The played meadow is terraced across five layers and the slice starts on one of
+        /// them, so the tool worked only on the columns whose ground happened to be at exactly that
+        /// height. From a player's seat that is "it never works".</para>
+        ///
+        /// <para>The rule now: <b>the higher of the two.</b> The slice is a floor under the order,
+        /// not an override of it — it can lift a click into open air above a room, which is what it
+        /// was for, and it can never drag one down into the ground, which it was never meant to
+        /// do.</para>
+        /// </summary>
+        [Test]
+        public void AWallOnAHigherTerraceIsStillFlooredFromASliceBelowIt()
+        {
+            // Two terraces: the low half is walkable at layer 2, the high half at layer 3.
+            var world = new RenderTestWorld(8, 8, 8);
+            for (int z = 0; z < 8; z++)
+            for (int x = 0; x < 8; x++)
+            {
+                int top = x < 4 ? 2 : 1;
+                for (int y = 0; y <= top; y++)
+                    world.Solid(x, z, y, Odyssey.Sim.Worldgen.Natural.NaturalContent.TerrainGrass);
+            }
+
+            // A wall on the HIGH terrace, at its own walkable layer 3.
+            world.Edifice(2, 4, 3, CoreContent.EdificeWall).Publish();
+
+            ConstructionGrid construction = ConstructionOver(world);
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Floor);
+
+            // The slice is on the LOW terrace, which is where it starts and where the player is.
+            const int sliceLayer = 2;
+            director.WorkingLayer = sliceLayer;
+
+            Assert.That(SlicePicker.Pick(DownAt(2, 4), world.Model, activeLayer: 3, out CellRef clicked),
+                Is.True);
+            Assume.That(clicked, Is.EqualTo(new CellRef(2, 4, 3)), "the pointer names the wall");
+
+            // Through the director, as a gesture does, so the substitution is the real one.
+            Assume.That(director.Begin(clicked), Is.True);
+            IReadOnlyList<CellRef> ordered = director.Commit();
+            Assert.That(ordered, Has.Count.EqualTo(1));
+
+            Assert.That(construction.Place(ordered[0], BuildingHandle.Floor, StuffHandle.Wood),
+                Is.EqualTo(IntentRejection.None),
+                "a wall one terrace above the slice must still take a floor on top of it");
+            Assert.That(construction.At(world.Index(2, 4, 4)), Is.EqualTo(BuildingHandle.Floor),
+                "and the floor goes on the wall, not into the hillside at the slice's layer");
+        }
+
+        /// <summary>
+        /// The other half of the same rule, and the reason it is a floor rather than a ceiling: a
+        /// slice <em>above</em> what the pointer names still wins, because that is the only way to
+        /// name a cell of open air over a room.
+        /// </summary>
+        [Test]
+        public void ASliceAboveThePointerStillDecidesTheLayer()
+        {
+            RenderTestWorld world = GroundWithAWallAt(4, 4);
+            var director = new DesignateDirector();
+            director.ArmBuild(BuildingHandle.Floor);
+            director.WorkingLayer = 3;
+
+            Assume.That(director.Begin(new CellRef(6, 6, 0)), Is.True);
+            IReadOnlyList<CellRef> ordered = director.Commit();
+
+            Assert.That(ordered[0].Y, Is.EqualTo(3),
+                "a slice above the surface is what lets a pointer name open air over a room");
         }
 
         /// <summary>

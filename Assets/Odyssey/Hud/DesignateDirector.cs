@@ -184,8 +184,24 @@ namespace Odyssey.Hud
         /// </summary>
         public int? WorkingLayer { get; set; }
 
+        /// <summary>
+        /// Lift a cell to the working layer — <b>and only ever lift it</b>.
+        ///
+        /// <para>The working layer is a <b>floor under the order, not an override of it</b>, and the
+        /// difference is the whole of the owner's third report that the slab tool "never wants to
+        /// build" (2026-09-17). It overrode unconditionally, and the played meadow is terraced
+        /// across five layers: a click on a wall standing one terrace above the slice was rewritten
+        /// down to the slice's layer, which is inside the hillside, and refused. The tool worked
+        /// only on the columns whose ground happened to sit at exactly the slice's height, which
+        /// from a player's seat is never.</para>
+        ///
+        /// <para>Taking the higher of the two keeps the thing it was added for — a pointer cannot
+        /// name open air over a room, so a slice raised above the surface still decides — and
+        /// removes the thing it was never meant to do, which is drag an order down into the
+        /// ground.</para>
+        /// </summary>
         CellRef OnTheWorkingLayer(CellRef cell) =>
-            WorkingLayer is int y ? new CellRef(cell.X, cell.Z, y) : cell;
+            WorkingLayer is int y && y > cell.Y ? new CellRef(cell.X, cell.Z, y) : cell;
 
         /// <summary>
         /// Move the far corner. Ignored unless a drag is running.
