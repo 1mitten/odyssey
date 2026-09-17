@@ -144,6 +144,16 @@ namespace Odyssey.Presentation.Ui
         int _stateSelected = int.MinValue;
         string? _stateSite;
 
+        // The pile count and the cell readout line, held beside the site line above for the same
+        // reason: the state line is interpolated, so it is rebuilt only when a value it quotes
+        // has moved.
+        int _stateStack = int.MinValue;
+        string? _stateCell;
+
+        // What the avatar was last keyed with, so a tile whose answer changed under the selection
+        // — a face mined through, a tree felled — swaps its icon without rebuilding the pane.
+        string _inspectAvatarKey = string.Empty;
+
         // ---- command bar (A8)
         VisualElement _barRow = null!;
         VisualElement _bar = null!;

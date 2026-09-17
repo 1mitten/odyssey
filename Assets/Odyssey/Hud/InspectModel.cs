@@ -107,6 +107,25 @@ namespace Odyssey.Hud
         /// <summary>How far through the work, 0 to 1. Separate from the material, per <see cref="SiteView"/>.</summary>
         public float SiteProgress;
 
+        // ---- item body
+        /// <summary>How many are in the selected pile. The ledger counts these, never the piles.</summary>
+        public int Stack;
+
+        /// <summary>The pile's own icon key, so a pile of wood stops drawing a meal.</summary>
+        public string ItemIconKey = "ui.res.meal";
+
+        // ---- cell body
+        /// <summary>
+        /// The one line a cell has to say for itself when no site stands on it: what crossing it
+        /// costs, what is built or standing there, and what it is worth digging. Empty when the
+        /// world has not answered the question yet — and the pane says nothing rather than
+        /// pretending, the same rule the site line follows.
+        /// </summary>
+        public string CellLine = string.Empty;
+
+        /// <summary>The tile's own icon key, so the pane's avatar is the thing that was clicked.</summary>
+        public string CellIconKey = "ui.overlay.zones";
+
         // ---- colonist body, the Needs tab
         public string Job = "idle";
         public string JobIconKey = "ui.status.idle";
@@ -246,8 +265,10 @@ namespace Odyssey.Hud
                 {
                     if (things[i].Id != Thing) continue;
                     ThingView thing = things[i];
-                    Title = thing.DefIndex == ItemHandle.Meal ? "Meal" : "Salvage";
+                    Title = ItemLabels.Label(thing.DefIndex);
                     Subtitle = "item";
+                    Stack = thing.Stack;
+                    ItemIconKey = ItemLabels.IconKey(thing.DefIndex);
                     SetPosition(thing.Cell);
                     Layer = thing.Cell.Y;
                     found = true;
@@ -261,13 +282,19 @@ namespace Odyssey.Hud
             {
                 SetPosition(_cell);
                 Layer = _cell.Y;
-                if (!DescribeSiteAt(snapshot, _cell))
+                if (DescribeSiteAt(snapshot, _cell))
                 {
-                    Title = "Ground";
-                    Subtitle = "cell";
-                    Site = string.Empty;
-                    SiteIconKey = string.Empty;
+                    // A site leads and is the whole answer: the tile under a blueprint is the
+                    // least interesting thing about the click.
+                    CellLine = string.Empty;
+                    _cellLineFor = -1;
+                    CellIconKey = "ui.overlay.zones";
+                    return;
                 }
+
+                Site = string.Empty;
+                SiteIconKey = string.Empty;
+                DescribeCellAt(snapshot, _cell);
 
                 return;
             }
@@ -376,6 +403,165 @@ namespace Odyssey.Hud
             if (seconds < 60) return seconds + "s";
             return seconds / 60 + "m " + seconds % 60 + "s";
         }
+
+        // ---- the cell readout --------------------------------------------------------------
+
+        /// <summary>
+        /// What the clicked cell is, when no site stands on it.
+        ///
+        /// <para><b>The title names the thing that was clicked, in the picker's own order of
+        /// ownership:</b> the edifice standing in the cell above all (a tree is what a click on a
+        /// tree means), then the built slab (a bridge is walked on, and the tile under the click
+        /// is air), then the terrain itself. "Ground" is what a blank key leaves — the city's
+        /// finished surfaces, which are not the played board's to name yet.</para>
+        ///
+        /// <para><b>No answer is a state, not a gap.</b> The row arrives one publish after the
+        /// click and is withdrawn when the question is, so a pane may honestly show "Ground" for
+        /// the frame between the two. What it must never do is invent a reading.</para>
+        /// </summary>
+        void DescribeCellAt(WorldSnapshot snapshot, CellRef cell)
+        {
+            if (!snapshot.TryGetCellDetail(snapshot.Size.Index(cell), out CellDetail detail))
+            {
+                Title = "Ground";
+                Subtitle = "cell";
+                CellIconKey = "ui.overlay.zones";
+                if (_cellLineFor >= 0)
+                {
+                    CellLine = string.Empty;
+                    _cellLineFor = -1;
+                }
+                return;
+            }
+
+            Subtitle = "cell";
+
+            string edifice = EdificeLabels.Title(detail.Edifice);
+            string terrain = TerrainLabels.Label(detail.Terrain);
+            if (edifice.Length > 0)
+            {
+                Title = edifice;
+                CellIconKey = EdificeLabels.IconKey(detail.Edifice);
+            }
+            else if (detail.FloorStuff != StuffHandle.None)
+            {
+                string stuff = BuildLabels.Stuff(detail.FloorStuff);
+                Title = stuff.Length == 0
+                    ? "Built floor"
+                    : char.ToUpperInvariant(stuff[0]) + stuff.Substring(1) + " floor";
+                CellIconKey = BuildLabels.StuffKey(detail.FloorStuff);
+            }
+            else if (terrain.Length > 0)
+            {
+                Title = terrain;
+                CellIconKey = TerrainLabels.IconKey(detail.Terrain);
+            }
+            else
+            {
+                Title = "Ground";
+                CellIconKey = "ui.overlay.zones";
+            }
+
+            SetCellLine(snapshot, detail);
+        }
+
+        // The last cell the readout line was written for, and everything it quotes. The pane
+        // refreshes fifteen times a second and the line is a joined interpolation, so it is
+        // rebuilt only when something it says has moved — the same argument as _positionFor and
+        // _siteSecondsFor, and the same flip condition F1 from ADR 0003. Order progress is
+        // compared as the whole percent it prints, so a face being cut rebuilds the line once
+        // per percent rather than fifteen times a second.
+        int _cellLineFor = -1;
+        int _cellLineCost;
+        int _cellLineFloor;
+        int _cellLineEdifice;
+        int _cellLineSupport;
+        int _cellLineWork;
+        int _cellLineOrderKind;
+        int _cellLineOrderPercent;
+        readonly List<string> _cellParts = new List<string>();
+
+        /// <summary>
+        /// The line under the title: what crossing the tile costs, what is built or standing
+        /// there, what it is worth digging, and what it bears. An order standing on the cell
+        /// leads — the same "lead with the actionable clause" rule <c>AlertModel</c> and the site
+        /// line follow — because "mining · 45% done" is what the player clicked a half-cut face
+        /// to learn.
+        /// </summary>
+        void SetCellLine(WorldSnapshot snapshot, in CellDetail detail)
+        {
+            byte progress = 0, kind = 0;
+            bool ordered = false;
+            var orders = snapshot.Orders;
+            for (int i = 0; i < orders.Length; i++)
+            {
+                if (orders[i].CellIndex != detail.CellIndex) continue;
+                ordered = true;
+                kind = orders[i].Kind;
+                progress = orders[i].Progress;
+                break;
+            }
+            int orderPercent = (progress * 100 + 127) / 255;
+
+            if (_cellLineFor == detail.CellIndex
+                && _cellLineCost == detail.MoveCostPerMille
+                && _cellLineFloor == detail.FloorStuff
+                && _cellLineEdifice == detail.Edifice
+                && _cellLineSupport == detail.Support
+                && _cellLineWork == detail.WorkToClear
+                && _cellLineOrderKind == (ordered ? kind : 0)
+                && _cellLineOrderPercent == (ordered ? orderPercent : 0)) return;
+
+            _cellLineFor = detail.CellIndex;
+            _cellLineCost = detail.MoveCostPerMille;
+            _cellLineFloor = detail.FloorStuff;
+            _cellLineEdifice = detail.Edifice;
+            _cellLineSupport = detail.Support;
+            _cellLineWork = detail.WorkToClear;
+            _cellLineOrderKind = ordered ? kind : 0;
+            _cellLineOrderPercent = ordered ? orderPercent : 0;
+
+            _cellParts.Clear();
+
+            if (ordered)
+                _cellParts.Add(OrderVerb(kind) + " · " + orderPercent + "% done");
+            else if (detail.WorkToClear > 0)
+                _cellParts.Add("minable · about " + Seconds(detail.WorkToClear) + " of work");
+
+            if (detail.MoveCostPerMille == 0) _cellParts.Add("cannot walk");
+            else _cellParts.Add("walk speed " + (100_000 + detail.MoveCostPerMille / 2) / detail.MoveCostPerMille + "%");
+
+            // The floor is said once: as the title when that is what was clicked, in the line
+            // when something above it — a tree, an order — is the headline instead.
+            bool floorIsTitle = EdificeLabels.Title(detail.Edifice).Length == 0
+                && detail.FloorStuff != StuffHandle.None;
+            if (detail.FloorStuff != StuffHandle.None && !floorIsTitle)
+            {
+                string stuff = BuildLabels.Stuff(detail.FloorStuff);
+                _cellParts.Add(stuff.Length == 0 ? "built floor" : stuff + " floor");
+            }
+
+            // Support is a solid's own fact — what the column can still bear — and is shown
+            // where there is something to dig, which is where a collapse is a question.
+            if (detail.WorkToClear > 0) _cellParts.Add("support " + detail.Support);
+
+            CellLine = string.Join(" · ", _cellParts);
+        }
+
+        /// <summary>
+        /// The verb for an order standing on the selected cell. The numbers are
+        /// <c>DesignationKind</c>'s — Mine 1, Deconstruct 2, Fell 3 — restated here because the
+        /// enum lives in the simulation and <c>OrderView.Kind</c> carries only its value. Fell
+        /// reads as chopping, the game's own word for it since the palette stopped saying
+        /// "Harvest".
+        /// </summary>
+        static string OrderVerb(byte kind) => kind switch
+        {
+            1 => "mining",
+            2 => "deconstructing",
+            3 => "chopping",
+            _ => "working",
+        };
 
         /// <summary>
         /// Fill the Skills tab from the frame.

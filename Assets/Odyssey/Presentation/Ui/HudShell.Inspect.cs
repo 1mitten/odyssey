@@ -146,12 +146,14 @@ namespace Odyssey.Presentation.Ui
             _inspect.Refresh(world.Views.Current);
 
             // The structure is rebuilt only when the subject changes; values update in place, so a
-            // refresh allocates nothing but the few strings it shows.
+            // refresh allocates nothing but the few strings it shows. A cell's signature carries
+            // its layer as well as its position, because "at 78, 59" names a column and a click
+            // can reach several cells of it.
             string signature =
                 _inspect.Subject + ":" +
                 (_inspect.Subject == InspectSubject.Colonist ? _inspect.Pawn.ToString()
                  : _inspect.Subject == InspectSubject.Item ? _inspect.Thing.ToString()
-                 : _inspect.Position);
+                 : _inspect.Position + ":" + _inspect.Layer);
             if (signature != _inspectBuiltFor)
             {
                 BuildInspectBody();
@@ -164,6 +166,17 @@ namespace Odyssey.Presentation.Ui
             _tombReason.style.display = _inspect.Tombstoned ? DisplayStyle.Flex : DisplayStyle.None;
 
             HudText.Set(_inspectTitle, _inspect.Title, HudTextRole.Name);
+
+            // The avatar follows the answer rather than the click: a tile whose face is mined
+            // through, or a pile that changes hands, swaps its icon without a rebuild.
+            string avatarKey = _inspect.Subject == InspectSubject.Colonist ? "ui.pawn.colonist"
+                : _inspect.Subject == InspectSubject.Item ? _inspect.ItemIconKey
+                : _inspect.CellIconKey;
+            if (avatarKey != _inspectAvatarKey)
+            {
+                _inspectAvatarKey = avatarKey;
+                _inspectAvatar.SetKey(avatarKey);
+            }
 
             // The two header lines are interpolated, and the pane refreshes fifteen times a
             // second, so they are rebuilt only when one of the values they quote has moved. The
@@ -182,12 +195,15 @@ namespace Odyssey.Presentation.Ui
                 HudText.Set(_inspectMeta, MetaLine(), HudTextRole.Meta);
             }
             if (!ReferenceEquals(_stateJob, _inspect.Job) || !ReferenceEquals(_stateBand, band) ||
-                _stateSelected != selected || !ReferenceEquals(_stateSite, _inspect.Site))
+                _stateSelected != selected || !ReferenceEquals(_stateSite, _inspect.Site) ||
+                _stateStack != _inspect.Stack || !ReferenceEquals(_stateCell, _inspect.CellLine))
             {
                 _stateSite = _inspect.Site;
                 _stateJob = _inspect.Job;
                 _stateBand = band;
                 _stateSelected = selected;
+                _stateStack = _inspect.Stack;
+                _stateCell = _inspect.CellLine;
                 HudText.Set(_inspectState, StateLine(), HudTextRole.Meta);
             }
 
@@ -348,13 +364,19 @@ namespace Odyssey.Presentation.Ui
                         return count + $"{_inspect.Job} · mood {MoodBands.Band(_inspect.Mood)}";
                     }
                 case InspectSubject.Item:
-                    return "item on the ground";
+                    // A pile is counted, not just named — "27 in the pile" is the question a
+                    // click on a heap of wood is asking (owner, 2026-09-17). A lone thing has no
+                    // count worth saying, and says what it is doing instead.
+                    return _inspect.Stack > 1
+                        ? _inspect.Stack + " in the pile"
+                        : "item on the ground";
                 case InspectSubject.Cell:
-                    // A site says what it is waiting for or how much longer; bare ground still
-                    // has nothing to say, and says so rather than pretending.
+                    // A site says what it is waiting for or how much longer; any other cell says
+                    // what the world has answered about it, and says nothing rather than
+                    // pretending while the answer is still a publish away.
                     return _inspect.Site.Length > 0
                         ? _inspect.Site
-                        : "cell readout arrives with cell inspection";
+                        : _inspect.CellLine;
                 default:
                     return string.Empty;
             }
@@ -388,11 +410,10 @@ namespace Odyssey.Presentation.Ui
             var header = new VisualElement();
             header.AddToClassList("inspect__hdr");
 
-            _inspectAvatar = new IconBadge(
-                _inspect.Subject == InspectSubject.Colonist ? "ui.pawn.colonist"
-                : _inspect.Subject == InspectSubject.Item ? "ui.res.meal"
-                : "ui.overlay.zones",
-                IconBadge.AvatarSize);
+            _inspectAvatarKey = _inspect.Subject == InspectSubject.Colonist ? "ui.pawn.colonist"
+                : _inspect.Subject == InspectSubject.Item ? _inspect.ItemIconKey
+                : _inspect.CellIconKey;
+            _inspectAvatar = new IconBadge(_inspectAvatarKey, IconBadge.AvatarSize);
             _inspectAvatar.Inherit(HudTokens.TextPrimary);
             header.Add(_inspectAvatar);
 
