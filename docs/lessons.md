@@ -1456,3 +1456,29 @@ hand-built grid was going to reproduce five surface layers and their woodland. A
 case in the Sim fast tier printed the column histogram in nine seconds (`Assert.Fail` with a
 `StringBuilder`, since the runner swallows `Console.WriteLine`), which is how the 6,140-of-14,400
 figure exists at all. Delete the probe before committing.
+
+## A performance threshold calibrated on your own machine is a gate that fails on everyone else's
+
+`DesignationProgressTests.PublishingCostsWhatTheOrdersCostRatherThanWhatTheLayerCosts` asserted a
+tick cost under **0.012 ms**, chosen as "five times the measured figure" on the author's machine.
+On 2026-09-17 it failed CI **twice in an hour, on two unrelated pull requests** — one that touched
+no simulation code at all and one that was a stylesheet and a HUD control. Measured on the
+GitHub-hosted Linux runner: **0.0164 ms** and **0.0125 ms**. The same commit measured **0.0029 ms**
+locally. Nothing was slow; the runner is.
+
+**The rule that would have avoided it: pick the number from the bug, not from the noise.** The
+defect this test guards costs twenty-six times the fixed figure (0.057 against 0.0022, both
+recorded in the test). Anything comfortably under that still catches it. The threshold is now
+0.030 — about twice the slowest honest reading, and about a tenth of what the bug would cost on
+the same machine — so there is headroom on both sides and the sentence saying so is in the test.
+
+**Two cheaper diagnostics before you believe a timing failure.** Re-run the job: a real regression
+repeats and noise usually does not. And run the test locally and read the printed figure — this
+one prints `[progress] … ms/tick` to `TestContext`, which is what turned "is my change slow?" into
+"the runner is slow" in one command. **Do not re-bake a timing number because CI is red** without
+one of those two; the first instinct of loosening it until it passes is how a gate quietly stops
+guarding anything.
+
+**A timing assertion on a shared runner is worth having, but only in this shape:** a wide band
+justified by the size of the defect, the measured figures for both states written down beside it,
+and a failure message that tells the next person which of the two they are probably looking at.
