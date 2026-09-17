@@ -59,10 +59,22 @@ namespace Odyssey.Tests.Sim
         /// <para>Moved a third time by U37, merged on top of deconstruct: <c>PawnKindDef</c>
         /// gained <c>startingSkillLevelWeights</c>, the invented distribution starting skill
         /// levels are rolled from.</para>
+        ///
+        /// <para>Moved a fourth time, 2026-09-17, by the pickup gaining a duration:
+        /// <c>PawnTuningDef</c> gained <c>liftTicks</c> (48, which is the 0.8 s the drawn gesture
+        /// has always taken) and <c>liftGraspTicks</c> (24, the middle of that gesture's hold).
+        /// Owner: <i>"there should be time spent motion down, picking up object and standing
+        /// up"</i>. It is the first content change here that moves a golden as well, because a
+        /// haul now costs the colony 48 ticks it did not spend before.</para>
         /// </summary>
         // U29 added Thought_Fell: the memory a colonist keeps of riding a floor down. It stands in
         // for an injury that cannot exist until there is a health model to apply one to.
-        const ulong ContentFingerprint = 13610108137465437640UL;
+        //
+        // The value below is neither branch's: U29 and the pickup's two tuning fields both moved
+        // this number, so the merged content has a fingerprint neither of them ever computed. It
+        // was taken by running the test against the merged pack rather than by picking a side,
+        // which is the only thing that could have produced a correct answer here.
+        const ulong ContentFingerprint = 7500205209164907889UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

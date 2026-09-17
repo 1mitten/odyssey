@@ -74,6 +74,20 @@ namespace Odyssey.Tests.Sim
     /// <para>The same commit stopped <c>ScenarioDef.Playtest</c> giving starting orders, and that
     /// moved <b>nothing here</b>, because every case below builds on <c>ScenarioDef.Bare</c>, which
     /// has never given any.</para>
+    ///
+    /// <para><b>Moved a fifth time, 2026-09-17, by the pickup gaining a duration</b> (owner: "there
+    /// should be time spent motion down, picking up object and standing up"). A colonist now spends
+    /// <c>PawnContent.LiftTicks</c> — 48, the 0.8 s the drawn gesture always took — stooping,
+    /// taking the thing and straightening up, where before that was one tick. Every haul and every
+    /// delivery in these windows is therefore 47 ticks longer, so the colonies reach a different
+    /// state.</para>
+    ///
+    /// <para><b>All three <see cref="Case.Simulated"/> values moved and no <see cref="Case.Generated"/>
+    /// one did, which is the signature that says the re-bake is what it claims.</b> The duration is
+    /// content, content is not hashed, and nothing about placement changed — so a moved
+    /// <c>Generated</c> here would have meant something else had come along with it. Checked by
+    /// running the table before re-baking and reading which assertion failed: all three failed on
+    /// the second, which is the one that fires only after the first has passed.</para>
     /// </summary>
     public static class Golden
     {
@@ -129,7 +143,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = false,
             Generated = 7415324713255390796UL,
-            Simulated = 4123229251212493599UL,
+            Simulated = 3128752858895027949UL,
         };
 
         /// <summary>
@@ -146,7 +160,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = true,
             Generated = 8029423938199474119UL,
-            Simulated = 15223569115139054285UL,
+            Simulated = 16725035343162846352UL,
         };
 
         /// <summary>
@@ -162,7 +176,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.RuinedCity,
             Wooded = false,
             Generated = 2695749815698818099UL,
-            Simulated = 13999314917987038887UL,
+            Simulated = 2896902808510897329UL,
         };
     }
 }
