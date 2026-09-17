@@ -89,21 +89,26 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 files to add itself, five of which should have been extension points. The table and the order are in
 `docs/plans/vertical-slice.md`, "Where the seams are" — **audited against the code on 2026-09-17,
 because it had gone stale and misled a session into recommending work that had already landed.**
-Three of the five chokepoints are open:
+Three of the five chokepoints are now open:
 
 - **Work givers register themselves** (OQ-44): a giver in the simulation assembly joins by existing.
-- **Content is written once** (OQ-15/OQ-16, finished by OQ-48 on 2026-09-17). `PawnContent.Core()`
-  is deleted and the XML under `Assets/Odyssey/Defs/Core/Pawns` is the only copy; every caller goes
-  through `ContentPack.Pawns()`, which finds the pack by walking up to the repository root and
-  caches the parse. A built player would not find it — nothing builds one, and `ContentPack.UseRoot`
-  is the tested seam for the day something does. **The world tables are still doubled**
-  (`CoreContent.Terrain`, `NaturalContent.Terrain` against `Defs/Core/World/*.xml`); that is the
-  remaining half, and the risk in it is the terrain *index order*, which is in every save and hash.
+- **Content is written once** (OQ-15/OQ-16, finished by OQ-48 and OQ-49 on 2026-09-17). The XML
+  under `Assets/Odyssey/Defs/Core` is the only copy of both the pawn tuning and the world tables;
+  `PawnContent.Core()` and both `BuildTerrain()` methods are deleted. Callers go through
+  `ContentPack.Pawns()` and `WorldContent.Table`, which find the pack by walking up to the
+  repository root and cache it. A built player would not find it — nothing builds one, and
+  `ContentPack.UseRoot` is the tested seam for the day something does.
 - **A feature can describe a pawn without widening `PawnView`** (OQ-45, ADR 0004 amended): a sparse
   `PawnAspect` row keyed by a name the feature mints for itself.
 
-**Still open:** the world tables above, mesh contributors for `ChunkMesher` (OQ-46), and
-`OdysseyBootstrap` wiring every presentation system by hand — the one chokepoint with no queue row.
+**Content values are pinned by fingerprints, and they earn their keep.** `PawnContentDefTests` and
+`WorldContentDefTests` each fold their loaded table into one literal. This is not belt-and-braces:
+the moment the game started reading the world XML, the old oracle was comparing it against itself,
+and **editing rock's `workToClear` from 700 to 701 left all 448 tests green** — measured, not
+supposed. A deliberate content change is one line; an accidental one now fails.
+
+**Still open:** mesh contributors for `ChunkMesher` (OQ-46), and `OdysseyBootstrap` wiring every
+presentation system by hand — the one chokepoint with no queue row.
 
 ### What runs today
 
@@ -156,7 +161,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~10 s, no Unity): **450 Sim + 117 Hud**.
+- **Fast tier** (`scripts/test-fast.sh`, ~10 s, no Unity): **452 Sim + 117 Hud**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
