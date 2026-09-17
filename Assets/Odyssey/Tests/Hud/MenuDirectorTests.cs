@@ -6,8 +6,8 @@ using Odyssey.Hud;
 namespace Odyssey.Tests.Hud
 {
     /// <summary>
-    /// The main screen with no screen: which of its two screens is up, what each row asks for, and
-    /// the ask-twice arming.
+    /// The main screen with no screen: which of its screens is up, what each row asks for, the
+    /// ask-twice arming, and the seed the New game screen commits (U39).
     ///
     /// <para>Every rule here is a promise the screen makes with the player watching — "that press
     /// armed the row", "backing out of the load list forgets the question you were asked" — and the
@@ -20,6 +20,27 @@ namespace Odyssey.Tests.Hud
         {
             var menu = new MenuDirector();
             menu.Show();
+            return menu;
+        }
+
+        /// <summary>
+        /// A showing menu whose seed is dealt rather than drawn, for the New game screen (U39). The
+        /// last number is repeated forever, so a test never runs the source dry.
+        /// </summary>
+        static MenuDirector ShowingWithSeeds(params uint[] numbers)
+        {
+            int next = 0;
+            var menu = new MenuDirector(
+                new SeedField(() => numbers[next < numbers.Length ? next++ : numbers.Length - 1]));
+            menu.Show();
+            return menu;
+        }
+
+        /// <summary>On the New game screen, on the first dealt seed.</summary>
+        static MenuDirector OnNewGame(params uint[] numbers)
+        {
+            MenuDirector menu = ShowingWithSeeds(numbers);
+            menu.Choose(SessionCommands.NewGameKey);
             return menu;
         }
 
@@ -59,39 +80,47 @@ namespace Odyssey.Tests.Hud
         public void NothingCanBePressedWhileTheScreenIsAway()
         {
             var menu = new MenuDirector();
-            int asked = 0;
-            menu.NewGameRequested += () => asked++;
+            int started = 0;
+            menu.StartRequested += _ => started++;
 
             Assert.That(menu.Choose(SessionCommands.NewGameKey), Is.False);
-            Assert.That(asked, Is.Zero);
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.Root), "it navigated with no screen up");
+            Assert.That(menu.Start(), Is.False);
+            Assert.That(started, Is.Zero);
         }
 
         // ------------------------------------------------------------------ what a row asks for
 
+        /// <summary>
+        /// <b>The behaviour U39 changes.</b> U38's New game row built a world on a seed nobody ever
+        /// saw; it opens the screen that shows the seed instead, and only the row on that screen
+        /// commits.
+        /// </summary>
         [Test]
-        public void NewGameAsksForAColonyAndNothingElse()
+        public void NewGameOpensItsOwnScreenRatherThanBuildingAWorld()
         {
-            MenuDirector menu = Showing();
-            int newGame = 0, saves = 0, settings = 0, quit = 0;
-            menu.NewGameRequested += () => newGame++;
+            MenuDirector menu = ShowingWithSeeds(4242u);
+            int started = 0, saves = 0, settings = 0, quit = 0;
+            menu.StartRequested += _ => started++;
             menu.SavesRequested += () => saves++;
             menu.SettingsRequested += () => settings++;
             menu.QuitRequested += () => quit++;
 
             Assert.That(menu.Choose(SessionCommands.NewGameKey), Is.True);
 
-            Assert.That(newGame, Is.EqualTo(1), "exactly once, on one press");
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.NewGame));
+            Assert.That(started, Is.Zero, "pressing New game must not build anything by itself");
             Assert.That(saves + settings + quit, Is.Zero);
-            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.Root),
-                "building a world is the bootstrap's; this screen does not navigate for it");
+            Assert.That(menu.Seed.Usable, Is.True, "the screen opened with no seed in the box");
+            Assert.That(menu.Seed.Seed, Is.EqualTo(4242u));
         }
 
         [Test]
         public void OptionsAsksForTheSettingsPanelAndNothingElse()
         {
             MenuDirector menu = Showing();
-            int newGame = 0, saves = 0, settings = 0, quit = 0;
-            menu.NewGameRequested += () => newGame++;
+            int started = 0, saves = 0, settings = 0, quit = 0;
+            menu.StartRequested += _ => started++;
             menu.SavesRequested += () => saves++;
             menu.SettingsRequested += () => settings++;
             menu.QuitRequested += () => quit++;
@@ -99,7 +128,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(menu.Choose(SessionCommands.OptionsKey), Is.True);
 
             Assert.That(settings, Is.EqualTo(1));
-            Assert.That(newGame + saves + quit, Is.Zero);
+            Assert.That(started + saves + quit, Is.Zero);
         }
 
         /// <summary>
@@ -147,7 +176,7 @@ namespace Odyssey.Tests.Hud
             menu.Choose(SessionCommands.OptionsKey);
 
             int anything = 0;
-            menu.NewGameRequested += () => anything++;
+            menu.StartRequested += _ => anything++;
             menu.SavesRequested += () => anything++;
             menu.QuitRequested += () => anything++;
 
@@ -155,6 +184,7 @@ namespace Odyssey.Tests.Hud
             Assert.That(menu.Choose(SessionCommands.LoadKey), Is.False);
             Assert.That(menu.Choose(SessionCommands.QuitKey), Is.False);
             Assert.That(anything, Is.Zero);
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.Settings), "a row that is not drawn navigated");
         }
 
         /// <summary>
@@ -183,7 +213,7 @@ namespace Odyssey.Tests.Hud
         {
             MenuDirector menu = Showing();
             int anything = 0;
-            menu.NewGameRequested += () => anything++;
+            menu.StartRequested += _ => anything++;
             menu.SavesRequested += () => anything++;
             menu.SettingsRequested += () => anything++;
             menu.QuitRequested += () => anything++;
@@ -240,12 +270,13 @@ namespace Odyssey.Tests.Hud
             MenuDirector menu = Showing();
             menu.ShowSaves(TwoSaves());
             int anything = 0;
-            menu.NewGameRequested += () => anything++;
+            menu.StartRequested += _ => anything++;
             menu.QuitRequested += () => anything++;
 
             Assert.That(menu.Choose(SessionCommands.NewGameKey), Is.False);
             Assert.That(menu.Choose(SessionCommands.QuitKey), Is.False);
             Assert.That(anything, Is.Zero, "a row that is not drawn cannot be pressed");
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.Load), "and it cannot navigate either");
         }
 
         [Test]
@@ -349,11 +380,9 @@ namespace Odyssey.Tests.Hud
         public void ARowThatDoesNotAskTwiceGoesOnTheFirstPress()
         {
             MenuDirector menu = Showing();
-            int newGame = 0;
-            menu.NewGameRequested += () => newGame++;
 
             Assert.That(menu.Choose(SessionCommands.NewGameKey), Is.True);
-            Assert.That(newGame, Is.EqualTo(1));
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.NewGame));
             Assert.That(menu.Armed, Is.Null, "nothing was ever armed");
         }
 
@@ -411,16 +440,139 @@ namespace Odyssey.Tests.Hud
         public void PressingAnotherRowStandsTheArmedOneDownRatherThanAnsweringIt()
         {
             MenuDirector menu = Showing();
-            int quits = 0, newGame = 0;
+            int quits = 0;
             menu.QuitRequested += () => quits++;
-            menu.NewGameRequested += () => newGame++;
 
             menu.Choose(SessionCommands.QuitKey);
             Assert.That(menu.Choose(SessionCommands.NewGameKey), Is.True);
 
-            Assert.That(newGame, Is.EqualTo(1));
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.NewGame));
             Assert.That(quits, Is.Zero, "only the row that is asking can answer");
             Assert.That(menu.Armed, Is.Null);
+        }
+
+        // ------------------------------------------------------------- the New game screen (U39)
+
+        [Test]
+        public void StartBuildsTheWorldTheBoxIsShowing()
+        {
+            MenuDirector menu = OnNewGame(4242u);
+            uint built = 0;
+            int starts = 0;
+            menu.StartRequested += seed => { built = seed; starts++; };
+
+            Assert.That(menu.Start(), Is.True);
+
+            Assert.That(starts, Is.EqualTo(1), "exactly once, on one press");
+            Assert.That(built, Is.EqualTo(4242u));
+        }
+
+        [Test]
+        public void StartBuildsATypedSeedRatherThanTheDrawnOne()
+        {
+            MenuDirector menu = OnNewGame(4242u);
+            uint built = 0;
+            menu.StartRequested += seed => built = seed;
+
+            menu.Seed.Type("77");
+            Assert.That(menu.Start(), Is.True);
+
+            Assert.That(built, Is.EqualTo(77u), "the world came from a number the player never chose");
+        }
+
+        [Test]
+        public void StartBuildsARerolledSeed()
+        {
+            MenuDirector menu = OnNewGame(1u, 2u);
+            uint built = 0;
+            menu.StartRequested += seed => built = seed;
+
+            menu.Seed.Reroll();
+            Assert.That(menu.Start(), Is.True);
+
+            Assert.That(built, Is.EqualTo(2u));
+        }
+
+        /// <summary>
+        /// <b>The rule the unit is built around</b> (§11.2 decision 2). A press that started the
+        /// last good seed while the box read <c>twelve</c> would be this screen lying about the one
+        /// number it exists to show — and a player who typed a seed deliberately would be given a
+        /// different world with no way to tell.
+        /// </summary>
+        [Test]
+        public void StartRefusesABoxThatNamesNoSeed()
+        {
+            MenuDirector menu = OnNewGame(4242u);
+            int starts = 0;
+            menu.StartRequested += _ => starts++;
+
+            menu.Seed.Type("twelve");
+
+            Assert.That(menu.Start(), Is.False);
+            Assert.That(starts, Is.Zero, "it built 4242 while the box said 'twelve'");
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.NewGame), "and it left the screen too");
+        }
+
+        [Test]
+        public void StartDoesNothingFromAnyOtherScreen()
+        {
+            MenuDirector menu = Showing();
+            int starts = 0;
+            menu.StartRequested += _ => starts++;
+
+            Assert.That(menu.Start(), Is.False, "from the root");
+
+            menu.ShowSaves(TwoSaves());
+            Assert.That(menu.Start(), Is.False, "from the load list");
+
+            menu.Back();
+            menu.Choose(SessionCommands.OptionsKey);
+            Assert.That(menu.Start(), Is.False, "from settings");
+
+            Assert.That(starts, Is.Zero);
+        }
+
+        [Test]
+        public void BackLeavesTheNewGameScreenForTheRoot()
+        {
+            MenuDirector menu = OnNewGame(4242u);
+            int closed = 0;
+            menu.SettingsClosed += () => closed++;
+
+            Assert.That(menu.Back(), Is.True);
+
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.Root));
+            Assert.That(closed, Is.Zero, "backing out of New game closed a settings panel");
+        }
+
+        /// <summary>
+        /// §11.2 decision 3. Coming back to this screen and being dealt the world you have just
+        /// walked away from reads as a reroll that does not work, and nothing on screen could tell
+        /// the player otherwise.
+        /// </summary>
+        [Test]
+        public void EnteringTheScreenDealsAFreshWorldEveryTime()
+        {
+            MenuDirector menu = ShowingWithSeeds(1u, 2u);
+
+            menu.Choose(SessionCommands.NewGameKey);
+            Assert.That(menu.Seed.Seed, Is.EqualTo(1u));
+
+            menu.Back();
+            menu.Choose(SessionCommands.NewGameKey);
+
+            Assert.That(menu.Seed.Seed, Is.EqualTo(2u));
+        }
+
+        [Test]
+        public void PuttingTheScreenAwayLeavesTheNewGameScreenToo()
+        {
+            MenuDirector menu = OnNewGame(4242u);
+
+            menu.Hide();
+
+            Assert.That(menu.Screen, Is.EqualTo(MenuScreen.Root),
+                "a menu that came back mid-navigation would show the last colony's half-made game");
         }
     }
 }

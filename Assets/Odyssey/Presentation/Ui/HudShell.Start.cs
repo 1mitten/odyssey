@@ -10,13 +10,13 @@ using UnityEngine.UIElements;
 namespace Odyssey.Presentation.Ui
 {
     /// <summary>
-    /// <see cref="HudShell"/>: B18, the start screen (U38).
+    /// <see cref="HudShell"/>: B18, the start screen (U38, and its New game screen U39).
     ///
     /// <para>The screen before the game — the only one that exists when no world is built. It is
     /// the project's first true modal, and it is deliberately small: four rows drawn from
-    /// <see cref="SessionCommands"/>, a list of saves read from their headers, and nothing that
-    /// the rest of the interface does not already have. Design and the owner's decisions are
-    /// <c>docs/design/17-start-flow.md</c>.</para>
+    /// <see cref="SessionCommands"/>, a list of saves read from their headers, a seed you can read
+    /// and reroll, and nothing that the rest of the interface does not already have. Design and the
+    /// owner's decisions are <c>docs/design/17-start-flow.md</c>; §11 is the seed.</para>
     ///
     /// <para><b>Everything here goes through a seam that already existed.</b> The panel is
     /// <c>Modal()</c>, which is <c>Window()</c> which is <c>Panel()</c>; the rows are
@@ -40,6 +40,11 @@ namespace Odyssey.Presentation.Ui
         VisualElement _startRows = null!;
         ScrollView _startList = null!;
         VisualElement _startBack = null!;
+
+        // The New game screen (U39): the seed, the reroll and the row that commits.
+        VisualElement _startNewGame = null!;
+        TextField _seedBox = null!;
+        VisualElement _startCommit = null!;
         readonly Dictionary<string, VisualElement> _startRowByKey = new Dictionary<string, VisualElement>();
 
         /// <summary>
@@ -91,6 +96,9 @@ namespace Odyssey.Presentation.Ui
             foreach (SessionCommand command in SessionCommands.For(SessionContext.MainScreen))
                 _startRows.Add(StartRow(command));
 
+            _startNewGame = BuildNewGameScreen();
+            body.Add(_startNewGame);
+
             // The saves, when the load screen is showing. A scroll view because a folder can hold
             // any number of colonies, wearing the Build palette's scroller class so there is one
             // scrollbar in the project rather than two.
@@ -115,7 +123,8 @@ namespace Odyssey.Presentation.Ui
             _menu.ShowingChanged += RefreshStartScreen;
             _menu.ScreenChanged += _ => RefreshStartScreen();
             _menu.ArmedChanged += RefreshStartArming;
-            _menu.NewGameRequested += OnNewGame;
+            _menu.Seed.Changed += RefreshSeed;
+            _menu.StartRequested += OnStartNewGame;
             _menu.SavesRequested += OnListSaves;
             _menu.SettingsRequested += () => _boot!.Preferences.SetOpen(true);
             _menu.SettingsClosed += () => _boot!.Preferences.SetOpen(false);
@@ -139,6 +148,81 @@ namespace Odyssey.Presentation.Ui
 
             _startRowByKey[command.Key] = row;
             return row;
+        }
+
+        /// <summary>
+        /// A plain row of the New game screen: the same icon-and-label row as every other, with an
+        /// action of its own rather than a <see cref="SessionCommand"/> behind it.
+        /// </summary>
+        static VisualElement SeedRow(string key, System.Action pressed)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("settings__row");
+
+            var icon = new IconBadge(key, IconBadge.RowSize);
+            icon.Inherit(HudTokens.TextMeta);
+            row.Add(icon);
+            row.Add(HudText.Make(Registry.Label(key), HudTextRole.Row, ussClass: "settings__label"));
+            row.RegisterCallback<ClickEvent>(_ => pressed());
+            return row;
+        }
+
+        /// <summary>
+        /// The New game screen (U39): the seed you can read, type and reroll, and the row that
+        /// builds a world from it. Design is <c>docs/design/17-start-flow.md</c> §11.
+        ///
+        /// <para><b>It introduces no control.</b> The caption is a <c>HudText</c> meta line, the box
+        /// is the <c>.field</c> the naming prompt restyled before it, and the two rows are
+        /// <c>.settings__row</c> like every other row on this screen — which is the bargain §3 makes
+        /// and the reason this unit is small.</para>
+        ///
+        /// <para><b>The field is not focused on the way in</b>, unlike the naming prompt's. There
+        /// the whole act is typing; here the common act is pressing Start on the number the game
+        /// dealt, and a focused field would put a text cursor and a swallowed keystroke between the
+        /// player and that.</para>
+        /// </summary>
+        VisualElement BuildNewGameScreen()
+        {
+            var screen = new VisualElement();
+            screen.style.display = DisplayStyle.None;
+
+            screen.Add(HudText.Make(Registry.Label(SeedField.SeedKey), HudTextRole.Meta,
+                ussClass: "startscreen__seedcap"));
+
+            // Named so a PlayMode test can drive the control the player drives rather than the
+            // director behind it — this box is the only place the seam between the two is real.
+            _seedBox = new TextField { name = "seed", isDelayed = false, maxLength = SeedEntry.MaxDigits };
+            _seedBox.AddToClassList("field");
+            _seedBox.RegisterValueChangedCallback(change => _menu.Seed.Type(change.newValue));
+            screen.Add(_seedBox);
+
+            var rows = new VisualElement();
+            rows.AddToClassList("startscreen__seedrows");
+            rows.Add(SeedRow(SeedField.RerollKey, () => _menu.Seed.Reroll()));
+
+            _startCommit = SeedRow(SeedField.StartKey, () => _menu.Start());
+            rows.Add(_startCommit);
+
+            screen.Add(rows);
+            return screen;
+        }
+
+        /// <summary>
+        /// Draw what the seed field is holding.
+        ///
+        /// <para><c>SetValueWithoutNotify</c>, and only when the text has actually moved: writing
+        /// the box's own value back into it through the notifying setter would re-enter
+        /// <see cref="SeedField.Type"/> on every keystroke, and the guard that makes that harmless
+        /// is a guard rather than a reason to lean on it.</para>
+        /// </summary>
+        void RefreshSeed()
+        {
+            if (_seedBox.value != _menu.Seed.Text) _seedBox.SetValueWithoutNotify(_menu.Seed.Text);
+
+            // Drawn faint and inert rather than hidden: a Start that disappears while you are
+            // mid-edit reads as a broken screen. MenuDirector.Start refuses as well — this is the
+            // half the player can see, not the half that enforces it.
+            _startCommit.EnableInClassList("settings__row--off", !_menu.Seed.Usable);
         }
 
         /// <summary>
@@ -183,11 +267,18 @@ namespace Odyssey.Presentation.Ui
             _startScreen.Show(true);
 
             bool root = _menu.Screen == MenuScreen.Root;
+            bool newGame = _menu.Screen == MenuScreen.NewGame;
+            bool load = _menu.Screen == MenuScreen.Load;
+
             _startRows.style.display = root ? DisplayStyle.Flex : DisplayStyle.None;
-            _startList.style.display = root ? DisplayStyle.None : DisplayStyle.Flex;
+            _startNewGame.style.display = newGame ? DisplayStyle.Flex : DisplayStyle.None;
+            _startList.style.display = load ? DisplayStyle.Flex : DisplayStyle.None;
+
+            // The way out of every screen but the root, which has nowhere to go back to.
             _startBack.style.display = root ? DisplayStyle.None : DisplayStyle.Flex;
 
-            if (!root) FillSaveList();
+            if (load) FillSaveList();
+            if (newGame) RefreshSeed();
             RefreshStartArming();
         }
 
@@ -291,15 +382,18 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// A new colony, on a drawn seed.
+        /// A new colony, on the seed the player was shown (U39).
+        ///
+        /// <para>The seed arrives with the request rather than being read back off the field here,
+        /// which is the one thing <c>MenuDirector.StartRequested</c> carries an argument for: a
+        /// presenter that fetched the number separately could fetch a different one, or fetch it
+        /// without the guard that says the box names a seed at all.</para>
         ///
         /// <para>Everything else about the request stays a default on the bootstrap — size, map
-        /// type and scenario — which is what the plan's U39 row asks for: the seed is the only
-        /// knob exposed, so the rest stay tunable later without new interface. The screen where
-        /// you read and reroll that seed is U39; <c>SeedEntry</c>, which draws it, landed early
-        /// and is already tested.</para>
+        /// type and scenario — which is what the plan's U39 row asks for: the seed is the only knob
+        /// exposed, so the rest stay tunable later without new interface.</para>
         /// </summary>
-        void OnNewGame() => _boot!.BuildSession(SeedEntry.Draw(), null);
+        void OnStartNewGame(uint seed) => _boot!.BuildSession(seed, null);
 
         // ============================================================ naming a save
 
