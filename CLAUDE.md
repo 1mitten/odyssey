@@ -98,6 +98,30 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   key is unchanged, because `ui.status.felling` draws real art and `icon-map.csv` is keyed the same
   way. Design, what is still open and the by-hand procedure are
   `docs/design/16-cancel-and-deconstruct.md`.
+  **The Build palette is now three layouts over one selection** (`claude/build-palette-layouts`,
+  2026-09-17) — the owner's 4a *Rows* (the default), 4b *Rail* and 4c *Bar*, switchable from the
+  panel header and from Options › Interface, with the choice stored. Design, the measurements and
+  what nobody has judged are `docs/design/17-build-palette-layouts.md`; **read it before touching
+  `HudShell.Build.cs`, `BuildPalette.cs` or the `bp__*` block of `Hud.uss`.** Three things a later
+  session should not undo by tidying. **Orders, Zones and Salvage came off the palette** as the
+  specification asked, but Orders held Mine and Chop — so both are **pinned in the header** beside
+  Deconstruct and Cancel rather than lost to the `M` and `C` keys, which is the Cancel fault of the
+  day before repeated exactly; `EveryLiveToolIsDrawnSomewhere` is the general form of that rule.
+  **The panel is docked, not floating, and the default is a column** (owner: *"tight and flush to
+  other elements to enable full use of space"*, then *"use the left hand side of the screen instead
+  of the width"*) — the mockups were drawn over a bare board and would have covered the stores panel
+  and the roster strip, and Rows spanning 1920 made seven very wide tiles out of the category row.
+  Rows is 372 px and four tiles across, and its height is **fixed at the widest category's** so the
+  control does not move up and down the screen as categories are opened; only Bar still spans the
+  screen. **Nothing is armed until the player clicks** — the palette model is built when the HUD
+  attaches, and its seeding pass used to arm a wall, so the game began in build mode with a wall on
+  the cursor. The Build cap on the command bar is the indicator of that: outlined at rest, filled
+  **only while a tool is actually held** — an open panel with nothing chosen is not build mode. The
+  palette pins into the bottom-left corner and **closes the inspect pane when it opens**. And **thirty-seven icons are drawn** as `Painter2D` paths in `HudGlyph`'s
+  existing box, because ADR 0007's pipeline covers no architecture key and the specification forbids
+  the placeholder square here; materials keep the game's own sprites, which is the one tier whose
+  art must not change. **Every PlayMode run writes `Logs/palette-{rows,rail,bar}.png`** — the only
+  thing anybody has looked at, and what found the three faults the tests could not see.
   **Deconstruct landed the same day** and closes U26's last outstanding line but one. A colonist
   walks to one of our own walls, takes it apart and leaves **2 or 3 wood of the 5 it cost** — a
   seeded coin flip on the odd unit, keyed on cell *and tick* so a cell cannot become a permanently
@@ -193,6 +217,17 @@ All five chokepoints named after the mining line are now open:
   `ContentPack.UseRoot` is the tested seam for the day something does.
 - **A feature can describe a pawn without widening `PawnView`** (OQ-45, ADR 0004 amended): a sparse
   `PawnAspect` row keyed by a name the feature mints for itself.
+- **The world answers a question about a cell** (2026-09-17, ADR 0004 amendment 2): a sparse
+  `CellDetail` row — terrain, edifice, floor stuff, support, work to clear, crossing cost in
+  thousandths of a clear crossing — published for the one asked-about cell by a sim-side
+  contributor every colony gets. The question is a `QueryCell` intent, and **a paused world answers
+  it by republishing the view without spending a tick** — the first time "intents flush while the
+  clock is paused" (ADR 0004's own Decision) has been true of anything but a speed change. This is
+  U16's readback arriving two milestones late: the pane had shipped the placeholder "cell readout
+  arrives with cell inspection" since M1, and the owner's reports (rocks indistinguishable from
+  grass, water silent about being water, piles generic with no count) are what opened it. The same
+  change made water own its click in the picker and a pile resting on bare ground selectable — the
+  pick resolves to the block under a pile, so `SelectionDirector` looks one cell up.
 - **The scene composes its world the way everything else does** (U34, 2026-09-17), which is the
   simulation half of the bootstrap chokepoint. It had forty lines that were a copy of
   `ColonyWorld.Build`, and the copy had drifted: no connectors reached the nav graph, no full
@@ -240,6 +275,74 @@ exactly this, not a reuse of either real one). Files go through `WorldSave.SaveT
 read — the `Saves` folder itself is left to the caller that wires the menu on top (`U38`–`U40`). Day
 is likewise handed in already computed: `GameClock`'s tick-to-calendar mapping lives in the Hud
 assembly and Sim must not reference it, so nothing here re-implements that conversion.
+
+**`U38` is done, 2026-09-17, and it is not the unit the plan described.** Read
+`docs/design/17-start-flow.md` before touching this line; §2 holds the owner's six decisions and two
+of them overturn the plan's own row. There is **no new in-game menu** — the owner's ruling was
+*"there is already an in game menu/settings — reuse that"* — so Save, Load and Quit to main menu
+joined the **B17 settings panel** beside its exit row, the quit row did **not** move out of B17 as
+`10-ui-panel-catalogue.md` predicted, and **`SettingsDirector.Escape` gained no case at all**,
+because the start screen is not reached by Escape.
+
+What was built instead is **the screen before the game**. `buildOnPlay` now defaults **false**, so
+pressing Play lands on New game / Load / Settings / Exit game and a colony exists only once somebody
+asks for one; the flag stays as the development loop, and every PlayMode rig now sets it explicitly
+rather than inheriting it. It is **the project's first true modal**, which makes `09` §6 case 5 true
+of something for the first time — and **the swallow is a pickable full-viewport scrim, not a flag**:
+`PointOverUi` then answers "the interface" everywhere, and the camera rig already declines a press it
+is told belongs to the interface. The two always-on contrast scrims are explicitly *not* pickable,
+for the mirror-image reason. `HudShell.Modal()` is the one place a modal is made and returns scrim
+and panel as a pair, because a scrim left showing over a hidden panel is a screen that eats every
+click, shows nothing and cannot be dismissed.
+
+**Save and Load work end to end**, which brought U36's unbuilt disk half here: `Saves` under
+`persistentDataPath`, names derived from the recipe, and a listing read from headers alone that
+**keeps an unreadable file with its reason rather than hiding it** — a save that vanishes from the
+list is a colony the player concludes is gone. The one exempt window in the game is this screen's
+root: it has nothing behind it to close *to*, so it carries no X, and `HudGeometryTests` names the
+exemption rather than loosening the rule.
+
+**The row set is data, in one table.** `SessionCommands` names every session-level command with its
+key, context, order and whether it asks twice, and both surfaces build from it — the bargain
+`HudCommands` already makes for the command bar. `SettingsDirector` now *reads* that flag rather than
+stating it: its exit row had the two clicks written into `RequestExit`, and three more destructive
+rows beside it would have been two answers to one question. `HudDirectors` no longer builds the
+settings and hotkey directors, it **takes** them — they are preferences about the machine, not facts
+about a colony, and the start screen exists precisely when no colony does.
+
+**The owner played it on 2026-09-17 and four things came back, all now in.** (1) A worktree has no
+art until `Assets/Synty/` is **junctioned** — gitignored, so a fresh worktree draws everything as
+primitives; the procedure is in `docs/lessons.md` and **the junction must be removed with `rmdir`
+before the worktree is, or a recursive delete follows it and empties the real packs.** (2) **The
+view is in the save now** — camera focus, yaw, pitch and distance, the slice layer, the selected
+colonist and the game speed, as a `"view"` section that is `ISaveable` and deliberately **not**
+`IStateHashable`. The rule that nothing in presentation reaches the save was aimed at determinism,
+and determinism is the hash's business; where the camera points cannot affect a tick. `SliceCameraRig`
+gained `RestorePose`, because yaw and distance are lerped toward *private* targets and assigning the
+public fields alone holds for one frame and then swings back. (3) **Settings is a screen of the start
+menu**, not a panel over it — both are centred, so one landed on the other. (4) **The panel is a
+fixed box**, 420 × 384, because a centred panel that resizes moves every row under the pointer; the
+load list's ceiling is derived from that box rather than written down beside it, and a save row now
+carries the date and time, since a folder is mostly repeated attempts at the same colony.
+
+**Saves are named, and Save overwrites** (owner, 2026-09-17: *"I notice you keep saving a new game
+everytime … otherwise lots of saves will be created"* — a fault `17-start-flow.md` §10 had already
+admitted). A session is **bound** to a file: the one it was loaded from, or the one it last saved
+to. **Save** writes over that; **Save as** asks for a name and binds to the answer; the first save
+of a colony has nothing bound, so it asks, defaulting to the colony's name. **A player-chosen name
+is never disambiguated** — that is the point, since a name that maps to one file is what makes
+saving again an overwrite — so naming an existing save *is* an overwrite and the prompt asks twice.
+**The trap it opened:** the old scheme was accidentally safe because every stem carried `-day-N`,
+which is what kept a colony called `con` or `com1` off a Windows reserved device name
+(`con-day-4.odyssey` is creatable, `con.odyssey` is not); a typed name has no `-day-`, so that guard
+is now deliberate. The naming prompt is the project's **first text field** and the **first modal
+over a running colony**.
+
+**Save format is 3.** The recipe gained `Barren` and `Wooded`, because U38's round-trip test found
+that `MapType` says "Natural" for three genuinely different boards and a header could not rebuild
+the one it was written on. **The state hash could not have caught it** — the load overwrites every
+cell, so the hashes agreed; what differed was the start cell the camera frames a loaded colony on,
+so a restored game opened on empty ground a third of the map away. Versions 1 and 2 still load.
 
 **`U38` is the one thing blocking the rest of the chain, and it has not moved.** `HudShell.Bar.cs`
 still carries the comment that the B18 menu "does not exist yet", and there is no menu panel
@@ -333,7 +436,17 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **585 Sim + 199 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **600 Sim + 285 Hud**; Long tier **20**.
+  **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
+  touches the composition root or the HUD shell is unproven until Unity has compiled it, however
+  green the 11 seconds look (`docs/lessons.md`).
+- **The two tiers do not run the same NUnit**, and the fast tier's is newer. `Assert.Multiple` does
+  not exist under Unity (a compile error, so the whole batch aborts before a test runs) and
+  `Has.Count` throws on an interface-typed collection. Both cost a Unity run each on 2026-09-17;
+  `docs/lessons.md` has them.
+- **A frame is not a tick.** Waiting one Unity frame for a simulation effect is a flake — the
+  composition root steps the sim on accumulated real time, so a frame holds zero or more ticks.
+  Wait for the effect with a bounded loop (`docs/lessons.md`).
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
@@ -438,17 +551,25 @@ no region spans two layers.
 
 ### Known gaps
 
-**Mining collapses things now** (U29, 2026-09-17) — that line said it did not, and the three places
-that deliberately declined to mark support dirty have all been wired. What is still missing is the
+~~Felled trees, mined cells and building sites are not in the save (the designation grid is not
+saved; the construction grid is).~~ **That was stale and is struck rather than quietly edited
+(found 2026-09-17 by U38's round-trip test, which had to check).** `DesignationGrid` is
+`ITickable, IStateHashable, ISaveable, ISnapshotContributor` and it is in
+`ColonyWorld.SaveComponents` beside the construction grid — so designations are saved, hashed and
+round-trip. **Check a claim in this section against the code before repeating it**; that one
+outlived its own fix and would have sent somebody to build a thing that exists.
+
+**Mining collapses things** (U29, 2026-09-17) — this section said it did not, and the three places
+that deliberately declined to mark support dirty are all wired now. What is still missing is the
 *injury*: a colonist rides a floor down, keeps a memory of it and is otherwise unharmed, because
-there is no health model for `a-02`'s fall-damage number to act on.
+there is no health model for `a-02`'s fall-damage number to act on. There is no fog of war, so a
+sealed cavern is visible if the player scrolls the layer down.
 
-There is no fog of war, so a sealed cavern is visible if the player scrolls the layer down.
-
-**The save gap in this section was stale and is corrected**: the designation grid *is* an
-`ISaveable`, with `SaveKey = "odyssey.designations"`, and it is in `ColonyWorld.SaveComponents`
-beside the construction grid. Felled trees and mined cells travel in `GridSaveSection`, and what
-stands in a cell in `EdificeSaveSection` (below).
+**The scenario table is written twice** (U38): `OdysseyBootstrap.ScenarioFor` and
+`SessionRoundTripTests.ScenarioByName` each map two `defName`s to a `ScenarioDef` by hand, because
+nothing in `Odyssey.Sim` turns a scenario name back into one. It wants a real lookup. It is not
+urgent — a scenario acts only at tick zero, so a loaded world is unaffected by getting it wrong —
+and both copies say so out loud.
 
 **And it covers what stands on the world, since 2026-09-17** — one level down from OQ-50 and found
 the same way, by a test written to fail. `List<PlacedEdifice>` was owned by worldgen and by nothing

@@ -56,6 +56,7 @@ ui.need.beauty,Beauty,ui.need,M2,How the surroundings look to them
 ui.need.space,Space,ui.need,M2,Room to move. Cramped quarters grate
 ui.need.outdoors,Outdoors,ui.need,M2,"Time under open sky. Some need it, some dread it"
 ui.need.hygiene,Cleanliness,ui.need,M2,Filth underfoot and in the air
+ui.need.mood,Mood,ui.need,M2,How good this colonist feels overall
 ui.mood.content,Content,ui.mood,M2,Mood is comfortable
 ui.mood.strained,Strained,ui.mood,M2,Mood is falling. Watch this one
 ui.mood.breaking,Breaking,ui.mood,M2,At the threshold of a mental break
@@ -396,6 +397,9 @@ ui.terrain.water.deep,Deep Water,ui.terrain,M1,"Out of your depth. Colonists wil
 ui.terrain.rock,Rock,ui.terrain,M1,"Natural stone. Mined, not cleared"
 ui.terrain.subsoil,Subsoil,ui.terrain,M1,"The band between soil and rock. Cheap to dig"
 ui.terrain.bedrock,Bedrock,ui.terrain,M1,"The floor of the world. Deliberately punitive to mine"
+ui.terrain.packedgravel,Packed Gravel,ui.terrain,M3,"Stony ground, packed hard. Firm footing, poor soil"
+ui.terrain.tree.conifer,Conifer,ui.terrain,M3,"An evergreen of the meadow. Chopped for wood"
+ui.terrain.tree.broadleaf,Broadleaf,ui.terrain,M3,"A broad-crowned tree of the meadow. Chopped for wood"
 ui.settings.panel,Settings,ui.settings,M1,"What the game does, not what the colony does"
 ui.settings.graphics,Graphics,ui.settings,M1,"How the world is drawn. None of it reaches the simulation"
 ui.settings.interface,Interface,ui.settings,M1,"How the interface itself is drawn and how large it is"
@@ -429,10 +433,24 @@ ui.keys.build,Build palette,ui.keys,M3,"Open and close the Build palette"
 ui.keys.developer,Developer overlay,ui.keys,M3,"Show the frame-time and draw-call readout"
 ui.settings.audio,Audio,ui.settings,M3,"How loud each part of the game is. Stored on the machine, in decibels"
 ui.settings.camspeed,Camera speed,ui.settings,M3,"How fast the camera pans and zooms, as a share of its tuned speed"
+ui.settings.buildlayout,Build palette layout,ui.settings,M3,"Which of the three shapes the Build palette takes: rows, rail or bar"
 ui.settings.developer,Developer overlay,ui.settings,M3,"The frame-time and draw-call readout, kept on the machine between sessions"
-ui.settings.exit,Exit game,ui.settings,M3,"Leave. Nothing is saved yet, so the row asks before it goes"
+ui.settings.exit,Exit game,ui.settings,M3,"Leave the game. The row asks twice, because leaving is not undoable"
 ui.settings.volume.master,Master volume,ui.settings,M3,"Everything at once"
 ui.settings.volume.music,Music volume,ui.settings,M3,"What plays under the game"
 ui.settings.volume.ambience,Ambience volume,ui.settings,M3,"The sound of the place itself"
 ui.settings.volume.effects,Effects volume,ui.settings,M3,"Axes, picks and the noises of work"
 ui.settings.volume.alerts,Alerts volume,ui.settings,M3,"What asks for attention"
+ui.session.newgame,New game,ui.session,MS,"Start a colony on a fresh board"
+ui.session.load,Load,ui.session,MS,"Open a saved colony. The list reads each file's header, never its body"
+ui.session.save,Save,ui.session,MS,"Write this colony over the save it came from. Names one the first time"
+ui.session.saveas,Save as,ui.session,MS,"Write this colony to a save of its own, leaving the one it came from alone"
+ui.session.quittomenu,Quit to main menu,ui.session,MS,"Put this colony down and go back to the start screen"
+ui.prompt.savename,Name this save,ui.prompt,MS,"What to call it. The name is the file, so two saves of one name are one save"
+ui.prompt.overwrite,Overwrite,ui.prompt,MS,"Write over the save already using this name. It asks twice"
+ui.prompt.cancel,Cancel,ui.prompt,MS,"Leave without writing anything"
+ui.start.screen,Odyssey,ui.start,MS,"The screen before the game, and the only one that exists with no world built"
+ui.start.load,Load a colony,ui.start,MS,"Every save in the folder, newest first"
+ui.start.back,Back,ui.start,MS,"Back to the start screen"
+ui.start.empty,No saved colonies,ui.start,MS,"Nothing in the Saves folder yet"
+ui.start.unreadable,Cannot be opened,ui.start,MS,"A save this build does not understand. Listed rather than hidden, so a colony never simply disappears"

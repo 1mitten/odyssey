@@ -144,6 +144,18 @@ namespace Odyssey.Presentation.Ui
         int _stateSelected = int.MinValue;
         string? _stateSite;
 
+        // The pile count, held beside the site line above for the same reason: the state line is
+        // interpolated, so it is rebuilt only when a value it quotes has moved.
+        int _stateStack = int.MinValue;
+
+        // What the avatar was last keyed with, so a tile whose answer changed under the selection
+        // — a face mined through, a tree felled — swaps its icon without rebuilding the pane.
+        string _inspectAvatarKey = string.Empty;
+
+        // ---- the tile readout's rows, built once and updated in place
+        VisualElement? _cellRowsGrid;
+        readonly List<CellRowView> _cellRows = new List<CellRowView>();
+
         // ---- command bar (A8)
         VisualElement _barRow = null!;
         VisualElement _bar = null!;
@@ -158,12 +170,8 @@ namespace Odyssey.Presentation.Ui
 
         // ---- panels over the board
         VisualElement _buildPanel = null!;
-        VisualElement _buildTools = null!;
-        VisualElement _buildMaterials = null!;
 
         /// <summary>The always-on row under the palette. See <see cref="PaletteTools.Pinned"/>.</summary>
-        VisualElement _buildPinned = null!;
-        int _buildCategory = -1;
         VisualElement _settingsPanel = null!;
         VisualElement _interfaceSection = null!;
         VisualElement _graphicsSection = null!;
@@ -176,6 +184,7 @@ namespace Odyssey.Presentation.Ui
         readonly Dictionary<SettingsTab, Label> _settingTabs = new();
         readonly Dictionary<int, Label> _scaleRungs = new();
         readonly Dictionary<int, Label> _cameraRungs = new();
+        readonly Dictionary<BuildPaletteLayout, Label> _layoutRungs = new();
         readonly Dictionary<SettingsBus, FaderView> _busFaders = new();
         readonly Dictionary<HotkeyAction, KeyRowView> _keyRows = new();
 
@@ -198,6 +207,7 @@ namespace Odyssey.Presentation.Ui
         /// <summary>The command-bar Build cap and its item, so a rebind can move the legend
         /// with the key it names.</summary>
         Label _buildCap = null!;
+        IconBadge? _buildIcon;
         VisualElement _buildItem = null!;
         string _buildTooltipLabel = "";
 
@@ -271,7 +281,7 @@ namespace Odyssey.Presentation.Ui
         sealed class NeedView
         {
             public VisualElement Root = null!;
-            public VisualElement Swatch = null!;
+            public IconBadge Icon = null!;
             public Label Name = null!;
             public Label Value = null!;
             public VisualElement Fill = null!;
@@ -294,6 +304,20 @@ namespace Odyssey.Presentation.Ui
             public int LastLevel = int.MinValue;
             public int LastPassion = int.MinValue;
             public bool LastLive;
+        }
+
+        /// <summary>
+        /// One fact of the tile readout: the label in its fixed column, the value beside it.
+        /// Held like a skill row — built once, updated in place, its last strings cached so a
+        /// refresh that says the same thing writes nothing.
+        /// </summary>
+        sealed class CellRowView
+        {
+            public VisualElement Root = null!;
+            public Label Name = null!;
+            public Label Value = null!;
+            public string LastName = string.Empty;
+            public string LastValue = string.Empty;
         }
 
         void Awake()
@@ -357,11 +381,33 @@ namespace Odyssey.Presentation.Ui
             BuildPalette();
             BuildSettings();
 
+            // B18, last, so it is the top-most element in the tree and its scrim covers everything
+            // above. Built whether or not a session exists, because the state it belongs to is the
+            // one where none does.
+            BuildStartScreen();
+
+            // After it, so the naming prompt is above the start screen in the tree — it is raised
+            // from in game today, but the two are both modals and the one raised last should win.
+            BuildSavePrompt();
+
             _hud.RegisterCallback<GeometryChangedEvent>(_ => OnResized());
+
+            // A session coming or going is the one thing that decides whether the start screen is
+            // on screen, so it is driven by the event rather than polled: Update returns early
+            // with no world, which is exactly when the start screen has to be visible.
+            _boot!.SessionChanged += OnSessionChanged;
+            OnSessionChanged();
         }
 
         void OnDestroy()
         {
+            if (_boot != null)
+            {
+                _boot.SessionChanged -= OnSessionChanged;
+                // The preferences outlive every session and this component, so a subscription left
+                // on them is a leak that survives the scene.
+                _boot.Preferences.Changed -= OnPreferencesChanged;
+            }
             Detach();
             if (_topRamp != null) DestroyImmediate(_topRamp);
             if (_bottomRamp != null) DestroyImmediate(_bottomRamp);
@@ -383,12 +429,19 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.TabChanged += OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged += OnUiScaleChanged;
             _directors.Settings.CameraSpeedChanged += OnCameraSpeedChanged;
+            _directors.Settings.BuildPaletteLayoutChanged += OnBuildLayoutChanged;
             _directors.Settings.DeveloperOverlayChanged += OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged += OnBusDbChanged;
             _directors.Settings.ExitChanged += OnExitChanged;
+            _directors.Settings.RowRequested += OnSessionRow;
             _directors.Hotkeys.BindingChanged += OnBindingChanged;
             _directors.Hotkeys.ListenChanged += OnListenChanged;
             _directors.Hotkeys.ConflictNoted += OnHotkeyConflict;
+
+            // The palette is a view of the designate director, so it cannot be built until there
+            // is one. Everything above this line is the shell catching up with state that already
+            // existed; this is the one thing that did not exist at all until now.
+            BindBuildPalette();
 
             // The panel may already disagree with the director by the time we get here: the
             // presenter seeds it from the scene and the screen and then lays stored preferences
@@ -397,6 +450,7 @@ namespace Odyssey.Presentation.Ui
             OnSettingsTabChanged(_directors.Settings.Tab);
             OnUiScaleChanged(_directors.Settings.UiScale);
             OnCameraSpeedChanged(_directors.Settings.CameraSpeed);
+            OnBuildLayoutChanged(_directors.Settings.BuildPaletteLayout);
             OnDeveloperOverlayChanged();
             foreach (SettingsBus bus in SettingsDirector.Buses) OnBusDbChanged(bus);
             OnExitChanged();
@@ -414,9 +468,11 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.TabChanged -= OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged -= OnUiScaleChanged;
             _directors.Settings.CameraSpeedChanged -= OnCameraSpeedChanged;
+            _directors.Settings.BuildPaletteLayoutChanged -= OnBuildLayoutChanged;
             _directors.Settings.DeveloperOverlayChanged -= OnDeveloperOverlayChanged;
             _directors.Settings.BusDbChanged -= OnBusDbChanged;
             _directors.Settings.ExitChanged -= OnExitChanged;
+            _directors.Settings.RowRequested -= OnSessionRow;
             _directors.Hotkeys.BindingChanged -= OnBindingChanged;
             _directors.Hotkeys.ListenChanged -= OnListenChanged;
             _directors.Hotkeys.ConflictNoted -= OnHotkeyConflict;
@@ -473,9 +529,6 @@ namespace Odyssey.Presentation.Ui
             return hit != null && hit != _hud;
         }
 
-        /// <summary>Whether the Build palette is open, for whoever owns the Escape key.</summary>
-        public bool BuildPaletteOpen => _buildPanel != null && _buildPanel.style.display == DisplayStyle.Flex;
-
         /// <summary>Close the Build palette. The Escape half, called by <c>SettingsPresenter</c>.</summary>
         public void CloseBuildPalette() => SetBuildPalette(false);
 
@@ -522,6 +575,7 @@ namespace Odyssey.Presentation.Ui
                 RefreshStores();
                 RefreshAlerts();
                 RefreshSpeed();
+                RefreshBuildPalette();
             }
             if (_slow >= SlowBucketSeconds)
             {
@@ -649,7 +703,12 @@ namespace Odyssey.Presentation.Ui
             DesignateDirector? tool = _directors?.Designate;
             DesignateTool armed = tool?.Tool ?? DesignateTool.None;
 
-            if (armed == DesignateTool.None)
+            // Not while the Build palette is open. The banner floats in the middle of the screen
+            // saying what is armed, and the open palette says the same thing in its own header,
+            // in the armed tool's colour, a few pixels away — two labels about one tool, one of
+            // them over the panel that set it. The banner is for the player who armed something
+            // and then closed the palette, which is the case it was written for.
+            if (armed == DesignateTool.None || BuildPaletteOpen)
             {
                 _armedBanner.style.display = DisplayStyle.None;
                 _armedFor = DesignateTool.None;

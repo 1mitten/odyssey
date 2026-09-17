@@ -375,5 +375,66 @@ namespace Odyssey.Tests.Presentation
             Assert.That(SlicePicker.Pick(DownAt(4, 4), world.Model, 1, slice, out CellRef roofed), Is.True);
             Assert.That(roofed, Is.EqualTo(new CellRef(4, 4, 2)));
         }
+
+        // ---- water ------------------------------------------------------------------------
+
+        /// <summary>
+        /// Water fills its cell but is not solid, so a click on a pond reaches the bed beneath it
+        /// and the block-below rule would answer with rock the player cannot see. The water claims
+        /// the click (owner, 2026-09-17: a water tile did not tell him it was water — this is the
+        /// picking half; the naming half is the cell detail the pane reads).
+        /// </summary>
+        [Test]
+        public void WaterIsPickedAsTheWaterNotAsTheBedBeneathIt()
+        {
+            // A pond in a channel: solid bed at layer 0, shallow water standing in the cell above.
+            var world = new RenderTestWorld(8, 8, 4)
+                .Solid(4, 4, 0, NaturalContent.TerrainSubsoil)
+                .Surface(4, 4, 1, NaturalContent.TerrainShallowWater)
+                .Publish();
+
+            bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, activeLayer: 1, out CellRef cell);
+
+            Assert.That(hit, Is.True, "the water's own floor is standable, so the pick must resolve");
+            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 1)),
+                "the water is drawn filling the cell; it is the water the player clicked");
+        }
+
+        [Test]
+        public void DeepWaterIsPickedAsTheWaterToo()
+        {
+            var world = new RenderTestWorld(8, 8, 4)
+                .Solid(4, 4, 0, NaturalContent.TerrainSubsoil)
+                .Surface(4, 4, 1, NaturalContent.TerrainDeepWater)
+                .Publish();
+
+            bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, activeLayer: 1, out CellRef cell);
+
+            Assert.That(hit, Is.True);
+            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 1)),
+                "impassable water is still water, and still the thing that was clicked");
+        }
+
+        /// <summary>
+        /// A slab over water claims the click before the water can, which today is the same cell
+        /// either way — the difference is what the pane then names, a bridge being walked on
+        /// rather than waded through. Pinned here so the water rule can never be moved ahead of
+        /// the slab rule and quietly start answering bridges with water.
+        /// </summary>
+        [Test]
+        public void ASlabOverWaterIsPickedAsTheSlab()
+        {
+            var world = new RenderTestWorld(8, 8, 4)
+                .Solid(4, 4, 0, NaturalContent.TerrainSubsoil)
+                .Surface(4, 4, 1, NaturalContent.TerrainShallowWater)
+                .Slab(4, 4, 1, CoreContent.StuffConcrete)
+                .Publish();
+
+            bool hit = SlicePicker.Pick(DownAt(4, 4), world.Model, activeLayer: 1, out CellRef cell);
+
+            Assert.That(hit, Is.True);
+            Assert.That(cell, Is.EqualTo(new CellRef(4, 4, 1)),
+                "the slab is drawn in this cell and owns its floor, water below it or not");
+        }
     }
 }

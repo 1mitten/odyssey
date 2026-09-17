@@ -224,5 +224,52 @@ namespace Odyssey.Tests.Presentation
             Assert.That(candidates, Is.GreaterThan(1000), "the meadow is most of the board");
             Assert.That(wrong, Is.Zero, "a click on open ground must give the ground block");
         }
+
+        /// <summary>
+        /// Every pond and stream on the played board, clicked straight down. The answer must be
+        /// the water cell itself — the pane's whole water readout hangs off the pick being the
+        /// water — and the single-layer control, which cannot leave the opening layer, must miss
+        /// every one of them (owner, 2026-09-17: a water tile did not tell him it was water).
+        /// </summary>
+        [Test]
+        public void EveryPondAnswersWithTheWaterAndNotTheBedBeneathIt()
+        {
+            using Board board = Generate();
+
+            int candidates = 0, wrong = 0, controlWrong = 0;
+
+            for (int z = 0; z < Size; z++)
+            for (int x = 0; x < Size; x++)
+            {
+                int water = -1;
+                for (int y = Layers - 1; y >= 0; y--)
+                    if (NaturalContent.IsWater(board.Grid.Terrain[board.Size.Index(x, z, y)]))
+                    { water = y; break; }
+                if (water < 0) continue;
+                candidates++;
+
+                var target = new CellRef(x, z, water);
+                Ray ray = StraightDownAt(x, z);
+
+                if (!SlicePicker.Pick(ray, board.Model, board.ActiveLayer, board.Slice, out CellRef got)
+                    || !got.Equals(target))
+                    wrong++;
+
+                // The control: the active-layer-only form cannot reach a channel cut below the
+                // opening layer, so it hands back the bed or nothing, never the water.
+                if (!SlicePicker.Pick(ray, board.Model, board.ActiveLayer, out CellRef old)
+                    || !old.Equals(target))
+                    controlWrong++;
+            }
+
+            Console.WriteLine(
+                $"[Picker] water: {candidates:N0} water columns. Banded: {wrong} wrong. " +
+                $"Single-layer control: {controlWrong} not the water.");
+
+            Assert.That(candidates, Is.GreaterThan(0), "the played board has streams and ponds");
+            Assert.That(wrong, Is.Zero, "a click on water must give the water cell");
+            Assert.That(controlWrong, Is.EqualTo(candidates),
+                "the control searches the opening layer only and cannot reach the water");
+        }
     }
 }

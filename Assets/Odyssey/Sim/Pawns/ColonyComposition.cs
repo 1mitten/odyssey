@@ -108,6 +108,10 @@ namespace Odyssey.Sim.Pawns
                 .AddTickable(_ => new SkillSystem(pawns))
                 .AddTickable(_ => pawns.Pawns)
                 .AddSnapshotContributor(pawns.Pawns)
+                // The world's own answer to "what is this cell", beside the pawn registry's
+                // answer to "who is here". Every colony gets it, so a click is answered in any
+                // build rather than the ones that remembered to attach the question.
+                .AddSnapshotContributor(new CellDetailContributor(pawns.Cells, edifices))
                 .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden)
                 // The one command that names a colonist rather than only a cell. It belongs to the
                 // pipeline because starting and ending jobs is what the pipeline is, and because a

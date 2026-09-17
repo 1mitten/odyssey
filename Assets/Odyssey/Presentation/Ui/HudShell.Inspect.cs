@@ -146,12 +146,14 @@ namespace Odyssey.Presentation.Ui
             _inspect.Refresh(world.Views.Current);
 
             // The structure is rebuilt only when the subject changes; values update in place, so a
-            // refresh allocates nothing but the few strings it shows.
+            // refresh allocates nothing but the few strings it shows. A cell's signature carries
+            // its layer as well as its position, because "at 78, 59" names a column and a click
+            // can reach several cells of it.
             string signature =
                 _inspect.Subject + ":" +
                 (_inspect.Subject == InspectSubject.Colonist ? _inspect.Pawn.ToString()
                  : _inspect.Subject == InspectSubject.Item ? _inspect.Thing.ToString()
-                 : _inspect.Position);
+                 : _inspect.Position + ":" + _inspect.Layer);
             if (signature != _inspectBuiltFor)
             {
                 BuildInspectBody();
@@ -164,6 +166,17 @@ namespace Odyssey.Presentation.Ui
             _tombReason.style.display = _inspect.Tombstoned ? DisplayStyle.Flex : DisplayStyle.None;
 
             HudText.Set(_inspectTitle, _inspect.Title, HudTextRole.Name);
+
+            // The avatar follows the answer rather than the click: a tile whose face is mined
+            // through, or a pile that changes hands, swaps its icon without a rebuild.
+            string avatarKey = _inspect.Subject == InspectSubject.Colonist ? "ui.pawn.colonist"
+                : _inspect.Subject == InspectSubject.Item ? _inspect.ItemIconKey
+                : _inspect.CellIconKey;
+            if (avatarKey != _inspectAvatarKey)
+            {
+                _inspectAvatarKey = avatarKey;
+                _inspectAvatar.SetKey(avatarKey);
+            }
 
             // The two header lines are interpolated, and the pane refreshes fifteen times a
             // second, so they are rebuilt only when one of the values they quote has moved. The
@@ -182,14 +195,18 @@ namespace Odyssey.Presentation.Ui
                 HudText.Set(_inspectMeta, MetaLine(), HudTextRole.Meta);
             }
             if (!ReferenceEquals(_stateJob, _inspect.Job) || !ReferenceEquals(_stateBand, band) ||
-                _stateSelected != selected || !ReferenceEquals(_stateSite, _inspect.Site))
+                _stateSelected != selected || !ReferenceEquals(_stateSite, _inspect.Site) ||
+                _stateStack != _inspect.Stack)
             {
                 _stateSite = _inspect.Site;
                 _stateJob = _inspect.Job;
                 _stateBand = band;
                 _stateSelected = selected;
+                _stateStack = _inspect.Stack;
                 HudText.Set(_inspectState, StateLine(), HudTextRole.Meta);
             }
+
+            if (_inspect.Subject == InspectSubject.Cell) SyncCellRows();
 
             if (_inspect.Subject != InspectSubject.Colonist || _inspect.Tombstoned) return;
 
@@ -309,9 +326,7 @@ namespace Odyssey.Presentation.Ui
 
             float percent = Percent(thousandths);
             view.Fill.style.width = Length.Percent(percent);
-            Color band = HudTokens.NeedBand(thousandths);
-            view.Fill.style.backgroundColor = band;
-            view.Swatch.style.backgroundColor = band;
+            view.Fill.style.backgroundColor = HudTokens.NeedBand(thousandths);
 
             // A need moves by fractions of a per cent between refreshes, so the label is rebuilt
             // only when the whole number it prints has actually changed.
@@ -350,13 +365,18 @@ namespace Odyssey.Presentation.Ui
                         return count + $"{_inspect.Job} · mood {MoodBands.Band(_inspect.Mood)}";
                     }
                 case InspectSubject.Item:
-                    return "item on the ground";
+                    // A pile is counted, not just named — "27 in the pile" is the question a
+                    // click on a heap of wood is asking (owner, 2026-09-17). A lone thing has no
+                    // count worth saying, and says what it is doing instead.
+                    return _inspect.Stack > 1
+                        ? _inspect.Stack + " in the pile"
+                        : "item on the ground";
                 case InspectSubject.Cell:
-                    // A site says what it is waiting for or how much longer; bare ground still
-                    // has nothing to say, and says so rather than pretending.
-                    return _inspect.Site.Length > 0
-                        ? _inspect.Site
-                        : "cell readout arrives with cell inspection";
+                    // A site is the one thing a cell still says in a sentence — what it is
+                    // waiting for, or how much longer. Every other fact the tile has is a row
+                    // below in its own column, and the state line stays empty rather than
+                    // repeating any of them.
+                    return _inspect.Site;
                 default:
                     return string.Empty;
             }
@@ -368,8 +388,10 @@ namespace Odyssey.Presentation.Ui
             _needs.Clear();
             _skills.Clear();
             _tabChips.Clear();
+            _cellRows.Clear();
             _needsGrid = null;
             _skillsGrid = null;
+            _cellRowsGrid = null;
             _needRows = 0;
 
             // Nothing selected: no panel at all (owner, 2026-09-16), and this is the HUD's resting
@@ -386,15 +408,20 @@ namespace Odyssey.Presentation.Ui
 
             _inspectPanel.style.display = DisplayStyle.Flex;
 
+            // The tile readout and a selected pile take a column; a colonist takes a band. The
+            // pane is the same panel either way — one class says which shape it is standing in
+            // (owner, 2026-09-17: the tile window at half width, with its facts in rows).
+            _inspectPanel.EnableInClassList("inspect--narrow",
+                _inspect.Subject == InspectSubject.Cell || _inspect.Subject == InspectSubject.Item);
+
             // ---- header: avatar, name and its two lines, then the actions on the right
             var header = new VisualElement();
             header.AddToClassList("inspect__hdr");
 
-            _inspectAvatar = new IconBadge(
-                _inspect.Subject == InspectSubject.Colonist ? "ui.pawn.colonist"
-                : _inspect.Subject == InspectSubject.Item ? "ui.res.meal"
-                : "ui.overlay.zones",
-                IconBadge.AvatarSize);
+            _inspectAvatarKey = _inspect.Subject == InspectSubject.Colonist ? "ui.pawn.colonist"
+                : _inspect.Subject == InspectSubject.Item ? _inspect.ItemIconKey
+                : _inspect.CellIconKey;
+            _inspectAvatar = new IconBadge(_inspectAvatarKey, IconBadge.AvatarSize);
             _inspectAvatar.Inherit(HudTokens.TextPrimary);
             header.Add(_inspectAvatar);
 
@@ -437,7 +464,6 @@ namespace Odyssey.Presentation.Ui
             {
                 var strip = new VisualElement();
                 strip.AddToClassList("inspect__tabs");
-                _tabChips.Clear();
                 for (int i = 0; i < _inspect.Tabs.Count; i++)
                 {
                     InspectTab tab = _inspect.Tabs[i];
@@ -459,9 +485,9 @@ namespace Odyssey.Presentation.Ui
 
                 var grid = new VisualElement();
                 grid.AddToClassList("needs");
-                _needs.Add(Need(grid, "Food"));
-                _needs.Add(Need(grid, "Rest"));
-                _needs.Add(Need(grid, "Mood"));
+                _needs.Add(Need(grid, "Food", "ui.need.food"));
+                _needs.Add(Need(grid, "Rest", "ui.need.rest"));
+                _needs.Add(Need(grid, "Mood", "ui.need.mood"));
                 _needRows = (_needs.Count + 1) / 2;
                 _needsGrid = grid;
                 _inspectBody.Add(grid);
@@ -475,10 +501,68 @@ namespace Odyssey.Presentation.Ui
                 ShowActiveTab();
             }
 
+            if (_inspect.Subject == InspectSubject.Cell)
+            {
+                // The tile's facts, one row each. Rows are added by SyncCellRows as the answer
+                // arrives and the facts change, so the pane never rebuilds its tree for a value.
+                _cellRowsGrid = new VisualElement();
+                _cellRowsGrid.AddToClassList("inspect__rows");
+                _inspectBody.Add(_cellRowsGrid);
+            }
+
             _tombReason = HudText.Make("no longer present — the pane keeps last-known values",
                 HudTextRole.Meta, ussClass: "inspect__reason");
             _tombReason.style.display = DisplayStyle.None;
             _inspectBody.Add(_tombReason);
+        }
+
+        /// <summary>
+        /// Bring the readout rows to what the model holds: one element per fact, its label in the
+        /// fixed column and its value beside it, written only when the words have moved.
+        ///
+        /// <para>Rows are added and removed rather than rebuilt — a tile held while a face is cut
+        /// changes one number once a second, and the pane's own rule is that structure is built
+        /// when the subject changes and never for a value.</para>
+        /// </summary>
+        void SyncCellRows()
+        {
+            if (_cellRowsGrid == null) return;
+
+            while (_cellRows.Count < _inspect.CellRows.Count)
+            {
+                var view = new CellRowView();
+
+                view.Root = new VisualElement();
+                view.Root.AddToClassList("inspect__row");
+
+                view.Name = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__rowname");
+                view.Value = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "inspect__rowvalue");
+                view.Root.Add(view.Name);
+                view.Root.Add(view.Value);
+                _cellRowsGrid.Add(view.Root);
+                _cellRows.Add(view);
+            }
+            while (_cellRows.Count > _inspect.CellRows.Count)
+            {
+                _cellRowsGrid.Remove(_cellRows[_cellRows.Count - 1].Root);
+                _cellRows.RemoveAt(_cellRows.Count - 1);
+            }
+
+            for (int i = 0; i < _cellRows.Count; i++)
+            {
+                CellRowView view = _cellRows[i];
+                InspectRow row = _inspect.CellRows[i];
+                if (view.LastName != row.Name)
+                {
+                    view.LastName = row.Name;
+                    HudText.Set(view.Name, row.Name, HudTextRole.Meta);
+                }
+                if (view.LastValue != row.Value)
+                {
+                    view.LastValue = row.Value;
+                    HudText.Set(view.Value, row.Value, HudTextRole.Meta);
+                }
+            }
         }
 
         VisualElement ActionButton(InspectCommand command)
@@ -494,7 +578,7 @@ namespace Odyssey.Presentation.Ui
             return button;
         }
 
-        static NeedView Need(VisualElement grid, string name)
+        static NeedView Need(VisualElement grid, string name, string iconKey)
         {
             var view = new NeedView();
 
@@ -503,11 +587,11 @@ namespace Odyssey.Presentation.Ui
 
             var line = new VisualElement();
             line.AddToClassList("need__line");
-            view.Swatch = new VisualElement();
-            view.Swatch.AddToClassList("need__swatch");
+            view.Icon = new IconBadge(iconKey, IconBadge.RowSize);
+            view.Icon.Inherit(HudTokens.TextMeta);
             view.Name = HudText.Make(name, HudTextRole.Body, ussClass: "need__name");
             view.Value = HudText.Make(string.Empty, HudTextRole.Meta, numeric: true, "need__value");
-            line.Add(view.Swatch);
+            line.Add(view.Icon);
             line.Add(view.Name);
             line.Add(view.Value);
             view.Root.Add(line);

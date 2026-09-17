@@ -149,10 +149,10 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#buildings">Buildings and orders<b>81</b></a></li>
 <li><a href="#commands">Commands<b>48</b></a></li>
 <li><a href="#work">Work and skills<b>35</b></a></li>
-<li><a href="#colonists">Colonists<b>33</b></a></li>
+<li><a href="#colonists">Colonists<b>34</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>37</b></a></li>
-<li><a href="#world">World and interface<b>77</b></a></li>
+<li><a href="#world">World and interface<b>80</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>29</b></a></li>
 </ul></nav>
 <main>
@@ -161,9 +161,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>437</b><i>named entries</i></div>
-<div class="stat"><b>265</b><i>with icon art</i></div>
-<div class="stat m"><b>172</b><i>no art yet</i></div>
+<div class="stat"><b>454</b><i>named entries</i></div>
+<div class="stat"><b>268</b><i>with icon art</i></div>
+<div class="stat m"><b>186</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -758,9 +758,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill low">low</span> manufactured</div>
 <div class="ms">M3</div>
 </div>
-<div class="row gap" id="ui.arch.tool.roof" data-hay="slab ui.arch.tool.roof an upper floor. goes on a wall or bridges out from one a roof or ceiling panel seen from below. central to the layer model" data-gap="1">
-<div class="nm">Slab<span class="k">ui.arch.tool.roof</span></div>
-<div class="dsc">An upper floor. Goes on a wall or bridges out from one<span class="need">Needs drawing: a roof or ceiling panel seen from below. Central to the layer model</span></div>
+<div class="row gap" id="ui.arch.tool.roof" data-hay="roof and floor above ui.arch.tool.roof roofs this layer and floors the next a roof or ceiling panel seen from below. central to the layer model" data-gap="1">
+<div class="nm">Roof and floor above<span class="k">ui.arch.tool.roof</span></div>
+<div class="dsc">Roofs this layer and floors the next<span class="need">Needs drawing: a roof or ceiling panel seen from below. Central to the layer model</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -1094,9 +1094,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">med</span> salvage gear</div>
 <div class="ms">M3</div>
 </div>
-<div class="row" id="ui.arch.tool.deckplate" data-hay="floor ui.arch.tool.deckplate laid on ground you already walk on " data-gap="0">
-<div class="nm">Floor<span class="k">ui.arch.tool.deckplate</span></div>
-<div class="dsc">Laid on ground you already walk on</div>
+<div class="row" id="ui.arch.tool.deckplate" data-hay="deck plate ui.arch.tool.deckplate metal flooring. fast to lay " data-gap="0">
+<div class="nm">Deck plate<span class="k">ui.arch.tool.deckplate</span></div>
+<div class="dsc">Metal flooring. Fast to lay</div>
 <div class="art"><span class="pill">high</span> manufactured</div>
 <div class="ms">M3</div>
 </div>
@@ -1677,7 +1677,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">33 entries</em></h2>
+<h2>Colonists <em class="count">34 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -1731,7 +1731,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="row" id="ui.need.food" data-hay="food ui.need.food how hungry this colonist is " data-gap="0">
 <div class="nm">Food<span class="k">ui.need.food</span></div>
 <div class="dsc">How hungry this colonist is</div>
-<div class="art"><span class="pill">high</span> food</div>
+<div class="art"><span class="pill">high</span> anatomy</div>
 <div class="ms">M2</div>
 </div>
 <div class="row" id="ui.need.rest" data-hay="rest ui.need.rest sleep debt " data-gap="0">
@@ -1774,6 +1774,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="nm">Cleanliness<span class="k">ui.need.hygiene</span></div>
 <div class="dsc">Filth underfoot and in the air</div>
 <div class="art"><span class="pill">med</span> salvage gear</div>
+<div class="ms">M2</div>
+</div>
+<div class="row" id="ui.need.mood" data-hay="mood ui.need.mood how good this colonist feels overall " data-gap="0">
+<div class="nm">Mood<span class="k">ui.need.mood</span></div>
+<div class="dsc">How good this colonist feels overall</div>
+<div class="art"><span class="pill">high</span> anatomy</div>
 <div class="ms">M2</div>
 </div>
 </div>
@@ -2307,7 +2313,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">77 entries</em></h2>
+<h2>World and interface <em class="count">80 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -2371,6 +2377,24 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="dsc">The floor of the world. Deliberately punitive to mine<span class="need">Needs drawing: a tile of dark, banded stone</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M1</div>
+</div>
+<div class="row gap" id="ui.terrain.packedgravel" data-hay="packed gravel ui.terrain.packedgravel stony ground, packed hard. firm footing, poor soil " data-gap="1">
+<div class="nm">Packed Gravel<span class="k">ui.terrain.packedgravel</span></div>
+<div class="dsc">Stony ground, packed hard. Firm footing, poor soil</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.tree.conifer" data-hay="conifer ui.terrain.tree.conifer an evergreen of the meadow. chopped for wood " data-gap="1">
+<div class="nm">Conifer<span class="k">ui.terrain.tree.conifer</span></div>
+<div class="dsc">An evergreen of the meadow. Chopped for wood</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
+<div class="row gap" id="ui.terrain.tree.broadleaf" data-hay="broadleaf ui.terrain.tree.broadleaf a broad-crowned tree of the meadow. chopped for wood " data-gap="1">
+<div class="nm">Broadleaf<span class="k">ui.terrain.tree.broadleaf</span></div>
+<div class="dsc">A broad-crowned tree of the meadow. Chopped for wood</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
 </div>
 </div>
 <h3 class="nsh">Weather</h3>
@@ -2568,22 +2592,22 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <h3 class="nsh">Tabs</h3>
 <div class="tbl">
 <div class="row head"><div>Name</div><div>What it is</div><div>Art</div><div class="ms">M</div></div>
-<div class="row gap" id="ui.tab.build" data-hay="build ui.tab.build build, dig and zone — the palette of placement tools " data-gap="1">
+<div class="row" id="ui.tab.build" data-hay="build ui.tab.build build, dig and zone — the palette of placement tools " data-gap="0">
 <div class="nm">Build<span class="k">ui.tab.build</span></div>
 <div class="dsc">Build, dig and zone — the palette of placement tools</div>
-<div class="art"><span class="pill no">no art</span></div>
+<div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M1</div>
 </div>
 <div class="row" id="ui.tab.work" data-hay="work ui.tab.work the priority grid " data-gap="0">
 <div class="nm">Work<span class="k">ui.tab.work</span></div>
 <div class="dsc">The priority grid</div>
-<div class="art"><span class="pill">med</span> action tiles</div>
+<div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M1</div>
 </div>
 <div class="row" id="ui.tab.schedule" data-hay="schedule ui.tab.schedule who does what, and when " data-gap="0">
 <div class="nm">Schedule<span class="k">ui.tab.schedule</span></div>
 <div class="dsc">Who does what, and when</div>
-<div class="art"><span class="pill">med</span> action tiles</div>
+<div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M1</div>
 </div>
 <div class="row" id="ui.tab.research" data-hay="research ui.tab.research the tree, and what is being worked on " data-gap="0">
@@ -2592,10 +2616,10 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M1</div>
 </div>
-<div class="row gap" id="ui.tab.colonists" data-hay="colonists ui.tab.colonists everyone, at a glance a group of people. blocked on the missing human figure" data-gap="1">
+<div class="row" id="ui.tab.colonists" data-hay="colonists ui.tab.colonists everyone, at a glance " data-gap="0">
 <div class="nm">Colonists<span class="k">ui.tab.colonists</span></div>
-<div class="dsc">Everyone, at a glance<span class="need">Needs drawing: a group of people. Blocked on the missing human figure</span></div>
-<div class="art"><span class="pill no">no art</span></div>
+<div class="dsc">Everyone, at a glance</div>
+<div class="art"><span class="pill">high</span> action tiles</div>
 <div class="ms">M1</div>
 </div>
 <div class="row" id="ui.tab.animals" data-hay="animals ui.tab.animals tame beasts and their training " data-gap="0">
@@ -2726,12 +2750,6 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M1</div>
 </div>
-<div class="row gap" id="ui.settings.cutaway" data-hay="cut away the ceiling ui.settings.cutaway see into rooms on this layer. off shows the floor above you " data-gap="1">
-<div class="nm">Cut away the ceiling<span class="k">ui.settings.cutaway</span></div>
-<div class="dsc">See into rooms on this layer. Off shows the floor above you</div>
-<div class="art"><span class="pill no">no art</span></div>
-<div class="ms">M3</div>
-</div>
 <div class="row gap" id="ui.settings.keys" data-hay="keys ui.settings.keys every key the game reads, and what each one may be changed to " data-gap="1">
 <div class="nm">Keys<span class="k">ui.settings.keys</span></div>
 <div class="dsc">Every key the game reads, and what each one may be changed to</div>
@@ -2756,15 +2774,21 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
+<div class="row gap" id="ui.settings.buildlayout" data-hay="build palette layout ui.settings.buildlayout which of the three shapes the build palette takes: rows, rail or bar " data-gap="1">
+<div class="nm">Build palette layout<span class="k">ui.settings.buildlayout</span></div>
+<div class="dsc">Which of the three shapes the Build palette takes: rows, rail or bar</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 <div class="row gap" id="ui.settings.developer" data-hay="developer overlay ui.settings.developer the frame-time and draw-call readout, kept on the machine between sessions " data-gap="1">
 <div class="nm">Developer overlay<span class="k">ui.settings.developer</span></div>
 <div class="dsc">The frame-time and draw-call readout, kept on the machine between sessions</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
-<div class="row gap" id="ui.settings.exit" data-hay="exit game ui.settings.exit leave. nothing is saved yet, so the row asks before it goes " data-gap="1">
+<div class="row gap" id="ui.settings.exit" data-hay="exit game ui.settings.exit leave the game. the row asks twice, because leaving is not undoable " data-gap="1">
 <div class="nm">Exit game<span class="k">ui.settings.exit</span></div>
-<div class="dsc">Leave. Nothing is saved yet, so the row asks before it goes</div>
+<div class="dsc">Leave the game. The row asks twice, because leaving is not undoable</div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -2987,7 +3011,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 437, "gaps": 172};</script>
+<script>window.WIKI={"total": 454, "gaps": 186};</script>
 <script>
 (function(){
   var D = window.WIKI;

@@ -77,7 +77,10 @@ namespace Odyssey.Presentation.Ui
             // Categorised: the command bar is the second and last place the spec allows an icon to
             // carry a colour of its own.
             var icon = new IconBadge(command.Key, IconBadge.BarSize, categorised: !command.Primary);
-            if (command.Primary) icon.Inherit(HudTokens.OnAccent);
+            // The primary cap's ink flips with its fill — accent on the outlined resting state,
+            // the dark on-accent ink once build mode fills it. MarkBuildMode does the flipping;
+            // this is only the starting value.
+            if (command.Primary) icon.Inherit(HudTokens.Accent);
             item.Add(icon);
 
             Label label = HudText.Make(command.Label, HudTextRole.Row, ussClass: "cmd__label");
@@ -95,6 +98,7 @@ namespace Odyssey.Presentation.Ui
             {
                 _buildCap = capLabel;
                 _buildItem = item;
+                _buildIcon = icon;
                 _buildTooltipLabel = command.Label;
             }
 
@@ -288,231 +292,6 @@ namespace Odyssey.Presentation.Ui
         /// <summary>Close the Menu popover. The Escape half, called by <c>SettingsPresenter</c>.</summary>
         public void CloseMenu() => ToggleMenu(false);
 
-        // ============================================================ A7 build palette
-
-        /// <summary>
-        /// Categories in catalogue order, each with a few of its tools — <see cref="PaletteTools"/>
-        /// owns the table, for the reason <see cref="HudCommands"/> owns the command bar's: it is
-        /// data, and the fast tier can see that assembly and cannot see this one.
-        /// </summary>
-        static (string key, string label, string[] tools)[] BuildCategories => PaletteTools.Categories;
-
-        /// <summary>
-        /// The palette, opened by the Build command and closed by Escape.
-        ///
-        /// <para>It used to be a column pinned to the left edge and permanently open, competing
-        /// with the stores panel for a column that could not hold both. As a transient panel over
-        /// the board it costs nothing when it is shut, which is most of the time.</para>
-        /// </summary>
-        void BuildPalette()
-        {
-            _buildPanel = Popover("build", "Build", () => SetBuildPalette(false), "build");
-
-            var cats = new VisualElement();
-            cats.AddToClassList("build__cats");
-
-            // The categories scroll: ten categories and their tools will outgrow any panel that
-            // has to share a screen, and a list too long for its panel should scroll rather than
-            // quietly lose its end.
-            var scroll = new ScrollView(ScrollViewMode.Vertical);
-            scroll.AddToClassList("build__scroll");
-            for (int i = 0; i < BuildCategories.Length; i++)
-            {
-                var (key, label, _) = BuildCategories[i];
-                int index = i;
-                VisualElement chip = PaletteChip(key, label);
-                chip.tooltip = label + " — placement tools arrive with M3";
-                chip.RegisterCallback<ClickEvent>(_ => SelectBuildCategory(index));
-                cats.Add(chip);
-            }
-            scroll.Add(cats);
-            _buildPanel.Add(scroll);
-
-            _buildTools = new VisualElement();
-            _buildTools.AddToClassList("build__tools");
-            _buildPanel.Add(_buildTools);
-
-            // Under the tools, and only while something made of a material is armed: a
-            // material is a property of the order being given, not a category of its own.
-            _buildMaterials = new VisualElement();
-            _buildMaterials.AddToClassList("build__materials");
-            _buildMaterials.style.display = DisplayStyle.None;
-            _buildPanel.Add(_buildMaterials);
-
-            // Under everything, always: the tools that belong to no category. Built once rather
-            // than rebuilt with the category, because the whole point of them is that they do not
-            // move when the category does.
-            BuildPinnedRow();
-
-            // Open on the first category rather than on an empty second group. The palette's whole
-            // shape is two groups, and one of them showing nothing until the player guesses that
-            // the chips above are clickable is a panel that has to be explained.
-            SelectBuildCategory(0);
-
-            _hud.Add(_buildPanel);
-        }
-
-        static VisualElement PaletteChip(string key, string label)
-        {
-            var chip = new VisualElement();
-            chip.AddToClassList("chip");
-            var icon = new IconBadge(key, IconBadge.BarSize);
-            icon.Inherit(HudTokens.TextMeta);
-            chip.Add(icon);
-            chip.Add(HudText.Make(label, HudTextRole.Row, ussClass: "chip__label"));
-            return chip;
-        }
-
-        void SetBuildPalette(bool open)
-        {
-            // One popover at a time. Two raised from the same bar would overlap each other over
-            // the buttons that raised them, and the player would have no way to tell which of the
-            // two the Escape they are about to press belongs to.
-            if (open) ToggleMenu(false);
-
-            _buildPanel.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
-            if (_barItems.Count > 0)
-            {
-                _barItems[0].EnableInClassList("cmd--on", open);
-                if (open) PlacePopover(_buildPanel, _barItems[0]);
-            }
-        }
-
-        /// <summary>What a wall may be made of, in the order the player meets them.</summary>
-        static readonly (int stuff, string key)[] BuildMaterials =
-        {
-            (StuffHandle.Wood, "ui.res.wood"),
-            (StuffHandle.Stone, "ui.res.stone"),
-        };
-
-        /// <summary>
-        /// The material row, shown only while a thing that is made of something is armed.
-        /// </summary>
-        void BuildMaterialRow()
-        {
-            _buildMaterials.Clear();
-            bool wanted = _directors != null && _directors.Designate.Tool == DesignateTool.Build;
-            _buildMaterials.style.display = wanted ? DisplayStyle.Flex : DisplayStyle.None;
-            if (!wanted) return;
-
-            _buildMaterials.Add(HudText.Make("MADE OF", HudTextRole.Meta));
-            foreach (var (stuff, key) in BuildMaterials)
-            {
-                VisualElement chip = PaletteChip(key, Registry.Label(key));
-                chip.EnableInClassList("chip--on", _directors!.Designate.Stuff == stuff);
-                int choice = stuff;
-                chip.RegisterCallback<ClickEvent>(_ =>
-                {
-                    if (_directors == null) return;
-                    _directors.Designate.ChooseStuff(choice);
-                    BuildMaterialRow();
-                });
-                _buildMaterials.Add(chip);
-            }
-        }
-
-        /// <summary>
-        /// The row that does not change with the category — Cancel, today, and only Cancel.
-        ///
-        /// <para>A player wants it while they are holding another tool, which is exactly when the
-        /// category row above is showing something else. See <see cref="PaletteTools.Pinned"/> for
-        /// why it is here instead of filed under Orders.</para>
-        /// </summary>
-        void BuildPinnedRow()
-        {
-            _buildPinned = new VisualElement();
-            _buildPinned.AddToClassList("build__pinned");
-
-            foreach (string key in PaletteTools.Pinned)
-            {
-                if (!PaletteTools.TryGet(key, out PaletteTool live)) continue;
-                VisualElement chip = PaletteChip(key, Registry.Label(key));
-                chip.tooltip = Registry.Label(key) + " — drag a box over the world";
-                chip.RegisterCallback<ClickEvent>(_ =>
-                {
-                    if (_directors == null) return;
-                    live.Arm(_directors.Designate);
-                    MarkArmedTool();
-                    // Arming an order puts any build tool down, so the material row goes with it.
-                    BuildMaterialRow();
-                });
-                _buildPinned.Add(chip);
-            }
-
-            _buildPanel.Add(_buildPinned);
-        }
-
-        /// <summary>
-        /// Light the chip for whatever is armed, so the palette and the world agree.
-        ///
-        /// <para>Each chip asks its own row whether it is the one being held. This used to be a
-        /// chain of key comparisons with one branch per live tool, written out a hundred lines away
-        /// from the table that armed them — two lists of the same tools, and when they drifted the
-        /// symptom was not a compile error but a chip that arms a tool and never lights, which
-        /// reads to a player as the click having missed.</para>
-        /// </summary>
-        void MarkArmedTool()
-        {
-            if (_directors == null || _buildCategory < 0) return;
-            DesignateDirector armed = _directors.Designate;
-
-            int at = 0;
-            foreach (string tool in BuildCategories[_buildCategory].tools)
-            {
-                bool on = PaletteTools.TryGet(tool, out PaletteTool live) && live.IsArmed(armed);
-                if (at < _buildTools.childCount) _buildTools[at].EnableInClassList("chip--on", on);
-                at++;
-            }
-
-            // The pinned row lights the same way. It is a separate walk because it is a separate
-            // row, and not marking it would leave the one chip that is always visible as the one
-            // chip that never says whether it is held.
-            at = 0;
-            foreach (string tool in PaletteTools.Pinned)
-            {
-                bool on = PaletteTools.TryGet(tool, out PaletteTool live) && live.IsArmed(armed);
-                if (at < _buildPinned.childCount) _buildPinned[at].EnableInClassList("chip--on", on);
-                at++;
-            }
-        }
-
-        void SelectBuildCategory(int index)
-        {
-            if (_buildCategory == index) return;
-            _buildCategory = index;
-
-            _buildTools.Clear();
-            foreach (string tool in BuildCategories[index].tools)
-            {
-                // The label is the registry's, never a two-letter sigil derived from the key: the
-                // acceptance criteria strike out every three-letter placeholder on the screen.
-                VisualElement chip = PaletteChip(tool, Registry.Label(tool));
-                if (PaletteTools.TryGet(tool, out PaletteTool live))
-                {
-                    chip.tooltip = Registry.Label(tool) + " — drag a box over the world";
-                    chip.RegisterCallback<ClickEvent>(_ =>
-                    {
-                        if (_directors == null) return;
-                        live.Arm(_directors.Designate);
-                        MarkArmedTool();
-                        // Only a thing made of something has a material row to refresh; the row
-                        // asks the table rather than this method knowing which tool that is.
-                        if (live.WantsMaterial) BuildMaterialRow();
-                    });
-                }
-                else
-                {
-                    chip.AddToClassList("chip--off");
-                    chip.tooltip = Registry.Label(tool) + " — placement tools arrive with M3";
-                }
-
-                _buildTools.Add(chip);
-            }
-
-            BuildMaterialRow();
-            MarkArmedTool();
-        }
-
         // ============================================================ B17 settings
 
         /// <summary>
@@ -562,18 +341,18 @@ namespace Odyssey.Presentation.Ui
             // setting, and the game menu it will one day belong to (B18) does not exist yet.
             // Two clicks, because nothing is saved and a settings panel is a place a player
             // reaches past for the close button.
-            _exitRow = new VisualElement();
-            _exitRow.AddToClassList("settings__row");
-            _exitRow.AddToClassList("settings__exit");
-            var exitIcon = new IconBadge(SettingsDirector.ExitKey, IconBadge.RowSize);
-            exitIcon.Inherit(HudTokens.TextMeta);
-            _exitRow.Add(exitIcon);
-            _exitLabel = HudText.Make(Registry.Label(SettingsDirector.ExitKey), HudTextRole.Row,
-                ussClass: "settings__label");
-            _exitRow.Add(_exitLabel);
-            _exitRow.tooltip = "Quits the game. Nothing is saved yet, so the row asks first";
-            _exitRow.RegisterCallback<ClickEvent>(_ => _directors?.Settings.RequestExit());
-            _settingsPanel.Add(_exitRow);
+            // Every session row, from the one table the start screen also builds from
+            // (SessionCommands). Four of them since U38: Save, Load, Quit to main menu, and the
+            // exit row that has been here since this panel had a way out at all. The hairline that
+            // sets them apart from the settings above belongs to the first of them, not to the
+            // exit row it used to belong to.
+            bool first = true;
+            foreach (SessionCommand command in SessionCommands.For(SessionContext.InGame))
+            {
+                VisualElement row = SessionRow(command, separated: first);
+                first = false;
+                _settingsPanel.Add(row);
+            }
 
             // The director opens on Interface, and the shell may never attach to a director at all
             // in a harness that builds no world. Showing every section at once is not a state
@@ -628,6 +407,7 @@ namespace Odyssey.Presentation.Ui
             _interfaceSection.Add(ladder);
 
             BuildCameraSpeedRow();
+            BuildLayoutRow();
             BuildDeveloperRow();
 
             _settingsPanel.Add(_interfaceSection);
@@ -665,6 +445,57 @@ namespace Odyssey.Presentation.Ui
                 int captured = percent;
                 rung.RegisterCallback<ClickEvent>(_ => _directors?.Settings.SetCameraSpeed(captured));
                 _cameraRungs[percent] = rung;
+                ladder.Add(rung);
+            }
+            _interfaceSection.Add(ladder);
+        }
+
+        /// <summary>
+        /// Which shape the Build palette takes.
+        ///
+        /// <para><b>The same control exists inside the palette's own header</b>, and both write
+        /// the one preference on <see cref="SettingsDirector"/>. It is here as well because a
+        /// three-icon switcher in a panel header is findable by someone who is already looking at
+        /// the panel and invisible to everyone else, and the layout is exactly the sort of choice
+        /// a player makes once, early, from the settings screen.</para>
+        ///
+        /// <para><b>A ladder, not the dropdown the specification asked for.</b> Three named
+        /// answers is what this panel's other two multiple choices already are — the interface
+        /// scale and the camera speed — and the argument written against those holds here: a
+        /// handful of honest answers rather than a control that hides two of the three until it is
+        /// opened.</para>
+        /// </summary>
+        void BuildLayoutRow()
+        {
+            var row = new VisualElement();
+            row.AddToClassList("settings__row");
+            row.AddToClassList("settings__row--static");
+            var icon = new IconBadge(SettingsDirector.BuildLayoutKey, IconBadge.RowSize);
+            icon.Inherit(HudTokens.TextMeta);
+            row.Add(icon);
+            row.Add(HudText.Make(Registry.Label(SettingsDirector.BuildLayoutKey), HudTextRole.Row,
+                ussClass: "settings__label"));
+            _interfaceSection.Add(row);
+
+            var ladder = new VisualElement();
+            ladder.AddToClassList("settings__ladder");
+            foreach (BuildPaletteLayout layout in BuildPaletteModel.Layouts)
+            {
+                // A name, not a figure, so this is the one ladder on the panel set in the reading
+                // face rather than the mono one.
+                Label rung = HudText.Make(BuildPaletteModel.LayoutName(layout), HudTextRole.Body,
+                    ussClass: "rung");
+                rung.tooltip = layout switch
+                {
+                    BuildPaletteLayout.Rows => "Bands across the screen. The default",
+                    BuildPaletteLayout.Rail => "Categories down a rail. Its height never changes",
+                    BuildPaletteLayout.Bar => "Two dense rows of icons. The least of the board hidden",
+                    _ => string.Empty,
+                };
+                BuildPaletteLayout chosen = layout;
+                rung.RegisterCallback<ClickEvent>(_ =>
+                    _directors?.Settings.SetBuildPaletteLayout(chosen));
+                _layoutRungs[layout] = rung;
                 ladder.Add(rung);
             }
             _interfaceSection.Add(ladder);
@@ -967,6 +798,12 @@ namespace Odyssey.Presentation.Ui
                 entry.Value.EnableInClassList("rung--on", entry.Key == percent);
         }
 
+        void OnBuildLayoutChanged(BuildPaletteLayout layout)
+        {
+            foreach (var entry in _layoutRungs)
+                entry.Value.EnableInClassList("rung--on", entry.Key == layout);
+        }
+
         void OnDeveloperOverlayChanged()
         {
             if (_directors == null) return;
@@ -993,13 +830,80 @@ namespace Odyssey.Presentation.Ui
             HudText.Set(view.Value, text, HudTextRole.Body);
         }
 
+        /// <summary>
+        /// One session row of the settings panel: Save, Load, Quit to main menu, Exit game.
+        ///
+        /// <para>Identical in construction to the start screen's rows, because they are rows of
+        /// the same table — the only difference is which context <see cref="SessionCommands"/> was
+        /// asked for. That is the whole of what "the two surfaces cannot drift apart" buys.</para>
+        /// </summary>
+        VisualElement SessionRow(SessionCommand command, bool separated)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("settings__row");
+            if (separated) row.AddToClassList("settings__exit");
+
+            var icon = new IconBadge(command.Key, IconBadge.RowSize);
+            icon.Inherit(HudTokens.TextMeta);
+            row.Add(icon);
+
+            Label label = HudText.Make(command.Label, HudTextRole.Row, ussClass: "settings__label");
+            row.Add(label);
+            row.tooltip = SessionTooltip(command);
+            row.RegisterCallback<ClickEvent>(_ => _directors?.Settings.Request(command.Key));
+
+            _sessionRows[command.Key] = (row, label);
+            if (command.Key == SettingsDirector.ExitKey)
+            {
+                _exitRow = row;
+                _exitLabel = label;
+            }
+            return row;
+        }
+
+        readonly Dictionary<string, (VisualElement Row, Label Label)> _sessionRows =
+            new Dictionary<string, (VisualElement, Label)>();
+
+        /// <summary>
+        /// What a session row says on hover. A literal, like every other tooltip in this shell —
+        /// the registry emits labels and not tooltips, and a tooltip is a sentence about what
+        /// happens rather than a name the owner maintains in the CSV.
+        /// </summary>
+        internal static string SessionTooltip(SessionCommand command)
+        {
+            string what = command.Key switch
+            {
+                SessionCommands.SaveKey => "Writes this colony to a file under Saves",
+                SessionCommands.LoadKey => "Opens another colony",
+                SessionCommands.QuitToMenuKey => "Puts this colony down and goes back to the start screen",
+                SessionCommands.QuitKey => "Leaves the game",
+                SessionCommands.NewGameKey => "Starts a colony on a fresh board",
+                _ => command.Label,
+            };
+
+            return command.AsksTwice ? what + ". It asks twice, because it cannot be undone" : what;
+        }
+
+        /// <summary>
+        /// The armed row says what it is waiting for, and every other one goes back to its name.
+        ///
+        /// <para>A loop over all four rather than a line about the exit row, because the director
+        /// holds one armed key across the whole panel: pressing Load while Quit is armed has to
+        /// stand Quit down, and a refresh that only knew about one row would leave the other
+        /// saying "Click again" about a question nobody is asking any more.</para>
+        /// </summary>
         void OnExitChanged()
         {
             if (_directors == null) return;
-            bool armed = _directors.Settings.ExitArmed;
-            _exitRow.EnableInClassList("settings__exit--armed", armed);
-            HudText.Set(_exitLabel, armed ? "Quit? Click again" : Registry.Label(SettingsDirector.ExitKey),
-                HudTextRole.Row);
+            string? armed = _directors.Settings.ArmedRow;
+
+            foreach (KeyValuePair<string, (VisualElement Row, Label Label)> pair in _sessionRows)
+            {
+                bool on = pair.Key == armed;
+                pair.Value.Row.EnableInClassList("row--armed", on);
+                HudText.Set(pair.Value.Label,
+                    on ? "Click again to confirm" : Registry.Label(pair.Key), HudTextRole.Row);
+            }
         }
 
         void OnBindingChanged(HotkeyAction action)

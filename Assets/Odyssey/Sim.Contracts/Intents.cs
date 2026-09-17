@@ -38,6 +38,19 @@ namespace Odyssey.Sim.Contracts
         /// <c>Job.PlayerForced</c> set.</para>
         /// </summary>
         ForceJob,
+
+        /// <summary>
+        /// Ask the world to publish detail about one cell: <see cref="Intent.Cell"/> is the cell,
+        /// and <c>A</c> = -1 withdraws the question.
+        ///
+        /// <para><b>A question, not a command.</b> It changes no state the simulation owns — not
+        /// a cell, not a pawn, nothing saved and nothing hashed — which is what lets a paused
+        /// world answer it: the composition root can apply view intents and republish without
+        /// spending a tick, where a real command must wait for a tick boundary. A re-ask of the
+        /// cell already asked is quietly fine rather than a rejection; clicking the same ground
+        /// twice is ordinary play, not an error to surface.</para>
+        /// </summary>
+        QueryCell,
     }
 
     /// <summary>
@@ -159,6 +172,41 @@ namespace Odyssey.Sim.Contracts
                 if (reason != IntentRejection.None) _rejected.Add(new RejectedIntent(intent, reason));
             }
             _pending.Clear();
+        }
+
+        /// <summary>Is any intent of this kind waiting? A scan of a list that is empty almost always.</summary>
+        public bool HasPending(IntentKind kind)
+        {
+            for (int i = 0; i < _pending.Count; i++)
+                if (_pending[i].Kind == kind) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Drain only the intents the predicate claims, leaving the rest pending in submission
+        /// order.
+        ///
+        /// <para><b>This exists for view intents, and nothing else should use it.</b> A paused
+        /// world never reaches a tick boundary, so a question queued as an intent would go
+        /// unanswered exactly when the player is most likely to be asking it — inspecting a world
+        /// they have stopped. A view intent changes no state the simulation owns, so applying it
+        /// outside a tick cannot desync anything a state hash can see; a command must never come
+        /// through here, because a command applied off-boundary is a replay that cannot be
+        /// reproduced.</para>
+        /// </summary>
+        public void DrainWhere(Func<Intent, bool> claim, Func<Intent, IntentRejection> handler)
+        {
+            if (claim == null) throw new ArgumentNullException(nameof(claim));
+            if (handler == null) throw new ArgumentNullException(nameof(handler));
+            for (int i = 0; i < _pending.Count; i++)
+            {
+                if (!claim(_pending[i])) continue;
+                var intent = _pending[i];
+                _pending.RemoveAt(i);
+                i--;
+                var reason = handler(intent);
+                if (reason != IntentRejection.None) _rejected.Add(new RejectedIntent(intent, reason));
+            }
         }
 
         /// <summary>Rejections since the last time they were taken. Presentation surfaces these.</summary>

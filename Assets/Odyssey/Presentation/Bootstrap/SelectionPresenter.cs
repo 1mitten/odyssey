@@ -94,6 +94,19 @@ namespace Odyssey.Presentation.Bootstrap
             _lastClickAt = Time.unscaledTime;
             _lastClickPawn = under;
 
+            // The pane's question is asked and answered BEFORE the selection changes, because the
+            // selection's own handlers read the frame the moment it does: republishing with the
+            // answer already in it is what stops the pane painting one refresh of "Ground" — or
+            // the previous tile's facts — before the real ones arrive (owner, 2026-09-17: the
+            // readout visibly skipped to something else before settling). Republishing between
+            // ticks is safe for exactly the reason a question is safe: it changes no state the
+            // simulation owns, publishes over the same settled world, and moves no counter.
+            if (picked.HasValue)
+                world.Intents.Submit(new Intent(IntentKind.QueryCell, picked.Value));
+            else
+                world.Intents.Submit(new Intent(IntentKind.QueryCell, default, -1));
+            world.RepublishViews();
+
             directors.Selection.Pick(picked, under, world.Views.Current, additive: shift);
         }
 

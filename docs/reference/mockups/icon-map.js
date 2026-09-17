@@ -38,11 +38,11 @@ window.ICON_SHEETS = {
   "rows": null
  },
  "06": {
-  "cell_h": null,
-  "cell_w": null,
-  "cols": null,
+  "cell_h": 32,
+  "cell_w": 32,
+  "cols": 8,
   "file": "06-action-tiles.png",
-  "rows": null
+  "rows": 7
  },
  "07": {
   "cell_h": null,
@@ -1098,10 +1098,10 @@ window.ICON_MAP = {
  },
  "ui.need.food": {
   "c": null,
-  "d": "bread loaf",
+  "d": "raw meat slab \u2014 the owner's own icon, shared with ui.res.meat",
   "q": "high",
   "r": null,
-  "s": "02"
+  "s": "07"
  },
  "ui.need.hygiene": {
   "c": null,
@@ -1109,6 +1109,13 @@ window.ICON_MAP = {
   "q": "med",
   "r": null,
   "s": "08"
+ },
+ "ui.need.mood": {
+  "c": null,
+  "d": "person silhouette \u2014 the owner's own icon, not sheet 07's cell",
+  "q": "high",
+  "r": null,
+  "s": "07"
  },
  "ui.need.outdoors": {
   "c": null,
@@ -1119,7 +1126,7 @@ window.ICON_MAP = {
  },
  "ui.need.rest": {
   "c": null,
-  "d": "mattress",
+  "d": "bed \u2014 the owner's own icon, not sheet 08's cell",
   "q": "high",
   "r": null,
   "s": "08"
@@ -1343,7 +1350,7 @@ window.ICON_MAP = {
  },
  "ui.res.meat": {
   "c": null,
-  "d": "raw meat slab",
+  "d": "raw meat slab \u2014 the owner's own icon, not sheet 07's cell",
   "q": "high",
   "r": null,
   "s": "07"
@@ -1510,87 +1517,87 @@ window.ICON_MAP = {
   "s": "04"
  },
  "ui.skill.animals": {
-  "c": null,
-  "d": "paw print tile",
+  "c": 6,
+  "d": "paw print in mud",
   "q": "high",
-  "r": null,
+  "r": 3,
   "s": "06"
  },
  "ui.skill.construction": {
-  "c": null,
-  "d": "hammer and tools tile",
-  "q": "med",
-  "r": null,
+  "c": 6,
+  "d": "mallet and cog on a workbench",
+  "q": "high",
+  "r": 4,
   "s": "06"
  },
  "ui.skill.cooking": {
-  "c": null,
-  "d": "cooking pot tile",
+  "c": 1,
+  "d": "stew pot over a fire",
   "q": "high",
-  "r": null,
+  "r": 0,
   "s": "06"
  },
  "ui.skill.crafting": {
-  "c": null,
-  "d": "anvil",
+  "c": 5,
+  "d": "hammer striking an anvil",
   "q": "high",
-  "r": null,
-  "s": "03"
+  "r": 2,
+  "s": "06"
  },
  "ui.skill.fabrication": {
-  "c": null,
-  "d": "gears tile",
-  "q": "med",
-  "r": null,
+  "c": 1,
+  "d": "crucible pouring molten metal",
+  "q": "high",
+  "r": 3,
   "s": "06"
  },
  "ui.skill.growing": {
-  "c": null,
-  "d": "ploughed field tile",
+  "c": 0,
+  "d": "sack of seed, leaf-marked",
   "q": "high",
-  "r": null,
+  "r": 3,
   "s": "06"
  },
  "ui.skill.intellect": {
-  "c": null,
-  "d": "book tile",
+  "c": 6,
+  "d": "open book, lightbulb above",
   "q": "high",
-  "r": null,
+  "r": 6,
   "s": "06"
  },
  "ui.skill.medicine": {
-  "c": null,
-  "d": "medical cross tile",
+  "c": 7,
+  "d": "first-aid case, pills spilling",
   "q": "high",
-  "r": null,
+  "r": 3,
   "s": "06"
  },
  "ui.skill.melee": {
-  "c": null,
-  "d": "blade",
+  "c": 4,
+  "d": "broad axe with slash marks",
   "q": "high",
-  "r": null,
-  "s": "05"
+  "r": 3,
+  "s": "06"
  },
  "ui.skill.mining": {
-  "c": null,
-  "d": "pickaxe",
+  "c": 0,
+  "d": "pickaxe on dark rock",
   "q": "high",
-  "r": null,
-  "s": "05"
+  "r": 1,
+  "s": "06"
  },
  "ui.skill.salvage": {
-  "c": null,
-  "d": "powered drill",
-  "q": "med",
-  "r": null,
-  "s": "05"
+  "c": 4,
+  "d": "drill bit biting a riveted plate",
+  "q": "high",
+  "r": 1,
+  "s": "06"
  },
  "ui.skill.shooting": {
-  "c": null,
-  "d": "crosshair tile",
+  "c": 0,
+  "d": "scope reticle over a landscape",
   "q": "high",
-  "r": null,
+  "r": 5,
   "s": "06"
  },
  "ui.skill.social": {
@@ -1691,6 +1698,20 @@ window.ICON_MAP = {
   "r": null,
   "s": "04"
  },
+ "ui.tab.build": {
+  "c": null,
+  "d": "hammer and tools tile \u2014 the owner's own icon, shared with ui.status.building",
+  "q": "high",
+  "r": null,
+  "s": "06"
+ },
+ "ui.tab.colonists": {
+  "c": null,
+  "d": "three-person silhouette tile \u2014 the owner's own icon, not sheet 06's cell",
+  "q": "high",
+  "r": null,
+  "s": "06"
+ },
  "ui.tab.factions": {
   "c": null,
   "d": "red flag",
@@ -1700,15 +1721,15 @@ window.ICON_MAP = {
  },
  "ui.tab.research": {
   "c": null,
-  "d": "book tile",
+  "d": "book tile \u2014 the owner's own icon, not sheet 06's cell",
   "q": "high",
   "r": null,
   "s": "06"
  },
  "ui.tab.schedule": {
   "c": null,
-  "d": "hourglass tile",
-  "q": "med",
+  "d": "calendar grid tile \u2014 the owner's own icon, not sheet 06's cell",
+  "q": "high",
   "r": null,
   "s": "06"
  },
@@ -1728,8 +1749,8 @@ window.ICON_MAP = {
  },
  "ui.tab.work": {
   "c": null,
-  "d": "hammer and tools tile",
-  "q": "med",
+  "d": "claw glove tile \u2014 the owner's own icon, not sheet 06's cell",
+  "q": "high",
   "r": null,
   "s": "06"
  },
@@ -2028,7 +2049,6 @@ window.ICON_GAPS = [
  "ui.status.downed",
  "ui.status.felling",
  "ui.status.recreating",
- "ui.tab.colonists",
  "ui.tab.menu",
  "ui.terrain.bareearth",
  "ui.terrain.bedrock",

@@ -121,7 +121,8 @@ namespace Odyssey.Sim.Pawns
         /// Day is not — <c>GameClock</c> lives in the Hud assembly and Sim must not reference it
         /// — so it is the one field every caller here has to supply for itself.
         /// </summary>
-        public SaveRecipe Recipe(int day) => new SaveRecipe(Request.Map, Scenario.defName, Request.Name, day);
+        public SaveRecipe Recipe(int day) =>
+            new SaveRecipe(Request.Map, Scenario.defName, Request.Name, day, Request.Barren, Request.Wooded);
 
         /// <summary>Write the whole world to a stream.</summary>
         public void Save(Stream stream, SaveRecipe? recipe = null) => WorldSave.Save(World, stream, SaveComponents, recipe);

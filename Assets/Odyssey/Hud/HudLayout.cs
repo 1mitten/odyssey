@@ -88,8 +88,16 @@ namespace Odyssey.Hud
         /// </summary>
         public readonly int SkillRows;
 
+        /// <summary>
+        /// Rows of the cell readout, when a tile (or a pile on one) is selected instead of a
+        /// colonist. The readout pane is narrower than the colonist pane — half its width — and
+        /// one fact per row, so the same fact is always in the same column (owner, 2026-09-17:
+        /// the joined line made every number hunt for its label).
+        /// </summary>
+        public readonly int CellRows;
+
         public HudContent(int colonists, int storeRows, int alerts, int layers, int needRows,
-                          int skillRows = 0)
+                          int skillRows = 0, int cellRows = 0)
         {
             Colonists = Math.Max(0, colonists);
             StoreRows = Math.Max(0, storeRows);
@@ -97,6 +105,7 @@ namespace Odyssey.Hud
             Layers = Math.Max(1, layers);
             NeedRows = Math.Max(0, needRows);
             SkillRows = Math.Max(0, skillRows);
+            CellRows = Math.Max(0, cellRows);
         }
 
         /// <summary>The state the coverage criterion is stated against: a colony running, nothing
@@ -389,47 +398,215 @@ namespace Odyssey.Hud
 
         // ------------------------------------------------------------------ build palette
 
+        /*
+         * The Build palette, in three layouts (`docs/design/17-build-palette-layouts.md`).
+         *
+         * Every number below is from the owner's 4a/4b/4c specification, and the arrangement is
+         * the one place the specification was overruled. It drew all three floating at a 28 px
+         * margin with the panel's own top-left corner in the top-left of the screen — over a bare
+         * board, with no HUD behind it. The real screen has the stores panel down the left edge
+         * and the roster strip across the top, and a panel there covers both. The owner's answer,
+         * asked directly: "tight and flush to other elements to enable full use of space". So the
+         * margins are gone, Rows and Bar span the screen edge to edge, and all three dock flush on
+         * whatever is under them, which is the rule the bar and the popovers already follow.
+         */
+
         /// <summary>
-        /// How wide the Build popover is.
+        /// How wide Rail is, and the one layout that keeps a width of its own.
         ///
-        /// <para><b>420 until 2026-09-17</b>, when the owner asked the first group to "use the
-        /// horizontal space … giving more room for the second group". Ten category chips with
-        /// their full words come to about eight hundred pixels of chip; at 420 they wrapped to
-        /// five rows and the tools under them got what was left of a 320 px panel, which was
-        /// almost nothing. Wider is the cheap half of the answer, and it costs nothing now that a
-        /// popover is anchored to its button rather than centred on the screen.</para>
+        /// <para>Rows and Bar span the screen, because their whole argument is that a row of seven
+        /// tiles should use the horizontal space rather than wrap. Rail's argument is the opposite
+        /// one — <i>its height never changes when you switch category, so nothing below it
+        /// reflows</i> — and that only holds if the pane beside the rail is a fixed size.</para>
         /// </summary>
-        public const int BuildWidth = 560;
+        public const int BuildRailWidth = 840;
+
+        /// <summary>The 186 px column of category rows down Rail's left edge.</summary>
+        public const int BuildRailColumn = 186;
+
+        /// <summary>A category row in Rail: 34 px, an 18 px icon and a label.</summary>
+        public const int BuildRailRow = 34;
+
+        /// <summary>The inset bar in the selected Rail row's own hue, on its left edge.</summary>
+        public const int BuildRailMark = 2;
+
+        /// <summary>A sub-type tile in Rail's four-column grid.</summary>
+        public const int BuildRailSubTile = 66;
+
+        /// <summary>A material tile in Rail's four-column grid. The one place a material is drawn
+        /// large enough for its name to be the loudest thing on the button.</summary>
+        public const int BuildRailMatTile = 86;
+
+        /// <summary>How many columns Rail's two grids are wide.</summary>
+        public const int BuildRailColumns = 4;
 
         /// <summary>
-        /// One row of category or tool chips, pitch included: the chip's own height plus the
-        /// margin under it. Written down rather than left to the content, because it is what
-        /// <see cref="BuildCatRows"/> is a count of.
-        /// </summary>
-        public const int BuildChipRow = BuildChip + 2 * BuildChipMargin;
-
-        /// <summary>A chip's own box, without its margins.</summary>
-        public const int BuildChip = 30;
-
-        public const int BuildChipMargin = 2;
-
-        /// <summary>
-        /// How many rows of categories the first group may take before it scrolls.
+        /// How many rows Rail's sub-type grid stands, whatever category is open.
         ///
-        /// <para><b>The cap is the real fix, not the width.</b> The category list was
-        /// <c>flex-grow: 1</c>, so it took every pixel the panel had and the tools got the
-        /// remainder — which meant the group the player is actually reaching into shrank as the
-        /// group above it grew. Two rows, and anything past them scrolls: the scroll view was
-        /// already there for exactly this and was never reached.</para>
+        /// <para><b>This is the number that makes Rail worth having.</b> Its whole claim is that
+        /// the panel's height never changes when you switch category, so nothing below it
+        /// reflows — and the grid is the only part of it that would otherwise vary, because
+        /// Structure has six sub-types and Security has three. Sized to the largest category and
+        /// left ragged for the rest, so the promise is kept by the layout rather than by the
+        /// contents happening to be even.</para>
+        ///
+        /// <para>It was not kept at first: the panel measured 376 px on Structure and 343 on
+        /// Production, and the PlayMode test written for the claim is what said so.
+        /// <see cref="BuildRailRowsNeeded"/> is checked against the real table in the fast tier,
+        /// so a seventh tool in a category fails loudly rather than quietly reflowing.</para>
         /// </summary>
-        public const int BuildCatRows = 2;
+        public const int BuildRailSubRows = 2;
 
-        /// <summary>How tall the category group is allowed to stand.</summary>
-        public const int BuildCatHeight = BuildCatRows * BuildChipRow;
+        /// <summary>How tall that grid stands.</summary>
+        public const int BuildRailSubGrid =
+            BuildRailSubRows * BuildRailSubTile + (BuildRailSubRows - 1) * BuildTileGap;
+
+        /// <summary>
+        /// How tall Rail's material grid stands, whether or not it has anything in it.
+        ///
+        /// <para><b>Reserved rather than collapsed, and this was the second half of the same
+        /// bug.</b> Fixing the sub-type grid was not enough: a category that opens on a tool which
+        /// is not built out of anything — which is five of the seven, because their tools are all
+        /// still drawn-disabled — hides the material buttons, and a hidden row takes its height
+        /// with it. Measured: the pane stood 317 px on Structure and 290 on Production, and the
+        /// panel followed. So the material band keeps its row whether it is showing buttons or
+        /// not.</para>
+        ///
+        /// <para>The cost is an empty band under the word MATERIAL while an order is armed. That
+        /// is the honest price of the promise this layout is built on, and it is only visible in
+        /// Rail: Rows and Bar let the band collapse, because neither of them ever claimed its
+        /// height would hold still.</para>
+        /// </summary>
+        public const int BuildRailMatGrid = BuildRailMatTile + BuildTileGap;
+
+        /// <summary>How many rows the largest category really needs, for the test that holds
+        /// <see cref="BuildRailSubRows"/> to it.</summary>
+        public static int BuildRailRowsNeeded(int largestCategory) =>
+            (largestCategory + BuildRailColumns - 1) / BuildRailColumns;
+
+        // --- Rows
+
+        /// <summary>
+        /// How wide the default layout is.
+        ///
+        /// <para><b>A column down the left, not a band across the screen</b> (owner, 2026-09-17:
+        /// <i>"make the 1st group of buttons short width as possible but evenly sized … you could
+        /// probably fit 4 on a row but increase the height and try to use the left hand side of
+        /// the screen instead of the width"</i>). It spanned the full width first, which is what
+        /// the mockup drew and what "use the horizontal space" had asked for while the palette was
+        /// ten wrapping chips. Seven tiles stretched across 1920 are seven very wide tiles with a
+        /// small icon adrift in each, and the board they hide is the board the player is aiming
+        /// at.</para>
+        ///
+        /// <para>The number is the narrowest that holds four category tiles: the band's 14 px of
+        /// padding each side, four tiles at 23% of what is left, and a 6 px gap after each.
+        /// <c>Recreation</c> is the longest label and sets the floor; anything narrower clips it
+        /// or drops to three across.</para>
+        /// </summary>
+        public const int BuildRowsWidth = 372;
+
+        /// <summary>How many category tiles Rows fits across. Seven of them therefore stand two
+        /// rows deep, which is where the height the owner asked for comes from.</summary>
+        public const int BuildRowsColumns = 4;
+
+        /// <summary>A category tile in the Rows band: a 20 px icon over a label, both centred.</summary>
+        public const int BuildCatTile = 62;
+
+        /// <summary>A sub-type button in the Rows band.</summary>
+        public const int BuildSubRow = 34;
+
+        /// <summary>
+        /// How tall the Rows sub-type band stands, whatever category is open (owner, 2026-09-17:
+        /// <i>"the height needs to stay fixed — ie as tall as the structure menu/selection goes so
+        /// it can accommodate all of the menus"</i>).
+        ///
+        /// <para><b>Measured, not derived, and that is the difference from Rail.</b> Rail's grid is
+        /// four columns, so its row count is arithmetic on the number of tools and a test can check
+        /// the constant against the table. Rows wraps its sub-types by how wide their <i>words</i>
+        /// are — "Roof and floor above" takes a line to itself — which is a fact about the text
+        /// engine that no Unity-free assembly can compute. So this is the figure the band actually
+        /// measured on the widest category, and <c>TheRowsLayoutKeepsItsHeightWhateverCategoryIsOpen</c>
+        /// prints every category's band on every run so it can be re-derived from the output rather
+        /// than guessed at a second time.</para>
+        ///
+        /// <para>Structure is the widest, at three rows: 24 px of band padding and three 40 px
+        /// pitches. It is also the category the owner named.</para>
+        /// </summary>
+        public const int BuildRowsSubBand = 144;
+
+        /// <summary>
+        /// A material button in the Rows band — the same box as a sub-type button beside it.
+        ///
+        /// <para><b>40 px with a 19/600 label until 2026-09-17</b>, when the owner asked for the
+        /// materials <i>"evenly sized in font and size as the other buttons but keep the style"</i>.
+        /// The specification had made them the loudest thing in the panel, on the argument that a
+        /// material is the terminal choice; in a narrow column that reads as two buttons of a
+        /// different kind rather than as the last tier of one control. What carries "terminal" is
+        /// the tint, the doubled border and the seated shadow — the style the owner kept — and none
+        /// of those needed the extra eight pixels and the heavier type.</para>
+        ///
+        /// <para>Rail is deliberately not changed: its 86 px grid is the whole shape of that
+        /// layout rather than a row in it.</para>
+        /// </summary>
+        public const int BuildMatRow = BuildSubRow;
+
+        // --- Bar
+
+        /// <summary>An icon-only category tile in Bar.</summary>
+        public const int BuildBarCat = 36;
+
+        /// <summary>An icon-only sub-type tile in Bar. Larger than the category above it, because
+        /// it is the tier the player is actually aiming at.</summary>
+        public const int BuildBarSub = 42;
+
+        // --- shared
+
+        /// <summary>The gap between two tiles, in every layout and every tier.</summary>
+        public const int BuildTileGap = 6;
+
+        /// <summary>A band's padding: 12 down, 14 across.</summary>
+        public const int BuildBandPadY = 12;
+
+        public const int BuildBandPadX = 14;
+
+        /// <summary>A header action button — the four pinned tools and the way out.</summary>
+        public const int BuildAction = 26;
+
+        /// <summary>One button of the layout switcher.</summary>
+        public const int BuildSwitchButton = 22;
+
+        /// <summary>
+        /// The gap between two icons and the label beside them, which the specification fixes at
+        /// "the same value on every labelled button, no exceptions".
+        ///
+        /// <para>It is the same 9 px <see cref="RowIconGap"/> the rest of the HUD already uses, so
+        /// the exception the specification was guarding against cannot arise: there is one number
+        /// and it was already here.</para>
+        /// </summary>
+        public const int BuildIconGap = RowIconGap;
 
         // ------------------------------------------------------------------ inspect
 
         public const int InspectWidth = 560;
+
+        /// <summary>
+        /// The tile readout's width: half the colonist pane's. The tile pane says short facts in
+        /// rows and needs no tabs, needs or skills, so it takes a column rather than a band
+        /// (owner, 2026-09-17).
+        /// </summary>
+        public const int InspectNarrowWidth = InspectWidth / 2;
+
+        /// <summary>One fact row of the cell readout: a label and its value on one line.</summary>
+        public const int CellRow = 20;
+
+        public const int CellRowGap = 4;
+
+        /// <summary>
+        /// The label column of the readout. A width rather than a gap so the values line up
+        /// whatever the labels are — "walk speed" and "support" both start their values at the
+        /// same x, which is what makes the column predictable.
+        /// </summary>
+        public const int CellRowName = 92;
 
         /// <summary>The pane's clearance over the command bar, which cannot grow taller than one row.</summary>
         public const int InspectToBar = 14;
@@ -467,6 +644,161 @@ namespace Odyssey.Hud
         public const int SkillRow = 19;
 
         public const int SkillRowGap = 4;
+
+        // ------------------------------------------------------------------ the start screen
+
+        /// <summary>
+        /// How wide the start screen's column is.
+        ///
+        /// <para>**420 since the owner played it** (2026-09-17), up from 320. A save row carries the
+        /// colony's name over a line that has to distinguish it from every other save of the same
+        /// colony — the day, the board, and now the date and time it was written — and at 320 that
+        /// line had to be cut somewhere. The acceptance criteria allow an ellipsis on a colonist's
+        /// name and on nothing else, so the panel widens rather than the words shortening.</para>
+        /// </summary>
+        public const int StartWidth = 420;
+
+        /// <summary>
+        /// The title block: the game's own name, set at <see cref="HudTextRole.Name"/>.
+        ///
+        /// <para>The type scale is closed at six steps and a seventh would fail
+        /// <c>HudTypeTests</c>, so the largest word-face step in the interface is what a title
+        /// gets. It is the same size as a colonist's name in the inspect pane, which is smaller
+        /// than a title usually is and is the honest consequence of having a scale at all: a
+        /// bigger one is a deliberate change to <see cref="HudType"/>, not a literal written
+        /// here.</para>
+        /// </summary>
+        public const int StartTitle = 26;
+
+        /// <summary>Title to the first row.</summary>
+        public const int StartTitleGap = 14;
+
+        /// <summary>
+        /// One row of the start screen — deliberately <see cref="RowHeight"/>, the same row the
+        /// stores panel, the Menu popover and the settings panel are all built from. The start
+        /// screen introduces no new control; it arranges the ones the interface already has.
+        /// </summary>
+        public const int StartRow = RowHeight;
+
+        public const int StartRowGap = 4;
+
+        /// <summary>
+        /// One row of the load list: a colony's name on one line and the line that identifies it —
+        /// day, board, when it was written, and for a file this build cannot open, why — under it.
+        /// Two lines, so it stands taller than the plain row above.
+        /// </summary>
+        public const int StartSaveRow = 44;
+
+        public const int StartSaveGap = 4;
+
+        /// <summary>
+        /// The start screen's body: everything under the title, and <b>a fixed height whatever
+        /// screen is showing</b>.
+        ///
+        /// <para><b>Fixed because the owner asked for it after playing</b> (2026-09-17): *"keep it
+        /// fixed width and height because it becomes hard to read between loading and saving
+        /// screens"*. The panel used to size itself to its content, so the root screen's four rows
+        /// and the load screen's list gave two quite different boxes — and since the panel is
+        /// centred, moving between them moved every row under the pointer. A menu whose items walk
+        /// away as you navigate is a menu you have to re-find each time.</para>
+        ///
+        /// <para>The number is six save rows and the row that goes back, which is what the load
+        /// screen needs before it scrolls; the root screen's four rows sit at the top of the same
+        /// box and leave the rest as air. Air is the cheaper of the two mistakes — the alternative
+        /// is a list that scrolls at four.</para>
+        /// </summary>
+        public const int StartBody =
+            6 * StartSaveRow + 5 * StartSaveGap                     // the list before it scrolls
+            + StartRowGap + HudTheme.BorderWidth + StartRow;        // the row that goes back
+
+        /// <summary>The start screen's height: the same for every screen it shows.</summary>
+        public const float StartPanelHeight =
+            Frame + Pad + StartTitle + StartTitleGap + StartBody + Pad;
+
+        // ------------------------------------------------------------------ the naming prompt
+
+        /// <summary>
+        /// The prompt that names a save. The start screen's width, because a save's name is as long
+        /// as a save's row and the two are read one after the other.
+        /// </summary>
+        public const int PromptWidth = StartWidth;
+
+        /// <summary>
+        /// A text field's box — the first control of its kind in this interface.
+        ///
+        /// <para>Thirty rather than the <see cref="RowHeight"/> of twenty-nine, because a field is
+        /// a thing you click into and type in rather than a line you read, and the one pixel is the
+        /// border it carries that a row does not.</para>
+        /// </summary>
+        public const int FieldHeight = 30;
+
+        /// <summary>
+        /// How tall the load list may stand before it scrolls: whatever the fixed body leaves once
+        /// the row that goes back has taken its share.
+        ///
+        /// <para><b>The first region in this interface with a real ceiling on it</b>, because it is
+        /// the first whose length is set by the player rather than by the game: a folder can hold
+        /// any number of saves. The Keys tab was already noted in <c>CLAUDE.md</c> as the panel
+        /// that would want this first; the load list simply got here before it, and the scroller
+        /// it uses is the one the Build palette already restyled.</para>
+        ///
+        /// <para>Derived rather than written down since the panel's height was fixed, because a
+        /// ceiling that disagreed with the box it sits in is a list that either scrolls early or
+        /// runs off the bottom.</para>
+        /// </summary>
+        public const int StartListMax = StartBody - StartRowGap - HudTheme.BorderWidth - StartRow;
+
+        /// <summary>
+        /// How tall the content of one screen <i>would</i> be, for a given number of rows — which
+        /// is no longer the panel's height, and is kept because it is what decides whether a screen
+        /// fits inside <see cref="StartBody"/> or has to scroll.
+        /// </summary>
+        public static float StartRowsHeight(int rows) =>
+            Math.Max(0, rows) * StartRow + Math.Max(0, rows - 1) * StartRowGap;
+
+        /// <summary>
+        /// How tall a listing of this many saves would be, before the body's ceiling is applied.
+        /// Zero saves still occupy a row: the "nothing here yet" line.
+        /// </summary>
+        public static float StartListHeight(int saves) =>
+            saves <= 0 ? StartSaveRow : saves * StartSaveRow + (saves - 1) * StartSaveGap;
+
+        /// <summary>
+        /// How many saves the list shows before it scrolls. Derived from the fixed body rather
+        /// than written down, so the two cannot disagree the day the body changes.
+        /// </summary>
+        public static int StartSavesBeforeScrolling =>
+            (int)((StartBody - StartRowGap - HudTheme.BorderWidth - StartRow + StartSaveGap) /
+                  (StartSaveRow + StartSaveGap));
+
+        /// <summary>
+        /// Where the start screen sits: centred, both axes.
+        ///
+        /// <para><b>Not part of <see cref="Solve"/>, and that is deliberate.</b> Solve places the
+        /// regions of the playing HUD and its test asks whether any two of them overlap. The start
+        /// screen is never on screen with any of them — it exists precisely when no session is
+        /// built, so there is no stores panel, no roster and no command bar to overlap. Putting it
+        /// in that dictionary would be asking a question about a screen nobody will ever see. What
+        /// it does owe the fast tier is <see cref="StartScreenFits"/>.</para>
+        /// </summary>
+        public static HudRect StartScreen(float width, float height) =>
+            new HudRect((width - StartWidth) * 0.5f, (height - StartPanelHeight) * 0.5f,
+                StartWidth, StartPanelHeight);
+
+        /// <summary>
+        /// Whether the start screen stands entirely inside the canvas.
+        ///
+        /// <para>The question the overlap test answers for the playing HUD, asked the only way it
+        /// can be asked of a screen with nothing beside it. A modal that runs off the top of a
+        /// small canvas hides its own first row, and the row a start screen hides first is New
+        /// game.</para>
+        /// </summary>
+        public static bool StartScreenFits(float width, float height)
+        {
+            HudRect box = StartScreen(width, height);
+            return box.X >= 0f && box.Y >= 0f &&
+                   box.X + box.Width <= width && box.Y + box.Height <= height;
+        }
 
 
         // ================================================================== solve
@@ -516,10 +848,11 @@ namespace Odyssey.Hud
 
             // ---- inspect, bottom left, clear of the bar. Nothing selected, no pane: an empty
             // rect, which is how every other region says "I am not on screen" here.
-            float inspectHeight = InspectHeight(content.NeedRows, content.SkillRows);
+            float inspectHeight = InspectHeight(content.NeedRows, content.SkillRows, content.CellRows);
             boxes[HudRegion.Inspect] = inspectHeight <= 0f
                 ? new HudRect(Edge, height - InspectBottom, 0f, 0f)
-                : new HudRect(Edge, height - InspectBottom - inspectHeight, InspectWidth, inspectHeight);
+                : new HudRect(Edge, height - InspectBottom - inspectHeight,
+                              content.CellRows > 0 ? InspectNarrowWidth : InspectWidth, inspectHeight);
 
             // ---- command bar, the full width of the screen (owner, 2026-09-17)
             //
@@ -632,20 +965,24 @@ namespace Odyssey.Hud
         public static float InspectHeight(int needRows) => InspectHeight(needRows, 0);
 
         /// <summary>
-        /// The pane's height with a given tab showing. Exactly one of the two counts is non-zero
-        /// when a colonist is selected: the pane shows one tab's body at a time, and its height
-        /// is that body's plus the chrome above and below it.
+        /// The pane's height with a given tab showing. Exactly one of the three counts is
+        /// non-zero when something is selected: a colonist shows one tab's body at a time, and a
+        /// tile shows the readout rows instead — no tab strip, so its chrome is the header alone.
         /// </summary>
-        public static float InspectHeight(int needRows, int skillRows)
+        public static float InspectHeight(int needRows, int skillRows, int cellRows = 0)
         {
-            float body = skillRows > 0
-                ? skillRows * SkillRow + (skillRows - 1) * SkillRowGap
-                : needRows <= 0
-                    ? 0f
-                    : needRows * NeedRow + (needRows - 1) * NeedRowGap;
+            float body;
+            if (cellRows > 0)
+                body = cellRows * CellRow + (cellRows - 1) * CellRowGap;
+            else if (skillRows > 0)
+                body = skillRows * SkillRow + (skillRows - 1) * SkillRowGap;
+            else if (needRows > 0)
+                body = needRows * NeedRow + (needRows - 1) * NeedRowGap;
+            else
+                return 0f;
 
-            return body <= 0f
-                ? 0f
+            return cellRows > 0
+                ? Frame + Pad + InspectHeader + InspectHeaderGap + body + Pad
                 : Frame + Pad + InspectHeader + InspectHeaderGap + InspectTabs + InspectTabGap +
                   body + Pad;
         }

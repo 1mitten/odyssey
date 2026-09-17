@@ -167,6 +167,9 @@ namespace Odyssey.Hud
         /// <summary>The registry key naming the developer-overlay row.</summary>
         public const string DeveloperKey = "ui.settings.developer";
 
+        /// <summary>The registry key naming the Build-palette layout row.</summary>
+        public const string BuildLayoutKey = "ui.settings.buildlayout";
+
         /// <summary>The registry key naming the exit row.</summary>
         public const string ExitKey = "ui.settings.exit";
 
@@ -194,6 +197,7 @@ namespace Odyssey.Hud
             AudioKey,
             CamSpeedKey,
             DeveloperKey,
+            BuildLayoutKey,
             ExitKey,
             "ui.settings.shadows",
             "ui.settings.surround",
@@ -388,8 +392,35 @@ namespace Odyssey.Hud
         /// so the row describes the screen rather than dictating to it.</summary>
         public bool DeveloperOverlay { get; private set; }
 
-        /// <summary>Whether the exit row has been clicked once and is asking to be sure.</summary>
-        public bool ExitArmed { get; private set; }
+        /// <summary>
+        /// Which of the three Build-palette layouts the player has chosen.
+        ///
+        /// <para><b>It lives here rather than on the palette</b> because there are two controls
+        /// for it — the switcher in the palette's own header, for the player who is looking at the
+        /// panel and wants it shaped differently, and a row in this panel, for the player who
+        /// never finds an icon in a header. Two controls over one preference have to read and
+        /// write one value or the second one a player touches will appear to undo the first.</para>
+        /// </summary>
+        public BuildPaletteLayout BuildPaletteLayout { get; private set; } = BuildPaletteModel.Default;
+
+        /// <summary>
+        /// The session row that has been clicked once and is asking to be sure, or null.
+        ///
+        /// <para>A key rather than a flag since U38, because the panel grew three more session
+        /// rows — Save, Load and Quit to main menu — and two of them are as irreversible as the
+        /// exit row. One armed row at a time, so pressing another stands the first down: a screen
+        /// with two rows both asking "are you sure?" is a screen where the second press lands on
+        /// whichever one the hand reaches first.</para>
+        /// </summary>
+        public string? ArmedRow { get; private set; }
+
+        /// <summary>
+        /// Whether the exit row is the one asking. Kept as its own name because the panel, its
+        /// stylesheet class and the tests written before U38 all speak in these terms, and
+        /// renaming them would have been a change to what this file means rather than to what it
+        /// does.
+        /// </summary>
+        public bool ExitArmed => ArmedRow == ExitKey;
 
         /// <summary>Raised when the panel opens or closes.</summary>
         public event Action? Changed;
@@ -409,6 +440,9 @@ namespace Odyssey.Hud
         /// <summary>Raised when the developer overlay is switched by the panel.</summary>
         public event Action? DeveloperOverlayChanged;
 
+        /// <summary>Raised when the Build-palette layout changes, whichever control changed it.</summary>
+        public event Action<BuildPaletteLayout>? BuildPaletteLayoutChanged;
+
         /// <summary>Raised when one bus's volume changes, with the bus that changed.</summary>
         public event Action<SettingsBus>? BusDbChanged;
 
@@ -421,6 +455,14 @@ namespace Odyssey.Hud
         /// is a sentence the fast tier can assert without one.
         /// </summary>
         public event Action? ExitRequested;
+
+        /// <summary>
+        /// A session row was confirmed, with the key of the row that was: Save, Load, Quit to main
+        /// menu or Exit game. Raised rather than performed, like everything else here — writing a
+        /// file and putting a colony down both need Unity, and "the panel asked" is a sentence the
+        /// fast tier can assert without one.
+        /// </summary>
+        public event Action<string>? RowRequested;
 
         public bool IsOn(GraphicsOption option) => _on.TryGetValue(option, out bool on) && on;
 
@@ -450,9 +492,9 @@ namespace Odyssey.Hud
             // The armed exit row lives only in this panel, so the panel going away stands it
             // down. A "quit?" that survived its own panel would be a trap armed across the
             // whole screen.
-            if (!open && ExitArmed)
+            if (!open && ArmedRow != null)
             {
-                ExitArmed = false;
+                ArmedRow = null;
                 ExitChanged?.Invoke();
             }
             Changed?.Invoke();
@@ -534,6 +576,21 @@ namespace Odyssey.Hud
         }
 
         /// <summary>
+        /// Choose a Build-palette layout, from either of the two controls that offer one, and
+        /// write the choice down. Stored as the enum's ordinal, which is the one place this
+        /// project stores an enum as a number rather than as its name — a layout is a position on
+        /// a switcher of three, and <see cref="BuildPaletteModel"/> rejects an ordinal outside the
+        /// set rather than trusting the file.
+        /// </summary>
+        public void SetBuildPaletteLayout(BuildPaletteLayout layout)
+        {
+            if (BuildPaletteLayout == layout) return;
+            BuildPaletteLayout = layout;
+            _store?.WriteInt(BuildLayoutKey, (int)layout);
+            BuildPaletteLayoutChanged?.Invoke(layout);
+        }
+
+        /// <summary>
         /// Move one bus's volume. A fader holds a continuum, so anything between silence and
         /// the boost ceiling is taken rather than snapped — but whole dB only, because a thumb
         /// that rests between two decibels is a position the readout cannot say and the store
@@ -572,17 +629,39 @@ namespace Odyssey.Hud
         /// not test; the armed row says what it wants and the panel closing stands it
         /// down.</para>
         /// </summary>
-        public void RequestExit()
+        public void RequestExit() => Request(ExitKey);
+
+        /// <summary>
+        /// A session row was pressed: Save, Load, Quit to main menu, or Exit game (U38).
+        ///
+        /// <para><b>Whether it asks twice is not decided here.</b> It is read from
+        /// <see cref="SessionCommands"/>, the one table both this panel and the start screen build
+        /// their rows from — which is the whole reason that table exists. Before U38 the exit row's
+        /// two clicks were written into this method, and adding three more destructive rows with
+        /// the same rule written again beside them would have been two answers to one question, in
+        /// the file whose job is to have one.</para>
+        ///
+        /// <para>Pressing a different row stands down whatever was armed, so the second click
+        /// always answers the row it landed on.</para>
+        /// </summary>
+        public void Request(string key)
         {
-            if (!ExitArmed)
+            if (key == null) return;
+
+            if (SessionCommands.AsksTwice(key, SessionContext.InGame) && ArmedRow != key)
             {
-                ExitArmed = true;
+                ArmedRow = key;
                 ExitChanged?.Invoke();
                 return;
             }
 
-            ExitArmed = false;
-            ExitRequested?.Invoke();
+            ArmedRow = null;
+
+            // Exit keeps its own event as well as the general one: the presenter that quits the
+            // application has listened to it since before this panel had any other session row,
+            // and "the panel asked the game to leave" is still the sentence the fast tier asserts.
+            if (key == ExitKey) ExitRequested?.Invoke();
+            RowRequested?.Invoke(key);
             ExitChanged?.Invoke();
         }
 
@@ -627,6 +706,10 @@ namespace Odyssey.Hud
         /// </summary>
         public void SeedBusDb(SettingsBus bus, int db) => _db[bus] = Math.Clamp(db, SilenceDb, BoostDb);
 
+        /// <summary>Record a Build-palette layout without raising anything, so the shell can lay
+        /// in what it opened with.</summary>
+        public void SeedBuildPaletteLayout(BuildPaletteLayout layout) => BuildPaletteLayout = layout;
+
         /// <summary>
         /// Attach the place preferences are kept, and apply anything this machine has already been
         /// told. Stored values are laid over the seeded ones, so a preference beats the scene and
@@ -649,6 +732,10 @@ namespace Odyssey.Hud
 
             bool? developer = store.Read(DeveloperKey);
             if (developer.HasValue) SetDeveloperOverlay(developer.Value);
+
+            int? layout = store.ReadInt(BuildLayoutKey);
+            if (layout.HasValue && BuildPaletteModel.IsLayout(layout.Value))
+                SetBuildPaletteLayout((BuildPaletteLayout)layout.Value);
         }
 
         /// <summary>

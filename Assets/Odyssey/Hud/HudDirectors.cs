@@ -17,8 +17,27 @@ namespace Odyssey.Hud
         public SliceDirector Slice { get; } = new SliceDirector();
         public CameraDirector Camera { get; } = new CameraDirector();
         public OverlayDirector Overlays { get; } = new OverlayDirector();
-        public SettingsDirector Settings { get; } = new SettingsDirector();
-        public HotkeyDirector Hotkeys { get; } = new HotkeyDirector();
+
+        /// <summary>
+        /// The settings panel's levers — and <b>handed in rather than made here since U38</b>,
+        /// because they are not session state.
+        ///
+        /// <para>Everything in <see cref="SettingsDirector"/> and <see cref="HotkeyDirector"/> is a
+        /// preference about this machine: how large the interface is drawn, how fast the camera
+        /// moves, how loud each bus is, what the keys do. None of it is a fact about a colony, none
+        /// of it is saved with one, and a player who sets their interface scale and then starts a
+        /// second colony has not changed their mind about it.</para>
+        ///
+        /// <para><b>What forced the change was the start screen.</b> These directors used to be
+        /// built here, so they existed only while a session did — and the start screen exists
+        /// precisely when one does not, which would have left its Options row with no panel behind
+        /// it. Two instances would have been the other way out, and the wrong one: two answers to
+        /// "how large is the interface" is a setting that appears not to stick.</para>
+        /// </summary>
+        public SettingsDirector Settings { get; }
+
+        /// <summary>The key bindings. Hoisted with <see cref="Settings"/>, for the same reason.</summary>
+        public HotkeyDirector Hotkeys { get; }
 
         /// <summary>
         /// The standing order the player is about to give.
@@ -30,8 +49,25 @@ namespace Odyssey.Hud
         /// </summary>
         public DesignateDirector Designate { get; } = new DesignateDirector();
 
+        /// <summary>
+        /// A session's directors with fresh preferences behind them. What every test and every
+        /// harness that builds one world and looks at it wants, and what the composition root
+        /// deliberately does not use — see the other constructor.
+        /// </summary>
         public HudDirectors(int layerCount, int startLayer)
+            : this(layerCount, startLayer, new SettingsDirector(), new HotkeyDirector())
         {
+        }
+
+        /// <summary>
+        /// A session's directors over preferences that outlive the session (U38). The composition
+        /// root holds one <see cref="SettingsDirector"/> and one <see cref="HotkeyDirector"/> for
+        /// as long as the game is running and hands the same pair to every session it builds.
+        /// </summary>
+        public HudDirectors(int layerCount, int startLayer, SettingsDirector settings, HotkeyDirector hotkeys)
+        {
+            Settings = settings ?? throw new System.ArgumentNullException(nameof(settings));
+            Hotkeys = hotkeys ?? throw new System.ArgumentNullException(nameof(hotkeys));
             Slice.Bind(layerCount, startLayer);
             Slice.LayerChanged += _ => Selection.OnLayerChanged();
         }

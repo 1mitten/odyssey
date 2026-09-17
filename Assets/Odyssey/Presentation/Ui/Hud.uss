@@ -42,6 +42,27 @@
 .hud {
     position: absolute;
     left: 0; top: 0; right: 0; bottom: 0;
+
+    /* The HUD's ink, inherited by every label that does not name its own.
+
+       This is a fix for a whole class of bug rather than for the one that found it (owner,
+       2026-09-17: "I couldn't see any text on the save as/save buttons when saving a world").
+       `color` is an inherited property in UI Toolkit, and nothing in this sheet set one above a
+       leaf — so a label built without a style class fell through to the imported default runtime
+       theme, whose ink is dark, and drew invisibly on a panel that is nearly black. Every label in
+       the HUD passes a class and so nobody had been bitten; the moment two did not, they vanished
+       silently rather than looking wrong, which is the worst way for a mistake like this to
+       present.
+
+       Two labels were already in that state and had been for some time: the naming prompt's
+       answers, and "MADE OF" on the Build palette's material row. Setting the inherited ink here
+       means the next one is merely unstyled instead of absent. Every class below still overrides
+       it, so nothing that already had a colour changes.
+
+       HudStyleSheetTests pins it, because a default nobody can see the absence of is exactly the
+       kind that gets deleted as unused. */
+    color: #eef3f6;
+
     /* The shell must not catch the pointer anywhere a region does not sit, or the world would be
        unclickable behind a full-screen element. Set from code (PickingMode.Ignore), where it
        cannot be lost with a stylesheet swap. */
@@ -493,6 +514,35 @@
     border-bottom-left-radius: 0;
 }
 
+/* The tile readout and a selected pile stand in a column, not a band: half the width, with the
+   facts in rows instead of a sentence (owner, 2026-09-17 — the same fact is always in the same
+   place now, where the joined line made every number hunt for its label). */
+.inspect--narrow {
+    width: 280px;
+}
+
+/* One fact of the readout: the label in a fixed-width column, the value beside it. The label
+   column is a width rather than a gap so the values line up whatever the labels are. */
+.inspect__rows { margin-top: 2px; }
+
+.inspect__row {
+    flex-direction: row;
+    align-items: center;
+    height: 20px;
+}
+
+.inspect__rowname {
+    width: 92px;
+    color: rgba(255, 255, 255, 0.50);
+    -unity-text-align: middle-left;
+}
+
+.inspect__rowvalue {
+    flex-grow: 1;
+    color: rgba(255, 255, 255, 0.66);
+    -unity-text-align: middle-left;
+}
+
 /* There is no empty state. With nothing selected the pane is display:none and leaves the layout
    (owner, 2026-09-16); the ".inspect__empty" rule that used to sit here styled a line reading
    "Nothing selected", which is the interface talking about itself. */
@@ -685,13 +735,6 @@
     height: 17px;
 }
 
-.need__swatch {
-    width: 7px;
-    height: 7px;
-    border-radius: 1px;
-    flex-shrink: 0;
-}
-
 .need__name {
     flex-grow: 1;
     margin-left: 8px;
@@ -766,15 +809,34 @@
     margin-left: 8px;
 }
 
-/* One filled item on the row, and the ink on it is the dark one. */
+/* Build, the one item on the row that is a mode rather than a command.
+
+   IT WAS FILLED ALL THE TIME UNTIL 2026-09-17, and that was the bug the owner reported: "the build
+   button still stays bold when it shouldn't and is confusing — it's an indicator to whether you
+   are truly in build mode". A solid accent fill drawn permanently swamps the .cmd--on wash that
+   was supposed to say "open", so the cap looked identical whether the player was placing walls or
+   had left the palette three minutes ago.
+
+   So the fill became the *state* and an outline became the resting style: accent border and accent
+   ink while nothing is armed, the filled cap the bar always had while build mode is on. Build is
+   still the only item on the row with a colour of its own, so it is still as findable as it was —
+   what it no longer does is claim to be active when it is not. */
 .cmd--primary {
-    background-color: #6fd3e3;
+    background-color: rgba(111, 211, 227, 0.10);
+    border-width: 1px;
+    border-color: #6fd3e3;
     padding: 0 14px;
 }
 
-.cmd--primary:hover { background-color: #8adfec; }
-.cmd__label--primary { color: #0b1116; }
-.cmd--primary .cmd__key { color: rgba(11, 17, 22, 0.55); }
+.cmd--primary:hover { background-color: rgba(111, 211, 227, 0.20); }
+.cmd__label--primary { color: #6fd3e3; }
+.cmd--primary .cmd__key { color: rgba(111, 211, 227, 0.55); }
+
+/* In build mode: the filled cap. */
+.cmd--primary.cmd--on { background-color: #6fd3e3; }
+.cmd--primary.cmd--on:hover { background-color: #8adfec; }
+.cmd--primary.cmd--on .cmd__label--primary { color: #0b1116; }
+.cmd--primary.cmd--on .cmd__key { color: rgba(11, 17, 22, 0.55); }
 
 /* A command with nothing behind it yet. 0.42 is the sheet's one off value, shared with
    .chip--off, .menu__row--off, .action--off and .tab--off; the bar used to sit at 0.55 and read as
@@ -847,98 +909,442 @@
 
 /* ---------------------------------------------------------------- A7 build palette
 
-   Opened by the Build command and closed by Escape. It used to be a column pinned to the left
-   edge and permanently open, competing with the stores panel for a column that could not hold
-   both. */
+   Three layouts over one set of contents, to `docs/design/17-build-palette-layouts.md`.
 
-.build {
-    width: 560px;
-    max-height: 320px;
+   WHAT IS NOT IN HERE. Seven category hues and four material tints, each with four states
+   derived from it, is forty-four colour declarations for colours that are already arithmetic on
+   a token — so those are set inline from HudTheme by HudShell.Build.cs. That is not a literal
+   escaping into the Presentation assembly: the tokens are still the only source, and BuildTier
+   is what does the deriving. What is left below is the geometry and the neutral states, which
+   are the parts a stylesheet is good at and which HudStyleSheetTests can check.
+
+   WHERE THE PANEL SITS. Docked, not floating. The specification drew all three at a 28px margin
+   over a bare board; the real screen has stores down the left edge and the roster strip across
+   the top. "Tight and flush to other elements to enable full use of space" (owner, 2026-09-17),
+   so Rows and Bar span edge to edge and the bottom is written from code, because what is under
+   the panel is the command bar or the inspect pane's collapsed header depending on whether
+   anything is selected. */
+
+.bp {
+    /* Rows and Bar take their left and right from code; Rail takes a width. Square at the
+       bottom, because that edge meets whatever it is docked on. */
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    padding: 0;
 }
 
-/* The category group is capped at two rows and the tools take what is left (owner, 2026-09-17:
-   "the first group should use the horizontal space … giving more room for the second group — it's
-   using too much vertical space"). It was flex-grow:1, so it took every pixel the panel had and
-   the tools got the remainder — which meant the group the player is actually reaching into shrank
-   as the group above it grew. Anything past two rows scrolls, which is what the scroll view was
-   put here for and never reached. 68px is HudLayout.BuildCatHeight. */
-.build__scroll {
-    flex-grow: 0;
+.bp--rows { width: 372px; }
+
+.bp--rail { width: 840px; }
+
+/* ---- header: BUILD, the mode line, the switcher, ESC, four actions, the way out */
+
+.bp__hdr {
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.10);
     flex-shrink: 0;
-    min-height: 0;
-    max-height: 68px;
-    margin-top: 9px;
 }
 
-/* Unity's default scroller is a light-grey bar with two arrow buttons, which against a near-black
-   panel reads as something broken rather than as a way to see the rest of the list. */
-.build__scroll .unity-scroller--vertical {
-    width: 8px;
-    background-color: rgba(0, 0, 0, 0);
-    border-width: 0;
-    margin-left: 2px;
+.bp__hdr-id {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 1;
+    overflow: hidden;
 }
 
-.build__scroll .unity-scroller--vertical .unity-repeat-button { display: none; }
-
-.build__scroll .unity-scroller--vertical .unity-base-slider__tracker {
-    background-color: rgba(0, 0, 0, 0);
-    border-width: 0;
+.bp__hdr-ctl {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+    flex-shrink: 0;
 }
 
-.build__scroll .unity-scroller--vertical .unity-base-slider__dragger {
-    width: 6px;
-    background-color: rgba(255, 255, 255, 0.13);
-    border-width: 0;
-    border-radius: 3px;
-    margin-left: 0;
+/* Rows is 372px wide and the controls alone are eight buttons, so its header is two stacked
+   lines: what is selected, then what you can press. Rail and Bar have the width for one. */
+.bp--rows .bp__hdr {
+    flex-direction: column;
+    align-items: stretch;
 }
 
-.build__scroll .unity-scroller--vertical .unity-base-slider__dragger:hover {
+.bp--rows .bp__hdr-ctl { margin-top: 8px; }
+
+/* The breadcrumb, and the mode line that replaces it while one of the four actions is held.
+   Its colour is written from code: cyan for a build, the held action's own hue otherwise. */
+.bp__crumb {
+    margin-left: 9px;
+    white-space: nowrap;
+}
+
+.bp__mode-icon {
+    margin-left: 9px;
+    flex-shrink: 0;
+}
+
+.bp__cost { color: rgba(255, 255, 255, 0.66); }
+
+.bp__esc {
+    margin-left: 9px;
+    margin-right: 9px;
+}
+
+/* ---- the layout switcher */
+
+.bp__switch {
+    flex-direction: row;
+    flex-shrink: 0;
+}
+
+.bp__switch-btn {
+    width: 22px;
+    height: 22px;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    margin-left: 3px;
+}
+
+.bp__switch-btn:hover { border-color: #6fd3e3; }
+
+.bp__switch-btn--on {
     background-color: #6fd3e3;
+    border-color: #6fd3e3;
 }
 
-.build__cats {
+/* ---- the four actions, and the way out. Their colours are written from code, because each
+   one is a different hue and the hue is what says which mode you are in. */
+
+.bp__actions {
+    flex-direction: row;
+    flex-shrink: 0;
+}
+
+.bp__action {
+    width: 26px;
+    height: 26px;
+    align-items: center;
+    justify-content: center;
+    border-width: 1px;
+    border-radius: 4px;
+    margin-left: 6px;
+}
+
+.bp__action--close {
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.bp__action--close:hover { border-color: #e06a5c; }
+
+/* ---- bands, which is what Rows is made of */
+
+.bp__body { flex-shrink: 0; }
+
+.bp__band {
+    flex-direction: row;
+    align-items: center;
+    padding: 12px 14px;
+    flex-shrink: 0;
+}
+
+.bp__divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.10);
+    margin-left: 14px;
+    margin-right: 14px;
+    flex-shrink: 0;
+}
+
+/* ---- a tile, in every tier and every layout */
+
+.bp__tile {
+    flex-direction: row;
+    align-items: center;
+    border-width: 1px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.bp__tile-label {
+    margin-left: 9px;
+    white-space: nowrap;
+}
+
+/* Neutral tier: the sub-types. The categories and the materials paint themselves from code. */
+.bp__sub, .bp__sub-tile, .bp__bar-sub {
+    background-color: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.14);
+}
+
+.bp__sub:hover, .bp__sub-tile:hover, .bp__bar-sub:hover {
+    background-color: rgba(255, 255, 255, 0.09);
+    border-color: rgba(255, 255, 255, 0.26);
+}
+
+.bp__tile--on {
+    background-color: rgba(111, 211, 227, 0.14);
+    border-color: #6fd3e3;
+}
+
+.bp__tile--on .bp__tile-label { color: #6fd3e3; }
+
+.bp__tile--off {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.07);
+    cursor: initial;
+}
+
+.bp__tile--off:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+    border-color: rgba(255, 255, 255, 0.07);
+}
+
+.bp__tile--off .bp__tile-label { color: rgba(255, 255, 255, 0.35); }
+
+/* ---- 4a, Rows, the default
+
+   A column down the left rather than a band across the screen (owner, 2026-09-17): "short width
+   as possible but evenly sized … you could probably fit 4 on a row but increase the height and
+   try to use the left hand side of the screen instead of the width". Seven tiles stretched across
+   1920 were seven very wide tiles with a small icon adrift in each, and they hid the board the
+   player is aiming at. */
+
+/* Four equal columns, wrapping — so seven categories stand two rows deep, which is where the
+   height comes from. Percentage widths rather than flex-grow, because a growing row does not
+   wrap into even columns: 4 x 23% plus a 6px gap after each fits the band's inner width with a
+   few pixels to spare. Same construction as Rail's grids, for the same reason. */
+.bp__cats {
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.bp__cat {
+    height: 62px;
+    width: 23%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+
+/* An icon over a label, both centred, so the label's own left margin has to come off. */
+.bp__cat .bp__tile-label {
+    margin-left: 0;
+    margin-top: 4px;
+}
+
+.bp__subs { flex-wrap: wrap; }
+
+/* Fixed, and tall enough for the widest category — Structure, at three rows (owner, 2026-09-17:
+   "the height needs to stay fixed … so it can accommodate all of the menus"). The panel is docked
+   on the command bar and grows upward, so a category with fewer sub-types than the last one does
+   not shrink neatly: it drops the whole control down the screen while the player is aiming at it.
+   align-content keeps the rows at the top of the reserved box instead of spreading them through
+   it. */
+.bp--rows .bp__subs {
+    height: 144px;
+    align-content: flex-start;
+    align-items: flex-start;
+    flex-shrink: 0;
+}
+
+/* Reserved for the same reason, one tier down: five of the seven categories open on a tool that
+   is not made of anything, and a hidden row takes its height with it. */
+.bp--rows .bp__mats-row {
+    height: 34px;
+    flex-shrink: 0;
+}
+
+.bp__sub {
+    height: 34px;
+    padding: 0 13px 0 11px;
+    margin-right: 6px;
+    margin-top: 3px;
+    margin-bottom: 3px;
+}
+
+/* The material band stacks: the word, the buttons, then the price. Across a full-width band those
+   three sat on one line with the cost pushed to the far right; in a 372px column that line does
+   not exist, and a 66px label column in front of two buttons would spend a fifth of the width on
+   a word. */
+.bp__mats {
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+/* The palette's captions take the panel-label ink rather than inheriting whatever is above them.
+   That is main's fix of 2026-09-17, ported: the old palette's "MADE OF" had no class at all, so it
+   took the imported runtime theme's dark ink and had been invisible since the material row was
+   built. `.hud` carries a default ink now, which would have covered these — but a caption that
+   says what colour it is cannot be uncovered again by the next theme change. */
+.bp__mats-label {
+    margin-bottom: 8px;
+    color: rgba(255, 255, 255, 0.50);
+}
+
+.bp__mats-row {
     flex-direction: row;
     flex-wrap: wrap;
+    margin-bottom: 8px;
 }
 
-.build__tools {
+/* The same box as a sub-type button beside it (owner, 2026-09-17: "evenly sized in font and size
+   as the other buttons but keep the style"). The style is the tint, the doubled border and the
+   seated shadow, and all of it survives the box and the type coming back into line — what said
+   "terminal choice" was never the extra eight pixels. */
+.bp__mat {
+    height: 34px;
+    padding: 0 13px 0 11px;
+    margin-right: 8px;
+}
+
+/* ---- 4b, Rail */
+
+.bp__split { flex-direction: row; }
+
+.bp__rail {
+    width: 186px;
+    flex-shrink: 0;
+    padding: 12px 10px;
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.10);
+}
+
+.bp__rail-row {
+    height: 34px;
+    padding: 0 10px;
+    margin-bottom: 4px;
+    border-left-width: 2px;
+}
+
+.bp__pane {
+    flex-grow: 1;
+    padding: 12px 14px;
+}
+
+.bp__pane-label {
+    margin-bottom: 8px;
+    color: rgba(255, 255, 255, 0.50);
+}
+
+/* Four columns of tiles, and they are allowed to end in a ragged row rather than close up:
+   this layout's whole point is that its height does not move when the category does. The grid
+   is sized for the largest category and stays that size, which is the only version of that
+   promise the layout keeps by itself — see HudLayout.BuildRailSubRows for the measurement that
+   showed it was not being kept. */
+.bp__sub-grid, .bp__mat-grid {
     flex-direction: row;
     flex-wrap: wrap;
     align-content: flex-start;
+}
+
+.bp__sub-grid {
+    height: 138px;
+    flex-shrink: 0;
+}
+
+/* Reserved even while it is empty. A category whose first buildable tool is not made of anything
+   hides these buttons, and a hidden row takes its height with it — which moved the panel by 27px
+   and broke the one promise this layout makes. */
+.bp__mat-grid {
+    height: 92px;
+    flex-shrink: 0;
+}
+
+.bp__sub-tile {
+    height: 66px;
+    width: 23%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+
+.bp__sub-tile .bp__tile-label {
+    margin-left: 0;
+    margin-top: 4px;
+}
+
+.bp__mat-tile {
+    height: 86px;
+    width: 23%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-right: 6px;
+    margin-bottom: 6px;
+}
+
+.bp__mat-tile .bp__material-label {
+    margin-left: 0;
+    margin-top: 6px;
+}
+
+/* ---- 4c, Bar */
+
+.bp__bar-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 14px;
+    flex-shrink: 0;
+}
+
+.bp__bar-cat {
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    margin-right: 4px;
+}
+
+.bp__bar-subs {
+    flex-direction: row;
+    flex-shrink: 0;
+    border-right-width: 1px;
+    border-right-color: rgba(255, 255, 255, 0.10);
+    padding-right: 12px;
+    margin-right: 12px;
+}
+
+.bp__bar-sub {
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    margin-right: 4px;
+}
+
+.bp__bar-mats {
+    flex-direction: row;
     flex-grow: 1;
-    min-height: 0;
-    margin-top: 9px;
-    border-top-width: 1px;
-    border-top-color: rgba(255, 255, 255, 0.09);
-    padding-top: 9px;
 }
 
-/* The material row, under the tools and shown only while something made of a material is
-   armed: a material is a property of the order being given, not a category of its own. */
-.build__materials {
-    flex-direction: row;
-    align-items: center;
-    flex-shrink: 0;
-    margin-top: 7px;
-    border-top-width: 1px;
-    border-top-color: rgba(255, 255, 255, 0.09);
-    padding-top: 7px;
+.bp__bar-hint { color: rgba(255, 255, 255, 0.50); }
+
+/* ---- materials, in every layout
+
+   Two pixels of border where everything else has one, because a material is the panel's terminal
+   choice. The fill, the border colour and the ink are written from code: a tinted button always
+   means buildable, and an untinted one never does, which is what lets the stock state be read
+   without putting a number on the button. */
+
+.bp__material {
+    border-width: 2px;
+    border-radius: 5px;
 }
 
-/* The pinned row, under everything and never hidden: the tools that belong to no category
-   because they are about whatever is already on the board rather than about what to put down.
-   A heavier rule above it than the material row's, because this one separates two kinds of
-   thing rather than two parts of one order. */
-.build__pinned {
-    flex-direction: row;
-    align-items: center;
-    flex-shrink: 0;
-    margin-top: 8px;
-    border-top-width: 1px;
-    border-top-color: rgba(255, 255, 255, 0.16);
-    padding-top: 8px;
+.bp__material-label {
+    margin-left: 9px;
+    white-space: nowrap;
+}
+
+.bp__material--on {
+    border-bottom-width: 4px;
 }
 
 /* ---------------------------------------------------------------- B17 settings
@@ -1133,9 +1539,208 @@
     border-top-color: rgba(255, 255, 255, 0.09);
 }
 
-.settings__exit--armed { background-color: rgba(111, 211, 227, 0.12); }
+/* A row that has been pressed once and is asking to be sure. Not named for the exit row any more
+   (U38): the settings panel grew Load and Quit-to-main-menu beside it, and the start screen has
+   its own Quit, and all of them ask the same question in the same voice. One class, so the answer
+   to "what does a row look like when it is waiting for a second press" has one place. */
+.row--armed { background-color: rgba(111, 211, 227, 0.12); }
 
-.settings__exit--armed .settings__label { color: #6fd3e3; }
+.row--armed .settings__label { color: #6fd3e3; }
+
+/* ---------------------------------------------------------------- the modal scrim
+
+   The third scrim, and the only one that is not always on. The two at the top and bottom of the
+   screen are ramps carrying the HUD's text contrast; this one is flat, covers the viewport, and
+   says that what is behind it is not available. Flat rather than a ramp, so it needs no generated
+   texture and can live here as a plain fill.
+
+   It is a pointer target on purpose, which is the whole of "a modal swallows every pointer event"
+   (09-ui-and-input.md section 6, case 5): a full-viewport element under the panel and over
+   everything else absorbs what would otherwise reach the world. */
+
+.modal-scrim {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(8, 11, 14, 0.66);
+}
+
+/* ---------------------------------------------------------------- B18 the start screen
+
+   The screen before the game: the only one that exists when no world is built. Centred like the
+   settings panel, and for the same reason — it belongs to no button, so there is nothing to anchor
+   it to. It is a window, so it takes the opaque fill and the close X from .window; the X is
+   suppressed on the root screen, which has nothing to close to.
+
+   It introduces no control of its own. A row here is a .settings__row, which is the same row the
+   stores panel, the Menu popover and the settings panel are built from. */
+
+/* A fixed box, and fixed is the point (owner, 2026-09-17: "keep it fixed width and height because
+   it becomes hard to read between loading and saving screens"). It used to size itself to its
+   content, so the root screen and the load screen gave two different boxes — and since the panel is
+   centred, moving between them moved every row under the pointer. A menu whose items walk away as
+   you navigate is a menu you have to re-find each time. */
+.startscreen {
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    width: 420px;
+    height: 384px;
+}
+
+/* Everything under the title. One height for every screen this panel shows, which is what makes
+   the panel's own height a constant rather than a consequence. */
+.startscreen__body {
+    height: 318px;
+    margin-top: 14px;
+}
+
+/* The game's own name, at the largest word-face step the type scale has. An explicit box with
+   middle alignment, like every other label that shares a column, so its leading falls outside the
+   box rather than pushing the rows below it down. */
+.startscreen__title {
+    color: #eef3f6;
+    height: 26px;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+/* Top-aligned in a body that is taller than they are. The air below is deliberate: the alternative
+   to a fixed body is a list that scrolls at four rows. */
+.startscreen__rows { flex-shrink: 0; }
+
+/* The saves, when the load screen is showing. A max height and a scroll, which is the first
+   ceiling any region in this interface has carried — and it is here first because this is the
+   first region whose length is set by the player rather than by the game. The scroller itself is
+   restyled by the .build__scroll rules above; this list wears the same class so there is one
+   scrollbar in the project rather than two. Six rows, which is what the fixed body leaves once the
+   row that goes back has taken its share. */
+.startscreen__list {
+    flex-grow: 0;
+    flex-shrink: 0;
+    min-height: 0;
+    max-height: 284px;
+}
+
+.save {
+    flex-direction: column;
+    justify-content: center;
+    height: 44px;
+    margin-bottom: 4px;
+    padding: 0 8px;
+    border-radius: 3px;
+}
+
+.save:hover { background-color: rgba(255, 255, 255, 0.07); }
+
+.save__name {
+    color: #eef3f6;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+/* Day, map, and — for a file this build cannot open — the reason. Listed rather than hidden: a
+   save that vanishes from the list is a colony the player concludes is gone. */
+.save__meta {
+    color: rgba(255, 255, 255, 0.66);
+    white-space: nowrap;
+}
+
+.save--bad { opacity: 0.42; }
+.save--bad:hover { background-color: rgba(0, 0, 0, 0); }
+.save--bad .save__meta { color: #e8b55c; }
+
+/* The row that goes back, set apart from the list above it the way the settings panel's exit row
+   is set apart from the tabs. */
+.startscreen__back {
+    margin-top: 4px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.09);
+}
+
+/* ---------------------------------------------------------------- the naming prompt
+
+   Names a save before it is written (owner, 2026-09-17). A modal over a running colony, which is
+   the first time that combination exists — the start screen's modal has no world behind it. The
+   world keeps running underneath, which is the owner's standing answer for what a modal does. */
+
+.prompt {
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    width: 420px;
+}
+
+/* The first text field in the project, so it is restyled from Unity's default rather than
+   accepted — the default is a pale box with a blue focus ring, which against a near-black panel
+   reads as a control from a different program. The scroller and the volume slider went the same
+   way; this is the third. No font-size here: type belongs to HudType, and the sheet is checked
+   for that. */
+.field {
+    height: 30px;
+    margin-top: 9px;
+}
+
+.field .unity-base-text-field__input {
+    background-color: rgba(0, 0, 0, 0.35);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+    padding: 0 8px;
+    color: #eef3f6;
+    --unity-cursor-color: #6fd3e3;
+    -unity-text-align: middle-left;
+}
+
+.field:hover .unity-base-text-field__input { border-color: rgba(255, 255, 255, 0.35); }
+.field:focus .unity-base-text-field__input { border-color: #6fd3e3; }
+
+/* The two answers, side by side under the field: confirm on the left where the eye already is
+   after typing, leave on the right. */
+.prompt__answers {
+    flex-direction: row;
+    margin-top: 9px;
+}
+
+/* The answer IS its label, the way a settings rung is — one element carrying the box and the word
+   together. It was a box with a Label inside it, and that Label had no class, so it took the
+   imported theme's dark ink and could not be seen at all. */
+.prompt__answer {
+    flex-grow: 1;
+    flex-basis: 0;
+    height: 29px;
+    margin-right: 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.82);
+    -unity-text-align: middle-center;
+}
+
+.prompt__answer:hover { border-color: #6fd3e3; }
+
+/* Armed: the same accent wash every other row that asks twice uses. It needs its own line because
+   .row--armed colours a `.settings__label` child, and this control has no child to colour. */
+.prompt__answer--armed {
+    background-color: rgba(111, 211, 227, 0.12);
+    border-color: #6fd3e3;
+    color: #6fd3e3;
+}
+
+/* A name that cannot be written — empty, or nothing but punctuation. Disabled with its reason
+   rather than a press that silently does nothing, which is the panel catalogue's rule. */
+.prompt__answer--off { opacity: 0.42; }
+.prompt__answer--off:hover { border-color: rgba(255, 255, 255, 0.13); }
+
+/* The line under the field: what will happen, in words, before it happens. It is the only warning
+   there is, since the write itself is instant and silent. */
+.prompt__note {
+    color: rgba(255, 255, 255, 0.50);
+    white-space: normal;
+    margin-top: 9px;
+}
+
+.prompt__note--warn { color: #e8b55c; }
 
 /* ---------------------------------------------------------------- the drag-select marquee */
 

@@ -32,10 +32,15 @@ namespace Odyssey.Tests.Sim
             return (world, counter);
         }
 
+        /// <summary>
+        /// Three since U38, which added the two natural-board flags to the recipe. The number is
+        /// asserted rather than merely read so that a bump is always a deliberate line in a diff —
+        /// that is the whole reason this test exists, and it did its job on the way to 3.
+        /// </summary>
         [Test]
-        public void TheFormatVersionIsTwo()
+        public void TheFormatVersionIsThree()
         {
-            Assert.That(WorldSave.CurrentFormatVersion, Is.EqualTo(2));
+            Assert.That(WorldSave.CurrentFormatVersion, Is.EqualTo(3));
         }
 
         [Test]
@@ -43,7 +48,8 @@ namespace Odyssey.Tests.Sim
         {
             var (world, counter) = Build();
             world.Tick(10);
-            var recipe = new SaveRecipe(MapType.Natural, "Scenario_Bare", "Meridian", day: 3);
+            var recipe = new SaveRecipe(MapType.Natural, "Scenario_Bare", "Meridian", day: 3,
+                barren: true, wooded: true);
 
             using var stream = new MemoryStream();
             WorldSave.Save(world, stream, new[] { counter }, recipe);
@@ -52,11 +58,49 @@ namespace Odyssey.Tests.Sim
             var (restored, restoredCounter) = Build();
             var header = WorldSave.Load(restored, stream, new[] { restoredCounter });
 
-            Assert.That(header.FormatVersion, Is.EqualTo(2));
+            Assert.That(header.FormatVersion, Is.EqualTo(3));
             Assert.That(header.Recipe.Map, Is.EqualTo(MapType.Natural));
             Assert.That(header.Recipe.Scenario, Is.EqualTo("Scenario_Bare"));
             Assert.That(header.Recipe.ColonyName, Is.EqualTo("Meridian"));
             Assert.That(header.Recipe.Day, Is.EqualTo(3));
+
+            // The two flags U38 added. Both true is the wooded meadow the scene actually loads,
+            // and it is the combination that used to be indistinguishable from the full natural
+            // generator once the file was written.
+            Assert.That(header.Recipe.Barren, Is.True);
+            Assert.That(header.Recipe.Wooded, Is.True);
+        }
+
+        /// <summary>
+        /// The bug U38's round-trip test found, written down as its own test: a header that cannot
+        /// say which of the three natural boards it was made on.
+        ///
+        /// <para><b>The state hash could not have caught this</b>, which is why it survived U36.
+        /// <c>GridSaveSection</c> writes every cell of every field, so a world rebuilt on the wrong
+        /// board is entirely overwritten by the load and the hashes agree. What differs is
+        /// everything worldgen returns beside the cells — the start cell the camera frames a loaded
+        /// colony on, the outcome, the count of cells marked for work.</para>
+        /// </summary>
+        [Test]
+        public void TheRecipeSaysWhichOfTheThreeNaturalBoardsItWas()
+        {
+            foreach ((bool barren, bool wooded) in new[] { (false, false), (true, false), (true, true) })
+            {
+                var (world, counter) = Build();
+                var recipe = new SaveRecipe(MapType.Natural, "Scenario_Bare", "Meridian", 3, barren, wooded);
+
+                using var stream = new MemoryStream();
+                WorldSave.Save(world, stream, new[] { counter }, recipe);
+                stream.Position = 0;
+
+                var (restored, restoredCounter) = Build();
+                SaveHeader header = WorldSave.Load(restored, stream, new[] { restoredCounter });
+
+                Assert.That(header.Recipe.Barren, Is.EqualTo(barren),
+                    $"a board written as barren={barren}, wooded={wooded} did not read back that way");
+                Assert.That(header.Recipe.Wooded, Is.EqualTo(wooded),
+                    $"a board written as barren={barren}, wooded={wooded} did not read back that way");
+            }
         }
 
         [Test]
@@ -233,6 +277,67 @@ namespace Odyssey.Tests.Sim
                 binary.Write(0); // no sections
             }
             return stream.ToArray();
+        }
+
+        /// <summary>
+        /// The exact bytes a build between U36 and U38 wrote: everything version 3 writes except
+        /// the two board flags. Written by hand for the same reason the version 1 fixture is —
+        /// proving an old layout still reads means producing bytes the current writer never
+        /// will.
+        /// </summary>
+        static byte[] BuildVersion2Fixture(uint seed, GridSize size, int tick, string colony)
+        {
+            const ulong magic = 0x59455353594451;
+            using var stream = new MemoryStream();
+            using (var binary = new BinaryWriter(stream, System.Text.Encoding.UTF8, leaveOpen: true))
+            {
+                binary.Write(magic);
+                binary.Write(2); // format version 2
+                binary.Write(seed);
+                binary.Write(size.SizeX);
+                binary.Write(size.SizeZ);
+                binary.Write(size.SizeY);
+                binary.Write(tick);
+                binary.Write((int)MapType.Natural);
+
+                void Text(string value)
+                {
+                    byte[] utf8 = System.Text.Encoding.UTF8.GetBytes(value);
+                    binary.Write(utf8.Length);
+                    binary.Write(utf8);
+                }
+
+                Text("Scenario_Bare");
+                Text(colony);
+                binary.Write(7);  // day
+                binary.Write(0);  // no sections
+            }
+            return stream.ToArray();
+        }
+
+        /// <summary>
+        /// A version 2 file still loads, and its two absent board flags read back false rather
+        /// than as a guess.
+        ///
+        /// <para>False and false is the full natural generator, which is what
+        /// <c>MapType.Natural</c> meant on its own before version 3 could say otherwise — so an
+        /// old file is read as the thing it would have been read as before, rather than as the
+        /// board the current scene happens to load.</para>
+        /// </summary>
+        [Test]
+        public void AVersion2FileStillLoadsAndItsBoardFlagsAreFalse()
+        {
+            var size = new GridSize(12, 10, 3);
+            byte[] bytes = BuildVersion2Fixture(seed: 77, size: size, tick: 500, colony: "Ashford");
+
+            using var stream = new MemoryStream(bytes);
+            SaveHeader header = WorldSave.ReadHeaderOnly(stream);
+
+            Assert.That(header.FormatVersion, Is.EqualTo(2));
+            Assert.That(header.Recipe.ColonyName, Is.EqualTo("Ashford"));
+            Assert.That(header.Recipe.Day, Is.EqualTo(7));
+            Assert.That(header.Recipe.Barren, Is.False);
+            Assert.That(header.Recipe.Wooded, Is.False);
         }
     }
 }

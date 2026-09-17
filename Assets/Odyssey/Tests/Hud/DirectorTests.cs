@@ -77,6 +77,44 @@ namespace Odyssey.Tests.Hud
             Assert.That(director.ThingDef, Is.EqualTo(ItemHandle.Meal));
         }
 
+        /// <summary>
+        /// The playtest report behind the second look in <c>ThingAt</c> (owner, 2026-09-17): a
+        /// pile resting on bare ground sits in the air cell above the solid block the picker
+        /// resolves to, so matching the picked cell alone made every such pile unselectable —
+        /// the click fell through to the cell pane and read as "wood cannot be selected".
+        /// </summary>
+        [Test]
+        public void APickOnGroundUnderAPileSelectsThePileRestingOnIt()
+        {
+            // The picker hands back the solid ground block; the pile is one cell up.
+            var ground = new CellRef(5, 5, 0);
+            var pileAt = new CellRef(5, 5, 1);
+            var snapshot = FrameWith(PawnId.None, default, new ThingId(4), pileAt);
+            var director = new SelectionDirector();
+
+            director.Pick(ground, PawnId.None, snapshot);
+
+            Assert.That(director.HasThing, Is.True,
+                "a thing resting on the block the player clicked is the thing the player clicked");
+            Assert.That(director.Thing, Is.EqualTo(new ThingId(4)));
+            Assert.That(director.ThingDef, Is.EqualTo(ItemHandle.Meal));
+        }
+
+        [Test]
+        public void APickAtTheTopOfTheWorldDoesNotLookForAThingAboveIt()
+        {
+            // A thing in the topmost cell is found in its own right; the guard being tested is
+            // the layer above it, which does not exist.
+            var top = new CellRef(5, 5, 3);
+            var snapshot = Frame.Write(layers: 4);
+            snapshot.AddThing(new ThingView(new ThingId(4), top, ItemHandle.Meal, 0));
+            var director = new SelectionDirector();
+
+            director.Pick(top, PawnId.None, snapshot);
+
+            Assert.That(director.Thing, Is.EqualTo(new ThingId(4)));
+        }
+
         [Test]
         public void APickOnBareGroundKeepsTheCellAndNothingElse()
         {

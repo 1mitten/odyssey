@@ -61,6 +61,44 @@ namespace Odyssey.Tests.Hud
                     $"{tool.Key} can be armed and has no name");
         }
 
+        /// <summary>
+        /// The session rows — Save, Load, Quit to main menu, Exit, New game, Settings — held to
+        /// the CSV like every other panel here (U38).
+        ///
+        /// <para>The second loop is the one that matters: it walks what the two surfaces actually
+        /// <i>draw</i>, rather than the array that says what they might, so a row added to the
+        /// table and forgotten in <c>IconKeys</c> fails here instead of drawing a key at the
+        /// player.</para>
+        /// </summary>
+        [Test]
+        public void EverySessionRowIsARegisteredName()
+        {
+            foreach (string key in SessionCommands.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+
+            foreach (SessionContext context in SessionCommands.Contexts)
+            foreach (SessionCommand command in SessionCommands.For(context))
+            {
+                Assert.That(Registry.Labels, Does.ContainKey(command.Key),
+                    $"{command.Key} is drawn in {context} and has no name");
+                Assert.That(SessionCommands.IconKeys, Does.Contain(command.Key),
+                    "a row the menu can draw but the registry test does not cover is a label nobody checks");
+            }
+        }
+
+        /// <summary>The naming prompt's four words, held to the CSV like every other panel.</summary>
+        [Test]
+        public void EverySavePromptWordIsARegisteredName()
+        {
+            foreach (string key in SavePrompt.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+
+            // The two the prompt swaps between on its own button. A missing one would draw the key
+            // at the player on exactly the press that is about to overwrite a save.
+            Assert.That(SavePrompt.IconKeys, Does.Contain(SavePrompt.ConfirmKey));
+            Assert.That(SavePrompt.IconKeys, Does.Contain(SavePrompt.OverwriteKey));
+        }
+
         [Test]
         public void EveryHotkeyKeyIsARegisteredName()
         {
@@ -108,6 +146,42 @@ namespace Odyssey.Tests.Hud
             Assert.That(BuildLabels.Building(BuildingHandle.Wall), Is.EqualTo("Wall"));
             Assert.That(BuildLabels.Stuff(StuffHandle.Wood), Is.EqualTo("wood"),
                 "a material is read inside a sentence, so it is lower case");
+        }
+
+        /// <summary>
+        /// The item, terrain and edifice tables the inspect pane reads, held to the same rule as
+        /// the jobs: the length matches the contract's count and every key is a name the wiki
+        /// knows. A table that is short is not a compile error — it is every pile of the missing
+        /// thing mislabelled, or every tile of the missing terrain reading as bare ground.
+        /// </summary>
+        [Test]
+        public void EveryItemTerrainAndEdificeKeyIsARegisteredNameOrNoneAtAll()
+        {
+            Assert.That(ItemLabels.Keys.Length, Is.EqualTo(ItemHandle.Count));
+            foreach (string key in ItemLabels.Keys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+            Assert.That(Registry.Labels, Does.ContainKey(ItemLabels.IconKey(-1)),
+                "the fallback key must be registered too");
+
+            Assert.That(TerrainLabels.Keys.Length, Is.EqualTo(TerrainHandle.Count));
+            foreach (string key in TerrainLabels.Keys)
+                if (key.Length > 0)
+                    Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+
+            Assert.That(EdificeLabels.Keys.Length, Is.EqualTo(EdificeHandle.Count));
+            foreach (string key in EdificeLabels.Keys)
+                if (key.Length > 0)
+                    Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+
+            // The words the playtest reports were about: a pile of wood is Wood and counted, a
+            // rock is Rock, water is water at the speed it is crossed at.
+            Assert.That(ItemLabels.Label(ItemHandle.Wood), Is.EqualTo("Wood"));
+            Assert.That(ItemLabels.Label(ItemHandle.Salvage), Is.EqualTo("Scrap"),
+                "salvage is scrap: the ledger settled the word, and the pane had hard-coded the other one");
+            Assert.That(TerrainLabels.Label(TerrainHandle.Rock), Is.EqualTo("Rock"));
+            Assert.That(TerrainLabels.Label(TerrainHandle.ShallowWater), Is.EqualTo("Shallow Water"));
+            Assert.That(TerrainLabels.Label(TerrainHandle.IronOre), Is.EqualTo("Iron ore"));
+            Assert.That(EdificeLabels.Title(EdificeHandle.TreeConifer), Is.EqualTo("Conifer"));
         }
 
         [Test]
