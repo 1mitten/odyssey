@@ -348,6 +348,7 @@ namespace Odyssey.Hud
             { "ui.res.wire", "Wire" },
             { "ui.res.wood", "Wood" },
             { "ui.settings.audio", "Audio" },
+            { "ui.settings.buildlayout", "Build palette layout" },
             { "ui.settings.camspeed", "Camera speed" },
             { "ui.settings.developer", "Developer overlay" },
             { "ui.settings.exit", "Exit game" },

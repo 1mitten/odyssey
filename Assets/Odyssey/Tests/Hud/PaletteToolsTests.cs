@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using System;
 using NUnit.Framework;
 using Odyssey.Hud;
 
@@ -107,14 +108,21 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
-        /// The pinned row is two chips and should stay small. A row that grows is a second palette,
-        /// and the whole point of it is to be the short list of things that are true whatever the
-        /// player is doing.
+        /// The pinned row should stay small. A row that grows is a second palette, and the whole
+        /// point of it is to be the short list of things that are true whatever the player is
+        /// doing.
+        ///
+        /// <para><b>The ceiling moved from three to four on 2026-09-17</b>, when the Orders
+        /// category was dropped and its two live tools were pinned rather than lost. Four is where
+        /// it stops: the palette header has room for four 26 px buttons beside the layout switcher
+        /// and the way out, and a fifth would start pushing one of those off a 1280-wide screen —
+        /// which is a limit the geometry imposes rather than one this test invented, and is why
+        /// the number is written here as well as argued for in <c>PaletteTools.Pinned</c>.</para>
         /// </summary>
         [Test]
         public void ThePinnedRowStaysShort()
         {
-            Assert.That(PaletteTools.Pinned.Length, Is.LessThanOrEqualTo(3));
+            Assert.That(PaletteTools.Pinned.Length, Is.LessThanOrEqualTo(4));
         }
 
         /// <summary>
@@ -131,18 +139,50 @@ namespace Odyssey.Tests.Hud
                         $"{pinned} is pinned and also listed under {label}, so it draws twice");
         }
 
-        /// <summary>The Orders row keeps the two tools whose orders Cancel takes off.</summary>
+        /// <summary>
+        /// The orders a player gives are still reachable, now that the category holding them is
+        /// gone.
+        ///
+        /// <para><b>This test used to assert the opposite</b> — that an Orders category existed
+        /// and contained Mine and Chop — and it is the same claim, rewritten against where those
+        /// two tools now live. The claim worth keeping is not "there is an Orders row"; it is
+        /// "the two orders a player actually gives can be found by looking". Dropping the
+        /// category without moving them would have left both on the <c>M</c> and <c>C</c> keys
+        /// and on nothing visible, which is exactly the fault the owner reported about Cancel on
+        /// 2026-09-17: the tool was never missing, every way of finding it was.</para>
+        /// </summary>
         [Test]
-        public void TheOrdersRowOffersTheOrdersAPlayerGives()
+        public void TheOrdersAPlayerGivesAreStillReachable()
         {
-            string[]? orders = null;
-            foreach (var (key, _, tools) in PaletteTools.Categories)
-                if (key == "ui.arch.category.orders")
-                    orders = tools;
+            Assert.That(PaletteTools.Pinned, Does.Contain(PaletteTools.Mine),
+                "mining is reachable from the palette rather than only from the M key");
+            Assert.That(PaletteTools.Pinned, Does.Contain(PaletteTools.Fell),
+                "chopping is reachable from the palette rather than only from the C key");
+        }
 
-            Assert.That(orders, Is.Not.Null, "the palette has an Orders category");
-            Assert.That(orders, Does.Contain(PaletteTools.Mine));
-            Assert.That(orders, Does.Contain(PaletteTools.Fell));
+        /// <summary>
+        /// Every live tool in the game is on the palette somewhere, in a category or pinned.
+        ///
+        /// <para>The general form of the test above, and the one that would have caught the
+        /// Orders question without anybody thinking of it. A tool with a working simulation half
+        /// and no way in is the failure this project has now made twice; a tier that walks
+        /// <see cref="PaletteTools.Live"/> and asks where each one is drawn cannot let it happen
+        /// a third time silently.</para>
+        /// </summary>
+        [Test]
+        public void EveryLiveToolIsDrawnSomewhere()
+        {
+            foreach (PaletteTool tool in PaletteTools.Live)
+            {
+                bool pinned = Array.IndexOf(PaletteTools.Pinned, tool.Key) >= 0;
+                bool filed = false;
+                foreach (var (_, _, tools) in PaletteTools.Categories)
+                    if (Array.IndexOf(tools, tool.Key) >= 0) filed = true;
+
+                Assert.That(pinned || filed, Is.True,
+                    $"{tool.Key} arms a real tool and appears nowhere on the palette, so the only " +
+                    "way to reach it is a key the player has to already know about");
+            }
         }
 
         /// <summary>
