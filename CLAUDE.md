@@ -133,6 +133,15 @@ pawn can be in has something under it. A hop is three seams that must agree — 
 (`MovementSystem.StepCost`); **a price the planner and the mover disagree about fails silently.**
 Ladders are still climbed, so the climb *pose* is live presentation code.
 
+**That warning is now enforced rather than remembered (2026-09-17).** `NavGraph.HopCost` is the
+only place the price of a hop is decided, and all three seams call it —
+`HopPriceHasOneOwnerTests` fails the fast tier if any other file in `Odyssey.Sim` names
+`MoveCost.JumpUp` or `MoveCost.Drop` in code, and checks the built region graph prices a hop at the
+owner's number rather than reading it off the source. Nothing was disagreeing when this landed:
+all three named the constants for themselves and agreed **by coincidence**, which survives exactly
+until the price stops being a constant. No golden moved, because who computes the number changed
+and the number did not.
+
 **Presentation** — instanced chunk rendering (no GameObject per cell), a slice camera rig, the HUD,
 audio, a day/night cycle and golden-hour grading. No pack contains a work animation, so the axe,
 pick and hammer strokes are **computed** (`WorkSwing`, `WorkStyle`) and stand in for art we do not
@@ -161,7 +170,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **481 Sim + 158 Hud**; Long tier **17**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **484 Sim + 158 Hud**; Long tier **17**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and

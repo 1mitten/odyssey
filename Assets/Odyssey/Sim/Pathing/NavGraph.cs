@@ -746,8 +746,9 @@ namespace Odyssey.Sim.Pathing
             _linkKind[id] = LinkKind.Portal;
             _linkCellA[id] = lower;
             _linkCellB[id] = upper;
-            _linkCostAB[id] = MoveCost.JumpUp;
-            _linkCostBA[id] = MoveCost.Drop;
+            // The same price the cell search plans with and the mover charges. See HopCost.
+            _linkCostAB[id] = HopCost(up: true);
+            _linkCostBA[id] = HopCost(up: false);
             _linkOneWay[id] = false;
             _linkSpan[id] = 1;
             _linkMode[id] = TraverseModes.AllMask;
@@ -1279,9 +1280,40 @@ namespace Odyssey.Sim.Pathing
             return below >= 0 && _cells.IsSolidTerrain(below);
         }
 
-        /// <summary>What a hop costs, in the direction it is taken.</summary>
-        public static int HopCost(CellRef from, CellRef to) =>
-            to.Y > from.Y ? MoveCost.JumpUp : MoveCost.Drop;
+        /// <summary>
+        /// What a hop costs, in the direction it is taken. **This is the only place the price of
+        /// a hop is decided**, and `HopPriceHasOneOwnerTests` fails the build if a second place
+        /// starts deciding it.
+        ///
+        /// <para><b>Why that rule is worth a test.</b> A hop needs nothing built, so unlike a
+        /// stair it declares no connector to carry its price, and three separate seams have to
+        /// agree about it independently: the cell search that plans the route
+        /// (<see cref="PathFinder"/>), the region graph that prices the abstract edge
+        /// (<c>TryHopEdges</c>), and the mover that charges for the step actually taken
+        /// (<c>MovementSystem.StepCost</c>). Until 2026-09-17 all three named
+        /// <see cref="MoveCost.JumpUp"/> and <see cref="MoveCost.Drop"/> for themselves and agreed
+        /// only by coincidence.</para>
+        ///
+        /// <para><b>And a disagreement here does not fail loudly.</b> It already happened once:
+        /// the mover read a hop's price off connectors, found none, and fell through to
+        /// <see cref="MoveCost.Fall"/> — 100,000, meaning forbidden. The pawn did not error and
+        /// did not re-plan. It stood in the cell before the step with a legal path in hand,
+        /// earning about one unit of progress a tick against a bill of a hundred thousand, and was
+        /// still there after 10,000 ticks. That is the failure mode this one-owner rule exists to
+        /// make impossible, rather than to catch again.</para>
+        /// </summary>
+        public static int HopCost(CellRef from, CellRef to) => HopCost(to.Y > from.Y);
+
+        /// <summary>
+        /// The same price, for callers that already know the direction and have no
+        /// <see cref="CellRef"/> to hand.
+        ///
+        /// <para>This overload exists for the search's inner loop, which walks cell indices and
+        /// would otherwise pay a division per neighbour to recover a <see cref="CellRef"/> it does
+        /// not need. Pathfinding is the hot path (ADR 0005), so the one-owner rule had to be free
+        /// to obey or it would have been disobeyed for a good reason.</para>
+        /// </summary>
+        public static int HopCost(bool up) => up ? MoveCost.JumpUp : MoveCost.Drop;
 
         bool IsFallStep(int from, int to, TraverseMode mode)
         {
