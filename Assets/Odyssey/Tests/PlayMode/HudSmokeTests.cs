@@ -58,9 +58,16 @@ namespace Odyssey.Tests.PlayMode
                 // we have. Naming them keeps that and says which one is missing, which a number
                 // cannot: the rebuild moved it from seven to eight and the failure was "expected
                 // 7, was 8", which is not a sentence anybody can act on.
+                // "start" is B18, built whether or not a session exists because the state it
+                // belongs to is the one where none does (U38). It is in the tree and hidden here,
+                // which is why it counts as a framed region while this rig is in a colony.
+                // "saveprompt" joins for the same reason "start" did: both are modals, built at
+                // startup and hidden until something asks for them, so both are framed regions in
+                // the tree whatever the colony is doing.
                 string[] expected =
                 {
                     "stores", "clock", "alerts", "rail", "inspect", "build", "menu", "settings",
+                    "start", "saveprompt",
                 };
                 var regions = doc.rootVisualElement.Query(className: "region").ToList();
                 var names = regions.ConvertAll(r => r.name);
@@ -340,6 +347,9 @@ namespace Odyssey.Tests.PlayMode
             bootObject.transform.SetParent(root.transform, false);
             bootObject.SetActive(false);   // so the fields land before Start runs
             boot = bootObject.AddComponent<OdysseyBootstrap>();
+            // Explicitly, not by default: since U38 pressing Play lands on the start screen, and
+            // what this rig is asserting is that a session exists.
+            boot.buildOnPlay = true;
             boot.sizeX = 60;
             boot.sizeZ = 60;
             boot.layers = layers;

@@ -591,6 +591,35 @@ namespace Odyssey.Presentation.CameraRig
         }
 
         /// <summary>
+        /// Put the camera back exactly where it was, live values and smoothing targets together
+        /// (U38).
+        ///
+        /// <para><b>Why this is not four assignments at the call site.</b> <c>yaw</c> and
+        /// <c>distance</c> are *lerped* toward <see cref="_targetYaw"/> and
+        /// <see cref="_targetDistance"/> on every frame, and those targets are private. Writing the
+        /// public fields alone looks right for exactly one frame and then swings back to wherever
+        /// the rig was already heading — which is worse than not restoring at all, because it reads
+        /// as the camera being shoved rather than as the restore not working.</para>
+        ///
+        /// <para>It is also why the focus is taken as a world position rather than as a cell:
+        /// <see cref="FocusOn"/> snaps to a cell centre, and half a cell is 1.25 m of drift every
+        /// time a colony is saved and loaded. A restored view has to be the view that was saved, or
+        /// it is a slow leak that nobody can reproduce.</para>
+        ///
+        /// <para>The focus is clamped to the board the way ordinary panning is, so a pose saved
+        /// against a larger map cannot put the camera outside this one.</para>
+        /// </summary>
+        public void RestorePose(Vector3 focus, float yawDegrees, float pitchDegrees, float distanceMetres)
+        {
+            _focus = focus;
+            ClampFocus();
+
+            yaw = _targetYaw = Mathf.Repeat(yawDegrees, 360f);
+            pitch = Mathf.Clamp(pitchDegrees, 20f, 80f);
+            distance = _targetDistance = Mathf.Clamp(distanceMetres, minDistance, maxDistance);
+        }
+
+        /// <summary>
         /// Realise the camera director's jump: a glide to the cell at the current zoom, on the
         /// smoothing the rest of the camera uses, because a cut would lose the player their
         /// bearings where a glide keeps them. The director is told when the rig has landed.

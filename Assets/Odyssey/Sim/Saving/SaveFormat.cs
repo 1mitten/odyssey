@@ -120,12 +120,40 @@ namespace Odyssey.Sim.Saving
         public readonly string ColonyName;
         public readonly int Day;
 
-        public SaveRecipe(MapType map, string scenario, string colonyName, int day)
+        /// <summary>
+        /// Flat ground with no rock or ore, and — with it — whether the woodland was kept.
+        ///
+        /// <para><b>Added at format 3, and the gap they close is not cosmetic.</b>
+        /// <see cref="Map"/> says <c>Natural</c> for three genuinely different boards: the full
+        /// natural generator, the bare board, and the wooded meadow the scene actually loads. A
+        /// header that names only the map type therefore rebuilds the wrong one.</para>
+        ///
+        /// <para><b>The state hash cannot catch it</b>, which is why it survived U36 and was found
+        /// by U38's round-trip test rather than by a save test: <c>GridSaveSection</c> writes every
+        /// cell of every field, so the wrong board is entirely overwritten and the hashes match.
+        /// What is not overwritten is everything worldgen returns <i>beside</i> the cells — the
+        /// start cell, the outcome, the count of cells marked for work. Measured on one seed: the
+        /// wooded board starts a colony at (25, 22, L11) with 34 cells marked; the same header
+        /// rebuilt on the default board gives (30, 30, L11) and none. Nothing in the simulation
+        /// reads those, so nothing went wrong in a test — but the camera frames the colony on the
+        /// start cell when a session is built, so a loaded game would open on empty ground a
+        /// third of the map away from the colony it had just restored.</para>
+        /// </summary>
+        public readonly bool Barren;
+
+        /// <summary>With <see cref="Barren"/>: keep the woodland. See that field for why both are
+        /// here.</summary>
+        public readonly bool Wooded;
+
+        public SaveRecipe(MapType map, string scenario, string colonyName, int day,
+            bool barren = false, bool wooded = false)
         {
             Map = map;
             Scenario = scenario ?? string.Empty;
             ColonyName = colonyName ?? string.Empty;
             Day = day;
+            Barren = barren;
+            Wooded = wooded;
         }
 
         /// <summary>
@@ -158,11 +186,19 @@ namespace Odyssey.Sim.Saving
         const ulong Magic = 0x59455353594451; // "QDYSSEY" little-endian-ish; any stable value
 
         /// <summary>
-        /// 2 (U36): the header grew a <see cref="SaveRecipe"/> — map type, scenario, colony name
-        /// and day — after the world scalars it always carried. A version 1 file still loads;
-        /// <see cref="ReadHeader"/> is the one place that knows which versions wrote what.
+        /// 3 (U38): the recipe grew the two natural-board flags, <c>Barren</c> and <c>Wooded</c>.
+        /// See <see cref="SaveRecipe.Barren"/> for what was wrong without them — in short, three
+        /// different boards all called <c>Natural</c>, so a header could not rebuild the one it
+        /// was written on, and the state hash could not notice because the cells are overwritten
+        /// by the load.
+        ///
+        /// <para>2 (U36): the header grew a <see cref="SaveRecipe"/> — map type, scenario, colony
+        /// name and day — after the world scalars it always carried.</para>
+        ///
+        /// <para>Version 1 and version 2 files both still load; <see cref="ReadHeader"/> is the
+        /// one place that knows which versions wrote what.</para>
         /// </summary>
-        public const int CurrentFormatVersion = 2;
+        public const int CurrentFormatVersion = 3;
 
         public static void Save(SimWorld world, Stream stream, IReadOnlyList<ISaveable> components,
             SaveRecipe? recipe = null)
@@ -183,6 +219,8 @@ namespace Odyssey.Sim.Saving
             WriteHeaderString(binary, effective.Scenario);
             WriteHeaderString(binary, effective.ColonyName);
             binary.Write(effective.Day);
+            binary.Write(effective.Barren);
+            binary.Write(effective.Wooded);
 
             binary.Write(components.Count);
             for (int i = 0; i < components.Count; i++)
@@ -329,10 +367,20 @@ namespace Odyssey.Sim.Saving
 
             // Version 1 wrote none of this — it predates SaveRecipe entirely — so a file that old
             // reads back Unknown rather than guessing at a map type or a name it never recorded.
-            SaveRecipe recipe = version >= 2
-                ? new SaveRecipe((MapType)binary.ReadInt32(), ReadHeaderString(binary), ReadHeaderString(binary),
-                    binary.ReadInt32())
-                : SaveRecipe.Unknown;
+            // Version 2 wrote everything but the two board flags, which is the one place a reader
+            // has to fill in rather than read: false and false is the full natural generator,
+            // which is what MapType.Natural meant on its own before version 3 could say otherwise.
+            SaveRecipe recipe = SaveRecipe.Unknown;
+            if (version >= 2)
+            {
+                var map = (MapType)binary.ReadInt32();
+                string scenario = ReadHeaderString(binary);
+                string colony = ReadHeaderString(binary);
+                int day = binary.ReadInt32();
+                bool barren = version >= 3 && binary.ReadBoolean();
+                bool wooded = version >= 3 && binary.ReadBoolean();
+                recipe = new SaveRecipe(map, scenario, colony, day, barren, wooded);
+            }
 
             return new SaveHeader(version, seed, size, tick, recipe);
         }

@@ -664,10 +664,28 @@ colour-blind-safe alert palette, interface scale from 80 to 150 per cent.
 
 ## B18 Game menu
 
-Save, load, options, quit. Reached from the tab bar or by the escape key unwinding to the
-bottom of the stack. Milestone M0. **The quit half lives in B17 since 2026-09-17** — an exit
-row pinned under the settings tabs, two clicks because nothing is saved — and moves here when
-this menu exists.
+Save, load, options, quit. Milestone M0 as written; built as **U38** on 2026-09-17, and not in the
+shape this entry predicted. `docs/design/17-start-flow.md` is the design and §2 holds the owner's
+decisions; three of them contradict what was written here and the entry is corrected rather than
+left to argue with the code.
+
+**It is not reached from the tab bar or by Escape**, because there is no second in-game menu. The
+owner's ruling was that the game already has one: the Menu popover on the command bar and the
+settings panel behind Escape. So **Save, Load and Quit to main menu joined B17**, beside the exit
+row, and **the quit half did not move out of B17** — this entry used to say it would, and it does
+not. B17 keeps it; there is one place a session is handled in game, and it is the panel Escape
+already opens.
+
+**What B18 actually is: the screen before the game.** It exists only when no world is built —
+press Play, or choose Quit to main menu — and it carries New game, Load, Options and Quit. It is
+**the project's first true modal**: a pickable scrim over the whole viewport, which is what makes
+`09-ui-and-input.md` §6 case 5 true of something for the first time. It does **not** pause,
+because with no session built there is nothing to pause; the rule is stated for the day a modal is
+raised over a live colony.
+
+The Escape unwind is unchanged and gained no case. The start screen is not reached by Escape, so
+the order in `SettingsDirector.Escape` — tool, popover, palette, panel, open panel — is exactly
+what it was.
 
 ---
 

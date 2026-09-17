@@ -42,6 +42,27 @@
 .hud {
     position: absolute;
     left: 0; top: 0; right: 0; bottom: 0;
+
+    /* The HUD's ink, inherited by every label that does not name its own.
+
+       This is a fix for a whole class of bug rather than for the one that found it (owner,
+       2026-09-17: "I couldn't see any text on the save as/save buttons when saving a world").
+       `color` is an inherited property in UI Toolkit, and nothing in this sheet set one above a
+       leaf — so a label built without a style class fell through to the imported default runtime
+       theme, whose ink is dark, and drew invisibly on a panel that is nearly black. Every label in
+       the HUD passes a class and so nobody had been bitten; the moment two did not, they vanished
+       silently rather than looking wrong, which is the worst way for a mistake like this to
+       present.
+
+       Two labels were already in that state and had been for some time: the naming prompt's
+       answers, and "MADE OF" on the Build palette's material row. Setting the inherited ink here
+       means the next one is merely unstyled instead of absent. Every class below still overrides
+       it, so nothing that already had a colour changes.
+
+       HudStyleSheetTests pins it, because a default nobody can see the absence of is exactly the
+       kind that gets deleted as unused. */
+    color: #eef3f6;
+
     /* The shell must not catch the pointer anywhere a region does not sit, or the world would be
        unclickable behind a full-screen element. Set from code (PickingMode.Ignore), where it
        cannot be lost with a stylesheet swap. */
@@ -1155,7 +1176,15 @@
     align-items: flex-start;
 }
 
-.bp__mats-label { margin-bottom: 8px; }
+/* The palette's captions take the panel-label ink rather than inheriting whatever is above them.
+   That is main's fix of 2026-09-17, ported: the old palette's "MADE OF" had no class at all, so it
+   took the imported runtime theme's dark ink and had been invisible since the material row was
+   built. `.hud` carries a default ink now, which would have covered these — but a caption that
+   says what colour it is cannot be uncovered again by the next theme change. */
+.bp__mats-label {
+    margin-bottom: 8px;
+    color: rgba(255, 255, 255, 0.50);
+}
 
 .bp__mats-row {
     flex-direction: row;
@@ -1197,7 +1226,10 @@
     padding: 12px 14px;
 }
 
-.bp__pane-label { margin-bottom: 8px; }
+.bp__pane-label {
+    margin-bottom: 8px;
+    color: rgba(255, 255, 255, 0.50);
+}
 
 /* Four columns of tiles, and they are allowed to end in a ragged row rather than close up:
    this layout's whole point is that its height does not move when the category does. The grid
@@ -1507,9 +1539,208 @@
     border-top-color: rgba(255, 255, 255, 0.09);
 }
 
-.settings__exit--armed { background-color: rgba(111, 211, 227, 0.12); }
+/* A row that has been pressed once and is asking to be sure. Not named for the exit row any more
+   (U38): the settings panel grew Load and Quit-to-main-menu beside it, and the start screen has
+   its own Quit, and all of them ask the same question in the same voice. One class, so the answer
+   to "what does a row look like when it is waiting for a second press" has one place. */
+.row--armed { background-color: rgba(111, 211, 227, 0.12); }
 
-.settings__exit--armed .settings__label { color: #6fd3e3; }
+.row--armed .settings__label { color: #6fd3e3; }
+
+/* ---------------------------------------------------------------- the modal scrim
+
+   The third scrim, and the only one that is not always on. The two at the top and bottom of the
+   screen are ramps carrying the HUD's text contrast; this one is flat, covers the viewport, and
+   says that what is behind it is not available. Flat rather than a ramp, so it needs no generated
+   texture and can live here as a plain fill.
+
+   It is a pointer target on purpose, which is the whole of "a modal swallows every pointer event"
+   (09-ui-and-input.md section 6, case 5): a full-viewport element under the panel and over
+   everything else absorbs what would otherwise reach the world. */
+
+.modal-scrim {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    background-color: rgba(8, 11, 14, 0.66);
+}
+
+/* ---------------------------------------------------------------- B18 the start screen
+
+   The screen before the game: the only one that exists when no world is built. Centred like the
+   settings panel, and for the same reason — it belongs to no button, so there is nothing to anchor
+   it to. It is a window, so it takes the opaque fill and the close X from .window; the X is
+   suppressed on the root screen, which has nothing to close to.
+
+   It introduces no control of its own. A row here is a .settings__row, which is the same row the
+   stores panel, the Menu popover and the settings panel are built from. */
+
+/* A fixed box, and fixed is the point (owner, 2026-09-17: "keep it fixed width and height because
+   it becomes hard to read between loading and saving screens"). It used to size itself to its
+   content, so the root screen and the load screen gave two different boxes — and since the panel is
+   centred, moving between them moved every row under the pointer. A menu whose items walk away as
+   you navigate is a menu you have to re-find each time. */
+.startscreen {
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    width: 420px;
+    height: 384px;
+}
+
+/* Everything under the title. One height for every screen this panel shows, which is what makes
+   the panel's own height a constant rather than a consequence. */
+.startscreen__body {
+    height: 318px;
+    margin-top: 14px;
+}
+
+/* The game's own name, at the largest word-face step the type scale has. An explicit box with
+   middle alignment, like every other label that shares a column, so its leading falls outside the
+   box rather than pushing the rows below it down. */
+.startscreen__title {
+    color: #eef3f6;
+    height: 26px;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+/* Top-aligned in a body that is taller than they are. The air below is deliberate: the alternative
+   to a fixed body is a list that scrolls at four rows. */
+.startscreen__rows { flex-shrink: 0; }
+
+/* The saves, when the load screen is showing. A max height and a scroll, which is the first
+   ceiling any region in this interface has carried — and it is here first because this is the
+   first region whose length is set by the player rather than by the game. The scroller itself is
+   restyled by the .build__scroll rules above; this list wears the same class so there is one
+   scrollbar in the project rather than two. Six rows, which is what the fixed body leaves once the
+   row that goes back has taken its share. */
+.startscreen__list {
+    flex-grow: 0;
+    flex-shrink: 0;
+    min-height: 0;
+    max-height: 284px;
+}
+
+.save {
+    flex-direction: column;
+    justify-content: center;
+    height: 44px;
+    margin-bottom: 4px;
+    padding: 0 8px;
+    border-radius: 3px;
+}
+
+.save:hover { background-color: rgba(255, 255, 255, 0.07); }
+
+.save__name {
+    color: #eef3f6;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+/* Day, map, and — for a file this build cannot open — the reason. Listed rather than hidden: a
+   save that vanishes from the list is a colony the player concludes is gone. */
+.save__meta {
+    color: rgba(255, 255, 255, 0.66);
+    white-space: nowrap;
+}
+
+.save--bad { opacity: 0.42; }
+.save--bad:hover { background-color: rgba(0, 0, 0, 0); }
+.save--bad .save__meta { color: #e8b55c; }
+
+/* The row that goes back, set apart from the list above it the way the settings panel's exit row
+   is set apart from the tabs. */
+.startscreen__back {
+    margin-top: 4px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.09);
+}
+
+/* ---------------------------------------------------------------- the naming prompt
+
+   Names a save before it is written (owner, 2026-09-17). A modal over a running colony, which is
+   the first time that combination exists — the start screen's modal has no world behind it. The
+   world keeps running underneath, which is the owner's standing answer for what a modal does. */
+
+.prompt {
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    width: 420px;
+}
+
+/* The first text field in the project, so it is restyled from Unity's default rather than
+   accepted — the default is a pale box with a blue focus ring, which against a near-black panel
+   reads as a control from a different program. The scroller and the volume slider went the same
+   way; this is the third. No font-size here: type belongs to HudType, and the sheet is checked
+   for that. */
+.field {
+    height: 30px;
+    margin-top: 9px;
+}
+
+.field .unity-base-text-field__input {
+    background-color: rgba(0, 0, 0, 0.35);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+    padding: 0 8px;
+    color: #eef3f6;
+    --unity-cursor-color: #6fd3e3;
+    -unity-text-align: middle-left;
+}
+
+.field:hover .unity-base-text-field__input { border-color: rgba(255, 255, 255, 0.35); }
+.field:focus .unity-base-text-field__input { border-color: #6fd3e3; }
+
+/* The two answers, side by side under the field: confirm on the left where the eye already is
+   after typing, leave on the right. */
+.prompt__answers {
+    flex-direction: row;
+    margin-top: 9px;
+}
+
+/* The answer IS its label, the way a settings rung is — one element carrying the box and the word
+   together. It was a box with a Label inside it, and that Label had no class, so it took the
+   imported theme's dark ink and could not be seen at all. */
+.prompt__answer {
+    flex-grow: 1;
+    flex-basis: 0;
+    height: 29px;
+    margin-right: 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.82);
+    -unity-text-align: middle-center;
+}
+
+.prompt__answer:hover { border-color: #6fd3e3; }
+
+/* Armed: the same accent wash every other row that asks twice uses. It needs its own line because
+   .row--armed colours a `.settings__label` child, and this control has no child to colour. */
+.prompt__answer--armed {
+    background-color: rgba(111, 211, 227, 0.12);
+    border-color: #6fd3e3;
+    color: #6fd3e3;
+}
+
+/* A name that cannot be written — empty, or nothing but punctuation. Disabled with its reason
+   rather than a press that silently does nothing, which is the panel catalogue's rule. */
+.prompt__answer--off { opacity: 0.42; }
+.prompt__answer--off:hover { border-color: rgba(255, 255, 255, 0.13); }
+
+/* The line under the field: what will happen, in words, before it happens. It is the only warning
+   there is, since the write itself is instant and silent. */
+.prompt__note {
+    color: rgba(255, 255, 255, 0.50);
+    white-space: normal;
+    margin-top: 9px;
+}
+
+.prompt__note--warn { color: #e8b55c; }
 
 /* ---------------------------------------------------------------- the drag-select marquee */
 

@@ -645,6 +645,161 @@ namespace Odyssey.Hud
 
         public const int SkillRowGap = 4;
 
+        // ------------------------------------------------------------------ the start screen
+
+        /// <summary>
+        /// How wide the start screen's column is.
+        ///
+        /// <para>**420 since the owner played it** (2026-09-17), up from 320. A save row carries the
+        /// colony's name over a line that has to distinguish it from every other save of the same
+        /// colony — the day, the board, and now the date and time it was written — and at 320 that
+        /// line had to be cut somewhere. The acceptance criteria allow an ellipsis on a colonist's
+        /// name and on nothing else, so the panel widens rather than the words shortening.</para>
+        /// </summary>
+        public const int StartWidth = 420;
+
+        /// <summary>
+        /// The title block: the game's own name, set at <see cref="HudTextRole.Name"/>.
+        ///
+        /// <para>The type scale is closed at six steps and a seventh would fail
+        /// <c>HudTypeTests</c>, so the largest word-face step in the interface is what a title
+        /// gets. It is the same size as a colonist's name in the inspect pane, which is smaller
+        /// than a title usually is and is the honest consequence of having a scale at all: a
+        /// bigger one is a deliberate change to <see cref="HudType"/>, not a literal written
+        /// here.</para>
+        /// </summary>
+        public const int StartTitle = 26;
+
+        /// <summary>Title to the first row.</summary>
+        public const int StartTitleGap = 14;
+
+        /// <summary>
+        /// One row of the start screen — deliberately <see cref="RowHeight"/>, the same row the
+        /// stores panel, the Menu popover and the settings panel are all built from. The start
+        /// screen introduces no new control; it arranges the ones the interface already has.
+        /// </summary>
+        public const int StartRow = RowHeight;
+
+        public const int StartRowGap = 4;
+
+        /// <summary>
+        /// One row of the load list: a colony's name on one line and the line that identifies it —
+        /// day, board, when it was written, and for a file this build cannot open, why — under it.
+        /// Two lines, so it stands taller than the plain row above.
+        /// </summary>
+        public const int StartSaveRow = 44;
+
+        public const int StartSaveGap = 4;
+
+        /// <summary>
+        /// The start screen's body: everything under the title, and <b>a fixed height whatever
+        /// screen is showing</b>.
+        ///
+        /// <para><b>Fixed because the owner asked for it after playing</b> (2026-09-17): *"keep it
+        /// fixed width and height because it becomes hard to read between loading and saving
+        /// screens"*. The panel used to size itself to its content, so the root screen's four rows
+        /// and the load screen's list gave two quite different boxes — and since the panel is
+        /// centred, moving between them moved every row under the pointer. A menu whose items walk
+        /// away as you navigate is a menu you have to re-find each time.</para>
+        ///
+        /// <para>The number is six save rows and the row that goes back, which is what the load
+        /// screen needs before it scrolls; the root screen's four rows sit at the top of the same
+        /// box and leave the rest as air. Air is the cheaper of the two mistakes — the alternative
+        /// is a list that scrolls at four.</para>
+        /// </summary>
+        public const int StartBody =
+            6 * StartSaveRow + 5 * StartSaveGap                     // the list before it scrolls
+            + StartRowGap + HudTheme.BorderWidth + StartRow;        // the row that goes back
+
+        /// <summary>The start screen's height: the same for every screen it shows.</summary>
+        public const float StartPanelHeight =
+            Frame + Pad + StartTitle + StartTitleGap + StartBody + Pad;
+
+        // ------------------------------------------------------------------ the naming prompt
+
+        /// <summary>
+        /// The prompt that names a save. The start screen's width, because a save's name is as long
+        /// as a save's row and the two are read one after the other.
+        /// </summary>
+        public const int PromptWidth = StartWidth;
+
+        /// <summary>
+        /// A text field's box — the first control of its kind in this interface.
+        ///
+        /// <para>Thirty rather than the <see cref="RowHeight"/> of twenty-nine, because a field is
+        /// a thing you click into and type in rather than a line you read, and the one pixel is the
+        /// border it carries that a row does not.</para>
+        /// </summary>
+        public const int FieldHeight = 30;
+
+        /// <summary>
+        /// How tall the load list may stand before it scrolls: whatever the fixed body leaves once
+        /// the row that goes back has taken its share.
+        ///
+        /// <para><b>The first region in this interface with a real ceiling on it</b>, because it is
+        /// the first whose length is set by the player rather than by the game: a folder can hold
+        /// any number of saves. The Keys tab was already noted in <c>CLAUDE.md</c> as the panel
+        /// that would want this first; the load list simply got here before it, and the scroller
+        /// it uses is the one the Build palette already restyled.</para>
+        ///
+        /// <para>Derived rather than written down since the panel's height was fixed, because a
+        /// ceiling that disagreed with the box it sits in is a list that either scrolls early or
+        /// runs off the bottom.</para>
+        /// </summary>
+        public const int StartListMax = StartBody - StartRowGap - HudTheme.BorderWidth - StartRow;
+
+        /// <summary>
+        /// How tall the content of one screen <i>would</i> be, for a given number of rows — which
+        /// is no longer the panel's height, and is kept because it is what decides whether a screen
+        /// fits inside <see cref="StartBody"/> or has to scroll.
+        /// </summary>
+        public static float StartRowsHeight(int rows) =>
+            Math.Max(0, rows) * StartRow + Math.Max(0, rows - 1) * StartRowGap;
+
+        /// <summary>
+        /// How tall a listing of this many saves would be, before the body's ceiling is applied.
+        /// Zero saves still occupy a row: the "nothing here yet" line.
+        /// </summary>
+        public static float StartListHeight(int saves) =>
+            saves <= 0 ? StartSaveRow : saves * StartSaveRow + (saves - 1) * StartSaveGap;
+
+        /// <summary>
+        /// How many saves the list shows before it scrolls. Derived from the fixed body rather
+        /// than written down, so the two cannot disagree the day the body changes.
+        /// </summary>
+        public static int StartSavesBeforeScrolling =>
+            (int)((StartBody - StartRowGap - HudTheme.BorderWidth - StartRow + StartSaveGap) /
+                  (StartSaveRow + StartSaveGap));
+
+        /// <summary>
+        /// Where the start screen sits: centred, both axes.
+        ///
+        /// <para><b>Not part of <see cref="Solve"/>, and that is deliberate.</b> Solve places the
+        /// regions of the playing HUD and its test asks whether any two of them overlap. The start
+        /// screen is never on screen with any of them — it exists precisely when no session is
+        /// built, so there is no stores panel, no roster and no command bar to overlap. Putting it
+        /// in that dictionary would be asking a question about a screen nobody will ever see. What
+        /// it does owe the fast tier is <see cref="StartScreenFits"/>.</para>
+        /// </summary>
+        public static HudRect StartScreen(float width, float height) =>
+            new HudRect((width - StartWidth) * 0.5f, (height - StartPanelHeight) * 0.5f,
+                StartWidth, StartPanelHeight);
+
+        /// <summary>
+        /// Whether the start screen stands entirely inside the canvas.
+        ///
+        /// <para>The question the overlap test answers for the playing HUD, asked the only way it
+        /// can be asked of a screen with nothing beside it. A modal that runs off the top of a
+        /// small canvas hides its own first row, and the row a start screen hides first is New
+        /// game.</para>
+        /// </summary>
+        public static bool StartScreenFits(float width, float height)
+        {
+            HudRect box = StartScreen(width, height);
+            return box.X >= 0f && box.Y >= 0f &&
+                   box.X + box.Width <= width && box.Y + box.Height <= height;
+        }
+
 
         // ================================================================== solve
 

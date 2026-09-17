@@ -341,18 +341,18 @@ namespace Odyssey.Presentation.Ui
             // setting, and the game menu it will one day belong to (B18) does not exist yet.
             // Two clicks, because nothing is saved and a settings panel is a place a player
             // reaches past for the close button.
-            _exitRow = new VisualElement();
-            _exitRow.AddToClassList("settings__row");
-            _exitRow.AddToClassList("settings__exit");
-            var exitIcon = new IconBadge(SettingsDirector.ExitKey, IconBadge.RowSize);
-            exitIcon.Inherit(HudTokens.TextMeta);
-            _exitRow.Add(exitIcon);
-            _exitLabel = HudText.Make(Registry.Label(SettingsDirector.ExitKey), HudTextRole.Row,
-                ussClass: "settings__label");
-            _exitRow.Add(_exitLabel);
-            _exitRow.tooltip = "Quits the game. Nothing is saved yet, so the row asks first";
-            _exitRow.RegisterCallback<ClickEvent>(_ => _directors?.Settings.RequestExit());
-            _settingsPanel.Add(_exitRow);
+            // Every session row, from the one table the start screen also builds from
+            // (SessionCommands). Four of them since U38: Save, Load, Quit to main menu, and the
+            // exit row that has been here since this panel had a way out at all. The hairline that
+            // sets them apart from the settings above belongs to the first of them, not to the
+            // exit row it used to belong to.
+            bool first = true;
+            foreach (SessionCommand command in SessionCommands.For(SessionContext.InGame))
+            {
+                VisualElement row = SessionRow(command, separated: first);
+                first = false;
+                _settingsPanel.Add(row);
+            }
 
             // The director opens on Interface, and the shell may never attach to a director at all
             // in a harness that builds no world. Showing every section at once is not a state
@@ -830,13 +830,80 @@ namespace Odyssey.Presentation.Ui
             HudText.Set(view.Value, text, HudTextRole.Body);
         }
 
+        /// <summary>
+        /// One session row of the settings panel: Save, Load, Quit to main menu, Exit game.
+        ///
+        /// <para>Identical in construction to the start screen's rows, because they are rows of
+        /// the same table — the only difference is which context <see cref="SessionCommands"/> was
+        /// asked for. That is the whole of what "the two surfaces cannot drift apart" buys.</para>
+        /// </summary>
+        VisualElement SessionRow(SessionCommand command, bool separated)
+        {
+            var row = new VisualElement();
+            row.AddToClassList("settings__row");
+            if (separated) row.AddToClassList("settings__exit");
+
+            var icon = new IconBadge(command.Key, IconBadge.RowSize);
+            icon.Inherit(HudTokens.TextMeta);
+            row.Add(icon);
+
+            Label label = HudText.Make(command.Label, HudTextRole.Row, ussClass: "settings__label");
+            row.Add(label);
+            row.tooltip = SessionTooltip(command);
+            row.RegisterCallback<ClickEvent>(_ => _directors?.Settings.Request(command.Key));
+
+            _sessionRows[command.Key] = (row, label);
+            if (command.Key == SettingsDirector.ExitKey)
+            {
+                _exitRow = row;
+                _exitLabel = label;
+            }
+            return row;
+        }
+
+        readonly Dictionary<string, (VisualElement Row, Label Label)> _sessionRows =
+            new Dictionary<string, (VisualElement, Label)>();
+
+        /// <summary>
+        /// What a session row says on hover. A literal, like every other tooltip in this shell —
+        /// the registry emits labels and not tooltips, and a tooltip is a sentence about what
+        /// happens rather than a name the owner maintains in the CSV.
+        /// </summary>
+        internal static string SessionTooltip(SessionCommand command)
+        {
+            string what = command.Key switch
+            {
+                SessionCommands.SaveKey => "Writes this colony to a file under Saves",
+                SessionCommands.LoadKey => "Opens another colony",
+                SessionCommands.QuitToMenuKey => "Puts this colony down and goes back to the start screen",
+                SessionCommands.QuitKey => "Leaves the game",
+                SessionCommands.NewGameKey => "Starts a colony on a fresh board",
+                _ => command.Label,
+            };
+
+            return command.AsksTwice ? what + ". It asks twice, because it cannot be undone" : what;
+        }
+
+        /// <summary>
+        /// The armed row says what it is waiting for, and every other one goes back to its name.
+        ///
+        /// <para>A loop over all four rather than a line about the exit row, because the director
+        /// holds one armed key across the whole panel: pressing Load while Quit is armed has to
+        /// stand Quit down, and a refresh that only knew about one row would leave the other
+        /// saying "Click again" about a question nobody is asking any more.</para>
+        /// </summary>
         void OnExitChanged()
         {
             if (_directors == null) return;
-            bool armed = _directors.Settings.ExitArmed;
-            _exitRow.EnableInClassList("settings__exit--armed", armed);
-            HudText.Set(_exitLabel, armed ? "Quit? Click again" : Registry.Label(SettingsDirector.ExitKey),
-                HudTextRole.Row);
+            string? armed = _directors.Settings.ArmedRow;
+
+            foreach (KeyValuePair<string, (VisualElement Row, Label Label)> pair in _sessionRows)
+            {
+                bool on = pair.Key == armed;
+                pair.Value.Row.EnableInClassList("row--armed", on);
+                HudText.Set(pair.Value.Label,
+                    on ? "Click again to confirm" : Registry.Label(pair.Key), HudTextRole.Row);
+            }
         }
 
         void OnBindingChanged(HotkeyAction action)
