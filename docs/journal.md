@@ -3507,3 +3507,41 @@ two URP test files are ignored, which is what we want. If the noise is unwelcome
 re-resolve the package (remove its `Library/PackageCache` folder and reopen) is the remedy; the
 hitching wants measuring in PlayMode, where frame time is the only place it is ever measured.
 
+### The start menu took the build cursor with it (2026-09-17)
+
+The owner, over three rounds: the build cursor does not appear, in a new game or a loaded one; then
+*"this is happening on other builds - did the new menus bust something? it used to highlight say -
+the wall immediately onto the placement area, but it's completely not visible anymore."*
+
+That last sentence is the one that solved it. Everything before it had been read as a fault in *this*
+branch, and it was not on this branch at all.
+
+`TeardownSession` dropped `_designate` along with the renderer, the render mirror, the colony and the
+world. Those four are built by a session and must not outlive one. The presenter is not: it is a
+sibling component on the same GameObject, found once by `WarnIfTheSceneIsStale` in `Start`, and
+`Start` does not run twice. So the first teardown set the reference to null and nothing ever looked
+for it again.
+
+`DrawToolPreview` opens with `if (_renderer == null || _designate == null) return;`. From that
+moment the build cursor, the drag box and the run's ghosts were all gone together — which is why the
+report was "no highlight at all" rather than anything subtler.
+
+**It was harmless until the menu existed.** A session used to be built once at `Start` and never
+torn down, so the null was unreachable. `MS` made teardown-and-rebuild the ordinary way into a game:
+every New game, every Load. The bug did not change; the path through it became the only path.
+
+**Two things made it expensive, and both are worth keeping in mind.** The diagnostics added over the
+previous two commits reported nothing, and I read that as "the cursor path is fine" when it meant
+"the cursor path is not being entered" — the guards all live inside `DrawHoverGhost`, one level below
+the return that was firing. Silence from an instrument is data about the instrument first. And every
+PlayMode test in the suite builds exactly one session, so not one of them could see a fault that
+begins at the second. `TheCursorSurvivesATeardownAndRebuild` asserts the ordinary path, and it was
+checked the only way worth checking: put the null back, watch it fail on "the cursor path says
+nothing at all", take it out again.
+
+Six other causes were checked and cleared along the way, and they are worth not re-checking: the
+rig's hover branch, the preview gate, the HUD re-adopting directors by identity after a rebuild,
+`PointOverUi` claiming the whole screen, every palette chip arming its tool (now a fast-tier test),
+and the ghost being drawn at an unseen layer — the owner's own guess, disproved by
+`[Cursor] drawn: pointer L6 -> ghost L6, camera L6`.
+

@@ -260,6 +260,35 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         /// <summary>
+        /// The presenter is a sibling component, not a thing a session owns.
+        ///
+        /// <para><b>It used to be dropped by <c>TeardownSession</c> along with the renderer, the
+        /// mirror and the colony, and it was the only line in that list that was wrong.</b> Those
+        /// are built by a session and must not outlive one; this is a component on the same
+        /// GameObject, found once in <c>Start</c> and alive for as long as the object is. Nulling
+        /// it meant the reference was gone and nothing ever looked for it again, because
+        /// <c>Start</c> does not run twice.</para>
+        ///
+        /// <para><b>What that cost.</b> <c>DrawToolPreview</c> begins
+        /// <c>if (_renderer == null || _designate == null) return;</c>, so from the first teardown
+        /// onwards the build cursor, the drag box and the run's ghosts all stopped being drawn —
+        /// and nothing said so, because every diagnostic in that path lives further down a method
+        /// that was no longer being reached. It did not matter while a session was built once at
+        /// <c>Start</c> and never torn down. The start menu made a teardown-and-rebuild the normal
+        /// way into every game, so the cursor vanished on every New game and every Load, on every
+        /// branch that has the menu (owner, 2026-09-17: *"this is happening on other builds - did
+        /// the new menus bust something? it used to highlight the wall immediately onto the
+        /// placement area"*).</para>
+        ///
+        /// <para>Re-found on build as well as kept, so a session built after the component was
+        /// added at runtime still has it.</para>
+        /// </summary>
+        void FindTheSiblingPresenters()
+        {
+            if (_designate == null) _designate = GetComponent<DesignatePresenter>();
+        }
+
+        /// <summary>
         /// Build a world and everything that draws it, now, rather than at <c>Start</c> (U35).
         ///
         /// <para><b>Why this is a method and not a lifecycle hook.</b> A menu has to be able to
@@ -469,6 +498,7 @@ namespace Odyssey.Presentation.Bootstrap
 
             // Over the preferences this component has held since it woke, not over fresh ones:
             // the same settings panel and the same key bindings serve every session.
+            FindTheSiblingPresenters();
             Directors = new HudDirectors(size.SizeY, outcome.StartCell.Y, Preferences, Keys);
             Directors.Slice.LayerChanged += OnActiveLayerChanged;
 
@@ -1859,7 +1889,6 @@ namespace Odyssey.Presentation.Bootstrap
             _figures = null;
             _colonistMaterials = null;
             _renderer = null;
-            _designate = null;
             _actorMaterial = null;
             _model = null;
             _colony = null;
