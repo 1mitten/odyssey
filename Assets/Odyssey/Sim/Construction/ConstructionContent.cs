@@ -174,6 +174,54 @@ namespace Odyssey.Sim.Construction
             return work < 1 ? 1 : work;
         }
 
+        /// <summary>
+        /// Which building this edifice is, or <see cref="BuildingHandle.None"/>.
+        ///
+        /// <para>The reverse of <see cref="BuildingDef.edifice"/>, and it exists because a wall
+        /// that is <i>standing</i> is a <c>PlacedEdifice</c> and has forgotten which row of this
+        /// table raised it. Building never needed to ask; deconstruct does, because what it costs
+        /// and what it gives back are both priced off that row. A linear walk over a table of two,
+        /// called once when a job is given rather than per tick.</para>
+        /// </summary>
+        public static int BuildingForEdifice(ushort edifice)
+        {
+            for (int i = 1; i < BuildingTable.Length; i++)
+                if (BuildingTable[i].edifice == edifice) return i;
+            return BuildingHandle.None;
+        }
+
+        /// <summary>
+        /// Which material this is, or <see cref="StuffHandle.None"/>. The reverse of
+        /// <see cref="StuffDef.stuff"/>, and here for the same reason as
+        /// <see cref="BuildingForEdifice"/>: a refund is paid in the material the thing was made
+        /// of, and a standing building carries the raw value rather than the handle.
+        /// </summary>
+        public static int StuffForValue(ushort stuff)
+        {
+            for (int i = 1; i < StuffTable.Length; i++)
+                if (StuffTable[i].stuff == stuff) return i;
+            return StuffHandle.None;
+        }
+
+        /// <summary>
+        /// What taking this thing apart costs in ticks.
+        ///
+        /// <para>Derived from what it took to build rather than given its own number, so a thing
+        /// that is expensive to raise is slow to pull down without anyone maintaining two figures
+        /// that have to agree. The clamp is the reference's (<c>a-04</c> §1): nothing is instant,
+        /// and nothing takes a day. With one building in the game neither bound can be reached, and
+        /// the shape is right before it can be reached rather than after.</para>
+        /// </summary>
+        public static int WorkToDeconstruct(int building, int stuff)
+        {
+            int work = WorkFor(building, stuff);
+            if (work < MinDeconstructTicks) return MinDeconstructTicks;
+            return work > MaxDeconstructTicks ? MaxDeconstructTicks : work;
+        }
+
+        public const int MinDeconstructTicks = 20;
+        public const int MaxDeconstructTicks = 3000;
+
         /// <summary>See <c>PawnContent.Register</c>: the Def types this content is made of.</summary>
         public static DefLoader Register(DefLoader loader) =>
             loader.Register<BuildingDef>().Register<StuffDef>();

@@ -149,7 +149,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#buildings">Buildings and orders<b>81</b></a></li>
 <li><a href="#commands">Commands<b>48</b></a></li>
 <li><a href="#work">Work and skills<b>35</b></a></li>
-<li><a href="#colonists">Colonists<b>32</b></a></li>
+<li><a href="#colonists">Colonists<b>33</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>37</b></a></li>
 <li><a href="#world">World and interface<b>76</b></a></li>
@@ -161,9 +161,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>435</b><i>named entries</i></div>
+<div class="stat"><b>436</b><i>named entries</i></div>
 <div class="stat"><b>265</b><i>with icon art</i></div>
-<div class="stat m"><b>170</b><i>no art yet</i></div>
+<div class="stat m"><b>171</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -529,9 +529,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> tools and weapons</div>
 <div class="ms">M3</div>
 </div>
-<div class="row" id="ui.item.axe" data-hay="axe ui.item.axe cutting, and felling " data-gap="0">
+<div class="row" id="ui.item.axe" data-hay="axe ui.item.axe cutting, and chopping " data-gap="0">
 <div class="nm">Axe<span class="k">ui.item.axe</span></div>
-<div class="dsc">Cutting, and felling</div>
+<div class="dsc">Cutting, and chopping</div>
 <div class="art"><span class="pill">high</span> tools and weapons</div>
 <div class="ms">M3</div>
 </div>
@@ -854,8 +854,8 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">high</span> salvage gear</div>
 <div class="ms">M3</div>
 </div>
-<div class="row gap" id="ui.arch.tool.fell" data-hay="fell trees ui.arch.tool.fell cut a tree down for wood an axe against a trunk" data-gap="1">
-<div class="nm">Fell trees<span class="k">ui.arch.tool.fell</span></div>
+<div class="row gap" id="ui.arch.tool.fell" data-hay="chop trees ui.arch.tool.fell cut a tree down for wood an axe against a trunk" data-gap="1">
+<div class="nm">Chop trees<span class="k">ui.arch.tool.fell</span></div>
 <div class="dsc">Cut a tree down for wood<span class="need">Needs drawing: an axe against a trunk</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
@@ -1677,7 +1677,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="colonists" data-sec="1">
-<h2>Colonists <em class="count">32 entries</em></h2>
+<h2>Colonists <em class="count">33 entries</em></h2>
 <p class="blurb">Who is on the map, what they need, how they feel and what they are doing right now. This is the section with the least art: no sheet contains a human figure.</p>
 <h3 class="nsh">Kinds of pawn</h3>
 <div class="tbl">
@@ -1820,14 +1820,20 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">med</span> action tiles</div>
 <div class="ms">M2</div>
 </div>
+<div class="row gap" id="ui.status.deconstructing" data-hay="deconstructing ui.status.deconstructing taking one of our own buildings apart " data-gap="1">
+<div class="nm">Deconstructing<span class="k">ui.status.deconstructing</span></div>
+<div class="dsc">Taking one of our own buildings apart</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 <div class="row" id="ui.status.mining" data-hay="mining ui.status.mining cutting into rubble, concrete or rock " data-gap="0">
 <div class="nm">Mining<span class="k">ui.status.mining</span></div>
 <div class="dsc">Cutting into rubble, concrete or rock</div>
 <div class="art"><span class="pill">high</span> tools and weapons</div>
 <div class="ms">M2</div>
 </div>
-<div class="row gap" id="ui.status.felling" data-hay="felling ui.status.felling cutting a tree down for wood an axe swung at a trunk" data-gap="1">
-<div class="nm">Felling<span class="k">ui.status.felling</span></div>
+<div class="row gap" id="ui.status.felling" data-hay="chopping ui.status.felling cutting a tree down for wood an axe swung at a trunk" data-gap="1">
+<div class="nm">Chopping<span class="k">ui.status.felling</span></div>
 <div class="dsc">Cutting a tree down for wood<span class="need">Needs drawing: an axe swung at a trunk</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
@@ -2975,7 +2981,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 435, "gaps": 170};</script>
+<script>window.WIKI={"total": 436, "gaps": 171};</script>
 <script>
 (function(){
   var D = window.WIKI;
