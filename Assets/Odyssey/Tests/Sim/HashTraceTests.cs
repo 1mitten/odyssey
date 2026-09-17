@@ -147,8 +147,13 @@ namespace Odyssey.Tests.Sim
             // ComputeStateHash walks every registered hashable, so its cost is a property of the
             // world's contents, not of the trace: the 8x8x4 world with one tickable is the floor,
             // and the colony is the figure that matters.
+            // The colony arm runs few ticks on purpose. Since OQ-50 put the cell grid into the
+            // hash, tracing a 60x60x16 colony costs about 2.8 ms a tick — a per-tick figure, so
+            // three hundred ticks measures it exactly as well as two thousand and gives the fast
+            // tier back five seconds. The toy world keeps its long run because its per-tick cost
+            // is sub-microsecond and needs the samples.
             Measure("8x8x4, one tickable", 20_000, _ => Build());
-            Measure("60x60x16 colony, 5 colonists", 2_000,
+            Measure("60x60x16 colony, 5 colonists", 300,
                 _ => ColonyWorld.Build(new GridSize(60, 60, 16), 4242, ScenarioDef.Bare()).World);
         }
 
