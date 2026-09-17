@@ -140,12 +140,39 @@ namespace Odyssey.Sim.Pawns
         /// <param name="wooded">With <paramref name="barren"/>: keep the woodland, which is what
         /// the scene loads since 2026-09-16. False is the bare board the tests baseline on.</param>
         public static ColonyWorld Build(GridSize size, uint seed, ScenarioDef scenario, bool barren = true,
-            ChunkGrid? chunks = null, MapType mapType = MapType.Natural, bool wooded = false)
-        {
-            MapGenDef gen = MapGenerator.DefaultDef(mapType, size);
-            if (barren && gen is NaturalMapGenDef natural)
+            ChunkGrid? chunks = null, MapType mapType = MapType.Natural, bool wooded = false) =>
+            Build(new ColonyRequest
             {
-                if (wooded) natural.MakeWooded();
+                Size = size,
+                Seed = seed,
+                Scenario = scenario,
+                Barren = barren,
+                Chunks = chunks,
+                Map = mapType,
+                Wooded = wooded,
+            });
+
+        /// <summary>
+        /// Build the world the play scene plays, from a <see cref="ColonyRequest"/>.
+        ///
+        /// <para>This is the only build. The composition root used to have its own copy of these
+        /// lines and had drifted from them twice over — it registered no connectors with the
+        /// navigation graph, so a stair on a city map joined no region; it never ran the full
+        /// support solve; and it assembled no <see cref="SaveComponents"/>, which is why the one
+        /// world a player actually ran was the one world that could not be written to a file.</para>
+        /// </summary>
+        public static ColonyWorld Build(ColonyRequest request)
+        {
+            if (request == null) throw new System.ArgumentNullException(nameof(request));
+
+            GridSize size = request.Size;
+            uint seed = request.Seed;
+            ChunkGrid? chunks = request.Chunks;
+
+            MapGenDef gen = MapGenerator.DefaultDef(request.Map, size);
+            if (request.Barren && gen is NaturalMapGenDef natural)
+            {
+                if (request.Wooded) natural.MakeWooded();
                 else natural.MakeBarren();
             }
 
@@ -167,12 +194,25 @@ namespace Odyssey.Sim.Pawns
             var designations = new DesignationGrid(grid, outcome.Edifices);
             var jobs = new JobSystem(pawns);
 
-            SimWorld world = new SimWorldBuilder()
+            var builder = new SimWorldBuilder()
                 .WithSeed(seed)
-                .WithSize(size)
+                .WithSize(size);
+
+            // The mirror publishes first so the geometry a frame shows is the one its pawns and
+            // orders were computed against. Built here because it is built from the grid that was
+            // generated four lines ago and could not have existed before it.
+            if (request.Mirror != null) builder.AddSnapshotContributor(request.Mirror(grid, outcome));
+
+            SimWorld world = builder
                 .AddColony(pawns, designations, support, nav, jobs)
                 .Build();
 
+            // Before anything is placed and before the first tick, which is the only window
+            // SimWorld.StartAtTick allows: CurrentTick is in the state hash and seeds the per-tick
+            // random stream. A start tick of zero is inert, so nothing baked moves.
+            if (request.StartTick > 0) world.StartAtTick(request.StartTick);
+
+            ScenarioDef scenario = request.Scenario;
             ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed, scenario);
             ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenario);
 
