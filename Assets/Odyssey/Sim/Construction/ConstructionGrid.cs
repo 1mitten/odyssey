@@ -29,6 +29,7 @@ namespace Odyssey.Sim.Construction
     public sealed class ConstructionGrid : ITickable, IStateHashable, ISaveable, ISnapshotContributor
     {
         readonly CellGrid _grid;
+        readonly EdificeSaveSection _edificeSave;
         readonly List<PlacedEdifice> _edifices;
         readonly ColonyItems _items;
         readonly byte[] _building;
@@ -37,10 +38,18 @@ namespace Odyssey.Sim.Construction
         readonly int[] _work;
         readonly List<int> _sites = new List<int>();
 
-        public ConstructionGrid(CellGrid grid, List<PlacedEdifice> edifices, ColonyItems items)
+        /// <summary>
+        /// Takes the edifice list as its <see cref="EdificeSaveSection"/> rather than raw, because
+        /// this is the one class in the game that <b>appends</b> to that list at run time — and
+        /// until 2026-09-17 nothing saved or hashed what it appended. Threading the section through
+        /// here means the thing that raises a wall and the thing that writes it down cannot be
+        /// wired up separately: <see cref="Edifices"/> hands it on to whoever assembles the save.
+        /// </summary>
+        public ConstructionGrid(CellGrid grid, EdificeSaveSection edifices, ColonyItems items)
         {
             _grid = grid ?? throw new ArgumentNullException(nameof(grid));
-            _edifices = edifices ?? throw new ArgumentNullException(nameof(edifices));
+            _edificeSave = edifices ?? throw new ArgumentNullException(nameof(edifices));
+            _edifices = edifices.Records;
             _items = items ?? throw new ArgumentNullException(nameof(items));
             _building = new byte[grid.Size.CellCount];
             _stuff = new byte[grid.Size.CellCount];
@@ -49,6 +58,13 @@ namespace Odyssey.Sim.Construction
         }
 
         public GridSize Size => _grid.Size;
+
+        /// <summary>
+        /// The standing buildings, as the channel that saves and hashes them. Whoever assembles the
+        /// world's save components takes it from here, so a colony that can raise a wall is by
+        /// construction a colony that writes that wall down.
+        /// </summary>
+        public EdificeSaveSection Edifices => _edificeSave;
 
         /// <summary>Every cell with a site on it, ascending. A stable order is what makes a scan deterministic.</summary>
         public IReadOnlyList<int> Sites => _sites;
@@ -270,7 +286,13 @@ namespace Odyssey.Sim.Construction
             // 1. The thing itself, as the record the ruined city's own walls are kept in, so that a
             //    wall a colonist built and a wall the generator stamped are indistinguishable to
             //    everything downstream — the mesher, the picker, deconstruction and the solver.
-            _edifices.Add(new PlacedEdifice { CellIndex = cell, Def = def.edifice, Stuff = stuff });
+            // Built = true: ours, and the only place in the game that says so. Everything the
+            // generator stamps leaves it false, which is what makes "deconstruct our own buildings
+            // and not the ruined city's" a rule that can be asked rather than guessed at.
+            _edifices.Add(new PlacedEdifice
+            {
+                CellIndex = cell, Def = def.edifice, Stuff = stuff, Built = true,
+            });
             _grid.Edifice[cell] = _edifices.Count - 1;
             if (def.blocking) _grid.Flags[cell] |= CellFlags.BlockingEdifice;
 

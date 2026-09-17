@@ -29,6 +29,17 @@ namespace Odyssey.Tests.Sim
     /// the tests print replacement values instead of asserting; paste them in and say in the
     /// commit message what you changed and why the numbers moved. A golden updated without that
     /// sentence is a golden that has stopped being a test.</para>
+    ///
+    /// <para><b>All six numbers moved on 2026-09-17, and here is the sentence.</b> The list of
+    /// standing buildings entered the state hash (<c>EdificeSaveSection</c>): what a wall is made
+    /// of was outside it until then, so a wooden wall and a stone wall in the same cell hashed
+    /// identically — measured, not supposed, by
+    /// <c>EdificeRoundTripTests.AWallsMaterialIsInTheStateHash</c>. <b>Both</b> numbers moved in
+    /// every case, including the barren meadow that has nothing standing on it at all, which is
+    /// the expected shape rather than a surprise: an empty list still contributes its count.
+    /// Nothing about how any of these worlds is generated or simulated changed — the hash simply
+    /// sees more of what was always there, which is the same thing that happened to all of them
+    /// when OQ-50 put the cell grid in.</para>
     /// </summary>
     public static class Golden
     {
@@ -83,8 +94,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 7633281305254602338UL,
-            Simulated = 7274653310757277862UL,
+            Generated = 1177489000261051986UL,
+            Simulated = 13215934017234015942UL,
         };
 
         /// <summary>
@@ -100,8 +111,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 10240930215320707382UL,
-            Simulated = 13373369047270975494UL,
+            Generated = 16980178257310470016UL,
+            Simulated = 15855734018405232012UL,
         };
 
         /// <summary>
@@ -116,8 +127,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 15938833264199567841UL,
-            Simulated = 5887301857021239423UL,
+            Generated = 16031803263833250104UL,
+            Simulated = 17124395716859021656UL,
         };
     }
 }

@@ -225,7 +225,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **494 Sim + 187 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **497 Sim + 189 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
@@ -333,6 +333,19 @@ no region spans two layers.
 Felled trees, mined cells and building sites are not in the save (the designation grid is not
 saved; the construction grid is). Mining collapses nothing. There is no fog of war, so a sealed
 cavern is visible if the player scrolls the layer down.
+
+**And it covers what stands on the world, since 2026-09-17** — one level down from OQ-50 and found
+the same way, by a test written to fail. `List<PlacedEdifice>` was owned by worldgen and by nothing
+else: not an `ISaveable`, so **a wall a colonist raised was never written to the save at all** (on a
+bare board it took handle 0 and a reload restored an empty list, leaving the cell pointing at
+nothing), and not an `IStateHashable`, so **a wooden wall and a stone wall in the same cell hashed
+identically**. `CellGrid` hashes `Edifice[cell]`, which is only an *index into that list*.
+`EdificeSaveSection` is now both, registered in `ColonyComposition.AddColony` so every colony gets
+it, and handed to the save through `ConstructionGrid.Edifices` — the class that appends a building
+at run time is the one that passes on the means of writing it down. **All six golden hashes moved**
+and `Golden.cs` carries the sentence saying why. `PlacedEdifice.Built` joined the record in the same
+change: it is what makes "deconstruct our own buildings, not the ruined city's" a question that can
+be asked.
 
 **The state hash covers the world** (OQ-50, ADR 0005 amended 2026-09-17). It did not until then —
 `CellGrid` is neither a tickable nor a system, which were the only two lists `ComputeStateHash`
