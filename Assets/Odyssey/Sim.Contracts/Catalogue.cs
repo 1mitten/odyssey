@@ -47,6 +47,68 @@ namespace Odyssey.Sim.Contracts
     }
 
     /// <summary>
+    /// See <see cref="JobHandle"/>: terrain kinds, as <see cref="CellDetail"/> carries them.
+    ///
+    /// <para>The order is <c>WorldContent.TerrainOrder</c> — the one list that decides which name
+    /// is which index, and the one a save and a state hash already depend on. These constants are
+    /// that order restated here so the interface can turn an index into a word without referencing
+    /// the simulation, exactly as <see cref="JobHandle"/> does for jobs. A Sim-side test holds the
+    /// two tables to each other, because nothing in either assembly can.</para>
+    /// </summary>
+    public static class TerrainHandle
+    {
+        public const int Air = 0;
+        public const int Pavement = 1;
+        public const int CrackedPavement = 2;
+        public const int Rubble = 3;
+        public const int Soil = 4;
+        public const int Gravel = 5;
+        public const int EngineeredFill = 6;
+        public const int Rock = 7;
+        public const int BuriedSeam = 8;
+        public const int Salvage = 9;
+
+        /// <summary>The wilderness half, continuing the city's numbering.</summary>
+        public const int Grass = 10;
+        public const int BareEarth = 11;
+        public const int PackedGravel = 12;
+        public const int Sand = 13;
+        public const int Subsoil = 14;
+        public const int Bedrock = 15;
+        public const int IronOre = 16;
+        public const int CoalSeam = 17;
+        public const int ShallowWater = 18;
+        public const int DeepWater = 19;
+        public const int Marsh = 20;
+
+        public const int Count = 21;
+    }
+
+    /// <summary>
+    /// See <see cref="JobHandle"/>: what can stand in a cell, as <see cref="CellDetail"/> carries
+    /// it. The order is the simulation's own edifice numbering — <c>CoreContent</c>'s ids 0 to 9,
+    /// the trees continuing from 10 — restated here for the interface to name.
+    /// </summary>
+    public static class EdificeHandle
+    {
+        public const int None = 0;
+        public const int Wall = 1;
+        public const int Door = 2;
+        public const int Window = 3;
+        public const int Pillar = 4;
+        public const int StairLower = 5;
+        public const int StairUpper = 6;
+        public const int Ladder = 7;
+        public const int VaultWall = 8;
+        public const int UtilityTap = 9;
+
+        public const int TreeConifer = 10;
+        public const int TreeBroadleaf = 11;
+
+        public const int Count = 12;
+    }
+
+    /// <summary>
     /// See <see cref="JobHandle"/>: buildable things, as <c>SiteView</c> and the
     /// <c>PlaceBuilding</c> intent carry them. 0 is "nothing", matching the grid default.
     /// </summary>
