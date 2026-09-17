@@ -75,6 +75,7 @@ namespace Odyssey.Presentation.Bootstrap
             _rig.ToolDrag += OnToolDrag;
             _rig.ToolDragging += OnToolDragging;
             _rig.ToolDragCancelled += OnToolDragCancelled;
+            _rig.WorldRightClicked += OnWorldRightClicked;
         }
 
         void OnDestroy()
@@ -83,6 +84,7 @@ namespace Odyssey.Presentation.Bootstrap
             _rig.ToolDrag -= OnToolDrag;
             _rig.ToolDragging -= OnToolDragging;
             _rig.ToolDragCancelled -= OnToolDragCancelled;
+            _rig.WorldRightClicked -= OnWorldRightClicked;
             if (_rig.WorldToolArmed != null) _rig.WorldToolArmed = null;
         }
 
@@ -103,6 +105,27 @@ namespace Odyssey.Presentation.Bootstrap
         }
 
         void OnToolDragCancelled() => Director.Abandon();
+
+        /// <summary>
+        /// Right-click on the world: put the tool down, and nothing else.
+        ///
+        /// <para>A player holding a tool has one hand on the mouse and reaches for the nearest way
+        /// to stop holding it, which is the button already under their finger — not a key across
+        /// the keyboard. The rig has already decided this was a click and not an orbit
+        /// (<c>PressGesture</c>), so swinging the camera around with a tool armed leaves the tool
+        /// armed.</para>
+        ///
+        /// <para><b>With nothing armed this does nothing, on purpose.</b> That gesture is reserved
+        /// for the forced-order context menu — right-click a site with a colonist selected and pick
+        /// "build this now" (<c>docs/design/15-building.md</c> §8). Giving it a second meaning here
+        /// would have to be taken back then, and a gesture that means two things depending on state
+        /// nobody can see is the fault the Escape key already taught this project once.</para>
+        /// </summary>
+        void OnWorldRightClicked()
+        {
+            if (Director.Tool == DesignateTool.None) return;
+            PutToolAway();
+        }
 
         void Update()
         {

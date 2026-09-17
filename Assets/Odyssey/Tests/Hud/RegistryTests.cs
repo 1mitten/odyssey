@@ -44,6 +44,23 @@ namespace Odyssey.Tests.Hud
                     "an option the panel can draw but the registry test does not cover is a label nobody checks");
         }
 
+        /// <summary>
+        /// Every category and every chip on the Build palette, live or drawn disabled.
+        ///
+        /// <para>New coverage, and it is new because the table used to live in the shell where
+        /// this tier cannot see it. A palette key that the registry does not know draws a blank
+        /// label on a chip the player is looking straight at.</para>
+        /// </summary>
+        [Test]
+        public void EveryPaletteKeyIsARegisteredName()
+        {
+            foreach (string key in PaletteTools.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+            foreach (PaletteTool tool in PaletteTools.Live)
+                Assert.That(Registry.Labels, Does.ContainKey(tool.Key),
+                    $"{tool.Key} can be armed and has no name");
+        }
+
         [Test]
         public void EveryHotkeyKeyIsARegisteredName()
         {

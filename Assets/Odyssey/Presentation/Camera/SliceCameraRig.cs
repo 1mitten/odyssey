@@ -247,6 +247,22 @@ namespace Odyssey.Presentation.CameraRig
         /// <summary>The drag ended without placing anything — the tool was not armed, or it was a pick.</summary>
         public event Action? ToolDragCancelled;
 
+        /// <summary>
+        /// A right-click that never became an orbit. Whoever is holding a tool puts it down.
+        ///
+        /// <para><b>It means one thing and must go on meaning one thing.</b> Escape unwinds — tool,
+        /// then top panel, then the menu — and that order lives in exactly one place
+        /// (<c>SettingsDirector.Escape</c>) because two components reading one key once disarmed a
+        /// tool and opened a panel on the same keystroke. Right-click is not a second Escape: it
+        /// disarms and does nothing else, and with nothing armed it is deliberately inert, because
+        /// that is the gesture the forced-order context menu is reserved for
+        /// (<c>docs/design/15-building.md</c> §8).</para>
+        /// </summary>
+        public event Action? WorldRightClicked;
+
+        /// <summary>Whether the right button is being swept or merely pressed. See <see cref="WorldRightClicked"/>.</summary>
+        PressGesture _rightPress;
+
         /// <summary>A press must travel this many pixels before it counts as a box and not a click.</summary>
         const float DragThresholdPixels = 6f;
 
@@ -383,6 +399,22 @@ namespace Odyssey.Presentation.CameraRig
                     minDistance, maxDistance);
             Vector2 delta = pointer - _lastPointer;
             _lastPointer = pointer;
+
+            // The right button is an orbit if it travels and a click if it does not — the same
+            // split the left button has always made between a box and a pick, applied to the other
+            // button. The arithmetic is <see cref="PressGesture"/>'s rather than this file's,
+            // because nothing decided inside a MonoBehaviour can be tested: the PlayMode harness
+            // still cannot deliver a synthetic mouse. A press that began over a panel is abandoned
+            // rather than tracked, per input case 2 of design 09 §6.
+            if (mouse.rightButton.wasPressedThisFrame)
+            {
+                if (overInterface) _rightPress.Abandon();
+                else _rightPress.Press(pointer.x, pointer.y);
+            }
+
+            if (_rightPress.Down && mouse.rightButton.isPressed) _rightPress.MoveTo(pointer.x, pointer.y);
+            if (mouse.rightButton.wasReleasedThisFrame && _rightPress.Release())
+                WorldRightClicked?.Invoke();
 
             if (mouse.rightButton.wasPressedThisFrame || mouse.middleButton.wasPressedThisFrame)
                 _orbiting = mouse.rightButton.isPressed;

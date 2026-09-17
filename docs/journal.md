@@ -1769,3 +1769,60 @@ work itself.
     including 200 chunk meshes, **steady submit 0.22 ms a frame**, warm full re-mesh of 200 chunks
     13.38 ms at 0.067 ms a chunk.
   - **Verified:** Unity EditMode **1121 total, 0 failed**.
+
+- **The cancel tool was already built; nobody could find it (2026-09-17, `claude/cancel-tool`).**
+  The owner asked for "a cancel button ... so we can deselect the build". The investigation's whole
+  finding was that the mechanic had been in the game since the designate line landed —
+  `DesignateTool.Cancel` on the **X** key, drawing a box and sending `CancelDesignation` +
+  `CancelBuilding` per cell, with a complete simulation half and its negative controls
+  (`FellJobTests.ACancelledOrderStopsTheJob`, `ConstructionTests.CancellingASiteGivesBackWhatWasCarriedToIt`).
+  **Every way of finding it was missing**: no chip on the palette, though `ui.arch.tool.cancel` has
+  been in the registry all along; no mention of the key anywhere on screen. This is the second time
+  a feature has existed and behaved as though it did not, and the first
+  (`15-building.md` §7, a composition fault) cost two playtests. This one cost none, because the
+  question asked first was *is it there* rather than *how do I build it*.
+  - **The chip said "Harvest" and the owner said "harvesting".** `ui.arch.tool.harvest` — "Take the
+    crop" — was wired to the fell tool, while `ui.arch.tool.fell` sat unused. The label had taught
+    the owner the wrong name for the tool, which is the clearest possible demonstration of what the
+    naming registry is for and of what happens when a chip is pointed at the wrong row of it.
+  - **Chop, not fell** (owner's call). Labels only: `ui.arch.tool.fell` → "Chop trees",
+    `ui.keys.fell` → "Chop tool", `ui.status.felling` → "Chopping", and the axe's description.
+    **Every key is unchanged**, because `ui.status.felling` is one of the nineteen that draws real
+    art off sheet 06 and `icon-map.csv` is keyed the same way — a key rename would have silently
+    dropped an icon back to an outlined square. The C# names (`DesignateTool.Fell`, `FellJobDriver`,
+    `JobHandle.Fell`) are deliberately left alone: internal, about twenty files, and no player ever
+    sees one.
+  - **And the armed banner still said "Felling"**, in C#, which is the failure the registry rule
+    exists to prevent and which the rename made visible in the same hour. Mine and Chop now read
+    `Registry.Label("ui.status.*")` — those keys were *already* phrased as the thing being done, so
+    the voice is unchanged and the next rename carries. Cancel keeps its own words, because there
+    is no activity key for it: no colonist is ever *cancelling*.
+  - **`PaletteTools` moved out of the shell**, for the reason `HudCommands` already lives in
+    `Odyssey.Hud`: the palette is data, and the fast tier can see that assembly and cannot see a
+    `MonoBehaviour`. That move is what made the rest testable — **`EveryPaletteKeyIsARegisteredName`
+    could not have been written before it**, and it now covers every category and chip.
+  - **Arming and lighting are one row now.** `MarkArmedTool` was a hard-coded chain of key
+    comparisons a hundred lines from the table that armed them: two lists of the same three tools,
+    and the symptom when they drifted was not a compile error but *a chip that arms a tool and never
+    lights*, which a player reads as the click having missed. Adding cancel would have been the
+    fourth tool and the first drift. A `PaletteTool` carries arm, is-armed and wants-material or it
+    does not exist.
+  - **Right-click puts the tool down** — input case 5 of `09-ui-and-input.md` §6, and the first half
+    of it built. The rig mirrors, for the right button, the click-versus-drag split the left button
+    has always made: travelled means it was an orbit, and only a press that never travelled disarms.
+    **With nothing armed it is deliberately inert**, because that gesture is reserved for the
+    forced-order context menu. It is *not* routed through `SettingsDirector.Escape`: Escape unwinds
+    tool → panel → menu, right-click means exactly one thing, and merging them would recreate the
+    two-components-one-key fault that rule was written for.
+  - **The arithmetic came out of the rig** as `PressGesture`, UnityEngine-free, because the PlayMode
+    harness still cannot deliver a synthetic mouse — the same lift that made `DesignateDirector`
+    testable. **And it immediately caught a real trap**: `new PressGesture()` runs the implicit
+    all-zeroes struct constructor rather than one declared with optional parameters, so a threshold
+    held as a *field* was zero exactly where it was used and every press read as a drag. Three tests
+    failed on the first run. The threshold is a constant now and the type no longer allows it. This
+    is the whole argument for the lift in one incident: inside the rig it would have shipped, and
+    the symptom would have been "right-drag puts my tool down", diagnosed as a threshold that wanted
+    tuning.
+  - **Verified:** fast tier **494 Sim + 187 Hud** (17 new), Unity EditMode **1138 total, 0 failed**,
+    both content gates green. Deconstruct, and the save gap underneath it, are PR 2 —
+    `docs/design/16-cancel-and-deconstruct.md` §4 and §5.

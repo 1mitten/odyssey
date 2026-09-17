@@ -86,6 +86,18 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   draped now, like the ground, the banks and the water, and the same seam measures 1.1 mm. **The
   rule that came out of it: anything fixed to the grid is draped; only what moves over it is
   lifted.** A hollow wall was filled and capped in the same round.
+  **Cancelling is now reachable, and chopping is called chopping** (`claude/cancel-tool`,
+  2026-09-17). The cancel tool was never missing — `DesignateTool.Cancel` has been on the **X** key
+  with a complete, tested simulation half since the designate line landed; every *way of finding
+  it* was missing. It has a chip on the Orders row now, **right-click puts any armed tool down**
+  (input case 5 of `09-ui-and-input.md` §6, first half built; with nothing armed it is deliberately
+  inert, reserved for the forced-order context menu), and the palette's chopping chip stopped
+  saying "Harvest" — which is what had taught the owner to call it harvesting. Labels only: every
+  key is unchanged, because `ui.status.felling` draws real art and `icon-map.csv` is keyed the same
+  way. Design, what is still open and the by-hand procedure are
+  `docs/design/16-cancel-and-deconstruct.md`. **Deconstruct is PR 2 and is not built**; §4 of that
+  file carries a prediction that must be measured first — a wall a colonist built is probably in
+  neither the save nor the state hash.
   **The build cursor and the drag gesture were then played and accepted** (owner, 2026-09-17): a
   build drag draws one closed wireframe box over the whole run, draped as the wall will be, and a
   box widens into a rectangle only after three cells clear across the run — narrowing again within
@@ -206,7 +218,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **494 Sim + 170 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **494 Sim + 187 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
@@ -293,6 +305,11 @@ no region spans two layers.
   30 px while ADR 0007 says not to draw pixel art below 32 — measured, 30 px reads, 17 px loses the
   grooves, 16 px goes to noise, and a **framed** sheet-06 tile at 17 px is mostly frame
   (`Logs/skill-icons.png`).
+- **Nobody has pressed Play on the cancel tool or on right-click.** Both tiers are green and
+  neither can say whether right-click disarms when the hand expects it to, or whether the six-pixel
+  threshold separating a right-*click* from a right-*drag* is the right number — an orbit is a
+  deliberate sweep, so it may want to be larger than the left button's. One number, judged at the
+  keyboard (`docs/design/16-cancel-and-deconstruct.md` §6).
 - **Nobody has pressed Play on the interface work either.** The roster card, the docked bars, the
   popovers, the Skills tab and the settings panel's new Keys and Audio tabs are all measured and
   none of them has been looked at. The Keys tab is the tallest panel yet — at 150 per cent
