@@ -436,7 +436,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **600 Sim + 285 Hud**; Long tier **20**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **626 Sim + 293 Hud**; Long tier **20**.
   **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
   touches the composition root or the HUD shell is unproven until Unity has compiled it, however
   green the 11 seconds look (`docs/lessons.md`).

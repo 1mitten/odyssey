@@ -152,7 +152,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <li><a href="#colonists">Colonists<b>34</b></a></li>
 <li><a href="#health">Health and anatomy<b>28</b></a></li>
 <li><a href="#events">Events<b>37</b></a></li>
-<li><a href="#world">World and interface<b>80</b></a></li>
+<li><a href="#world">World and interface<b>81</b></a></li>
 <li><a href="#proper-nouns">Proper nouns<b>29</b></a></li>
 </ul></nav>
 <main>
@@ -161,9 +161,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p>It is generated from the design data, so it cannot drift from the game. Names and descriptions come from <code>docs/design/icon-keys.csv</code>; whether the owner's pixel-art sheets can draw a thing comes from <code>docs/design/icon-map.csv</code>; people, places and factions come from <code>docs/design/proper-nouns.csv</code>.</p>
 </div>
 <div class="stats">
-<div class="stat"><b>454</b><i>named entries</i></div>
+<div class="stat"><b>455</b><i>named entries</i></div>
 <div class="stat"><b>268</b><i>with icon art</i></div>
-<div class="stat m"><b>186</b><i>no art yet</i></div>
+<div class="stat m"><b>187</b><i>no art yet</i></div>
 <div class="stat"><b>37</b><i>low confidence</i></div>
 <div class="stat m"><b>0</b><i>proper nouns unnamed</i></div>
 </div>
@@ -758,9 +758,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill low">low</span> manufactured</div>
 <div class="ms">M3</div>
 </div>
-<div class="row gap" id="ui.arch.tool.roof" data-hay="roof and floor above ui.arch.tool.roof roofs this layer and floors the next a roof or ceiling panel seen from below. central to the layer model" data-gap="1">
-<div class="nm">Roof and floor above<span class="k">ui.arch.tool.roof</span></div>
-<div class="dsc">Roofs this layer and floors the next<span class="need">Needs drawing: a roof or ceiling panel seen from below. Central to the layer model</span></div>
+<div class="row gap" id="ui.arch.tool.roof" data-hay="slab ui.arch.tool.roof an upper floor. goes on a wall or bridges out from one a roof or ceiling panel seen from below. central to the layer model" data-gap="1">
+<div class="nm">Slab<span class="k">ui.arch.tool.roof</span></div>
+<div class="dsc">An upper floor. Goes on a wall or bridges out from one<span class="need">Needs drawing: a roof or ceiling panel seen from below. Central to the layer model</span></div>
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M3</div>
 </div>
@@ -1094,9 +1094,9 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill">med</span> salvage gear</div>
 <div class="ms">M3</div>
 </div>
-<div class="row" id="ui.arch.tool.deckplate" data-hay="deck plate ui.arch.tool.deckplate metal flooring. fast to lay " data-gap="0">
-<div class="nm">Deck plate<span class="k">ui.arch.tool.deckplate</span></div>
-<div class="dsc">Metal flooring. Fast to lay</div>
+<div class="row" id="ui.arch.tool.deckplate" data-hay="floor ui.arch.tool.deckplate laid on ground you already walk on " data-gap="0">
+<div class="nm">Floor<span class="k">ui.arch.tool.deckplate</span></div>
+<div class="dsc">Laid on ground you already walk on</div>
 <div class="art"><span class="pill">high</span> manufactured</div>
 <div class="ms">M3</div>
 </div>
@@ -2313,7 +2313,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <p class="empty" hidden>No entries in this section match.</p>
 </section>
 <section id="world" data-sec="1">
-<h2>World and interface <em class="count">80 entries</em></h2>
+<h2>World and interface <em class="count">81 entries</em></h2>
 <p class="blurb">Weather, the data overlays, the layer controls and the rest of the interface furniture. The six layer visibility modes are decided: see ADR 0006.</p>
 <h3 class="nsh">Terrain</h3>
 <div class="tbl">
@@ -2750,6 +2750,12 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <div class="art"><span class="pill no">no art</span></div>
 <div class="ms">M1</div>
 </div>
+<div class="row gap" id="ui.settings.cutaway" data-hay="cut away the ceiling ui.settings.cutaway see into rooms on this layer. off shows the floor above you " data-gap="1">
+<div class="nm">Cut away the ceiling<span class="k">ui.settings.cutaway</span></div>
+<div class="dsc">See into rooms on this layer. Off shows the floor above you</div>
+<div class="art"><span class="pill no">no art</span></div>
+<div class="ms">M3</div>
+</div>
 <div class="row gap" id="ui.settings.keys" data-hay="keys ui.settings.keys every key the game reads, and what each one may be changed to " data-gap="1">
 <div class="nm">Keys<span class="k">ui.settings.keys</span></div>
 <div class="dsc">Every key the game reads, and what each one may be changed to</div>
@@ -3011,7 +3017,7 @@ footer code{font-size:11.5px;color:var(--ink2)}
 <footer><p><strong>How to correct something.</strong> Every row has a stable key or id, shown under its name. Cite it. To change a name or description, edit <code>docs/design/icon-keys.csv</code> or <code>docs/design/proper-nouns.csv</code> and run <code>python3 tools/wiki/build_wiki.py</code>. Editing these pages directly does nothing: they are overwritten on the next build.</p>
 <p>Art status reflects the owner's eight pixel-art sheets, mapped in <code>docs/design/icon-map.csv</code>. A confidence of <em>low</em> means the cell was identified from a small image and wants checking against a contact sheet. Milestone columns follow the roadmap in the brief.</p>
 <p>Generated by <code>tools/wiki/build_wiki.py</code>. Design decisions live in <code>docs/design/</code> and <code>docs/adr/</code>; this wiki is content and names, not mechanics.</p></footer>
-<script>window.WIKI={"total": 454, "gaps": 186};</script>
+<script>window.WIKI={"total": 455, "gaps": 187};</script>
 <script>
 (function(){
   var D = window.WIKI;
