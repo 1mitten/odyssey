@@ -21,9 +21,11 @@ namespace Odyssey.Tests.Sim
 
         static ColonyWorld Fresh()
         {
-            // No scenario beds: this file's questions are about the beds the colony builds, and
-            // the chooser's list should contain nothing but what these tests raise.
+            // Three colonists for the ownership tests, and no scenario beds: this file's questions
+            // are about the beds the colony builds, and the chooser's list should contain nothing
+            // but what these tests raise.
             ScenarioDef scenario = ScenarioDef.Bare();
+            scenario.colonists = 3;
             scenario.beds = 0;
             return ColonyWorld.Build(Size, Seed, scenario);
         }
@@ -251,6 +253,172 @@ namespace Odyssey.Tests.Sim
                 "the record is marked out rather than dropped, so every other handle stays valid");
             Assert.That(colony.Pawns.Items.Beds, Does.Not.Contain(head),
                 "a demolished bed is not slept in");
+        }
+
+        // ---- ownership (design 20 section 7) --------------------------------------------------
+
+        /// <summary>A second open footprint, distinct from the first, for the two-bed tests.</summary>
+        static int AnotherOpenFootprint(ColonyWorld colony, int notHead, out int second)
+        {
+            CellRef start = colony.Start;
+            for (int radius = 1; radius < 12; radius++)
+            for (int dz = -radius; dz <= radius; dz++)
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                if (System.Math.Abs(dx) != radius && System.Math.Abs(dz) != radius) continue;
+                int x = start.X + dx, z = start.Z + dz;
+                if (!Size.Contains(x, z, start.Y)) continue;
+
+                int head = Size.Index(x, z, start.Y);
+                if (head == notHead || !colony.Construction.Allows(head)) continue;
+
+                int foot = EdificeFootprint.SecondCell(head, CoreContent.EdificeBed, 0, Size);
+                if (foot >= 0 && colony.Construction.Allows(foot))
+                {
+                    second = foot;
+                    return head;
+                }
+            }
+
+            second = -1;
+            return -1;
+        }
+
+        static void RaiseABed(ColonyWorld colony, int head) => colony.Construction.Raise(
+            colony.Pawns, head, (byte)QualityHandle.Normal);
+
+        static IntentRejection Assign(ColonyWorld colony, int anyBedCell, int pawnId)
+        {
+            // Rejections accumulate until taken; clear the last assert's away so this one reads
+            // only its own answer.
+            colony.World.Intents.ClearRejected();
+            colony.World.Intents.Submit(new Intent(
+                IntentKind.AssignBedOwner, Size.FromIndex(anyBedCell), pawnId));
+            colony.World.Tick();
+            var rejected = colony.World.Intents.Rejected;
+            return rejected.Count == 0 ? IntentRejection.None : rejected[0].Reason;
+        }
+
+        /// <summary>As <see cref="Assign"/>, for a cell the test already holds as a reference.</summary>
+        static IntentRejection AssignCell(ColonyWorld colony, CellRef cell, int pawnId)
+        {
+            colony.World.Intents.ClearRejected();
+            colony.World.Intents.Submit(new Intent(IntentKind.AssignBedOwner, cell, pawnId));
+            colony.World.Tick();
+            var rejected = colony.World.Intents.Rejected;
+            return rejected.Count == 0 ? IntentRejection.None : rejected[0].Reason;
+        }
+
+        [Test]
+        public void ABedCanBeGivenToOneColonistAndTakenBack()
+        {
+            ColonyWorld colony = Fresh();
+            var pawn = colony.Pawns.Pawns.All[0];
+            int head = OpenFootprint(colony, out int second);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+            Assume.That(colony.Construction.Place(Size.FromIndex(head), BuildingHandle.Bed, StuffHandle.Wood, 0),
+                Is.EqualTo(IntentRejection.None));
+            RaiseABed(colony, head);
+
+            // Either half names the bed, because both point at the one record.
+            Assert.That(Assign(colony, second, pawn.Id.Value), Is.EqualTo(IntentRejection.None));
+            Assert.That(colony.Construction.BedOwnerAt(head), Is.EqualTo(pawn.Id.Value));
+            Assert.That(colony.Construction.BedOwnerAt(second), Is.EqualTo(pawn.Id.Value),
+                "the far cell answers the same owner, not a second opinion");
+
+            Assert.That(Assign(colony, head, pawn.Id.Value), Is.EqualTo(IntentRejection.AlreadyInThatState));
+
+            Assert.That(Assign(colony, head, -1), Is.EqualTo(IntentRejection.None));
+            Assert.That(colony.Construction.BedOwnerAt(head), Is.EqualTo(0), "taken back: 0 is nobody");
+        }
+
+        [Test]
+        public void AColonistWhoTakesANewBedReleasesTheOldOne()
+        {
+            ColonyWorld colony = Fresh();
+            var pawn = colony.Pawns.Pawns.All[0];
+            int first = OpenFootprint(colony, out _);
+            int secondBed = AnotherOpenFootprint(colony, first, out _);
+            Assume.That(first, Is.GreaterThanOrEqualTo(0));
+            Assume.That(secondBed, Is.GreaterThanOrEqualTo(0));
+            RaiseABed(colony, first);
+            RaiseABed(colony, secondBed);
+
+            Assume.That(Assign(colony, first, pawn.Id.Value), Is.EqualTo(IntentRejection.None));
+            Assert.That(Assign(colony, secondBed, pawn.Id.Value), Is.EqualTo(IntentRejection.None));
+            Assert.That(colony.Construction.BedOwnerAt(first), Is.EqualTo(0),
+                "one bed per colonist, kept by the handler rather than hoped for by the interface");
+            Assert.That(colony.Construction.BedOwnerAt(secondBed), Is.EqualTo(pawn.Id.Value));
+        }
+
+        [Test]
+        public void OwnershipIsRefusedWhereThereIsNoBedToOwn()
+        {
+            ColonyWorld colony = Fresh();
+            var pawn = colony.Pawns.Pawns.All[0];
+
+            Assert.That(AssignCell(colony, colony.Start, pawn.Id.Value),
+                Is.EqualTo(IntentRejection.NotPermitted), "bare ground is nobody's bed");
+
+            Assert.That(AssignCell(colony, colony.Start, 9_999),
+                Is.EqualTo(IntentRejection.NotPermitted), "a pawn who does not exist cannot own one either");
+
+            int head = OpenFootprint(colony, out int second);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+            Assume.That(colony.Construction.Place(Size.FromIndex(head), BuildingHandle.Wall, StuffHandle.Wood),
+                Is.EqualTo(IntentRejection.None));
+            colony.Construction.Raise(colony.Pawns, head);
+            Assert.That(Assign(colony, head, pawn.Id.Value),
+                Is.EqualTo(IntentRejection.NotPermitted), "a wall is not a bed, whoever finishes it");
+        }
+
+        [Test]
+        public void AnOwnerSleepsInTheirOwnBedAndNobodyElseDoes()
+        {
+            ColonyWorld colony = Fresh();
+            var owner = colony.Pawns.Pawns.All[0];
+            var other = colony.Pawns.Pawns.All[1];
+
+            // Two beds. The owner's is the one further from where either of them stands: own-bed
+            // preference is only observable if distance argues the other way.
+            int near = OpenFootprint(colony, out int nearFoot);
+            int far = AnotherOpenFootprint(colony, near, out int farFoot);
+            Assume.That(near, Is.GreaterThanOrEqualTo(0));
+            Assume.That(far, Is.GreaterThanOrEqualTo(0));
+            RaiseABed(colony, near);
+            RaiseABed(colony, far);
+            Assume.That(Assign(colony, far, owner.Id.Value), Is.EqualTo(IntentRejection.None));
+
+            owner.Needs[NeedIndex.Rest] = 40;
+            for (int i = 0; i < 6_000 && !owner.Asleep; i++) colony.World.Tick();
+            Assert.That(owner.Asleep, Is.True, "the owner found somewhere to sleep");
+            Assert.That(owner.Cell, Is.EqualTo(far),
+                "a colonist walks past a nearer unowned bed to sleep in their own");
+
+            other.Needs[NeedIndex.Rest] = 40;
+            for (int i = 0; i < 6_000 && !other.Asleep; i++) colony.World.Tick();
+            Assert.That(other.Asleep, Is.True);
+            Assert.That(other.Cell, Is.EqualTo(near),
+                "the unowned bed is the free bed: nobody checks into somebody else's");
+        }
+
+        [Test]
+        public void AnOwnedBedSurvivesASaveAndItsOwnerWithIt()
+        {
+            ColonyWorld original = Fresh();
+            var pawn = original.Pawns.Pawns.All[0];
+            int head = OpenFootprint(original, out _);
+            Assume.That(head, Is.GreaterThanOrEqualTo(0));
+            RaiseABed(original, head);
+            Assume.That(Assign(original, head, pawn.Id.Value), Is.EqualTo(IntentRejection.None));
+
+            ColonyWorld restored = Fresh();
+            restored.Load(original.Save());
+
+            Assert.That(restored.Construction.BedOwnerAt(head), Is.EqualTo(pawn.Id.Value),
+                "ownership rides the edifice list into the save and back");
+            Assert.That(restored.Construction.BedQualityAt(head), Is.EqualTo(QualityHandle.Normal),
+                "and so does the tier the finisher rolled");
         }
     }
 }
