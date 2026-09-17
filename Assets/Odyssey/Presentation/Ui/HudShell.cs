@@ -168,6 +168,10 @@ namespace Odyssey.Presentation.Ui
         readonly Dictionary<SettingsTab, Label> _settingTabs = new();
         readonly Dictionary<int, Label> _scaleRungs = new();
 
+        /// <summary>Defaults-only binding map for the frames before the shell attaches to
+        /// the colony's directors, and for harness scenes that build no world.</summary>
+        HotkeyDirector? _hotkeysFallback;
+
         /// <summary>Our own copy of the panel settings, so that changing the interface scale does
         /// not write to the committed asset. See <see cref="ApplyUiScale"/>.</summary>
         PanelSettings? _panelCopy;

@@ -37,6 +37,7 @@ namespace Odyssey.Presentation.Bootstrap
         SliceCameraRig? _rig;
 
         DesignateDirector? _fallback;
+        HotkeyDirector? _hotkeysFallback;
 
         /// <summary>
         /// What the player is about to order.
@@ -54,6 +55,14 @@ namespace Odyssey.Presentation.Bootstrap
         /// </summary>
         public DesignateDirector Director =>
             _bootstrap?.Directors?.Designate ?? (_fallback ??= new DesignateDirector());
+
+        /// <summary>
+        /// The binding map, borrowed the same way the designate director is: the colony's
+        /// when there is one, a defaults-only one when there is not, so the keys still arm
+        /// tools in a scene built without a HUD.
+        /// </summary>
+        HotkeyDirector Hotkeys =>
+            _bootstrap?.Directors?.Hotkeys ?? (_hotkeysFallback ??= new HotkeyDirector());
 
         void Awake()
         {
@@ -99,19 +108,27 @@ namespace Odyssey.Presentation.Bootstrap
         {
             Keyboard? keys = Keyboard.current;
             if (keys == null) return;
+            HotkeyDirector hotkeys = Hotkeys;
 
-            // M mine, C cut, X cancel. Pressing the armed tool's own key again disarms it, so a
-            // player who picked one up can always put it down the way they picked it up.
+            // While the settings panel is waiting for a key, every press belongs to the
+            // rebind: arming a tool with the very key being offered to the slot would be two
+            // things on one key, which is the fault this assembly's clash test exists for.
+            if (hotkeys.Listening != null) return;
+
+            // Mine, cut, cancel. Pressing the armed tool's own key again disarms it, so a
+            // player who picked one up can always put it down the way they picked it up. The
+            // letters themselves are the binding map's business; these lines say only what
+            // the key does.
             //
             // **Escape is deliberately not read here any more.** It used to be, and it was the
             // only consumer in the build; the settings panel made it the second, and two
-            // components reading one key would have disarmed the tool and opened the panel on the
-            // same keystroke. The unwind order is one rule (`09-ui-and-input.md` §6) so it lives
+            // components reading one key would have disarmed the tool and opened the panel on
+            // the same keystroke. The unwind order is one rule (`09-ui-and-input.md` §6) so it lives
             // in one place — `SettingsDirector.Escape`, decided in the fast tier — and
             // `SettingsPresenter` calls `PutToolAway` when the answer is to disarm.
-            if (keys.mKey.wasPressedThisFrame) Arm(DesignateTool.Mine);
-            if (keys.cKey.wasPressedThisFrame) Arm(DesignateTool.Fell);
-            if (keys.xKey.wasPressedThisFrame) Arm(DesignateTool.Cancel);
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ToolMine)) Arm(DesignateTool.Mine);
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ToolFell)) Arm(DesignateTool.Fell);
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.ToolCancel)) Arm(DesignateTool.Cancel);
         }
 
         /// <summary>Whether a tool is armed, for whoever is deciding what Escape means.</summary>

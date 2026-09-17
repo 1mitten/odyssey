@@ -54,6 +54,20 @@ namespace Odyssey.Presentation.Bootstrap
 
             Keyboard? keys = Keyboard.current;
             if (keys == null || _director == null) return;
+            HotkeyDirector? hotkeys = _bootstrap?.Directors?.Hotkeys;
+
+            // A slot in the Keys tab is waiting for its key. This frame's press belongs to
+            // the rebind and to nothing else — the pollers sit the frame out too, each at
+            // its own post — and Escape, which elsewhere unwinds what is open, here cancels
+            // the wait. That order is the director's, decided before anything else sees the
+            // key.
+            if (hotkeys != null && hotkeys.Listening != null)
+            {
+                if (keys.escapeKey.wasPressedThisFrame) hotkeys.ConsumeEscape();
+                else Capture(keys, hotkeys);
+                return;
+            }
+
             if (!keys.escapeKey.wasPressedThisFrame) return;
 
             // One key, one rule, one place. The order itself is the director's and is tested
@@ -85,6 +99,24 @@ namespace Odyssey.Presentation.Bootstrap
                 case EscapeAction.OpenPanel:
                     _director.SetOpen(true);
                     break;
+            }
+        }
+
+        /// <summary>
+        /// Offer this frame's key press to the listening slot. The whole engine half of
+        /// rebinding: find which key went down, hand its name to the director, let the
+        /// director's rules — conflict, refusal, the closed set — decide what became of it.
+        /// </summary>
+        static void Capture(Keyboard keys, HotkeyDirector hotkeys)
+        {
+            foreach (UnityEngine.InputSystem.Controls.KeyControl control in keys.allKeys)
+            {
+                if (!control.wasPressedThisFrame) continue;
+
+                HudKey? key = HotkeyUnity.ToHud(control.keyCode);
+                if (key == null) continue; // Escape, modifiers, the function keys: not bindable
+                hotkeys.Capture(key.Value);
+                return; // one frame offers one key; the rest belong to nobody
             }
         }
 

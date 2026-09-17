@@ -103,16 +103,26 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// The two hotkeys on the bar that are live. The rest are legends on controls whose
-        /// systems do not exist, and they deliberately avoid every key the game already uses —
-        /// M, C and X arm the designate tools, R and F move the slice, V cycles visibility,
-        /// Space and 1 to 3 are the clock and Home recentres.
+        /// The one hotkey on the bar that is live, read through the binding map so the panel
+        /// that rebinds it and the key that opens the palette can never disagree. The rest of
+        /// the caps are legends on controls whose systems do not exist, and they deliberately
+        /// avoid every action the game already has — camera, slice, clock, tools.
         /// </summary>
         void ReadBarKeys()
         {
             var keys = UnityEngine.InputSystem.Keyboard.current;
             if (keys == null) return;
-            if (keys.bKey.wasPressedThisFrame) SetBuildPalette(!BuildPaletteOpen);
+
+            // The colony's map when there is one, defaults when there is not, so the key
+            // works in a harness scene with no world behind the shell.
+            HotkeyDirector hotkeys = _directors?.Hotkeys ?? (_hotkeysFallback ??= new HotkeyDirector());
+
+            // A key offered to a slot in the settings panel belongs to the rebind, not to
+            // the palette it might be being bound to.
+            if (hotkeys.Listening != null) return;
+
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.BuildPalette))
+                SetBuildPalette(!BuildPaletteOpen);
         }
 
         /// <summary>
