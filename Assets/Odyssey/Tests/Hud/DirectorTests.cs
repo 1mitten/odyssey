@@ -522,7 +522,7 @@ namespace Odyssey.Tests.Hud
         }
 
         [Test]
-        public void AVolumeSnapsToItsLadderAndSaysSoOnlyWhenItMoves()
+        public void AVolumeTakesAnyWholeDecibelInItsSpanAndSaysSoOnlyWhenItMoves()
         {
             var settings = new SettingsDirector();
             var changed = new System.Collections.Generic.List<SettingsBus>();
@@ -532,14 +532,29 @@ namespace Odyssey.Tests.Hud
                 Assert.That(settings.BusDb(bus), Is.Zero,
                     "a fader starts at unity — nothing attenuated, nothing boosted");
 
+            // A fader holds a continuum: any whole dB in the span is taken as it stands. The
+            // section shipped as seven-rung ladders and the owner asked for sliders on
+            // 2026-09-17, so the snapping went with the rungs.
             settings.SetBusDb(SettingsBus.Music, -33);
-            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(-36), "-33 snaps to -36");
-            settings.SetBusDb(SettingsBus.Music, -25);
-            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(-24), "-25 snaps to -24");
-            settings.SetBusDb(SettingsBus.Music, -30);
-            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(-36),
-                "-30 is equidistant, and a tie goes to the quieter rung");
-            Assert.That(changed, Is.EqualTo(new[] { SettingsBus.Music, SettingsBus.Music, SettingsBus.Music }),
+            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(-33),
+                "-33 is a place a thumb can rest, so -33 it stays");
+            Assert.That(changed, Is.EqualTo(new[] { SettingsBus.Music }),
+                "one real move, announced once");
+
+            settings.SetBusDb(SettingsBus.Music, -33);
+            Assert.That(changed.Count, Is.EqualTo(1), "a drag that lands where it started says nothing");
+
+            settings.SetBusDb(SettingsBus.Music, 5);
+            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(5),
+                "a boost is taken as it stands, to the ceiling and no further");
+            settings.SetBusDb(SettingsBus.Music, -200);
+            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(SettingsDirector.SilenceDb),
+                "the fader has a floor, and it is silence");
+            settings.SetBusDb(SettingsBus.Music, 30);
+            Assert.That(settings.BusDb(SettingsBus.Music), Is.EqualTo(SettingsDirector.BoostDb),
+                "and a ceiling, and it is the boost cap");
+            Assert.That(changed, Is.EqualTo(new[]
+                    { SettingsBus.Music, SettingsBus.Music, SettingsBus.Music, SettingsBus.Music }),
                 "each real move is announced; the faders the store left alone say nothing");
 
             // Seeding is the presenter laying the audio store's values in: recorded, never
@@ -547,9 +562,46 @@ namespace Odyssey.Tests.Hud
             var seeded = new SettingsDirector();
             var seededRaised = new System.Collections.Generic.List<SettingsBus>();
             seeded.BusDbChanged += seededRaised.Add;
-            seeded.SeedBusDb(SettingsBus.Alerts, -80);
-            Assert.That(seeded.BusDb(SettingsBus.Alerts), Is.EqualTo(-80));
+            seeded.SeedBusDb(SettingsBus.Alerts, -47);
+            Assert.That(seeded.BusDb(SettingsBus.Alerts), Is.EqualTo(-47));
+            seeded.SeedBusDb(SettingsBus.Alerts, -999);
+            Assert.That(seeded.BusDb(SettingsBus.Alerts), Is.EqualTo(SettingsDirector.SilenceDb),
+                "a value from an older build cannot seed what the fader cannot show");
             Assert.That(seededRaised, Is.Empty);
+        }
+
+        [Test]
+        public void UnitySitsAtTheCentreOfTheFadersTrack()
+        {
+            // The owner asked on 2026-09-17 for the default in the middle of the control:
+            // lowering to silence on one side of it, boosting to the ceiling on the other.
+            // Each half is linear in dB over its own span, which is the only way one track
+            // can say both.
+            Assert.That(SettingsDirector.TrackOf(SettingsDirector.UnityDb), Is.EqualTo(0f),
+                "unity is the centre of the track");
+            Assert.That(SettingsDirector.TrackOf(SettingsDirector.SilenceDb), Is.EqualTo(-1f),
+                "silence is the left end");
+            Assert.That(SettingsDirector.TrackOf(SettingsDirector.BoostDb), Is.EqualTo(1f),
+                "the boost ceiling is the right end");
+            Assert.That(SettingsDirector.TrackOf(SettingsDirector.SilenceDb / 2),
+                Is.EqualTo(-0.5f).Within(0.0001f),
+                "the left half spends itself on 80 dB of attenuation");
+            Assert.That(SettingsDirector.TrackOf(SettingsDirector.BoostDb / 2),
+                Is.EqualTo(0.5f).Within(0.0001f),
+                "the right half on the boost");
+
+            // And back again, to the whole dB the thumb rests at.
+            Assert.That(SettingsDirector.DbOf(0f), Is.EqualTo(SettingsDirector.UnityDb));
+            Assert.That(SettingsDirector.DbOf(-1f), Is.EqualTo(SettingsDirector.SilenceDb));
+            Assert.That(SettingsDirector.DbOf(1f), Is.EqualTo(SettingsDirector.BoostDb));
+            Assert.That(SettingsDirector.DbOf(0.25f), Is.EqualTo(3), "a quarter right is +3 dB");
+            Assert.That(SettingsDirector.DbOf(-0.5f), Is.EqualTo(-40), "half left is -40 dB");
+
+            // Every whole dB in the span round-trips to itself, or the readout would say a
+            // figure the thumb is not standing at.
+            for (int db = SettingsDirector.SilenceDb; db <= SettingsDirector.BoostDb; db++)
+                Assert.That(SettingsDirector.DbOf(SettingsDirector.TrackOf(db)), Is.EqualTo(db),
+                    $"whole dB {db} does not survive the seat");
         }
 
         [Test]

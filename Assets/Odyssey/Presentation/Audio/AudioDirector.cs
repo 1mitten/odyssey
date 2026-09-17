@@ -368,10 +368,11 @@ namespace Odyssey.Presentation.Audio
             if (PlayOneShot(id, _listener)) _duckRemaining = DuckSeconds;
         }
 
-        /// <summary>Put a bus's fader at a dB value. Applies live to the looping voices at the
-        /// next Sync and to every one-shot that spawns after it.</summary>
+        /// <summary>Put a bus's fader at a dB value, silence to the boost ceiling. Applies live
+        /// to the looping voices at the next Sync and to every one-shot that spawns after
+        /// it.</summary>
         public void SetBusDb(SoundBus bus, float db) =>
-            _busDb[(int)bus] = Mathf.Clamp(db, AudioMath.SilenceDb, AudioMath.UnityDb);
+            _busDb[(int)bus] = Mathf.Clamp(db, AudioMath.SilenceDb, AudioMath.BoostDb);
 
         public float BusDb(SoundBus bus) => _busDb[(int)bus];
 
