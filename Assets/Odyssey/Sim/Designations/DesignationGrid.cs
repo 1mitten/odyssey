@@ -171,9 +171,22 @@ namespace Odyssey.Sim.Designations
         /// </summary>
         int TreeAbove(int index, DesignationKind kind)
         {
-            if (kind != DesignationKind.Fell || !_grid.IsSolidTerrain(index)) return index;
+            if (!_grid.IsSolidTerrain(index)) return index;
             int above = index + _grid.Size.LayerStride;
-            return above < _grid.Size.CellCount && IsTree(above) ? above : index;
+            if (above >= _grid.Size.CellCount) return index;
+
+            // Both kinds that name a thing standing on the ground need this lift, and for one
+            // reason: a wall is raised into the air cell above the ground exactly as a tree grows
+            // there (`ConstructionGrid.StandingOn` is the same relation from the other side). A
+            // drag over open ground comes through a layer too low, and without the lift every
+            // cell of it is refused in silence — the player sweeping a tool over their own colony
+            // and watching nothing happen.
+            return kind switch
+            {
+                DesignationKind.Fell when IsTree(above) => above,
+                DesignationKind.Deconstruct when CanDeconstruct(above) => above,
+                _ => index,
+            };
         }
 
         /// <summary>Clear a cell without ceremony: the order was carried out.</summary>
@@ -198,7 +211,7 @@ namespace Odyssey.Sim.Designations
                 case DesignationKind.Mine:
                     return CanMine(index);
                 case DesignationKind.Deconstruct:
-                    return TryEdificeDef(index, out ushort built) && built < NaturalContent.FirstEdifice;
+                    return CanDeconstruct(index);
                 case DesignationKind.Fell:
                     return IsTree(index);
                 default:
@@ -292,6 +305,41 @@ namespace Odyssey.Sim.Designations
 
         /// <summary>Whether a tree stands in the cell right now.</summary>
         public bool IsTree(int index) => TryEdificeDef(index, out ushort def) && NaturalContent.IsTree(def);
+
+        /// <summary>
+        /// Can this be taken apart? Only what the colony built itself.
+        ///
+        /// <para><b>Ownership, not shape.</b> The test used to be <c>def &lt; FirstEdifice</c> — a
+        /// core wall rather than a natural one — which excludes trees and includes every wall the
+        /// generator stamped into the ruined city. Those are Reclaim's and Salvage's, with their
+        /// own yields and their own "claim it first" step (<c>a-04-building-and-materials.md</c>),
+        /// and offering a colonist a free demolition of the city would quietly pre-empt that whole
+        /// line. <see cref="PlacedEdifice.Built"/> is set by <c>ConstructionGrid.Raise</c> and
+        /// nowhere else, so this asks the only question that actually matters: did we put it
+        /// there?</para>
+        ///
+        /// <para>Trees need no separate exclusion — a tree is the generator's, so it is never
+        /// <c>Built</c>, and felling remains the way one comes down.</para>
+        /// </summary>
+        public bool CanDeconstruct(int index) => TryEdifice(index, out PlacedEdifice placed) && placed.Built;
+
+        /// <summary>
+        /// The building standing in this cell, or false. Public because deconstruct needs more than
+        /// the def: it prices the work from what the thing is and the refund from what it is made
+        /// of, and both live on the record rather than in the cell.
+        /// </summary>
+        public bool TryEdifice(int index, out PlacedEdifice placed)
+        {
+            int handle = _grid.Edifice[index];
+            if (handle < 0 || handle >= _edifices.Count)
+            {
+                placed = default;
+                return false;
+            }
+
+            placed = _edifices[handle];
+            return !placed.Removed && placed.Def != CoreContent.EdificeNone;
+        }
 
         bool TryEdificeDef(int index, out ushort def)
         {

@@ -25,6 +25,19 @@ namespace Odyssey.Sim.Contracts
 
         /// <summary>Take a building site off a cell, refunding whatever was delivered to it.</summary>
         CancelBuilding,
+
+        /// <summary>
+        /// Put one job on one named colonist, now: <c>A</c> is a <c>JobIndex</c> value and
+        /// <c>B</c> a <c>PawnId</c> value.
+        ///
+        /// <para><b>The only intent that names a pawn</b>, and it has to. Every other command here
+        /// is about a cell and leaves the question of who answers it to the work scan; a forced
+        /// order is the player overruling that scan for one colonist, so the colonist is half of
+        /// what is being said. The job it names is an ordinary one — the same driver, the same
+        /// toils, the same reservations — with the scan bypassed and
+        /// <c>Job.PlayerForced</c> set.</para>
+        /// </summary>
+        ForceJob,
     }
 
     /// <summary>

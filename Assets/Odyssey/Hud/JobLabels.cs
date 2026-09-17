@@ -31,7 +31,7 @@ namespace Odyssey.Hud
         {
             "ui.status.hauling", "ui.status.eating", "ui.status.sleeping",
             Idle, Idle, "ui.status.felling", "ui.status.mining",
-            "ui.status.hauling", "ui.status.building",
+            "ui.status.hauling", "ui.status.building", "ui.status.deconstructing",
         };
 
         public static string IconKey(int jobDef) =>

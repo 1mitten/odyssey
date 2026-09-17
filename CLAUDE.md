@@ -88,12 +88,38 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   draped now, like the ground, the banks and the water, and the same seam measures 1.1 mm. **The
   rule that came out of it: anything fixed to the grid is draped; only what moves over it is
   lifted.** A hollow wall was filled and capped in the same round.
+  **Cancelling is now reachable, and chopping is called chopping** (`claude/cancel-tool`,
+  2026-09-17). The cancel tool was never missing — `DesignateTool.Cancel` has been on the **X** key
+  with a complete, tested simulation half since the designate line landed; every *way of finding
+  it* was missing. It has a chip on the Orders row now, **right-click puts any armed tool down**
+  (input case 5 of `09-ui-and-input.md` §6, first half built; with nothing armed it is deliberately
+  inert, reserved for the forced-order context menu), and the palette's chopping chip stopped
+  saying "Harvest" — which is what had taught the owner to call it harvesting. Labels only: every
+  key is unchanged, because `ui.status.felling` draws real art and `icon-map.csv` is keyed the same
+  way. Design, what is still open and the by-hand procedure are
+  `docs/design/16-cancel-and-deconstruct.md`.
+  **Deconstruct landed the same day** and closes U26's last outstanding line but one. A colonist
+  walks to one of our own walls, takes it apart and leaves **2 or 3 wood of the 5 it cost** — a
+  seeded coin flip on the odd unit, keyed on cell *and tick* so a cell cannot become a permanently
+  generous one. **Only what we built**: `PlacedEdifice.Built` is set by `ConstructionGrid.Raise`
+  and nowhere else, so the ruined city stays Reclaim's and Salvage's. Getting there first required
+  fixing the save and hash gap above, which was found by a test written to fail.
   **The build cursor and the drag gesture were then played and accepted** (owner, 2026-09-17): a
   build drag draws one closed wireframe box over the whole run, draped as the wall will be, and a
   box widens into a rectangle only after three cells clear across the run — narrowing again within
   one. The gesture took three rounds because the first two fixed the *number* and the fault was
   that the gate latched. What nobody has judged yet is the site marks, the blueprint readout and
   the computed hammer swing (`docs/design/15-building.md` §8).
+  **Forced orders have their simulation half** (`claude/forced-orders-intent`, 2026-09-17): steps 1
+  and 2 of that section's four. `ForceJob(cell, A = job, B = pawn)` is the first intent that names a
+  colonist, and `Job.PlayerForced` — saved and hashed since the job record was written, and read by
+  nothing until now — is what it sets. A forced order is **not a new job kind**: the same
+  `BuildJobDriver`, with the scan bypassed and the job pushed onto the named pawn. The piece that
+  mattered is the split: `BuildWorkGiver.CanBuild` answers "could this colonist build that" and
+  **reserves nothing**, `JobSystem.CanForce` is what a menu asks, and `TryGiveJob` calls the same
+  query — so the offered path and the forced path cannot come to disagree. **Steps 3 and 4 are not
+  started** (the right-click/drag split, and the context-menu panel), so nothing in the running game
+  can send one yet and nobody has pressed Play on it.
 - **Work reaches `main` only through a pull request** with both tiers green, one approving review
   and the branch up to date. Branch protection enforces it, agents included. There is no long-lived
   feature branch — `claude/*` branches are per-change and short-lived.
@@ -150,16 +176,40 @@ build and teardown callable at runtime — `BuildSession()`/`TeardownSession()` 
 built rig. One half is deferred rather than faked: the figure-leak check cannot run in the rig with
 no module catalogue (everything resolves to a shared Unity primitive, so there is nothing to leak),
 and giving it a real catalogue would make a test depend on the licensed packs — so it `Assert.Ignore`s
-with that reason recorded. `U36` (save format v2) is next in the `MS` chain and still open.
+with that reason recorded. **`U36` (save format v2) is done, Sim-only, 2026-09-17.** The header now
+carries a `SaveRecipe` beside the seed/size/tick it always had — map type, scenario, colony name and
+day — so a load screen can describe a save from its header alone; `WorldSave.ReadHeaderOnly` reads
+exactly that, with no world and no component list. `CurrentFormatVersion` is 2; a version 1 file
+still loads and reads back `SaveRecipe.Unknown` (map type `MapType.Unknown`, a value added for
+exactly this, not a reuse of either real one). Files go through `WorldSave.SaveToFile` /
+`LoadFromFile`, both path-taking because Sim has no `UnityEngine.Application.persistentDataPath` to
+read — the `Saves` folder itself is left to the caller that wires the menu on top (`U38`–`U40`). Day
+is likewise handed in already computed: `GameClock`'s tick-to-calendar mapping lives in the Hud
+assembly and Sim must not reference it, so nothing here re-implements that conversion.
+
+**`U38` is the one thing blocking the rest of the chain, and it has not moved.** `HudShell.Bar.cs`
+still carries the comment that the B18 menu "does not exist yet", and there is no menu panel
+anywhere in the presentation assembly — so there is nowhere for `U39`'s screen to attach.
+**Check the code, not the plan's table, before starting anything downstream**: that table listed
+`U36` and `U37` as available while both were still open, and then both landed mid-afternoon on
+2026-09-17 while a branch was in flight against the earlier reading.
+
+**`U39`'s seed logic landed without its screen** (2026-09-17): `SeedEntry` in
+`Odyssey.Sim.Contracts` draws a seed, rerolls to one guaranteed different, formats it as plain
+decimal and reads back what the player typed — the half of `U39` that needs no interface, and the
+half that would otherwise live in a text field's callback where the fast tier could never reach it.
+A seed is decimal because that is already the form the project prints one in; **free-text seeds in
+the Minecraft idiom were considered and not taken**, because they only work if the typed text is
+kept beside the number — now a `SaveRecipe` field, so it is a live question rather than a blocked
+one. It is the one deliberately non-deterministic code in the simulation assemblies, confined to
+two methods and reachable from no tick path.
 
 Three things a later session should not re-litigate. **Live portraits** are refused by
 `09-ui-and-input.md` §4.5 — but that argument is about fifty of them in the roster bar at 15 Hz
 while the world renders, and the select screen is three, rendered once, with no world behind them;
 §4.5 gets an explicit carve-out in `U41` rather than a silent exception. **Colonists start every
 skill at 0 experience** — only passions are rolled — so there is nothing to choose between three
-candidates until `U37`. And **the save header records only seed, size and tick**, not the map type,
-so a save reloaded against a different generator would load cell data over a differently generated
-world; `U36` is where that is fixed.
+candidates until `U37`.
 
 ### What runs today
 
@@ -221,7 +271,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **494 Sim + 170 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **542 Sim + 191 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
@@ -308,6 +358,11 @@ no region spans two layers.
   30 px while ADR 0007 says not to draw pixel art below 32 — measured, 30 px reads, 17 px loses the
   grooves, 16 px goes to noise, and a **framed** sheet-06 tile at 17 px is mostly frame
   (`Logs/skill-icons.png`).
+- **Nobody has pressed Play on the cancel tool or on right-click.** Both tiers are green and
+  neither can say whether right-click disarms when the hand expects it to, or whether the six-pixel
+  threshold separating a right-*click* from a right-*drag* is the right number — an orbit is a
+  deliberate sweep, so it may want to be larger than the left button's. One number, judged at the
+  keyboard (`docs/design/16-cancel-and-deconstruct.md` §6).
 - **Nobody has pressed Play on the interface work either.** The roster card, the docked bars, the
   popovers, the Skills tab and the settings panel's new Keys and Audio tabs are all measured and
   none of them has been looked at. The Keys tab is the tallest panel yet — at 150 per cent
@@ -324,6 +379,19 @@ no region spans two layers.
 Felled trees, mined cells and building sites are not in the save (the designation grid is not
 saved; the construction grid is). Mining collapses nothing. There is no fog of war, so a sealed
 cavern is visible if the player scrolls the layer down.
+
+**And it covers what stands on the world, since 2026-09-17** — one level down from OQ-50 and found
+the same way, by a test written to fail. `List<PlacedEdifice>` was owned by worldgen and by nothing
+else: not an `ISaveable`, so **a wall a colonist raised was never written to the save at all** (on a
+bare board it took handle 0 and a reload restored an empty list, leaving the cell pointing at
+nothing), and not an `IStateHashable`, so **a wooden wall and a stone wall in the same cell hashed
+identically**. `CellGrid` hashes `Edifice[cell]`, which is only an *index into that list*.
+`EdificeSaveSection` is now both, registered in `ColonyComposition.AddColony` so every colony gets
+it, and handed to the save through `ConstructionGrid.Edifices` — the class that appends a building
+at run time is the one that passes on the means of writing it down. **All six golden hashes moved**
+and `Golden.cs` carries the sentence saying why. `PlacedEdifice.Built` joined the record in the same
+change: it is what makes "deconstruct our own buildings, not the ruined city's" a question that can
+be asked.
 
 **The state hash covers the world** (OQ-50, ADR 0005 amended 2026-09-17). It did not until then —
 `CellGrid` is neither a tickable nor a system, which were the only two lists `ComputeStateHash`

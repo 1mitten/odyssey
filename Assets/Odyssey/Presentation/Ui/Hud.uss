@@ -920,6 +920,20 @@
     padding-top: 7px;
 }
 
+/* The pinned row, under everything and never hidden: the tools that belong to no category
+   because they are about whatever is already on the board rather than about what to put down.
+   A heavier rule above it than the material row's, because this one separates two kinds of
+   thing rather than two parts of one order. */
+.build__pinned {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin-top: 8px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.16);
+    padding-top: 8px;
+}
+
 /* ---------------------------------------------------------------- B17 settings
 
    Centred, and deliberately narrow: it holds a short list of switches, not a settings tree. Not a

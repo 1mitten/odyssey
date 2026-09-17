@@ -29,6 +29,7 @@ namespace Odyssey.Sim.Construction
     public sealed class ConstructionGrid : ITickable, IStateHashable, ISaveable, ISnapshotContributor
     {
         readonly CellGrid _grid;
+        readonly EdificeSaveSection _edificeSave;
         readonly List<PlacedEdifice> _edifices;
         readonly ColonyItems _items;
         readonly byte[] _building;
@@ -37,10 +38,18 @@ namespace Odyssey.Sim.Construction
         readonly int[] _work;
         readonly List<int> _sites = new List<int>();
 
-        public ConstructionGrid(CellGrid grid, List<PlacedEdifice> edifices, ColonyItems items)
+        /// <summary>
+        /// Takes the edifice list as its <see cref="EdificeSaveSection"/> rather than raw, because
+        /// this is the one class in the game that <b>appends</b> to that list at run time — and
+        /// until 2026-09-17 nothing saved or hashed what it appended. Threading the section through
+        /// here means the thing that raises a wall and the thing that writes it down cannot be
+        /// wired up separately: <see cref="Edifices"/> hands it on to whoever assembles the save.
+        /// </summary>
+        public ConstructionGrid(CellGrid grid, EdificeSaveSection edifices, ColonyItems items)
         {
             _grid = grid ?? throw new ArgumentNullException(nameof(grid));
-            _edifices = edifices ?? throw new ArgumentNullException(nameof(edifices));
+            _edificeSave = edifices ?? throw new ArgumentNullException(nameof(edifices));
+            _edifices = edifices.Records;
             _items = items ?? throw new ArgumentNullException(nameof(items));
             _building = new byte[grid.Size.CellCount];
             _stuff = new byte[grid.Size.CellCount];
@@ -49,6 +58,13 @@ namespace Odyssey.Sim.Construction
         }
 
         public GridSize Size => _grid.Size;
+
+        /// <summary>
+        /// The standing buildings, as the channel that saves and hashes them. Whoever assembles the
+        /// world's save components takes it from here, so a colony that can raise a wall is by
+        /// construction a colony that writes that wall down.
+        /// </summary>
+        public EdificeSaveSection Edifices => _edificeSave;
 
         /// <summary>Every cell with a site on it, ascending. A stable order is what makes a scan deterministic.</summary>
         public IReadOnlyList<int> Sites => _sites;
@@ -118,15 +134,30 @@ namespace Odyssey.Sim.Construction
             return IntentRejection.None;
         }
 
+        /// <summary>
+        /// The site the player means by naming this cell, or -1 where there is none.
+        ///
+        /// <para>The mirror of <see cref="StandingOn"/>, and the one answer to "which site is this
+        /// click about": the site the player can see over a patch of ground is the one standing on
+        /// it, so naming the ground names the site above. Cancelling asked it first and a forced
+        /// order asks it now; both go through here rather than each carrying a copy of the rule,
+        /// because two copies of a lift are how one of them gets fixed on its own.</para>
+        /// </summary>
+        public int SiteAt(CellRef cell)
+        {
+            if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return -1;
+
+            int index = _grid.Index(cell);
+            if (_building[index] == 0) index = StandingOn(index);
+            return _building[index] == 0 ? -1 : index;
+        }
+
         public IntentRejection Cancel(CellRef cell)
         {
             if (!_grid.Contains(cell.X, cell.Z, cell.Y)) return IntentRejection.OutOfBounds;
 
-            // The mirror of StandingOn: the site the player can see over this patch of ground is
-            // the one standing on it, so naming the ground takes it off.
-            int index = _grid.Index(cell);
-            if (_building[index] == 0) index = StandingOn(index);
-            if (_building[index] == 0) return IntentRejection.AlreadyInThatState;
+            int index = SiteAt(cell);
+            if (index < 0) return IntentRejection.AlreadyInThatState;
 
             Refund(index);
             Set(index, BuildingHandle.None, StuffHandle.None);
@@ -270,7 +301,13 @@ namespace Odyssey.Sim.Construction
             // 1. The thing itself, as the record the ruined city's own walls are kept in, so that a
             //    wall a colonist built and a wall the generator stamped are indistinguishable to
             //    everything downstream — the mesher, the picker, deconstruction and the solver.
-            _edifices.Add(new PlacedEdifice { CellIndex = cell, Def = def.edifice, Stuff = stuff });
+            // Built = true: ours, and the only place in the game that says so. Everything the
+            // generator stamps leaves it false, which is what makes "deconstruct our own buildings
+            // and not the ruined city's" a rule that can be asked rather than guessed at.
+            _edifices.Add(new PlacedEdifice
+            {
+                CellIndex = cell, Def = def.edifice, Stuff = stuff, Built = true,
+            });
             _grid.Edifice[cell] = _edifices.Count - 1;
             if (def.blocking) _grid.Flags[cell] |= CellFlags.BlockingEdifice;
 
@@ -282,6 +319,53 @@ namespace Odyssey.Sim.Construction
             ctx.Nav.MarkDirty(cell);
             int above = cell + _grid.Size.LayerStride;
             if (above < _grid.Size.CellCount) ctx.Nav.MarkDirty(above);
+        }
+
+        /// <summary>
+        /// Take a standing building out of the world: <see cref="Raise"/>'s list, inverted, and
+        /// beside it on purpose so the two cannot drift.
+        ///
+        /// <para><b>The record keeps its slot and is marked removed</b> rather than being dropped.
+        /// Handles are positions in this list and are part of the determinism contract — every cell
+        /// that points at a later entry would otherwise be pointing at the wrong building, which is
+        /// the kind of corruption that shows up three saves later as a wall made of the wrong
+        /// thing.</para>
+        ///
+        /// <para><b>Support is deliberately not marked dirty</b>, the same omission <see cref="Raise"/>
+        /// and <c>MineCell</c> both make. Nothing collapses yet; U29 wires all three together, and
+        /// none of the three should quietly acquire behaviour the others lack.</para>
+        ///
+        /// <para>What it was is returned, so the caller can pay the refund without asking the world
+        /// a question whose answer it has just destroyed.</para>
+        /// </summary>
+        public bool Demolish(PawnContext ctx, int cell, out PlacedEdifice was)
+        {
+            int handle = _grid.Edifice[cell];
+            if (handle < 0 || handle >= _edifices.Count)
+            {
+                was = default;
+                return false;
+            }
+
+            was = _edifices[handle];
+            if (was.Removed) return false;
+
+            // 1. The thing itself.
+            _grid.RemoveEdifice(cell);
+            PlacedEdifice gone = was;
+            gone.Removed = true;
+            _edifices[handle] = gone;
+
+            // 2. The cell and everything touching it must be re-meshed: a wall coming down changes
+            //    how its neighbours draw their own faces, and the vertical neighbours are in other
+            //    chunks.
+            MarkChunksAround(ctx, cell);
+
+            // 3. What is walkable changed here, and in the cell above through the floor rule.
+            ctx.Nav.MarkDirty(cell);
+            int above = cell + _grid.Size.LayerStride;
+            if (above < _grid.Size.CellCount) ctx.Nav.MarkDirty(above);
+            return true;
         }
 
         static void MarkChunksAround(PawnContext ctx, int cell)

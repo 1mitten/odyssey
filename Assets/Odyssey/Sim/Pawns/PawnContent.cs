@@ -131,6 +131,7 @@ namespace Odyssey.Sim.Pawns
         public const int Mine = JobHandle.Mine;
         public const int Deliver = JobHandle.Deliver;
         public const int Build = JobHandle.Build;
+        public const int Deconstruct = JobHandle.Deconstruct;
         public const int Count = JobHandle.Count;
     }
 
@@ -414,6 +415,20 @@ namespace Odyssey.Sim.Pawns
         public int passionMinorPerCent = 35;
 
         public int passionMajorPerCent = 15;
+
+        /// <summary>
+        /// Starting skill levels (U37), one independent roll per skill. Index is the level,
+        /// value is its weight out of the sum of the whole table; level 0 needs no entry beyond
+        /// index 0 carrying the largest share. INVENTED: there is no RimWorld number to take
+        /// (clean room) and nothing in docs/research/ or docs/design/ pins one. Weighted toward a
+        /// low baseline, on the reasoning that a colonist's life before the crash was mostly not
+        /// this particular trade, with a thin tail so an occasional colonist starts competent
+        /// rather than every one of five arriving identical — which is also the reason `U40`'s
+        /// candidate cards need this at all: three colonists rolled from the same table must be
+        /// able to differ. Mean level is 1.16, and levels 6 and 7 together are a 2% roll, so a
+        /// visibly skilled starting colonist is rare rather than routine.
+        /// </summary>
+        public int[] startingSkillLevelWeights = { 40, 20, 14, 10, 6, 4, 3, 2, 1 };
     }
 
     /// <summary>
@@ -557,7 +572,7 @@ namespace Odyssey.Sim.Pawns
                 "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround");
             content.Jobs = ByName<JobDef>(defs,
                 "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine",
-                "Job_Deliver", "Job_Build");
+                "Job_Deliver", "Job_Build", "Job_Deconstruct");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
                 "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction");
             content.Skills = ByName<SkillDef>(defs,
@@ -624,5 +639,33 @@ namespace Odyssey.Sim.Pawns
         /// stone is the kind of coupling nothing would ever report.
         /// </summary>
         public const uint StoneYield = 0x27D4_EB2F;
+
+        /// <summary>
+        /// The odd unit when a demolished building refunds half of an odd cost.
+        ///
+        /// <para>Drawn from (world seed, <b>cell index ^ tick</b>) — and the tick is the whole
+        /// difference from <see cref="StoneYield"/> above, which deliberately leaves it out.
+        /// Stone is a property of the rock: the same cell must answer the same way for ever, or a
+        /// reload would reroll the map's mineral wealth. A refund is a property of the
+        /// <i>moment</i>. Keyed on the cell alone, every cell on the board would be permanently a
+        /// "2" cell or a "3" cell — stable, discoverable, and then farmable by rebuilding the good
+        /// ones. Keyed on both, it still replays identically from a seed, which is all determinism
+        /// asks.</para>
+        /// </summary>
+        public const uint DeconstructRefund = 0x165667B1;
+
+        /// <summary>
+        /// Starting skill levels (U37). Drawn from (world seed, pawn id), the same shape as
+        /// <see cref="Passion"/> and for the same reason: a colonist's skills and its passions
+        /// are two different questions, and sharing a salt would make one answer depend on the
+        /// other by coincidence of arithmetic rather than by design.
+        ///
+        /// <para>Not <c>0x1656_67B1</c>, which is what this was written as before the merge that
+        /// found <see cref="DeconstructRefund"/> claiming the same value on another branch —
+        /// both are the fifth of xxHash32's five prime constants, and this file had already used
+        /// all five once each. There is no sixth prime to reach for, so this one steps outside
+        /// that family rather than fight over who keeps it.</para>
+        /// </summary>
+        public const uint StartingSkill = 0x5A82_7999;
     }
 }

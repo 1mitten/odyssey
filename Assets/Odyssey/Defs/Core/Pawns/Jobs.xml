@@ -110,4 +110,23 @@
     <settleTicks>30</settleTicks>
   </JobDef>
 
+  <!--
+    No workTicks: what it costs to pull a thing down is derived from what it cost to raise,
+    clamped to [20, 3000] ticks (a-04 section 1), so a thing that is expensive to build is slow
+    to demolish without anyone maintaining two numbers that have to agree. The same argument
+    Job_Mine and Job_Build already make, arrived at from the other end.
+
+    It trains construction, not mining. Taking a wall apart without wrecking what it is made of
+    is the builder's knowledge, and the colonist who put it up is the one who knows where it
+    comes apart.
+  -->
+  <JobDef>
+    <defName>Job_Deconstruct</defName>
+    <driver>9</driver>
+    <expiryTicks>12000</expiryTicks>
+    <trainsSkill>3</trainsSkill>
+    <experiencePerWorkTick>110</experiencePerWorkTick>
+    <settleTicks>30</settleTicks>
+  </JobDef>
+
 </Defs>

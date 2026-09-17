@@ -4,6 +4,7 @@ using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Construction;
 using Odyssey.Sim.Designations;
 using Odyssey.Sim.Pathing;
+using Odyssey.Sim.Saving;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
 
@@ -61,7 +62,12 @@ namespace Odyssey.Sim.Pawns
         {
             // pawns.Cells, not a grid of its own: the context already carries the one cell grid the
             // colony is about, and taking a second would be an invitation to hand in two.
-            construction = new ConstructionGrid(pawns.Cells, edifices, pawns.Items);
+            // The edifice list becomes a saved, hashed component here and nowhere else, so every
+            // colony gets it — the same argument the `out ConstructionGrid` above is built on.
+            // Until 2026-09-17 a wall a colonist raised was in neither the save nor the hash;
+            // `EdificeSaveSection` carries the measurement that found it.
+            var edificeSave = new EdificeSaveSection(edifices);
+            construction = new ConstructionGrid(pawns.Cells, edificeSave, pawns.Items);
             pawns.Designations = designations;
             pawns.Construction = construction;
             JobSystem pipeline = jobs ?? new JobSystem(pawns);
@@ -69,8 +75,18 @@ namespace Odyssey.Sim.Pawns
                 // The world itself, first: it is what everything below reads, and it ticks
                 // nothing, so nothing else would ever have put it in the hash (OQ-50).
                 .AddHashable(pawns.Cells)
+                // What stands on the board, beside what the board is made of. `CellGrid` hashes
+                // `Edifice[cell]`, which is only an index into this list — so without this line a
+                // wooden wall and a stone wall in the same cell hash identically. Measured, not
+                // supposed: `EdificeRoundTripTests.AWallsMaterialIsInTheStateHash`.
+                .AddHashable(edificeSave)
                 .AddSystem(_ => support)
                 .AddSystem(_ => new NavigationSystem(nav, support))
+                // Starting skills (U37), before Needs and the job pipeline for the same reason
+                // they run: a colonist should not be scanned for work on the first tick it is
+                // ever ticked with the zero skills its constructor gave it, when its rolled ones
+                // are one order earlier in the same phase.
+                .AddSystem(_ => new StartingSkillsSystem(pawns))
                 .AddSystem(_ => new NeedsSystem(pawns))
                 // Inside the lambda, not before it: the factory runs during Build(), so a giver
                 // registered after this call is still picked up. Outside it, AddColony would have
@@ -85,7 +101,12 @@ namespace Odyssey.Sim.Pawns
                 .AddTickable(_ => new SkillSystem(pawns))
                 .AddTickable(_ => pawns.Pawns)
                 .AddSnapshotContributor(pawns.Pawns)
-                .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden);
+                .AddIntentHandler(IntentKind.SetForbidden, pawns.Items.HandleSetForbidden)
+                // The one command that names a colonist rather than only a cell. It belongs to the
+                // pipeline because starting and ending jobs is what the pipeline is, and because a
+                // second path into `StartJob` would be a second path out of it — which is where a
+                // reservation leak comes from.
+                .AddIntentHandler(IntentKind.ForceJob, pipeline.HandleForceJob);
             designations.Attach(builder);
             construction.Attach(builder);
             return builder;

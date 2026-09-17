@@ -106,18 +106,37 @@ namespace Odyssey.Sim.Pawns
                 jobs,
                 designations,
                 construction,
+                // Taken off the construction grid rather than built here, because that is the one
+                // class that appends a building to the list at run time. The guard against
+                // forgetting it is not vigilance: the edifice list is in the state hash, so
+                // `WorldRoundTripTests.TheRoundTripReproducesTheStateExactly` fails the moment the
+                // save stops covering what the hash covers.
+                construction.Edifices,
             };
         }
 
-        /// <summary>Write the whole world to a stream.</summary>
-        public void Save(Stream stream) => WorldSave.Save(World, stream, SaveComponents);
+        /// <summary>
+        /// The recipe this world can state about itself without a calendar: map type, scenario
+        /// and colony name all come from <see cref="Request"/>, which is exactly why it is kept.
+        /// Day is not — <c>GameClock</c> lives in the Hud assembly and Sim must not reference it
+        /// — so it is the one field every caller here has to supply for itself.
+        /// </summary>
+        public SaveRecipe Recipe(int day) => new SaveRecipe(Request.Map, Scenario.defName, Request.Name, day);
 
-        public byte[] Save()
+        /// <summary>Write the whole world to a stream.</summary>
+        public void Save(Stream stream, SaveRecipe? recipe = null) => WorldSave.Save(World, stream, SaveComponents, recipe);
+
+        public byte[] Save(SaveRecipe? recipe = null)
         {
             using var buffer = new MemoryStream();
-            Save(buffer);
+            Save(buffer, recipe);
             return buffer.ToArray();
         }
+
+        /// <summary>Write the whole world to a path. See <see cref="WorldSave.SaveToFile"/> for
+        /// why the path is the caller's to supply.</summary>
+        public void SaveToFile(string path, SaveRecipe? recipe = null) =>
+            WorldSave.SaveToFile(path, World, SaveComponents, recipe);
 
         /// <summary>
         /// Load state over a world already built from the same seed and size, then rebuild
@@ -134,6 +153,14 @@ namespace Odyssey.Sim.Pawns
         {
             using var buffer = new MemoryStream(bytes, writable: false);
             return Load(buffer);
+        }
+
+        /// <summary>Load state from a path. See <see cref="WorldSave.LoadFromFile"/>.</summary>
+        public SaveHeader LoadFromFile(string path)
+        {
+            var header = WorldSave.LoadFromFile(path, World, SaveComponents);
+            RebuildDerived();
+            return header;
         }
 
         /// <summary>

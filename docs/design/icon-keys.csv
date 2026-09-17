@@ -83,8 +83,9 @@ ui.pawn.synth,Synth,ui.pawn,M2,"Machine intelligence. Not alive, not harmless"
 ui.pawn.corpse,Corpse,ui.pawn,M2,"Rots, upsets people, can be buried or worse"
 ui.status.hauling,Hauling,ui.status,M2,Carrying something to storage
 ui.status.building,Building,ui.status,M2,Working a frame or blueprint
+ui.status.deconstructing,Deconstructing,ui.status,M3,Taking one of our own buildings apart
 ui.status.mining,Mining,ui.status,M2,"Cutting into rubble, concrete or rock"
-ui.status.felling,Felling,ui.status,M3,Cutting a tree down for wood
+ui.status.felling,Chopping,ui.status,M3,Cutting a tree down for wood
 ui.status.sleeping,Sleeping,ui.status,M2,"Asleep, and should stay that way"
 ui.status.eating,Eating,ui.status,M2,Taking a meal
 ui.status.idle,Idle,ui.status,M2,Nothing to do. Usually a priorities problem
@@ -147,7 +148,7 @@ ui.arch.tool.salvage,Salvage,ui.arch.tool,M3,"Strip a ruin. Slower than deconstr
 ui.arch.tool.haulurgent,Haul urgently,ui.arch.tool,M3,Jump this to the top of the haul list
 ui.arch.tool.cancel,Cancel,ui.arch.tool,M3,Remove designations and orders
 ui.arch.tool.forbid,Forbid,ui.arch.tool,M3,Hands off this
-ui.arch.tool.fell,Fell trees,ui.arch.tool,M3,Cut a tree down for wood
+ui.arch.tool.fell,Chop trees,ui.arch.tool,M3,Cut a tree down for wood
 ui.arch.tool.allowitem,Allow,ui.arch.tool,M3,Hands back on
 ui.arch.tool.clearrubble,Clear rubble,ui.arch.tool,M3,Remove loose debris from a cell
 ui.arch.tool.extinguish,Extinguish,ui.arch.tool,M3,Put this fire out now
@@ -365,7 +366,7 @@ ui.item.shovel,Shovel,ui.item,M3,Rubble and soil
 ui.item.hammer,Hammer,ui.item,M3,Construction tool
 ui.item.wrench,Wrench,ui.item,M3,Machinery and repair
 ui.item.drill,Drill,ui.item,M3,Powered cutting. Fast salvage
-ui.item.axe,Axe,ui.item,M3,"Cutting, and felling"
+ui.item.axe,Axe,ui.item,M3,"Cutting, and chopping"
 ui.item.cutter,Cutting torch,ui.item,M3,Opens a hull. Opens a wall
 ui.item.pistol,Sidearm,ui.item,M3,"Short range, always to hand"
 ui.item.rifle,Rifle,ui.item,M3,The standard ranged weapon
@@ -422,7 +423,7 @@ ui.keys.speed1,Speed one,ui.keys,M3,"Run the clock at its first speed"
 ui.keys.speed2,Speed two,ui.keys,M3,"Run the clock at its second speed"
 ui.keys.speed3,Speed three,ui.keys,M3,"Run the clock at its third speed"
 ui.keys.mine,Mine tool,ui.keys,M3,"Arm the mine designation"
-ui.keys.fell,Fell tool,ui.keys,M3,"Arm the fell trees designation"
+ui.keys.fell,Chop tool,ui.keys,M3,"Arm the chop trees designation"
 ui.keys.cancel,Cancel tool,ui.keys,M3,"Arm the cancel designation"
 ui.keys.build,Build palette,ui.keys,M3,"Open and close the Build palette"
 ui.keys.developer,Developer overlay,ui.keys,M3,"Show the frame-time and draw-call readout"
