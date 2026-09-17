@@ -13,8 +13,12 @@ labels or flavour. The taxonomy behind it is `docs/research/g-01-ui-information-
 
 **B17, the settings panel, is four tabs since 2026-09-17**: *Interface* (the interface-scale
 ladder, a camera-speed ladder and the developer-overlay toggle), *Graphics* (as before), *Audio*
-(five dB rung ladders — the faders that had waited in `AudioSettingsStore` since the sound work
-landed), and *Keys* (the binding list, grouped, one or two caps per row, click a cap to rebind,
+(five dB drag sliders with unity seated at the centre of the track — silence at the left end,
++12 dB of boost at the right, a notch marking the centre, and the figure the thumb rests at said
+beside it; the faders that had waited in `AudioSettingsStore` since the sound work landed, and
+sliders rather than the rung ladders they first shipped as, because the owner asked for controls
+that drag on 2026-09-17 and for the default in the middle later the same day), and *Keys* (the
+binding list, grouped, one or two caps per row, click a cap to rebind,
 conflicts refused and reported, a reset row under it). It opens on Interface, because the first
 thing a player wants from a settings panel on a large monitor is to make the type bigger. Under
 all four tabs sits the exit row — two clicks, because nothing is saved — which is B18's quit
@@ -646,8 +650,11 @@ submitted. The other two are baked into instance matrices when a chunk is meshed
 sends the board back through the mesher and rebuilds the surround. The panel says which is which
 in the row's tooltip, so a player is never left wondering why one switch stutters and three do not.
 
-Audio, interface scale and keybindings are **built as of 2026-09-17** — audio as one dB rung
-ladder per bus writing through `AudioSettingsStore`, keybindings as the `HotkeyDirector` binding
+Audio, interface scale and keybindings are **built as of 2026-09-17** — audio as one dB drag
+slider per bus writing through `AudioSettingsStore`, with unity at the centre of the track,
+silence to its left and +12 dB of boost to its right (rung ladders until the owner asked for
+sliders the same day, and the centre seating an hour after that), keybindings as the
+`HotkeyDirector` binding
 list with its rebind-and-refuse rules — and the golden-hour work
 (`docs/research/look-interview.md`) is what fills the Graphics section out, since its own
 quality tier is a settings surface by definition. Accessibility modes remain the M8 pass.

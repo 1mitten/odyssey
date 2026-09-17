@@ -706,12 +706,23 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// The Audio section: one ladder per bus, in dB, mute to unity.
+        /// The Audio section: one fader per bus, with the dB it rests at said beside it.
         ///
         /// <para>These faders have been in <c>AudioSettingsStore</c> since the sound work
         /// landed — persisted, applied at boot, and writable by nothing. This section is the
-        /// panel they were waiting for, and the values are the director's so the set is
-        /// testable in the fast tier like every other ladder here.</para>
+        /// panel they were waiting for, and the span is the director's so the bounds are
+        /// testable in the fast tier like every other lever here.</para>
+        ///
+        /// <para><b>A slider, since the owner asked for one on 2026-09-17</b> — and later
+        /// the same day, for <b>unity seated at the centre of the track</b>: dragging left
+        /// lowers towards silence, dragging right boosts to the ceiling. The slider's own
+        /// value is track position (−1 to +1; see <see cref="SettingsDirector.TrackOf"/> for
+        /// why it is not dB), and the notch under the thumb marks where the default sits, so
+        /// "put it back the way it shipped" is a place rather than a memory. It is the
+        /// built-in <see cref="Slider"/> restyled rather than a hand-rolled thumb, because
+        /// the engine's drag capture, track jumps and arrow keys are behaviour this HUD has
+        /// no reason to re-derive — the Build palette's scroller already showed the way
+        /// in.</para>
         /// </summary>
         void BuildAudioSection()
         {
@@ -728,38 +739,51 @@ namespace Odyssey.Presentation.Ui
                 icon.Inherit(HudTokens.TextMeta);
                 row.Add(icon);
                 row.Add(HudText.Make(Registry.Label(key), HudTextRole.Row, ussClass: "settings__label"));
+
+                Label value = HudText.Make(VolumeText(SettingsDirector.UnityDb), HudTextRole.Body,
+                    numeric: true, ussClass: "settings__value");
+                row.Add(value);
                 _audioSection.Add(row);
 
-                var ladder = new VisualElement();
-                ladder.AddToClassList("settings__ladder");
-                foreach (int db in SettingsDirector.VolumeDbRungs)
+                var fader = new Slider(-1f, 1f, SliderDirection.Horizontal);
+                fader.AddToClassList("settings__fader");
+                fader.SetValueWithoutNotify(SettingsDirector.TrackOf(SettingsDirector.UnityDb));
+                fader.tooltip =
+                    "Drag to set the volume — silence at the left, unity at the centre mark, boost at the right";
+
+                // The centre mark, first child so the track and the thumb both draw over it:
+                // where unity sits, findable after the thumb has been dragged away from it.
+                var notch = new VisualElement { pickingMode = PickingMode.Ignore };
+                notch.AddToClassList("settings__fader-notch");
+                fader.Insert(0, notch);
+
+                SettingsBus capturedBus = bus;
+                fader.RegisterValueChangedCallback(evt =>
                 {
-                    string text = VolumeText(db);
-                    // The decibel figures are figures and set in the mono face; "Mute" is a
-                    // word, and a word in the mono face is a word pretending to be a number.
-                    Label rung = HudText.Make(text, HudTextRole.Body, text != "Mute", "rung");
-                    rung.tooltip = db == 0
-                        ? "Unity — nothing attenuated, nothing boosted"
-                        : db <= SettingsDirector.VolumeDbRungs[0]
-                            ? "Silence"
-                            : text + " dB";
-                    SettingsBus capturedBus = bus;
-                    int capturedDb = db;
-                    rung.RegisterCallback<ClickEvent>(_ =>
-                        _directors?.Settings.SetBusDb(capturedBus, capturedDb));
-                    _busRungs[(bus, db)] = rung;
-                    ladder.Add(rung);
-                }
-                _audioSection.Add(ladder);
+                    // Whole decibels: a thumb resting between two of them is a position the
+                    // readout cannot say and the store cannot keep. The guard keeps a drag
+                    // to one write per dB, and one store save with it.
+                    int db = SettingsDirector.DbOf(evt.newValue);
+                    if (_directors != null && _directors.Settings.BusDb(capturedBus) != db)
+                        _directors.Settings.SetBusDb(capturedBus, db);
+                });
+                _audioSection.Add(fader);
+
+                _busFaders[bus] = new FaderView { Fader = fader, Value = value };
             }
 
             _settingsPanel.Add(_audioSection);
         }
 
-        /// <summary>What one rung of a volume ladder says. Mute is a word because silence is
-        /// not a number; everything else is the decibels it is.</summary>
+        /// <summary>What one fader's readout says. Mute is a word because silence is not a
+        /// number; a boost says its plus out loud, so the two sides of the centre mark read
+        /// as the different promises they are; everything else is the decibels it
+        /// is.</summary>
         static string VolumeText(int db) =>
-            db <= SettingsDirector.VolumeDbRungs[0] ? "Mute" : db == 0 ? "0 dB" : db + " dB";
+            db <= SettingsDirector.SilenceDb ? "Mute"
+            : db == SettingsDirector.UnityDb ? "0 dB"
+            : db < SettingsDirector.UnityDb ? db + " dB"
+            : "+" + db + " dB";
 
         /// <summary>
         /// The groups the binding list is drawn in. Layout is the shell's business — the
@@ -927,11 +951,22 @@ namespace Odyssey.Presentation.Ui
 
         void OnBusDbChanged(SettingsBus bus)
         {
-            if (_directors == null) return;
+            if (_directors == null || !_busFaders.TryGetValue(bus, out FaderView? view)) return;
             int at = _directors.Settings.BusDb(bus);
-            foreach (var entry in _busRungs)
-                entry.Value.EnableInClassList("rung--on",
-                    entry.Key.Bus == bus && entry.Key.Db == at);
+
+            // The thumb stands at the director's whole dB — on its seat on the track, which
+            // is unity's centre when the value is unity — whether the move came from this
+            // drag (the write-back lands on the rounded figure the drag already offered) or
+            // from a seed laid in before the shell attached. The value-changed callback this
+            // can raise finds nothing left to ask for and stops there.
+            float seat = SettingsDirector.TrackOf(at);
+            if (!Mathf.Approximately(view.Fader.value, seat)) view.Fader.value = seat;
+
+            string text = VolumeText(at);
+            // The decibel figures are figures and set in the mono face; "Mute" is a word,
+            // and a word in the mono face is a word pretending to be a number.
+            HudText.Apply(view.Value, HudTextRole.Body, numeric: text != "Mute");
+            HudText.Set(view.Value, text, HudTextRole.Body);
         }
 
         void OnExitChanged()
