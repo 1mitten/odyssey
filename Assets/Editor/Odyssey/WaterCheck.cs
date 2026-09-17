@@ -129,6 +129,42 @@ namespace Odyssey.EditorTools
                     // that has to keep proving it has not come back.
                     PlayScene.Shoot(camera, focus, 9f, 14f, $"Logs/water-{condition.Name}-waterline.png");
 
+                    // The cascade, which is a different subject from the shots above and needs its
+                    // own focus. A water cell has a face on any side that does not hold it in
+                    // (owner, 2026-09-17: water "in mid air"), and the case that face exists for is
+                    // a step — so the camera has to be over a step, not over the biggest body of
+                    // water. Scoring by nearby water rather than by nearby steps picks the middle
+                    // of the widest pool, whose nearest step is out of frame; three shots were
+                    // spent on that before the falls were confirmed to be drawing at all.
+                    if (LookAtACascade(grid, size, out Vector3 stepFocus))
+                    {
+                        PlayScene.Shoot(camera, stepFocus, 18f, 14f,
+                            $"Logs/water-{condition.Name}-cascade.png");
+                        PlayScene.Shoot(camera, stepFocus, 34f, 26f,
+                            $"Logs/water-{condition.Name}-lip.png");
+
+                        // The same frame with banks off. Not idle curiosity: the large diagonal
+                        // green sheets standing proud of the meadow beside a channel read exactly
+                        // like the water fault being investigated and are nothing to do with water
+                        // — switching banks off removes every one of them and leaves clean terrace
+                        // risers, which is how they were attributed to BankMesh. Kept as a pair so
+                        // the next session can tell a bank fault from a water one in one run.
+                        BankLayout.Enabled = false;
+                        try
+                        {
+                            PlayScene.Shoot(camera, stepFocus, 34f, 26f,
+                                $"Logs/water-{condition.Name}-nobanks.png");
+                        }
+                        finally
+                        {
+                            BankLayout.Reset();
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log($"[Water] {condition.Name}: no cascade step on this board.");
+                    }
+
                     RenderPipelineManager.beginCameraRendering -= hook;
                     hook = null;
 
@@ -144,7 +180,8 @@ namespace Odyssey.EditorTools
                     library = null;
                 }
 
-                Debug.Log("[Water] wrote Logs/water-{stream,river}-{play,grazing,close}.png");
+                Debug.Log("[Water] wrote Logs/water-{stream,river}-"
+                          + "{play,grazing,close,waterline,cascade,lip,nobanks}.png");
             }
             catch (Exception e)
             {
@@ -181,6 +218,63 @@ namespace Odyssey.EditorTools
 
             int x = best % ctx.Size.SizeX, z = best / ctx.Size.SizeX;
             return new Vector3(x * CellMetrics.SizeXZ, layer * CellMetrics.SizeY, z * CellMetrics.SizeXZ);
+        }
+
+        /// <summary>
+        /// A cascade step with as many more steps around it as can be found: a water cell whose
+        /// neighbour is open at its own layer and is water one layer down, which is exactly the
+        /// condition <c>WaterContributor</c> draws a falling sheet for.
+        ///
+        /// <para>Scored by nearby <b>steps</b> and not by nearby water. That distinction cost three
+        /// contact sheets: scoring by water selects the middle of the widest pool, which is the one
+        /// place a step is guaranteed not to be, and the shots came back apparently showing the
+        /// falls not drawing when the truth was that none was in frame.</para>
+        /// </summary>
+        static bool LookAtACascade(CellGrid grid, GridSize size, out Vector3 focus)
+        {
+            focus = default;
+            int bx = 0, bz = 0, by = 0, best = -1;
+
+            for (int y = 1; y < size.SizeY; y++)
+            for (int z = 0; z < size.SizeZ; z++)
+            for (int x = 0; x < size.SizeX; x++)
+            {
+                if (!Steps(grid, size, x, z, y)) continue;
+
+                int score = 0;
+                for (int oz = -3; oz <= 3; oz++)
+                for (int ox = -3; ox <= 3; ox++)
+                for (int oy = -1; oy <= 1; oy++)
+                    if (Steps(grid, size, x + ox, z + oz, y + oy)) score++;
+
+                if (score <= best) continue;
+                best = score;
+                bx = x; bz = z; by = y;
+            }
+
+            if (best < 0) return false;
+
+            focus = new Vector3(
+                bx * CellMetrics.SizeXZ, by * CellMetrics.SizeY, bz * CellMetrics.SizeXZ);
+            return true;
+        }
+
+        /// <summary>Does water in this cell fall out of one of its sides?</summary>
+        static bool Steps(CellGrid grid, GridSize size, int x, int z, int y)
+        {
+            if (y < 1 || !size.Contains(x, z, y)) return false;
+            if (!NaturalContent.IsWater(grid.Terrain[size.Index(x, z, y)])) return false;
+
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int nx = x + Directions.DeltaX[dir], nz = z + Directions.DeltaZ[dir];
+                if (!size.Contains(nx, nz, y) || !size.Contains(nx, nz, y - 1)) continue;
+                if (grid.IsSolidTerrain(size.Index(nx, nz, y))) continue;
+                if (NaturalContent.IsWater(grid.Terrain[size.Index(nx, nz, y)])) continue;
+                if (NaturalContent.IsWater(grid.Terrain[size.Index(nx, nz, y - 1)])) return true;
+            }
+
+            return false;
         }
     }
 }
