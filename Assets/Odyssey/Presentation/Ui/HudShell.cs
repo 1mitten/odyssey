@@ -173,8 +173,16 @@ namespace Odyssey.Presentation.Ui
         readonly Dictionary<SettingsTab, Label> _settingTabs = new();
         readonly Dictionary<int, Label> _scaleRungs = new();
         readonly Dictionary<int, Label> _cameraRungs = new();
-        readonly Dictionary<(SettingsBus Bus, int Db), Label> _busRungs = new();
+        readonly Dictionary<SettingsBus, FaderView> _busFaders = new();
         readonly Dictionary<HotkeyAction, KeyRowView> _keyRows = new();
+
+        /// <summary>One volume row: its fader and the readout beside it, refreshed when the
+        /// bus's value moves and never per frame.</summary>
+        sealed class FaderView
+        {
+            public Slider Fader = null!;
+            public Label Value = null!;
+        }
 
         /// <summary>One binding row: its root and the caps of its two slots, for
         /// event-driven refresh. Strings are rebuilt on click, never per frame.</summary>

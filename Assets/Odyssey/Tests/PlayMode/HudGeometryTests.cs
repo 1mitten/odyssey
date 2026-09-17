@@ -298,6 +298,106 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// The audio faders seat unity at the centre of their track — lowering towards
+        /// silence to the left of it, boosting to the ceiling to the right — and a drag
+        /// reaches the bus it names.
+        ///
+        /// <para>The fast tier proves the span, the seating arithmetic and the event. What it
+        /// cannot prove is that the shell built faders at all, or that the loop closes:
+        /// track position to director to event and back onto the thumb and the readout. The
+        /// drag is offered the way the engine would deliver it — as the slider's own value —
+        /// because <c>MouseHarness</c> cannot press a button in a batch run (its docs say
+        /// why); the pointer half of a drag is Unity's own control, and it is the wiring
+        /// around it that is ours to break.</para>
+        ///
+        /// <para>The slider's value is track position (−1 to +1), not dB, so that unity can
+        /// sit at the exact centre — see <c>SettingsDirector.TrackOf</c> for the
+        /// mapping.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator AVolumeSliderDragsItsBusAndThePanelAgrees()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+                Assert.That(boot.Directors, Is.Not.Null, "the bootstrap never built its directors");
+                SettingsDirector settings = boot.Directors!.Settings;
+
+                settings.SetOpen(true);
+                settings.SetTab(SettingsTab.Audio);
+                yield return null;
+
+                List<Slider> faders = doc.rootVisualElement.Query<Slider>(className: "settings__fader").ToList();
+                Assert.That(faders.Count, Is.EqualTo(SettingsDirector.Buses.Length),
+                    "one fader per bus, or a bus has no lever");
+
+                // The first two are the master's and the music's: the buses are drawn in order.
+                Slider master = faders[0];
+                Slider music = faders[1];
+                Assert.That(master.direction, Is.EqualTo(SliderDirection.Horizontal),
+                    "the owner asked for faders that drag left to right, on 2026-09-17");
+
+                // The default is seated at the centre of the track: the owner's second ask,
+                // later the same day. The notch is the mark that makes the centre findable.
+                Assert.That((master.lowValue + master.highValue) / 2f, Is.EqualTo(0f).Within(0.001f),
+                    "the track's centre is 0, or unity cannot sit at it");
+                Assert.That(master.value, Is.EqualTo(0f).Within(0.001f),
+                    "the fader does not start at the centre — at unity");
+                Assert.That(master.Q(className: "settings__fader-notch"), Is.Not.Null,
+                    "the fader has no centre mark to find unity by");
+
+                Label readout = ReadoutOf(master);
+                Assert.That(readout.text, Is.EqualTo("0 dB"), "a fader starts at unity");
+
+                // Drag left, to half the attenuation side of the track: −40 dB.
+                master.value = -0.5f;
+                Assert.That(settings.BusDb(SettingsBus.Master), Is.EqualTo(-40),
+                    "the drag never reached the bus it names");
+                Assert.That(master.value, Is.EqualTo(-0.5f).Within(0.001f),
+                    "the thumb was not seated at the director's whole dB");
+                Assert.That(readout.text, Is.EqualTo("-40 dB"),
+                    "the readout does not say where the thumb rests");
+
+                // Drag right, onto the boost side: +6 dB, said with its plus.
+                master.value = 0.5f;
+                Assert.That(settings.BusDb(SettingsBus.Master), Is.EqualTo(SettingsDirector.BoostDb / 2),
+                    "the boost side of the centre does not boost");
+                Assert.That(readout.text, Is.EqualTo("+6 dB"),
+                    "a boost that does not say its plus reads as a level, not a lift");
+
+                Assert.That(music.value, Is.EqualTo(0f).Within(0.001f),
+                    "dragging one fader moved another bus's");
+
+                // Both ends, and past them: the track clamps, and the readout says the word
+                // at the floor.
+                master.value = 1f;
+                Assert.That(settings.BusDb(SettingsBus.Master), Is.EqualTo(SettingsDirector.BoostDb));
+                Assert.That(readout.text, Is.EqualTo("+12 dB"));
+                master.value = -400f;
+                Assert.That(settings.BusDb(SettingsBus.Master), Is.EqualTo(SettingsDirector.SilenceDb));
+                Assert.That(readout.text, Is.EqualTo("Mute"));
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>The readout beside one fader: the label row above it in the Audio
+        /// section.</summary>
+        static Label ReadoutOf(VisualElement fader)
+        {
+            VisualElement? row = null;
+            foreach (VisualElement child in fader.parent.Children())
+            {
+                if (child == fader) break;
+                row = child;
+            }
+            return row!.Q<Label>(className: "settings__value")!;
+        }
+
+        /// <summary>
         /// The one acceptance criterion that is about words rather than boxes: no three-letter
         /// placeholder strings anywhere on the screen. MEA, WOO and SCR were the old icon
         /// stand-in, and they read as truncated data rather than as a deliberate gap.

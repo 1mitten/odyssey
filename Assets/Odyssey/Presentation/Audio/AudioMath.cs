@@ -22,8 +22,23 @@ namespace Odyssey.Presentation.Audio
         /// </summary>
         public const float SilenceDb = -80f;
 
-        /// <summary>The loudest a bus may be set. 0 dB — a bus cannot amplify, only attenuate.</summary>
+        /// <summary>
+        /// The fader's default, in dB: unity — neither attenuated nor boosted. The settings panel
+        /// seats it at the centre of its track, so the default is a place the thumb can find its
+        /// way back to.
+        /// </summary>
         public const float UnityDb = 0f;
+
+        /// <summary>
+        /// The most a bus may be boosted above unity, in dB: +12, four times the amplitude.
+        ///
+        /// <para>The owner asked on 2026-09-17 for faders that raise as well as lower. Twelve is
+        /// enough lift to make a quiet mix comfortable, and the ceiling exists because boosting
+        /// amplifies rather than passes through — above unity a gain multiplies the author's own
+        /// volume and can clip, and a bounded place to stop is kinder to the player than an
+        /// unbounded one to discover that in.</para>
+        /// </summary>
+        public const float BoostDb = 12f;
 
         /// <summary>Linear amplitude to dB, clamped to the fader's range. Zero maps to silence.</summary>
         public static float LinearToDb(float linear) =>
@@ -49,9 +64,11 @@ namespace Odyssey.Presentation.Audio
         /// <summary>
         /// The combined gain of a stack of bus volumes, in dB. Buses multiply in linear amplitude
         /// and therefore add in dB; doing it here rather than at each <see cref="AudioSource"/>
-        /// keeps one place that knows the range and can clamp it.
+        /// keeps one place that knows the range and can clamp it. The sum may boost since the
+        /// faders may, but never past <see cref="BoostDb"/> — master and bus both pushed to their
+        /// tops still meet one ceiling.
         /// </summary>
         public static float StackDb(float masterDb, float busDb) =>
-            Mathf.Clamp(masterDb + busDb, SilenceDb, UnityDb);
+            Mathf.Clamp(masterDb + busDb, SilenceDb, BoostDb);
     }
 }

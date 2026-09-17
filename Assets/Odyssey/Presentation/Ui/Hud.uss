@@ -945,7 +945,8 @@
 .settings__body { margin-top: 9px; }
 
 /* The scale ladder: one rung per percentage, the live one filled. Chips rather than a slider,
-   which is the on-off idiom this HUD already uses everywhere else. */
+   because a scale rung is a choice and not a continuum — the chip is the idiom this HUD uses
+   for every control that holds a choice. The faders below are the other kind. */
 .settings__ladder {
     flex-direction: row;
     flex-wrap: wrap;
@@ -970,6 +971,65 @@
     background-color: #6fd3e3;
     border-color: #6fd3e3;
     color: #0b1116;
+}
+
+/* A volume fader: the one control in this HUD that holds a continuum rather than a choice.
+   Unity seated at the centre (the notch below marks it), silence at the left end, boost at
+   the right — each half linear in dB over its own span. The built-in slider restyled rather
+   than replaced, the Build palette's scroller having shown the way in. The tracker's end
+   margins are half the thumb's width on purpose: Unity sweeps the thumb's LEFT edge from the
+   track's start to its end minus the thumb, so those margins are what make the thumb's centre
+   sweep exactly the track — and what puts its centre on the notch at unity. */
+.settings__fader {
+    height: 24px;
+    margin: 0 6px 4px 26px;
+}
+
+.settings__fader .unity-base-slider__tracker {
+    height: 3px;
+    align-self: center;
+    border-radius: 1.5px;
+    background-color: rgba(255, 255, 255, 0.13);
+    border-width: 0;
+    margin-left: 6px;
+    margin-right: 6px;
+}
+
+.settings__fader .unity-base-slider__dragger {
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    background-color: #6fd3e3;
+    border-width: 0;
+    margin-left: 0;
+    top: 50%;
+    margin-top: -6px;
+}
+
+.settings__fader .unity-base-slider__dragger:hover { background-color: #ffffff; }
+
+/* Where unity sits: the centre mark the default is seated on, so putting a fader back the way
+   it shipped is a place rather than a memory. First child, so the track and the thumb both
+   draw over it. */
+.settings__fader-notch {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1px;
+    height: 7px;
+    margin-left: -0.5px;
+    margin-top: -3.5px;
+    background-color: rgba(255, 255, 255, 0.35);
+}
+
+/* The figure a fader rests at, beside its row's label: the saying half of the control the
+   slider is the dragging half of. Wide enough for the longest figure in the mono face, so
+   the label does not walk as the thumb moves. */
+.settings__value {
+    min-width: 52px;
+    margin-left: 6px;
+    color: rgba(255, 255, 255, 0.66);
+    -unity-text-align: middle-right;
 }
 
 /* A row that only labels the control under it, and answers nothing itself. */
