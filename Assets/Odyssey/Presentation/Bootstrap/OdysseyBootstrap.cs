@@ -102,10 +102,10 @@ namespace Odyssey.Presentation.Bootstrap
         [Tooltip("Scatter trees over the background hills, out to 900 m. They are what gives the distance a scale; off is the old bare hillside. Decoration only, like the rest of the surround.")]
         public bool skirtHillTrees = true;
 
-        [Tooltip("Roll a fresh cast every session: different faces, hair, skin and clothes each time you press Play. Off deals from the world seed instead, so a given world is the same people on every load. Either way colonistLookSeed overrides it.")]
+        [Tooltip("Roll a fresh cast every session: different faces, hair, skin and clothes each time you press Play. This overrules each colonist's own roll seed, so the people you picked on the setup screen will not be the people you get — it is for judging the palette, not for playing. Off, every colonist looks the way their roll says, and a given world is the same people on every load. colonistLookSeed overrides it.")]
         public bool randomCastEachSession = true;
 
-        [Tooltip("Pin one cast. 0 follows the switch above; any other value deals that cast every time, and the log prints the value used so a cast you liked can be kept.")]
+        [Tooltip("Pin one cast. 0 follows the switch above; any other value deals the whole colony that cast every time, overruling each colonist's own roll seed, and the log prints the value used so a cast you liked can be kept.")]
         public int colonistLookSeed = 0;
 
         /// <summary>
@@ -495,15 +495,26 @@ namespace Odyssey.Presentation.Bootstrap
                 randomCastEachSession ? (uint)UnityEngine.Random.Range(1, int.MaxValue) :
                 sessionSeed;
             ColonistAppearanceBook appearances = AppearanceBooks.For(castSeed, moduleCatalogue);
+
+            // Since 2026-09-18 a colonist is dealt from *their own* roll seed, not the world's
+            // (docs/design/20-avatars.md §5) — which is what lets a face on the setup screen be
+            // the face the colony gives them. The cast seed above is then only the fallback, for a
+            // save written before pawns carried one.
+            //
+            // So the two switches have to say so out loud or they would be inspector fields that
+            // silently do nothing: either of them on means "overrule the pawns and deal the whole
+            // colony from this number", which is exactly what both were for.
+            appearances.Pinned =
+                colonistLookSeed != 0 || randomCastEachSession ? castSeed : 0u;
             // One ink line in the game, not two. Characters draw their own hull because they are
             // absent from the depth texture the world's outline pass reads, so the colour and
             // width have to be copied across from the feature that inks everything else.
             ColonistMaterials.AdoptInkFrom();
             _colonistMaterials = new ColonistMaterials();
             Debug.Log($"[Odyssey] colonist cast seed {castSeed} over {appearances.LookCount} faces, " +
-                      (colonistLookSeed != 0 ? "pinned by colonistLookSeed" :
-                       randomCastEachSession ? "rolled for this session — copy it into colonistLookSeed to keep this cast" :
-                       "dealt from the world seed"));
+                      (colonistLookSeed != 0 ? "pinned by colonistLookSeed, overruling every pawn's own seed" :
+                       randomCastEachSession ? "rolled for this session, overruling every pawn's own seed — copy it into colonistLookSeed to keep this cast" :
+                       "the fallback only; every colonist is dealt from their own roll seed"));
 
             _renderer = new ChunkRenderer(_model)
             {

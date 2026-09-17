@@ -104,7 +104,7 @@ namespace Odyssey.Presentation.Tests
                 ColonistAppearanceBook before = AppearanceBooks.For(77u, whole);
                 ColonistAppearanceBook after = AppearanceBooks.For(77u, holed);
                 for (int id = 1; id <= 300; id++)
-                    Assert.That(after.For(id), Is.EqualTo(before.For(id)), $"pawn {id}");
+                    Assert.That(after.For(id, 0u), Is.EqualTo(before.For(id, 0u)), $"pawn {id}");
             }
             finally
             {
@@ -119,7 +119,7 @@ namespace Odyssey.Presentation.Tests
             // The no-packs path: one face, no art, no figures, and nothing that throws.
             ColonistAppearanceBook book = AppearanceBooks.For(3u, null);
             Assert.That(book.LookCount, Is.EqualTo(1));
-            for (int id = 1; id <= 20; id++) Assert.That(book.For(id).Look, Is.Zero);
+            for (int id = 1; id <= 20; id++) Assert.That(book.For(id, 0u).Look, Is.Zero);
         }
     }
 }

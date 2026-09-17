@@ -529,7 +529,7 @@ namespace Odyssey.Presentation.Rendering
 
                 // The same face the live figures would have given this pawn, so a colonist does
                 // not change identity on crossing the figure cap. Same object, same answer.
-                int variant = Cast.LookFor(pawns[i].Id.Value);
+                int variant = Cast.LookFor(snapshot, pawns[i].Id);
                 if ((uint)variant >= (uint)_colonistModules.Length) variant = 0;
                 ResolvedModule colonist = ColonistModule(variant);
 

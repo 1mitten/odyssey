@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using Odyssey.Sim.Contracts;
 
 namespace Odyssey.Hud
 {
@@ -30,7 +31,7 @@ namespace Odyssey.Hud
     /// </summary>
     public sealed class ColonistAppearanceBook
     {
-        readonly Dictionary<int, ColonistAppearance> _cache = new Dictionary<int, ColonistAppearance>();
+        readonly Dictionary<int, Entry> _cache = new Dictionary<int, Entry>();
         readonly Dictionary<int, ColonistAppearance> _overrides = new Dictionary<int, ColonistAppearance>();
 
         /// <summary>
@@ -61,19 +62,72 @@ namespace Odyssey.Hud
             LookCount = lookCount < 1 ? 1 : lookCount;
         }
 
-        /// <summary>The appearance of a pawn: an override if one was set, otherwise derived.</summary>
-        public ColonistAppearance For(int pawnId)
+        /// <summary>
+        /// The appearance of a pawn: an override if one was set, otherwise derived.
+        ///
+        /// <para><b><paramref name="rollSeed"/> is the pawn's own, and zero means it has none.</b>
+        /// A colonist is dealt from the seed they were rolled from, the same one their name, age,
+        /// trade and skills come from — so rerolling a candidate on the setup screen changes the
+        /// face along with everything else, and the person chosen there is the person who walks
+        /// around (<c>docs/design/20-avatars.md</c> §5). Before this the whole cast came off one
+        /// world-level seed, which no card could know.</para>
+        ///
+        /// <para><b>Zero falls back to <see cref="Seed"/>, and that is the compatibility path</b>
+        /// rather than a guard: <c>ColonistNames.RollSeedOf</c> answers zero for a save written
+        /// before U40, and those colonies should keep the faces they had.</para>
+        /// </summary>
+        /// <summary>
+        /// Deal the whole cast from this seed, whatever roll seed a colonist carries. Zero, the
+        /// default, means every colonist is dealt from their own.
+        ///
+        /// <para><b>It is how the two development switches survived the change.</b>
+        /// <c>colonistLookSeed</c> pins a cast the owner liked while the palette is being judged,
+        /// and <c>randomCastEachSession</c> deals fresh faces on every Play. Both are about
+        /// looking at lots of colonists quickly, and both would simply have stopped working once a
+        /// face followed the pawn instead of the world — so rather than leave two inspector fields
+        /// that quietly do nothing, they set this.</para>
+        /// </summary>
+        public uint Pinned { get; set; }
+
+        public ColonistAppearance For(int pawnId, uint rollSeed)
         {
             if (_overrides.TryGetValue(pawnId, out ColonistAppearance chosen)) return chosen;
-            if (_cache.TryGetValue(pawnId, out ColonistAppearance cached)) return cached;
 
-            ColonistAppearance made = ColonistAppearance.Of(Seed, pawnId, LookCount);
-            _cache[pawnId] = made;
+            uint seed = Pinned != 0u ? Pinned : rollSeed != 0u ? rollSeed : Seed;
+
+            // Keyed on the pawn and checked against the seed. A pawn's roll seed does not change
+            // once it has one, so in the ordinary case this is a plain hit — but a figure asked
+            // for before the aspect arrived would otherwise be cached on the fallback for ever.
+            if (_cache.TryGetValue(pawnId, out Entry cached) && cached.Seed == seed)
+                return cached.Appearance;
+
+            ColonistAppearance made = ColonistAppearance.Of(seed, pawnId, LookCount);
+            _cache[pawnId] = new Entry(seed, made);
             return made;
         }
 
-        /// <summary>Which body a pawn wears. Shorthand for <c>For(pawnId).Look</c>.</summary>
-        public int LookFor(int pawnId) => For(pawnId).Look;
+        /// <summary>Which body a pawn wears. Shorthand for <c>For(pawnId, rollSeed).Look</c>.</summary>
+        public int LookFor(int pawnId, uint rollSeed) => For(pawnId, rollSeed).Look;
+
+        /// <summary>The appearance of a pawn in the published frame — the ordinary way to ask.</summary>
+        public ColonistAppearance For(WorldSnapshot snapshot, PawnId pawn) =>
+            For(pawn.Value, ColonistNames.RollSeedOf(snapshot, pawn));
+
+        /// <summary>Which body a pawn in the published frame wears.</summary>
+        public int LookFor(WorldSnapshot snapshot, PawnId pawn) =>
+            For(snapshot, pawn).Look;
+
+        readonly struct Entry
+        {
+            public readonly uint Seed;
+            public readonly ColonistAppearance Appearance;
+
+            public Entry(uint seed, ColonistAppearance appearance)
+            {
+                Seed = seed;
+                Appearance = appearance;
+            }
+        }
 
         /// <summary>
         /// Give one pawn an appearance of its own, for the appearance panel that does not exist

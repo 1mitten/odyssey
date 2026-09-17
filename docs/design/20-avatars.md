@@ -161,7 +161,14 @@ the world the player started. So:
 - **A `RollSeed` of zero falls back to the book's own seed.** `ColonistNames.RollSeedOf` returns 0
   when the aspect is absent, which is exactly what a save written before U40 has, and that colony's
   faces should stay the faces it had.
-- `randomCastEachSession` keeps working and keeps its tooltip, as the override it now is.
+- **`randomCastEachSession` and `colonistLookSeed` become a real override rather than a dead
+  flag.** Once a face follows the pawn, a world-level cast seed decides nothing, so both inspector
+  fields would have gone on sitting there doing nothing — which is worse than removing them,
+  because somebody would tick one and believe it. Either of them on sets
+  `ColonistAppearanceBook.Pinned`, which overrules every pawn's own seed and deals the whole colony
+  from one number. That is exactly what both were for: looking at a lot of colonists quickly while
+  the palette is being judged. The tooltips now say that ticking one means the people you chose on
+  the setup screen are **not** the people you get.
 - Callers are `PawnFigureDirector` (:1288, :721) and `ChunkRenderer` (:79-83), both of which have a
   snapshot to hand.
 
