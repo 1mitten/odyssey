@@ -1279,3 +1279,120 @@ work itself.
     thing the panel has held (19 rows in five groups); at 150 per cent interface scale on a
     1080p screen it is within a few pixels of the screen height, and if it clips, the window
     wants a max-height and a scroll, which no panel here has yet.
+
+- **The audio faders learned to drag, 2026-09-17.** The owner asked for the audio settings to
+  be sliders that drag left to right rather than buttons. That reverses this journal's own
+  "rungs, not sliders, everywhere" from the morning — recorded here because a reversal nobody
+  can find is a decision that never happened — and it is the right reversal for this one
+  control: a fader holds a continuum, six of the seven rungs sat between −36 and 0, so a
+  slider that still snapped would have spent most of its travel as dead space. The part of the
+  old argument worth keeping is kept: the track is **linear in dB**, so equal travel is equal
+  change of loudness, and whole decibels only, so the thumb always rests somewhere the readout
+  can say.
+
+  - **The director takes what the thumb offers.** `SetBusDb` now clamps to
+    `SettingsDirector.SilenceDb`/`UnityDb` (−80 and 0, restating `AudioMath` across the ADR
+    0003 seam the rungs already crossed) instead of snapping to `VolumeDbRungs`, which is
+    deleted. Seeding clamps the same way. The write-through bargain is untouched: the
+    presenter still routes every change through `AudioSettingsStore`, so there is still no
+    second copy of a volume anywhere, and a drag still costs one store save per whole dB it
+    crosses — the shell rounds before it asks.
+  - **The control is Unity's own `Slider`, restyled, not a hand-rolled thumb.** Its drag
+    capture, track-jump and arrow keys are behaviour this HUD has no reason to re-derive, and
+    the Build palette's scroller already showed the way in over the default theme. The sheet
+    seats a 12 px accent thumb on a 3 px hairline track, centred on its value by a negative
+    margin because Unity seats the dragger's *left edge* at the percentage. Each row says the
+    figure beside its label — "Mute" at the floor as a word in the text face, a number in the
+    mono face everywhere else.
+  - **The loop is pinned from both sides.** The fast tier's volume test now asserts the
+    continuum (any whole dB taken as it stands, clamped at both ends, announced only when it
+    moves). `HudGeometryTests.AVolumeSliderDragsItsBusAndThePanelAgrees` drives the slider's
+    value the way the engine would deliver a drag and asserts the whole round trip — fader to
+    director to thumb and readout, one bus's fader not moving another's. A real pointer drag
+    is beyond today's harness: `MouseHarness` cannot press a button in a batch run, which its
+    own docs say in four acts.
+  - **Verified:** fast tier **478 Sim + 158 Hud**, Unity EditMode **1070**, PlayMode **28 of
+    30** (the two standing `[Ignore]`s). **Not verified:** an eye — as with everything else in
+    the rebuilt interface, nobody has pressed Play on it yet.
+
+- **Unity moved to the middle of the fader, 2026-09-17, an hour after it learned to drag.**
+  The owner's second ask: seat the default (0 dB) at the centre of the slider, so dragging
+  left of it lowers towards mute and dragging right makes the sound higher. A boost is a new
+  capability, not a restatement — every clamp in the chain said "a bus cannot amplify, only
+  attenuate" — so the ceiling had to move in one motion everywhere a fader's value is held.
+
+  - **The span is now −80 to +12 dB, and the ceiling is +12 for a reason.** `AudioMath`
+    gained `BoostDb` (+12, four times the amplitude: enough lift for a quiet mix, bounded
+    because a boost multiplies the author's own volume and can clip), and every stop widened
+    to it in the same change — `AudioSettingsStore.SetDb`, `AudioDirector.SetBusDb`, and
+    `StackDb`, whose combination cap means master and bus both pushed to their tops still
+    meet one ceiling. `SettingsDirector.BoostDb` mirrors it across the ADR 0003 seam the
+    way `SilenceDb` always has.
+  - **The centre is bought with a two-scale track.** One linear dB track cannot put unity in
+    the middle: −80 to +12 would seat it six sevenths of the way right. So the slider's own
+    value is track position, −1 to +1, and `SettingsDirector.TrackOf`/`DbOf` map each half
+    separately — 80 dB of attenuation across the left half, the boost across the right, each
+    linear in dB within itself. The price is that the right half is ~6.7× coarser per pixel
+    than the left; paid in drag sensitivity rather than in honesty, and every whole dB still
+    round-trips through its seat (a fast-tier test says so, and pins unity at exactly 0, the
+    centre).
+  - **A notch marks the centre.** A centre that means "the way it shipped" is only worth
+    seating if it is findable afterwards: a 1 px mark under the thumb, drawn beneath the
+    track and thumb both.
+  - **A geometry bug in the morning's fader was found by this change and fixed.** The USS
+    had given the thumb a −6 px left margin on a theory that Unity seats the dragger's left
+    edge at the percentage. It does sweep the left edge — from the track's start to its end
+    minus the thumb — so the honest construction is track end-margins of half the thumb and
+    no offset on the thumb itself. With unity at a marked centre, a 6 px lie would have put
+    the thumb visibly off the notch; the old −80-to-0 track merely hid it at the ends.
+  - **Readouts say their plus.** `+6 dB` on the boost side, `-40 dB` on the attenuation
+    side, `Mute` at the floor, `0 dB` at the centre — the two sides of the notch read as the
+    different promises they are.
+  - **Verified:** fast tier **478 Sim + 159 Hud**, Unity EditMode **1070**, PlayMode **28 of
+    30**. **Not verified:** an eye, still — the faders remain unpressed-in-anger like the
+    rest of the rebuilt interface.
+
+- **The ambience was never off — it was mixed to a whisper, 2026-09-17.** The owner reported
+  the ambience (water/forest) as turned off by default. Every stop in the chain was checked
+  before touching a number: the faders all boot at 0 dB (and the machine's stored
+  `odyssey.audio.*` prefs were all exactly 0 — not a saved Mute), the probe and the layer
+  gating were sound. What remained was the authored mix: the outdoor bed at **0.09 by day
+  and 0.07 by night**, behind a **ten-second arrival fade**, on a world whose `CurrentTick`
+  starts at 0 — **midnight**, so the first bed a session ever plays is the quieter of the
+  two. Roughly −21 dB arriving at a crawl reads, correctly, as nothing.
+
+  - **The fix is the catalogue's mix, and only that.** Outdoor day 0.09 → **0.35**, night
+    0.07 → **0.28** (night stays lower: the world is quieter after dark and the bed should
+    say so), water 0.20 → **0.40** (it is still coverage-scaled by the probe, so 0.40 is
+    "standing in the river", not everywhere), arrival fade 10 s → **4 s**. Applied to the
+    committed `AudioCatalogue.asset` and to `AudioSetup.BuildCatalogue`, which remains the
+    source of the same numbers. Night-under-day retained; the owner's ear is the final
+    mix desk, as ever.
+  - **The beds are real recordings, and the never-overwrite rule earned its keep.** Halfway
+    through, the working theory was that the *synthesised* placeholder outdoor clip (raw
+    peak ≈ 0.06) was shipping; three bed WAVs were deleted ready to regenerate. A
+    byte-compare against git — the committed `water.wav` is 7 MB of forty-second stereo —
+    said otherwise: water, ambience-day, ambience-night and campfire are all **sourced
+    audio** under the placeholder names, exactly the case the tool refuses to overwrite
+    without a dialog. Everything was restored from git untouched, verified clean.
+  - **The placeholder path was independently inaudible, and is fixed too.** A clone without
+    the recordings falls back to the synth, whose outdoor bed peaked around 0.06 — beneath
+    even a def volume of 1.0. `AudioSetup` now normalises placeholder bed clips to a shared
+    0.5 peak (`BedPeak`), so the def's Volume means the same thing on real audio and
+    stand-ins alike. The shipped mix did not change by this route at all.
+  - **"On by default" is now a test.** `TheShippedAmbienceBedsAreAudibleByDefault` loads the
+    committed catalogue and holds every bed at or above a 0.2 floor — a floor, not the
+    exact values, so tuning by ear stays free while drifting back to inaudible fails. It is
+    the one audio-director test that reads a committed asset, and says why.
+  - **Verified:** nothing to run yet that touches these files — the owner's editor holds the
+    project lock, so the Unity tiers (and this new test) run when it next closes; the fader
+    work earlier in the day was verified at **478 Sim + 159 Hud, EditMode 1071, PlayMode
+    28 of 30** before any of this. **The ear is the gate that matters here**: press Play on
+    a fresh boot and the forest should be present within a few seconds, quieter after dark,
+    and the river should arrive as you pan to it.
+
+- **The owner's first listen took a notch back off the new ambience defaults, 2026-09-17.**
+  The first press of Play since the mix was raised: day 0.35 → **0.28**, night 0.28 →
+  **0.22**, water 0.40 → **0.32** — about −2 dB across the beds, present but under the work.
+  The floor test still holds (night, the lowest, sits above 0.2), and the generator and the
+  committed catalogue carry the same numbers as ever.
