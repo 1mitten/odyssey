@@ -111,7 +111,7 @@ namespace Odyssey.Sim.Pawns
         /// <para><b>On top</b> — last, because it is the one that costs. It is also unavoidable:
         /// the first cut into flat ground has no rim to stand on, and there is no other stance for
         /// starting a shaft. The floor goes with the cell, and the colonist steps down into the
-        /// hole it made (<c>MineJobDriver.StepDownOntoTheFloorJustCut</c>). Ordering it last means
+        /// hole it made (<see cref="Falling.OutOf"/>). Ordering it last means
         /// a step down is a consequence of the shape of the dig rather than a surprise: once one
         /// cell of a shaft is open, every cell beside it is worked from the rim.</para>
         ///
@@ -157,7 +157,7 @@ namespace Odyssey.Sim.Pawns
             // Nobody digs a hole they cannot get out of.
             //
             // This is the ONLY stance that puts the miner in the cell it just cut: the floor goes
-            // with the cell and StepDownOntoTheFloorJustCut drops whoever was on top of it into
+            // with the cell and Falling.OutOf drops whoever was on top of it into
             // the hole. Beside, on the rim and from below all leave the colonist standing on
             // something that the cut did not touch, so none of them can strand anybody.
             //
@@ -380,13 +380,17 @@ namespace Odyssey.Sim.Pawns
             //     to mark a cell that would leave one it could not jump out of — so a quarry comes
             //     out as benches. Deeper than that wants a ladder, and a ladder is built.
 
-            // 4. Anybody standing on this cell is now standing on nothing.
-            StepDownOntoTheFloorJustCut(ctx, cell);
-
-            // 4a. And anything LYING on it. The cell above has just lost its floor, so whatever
-            //     was resting there goes down the hole — which is also how a quarry ends up with
-            //     its spoil in one place at the bottom rather than shelved up its sides.
-            DropWhatWasRestingOnIt(ctx, cell);
+            // 4. Anybody standing on this cell is now standing on nothing, and so is anything
+            //    LYING on it: the cell above has just lost its floor, so whatever was there goes
+            //    down the hole — which is also how a quarry ends up with its spoil in one place at
+            //    the bottom rather than shelved up its sides.
+            //
+            //    `Falling` is where both rules live now. They were written here and a collapsing
+            //    floor asks the same question of the same cell (U29), so the second caller took
+            //    them out rather than copying them. No thought is passed: a step down into the
+            //    hole you were told to dig is not an event, which is the distinction
+            //    `Falling.OutOf` exists to let the two callers disagree about.
+            Falling.OutOf(ctx, cell + size.LayerStride);
 
             // 5. What the cell was made of, if it left anything.
             SpawnYield(ctx, cell, terrain);
@@ -405,88 +409,6 @@ namespace Odyssey.Sim.Pawns
             if (at.Z < size.SizeZ - 1) ctx.Chunks.MarkDirty(new CellRef(at.X, at.Z + 1, at.Y));
             if (at.Y > 0) ctx.Chunks.MarkDirty(new CellRef(at.X, at.Z, at.Y - 1));
             if (at.Y < size.SizeY - 1) ctx.Chunks.MarkDirty(new CellRef(at.X, at.Z, at.Y + 1));
-        }
-
-        /// <summary>
-        /// A colonist digging the cell under its own feet steps down into the hole it just made.
-        ///
-        /// <para>This is not a courtesy, it is the alternative to a colonist standing on nothing.
-        /// Cutting a shaft means mining downward, and mining downward means standing on the cell
-        /// being cut away — there is no other stance for it. The moment the floor goes, the pawn's
-        /// cell has nothing under it, and a pawn in an unstandable cell is a pawn whose next path
-        /// starts from a lie.</para>
-        ///
-        /// <para>It is also how a shaft gets cut at all, and why
-        /// <see cref="MineWorkGiver.StandToMine"/> prefers a stance beside the cell: a step down
-        /// should be a decision about the shape of the dig, never a surprise.</para>
-        /// </summary>
-        static void StepDownOntoTheFloorJustCut(PawnContext ctx, int cell)
-        {
-            int above = cell + ctx.Size.LayerStride;
-            if (above < ctx.Size.CellCount) DropAnyoneStandingIn(ctx, above);
-        }
-
-        /// <summary>
-        /// Anybody standing in this cell falls to the first real floor below it.
-        ///
-        /// <para><b>The first floor, not one layer.</b> Dropping a colonist exactly one layer is
-        /// right only when the cell below is solid, and a shaft is by definition the case where it
-        /// is not — so a colonist over a two-deep hole was moved into the middle of it and left
-        /// there. The item rule already landed on the first real floor and this is the same rule
-        /// for people, asking the same <see cref="CellGrid.FirstFloorAtOrBelow"/>.</para>
-        ///
-        /// <para><b>Real floor, and a climb is not one.</b> A cell with a climb footprint counts as
-        /// standable to navigation — that is what lets a colonist be on a rock face at all — but
-        /// there is nothing under it, so it is not somewhere to be left. This matters because a
-        /// climb can now be <em>retired</em> when the wall it went up is mined away, and the
-        /// colonist that was on it has to go somewhere. Measured without this: two of five
-        /// colonists spent the last 12,600 ticks of a 40,000-tick run standing still in mid-air,
-        /// which is precisely the fault the owner reported.</para>
-        /// </summary>
-        static void DropAnyoneStandingIn(PawnContext ctx, int cell)
-        {
-            int landing = ctx.Cells.FirstFloorAtOrBelow(cell);
-            if (landing == cell) return;
-
-            var pawns = ctx.Pawns.All;
-            for (int i = 0; i < pawns.Count; i++)
-            {
-                Pawn pawn = pawns[i];
-                if (pawn.Cell != cell) continue;
-                pawn.Cell = landing;
-                pawn.ClearPath();
-                pawn.Destination = -1;
-            }
-        }
-
-        /// <summary>
-        /// Anything resting on the cell just cut falls to the first real floor below.
-        ///
-        /// <para>The item half of <see cref="StepDownOntoTheFloorJustCut"/>, and it had no half at
-        /// all before: items have never had a support rule, so a stack simply stayed where it was
-        /// spawned however much was dug out from under it.</para>
-        ///
-        /// <para>It <em>merges</em> where it lands, up to the ordinary stack limit, because
-        /// <see cref="ColonyItems.MoveTo"/> merges — which is the owner's decision and the point of
-        /// the exercise: two loads that fall into the same hole become one load, and one hauler
-        /// trip carries what took two. A load that will not fit goes to the nearest cell that can
-        /// take it rather than being lost.</para>
-        /// </summary>
-        static void DropWhatWasRestingOnIt(PawnContext ctx, int cell)
-        {
-            int above = cell + ctx.Size.LayerStride;
-            if (above >= ctx.Size.CellCount) return;
-
-            ColonyItem? resting = ctx.Items.ItemAt(above);
-            if (resting == null || resting.Despawned) return;
-            if (ctx.Cells.HasFloor(above)) return;
-
-            int landing = ctx.Cells.FirstFloorAtOrBelow(above);
-            if (landing == above) return;
-
-            int room = ctx.Items.NearestCellWithSpace(
-                ctx.Cells, landing, resting.DefIndex, resting.Stack, maxRadius: 3);
-            if (room >= 0) ctx.Items.MoveTo(resting, room);
         }
 
         static void SpawnYield(PawnContext ctx, int cell, ushort terrain)
