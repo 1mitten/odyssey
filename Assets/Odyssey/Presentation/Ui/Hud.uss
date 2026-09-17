@@ -759,15 +759,34 @@
     margin-left: 8px;
 }
 
-/* One filled item on the row, and the ink on it is the dark one. */
+/* Build, the one item on the row that is a mode rather than a command.
+
+   IT WAS FILLED ALL THE TIME UNTIL 2026-09-17, and that was the bug the owner reported: "the build
+   button still stays bold when it shouldn't and is confusing — it's an indicator to whether you
+   are truly in build mode". A solid accent fill drawn permanently swamps the .cmd--on wash that
+   was supposed to say "open", so the cap looked identical whether the player was placing walls or
+   had left the palette three minutes ago.
+
+   So the fill became the *state* and an outline became the resting style: accent border and accent
+   ink while nothing is armed, the filled cap the bar always had while build mode is on. Build is
+   still the only item on the row with a colour of its own, so it is still as findable as it was —
+   what it no longer does is claim to be active when it is not. */
 .cmd--primary {
-    background-color: #6fd3e3;
+    background-color: rgba(111, 211, 227, 0.10);
+    border-width: 1px;
+    border-color: #6fd3e3;
     padding: 0 14px;
 }
 
-.cmd--primary:hover { background-color: #8adfec; }
-.cmd__label--primary { color: #0b1116; }
-.cmd--primary .cmd__key { color: rgba(11, 17, 22, 0.55); }
+.cmd--primary:hover { background-color: rgba(111, 211, 227, 0.20); }
+.cmd__label--primary { color: #6fd3e3; }
+.cmd--primary .cmd__key { color: rgba(111, 211, 227, 0.55); }
+
+/* In build mode: the filled cap. */
+.cmd--primary.cmd--on { background-color: #6fd3e3; }
+.cmd--primary.cmd--on:hover { background-color: #8adfec; }
+.cmd--primary.cmd--on .cmd__label--primary { color: #0b1116; }
+.cmd--primary.cmd--on .cmd__key { color: rgba(11, 17, 22, 0.55); }
 
 /* A command with nothing behind it yet. 0.42 is the sheet's one off value, shared with
    .chip--off, .menu__row--off, .action--off and .tab--off; the bar used to sit at 0.55 and read as
@@ -1070,6 +1089,26 @@
 
 .bp__subs { flex-wrap: wrap; }
 
+/* Fixed, and tall enough for the widest category — Structure, at three rows (owner, 2026-09-17:
+   "the height needs to stay fixed … so it can accommodate all of the menus"). The panel is docked
+   on the command bar and grows upward, so a category with fewer sub-types than the last one does
+   not shrink neatly: it drops the whole control down the screen while the player is aiming at it.
+   align-content keeps the rows at the top of the reserved box instead of spreading them through
+   it. */
+.bp--rows .bp__subs {
+    height: 144px;
+    align-content: flex-start;
+    align-items: flex-start;
+    flex-shrink: 0;
+}
+
+/* Reserved for the same reason, one tier down: five of the seven categories open on a tool that
+   is not made of anything, and a hidden row takes its height with it. */
+.bp--rows .bp__mats-row {
+    height: 34px;
+    flex-shrink: 0;
+}
+
 .bp__sub {
     height: 34px;
     padding: 0 13px 0 11px;
@@ -1245,20 +1284,6 @@
 
 .bp__material--on {
     border-bottom-width: 4px;
-}
-
-/* ---- the hint, outside the panel
-
-   A child of the panel, hung off its top edge, so that it needs no arithmetic and cannot be out
-   of date: the panel is docked flush and its height changes with the layout, so anything that
-   worked out where to put this from the outside would be right only until the next switch. It was
-   in the shell first and drew the sentence straight through the material buttons. */
-
-.bp__hint {
-    position: absolute;
-    left: 14px;
-    top: -18px;
-    color: rgba(255, 255, 255, 0.50);
 }
 
 /* ---- the inspect pane, collapsed while the palette is open

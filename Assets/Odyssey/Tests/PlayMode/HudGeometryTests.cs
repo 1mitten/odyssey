@@ -1011,6 +1011,126 @@ namespace Odyssey.Tests.PlayMode
         }
 
         /// <summary>
+        /// The Build cap on the command bar says whether the player is in build mode, and stops
+        /// saying it when they leave.
+        ///
+        /// <para><b>The owner's bug, stated as a test</b> (2026-09-17): <i>"when I come out of
+        /// build mode by escaping etc, the build button still stays bold when it shouldn't and is
+        /// confusing — it's an indicator to whether you are truly in build mode"</i>. The cap was
+        /// drawn with a permanent accent fill, so the wash that was supposed to mean "open" was
+        /// invisible under it and the button looked identical either way.</para>
+        ///
+        /// <para>It checks the resolved fill rather than only the class, because the class being
+        /// set and the fill not following is exactly the shape this fault took the first time.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheBuildCapIsLitOnlyInBuildMode()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+
+                VisualElement? cap = ButtonFor(doc, "build");
+                Assert.That(cap, Is.Not.Null, "the command bar has no Build cap");
+
+                Color resting = cap!.resolvedStyle.backgroundColor;
+                Assert.That(cap.ClassListContains("cmd--on"), Is.False,
+                    "the Build cap is lit before anything has been opened or armed");
+
+                yield return OpenPalette(doc);
+                Assert.That(cap.ClassListContains("cmd--on"), Is.True,
+                    "the Build cap is not lit with the palette open");
+                Color lit = cap.resolvedStyle.backgroundColor;
+                Assert.That(lit, Is.Not.EqualTo(resting),
+                    $"the Build cap draws {lit} both in and out of build mode, so it says nothing");
+                Assert.That(lit.r, Is.EqualTo(HudTokens.Accent.r).Within(0.02f),
+                    "the lit cap is not the accent fill");
+
+                // Escape disarms the tool first and closes the panel second, so it takes two.
+                _directors_CloseEverything(doc);
+                yield return Settle(doc);
+
+                Assert.That(cap.ClassListContains("cmd--on"), Is.False,
+                    "the Build cap is still lit after leaving build mode — the owner's report");
+                Assert.That(cap.resolvedStyle.backgroundColor, Is.EqualTo(resting),
+                    "the Build cap did not go back to its resting fill");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>Put the tool down and shut the palette, the way Escape does.</summary>
+        static void _directors_CloseEverything(UIDocument doc)
+        {
+            var shell = doc.GetComponent<HudShell>();
+            shell.CloseBuildPalette();
+        }
+
+        /// <summary>
+        /// Rows holds its height too, whatever category is open (owner, 2026-09-17: <i>"the height
+        /// needs to stay fixed — ie as tall as the structure menu/selection goes so it can
+        /// accommodate all of the menus"</i>).
+        ///
+        /// <para>Rail's promise was a property of that layout; this is the same promise made of the
+        /// default, and for a plainer reason — the panel is docked on the command bar and grows
+        /// upward, so a category with fewer sub-types than the last one does not shrink neatly, it
+        /// drops the whole control down the screen while the player is aiming at it.</para>
+        ///
+        /// <para>Unlike Rail's four-column grid, where the row count is arithmetic on the number of
+        /// tools, Rows wraps its sub-types by how wide their <i>words</i> are. That is a fact about
+        /// the text engine, so the reserved height is a measured constant rather than a derived
+        /// one, and this test prints every category's band on every run so that the constant can be
+        /// re-derived from the output rather than guessed at again.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheRowsLayoutKeepsItsHeightWhateverCategoryIsOpen()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                yield return Settle(doc);
+                yield return OpenPalette(doc);
+                yield return SwitchLayout(doc, BuildPaletteLayout.Rows);
+
+                float first = -1f;
+                for (int i = 0; i < PaletteTools.Categories.Length; i++)
+                {
+                    VisualElement? tile =
+                        doc.rootVisualElement.Q(name: "cat-" + PaletteTools.Categories[i].key);
+                    Assert.That(tile, Is.Not.Null, $"Rows has no {PaletteTools.Categories[i].label} tile");
+                    using (var click = ClickEvent.GetPooled())
+                    {
+                        click.target = tile;
+                        tile!.SendEvent(click);
+                    }
+                    yield return Settle(doc);
+
+                    VisualElement panel = doc.rootVisualElement.Q(name: "build")!;
+                    float height = panel.worldBound.height;
+                    if (first < 0f) first = height;
+
+                    Debug.Log($"[HudGeometry] rows {PaletteTools.Categories[i].label}: " +
+                              $"panel {height:0.#}, " +
+                              $"subs {panel.Q(className: "bp__subs")?.worldBound.height ?? -1:0.#}, " +
+                              $"mats {panel.Q(className: "bp__mats-row")?.worldBound.height ?? -1:0.#}");
+
+                    Assert.That(height, Is.EqualTo(first).Within(1f),
+                        $"the Rows palette stands {height:0.#} px on " +
+                        $"{PaletteTools.Categories[i].label} against {first:0.#} on the first " +
+                        "category, so opening a category moves the whole control up or down the " +
+                        "screen while the player is aiming at it");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
         /// Rail's whole argument: its height does not change when the category does, so nothing
         /// below it reflows.
         /// </summary>

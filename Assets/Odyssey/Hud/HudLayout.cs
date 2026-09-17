@@ -507,6 +507,25 @@ namespace Odyssey.Hud
         public const int BuildSubRow = 34;
 
         /// <summary>
+        /// How tall the Rows sub-type band stands, whatever category is open (owner, 2026-09-17:
+        /// <i>"the height needs to stay fixed — ie as tall as the structure menu/selection goes so
+        /// it can accommodate all of the menus"</i>).
+        ///
+        /// <para><b>Measured, not derived, and that is the difference from Rail.</b> Rail's grid is
+        /// four columns, so its row count is arithmetic on the number of tools and a test can check
+        /// the constant against the table. Rows wraps its sub-types by how wide their <i>words</i>
+        /// are — "Roof and floor above" takes a line to itself — which is a fact about the text
+        /// engine that no Unity-free assembly can compute. So this is the figure the band actually
+        /// measured on the widest category, and <c>TheRowsLayoutKeepsItsHeightWhateverCategoryIsOpen</c>
+        /// prints every category's band on every run so it can be re-derived from the output rather
+        /// than guessed at a second time.</para>
+        ///
+        /// <para>Structure is the widest, at three rows: 24 px of band padding and three 40 px
+        /// pitches. It is also the category the owner named.</para>
+        /// </summary>
+        public const int BuildRowsSubBand = 144;
+
+        /// <summary>
         /// A material button in the Rows band — the same box as a sub-type button beside it.
         ///
         /// <para><b>40 px with a 19/600 label until 2026-09-17</b>, when the owner asked for the
@@ -546,16 +565,6 @@ namespace Odyssey.Hud
 
         /// <summary>One button of the layout switcher.</summary>
         public const int BuildSwitchButton = 22;
-
-        /// <summary>
-        /// How far under the panel the hint line sits: its own line plus the gap above it.
-        ///
-        /// <para>The hint is <i>outside</i> the panel (specification), because it is an
-        /// instruction about the world rather than a part of the control surface — so it is not
-        /// panel area, it does not count towards coverage, and it must not be allowed to push the
-        /// panel up off the bar.</para>
-        /// </summary>
-        public const int BuildHintBlock = 18;
 
         /// <summary>
         /// The gap between two icons and the label beside them, which the specification fixes at

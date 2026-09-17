@@ -111,7 +111,12 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   other elements to enable full use of space"*, then *"use the left hand side of the screen instead
   of the width"*) — the mockups were drawn over a bare board and would have covered the stores panel
   and the roster strip, and Rows spanning 1920 made seven very wide tiles out of the category row.
-  Rows is 372 px and four tiles across; only Bar still spans the screen. And **thirty-seven icons are drawn** as `Painter2D` paths in `HudGlyph`'s
+  Rows is 372 px and four tiles across, and its height is **fixed at the widest category's** so the
+  control does not move up and down the screen as categories are opened; only Bar still spans the
+  screen. **Nothing is armed until the player clicks** — the palette model is built when the HUD
+  attaches, and its seeding pass used to arm a wall, so the game began in build mode with a wall on
+  the cursor. The Build cap on the command bar is the indicator of that: outlined at rest, filled
+  while a tool is held or the panel is up. And **thirty-seven icons are drawn** as `Painter2D` paths in `HudGlyph`'s
   existing box, because ADR 0007's pipeline covers no architecture key and the specification forbids
   the placeholder square here; materials keep the game's own sprites, which is the one tier whose
   art must not change. **Every PlayMode run writes `Logs/palette-{rows,rail,bar}.png`** — the only
@@ -289,7 +294,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **559 Sim + 217 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **559 Sim + 219 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and

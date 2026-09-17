@@ -268,6 +268,50 @@ namespace Odyssey.Tests.Hud
         }
 
         /// <summary>
+        /// A palette that has just been built has armed nothing.
+        ///
+        /// <para><b>This is the test for a real defect, found through its symptom.</b> The model is
+        /// constructed when the HUD attaches to its directors — long before the player opens
+        /// anything — and it used to arm its landing sub-type there. So the game began in build
+        /// mode: a wall on the cursor from the first frame, which nobody had asked for and which a
+        /// click on the world would have placed. It surfaced as the owner noticing that the command
+        /// bar's Build cap was lit when it should not have been, and the lit cap was telling the
+        /// truth.</para>
+        /// </summary>
+        [Test]
+        public void ANewPaletteHasArmedNothing()
+        {
+            var (palette, designate, _) = Open();
+
+            Assert.That(designate.Tool, Is.EqualTo(DesignateTool.None),
+                "building the palette put a tool in the player's hand before the game started");
+            Assert.That(palette.SubTypeIsArmed, Is.False);
+            Assert.That(palette.SubType, Is.EqualTo(PaletteTools.Wall),
+                "the palette should still be pointing at something, so that opening it is not blank");
+        }
+
+        /// <summary>
+        /// The first click on the tile the palette was already pointing at still arms it.
+        ///
+        /// <para>The other half of the fix above, and the way it could have gone wrong: with the
+        /// landing sub-type seeded but unarmed, a guard of "already selected, do nothing" makes the
+        /// first tile a player reaches for a dead button.</para>
+        /// </summary>
+        [Test]
+        public void ClickingTheTileAlreadyPointedAtStillArmsIt()
+        {
+            var (palette, designate, _) = Open();
+            Assert.That(palette.SubType, Is.EqualTo(PaletteTools.Wall));
+
+            palette.SelectSubType(PaletteTools.Wall);
+
+            Assert.That(palette.SubTypeIsArmed, Is.True,
+                "the first click of a session landed on the tile the palette was pointing at and " +
+                "did nothing");
+            Assert.That(designate.Tool, Is.EqualTo(DesignateTool.Build));
+        }
+
+        /// <summary>
         /// Each sub-type remembers what it was last made of, separately from the others.
         /// </summary>
         [Test]

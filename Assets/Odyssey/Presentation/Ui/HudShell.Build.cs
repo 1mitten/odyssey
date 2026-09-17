@@ -53,7 +53,6 @@ namespace Odyssey.Presentation.Ui
         Label _buildCrumb = null!;
         VisualElement _buildModeIcon = null!;
         VisualElement _buildActions = null!;
-        Label _buildHint = null!;
 
         /// <summary>Every tile currently on screen that has a lit state, by the thing it stands
         /// for. Rebuilt with the layout and walked on every repaint, so a repaint never has to
@@ -93,22 +92,11 @@ namespace Odyssey.Presentation.Ui
             _buildBody.AddToClassList("bp__body");
             _buildPanel.Add(_buildBody);
 
-            // The hint sits outside the panel — it is an instruction about the world rather than a
-            // part of the control surface — but it is a *child* of the panel, absolutely
-            // positioned just above its top edge.
-            //
-            // That is the second attempt. The first put it in the shell and worked out where the
-            // top of the panel was, which is a measurement that does not exist yet when the panel
-            // is first placed: it fell back to a fixed offset and drew the sentence through the
-            // material buttons. Hanging it off the panel's own top edge needs no measurement and
-            // cannot be out of date, and UI Toolkit draws a child outside its parent's box quite
-            // happily as long as nothing clips it.
-            _buildHint = HudText.Make(
-                "Left click places · drag for a run · right click cancels",
-                HudTextRole.Meta, ussClass: "bp__hint");
-            _buildHint.pickingMode = PickingMode.Ignore;
-            _buildPanel.Add(_buildHint);
-
+            // No hint line. The specification put "Left click places · drag for a run · right click
+            // cancels" under the panel; the owner had it removed outright (2026-09-17). It is a
+            // sentence about the three most basic gestures in the game, printed permanently over
+            // the board, and a player who needs it needs it once. The tooltips on every tile still
+            // say what a drag does.
             _hud.Add(_buildPanel);
         }
 
@@ -138,9 +126,16 @@ namespace Odyssey.Presentation.Ui
             // is repainting, which is already the moment the answer has to be current.
             _palette.ReadStockFrom(StockOf);
 
-            // The world can disarm a tool without the palette being touched — Escape, right-click,
-            // a hotkey — and a panel that did not hear about it would sit there lit.
-            _directors.Designate.ToolChanged += _ => MarkBuildState();
+            // The world can arm or disarm a tool without the palette being touched — Escape,
+            // right-click, a hotkey — and neither the panel nor the cap on the bar would hear
+            // about it. The cap is the half the owner noticed: it stayed lit after Escape.
+            _directors.Designate.ToolChanged += _ =>
+            {
+                MarkBuildState();
+                MarkBuildMode();
+            };
+
+            MarkBuildMode();
 
             RaiseBuildLayout();
         }
@@ -382,6 +377,11 @@ namespace Odyssey.Presentation.Ui
             mats.Add(buttons);
 
             _buildCost = HudText.Make(string.Empty, HudTextRole.Body, numeric: true, "bp__cost");
+
+            // Reserved, like Rail's. An empty label does not stand as tall as a full one, and an
+            // order has no price — so without this the panel would still move by a line between a
+            // category that opens on a wall and one that opens on something unbuilt.
+            _buildCost.style.minHeight = HudText.LineHeight(HudTextRole.Body);
             mats.Add(_buildCost);
             _buildBody.Add(mats);
         }
@@ -607,6 +607,35 @@ namespace Odyssey.Presentation.Ui
         // ============================================================ state
 
         /// <summary>
+        /// Light the Build cap on the command bar when, and only when, the player is in build mode.
+        ///
+        /// <para><b>Which is a different question from "is the palette open"</b>, and getting the
+        /// two confused is the fault the owner reported (2026-09-17): <i>"when I come out of build
+        /// mode by escaping etc, the build button still stays bold when it shouldn't and is
+        /// confusing — it's an indicator to whether you are truly in build mode"</i>. The cap was
+        /// drawn with a permanent accent fill because Build is the bar's primary item, and the
+        /// faint wash that was meant to say "open" was invisible underneath it. So the fill is the
+        /// state now and an outline is the resting style, and the state it reports is this
+        /// one.</para>
+        ///
+        /// <para><b>Build mode is: a tool is held, or the panel is up.</b> Both are conditions
+        /// under which a click on the world does something other than select, which is the thing
+        /// the player needs to know before they click. Either alone is enough — a player who arms
+        /// a wall and shuts the panel is still building, and a player who opens the panel and has
+        /// not chosen anything is still about to be.</para>
+        /// </summary>
+        void MarkBuildMode()
+        {
+            if (_buildItem == null) return;
+
+            bool armed = _directors != null && _directors.Designate.Tool != DesignateTool.None;
+            bool on = armed || BuildPaletteOpen;
+
+            _buildItem.EnableInClassList("cmd--on", on);
+            _buildIcon?.Inherit(on ? HudTokens.OnAccent : HudTokens.Accent);
+        }
+
+        /// <summary>
         /// Repaint the open palette on the middle cadence, beside the stores panel it shares a
         /// question with.
         ///
@@ -698,12 +727,15 @@ namespace Odyssey.Presentation.Ui
             }
 
             // --- sub-types
+            //
+            // Lit by what is in the player's hand, not by what the palette is pointing at. The two
+            // differ before the first click of a session: the palette points at Wall from the
+            // moment it is built, and nothing is armed until somebody asks for it.
             foreach (string key in _palette.SubTypes)
             {
                 if (!_buildTiles.TryGetValue(key, out VisualElement tile)) continue;
                 tile.EnableInClassList("bp__tile--on",
-                    armedAction.Length == 0 && key == _palette.SubType &&
-                    BuildPaletteModel.IsBuildable(key));
+                    armedAction.Length == 0 && key == _palette.SubType && _palette.SubTypeIsArmed);
             }
 
             // --- materials
@@ -715,8 +747,14 @@ namespace Odyssey.Presentation.Ui
                 PaintMaterialTile(stuff, tile, _palette.IsStocked(stuff), stuff == _palette.Material);
             }
 
+            // The word MATERIAL stays whether or not there are buttons under it. It was hidden with
+            // them, which took another 31 px out of the panel on a category that opens on an order
+            // — the last of four places the fixed height leaked, and the one the reserved band
+            // heights above could not catch, because the label is not in either band. Rail had
+            // always kept its copy; this is Rows catching up, and it is the same bargain: a heading
+            // over an empty space is the honest price of a control that does not move.
             foreach (Label label in _buildPanel.Query<Label>(className: "bp__mats-label").ToList())
-                label.style.display = wanted ? DisplayStyle.Flex : DisplayStyle.None;
+                label.style.opacity = wanted ? 1f : 0.35f;
 
             // --- the cost, once
             //
@@ -776,12 +814,10 @@ namespace Odyssey.Presentation.Ui
             // is what stops a selected colonist's needs pushing the palette up over the board.
             _inspectPanel?.EnableInClassList("inspect--collapsed", open);
 
-            if (_barItems.Count > 0)
-            {
-                _barItems[0].EnableInClassList("cmd--on", open);
-                if (open) PlaceBuildPalette();
-            }
+            if (open && _barItems.Count > 0) PlaceBuildPalette();
 
+            // The cap is lit by build mode, not by this panel — see MarkBuildMode.
+            MarkBuildMode();
             if (open) MarkBuildState();
         }
 

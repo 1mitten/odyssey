@@ -2451,4 +2451,36 @@ work itself.
   pixels. Rail's 86 px grid is deliberately untouched — that is the shape of that layout rather than
   a row in it.
 
+  **A third pass fixed the default's height, dropped the hint line, and found the tool that armed
+  itself.** The owner asked for three things. The height must stay fixed *"as tall as the structure
+  menu/selection goes so it can accommodate all of the menus"* — the panel is docked on the command
+  bar and grows upward, so a category with fewer sub-types than the last does not shrink neatly, it
+  drops the whole control down the screen while the player is aiming at it. It took four
+  reservations, three of them the same faults Rail had already had one tier at a time: the sub-type
+  band, the material row, the cost line, and finally the word MATERIAL itself, which was being
+  hidden along with its buttons and took another 31 px with it. Unlike Rail the row count is not
+  arithmetic — Rows wraps by how wide the *words* are, so the height is a measured constant and the
+  test prints every category's band on every run so it can be re-derived rather than guessed twice.
+  All seven now stand at 516 px. The hint line went outright: a sentence about the three most basic
+  gestures in the game, printed permanently over the board.
+
+  **The third ask uncovered a real defect.** The owner reported that the Build cap on the command
+  bar *"still stays bold when it shouldn't"* after leaving build mode, and called it *"an indicator
+  to whether you are truly in build mode"*. Two things were wrong and the second was serious. The
+  cap could not report a state at all: Build is the bar's primary item and was drawn with a solid
+  accent fill at all times, so `.cmd--on` was invisible underneath it — the fill is the state now
+  and an outline is the resting style. And then the test written for it failed *before the palette
+  had been opened*, which was the real finding: `BuildPaletteModel` is constructed when the HUD
+  attaches to its directors, long before anybody opens anything, and its seeding pass **armed** the
+  landing sub-type. The game began in build mode with a wall on the cursor that nobody had asked
+  for, and a click on the world would have placed one. The lit cap had been telling the truth.
+
+  Nothing is armed now until the player asks: the seeded pass sets where the palette is *pointing*,
+  a click is what picks a tool *up*, and the sub-type tiles light by asking `DesignateDirector`
+  what is in the player's hand rather than by comparing against what the palette points at. The
+  half of that fix which could have gone wrong on its own is the guard in `SelectSubType` — with
+  the landing sub-type seeded but unarmed, the first tile a player reaches for is usually the one
+  already pointed at, so "same key, do nothing" would have made the first click of every session a
+  dead button. The fast tier caught that one within a minute of the first.
+
   **Nobody has pressed Play on any of it.** The portraits are the only thing anyone has looked at.

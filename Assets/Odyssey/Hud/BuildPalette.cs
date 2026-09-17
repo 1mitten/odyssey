@@ -90,6 +90,7 @@ namespace Odyssey.Hud
             if (settings != null)
                 settings.BuildPaletteLayoutChanged += layout => LayoutChanged?.Invoke(layout);
 
+            // Seeded, not armed. See SelectCategory.
             SelectCategory(0, force: true);
         }
 
@@ -173,6 +174,23 @@ namespace Odyssey.Hud
         /// </summary>
         public void SelectCategory(int index) => SelectCategory(index, force: false);
 
+        /// <summary>
+        /// <paramref name="force"/> is the constructor seeding the palette rather than the player
+        /// choosing, and it is the difference between pointing at a tool and picking one up.
+        ///
+        /// <para><b>Nothing is armed until the player asks.</b> This model is built when the HUD
+        /// attaches to its directors, long before the palette is opened — and it used to arm its
+        /// landing sub-type there, which put the whole game into build mode on the first frame with
+        /// a wall on the cursor that nobody had asked for. The command bar's Build cap was lit from
+        /// the start, which is how it surfaced (owner: <i>"the build button still stays bold when
+        /// it shouldn't"</i>), but the lit cap was telling the truth: a click on the world really
+        /// would have placed a wall.</para>
+        ///
+        /// <para>So the seeded pass sets where the palette is <i>pointing</i> and arms nothing. A
+        /// click on a category is a player choice and does arm — which is what makes the specified
+        /// reset, "selecting a category resets the sub-type to its first buildable entry",
+        /// meaningful rather than decorative.</para>
+        /// </summary>
         void SelectCategory(int index, bool force)
         {
             if (index < 0 || index >= PaletteTools.Categories.Length) return;
@@ -189,7 +207,7 @@ namespace Odyssey.Hud
                 break;
             }
 
-            ApplySubType(landing);
+            ApplySubType(landing, arm: !force);
             if (!force) SelectionChanged?.Invoke();
         }
 
@@ -212,21 +230,33 @@ namespace Odyssey.Hud
         /// remembered material would silently re-answer a question they had already answered
         /// differently one tier up.</para>
         /// </summary>
+        /// <summary>
+        /// <paramref name="key"/> may be the one already pointed at, and that case matters.
+        ///
+        /// <para>The palette points at its category's first buildable entry from the moment it is
+        /// built, without arming it — so the very first thing a player clicks is usually the tile
+        /// the palette was already pointing at, and an early return on "same key" made that click
+        /// do nothing at all. It reads as a dead button, which is the same class of fault as a chip
+        /// that arms a tool and never lights. The guard is therefore "already pointed at
+        /// <i>and</i> already in the player's hand".</para>
+        /// </summary>
         public void SelectSubType(string key)
         {
-            if (_subType == key) return;
+            if (_subType == key && SubTypeIsArmed) return;
             if (!Array.Exists(PaletteTools.Categories[_category].tools, t => t == key)) return;
 
-            ApplySubType(key);
+            ApplySubType(key, arm: true);
             SelectionChanged?.Invoke();
         }
 
-        void ApplySubType(string key)
+        void ApplySubType(string key, bool arm)
         {
             _subType = key;
             if (key.Length == 0 || !PaletteTools.TryGet(key, out PaletteTool tool)) return;
 
-            tool.Arm(_designate);
+            // Arming is a toggle, so a second call would put the tool back down. Only a player
+            // choice reaches this.
+            if (arm && !tool.IsArmed(_designate)) tool.Arm(_designate);
 
             if (!tool.WantsMaterial) return;
             if (_lastMaterial.TryGetValue(key, out int remembered) && IsStocked(remembered))
@@ -236,6 +266,19 @@ namespace Odyssey.Hud
         }
 
         // ---------------------------------------------------------------- material
+
+        /// <summary>
+        /// Whether the sub-type the palette is pointing at is the tool the player is actually
+        /// holding.
+        ///
+        /// <para>Asked of <see cref="DesignateDirector"/> rather than assumed from
+        /// <see cref="SubType"/>, which is the same discipline <see cref="PaletteTool"/>'s own
+        /// header argues for: the palette points at something from the moment it is built, and a
+        /// tile that lights because the palette is pointing at it — rather than because the tool is
+        /// in the player's hand — is a tile that says "armed" when nothing is.</para>
+        /// </summary>
+        public bool SubTypeIsArmed =>
+            PaletteTools.TryGet(_subType, out PaletteTool tool) && tool.IsArmed(_designate);
 
         /// <summary>What the armed sub-type is being made of, as a <see cref="StuffHandle"/>.</summary>
         public int Material => _designate.Stuff;

@@ -195,6 +195,7 @@ namespace Odyssey.Presentation.Ui
         /// <summary>The command-bar Build cap and its item, so a rebind can move the legend
         /// with the key it names.</summary>
         Label _buildCap = null!;
+        IconBadge? _buildIcon;
         VisualElement _buildItem = null!;
         string _buildTooltipLabel = "";
 

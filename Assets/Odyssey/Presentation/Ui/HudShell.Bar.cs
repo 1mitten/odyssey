@@ -77,7 +77,10 @@ namespace Odyssey.Presentation.Ui
             // Categorised: the command bar is the second and last place the spec allows an icon to
             // carry a colour of its own.
             var icon = new IconBadge(command.Key, IconBadge.BarSize, categorised: !command.Primary);
-            if (command.Primary) icon.Inherit(HudTokens.OnAccent);
+            // The primary cap's ink flips with its fill — accent on the outlined resting state,
+            // the dark on-accent ink once build mode fills it. MarkBuildMode does the flipping;
+            // this is only the starting value.
+            if (command.Primary) icon.Inherit(HudTokens.Accent);
             item.Add(icon);
 
             Label label = HudText.Make(command.Label, HudTextRole.Row, ussClass: "cmd__label");
@@ -95,6 +98,7 @@ namespace Odyssey.Presentation.Ui
             {
                 _buildCap = capLabel;
                 _buildItem = item;
+                _buildIcon = icon;
                 _buildTooltipLabel = command.Label;
             }
 

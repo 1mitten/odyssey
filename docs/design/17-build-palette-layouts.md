@@ -125,16 +125,56 @@ So:
 - **The material band stacks** — the word, the buttons, then the price. Across a full-width band
   those sat on one line with the cost pushed right; in a column that line does not exist, and a
   66 px label column in front of two buttons would spend a fifth of the width on a word.
+- **The height is fixed** at the widest category's — Structure, three rows of sub-types —
+  `HudLayout.BuildRowsSubBand`, with the material row and the cost line reserved beside it
+  (owner: *"the height needs to stay fixed, ie as tall as the structure menu/selection goes so it
+  can accommodate all of the menus"*). The panel is docked on the command bar and grows upward, so
+  a shorter category does not shrink neatly — it drops the whole control down the screen while the
+  player is aiming at it. Unlike Rail's grid the row count is not arithmetic: Rows wraps by how
+  wide the *words* are, so the figure is measured and the PlayMode test prints every category's
+  band on every run so it can be re-derived rather than guessed at twice. All seven stand at
+  **516 px**.
 - **The header is two stacked lines in Rows**: what is selected, then the eight controls. In one
   row they came to 426 px and ran off a 372 px panel. The split is made in the shell rather than by
   letting the row wrap, because a wrapping row breaks wherever it runs out of room and could put
   the close button on a line of its own.
 
-The hint line (*"Left click places · drag for a run · right click cancels"*) is outside the panel
-but is a **child** of it, absolutely positioned above its top edge. Putting it in the shell and
-working out where the panel's top was drew the sentence straight through the material buttons: the
-panel is docked, its height changes with the layout, and the measurement does not exist when the
-panel is first placed.
+**There is no hint line.** The specification put *"Left click places · drag for a run · right click
+cancels"* under the panel; the owner had it removed outright (2026-09-17). It is a sentence about
+the three most basic gestures in the game, printed permanently over the board, and a player who
+needs it needs it once. The tooltip on every tile still says what a drag does.
+
+## 4b. The Build cap on the command bar, and the tool that armed itself
+
+The owner, 2026-09-17: *"when you are in build mode the button stays highlighted — but when I come
+out of build mode by escaping etc, the build button still stays bold when it shouldn't and is
+confusing. It's an indicator to whether you are truly in build mode."*
+
+Two faults sat behind that, and the second was the serious one.
+
+**The cap could not report a state.** Build is the bar's primary item and was drawn with a solid
+accent fill at all times; `.cmd--on`, the faint wash meant to say "open", was invisible underneath
+it. So the fill became the state and an outline became the resting style — accent border and accent
+ink at rest, the filled cap the bar always had while build mode is on. Build is still the only item
+on the row with a colour of its own, so it is exactly as findable; what it no longer does is claim
+to be active when it is not.
+
+**And the game really was in build mode.** `BuildPaletteModel` is constructed when the HUD attaches
+to its directors, long before the palette is opened, and its seeding pass *armed* the landing
+sub-type. A wall was on the cursor from the first frame, and a click on the world would have placed
+one. The lit cap was telling the truth. Nothing is armed now until the player asks: the seeded pass
+sets where the palette is **pointing**, a click is what picks a tool **up**, and the sub-type tiles
+light by asking `DesignateDirector` what is in the player's hand rather than by comparing against
+what the palette points at.
+
+The half of that fix which could have gone wrong on its own: with the landing sub-type seeded but
+unarmed, the first tile a player reaches for is usually the one already pointed at — so the guard
+in `SelectSubType` is "already pointed at **and** already in the player's hand", or that first click
+would do nothing and read as a dead button. `ClickingTheTileAlreadyPointedAtStillArmsIt` pins it.
+
+**Build mode is: a tool is held, or the panel is up.** Both are conditions under which a click on
+the world does something other than select, which is the thing the player needs to know before they
+click.
 
 ## 5. The icons are drawn, and why
 
@@ -248,8 +288,10 @@ category.
 
 **Proved, PlayMode** (`HudGeometryTests`): no row overflows in any layout at 1280×720, 1920×1080 or
 2560×1440; no panel overlaps another; every tile draws a real shape rather than the placeholder;
-Rail holds its height across all seven categories; switching layout on screen keeps what was armed;
-holding Cancel colours the panel.
+**Rows and Rail both hold their height across all seven categories**; switching layout on screen
+keeps what was armed; holding Cancel colours the panel; **the Build cap is lit in build mode and
+dark out of it**, checked on the resolved fill and not only on the class, because the class being
+set and the fill not following is the shape that fault took first.
 
 **Not judged by anybody.** Three portraits are written to `Logs/palette-{rows,rail,bar}.png` on every
 PlayMode run for exactly this reason, and they are the only reason the mode colours, the hue set and
