@@ -148,6 +148,42 @@ namespace Odyssey.Tests.Hud
                 "a material is read inside a sentence, so it is lower case");
         }
 
+        /// <summary>
+        /// The item, terrain and edifice tables the inspect pane reads, held to the same rule as
+        /// the jobs: the length matches the contract's count and every key is a name the wiki
+        /// knows. A table that is short is not a compile error — it is every pile of the missing
+        /// thing mislabelled, or every tile of the missing terrain reading as bare ground.
+        /// </summary>
+        [Test]
+        public void EveryItemTerrainAndEdificeKeyIsARegisteredNameOrNoneAtAll()
+        {
+            Assert.That(ItemLabels.Keys.Length, Is.EqualTo(ItemHandle.Count));
+            foreach (string key in ItemLabels.Keys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+            Assert.That(Registry.Labels, Does.ContainKey(ItemLabels.IconKey(-1)),
+                "the fallback key must be registered too");
+
+            Assert.That(TerrainLabels.Keys.Length, Is.EqualTo(TerrainHandle.Count));
+            foreach (string key in TerrainLabels.Keys)
+                if (key.Length > 0)
+                    Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+
+            Assert.That(EdificeLabels.Keys.Length, Is.EqualTo(EdificeHandle.Count));
+            foreach (string key in EdificeLabels.Keys)
+                if (key.Length > 0)
+                    Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+
+            // The words the playtest reports were about: a pile of wood is Wood and counted, a
+            // rock is Rock, water is water at the speed it is crossed at.
+            Assert.That(ItemLabels.Label(ItemHandle.Wood), Is.EqualTo("Wood"));
+            Assert.That(ItemLabels.Label(ItemHandle.Salvage), Is.EqualTo("Scrap"),
+                "salvage is scrap: the ledger settled the word, and the pane had hard-coded the other one");
+            Assert.That(TerrainLabels.Label(TerrainHandle.Rock), Is.EqualTo("Rock"));
+            Assert.That(TerrainLabels.Label(TerrainHandle.ShallowWater), Is.EqualTo("Shallow Water"));
+            Assert.That(TerrainLabels.Label(TerrainHandle.IronOre), Is.EqualTo("Iron ore"));
+            Assert.That(EdificeLabels.Title(EdificeHandle.TreeConifer), Is.EqualTo("Conifer"));
+        }
+
         [Test]
         public void AnUnregisteredKeyShowsItselfRatherThanNothing()
         {

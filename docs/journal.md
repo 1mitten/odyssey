@@ -2330,6 +2330,112 @@ work itself.
   statistical claims were modelled in Python against the same constants and held over five trials
   of 256 draws, which is not the same as running the test. The fast-tier counts in `CLAUDE.md` are
   deliberately left alone rather than advanced by a guess.
+
+- **The tile answers, 2026-09-17.** Three owner reports, one session: a wood pile read as a
+  generic placeholder with no amount, rocks could be clicked but not told from grass, and a water
+  tile did not say it was water. Behind all three sat the same fact: **U16 "cell inspection" was
+  marked done with M1 and only its click plumbing had landed** — the pane's own state line for a
+  bare cell was the literal string "cell readout arrives with cell inspection", a promise shipped
+  as a placeholder through two milestones and one M1 report claiming the unit existed and was
+  tested. The readback's criteria (terrain, floor, edifice, support) were never built because no
+  queue row and no milestone gate asked for them again; the M1 report measured the plumbing.
+  - **The seam chose itself, mostly.** A layer-shaped terrain channel was the tempting widening —
+    the slice channel already publishes one byte per cell of the active layer — and it is wrong for
+    the same reason `OrderView` was widened: a click reaches above the slice (the outcrop the
+    owner could see and not mine), so a layer-shaped answer either misses those cells or costs the
+    whole drawn band every frame. What shipped is the `PawnAspect` shape applied to cells: **a
+    sparse `CellDetail` row for the one asked-about cell** — terrain, edifice, floor stuff,
+    support, work to clear, and the crossing cost in thousandths of a clear crossing — written by a
+    sim-side contributor every colony gets through `ColonyComposition`, asked by a `QueryCell`
+    intent, withdrawn by one. ADR 0004 gained its second amendment for the per-cell half.
+  - **The crossing cost is worldgen's own number, restated once.** `NaturalContent.ApplyCostClasses`
+    owns "+40 is boggy, +200 is wading" and fills the contributor's table the same way it fills the
+    nav grid's; the pane reads 1000 / 1400 / 3000 — thousandths, the ratio a player reads — so
+    there is one source for the addends and no second copy anywhere to drift. Zero is published as
+    *cannot walk* for impassable water and for a cell with nothing to stand on, which is a
+    different answer from slow and not an extreme of it.
+  - **The paused world was the discovery of the session.** ADR 0004's Decision says "intents flush
+    while the clock is paused", and the implementation honoured that exactly never: a paused world
+    spends a tick only for a speed change, everything else queued waits for an unpause. Tolerable
+    for commands (an order given while paused applying on unpause is sensible) and wrong for the
+    first intent that is a question — inspecting a stopped world is when inspection happens. The
+    answer is `SimWorld.RepublishViews`: apply the queued view intents and publish over the same
+    settled world — no tick, no system, no hash, the counter unmoved. It is safe because a
+    question owns no state, which is also why `IntentBus.DrainWhere` is documented as being for
+    view intents and nothing else: a command applied off-boundary is a replay that cannot be
+    reproduced.
+  - **Two picking bugs fell out of the same reports, and both were ownership questions rather
+    than arithmetic.** Water fills its cell but is not solid, so a pond click reached the bed and
+    the block-below rule answered with rock the player cannot see — water owns its own floor now,
+    with a slab still checked first (a bridge is walked on, not waded through). And a pile on bare
+    ground sits in the air cell above the solid block the picker resolves to, so `ThingAt`'s exact
+    match missed every pile not on a built slab — the director looks one cell up now, and the
+    direct-cell match still wins where it applies.
+  - **Content moved a little, by the wiki's own rules.** Three icon keys were added (packed
+    gravel, the two trees — `ui.terrain.*`, M3); ore terrain reuses the resource's own name
+    ("Iron ore" on a rock face is what the player needs to read there); the pane's hard-coded
+    "Salvage" became **Scrap**, the word the ledger and the wiki already settled on; and the
+    city's finished surfaces (pavement, cracked pavement, soil, engineered fill, the buried seam)
+    are deliberately unnamed until the city map is loadable — the registry test tolerates blanks
+    and nothing invents content to describe tiles a player cannot click.
+  - **Measured:** fast tier **570 Sim + 209 Hud** green, Unity EditMode **1242 passed, 0 failed**
+    of 1251, including a board-wide test that clicks every water column on the played map and a
+    paused-world test proving the answer arrives with the tick counter unmoved and a queued
+    command still queued. **Not measured: nobody has pressed Play.** The readout's judgement
+    calls — walk speed shown at 100% rather than only when abnormal, support always said, the
+    minable clause honest about grass ("about 1s of work") — are exactly the kind of thing the
+    owner vetoes from a keyboard, and this pane is now verbose enough to be worth vetoing.
+
+- **The readout's first playtest, 2026-09-17.** The owner pressed Play on the tile answers within
+  the hour and came back with three reports, which is the loop working.
+  - **Meals and scrap showed no cursor.** The item bracket was drawn at the cell the *pick*
+    resolved to — the solid block under a pile on bare ground — so the bracket sat inside the
+    ground, and a no-art module fell through to a ground highlight that never read as "around the
+    object". The thing's own cell is in the snapshot the cursor routine already holds; the bracket
+    and the fall-through both draw there now.
+  - **The tile window reshaped.** Half the width, one fact per row in two fixed columns, order
+    first, then minable, walk speed, floor, support — the same fact always in the same place,
+    where the joined line made every number hunt for its label. The model's readout became rows
+    (`InspectModel.CellRows`) and the pane a narrow variant (`inspect--narrow`, half the constant
+    width, pinned like every other anchor); the colonist pane keeps its full width, because its
+    tabs, needs and skills were sized for the band.
+  - **The readout visibly skipped before settling.** The question was submitted *after* the
+    selection changed, so the pane's first refresh painted the unanswered frame — "Ground", or
+    the previous tile — and the answered one arrived a refresh later. The fix is ordering, not
+    caching: the question is submitted and the view republished *before* `Pick` runs, because
+    `Pick` raises the change whose handlers read the frame. One click, one paint, the right
+    answer — and the same republish that serves the paused world serves the running one.
+
+- **The readout audited for scale, 2026-09-17.** The owner asked whether the tile answers would
+  hold up as the game grows, so every path the feature touches was walked and the two that matter
+  were measured rather than argued.
+  - **Measured, on the scale target** (250 × 250 × 40, fifty pawns, a question standing every
+    tick): the answered publish — the Snapshot phase, which is also exactly what one click's
+    `RepublishViews` costs — runs at **0.019 ms mean, 0.026 p95**, statistically identical to the
+    no-question arm's 0.021 and 2.4% of the 0.8 ms publish budget. Allocation in the paired
+    same-process measurement: **3.3 bytes per tick with the question standing against 3.3
+    without — the standing question adds 0.0** over 5,000 ticks, no collection. The arm that
+    produced this is `TickBenchmarkTests.TheColonyAnsweringACellQuestion`, and the guard that
+    keeps it true is `PathAllocationTests.AStandingQuestionCostsTheTickNothing`, because the
+    publish phase is allocation-free and a row-a-tick of heap traffic would be sixty objects a
+    second the GC owned for one frame each.
+  - **Walked, and O(1) in the board everywhere.** The contributor is one bounds check when
+    nobody is asking and about eight array reads plus one terrain-table lookup when they are —
+    the cost does not move with 2.5 million cells, because a question is about one of them. The
+    pane at 15 Hz scans a channel of at most a handful of rows and rebuilds a row string only
+    when the printed value changes (pinned by test, ADR 0003 F1). The picker's water rule is two
+    comparisons a floor-crossing; the director's second look is one more scan of tens of things
+    per click.
+  - **Expansion is guarded at the edges.** The three label tables are held to their contract
+    counts by `RegistryTests`, so a terrain or edifice or commodity added to the simulation
+    cannot reach the pane unnamed — the fast tier says so. The contract's handles are welded to
+    the simulation's tables by test on both sides. And the channel already fits design 09's
+    32-subject selection-detail bound without change.
+  - **The one thing to watch, written down where it will be looked for:** a hover tooltip (A13)
+    is the one future consumer that asks questions *per hover* rather than per click. A
+    `QueryCell` plus a republish per hover-frame would be sixty publishes a second and is the
+    wrong shape — that feature wants a throttled question or a presentation-side read of the
+    mirror, and ADR 0004 amendment 2's flip condition is where the decision is recorded.
 - **U38, the start screen, 2026-09-17.** Design first (`docs/design/17-start-flow.md`), then an
   interview, then the code — and the interview is why this unit is not what the plan said it was.
   `vertical-slice.md` described an in-game menu that Escape would unwind into; the owner's answer

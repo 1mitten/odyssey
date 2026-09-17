@@ -139,6 +139,17 @@ All five chokepoints named after the mining line are now open:
   `ContentPack.UseRoot` is the tested seam for the day something does.
 - **A feature can describe a pawn without widening `PawnView`** (OQ-45, ADR 0004 amended): a sparse
   `PawnAspect` row keyed by a name the feature mints for itself.
+- **The world answers a question about a cell** (2026-09-17, ADR 0004 amendment 2): a sparse
+  `CellDetail` row — terrain, edifice, floor stuff, support, work to clear, crossing cost in
+  thousandths of a clear crossing — published for the one asked-about cell by a sim-side
+  contributor every colony gets. The question is a `QueryCell` intent, and **a paused world answers
+  it by republishing the view without spending a tick** — the first time "intents flush while the
+  clock is paused" (ADR 0004's own Decision) has been true of anything but a speed change. This is
+  U16's readback arriving two milestones late: the pane had shipped the placeholder "cell readout
+  arrives with cell inspection" since M1, and the owner's reports (rocks indistinguishable from
+  grass, water silent about being water, piles generic with no count) are what opened it. The same
+  change made water own its click in the picker and a pile resting on bare ground selectable — the
+  pick resolves to the block under a pile, so `SelectionDirector` looks one cell up.
 - **The scene composes its world the way everything else does** (U34, 2026-09-17), which is the
   simulation half of the bootstrap chokepoint. It had forty lines that were a copy of
   `ColonyWorld.Build`, and the copy had drifted: no connectors reached the nav graph, no full
@@ -339,7 +350,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **581 Sim + 219 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **600 Sim + 257 Hud**; Long tier **20**.
   **It compiles neither Presentation nor Editor** — only the two mirror projects — so a unit that
   touches the composition root or the HUD shell is unproven until Unity has compiled it, however
   green the 11 seconds look (`docs/lessons.md`).
@@ -347,6 +358,9 @@ That rule is load-bearing; keep it.
   not exist under Unity (a compile error, so the whole batch aborts before a test runs) and
   `Has.Count` throws on an interface-typed collection. Both cost a Unity run each on 2026-09-17;
   `docs/lessons.md` has them.
+- **A frame is not a tick.** Waiting one Unity frame for a simulation effect is a flake — the
+  composition root steps the sim on accumulated real time, so a frame holds zero or more ticks.
+  Wait for the effect with a bounded loop (`docs/lessons.md`).
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and

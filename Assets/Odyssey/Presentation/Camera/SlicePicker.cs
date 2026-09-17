@@ -2,6 +2,7 @@
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
 
 namespace Odyssey.Presentation.CameraRig
@@ -33,12 +34,19 @@ namespace Odyssey.Presentation.CameraRig
     /// layer it was the only cell on offer. Carried up and down a stack it reads as clicking a
     /// rock and selecting the sky above it.</para>
     ///
-    /// <para><b>An edifice standing in a cell is the thing you clicked, and that is the same rule
-    /// rather than an exception to it.</b> A tree is an edifice that blocks nothing, standing in
-    /// the walkable cell — so a literal reading of "select the tile below" would hand back the
-    /// ground under every tree and <i>felling could never be ordered again</i>. What you are
-    /// looking at there is the tree, and the tree owns the face. The same holds for a wall, a door
-    /// and a built floor slab: each is drawn in its own cell and each is returned in it.</para>
+        /// <para><b>An edifice standing in a cell is the thing you clicked, and that is the same rule
+        /// rather than an exception to it.</b> A tree is an edifice that blocks nothing, standing in
+        /// the walkable cell — so a literal reading of "select the tile below" would hand back the
+        /// ground under every tree and <i>felling could never be ordered again</i>. What you are
+        /// looking at there is the tree, and the tree owns the face. The same holds for a wall, a door
+        /// and a built floor slab: each is drawn in its own cell and each is returned in it.</para>
+        ///
+        /// <para><b>Water owns its own floor.</b> Both waters fill their cell but neither is solid,
+        /// so a click on a pond reaches the bed beneath it and the block-below rule would answer
+        /// "what did I click?" with rock the player cannot see. The water claims the click first,
+        /// and the pane can then say what it is and what crossing it costs (owner, 2026-09-17: a
+        /// water tile did not tell him it was water). A bridge slab still wins — it is checked
+        /// first, and a bridge is walked on, not waded through.</para>
     ///
     /// <para><b>Nearest along the ray wins</b>, with a thing beating bare ground at the same
     /// distance and, failing that, the layer nearer the slice.</para>
@@ -295,11 +303,13 @@ namespace Odyssey.Presentation.CameraRig
         /// Which cell owns the floor of this one — the thing the player has actually clicked when
         /// the ray crosses it — and whether that thing is an object rather than bare ground.
         ///
-        /// <para>Three answers in order, and the order is the whole rule:</para>
+        /// <para>Four answers in order, and the order is the whole rule:</para>
         /// <list type="number">
         /// <item>an edifice standing here: the tree, the bed, whatever it is. It is drawn in this
         /// cell and it is what the player is looking at.</item>
         /// <item>a built floor slab: also drawn in this cell, so this cell owns it.</item>
+        /// <item>water filling the cell: it is drawn here, it is what the player clicked, and the
+        /// bed beneath it is not.</item>
         /// <item>solid terrain underneath: <b>the block below</b>, because its top face is the
         /// surface the ray just met. This is the owner's rule — "the tile below it or not at
         /// all" — and it is why clicking the meadow gives the ground rather than the air above
@@ -322,6 +332,16 @@ namespace Odyssey.Presentation.CameraRig
             }
 
             if (model.Floor(index) != 0)
+            {
+                cell = size.FromIndex(index);
+                return true;
+            }
+
+            // Water is drawn filling this cell and is not solid, so without this rule the bed
+            // beneath it would own the click. It is the water the player is looking at and it is
+            // the water the pane has something to say about. A slab over the water has already
+            // claimed the click above: a bridge is walked on, not waded through.
+            if (NaturalContent.IsWater(model.Terrain(index)))
             {
                 cell = size.FromIndex(index);
                 return true;

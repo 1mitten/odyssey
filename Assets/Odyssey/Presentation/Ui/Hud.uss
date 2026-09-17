@@ -514,6 +514,35 @@
     border-bottom-left-radius: 0;
 }
 
+/* The tile readout and a selected pile stand in a column, not a band: half the width, with the
+   facts in rows instead of a sentence (owner, 2026-09-17 — the same fact is always in the same
+   place now, where the joined line made every number hunt for its label). */
+.inspect--narrow {
+    width: 280px;
+}
+
+/* One fact of the readout: the label in a fixed-width column, the value beside it. The label
+   column is a width rather than a gap so the values line up whatever the labels are. */
+.inspect__rows { margin-top: 2px; }
+
+.inspect__row {
+    flex-direction: row;
+    align-items: center;
+    height: 20px;
+}
+
+.inspect__rowname {
+    width: 92px;
+    color: rgba(255, 255, 255, 0.50);
+    -unity-text-align: middle-left;
+}
+
+.inspect__rowvalue {
+    flex-grow: 1;
+    color: rgba(255, 255, 255, 0.66);
+    -unity-text-align: middle-left;
+}
+
 /* There is no empty state. With nothing selected the pane is display:none and leaves the layout
    (owner, 2026-09-16); the ".inspect__empty" rule that used to sit here styled a line reading
    "Nothing selected", which is the interface talking about itself. */

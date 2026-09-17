@@ -363,6 +363,34 @@ namespace Odyssey.Tests.Hud
                                         skillRows: SkillCatalogue.Rows);
             yield return new HudContent(8, AllStoreRows, 3, 32, needRows: 0,
                                         skillRows: SkillCatalogue.Rows);
+
+            // A tile readout: five facts is the fullest the meadow offers (order, walk, floor,
+            // support — one of order/minable), and the pane it stands in is the narrow one.
+            yield return new HudContent(Colonists, AllStoreRows, 0, Layers, 0, cellRows: 5);
+        }
+
+        /// <summary>
+        /// The shape the owner asked for on 2026-09-17: the tile readout stands in half the
+        /// colonist pane's width, and its rows stand the pane up around three times the height
+        /// of the header alone — a column of facts, not a band with a sentence in it.
+        /// </summary>
+        [Test]
+        public void TheTileReadoutIsHalfAsWideAndRowsMakeItTall()
+        {
+            var boxes = HudLayout.Solve(1920, 1080,
+                new HudContent(Colonists, AllStoreRows, 0, Layers, 0, cellRows: 5));
+            HudRect pane = boxes[HudRegion.Inspect];
+
+            Assert.That(pane.Width, Is.EqualTo(HudLayout.InspectNarrowWidth));
+            Assert.That(HudLayout.InspectNarrowWidth * 2, Is.EqualTo(HudLayout.InspectWidth),
+                "narrow is half, by definition, and the definition is load-bearing");
+
+            float chrome = HudLayout.Frame + HudLayout.Pad + HudLayout.InspectHeader +
+                           HudLayout.InspectHeaderGap + HudLayout.Pad;
+            Assert.That(HudLayout.InspectHeight(0, 0, cellRows: 5),
+                Is.EqualTo(chrome + 5 * HudLayout.CellRow + 4 * HudLayout.CellRowGap));
+            Assert.That(HudLayout.InspectHeight(0, 0, cellRows: 5) / chrome, Is.GreaterThan(2.5f),
+                "five facts stand the pane up around three times its header alone");
         }
     }
 

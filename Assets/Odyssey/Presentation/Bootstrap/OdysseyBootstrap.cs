@@ -586,6 +586,13 @@ namespace Odyssey.Presentation.Bootstrap
                 // could never be un-paused. One tick is spent to let the speed change through, and
                 // only for a speed change: layer changes are presentation state and can wait, so a
                 // player scrolling through layers while paused does not advance the simulation.
+                //
+                // A question about a cell is the one thing that cannot wait, because inspecting a
+                // stopped world is exactly when it is asked. It is answered by republishing the
+                // view over the same settled world — no tick, no system, no hash — which the
+                // intent's kind permits because a question changes nothing the simulation owns.
+                if (_world.Intents.HasPending(IntentKind.QueryCell))
+                    _world.RepublishViews();
                 if (_speedChangePending)
                 {
                     _world.Tick();
@@ -1138,6 +1145,19 @@ namespace Odyssey.Presentation.Bootstrap
 
             if (selection != null && selection.HasThing)
             {
+                // The thing's own cell, not the cell the pick resolved to: a pile on bare ground
+                // is picked through the solid block under it, and a bracket drawn there is buried
+                // in the ground rather than around the object (owner, 2026-09-17: meals and scrap
+                // showed no cursor at all). The snapshot is the thing's address, and it is
+                // already in hand.
+                var things = snapshot.Things;
+                for (int i = 0; i < things.Length; i++)
+                {
+                    if (things[i].Id != selection.Thing) continue;
+                    cell = things[i].Cell;
+                    break;
+                }
+
                 ResolvedModule item = _model.Library[
                     _model.Library.Resolve(ModuleIds.Item(selection.ThingDef), ModuleShape.Pillar)];
                 if (item.UsesArt && !item.IsEmpty)
