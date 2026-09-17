@@ -1,9 +1,10 @@
 # 21 — Tree colours
 
-**Status:** built 2026-09-18 on `claude/tree-colours`. Nobody has pressed Play on it; four contact
-sheets are all anybody has looked at. EditMode 1537 total, 1525 passed, 0 failed; fast tier 645 Sim
-and 358 Hud. **Cost on the played board: 1758 draw calls to 1815, +3.2%**, instances unchanged at
-44,200.
+**Status:** built 2026-09-18 on `claude/tree-colours`, and revised the same day after the owner
+played it — §3a is that round and is the one to read first. EditMode 1544 total, 1532 passed, 0
+failed; fast tier 645 Sim and 358 Hud. **Cost on the played board: 1758 draw calls to 2135,
++21.4%**, instances unchanged at 44,200 — that is what a thoroughly mixed wood costs, against
++3.2% when a stand was one colour, and `TreeLook.ThemesPerStand` is the knob it is bought with.
 
 **Read this before touching** `TreePalette`, `TreeLook`, `TreeSwatches`, `TreeMaterials` or
 `Assets/Odyssey/Presentation/Shaders/OdysseyTree.shader`.
@@ -102,17 +103,23 @@ and a chunk is 25 cells:
 
 Measured on a 200 x 200 board carrying 10,403 trees over 64 chunks, palette of 11:
 
-| | tree buckets per chunk | worst chunk |
-|---|---|---|
-| a colour per tree | — | **11**, the whole palette |
-| `StandCell` = 20 cells (50 m) | 6.75 | 10 |
-| `StandCell` = 40 cells (100 m) — shipped | **4.34** | 9 |
+| | tree buckets per chunk | worst chunk | themes drawn |
+|---|---|---|---|
+| a colour rolled freely per tree | — | **107** | — |
+| a handful of 4 per stand — **shipped** | **17.72** | 29 | 130 of 166 |
+| one colour per stand, 40-cell stands | 4.34 | 9 | 11 of 11 |
+| one colour per stand, 20-cell stands | 6.75 | 10 | |
 
-At 20 cells the saving over the naive answer was so thin it would not have been worth the feature:
-a chunk overlaps about five stand squares at that size. 40 halves it. The other end of the trade is
-the board — the played meadow is 120 cells, which at 40 is nine stands — and
-`ThePlayedBoardCarriesAWoodWorthLookingAt` measures that: **all eleven themes** are on a 120-cell
-board, so nothing was given up for the saving.
+Three numbers were chosen by measurement rather than by eye. The stand is **40 cells** because at 20
+a chunk overlaps about five squares and the wood cost half again as much for no more variety. The
+handful is **4** because that is what *"really mix them in together"* asked for, and the row above
+it is what it costs. And the free per-tree roll is the row that says why a handful exists at all:
+107 colours in the worst chunk is the whole palette arriving in every chunk, and a table that could
+never grow again.
+
+The other end of the trade is the board, measured at the size the game actually loads:
+`ThePlayedBoardCarriesAWoodWorthLookingAt` reports **89 of the 166 themes on a 120-cell meadow**,
+against eleven before this round.
 
 Everything here is a hash of the cell's own coordinates, for the reason `GroundLook` records: a
 chunk is re-meshed whenever anything in it changes, so a stream of random numbers would recolour
@@ -121,6 +128,50 @@ the wood every time a colonist felled a tree twenty metres away.
 **Nothing is saved, hashed or visible to the simulation.** A tree's colour is drawing, in exactly
 the sense a colonist's face is. No Def changed, no golden hash moved, and a clone without the packs
 draws the same wood it always did.
+
+## 3a. The owner played it, and two things came back (2026-09-18)
+
+> a shorter tree that was white/pale leaves that looked odd … it all needs a much larger variation
+> of bark and leaf colours, really vary it up as much as possible … but also really mix them in
+> together
+
+**The white tree was a mapping fault, not a bad colour.** The owner's table is authored as a deep
+colour plus a *"fresh leaf / highlight"*, which reads as a small bright accent on a mass of the
+deep colour. The mesh is the other way round: the probe measures the broadleaf's **upper** canopy
+cell at **49.9%** of its vertices against the lower at 24.3%, so whatever colour goes on top *is*
+the tree — and the shorter tree is exactly the broadleaf, 6.15 m against the pine's 9.47 m. Silver
+Birch's highlight #8F9779 and Mossy Birch's #9CAF88 measure luminance 145 and 151; painted over
+half a tree they are a pale sage tree.
+
+So a colour is now **two faces of one colour — lit and shaded — rather than a mass and an accent**,
+and how far apart the faces may be is taken from the art rather than invented. `TreeToneRules`
+holds the bands and three tests enforce them:
+
+| | measured in the pack | the band |
+|---|---|---|
+| leaf step (lit ÷ shaded luminance) | 1.21 on both meshes | 1.10 – 1.45 |
+| bark step | **1.68** (trunk #554B40 against branch stub #9B7E5A) | 1.10 – 2.20 |
+| brightest leaf lit face | 110.9 | ≤ 132 |
+
+**Bark keeps a band of its own and that was found, not decided.** Holding trunks to the canopy's
+band rejected six entries including three of the owner's — Scots Pine at 2.13, Redwood at 1.79,
+Ancient Oak at 1.58 — and measuring the pack's own trunk pair settled it at 1.68 in the owner's
+favour. A trunk is a cylinder with a lit side; a canopy is a cloud of leaves and has no such thing.
+
+**"Vary it up as much as possible" is answered by a cross product.** Eleven hand-written themes
+became **fourteen leaf tones and eight bark tones for broadleaves (112 combinations) and nine
+against six for conifers (54)** — 166 themes from twenty-two readable lines, where writing 166 by
+hand would have been 166 chances to author another white tree. The owner's six survive as the tones
+they were built from, and the cross product contains their original pairings along with every
+other. This costs nothing: the length of the table was never what a wood costs.
+
+**"Really mix them in together" is what does cost.** A stand used to deal *one* colour, which made
+a wood of uniform patches. A stand now deals a **handful** — `TreeLook.ThemesPerStand` — and each
+tree picks one of them by its own hash, so neighbouring trees differ while neighbouring woods are
+different mixtures. That is the one number that decides the bill: every step of it multiplies the
+tree buckets in a chunk. The handful is drawn without replacement, by walking the species' rows
+from a hashed start at a hashed coprime stride, because four independent hashes would hand the same
+colour out twice about one stand in ten and quietly narrow the mixing.
 
 ## 4. The palette
 

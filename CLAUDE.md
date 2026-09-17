@@ -575,8 +575,9 @@ so a world deals the same people every load. **`OdysseyBootstrap.randomCastEachS
 on** while the palette is being judged, which means pressing Play deals new faces each time; switch
 it off for a stable cast.
 
-**The wood is coloured by stands, not by trees** (owner, 2026-09-18: *"they need to be a variety of
-colours … the world feels dull"*). Every tree on the board used to draw in the one green over the
+**The wood is coloured by stands, and mixed within them** (owner, 2026-09-18: *"they need to be a
+variety of colours … the world feels dull"*, then *"really vary it up as much as possible … but also
+really mix them in together"*). Every tree on the board used to draw in the one green over the
 one brown PolygonGeneric shipped, and that was the side effect of a correct fix — a tree takes **no
 stuff tint**, deliberately, because it is *made* of wood rather than *built* from it, which left it
 with no colour lever at all. It has one now: `TreePalette` holds eleven themes of four colours (the
@@ -584,17 +585,23 @@ owner's six verbatim, five of ours), `Odyssey/Tree` repaints the atlas's bark an
 separately — one mesh, one material, so a `_BaseColor` multiply would brown the leaves along with
 the bark — and `TreeMaterials` caches one material per colour actually drawn. Design and every
 measured number: `docs/design/21-tree-colours.md`; **read it before touching this line.**
-Three things not to undo by tidying. **A colour belongs to a stand of wood, not to a tree**, and
-that is the whole design rather than a flourish: a tree's colour is a bucket key, a chunk of
-woodland holds 160 trees, and a colour per tree measured a worst chunk of the entire palette.
-`TreeLook.StandCell` is 40 cells because 20 measured 6.75 buckets a chunk against 40's **4.34** —
-the first number was chosen by eye and moved by the measurement. **The swatch mechanism was
+Four things not to undo by tidying. **A stand deals a handful of colours and each tree picks one**,
+and the size of that handful (`TreeLook.ThemesPerStand`) is the one number that decides what the
+feature costs: a tree's colour is a bucket key, a chunk of woodland holds 160 trees, and a colour
+rolled freely per tree would put essentially the whole table in every chunk. **A colour is two faces
+of one colour, lit and shaded — not a mass and an accent**, and getting that backwards is what made
+the pale tree the owner reported: the probe measures the broadleaf's *upper* canopy cell at 49.9% of
+the mesh, so a colour authored as a highlight was painted over half a tree. `TreeToneRules` holds
+the bands that stop it happening again, every one measured off the pack (leaf step 1.21, **bark step
+1.68** — bark has a band of its own and that was found, not decided). **The swatch mechanism was
 measured before it was built** (`TreeSwatchProbe`): every cluster on every tree mesh in the pack
 reports a texel deviation of **0**, which is the only reason replacing a colour inside a rectangle
 throws no art away. And **nothing here is saved, hashed or visible to the simulation** — no Def
 moved and no golden hash moved — because a tree's colour is drawing, in exactly the sense a
-colonist's face is. **Cost on the played board: +57 draw calls of 1758, 3.2%**, instances
-unchanged. **Open, and the owner's:** the palette itself, and one measured fidelity gap —
+colonist's face is. **Cost on the played board: 1758 draw calls to 2135, +21.4%**, instances
+unchanged at 44,200 — that is what a thoroughly mixed wood costs, against +3.2% when a stand was one
+colour, and `TreeLook.ThemesPerStand` is the one knob it is bought with. The played meadow now draws
+**89 of 166 themes** where it drew eleven. **Open, and the owner's:** the palette itself, and one measured fidelity gap —
 `Odyssey/Tree` draws a tree about a tenth darker in sRGB than the pack's own shader does, which is
 two different lighting implementations rather than a bug, and emission, the normal map and
 screen-space occlusion were each tested and each ruled out (§6 of the design).
@@ -850,14 +857,14 @@ Three things the owner reported after playing. **Read `docs/journal.md` for each
   interface scale on a 1080p screen it is within pixels of the screen height and may want the
   first max-height-and-scroll any panel here has carried.
 - **The 29 proposed proper nouns** in `docs/design/proper-nouns.csv` await approval or veto.
-- **Nobody has pressed Play on the coloured wood.** `Logs/tree-{pack,plain,flat,themed}-{play,wood,close}.png`
-  is all anybody has looked at, and a still cannot say whether a 100 m stand is the right size to
-  look at or whether eleven themes is too many. Three specific calls are the owner's: **the five
-  themes we added** to their six (`TreePalette`, marked as ours in place); **whether the wood is
-  now bright enough**, since their own six are a muted, earthy set and the brightness lever is that
-  table rather than anything in the shader; and **the measured tenth-of-a-stop the new shader
-  costs** (`docs/design/21-tree-colours.md` §6), which is two lighting implementations disagreeing
-  and was deliberately not papered over with a gain.
+- **The coloured wood has had one playtest and one revision, and the revision has not been
+  played.** Round one produced the pale-tree report and *"really mix them in together"*, both now
+  in (`docs/design/21-tree-colours.md` §3a). Three calls are the owner's: **the 21.4% draw calls a
+  mixed wood costs** — one knob, `TreeLook.ThemesPerStand`, and turning it down to 3 or 2 gets most
+  of it back; **the tones we added**, especially the plum and rust canopies, which are the most
+  distinctive and the first to veto; and **the measured tenth-of-a-stop the new shader costs**
+  (§6), which is two lighting implementations disagreeing and was deliberately not papered over
+  with a gain.
 - **Nobody has seen the falls move.** They draw correctly now and carry downward-scrolling
   streaks and foam at the foot, but **whether that reads as falling water or as a pattern sliding
   down a pane cannot be judged in a still**, and stills are all anybody has looked at

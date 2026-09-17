@@ -31,6 +31,15 @@ namespace Odyssey.Tests.Presentation
         /// </summary>
         const int DensityPerMille = 260;
 
+        /// <summary>
+        /// How many stand squares a 25-cell chunk can be nearest to.
+        ///
+        /// A stand site is jittered anywhere inside its own 40-cell square, so a chunk straddling a
+        /// boundary can take cells from the squares on either side of it and from the diagonals:
+        /// three squares along each axis rather than the two its size would suggest.
+        /// </summary>
+        const int StandsAChunkCanOverlap = 9;
+
         [Test]
         public void AWoodCostsAFewBucketsPerChunkHoweverLongThePaletteIs()
         {
@@ -102,28 +111,42 @@ namespace Odyssey.Tests.Presentation
 
             Assert.That(trees, Is.GreaterThan(5_000), "the board did not grow a wood to measure");
 
-            // Pinned to the measured figure rather than bounded by an argument, for the reason
-            // ChunkBucketScaleTests gives about its own numbers: "about the same" cannot be
-            // compared a month later, and this is the number that says whether the feature is
-            // affordable. Measured 2026-09-18 at TreeLook.StandCell = 40: **4.34 tree buckets a
-            // chunk, worst chunk 9**, against 6.75 and a worst of 10 when the stand was 20 cells,
-            // and against a worst of 11 — the whole palette — for a colour dealt per tree.
-            Assert.That(worstChunk, Is.LessThanOrEqualTo(9),
-                "a chunk carries more tree colours than its stands can account for — either the " +
-                "stand field stopped clumping, or a colour is being dealt per tree");
+            // Measured 2026-09-18 on this board, with StandCell 40 and a handful of four:
+            // **17.72 tree buckets a chunk, worst chunk 29**, drawing 130 of the 166 themes —
+            // against 4.34 and a worst of 9 when a stand dealt one colour, and against a worst of
+            // 107 for a colour rolled freely per tree. The handful is what sits between those two.
+            //
+            // Measured 2026-09-18 on this board, with StandCell 40 and a handful of four:
+            // **17.72 tree buckets a chunk, worst chunk 29**, drawing 130 of the 166 themes —
+            // against 4.34 and a worst of 9 when a stand dealt one colour, and against a worst of
+            // 107 for a colour rolled freely per tree. The handful sits between those two.
+            //
+            // The structural bound, and it is what makes the palette free to grow. A chunk
+            // overlaps a handful of stand squares; each stand deals ThemesPerStand colours to each
+            // of the two species; and that product is the ceiling however long TreePalette
+            // becomes. It is generous rather than tight on purpose — the jittered sites let a
+            // 25-cell chunk reach into more squares than its size suggests — and the printed
+            // figure above is the number to compare against next time.
+            int ceiling = StandsAChunkCanOverlap * 2 * TreeLook.ThemesPerStand;
+            Assert.That(worstChunk, Is.LessThanOrEqualTo(ceiling),
+                $"a chunk carries more tree colours ({worstChunk}) than its stands can account " +
+                $"for ({ceiling}) — either the stand field stopped clumping, or a colour is being " +
+                "dealt per tree");
 
-            Assert.That(treeBuckets / (float)chunksPerLayer, Is.LessThan(5f),
-                "the average chunk's tree buckets grew; this is what the draw-call bill is made of");
+            // And the comparison that says the bound is worth having: rolling a colour freely per
+            // tree over the same board. Nothing in the game does this; it is here so the figure
+            // above is a comparison rather than a bare number, and because a per-tree roll is what
+            // a later session would reach for first.
+            Assert.That(worstChunk, Is.LessThan(perTreeWorst / 2),
+                "dealing a handful to a stand cost about as much as dealing a colour to every tree");
 
-            // And the cheap answer — one colour everywhere — is excluded, or the bound above
-            // would be satisfied by the dullness this replaced.
-            Assert.That(themes.Count, Is.GreaterThanOrEqualTo(TreePalette.Count - 1),
-                "the board drew only part of the palette");
+            // The wood is mixed, not patched: a chunk carries several colours per species rather
+            // than the one the first version of this feature gave it.
+            Assert.That(treeBuckets / (float)chunksPerLayer, Is.GreaterThan(6f),
+                "a chunk carries too few tree colours for the wood to read as mixed");
 
-            // The comparison, asserted so that it cannot quietly stop being true. A per-tree
-            // colour is what a later session would reach for first.
-            Assert.That(worstChunk, Is.LessThan(perTreeWorst),
-                "dealing a colour to a stand cost as much as dealing one to every tree");
+            Assert.That(themes.Count, Is.GreaterThanOrEqualTo(40),
+                "the board drew too little of the palette");
         }
 
         /// <summary>

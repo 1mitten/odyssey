@@ -4267,3 +4267,66 @@ six themes of four colours each, and *"bake it and make it performant"*.
   zero — the fidelity control that separates "our shader draws a Synty tree differently" from "the
   palette is wrong". Design, the owner's table and the five themes we added are
   `docs/design/21-tree-colours.md`.
+
+### The pale tree was a mapping fault, and a wood is a mixture (2026-09-18)
+
+The owner played the coloured wood and sent two notes: *"there was a shorter tree that was
+white/pale leaves that looked odd"*, and *"it all needs a much larger variation of bark and leaf
+colours, really vary it up as much as possible … but also really mix them in together"*.
+
+- **The white tree was not a badly chosen colour; it was a colour put in the wrong place.** The
+  owner's table is authored as a deep colour plus a *fresh leaf / highlight*, which reads as a small
+  bright accent on a mass of the deep colour — and I took that at face value. The mesh is the other
+  way round, and the probe had already said so: the broadleaf's **upper** canopy cell is **49.9%**
+  of its vertices and the lower 24.3%. Whatever goes on top *is* the tree. Silver Birch's highlight
+  #8F9779 and Mossy Birch's #9CAF88 measure luminance 145 and 151, and over half a tree that is a
+  pale sage tree. The shorter tree is the broadleaf, 6.15 m against the pine's 9.47 m, which is what
+  makes the report land on exactly the right mesh.
+
+- **The fix is a change of concept rather than of numbers.** A colour is now **two faces of one
+  colour**, lit and shaded, and the distance between them is taken from the art: the pack's own two
+  canopy greens are a step of **1.21** in luminance, on both meshes. `TreeToneRules` holds that
+  band, a brightness ceiling a little above the art's own brightest canopy, and a chroma floor,
+  because a sage highlight is pale *and* nearly colourless and a colourless canopy reads as a dead
+  tree. Three tests enforce them, so this particular fault cannot come back.
+
+- **Bark needed a band of its own, and that was found rather than decided.** Holding trunks to the
+  canopy's band failed six entries, three of them the owner's — Scots Pine at 2.13, Redwood at 1.79,
+  Ancient Oak at 1.58 — which looked like the owner's table being wrong. Measuring the pack's own
+  trunk pair settled it the other way: trunk #554B40 at luminance 77.9 against the branch-stub cell
+  #9B7E5A at 130.6 is a step of **1.68**. A trunk is a cylinder with a lit side and a canopy is a
+  cloud of leaves that has no such thing. **A rule derived from one kind of surface is a rule about
+  that surface.**
+
+- **"Vary it up as much as possible" is a cross product, not a longer list.** Eleven hand-written
+  four-colour themes became fourteen leaf tones against eight barks for broadleaves and nine against
+  six for conifers: **166 themes out of twenty-two readable lines**. Writing 166 themes by hand
+  would have been 166 more chances to author a white tree. The owner's six survive as the tones they
+  were built from, and the cross product contains their original pairings along with every other.
+  It costs nothing, because the length of this table was never what a wood costs.
+
+- **"Really mix them in together" is the part that does cost, and it is one number.** A stand used
+  to deal one colour, which is what made a wood of uniform patches. A stand now deals a handful —
+  `ThemesPerStand`, four — and each tree picks one by its own hash, so neighbours differ while two
+  woods are different mixtures. Every step of that number multiplies the tree buckets in a chunk, so
+  it is bought with draw calls and nothing else. The handful is drawn without replacement by walking
+  the species' rows at a hashed coprime stride: four independent hashes would hand the same colour
+  out twice about one stand in ten and narrow the mixing with nothing to show for it.
+
+- **Unverified at the time of writing, and the reason is worth recording.** The Unity tier could not
+  run: the owner had the editor open on this very worktree, which is what `check_project_lock` is
+  for, and killing it would have taken the project out from under somebody looking at it. The tone
+  tables were checked outside Unity instead, by parsing the C# table and applying the same
+  arithmetic the tests do — all 37 tones inside their bands, 166 themes — which is a control on the
+  numbers and not on the code.
+
+- **What the mixing cost, measured on the board the game loads**: 1758 draw calls to **2135, +21.4%**,
+  instances unchanged at 44,200. Structurally that is 4.34 tree buckets a chunk becoming **17.72**,
+  worst chunk 9 becoming 29 — against **107** in the worst chunk for a colour rolled freely per
+  tree, which is the row that says why a handful exists at all. The played meadow now draws **89 of
+  166 themes** where it drew eleven, and 75.6% of neighbouring trees are a different colour from
+  each other. It is one knob: `ThemesPerStand` at 3 or 2 gets most of the 21% back.
+
+- **Verified:** EditMode **1544 total, 1532 passed, 0 failed**. **Not verified:** whether a wood
+  this mixed is better than a wood in patches, and whether the plum and rust canopies belong on a
+  board at all — they are the most distinctive rows in the table and the first to veto.

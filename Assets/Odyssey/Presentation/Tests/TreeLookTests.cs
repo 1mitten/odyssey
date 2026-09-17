@@ -7,8 +7,9 @@ using UnityEngine;
 namespace Odyssey.Tests.Presentation
 {
     /// <summary>
-    /// The rules a wood's colours follow: stands rather than confetti, the same answer every time,
-    /// a pine never in an oak's colours, and enough variety on a board to be worth the feature.
+    /// The rules a wood's colours follow: thoroughly mixed inside a stand, different from the wood
+    /// over the hill, the same answer every time, a pine never in an oak's colours, and a bounded
+    /// number of colours in any one chunk.
     /// </summary>
     public class TreeLookTests
     {
@@ -17,9 +18,9 @@ namespace Odyssey.Tests.Presentation
         [Test]
         public void TheSameCellIsAlwaysDealtTheSameTheme()
         {
-            // The mesher re-meshes a whole chunk whenever anything in it changes, so a colour
-            // that was not a pure function of the cell would reshuffle the wood every time a
-            // colonist felled a tree twenty metres away.
+            // The mesher re-meshes a whole chunk whenever anything in it changes, so a colour that
+            // was not a pure function of the cell would reshuffle the wood every time a colonist
+            // felled a tree twenty metres away.
             for (int z = 0; z < 40; z++)
             for (int x = 0; x < 40; x++)
             {
@@ -43,9 +44,71 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
-        /// A stand has to actually be a stand: a cell's neighbours nearly always belong to the
-        /// same one, because that is the whole performance argument — a chunk holds a couple of
-        /// colours rather than the whole palette.
+        /// The owner's second note, as a test: <i>"but also really mix them in together"</i>.
+        ///
+        /// <para>The first version dealt one colour to a stand, so a tree and its neighbour were
+        /// the same colour about nineteen times in twenty and a wood was a uniform patch. A stand
+        /// now deals a handful and each tree picks from it, so neighbours should differ most of the
+        /// time — with a handful of four, three times in four if the picks were independent.</para>
+        /// </summary>
+        [Test]
+        public void NeighbouringTreesAreDifferentColours()
+        {
+            int differ = 0, total = 0;
+            for (int z = 1; z < Board; z++)
+            for (int x = 1; x < Board; x++)
+            {
+                int here = TreeLook.Theme(x, z, TreeSpecies.Broadleaf);
+                if (TreeLook.Theme(x - 1, z, TreeSpecies.Broadleaf) != here) differ++;
+                if (TreeLook.Theme(x, z - 1, TreeSpecies.Broadleaf) != here) differ++;
+                total += 2;
+            }
+
+            float share = differ / (float)total;
+            TestContext.WriteLine($"neighbouring trees of a different colour: {100f * share:0.0}%");
+            Assert.That(share, Is.GreaterThan(0.6f),
+                "a wood is not mixed; trees are taking their stand's colour rather than their own");
+        }
+
+        /// <summary>
+        /// And the mixing must not have swallowed the stand. A wood is a *mixture*, and two woods
+        /// should be different mixtures — otherwise every chunk carries the whole table, which is
+        /// the bill <c>TreeLook</c> exists to avoid.
+        /// </summary>
+        [Test]
+        public void TwoStandsAreDifferentMixtures()
+        {
+            var seen = new Dictionary<int, HashSet<int>>();
+            for (int z = 0; z < Board; z++)
+            for (int x = 0; x < Board; x++)
+            {
+                int stand = TreeLook.Stand(x, z);
+                if (!seen.TryGetValue(stand, out HashSet<int>? themes))
+                    seen[stand] = themes = new HashSet<int>();
+                themes.Add(TreeLook.Theme(x, z, TreeSpecies.Broadleaf));
+            }
+
+            int identical = 0, pairs = 0;
+            var stands = new List<HashSet<int>>(seen.Values);
+            for (int a = 0; a < stands.Count; a++)
+            for (int b = a + 1; b < stands.Count; b++)
+            {
+                pairs++;
+                if (stands[a].SetEquals(stands[b])) identical++;
+            }
+
+            TestContext.WriteLine($"{stands.Count} stands, {identical} of {pairs} pairs share a mixture");
+            foreach (HashSet<int> themes in stands)
+                Assert.That(themes.Count, Is.LessThanOrEqualTo(TreeLook.ThemesPerStand),
+                    "a stand dealt more colours than its handful");
+
+            Assert.That(identical, Is.LessThan(pairs / 10),
+                "stands are drawing the same handful as each other, so the board has no regions");
+        }
+
+        /// <summary>
+        /// A stand has to actually be a stand: a cell's neighbours nearly always belong to the same
+        /// one, because that is what bounds the colours in a chunk.
         /// </summary>
         [Test]
         public void NeighbouringCellsBelongToTheSameStand()
@@ -62,16 +125,15 @@ namespace Odyssey.Tests.Presentation
 
             float share = same / (float)total;
             TestContext.WriteLine($"neighbours in the same stand: {100f * share:0.0}%");
-            // A stand about 20 cells across has a boundary on roughly one edge in ten.
-            Assert.That(share, Is.GreaterThan(0.85f));
+            Assert.That(share, Is.GreaterThan(0.9f));
         }
 
         /// <summary>
         /// The stands must not be squares. Quantising a cell straight to a grid square is the
         /// obvious implementation and it draws ruler-straight colour boundaries running the whole
         /// width of the board, which reads at once as a bug. The jittered sites make the boundary
-        /// wander, and what that means measurably is that the run of cells along a row between two
-        /// stand changes is not always a multiple of the stand size.
+        /// wander, and what that means measurably is that a boundary is crossed at many different
+        /// columns rather than only at multiples of the stand size.
         /// </summary>
         [Test]
         public void StandBoundariesWander()
@@ -89,38 +151,53 @@ namespace Odyssey.Tests.Presentation
             }
 
             TestContext.WriteLine($"distinct columns a stand boundary crosses: {columns.Count}");
-            // A grid would put every boundary on a multiple of StandCell: ten columns on this
+            // A grid would put every boundary on a multiple of StandCell: five columns on this
             // board. Anything approaching the board's width is a boundary that wanders.
             Assert.That(columns.Count, Is.GreaterThan(Board / 4));
         }
 
+        /// <summary>
+        /// A stand's handful is distinct: four independent hashes would hand the same colour out
+        /// twice about one stand in ten, which narrows the mixing without anybody noticing.
+        /// </summary>
         [Test]
-        public void ABoardCarriesMostOfThePalette()
+        public void AStandsHandfulHasNoRepeats()
+        {
+            var handful = new int[TreeLook.ThemesPerStand];
+            for (int z = 0; z < Board; z += 7)
+            for (int x = 0; x < Board; x += 7)
+            foreach (TreeSpecies species in new[] { TreeSpecies.Conifer, TreeSpecies.Broadleaf })
+            {
+                int n = TreeLook.ThemesOfStand(TreeLook.Stand(x, z), species, handful);
+                Assert.That(n, Is.EqualTo(TreeLook.ThemesPerStand));
+                var distinct = new HashSet<int>();
+                for (int i = 0; i < n; i++)
+                    Assert.That(distinct.Add(handful[i]),
+                        $"{species} stand at {x},{z} was dealt theme {handful[i]} twice");
+            }
+        }
+
+        [Test]
+        public void ABoardCarriesAGreatManyOfTheThemes()
         {
             var seen = new HashSet<int>();
-            for (int z = 0; z < Board; z += 2)
-            for (int x = 0; x < Board; x += 2)
+            for (int z = 0; z < Board; z++)
+            for (int x = 0; x < Board; x++)
             {
                 seen.Add(TreeLook.Theme(x, z, TreeSpecies.Conifer));
                 seen.Add(TreeLook.Theme(x, z, TreeSpecies.Broadleaf));
             }
 
             TestContext.WriteLine($"themes on a {Board} x {Board} board: {seen.Count} of {TreePalette.Count}");
-            // The point of the feature. A board that showed two or three of eleven would be the
-            // dullness this replaced, wearing a longer table.
-            Assert.That(seen.Count, Is.GreaterThanOrEqualTo(TreePalette.Count - 1));
+            // A board cannot show the whole table — it has only so many stands, and each deals a
+            // handful — but it must show a great deal more than the eleven the first version had.
+            Assert.That(seen.Count, Is.GreaterThanOrEqualTo(60));
         }
 
         /// <summary>
-        /// And on the board the game actually loads, which is smaller than the one above and is
-        /// the only size anybody will judge this at.
-        ///
-        /// <para>It matters because the two halves of the design pull against each other: stands
-        /// wide enough to be cheap are stands a small board has few of. 120 cells at
-        /// <see cref="TreeLook.StandCell"/> is nine squares, and nine squares dealt a conifer
-        /// theme and a broadleaf theme each is eighteen draws from a table of eleven — enough that
-        /// most of the palette is on screen at once, but not so many that it is certain, which is
-        /// why this is measured at the real size rather than inferred from the 200-cell case.</para>
+        /// And on the board the game actually loads, which is smaller than the one above and is the
+        /// only size anybody will judge this at. 120 cells is nine stands, each dealing four
+        /// colours per species, so seventy-two draws from a table of 166.
         /// </summary>
         [Test]
         public void ThePlayedBoardCarriesAWoodWorthLookingAt()
@@ -136,13 +213,13 @@ namespace Odyssey.Tests.Presentation
 
             TestContext.WriteLine(
                 $"themes on the played {Played} x {Played} board: {seen.Count} of {TreePalette.Count}");
-            Assert.That(seen.Count, Is.GreaterThanOrEqualTo(6),
+            Assert.That(seen.Count, Is.GreaterThanOrEqualTo(24),
                 "the meadow shows too few tree colours to be worth the feature");
         }
 
         /// <summary>
-        /// Negative coordinates are not a curiosity here: the surround strews trees past the rim
-        /// by continuing the board's own cell coordinates, so cell (-3, 40) is a real question and
+        /// Negative coordinates are not a curiosity here: the surround strews trees past the rim by
+        /// continuing the board's own cell coordinates, so cell (-3, 40) is a real question and
         /// integer division would put it in the same stand square as (3, 40).
         /// </summary>
         [Test]
@@ -155,6 +232,34 @@ namespace Odyssey.Tests.Presentation
                 if (TreeLook.Stand(i, 10) == TreeLook.Stand(i + 1, 10)) same++;
             Assert.That(same, Is.GreaterThan(25), "stands outside the board are still stands");
         }
+
+        /// <summary>
+        /// With the stand field switched off — the "before" column of <c>TreeCheck</c> — a board
+        /// carries exactly the two colours it carried before this feature existed. A before that is
+        /// not a before reads exactly like a free feature, which is what the first contact sheet
+        /// reported.
+        /// </summary>
+        [Test]
+        public void WithStandsOffTheBoardIsTwoColours()
+        {
+            try
+            {
+                TreeLook.Stands = false;
+                var seen = new HashSet<int>();
+                for (int z = 0; z < 120; z += 3)
+                for (int x = 0; x < 120; x += 3)
+                {
+                    seen.Add(TreeLook.Theme(x, z, TreeSpecies.Conifer));
+                    seen.Add(TreeLook.Theme(x, z, TreeSpecies.Broadleaf));
+                }
+
+                Assert.That(seen.Count, Is.EqualTo(2));
+            }
+            finally
+            {
+                TreeLook.Stands = true;
+            }
+        }
     }
 
     /// <summary>
@@ -164,21 +269,132 @@ namespace Odyssey.Tests.Presentation
     public class TreePaletteTests
     {
         [Test]
-        public void BothKindsOfTreeHaveSomethingToChooseBetween()
+        public void BothKindsOfTreeHaveAGreatDealToChooseBetween()
         {
-            Assert.That(TreePalette.For(TreeSpecies.Conifer).Length, Is.GreaterThanOrEqualTo(2));
-            Assert.That(TreePalette.For(TreeSpecies.Broadleaf).Length, Is.GreaterThanOrEqualTo(2));
+            TestContext.WriteLine(
+                $"conifer {TreePalette.Barks(TreeSpecies.Conifer).Length} barks x " +
+                $"{TreePalette.Leaves(TreeSpecies.Conifer).Length} leaves = " +
+                $"{TreePalette.For(TreeSpecies.Conifer).Length}; " +
+                $"broadleaf {TreePalette.Barks(TreeSpecies.Broadleaf).Length} barks x " +
+                $"{TreePalette.Leaves(TreeSpecies.Broadleaf).Length} leaves = " +
+                $"{TreePalette.For(TreeSpecies.Broadleaf).Length}; " +
+                $"{TreePalette.Count} themes in all");
+
+            Assert.That(TreePalette.For(TreeSpecies.Conifer).Length, Is.GreaterThanOrEqualTo(24));
+            Assert.That(TreePalette.For(TreeSpecies.Broadleaf).Length, Is.GreaterThanOrEqualTo(48));
             Assert.That(TreePalette.For(TreeSpecies.Conifer).Length +
                         TreePalette.For(TreeSpecies.Broadleaf).Length,
                 Is.EqualTo(TreePalette.Count), "every theme belongs to exactly one species");
         }
 
+        /// <summary>
+        /// The table must stay inside a byte, because a tint code carries the theme in its low one
+        /// and <c>TintCode.Value</c> masks 0xFF. Past 255 it would wrap in silence and draw one
+        /// wood in another's colours with nothing anywhere to report it — which is precisely the
+        /// class of fault this file exists to make loud.
+        /// </summary>
         [Test]
-        public void ThemeNamesAreDistinct()
+        public void TheTableFitsInTheTintCode()
         {
-            var names = new HashSet<string>();
-            for (int i = 0; i < TreePalette.Count; i++)
-                Assert.That(names.Add(TreePalette.At(i).Name), $"duplicate theme name at {i}");
+            Assert.That(TreePalette.Count, Is.LessThanOrEqualTo(255),
+                "the palette outgrew the byte TintCode.Value reads it from; widen the code first");
+        }
+
+        [Test]
+        public void ToneNamesAreDistinctWithinTheirTable()
+        {
+            foreach (TreeSpecies species in new[] { TreeSpecies.Conifer, TreeSpecies.Broadleaf })
+            foreach (TreeTone[] table in new[] { TreePalette.Barks(species), TreePalette.Leaves(species) })
+            {
+                var names = new HashSet<string>();
+                foreach (TreeTone tone in table)
+                    Assert.That(names.Add(tone.Name), $"duplicate tone name '{tone.Name}' in {species}");
+            }
+        }
+
+        /// <summary>
+        /// The fault the owner reported, as a test: <i>"a shorter tree that was white/pale leaves
+        /// that looked odd"</i>.
+        ///
+        /// <para>The mechanism was that the lit face goes on the <b>larger</b> of the two canopy
+        /// cells — <c>TreeSwatchProbe</c> measures the broadleaf's upper canopy at 49.9% of the
+        /// mesh, and the broadleaf is the shorter tree at 6.15 m against the pine's 9.47 m — so a
+        /// colour authored as a small bright highlight was painted over half a tree. The ceiling is
+        /// the pack's own brightest canopy plus a margin, and the two entries that caused the
+        /// complaint are well above it: Silver Birch's old highlight #8F9779 measures 145 and Mossy
+        /// Birch's #9CAF88 measures 151, against a ceiling of 132.</para>
+        /// </summary>
+        [Test]
+        public void NoCanopyIsPaleEnoughToReadAsWhite()
+        {
+            foreach (TreeSpecies species in new[] { TreeSpecies.Conifer, TreeSpecies.Broadleaf })
+            foreach (TreeTone leaf in TreePalette.Leaves(species))
+            {
+                float lit = TreeToneRules.Luminance(leaf.Lit);
+                Assert.That(lit, Is.LessThanOrEqualTo(TreeToneRules.MaxLeafLit),
+                    $"{species} leaf '{leaf.Name}' lit face is luminance {lit:0.0}, which over half " +
+                    "a tree reads as a pale, washed-out canopy");
+            }
+
+            foreach (TreeSpecies species in new[] { TreeSpecies.Conifer, TreeSpecies.Broadleaf })
+            foreach (TreeTone bark in TreePalette.Barks(species))
+            {
+                float lit = TreeToneRules.Luminance(bark.Lit);
+                Assert.That(lit, Is.LessThanOrEqualTo(TreeToneRules.MaxBarkLit),
+                    $"{species} bark '{bark.Name}' lit face is luminance {lit:0.0}");
+            }
+        }
+
+        /// <summary>
+        /// The two faces of a tone must be a step apart, and the size of the step is taken from the
+        /// art rather than from taste. Too small and the tree is a flat silhouette; too large and
+        /// it is a dark tree wearing a bright cap, which is the shape of the reported fault.
+        ///
+        /// <para><b>Bark and leaf get different bands, and that was measured rather than decided.</b>
+        /// Holding bark to the leaf band failed six entries including three of the owner's own, and
+        /// the art sides with the owner: the pack's canopy cells are a step of 1.21 apart while its
+        /// trunk and branch-stub cells are <b>1.68</b>. A trunk is a cylinder with a lit side; a
+        /// canopy is a cloud of leaves and has no such thing.</para>
+        /// </summary>
+        [Test]
+        public void TheLitFaceIsAStepAboveTheShadedOne()
+        {
+            foreach (TreeSpecies species in new[] { TreeSpecies.Conifer, TreeSpecies.Broadleaf })
+            {
+                foreach (TreeTone tone in TreePalette.Leaves(species))
+                {
+                    float step = TreeToneRules.Step(tone);
+                    Assert.That(step, Is.GreaterThanOrEqualTo(TreeToneRules.MinStep)
+                        .And.LessThanOrEqualTo(TreeToneRules.MaxLeafStep),
+                        $"{species} leaf '{tone.Name}' has a step of {step:0.00}");
+                }
+
+                foreach (TreeTone tone in TreePalette.Barks(species))
+                {
+                    float step = TreeToneRules.Step(tone);
+                    Assert.That(step, Is.GreaterThanOrEqualTo(TreeToneRules.MinStep)
+                        .And.LessThanOrEqualTo(TreeToneRules.MaxBarkStep),
+                        $"{species} bark '{tone.Name}' has a step of {step:0.00}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// A leaf must not be grey. The reported fault was not only about brightness — a sage
+        /// highlight is pale <em>and</em> nearly colourless, and a colourless canopy reads as a dead
+        /// tree rather than as a different species.
+        /// </summary>
+        [Test]
+        public void NoLeafIsGrey()
+        {
+            foreach (TreeSpecies species in new[] { TreeSpecies.Conifer, TreeSpecies.Broadleaf })
+            foreach (TreeTone leaf in TreePalette.Leaves(species))
+            {
+                Assert.That(TreeToneRules.Chroma(leaf.Lit), Is.GreaterThanOrEqualTo(24),
+                    $"{species} leaf '{leaf.Name}' lit face is nearly grey");
+                Assert.That(TreeToneRules.Chroma(leaf.Shaded), Is.GreaterThanOrEqualTo(20),
+                    $"{species} leaf '{leaf.Name}' shaded face is nearly grey");
+            }
         }
 
         [Test]
@@ -187,29 +403,10 @@ namespace Odyssey.Tests.Presentation
             for (int i = 0; i < TreePalette.Count; i++)
             {
                 TreeTheme t = TreePalette.At(i);
-                Assert.That(t.DeepCanopy.Packed, Is.Not.EqualTo(t.DeepBark.Packed), t.Name);
-                Assert.That(t.FreshLeaf.Packed, Is.Not.EqualTo(t.DeepCanopy.Packed), t.Name);
-                Assert.That(t.WarmTrunk.Packed, Is.Not.EqualTo(t.DeepBark.Packed), t.Name);
+                Assert.That(t.Leaf.Lit.Packed, Is.Not.EqualTo(t.Bark.Lit.Packed), t.Name);
+                Assert.That(t.Leaf.Shaded.Packed, Is.Not.EqualTo(t.Bark.Shaded.Packed), t.Name);
             }
         }
-
-        /// <summary>
-        /// The lighter of each pair really is lighter. The shader paints the fresh leaf on the
-        /// cluster the probe found at the top of the tree and the deep canopy below it, so a theme
-        /// whose "fresh" colour were the darker of the two would light the tree from underneath.
-        /// </summary>
-        [Test]
-        public void TheHighlightIsLighterThanWhatItSitsOn()
-        {
-            for (int i = 0; i < TreePalette.Count; i++)
-            {
-                TreeTheme t = TreePalette.At(i);
-                Assert.That(Luminance(t.FreshLeaf), Is.GreaterThan(Luminance(t.DeepCanopy)), t.Name + " leaf");
-                Assert.That(Luminance(t.WarmTrunk), Is.GreaterThan(Luminance(t.DeepBark)), t.Name + " bark");
-            }
-        }
-
-        static float Luminance(Rgb24 c) => 0.299f * c.R + 0.587f * c.G + 0.114f * c.B;
 
         /// <summary>
         /// The rectangles must not overlap. The shader repaints in a fixed order and would hand a
@@ -238,9 +435,9 @@ namespace Odyssey.Tests.Presentation
         }
 
         /// <summary>
-        /// Every slot a tree can wear has somewhere to be painted, except the broadleaf's second
-        /// bark colour, which the art does not have — recorded here rather than left as a silent
-        /// hole, so that adding the cell later is a test that changes rather than a discovery.
+        /// Every slot a tree can wear has somewhere to be painted, except the broadleaf's lit bark,
+        /// which the art does not have — recorded here rather than left as a silent hole, so that
+        /// adding the cell later is a test that changes rather than a discovery.
         /// </summary>
         [Test]
         public void EverySlotButOneHasACellToPaint()

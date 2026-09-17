@@ -233,10 +233,14 @@ namespace Odyssey.Presentation.Rendering
             Write(material, LeafDeepRectIds, cells.LeafDeep);
             Write(material, LeafFreshRectIds, cells.LeafFresh);
 
-            material.SetColor(BarkDeepColourId, SkirtLayout.Mute(Colour(look.DeepBark), muteStep));
-            material.SetColor(BarkWarmColourId, SkirtLayout.Mute(Colour(look.WarmTrunk), muteStep));
-            material.SetColor(LeafDeepColourId, SkirtLayout.Mute(Colour(look.DeepCanopy), muteStep));
-            material.SetColor(LeafFreshColourId, SkirtLayout.Mute(Colour(look.FreshLeaf), muteStep));
+            // Shaded face to the smaller cell, lit face to the larger one: the probe measures the
+            // broadleaf's upper canopy at half the mesh, so the lit colour is what the tree reads
+            // as and the shaded one is the underside. Naming them mass and accent, which the first
+            // version did, is what put a pale highlight over half a tree.
+            material.SetColor(BarkDeepColourId, SkirtLayout.Mute(Colour(look.Bark.Shaded), muteStep));
+            material.SetColor(BarkWarmColourId, SkirtLayout.Mute(Colour(look.Bark.Lit), muteStep));
+            material.SetColor(LeafDeepColourId, SkirtLayout.Mute(Colour(look.Leaf.Shaded), muteStep));
+            material.SetColor(LeafFreshColourId, SkirtLayout.Mute(Colour(look.Leaf.Lit), muteStep));
 
             // The depth shade, carried the way every other bucket carries it. The shader applies
             // it after the repaint, so a tree on a shaded layer is a darker tree rather than a

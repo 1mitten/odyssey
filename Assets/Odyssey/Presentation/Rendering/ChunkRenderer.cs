@@ -465,7 +465,7 @@ namespace Odyssey.Presentation.Rendering
                 // primitive there is no atlas to repaint and the tint is the only colour there
                 // is, so a stand-in box takes the theme's canopy and a clone without the packs
                 // gets a green wood instead of a grey one.
-                tint = fallback ? TreeMaterials.Colour(TreePalette.At(value).DeepCanopy) : Color.white;
+                tint = fallback ? TreeMaterials.Colour(TreePalette.At(value).Leaf.Lit) : Color.white;
                 emission = Color.black;
             }
             else if (TintCode.IsTerrain(tintCode))
