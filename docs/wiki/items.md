@@ -15,7 +15,7 @@ Things a colonist carries, wears or fights with, as distinct from the bulk commo
 | **Hammer** | `ui.item.hammer` | Construction tool | sheet 05 (tools and weapons), high | M3 |
 | **Wrench** | `ui.item.wrench` | Machinery and repair | sheet 01 (raw materials), high | M3 |
 | **Drill** | `ui.item.drill` | Powered cutting. Fast salvage | sheet 05 (tools and weapons), high | M3 |
-| **Axe** | `ui.item.axe` | Cutting, and felling | sheet 05 (tools and weapons), high | M3 |
+| **Axe** | `ui.item.axe` | Cutting, and chopping | sheet 05 (tools and weapons), high | M3 |
 | **Cutting torch** | `ui.item.cutter` | Opens a hull. Opens a wall | sheet 05 (tools and weapons), low | M3 |
 | **Sidearm** | `ui.item.pistol` | Short range, always to hand | sheet 05 (tools and weapons), high | M3 |
 | **Rifle** | `ui.item.rifle` | The standard ranged weapon | sheet 05 (tools and weapons), med | M3 |

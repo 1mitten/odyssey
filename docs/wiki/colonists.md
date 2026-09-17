@@ -45,7 +45,7 @@ Who is on the map, what they need, how they feel and what they are doing right n
 | **Hauling** | `ui.status.hauling` | Carrying something to storage | sheet 08 (salvage gear), low | M2 |
 | **Building** | `ui.status.building` | Working a frame or blueprint | sheet 06 (action tiles), med | M2 |
 | **Mining** | `ui.status.mining` | Cutting into rubble, concrete or rock | sheet 05 (tools and weapons), high | M2 |
-| **Felling** | `ui.status.felling` | Cutting a tree down for wood <br>**Needs:** an axe swung at a trunk | no art | M3 |
+| **Chopping** | `ui.status.felling` | Cutting a tree down for wood <br>**Needs:** an axe swung at a trunk | no art | M3 |
 | **Sleeping** | `ui.status.sleeping` | Asleep, and should stay that way | sheet 08 (salvage gear), high | M2 |
 | **Eating** | `ui.status.eating` | Taking a meal | sheet 02 (food), high | M2 |
 | **Idle** | `ui.status.idle` | Nothing to do. Usually a priorities problem | sheet 06 (action tiles), med | M2 |
