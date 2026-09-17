@@ -173,6 +173,37 @@ takes it away, and rock mined out does the same.
 `PawnContext.Support` is the seam — the solver, optional and null in a bare fixture, exactly as
 `Designations`, `Construction` and `Chunks` already are.
 
+## 7a. Where a colonist stands to build one — found by building it
+
+The design above was complete and the feature still did not work: the journey test sat through
+20,000 ticks and nobody built anything. **A slab has no neighbours on its own layer to stand on
+until there is already a floor up there**, so `FellJobDriver.StandBeside` answered -1 for the first
+slab of any storey, the work giver never offered the job, and the order sat there for ever. Nothing
+logged, nothing failed — exactly the silent refusal `15-building.md` §6 was written about.
+
+`BuildWorkGiver.StandToBuild` is the fix and it is mining's envelope rather than felling's: beside
+it on its own layer first — so extending an existing floor still works from that floor — then
+beside-and-one-below, then directly underneath. *A plank goes overhead exactly as a pick does*,
+which is the argument mining's `layersBelow: 1` already made. `BuildJobDriver`'s working toil takes
+the same envelope, because a stance the work toil then rejects is a colonist who walks to a site and
+turns round again.
+
+The deliverer uses the same function, for the same reason: material for a slab has to be put down
+somewhere a colonist can reach.
+
+## 7b. Binding the colony to the solver
+
+`SupportSystem` finds the collapses and needed a colony to drop things into. Seventeen places build
+one — the world, the screenshot harness, eleven editor probes, four test fixtures — and every one of
+them hands it to `ColonyComposition.AddColony`, which is the one place that also holds the
+`PawnContext`. So it is **bound there rather than constructed with**: a constructor argument would
+have been seventeen edits and seventeen chances to pass null, and this way a colony cannot be
+assembled without it. It is the argument that file already makes about the construction grid.
+
+The first version did take a constructor argument, and the consequence was visible immediately: two
+tests failed saying nothing fell and no rubble landed, because the one construction site that
+mattered had not been told.
+
 ## 8. Test procedure
 
 *Fast tier, Sim*, and every one of these is a claim that can fail:
@@ -210,6 +241,15 @@ and watch the floor and whoever was on it come down.
 - **Rubble draws as a terrain colour**, not as a heap. It is in the palette and it is not art.
 - **A slab with a hole in it** — `SM_Bld_Base_Floor_Hole_01` — is what a stair or ladder through a
   floor will want, and nothing needs it yet.
+- **What the build cursor names when the player orders a floor over a drop.** The picker answers a
+  click with the surface under it, which for a pit is the bottom of the pit — so a player standing
+  on the rim and clicking into the hole would order a slab on the floor of it rather than at the rim
+  they meant. Ordering along an existing edge works, because the cell the cursor lands on is beside
+  something solid. This is a cursor question rather than a simulation one: the rule here is settled
+  and the interface has to name the cell the player means. **Nobody has pressed Play on it.**
+- **`Thought_Fell` is not in the wiki**, because no thought is. The registry covers what a player
+  reads as a name; mood thoughts are surfaced as text nobody has designed yet, and the day they get
+  a panel is the day the whole thought table wants rows.
 
 ## 10. The art
 

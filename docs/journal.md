@@ -2273,3 +2273,72 @@ work itself.
     down, and is deliberately inert with nothing armed, reserved for this), and step 4, the menu
     itself. Nobody has pressed Play on a forced order, and nothing in the running game can send one
     yet.
+
+- **U29 floors and collapse, 2026-09-17.** The unit the project exists to prove, and on inspection
+  mostly wiring: the support physics was built in M1 and switched off. `SupportSolver` had computed
+  collapses since then, `SupportSystem` had deferred them, and the lambda at the end of it was
+  empty with `/* M3: rubble and fall damage */` written inside it. Design, and the eleven owner
+  decisions behind it, are `docs/design/17-floors-and-collapse.md`.
+
+  - **A floor is one field on a `BuildingDef`.** `Building_Floor` is `Building_Wall` with
+    `slab = true`, through the same order → deliver → work → raise. `Raise` writes
+    `CoreContent.SlabBuilt` and the material into the cell's lower boundary instead of appending an
+    edifice, and that is the whole difference. The claim is testable rather than rhetorical: the
+    journey test is the wall's journey with one word changed.
+  - **`SlabBuilt` is a fourth slab kind, and it is `PlacedEdifice.Built`'s argument one level
+    down.** The three that existed are all the generator's — structural decks, plaza decks, roofs —
+    so a fourth is what makes "take our own floors apart and not the ruined city's" a question that
+    can be asked. It cost no new state: `Floor[]` has always been saved and always been hashed.
+  - **Nothing in presentation changed to draw it**, which was luck worth noticing:
+    `WorldRenderModel.FloorModule` returns the stuff group's slab module for *any* non-zero floor
+    and never looks at the kind. A built floor draws in its own material's tint the moment it is
+    written, with no catalogue row and no mesher edit.
+  - **The support rule is now visible to the player rather than only to the solver.**
+    `SupportIfSlabAt` answers what a slab *would* have if one were built, reserving nothing, and
+    `Allows` refuses an order it says is zero. So a colonist bridges out from a wall as far as
+    support reaches and the next order is refused with a reason, instead of being accepted, walked
+    to, carried to, built, and collapsed on the tick it finished. **Nobody tuned that reach**: it is
+    `MaxSupport` seen sideways, which is why the test reads it off the solver rather than spelling
+    a 4.
+  - **The three omissions are closed together, as all three comments demanded.** `Raise`, `Demolish`
+    and `MineCell` each said support was deliberately not marked dirty, each named U29, and each
+    warned that the three should be wired at once rather than one of them quietly acquiring
+    behaviour the others lack. `PawnContext.Support` is the seam; `MarkStructureChanged` is the
+    call, and it marks the cell *and the one above it* because they are two different questions.
+  - **The design was complete and the feature still did not work.** The journey test sat through
+    20,000 ticks and nobody built anything: **a slab has no neighbours on its own layer to stand on
+    until there is already a floor up there**, so `StandBeside` answered -1 for the first slab of any
+    storey and the work giver never offered the job. Nothing logged and nothing failed — the exact
+    silent refusal `15-building.md` §6 was written about, found only because the test asserted a wall
+    went up rather than that a job started. `StandToBuild` reaches a slab from below as well, which
+    is mining's envelope and mining's argument: a plank goes overhead exactly as a pick does.
+  - **A second wiring fault, found the same way.** `SupportSystem` needed a `PawnContext` to drop
+    things into and took it as a constructor argument — and seventeen places build one, so the single
+    site that mattered was not told and two tests said, correctly, that nothing fell and no rubble
+    landed. It is bound in `ColonyComposition.AddColony` now, which is the one place holding both,
+    and a colony therefore cannot be assembled without it.
+  - **Rubble gave two long-dead flags their first readers.** `TerrainDef.buildable` had existed
+    since the tables were written and nothing read it; `Allows` reads it now and rubble sets it
+    false, which is the whole of "clear the mess first". `clearable` is new and set by rubble alone,
+    because `CanMine` wants solid terrain and a heap on a floor is not a face to cut — that is
+    U28's missing middle speed, "breach a slab, clear rubble, mine rock", landing with the unit
+    that first produces any rubble at run time.
+  - **Nobody is hurt by a fall, deliberately and temporarily.** `a-02` has the number —
+    `15 × layers^1.5` blunt on the bottom-facing parts — and it is calibrated against a part tree
+    with pain, shock and a 150 HP threshold, none of which exists. Applied to a single invented HP
+    pool the exponent means nothing, so it would be a number built in order to be thrown away.
+    `Thought_Fell` keeps the event legible meanwhile. **The cost is real and is written down rather
+    than glossed:** "pulling out the wrong pillar hurts somebody" is half of why collapse is
+    interesting, and today it does not.
+  - **Content re-baked deliberately, three fingerprints, one line each** with what moved written
+    beside it: the building table (the floor), the pawn table (the thought) and the terrain table
+    (rubble's two flags). **No golden moved**, because no golden world has a slab in it — mining
+    now marks support dirty and there was nothing anywhere for it to bring down.
+  - **Verified:** fast tier **555 Sim + 191 Hud** (13 new, `FloorsAndCollapseTests`), Long tier
+    **19**, both content gates `--check` clean — the floor tool reuses the catalogue's existing
+    `ui.arch.tool.roof` key and only its label moved, because `icon-map.csv` is keyed the same way
+    and a key is forever. **Not run:** the Unity tier, which this container has no Unity for.
+  - **Nobody has pressed Play on any of it**, and one thing waits on that: the build cursor names
+    the surface under a click, which for a pit is the bottom of the pit, so ordering a floor *over* a
+    drop may name a cell the player did not mean. Ordering along an existing edge is unaffected. It
+    is a cursor question, not a simulation one.

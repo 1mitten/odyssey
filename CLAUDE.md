@@ -120,6 +120,19 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   query — so the offered path and the forced path cannot come to disagree. **Steps 3 and 4 are not
   started** (the right-click/drag split, and the context-menu panel), so nothing in the running game
   can send one yet and nobody has pressed Play on it.
+- **U29 is built — floors, roofs and collapse** (2026-09-17), the unit the plan calls the one the
+  project exists to prove. A floor is `Building_Wall` with one field changed (`BuildingDef.slab`)
+  through the same pipeline; a slab is written to `Floor[cell]` as `CoreContent.SlabBuilt`, which is
+  `PlacedEdifice.Built`'s argument one level down and costs no new state. **The support physics was
+  already built and switched off**: `SupportSolver` had computed collapses since M1 and the deferred
+  lambda that should have acted on them was empty. It acts now — what stood on a falling slab drops
+  to the first real floor below, keeps a memory of it, and the debris lands as rubble that must be
+  cleared before anything is rebuilt. **An order that could not stand is refused**
+  (`SupportIfSlabAt`), so a bridge reaches as far as `S_max` and no further, and the three
+  "support is deliberately not marked dirty" comments in `Raise`, `Demolish` and `MineCell` are
+  closed together as all three demanded. **Fall damage is deferred and said so**: `a-02` has the
+  number and there is no health model to apply it to. Design and the eleven owner decisions:
+  `docs/design/17-floors-and-collapse.md`. **Nobody has pressed Play on it.**
 - **Work reaches `main` only through a pull request** with both tiers green, one approving review
   and the branch up to date. Branch protection enforces it, agents included. There is no long-lived
   feature branch — `claude/*` branches are per-change and short-lived.
@@ -254,7 +267,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **542 Sim + 191 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **555 Sim + 191 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
@@ -359,9 +372,17 @@ no region spans two layers.
 
 ### Known gaps
 
-Felled trees, mined cells and building sites are not in the save (the designation grid is not
-saved; the construction grid is). Mining collapses nothing. There is no fog of war, so a sealed
-cavern is visible if the player scrolls the layer down.
+**Mining collapses things now** (U29, 2026-09-17) — that line said it did not, and the three places
+that deliberately declined to mark support dirty have all been wired. What is still missing is the
+*injury*: a colonist rides a floor down, keeps a memory of it and is otherwise unharmed, because
+there is no health model for `a-02`'s fall-damage number to act on.
+
+There is no fog of war, so a sealed cavern is visible if the player scrolls the layer down.
+
+**The save gap in this section was stale and is corrected**: the designation grid *is* an
+`ISaveable`, with `SaveKey = "odyssey.designations"`, and it is in `ColonyWorld.SaveComponents`
+beside the construction grid. Felled trees and mined cells travel in `GridSaveSection`, and what
+stands in a cell in `EdificeSaveSection` (below).
 
 **And it covers what stands on the world, since 2026-09-17** — one level down from OQ-50 and found
 the same way, by a test written to fail. `List<PlacedEdifice>` was owned by worldgen and by nothing
