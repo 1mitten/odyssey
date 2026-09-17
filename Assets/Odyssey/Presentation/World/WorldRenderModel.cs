@@ -263,6 +263,16 @@ namespace Odyssey.Presentation.World
         public int FloorModule(int index) =>
             _floor[index] == CoreContent.SlabNone ? 0 : _groups[_slot[index]].Slab;
 
+        /// <summary>
+        /// The slab module this cell <em>would</em> draw with, whether or not it holds one.
+        ///
+        /// <para><see cref="FloorModule"/>'s twin for the build cursor: that one answers "what is
+        /// drawn here" and returns nothing for an empty cell, which is precisely the cell a ghost
+        /// is being drawn in (`19-build-cursor.md`). Same module, same group, one guard
+        /// removed.</para>
+        /// </summary>
+        public int SlabModuleFor(int index) => _groups[_slot[index]].Slab;
+
         /// <summary>The module index for the natural material in this cell, or 0 for open air.</summary>
         public int TerrainModule(int index) => _terrainModule[_terrain[index]];
 

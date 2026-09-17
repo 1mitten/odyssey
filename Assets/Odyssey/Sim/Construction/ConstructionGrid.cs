@@ -132,15 +132,10 @@ namespace Odyssey.Sim.Construction
             if (!ConstructionContent.IsBuilding(building)) return IntentRejection.NotPermitted;
             if (!ConstructionContent.IsBuildable(stuff)) return IntentRejection.NotPermitted;
 
-            // A click names a surface and an order names a cell, for a floor exactly as for a
-            // wall — only the surfaces differ. See StandingOn and StandingOver.
-            // A covering takes the WALL's lift, not the slab's: a click on grass names the ground
-            // block and paving goes in the air cell above it, which is exactly what StandingOn
-            // already does. Only structure is lifted over things that fill a cell (U42).
-            BuildingDef what = ConstructionContent.BuildingAt(building);
-            int index = what.slab && !what.covering
-                ? StandingOver(_grid.Index(cell), building)
-                : StandingOn(_grid.Index(cell));
+            // A click names a surface and an order names a cell, and which surface depends on what
+            // is armed. WhereItWouldLand is that one answer, public so the build cursor asks it
+            // rather than working it out again.
+            int index = WhereItWouldLand(_grid.Index(cell), building);
 
             if (_building[index] == building && _stuff[index] == stuff)
                 return IntentRejection.AlreadyInThatState;
@@ -182,6 +177,32 @@ namespace Odyssey.Sim.Construction
             Refund(index);
             Set(index, BuildingHandle.None, StuffHandle.None);
             return IntentRejection.None;
+        }
+
+        /// <summary>
+        /// Which cell an order named here would actually land in, without placing anything.
+        ///
+        /// <para><b>Public so the cursor can ask.</b> A build ghost has to be drawn where the thing
+        /// will end up, not where the pointer is, and there are three different lifts depending on
+        /// what is armed — a wall onto the ground it was clicked on, a slab onto whatever fills the
+        /// cell, paving into the air over the block. Working that out a second time in the renderer
+        /// is precisely how the cursor and the order came to disagree twice already, so they ask the
+        /// same method (`19-build-cursor.md` §6).</para>
+        ///
+        /// <para>Changes nothing and reserves nothing: it is the arithmetic <see cref="Place"/> does
+        /// on its first line, lifted out so that two callers cannot drift.</para>
+        /// </summary>
+        public int WhereItWouldLand(int index, int building)
+        {
+            if ((uint)index >= (uint)_grid.Size.CellCount) return index;
+
+            // A covering takes the WALL's lift, not the slab's: a click on grass names the ground
+            // block and paving goes in the air cell above it, which is exactly what StandingOn
+            // already does. Only structure is lifted over things that fill a cell (U42).
+            BuildingDef what = ConstructionContent.BuildingAt(building);
+            return what.slab && !what.covering
+                ? StandingOver(index, building)
+                : StandingOn(index);
         }
 
         /// <summary>
@@ -295,8 +316,84 @@ namespace Odyssey.Sim.Construction
         {
             if (_grid.Floor[index] != CoreContent.SlabNone) return false;
             if (_grid.HasFloor(index)) return false;
-            return _support == null || _support.SupportIfSlabAt(index) > 0;
+            if (_support == null) return true;
+            return _support.SupportIfSlabAt(index) > 0 || SupportedByWhatIsPlanned(index);
         }
+
+        /// <summary>
+        /// Would this slab stand once the slabs already <b>ordered</b> around it are built?
+        ///
+        /// <para><b>Without this you cannot roof a room in one gesture, and that is what the owner
+        /// hit</b> (2026-09-17): *"I wasn't able to create a slab across a house — it requires
+        /// blocks underneath."* Support crosses a slab and does not cross a hole, so before any of
+        /// a roof exists the only cells that answer yes are the ones touching a wall. Measured on a
+        /// 6 × 5 house: 28 of 30 cells took the order and the two in the middle refused, and on a
+        /// larger house the refusing middle is most of the roof. The player had to order a ring,
+        /// wait for colonists to build it, order the next ring, and wait again.</para>
+        ///
+        /// <para><b>The guarantee is kept rather than traded away.</b> The point of checking support
+        /// at order time is that a colony never carries material across the map to build something
+        /// that falls on the tick it is finished, and a bare "is a neighbour planned?" would throw
+        /// that away — twenty cells dragged off a wall would all be accepted and sixteen of them
+        /// would collapse. So this walks outward over slabs that exist <em>or are ordered</em>,
+        /// spending one point of support per step exactly as the solver does, and answers yes only
+        /// if a real source is reachable within budget. A bridge still stops at
+        /// <c>S_max</c>; a roof orders in one drag.</para>
+        ///
+        /// <para>Bounded by <c>MaxSupport</c> steps on one layer, so it visits a few dozen cells at
+        /// worst and cannot walk the board.</para>
+        /// </summary>
+        bool SupportedByWhatIsPlanned(int index)
+        {
+            int budget = _support!.MaxSupport;
+            if (budget <= 1) return false;
+
+            GridSize size = _grid.Size;
+            int layerBase = index / size.LayerStride * size.LayerStride;
+
+            _plannedFrontier.Clear();
+            _plannedSeen.Clear();
+            _plannedFrontier.Add(index);
+            _plannedSeen.Add(index);
+
+            // One ring at a time, so the first source found is the nearest and the budget spent is
+            // the distance travelled.
+            for (int step = 1; step < budget; step++)
+            {
+                int count = _plannedFrontier.Count;
+                for (int f = 0; f < count; f++)
+                {
+                    CellRef at = size.FromIndex(_plannedFrontier[f]);
+                    for (int d = 0; d < 4; d++)
+                    {
+                        int x = at.X + (d == 0 ? -1 : d == 1 ? 1 : 0);
+                        int z = at.Z + (d == 2 ? -1 : d == 3 ? 1 : 0);
+                        if (!size.Contains(x, z, at.Y)) continue;
+
+                        int next = size.Index(x, z, at.Y);
+                        if (next < layerBase || next >= layerBase + size.LayerStride) continue;
+                        if (!_plannedSeen.Add(next)) continue;
+
+                        // A real source: something already holding this boundary up. Reached in
+                        // `step` moves, so it can spare `support - step` points.
+                        if (_support.SupportIfSlabAt(next) - step > 0) return true;
+
+                        // Otherwise it is only worth walking through if a slab will be there.
+                        if (_building[next] != BuildingHandle.None
+                            && ConstructionContent.BuildingAt(_building[next]).slab)
+                            _plannedFrontier.Add(next);
+                    }
+                }
+
+                _plannedFrontier.RemoveRange(0, count);
+                if (_plannedFrontier.Count == 0) return false;
+            }
+
+            return false;
+        }
+
+        readonly List<int> _plannedFrontier = new List<int>();
+        readonly HashSet<int> _plannedSeen = new HashSet<int>();
 
         /// <summary>
         /// Whether a <b>covering</b> may be laid here: paving, on ground that is already there.

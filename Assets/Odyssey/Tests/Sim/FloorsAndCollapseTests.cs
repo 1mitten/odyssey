@@ -172,6 +172,88 @@ namespace Odyssey.Tests.Sim
                 "a wall ordered on a wall is refused: only a slab goes on top of one");
         }
 
+        /// <summary>
+        /// <b>A roof goes on in one drag.</b>
+        ///
+        /// <para>The owner's report: *"I wasn't able to create a slab across a house — it requires
+        /// blocks underneath."* Support crosses a slab and does not cross a hole, so before any of
+        /// a roof exists the only cells that answered yes were the ones touching a wall. Measured on
+        /// this very house: 28 of 30 taken and the two in the middle refused, and on a larger house
+        /// the refusing middle is most of the roof. The player had to order a ring, wait for it to
+        /// be built, order the next, and wait again.</para>
+        ///
+        /// <para>Placed cell by cell in row order, because that is what a drag commits — not
+        /// <c>Allows</c> in a loop, which would not exercise the thing that changed.</para>
+        /// </summary>
+        [Test]
+        public void AWholeRoofCanBeOrderedInOneDrag()
+        {
+            ColonyWorld colony = Board();
+            CellRef start = colony.Start;
+            const int wide = 6, deep = 5;
+
+            for (int i = 0; i < wide; i++)
+            for (int j = 0; j < deep; j++)
+            {
+                if (i != 0 && j != 0 && i != wide - 1 && j != deep - 1) continue;
+                int cell = Size.Index(start.X + i, start.Z + j, start.Y);
+                Assume.That(colony.Construction.Place(Size.FromIndex(cell), BuildingHandle.Wall, StuffHandle.Wood),
+                    Is.EqualTo(IntentRejection.None));
+                colony.Construction.Raise(colony.Pawns, cell);
+            }
+
+            colony.World.Tick();
+
+            int taken = 0;
+            for (int j = 0; j < deep; j++)
+            for (int i = 0; i < wide; i++)
+            {
+                var roof = new CellRef(start.X + i, start.Z + j, start.Y + 1);
+                if (colony.Construction.Place(roof, BuildingHandle.Floor, StuffHandle.Wood)
+                    == IntentRejection.None) taken++;
+            }
+
+            Assert.That(taken, Is.EqualTo(wide * deep),
+                "every cell of the roof must take the order in one gesture, middle included");
+        }
+
+        /// <summary>
+        /// <b>And the guarantee that must not be traded away for it.</b> A bridge dragged off a
+        /// lone wall into open air still runs out where the support rule says, rather than
+        /// accepting everything because its neighbour happened to be ordered a moment earlier.
+        ///
+        /// <para>That is the difference between walking outward over planned slabs <em>spending a
+        /// point of support per step</em> and simply asking whether a neighbour is planned. The
+        /// cheap version would accept twenty cells and drop sixteen of them on the tick they were
+        /// finished, which is the exact fault checking support at order time exists to prevent.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void APlannedBridgeStillRunsOutAtTheSupportRule()
+        {
+            ColonyWorld colony = Board();
+            int ground = GroundLevelCellNear(colony, 4);
+            Assume.That(ground, Is.GreaterThanOrEqualTo(0));
+
+            RaiseNow(colony, ground, BuildingHandle.Wall);
+            colony.World.Tick();
+
+            int reach = colony.Pawns.Support!.MaxSupport;
+            int first = Above(ground);
+
+            int bridged = 0;
+            for (int k = 0; k < reach + 6; k++)
+            {
+                if (colony.Construction.Place(
+                        Size.FromIndex(first + k), BuildingHandle.Floor, StuffHandle.Wood)
+                    != IntentRejection.None) break;
+                bridged++;
+            }
+
+            Assert.That(bridged, Is.EqualTo(reach),
+                "a planned bridge reaches exactly as far as a built one, and no further");
+        }
+
         // ---- paving: a floor laid on ground that is already there (U42) ----------------------
 
         /// <summary>

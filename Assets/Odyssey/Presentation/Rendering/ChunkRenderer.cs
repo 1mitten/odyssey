@@ -1115,6 +1115,64 @@ namespace Odyssey.Presentation.Rendering
         /// three bars meeting at a corner close it rather than leaving a notch. The whole box goes
         /// in one instanced submission, as the bracket does.</para>
         /// </summary>
+        /// <summary>
+        /// A <b>ghost of a thing that does not exist yet</b>: the module a building would be drawn
+        /// with, placed where it would stand, translucent.
+        ///
+        /// <para><b>The first cursor in this project that is the shape of the thing rather than a
+        /// marker standing for it.</b> Everything else here draws a bracket, a box or a plate; the
+        /// owner reported that they could not tell what they were about to build or where it would
+        /// land, and a box cannot answer the first half of that (`19-build-cursor.md`).</para>
+        ///
+        /// <para><b>Translucency is not decoration, it is the existing vocabulary.</b> A storey
+        /// above the slice is ghosted through this same <see cref="MaterialCache"/> path, so the
+        /// player has already been taught that see-through means "there, but not your business
+        /// right now" — and a thing that has not been built yet is the same sentence.</para>
+        ///
+        /// <para><b>The colour carries whether it can be built</b>, and green is deliberately not
+        /// used for yes. A legal ghost wears its own material's tint, which is the affirmative
+        /// signal: it looks like the wooden wall you asked for. Only the refusal needs a colour of
+        /// its own, and it is the red this interface already uses for "this does nothing".</para>
+        ///
+        /// <para>One submission per part of the module, which for everything a player can build is
+        /// one or two. Nothing here touches a chunk batch — a ghost is not in the world and must
+        /// never be meshed into it.</para>
+        /// </summary>
+        public void DrawGhost(int module, Color colour, in Matrix4x4 placement)
+        {
+            if (module <= 0) return;
+
+            var parts = _model.Library[module].Parts;
+            for (int p = 0; p < parts.Length; p++)
+            {
+                ModulePart part = parts[p];
+                Material material = _materials.Get(
+                    part.Material, colour, colour * GhostGlow, ghost: true, alpha: colour.a);
+
+                var rp = new RenderParams(material)
+                {
+                    layer = GameObjectLayer,
+                    shadowCastingMode = ShadowCastingMode.Off,
+                    receiveShadows = false,
+                };
+
+                if (SubmitToGpu)
+                    Graphics.RenderMesh(rp, part.Mesh, part.Submesh, placement * part.Local);
+                DrawCalls++;
+                InstancesDrawn++;
+            }
+        }
+
+        /// <summary>
+        /// How much the ghost lifts its own emission, so it stays readable against bright ground.
+        ///
+        /// <para>Lower than <see cref="BracketGlow"/>: a bracket is a line and has to compete with
+        /// whatever it is drawn over, while a ghost is a solid volume and one that glows reads as a
+        /// building already standing there — which is the one way this cursor could mislead rather
+        /// than help (`19-build-cursor.md` §8).</para>
+        /// </summary>
+        const float GhostGlow = 0.45f;
+
         public void DrawWireBox(Vector3 centre, Vector3 size, Color colour)
         {
             Material material = BracketMaterial(colour);

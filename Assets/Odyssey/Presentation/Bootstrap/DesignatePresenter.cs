@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
+using Odyssey.Sim;
 using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
@@ -76,6 +77,9 @@ namespace Odyssey.Presentation.Bootstrap
             _rig.ToolDrag += OnToolDrag;
             _rig.ToolDragging += OnToolDragging;
             _rig.ToolDragCancelled += OnToolDragCancelled;
+            _rig.ToolHover += OnToolHover;
+            _rig.ToolHoverLost += OnToolHoverLost;
+            _rig.ToolClick += OnToolClick;
             _rig.WorldRightClicked += OnWorldRightClicked;
         }
 
@@ -85,6 +89,9 @@ namespace Odyssey.Presentation.Bootstrap
             _rig.ToolDrag -= OnToolDrag;
             _rig.ToolDragging -= OnToolDragging;
             _rig.ToolDragCancelled -= OnToolDragCancelled;
+            _rig.ToolHover -= OnToolHover;
+            _rig.ToolHoverLost -= OnToolHoverLost;
+            _rig.ToolClick -= OnToolClick;
             _rig.WorldRightClicked -= OnWorldRightClicked;
             if (_rig.WorldToolArmed != null) _rig.WorldToolArmed = null;
         }
@@ -137,6 +144,45 @@ namespace Odyssey.Presentation.Bootstrap
         void OnToolDragCancelled() => Director.Abandon();
 
         /// <summary>
+        /// The pointer moved over a cell with a tool armed and no button down.
+        ///
+        /// <para><b>A hover is a one-cell drag that has not started</b>, and it is resolved through
+        /// the director for exactly that reason: the layer rule, the lift and the cell the order
+        /// will land in are all decided in one place, so the ghost the player sees and the site they
+        /// get cannot come to disagree. That disagreement is the fault this line of work has now hit
+        /// three times (`19-build-cursor.md` §6).</para>
+        /// </summary>
+        void OnToolHover(CellRef cell)
+        {
+            TellTheDirectorWhichLayerItIsWorkingOn();
+
+            // A box anchored by a click follows the pointer with nothing held, which is the whole
+            // point of the gesture: the hover IS the drag (owner, 2026-09-17).
+            if (Director.AwaitingSecondClick) Director.DragTo(cell);
+            else Director.HoverAt(cell);
+        }
+
+        void OnToolHoverLost() => Director.HoverNowhere();
+
+        /// <summary>
+        /// A click on the world with a tool armed: anchor a run, or finish the one in hand.
+        ///
+        /// <para><b>Click, move, click</b> — the default gesture. The director decides which of the
+        /// two this click is, because it is the thing that knows whether a box is already open, and
+        /// it hands back the cells when the click completed one. Holding and dragging still works
+        /// and still arrives through <see cref="OnToolDrag"/>: the two gestures share a box and
+        /// differ only in what ends it.</para>
+        /// </summary>
+        void OnToolClick(CellRef cell)
+        {
+            var world = _bootstrap?.World;
+            if (world == null) return;
+
+            TellTheDirectorWhichLayerItIsWorkingOn();
+            Submit(world, Director.Tool, Director.Click(cell));
+        }
+
+        /// <summary>
         /// Right-click on the world: put the tool down, and nothing else.
         ///
         /// <para>A player holding a tool has one hand on the mouse and reaches for the nearest way
@@ -154,6 +200,12 @@ namespace Odyssey.Presentation.Bootstrap
         void OnWorldRightClicked()
         {
             if (Director.Tool == DesignateTool.None) return;
+
+            // One press, one step of unwinding (owner, 2026-09-17). A half-drawn run is thrown
+            // away and the tool stays in hand, so a misjudged anchor costs one click rather than a
+            // trip back to the palette; only when there is nothing left to cancel does the same
+            // button put the tool down. It is the order the Escape key already follows.
+            if (Director.CancelPending()) return;
             PutToolAway();
         }
 
@@ -220,7 +272,19 @@ namespace Odyssey.Presentation.Bootstrap
             TellTheDirectorWhichLayerItIsWorkingOn();
             if (!Director.Dragging && !Director.Begin(anchor)) return;
             Director.DragTo(head);
-            IReadOnlyList<CellRef> cells = Director.Commit();
+            Submit(world, tool, Director.Commit());
+        }
+
+        /// <summary>
+        /// Turn a committed box into intents.
+        ///
+        /// <para>Shared by the two gestures — held-and-dragged, and click-move-click — so that the
+        /// way a run was drawn cannot change what it orders. They differ only in what ends the box;
+        /// everything after that is one path (owner, 2026-09-17).</para>
+        /// </summary>
+        void Submit(SimWorld world, DesignateTool tool, IReadOnlyList<CellRef> cells)
+        {
+            if (cells.Count == 0) return;
 
             // Cancel is two intents, because there are two kinds of order and the player is holding
             // one rubber. A cell cannot carry both a designation and a building site, so exactly

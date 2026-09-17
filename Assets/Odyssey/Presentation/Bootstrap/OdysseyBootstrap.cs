@@ -739,10 +739,18 @@ namespace Odyssey.Presentation.Bootstrap
         /// answers, and one bar would merge them (<c>SiteView</c> says the same thing from the
         /// simulation's side).</para>
         ///
-        /// <para>Deliberately a mark and a slab rather than a ghost of the finished wall. A ghost
-        /// wants the mesher to place a module it has not been asked for, which is the mesh
-        /// contributor seam (OQ-46) and a larger change than this; the mark and the fill are the
-        /// precedent standing orders already set, cost one instanced cube each, and read.</para>
+        /// <para><b>A ghost of the finished thing, since 2026-09-17.</b> This used to be a mark and
+        /// a fill and nothing else, and the reason written here was that "a ghost wants the mesher
+        /// to place a module it has not been asked for". That reason has gone:
+        /// <see cref="ChunkRenderer.DrawGhost"/> was built for the build cursor and places a module
+        /// without touching the mesher or a chunk batch at all. The owner asked for the two to
+        /// match — *"keep the same selection tool graphics, wall stays the wall"* — and they are
+        /// now literally the same call, so what you saw under the pointer is what stands on the
+        /// board while it waits.</para>
+        ///
+        /// <para>The mark stays underneath it. A ghost says <em>what</em> and the plate says
+        /// <em>which cell</em>, which is the thing that reads from directly above when a ghost is
+        /// foreshortened to nothing.</para>
         /// </summary>
         void DrawBuildingSites(WorldSnapshot snapshot)
         {
@@ -760,16 +768,60 @@ namespace Odyssey.Presentation.Bootstrap
                 CellRef cell = size.FromIndex(sites[i].CellIndex);
                 if (cell.Y < lowest || cell.Y > highest) continue;
 
-                // The outline first, because a site is a thing that is going to fill the cell and a
-                // plate on the floor reads as a path drawn on the grass. The plate stays under it:
-                // it is what says which cell, at a glance, from directly above.
+                // The mark first and underneath: a ghost seen from directly above is foreshortened
+                // to nothing, and the plate is what still says which cell.
                 _renderer.DrawCellOutline(cell, BuildOrderColour);
                 _renderer.DrawCellMark(cell, BuildOrderColour);
 
-                if (sites[i].Progress > 0)
+                DrawSiteGhost(cell, sites[i].Building, sites[i].Stuff);
+
+                // **A slab does not rise, so it must not be drawn rising** (owner, 2026-09-17:
+                // "these little gaps or white lines appearing on the builds"). DrawCellFill grows
+                // a bone-coloured box out of the cell floor because that is how a wall is built —
+                // and a floor's cell floor is exactly the plane the finished slab occupies, so a
+                // slab a few per cent built is a thin pale plate lying in the deck, reading as a
+                // bright hairline between the boards around it. Two contact sheets came back clean
+                // trying to reproduce it, and that was the evidence: both stamped finished slabs
+                // with no site in progress anywhere.
+                //
+                // The ghost above already says what is coming and where. A slab's progress is the
+                // one thing left unsaid, and a wrong picture is worse than none until there is a
+                // right one.
+                if (sites[i].Progress > 0 && !ConstructionContent.BuildingAt(sites[i].Building).slab)
                     _renderer.DrawCellFill(cell, sites[i].Progress / 255f, FrameColour);
             }
         }
+
+        /// <summary>
+        /// The waiting thing, drawn as the thing it will be.
+        ///
+        /// <para>The same module, tint and placement the build cursor uses, so a wall ordered looks
+        /// like the wall the cursor promised and a slab like the slab. Fainter than the cursor:
+        /// the cursor follows the pointer and has to be found instantly, while a site sits on the
+        /// board for as long as it takes a colonist to walk over, and a colony of them at cursor
+        /// weight would read as a finished town.</para>
+        /// </summary>
+        void DrawSiteGhost(CellRef cell, int building, int stuff)
+        {
+            if (_renderer == null || _model == null || _grid == null) return;
+            if (!ConstructionContent.IsBuilding(building)) return;
+
+            int index = _grid.Index(cell);
+            BuildingDef what = ConstructionContent.BuildingAt(building);
+            int module = what.slab ? _model.SlabModuleFor(index) : _model.WallCoreModule;
+
+            Color tint = StuffPalette.For(ConstructionContent.StuffAt(stuff).stuff, overArt: true);
+            tint.a = SiteGhostAlpha;
+
+            _renderer.DrawGhost(module, tint,
+                GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y)));
+        }
+
+        /// <summary>
+        /// How solid a waiting site is. Half the cursor's, for the reason above: one of these
+        /// follows your pointer and a hundred of them sit on the board at once.
+        /// </summary>
+        const float SiteGhostAlpha = 0.22f;
 
         /// <summary>
         /// Say out loud when the simulation refuses a command.
@@ -852,7 +904,11 @@ namespace Odyssey.Presentation.Bootstrap
             if (_renderer == null || _designate == null) return;
 
             DesignateDirector director = _designate.Director;
-            if (!director.TryPreview(out CellRef min, out CellRef max)) return;
+            if (!director.TryPreview(out CellRef min, out CellRef max))
+            {
+                DrawHoverGhost(director);
+                return;
+            }
 
             // Deconstruct is named rather than left to fall through. It fell through to the cancel
             // red, which happens to be the right hue and was still wrong: the cursor said "cancel"
@@ -900,6 +956,68 @@ namespace Odyssey.Presentation.Bootstrap
             for (int x = min.X; x <= max.X; x++)
                 _renderer.DrawCellMark(new CellRef(x, z, min.Y), tint);
         }
+
+        /// <summary>
+        /// The thing under the pointer, before any button has been pressed.
+        ///
+        /// <para><b>This is the answer to "I don't know what I'm going to build is going to
+        /// land"</b> (owner, 2026-09-17). Until now nothing at all was drawn between arming a tool
+        /// and pressing: the board looked exactly as it had, and a player found out where a wall
+        /// went by placing one. See `19-build-cursor.md`.</para>
+        ///
+        /// <para><b>Only for a build tool.</b> Mine, chop and cancel are verbs applied to what is
+        /// already there — the thing they act on is drawn, and a ghost of it would be a second copy
+        /// of something the player is already looking at.</para>
+        ///
+        /// <para>The cell comes from <see cref="DesignateDirector.Hover"/> rather than being worked
+        /// out here, so the ghost and the order it promises are the same object's answer.</para>
+        /// </summary>
+        void DrawHoverGhost(DesignateDirector director)
+        {
+            if (_renderer == null || _model == null || _grid == null) return;
+            if (director.Tool != DesignateTool.Build) return;
+
+            // Split from the line above rather than folded into it with `||`: definite assignment
+            // across a short-circuit and a negated pattern is the sort of thing that compiles on
+            // one C# version and not the next, and the owner has the editor open on this worktree.
+            if (director.Hover is not CellRef hover) return;
+
+            ConstructionGrid? sites = _colony?.Construction;
+            if (sites == null) return;
+
+            // Where the order would land, asked of the grid that will land it rather than guessed:
+            // a wall is lifted onto the ground it was clicked on, a slab onto whatever fills the
+            // cell, and paving into the air over the block. WhereItWouldLand is that one answer.
+            int cell = sites.WhereItWouldLand(_grid.Index(hover), director.Building);
+            CellRef at = _grid.Size.FromIndex(cell);
+
+            bool allowed = sites.Allows(cell, director.Building);
+            BuildingDef what = ConstructionContent.BuildingAt(director.Building);
+
+            // A slab draws with the slab module; everything that stands in a cell draws with the
+            // wall core, which is the cell-filling block. NOT the face panels a finished wall gets:
+            // those are chosen from what stands beside it, and a ghost has no neighbours because it
+            // is not in the grid yet (`19-build-cursor.md` section 2).
+            int module = what.slab ? _model.SlabModuleFor(cell) : _model.WallCoreModule;
+
+            // Its own material when it can be built, which is the affirmative signal - it looks
+            // like the wooden wall you asked for - and red when it cannot. Green is deliberately
+            // not used for yes: looking right IS yes.
+            Color tint = allowed
+                ? StuffPalette.For(ConstructionContent.StuffAt(director.Stuff).stuff, overArt: true)
+                : PreviewRefusedColour;
+            tint.a = GhostAlpha;
+
+            // Draped, like everything fixed to the grid, and placed where the mesher would put it.
+            _renderer.DrawGhost(module, tint, GroundRelief.Drape(CellMetrics.FloorCentre(at.X, at.Z, at.Y)));
+        }
+
+        /// <summary>
+        /// How solid the build ghost is. Enough to read its shape and its material, not enough to
+        /// be mistaken for a building that is already standing — which is the one way this cursor
+        /// could mislead rather than help.
+        /// </summary>
+        const float GhostAlpha = 0.45f;
 
         /// <summary>
         /// Which layer a build order dragged over this column would actually stand on.

@@ -158,6 +158,92 @@ namespace Odyssey.Tests.Hud
                 Assert.That(cell.Y, Is.EqualTo(3), $"{cell} left the anchor's layer");
         }
 
+        /// <summary>
+        /// <b>Click, move, click.</b> The default gesture (owner, 2026-09-17): one click anchors a
+        /// run, the pointer then moves with nothing held, and a second click places it.
+        ///
+        /// <para>Holding a button while steering a pointer precisely across a board drawn in
+        /// perspective is the awkward part of the old gesture, and it is awkward in a way practice
+        /// does not fix.</para>
+        /// </summary>
+        [Test]
+        public void AClickAnchorsARunAndASecondClickPlacesIt()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.Mine };
+
+            Assert.That(director.Click(At(2, 2)), Is.Empty, "the first click only anchors");
+            Assert.That(director.AwaitingSecondClick, Is.True);
+
+            // Free movement with nothing held.
+            director.DragTo(At(5, 2));
+            Assert.That(director.PreviewCount, Is.EqualTo(4), "the box follows the pointer");
+
+            IReadOnlyList<CellRef> placed = director.Click(At(5, 2));
+
+            Assert.That(placed.Count, Is.EqualTo(4), "and the second click places the run");
+            Assert.That(director.Dragging, Is.False, "which ends the box");
+            Assert.That(director.AwaitingSecondClick, Is.False);
+        }
+
+        /// <summary>
+        /// <b>The press that opens a box has usually opened it already.</b> While a button is down
+        /// the rig reports the pointer every frame, so by the time the release arrives a box exists
+        /// even for a click that never moved a pixel. If that counted as the <em>second</em> click,
+        /// every single click would place a one-cell order and the gesture would not exist.
+        /// </summary>
+        [Test]
+        public void APressThatAlreadyOpenedTheBoxStillOnlyAnchorsIt()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.Fell };
+
+            // What the rig does while the button is held, before the release.
+            director.Begin(At(3, 3));
+            director.DragTo(At(3, 3));
+            Assume.That(director.Dragging, Is.True);
+
+            Assert.That(director.Click(At(3, 3)), Is.Empty,
+                "the release of the anchoring press must not place anything");
+            Assert.That(director.AwaitingSecondClick, Is.True, "it is now waiting for the second");
+        }
+
+        /// <summary>
+        /// Both ways in still work and the hand decides which: a press that travels is a held drag
+        /// and is finished by letting go, exactly as it always has been. A player reaching for the
+        /// old gesture is never punished.
+        /// </summary>
+        [Test]
+        public void AHeldDragStillFinishesOnItsOwnRelease()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.Mine };
+
+            director.Begin(At(1, 1));
+            director.DragTo(At(3, 1));
+            IReadOnlyList<CellRef> cells = director.Commit();
+
+            Assert.That(cells.Count, Is.EqualTo(3), "a held drag commits on release as before");
+            Assert.That(director.AwaitingSecondClick, Is.False, "and leaves nothing waiting");
+        }
+
+        /// <summary>
+        /// Right-click, and Escape, unwind one step at a time: the half-drawn run goes first and
+        /// the tool stays in hand, so a misjudged anchor costs one click rather than a trip back to
+        /// the palette. The answer is what tells the caller whether to unwind further.
+        /// </summary>
+        [Test]
+        public void CancellingTakesThePendingRunFirstAndTheToolAfter()
+        {
+            var director = new DesignateDirector { Tool = DesignateTool.Mine };
+            director.Click(At(2, 2));
+            Assume.That(director.AwaitingSecondClick, Is.True);
+
+            Assert.That(director.CancelPending(), Is.True, "there was a run to throw away");
+            Assert.That(director.Dragging, Is.False);
+            Assert.That(director.Tool, Is.EqualTo(DesignateTool.Mine), "and the tool is still held");
+
+            Assert.That(director.CancelPending(), Is.False,
+                "with nothing pending the caller is told to unwind the next step itself");
+        }
+
         [Test]
         public void TheBoxCanBeThrownAway()
         {

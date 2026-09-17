@@ -156,6 +156,74 @@ namespace Odyssey.Hud
             _head = _anchor;
             _wide = false;
             Dragging = true;
+            Hover = null;
+            return true;
+        }
+
+        /// <summary>
+        /// Is the box waiting for a second click rather than for a button to be let go?
+        ///
+        /// <para><b>Click, move, click</b> (owner, 2026-09-17, and the default): one click anchors
+        /// the run, the pointer then moves with nothing held, a second click places it, and a
+        /// right-click throws it away. Holding a button down while steering a pointer precisely
+        /// across a board drawn in perspective is the awkward part of the old gesture, and it is
+        /// awkward in a way practice does not fix.</para>
+        ///
+        /// <para><b>Both ways in still work, and the hand decides which</b> — a press that travels
+        /// past the widen threshold is a held drag and finishes when the button comes up, exactly
+        /// as it always has. So a player reaching for the old gesture is never punished and has
+        /// nothing to unlearn. That is why this is a state the box is in rather than a mode the
+        /// whole director is in: the same box can be begun either way.</para>
+        /// </summary>
+        public bool AwaitingSecondClick { get; private set; }
+
+        /// <summary>
+        /// A click landed on the world with a tool armed: anchor the run, or finish it.
+        ///
+        /// <para>Returns the cells to order when this click completed a box, and empty when it
+        /// only started one. One method rather than two so that the caller cannot get the order of
+        /// the two halves wrong, which is the same argument <see cref="Commit"/> already makes.
+        /// </para>
+        /// </summary>
+        public IReadOnlyList<CellRef> Click(CellRef cell)
+        {
+            if (_tool == DesignateTool.None) return Array.Empty<CellRef>();
+
+            // **The press that opens a box has usually opened it already.** While the button is
+            // down the rig reports the pointer every frame, so a box exists by the time the release
+            // arrives even for a click that never moved. Both shapes therefore mean "anchor": no
+            // box at all, or a box this very press created and has not been told to wait on.
+            if (!Dragging)
+            {
+                if (!Begin(cell)) return Array.Empty<CellRef>();
+                AwaitingSecondClick = true;
+                return Array.Empty<CellRef>();
+            }
+
+            if (!AwaitingSecondClick)
+            {
+                AwaitingSecondClick = true;
+                return Array.Empty<CellRef>();
+            }
+
+            DragTo(cell);
+            AwaitingSecondClick = false;
+            return Commit();
+        }
+
+        /// <summary>
+        /// Right-click, or Escape: throw away the half-drawn box and say whether there was one.
+        ///
+        /// <para><b>The answer is what decides whether the tool is also put down.</b> False means
+        /// nothing was pending, and the caller unwinds one step further. So the same button cancels
+        /// a mis-anchored run first and disarms only when there is nothing left to cancel — one
+        /// press, one step, which is the rule the Escape key already follows
+        /// (`09-ui-and-input.md` §6).</para>
+        /// </summary>
+        public bool CancelPending()
+        {
+            if (!Dragging) return false;
+            Abandon();
             return true;
         }
 
@@ -303,11 +371,37 @@ namespace Odyssey.Hud
             return cells;
         }
 
+        /// <summary>
+        /// Where the pointer is resting with a tool armed and nothing pressed, put through the same
+        /// layer rule an order gets, or null when there is nothing under it.
+        ///
+        /// <para><b>A hover is a one-cell drag that has not started.</b> It is held here rather than
+        /// in the renderer so that the cell the cursor draws and the cell the order lands in are the
+        /// same answer from the same object — which is the rule the whole class exists to keep, and
+        /// the one that has been broken three times in this line of work.</para>
+        ///
+        /// <para>Null while a drag is running: the box is then the thing being shown, and a lone
+        /// cursor cell hanging off the head of it would be a second answer to "where is this
+        /// going".</para>
+        /// </summary>
+        public CellRef? Hover { get; private set; }
+
+        /// <summary>The pointer is over this cell. Ignored mid-drag, for the reason above.</summary>
+        public void HoverAt(CellRef cell)
+        {
+            if (_tool == DesignateTool.None || Dragging) { Hover = null; return; }
+            Hover = OnTheWorkingLayer(cell);
+        }
+
+        /// <summary>Nothing under the pointer, or nothing that should be shown.</summary>
+        public void HoverNowhere() => Hover = null;
+
         /// <summary>Throw the box away — the escape key, a layer change, a tool change.</summary>
         public void Abandon()
         {
             if (!Dragging) return;
             Dragging = false;
+            AwaitingSecondClick = false;
             _wide = false;
             _anchor = default;
             _head = default;
