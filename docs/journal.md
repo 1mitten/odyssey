@@ -1476,3 +1476,41 @@ work itself.
     pair it met first, so asking for our own two cells was asking the wrong question. Found by the
     test failing rather than by reading the code — which is the third time this week that reading
     the code would have been wrong.
+
+- **The tick's allocation is attributed, and most of it was a defect (2026-09-17).** `OQ-19` had
+  left a loose end: the real tick grows the heap by 76.7 bytes at rest and 284.6 under replan
+  pressure, against the D1 spike's true zero, and the ADR said the difference *pointed at* the
+  served path's cell array without demonstrating it. This closes it, and the answer was not what
+  the pointing suggested.
+  - **The at-rest cost was not the colony, and bracketing is what showed it.** An *empty* world —
+    no systems, no pawns, no snapshot contributors — allocated **67.4 bytes a tick**, and adding a
+    whole colony of five with needs, jobs and movement added **nothing measurable**. A cost that
+    scales with neither pawns nor systems nor contributors cannot be any of them, which narrowed
+    it to the tick machinery in one measurement instead of a hunt.
+  - **It was `Intents.Drain(HandleIntent)`.** `Drain` takes a `Func<Intent, IntentRejection>`, and
+    a method group converts to a **fresh delegate on every call** — 64 bytes a tick, for a handler
+    that never changes, paid by every tick of every game whether or not one intent was submitted.
+    Holding it in a `readonly` field took the empty world to **1.6 bytes a tick** and the colony to
+    3.3; on the real benchmark the colony went from **76.7 to 11.0**, about 4.6 MB a day down to
+    0.66 MB. One field.
+  - **The per-path half is now demonstrated rather than pointed at.** Serving the same request at
+    two path lengths gives 53.4 bytes for 5 cells and 197.4 for 41 — **exactly 4.00 bytes per extra
+    cell**, an `int`, so a request costs `≈32 + 4 × cells`. That reproduces the 208 the benchmark
+    saw, which is the check that the attribution is the whole story and not a coincidence.
+  - **The remaining 214 bytes a request is kept deliberately, and the reason is a hazard rather
+    than a cost.** Pooling the served array would make `ServedPath.Cells` valid only until the next
+    `Serve()`. It is safe *today* — `MovementSystem` is the only consumer and `Pawn.AdoptPath`
+    copies into the pawn's own buffer, which I checked rather than assumed — but `Served` is
+    public, and the first future consumer to hold the array would be silently reading somebody
+    else's path. **The project has already decided this shape of question once**, on the state hash
+    (OQ-50): an honest cost beats a silent wrongness. Same answer. It stays until pooling can be
+    made safe *by construction* rather than safe by inspection.
+  - **Controlled both ways.** Putting the method group back restores 67.4 bytes a tick and fails
+    the new guard with the message naming the cause; restoring the field passes. The guard's budget
+    is a loose 16 bytes on purpose — its job is to keep a 64-byte-per-tick delegate out, not to pin
+    11.
+  - **Reading the code would have found the delegate too, and would probably have found the array
+    first and stopped.** The measurement is what said the array was the *smaller* half of the
+    at-rest story and in fact no part of it at all. Fourth time this week.
+  - **Verified:** fast tier **484 Sim + 158 Hud**, Long tier **19**, no golden moved — caching a
+    delegate cannot change behaviour, and the goldens agree.

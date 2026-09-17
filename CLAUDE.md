@@ -170,7 +170,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **484 Sim + 158 Hud**; Long tier **17**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **484 Sim + 158 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
@@ -207,10 +207,17 @@ discounted 4× for the target laptop leave 11.3 ms of a 16.6 ms frame rather tha
 scale, `OneDay` on the board the scene actually loads runs at 0.003 ms a tick. Pathfinding is still
 where the tick goes under load, but it is no longer a threat to the frame budget.
 
-**What the same run found instead: the tick allocates.** 76.7 bytes a tick at rest and 284.6 under
-replan pressure, with no collection of any generation across either window — so those are the
-allocation figures, not lower bounds — against the D1 spike's true zero. About 208 bytes per served
-path request, source **unmeasured**, roughly 17 MB over a day. It wants a row.
+**What the same run found instead: the tick allocated, and most of it was a defect** (attributed
+2026-09-17, `PathAllocationTests`, ADR 0005 addendum). The at-rest cost was **not the colony**: an
+empty world with no systems, no pawns and no contributors allocated 67.4 bytes a tick and adding a
+whole colony added nothing. It was `Intents.Drain(HandleIntent)` — a method group converting to a
+**fresh 64-byte delegate every tick**, for a handler that never changes, paid by every tick of every
+game. Holding it in a field took the colony from **76.7 to 11.0 bytes a tick** (about 4.6 MB a day
+down to 0.66 MB). The rest is the served path's cell array, now demonstrated rather than guessed:
+allocation rises with path length at **exactly 4.00 bytes per extra cell**, so a request costs
+`≈32 + 4 × cells`. That one is **kept on purpose** — pooling it would make `ServedPath.Cells` valid
+only until the next `Serve()`, which is safe by inspection today and would be silently wrong for the
+first consumer who held it.
 
 **The graph that search would run on is now measured** (OQ-18, 2026-09-17;
 `NavGraphStatisticsTests`, and `d-04-pathfinding.md` §"Measured 2026-09-17"). At 250 × 250 × 40 the
