@@ -26,11 +26,26 @@ namespace Odyssey.Sim
             new Dictionary<IntentKind, Func<Intent, IntentRejection>>();
         ISnapshotContributor[] _contributors = Array.Empty<ISnapshotContributor>();
 
+        /// <summary>
+        /// The intent handler, held as a delegate rather than converted from a method group at
+        /// every tick.
+        ///
+        /// <para><b>This was the whole of the tick's at-rest allocation.</b> `Intents.Drain` takes
+        /// a <see cref="Func{T, TResult}"/>, and writing `Drain(HandleIntent)` builds a fresh
+        /// delegate object each call — 64 bytes on a 64-bit runtime, paid by every tick of every
+        /// game whether or not a single intent was submitted. Measured at 67.4 bytes a tick on an
+        /// *empty* world, with a colony adding nothing, which is what pointed here: the cost
+        /// scaled with neither pawns nor systems nor contributors, so it could not be any of
+        /// them.</para>
+        /// </summary>
+        readonly Func<Intent, IntentRejection> _handleIntent;
+
         internal SimWorld(uint seed, GridSize size)
         {
             Seed = seed;
             Size = size;
             CurrentTick = 0;
+            _handleIntent = HandleIntent;
             _byGroup = new[]
             {
                 new List<ITickable>(), // Normal
@@ -114,7 +129,7 @@ namespace Odyssey.Sim
             long mark = phases != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
 
             // 1. Intents from the UI, in submission order.
-            Intents.Drain(HandleIntent);
+            Intents.Drain(_handleIntent);
             Mark(phases, Diagnostics.TickSegment.Intents, ref mark);
 
             // 2. World systems: grid propagation, support solving, region rebuild.

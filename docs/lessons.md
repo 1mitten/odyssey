@@ -1556,3 +1556,37 @@ guarding anything.
 **A timing assertion on a shared runner is worth having, but only in this shape:** a wide band
 justified by the size of the defect, the measured figures for both states written down beside it,
 and a failure message that tells the next person which of the two they are probably looking at.
+
+## `GC.GetTotalMemory` sees nothing under Mono, and a byte budget passes loudest where it is blind
+
+**Symptom.** An allocation test measured cleanly in the fast tier — 4.00 bytes per extra path cell,
+exactly one `int`, reproducible run to run — and failed in the Unity tier with
+`0.0 bytes per request` for *both* arms of the comparison. Same code, same assertions, opposite
+verdicts.
+
+**Cause.** `GC.GetTotalMemory(false)` does not mean the same thing on the two runtimes we ship
+against. On CoreCLR it moves with allocation. On Mono it reports the heap the collector owns, and
+the collector hands out nursery space in blocks and reuses it for short-lived objects — so a couple
+of thousand arrays of a couple of hundred bytes each, allocated and dropped, can move the number
+**not at all**. Roughly 400 KB of allocation reported as zero.
+
+**The half that matters more than the failure.** The same run had a *second* test asserting that an
+idle tick allocates under a 16-byte budget. Under Mono it read zero and **passed** — a guard against
+a 64-byte-per-tick delegate, reporting success on the one runtime where it could not have seen one.
+A test that fails on a blind instrument is an annoyance. A test that passes on a blind instrument is
+the state-hash defect again: an oracle comparing numbers that cannot see the thing they are about.
+
+**What to do.** Calibrate the instrument inside the test before believing it. Allocate a known
+quantity, and if the runtime cannot report it to within a factor of two, `Assert.Ignore` with the
+reason rather than failing *or* trusting the reading. Two details make the probe honest:
+
+- **Allocate the same shape and total** as the thing being measured. A probe that allocates a
+  megabyte proves nothing about whether a few hundred bytes are visible.
+- **Discard, do not retain.** Retained allocations force heap growth that a real per-tick
+  allocation never forces, so a retaining probe is easier to satisfy than the measurement it stands
+  in for — which reproduces exactly the false pass you were trying to prevent.
+
+**Where this bites next.** Any figure in bytes: allocation budgets, save sizes measured by heap
+delta, pooling proofs. Timings are fine; byte counts are not. `PathAllocationTests` carries the
+worked version, and the figures in `docs/adr/0005-simulation-architecture.md` are the CoreCLR ones,
+labelled as such.

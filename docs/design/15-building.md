@@ -1,7 +1,13 @@
 # 15 — Building: sites, materials, and the orders that fill them
 
-**Status: first slice built, not yet proven in the running game.** Written 2026-09-17 on branch
-`claude/build-pipeline` (PR #63). U26 of `docs/plans/vertical-slice.md`.
+**Status: built, played and accepted.** Written 2026-09-17 on branch `claude/build-pipeline`
+(PR #63). U26 of `docs/plans/vertical-slice.md`.
+
+The owner ordered walls in the running game on 2026-09-17 and the colony built them; the two faults
+that playtest found — a stepped wall (§7) and a hollow one — were fixed, and the cursor and the
+widening gate of §5a were judged in play and accepted on the same day. **The drape and the fill were
+in that build and drew no complaint**, which is weaker than a judgement and is recorded as what it
+is. What remains unlooked-at is listed in §8.
 
 Read `03-systems-catalogue.md` §4 for the design intent and `docs/research/a-04-building-and-materials.md`
 for what the reference does. This file is what was actually built, what it costs, how to test it,
@@ -270,6 +276,14 @@ The owner reported walls still not going up after the composition fix. On the ne
 (screenshots, 2026-09-17), so the composition fix was the whole of it and the rejection log of §6
 was never needed to settle it. It stays, because it costs nothing and the next silent refusal will
 want it.
+
+### What is still unlooked-at
+
+The playtests covered ordering a wall, the material row, the cursor and the widening gate. Nobody
+has yet judged **the site marks** (a mark plus a slab rising from the floor, §8 below), **the
+inspect pane's blueprint readout** — "2 of 5 wood delivered", "about 2s left" — or **the hammer
+swing** itself, which is computed rather than animated. They are all in the build and none has been
+reported on either way.
 
 ### Forced orders and the context menu — the next piece
 

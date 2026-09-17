@@ -119,6 +119,23 @@ The figures above come from the D1 spike, which *mirrored* the tick rather than 
 
 **One thing the row asked for and did not get: allocation is not zero.** The D1 spike recorded a true `alloc_bytes_per_tick=0.000`; the real tick grows the heap by **76.7 bytes per tick at rest and 284.6 under replan pressure**. No collection of any generation ran across either window, so those growth figures are the allocation figures rather than a lower bound. The delta divides to roughly 208 bytes per served path request, which points at the served path's cell array — *points at*, not demonstrates; nobody has measured where it comes from. It is small, and over a 60,000-tick day it is still about 17 MB, which will provoke gen0 collections in a long session. Worth a row of its own; it is not a reason to hold this one.
 
+### Addendum, 2026-09-17: the allocation, attributed and mostly removed
+
+Both figures above are now measured rather than guessed at, by `PathAllocationTests`. One of them was a defect and is gone.
+
+**The at-rest cost was the tick machinery, not the colony.** Bracketing found an *empty* world — no systems, no pawns, no contributors — allocating **67.4 bytes a tick**, and adding a whole colony added **nothing**. A cost that scales with neither pawns nor systems nor contributors cannot be any of them. It was `Intents.Drain(HandleIntent)`: `Drain` takes a delegate, and a method group converts to a fresh one on every call — 64 bytes a tick, for a handler that never changes, paid by every tick of every game whether or not a single intent was submitted. Holding it in a field fixed it.
+
+**The per-path cost is the served cell array, and that is now demonstrated rather than pointed at.** Allocation per request rises with path length at **exactly 4.00 bytes per extra cell** — an `int` — measured by serving the same request at two path lengths: 5 cells for 53.4 bytes, 41 cells for 197.4. The shape is `≈32 + 4 × cells`, which reproduces the 208 bytes the benchmark saw at typical path length.
+
+| bytes per tick | before | after |
+|---|---|---|
+| colony at rest | 76.7 | **11.0** |
+| D1 replan rate | 284.6 | **224.7** |
+
+Over a 60,000-tick day the at-rest figure falls from about 4.6 MB to 0.66 MB. `ATickThatDoesNothingAllocatesNextToNothing` holds it there with a loose 16-byte budget — loose on purpose, since its job is to keep a 64-byte delegate out rather than to pin 11.
+
+**The remaining ~214 bytes per request is not being removed, and the reason is a hazard rather than a cost.** Pooling the served array would mean `ServedPath.Cells` stayed valid only until the next `Serve()`. Today that is safe — `MovementSystem` is the only consumer and `Pawn.AdoptPath` copies into the pawn's own buffer — but `PathService.Served` is public, and a future consumer that held the array would be silently reading someone else's path. This project has decided once already that a silent wrongness is worse than an honest cost (OQ-50, on the state hash). The same answer applies: **keep the allocation until pooling can be made safe by construction**, not merely safe by inspection.
+
 Two consequences either way: the frame budget is a **pathfinding** problem, not an architecture problem, and it must not be used to choose between the candidates unless they differ materially on phase 3 for structural reasons.
 
 ## Results: candidate "ecs"
