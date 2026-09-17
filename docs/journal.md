@@ -1434,3 +1434,45 @@ work itself.
     optimisation is a post the community publicly flagged as fabricated, whose invented claims
     search engines now restate as fact. The file cites it as a caution rather than pretending it
     does not exist, which is the right way to leave a trap for the next reader to find.
+
+- **The hop price gets one owner, and the warning becomes a test (2026-09-17).** `CLAUDE.md` has
+  carried a sentence since the hop landed — *"a price the planner and the mover disagree about
+  fails silently"* — earned the hard way: the mover once read a hop's price off connectors, found
+  none, and fell through to `MoveCost.Fall`, which is 100,000 and means forbidden. The pawn did not
+  throw and did not re-plan. It stood in the cell before the step holding a legal path, earning
+  about one unit of progress a tick against a bill of a hundred thousand, and was still there after
+  10,000 ticks. Nothing enforced the sentence. Today's Timberborn research arrived at the same
+  recommendation from the outside — their ramp is an object in a cell, so one row answers the
+  planner, the mover and the renderer at once — which is what moved this up the queue.
+  - **Nothing was disagreeing, and that is the finding.** All three seams — `PathFinder`'s
+    relaxation, `NavGraph.TryHopEdges` and `MovementSystem.StepCost` — arrived at the same number,
+    because each named `MoveCost.JumpUp` and `MoveCost.Drop` for itself and the constants happened
+    to be identical everywhere. **Agreement by coincidence**, which holds exactly until the price
+    stops being a constant: a hop onto ice, a hop while carrying, a hop for a different traverse
+    mode. Then two of the three would silently keep the old number and the failure would present as
+    a colonist standing still.
+  - **`NavGraph.HopCost` is now the only expression of the rule**, with a second overload taking a
+    direction rather than two `CellRef`s. That overload exists for a measured reason: the search's
+    inner loop walks cell indices and would have paid a division per neighbour to recover a
+    `CellRef` it does not need. Pathfinding is the hot path, so the one-owner rule had to be free
+    to obey or it would have been disobeyed for a good reason. The price is asked once per search
+    and held in a local.
+  - **The guard is a source grep, because what it forbids leaves no trace in IL.** Naming a
+    constant compiles to the same instruction as calling a method that returns it, so there is
+    nothing to inspect after the fact. `HopPriceHasOneOwnerTests` walks `Assets/Odyssey/Sim`,
+    strips comments — a comment may *discuss* the price, only code may not *decide* it — and fails
+    on any file but `NavGrid.cs` (which defines the constants) and `NavGraph.cs` (which owns the
+    rule). Beside it, a test that reads the price off a **built region graph** rather than off the
+    source, so a future `TryHopEdges` routed through a different rule fails even if it never names
+    a constant.
+  - **Controlled, not assumed.** Putting `MoveCost.JumpUp` back into `PathFinder` fails the guard
+    with the exact offending file and line; restoring it passes. The failure message names the
+    10,000-tick incident, so whoever trips it in two years learns why the rule exists rather than
+    just that it does.
+  - **No golden moved**, which is the point: who computes the number changed and the number did
+    not. Verified fast tier **484 Sim + 158 Hud**, Long tier **17**.
+  - **One fixture error worth recording.** The first region-graph test looked for the hop edge by
+    its two cells and found nothing. `TryHopEdges` keys by *region pair* and stores whichever cell
+    pair it met first, so asking for our own two cells was asking the wrong question. Found by the
+    test failing rather than by reading the code — which is the third time this week that reading
+    the code would have been wrong.
