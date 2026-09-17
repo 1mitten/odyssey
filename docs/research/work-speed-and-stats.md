@@ -302,3 +302,170 @@ No decompiled source, Def XML or asset was opened; none of the above is a source
 - **How mining speed interacts with the "action" boundary when a strike would overkill the rock** —
   whether the final partial strike is prorated or the cell simply dies early. Our counter model makes
   the question moot, which is a further small argument for it.
+
+## Follow-up 2026-09-17 — does condition slow a colonist, and by what path
+
+**Question:** do exhaustion (very low rest) and hunger/starvation (very low food) actually slow a
+colonist — work speed and move speed both — and if so by what path: mood, or health capacities?
+
+**Answered:** 2026-09-17 · same subagent, cap 5 searches / 5 reads · clean room
+
+### Findings
+
+**The hypothesis is half right, and the half that is wrong is the more interesting one.**
+
+**Hunger: yes, and through the body exactly as predicted.** Starvation is modelled as a
+**malnutrition condition**, not as a mood effect. It appears **the moment food saturation hits 0%**
+and then climbs at **1.51%–2.27% severity per hour**. Its effect is an **offset to the Consciousness
+capacity**, by stage:
+
+| Stage | Severity | Consciousness | Hunger rate | Mood |
+|---|---|---|---|---|
+| Trivial | 0.00–0.19 | 0 to −5% | +50% | −20 |
+| Minor | 0.20–0.39 | **−10%** | +60% | −26 |
+| Moderate | 0.40–0.59 | **−20%** | +100% (×2.5 overall) | −32 |
+| Severe | 0.60–0.79 | **−30%** | +200% (×3.0 overall) | −38 |
+| Extreme | 0.80–0.99 | **capped at 10%** — a *limit*, not an offset | — | −44 |
+| — | 1.00 | **Death** | — | — |
+
+The mood hit is there too, but it is *parallel decoration*: the mood number changes how the colonist
+feels and behaves, and the consciousness number is what changes their output. They are two separate
+effects of one condition, not one causing the other.
+
+**The chain from consciousness to speed is short and doubles up.** Consciousness feeds both of the
+capacities this matters through:
+
+- **Moving** = `min(Consciousness, 100%) × [1 + (BloodPumping − 1) × 0.2] × [1 + (Breathing − 1) × 0.2] × LegEfficiency + offsets`, then post-factors. Consciousness is at **100% importance but capped at 100%** — the same asymmetry as Sight in part 1: being extra alert never makes you walk faster, being dulled always makes you slower, at full rate. Moving then drives **Move Speed at weight 1**.
+- **Manipulation** is likewise **directly driven by Consciousness at 100% importance** (plus arms at 50% each and fingers at 8% each). And Manipulation is, from part 1, the capacity every work-speed stat applies at **100% importance with no ceiling**.
+
+So one consciousness offset lands on *both* halves of a job. At **severe** malnutrition and an
+otherwise healthy body, a colonist walks at **70%** and mines, builds and farms at **70%** — and
+since a typical job is walk-then-work, the round-trip throughput is nearer **0.7 × 0.7 ≈ 49%**. At
+**moderate** it is 80% and 80% (≈64% throughput); at **minor**, 90% and 90% (≈81%).
+
+**Exhaustion: no. Tiredness does not slow anybody down at all.** This is the surprise, and it is
+stated flatly: sleep deprivation does not affect any work- or combat-related stat. The rest need's
+four bands do two things only — **mood and disease immunity**:
+
+| Band | Rest | Mood | Immunity gain |
+|---|---|---|---|
+| Rested | ≥28% | — | 100% |
+| Drowsy | ≥14% and <28% | −6 | ×96% |
+| Tired | ≥1% and <14% | −12 | ×92% |
+| Exhausted | ≤1% | −18 | ×80% |
+
+What tiredness does instead is **stop them outright**: at 0% rest a colonist **may collapse from
+exhaustion**, lying down and sleeping wherever they happen to be standing. Drafting wakes them
+immediately. There is no glide path from "a bit tired" to "working at 60%" — you get full output,
+full output, full output, then a body on the floor.
+
+**That is the same design philosophy as the Beta 18 mood removal, applied twice.** RimWorld's rule
+appears to be: *a condition either does nothing to your rate or it produces a visible, discrete
+event*. It systematically refuses the invisible percentage tax. Hunger is the exception that proves
+it — and hunger gets to slow you only because it has crossed out of "need" into "injury": there is a
+named condition on the health tab with a severity bar you can point at. The need itself, at 5% food,
+does nothing to your speed; the hediff that starts at 0% food does.
+
+**Floors: yes, several, and they are stopping points rather than soft landings.**
+
+- **Consciousness below 30% → unconscious**; at 0% → **dead**. So the Extreme stage's cap of 10% is
+  not "works very slowly", it is "collapsed on the floor", one band before death.
+- **Moving at 15% or below → downed**, no walking, crawling only.
+- **Move Speed has a hard minimum of 0.15 cells/second.**
+- **Manipulation at 0% → incapable** of whole classes of work rather than slow at them.
+- The work-speed stats' own floors from part 1 still apply last (Plant Work Speed 10%, Global Work
+  Speed 30%).
+
+So the answer to "can a starving, exhausted colonist reach 0 speed" is: **not by degradation — by
+threshold.** They stay proportionally slower until a capacity crosses a line, and then they stop
+being a worker at all. Nothing grinds asymptotically towards zero.
+
+**The death spiral is real, is deliberately shaped, and has four brakes.** The accelerator is
+vicious: malnutrition **raises the hunger rate by 50% to 200%**, so being starved makes you starve
+faster; wounds **do not heal at all** while malnourished; and falling consciousness slows the walk to
+the food. The brakes:
+
+1. **A long runway.** From 100% saturation a human survives up to **72.5 hours** before dying — about
+   three in-game days of visible, alarmed warning before anything is irreversible.
+2. **Symmetric recovery.** Once fed, severity falls at the same 1.51%–2.27% per hour it rose at. There
+   is no permanent scar and no point of no return short of 100%.
+3. **A price for the rescue, not a penalty.** Recovery costs **50%–60% more food** than normal for the
+   duration, so a famine you survive still costs you the stores — the spiral is paid for in resources
+   rather than in a lost colonist.
+4. **Collapse hands the problem to somebody else.** Once downed, the pawn stops spending nutrition on
+   work and becomes a patient another colonist feeds in bed. The threshold that looks like the worst
+   outcome is in fact the mechanism that breaks the loop.
+
+### Recommendation
+
+**Copy the path, not just the outcome.** Model "starving colonists are slower" as a **condition on
+the body that offsets one capacity**, and let the capacity do the rest — never as a direct penalty
+written onto work speed, and never through mood. One offset on our equivalent of consciousness then
+correctly slows walking *and* working without either system knowing about hunger, which is the same
+argument as putting the price of a hop in `NavGraph.HopCost`.
+
+**Take the two-capacity chain: condition → consciousness → {moving, manipulation} → {move speed, work
+speed}.** It is three cheap numbers and it gets the compounding right for free.
+
+**Cap consciousness at 100% inside moving, exactly as they do.** The asymmetry — dulled makes you
+slower, alert never makes you faster — is the same rule we already recommended for sight, and having
+one rule for both is worth more than either.
+
+**Do not make tiredness a rate penalty. Rank: (1) collapse at zero rest, backed; (2) a graded
+slowdown, rejected.** This is the finding most likely to be overridden by intuition later, so it is
+worth writing down why: a slowdown is invisible, unattributable and un-actionable — the player sees
+less output and cannot tell whether it is the weather, the wall's stuff factor or a skill. A collapse
+is a colonist lying in the mud with an alert. Our project already prefers the legible event; this is
+the reference agreeing.
+
+**Keep the thresholds as thresholds.** Downed at 15% moving, unconscious below 30% consciousness,
+dead at 0%. A hard floor on move speed (their 0.15 c/s) is worth having for the same reason ours
+should never divide by a speed of zero.
+
+**If we build hunger before we build medicine, build the brakes in the same commit.** The three-day
+runway, symmetric recovery and the extra food cost of recovering are what make the spiral a crisis
+rather than a colony-ender, and a version with the accelerator and none of the brakes would read as a
+bug.
+
+### Sources
+
+https://rimworldwiki.com/wiki/Malnutrition — threshold at 0% saturation, the five severity stages with their consciousness offsets and hunger-rate multipliers, 1.51–2.27%/hour rise and fall, death at 1.0, 72.5-hour survival, 50–60% recovery food cost, wounds do not heal
+https://rimworldwiki.com/wiki/Rest — the four rest bands with mood and immunity figures; the explicit statement that sleep affects no work or combat stat; collapse from exhaustion at 0%
+https://rimworldwiki.com/wiki/Consciousness — what it feeds (moving, manipulation, talking, eating), unconscious below 30%, death at 0%, composition shape
+https://rimworldwiki.com/wiki/Moving — the moving formula, consciousness at 100% importance capped at 100%, downed and crawling at 15% or below
+https://rimworldwiki.com/wiki/Manipulation — consciousness at 100% importance; arms 50% each, fingers 8% each; incapable at 0%
+https://rimworldwiki.com/wiki/Move_Speed — minimum allowed value 0.15 c/s
+
+### Confidence
+
+- **That hunger slows a colonist via a health condition offsetting consciousness, and not via mood:
+  high.** Stated directly, with the stage table printing the consciousness numbers.
+- **That tiredness does *not* slow work or movement: high.** The rest page says so in terms, and the
+  band table lists only mood and immunity. This is the one I went looking to confirm because it
+  contradicts common intuition, and the source is unambiguous.
+- **The consciousness → moving → move speed chain and its 100% cap: high.** The formula is printed.
+- **The consciousness → manipulation → work speed chain: medium-high.** Consciousness at 100%
+  importance for manipulation is stated, and manipulation at 100% importance for the work stats was
+  established in part 1; I am joining two sourced links rather than reading one page that joins them.
+- **The worked throughput figures (70% × 70% ≈ 49% at severe): medium.** The multiplication follows
+  from the two sourced weights, but no page prints a worked example, and it assumes an otherwise
+  perfect body.
+- **The thresholds and floors: high.** All four are printed numbers.
+- **The four brakes on the death spiral: medium-high** as mechanics (each is sourced); **medium** as
+  *design intent*, since calling them deliberate brakes is my reading rather than a stated one.
+
+### Could not be determined
+
+- **Whether malnutrition offsets anything besides consciousness** — the stage table lists no separate
+  manipulation or moving entry, so the whole effect appears to route through consciousness, but the
+  page does not say "and nothing else".
+- **Whether consciousness is capped at 100% inside *manipulation* too**, as it demonstrably is inside
+  moving. If it is not, a stimulant could in principle make a worker faster than baseline while not
+  making them walk faster — an asymmetry worth knowing before we copy it.
+- **What decides whether an exhausted pawn collapses** — the source says a colonist at 0% rest *may*
+  collapse, which implies a chance or a delay rather than a certainty, and the probability is not given.
+- **Whether a drafted or player-forced colonist ignores the collapse** beyond the stated fact that
+  drafting wakes an already-collapsed one.
+- **The exact interaction of the extreme stage's consciousness *limit* with offsets** — whether it
+  clamps after everything else (making implants and drugs useless at that stage) or participates in
+  the ordinary ordering.

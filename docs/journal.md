@@ -2537,3 +2537,39 @@ work itself.
     unbuilt costs nothing and building it now would mean inventing an urgency model to justify it.
     `OQ-54` is marked blocked with that reason rather than left open to be picked up by a session
     looking for work.
+- **"Use the reference roughly" was taken literally enough to check it, and it overturned half a
+  decision that had just been made (2026-09-17).** The owner's steer prompted one capped follow-up
+  question: do exhaustion and starvation actually slow a colonist in the reference, and by what
+  path? The guess being tested was that they do, but through **health capacities** rather than
+  mood — which would reconcile the owner's "all has an effect" with the earlier finding that the
+  mood-driven work-speed bonus was deliberately removed.
+  - **Half right, and the wrong half was the more useful finding.** Hunger behaves exactly as
+    guessed: at zero food it stops being a need and becomes a *condition with a severity bar*,
+    whose entire mechanical action is an **offset to consciousness** (−10/−20/−30%), and
+    consciousness feeds both moving and manipulation. One offset, both rates, and the mood hit
+    rides alongside causing none of it. **Exhaustion does not slow anybody down at all** — the rest
+    bands touch mood and disease immunity and nothing else, and at zero rest the colonist collapses
+    and sleeps where it stands.
+  - **So it is one philosophy applied twice, and the mood removal was the third instance:** a
+    condition either does nothing to your rate or it produces a visible, discrete event; the
+    invisible percentage tax is refused systematically. Starvation is the exception that proves it
+    and is allowed to slow you only because it has crossed out of being a need and become an
+    injury.
+  - **The design followed the finding rather than the draft.** `ConditionPerMille()` is now one
+    consciousness-like scalar that starvation offsets, so neither rate ever learns hunger exists
+    and M4's capacities will substitute for it rather than requiring a rewrite; it is floored at
+    700 and **ceilinged at 1,000**, the reference's asymmetry — dulled slows you, alert never
+    speeds you up — which is what stops a future "well fed" bonus quietly becoming a speed boost.
+    The compounding that the draft had worried about is now evidence: one scalar on both rates
+    means a starving colonist runs a walk-then-work round trip at about 0.49 throughput, which is
+    what the reference does at severe malnutrition.
+  - **Exhaustion lost its slowdown and gained a collapse**, which is a departure from the literal
+    reading of the owner's answer and is flagged in §7 for veto rather than assumed. It is also
+    smaller than it sounds: `SleepJobDriver` already owns `Pawn.Asleep` and nothing in the game can
+    collapse today, so the whole of it is "at zero rest, sleep here instead of walking there" —
+    with the control that a merely tired colonist still walks to a bed, because the failure mode is
+    a colony that sleeps in the mud.
+  - **The floor is ours and is honest about being a departure.** The reference has no soft landing:
+    it has thresholds, and below 30% consciousness the colonist is unconscious. We have no downed
+    state to fall through, so 700 stands in for one and should give way to a threshold the day
+    health exists.

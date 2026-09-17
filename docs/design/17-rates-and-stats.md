@@ -316,13 +316,18 @@ per strike at an interval that shortens with speed — which is a second mechani
 state, save and hash, reaching the same place our work counter already reaches. There is no design
 gain in it for us, and it would make mining the one job that works differently from every other.
 
-**Refused, but recorded because it is a real argument against §4c: mood does not affect work speed
-in the reference, and that is deliberate.** The mood-driven work-speed bonus existed and was
-*removed*, on the reasoning that mood should produce visible events rather than an invisible
-percentage tax on everything. §4c proposes exactly such a tax for movement, driven by exhaustion
-and starvation. **The difference this design relies on is that ours will be visible** — the
-inspect pane says what a colonist's move rate is and why — and if that turns out not to be enough
-to make it legible in play, this paragraph is the reason to drop it rather than tune it.
+**Taken, and it is the sharpest thing in this document: a condition either does nothing to your
+rate or it produces a visible, discrete event. Never an invisible percentage tax.** The
+mood-driven work-speed bonus existed in the reference and was *removed* on exactly that reasoning,
+and the follow-up research found the same rule applied again where nobody would expect it —
+**tiredness affects no work or movement stat at all**; at zero rest the colonist collapses instead.
+The one condition allowed to slow you is starvation, and only because it has crossed out of being
+a *need* and become an *injury* with a name and a severity bar.
+
+This is what shaped §4c, which originally proposed a graded slowdown for both hunger and
+exhaustion. Hunger keeps its slowdown and gains the reference's mechanism; **exhaustion loses its
+slowdown and gains a collapse**, which is a better answer to "exhaustion should have an effect"
+than a number nobody can see.
 
 **Not yet, but named: darkness.** The reference scales work speed with light, from ×0.3 in the dark
 to ×1.0 at 30% light. We have a day/night cycle that is **presentation only** and nothing in the
@@ -361,35 +366,68 @@ jog everywhere while ostensibly walking. **So innate variation is capped at ±15
 1.28–1.72 m/s), which is also about the true spread of human walking pace, and **everything above
 2 m/s is reserved for a deliberate run.**
 
-### 4c. Condition — decided 2026-09-17, and it applies to both rates
+### 4c. Condition — decided 2026-09-17, and the research then split it in two
 
 The owner asked for condition *and* health, and when asked whether condition should bite before
 health exists answered: *"Yes — if exhausted, starving etc, all has an effect."* **So condition
 multiplies both the work rate and the move rate**, from one shared `ConditionPerMille()` (§2c),
 rather than movement only as this design first proposed.
 
-Health is M4 and does not exist. **Needs do**, and they are the honest half of "condition"
-available now. Proposed, all INVENTED, all on the same shape as every other need effect:
+**Then the follow-up research came back and said the two halves of that sentence work completely
+differently in the reference** (`work-speed-and-stats.md`, follow-up section). The finding comes
+before the design here, because the design is a consequence of it.
 
-| Condition | Factor |
+- **Hunger slows you, by exactly the path this design guessed.** Starvation is not a need effect at
+  all: at 0% food it becomes a *condition with a severity bar* — an injury, in effect — and its
+  whole mechanical action is an **offset to consciousness**, −10% minor, −20% moderate, −30%
+  severe. Consciousness feeds **moving** (which drives move speed) and **manipulation** (which
+  every work-speed stat applies at full weight, uncapped). One offset, both rates. The mood hit
+  rides alongside and causes none of it.
+- **Exhaustion does not slow you at all.** Tiredness affects no work or combat stat in the
+  reference — the rest bands do mood and disease immunity and nothing else. What it does instead is
+  **stop you**: at zero rest a colonist collapses and sleeps where they stand. Full output, full
+  output, full output, then a body on the floor.
+
+**That is one philosophy applied twice, and it is the same one behind the removed mood tax
+(§3e): a condition either does nothing to your rate or it produces a visible, discrete event.**
+Hunger is the exception that proves it, and it is allowed to slow you only because it has stopped
+being a need and become an injury with a name and a bar.
+
+#### What this design takes
+
+**Hunger: the path, not just the outcome.** `ConditionPerMille()` is a single scalar — the
+stand-in for consciousness until M4 builds capacities — and starvation offsets *it*, not the two
+rates separately. Neither the work rate nor the move rate ever learns that hunger exists, which is
+the property that makes M4's arrival a substitution rather than a rewrite.
+
+| | Effect on `ConditionPerMille()` |
 |---|---|
-| Rest below 15% | ×0.85 |
-| Food below 10% (starving) | ×0.80 |
-| Floor on the product of all condition factors | **×0.70, never lower** |
+| Food at 0% (starving), by severity | **−100, −200, −300** |
+| Ceiling | **1,000. Nothing may raise it above baseline** — being dulled slows you, being alert never speeds you up. That asymmetry is the reference's and is worth keeping |
+| Floor | **700, never lower** |
 
-**The floor is the whole safety argument, and applying condition to work as well makes it matter
-more, not less.** A slower colonist eats later, which makes it hungrier, which makes it slower — and
-now also chops its firewood and cooks its meal more slowly, so the spiral has a second turn in it
-that the movement-only version did not. A floor of 0.70 keeps the compounded worst case at 0.70 on
-both rates rather than 0.49 on the pair, which is the difference between a colonist having a bad
-day and a colonist who cannot recover. **This must be proved on the soak before it is believed**,
-on the same three seeds, against a run with the condition factors disabled — and that comparison
-is `U44`'s done criterion rather than a nice-to-have.
+**The compounding is now evidence rather than a worry.** Because one scalar reaches both rates, a
+starving colonist walks at 0.7 *and* works at 0.7, so a walk-then-work round trip runs at about
+**0.49 of its throughput** — which is what the reference does at severe malnutrition too. The floor
+at 700 is ours and is a deliberate departure: the reference has no soft landing, it has
+*thresholds* — consciousness below 30% and the colonist is unconscious. **We have no downed state
+to fall through**, so a floor stands in for one, and it should give way to a threshold on the day
+health exists.
 
-**The counter-argument is real and is recorded in §3e**: the reference removed its mood-driven
-work-speed tax precisely because an invisible percentage on everything is bad design. The bet this
-takes is that ours is visible — the inspect pane says what a colonist's rate is and why. If it is
-not legible in play, drop it rather than tune it.
+**Exhaustion: not a rate penalty. Collapse.** This is a departure from the literal reading of the
+owner's answer and it is flagged as such in §7 — a graded slowdown for tiredness is invisible and
+unattributable, where a colonist face-down in the mud with an alert is legible at a glance, and the
+reference reached that conclusion deliberately rather than by omission. It is also a *smaller*
+change than it sounds: `SleepJobDriver` already sets `Pawn.Asleep`, and nothing in the game can
+currently collapse — a tired colonist walks to a bed — so the whole of it is "at zero rest, sleep
+here instead of walking there".
+
+**The soak proves it or the tuning is wrong.** Three seeds, ten days, against a run with condition
+disabled, both economies recorded. The spiral is real in the reference and is braked by three
+things: a long runway, symmetric recovery with no point of no return, and collapse itself handing
+the colonist to somebody else to feed. **We have the runway** (`a-08`: 72.5 hours from full to
+starvation). The other two want checking rather than assuming, and the second of them is another
+argument for collapse being a behaviour rather than a number.
 
 ### 4d. Load, deferred on purpose
 
@@ -476,6 +514,15 @@ curves move with it.
    than this design first proposed: condition multiplies **both** the work rate and the move rate,
    from one shared method. The soak comparison is `U44`'s done criterion, because that is where a
    starvation spiral would show up.
+
+   **One part of this needs the owner's veto rather than their approval.** Follow-up research
+   found that in the reference **exhaustion does not slow anybody down** — tiredness touches no
+   work or movement stat; at zero rest a colonist collapses and sleeps where they stand. §4c
+   therefore gives starvation a slowdown and gives exhaustion **a collapse instead of a number**,
+   on the argument that a colonist face-down in the mud is a visible effect where a hidden −15% is
+   not. That is still "exhaustion has an effect", but it is not the effect the answer literally
+   asked for, so: **say if you want the slowdown as well and it goes back in** — it is one row of
+   a table either way.
 3. **Running is parked** (§4f) — *"not sure yet"*. `U45` is held, and the standing rule while it is
    held is that nobody invents an urgency model to fill the gap.
 
@@ -504,10 +551,13 @@ Test-first, per the standing convention. The tests that must exist before the co
   and however many times they swap.
 - **A rate of zero cannot exist**, and a rate below the floor clamps rather than stalling. A
   colonist who can never finish a job is an infinite loop in the job system.
-- **Condition reaches both rates from one place.** A colonist driven to the condition floor is at
-  ×0.70 on work and ×0.70 on movement, and the test asserts the floor holds when both the rest and
-  the food factor apply at once — the compounded case is the one that would otherwise reach 0.68
-  and keep falling as factors are added.
+- **Condition reaches both rates from one place.** A starving colonist is at ×0.70 on work and
+  ×0.70 on movement from a single scalar, and the test asserts the ceiling as well as the floor —
+  nothing may push `ConditionPerMille` above 1,000, which is the asymmetry that stops a future
+  "well fed" bonus quietly becoming a speed boost.
+- **A colonist at zero rest collapses where it stands** rather than walking to a bed, and wakes
+  where it fell. The control is that a merely tired colonist still walks to the bed, because the
+  failure mode of this feature is every colonist sleeping in the mud.
 - **The planner and the mover still agree**, in the shape of `HopPriceHasOneOwnerTests`: no path
   changes, so every existing path checksum holds with the rate at 1,000.
 - **No allocation added to the tick.** `PathAllocationTests` is the precedent — the tick is at

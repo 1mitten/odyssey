@@ -251,8 +251,14 @@ done criterion is that **nothing changes**.
 **Three owner decisions on 2026-09-17, so a later session does not re-open them.** The proposed
 curve anchor is **accepted as a starting point** — a novice at 0.55–0.7×, a master at about 2.5×,
 mining steeper than building, eight Def integers to be judged at the keyboard. **Condition bites
-both rates**, not movement alone: one shared `ConditionPerMille()` for exhaustion and starvation,
-floored at ×0.70, which makes `U44`'s soak comparison a done criterion rather than a formality.
+both rates**, not movement alone: one shared consciousness-like `ConditionPerMille()`, which makes
+`U44`'s soak comparison a done criterion rather than a formality. **Follow-up research then split
+that in two and the design followed it:** starvation slows a colonist — as an *injury* offsetting
+one scalar that both rates read, never as a need touching either rate directly — while
+**exhaustion slows nothing and collapses you instead**, because in the reference a condition
+either does nothing to your rate or produces a visible discrete event, never an invisible
+percentage. That is a departure from the literal answer and is flagged for veto in §7, not
+assumed.
 **Running is held** — the capability is free to leave unbuilt and nobody is to invent an urgency
 model to justify building it. The governing rule for the whole line is the owner's: *use the
 reference roughly* — shape, structure and intent taken, constants re-anchored where our colonists
