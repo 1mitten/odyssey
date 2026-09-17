@@ -808,13 +808,36 @@ namespace Odyssey.Presentation.Bootstrap
 
             int index = _grid.Index(cell);
             BuildingDef what = ConstructionContent.BuildingAt(building);
-            int module = what.slab ? _model.SlabModuleFor(index) : _model.WallCoreModule;
+            int module = GhostModuleFor(index, what);
 
             Color tint = StuffPalette.For(ConstructionContent.StuffAt(stuff).stuff, overArt: true);
             tint.a = SiteGhostAlpha;
 
             _renderer.DrawGhost(module, tint,
                 GroundRelief.Drape(CellMetrics.FloorCentre(cell.X, cell.Z, cell.Y)));
+        }
+
+        /// <summary>
+        /// Which module stands in for a thing that is not there yet.
+        ///
+        /// <para>Its own, for everything except a wall. A ladder ghosts as a ladder and a door as a
+        /// door, which is the whole of what the owner asked for — *"wall stays the wall, and same
+        /// goes for floor, slab and anything else"*.</para>
+        ///
+        /// <para><b>A wall is the exception and stays one.</b> A finished wall is drawn as panels on
+        /// whichever faces something can be seen through, chosen from what stands beside it — and a
+        /// ghost has no neighbours, because it is not in the grid. Reproducing that choice for a
+        /// thing that does not exist would be a second copy of the mesher's hardest rule.
+        /// <c>WallCore</c> is the cell-filling block and is exactly "a wall-shaped thing of this
+        /// material" (`19-build-cursor.md` §2).</para>
+        /// </summary>
+        int GhostModuleFor(int index, BuildingDef what)
+        {
+            if (_model == null) return 0;
+            if (what.slab) return _model.SlabModuleFor(index);
+            return what.edifice == CoreContent.EdificeWall
+                ? _model.WallCoreModule
+                : _model.ModuleForEdificeAt(index, what.edifice);
         }
 
         /// <summary>
@@ -994,11 +1017,7 @@ namespace Odyssey.Presentation.Bootstrap
             bool allowed = sites.Allows(cell, director.Building);
             BuildingDef what = ConstructionContent.BuildingAt(director.Building);
 
-            // A slab draws with the slab module; everything that stands in a cell draws with the
-            // wall core, which is the cell-filling block. NOT the face panels a finished wall gets:
-            // those are chosen from what stands beside it, and a ghost has no neighbours because it
-            // is not in the grid yet (`19-build-cursor.md` section 2).
-            int module = what.slab ? _model.SlabModuleFor(cell) : _model.WallCoreModule;
+            int module = GhostModuleFor(cell, what);
 
             // Its own material when it can be built, which is the affirmative signal - it looks
             // like the wooden wall you asked for - and red when it cannot. Green is deliberately

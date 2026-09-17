@@ -234,9 +234,20 @@ namespace Odyssey.Presentation.World
         public ushort EdificeStuff(int index) => _edificeStuff[index];
 
         /// <summary>The module index for whatever edifice stands in this cell, or 0.</summary>
-        public int EdificeModule(int index)
+        public int EdificeModule(int index) => ModuleForEdificeAt(index, _edifice[index]);
+
+        /// <summary>
+        /// The module a <em>named</em> edifice would draw with in this cell, whether or not one is
+        /// standing there.
+        ///
+        /// <para><see cref="EdificeModule"/>'s twin for the build cursor, and it exists because that
+        /// one reads the grid: a ghost is precisely the case where nothing is in the cell yet. The
+        /// stuff group still comes from the cell, because a thing is drawn in the material of where
+        /// it stands (U43 — before this, a ladder ghosted as a solid wall block, which is the
+        /// opposite of "the cursor is the shape of the thing").</para>
+        /// </summary>
+        public int ModuleForEdificeAt(int index, ushort def)
         {
-            ushort def = _edifice[index];
             if (def == CoreContent.EdificeNone) return 0;
             // The natural table continues CoreContent's numbering, as terrain does. A tree is not
             // a kind of wall: before this branch existed every tree fell through the switch below
