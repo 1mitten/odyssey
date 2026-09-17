@@ -1,0 +1,47 @@
+#nullable enable
+using Odyssey.Sim.Contracts;
+
+namespace Odyssey.Sim.Pawns
+{
+    /// <summary>
+    /// The names a colonist's skills are published under, and the keys minted from them.
+    ///
+    /// <para><b>This is the whole of the seam.</b> Nothing in <c>Sim.Contracts</c> knows that
+    /// skills exist: the interface asks for <c>odyssey.pawn.skill.mining.level</c> by name and
+    /// gets a number, which is exactly what <see cref="PawnAspect"/> was added for. A
+    /// <c>SkillView</c> struct and a <c>SkillHandle</c> table were written here first and then
+    /// removed on merging, because they were a second mechanism for the job this one already
+    /// does — and the shared file they would have lived in is the file aspects exist to stop
+    /// people editing.</para>
+    ///
+    /// <para><b>Three names per skill rather than one packed number.</b> A level, a passion and an
+    /// experience are three things the interface shows separately and three things that change on
+    /// different occasions; packing them into one int would save two rows a pawn and cost the
+    /// reader a decode it could get wrong. The published set is nine rows a colonist, which on a
+    /// colony of fifty is four hundred and fifty rows into a buffer that is reused.</para>
+    ///
+    /// <para><b>Minted once.</b> <see cref="AspectKey.Of"/> walks the string, and the publish loop
+    /// runs every tick for every colonist, so the keys are static and the loop only indexes them.
+    /// </para>
+    /// </summary>
+    public static class SkillAspects
+    {
+        /// <summary>Everything this project publishes about a pawn shares this prefix.</summary>
+        public const string Prefix = "odyssey.pawn.skill.";
+
+        /// <summary>The full name of one value of one skill, as both sides spell it.</summary>
+        public static string Name(string skill, string value) => Prefix + skill + "." + value;
+
+        public static readonly AspectKey[] Level = Mint("level");
+        public static readonly AspectKey[] Passion = Mint("passion");
+        public static readonly AspectKey[] Experience = Mint("experience");
+
+        static AspectKey[] Mint(string value)
+        {
+            var keys = new AspectKey[SkillIndex.Count];
+            for (int s = 0; s < keys.Length; s++)
+                keys[s] = AspectKey.Of(Name(SkillIndex.Names[s], value));
+            return keys;
+        }
+    }
+}

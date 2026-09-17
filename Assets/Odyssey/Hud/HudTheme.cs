@@ -128,6 +128,20 @@ namespace Odyssey.Hud
         /// bar is always on screen and always carries text.</summary>
         public static readonly HudColour BarFill = new HudColour(12, 16, 20, 0.90f);
 
+        /// <summary>
+        /// The fill of a panel raised from the command bar (owner, 2026-09-17: "there should be
+        /// less transparency with these menus that appear from this bar").
+        ///
+        /// <para><b>Why these and not every panel.</b> A board panel — stores, the clock, the
+        /// inspect pane — is something you read *while* watching the world, and the two scrims
+        /// carry its text contrast so the panel itself can stay light enough to see terrain
+        /// through. A popover is something you have deliberately opened and are looking *at*; the
+        /// board behind it is not being read, and showing it through a list of rows is noise on
+        /// the one surface the player is attending to. It is also the surface furthest from a
+        /// scrim's strongest point, since it stands a panel's height above the bottom edge.</para>
+        /// </summary>
+        public static readonly HudColour PopoverFill = new HudColour(12, 16, 20, 0.96f);
+
         public static readonly HudColour PanelBorder = new HudColour(255, 255, 255, 0.13f);
         public static readonly HudColour Divider = new HudColour(255, 255, 255, 0.09f);
 
@@ -179,7 +193,12 @@ namespace Odyssey.Hud
         // ------------------------------------------------------------------ geometry
 
         public const int PanelRadius = 5;
-        public const int BarRadius = 6;
+        /// <summary>
+        /// The command bar's corner radius: none. It runs the full width of the screen with three
+        /// of its four sides off it (owner, 2026-09-17), and a rounded corner against a screen
+        /// edge shows a notch of world through it, which is what a floating panel looks like.
+        /// </summary>
+        public const int BarRadius = 0;
         public const int ControlRadius = 4;
         public const int ChipRadius = 3;
         public const int BorderWidth = 1;

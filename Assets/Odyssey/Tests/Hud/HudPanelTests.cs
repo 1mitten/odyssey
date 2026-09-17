@@ -453,6 +453,28 @@ namespace Odyssey.Tests.Hud
                 Is.EqualTo(EscapeAction.OpenPanel));
         }
 
+        /// <summary>
+        /// The Menu popover is in the order too (owner, 2026-09-17: every window can be escaped).
+        /// It was the one window with no way out but the button that opened it.
+        /// </summary>
+        [Test]
+        public void TheMenuPopoverUnwindsWithTheRest()
+        {
+            var settings = new SettingsDirector();
+
+            Assert.That(settings.Escape(toolArmed: false, paletteOpen: false, menuOpen: true),
+                Is.EqualTo(EscapeAction.CloseMenu));
+
+            Assert.That(settings.Escape(toolArmed: true, paletteOpen: false, menuOpen: true),
+                Is.EqualTo(EscapeAction.DisarmTool),
+                "a tool in the hand still comes off first");
+
+            settings.SetOpen(true);
+            Assert.That(settings.Escape(toolArmed: false, paletteOpen: false, menuOpen: true),
+                Is.EqualTo(EscapeAction.CloseMenu),
+                "a popover raised a moment ago unwinds before the settings panel under it");
+        }
+
         [Test]
         public void TheOlderOverloadStillMeansWhatItMeant()
         {

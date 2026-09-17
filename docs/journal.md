@@ -980,3 +980,119 @@ work itself.
     `scripts/unity.sh test editmode` and PlayMode — a Unity editor held the main checkout
     throughout, which matters more than usual here because **the ten editor tools are compiled by
     nothing else**, so CI's Unity tier is the first thing to compile a third of this change.
+
+- **The roster card says what a colonist is doing with a picture (owner, 2026-09-17).** Three of
+  the owner's 32 px drawings went in as `ui.status.felling`, `ui.status.mining` and
+  `ui.status.building`, and an `IconBadge` leads the activity line on every card. **The slot is
+  never empty**: hauling, eating, sleeping and idle have no art and draw the outlined square,
+  because hiding the badge would move the word sideways every time a colonist changed job. The
+  hammer has no job to be drawn for yet — there is no build driver in `JobIndex` — and costs
+  nothing sitting there. `TheActivityLineLeadsWithAnIconAndStillHoldsItsWord` measures the word the
+  text engine would really draw against the room the row gave it, because a word that no longer
+  fits does not report itself: UI Toolkit lays it past the card's edge, where the rounded frame
+  hides the tail. Measured at 1080p: "Mining" 31 px in 34, "Felling" 30 in 33, against 93 available.
+
+- **The bars came off the card and it was sized by measurement (owner, 2026-09-17).** *"Remove the
+  bars from the roster icons and then we can shorten and tighten them so we can carry many more —
+  accommodate the longest name possible."* A card is two rows now, identity and activity, at
+  **106 x 63** against 132 x 86: **1.24x as many colonists on the same bar** (4→5 at 720p, 8→10 at
+  1080p, 13→16 at 1440p). **The width is measured, not chosen** —
+  `TheCardIsWideEnoughForItsRowsAndNoWider` asks the text engine what the longest name the pool can
+  deal and the longest `ui.status` word really draw: `Wrenn 10` at 50 px makes a 100 px identity row
+  and `Sleeping` at 39 px a 78 px activity row, against a 106 px card. It sweeps **twelve cycles of
+  the eight-name pool**, because the wide names are not the pool's own but the ones carrying a
+  two-digit cycle suffix, and a colony of fifty reaches them. Food, rest and mood are on the inspect
+  pane for whoever is selected and in the alerts panel for the colony — both built after the card
+  was, and both answer properly what three 3 px bars answered at a glance.
+
+- **Both bars docked, and the strip may wrap to two rows (owner, 2026-09-17).** `StripTop` and
+  `BarBottom` are 0 where both were `Edge`. **A second row has to be earned:** two full rows are
+  8.1% of a 1280 x 720 screen and took the resting HUD to **21.7%**, over the approved 18% ceiling,
+  so `StripHeightShare` (0.14) caps the strip against the viewport — one row at 720p, two at 1080p
+  and above, and back to one at a raised interface scale. The clamp matters more than the growth:
+  the strip is the one region with no ceiling of its own. **The wrap happens at the strip's own
+  room, not the screen's**, so the shell writes the strip's insets on every resize; without that
+  the second row runs under the clock.
+
+- **The Skills tab is real, and sheet 06 is in the repository (owner, 2026-09-17; design
+  `docs/design/15-skills.md`).** The owner supplied `SurvivalSkills-Sheet.png` — 56 framed 32 px
+  tiles, 8 x 7 — and it **is** the sheet the icon map had been calling 06 since that map was
+  written blind. All 56 cells are catalogued in `15-skills.md` §2.
+  - **The finding is that the sheet is a skill list for a game two or three milestones out.** Three
+    cells draw something the simulation has; ten draw a skill the design has named and nothing
+    implements; the other **forty-three argue for systems nobody has designed** — hunting, trapping
+    and fishing, butchery and tanning, textiles, a refining chain, demolition, foraging, warmth and
+    light as needs, injury and death, research and blueprints. So the rows had to be chosen
+    deliberately rather than taken wholesale, or the interface would promise weaving to a player
+    who can only chop and dig.
+  - **Four decisions by interview** (§6): thirteen rows with the simulated ones live and the rest
+    visibly unavailable; the thirteen in `icon-keys.csv` are canon, so hauling and cutting are work
+    types and not skills; a row is an icon, a name, a level and a passion mark; and two icon idioms
+    — framed painted tiles for skills against bare marks for status.
+  - **It was built on its own contract and merged onto the aspect mechanism.** The first version
+    added `SkillView`, `SkillHandle`, `Skills`, `SkillCount` and `AddSkill` to `Sim.Contracts` — a
+    sparse counted list in `OrderView`'s shape, reasoned out independently and, as it turned out,
+    the same idea as OQ-45's pawn aspects, which landed on `main` the same night. **All of it was
+    deleted on merging.** Skills now publish as `odyssey.pawn.skill.<name>.level` / `.passion` /
+    `.experience`, `SkillAspects` mints the keys in `Odyssey.Sim`, `SkillCatalogue` mints the same
+    keys from the same literals in `Odyssey.Hud`, and **nothing in the shared assembly knows that
+    skills exist** — which is exactly what that mechanism was added for. Two tests spell the
+    literals out rather than asking either side what it is called, because a test that asks the
+    thing under test agrees with itself whatever it has been renamed to.
+  - **The pane has working tabs at last.** They were chips with no click and one body.
+    `InspectModel.ActiveTab` is **model state**, so the choice survives the refresh that follows
+    every click; in the view it would undo itself fifteen times a second.
+  - **Twelve icons are cut by the pipeline, and that is the first time its output has been
+    loadable.** `tools/icons/icons.py` wrote to `Assets/Art/Ui/icons/` while `IconArt` loads from
+    `Assets/Art/Ui/Resources/odyssey/icons/` — so anything ever exported would have drawn the
+    placeholder square, **silently**, because a key with no art is not an error and is not logged.
+  - **Where the simulation's three went.** Mining is `ui.skill.mining`. **Cutting feeds
+    `ui.skill.growing`** — felling is plant work, the canon work type `ui.work.cutting` is "cut
+    plants and clear growth", and the row's tooltip says so precisely so it can be objected to.
+    **`Skill_Hauling` should be deleted**: under the canon list hauling is a work type and not a
+    skill, so its experience has nowhere to go. That is a Defs, `SkillIndex`, save-format and hash
+    change and is **not done**.
+  - **Not judged by eye, and one thing measured against it: a framed tile does not read at 17 px.**
+    The frame is a large share of the tile and what is left of the painting is a few pixels of
+    colour. `Logs/skill-icons.png`, 64 px over 17 px.
+
+- **The command bar runs edge to edge, and its menus became popovers (owner, 2026-09-17).** *"Make
+  the bottom bar the full width of the screen. When I click on build I expect the menu to appear
+  directly above the build button, as I do all the menus… All windows can be escaped but also
+  should have an X in the top right… There should be less transparency with these menus. Make this
+  a consistent rule."*
+  - The bar was a centred pill as wide as its items; it is now edge to edge with **no corner
+    rounded and only its top hairline drawn** (`HudTheme.BarRadius` 6 → 0, `HudLayout.BarFrame` one
+    border rather than two), and the overflow arithmetic measures against the bar's own padding
+    rather than the screen margin — which puts **two more items on the bar** before anything goes
+    into Menu.
+  - **The rule is written once, in one helper.** A **window** is a panel you deliberately opened
+    and are looking at: `HudTheme.PopoverFill` (0.96 against a board panel's 0.86) and a close X,
+    which is the inspect pane's own control lifted out rather than reinvented. **The fill is not
+    taste** — the two scrims carry a board panel's contrast so it can stay light enough to see
+    terrain through, but the board behind a window is not being read. A **popover** is a window
+    raised from a bar button: anchored to the **left edge** of that button, flush on the bar with
+    **no gap**, bottom corners squared. Left-aligned rather than centred, because centring puts a
+    wide popover off the screen for the leftmost button and has to clamp anyway.
+  - **Only one popover at a time**, or two raised from the same bar would overlap each other over
+    the buttons that raised them and the player could not tell which the next Escape belongs to.
+    `EscapeAction.CloseMenu` is new: **the Menu popover was the one window with no way out but the
+    button that opened it.**
+  - Measured under the player loop at 1080p: the Build popover lands at x=5 against its button at
+    5 and the Menu popover at 1191 against 1191, both with their bottom edge exactly on the bar's
+    top at 1031.
+
+- **The rest of the HUD docked too, and the Build palette stopped eating itself (owner,
+  2026-09-17).** `HudLayout.Edge` is 0 where it was 20: the clock sat twenty pixels below a strip
+  beside it that started at zero and the two read as misaligned *because they were*. Stores, the
+  clock column, the depth rail and the inspect pane sit on their edges now, with the corners that
+  lie on a screen edge squared. **The breathing room moved inside rather than going away** — a
+  panel's `Pad` is still twelve on all four sides, so no text is nearer the edge than it was; what
+  is gone is the strip of world between a border and the edge. It is also forty pixels of strip
+  room. **For the Build palette the cap is the fix and the width is the cheap half:** the category
+  list was `flex-grow: 1`, so it took every pixel the panel had and the tools got the remainder —
+  the group the player is reaching into shrank as the group above it grew. `BuildCatRows` is 2 and
+  anything past two rows scrolls, which is what the scroll view was put there for and never
+  reached. A chip has an explicit 30 px height, because **a count of rows is meaningless if a row's
+  height is content-driven**. Measured at 1080p: the palette is **176 px tall with categories at 68
+  and tools at 44**, against a panel that ran to its 320 px ceiling with five rows of categories.

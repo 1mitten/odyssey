@@ -51,6 +51,80 @@ namespace Odyssey.Presentation.Ui
             return row;
         }
 
+        /// <summary>
+        /// The close button every window carries in its top right (owner, 2026-09-17: "all windows
+        /// can be escaped but also should have an X in the top right … like the one used in the
+        /// tile selection").
+        ///
+        /// <para>It is the inspect pane's own control, lifted out rather than reinvented: the
+        /// same glyph, the same 26 px box, the same red hairline on hover. A second close button
+        /// that looked slightly different would be the interface disagreeing with itself about
+        /// what closing means.</para>
+        /// </summary>
+        static VisualElement CloseButton(VisualElement header, string what, Action onClose)
+        {
+            var spacer = new VisualElement { pickingMode = PickingMode.Ignore };
+            spacer.style.flexGrow = 1;
+            header.Add(spacer);
+
+            var close = new VisualElement();
+            close.AddToClassList("inspect__close");
+            close.AddToClassList("panel__close");
+            close.Add(new HudGlyph(HudGlyphKind.Close, 14f, HudTokens.TextDim));
+            close.tooltip = "Close " + what + " — Esc";
+            close.RegisterCallback<ClickEvent>(_ => onClose());
+            header.Add(close);
+            return close;
+        }
+
+        /// <summary>
+        /// A panel the player opened and is looking at, as against a board panel read while
+        /// watching the world: the opaque fill and the close X, which are the two halves of the
+        /// owner's rule. Every window is built through here, so "consistent" is a property of the
+        /// code rather than a convention three call sites have to remember.
+        /// </summary>
+        VisualElement Window(string name, string label, Action onClose, params string[] extraClasses)
+        {
+            var panel = Panel(name, extraClasses);
+            panel.AddToClassList("window");
+            VisualElement header = Header(panel, label, out _);
+            CloseButton(header, label, onClose);
+            panel.style.display = DisplayStyle.None;
+            return panel;
+        }
+
+        /// <summary>
+        /// A panel raised from the command bar: the one rule, in one place.
+        ///
+        /// <para>Anchored to the button that raised it, flush on the bar with no gap, less
+        /// transparent than a board panel, an X in the header and closed by Escape.</para>
+        /// </summary>
+        VisualElement Popover(string name, string label, Action onClose, params string[] extraClasses)
+        {
+            VisualElement panel = Window(name, label, onClose, extraClasses);
+            panel.AddToClassList("popover");
+            return panel;
+        }
+
+        /// <summary>
+        /// Put a popover over the button that raised it.
+        ///
+        /// <para>Written from code because where it sits is a fact about the bar, and only the
+        /// laid-out bar knows where its buttons are: the reflow moves them as items go into Menu,
+        /// and the interface scale moves them again. The arithmetic itself is
+        /// <see cref="HudLayout.PopoverLeft"/>, in the assembly the fast tier can read.</para>
+        /// </summary>
+        void PlacePopover(VisualElement popover, VisualElement anchor)
+        {
+            float screen = _hud.resolvedStyle.width;
+            float width = popover.resolvedStyle.width;
+            if (float.IsNaN(width) || width <= 1f) width = popover.worldBound.width;
+
+            Rect button = anchor.worldBound;
+            popover.style.left = HudLayout.PopoverLeft(button.xMin, width, screen);
+            popover.style.bottom = HudLayout.PopoverBottom;
+        }
+
         // ============================================================ scrims
 
         /// <summary>
@@ -244,14 +318,12 @@ namespace Odyssey.Presentation.Ui
                     HudText.Set(view.Initial, Initial(model.Name), HudTextRole.Row);
                 }
                 if (view.LastJob != model.JobDef)
+                {
                     HudText.Set(view.Job, JobLabels.Label(model.JobDef), HudTextRole.Meta);
-
-                view.FoodFill.style.width = Length.Percent(Percent(model.Food));
-                view.RestFill.style.width = Length.Percent(Percent(model.Rest));
-                view.MoodFill.style.width = Length.Percent(Percent(model.Mood));
-                Band(view.FoodFill, model.Food);
-                Band(view.RestFill, model.Rest);
-                Band(view.MoodFill, model.Mood);
+                    // A same-key call does nothing, so a colonist moving between two jobs that
+                    // read as idle retargets nothing at all.
+                    view.JobIcon.SetKey(JobLabels.IconKey(model.JobDef));
+                }
 
                 view.Root.EnableInClassList("card--sel", model.Selected);
                 view.Ring.style.display = model.Selected ? DisplayStyle.Flex : DisplayStyle.None;
@@ -304,12 +376,22 @@ namespace Odyssey.Presentation.Ui
             // The job goes on its own line under the avatar row, not in the strip beside the
             // avatar. The whole width of the card is what lets it be a full word: an ellipsis is
             // allowed on a colonist's name and on nothing else.
+            //
+            // The icon leads the word rather than replacing it (owner, 2026-09-17). Uncategorised,
+            // because the spec gives a colour of its own only to stores and the command bar; here
+            // it takes the ink of the word beside it, which is what makes the line read as one
+            // thing. It is not hidden where a key has no art: the slot is always occupied, so the
+            // word does not shift sideways as a colonist changes job, and the outlined square
+            // says a picture belongs there — which is true, and is the same thing it says
+            // everywhere else in the HUD.
+            var jobRow = new VisualElement { pickingMode = PickingMode.Ignore };
+            jobRow.AddToClassList("card__jobrow");
+            var jobIcon = new IconBadge(JobLabels.IconKey(-1), IconBadge.RowSize);
+            jobIcon.Inherit(HudTokens.TextDim);
             Label job = HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "card__job");
-            card.Add(job);
-
-            VisualElement foodFill = CardBar(card);
-            VisualElement restFill = CardBar(card);
-            VisualElement moodFill = CardBar(card);
+            jobRow.Add(jobIcon);
+            jobRow.Add(job);
+            card.Add(jobRow);
 
             // Shift is the strip's toggle, exactly as it is in the world: a shift-press on a card
             // turns it on or off without moving the camera, and while shift is held a drag across
@@ -335,21 +417,9 @@ namespace Odyssey.Presentation.Ui
             _strip.Add(card);
             return new CardView
             {
-                Root = card, Ring = ring, Initial = initial, Name = name, Job = job,
-                FoodFill = foodFill, RestFill = restFill, MoodFill = moodFill,
+                Root = card, Ring = ring, Initial = initial, Name = name,
+                JobIcon = jobIcon, Job = job,
             };
-        }
-
-        static VisualElement CardBar(VisualElement card)
-        {
-            var bar = new VisualElement();
-            bar.AddToClassList("bar");
-            bar.AddToClassList("bar--card");
-            var fill = new VisualElement();
-            fill.AddToClassList("bar__fill");
-            bar.Add(fill);
-            card.Add(bar);
-            return fill;
         }
 
         static string Initial(string name) =>

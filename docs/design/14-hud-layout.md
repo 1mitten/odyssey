@@ -195,7 +195,7 @@ anchored to a screen edge or centred; nothing is placed at a computed offset.
 | region | anchor | notes |
 |---|---|---|
 | **Stores** | `left 20, top 20, w 288` | header carries `n / total` and a disclosure; zero-stock rows folded away |
-| **Colonist strip** | centred, `top 20` | 132 × 86 cards, 7 px apart; clamped to what fits between the two corners |
+| **Colonist strip** | centred, `top 20` | 106 × 63 cards (132 × 86 until 2026-09-17), 7 px apart; clamped to what fits between the two corners |
 | **Clock + speed** | `right 76, top 20, w 266` | one panel — the merge *is* the fix for A3/A4 overlapping |
 | **Alerts** | under the clock in the same column, 9 px gap | hidden outright when empty |
 | **Depth rail** | `right 20, top 20, w 44` | one 26 × 16 cell a layer; shrinks rather than overflowing |
@@ -336,6 +336,115 @@ was neither disabled nor labelled.
   depth readout has to say at a glance, and lights the live layer with its number in it.
 - **The colonist card** lost its L12 label, because the rail states the layer once and the inspect
   pane states it again for whoever is selected. It gained a rest bar, so all three needs are on it.
+  - **Amended 2026-09-17 (owner):** the activity line leads with an icon, so the card answers
+    "what is this one doing" as a picture as well as a word. The line is 17 px rather than 16,
+    because the row is now sized by the icon rather than by the text, and the gap is 6 px rather
+    than a list row's 9, because the card is narrow and the word has to stay a whole word.
+    The slot is occupied whatever the job: a key with no art draws the outlined square, as it does
+    everywhere else in the HUD, and hiding it would move the word sideways every time a colonist
+    changed job.
+  - **Amended again the same day (owner): the three need bars come off, and the card is sized by
+    what is left.** "Remove the bars from the roster icons and then we can shorten and tighten
+    them so we can carry many more — accommodate the longest name possible." A card is now two
+    rows, identity and activity, at **106 × 63** against 132 × 86: **1.24× as many colonists on
+    the same bar**, and the strip's footprint falls by 47%. The width is not chosen — it is the
+    wider of the two rows, measured. `TheCardIsWideEnoughForItsRowsAndNoWider` asks the text
+    engine what the longest name the pool can deal and the longest `ui.status` word really draw,
+    in the real face at the real size, and bounds the constant on both sides with a figure
+    attached. Food, rest and mood are still on the inspect pane for whoever is selected, and the
+    alerts panel still raises starving and close-to-breaking off the whole colony — which is the
+    argument for taking them off the card: three 3 px bars at a glance told you a colonist existed
+    and not much else, and the two regions that answer the same question properly were both built
+    after the card was.
+  - **And the two bars are docked to the screen edges (owner, same day).** `StripTop` and
+    `BarBottom` are 0 where both were `Edge`: the strip and the command bar *bound* the view where
+    the stores panel, clock and rail sit *in* it, and a bar with a strip of world under it reads as
+    floating rather than as the edge of the screen. The command bar's bottom corners are squared
+    for the same reason. `InspectBottom` is derived from the bar's position now rather than written
+    down, so the pane follows it.
+  - **The strip may run to two rows, where the screen can afford one.** `StripHeightShare` (0.14)
+    caps the strip against the viewport's height: **one row at 720p, two at 1080p and above**, and
+    it drops back to one at a raised interface scale, because that shrinks the logical canvas. The
+    cap is not taste — two full rows are 8.1% of a 720p screen and took the resting HUD to 21.7%,
+    over §4's 18% ceiling. The clamp is the part that matters: the strip is the only region with no
+    ceiling of its own, so unbounded rows would make every other guarantee here true only for the
+    colony sizes somebody happened to try.
+
+---
+
+## 7b. The command bar and its popovers (owner, 2026-09-17)
+
+**The bar is the full width of the screen and sits on its bottom edge.** It was a centred pill as
+wide as its items. Full width for the same reason it is docked: it is the edge of the screen rather
+than a panel floating near it. Three of its four sides are off the screen, so no corner is rounded
+and only the top hairline is drawn (`HudTheme.BarRadius` is 0, `HudLayout.BarFrame` is one border
+rather than two). The overflow arithmetic now measures against the bar's own padding rather than
+the screen margin, since the bar no longer has a margin — which puts two more items on the bar
+before anything goes into Menu.
+
+**One rule for every panel the player opens, rather than three panels each doing their own thing.**
+
+- **A *window*** is a panel you deliberately opened and are looking at, as against a board panel
+  you read while watching the world. Every window is **less transparent** than a board panel
+  (`HudTheme.PopoverFill`, 0.96 against 0.86) and carries a **close X in its top right**, the
+  inspect pane's own control lifted out rather than reinvented. The reason for the fill is not
+  taste: the two scrims carry a board panel's text contrast so it can stay light enough to see
+  terrain through, but the board behind a window is not being read, and showing it through a list
+  of rows is noise on the one surface the player is attending to.
+- **A *popover*** is a window raised from a button on the command bar. It is additionally
+  **anchored to the left edge of that button** and sits **flush on the bar with no gap**, with its
+  bottom corners squared where it meets it. Left-aligned rather than centred, because a menu whose
+  left edge lines up with its control reads as belonging to it — and because centring puts a wide
+  popover off the screen for the leftmost button and has to clamp anyway, at which point it is
+  neither centred nor aligned. The clamp is to the screen rather than to a margin, so a popover
+  raised by the rightmost button ends flush with the right edge, like the bar under it.
+- **Only one popover is open at a time.** Two raised from the same bar would overlap each other
+  over the buttons that raised them, and the player would have no way to tell which of the two the
+  Escape they are about to press belongs to.
+- **Every window can be escaped.** The Menu popover was the one that could not — it had no place
+  in the Escape order and no X, so the only way to shut it was to press the button that opened it.
+  The order is now tool → bar popover → settings → open settings.
+
+Build and Menu are popovers. The settings panel is a window but not a popover: it is reached from
+Menu *and* from Escape, so there is no one button it belongs over, and it keeps the centring a
+settings panel wants.
+
+Where a popover sits is written from code rather than the stylesheet, because it is a fact about
+the laid-out bar — the reflow moves buttons as items go into Menu, and the interface scale moves
+them again. The arithmetic is `HudLayout.PopoverLeft` and `PopoverBottom`, in the assembly the fast
+tier can read; `EveryBarPopoverOpensOverItsOwnButtonAndFlushWithTheBar` measures the realised boxes
+under the player loop, and `EveryWindowHasAWayOutThatIsNotTheKeyboard` holds the X rule.
+
+### 7b.1 The rest of the HUD docks too (owner, same day)
+
+**`HudLayout.Edge` is 0 where it was 20.** The strip and the bar were docked the day before, so the
+clock sat twenty pixels below a strip beside it that started at zero, and the two read as
+misaligned because they were. Stores, the clock column, the depth rail and the inspect pane all sit
+on their edges now, and **the corners that lie on a screen edge are squared** — the same rule the
+command bar got, for the same reason: a rounded corner against the edge shows a notch of world
+through it.
+
+**The breathing room did not go anywhere; it moved inside.** A panel's `Pad` is still twelve on all
+four sides, so no text is nearer the screen edge than it was. What is gone is the strip of world
+between a panel's border and the edge, which carried no information and cost every corner of the
+screen twenty pixels in both directions. It is also forty pixels of strip room, because
+`StripRoom` measures from the panels either side.
+
+### 7b.2 The Build palette's two groups
+
+**The cap is the fix, not the width.** The category list was `flex-grow: 1`, so it took every pixel
+the panel had and the tools got the remainder — the group the player is actually reaching into
+shrank as the group above it grew. `BuildCatRows` is 2 and `BuildCatHeight` caps the group; anything
+past two rows scrolls, which is what the scroll view was put there for and never reached. A chip has
+an explicit 30 px height, because a count of rows is meaningless if a row's height is
+content-driven.
+
+**Wider is the cheap half.** `BuildWidth` 420 → 560: ten category chips with their full words come
+to about eight hundred pixels of chip, so at 420 they wrapped to five rows. It costs nothing now
+that a popover is anchored to its button rather than centred on the screen.
+
+**And the palette opens on its first category**, rather than on an empty second group that only
+fills once the player has guessed the chips above are clickable.
 
 ---
 
