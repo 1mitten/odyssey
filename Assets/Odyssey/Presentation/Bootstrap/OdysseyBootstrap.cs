@@ -517,6 +517,13 @@ namespace Odyssey.Presentation.Bootstrap
                 // could never be un-paused. One tick is spent to let the speed change through, and
                 // only for a speed change: layer changes are presentation state and can wait, so a
                 // player scrolling through layers while paused does not advance the simulation.
+                //
+                // A question about a cell is the one thing that cannot wait, because inspecting a
+                // stopped world is exactly when it is asked. It is answered by republishing the
+                // view over the same settled world — no tick, no system, no hash — which the
+                // intent's kind permits because a question changes nothing the simulation owns.
+                if (_world.Intents.HasPending(IntentKind.QueryCell))
+                    _world.RepublishViews();
                 if (_speedChangePending)
                 {
                     _world.Tick();

@@ -95,6 +95,15 @@ namespace Odyssey.Presentation.Bootstrap
             _lastClickPawn = under;
 
             directors.Selection.Pick(picked, under, world.Views.Current, additive: shift);
+
+            // The pane's question rides the same click: the cell the selection landed on is what
+            // the world should publish detail about. A pick that went to a colonist or a pile
+            // withdraws the question instead — nobody is looking at a cell any more, and a
+            // standing question no one reads still costs a row every publish.
+            if (directors.Selection.Cell.HasValue && !directors.Selection.HasThing)
+                world.Intents.Submit(new Intent(IntentKind.QueryCell, directors.Selection.Cell.Value));
+            else
+                world.Intents.Submit(new Intent(IntentKind.QueryCell, default, -1));
         }
 
         void OnBoxSelected(Rect screenRect, bool additive)
