@@ -127,13 +127,29 @@ namespace Odyssey.Tests.Sim
         /// quarter of the cells is a quarter of the bug, 0.016 ms, which sat inside the
         /// threshold. A performance guard has to run at the size the thing is used at.</para>
         ///
-        /// <para>A timing assertion is a blunt instrument and the threshold is loose — five times
-        /// the measured figure — because the machine, the runtime and the build configuration all
-        /// move it. It is worth having anyway: it was seen to fail against the unfixed code at
-        /// this size, which is the only reason to believe it.</para>
+        /// <para>A timing assertion is a blunt instrument and the threshold is loose, because the
+        /// machine, the runtime and the build configuration all move it. It is worth having
+        /// anyway: it was seen to fail against the unfixed code at this size, which is the only
+        /// reason to believe it.</para>
         ///
         /// <para>Measured when written, on the 120 x 120 x 16 board with the whole simulation
-        /// running: <b>0.0022 ms a tick fixed, 0.057 ms unfixed.</b></para>
+        /// running: <b>0.0022 ms a tick fixed, 0.057 ms unfixed</b> — a factor of twenty-six.</para>
+        ///
+        /// <para><b>The threshold was 0.012 and blocked two unrelated pull requests in an hour
+        /// (2026-09-17).</b> It was five times the figure measured on the author's machine, which
+        /// turned out to be a statement about that machine: the GitHub-hosted Linux runner clocks
+        /// the same fixed code at <b>0.0125 and 0.0164 ms</b> — measured, both from CI, on changes
+        /// that touched no simulation code at all, one of them a stylesheet. The same commit
+        /// measured 0.0029 ms locally. A gate calibrated on the fastest machine that runs it is a
+        /// gate that fails on every other one.</para>
+        ///
+        /// <para><b>0.030 is chosen from the bug rather than from the noise</b>, which is the only
+        /// way a performance threshold stays meaningful. The defect costs twenty-six times the
+        /// fixed figure, so on the slow runner it would land near 0.3 ms — ten times this
+        /// threshold, and unmissable. The slowest honest reading seen is 0.0164, so there is
+        /// roughly a factor of two of headroom above the noise and a factor of ten below the
+        /// thing being guarded against. Widening it further would start to hide the bug; leaving
+        /// it at 0.012 hid nothing and stopped the queue.</para>
         /// </summary>
         [Test, Category("Long")]
         public void PublishingCostsWhatTheOrdersCostRatherThanWhatTheLayerCosts()
@@ -152,9 +168,11 @@ namespace Odyssey.Tests.Sim
             Console.WriteLine($"[progress] {Ticks:N0} ticks on 120x120x16 with no orders: " +
                               $"{clock.Elapsed.TotalMilliseconds:F0} ms, {msPerTick:F4} ms/tick");
 
-            Assert.That(msPerTick, Is.LessThan(0.012),
+            Assert.That(msPerTick, Is.LessThan(0.030),
                 $"a tick on an empty board costs {msPerTick:F4} ms, which is the whole-layer " +
-                "publish loop back again (it cost 0.057 ms a tick, against 0.002 without it)");
+                "publish loop back again (it cost 0.057 ms a tick, against 0.002 without it). " +
+                "If this is nearer 0.02 than 0.3 the machine is slow rather than the code being " +
+                "broken — see the remarks on this test before re-baking the number");
         }
     }
 }
