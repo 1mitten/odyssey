@@ -3233,3 +3233,62 @@ work itself.
   **0.22**, water 0.40 → **0.32** — about −2 dB across the beds, present but under the work.
   The floor test still holds (night, the lowest, sits above 0.2), and the generator and the
   committed catalogue carry the same numbers as ever.
+
+- **Starting skills, U37, 2026-09-17.** A colonist now spawns with a rolled level in every
+  skill instead of a flat zero — the gap `CLAUDE.md` had flagged as blocking `U40`'s
+  candidate cards, since three colonists with identical zeroes are nothing to choose between.
+
+  - **Where the roll had to live was the actual problem, and it was found by measuring rather
+    than by reasoning about it.** The plan's done criterion is that the roll moves every
+    `Simulated` golden and no `Generated` one. `RollPassions` is called from
+    `ColonyScenario.Place`, which runs inside `ColonyWorld.Build` — and `Build` is exactly
+    what `GoldenMasterTests` hashes for `Generated`, before a single tick runs. Rolling
+    skills the same way `RollPassions` does would have moved `Generated` too, which the plan
+    explicitly does not want. So the roll lives in a new one-shot system,
+    `StartingSkillsSystem`, that fires from inside `SimWorld.Tick()` the first time
+    `CurrentTick` reads zero — after `Generated` is taken, before `Simulated` is, for any
+    case that runs at least one tick. Confirmed by rebaking with `ODYSSEY_REGOLDEN=1` and
+    reading the printed pairs before pasting anything: all three cases' `Generated` values
+    came back byte-identical to what was already committed, and all three `Simulated` values
+    moved. No per-pawn "already rolled" flag is needed — the guard is `CurrentTick == 0`,
+    which a fresh world only ever satisfies once and a loaded save (restored to a non-zero
+    tick) never satisfies again.
+  - **The distribution is invented and said so where it lives.** Nothing in
+    `docs/research/` or `docs/design/` pins a starting-skill spread — clean room, no
+    RimWorld number to take — so `PawnKindDef.startingSkillLevelWeights` is a new Def-driven
+    table, `{ 40, 20, 14, 10, 6, 4, 3, 2, 1 }` over levels 0–8, weighted toward a low
+    baseline (mean 1.16) with a thin tail (levels 6–7 together are a 2% roll) so an
+    occasional colonist starts competent rather than every one of five arriving identical.
+    Marked INVENTED in both the C# field and the XML, per the clean-room rule, and rolled
+    from its own stream (`PawnPurpose.StartingSkill`) rather than sharing `Passion`'s salt —
+    the file's own comment on `StoneYield` already warns what sharing one does.
+  - **The one-shot roll collided with a testing convention already in use, and the fix was
+    to make the roll idempotent rather than the tests fragile.** Several existing tests
+    build a `ColonyWorld`, poke a pawn's `Skills[]` directly, then call `Tick()` once to
+    observe behaviour on that very tick — `ThePublishedFrameCarriesEveryColonistsSkills`,
+    `DecayRunsInTheColonyTheGamePlays`. Because that first `Tick()` is also the roll's only
+    chance to run, it was overwriting the value the test had just set. Fixed in
+    `Pawn.RollStartingSkills`: the draw is always made, so a later skill's roll never
+    depends on which earlier ones happened to be preset, but the result is only written into
+    a skill still holding the constructor's zero. In the game every skill is zero at that
+    point, always, so nothing changes there; in a fixture that decided a skill for its own
+    reason, the roll leaves it alone. `FellingGrantsCuttingExperiencePerWorkTick` needed a
+    real fix rather than a guard, because its premise ("nobody but the cutter has any cutting
+    experience") is no longer true once starting skills are nonzero — it now ticks once to
+    let the roll fire, snapshots every colonist's starting figure, and asserts deltas from
+    that baseline instead of absolute zero.
+  - **Content fingerprint moved on purpose.** `PawnKindDef` gaining a field moves
+    `PawnContentDefTests`'s pinned fingerprint by construction; updated with the reason
+    recorded beside it, not silently.
+  - **New coverage, direct rather than only hash-shaped:** `StartingSkillsTests` proves the
+    zero-before-any-tick state outright (not inferred from a hash not moving), that the roll
+    is deterministic on `(seed, pawn id)` and nothing else, that it never re-fires on a later
+    tick even when a skill is forced back to an arbitrary value, that it lands in the state
+    hash, and that a rolled level survives a save/load round trip — including the case where
+    a colonist has since earned real experience on top of the roll and loading must not
+    disturb it.
+  - **Verified:** fast tier **502 Sim + 171 Hud**, Long tier **19** (`ODYSSEY_TEST_ALL=1`:
+    **521 Sim** total). Both content gates `--check` clean — this is a tuning constant, not
+    player-visible named content, so neither the wiki nor the label registry needed a
+    rebuild, and both confirm nothing went stale regardless. **Not verified:** the Unity
+    tier, which this container cannot run; it is CI's job on the owner's self-hosted runner.

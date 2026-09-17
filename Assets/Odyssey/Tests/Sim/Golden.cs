@@ -29,6 +29,13 @@ namespace Odyssey.Tests.Sim
     /// the tests print replacement values instead of asserting; paste them in and say in the
     /// commit message what you changed and why the numbers moved. A golden updated without that
     /// sentence is a golden that has stopped being a test.</para>
+    ///
+    /// <para><b>Moved 2026-09-17 by U37, starting skills, and only the way the plan asked.</b>
+    /// Every <c>Simulated</c> value below moved and every <c>Generated</c> one did not — proof
+    /// that the roll (<see cref="Pawns.StartingSkillsSystem"/>) happens on the world's first
+    /// tick rather than during <c>ColonyScenario.Place</c>, which runs before <c>Generated</c> is
+    /// taken. See <c>StartingSkillsTests</c> for the direct, non-hash evidence of the same
+    /// thing.</para>
     /// </summary>
     public static class Golden
     {
@@ -84,7 +91,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = false,
             Generated = 7633281305254602338UL,
-            Simulated = 7274653310757277862UL,
+            Simulated = 1732213831916796565UL,
         };
 
         /// <summary>
@@ -101,7 +108,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.Natural,
             Wooded = true,
             Generated = 10240930215320707382UL,
-            Simulated = 13373369047270975494UL,
+            Simulated = 10640879307114233262UL,
         };
 
         /// <summary>
@@ -117,7 +124,7 @@ namespace Odyssey.Tests.Sim
             Map = MapType.RuinedCity,
             Wooded = false,
             Generated = 15938833264199567841UL,
-            Simulated = 5887301857021239423UL,
+            Simulated = 17807929989781465493UL,
         };
     }
 }

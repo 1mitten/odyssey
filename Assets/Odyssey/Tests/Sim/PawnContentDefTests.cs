@@ -50,8 +50,12 @@ namespace Odyssey.Tests.Sim
         /// <para>Moved 2026-09-17 by the build pipeline: two jobs (<c>Job_Deliver</c>,
         /// <c>Job_Build</c>), a work type (<c>Work_Construction</c>, which also renumbered the other
         /// three so it could scan first) and a skill (<c>Skill_Construction</c>).</para>
+        ///
+        /// <para>Moved again 2026-09-17 by U37: <c>PawnKindDef</c> gained
+        /// <c>startingSkillLevelWeights</c>, the invented distribution starting skill levels are
+        /// rolled from.</para>
         /// </summary>
-        const ulong ContentFingerprint = 5563497223069918341UL;
+        const ulong ContentFingerprint = 18163445494007329328UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()
