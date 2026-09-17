@@ -42,6 +42,27 @@
 .hud {
     position: absolute;
     left: 0; top: 0; right: 0; bottom: 0;
+
+    /* The HUD's ink, inherited by every label that does not name its own.
+
+       This is a fix for a whole class of bug rather than for the one that found it (owner,
+       2026-09-17: "I couldn't see any text on the save as/save buttons when saving a world").
+       `color` is an inherited property in UI Toolkit, and nothing in this sheet set one above a
+       leaf — so a label built without a style class fell through to the imported default runtime
+       theme, whose ink is dark, and drew invisibly on a panel that is nearly black. Every label in
+       the HUD passes a class and so nobody had been bitten; the moment two did not, they vanished
+       silently rather than looking wrong, which is the worst way for a mistake like this to
+       present.
+
+       Two labels were already in that state and had been for some time: the naming prompt's
+       answers, and "MADE OF" on the Build palette's material row. Setting the inherited ink here
+       means the next one is merely unstyled instead of absent. Every class below still overrides
+       it, so nothing that already had a colour changes.
+
+       HudStyleSheetTests pins it, because a default nobody can see the absence of is exactly the
+       kind that gets deleted as unused. */
+    color: #eef3f6;
+
     /* The shell must not catch the pointer anywhere a region does not sit, or the world would be
        unclickable behind a full-screen element. Set from code (PickingMode.Ignore), where it
        cannot be lost with a stylesheet swap. */
@@ -1289,6 +1310,9 @@
     margin-top: 9px;
 }
 
+/* The answer IS its label, the way a settings rung is — one element carrying the box and the word
+   together. It was a box with a Label inside it, and that Label had no class, so it took the
+   imported theme's dark ink and could not be seen at all. */
 .prompt__answer {
     flex-grow: 1;
     flex-basis: 0;
@@ -1297,11 +1321,19 @@
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.13);
     border-radius: 4px;
-    justify-content: center;
-    align-items: center;
+    color: rgba(255, 255, 255, 0.82);
+    -unity-text-align: middle-center;
 }
 
 .prompt__answer:hover { border-color: #6fd3e3; }
+
+/* Armed: the same accent wash every other row that asks twice uses. It needs its own line because
+   .row--armed colours a `.settings__label` child, and this control has no child to colour. */
+.prompt__answer--armed {
+    background-color: rgba(111, 211, 227, 0.12);
+    border-color: #6fd3e3;
+    color: #6fd3e3;
+}
 
 /* A name that cannot be written — empty, or nothing but punctuation. Disabled with its reason
    rather than a press that silently does nothing, which is the panel catalogue's rule. */

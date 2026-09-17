@@ -395,7 +395,11 @@ namespace Odyssey.Presentation.Ui
             _buildMaterials.style.display = wanted ? DisplayStyle.Flex : DisplayStyle.None;
             if (!wanted) return;
 
-            _buildMaterials.Add(HudText.Make("MADE OF", HudTextRole.Meta));
+            // The class matters: without one this caption inherited nothing and took the imported
+            // runtime theme's dark ink, so it had been invisible on the palette since the material
+            // row was built. `.hud` now carries a default ink for exactly that reason, and this
+            // says the quieter thing a caption should say beside the chips it labels.
+            _buildMaterials.Add(HudText.Make("MADE OF", HudTextRole.Meta, ussClass: "panel__label"));
             foreach (var (stuff, key) in BuildMaterials)
             {
                 VisualElement chip = PaletteChip(key, Registry.Label(key));

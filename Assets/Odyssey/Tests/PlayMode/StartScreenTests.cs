@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections;
+using System.Collections.Generic;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
@@ -153,6 +154,134 @@ namespace Odyssey.Tests.PlayMode
             {
                 Object.Destroy(root);
             }
+        }
+
+        /// <summary>
+        /// No text anywhere in the HUD is invisible against the panel behind it.
+        ///
+        /// <para><b>Written because two labels were</b> (owner, 2026-09-17: *"I couldn't see any
+        /// text on the save as/save buttons when saving a world"*). <c>color</c> is an inherited
+        /// property in UI Toolkit and nothing in the sheet set one above a leaf, so a label built
+        /// without a style class fell through to the imported runtime theme's dark ink and drew
+        /// invisibly on a near-black panel. Every other label in the HUD passes a class, which is
+        /// why it had never happened — and when it did, the text was *absent* rather than wrong,
+        /// which no screenshot review would flag as a mistake because there is nothing there to
+        /// look at.</para>
+        ///
+        /// <para><b>This is an invisibility test, not a legibility one.</b> The floor is 2:1, well
+        /// under the 4.5:1 <see cref="HudContrast.BodyMinimum"/> the acceptance criteria set for
+        /// body text, because the deliberately quiet inks — a hotkey cap at
+        /// <see cref="HudTheme.TextFaint"/>, a disabled row — are meant to be faint and are not
+        /// what this is looking for. <b>Measured, not assumed:</b> the quietest ink anybody chose
+        /// draws at about 2.8:1 and ink that inherited the runtime theme's default draws at 1.0,
+        /// so the floor sits in a wide gap rather than next to either.</para>
+        ///
+        /// <para><b>The control was run, and the first one taught something.</b> Stripping the
+        /// style class off a button — the original bug — now *passes*, because <c>.hud</c> carries
+        /// a default ink and a classless label simply inherits it. That route is closed, so the
+        /// remaining risk is a class that names a dark colour, and the control for that is real:
+        /// setting <c>.prompt__answer</c>'s colour to <c>#0b1116</c> fails this test with
+        /// <i>"'Save' draws at 1.0:1 — ink #0b1116 on #0c0f13"</i>, naming the button and the
+        /// number. Restored, it passes.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator NoTextInTheHudIsInvisible()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell shell);
+            try
+            {
+                yield return Settle();
+                var doc = boot.GetComponent<UIDocument>();
+
+                // Open the surfaces that are hidden at rest, so their labels are laid out and
+                // counted. The naming prompt is the one that started this.
+                boot.Preferences.SetOpen(true);
+                shell.Prompt.Show("Ashford", SaveNameStatus.Free);
+                yield return Settle();
+
+                int checkedLabels = 0;
+                foreach (Label label in doc.rootVisualElement.Query<Label>().ToList())
+                {
+                    if (label.worldBound.width <= 0f || label.worldBound.height <= 0f) continue;
+                    if (string.IsNullOrWhiteSpace(label.text)) continue;
+
+                    HudColour behind = BackgroundBehind(label);
+                    HudColour ink = Ink(label);
+
+                    double ratio = HudContrast.Ratio(HudContrast.Over(ink, behind), behind);
+                    checkedLabels++;
+
+                    Assert.That(ratio, Is.GreaterThan(2.0),
+                        $"'{label.text}' draws at {ratio:0.0}:1 — ink {ink.Hex} on {behind.Hex}. " +
+                        "A label with no style class inherits the runtime theme's ink, which is " +
+                        "dark, and vanishes rather than looking wrong.");
+                }
+
+                // Without this the test passes on a HUD that built nothing at all, which is the
+                // shape of vacuous pass this project has been bitten by before.
+                Assert.That(checkedLabels, Is.GreaterThan(20),
+                    "too few labels were on screen for this to have checked anything");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        /// <summary>
+        /// A label's own ink, <b>without</b> the opacity its ancestors apply to it.
+        ///
+        /// <para><b>Deliberately not the number the eye finally gets</b>, and the first version of
+        /// this test was wrong to use that. It failed on a command-bar hotkey cap: faint ink by
+        /// design, on a row dimmed to 0.42 because the command is unavailable, and the two
+        /// compounding put it under the floor. Both of those are the interface saying something on
+        /// purpose.</para>
+        ///
+        /// <para>The question this test asks is "was this ink ever chosen", and a dimmed row is an
+        /// answer to a different one. Ink that inherited the runtime theme's default lands at about
+        /// 1.0 whatever opacity is over it; the quietest ink anybody chose lands near 2.8. The gap
+        /// between those is the whole test, and folding opacity in closes it for no gain.</para>
+        /// </summary>
+        static HudColour Ink(Label label)
+        {
+            Color colour = label.resolvedStyle.color;
+            return new HudColour(
+                (byte)(colour.r * 255f + 0.5f), (byte)(colour.g * 255f + 0.5f),
+                (byte)(colour.b * 255f + 0.5f), colour.a);
+        }
+
+        /// <summary>
+        /// What is actually behind a label: every ancestor's background composited from the
+        /// outermost inwards, over black.
+        ///
+        /// <para><b>Not simply the panel fill, and the first version of this test was wrong to
+        /// assume so.</b> It failed on a colonist's initial — dark ink, deliberately, because it
+        /// sits on an accent-coloured avatar tile. The same is true of the depth rail's active
+        /// number and the command bar's primary label. Ink that looks invisible against a panel is
+        /// perfectly legible against the thing it is really drawn on, so the background has to be
+        /// computed rather than assumed, or this test punishes the interface for being careful.
+        /// </para>
+        /// </summary>
+        static HudColour BackgroundBehind(Label label)
+        {
+            var chain = new List<VisualElement>();
+            for (VisualElement? at = label; at != null; at = at.parent) chain.Add(at);
+            chain.Reverse();
+
+            var behind = new HudColour(0, 0, 0);
+            foreach (VisualElement element in chain)
+            {
+                Color fill = element.resolvedStyle.backgroundColor;
+                if (fill.a <= 0.001f) continue;
+
+                behind = HudContrast.Over(
+                    new HudColour((byte)(fill.r * 255f + 0.5f), (byte)(fill.g * 255f + 0.5f),
+                        (byte)(fill.b * 255f + 0.5f), fill.a),
+                    behind);
+            }
+
+            return behind;
         }
 
         /// <summary>

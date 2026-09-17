@@ -214,9 +214,18 @@ namespace Odyssey.Tests.PlayMode
 
             Assert.That(asked, Is.EqualTo(Speed), "the rig was not asked for the saved speed");
 
-            // The world is asked through an intent, which a paused world spends one tick to drain,
-            // so this is the frame after rather than the frame of.
-            yield return null;
+            // The world is asked through an intent, and intents drain on a tick — but a Unity frame
+            // does not always contain one. The composition root accumulates real time and steps the
+            // simulation only when it has a tick's worth, so a fixed one-frame wait passes or fails
+            // on how long that frame happened to take. **Measured, not supposed:** this test failed
+            // once in three runs on exactly that line, expecting 2 and finding 1.
+            //
+            // Waiting for the effect rather than for a frame is the fix, and it is still a real
+            // assertion: a request that never arrives exhausts the budget and fails with the same
+            // message it always did.
+            for (int frame = 0; frame < 120 && boot.World!.GameSpeed != Speed; frame++)
+                yield return null;
+
             Assert.That(boot.World!.GameSpeed, Is.EqualTo(Speed),
                 "the request never reached the simulation");
 

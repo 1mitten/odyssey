@@ -40,6 +40,13 @@ namespace Odyssey.Tests.Hud
 
         static readonly (string Selector, string Property, Func<HudColour> Token, string Name)[] Colours =
         {
+            // The inherited ink. `color` cascades in UI Toolkit and nothing above a leaf set one,
+            // so a label built without a style class fell through to the imported runtime theme's
+            // dark ink and drew invisibly on a near-black panel — which is how the naming prompt's
+            // two buttons and the palette's "MADE OF" came to be unreadable rather than merely
+            // unstyled. Pinned because the absence of a default is not visible in a review.
+            (".hud", "color", () => HudTheme.TextPrimary, "text primary"),
+
             (".panel", "background-color", () => HudTheme.PanelFill, "panel fill"),
             (".panel", "border-color", () => HudTheme.PanelBorder, "panel border"),
             (".card", "background-color", () => HudTheme.PanelFill, "panel fill"),
@@ -99,6 +106,8 @@ namespace Odyssey.Tests.Hud
             (".field:focus .unity-base-text-field__input", "border-color", () => HudTheme.Accent, "accent"),
             (".prompt__answer", "border-color", () => HudTheme.PanelBorder, "panel border"),
             (".prompt__answer:hover", "border-color", () => HudTheme.Accent, "accent"),
+            (".prompt__answer--armed", "background-color", () => HudTheme.ActiveTabFill, "active tab fill"),
+            (".prompt__answer--armed", "color", () => HudTheme.Accent, "accent"),
             (".prompt__note", "color", () => HudTheme.TextDim, "text dim"),
             (".prompt__note--warn", "color", () => HudTheme.Warn, "warn"),
         };

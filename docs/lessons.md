@@ -71,6 +71,23 @@ form Unity accepts**, and that includes the test code. Neither of these is catch
 both are one `scripts/unity.sh test editmode` away, so run it before saying a test suite is done
 rather than after.
 
+**A frame is not a tick, and waiting one frame for a simulation effect is a flake.** Found
+2026-09-17, one failure in three PlayMode runs. `OdysseyBootstrap` accumulates real time and steps
+the simulation only when it has a tick's worth, so **a Unity frame contains zero or more ticks
+depending on how long it took**. A test that submits an intent and then does `yield return null`
+before asserting is really asserting that the frame happened to be long enough — which it is, most
+of the time, on this machine. Wait for the *effect* with a bounded loop instead:
+
+```csharp
+for (int frame = 0; frame < 120 && boot.World!.GameSpeed != wanted; frame++) yield return null;
+Assert.That(boot.World!.GameSpeed, Is.EqualTo(wanted), "the request never reached the simulation");
+```
+
+It is still a real assertion — a request that never arrives exhausts the budget and fails with the
+same message — and it does not get slower, because it stops as soon as the effect lands. The same
+applies to anything downstream of a tick: a published snapshot, a job starting, a designation
+clearing.
+
 **The fast tier compiles neither Presentation nor Editor.** `scripts/test-fast.sh` builds only the
 two mirror projects, `Odyssey.Tests.Sim` and `Odyssey.Tests.Hud`, so a green fast tier says nothing
 at all about `Assets/Odyssey/Presentation/`, `Assets/Editor/` or the scene wiring. A unit that
