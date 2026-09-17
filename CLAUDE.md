@@ -161,7 +161,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **478 Sim + 158 Hud**; Long tier **17**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **481 Sim + 158 Hud**; Long tier **17**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
@@ -183,11 +183,25 @@ RTX 5070 Ti at 640 x 480. The city's move from 0.88 to 1.56 ms is **unexplained*
 
 ### Top technical risk
 
-**Pathfinding cost:** 65% of the measured tick is A-star. The once-recorded explanation — futile
-searches for unreachable targets — was **falsified by its own follow-up experiment** (only 14% of
-budget exhaustions were unreachable, under 1% on a structured map). The fix is hierarchical search
-plus a better heuristic, with the district-id reachability check (`d-04-pathfinding.md`) measured
-first.
+**Pathfinding cost, and it is smaller than this section used to say.** 65% of the tick was A-star
+on the D1 spike; the once-recorded explanation — futile searches for unreachable targets — was
+**falsified by its own follow-up experiment** (only 14% of budget exhaustions were unreachable,
+under 1% on a structured map), and the fix that worked was hierarchical search plus a better
+heuristic.
+
+**The re-run the ADR asked for has happened** (OQ-19, 2026-09-17; `TickBenchmarkTests`, ADR 0005
+addendum). Measured on the real `SimWorld.Tick` rather than on a spike that mirrored it: a colony
+of 50 on a 250 × 250 × 40 board costs **0.025 ms a tick**, and the same world under D1's replan
+rate — one long-range path per tick — costs **0.438 ms, p95 1.253, with Pawns at 97.1%**. That is
+**half the 0.88 ms the ADR estimated**, and it reverses the margin table's verdict: three ticks
+discounted 4× for the target laptop leave 11.3 ms of a 16.6 ms frame rather than nothing. For
+scale, `OneDay` on the board the scene actually loads runs at 0.003 ms a tick. Pathfinding is still
+where the tick goes under load, but it is no longer a threat to the frame budget.
+
+**What the same run found instead: the tick allocates.** 76.7 bytes a tick at rest and 284.6 under
+replan pressure, with no collection of any generation across either window — so those are the
+allocation figures, not lower bounds — against the D1 spike's true zero. About 208 bytes per served
+path request, source **unmeasured**, roughly 17 MB over a day. It wants a row.
 
 **The graph that search would run on is now measured** (OQ-18, 2026-09-17;
 `NavGraphStatisticsTests`, and `d-04-pathfinding.md` §"Measured 2026-09-17"). At 250 × 250 × 40 the

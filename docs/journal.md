@@ -1327,3 +1327,50 @@ work itself.
     ran 478 + 158. That line is edited by every branch that adds a test and is therefore wrong
     most of the time; PR #69 carries its own different number for the same line. It is a shared
     counter with no owner, and it will keep going stale until it is either generated or dropped.
+
+- **The real tick is measured, and the estimate it replaces was conservative by half (OQ-19,
+  2026-09-17; ADR 0005 addendum).** The ADR's margin table — "the most important number in the
+  benchmark", by its own description — came from the D1 spike, a program that *mirrored* the tick
+  rather than being it, and its post-hierarchical figure of 0.88 ms was arithmetic: the 2.4×
+  pathfinder win applied by hand to the spike's phase 3. The ADR asked for the re-run in as many
+  words. `TickBenchmarkTests` does it on the real `SimWorld.Tick`.
+  - **The first run measured the wrong thing, and the number was the clue.** Fifty pawns on a
+    250 × 250 × 40 board came out at **0.021 ms a tick** — forty times cheaper than the estimate.
+    Not a triumph: a colony left to itself barely paths at all, because wandering picks a target
+    a few cells away on its own layer and then walks a route it already has, while the D1 workload
+    replans constantly. Publishing that as the replacement figure would have "confirmed" a 40×
+    improvement that was really a change of workload.
+  - **So there are two arms and they bracket the answer.** The second lays D1's request rate over
+    the same world — one long-range path per tick, ±40 cells and ±3 layers, enqueued by a
+    registered thing and served by the same `PathService` the pawns use, inside `MovementSystem`,
+    inside the tick. **0.438 ms a tick, p95 1.253, Pawns 97.1% of it**, and the queue ends empty
+    so every request really was served.
+  - **The verdict in the margin table reverses.** Three ticks at the replan rate cost 1.31 ms;
+    discounted 4× for the target laptop, 5.26 ms, leaving **11.3 ms of a 16.6 ms frame** for
+    rendering. The row that read "discounted 4× — none, over budget" is no longer true. The frame
+    budget was a pathfinding problem, the pathfinding was fixed, and this is the measurement
+    saying so instead of the estimate.
+  - **Three numbers, so nobody has to guess which one is "the" tick**: 0.003 ms for `OneDay` on the
+    board the scene actually loads, 0.025 ms for fifty pawns on a board seven times larger, and
+    0.438 ms for that board under a stress workload no colony has yet generated.
+  - **Allocation is not zero, and the row asked for zero.** The D1 spike recorded a true
+    `alloc_bytes_per_tick=0.000`; the real tick grows the heap by **76.7 bytes at rest and 284.6
+    under replan pressure**, with no collection of any generation across either window — so those
+    growth figures are the allocation figures and not a lower bound. The delta divides to about
+    208 bytes per served path request, which *points at* the served path's cell array without
+    demonstrating it, because nobody has measured where it comes from. About 17 MB over a day.
+    Recorded as a finding and as a row to write, not quietly asserted away.
+  - **Per-phase timing needed a seam, and there was already a shape for it.** `SimWorld.PhaseSink`
+    is an opt-in diagnostic beside `HashSink`, null in every ordinary run, one branch per phase
+    when unattached. It went on `SimWorld` rather than into the benchmark because the phase order
+    lives in `Tick()` and `WorldSystemSchedule`'s run methods are internal — a benchmark that timed
+    the phases by calling them itself would have been a second copy of the tick order, which is the
+    defect U34 had just finished deleting out of the composition root. Two tests hold it honest:
+    attaching a sink cannot change the state hash, and detaching one stops it recording.
+  - **A name collision caught a real risk.** `Odyssey.Sim.TickPhase` already existed — the three
+    phases a *system* may register in. The timing enum needs all seven, including the ones no
+    system may join, so it is `TickSegment`, **numbered to match** where the two overlap, with a
+    test asserting the values agree and that every registerable phase is a segment something times.
+    Two enumerations of the tick order that could drift apart are worth one test.
+  - **Verified:** fast tier **481 Sim + 158 Hud**, Long tier **17**. The benchmark itself is
+    `[Explicit]` and never runs in CI, which is why its seam has three ordinary tests beside it.
