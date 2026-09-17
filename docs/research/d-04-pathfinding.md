@@ -290,7 +290,7 @@ Consulted via search-result summaries only (claims attributed, not independently
 
 **High** on the determinism rules: they follow from a published formal statement of the tie-breaking problem plus Unity's own documentation of Burst float modes, and they are cheap to enforce and directly testable.
 
-**Medium** on the specific numbers in this document — the 10 × 10 × 1 chunk size, the 20,000-node tick budget, the connector costs, the sub-millisecond district-recompute estimate. These are derived from the map dimensions, the cited precedents and back-of-envelope reasoning, not measured. They are starting points for the D1 benchmark and the M2 gate to correct, and the architecture does not depend on any of them being right.
+**Medium** on the specific numbers in this document — the 10 × 10 × 1 chunk size, the 20,000-node tick budget, the connector costs, the sub-millisecond district-recompute estimate. These are derived from the map dimensions, the cited precedents and back-of-envelope reasoning, not measured. They are starting points for the D1 benchmark and the M2 gate to correct, and the architecture does not depend on any of them being right. **The region-count half of that list was corrected on 2026-09-17** — see `## Measured 2026-09-17`, where the 10 × 10 chunk size turns out to be the thing that bounds the count and the uniformity argument turns out not to be. The node budget, the connector costs and the district-recompute estimate remain unmeasured.
 
 **Medium** on the claim that HPA*-style cached intra-region crossing distances remain affordable under constant editing: the reasoning (small clusters bound the repair cost) is sound and the literature's objections are about large clusters, but no published measurement at a 10 × 10 cluster size on an actively edited 3D grid was found. This is why the build order puts that cache last, behind the determinism harness.
 
@@ -302,5 +302,77 @@ Consulted via search-result summaries only (claims attributed, not independently
 - The measured cost of RimWorld's region and reachability maintenance on a large late-game colony. The 2013 figure (5.5 ms for a full cell-level regeneration on 200 × 200) is the only public number found, and it predates the incremental system it motivated.
 - Quantitative results from the DHPA*/SHPA* paper: the PDF would not text-extract within the read cap, so its measured update costs and path-quality figures are unverified here. Worth one targeted follow-up if a second abstract level is ever considered.
 - Whether RimWorld 1.6's batched Burst pathfinder preserves cross-run reproducibility (RimWorld has no determinism gate, so the question may simply not arise for them). Our fork-join-with-ordered-application design does not depend on the answer.
-- The real distribution of live (non-uniform) chunks in a stamped ruined-city map at our dimensions — needed to turn the region-count estimate from an upper bound into a budget. This is measurable as soon as the mapgen slice exists and should be recorded in the M2 report.
+- ~~The real distribution of live (non-uniform) chunks in a stamped ruined-city map at our dimensions — needed to turn the region-count estimate from an upper bound into a budget. This is measurable as soon as the mapgen slice exists and should be recorded in the M2 report.~~ **Answered 2026-09-17 (`OQ-18`), and it corrected the claim it was meant to confirm** — see `## Measured 2026-09-17`. The city is 35.0% live blocks and the natural map 92.1%, because all-solid rock allocates an impassable region per block rather than nothing. The region budget holds on both maps; the uniformity short-circuit credited for it does not exist on the wilderness map.
 - Whether a Burst-compiled cell A* is needed at all at our agent count, or whether plain C# with the abstract heuristic and node budgets suffices. That is precisely a D1 benchmark question; the architecture deliberately keeps the search behind a boundary so the answer can change without redesign.
+
+## Measured 2026-09-17
+
+The numbers in this file were reasoned from the map dimensions, not measured, and the Confidence
+section says so. Both generators and the region graph now exist, so `OQ-18` measured them.
+`NavGraphStatisticsTests` (fast tier, `Category("Long")`) builds each map at the scale target and
+walks the graph through its public API. Seed 4242, 250 x 250 x 40, .NET 8 CoreCLR on an AMD Ryzen 7
+9800X3D. Every figure below is printed by that test on every run, so this section can be checked
+rather than trusted.
+
+| | natural | ruined city |
+|---|---|---|
+| live regions | 24,141 | 23,240 |
+| — walkable | 1,649 | 8,103 |
+| — connector | 0 | 903 |
+| — impassable | 22,492 | 14,234 |
+| links | 4,820 | 20,761 |
+| — span / portal / fall | 1,769 / 1,495 / 1,556 | 6,758 / 2,595 / 11,408 |
+| districts (colonist) | 37 | 3,291 |
+| districts (hauler, animal) | 37 | 3,628 |
+| connectors registered | 0 of 0 | 465 of 733 |
+| blocks live of 25,000 | 23,031 (92.1%) | 8,746 (35.0%) |
+| cells inside a region | 90.4% | 28.6% |
+| mean / largest region | 93.6 / 100 | 30.8 / 100 |
+| generation | 212 ms | 289 ms |
+| full nav rebuild | 168 ms | 124 ms |
+
+**The budget was right and the reason given for it was wrong.** "Budget for a live region count in
+the low tens of thousands, not the theoretical 50 k-plus" holds on both maps: 24,141 and 23,240.
+But the mechanism credited above — "Most chunks in a ruined-city column are all-air or all-solid;
+those allocate no regions at all" — is true of the city (65% of blocks are uniform) and **false of
+the natural map, where 92.1% of blocks are live.** All-solid is precisely the case that *does*
+allocate here, because `RegionKind.Impassable` regions are kept on purpose so rooms and atmosphere
+have a substrate. Underground rock therefore fills every block with exactly one region, and the
+natural map's region count is very nearly its live-block count.
+
+**What actually bounds the count is structural, not statistical.** A region is a connected part of
+one 10 x 10 block of one layer, so the largest region on either map is exactly 100 cells, and the
+floor is one region per live block. The worst case is therefore blocks x layers — 625 x 40 = 25,000
+— plus however many extra components complex geometry splits out, and both maps land near it from
+below. The estimate would have been right whatever the generators did, which is not the same as
+having been right for the stated reason.
+
+**The search space is much smaller than the graph.** Impassable regions carry no links and are
+excluded from the district flood, so what an abstract search actually traverses is the walkable and
+connector regions: **1,649 of 24,141 on the natural map (6.8%) and 9,006 of 23,240 on the city
+(38.8%).** The hierarchical search this file recommends is therefore cheaper than the region totals
+suggest — worth knowing before the top technical risk is attacked, since 65% of the measured tick
+is A-star.
+
+**Falls are the city's dominant edge, by a wide margin**: 11,408 of 20,761 links, 55%. "Collapsed
+floors are the signature feature" now has a number behind it. The natural map's link graph is a
+quarter the size and evenly split between the three kinds.
+
+**Traverse mode changes connectivity on the city and not on the wilderness.** Colonists and
+door-ignoring raiders see 3,291 districts; haulers and animals, which may not use ladders, see
+3,628 — **337 more components, one per place reachable only by ladder.** On the natural map all
+four modes see 37, because it has no ladders and no doors. The per-mode district array is doing
+real work rather than holding four copies of one answer.
+
+**A full rebuild at the scale target costs 168 ms (natural) and 124 ms (city).** That is the
+worst case — every block dirty — and not a per-tick figure; `NavigationSystem` maintains the graph
+incrementally inside the tick. It sits against the only public RimWorld number found (5.5 ms for a
+full cell-level regeneration on 200 x 200 in 2013) on a board with 40 times the cells.
+
+**The wilderness is not one connected place**: 37 districts on a map with no buildings, which is
+the sealed caverns and isolated ledges the natural generator makes. Worth remembering when a
+colonist is asked to reach an ore seam.
+
+**Two structural guarantees are now checked rather than asserted in prose.** Over all 2.5 million
+cells of each generated board, no region spans two layers, and no region outgrows its block. The
+first is the guarantee every layer-local claim in this file rests on.

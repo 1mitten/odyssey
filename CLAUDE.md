@@ -138,6 +138,15 @@ pawn can be in has something under it. A hop is three seams that must agree — 
 (`MovementSystem.StepCost`); **a price the planner and the mover disagree about fails silently.**
 Ladders are still climbed, so the climb *pose* is live presentation code.
 
+**That warning is now enforced rather than remembered (2026-09-17).** `NavGraph.HopCost` is the
+only place the price of a hop is decided, and all three seams call it —
+`HopPriceHasOneOwnerTests` fails the fast tier if any other file in `Odyssey.Sim` names
+`MoveCost.JumpUp` or `MoveCost.Drop` in code, and checks the built region graph prices a hop at the
+owner's number rather than reading it off the source. Nothing was disagreeing when this landed:
+all three named the constants for themselves and agreed **by coincidence**, which survives exactly
+until the price stops being a constant. No golden moved, because who computes the number changed
+and the number did not.
+
 **Presentation** — instanced chunk rendering (no GameObject per cell), a slice camera rig, the HUD,
 audio, a day/night cycle and golden-hour grading. No pack contains a work animation, so the axe,
 pick and hammer strokes are **computed** (`WorkSwing`, `WorkStyle`) and stand in for art we do not
@@ -166,7 +175,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **461 Sim + 117 Hud**; Long tier **15**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **484 Sim + 158 Hud**; Long tier **17**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
@@ -188,11 +197,37 @@ RTX 5070 Ti at 640 x 480. The city's move from 0.88 to 1.56 ms is **unexplained*
 
 ### Top technical risk
 
-**Pathfinding cost:** 65% of the measured tick is A-star. The once-recorded explanation — futile
-searches for unreachable targets — was **falsified by its own follow-up experiment** (only 14% of
-budget exhaustions were unreachable, under 1% on a structured map). The fix is hierarchical search
-plus a better heuristic, with the district-id reachability check (`d-04-pathfinding.md`) measured
-first.
+**Pathfinding cost, and it is smaller than this section used to say.** 65% of the tick was A-star
+on the D1 spike; the once-recorded explanation — futile searches for unreachable targets — was
+**falsified by its own follow-up experiment** (only 14% of budget exhaustions were unreachable,
+under 1% on a structured map), and the fix that worked was hierarchical search plus a better
+heuristic.
+
+**The re-run the ADR asked for has happened** (OQ-19, 2026-09-17; `TickBenchmarkTests`, ADR 0005
+addendum). Measured on the real `SimWorld.Tick` rather than on a spike that mirrored it: a colony
+of 50 on a 250 × 250 × 40 board costs **0.025 ms a tick**, and the same world under D1's replan
+rate — one long-range path per tick — costs **0.438 ms, p95 1.253, with Pawns at 97.1%**. That is
+**half the 0.88 ms the ADR estimated**, and it reverses the margin table's verdict: three ticks
+discounted 4× for the target laptop leave 11.3 ms of a 16.6 ms frame rather than nothing. For
+scale, `OneDay` on the board the scene actually loads runs at 0.003 ms a tick. Pathfinding is still
+where the tick goes under load, but it is no longer a threat to the frame budget.
+
+**What the same run found instead: the tick allocates.** 76.7 bytes a tick at rest and 284.6 under
+replan pressure, with no collection of any generation across either window — so those are the
+allocation figures, not lower bounds — against the D1 spike's true zero. About 208 bytes per served
+path request, source **unmeasured**, roughly 17 MB over a day. It wants a row.
+
+**The graph that search would run on is now measured** (OQ-18, 2026-09-17;
+`NavGraphStatisticsTests`, and `d-04-pathfinding.md` §"Measured 2026-09-17"). At 250 × 250 × 40 the
+region graph holds **24,141 regions on the wilderness and 23,240 on the city** — inside d-04's
+"low tens of thousands" budget — but **only 6.8% and 38.8% of them are walkable**; the rest is
+impassable rock kept as a substrate for rooms and atmosphere, carrying no links and excluded from
+the district flood. An abstract search is therefore cheaper than the totals suggest. A full rebuild
+is 168 ms (wilderness) and 124 ms (city), which is the all-dirty worst case and not a per-tick cost.
+**d-04's stated reason for the budget was wrong** — it credited all-solid chunks allocating nothing,
+and all-solid is exactly what allocates here; what really bounds the count is that a region never
+leaves its 10 × 10 block, now asserted over every cell of both boards along with the guarantee that
+no region spans two layers.
 
 ### Waiting on the owner
 
@@ -211,7 +246,10 @@ first.
   grooves, 16 px goes to noise, and a **framed** sheet-06 tile at 17 px is mostly frame
   (`Logs/skill-icons.png`).
 - **Nobody has pressed Play on the interface work either.** The roster card, the docked bars, the
-  popovers and the Skills tab are all measured and none of them has been looked at.
+  popovers, the Skills tab and the settings panel's new Keys and Audio tabs are all measured and
+  none of them has been looked at. The Keys tab is the tallest panel yet — at 150 per cent
+  interface scale on a 1080p screen it is within pixels of the screen height and may want the
+  first max-height-and-scroll any panel here has carried.
 - **The 29 proposed proper nouns** in `docs/design/proper-nouns.csv` await approval or veto.
 - **Marsh reads as a sandy bank** — re-tint it greener or rename it.
 - **The audio listener is on the camera**, 32–160 m up, while the catalogue authors ranges as ground

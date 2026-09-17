@@ -44,6 +44,16 @@ namespace Odyssey.Tests.Hud
                     "an option the panel can draw but the registry test does not cover is a label nobody checks");
         }
 
+        [Test]
+        public void EveryHotkeyKeyIsARegisteredName()
+        {
+            foreach (string key in HotkeyDirector.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+            foreach (HotkeyAction action in HotkeyDirector.All)
+                Assert.That(HotkeyDirector.IconKeys, Does.Contain(HotkeyDirector.KeyOf(action)),
+                    "an action the binding panel can draw but the registry test does not cover is a label nobody checks");
+        }
+
         /// <summary>
         /// A job with no icon key reads as <i>idle</i>, which is a lie rather than a gap.
         ///

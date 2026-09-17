@@ -363,6 +363,13 @@ namespace Odyssey.Sim.Pathing
             int budget = options.MaxCellNodes;
             bool falls = options.AllowFalls;
 
+            // The price of a hop, asked once per search rather than once per neighbour. It is
+            // NavGraph's to decide — see NavGraph.HopCost — because the region graph and the mover
+            // price the same step, and three seams that each name the constants for themselves
+            // agree only by coincidence.
+            int hopUp = NavGraph.HopCost(up: true);
+            int hopDown = NavGraph.HopCost(up: false);
+
             while (_cellHeap.Count > 0)
             {
                 _cellHeap.Pop(out _, out _, out int c);
@@ -396,22 +403,27 @@ namespace Odyssey.Sim.Pathing
                 // A hop: one block up or one block down, into the column next door. Unaided
                 // vertical movement is exactly this and nothing else (owner, 2026-09-16) — the
                 // cell entered has a floor, so no route can end in mid-air the way a climb could.
+                // Priced by NavGraph.HopCost and not by naming the constants here, so that the
+                // planner, the region graph and the mover cannot drift apart. Hoisted out of the
+                // neighbour tests because this is the hot path, not because the call is dear.
                 if (y + 1 < _size.SizeY)
                 {
                     int up = c + _layerStride;
-                    if (x > 0) RelaxHop(c, up - 1, g + MoveCost.JumpUp, goal, mode, stamp, rstamp, constrained);
-                    if (x + 1 < _sizeX) RelaxHop(c, up + 1, g + MoveCost.JumpUp, goal, mode, stamp, rstamp, constrained);
-                    if (z > 0) RelaxHop(c, up - _sizeX, g + MoveCost.JumpUp, goal, mode, stamp, rstamp, constrained);
-                    if (z + 1 < _size.SizeZ) RelaxHop(c, up + _sizeX, g + MoveCost.JumpUp, goal, mode, stamp, rstamp, constrained);
+                    int gUp = g + hopUp;
+                    if (x > 0) RelaxHop(c, up - 1, gUp, goal, mode, stamp, rstamp, constrained);
+                    if (x + 1 < _sizeX) RelaxHop(c, up + 1, gUp, goal, mode, stamp, rstamp, constrained);
+                    if (z > 0) RelaxHop(c, up - _sizeX, gUp, goal, mode, stamp, rstamp, constrained);
+                    if (z + 1 < _size.SizeZ) RelaxHop(c, up + _sizeX, gUp, goal, mode, stamp, rstamp, constrained);
                 }
 
                 if (y > 0)
                 {
                     int down = c - _layerStride;
-                    if (x > 0) RelaxHop(c, down - 1, g + MoveCost.Drop, goal, mode, stamp, rstamp, constrained);
-                    if (x + 1 < _sizeX) RelaxHop(c, down + 1, g + MoveCost.Drop, goal, mode, stamp, rstamp, constrained);
-                    if (z > 0) RelaxHop(c, down - _sizeX, g + MoveCost.Drop, goal, mode, stamp, rstamp, constrained);
-                    if (z + 1 < _size.SizeZ) RelaxHop(c, down + _sizeX, g + MoveCost.Drop, goal, mode, stamp, rstamp, constrained);
+                    int gDown = g + hopDown;
+                    if (x > 0) RelaxHop(c, down - 1, gDown, goal, mode, stamp, rstamp, constrained);
+                    if (x + 1 < _sizeX) RelaxHop(c, down + 1, gDown, goal, mode, stamp, rstamp, constrained);
+                    if (z > 0) RelaxHop(c, down - _sizeX, gDown, goal, mode, stamp, rstamp, constrained);
+                    if (z + 1 < _size.SizeZ) RelaxHop(c, down + _sizeX, gDown, goal, mode, stamp, rstamp, constrained);
                 }
 
                 if ((_grid.Flags[c] & NavFlags.Connector) != 0)

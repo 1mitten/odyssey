@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using Odyssey.Hud;
+using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim.Contracts;
@@ -47,6 +48,17 @@ namespace Odyssey.Presentation.CameraRig
         public float panSpeed = 26f;
         public float zoomSpeed = 6f;
         public float smoothing = 12f;
+
+        /// <summary>
+        /// What the settings panel's camera-speed rung multiplies every camera
+        /// <em>translation</em> by: keyboard pan, drag pan and wheel zoom. 1 is the tuned
+        /// speed — the fields above, exactly as authored — and the rungs the panel offers
+        /// scale on top of it, beside <see cref="DistanceScale"/> and shift's
+        /// <see cref="fastMultiplier"/> rather than replacing either. Orbit is left alone for
+        /// the same reason shift leaves it alone: it is a direct mouse-delta mapping, and a
+        /// scaled mouse delta is not a slower orbit, only a numb one.
+        /// </summary>
+        [HideInInspector] public float speedScale = 1f;
 
         /// <summary>
         /// What holding shift multiplies every camera <em>translation</em> by.
@@ -273,49 +285,59 @@ namespace Odyssey.Presentation.CameraRig
         void ReadKeyboard(float dt)
         {
             Keyboard? keys = Keyboard.current;
-            if (keys == null) return;
+            if (keys == null || _directors == null) return;
+
+            // Actions, not keys: which key each action is on is the player's to change in the
+            // settings panel, and this is the only thing the rebind needs to hold true — the
+            // same line reads W and whatever W was changed to. While a slot in that panel is
+            // waiting for a key, every press belongs to the rebind, so the pollers sit the
+            // frame out rather than arming a tool with the key the player is offering it.
+            HotkeyDirector hotkeys = _directors.Hotkeys;
+            if (hotkeys.Listening != null) return;
 
             var move = Vector2.zero;
-            if (keys.wKey.isPressed || keys.upArrowKey.isPressed) move.y += 1f;
-            if (keys.sKey.isPressed || keys.downArrowKey.isPressed) move.y -= 1f;
-            if (keys.dKey.isPressed || keys.rightArrowKey.isPressed) move.x += 1f;
-            if (keys.aKey.isPressed || keys.leftArrowKey.isPressed) move.x -= 1f;
-            if (move.sqrMagnitude > 0f) Pan(move.normalized * (panSpeed * dt * DistanceScale * Boost));
+            if (keys.IsPressed(hotkeys, HotkeyAction.CameraForward)) move.y += 1f;
+            if (keys.IsPressed(hotkeys, HotkeyAction.CameraBack)) move.y -= 1f;
+            if (keys.IsPressed(hotkeys, HotkeyAction.CameraRight)) move.x += 1f;
+            if (keys.IsPressed(hotkeys, HotkeyAction.CameraLeft)) move.x -= 1f;
+            if (move.sqrMagnitude > 0f)
+                Pan(move.normalized * (panSpeed * speedScale * dt * DistanceScale * Boost));
 
             // Held, not tapped: see rotateSpeed. The target is driven rather than the yaw itself,
             // so the same smoothing that carries a mouse orbit carries this, and the two cannot
             // fight each other over who owns the angle.
             float turn = 0f;
-            if (keys.qKey.isPressed) turn -= 1f;
-            if (keys.eKey.isPressed) turn += 1f;
+            if (keys.IsPressed(hotkeys, HotkeyAction.CameraTurnLeft)) turn -= 1f;
+            if (keys.IsPressed(hotkeys, HotkeyAction.CameraTurnRight)) turn += 1f;
             if (turn != 0f) _targetYaw += turn * rotateSpeed * dt * Boost;
 
             // Shift covers several storeys at once, for the same reason it covers more ground: a
             // layer at a time is right for reading a building and slow for getting from the
             // surface to the floor of a sixteen-layer map.
             int layers = Fast ? Mathf.Max(1, fastLayerStep) : 1;
-            if (keys.pageUpKey.wasPressedThisFrame || keys.rKey.wasPressedThisFrame) _directors!.Slice.Step(layers);
-            if (keys.pageDownKey.wasPressedThisFrame || keys.fKey.wasPressedThisFrame) _directors!.Slice.Step(-layers);
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.SliceUp)) _directors.Slice.Step(layers);
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.SliceDown)) _directors.Slice.Step(-layers);
 
-            if (keys.spaceKey.wasPressedThisFrame) RequestGameSpeed(0);
-            if (keys.digit1Key.wasPressedThisFrame) RequestGameSpeed(1);
-            if (keys.digit2Key.wasPressedThisFrame) RequestGameSpeed(2);
-            if (keys.digit3Key.wasPressedThisFrame) RequestGameSpeed(3);
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.Pause)) RequestGameSpeed(0);
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.Speed1)) RequestGameSpeed(1);
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.Speed2)) RequestGameSpeed(2);
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.Speed3)) RequestGameSpeed(3);
 
-            // V and shift-V are the two halves of one question — what do I see above me, and what
-            // do I see below me — so they share a key. B was the below-mode cycle until
-            // 2026-09-16, when the command bar wanted it for Build; a view-debug key gives way to
-            // a player-facing command, and pairing the two cycles is tidier than the letter it
-            // replaced.
-            if (keys.vKey.wasPressedThisFrame)
+            // The above-slice cycle and its shift-modified below-slice half are one question —
+            // what do I see above me, and what do I see below me — so they share a key. B was
+            // the below-mode cycle until 2026-09-16, when the command bar wanted it for Build;
+            // a view-debug key gives way to a player-facing command, and pairing the two
+            // cycles is tidier than the letter it replaced.
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.CycleAbove))
             {
                 if (Fast) slice.below = (BelowMode)(((int)slice.below + 1) % 3);
                 else CycleAboveMode();
             }
-            if (keys.homeKey.wasPressedThisFrame) Frame();
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.FrameMap)) Frame();
 
             // The developer overlay sits on the picture, so it is off until asked for.
-            if (keys.backquoteKey.wasPressedThisFrame) _directors!.Overlays.ToggleDeveloper();
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.DeveloperOverlay))
+                _directors.Overlays.ToggleDeveloper();
         }
 
         /// <summary>
@@ -357,7 +379,7 @@ namespace Odyssey.Presentation.CameraRig
             float scroll = mouse.scroll.ReadValue().y;
             if (Mathf.Abs(scroll) > 0.01f && !overInterface)
                 _targetDistance = Mathf.Clamp(
-                    _targetDistance - Mathf.Sign(scroll) * zoomSpeed * DistanceScale * Boost,
+                    _targetDistance - Mathf.Sign(scroll) * zoomSpeed * speedScale * DistanceScale * Boost,
                     minDistance, maxDistance);
             Vector2 delta = pointer - _lastPointer;
             _lastPointer = pointer;
@@ -372,7 +394,7 @@ namespace Odyssey.Presentation.CameraRig
             }
             else if (mouse.middleButton.isPressed)
             {
-                Pan(new Vector2(-delta.x, -delta.y) * (0.02f * DistanceScale * Boost));
+                Pan(new Vector2(-delta.x, -delta.y) * (0.02f * speedScale * DistanceScale * Boost));
             }
             else
             {

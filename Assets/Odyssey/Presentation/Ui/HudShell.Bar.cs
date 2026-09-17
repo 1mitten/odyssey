@@ -86,7 +86,17 @@ namespace Odyssey.Presentation.Ui
 
             // Every item shows its key. An acceptance criterion, and the reason the bar is set in
             // a narrow face: eleven labelled items with their caps have to cross the screen.
-            item.Add(HudText.Make(command.Hotkey, HudTextRole.Hotkey, ussClass: "cmd__key"));
+            Label capLabel = HudText.Make(command.Hotkey, HudTextRole.Hotkey, ussClass: "cmd__key");
+            item.Add(capLabel);
+
+            // Build is the one cap on the bar that names a binding rather than a promise: it
+            // follows the binding map when the player moves the key.
+            if (command.Key == HudCommands.BuildKey)
+            {
+                _buildCap = capLabel;
+                _buildItem = item;
+                _buildTooltipLabel = command.Label;
+            }
 
             item.tooltip = command.Live
                 ? command.Label + " — " + command.Hotkey
@@ -113,16 +123,26 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
-        /// The two hotkeys on the bar that are live. The rest are legends on controls whose
-        /// systems do not exist, and they deliberately avoid every key the game already uses —
-        /// M, C and X arm the designate tools, R and F move the slice, V cycles visibility,
-        /// Space and 1 to 3 are the clock and Home recentres.
+        /// The one hotkey on the bar that is live, read through the binding map so the panel
+        /// that rebinds it and the key that opens the palette can never disagree. The rest of
+        /// the caps are legends on controls whose systems do not exist, and they deliberately
+        /// avoid every action the game already has — camera, slice, clock, tools.
         /// </summary>
         void ReadBarKeys()
         {
             var keys = UnityEngine.InputSystem.Keyboard.current;
             if (keys == null) return;
-            if (keys.bKey.wasPressedThisFrame) SetBuildPalette(!BuildPaletteOpen);
+
+            // The colony's map when there is one, defaults when there is not, so the key
+            // works in a harness scene with no world behind the shell.
+            HotkeyDirector hotkeys = _directors?.Hotkeys ?? (_hotkeysFallback ??= new HotkeyDirector());
+
+            // A key offered to a slot in the settings panel belongs to the rebind, not to
+            // the palette it might be being bound to.
+            if (hotkeys.Listening != null) return;
+
+            if (keys.WasPressedThisFrame(hotkeys, HotkeyAction.BuildPalette))
+                SetBuildPalette(!BuildPaletteOpen);
         }
 
         /// <summary>
@@ -227,7 +247,7 @@ namespace Odyssey.Presentation.Ui
             settings.AddToClassList("menu__row");
             settings.Add(HudText.Make("Settings", HudTextRole.Row, ussClass: "menu__label"));
             settings.Add(HudText.Make("Esc", HudTextRole.Hotkey, ussClass: "menu__key"));
-            settings.tooltip = "Graphics settings. None of it is in the save.";
+            settings.tooltip = "Settings, and the way out. None of it is in the save.";
             settings.RegisterCallback<ClickEvent>(_ =>
             {
                 ToggleMenu(false);
@@ -472,7 +492,8 @@ namespace Odyssey.Presentation.Ui
         // ============================================================ B17 settings
 
         /// <summary>
-        /// The settings panel: two sections behind a tab strip, opened with Escape or from Menu.
+        /// The settings panel: four sections behind a tab strip, opened with Escape or from
+        /// Menu, with the way out pinned under all of them.
         ///
         /// <para><b>It is not a modal.</b> There is no scrim and nothing is blocked: the world
         /// runs, the camera orbits and the clock ticks while it is open, because the only reason
@@ -481,7 +502,9 @@ namespace Odyssey.Presentation.Ui
         ///
         /// <para><b>Interface before Graphics</b>, because the first thing a player wants from a
         /// settings panel on a large monitor is to make the type bigger, and because that is the
-        /// one setting here that changes the panel they are looking at while they look at it.</para>
+        /// one setting here that changes the panel they are looking at while they look at it.
+        /// Audio and Keys follow: the faders waited in their store for this panel, and the
+        /// bindings waited for the map that could hold them.</para>
         /// </summary>
         void BuildSettings()
         {
@@ -494,12 +517,11 @@ namespace Odyssey.Presentation.Ui
             // a second use of a control the HUD already has.
             var tabs = new VisualElement();
             tabs.AddToClassList("settings__tabs");
-            foreach (SettingsTab tab in new[] { SettingsTab.Interface, SettingsTab.Graphics })
+            foreach (SettingsTab tab in new[]
+                     { SettingsTab.Interface, SettingsTab.Graphics, SettingsTab.Audio, SettingsTab.Keys })
             {
-                string key = tab == SettingsTab.Interface
-                    ? SettingsDirector.InterfaceKey
-                    : SettingsDirector.GraphicsKey;
-                Label chip = HudText.Make(Registry.Label(key), HudTextRole.Body, ussClass: "tab");
+                Label chip = HudText.Make(Registry.Label(SettingsDirector.TabKey(tab)),
+                    HudTextRole.Body, ussClass: "tab");
                 SettingsTab captured = tab;
                 chip.RegisterCallback<ClickEvent>(_ => _directors?.Settings.SetTab(captured));
                 _settingTabs[tab] = chip;
@@ -509,9 +531,28 @@ namespace Odyssey.Presentation.Ui
 
             BuildInterfaceSection();
             BuildGraphicsSection();
+            BuildAudioSection();
+            BuildKeysSection();
+
+            // The way out, pinned under the tabs rather than living in one of them: it is not a
+            // setting, and the game menu it will one day belong to (B18) does not exist yet.
+            // Two clicks, because nothing is saved and a settings panel is a place a player
+            // reaches past for the close button.
+            _exitRow = new VisualElement();
+            _exitRow.AddToClassList("settings__row");
+            _exitRow.AddToClassList("settings__exit");
+            var exitIcon = new IconBadge(SettingsDirector.ExitKey, IconBadge.RowSize);
+            exitIcon.Inherit(HudTokens.TextMeta);
+            _exitRow.Add(exitIcon);
+            _exitLabel = HudText.Make(Registry.Label(SettingsDirector.ExitKey), HudTextRole.Row,
+                ussClass: "settings__label");
+            _exitRow.Add(_exitLabel);
+            _exitRow.tooltip = "Quits the game. Nothing is saved yet, so the row asks first";
+            _exitRow.RegisterCallback<ClickEvent>(_ => _directors?.Settings.RequestExit());
+            _settingsPanel.Add(_exitRow);
 
             // The director opens on Interface, and the shell may never attach to a director at all
-            // in a harness that builds no world. Showing both sections at once is not a state
+            // in a harness that builds no world. Showing every section at once is not a state
             // anything asks for, so it is not a state the panel is ever in.
             OnSettingsTabChanged(SettingsTab.Interface);
 
@@ -561,7 +602,73 @@ namespace Odyssey.Presentation.Ui
                 ladder.Add(rung);
             }
             _interfaceSection.Add(ladder);
+
+            BuildCameraSpeedRow();
+            BuildDeveloperRow();
+
             _settingsPanel.Add(_interfaceSection);
+        }
+
+        /// <summary>
+        /// The camera-speed ladder: how fast the rig pans and zooms, as a share of the speed
+        /// it was tuned at. The same ladder idiom as the interface scale, for the same
+        /// reason — a handful of honest answers rather than a knob.
+        /// </summary>
+        void BuildCameraSpeedRow()
+        {
+            var row = new VisualElement();
+            row.AddToClassList("settings__row");
+            row.AddToClassList("settings__row--static");
+            var icon = new IconBadge(SettingsDirector.CamSpeedKey, IconBadge.RowSize);
+            icon.Inherit(HudTokens.TextMeta);
+            row.Add(icon);
+            row.Add(HudText.Make(Registry.Label(SettingsDirector.CamSpeedKey), HudTextRole.Row,
+                ussClass: "settings__label"));
+            _interfaceSection.Add(row);
+
+            var ladder = new VisualElement();
+            ladder.AddToClassList("settings__ladder");
+            foreach (int percent in SettingsDirector.CameraSpeeds)
+            {
+                // A multiplier is a figure, so: mono, like every other figure on this screen.
+                Label rung = HudText.Make($"{percent / 100f:0.#}×", HudTextRole.Body,
+                    numeric: true, "rung");
+                rung.tooltip = percent == 100
+                    ? "The speed the camera was tuned at"
+                    : percent < 100
+                        ? "Slower, for fine placement"
+                        : "Faster, for crossing the map";
+                int captured = percent;
+                rung.RegisterCallback<ClickEvent>(_ => _directors?.Settings.SetCameraSpeed(captured));
+                _cameraRungs[percent] = rung;
+                ladder.Add(rung);
+            }
+            _interfaceSection.Add(ladder);
+        }
+
+        /// <summary>
+        /// The developer readout: the one toggle in Interface that is about the HUD's own
+        /// drawing rather than the world. A pip row like the graphics ones, seeded from
+        /// whatever state the backquote key left the overlay in.
+        /// </summary>
+        void BuildDeveloperRow()
+        {
+            _developerRow = new VisualElement();
+            _developerRow.AddToClassList("settings__row");
+            var icon = new IconBadge(SettingsDirector.DeveloperKey, IconBadge.RowSize);
+            icon.Inherit(HudTokens.TextMeta);
+            _developerRow.Add(icon);
+            _developerRow.Add(HudText.Make(Registry.Label(SettingsDirector.DeveloperKey),
+                HudTextRole.Row, ussClass: "settings__label"));
+
+            var pip = new VisualElement { pickingMode = PickingMode.Ignore };
+            pip.AddToClassList("settings__pip");
+            _developerRow.Add(pip);
+
+            _developerRow.tooltip = "The frame-time readout. Also the ` key, and kept between sessions";
+            _developerRow.RegisterCallback<ClickEvent>(_ =>
+                _directors?.Settings.SetDeveloperOverlay(!_directors.Settings.DeveloperOverlay));
+            _interfaceSection.Add(_developerRow);
         }
 
         void BuildGraphicsSection()
@@ -598,6 +705,189 @@ namespace Odyssey.Presentation.Ui
             _settingsPanel.Add(_graphicsSection);
         }
 
+        /// <summary>
+        /// The Audio section: one ladder per bus, in dB, mute to unity.
+        ///
+        /// <para>These faders have been in <c>AudioSettingsStore</c> since the sound work
+        /// landed — persisted, applied at boot, and writable by nothing. This section is the
+        /// panel they were waiting for, and the values are the director's so the set is
+        /// testable in the fast tier like every other ladder here.</para>
+        /// </summary>
+        void BuildAudioSection()
+        {
+            _audioSection = new VisualElement();
+            _audioSection.AddToClassList("settings__body");
+
+            foreach (SettingsBus bus in SettingsDirector.Buses)
+            {
+                string key = SettingsDirector.VolumeKey(bus);
+                var row = new VisualElement();
+                row.AddToClassList("settings__row");
+                row.AddToClassList("settings__row--static");
+                var icon = new IconBadge(key, IconBadge.RowSize);
+                icon.Inherit(HudTokens.TextMeta);
+                row.Add(icon);
+                row.Add(HudText.Make(Registry.Label(key), HudTextRole.Row, ussClass: "settings__label"));
+                _audioSection.Add(row);
+
+                var ladder = new VisualElement();
+                ladder.AddToClassList("settings__ladder");
+                foreach (int db in SettingsDirector.VolumeDbRungs)
+                {
+                    string text = VolumeText(db);
+                    // The decibel figures are figures and set in the mono face; "Mute" is a
+                    // word, and a word in the mono face is a word pretending to be a number.
+                    Label rung = HudText.Make(text, HudTextRole.Body, text != "Mute", "rung");
+                    rung.tooltip = db == 0
+                        ? "Unity — nothing attenuated, nothing boosted"
+                        : db <= SettingsDirector.VolumeDbRungs[0]
+                            ? "Silence"
+                            : text + " dB";
+                    SettingsBus capturedBus = bus;
+                    int capturedDb = db;
+                    rung.RegisterCallback<ClickEvent>(_ =>
+                        _directors?.Settings.SetBusDb(capturedBus, capturedDb));
+                    _busRungs[(bus, db)] = rung;
+                    ladder.Add(rung);
+                }
+                _audioSection.Add(ladder);
+            }
+
+            _settingsPanel.Add(_audioSection);
+        }
+
+        /// <summary>What one rung of a volume ladder says. Mute is a word because silence is
+        /// not a number; everything else is the decibels it is.</summary>
+        static string VolumeText(int db) =>
+            db <= SettingsDirector.VolumeDbRungs[0] ? "Mute" : db == 0 ? "0 dB" : db + " dB";
+
+        /// <summary>
+        /// The groups the binding list is drawn in. Layout is the shell's business — the
+        /// actions, their defaults and their rules are the director's — but which ones share
+        /// a heading is a question about the panel, not about the bindings.
+        /// </summary>
+        static readonly (string Header, HotkeyAction[] Actions)[] KeyGroups =
+        {
+            ("Camera", new[]
+            {
+                HotkeyAction.CameraForward, HotkeyAction.CameraBack,
+                HotkeyAction.CameraRight, HotkeyAction.CameraLeft,
+                HotkeyAction.CameraTurnLeft, HotkeyAction.CameraTurnRight,
+            }),
+            ("View", new[]
+            {
+                HotkeyAction.SliceUp, HotkeyAction.SliceDown,
+                HotkeyAction.CycleAbove, HotkeyAction.FrameMap,
+            }),
+            ("Time", new[]
+            {
+                HotkeyAction.Pause, HotkeyAction.Speed1, HotkeyAction.Speed2, HotkeyAction.Speed3,
+            }),
+            ("Tools", new[]
+            {
+                HotkeyAction.ToolMine, HotkeyAction.ToolFell, HotkeyAction.ToolCancel,
+            }),
+            ("Interface", new[]
+            {
+                HotkeyAction.BuildPalette, HotkeyAction.DeveloperOverlay,
+            }),
+        };
+
+        /// <summary>
+        /// The Keys section: every action the game reads a key for, grouped, one or two caps
+        /// per row. Click a cap to change it; the next key pressed is offered to that slot,
+        /// and Escape backs out of the wait without unwinding anything under it.
+        /// </summary>
+        void BuildKeysSection()
+        {
+            _keysSection = new VisualElement();
+            _keysSection.AddToClassList("settings__body");
+
+            foreach ((string header, HotkeyAction[] actions) in KeyGroups)
+            {
+                _keysSection.Add(HudText.Make(header, HudTextRole.Meta, ussClass: "settings__section"));
+
+                foreach (HotkeyAction action in actions)
+                {
+                    string key = HotkeyDirector.KeyOf(action);
+                    var row = new VisualElement();
+                    row.AddToClassList("settings__row");
+                    var icon = new IconBadge(key, IconBadge.RowSize);
+                    icon.Inherit(HudTokens.TextMeta);
+                    row.Add(icon);
+                    row.Add(HudText.Make(Registry.Label(key), HudTextRole.Row, ussClass: "settings__label"));
+
+                    var view = new KeyRowView { Root = row };
+                    for (int slot = 0; slot < HotkeyDirector.SlotCount; slot++)
+                    {
+                        HotkeyAction capturedAction = action;
+                        int capturedSlot = slot;
+                        Label cap = HudText.Make("—", HudTextRole.Hotkey, ussClass: "settings__keycap");
+                        cap.RegisterCallback<ClickEvent>(_ =>
+                            _directors?.Hotkeys.Listen(capturedAction, capturedSlot));
+                        view.Caps[slot] = cap;
+                        row.Add(cap);
+                    }
+
+                    _keyRows[action] = view;
+                    _keysSection.Add(row);
+                }
+            }
+
+            Label reset = HudText.Make(Registry.Label(HotkeyDirector.ResetKey), HudTextRole.Body,
+                ussClass: "rung settings__reset");
+            reset.tooltip = "Every action goes back to the key it shipped with";
+            reset.RegisterCallback<ClickEvent>(_ => _directors?.Hotkeys.ResetKeys());
+            _keysSection.Add(reset);
+
+            _settingsPanel.Add(_keysSection);
+        }
+
+        /// <summary>
+        /// Redraw every cap from the binding map. Called on change only — a click, a capture,
+        /// a reset — never per frame, so building the strings costs a click and not the
+        /// frame budget.
+        /// </summary>
+        void RefreshKeyCaps()
+        {
+            if (_directors == null) return;
+            HotkeyDirector hotkeys = _directors.Hotkeys;
+
+            foreach (HotkeyAction action in HotkeyDirector.All)
+            {
+                if (!_keyRows.TryGetValue(action, out KeyRowView view)) continue;
+                for (int slot = 0; slot < HotkeyDirector.SlotCount; slot++)
+                {
+                    HudKey key = hotkeys.Key(action, slot);
+                    bool listening = hotkeys.Listening == (action, slot);
+                    Label cap = view.Caps[slot];
+
+                    cap.text = listening ? "…" : key == HudKey.None ? "—" : HotkeyDirector.Display(key);
+                    cap.EnableInClassList("settings__keycap--listening", listening);
+
+                    HudKey def = HotkeyDirector.DefaultKey(action, slot);
+                    cap.tooltip = listening
+                        ? "Press the key to bind. Escape cancels."
+                        : def == HudKey.None
+                            ? "Click, then press a key"
+                            : "Click, then press a key. Default: " + HotkeyDirector.Display(def);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Say on the cap why the key it was offered did not take. The refusal itself is the
+        /// director's; this is only its voice.
+        /// </summary>
+        void OnHotkeyConflict(HotkeyAction refused, HotkeyAction owner)
+        {
+            if (_directors == null || !_keyRows.TryGetValue(refused, out KeyRowView view)) return;
+            (HotkeyAction Action, int Slot)? listening = _directors.Hotkeys.Listening;
+            if (listening == null || listening.Value.Action != refused) return;
+            view.Caps[listening.Value.Slot].tooltip =
+                "In use — " + Registry.Label(HotkeyDirector.KeyOf(owner));
+        }
+
         void OnSettingsTabChanged(SettingsTab tab)
         {
             foreach (var entry in _settingTabs)
@@ -610,6 +900,10 @@ namespace Odyssey.Presentation.Ui
                 tab == SettingsTab.Interface ? DisplayStyle.Flex : DisplayStyle.None;
             _graphicsSection.style.display =
                 tab == SettingsTab.Graphics ? DisplayStyle.Flex : DisplayStyle.None;
+            _audioSection.style.display =
+                tab == SettingsTab.Audio ? DisplayStyle.Flex : DisplayStyle.None;
+            _keysSection.style.display =
+                tab == SettingsTab.Keys ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         void OnUiScaleChanged(int percent)
@@ -617,6 +911,48 @@ namespace Odyssey.Presentation.Ui
             foreach (var entry in _scaleRungs)
                 entry.Value.EnableInClassList("rung--on", entry.Key == percent);
             ApplyUiScale(percent);
+        }
+
+        void OnCameraSpeedChanged(int percent)
+        {
+            foreach (var entry in _cameraRungs)
+                entry.Value.EnableInClassList("rung--on", entry.Key == percent);
+        }
+
+        void OnDeveloperOverlayChanged()
+        {
+            if (_directors == null) return;
+            _developerRow.EnableInClassList("settings__row--on", _directors.Settings.DeveloperOverlay);
+        }
+
+        void OnBusDbChanged(SettingsBus bus)
+        {
+            if (_directors == null) return;
+            int at = _directors.Settings.BusDb(bus);
+            foreach (var entry in _busRungs)
+                entry.Value.EnableInClassList("rung--on",
+                    entry.Key.Bus == bus && entry.Key.Db == at);
+        }
+
+        void OnExitChanged()
+        {
+            if (_directors == null) return;
+            bool armed = _directors.Settings.ExitArmed;
+            _exitRow.EnableInClassList("settings__exit--armed", armed);
+            HudText.Set(_exitLabel, armed ? "Quit? Click again" : Registry.Label(SettingsDirector.ExitKey),
+                HudTextRole.Row);
+        }
+
+        void OnBindingChanged(HotkeyAction action)
+        {
+            RefreshKeyCaps();
+
+            // The command bar's Build cap is a legend of a real binding: if the player moves
+            // it, the legend moves with it or it is a lie on the bar.
+            if (action != HotkeyAction.BuildPalette || _directors == null || _buildCap == null) return;
+            string cap = HotkeyDirector.Display(_directors.Hotkeys.Key(HotkeyAction.BuildPalette, 0));
+            HudText.Set(_buildCap, cap, HudTextRole.Hotkey);
+            if (_buildItem != null) _buildItem.tooltip = _buildTooltipLabel + " — " + cap;
         }
 
         /// <summary>

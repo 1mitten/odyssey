@@ -164,9 +164,35 @@ namespace Odyssey.Presentation.Ui
         VisualElement _settingsPanel = null!;
         VisualElement _interfaceSection = null!;
         VisualElement _graphicsSection = null!;
+        VisualElement _audioSection = null!;
+        VisualElement _keysSection = null!;
+        VisualElement _developerRow = null!;
+        VisualElement _exitRow = null!;
+        Label _exitLabel = null!;
         readonly Dictionary<GraphicsOption, VisualElement> _settingRows = new();
         readonly Dictionary<SettingsTab, Label> _settingTabs = new();
         readonly Dictionary<int, Label> _scaleRungs = new();
+        readonly Dictionary<int, Label> _cameraRungs = new();
+        readonly Dictionary<(SettingsBus Bus, int Db), Label> _busRungs = new();
+        readonly Dictionary<HotkeyAction, KeyRowView> _keyRows = new();
+
+        /// <summary>One binding row: its root and the caps of its two slots, for
+        /// event-driven refresh. Strings are rebuilt on click, never per frame.</summary>
+        sealed class KeyRowView
+        {
+            public VisualElement Root = null!;
+            public readonly Label[] Caps = new Label[HotkeyDirector.SlotCount];
+        }
+
+        /// <summary>The command-bar Build cap and its item, so a rebind can move the legend
+        /// with the key it names.</summary>
+        Label _buildCap = null!;
+        VisualElement _buildItem = null!;
+        string _buildTooltipLabel = "";
+
+        /// <summary>Defaults-only binding map for the frames before the shell attaches to
+        /// the colony's directors, and for harness scenes that build no world.</summary>
+        HotkeyDirector? _hotkeysFallback;
 
         /// <summary>Our own copy of the panel settings, so that changing the interface scale does
         /// not write to the committed asset. See <see cref="ApplyUiScale"/>.</summary>
@@ -345,6 +371,13 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.OptionChanged += OnSettingChanged;
             _directors.Settings.TabChanged += OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged += OnUiScaleChanged;
+            _directors.Settings.CameraSpeedChanged += OnCameraSpeedChanged;
+            _directors.Settings.DeveloperOverlayChanged += OnDeveloperOverlayChanged;
+            _directors.Settings.BusDbChanged += OnBusDbChanged;
+            _directors.Settings.ExitChanged += OnExitChanged;
+            _directors.Hotkeys.BindingChanged += OnBindingChanged;
+            _directors.Hotkeys.ListenChanged += OnListenChanged;
+            _directors.Hotkeys.ConflictNoted += OnHotkeyConflict;
 
             // The panel may already disagree with the director by the time we get here: the
             // presenter seeds it from the scene and the screen and then lays stored preferences
@@ -352,7 +385,12 @@ namespace Odyssey.Presentation.Ui
             OnSettingsChanged();
             OnSettingsTabChanged(_directors.Settings.Tab);
             OnUiScaleChanged(_directors.Settings.UiScale);
+            OnCameraSpeedChanged(_directors.Settings.CameraSpeed);
+            OnDeveloperOverlayChanged();
+            foreach (SettingsBus bus in SettingsDirector.Buses) OnBusDbChanged(bus);
+            OnExitChanged();
             foreach (GraphicsOption option in SettingsDirector.All) OnSettingChanged(option);
+            RefreshKeyCaps();
         }
 
         void Detach()
@@ -364,8 +402,18 @@ namespace Odyssey.Presentation.Ui
             _directors.Settings.OptionChanged -= OnSettingChanged;
             _directors.Settings.TabChanged -= OnSettingsTabChanged;
             _directors.Settings.UiScaleChanged -= OnUiScaleChanged;
+            _directors.Settings.CameraSpeedChanged -= OnCameraSpeedChanged;
+            _directors.Settings.DeveloperOverlayChanged -= OnDeveloperOverlayChanged;
+            _directors.Settings.BusDbChanged -= OnBusDbChanged;
+            _directors.Settings.ExitChanged -= OnExitChanged;
+            _directors.Hotkeys.BindingChanged -= OnBindingChanged;
+            _directors.Hotkeys.ListenChanged -= OnListenChanged;
+            _directors.Hotkeys.ConflictNoted -= OnHotkeyConflict;
             _directors = null;
         }
+
+        /// <summary>A slot opened or closed its wait for a key; the caps say which.</summary>
+        void OnListenChanged() => RefreshKeyCaps();
 
         void OnEnable()
         {

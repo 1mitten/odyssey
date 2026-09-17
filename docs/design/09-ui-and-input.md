@@ -500,17 +500,23 @@ a press: this board is layered and its slice is cut at an angle, so the clearest
 of four. And the below-slice mode cycle moved from B to **shift-V**, freeing B for the Build
 command and pairing the two visibility cycles on one key.
 
-**Hotkey clashes are now caught by a test that reads the source**, not by a list somebody
+**Hotkey clashes are caught by a test that reads the source**, not by a list somebody
 maintains. The rebuilt command bar shipped with five of its eleven hotkeys already bound to camera
 keys, and the guard written to prevent that passed, because its reserved list was written from
 memory. `HotkeyClashTests` greps the Presentation assembly for every `keys.somethingKey` and
-allows a command's key only in the file that reads it on the command's behalf. Until
-`HotkeyDirector` exists and bindings are data, this is the only thing standing between two
-features and one key.
+allows a read only where the binding map cannot do the job: Escape (the unwind rule), the capture
+loop's `allKeys` (which names no key), and the shift modifiers. Since `HotkeyDirector` landed on
+2026-09-17 **no component reads a key by name at all** — every poller asks the director for an
+action — so the grep is a regression net for a named read made behind the map's back, and the
+reserved set a command cap is checked against is the director's own defaults.
 
-`HotkeyDirector` holds bindings as **actions, not keys**, with Def-supplied defaults and user
-rebinds. Action-based bindings cost nothing now and leave the gamepad door unnailed, which is
-the only concession made to a decision the brief has not taken.
+`HotkeyDirector` holds bindings as **actions, not keys**, with in-code defaults (until the UI Def
+set exists to generate them) and user rebinds. Each action has a primary and an alternate slot,
+because the game ships panning on WASD *or* arrows and slicing on R/F *or* PgUp/PgDn. A key
+another action owns is refused and reported, never silently swapped. It runs **one global
+context**: no key means two things today, and the contexts below — like `InputRouter` — arrive on
+the day one does. Escape and the modifiers are not bindable at all, and the function keys are
+reserved for the command bar's panels.
 
 **Contexts** change what a key means: world, tool active, panel focused, text entry, modal.
 Conflicts are detected at load and reported, not silently resolved.
