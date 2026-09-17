@@ -8,9 +8,7 @@ using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.World;
 using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
-using Odyssey.Sim.Defs;
 using Odyssey.Sim.Designations;
-using Odyssey.Sim.Pathing;
 using Odyssey.Sim.Pawns;
 using Odyssey.Sim.World;
 using Odyssey.Sim.Worldgen;
@@ -151,7 +149,7 @@ namespace Odyssey.Presentation.Bootstrap
         DaylightDirector? _daylight;
         Material? _actorMaterial;
         ColonistMaterials? _colonistMaterials;
-        MapGenDef? _gen;
+        ColonyWorld? _colony;
         double _accumulator;
         float _tickAlpha;
 
@@ -191,6 +189,17 @@ namespace Odyssey.Presentation.Bootstrap
         public SimWorld? World => _world;
 
         /// <summary>
+        /// The world as the simulation composed it — the grid, the colony, the scenario it was
+        /// given, and the list of components a save is written from.
+        ///
+        /// <para>Exposed because the scene had no way to write a save file. Not for want of a save
+        /// format: <c>WorldSave</c> has been complete and tested for weeks, but every caller was a
+        /// test holding a <c>ColonyWorld</c>, and this was the one build that composed its world by
+        /// hand and therefore held none.</para>
+        /// </summary>
+        public ColonyWorld? Colony => _colony;
+
+        /// <summary>
         /// The interface directors: selection, slice and camera, Unity-free and made here with the
         /// world, because the composition root is the one place that knows the layer count and
         /// the start layer. The rig, the pick presenter and the HUD shell all realise these.
@@ -212,70 +221,68 @@ namespace Odyssey.Presentation.Bootstrap
             GroundRelief.Period = groundReliefPeriod;
 
             var size = new GridSize(sizeX, sizeZ, layers);
-            _grid = new CellGrid(size);
             var chunks = new ChunkGrid(size);
 
+            // The render model is built before the world, because the mirror the world publishes
+            // through is built from it. It needs the size and the chunk grid and nothing else, so
+            // none of it depends on a board that has not been generated yet.
+            var library = new ModuleLibrary(moduleCatalogue);
+            _model = new WorldRenderModel(size, chunks, library);
+            WorldRenderModel model = _model;
+
+            // One build, the same one the headless runs and every test use.
+            //
+            // This was forty lines of wiring re-typed here, and it had drifted from the original
+            // twice over: it registered no connectors with the navigation graph, so a stair on a
+            // city map joined no region; it never ran the full support solve; and it assembled no
+            // save components, which is why the one world a player actually ran was the one world
+            // that could not be written to a file.
+            //
             // The prototype starts on empty natural ground and the colony builds from nothing
             // (ADR 0008). The ruined-city generator is still here and still tested; switch
             // mapType to reach it.
-            _gen = MapGenerator.DefaultDef(mapType, size);
-            if (barrenMap && _gen is NaturalMapGenDef natural)
-            {
-                if (woodedMap) natural.MakeWooded();
-                else natural.MakeBarren();
-            }
-
+            ScenarioDef scenarioDef = scenario == StartingScenario.Bare ? ScenarioDef.Bare() : ScenarioDef.Playtest();
             var generation = Stopwatch.StartNew();
-            MapGenOutcome outcome = MapGenerator.Generate(_grid, seed, _gen);
+            ColonyWorld colony = ColonyWorld.Build(new ColonyRequest
+            {
+                Size = size,
+                Seed = seed,
+                Scenario = scenarioDef,
+                Barren = barrenMap,
+                Wooded = woodedMap,
+                Map = mapType,
+                Chunks = chunks,
+
+                // Noon, and it belongs to the build rather than to a call after it: a colony that
+                // starts at tick 0 starts at midnight, SimWorld.StartAtTick refuses a clock that
+                // has already run, and the composition root ticks once below to publish a first
+                // frame. That ordering has been got wrong here once already.
+                StartTick = startHour >= 0 ? startHour * GameClock.TicksPerHour : 0,
+
+                // Built from the grid the generator has just filled, which is why it is a factory
+                // and not a ready-made contributor. It is registered ahead of the colony, so the
+                // geometry a frame shows is the one that frame's pawns and orders were computed
+                // against.
+                Mirror = (grid, outcome) => new GridMirrorContributor(grid, outcome.Edifices, model),
+            });
             generation.Stop();
 
-            var library = new ModuleLibrary(moduleCatalogue);
-            _model = new WorldRenderModel(size, chunks, library);
+            _colony = colony;
+            _grid = colony.Grid;
+            _pawns = colony.Pawns;
+            _world = colony.World;
+            MapGenOutcome outcome = colony.Outcome;
 
             // Shell templates only exist on a city map; natural ground has no stamped buildings.
-            if (outcome.City != null) _model.ApplyTemplates(outcome.City, _gen);
+            // After the build and before the first tick is the window: the mirror reads the model
+            // when it publishes, not when it is made.
+            if (outcome.City != null) _model.ApplyTemplates(outcome.City, colony.Gen);
 
-            var edifices = outcome.City != null
-                ? outcome.City.Context.Edifices
-                : outcome.Natural!.Context.Edifices;
-            var mirror = new GridMirrorContributor(_grid, edifices, _model);
-            var solver = new SupportSolver(_grid);
-            CellGrid grid = _grid;
-
-            // Navigation and the colonists that use it. The graph is built once here and then
-            // maintained inside the tick by NavigationSystem, which runs after the support solver
-            // because a collapse changes what is walkable.
-            var nav = new NavGraph(_grid);
-            nav.Rebuild();
-            var pathService = new PathService(new PathFinder(nav));
-            _pawns = new PawnContext(_grid, nav, pathService, ContentPack.Pawns()) { Chunks = chunks };
-
-            var support = new SupportSystem(grid, solver, chunks);
-            var designations = new DesignationGrid(_grid, edifices);
-
-            // The mirror publishes first so the geometry a frame shows is the one its pawns and
-            // orders were computed against; the colony itself is listed once, in ColonyComposition.
-            _world = new SimWorldBuilder()
-                .WithSeed(seed)
-                .WithSize(size)
-                .AddSnapshotContributor(mirror)
-                .AddColony(_pawns, designations, support, nav)
-                .Build();
-
-            // Noon, before the world has ticked once. It has to be here and not further down:
-            // the composition root ticks once during setup to publish a first frame, and
-            // SimWorld.StartAtTick refuses a clock that has already run — which is how this was
-            // caught being in the wrong place rather than quietly starting the day an hour late.
-            if (startHour >= 0) _world.StartAtTick(startHour * GameClock.TicksPerHour);
-
-            ScenarioDef scenarioDef = scenario == StartingScenario.Bare ? ScenarioDef.Bare() : ScenarioDef.Playtest();
-            var placement = ColonyScenario.Place(_grid, _pawns, outcome.StartCell, seed, scenarioDef);
-            if (placement.Colonists == 0)
-                Debug.LogError($"[Odyssey] no colonists were placed near {outcome.StartCell}: {placement}");
-            int marked = ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenarioDef);
-            if (marked > 0)
-                Debug.Log($"[Odyssey] {scenarioDef}: {marked} cells marked for work before the first tick — " +
-                          $"trees within {scenarioDef.startingFellRadius} cells of the start, and the nearest " +
+            if (colony.Placement.Colonists == 0)
+                Debug.LogError($"[Odyssey] no colonists were placed near {outcome.StartCell}: {colony.Placement}");
+            if (colony.MarkedForWork > 0)
+                Debug.Log($"[Odyssey] {scenarioDef}: {colony.MarkedForWork} cells marked for work before the first " +
+                          $"tick — trees within {scenarioDef.startingFellRadius} cells of the start, and the nearest " +
                           $"outcrop within {scenarioDef.startingMineRadius}");
 
             // One tick primes the mirror: the contributor runs in the publish phase, so until the

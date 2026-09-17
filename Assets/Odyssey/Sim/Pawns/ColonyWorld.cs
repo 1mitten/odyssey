@@ -35,6 +35,27 @@ namespace Odyssey.Sim.Pawns
         public MapGenOutcome Outcome { get; }
         public ColonyScenario.Result Placement { get; }
 
+        /// <summary>
+        /// What was asked for. Kept so that a world can say how it was made without anyone having
+        /// to remember separately — a log line, a save header, and the second build a load needs
+        /// all want the same answer, and a copy of it is a copy that can drift.
+        /// </summary>
+        public ColonyRequest Request { get; }
+
+        /// <summary>
+        /// The generator settings this world came from. Kept because the renderer stamps a city
+        /// map's shell templates from them after the build, and because a request that was
+        /// answered is worth being able to read back.
+        /// </summary>
+        public MapGenDef Gen { get; }
+
+        /// <summary>
+        /// Cells the scenario marked for work before the first tick — trees near the start and the
+        /// nearest outcrop. Reported rather than discarded because a scenario that marked nothing
+        /// looks exactly like a colony that has decided to do nothing.
+        /// </summary>
+        public int MarkedForWork { get; }
+
         /// <summary>What the colony was given at the start, for a run's report to say so.</summary>
         public ScenarioDef Scenario { get; }
 
@@ -55,10 +76,13 @@ namespace Odyssey.Sim.Pawns
 
         ColonyWorld(CellGrid grid, PawnContext pawns, DesignationGrid designations, SimWorld world,
             MapGenOutcome outcome, ScenarioDef scenario, ColonyScenario.Result placement, SupportSolver solver,
-            NavGraph nav, JobSystem jobs)
+            NavGraph nav, JobSystem jobs, MapGenDef gen, int markedForWork, ColonyRequest request)
         {
+            Request = request;
             Jobs = jobs;
             Scenario = scenario;
+            Gen = gen;
+            MarkedForWork = markedForWork;
             Grid = grid;
             Pawns = pawns;
             Designations = designations;
@@ -214,9 +238,10 @@ namespace Odyssey.Sim.Pawns
 
             ScenarioDef scenario = request.Scenario;
             ColonyScenario.Result placement = ColonyScenario.Place(grid, pawns, outcome.StartCell, seed, scenario);
-            ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenario);
+            int marked = ColonyScenario.GiveStartingOrders(designations, outcome.StartCell, scenario);
 
-            var built = new ColonyWorld(grid, pawns, designations, world, outcome, scenario, placement, solver, nav, jobs);
+            var built = new ColonyWorld(grid, pawns, designations, world, outcome, scenario, placement, solver, nav,
+                jobs, gen, marked, request);
             built.RebuildDerived();
             return built;
         }
