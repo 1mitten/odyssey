@@ -2118,3 +2118,64 @@ work itself.
     offset from the factor and the floor from both, 7 in the new `ConstructionContentDefTests`).
     Not run: the Unity tier — no Unity in this environment; it runs on the owner's self-hosted
     runner via CI on the pull request.
+
+- **U39 is blocked on U36 and U38; the seed logic landed early on its own merit (2026-09-17,
+  `claude/exciting-albattani-4ua5z2`).** A session was sent to build U39, the new-game screen, on
+  the plan's word that its dependencies were in place. **They are not**, and the plan does not say
+  so — which is the second time in two days the plan has been ahead of the code
+  (`docs/plans/vertical-slice.md` "Where the seams are" was audited on 2026-09-17 for the same
+  reason). Checked against the source rather than the table:
+  - **U35 is done.** `OdysseyBootstrap.BuildSession()`/`TeardownSession()` exist, are what
+    `buildOnPlay` and `OnDestroy` call, and are covered by `SessionSeamTests`.
+  - **U36 has not landed.** `SaveFormat.CurrentFormatVersion` is still **1**. There is no v2
+    header, so no place to hand a colony name, a map type or a day to.
+  - **U38 has not landed.** `HudShell.Bar.cs:562` still carries the comment saying "the game menu
+    it will one day belong to (B18) does not exist yet", and there is no menu panel anywhere in
+    the presentation assembly. There is nowhere for a new-game screen to attach.
+  - **U37 has not landed either** (informational — U40 needs it, U39 does not). `Pawn.Skills` is
+    experience per skill and only `Passions` is described as rolled at spawn; nothing under
+    `Sim/Pawns` rolls a starting level.
+
+  **What was built instead, and why this and nothing else.** `SeedEntry` in `Odyssey.Sim.Contracts`:
+  draw a seed, reroll to a seed that is guaranteed different, format one for the player to read,
+  and read back what they typed. That is the whole of U39 that does not depend on a screen, and it
+  is the half that would otherwise have been written inside a text field's callback where the fast
+  tier could never reach it. **Nothing was invented to route around the blockers** — no standalone
+  menu, no second save header — because a second source of truth for either is exactly what
+  `CLAUDE.md` warns about while a seam is open.
+
+  Four decisions worth not re-litigating:
+  - **Decimal digits, not hex and not a word code.** It is already the form the project prints a
+    seed in (`OdysseyBootstrap`'s cast-seed log line, the `colonistLookSeed` inspector field), so a
+    number copied out of a log is a number that can be pasted back in, and it needs no vocabulary a
+    player has to be taught. **The Minecraft idiom — type a word, have it hashed — is the genre's
+    friendlier convention and was deliberately not taken**, because it only works if the typed text
+    is kept beside the number, and where that text would live is the v2 header's business. It is
+    worth reopening when U36 lands; it is not worth a second representation before then.
+  - **Zero is an ordinary seed**, so nothing special-cases it. `DeterministicRandom`'s constructor
+    does map a state of 0 to 1, but no consumer ever reaches it that way: every stream comes from
+    `ForTick`, which avalanche-mixes first (checked — there is no `new DeterministicRandom(` in
+    `Sim` or `Presentation` outside `ForTick`). A test pins it, because a start screen showing "0"
+    would otherwise be lying about which world it was about to build.
+  - **A reroll may not return the seed it replaced**, and the guarantee is absolute rather than
+    probabilistic. One in 2^32 is invisible in play but reads as a broken button when it happens,
+    and the player cannot tell the two apart. The retry is bounded at eight draws and then takes
+    the neighbouring seed, because an unbounded loop against a stuck source would hang rather than
+    fail — and a source stuck on one value is exactly what a test double is.
+  - **The one deliberately non-deterministic code in the simulation assemblies**, confined to
+    `Draw()` and `Reroll()` and reachable from nowhere on a tick path. Entropy is `Guid.NewGuid`,
+    folded FNV-1a and then put through `ForTick`'s own avalanche rather than truncated: six of a
+    GUID's bits are fixed version and variant markers, and a truncation could land on them and
+    quietly narrow the range of seeds a player can ever be dealt. Two tests cover it without
+    flaking — 256 draws must yield at least 252 distinct values, and every one of the 32 bit
+    positions must be seen both set and clear (a uniform bit is stuck by chance with probability
+    2^-255).
+
+  **Not run: either tier, and that is a real gap rather than a formality.** This container has no
+  Unity *and no .NET SDK*, and the network policy answers 403 to `builds.dotnet.microsoft.com`,
+  `dotnetcli.azureedge.net` and `download.visualstudio.microsoft.com`, so `scripts/test-fast.sh`
+  could not be installed into, let alone run. The 17 tests in `SeedEntryTests` are written and
+  unexecuted; CI on the pull request is the first thing that will run them. The entropy fold's two
+  statistical claims were modelled in Python against the same constants and held over five trials
+  of 256 draws, which is not the same as running the test. The fast-tier counts in `CLAUDE.md` are
+  deliberately left alone rather than advanced by a guess.

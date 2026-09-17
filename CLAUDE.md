@@ -168,6 +168,17 @@ no module catalogue (everything resolves to a shared Unity primitive, so there i
 and giving it a real catalogue would make a test depend on the licensed packs — so it `Assert.Ignore`s
 with that reason recorded. `U36` (save format v2) is next in the `MS` chain and still open.
 
+**`U36` and `U38` are both still open, and the plan's table does not say so** — check the code, not
+the table, before starting anything downstream of them: `SaveFormat.CurrentFormatVersion` is still
+**1**, and `HudShell.Bar.cs` still carries the comment that the B18 menu "does not exist yet". That
+blocks `U39`'s screen, so only **`U39`'s seed logic** landed (2026-09-17): `SeedEntry` in
+`Odyssey.Sim.Contracts` draws a seed, rerolls to one guaranteed different, formats it as plain
+decimal and reads back what the player typed. A seed is decimal because that is already what the
+project prints; **free-text seeds in the Minecraft idiom were considered and deferred to `U36`**,
+because they only work if the typed text is kept beside the number and the v2 header is where that
+would live. It is the one deliberately non-deterministic code in the simulation assemblies, confined
+to two methods and reachable from no tick path.
+
 Three things a later session should not re-litigate. **Live portraits** are refused by
 `09-ui-and-input.md` §4.5 — but that argument is about fifty of them in the roster bar at 15 Hz
 while the world renders, and the select screen is three, rendered once, with no world behind them;
