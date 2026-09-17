@@ -2118,3 +2118,36 @@ work itself.
     offset from the factor and the floor from both, 7 in the new `ConstructionContentDefTests`).
     Not run: the Unity tier — no Unity in this environment; it runs on the owner's self-hosted
     runner via CI on the pull request.
+
+- **U36 Save format v2, and files on disk, 2026-09-17.** Sim-only, per the plan: `WorldSave` gained
+  a `SaveRecipe` — map type, scenario, colony name, day — written into the header after the
+  seed/size/tick it always carried, and `CurrentFormatVersion` moved to 2.
+
+  - **Day is handed in, not derived in Sim.** `GameClock`'s tick-to-calendar mapping lives in the
+    Hud assembly; `Odyssey.Sim.csproj`'s own comment says referencing only `Sim.Contracts` is what
+    keeps the dependency direction enforced, and Hud is not on that list. So `SaveRecipe.Day` is
+    whatever the caller — who already has both the tick and the clock — computed, and nothing in
+    Sim re-implements the conversion. `ColonyWorld.Recipe(day)` fills in map, scenario and colony
+    name from `Request` and still asks the caller for the day, for the same reason.
+  - **A version 1 file reads back `SaveRecipe.Unknown` rather than guessing.** `MapType` gained a
+    third value, `Unknown = 2`, specifically so a file that never recorded a map type does not have
+    to borrow either real one to say so. `ReadHeader` is the one place that knows the layout differs
+    by version, and both `Load` and the new `ReadHeaderOnly` go through it, so they cannot read an
+    old file two different ways.
+  - **The header-only read is the point of the exercise.** `WorldSave.ReadHeaderOnly(Stream | path)`
+    needs no `SimWorld` and no component list — it reads magic, version, seed, size, tick and the
+    recipe, then stops, never touching a section. That is what lets a load screen list a folder of
+    saves from their headers alone, which is what the unit was for.
+  - **`SaveToFile` / `LoadFromFile` exist because Sim cannot read
+    `UnityEngine.Application.persistentDataPath`.** Both take a plain path and do nothing else with
+    it — no `Saves`-folder convention, no extension, no enumeration policy. Deciding where that
+    folder lives and listing what's in it is presentation's job (`U38`–`U40`), not this unit's.
+  - **Every existing three-argument `WorldSave.Save(world, stream, components)` call site still
+    compiles**, because the recipe is an optional fourth parameter; it now writes a version 2 file
+    carrying `SaveRecipe.Unknown`, which reads back identically to an old file that never had one.
+  - **Verified:** fast tier **525 Sim + 191 Hud** (10 new, `SaveFormatV2Tests`: the recipe round
+    trip, the no-recipe-given default, a hand-built version 1 fixture read both header-only and
+    through a full `Load`, the truncated/non-Odyssey failure modes on `ReadHeaderOnly`, a
+    file-path round trip, and `ColonyWorld.Recipe`). Long tier unaffected (19). Wiki and label
+    registries current (no content changed). Not run: the Unity tier — no Unity in this
+    environment; it runs on the owner's self-hosted runner via CI on the pull request.
