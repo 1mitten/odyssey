@@ -99,6 +99,19 @@ namespace Odyssey.Tests.Hud
             Assert.That(SavePrompt.IconKeys, Does.Contain(SavePrompt.OverwriteKey));
         }
 
+        /// <summary>The New game screen's three words (U39), held to the CSV like every other
+        /// surface.</summary>
+        [Test]
+        public void EveryNewGameWordIsARegisteredName()
+        {
+            foreach (string key in SeedField.IconKeys)
+                Assert.That(Registry.Labels, Does.ContainKey(key), $"{key} is not in the registry");
+
+            // The row that commits is a word of its own rather than the root row's (§11.3), so a
+            // rename of one must not silently become a rename of both.
+            Assert.That(SeedField.StartKey, Is.Not.EqualTo(SessionCommands.NewGameKey));
+        }
+
         [Test]
         public void EveryHotkeyKeyIsARegisteredName()
         {
