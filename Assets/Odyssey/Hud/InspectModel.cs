@@ -599,11 +599,17 @@ namespace Odyssey.Hud
         /// </summary>
         void RefreshSkills(WorldSnapshot snapshot)
         {
-            while (Skills.Count < SkillCatalogue.All.Length) Skills.Add(default);
+            // In reading order, not declaration order (owner, 2026-09-17): alphabetical by the word
+            // on screen, laid down so the two-column grid reads down the left and then down the
+            // right. The same order feeds a candidate's card on the setup page, which is the point
+            // — the two grids are looked at side by side and must not disagree.
+            IReadOnlyList<SkillCatalogue.Entry> order = SkillCatalogue.ReadingOrder;
 
-            for (int i = 0; i < SkillCatalogue.All.Length; i++)
+            while (Skills.Count < order.Count) Skills.Add(default);
+
+            for (int i = 0; i < order.Count; i++)
             {
-                SkillCatalogue.Entry entry = SkillCatalogue.All[i];
+                SkillCatalogue.Entry entry = order[i];
                 SkillRow row = Skills[i];
                 row.IconKey = entry.Key;
                 row.Name = Registry.Label(entry.Key);
@@ -630,9 +636,9 @@ namespace Odyssey.Hud
             {
                 PawnAspect aspect = published[i];
                 if (aspect.Pawn != Pawn) continue;
-                for (int r = 0; r < SkillCatalogue.All.Length; r++)
+                for (int r = 0; r < order.Count; r++)
                 {
-                    SkillCatalogue.Entry entry = SkillCatalogue.All[r];
+                    SkillCatalogue.Entry entry = order[r];
                     if (!entry.Live) continue;
 
                     SkillRow row = Skills[r];

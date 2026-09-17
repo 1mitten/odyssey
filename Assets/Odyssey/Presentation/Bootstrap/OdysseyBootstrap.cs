@@ -276,6 +276,9 @@ namespace Odyssey.Presentation.Bootstrap
         public void BuildSession(uint? seedOverride, SaveHeader? from) =>
             BuildSession(seedOverride, from, null);
 
+        public void BuildSession(uint? seedOverride, SaveHeader? from, uint[]? colonists) =>
+            BuildSession(seedOverride, from, colonists, null, null);
+
         /// <summary>
         /// Build a session, optionally on a seed and a shape that are not the scene's (U38).
         ///
@@ -293,8 +296,14 @@ namespace Odyssey.Presentation.Bootstrap
         /// colonist count is overridden to match, because the owner's ruling is that a new game
         /// starts with exactly the three that were chosen. Null leaves both alone, which is every
         /// other caller.</para>
+        ///
+        /// <para><paramref name="name"/> and <paramref name="sizeOverride"/> are the setup page's
+        /// other two knobs. Both are null for every caller that does not ask, and both are ignored
+        /// on a load — a saved colony's name and board are facts about the file, and
+        /// <c>WorldSave.Load</c> refuses a world of a different size anyway.</para>
         /// </summary>
-        public void BuildSession(uint? seedOverride, SaveHeader? from, uint[]? colonists)
+        public void BuildSession(uint? seedOverride, SaveHeader? from, uint[]? colonists,
+            string? name, GridSize? sizeOverride)
         {
             if (HasSession)
                 throw new System.InvalidOperationException(
@@ -348,7 +357,10 @@ namespace Odyssey.Presentation.Bootstrap
             var generation = Stopwatch.StartNew();
             ColonyWorld colony = ColonyWorld.Build(new ColonyRequest
             {
-                Size = size,
+                // The setup page's choice when there is one, the inspector's otherwise, and never
+                // on a load: a save is refused outright if the world it opens into is a different
+                // size, so taking the page's here would turn a mismatch into a confusing refusal.
+                Size = from == null && sizeOverride.HasValue ? sizeOverride.Value : size,
                 Seed = sessionSeed,
                 Scenario = scenarioDef,
                 // From the file when loading, for the reason SaveRecipe.Barren sets out: three
@@ -362,9 +374,12 @@ namespace Odyssey.Presentation.Bootstrap
                 // A colony keeps the name it was saved under. Nothing names one yet — that is the
                 // New game screen's, in U39 — so a fresh session takes the request's default and
                 // only a loaded one carries a name here.
+                // The file's when loading; the setup page's when the player typed one; the scene's
+                // otherwise. An empty typed name is not a name, so it falls through rather than
+                // making a colony called nothing.
                 Name = from != null && from.Recipe.ColonyName.Length > 0
                     ? from.Recipe.ColonyName
-                    : colonyName,
+                    : !string.IsNullOrWhiteSpace(name) ? name!.Trim() : colonyName,
 
                 // Who they are (U40). Null for a loaded session, whose colonists come out of the
                 // file with their seeds already on them, and for every caller that never asked.

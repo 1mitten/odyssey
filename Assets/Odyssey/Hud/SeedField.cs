@@ -61,14 +61,19 @@ namespace Odyssey.Hud
         public const string StartKey = "ui.newgame.start";
 
         /// <summary>
-        /// The registry key naming the row that goes on to the colonists (U40).
+        /// The registry key naming the setup page itself — the heading over the whole thing.
         ///
-        /// <para>The seed screen's last row was <see cref="StartKey"/> until colonist select landed
-        /// and took the commit with it. The word had to move rather than be shared: a Start on the
-        /// seed screen and a Start two screens later would be two presses with one name, and the
-        /// player could not tell which of them was the one that could not be undone.</para>
+        /// <para>This was <c>ui.newgame.next</c> for about an hour, when the colonists briefly had
+        /// a screen of their own and the seed's last row said Next. The whole setup is one page
+        /// now, so there is nothing to go on to and the word is a title instead.</para>
         /// </summary>
-        public const string NextKey = "ui.newgame.next";
+        public const string TitleKey = "ui.newgame.title";
+
+        /// <summary>The registry key naming the colony-name field.</summary>
+        public const string ColonyKey = "ui.newgame.colony";
+
+        /// <summary>The registry key naming the board-size control.</summary>
+        public const string SizeKey = "ui.newgame.size";
 
         /// <summary>
         /// Every key this screen can put on screen, so <c>RegistryTests</c> can hold it to the
@@ -80,7 +85,9 @@ namespace Odyssey.Hud
             SeedKey,
             RerollKey,
             StartKey,
-            NextKey,
+            TitleKey,
+            ColonyKey,
+            SizeKey,
         };
 
         public SeedField() : this(SeedEntry.Draw) { }

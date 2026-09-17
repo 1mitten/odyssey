@@ -143,12 +143,9 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(boot.HasSession, Is.False,
                     "opening the New game screen built a world before anything was chosen");
 
-                // Three presses since U40: New game, Next to the colonists, Start.
-                Assert.That(shell.Menu.Next(), Is.True);
-                yield return Settle();
-                Assert.That(boot.HasSession, Is.False,
-                    "walking on to the colonists built a world before anybody was chosen");
-
+                // Two presses: New game opens the setup page with a board and three people
+                // already dealt, and Start commits. It was briefly three, when the colonists had
+                // a screen of their own; the whole setup is one page now.
                 Assert.That(shell.Menu.Start(), Is.True);
                 yield return Settle();
 
@@ -212,8 +209,6 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(shell.Menu.Seed.Seed, Is.EqualTo(4242u),
                     "typing in the field did not reach the director");
 
-                Assert.That(shell.Menu.Next(), Is.True, "the typed seed did not survive the way on");
-                yield return Settle();
                 Assert.That(shell.Menu.Start(), Is.True);
                 yield return Settle();
 
@@ -221,7 +216,7 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(boot.World!.Seed, Is.EqualTo(4242u),
                     "the colony was built from a seed the player never saw");
 
-                // And the colony is the three that were on the colonist screen (U40) — the same
+                // And the colony is the three that were on the setup page — the same
                 // claim one level up, and the one no fast-tier test can make because it spans the
                 // screen, the director, the bootstrap and ColonyRequest.
                 Assert.That(boot.Colony!.Pawns.Pawns.Count, Is.EqualTo(ColonistSelect.Slots),
@@ -258,8 +253,8 @@ namespace Odyssey.Tests.PlayMode
                 yield return Settle();
 
                 Assert.That(shell.Menu.Seed.Usable, Is.False);
-                Assert.That(shell.Menu.Next(), Is.False,
-                    "a box that names no seed still walked on to pick people for it");
+                Assert.That(shell.Menu.Start(), Is.False,
+                    "a world was started from a box that does not name a seed");
                 Assert.That(boot.HasSession, Is.False,
                     "a world was built from a box that does not name a seed");
 
@@ -501,21 +496,31 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(atLoad.x, Is.EqualTo(atRoot.x).Within(0.5f));
                 Assert.That(atLoad.y, Is.EqualTo(atRoot.y).Within(0.5f));
 
-                // And the New game screen (U39), which is the third thing this box has had to hold
-                // and the first one added after the height was fixed.
+                // New game is not one of this box's screens any more, and that is the point of the
+                // setup page: rather than growing the panel to hold three candidates and a skills
+                // grid, New game leaves it entirely. So the panel goes away and the page stands in
+                // its place — asserted here because "the box never changes size" is now kept by
+                // there being nothing in it to change size for.
                 shell.Menu.Back();
                 shell.Menu.Choose(SessionCommands.NewGameKey);
                 yield return Settle();
                 Assert.That(shell.Menu.Screen, Is.EqualTo(MenuScreen.NewGame));
 
-                Rect atNewGame = Screen(doc)!.worldBound;
-                Assert.That(atNewGame.width, Is.EqualTo(atRoot.width).Within(0.5f),
-                    "the panel changed width on the New game screen");
-                Assert.That(atNewGame.height, Is.EqualTo(atRoot.height).Within(0.5f),
-                    "the panel changed height on the New game screen, so every row under the " +
-                    "pointer moved");
-                Assert.That(atNewGame.x, Is.EqualTo(atRoot.x).Within(0.5f));
-                Assert.That(atNewGame.y, Is.EqualTo(atRoot.y).Within(0.5f));
+                Assert.That(Shown(Screen(doc)), Is.False,
+                    "the menu panel is still up underneath the setup page");
+                VisualElement? page = doc.rootVisualElement.Q("setup");
+                Assert.That(Shown(page), Is.True, "the setup page is not on screen");
+
+                // Back, and the box is exactly where it was — which is the half that would strand
+                // a player if the page did not put the panel back.
+                shell.Menu.Back();
+                yield return Settle();
+
+                Rect returned = Screen(doc)!.worldBound;
+                Assert.That(returned.width, Is.EqualTo(atRoot.width).Within(0.5f));
+                Assert.That(returned.height, Is.EqualTo(atRoot.height).Within(0.5f));
+                Assert.That(returned.x, Is.EqualTo(atRoot.x).Within(0.5f));
+                Assert.That(returned.y, Is.EqualTo(atRoot.y).Within(0.5f));
             }
             finally
             {

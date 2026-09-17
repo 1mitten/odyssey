@@ -155,6 +155,45 @@ namespace Odyssey.Hud
             return slice;
         }
 
+        static Entry[]? _reading;
+
+        /// <summary>
+        /// The order to <b>lay the rows down in</b> so that a two-column grid <b>reads</b> down the
+        /// left column and then down the right.
+        ///
+        /// <para><b>Not the same as <see cref="Alphabetical"/>, and that is the whole point.</b> The
+        /// grid is a wrapping flex row — thirteen items at half width, which the engine flows left
+        /// to right and then wraps. Appending A, B, C into that gives A and B side by side, which
+        /// is across-then-down: the layout the owner refused. So the sequence is interleaved here,
+        /// where it can be tested, rather than by giving the stylesheet a column count it would
+        /// then own.</para>
+        ///
+        /// <para>Thirteen into seven rows leaves the right column one short, so the last row holds
+        /// only the left item and the sequence simply runs out — which is why this is computed
+        /// rather than written as a table of indices that would be wrong the day a skill is
+        /// added.</para>
+        /// </summary>
+        public static IReadOnlyList<Entry> ReadingOrder
+        {
+            get
+            {
+                if (_reading != null) return _reading;
+
+                IReadOnlyList<Entry> order = Alphabetical;
+                int rows = Rows;
+                var laid = new List<Entry>(order.Count);
+
+                for (int row = 0; row < rows; row++)
+                for (int column = 0; column < 2; column++)
+                {
+                    int index = column * rows + row;
+                    if (index < order.Count) laid.Add(order[index]);
+                }
+
+                return _reading = laid.ToArray();
+            }
+        }
+
         /// <summary>The keys, for the registry test that holds every key this panel can draw.</summary>
         public static string[] IconKeys
         {
