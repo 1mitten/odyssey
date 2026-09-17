@@ -1272,7 +1272,50 @@ namespace Odyssey.Presentation.Bootstrap
                 throw new InvalidOperationException("there is no session to save");
 
             System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
-            _colony.SaveToFile(path, CurrentRecipe());
+
+            // The view is captured at the moment of saving rather than tracked, because it is only
+            // ever needed once and a camera that told a save component about every frame would be
+            // the most-written state in the game for the least reason.
+            if (cameraRig != null && Directors != null)
+                _view.Capture(cameraRig, Directors, _world.GameSpeed);
+
+            WorldSave.SaveToFile(path, _world, WithView(_colony.SaveComponents), CurrentRecipe());
+        }
+
+        /// <summary>
+        /// The view section for the session being saved or loaded right now.
+        ///
+        /// <para><b>Replaced on every load rather than reused, and the reason is a bug this had
+        /// before the wiring was reviewed.</b> The section remembers whether it captured anything,
+        /// and <c>WorldSave.Load</c> simply does not call <c>Load</c> on a section the file does
+        /// not contain. So a component kept across sessions would, on opening a save written before
+        /// this section existed, still be holding the *previous* colony's camera — and would
+        /// faithfully restore it. A restore that quietly uses another game's view is worse than no
+        /// restore at all, because it looks like the feature working.</para>
+        /// </summary>
+        ViewStateSection _view = new ViewStateSection();
+
+        /// <summary>
+        /// The simulation's save components plus the one this assembly owns.
+        ///
+        /// <para><b>The view section is Presentation's, and that is why it is appended here rather
+        /// than living in <c>ColonyWorld.SaveComponents</c>.</b> Sim cannot see a camera and must
+        /// not learn to. It is <c>ISaveable</c> and deliberately <i>not</i>
+        /// <c>IStateHashable</c>, so it cannot move the state hash, desync a load or appear in a
+        /// determinism gate — which is what makes writing presentation state into a save file safe
+        /// at all. `CLAUDE.md`'s rule that nothing in presentation reaches the save was aimed at
+        /// determinism, and determinism is the hash's business.</para>
+        ///
+        /// <para>A headless caller that passes only the simulation's own components is unaffected
+        /// in both directions: it writes no view section, and <c>WorldSave.Load</c> skips one it
+        /// was not given a handler for.</para>
+        /// </summary>
+        IReadOnlyList<ISaveable> WithView(IReadOnlyList<ISaveable> components)
+        {
+            var all = new List<ISaveable>(components.Count + 1);
+            all.AddRange(components);
+            all.Add(_view);
+            return all;
         }
 
         SaveRecipe CurrentRecipe()
@@ -1299,10 +1342,16 @@ namespace Odyssey.Presentation.Bootstrap
             TeardownSession();
             BuildSession(null, header);
 
+            // A fresh one, so that a save with no view section cannot be restored using the view
+            // of whatever was open before it. See the field.
+            _view = new ViewStateSection();
+
             // The colony was built from the header, so this cannot mismatch; if it ever does, the
             // exception from WorldSave says which of seed or size disagreed, and that is a fault
             // in the rebuild above rather than in the file.
-            _colony!.LoadFromFile(path);
+            using (var stream = System.IO.File.OpenRead(path))
+                WorldSave.Load(_world!, stream, WithView(_colony!.SaveComponents));
+
             RefreshAfterLoad();
         }
 
@@ -1328,6 +1377,21 @@ namespace Odyssey.Presentation.Bootstrap
             _colony!.RebuildDerived();
             _model!.RefreshAll(_colony.Grid, _colony.Outcome.Edifices);
             _world!.Tick();
+
+            // The view goes back last, and after the tick: BuildSession has already pointed the
+            // camera at the generated start cell and the slice at its layer, so anything applied
+            // before this would be overwritten by the build it is trying to correct.
+            //
+            // The pose is the section's own business — it calls SliceCameraRig.RestorePose, which
+            // sets the smoothing targets as well as the live values. The speed is not: the rig can
+            // only *request* a speed, and its request handler reads 0 as "start again" when the
+            // world is already paused, so a colony saved paused would come back running. The
+            // intent says what was meant.
+            if (cameraRig != null && Directors != null)
+                _view.Apply(cameraRig, Directors,
+                    setGameSpeed: speed =>
+                        _world.Intents.Submit(new Intent(IntentKind.SetGameSpeed, default, speed)));
+
             SessionChanged?.Invoke();
         }
 
