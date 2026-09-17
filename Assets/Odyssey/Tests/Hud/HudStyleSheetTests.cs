@@ -147,6 +147,7 @@ namespace Odyssey.Tests.Hud
             (".bp__bar-cat", "width", () => HudLayout.BuildBarCat, "a bar category tile"),
             (".bp__bar-sub", "width", () => HudLayout.BuildBarSub, "a bar sub-type tile"),
             (".bp__action", "width", () => HudLayout.BuildAction, "a header action"),
+            (".bp__hint", "left", () => HudLayout.BuildBandPadX, "band side padding"),
             (".bp__switch-btn", "width", () => HudLayout.BuildSwitchButton, "a switcher button"),
             (".bp__material", "border-width", () => HudTheme.MaterialBorderWidth, "material border"),
             (".bp__material", "border-radius", () => HudTheme.MaterialRadius, "material radius"),

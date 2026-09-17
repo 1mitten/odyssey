@@ -524,6 +524,7 @@ namespace Odyssey.Presentation.Ui
                 RefreshStores();
                 RefreshAlerts();
                 RefreshSpeed();
+                RefreshBuildPalette();
             }
             if (_slow >= SlowBucketSeconds)
             {
@@ -651,7 +652,12 @@ namespace Odyssey.Presentation.Ui
             DesignateDirector? tool = _directors?.Designate;
             DesignateTool armed = tool?.Tool ?? DesignateTool.None;
 
-            if (armed == DesignateTool.None)
+            // Not while the Build palette is open. The banner floats in the middle of the screen
+            // saying what is armed, and the open palette says the same thing in its own header,
+            // in the armed tool's colour, a few pixels away — two labels about one tool, one of
+            // them over the panel that set it. The banner is for the player who armed something
+            // and then closed the palette, which is the case it was written for.
+            if (armed == DesignateTool.None || BuildPaletteOpen)
             {
                 _armedBanner.style.display = DisplayStyle.None;
                 _armedFor = DesignateTool.None;

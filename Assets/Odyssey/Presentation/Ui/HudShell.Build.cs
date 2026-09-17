@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using Odyssey.Hud;
+using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -84,14 +85,21 @@ namespace Odyssey.Presentation.Ui
             _buildBody.AddToClassList("bp__body");
             _buildPanel.Add(_buildBody);
 
-            // The hint sits outside the panel, under it, in the shell — it is an instruction about
-            // the world rather than a part of the control surface.
+            // The hint sits outside the panel — it is an instruction about the world rather than a
+            // part of the control surface — but it is a *child* of the panel, absolutely
+            // positioned just above its top edge.
+            //
+            // That is the second attempt. The first put it in the shell and worked out where the
+            // top of the panel was, which is a measurement that does not exist yet when the panel
+            // is first placed: it fell back to a fixed offset and drew the sentence through the
+            // material buttons. Hanging it off the panel's own top edge needs no measurement and
+            // cannot be out of date, and UI Toolkit draws a child outside its parent's box quite
+            // happily as long as nothing clips it.
             _buildHint = HudText.Make(
                 "Left click places · drag for a run · right click cancels",
                 HudTextRole.Meta, ussClass: "bp__hint");
             _buildHint.pickingMode = PickingMode.Ignore;
-            _buildHint.style.display = DisplayStyle.None;
-            _hud.Add(_buildHint);
+            _buildPanel.Add(_buildHint);
 
             _hud.Add(_buildPanel);
         }
@@ -108,11 +116,48 @@ namespace Odyssey.Presentation.Ui
             _palette.LayoutChanged += _ => RaiseBuildLayout();
             _palette.SelectionChanged += MarkBuildState;
 
+            // The cost table lives in the simulation assembly, which Odyssey.Hud cannot see and
+            // this one can. Handed over as a function rather than copied, so that SiteView's
+            // standing objection — "the interface keeping its own copy of the cost table, which is
+            // two sources for one number" — stays answered.
+            _palette.ReadCostFrom((building, stuff) =>
+                ConstructionContent.IsBuilding(building)
+                    ? ConstructionContent.BuildingAt(building).costCount
+                    : 0);
+
+            // And what the colony holds, so a material it has none of stops being offered. Read
+            // from the published snapshot on demand rather than cached: the palette asks while it
+            // is repainting, which is already the moment the answer has to be current.
+            _palette.ReadStockFrom(StockOf);
+
             // The world can disarm a tool without the palette being touched — Escape, right-click,
             // a hotkey — and a panel that did not hear about it would sit there lit.
             _directors.Designate.ToolChanged += _ => MarkBuildState();
 
             RaiseBuildLayout();
+        }
+
+        /// <summary>
+        /// How many units of a material the colony is holding, counted off the published
+        /// snapshot.
+        ///
+        /// <para>Loose stacks on the ground, which is what the stores panel counts too, and for
+        /// the same reason: a wall is built out of what a hauler can fetch. A material with no
+        /// item behind it can never be held, so it answers zero rather than pretending.</para>
+        /// </summary>
+        int StockOf(int stuff)
+        {
+            WorldSnapshot? snapshot = _boot == null ? null : _boot.World?.Views.Current;
+            if (snapshot == null || !ConstructionContent.IsBuildable(stuff)) return 0;
+
+            int item = ConstructionContent.StuffAt(stuff).item;
+            if (item < 0) return 0;
+
+            int held = 0;
+            ReadOnlySpan<ThingView> things = snapshot.Things;
+            for (int i = 0; i < things.Length; i++)
+                if (things[i].DefIndex == item) held += things[i].Stack;
+            return held;
         }
 
         VisualElement BuildPaletteHeader()
@@ -142,7 +187,6 @@ namespace Odyssey.Presentation.Ui
             // layout builders can find this copy and not the body's.
             _buildHeaderCost = HudText.Make(string.Empty, HudTextRole.Body, numeric: true, "bp__cost");
             _buildHeaderCost.AddToClassList("bp__cost--hdr");
-            _buildHeaderCost.style.display = DisplayStyle.None;
             header.Add(_buildHeaderCost);
 
             _buildSwitch = BuildLayoutSwitcher();
@@ -249,7 +293,7 @@ namespace Odyssey.Presentation.Ui
 
             _buildBody.Clear();
             _buildCost = null;
-            _buildHeaderCost.style.display = DisplayStyle.None;
+            _buildHeaderCost.text = string.Empty;
             _buildTiles.Clear();
             _buildCategoryTiles.Clear();
             _buildMaterialTiles.Clear();
@@ -350,6 +394,13 @@ namespace Odyssey.Presentation.Ui
             pane.Add(spacer);
 
             _buildCost = HudText.Make(string.Empty, HudTextRole.Body, numeric: true, "bp__cost");
+
+            // Rail alone reserves the line. An empty label does not stand as tall as a full one,
+            // which left the panel 17 px shorter on a category that has nothing to price — the
+            // third and last place the constant-height promise leaked, after the sub-type grid and
+            // the material band. The figure is the renderer's, not the model's, which is why it is
+            // taken from HudText here rather than written into HudLayout.
+            _buildCost.style.minHeight = HudText.LineHeight(HudTextRole.Body);
             pane.Add(_buildCost);
 
             split.Add(pane);
@@ -518,6 +569,23 @@ namespace Odyssey.Presentation.Ui
         // ============================================================ state
 
         /// <summary>
+        /// Repaint the open palette on the middle cadence, beside the stores panel it shares a
+        /// question with.
+        ///
+        /// <para><b>Because stock moves without the player touching the palette.</b> Everything
+        /// else here repaints on an event — a click, a layout switch, a tool armed elsewhere — and
+        /// that was enough for every tier but the materials, which are tinted by whether the colony
+        /// has any. A hauler emptying the last stack would otherwise leave a button promising a
+        /// build that cannot start, until something unrelated happened to repaint it. Shut, it
+        /// costs nothing; open, it is two buttons and the same sweep of things the stores panel is
+        /// doing a line above.</para>
+        /// </summary>
+        void RefreshBuildPalette()
+        {
+            if (BuildPaletteOpen) MarkBuildState();
+        }
+
+        /// <summary>
         /// Repaint everything that can be lit, without rebuilding anything.
         ///
         /// <para>Each tier asks the model what it is rather than being told, which is the same
@@ -613,12 +681,12 @@ namespace Odyssey.Presentation.Ui
                 label.style.display = wanted ? DisplayStyle.Flex : DisplayStyle.None;
 
             // --- the cost, once
-            if (_buildCost != null)
-            {
-                string cost = _palette.CostLine;
-                _buildCost.text = cost;
-                _buildCost.style.display = cost.Length > 0 ? DisplayStyle.Flex : DisplayStyle.None;
-            }
+            //
+            // Emptied rather than hidden, and that is not fussiness: a hidden row takes its height
+            // with it, and in Rail that moved the panel 25 px the moment a category opened on a
+            // tool that is not made of anything. Same fault as the material band above, one tier
+            // down, and found the same way. An empty label costs nothing in the other two.
+            if (_buildCost != null) _buildCost.text = _palette.CostLine;
         }
 
         /// <summary>
@@ -664,7 +732,6 @@ namespace Odyssey.Presentation.Ui
             if (open) ToggleMenu(false);
 
             _buildPanel.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
-            _buildHint.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
 
             // While the palette is open the inspect pane collapses to its header (specification).
             // The palette docks on top of whatever is under it, so this is not only tidiness: it
@@ -701,7 +768,6 @@ namespace Odyssey.Presentation.Ui
             }
 
             _buildPanel.style.bottom = bottom;
-            _buildHint.style.bottom = bottom - HudLayout.BuildHintBlock;
 
             if (_palette.Layout == BuildPaletteLayout.Rail)
             {
@@ -714,13 +780,11 @@ namespace Odyssey.Presentation.Ui
                     _buildPanel.style.left =
                         HudLayout.PopoverLeft(_barItems[0].worldBound.xMin, width, screen);
                 }
-                _buildHint.style.left = _buildPanel.style.left;
                 return;
             }
 
             _buildPanel.style.left = HudLayout.Edge;
             _buildPanel.style.right = HudLayout.Edge;
-            _buildHint.style.left = HudLayout.Edge + HudLayout.Pad;
         }
     }
 }

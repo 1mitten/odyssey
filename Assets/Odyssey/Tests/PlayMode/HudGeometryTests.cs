@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
@@ -929,6 +930,83 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(PaletteGlyphs.Has(key), Is.True,
                     $"{key} is on the Build palette and has no drawn shape, so it would draw the " +
                     "placeholder square that the specification forbids");
+        }
+
+        /// <summary>
+        /// Write a picture of each layout to <c>Logs/</c>.
+        ///
+        /// <para><b>Why a test takes photographs.</b> Everything else here asks whether the
+        /// palette <i>fits</i> — nothing overflows, nothing overlaps, no tile falls back to the
+        /// placeholder square, every label clears its contrast floor. None of that can say whether
+        /// the shape meant to be a bench reads as a bench, and the palette's thirty-seven icons are
+        /// hand-written vector paths, which is exactly where a mirrored axis hides: it still draws
+        /// something, it still passes, and it still looks like nothing.</para>
+        ///
+        /// <para>The rig already renders the real HUD into a render texture at the real
+        /// resolution, so the picture costs one <c>ReadPixels</c> and is of the actual panel rather
+        /// than of a mock-up of it. It asserts only that it managed to write something: it is here
+        /// to produce the artefact the owner judges, in the same spirit as the <c>*Check</c>
+        /// harnesses, not to have an opinion about what is in it.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator EveryLayoutSitsForItsPortrait()
+        {
+            GameObject root = Build(out OdysseyBootstrap boot, out UIDocument doc, Resolutions[1]);
+            try
+            {
+                // Nothing else clears this texture. In the game a camera draws the world into the
+                // frame before the panel goes over it; in the rig the panel is all there is, so
+                // without this each portrait carries the last one underneath it — which is how the
+                // first set came out with the previous layout showing around the edges of the
+                // next. A picture with a ghost in it is worse than no picture: it invites a
+                // diagnosis of a bug that is not there.
+                doc.panelSettings.clearColor = true;
+                doc.panelSettings.colorClearValue = new Color(0.06f, 0.08f, 0.09f, 1f);
+
+                yield return Settle(doc);
+                yield return OpenPalette(doc);
+
+                Directory.CreateDirectory("Logs");
+
+                foreach (BuildPaletteLayout layout in BuildPaletteModel.Layouts)
+                {
+                    yield return SwitchLayout(doc, layout);
+
+                    // One more frame after the switch, so the texture holds the panel that was
+                    // just built rather than the one it replaced.
+                    yield return null;
+
+                    string path = $"Logs/palette-{layout.ToString().ToLowerInvariant()}.png";
+                    Capture(doc, path);
+                    Assert.That(File.Exists(path), Is.True, $"no picture was written for {layout}");
+                    Debug.Log($"[HudGeometry] wrote {path}");
+                }
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
+
+        static void Capture(UIDocument doc, string path)
+        {
+            RenderTexture? target = doc.panelSettings.targetTexture;
+            if (target == null) return;
+
+            RenderTexture previous = RenderTexture.active;
+            var picture = new Texture2D(target.width, target.height, TextureFormat.RGBA32, false);
+            try
+            {
+                RenderTexture.active = target;
+                picture.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                picture.Apply();
+                File.WriteAllBytes(path, picture.EncodeToPNG());
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                Object.DestroyImmediate(picture);
+            }
         }
 
         /// <summary>

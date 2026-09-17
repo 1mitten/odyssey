@@ -98,6 +98,22 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
   key is unchanged, because `ui.status.felling` draws real art and `icon-map.csv` is keyed the same
   way. Design, what is still open and the by-hand procedure are
   `docs/design/16-cancel-and-deconstruct.md`.
+  **The Build palette is now three layouts over one selection** (`claude/build-palette-layouts`,
+  2026-09-17) — the owner's 4a *Rows* (the default), 4b *Rail* and 4c *Bar*, switchable from the
+  panel header and from Options › Interface, with the choice stored. Design, the measurements and
+  what nobody has judged are `docs/design/17-build-palette-layouts.md`; **read it before touching
+  `HudShell.Build.cs`, `BuildPalette.cs` or the `bp__*` block of `Hud.uss`.** Three things a later
+  session should not undo by tidying. **Orders, Zones and Salvage came off the palette** as the
+  specification asked, but Orders held Mine and Chop — so both are **pinned in the header** beside
+  Deconstruct and Cancel rather than lost to the `M` and `C` keys, which is the Cancel fault of the
+  day before repeated exactly; `EveryLiveToolIsDrawnSomewhere` is the general form of that rule.
+  **The panel is docked, not floating** (owner: *"tight and flush to other elements to enable full
+  use of space"*) — the mockups were drawn over a bare board and would have covered the stores panel
+  and the roster strip. And **thirty-seven icons are drawn** as `Painter2D` paths in `HudGlyph`'s
+  existing box, because ADR 0007's pipeline covers no architecture key and the specification forbids
+  the placeholder square here; materials keep the game's own sprites, which is the one tier whose
+  art must not change. **Every PlayMode run writes `Logs/palette-{rows,rail,bar}.png`** — the only
+  thing anybody has looked at, and what found the three faults the tests could not see.
   **Deconstruct landed the same day** and closes U26's last outstanding line but one. A colonist
   walks to one of our own walls, takes it apart and leaves **2 or 3 wood of the 5 it cost** — a
   seeded coin flip on the odd unit, keyed on cell *and tick* so a cell cannot become a permanently
@@ -271,7 +287,7 @@ That rule is load-bearing; keep it.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **542 Sim + 191 Hud**; Long tier **19**.
+- **Fast tier** (`scripts/test-fast.sh`, ~11 s, no Unity): **559 Sim + 217 Hud**; Long tier **19**.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative) plus PlayMode, which is the only
   place frame time is measured — never an editor `camera.Render()` loop.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and

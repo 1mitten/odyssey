@@ -2330,3 +2330,101 @@ work itself.
   statistical claims were modelled in Python against the same constants and held over five trials
   of 256 draws, which is not the same as running the test. The fast-tier counts in `CLAUDE.md` are
   deliberately left alone rather than advanced by a guess.
+
+- **The Build palette became three layouts, 2026-09-17** (`claude/build-palette-layouts`,
+  `docs/design/17-build-palette-layouts.md`). The owner supplied a specification and three rendered
+  mockups — 4a Rows, 4b Rail, 4c Bar — with 4a the default and the other two switchable from inside
+  the panel. The whole design follows from one clause of it: *all three share one data source and
+  one state object*. `BuildPaletteModel` in the Unity-free assembly holds the category, the
+  sub-type, the per-sub-type material memory, the breadcrumb and the cost line, and the three layout
+  builders in `HudShell.Build.cs` read it and decide nothing — so "switching layout never changes
+  selection" is a property of the structure rather than a thing three builders have to remember, and
+  it is checked in eleven seconds rather than by opening the game.
+
+  **Dropping the Orders category would have hidden mining and chopping.** The specification takes
+  Orders, Zones and Salvage off the palette, leaving exactly the seven it names. Zones and Salvage
+  took nothing live with them; Orders held Mine and Chop, which are two of the five tools in this
+  game that actually do anything. Taken literally it would have left both reachable by the `M` and
+  `C` keys and by nothing a player could see — which is not a hypothetical, it is precisely what had
+  happened to Cancel the day before: *the tool was never missing, every way of finding it was
+  missing*, and it cost a playtest to find. Both are pinned in the panel header now beside
+  Deconstruct and Cancel, on the test those two already passed — all four are verbs applied to what
+  is already on the board, not nouns to place. `EveryLiveToolIsDrawnSomewhere` is the general form,
+  so a third time cannot be silent.
+
+  **The mockups were drawn over a bare board.** All three floated at a 28 px margin with the panel's
+  corner in the screen's corner, and the real screen has the stores panel docked down the left edge
+  and the roster strip across the whole top, so a panel there covers both while it is open. Asked
+  which of three placements they wanted, the owner answered with a principle instead: *"tight and
+  flush to other elements to enable full use of space"*. So the margins went, Rows and Bar span the
+  screen edge to edge, Rail keeps its 840 anchored to the button that raised it, and all three dock
+  flush on whatever is under them — the command bar, or the inspect pane's collapsed header. That is
+  the rule the bar and the popovers already follow, and very nearly the words the owner used about
+  the popovers a day earlier.
+
+  **Thirty-seven icons are drawn rather than imported.** The specification asks for 1.8 px line art
+  on a 24 px grid and forbids the placeholder square anywhere in the palette; the ADR 0007 pipeline
+  covers nineteen keys and not one is an architecture tool, so every tile would have been an
+  outlined box. They are `Painter2D` paths in `HudGlyph`'s existing 24-unit box, sharing its stroke
+  rule and its helpers — one path each, no texture, no atlas, no licence — and the key is still the
+  contract, so a sheet landing later takes the slot back with nothing moving. The materials are
+  deliberately not among them: Wood and Stone keep the exact sprites the game already draws, which
+  is the one tier the specification says not to touch.
+
+  **Rail's only promise broke three times, and the test written for it found all three.** Its claim
+  is that its height does not change when the category does, so nothing below it reflows. It did:
+  376 px on Structure against 343 on Production. The sub-type grid was sizing itself to its
+  contents; then, fixed, the material band was collapsing entirely for a category whose first
+  buildable tool is not made of anything, which is five of the seven; then, fixed, the cost line was
+  17 px shorter when empty. Each was found by printing the measurement rather than by reading the
+  code — the second and third would both have read as correct. All seven now stand at 396 px, and
+  the row count is held to the largest category in the fast tier so an eighth tool fails in eleven
+  seconds rather than in a PlayMode run. The price is an empty band under the word MATERIAL while an
+  order is armed, which is the honest cost of the promise and is visible only in Rail.
+
+  **Mode colour, asked for mid-build** (owner: *"the cancel/deconstruct colours … should also be
+  represented in the dialog … so it becomes clearer what mode you are in"*). Each of the four pinned
+  actions has a hue — four existing signal tokens, not four new ones — and while one is held the
+  panel wears it: the header line becomes that action's name in its colour, its icon appears beside
+  it, and the panel's top edge becomes a 2 px hairline of it. The header line is a sentence to read;
+  the edge is seen without reading, which is the half that answers the question. The breadcrumb is
+  replaced rather than joined, because what the palette would have built is not what is about to
+  happen. The floating armed banner is suppressed while the palette is open, since it said the same
+  thing over the panel that had just set it.
+
+  **One token departs from the specification, and the test is why.** The specified 0.30 disabled ink
+  measures 2.71:1 against its own chip over the brightest terrain the game draws. WCAG exempts
+  inactive controls, so nothing external said it was wrong; what says so is this palette at this
+  moment — one of its twenty-seven sub-types is live, so the greyed-out state is very nearly the
+  whole panel and is the only thing telling a player what the game will eventually let them build.
+  0.35 measures 3.21:1. `HudTheme.SubTypeDisabledInk` records when to put it back, and the second
+  half of the assertion stops the fix going too far: a disabled chip must stay obviously quieter
+  than a live one.
+
+  **Two general fixes fell out of it.** The ESC hint failed
+  `NoLabelIsAThreeLetterPlaceholder` — correctly by the letter of that rule and wrongly by its
+  meaning, since a key cap is a legend rather than a truncated word. The test had been excusing caps
+  by naming each class one happened to be drawn in, three entries long, and this would have been a
+  fourth; `HudText.Apply` now marks anything set in the Hotkey role and the test excuses the role,
+  so a fifth cannot go wrong. And the palette's close button needed the shared `panel__close` class,
+  or "every window carries an X" would have passed while the rule was broken.
+
+  **Every PlayMode run now writes three portraits** to `Logs/palette-{rows,rail,bar}.png`. The rig
+  already renders the real HUD into a render texture, so this costs one `ReadPixels` and is of the
+  actual panel. It exists because everything else here asks whether the palette *fits*, and nothing
+  can say whether the shape meant to be a bench reads as a bench — which is exactly where a mirrored
+  axis hides in thirty-seven hand-written paths. The first set came out with each layout ghosting
+  under the next, because nothing clears that texture when there is no camera drawing a world into
+  it first; a picture with a ghost in it invites a diagnosis of a bug that is not there, so the
+  portrait run clears it. Reading them found three real faults the tests could not: the cost readout
+  was never wired to a cost table, the hint line was drawing through the material buttons, and the
+  armed banner was floating over the panel.
+
+  **Tiers: EditMode 1244, PlayMode 42 (39 passed, 3 ignored with reasons), fast tier 559 Sim + 217
+  Hud.** One PlayMode failure was seen once and did not reproduce —
+  `Adr0003_F1_TheDenseHudHoldsItsBudget` at 1.721 ms against a 1.167 ms budget, while four other
+  Unity batch runs from other worktrees were on the machine; it measured 0.422 ms on the next two
+  runs. Recorded rather than fixed: it is a shared-machine artefact of this dev box, not of the
+  palette, and the palette is not in that test's dense layer.
+
+  **Nobody has pressed Play on any of it.** The portraits are the only thing anyone has looked at.

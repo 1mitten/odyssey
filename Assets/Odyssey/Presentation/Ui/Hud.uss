@@ -1195,10 +1195,17 @@
     border-bottom-width: 4px;
 }
 
-/* ---- the hint, outside the panel */
+/* ---- the hint, outside the panel
+
+   A child of the panel, hung off its top edge, so that it needs no arithmetic and cannot be out
+   of date: the panel is docked flush and its height changes with the layout, so anything that
+   worked out where to put this from the outside would be right only until the next switch. It was
+   in the shell first and drew the sentence straight through the material buttons. */
 
 .bp__hint {
     position: absolute;
+    left: 14px;
+    top: -18px;
     color: rgba(255, 255, 255, 0.50);
 }
 
