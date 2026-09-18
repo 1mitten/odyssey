@@ -1011,9 +1011,11 @@ namespace Odyssey.Presentation.World
         /// rejected for. Holding the stride the figure arrived with covers both: the legs keep the
         /// cadence they had, and the <see cref="HopArc"/> does the talking.</para>
         ///
-        /// <para>The cost of holding is a few frames of the gait sliding during the gather, while
-        /// the feet are still on the ground and the body has not left it. That is why
-        /// <see cref="HopArc.Gather"/> is short.</para>
+        /// <para>The cost of holding is that the cadence does not answer to the strides the climb
+        /// is drawn in: the body pushes up on to each tread and the legs keep the rhythm they
+        /// arrived with. If the feet ever read as sliding up the bank, this is the line to look at
+        /// — and the honest answer then is a climb pose, which no pack we own contains, rather than
+        /// solving the gait from a speed that swings between a push and a plant.</para>
         /// </summary>
         public static float ObserveSpeed(float previous, Vector3 simPosition, Vector3 position,
             float deltaTime, bool settled, bool hopping = false)

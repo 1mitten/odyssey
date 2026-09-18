@@ -53,8 +53,11 @@ namespace Odyssey.Tests.Presentation
             // pawn is in the leaving cell at 0 and the arriving cell at 1; a curve that does not
             // agree puts a jolt at one end of every step, which reads as a teleport and gets
             // blamed on the animation.
-            Assert.That(HopArc.Climb(0f, 1.5f), Is.EqualTo(0f).Within(Tolerance));
-            Assert.That(HopArc.Climb(1f, 1.5f), Is.EqualTo(1.5f).Within(Tolerance));
+            // The climb is a function of the ground under the walker, so its two ends are the two
+            // ends of the ground: standing at the bottom draws the bottom, standing on the top
+            // draws the top, exactly.
+            Assert.That(HopArc.Stepped(7.5f, 9f, 1.5f), Is.EqualTo(7.5f).Within(Tolerance));
+            Assert.That(HopArc.Stepped(9f, 9f, 1.5f), Is.EqualTo(9f).Within(Tolerance));
             Assert.That(HopArc.Fall(0f), Is.EqualTo(0f).Within(Tolerance));
             Assert.That(HopArc.Fall(1f), Is.EqualTo(1f).Within(Tolerance));
         }
@@ -72,41 +75,84 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
-        public void AClimbGathersBeforeItRises()
+        public void AClimbNeverLeavesTheHillside()
         {
-            // A jump starts from a crouch. Without the gather the figure rises in the first frame,
-            // which is an escalator rather than effort.
-            Assert.That(HopArc.Climb(HopArc.Gather * 0.5f, 1.5f), Is.EqualTo(0f).Within(Tolerance),
-                "the climb had already started during the gather");
-            Assert.That(HopArc.Climb(HopArc.Gather + 0.05f, 1.5f), Is.GreaterThan(0f),
-                "the climb never leaves the gather");
+            // **The owner's second report, turned into an assertion** (2026-09-18: "when going up
+            // hill it looks like they jump a bit and not flat with the terrain, which they should
+            // be"). The figure is never below the ground it is walking on, and never above the
+            // ground it is walking on to. Between those two it is on the hillside, which is the
+            // whole of what was asked for, and it is what an arc cannot promise.
+            foreach (float rise in new[] { 0.5f, 1.5f, 3.0f })
+            {
+                const float landing = 9f;
+                for (int i = 0; i <= 1000; i++)
+                {
+                    float ground = landing - rise + rise * (i / 1000f);
+                    float drawn = HopArc.Stepped(ground, landing, rise);
+
+                    Assert.That(drawn, Is.GreaterThanOrEqualTo(ground - Tolerance),
+                        $"a {rise} m climb is drawn inside the hillside at {ground}");
+                    Assert.That(drawn, Is.LessThanOrEqualTo(landing + Tolerance),
+                        $"a {rise} m climb rises above the ground it is climbing on to, which is a jump");
+                }
+            }
         }
 
         [Test]
-        public void AClimbGoesOverTheLipAndComesDownOnIt()
+        public void AClimbIsTakenInAFewStrides()
         {
-            // The property that makes it a hop rather than a ramp, on the curve itself: the top of
-            // the flight is above the ground being landed on, so the figure crosses the lip and
-            // settles, rather than arriving from underneath at the final frame.
-            foreach (float rise in new[] { 0f, 0.75f, 1.5f, 3.0f })
-            {
-                float highest = float.MinValue;
-                float apexAt = 0f;
-                for (int i = 0; i <= 1000; i++)
-                {
-                    float t = i / 1000f;
-                    float y = HopArc.Climb(t, rise);
-                    if (y <= highest) continue;
-                    highest = y;
-                    apexAt = t;
-                }
+            // "Would it be possible they take actual steps up the terrain in a few motions." A few
+            // is what this counts: the height holds while the ramp catches up, then pushes on to
+            // the next tread. Four for the 1.5 m of a terrace, which is the climb the owner is
+            // looking at.
+            const float landing = 9f, rise = 1.5f;
+            Assert.That(HopArc.Strides(rise), Is.EqualTo(4), "a terrace climb is not four strides");
 
-                Assert.That(highest, Is.EqualTo(rise + HopArc.Clearance).Within(0.01f),
-                    $"a {rise} m hop peaks at {highest} rather than {HopArc.Clearance} m over the lip");
-                Assert.That(apexAt, Is.LessThan(0.98f),
-                    $"a {rise} m hop is still rising when it lands, which is not a landing");
-                Assert.That(HopArc.Climb(1f, rise), Is.EqualTo(rise).Within(Tolerance),
-                    $"a {rise} m hop does not finish on the ground it climbed to");
+            int pushes = 0;
+            bool rising = false;
+            float previous = HopArc.Stepped(landing - rise, landing, rise);
+
+            for (int i = 1; i <= 2000; i++)
+            {
+                float ground = landing - rise + rise * (i / 2000f);
+                float drawn = HopArc.Stepped(ground, landing, rise);
+                bool climbing = drawn - previous > 1e-5f;
+
+                if (climbing && !rising) pushes++;
+                rising = climbing;
+                previous = drawn;
+            }
+
+            Assert.That(pushes, Is.EqualTo(HopArc.Strides(rise)),
+                $"the climb is drawn in {pushes} separate pushes rather than {HopArc.Strides(rise)}");
+        }
+
+        [Test]
+        public void AStrideIsTheSameSizeWhateverTheClimb()
+        {
+            // The count comes out of the height, not the other way round, so a short climb is not
+            // drawn in the same number of strides as a tall one — which is what would read as
+            // wrong, because it makes one of the two the wrong size.
+            foreach (float rise in new[] { 0.8f, 1.5f, 3.0f, 6.0f })
+            {
+                float tread = rise / HopArc.Strides(rise);
+                Assert.That(tread, Is.InRange(HopArc.PreferredTread * 0.6f, HopArc.PreferredTread * 1.5f),
+                    $"a {rise} m climb is taken in strides of {tread} m");
+            }
+        }
+
+        [Test]
+        public void AClimbNeverGoesBackwards()
+        {
+            const float landing = 9f, rise = 1.5f;
+            float previous = float.MinValue;
+            for (int i = 0; i <= 1000; i++)
+            {
+                float ground = landing - rise + rise * (i / 1000f);
+                float drawn = HopArc.Stepped(ground, landing, rise);
+                Assert.That(drawn, Is.GreaterThanOrEqualTo(previous - Tolerance),
+                    $"the climb dropped back at a ground height of {ground}");
+                previous = drawn;
             }
         }
 
@@ -144,11 +190,11 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
-        public void TheClearanceIsAHopAndNotAThrow()
+        public void ATreadIsAStrideAndNotAStorey()
         {
-            Assert.That(HopArc.Clearance, Is.InRange(0.15f, 0.5f),
-                "under fifteen centimetres nobody sees the figure leave the ground, and over half a " +
-                "metre it is being thrown rather than hopping");
+            Assert.That(HopArc.PreferredTread, Is.InRange(0.25f, 0.6f),
+                "under a quarter of a metre the strides are too small to see and the climb reads as " +
+                "gliding; over half a metre the body leads the slope by enough to read as floating");
         }
 
         // ------------------------------------------------------------------ on the board
@@ -206,11 +252,10 @@ namespace Odyssey.Tests.Presentation
         }
 
         [Test]
-        public void AClimbGetsAboveWhatItIsClimbingOnTo()
+        public void AClimbUpTheBoardStaysOnTheHillside()
         {
-            // The difference between a hop and a ramp, stated on the board rather than on the
-            // curve: at some point in the step the figure is higher than the ground it is landing
-            // on. A slide up a bank never is, which is what this used to draw.
+            // The same claim as the curve's, made where the owner is looking: across a real
+            // terrace, the figure never rises above the ground it is climbing on to.
             RenderTestWorld world = Terrace();
             float landing = DrawnStanding(world, Top).y;
 
@@ -218,8 +263,37 @@ namespace Odyssey.Tests.Presentation
             for (int percent = 0; percent <= 100; percent++)
                 highest = Mathf.Max(highest, DrawnAt(world, Foot, Top, percent).y);
 
-            Assert.That(highest, Is.EqualTo(landing + HopArc.Clearance).Within(0.02f),
-                "the figure does not pass over the block it is hopping onto by its own clearance");
+            Assert.That(highest, Is.LessThanOrEqualTo(landing + 0.01f),
+                $"the figure is drawn {(highest - landing) * 100f:F0} cm above the step it is " +
+                "climbing on to, which reads as a jump rather than as walking up it");
+        }
+
+        [Test]
+        public void AClimbUpTheBoardIsTakenInStrides()
+        {
+            // And that it is not a glide, on the board: the drawn height holds and then pushes,
+            // several times over, rather than rising by the same amount every frame.
+            RenderTestWorld world = Terrace();
+
+            int pushes = 0, holds = 0;
+            bool rising = false;
+            float previous = DrawnAt(world, Foot, Top, 0).y;
+
+            // One sample a frame, at the step's real duration.
+            for (int frame = 1; frame <= MoveCost.JumpUp; frame++)
+            {
+                float y = DrawnAt(world, Foot, Top, Mathf.RoundToInt(frame * 100f / MoveCost.JumpUp)).y;
+                bool climbing = y - previous > 1e-4f;
+                if (climbing && !rising) pushes++;
+                if (!climbing) holds++;
+                rising = climbing;
+                previous = y;
+            }
+
+            Assert.That(pushes, Is.InRange(2, 6),
+                $"the climb is drawn in {pushes} pushes, which is not a few strides");
+            Assert.That(holds, Is.GreaterThan(MoveCost.JumpUp / 4),
+                "the figure never plants a foot: it rises on almost every frame, which is a glide");
         }
 
         [Test]
@@ -318,6 +392,45 @@ namespace Odyssey.Tests.Presentation
             // colonist walks to one rather than hopping a single block.
             Assert.That(MoveCost.JumpUp, Is.LessThan(MoveCost.StairUp),
                 "a hop costs more than a stair, so nothing will hop a one-block step again");
+        }
+
+        [Test]
+        public void ASheerFaceIsClimbedSmoothlyRatherThanInStrides()
+        {
+            // There is not always a ramp to tread. A bank is refused against rock, inside a working
+            // and under a roof, and there the ground under the walker is flat for half the step and
+            // then jumps a whole layer at the midpoint — strides taken off it would draw a colonist
+            // standing still and then teleporting three metres. The chord underneath the strides is
+            // what catches that, and this is the case that proves it.
+            const int n = 6;
+            var world = new RenderTestWorld(n, n, 8);
+            for (int z = 0; z < n; z++)
+            for (int x = 0; x < n; x++)
+            {
+                int top = x < 3 ? 2 : 1;
+                for (int y = 0; y <= top; y++) world.Solid(x, z, y, CoreContent.TerrainRock);
+            }
+            world.Publish();
+
+            var foot = new CellRef(3, 3, 2);
+            var top2 = new CellRef(2, 3, 3);
+            Assert.That(BankLayout.At(world.Model, foot).Exists, Is.False,
+                "the fixture grew a bank against rock, so it is not testing a sheer face");
+
+            float previous = DrawnAt(world, foot, top2, 0).y;
+            float largest = 0f;
+            for (int frame = 1; frame <= MoveCost.JumpUp; frame++)
+            {
+                float y = DrawnAt(world, foot, top2, Mathf.RoundToInt(frame * 100f / MoveCost.JumpUp)).y;
+                largest = Mathf.Max(largest, Mathf.Abs(y - previous));
+                previous = y;
+            }
+
+            Assert.That(largest, Is.LessThan(0.1f),
+                $"climbing a sheer face moves the figure {largest * 100f:F0} cm in one frame");
+            Assert.That(DrawnAt(world, foot, top2, 100).y,
+                Is.EqualTo(DrawnStanding(world, top2).y).Within(0.01f),
+                "a sheer climb does not finish on the ground above it");
         }
 
         [Test]

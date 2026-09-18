@@ -5,51 +5,62 @@ using UnityEngine;
 namespace Odyssey.Presentation.Rendering
 {
     /// <summary>
-    /// The shape of a hop: how a figure's height moves across a step that changes layer.
+    /// How a figure is drawn across a step that changes layer: treading up it, or dropping off it.
     ///
-    /// <para><b>Why a hop needed a shape at all.</b> A hop was drawn as a straight line between two
-    /// cell centres, raised onto whatever ground was under it — so going up, the figure slid up the
-    /// bank at a constant rate, and going down it slid back down at a constant rate. Neither is a
-    /// hop. The owner saw the first of the two in play on 2026-09-18 (<i>"the colonists looked too
-    /// fast going up definitely"</i>), and the number behind it is in <c>MoveCost.JumpUp</c>: the
-    /// drawn path up a step is 3.91 m and it was being covered in 2.25 s, faster than walking.
-    /// Re-pricing the step fixes the speed; this fixes the motion, and neither would have been
-    /// enough alone — a slow slide is a colonist stuck on a hill, which is what the last retune of
-    /// that constant produced.</para>
+    /// <para><b>The two directions are not the same kind of thing, and that is the design.</b>
+    /// Going up there is a ramp underfoot the whole way — <c>BankMesh.HeightAt</c> is a plane from
+    /// the floor of the lower cell to the rim of the upper one — so the figure walks the hillside
+    /// in strides and its height is a function of <b>the ground under it</b>
+    /// (<see cref="Stepped"/>). Going down there is nothing underfoot past the edge, so its height
+    /// is a function of <b>time</b>: a beat at the lip and then a fall (<see cref="Fall"/>).</para>
+    ///
+    /// <para><b>Both of the owner's reports of 2026-09-18 are in here.</b> First the speed —
+    /// <i>"the colonists looked too fast going up definitely"</i> — which was the price and is
+    /// answered in <c>MoveCost.JumpUp</c>: the drawn path up a step is 3.91 m and it was being
+    /// covered in 2.25 s, faster than walking on the flat. Then the motion — <i>"it looks like they
+    /// jump a bit and not flat with the terrain, which they should be … would it be possible they
+    /// take actual steps up the terrain in a few motions"</i> — which is this file. The first cut
+    /// of the climb was a solved parabola over the lip, a jump; it is now four strides up the bank.
+    /// Neither half would have done alone: a slow glide up a hillside is a colonist stuck on it,
+    /// which is what the previous retune of that constant produced and was rejected for.</para>
     ///
     /// <para><b>Nothing here is simulated.</b> A hop's price, its legality and its two ends are the
-    /// simulation's (`NavGraph.HopCost`, `NavGraph.IsHop`); this only decides where the figure is
-    /// drawn between them, like <see cref="GroundRelief"/> and <see cref="BankLayout"/>. It cannot
-    /// move a pawn, change a path or touch the state hash.</para>
+    /// simulation's (<c>NavGraph.HopCost</c>, <c>NavGraph.IsHop</c>); this only decides where the
+    /// figure is drawn between them, like <see cref="GroundRelief"/> and <see cref="BankLayout"/>.
+    /// It cannot move a pawn, change a path or touch the state hash.</para>
     ///
-    /// <para><b>Both curves end exactly where the standing pose is.</b> <see cref="Leap"/> and
-    /// <see cref="Fall"/> are 0 at the start and 1 at the end, so the drawn figure meets the
-    /// arriving cell's surface at the moment the simulation says it arrives, and meets the leaving
-    /// cell's surface at the moment it left. A curve that did not would show as a jolt at one end
-    /// of every step — the fault <c>WalkOnReliefTests</c> was written for.</para>
+    /// <para><b>Both ends are exact.</b> Standing at the bottom draws the bottom and standing on
+    /// the top draws the top, so a step joins the two standing poses without a jolt at either end —
+    /// the fault <c>WalkOnReliefTests</c> was written for.</para>
     /// </summary>
     public static class HopArc
     {
         /// <summary>
-        /// The part of a hop up spent gathering before anything rises, as a fraction of the step.
+        /// About how much height one stride up a bank wins, in metres.
         ///
-        /// <para>A jump starts from a crouch, and without this the figure begins rising in the
-        /// first frame — which reads as an escalator rather than as effort. Short on purpose: the
-        /// figure is still walking forward during the gather and its feet are on the bank, so every
-        /// frame of it is a frame of the gait sliding. At <c>MoveCost.JumpUp</c> = 240 this is
-        /// about half a second.</para>
+        /// <para><b>The number of steps falls out of this rather than being chosen.</b> A terrace
+        /// climb is about 1.5 m — a colonist at the foot of one is already half way up the ramp —
+        /// so 0.4 m gives four strides of 0.375 m each. A layer-high climb with no bank under it
+        /// gives eight. Fixing the *count* instead would make a small step and a big one take the
+        /// same number of strides, which is the thing that reads as wrong.</para>
+        ///
+        /// <para>It also bounds the fault this is most likely to be criticised for. The body is
+        /// drawn at the tread it has stepped on to, so it leads the slope under it by up to one
+        /// tread — that is what stepping *is*, since your hips go up when your foot does — and this
+        /// is the size of that lead. Smaller reads as gliding; larger reads as floating.</para>
         /// </summary>
-        public const float Gather = 0.12f;
+        public const float PreferredTread = 0.4f;
 
         /// <summary>
-        /// How far above the lip the figure passes, in metres, at the top of a hop up.
+        /// The part of one stride spent pushing up on to the next tread, the rest being the plant.
         ///
-        /// <para>This is what makes it a hop rather than a ramp: without it the curve arrives at
-        /// the upper surface and stops, and a body that never goes above what it is climbing onto
-        /// has not jumped onto anything. A third of a metre is a clear vault at the play camera's
-        /// 48° and well under the half-metre at which a colonist looks thrown.</para>
+        /// <para>A third: a quick push and a longer settle, which is the rhythm of climbing
+        /// something steep. It also keeps the push itself smooth — 0.375 m over a third of a second
+        /// is 21 mm in a frame, against the 25 mm an honest frame of walking moves — because a
+        /// hard step would be a snap, and <c>ObserveSpeed</c> differences position frame to frame,
+        /// so a snap throws the gait as well as the eye.</para>
         /// </summary>
-        public const float Clearance = 0.35f;
+        public const float Push = 0.33f;
 
         /// <summary>
         /// The part of a drop spent leaving the edge before the fall begins, as a fraction.
@@ -64,41 +75,54 @@ namespace Odyssey.Presentation.Rendering
         public const float StepOff = 0.06f;
 
         /// <summary>
-        /// How far above the ground it left the figure is, in metres, at this point through a hop
-        /// <b>up</b> of <paramref name="rise"/> metres.
+        /// Where the figure is drawn while climbing: the ground under it, taken in strides.
         ///
-        /// <para><b>A thrown body, solved rather than eased.</b> The curve is the parabola that
-        /// leaves the lower ground at the end of the gather, passes exactly
-        /// <see cref="Clearance"/> above the upper ground at the top of its flight, and comes back
-        /// down onto that upper ground exactly as the step ends. So the figure goes <i>over</i> the
-        /// lip and settles onto it, which is the difference between hopping onto a block and being
-        /// carried up a ramp.</para>
+        /// <para><b>This is a function of height, not of time.</b> Give it the height of the drawn
+        /// ground under the walker, the height it is climbing on to, and the whole rise of the
+        /// step; it hands back the tread the figure has stepped on to. That is what makes it follow
+        /// the hillside rather than sail over it: the shape of the bank decides where the strides
+        /// fall, so where the ground is flat nothing rises, and where it is steep the strides come
+        /// close together.</para>
         ///
-        /// <para><b>It takes the rise rather than assuming a layer</b>, and that is not generality
-        /// for its own sake: a colonist hopping up a terrace starts half way up the bank in the
-        /// cell at its foot, so the real climb is about 1.5 m and not the 3.0 m of a layer. An arc
-        /// built for the layer would have cleared the lip by twice what it should and read as a
-        /// leap. The first cut of this class made exactly that mistake in the other direction — a
-        /// fixed arch added to a fixed climb — and cleared the lip by 15 cm instead of the 35 it
-        /// claimed. <c>HopArcTests.AClimbGetsAboveWhatItIsClimbingOnTo</c> is what caught it.</para>
+        /// <para><b>Why it replaced an arc</b> (owner, 2026-09-18: <i>"when going up hill it looks
+        /// like they jump a bit and not flat with the terrain, which they should be … would it be
+        /// possible they take actual steps up the terrain in a few motions"</i>). The first cut was
+        /// a solved parabola that left the ground, passed over the lip and landed — a jump, which
+        /// is what the simulation calls this step and is not what the board shows. The board shows
+        /// a <i>ramp</i>: <c>BankMesh.HeightAt</c> is a plane from the floor of the lower cell to
+        /// the rim of the upper one, so there is a walkable surface the whole way and a body
+        /// arcing over it is a body ignoring the ground it is on.</para>
         ///
-        /// <para>Solving <c>y = au - bu²</c> for <c>y(1) = rise</c> and an apex of
-        /// <c>rise + Clearance</c> gives <c>a = 2(rise + C) + 2√(C(rise + C))</c> and
-        /// <c>b = a - rise</c>; the other root of that quadratic puts the apex past the landing,
-        /// which is a figure still rising as it arrives.</para>
+        /// <para><b>The figure leads the slope, and that is the stride rather than a fault.</b> It
+        /// is drawn at the tread it has stepped on to while the ramp beneath catches up, by at most
+        /// <see cref="PreferredTread"/> — your hips go up when your foot does. It is never drawn
+        /// below the ground, and it never rises above the ground it is climbing on to, which is the
+        /// difference between this and the arc: <c>HopArcTests.AClimbNeverLeavesTheHillside</c>.
+        /// </para>
         /// </summary>
-        public static float Climb(float t, float rise)
+        public static float Stepped(float ground, float landing, float rise)
         {
-            float u = Flight(t, Gather);
+            // Nothing to climb: the caller's own ground is the answer. Also the guard against a
+            // division by zero and against a step whose ends have been handed over the wrong way
+            // round, either of which would draw a colonist at NaN — which is a colonist who
+            // disappears rather than one who looks wrong.
+            if (rise <= 0f || ground >= landing) return Mathf.Max(ground, landing);
 
-            // A hop that does not rise is not a fault worth an exception — the ground clamp in
-            // PawnPose covers it — but a negative one would take the root of a negative number and
-            // draw the figure at NaN, which is a colonist that disappears.
-            float h = Mathf.Max(0f, rise);
-            float a = 2f * (h + Clearance) + 2f * Mathf.Sqrt(Clearance * (h + Clearance));
-            float b = a - h;
+            int strides = Mathf.Max(1, Mathf.RoundToInt(rise / PreferredTread));
+            float tread = rise / strides;
 
-            return a * u - b * u * u;
+            // How many treads below the landing the ground is. Whole part: which tread the figure
+            // has its weight on. Fraction: how far through that stride the ground has come.
+            float below = (landing - ground) / tread;
+            float whole = Mathf.Floor(below);
+            float through = below - whole;
+
+            // The push on to the next tread happens at the *start* of the stride — as the ground
+            // leaves the tread line behind — and the rest of it is the plant. Smoothed over that
+            // window rather than switched, because a 37 cm jump in one frame is a snap.
+            float pushed = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(1f - Push, 1f, through));
+
+            return landing - (whole + pushed) * tread;
         }
 
         /// <summary>
@@ -119,6 +143,9 @@ namespace Odyssey.Presentation.Rendering
             float u = Flight(t, StepOff);
             return u * u;
         }
+
+        /// <summary>How many strides a climb of this many metres is taken in.</summary>
+        public static int Strides(float rise) => Mathf.Max(1, Mathf.RoundToInt(rise / PreferredTread));
 
         /// <summary>
         /// How far through the airborne part of the step this is: nothing until <paramref name="hold"/>

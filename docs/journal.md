@@ -6104,3 +6104,48 @@ going up definitely … should be much slower."* The design is `docs/design/22-t
   is a flat table with no step to hop.
 - **Verified:** fast tier **726 Sim + 438 Hud**, Long **21**; EditMode **1771 total, 1757 passed,
   0 failed**; PlayMode **82 total, 77 passed, 0 failed**, so the frame budget is unmoved by the arc.
+
+### The climb stopped being a jump and became four strides (2026-09-18, branch `claude/terrace-foot-guard`)
+
+Owner, on the arc that had just landed: *"when going up hill - it looks like they jump a bit and not
+flat with the terrain - which they should be. The motion animation, doesn't quite match, would it be
+possible they take actual steps up the terrain in a few motions."*
+
+- **The arc was answering the simulation's word rather than the board's picture.** The simulation
+  calls this step a *hop* — `MoveCost.JumpUp`, "a colonist can jump if they need to get up a +1
+  height block" — so the first cut drew a jump: a solved parabola over the lip. But the board has a
+  **bank** under that step, and `BankMesh.HeightAt` is a plane from the lower floor to the upper
+  rim: a walkable ramp the whole way. A body arcing over a surface it could be walking on is a body
+  ignoring the ground it is on, and that is exactly what the owner saw. The lesson is small and
+  general: *the drawn motion has to answer to what is drawn, not to what the mechanic is called.*
+- **So the climb became a function of height rather than of time.** `HopArc.Stepped` takes the
+  drawn ground under the walker, the height being climbed on to and the whole rise, and hands back
+  the tread the figure has its weight on. The shape of the bank therefore decides where the strides
+  fall: flat ground gives no rise, steep ground gives them close together. Nothing about it is
+  parameterised on the duration, so retuning the price cannot change the stepping.
+- **The stride count comes out of the height.** `PreferredTread` is 0.4 m, so a terrace's 1.5 m is
+  four strides of 0.375 m and a layer-high climb is eight. Fixing the *count* instead would draw a
+  small step and a tall one in the same number of motions, which is the thing that would read as
+  wrong at whichever end was not tuned for.
+- **Stepping means leading the slope, and there is no way round it.** The figure is drawn at the
+  tread it has stepped on to while the ramp beneath catches up — up to two thirds of a tread ahead,
+  because your hips go up when your foot does. Quantising the other way makes the body sink into the
+  hillside and the clamp then erases the whole effect. The honest alternative is foot IK, which is a
+  different piece of work; the lever meanwhile is `PreferredTread`, where smaller reads as gliding
+  and larger as floating.
+- **A sheer face nearly shipped as a three-metre teleport.** A bank is refused against rock, inside a
+  working and under a roof. There the ground under the walker is flat for the first half of the step
+  and jumps a whole layer at the midpoint, because that is what `over` does — so a purely
+  ground-driven climb would have drawn a colonist standing still and then teleporting. Caught by
+  reasoning about the fixture rather than by a test, and then given both: the straight chord sits
+  under the strides as a floor, and `ASheerFaceIsClimbedSmoothlyRatherThanInStrides` measures the
+  largest single frame of such a climb.
+- **What is still owed is the cadence.** The gait is held through a hop, so the legs keep the rhythm
+  they arrived with while the body pushes up each tread. If that reads as sliding, the answer is a
+  computed climb pose in the manner of `WorkSwing` — no pack we own has the clip — rather than
+  solving the gait from a speed that swings between a push and a plant.
+- **Not verified in Unity at the time of writing.** The owner's editor is open on this worktree
+  (`odyssey-inspect`, the Play scene), which locks the project against a batch run, and
+  `docs/lessons.md` is explicit that one must not be killed. The fast tier does not compile
+  presentation, so this revision has its arithmetic reviewed and not run. Verified on a scratch
+  worktree instead — see the commit that follows.

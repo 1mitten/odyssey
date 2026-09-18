@@ -144,11 +144,28 @@ difference this time is that the motion carries the duration.
 
 `HopArc` owns the shape; `PawnPose` places it; nothing is simulated.
 
-- **Up** is a solved parabola, not an ease. It gathers for the first 12% of the step (0.48 s — a
-  jump starts from a crouch), leaves the lower ground, passes exactly **0.35 m above the lip** at
-  the top of its flight, and comes down onto the upper ground precisely as the step ends. It takes
-  the **real rise** as a parameter, which at a terrace is about 1.5 m and not a layer, because a
-  colonist standing in the cell at the foot of a step is already half way up the bank.
+**The two directions are not the same kind of thing.** Going up there is a ramp underfoot the whole
+way, so the height is a function of *the ground under the walker*. Going down there is nothing
+underfoot past the edge, so it is a function of *time*.
+
+- **Up is four strides up the bank.** The first cut was a solved parabola that left the ground,
+  cleared the lip by 0.35 m and landed — and the owner's answer to it was immediate: *"when going up
+  hill it looks like they jump a bit and not flat with the terrain, which they should be … would it
+  be possible they take actual steps up the terrain in a few motions."* Quite right: the board shows
+  a **ramp** (`BankMesh.HeightAt` is a plane from the lower floor to the upper rim), so there is a
+  walkable surface the whole way and a body arcing over it is a body ignoring the ground it is on.
+  The figure now steps: the drawn height holds while the ramp catches up, then pushes on to the next
+  tread over a third of a stride. The stride count comes out of the height — `PreferredTread` is
+  0.4 m, so a terrace's 1.5 m is four strides of 0.375 m — rather than being fixed, so a small step
+  and a tall one are not drawn in the same number of motions.
+- **It leads the slope by up to two thirds of a tread, and that is the stride.** Your hips go up
+  when your foot does. It is never drawn below the ground, and — the assertion that separates this
+  from the arc — **never above the ground it is climbing on to**.
+- **A sheer face gets a plain climb.** A bank is refused against rock, inside a working and under a
+  roof, and there the ground under the walker is flat for half the step and then jumps a whole layer
+  at the midpoint. Strides taken off that would draw a colonist standing still and then teleporting
+  three metres, so the straight chord sits underneath as a floor: where there is a ramp the strides
+  are always above it and the figure treads; where there is none the chord carries it.
 - **Down** is a square, because that is what falling is. `MoveCost.Drop` is 0.83 s and a 3.0 m free
   fall takes 0.78 s; the 0.05 s difference is the step off the edge. The implied acceleration is
   **9.78 m/s²**, and `HopArcTests.AFallIsAtTheSpeedOfGravity` pins it — retune the drop and that
@@ -162,8 +179,11 @@ difference this time is that the motion carries the duration.
   this cast owns (2.60 m/s), so stepping off a terrace pinned the run cycle and rate-stretched it
   for eight tenths of a second. A climb at 240 is the opposite fault — 0.63 m/s across the cell,
   which blends a third of the idle in and reads as a dawdle, which is exactly the "stuck" look.
-  Holding the stride the figure arrived with covers both. The cost is a few frames of the gait
-  sliding during the gather, which is why the gather is short.
+  Holding the stride the figure arrived with covers both. **The open cost of this is that the
+  cadence does not answer to the strides**: the body pushes up on to each tread and the legs keep
+  the rhythm they arrived with. If the feet read as sliding up the bank, the honest fix is a climb
+  pose — which no pack we own contains, so it would be computed like `WorkSwing` — and not solving
+  the gait from a speed that swings between a push and a plant.
 
 ### What this is not
 

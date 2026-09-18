@@ -109,11 +109,10 @@ namespace Odyssey.Presentation.Rendering
         /// <para><b>A step that changes layer is a hop, and a hop has a shape</b> —
         /// <see cref="HopArc"/>. Both directions were drawn as a straight line raised onto the
         /// ground until 2026-09-18, which made a climb a slide up the bank and a drop a slide back
-        /// down it. Now the height comes from the arc and the ground only ever pushes it *up*:
-        /// going up, the arc leaves the gather, clears the lip and settles on the upper surface;
-        /// going down, the fall is allowed to pass below the bank and the clamp keeps the figure on
-        /// the slope until the slope drops away faster than it does. One rule, both halves, and the
-        /// hand-faded lift the descent used to need is gone.</para>
+        /// down it. Now the climb treads the bank in strides and the fall is a fall, and the ground
+        /// only ever pushes the result *up*: going down, the fall is allowed to pass below the bank
+        /// and the clamp keeps the figure on the slope until the slope drops away faster than it
+        /// does, which is one rule where the descent used to need a hand-faded lift.</para>
         ///
         /// <para><b>The clamp is why it cannot show a figure inside the hillside.</b> Climbing, the
         /// chord runs below the ground for the second half of the step — a hop's straight line from
@@ -194,18 +193,27 @@ namespace Odyssey.Presentation.Rendering
         }
 
         /// <summary>
-        /// The height of the arc across a hop, before the ground clamp.
+        /// How high the figure is drawn part way across a hop, before the ground clamp.
         ///
         /// <para><b>Between the two drawn surfaces, not the two cell floors.</b> The ends are the
         /// heights the figure is drawn at while <i>standing</i> in each cell — floor, plus the bank
         /// beneath it — which is exactly what <see cref="Of"/> returns for a pawn that is not
-        /// moving. Taking the floors instead would leave the arc a metre and a half short at a
+        /// moving. Taking the floors instead would leave the climb a metre and a half short at a
         /// terrace, because a colonist standing in the cell at the foot of one stands half way up
         /// the ramp, and every hop would start and end with a jolt.</para>
         ///
+        /// <para><b>The two directions ask different questions, and the difference is the point.</b>
+        /// Going up there is a ramp underfoot the whole way, so the height comes from <i>the ground
+        /// under the walker</i>, taken in strides — the figure treads the hillside. Going down
+        /// there is nothing underfoot after the edge, so the height comes from <i>time</i>: a beat
+        /// at the lip and then a fall. A climb that used time ignored the slope it was on, which is
+        /// what the owner saw as jumping.</para>
+        ///
         /// <para>The relief field is added at the walker's own position rather than at either end,
         /// for the reason recorded in <see cref="OnTheDrawnGround"/>: sampling it anywhere else
-        /// puts a vertical snap at the midpoint of the step.</para>
+        /// puts a vertical snap at the midpoint of the step. The strides are measured without it,
+        /// so a stride is a stride up the bank and not up the bank plus whatever the meadow is
+        /// doing underneath.</para>
         /// </summary>
         static float HopHeight(Vector3 along, in PawnView pawn, float t, WorldRenderModel world)
         {
@@ -215,9 +223,36 @@ namespace Odyssey.Presentation.Rendering
             float leaving = from.y + BankLayout.RiseAt(world, pawn.Cell, from.x, from.z);
             float arriving = to.y + BankLayout.RiseAt(world, pawn.NextCell, to.x, to.z);
 
-            float height = pawn.NextCell.Y > pawn.Cell.Y
-                ? leaving + HopArc.Climb(t, arriving - leaving)
-                : Mathf.Lerp(leaving, arriving, HopArc.Fall(t));
+            float height;
+            if (pawn.NextCell.Y > pawn.Cell.Y)
+            {
+                // The drawn ground under the walker, without the relief field: the same expression
+                // OnTheDrawnGround clamps against, which is what keeps the two continuous.
+                CellRef over = t < 0.5f ? pawn.Cell : pawn.NextCell;
+                float ground = CellMetrics.FloorCentre(over).y +
+                               BankLayout.RiseAt(world, over, along.x, along.z);
+
+                // **The chord is the floor under the strides, and it is what a sheer face gets.**
+                //
+                // Treading works because a bank is a ramp: the ground rises continuously under the
+                // walker, so strides taken off it are continuous too. Not every step has one — a
+                // bank is refused against rock, inside a working and under a roof — and there the
+                // ground under the walker is flat for the first half of the step and then jumps a
+                // whole layer at the midpoint, because that is what `over` does. Strides alone
+                // would draw that as a colonist standing still and then teleporting three metres.
+                //
+                // So the height is the higher of the two: where there is a ramp the strides are
+                // always above the straight line and the figure treads the hillside; where there is
+                // none the straight line carries it and the step is a plain climb up a wall, which
+                // is what it looks like from the outside as well. Both agree at both ends, so
+                // neither can put a jolt there.
+                height = Mathf.Max(HopArc.Stepped(ground, arriving, arriving - leaving),
+                                   Mathf.Lerp(leaving, arriving, t));
+            }
+            else
+            {
+                height = Mathf.Lerp(leaving, arriving, HopArc.Fall(t));
+            }
 
             return height + GroundRelief.HeightAt(along.x, along.z);
         }
