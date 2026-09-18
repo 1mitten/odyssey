@@ -99,6 +99,10 @@ namespace Odyssey.Sim.Growing
         /// <summary>Accumulated growing-window ticks standing in this cell.</summary>
         public int GrowthTicks(int index) => _growthAt[index];
 
+        /// <summary>Does this cell hold a crop that has finished growing and is ready to cut?</summary>
+        public bool IsRipe(int index) =>
+            _cropAt[index] != 0 && _growthAt[index] >= _plants[_cropAt[index] - 1].growTicks;
+
         // ---- the siting gate -------------------------------------------------------------------
 
         /// <summary>

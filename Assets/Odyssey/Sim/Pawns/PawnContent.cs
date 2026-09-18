@@ -135,6 +135,8 @@ namespace Odyssey.Sim.Pawns
         public const int Deliver = JobHandle.Deliver;
         public const int Build = JobHandle.Build;
         public const int Deconstruct = JobHandle.Deconstruct;
+        public const int Sow = JobHandle.Sow;
+        public const int Harvest = JobHandle.Harvest;
         public const int Count = JobHandle.Count;
     }
 
@@ -209,7 +211,14 @@ namespace Odyssey.Sim.Pawns
         /// fetching the wood is part of building the wall, not a haul that happens to help.</summary>
         public const int Construction = 3;
 
-        public const int Count = 4;
+        /// <summary>
+        /// Breaking ground in a growing zone and cutting what ripens there. One work type for
+        /// both ends of the crop, because they are one craft at one patch of soil and a colonist
+        /// who will sow but not reap strands the field at its only interesting moment.
+        /// </summary>
+        public const int Growing = 4;
+
+        public const int Count = 5;
     }
 
     /// <summary>
@@ -226,7 +235,8 @@ namespace Odyssey.Sim.Pawns
         public const int Cutting = 1;
         public const int Mining = 2;
         public const int Construction = 3;
-        public const int Count = 4;
+        public const int Growing = 4;
+        public const int Count = 5;
 
         /// <summary>
         /// The names skills are published under, parallel to the indices above.
@@ -236,7 +246,7 @@ namespace Odyssey.Sim.Pawns
         /// assembly or sharing an enum with it. The prefix is the project's, the middle is this
         /// feature's, and the leaf is the value — the same shape as an icon key.</para>
         /// </summary>
-        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction" };
+        public static readonly string[] Names = { "hauling", "cutting", "mining", "construction", "growing" };
     }
 
     /// <summary>
@@ -650,11 +660,16 @@ namespace Odyssey.Sim.Pawns
                 "Thought_Catharsis", "Thought_AteMeal", "Thought_SleptOnGround", "Thought_Fell");
             content.Jobs = ByName<JobDef>(defs,
                 "Job_Haul", "Job_Eat", "Job_Sleep", "Job_Wander", "Job_Wait", "Job_Fell", "Job_Mine",
-                "Job_Deliver", "Job_Build", "Job_Deconstruct");
+                "Job_Deliver", "Job_Build", "Job_Deconstruct",
+                // Appended, never inserted: a job def index rides every pawn's current job and
+                // every save taken with one running, so its number is a save contract.
+                "Job_Sow", "Job_Harvest");
             content.WorkTypes = ByName<WorkTypeDef>(defs,
-                "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction");
+                "Work_Haul", "Work_Cutting", "Work_Mining", "Work_Construction",
+                "Work_Growing");
             content.Skills = ByName<SkillDef>(defs,
-                "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction");
+                "Skill_Hauling", "Skill_Cutting", "Skill_Mining", "Skill_Construction",
+                "Skill_Growing");
             content.Items = ByName<ItemDef>(defs,
                 "Item_Meal", "Item_Salvage", "Item_Wood", "Item_Stone", "Item_IronOre", "Item_Coal",
                 // Appended, never inserted: an item handle is stored in every stack, every haul

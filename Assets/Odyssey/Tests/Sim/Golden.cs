@@ -114,6 +114,12 @@ namespace Odyssey.Tests.Sim
     /// re-bake. Nothing about generation or simulation moved: the fields are new and empty,
     /// and both numbers move in every case for it.</para>
     ///
+    /// <para><b>Moved for the growing jobs (U47), 2026-09-18, and all six numbers again.</b>
+    /// <c>Work_Growing</c> and <c>Skill_Growing</c> made every pawn's work-priority and skill
+    /// arrays one slot longer, and the pawn hash walks both — the same shape as the tenth job's
+    /// extra tally slot, seen from the pawn side this time. Both numbers move in every case,
+    /// including the barren meadow, and nothing about generation or simulation moved.</para>
+    ///
     public static class Golden
     {
         /// <summary>One world, pinned: how to build it, how long to run it, and what it came to.</summary>
@@ -167,8 +173,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 5_000,
             Map = MapType.Natural,
             Wooded = false,
-            Generated = 4215014633701583116UL,
-            Simulated = 15128862469781481421UL,
+            Generated = 17287400559466587244UL,
+            Simulated = 10597903896334463547UL,
         };
 
         /// <summary>
@@ -184,8 +190,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.Natural,
             Wooded = true,
-            Generated = 16310110166269190031UL,
-            Simulated = 10215959261266427536UL,
+            Generated = 2087747500389239450UL,
+            Simulated = 13795493344017300943UL,
         };
 
         /// <summary>
@@ -200,8 +206,8 @@ namespace Odyssey.Tests.Sim
             Ticks = 10_000,
             Map = MapType.RuinedCity,
             Wooded = false,
-            Generated = 4643545608710265163UL,
-            Simulated = 3636313229702395345UL,
+            Generated = 13906133993818225881UL,
+            Simulated = 7981093609369776339UL,
         };
     }
 }

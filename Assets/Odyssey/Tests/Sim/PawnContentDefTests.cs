@@ -84,7 +84,12 @@ namespace Odyssey.Tests.Sim
         // Moved a sixth time, 2026-09-18, by the growing zones: Item_Carrots joins the item
         // table (nutrition 180, stackLimit 40) as the yield of Plant_Carrot. One new commodity
         // at the end of the handle order, nothing existing moved.
-        const ulong ContentFingerprint = 9025186057861755672UL;
+        // Moved a seventh time, 2026-09-18, by the growing jobs (U47): Job_Sow and Job_Harvest at
+        // drivers 10 and 11, Work_Growing at scan order 1 (cutting, mining and hauling each
+        // shifted one rank to keep every pair distinct), and Skill_Growing — which is why the
+        // meadow golden moved with it: every pawn's priority and skill arrays are one slot
+        // longer, and the pawn hash walks both.
+        const ulong ContentFingerprint = 6487834678130530878UL;
 
         [Test]
         public void TheContentIsStillWhatItWas()

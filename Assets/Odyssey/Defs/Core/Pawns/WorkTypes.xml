@@ -1,28 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Containers for work givers, carrying the natural order they scan in. Cutting and mining scan
-  before hauling at equal priority: the orders that make work exist come before the order that
-  tidies it up. Cutting is first of the two because felling is the shorter job and the wood is
-  usually nearer.
+  Containers for work givers, carrying the natural order they scan in. Work that makes something
+  scans before work that tidies: construction, then growing, then cutting and mining, then
+  hauling. Cutting is ahead of mining because felling is the shorter job and the wood is usually
+  nearer.
+
+  Growing took cutting's old 1 when it arrived (U47), and the other three shifted down a rank to
+  keep every pair distinct - the scan order among the original four is unchanged, but a field
+  waiting for its seed now beats a tree waiting for its axe, which is the point: a zone is sown
+  inside the daylight window or it is not sown today.
 -->
 <Defs>
 
   <WorkTypeDef>
     <defName>Work_Haul</defName>
     <label>hauling</label>
-    <order>3</order>
+    <order>4</order>
   </WorkTypeDef>
 
   <WorkTypeDef>
     <defName>Work_Cutting</defName>
     <label>cutting</label>
-    <order>1</order>
+    <order>2</order>
   </WorkTypeDef>
 
   <WorkTypeDef>
     <defName>Work_Mining</defName>
     <label>mining</label>
-    <order>2</order>
+    <order>3</order>
   </WorkTypeDef>
 
   <!--
@@ -48,6 +53,19 @@
     <order>0</order>
     <successBasePerMille>850</successBasePerMille>
     <successSlopePerLevel>50</successSlopePerLevel>
+  </WorkTypeDef>
+
+  <!--
+    Sowing and harvest are one work type (docs/design/22-growing.md section 6): one craft at one
+    patch of soil, and a colonist who would sow but not reap strands the field at its only
+    interesting moment. It scans behind construction and ahead of cutting - a site is work
+    already begun, and a zone's daylight window is the one clock in the colony that will not
+    wait, where a tree keeps until Thursday.
+  -->
+  <WorkTypeDef>
+    <defName>Work_Growing</defName>
+    <label>growing</label>
+    <order>1</order>
   </WorkTypeDef>
 
 </Defs>
