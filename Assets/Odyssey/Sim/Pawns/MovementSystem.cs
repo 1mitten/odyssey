@@ -109,7 +109,11 @@ namespace Odyssey.Sim.Pawns
                 return;
             }
 
-            pawn.MoveProgress += pawn.MovePerTick();
+            // Progress and cost both count thousandths of the raw nav cost (Rates): the planner's
+            // prices are untouched, so no path changes — the pawn just retires more or fewer
+            // thousandths a tick. Rate multiplies the pawn's progress; cost prices the cell, and
+            // the two must never swap jobs (design 17 §4g).
+            pawn.MoveProgress += pawn.MoveRatePerMille();
 
             while (pawn.HasPath)
             {
@@ -123,10 +127,11 @@ namespace Odyssey.Sim.Pawns
                     return;
                 }
 
-                int cost = StepCost(pawn.Cell, next, pawn.Mode);
+                int cost = StepCost(pawn.Cell, next, pawn.Mode) * Rates.Scale;
 
                 // Carried so presentation can glide the figure across the WHOLE step rather than
-                // across its first hundred units. See Pawn.MoveStepCost.
+                // across its first hundred units. Scaled with progress, so the published ratio
+                // reads what it always read. See Pawn.MoveStepCost.
                 pawn.MoveStepCost = cost;
                 if (pawn.MoveProgress < cost) return;
 

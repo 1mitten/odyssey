@@ -52,7 +52,11 @@ namespace Odyssey.Tests.Sim
         // U45 appended Building_Bed at handle 5 — two cells, rotatable, quality-bearing, 5 stuff
         // and 180 ticks. It was written at handle 2 and moved here on the merge: the three above
         // reached main first and a handle position is a save contract.
-        const ulong BuildingFingerprint = 14011408076065575136UL;
+        // 2026-09-18: Building_Ladder gained `rotates`. The owner reported a built ladder on the
+        // wrong side of its cell — a free-standing one had nowhere to take a facing from and fell
+        // back to north, which the player could neither predict nor change. A ladder fixed to a
+        // wall still hugs it; the rotation only decides where there is nothing to hug.
+        const ulong BuildingFingerprint = 16750019241906452571UL;
 
         /// <summary>
         /// The material table as it stands, U27's <c>workOffsetTicks</c> included (wood 0, stone

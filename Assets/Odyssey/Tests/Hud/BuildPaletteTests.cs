@@ -262,6 +262,79 @@ namespace Odyssey.Tests.Hud
             Assert.That(raised, Is.EqualTo(1));
         }
 
+        // ---------------------------------------------------------------- the corner
+
+        /// <summary>
+        /// A selection that raises the inspect pane closes the palette; a selection going away
+        /// leaves it alone.
+        ///
+        /// <para>Both panels dock into the same bottom-left corner, so the corner holds one of
+        /// them. Opening the palette has cleared the selection since 2026-09-17; the other
+        /// direction was never wired and the pane opened <i>underneath</i> the palette (owner,
+        /// 2026-09-18). The rule is asked of the reason rather than of the input device, because
+        /// what collides is the pane: whatever raises it is what should close the palette.</para>
+        /// </summary>
+        [Test]
+        public void AnythingThatRaisesThePaneClosesThePalette()
+        {
+            SelectionChange[] raises =
+            {
+                SelectionChange.Picked,    // a click on the board
+                SelectionChange.Chosen,    // a roster card, an alert jump
+                SelectionChange.Boxed,     // a drag box
+                SelectionChange.Toggled,   // shift adding a colonist
+                SelectionChange.Similar,   // a double click
+            };
+
+            foreach (SelectionChange reason in raises)
+                Assert.That(BuildPaletteModel.ClosedBy(reason, selectionIsEmpty: false), Is.True,
+                    $"{reason} raises the pane into the palette's corner");
+
+            SelectionChange[] takesAway =
+            {
+                SelectionChange.Cleared,
+                SelectionChange.Died,
+                SelectionChange.LayerChanged,
+            };
+
+            foreach (SelectionChange reason in takesAway)
+                Assert.That(BuildPaletteModel.ClosedBy(reason, selectionIsEmpty: false), Is.False,
+                    $"{reason} shows nothing new and must not close the palette");
+        }
+
+        /// <summary>
+        /// <b>Cleared must not close the palette, and that is not tidiness.</b>
+        ///
+        /// <para><c>SetBuildPalette(true)</c> clears the selection as it opens — that is the
+        /// 2026-09-17 half of this rule. A close rule that fired on
+        /// <see cref="SelectionChange.Cleared"/> would therefore shut the palette on the very
+        /// frame it opened, and the symptom would be a Build button that does nothing.</para>
+        /// </summary>
+        [Test]
+        public void OpeningThePaletteCannotCloseIt()
+        {
+            Assert.That(BuildPaletteModel.ClosedBy(SelectionChange.Cleared, selectionIsEmpty: true),
+                Is.False, "the palette would shut itself on the frame it opened");
+            Assert.That(BuildPaletteModel.ClosedBy(SelectionChange.Cleared, selectionIsEmpty: false),
+                Is.False);
+        }
+
+        /// <summary>
+        /// An empty selection never closes it, whatever the reason says.
+        ///
+        /// <para>The case is a shift-click taking the last colonist back out: the reason is
+        /// <see cref="SelectionChange.Toggled"/>, which does raise the pane when it adds somebody,
+        /// but there is nothing left to show. Nothing is drawn in the corner, so nothing wants
+        /// it.</para>
+        /// </summary>
+        [Test]
+        public void AnEmptySelectionLeavesThePaletteAlone()
+        {
+            foreach (SelectionChange reason in Enum.GetValues(typeof(SelectionChange)))
+                Assert.That(BuildPaletteModel.ClosedBy(reason, selectionIsEmpty: true), Is.False,
+                    $"{reason} closed the palette while showing nothing");
+        }
+
         // ---------------------------------------------------------------- selection
 
         /// <summary>

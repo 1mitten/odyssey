@@ -222,6 +222,55 @@ namespace Odyssey.Hud
         public static bool IsBuildable(string key) => PaletteTools.TryGet(key, out _);
 
         /// <summary>
+        /// Whether a selection change should close the palette.
+        ///
+        /// <para><b>The missing half of a rule that was already half-written</b> (owner,
+        /// 2026-09-18: <i>"If I have the build menu open and I haven't selected anything to build
+        /// — I go to click on any tile for info — that panel appears but underneath the build
+        /// menu"</i>). Opening the palette has cleared the selection since 2026-09-17, because
+        /// both panels dock into the same bottom-left corner and the corner holds one. Selecting
+        /// something <i>while</i> the palette was up was never wired, so the pane opened
+        /// underneath it.</para>
+        ///
+        /// <para><b>Asked of the reason and not of the input device</b> (owner's choice of the two
+        /// offered). What collides is the inspect pane, so whatever raises the pane is what closes
+        /// the palette: a world click, a roster card, an alert jump, a drag box. The other
+        /// direction — a selection that <i>goes away</i> — leaves the palette alone, and that
+        /// half is load-bearing rather than tidy: opening the palette calls
+        /// <c>Selection.Clear()</c>, so a rule that fired on <see cref="SelectionChange.Cleared"/>
+        /// would close the palette on the frame it opened.</para>
+        ///
+        /// <para>An empty selection never closes it either, which is what covers a shift-click
+        /// that takes the last colonist back out again: nothing is left to show, so there is
+        /// nothing for the corner to argue about.</para>
+        ///
+        /// <para><b>A tool in hand stays in hand</b> (owner, same exchange). This closes a panel;
+        /// it does not put the player's tool down. Note that a <i>world</i> selection cannot
+        /// happen while a tool is armed at all — <c>SliceCameraRig.WorldToolArmed</c> sends that
+        /// click to the designate path instead — so the only way to reach this holding something
+        /// is a roster click, and disarming there would silently undo a choice nobody revoked.</para>
+        /// </summary>
+        public static bool ClosedBy(SelectionChange reason, bool selectionIsEmpty)
+        {
+            if (selectionIsEmpty) return false;
+
+            switch (reason)
+            {
+                case SelectionChange.Picked:
+                case SelectionChange.Chosen:
+                case SelectionChange.Boxed:
+                case SelectionChange.Toggled:
+                case SelectionChange.Similar:
+                    return true;
+
+                // Cleared, Died and LayerChanged are the selection being taken away rather than
+                // made. Nothing new is shown, so nothing wants the corner.
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
         /// Arm a sub-type, restoring whatever it was last made of.
         ///
         /// <para>The material memory is keyed on the sub-type rather than held once for the

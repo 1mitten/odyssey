@@ -89,7 +89,27 @@ namespace Odyssey.Tests.Sim
         // shifted one rank to keep every pair distinct), and Skill_Growing — which is why the
         // meadow golden moved with it: every pawn's priority and skill arrays are one slot
         // longer, and the pawn hash walks both.
+        //
+        // Moved a sixth time, 2026-09-18, by WS2's curve: the three skilled work types gained the
+        // four rate integers each — rateSkill, workRateBasePerMille, workRateSlopePerLevel and
+        // workRateFloorPerMille — so a colonist pays work at her skill's pace and not at the flat
+        // speed everything was tuned at (design 17 §3a). Taken from a freshly loaded pack.
+        //
+        // Moved a seventh time, the same day, by WS3's movement: MovementDef gained the two innate
+        // pace bounds — 850 to 1,150, capped by the walk cycle's 2 m/s — and PawnKindDef gained
+        // starvationPerInterval, the speed of the bar that starving fills and eating drains
+        // (design 17 §4b, §4c). Taken from a freshly loaded pack.
+        //
+        // Moved an eighth time, 2026-09-18, in review: starvationPerInterval went 2 to 1. The
+        // comment beside it read the needs cadence as 200 intervals a day when it is 400 — a
+        // 60,000-tick day over the 150-tick cadence — so the bar filled four times faster than
+        // every sentence describing it said, and severe malnutrition arrived on the fourth day
+        // rather than the fifth. Nothing had ever measured it: the bands were pinned by setting
+        // the bar by hand, and TheBarFillsAtTheCadenceItsCommentClaims is the test that now
+        // holds the arithmetic and the tick path together. No golden moved, because no golden
+        // window lets a need reach zero.
         const ulong ContentFingerprint = 6487834678130530878UL;
+
 
         [Test]
         public void TheContentIsStillWhatItWas()

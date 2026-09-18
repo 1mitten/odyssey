@@ -16,12 +16,25 @@ namespace Odyssey.Hud
     /// hides the shape of the game until the last system lands.</para>
     ///
     /// <para><b>Where the simulation's three go.</b> <c>Skill_Mining</c> is <c>ui.skill.mining</c>
-    /// and needs no argument. <c>Skill_Cutting</c> is plant work — the canon work type
-    /// <c>ui.work.cutting</c> is "cut plants and clear growth" — and the only plant skill in the
-    /// canon list is growing, so felling trains <c>ui.skill.growing</c>. <c>Skill_Hauling</c> has
-    /// no canon skill at all, deliberately: the design makes hauling a work type and not a skill,
-    /// which is also the reference's answer. <b>It is therefore not listed here, and the open
-    /// item is on the simulation's side</b> — see <c>docs/design/15-skills.md</c> §1.</para>
+    /// and needs no argument. <c>Skill_Cutting</c> is <c>ui.skill.cutting</c>, <b>Chopping</b>.
+    /// <c>Skill_Hauling</c> has no canon skill at all, deliberately: the design makes hauling a
+    /// work type and not a skill, which is also the reference's answer. <b>It is therefore not
+    /// listed here, and the open item is on the simulation's side</b> — see
+    /// <c>docs/design/15-skills.md</c> §1.</para>
+    ///
+    /// <para><b>Chopping got a row of its own on 2026-09-18, and before that it wore Growing's.</b>
+    /// The reasoning was defensible — felling is plant work, and growing was the only plant skill
+    /// in the canon list — but it meant a colonist who spent a day with an axe levelled up
+    /// <i>Growing</i>, and there was no Chopping anywhere on the screen. The owner met it from the
+    /// other end: <i>"I noticed the chopping varied in speed — could we add that to the skills"</i>,
+    /// which is a player watching WS2's curve work and going looking for the number behind it.
+    /// A skill a player can feel and cannot find is worse than one that does nothing.</para>
+    ///
+    /// <para><b>The word is the owner's and the family now agrees.</b> The order says Chop, the
+    /// activity <c>ui.status.felling</c> says Chopping, and <c>ui.work.cutting</c> said Cutting
+    /// until this change brought it along. <b>The key stays <c>cutting</c></b> — it matches the
+    /// simulation's <c>SkillIndex.Cutting</c> and a key is a stable identifier, not a label. Three
+    /// of these rows already do not spell their own label.</para>
     /// </summary>
     public static class SkillCatalogue
     {
@@ -83,8 +96,8 @@ namespace Odyssey.Hud
             new Entry("ui.skill.mining", "mining", string.Empty),
             new Entry("ui.skill.salvage", NotSimulated, "salvage is hauled, not stripped"),
             new Entry("ui.skill.cooking", NotSimulated, "meals are found, not made"),
-            new Entry("ui.skill.growing", "cutting", string.Empty,
-                      "trained by felling, which is plant work"),
+            new Entry("ui.skill.growing", NotSimulated, "nothing is planted yet"),
+            new Entry("ui.skill.cutting", "cutting", string.Empty),
             new Entry("ui.skill.animals", NotSimulated, "no creature simulation"),
             new Entry("ui.skill.crafting", NotSimulated, "no bench work"),
             new Entry("ui.skill.fabrication", NotSimulated, "no production chain"),

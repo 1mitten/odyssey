@@ -19,6 +19,81 @@ namespace Odyssey.Tests.Hud
     public class PaletteToolsTests
     {
         /// <summary>
+        /// A category's live count is the table's own answer, not a number written beside it.
+        ///
+        /// <para>The count is what dims a category tile and what its tooltip says (owner,
+        /// 2026-09-18: <i>"disable the top groups that have nothing to build … so we understand
+        /// what we can build"</i>). Written as an invariant rather than as seven expected numbers
+        /// on purpose: <c>U44</c> puts a stair into Structure and the first workbench will light
+        /// Production, and a test that had to be edited on each of those is a test that would be
+        /// edited without being read.</para>
+        /// </summary>
+        [Test]
+        public void ACategorysLiveCountIsWhatItsToolsSay()
+        {
+            for (int i = 0; i < PaletteTools.Categories.Length; i++)
+            {
+                string[] tools = PaletteTools.Categories[i].tools;
+
+                int expected = 0;
+                foreach (string tool in tools)
+                    if (PaletteTools.TryGet(tool, out _)) expected++;
+
+                string name = Registry.Label(PaletteTools.Categories[i].key);
+                Assert.That(PaletteTools.LiveToolsIn(i), Is.EqualTo(expected),
+                    $"{name} miscounts what it holds");
+                Assert.That(PaletteTools.HasLiveTool(i), Is.EqualTo(expected > 0),
+                    $"{name} disagrees with its own count");
+                Assert.That(PaletteTools.LiveToolsIn(i), Is.LessThanOrEqualTo(tools.Length),
+                    $"{name} claims more live tools than it has tools");
+            }
+
+            // An index off either end is 0 rather than a throw: the shell walks this beside a
+            // tile list and a palette that crashed while drawing would be a worse bug than a
+            // category drawn dim.
+            Assert.That(PaletteTools.LiveToolsIn(-1), Is.Zero);
+            Assert.That(PaletteTools.LiveToolsIn(PaletteTools.Categories.Length), Is.Zero);
+        }
+
+        /// <summary>
+        /// A category with nothing live in it can still be opened, and opening it arms nothing.
+        ///
+        /// <para><b>Both halves are the decision</b> (owner, 2026-09-18, choosing "grey but still
+        /// openable"). The palette draws seven categories while four hold nothing at all, and the
+        /// reason to draw them is that a player can look inside and see what is coming — so the
+        /// tile dims rather than going dead to the click. That is only safe because opening an
+        /// empty category cannot put a tool in the player's hand, which is what the second half
+        /// asserts: the landing entry has no live tool behind it, so <c>ApplySubType</c> falls
+        /// through and the cursor is still empty.</para>
+        /// </summary>
+        [Test]
+        public void AnEmptyCategoryOpensAndArmsNothing()
+        {
+            var designate = new DesignateDirector();
+            var palette = new BuildPaletteModel(designate);
+
+            int opened = 0;
+            for (int i = 0; i < PaletteTools.Categories.Length; i++)
+            {
+                if (PaletteTools.HasLiveTool(i)) continue;
+                opened++;
+
+                designate.Tool = DesignateTool.None;
+                palette.SelectCategory(i);
+
+                string name = Registry.Label(PaletteTools.Categories[i].key);
+                Assert.That(palette.Category, Is.EqualTo(i), $"{name} refused to open");
+                Assert.That(designate.Tool, Is.EqualTo(DesignateTool.None),
+                    $"opening {name} put a tool in the player's hand");
+                Assert.That(palette.SubTypeIsArmed, Is.False,
+                    $"{name} lit a tile that arms nothing");
+            }
+
+            Assert.That(opened, Is.GreaterThan(0),
+                "no empty category left to check — delete this test and the dimming with it");
+        }
+
+        /// <summary>
         /// Arming any live tool makes that tool — and only that tool — report itself as armed.
         ///
         /// <para>The "only that tool" half is the one that matters: a predicate that answered true

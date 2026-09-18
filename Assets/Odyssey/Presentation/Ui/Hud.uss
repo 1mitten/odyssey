@@ -392,39 +392,72 @@
    rows * height + (rows - 1) * gap tall — which is what HudLayout models and what the PlayMode
    gate compares the realised box against. The same trick is used by the needs grid and the
    depth rail below. */
-.alerts__rows { margin-top: 9px; margin-bottom: -7px; }
+.alerts__rows { margin-top: 9px; margin-bottom: -4px; }
 
-/* Two lines of 13 px type at the renderer's own line height, which is nearer 26 px a line than
-   the 17 the point size suggests. A minimum rather than a fixed height: a one-line alert still
-   occupies the modelled row so the panel's height is predictable, and a longer one grows rather
-   than being clipped. The authored leads and details are all one or two lines in a 242 px
-   column. */
+/* One line of 13 px type at the renderer's own line height (26 px). Vertically middle-aligned
+   icon, highlighted clickable subject, and aligned dismiss button on the right. */
 .alert {
     flex-direction: row;
-    align-items: flex-start;
-    margin-bottom: 7px;
-    min-height: 52px;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+    min-height: 26px;
+    padding-left: 4px;
+    padding-right: 2px;
+    border-radius: 2px;
+    cursor: link;
 }
 
-.alert__icon { margin-top: 1px; }
+.alert:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.alert__icon {
+    margin-top: 0;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
 
 .alert__text {
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     flex-grow: 1;
-    margin-left: 9px;
+    align-items: center;
+    overflow: hidden;
 }
 
-/* Lead first in full ink, detail trailing dim. A player who reads only the leads should know
-   what to do; the detail is there for the one they stop on. */
+.alert__target {
+    cursor: link;
+}
+
+.alert__prefix,
+.alert__message,
 .alert__lead {
     color: #eef3f6;
-    white-space: normal;
+    white-space: nowrap;
 }
 
 .alert__detail {
     color: rgba(255, 255, 255, 0.60);
-    white-space: normal;
+    white-space: nowrap;
+}
+
+.alert__dismiss {
+    width: 18px;
+    height: 18px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: link;
+    border-radius: 2px;
+}
+
+.alert__dismiss:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.alert__dismiss:hover > .hud-glyph {
+    --glyph-color: #e64a38;
 }
 
 /* ---------------------------------------------------------------- the right-hand gutter
@@ -706,10 +739,23 @@
 
 /* Two columns, 9 px between rows and 18 px between columns. The old pane stacked them, which is
    why it was 690 px wide and 302 tall for three numbers. */
+/* The colonist body's tab area: one height, whatever tab is showing.
+
+   The pane is docked to its bottom edge and grows upward, so a body that sized itself to its own
+   tab moved the header, the tab strip and every row under the pointer each time the player
+   changed tab — Needs is two rows of 25 against Skills' seven of 19, ninety-eight pixels apart
+   (owner, 2026-09-18: "it resizes every time … it needs to be at least a fixed size"). The
+   tallest live tab sets the height here; a shorter one sits at the top of it with the slack
+   below, so between tabs only the rows change. HudLayout.InspectTabBody is the same number and
+   HudStyleSheetTests holds the two together. */
+.inspect__tabbody {
+    height: 157px;
+    margin-top: 9px;
+}
+
 .needs {
     flex-direction: row;
     flex-wrap: wrap;
-    margin-top: 9px;
 
     /* Eighteen pixels of room borrowed back, so that two 256 px columns and the gap between them
        fit the pane's 534 px of content with the second column's own trailing margin hanging over
@@ -734,7 +780,6 @@
 .skills {
     flex-direction: row;
     flex-wrap: wrap;
-    margin-top: 9px;
     margin-right: -18px;
     margin-bottom: -4px;
 }
@@ -1773,10 +1818,32 @@
    is not something a 420x384 box can hold. New game leaves the box rather than stretching it, and
    the box is left exactly as it is for Load and Settings. docs/design/19-world-setup.md. */
 
+/* A panel, not a new box: the element wears .panel and .window, so the fill (rgba(12,16,20,0.96)),
+   the border and the radius are the in-game menus' own tokens and nothing here restates them
+   (owner, 2026-09-18: "use the same transparency/translucent as the in game menus, not to
+   reinvent"). What .setup overrides is only where it sits and how much air it keeps: inset from
+   every edge so the border reads as a box around the interface rather than as a screen border. */
 .setup {
     position: absolute;
-    left: 0; top: 0; right: 0; bottom: 0;
-    padding: 40px 56px;
+    left: 24px; top: 24px; right: 24px; bottom: 24px;
+    padding: 32px 40px;
+}
+
+/* A section heading: "Skills", "Traits". Bigger and bolder than the block under it, and set off
+   above so it belongs to what follows rather than floating between two blocks. */
+.setup__heading {
+    color: #eef3f6;
+    height: 26px;
+    margin-top: 22px;
+}
+
+/* Every clickable row on this page carries an outline, so what can be pressed is visible without
+   hovering it (owner, 2026-09-18). Scoped to the page: .settings__row is also the settings panel's
+   and the Menu popover's row, and those are read over a running world where a grid of outlines
+   would be noise. */
+.setup .settings__row {
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
 }
 
 .setup__title {
@@ -1824,6 +1891,39 @@
     flex-grow: 1;
 }
 
+/* Two columns rather than however many fit the viewport (owner, 2026-09-18), and set clear of the
+   record above it. The grid is a wrapping row in a pane that grows, so at 1920 it had laid thirteen
+   skills out four across and filled the page edge to edge; the cap is what holds it to two and
+   leaves the right-hand half for whatever comes. Derived in HudLayout.SetupSkillsWidth. */
+.skills--setup {
+    max-width: 636px;
+    margin-top: 24px;
+}
+
+/* Wider and taller than the inspect pane's line, at a step up the type scale: this screen is read
+   at leisure with no world behind it. */
+.skill--setup {
+    width: 300px;
+    height: 24px;
+}
+
+/* The way in, and the only green row in the game. Back and Start sit side by side and read
+   identically otherwise, so the colour is what says which is which.
+
+   Written as a descendant so it out-specifies `.setup .settings__row` above, which outlines every
+   pressable row on this page: that selector is 0,2,0 and a bare `.setup__commit` is 0,1,0, so the
+   grey would have won and the green border would never have drawn. Specificity beats order. */
+.setup .setup__commit {
+    background-color: rgba(127, 201, 140, 0.15);
+    border-width: 1px;
+    border-color: rgba(127, 201, 140, 0.45);
+    border-radius: 3px;
+}
+
+.setup .setup__commit .settings__label { color: #7fc98c; }
+
+.setup .setup__commit:hover { background-color: rgba(127, 201, 140, 0.24); }
+
 /* The one being read, beside the three. */
 .setup__detail {
     flex-grow: 1;
@@ -1843,7 +1943,9 @@
 
 .detail__name { color: #eef3f6; height: 26px; }
 .detail__trade { color: rgba(255, 255, 255, 0.66); height: 18px; }
-.detail__traits { color: rgba(255, 255, 255, 0.50); height: 18px; margin-top: 4px; }
+/* A section under the skills now rather than a third line of the record, so it reads as the block
+   M7 will fill rather than as another fact about the person (owner, 2026-09-18). */
+.detail__traits { color: rgba(255, 255, 255, 0.50); height: 18px; }
 
 .setup__footer {
     flex-direction: row;
@@ -1860,17 +1962,21 @@
 
 .colonists {
     flex-shrink: 0;
-    width: 260px;
+    width: 340px;
 }
 
 /* A row wrapping a column since avatars landed (docs/design/20-avatars.md §3): the face, then the
-   two lines about the person whose face it is. The same shape a roster card's identity row is. */
+   three lines about the person whose face it is — name, trade, and what they are good at. The same
+   shape a roster card's identity row is.
+
+   Sixty-five is the three lines, and it must not fall under the 60 px face: at 47 the faces ran
+   into one another and into the selection outline (HudLayout.ColonistCard). */
 .colonist {
     flex-direction: row;
     align-items: center;
-    height: 47px;
-    margin-bottom: 6px;
-    padding: 0 8px;
+    height: 76px;
+    margin-bottom: 10px;
+    padding: 8px;
     border-radius: 3px;
     border-width: 1px;
     border-color: rgba(0, 0, 0, 0);
@@ -1890,8 +1996,11 @@
     overflow: hidden;
 }
 
+/* Dim rather than meta since the skills line arrived under it: three lines at two weights read as
+   a hierarchy, and an occupation is flavour where the line below it is the decision. */
 .colonist__trade {
     color: rgba(255, 255, 255, 0.66);
+    height: 20px;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
@@ -1899,16 +2008,10 @@
 
 .colonist__name {
     color: #eef3f6;
+    height: 26px;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
-}
-
-/* What they are good at, on one line: three cards of two lines each came to 296 against the fixed
-   body's 284. Measured by HudLayoutTests rather than found on screen. */
-.colonist__skills {
-    color: rgba(255, 255, 255, 0.66);
-    white-space: nowrap;
 }
 
 /* The row that goes back, set apart from the list above it the way the settings panel's exit row

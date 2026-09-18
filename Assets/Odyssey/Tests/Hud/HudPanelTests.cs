@@ -40,16 +40,17 @@ namespace Odyssey.Tests.Hud
             var alerts = new AlertModel();
             alerts.Refresh(snapshot, 0.0);
 
-            Assert.That(alerts.Rows, Has.Count.EqualTo(1));
+            Assert.That(alerts.Rows.Count, Is.EqualTo(1));
             Assert.That(alerts.Rows[0].Key, Is.EqualTo(AlertModel.StarveKey));
             Assert.That(alerts.Rows[0].Severity, Is.EqualTo(AlertSeverity.Danger));
-            Assert.That(alerts.Rows[0].Lead, Is.EqualTo("A colonist is starving"));
-            Assert.That(alerts.Rows[0].Detail, Is.Not.Empty, "the trailing detail is what the lead leaves out");
+            Assert.That(alerts.Rows[0].TargetName, Is.EqualTo(ColonistNames.Of(snapshot, new PawnId(1))));
+            Assert.That(alerts.Rows[0].Lead, Is.EqualTo(ColonistNames.Of(snapshot, new PawnId(1)) + " is starving"));
+            Assert.That(alerts.Rows[0].Pawn, Is.EqualTo(new PawnId(1)));
             Assert.That(alerts.Rows[0].Count, Is.EqualTo(1));
         }
 
         [Test]
-        public void SeveralSubjectsBecomeOneLineWithACount()
+        public void SeveralSubjectsBecomeIndividualRowsWithTargets()
         {
             var snapshot = Frame.Write();
             snapshot.AddPawn(Colonist(1, food: 10));
@@ -59,8 +60,63 @@ namespace Odyssey.Tests.Hud
             var alerts = new AlertModel();
             alerts.Refresh(snapshot, 0.0);
 
-            Assert.That(alerts.Rows, Has.Count.EqualTo(1), "three starving colonists are one alert");
-            Assert.That(alerts.Rows[0].Lead, Is.EqualTo("3 colonists are starving"));
+            Assert.That(alerts.Rows.Count, Is.EqualTo(3), "three starving colonists become three alert rows");
+            Assert.That(alerts.Rows[0].Lead, Is.EqualTo(ColonistNames.Of(snapshot, new PawnId(1)) + " is starving"));
+            Assert.That(alerts.Rows[0].Pawn, Is.EqualTo(new PawnId(1)));
+            Assert.That(alerts.Rows[1].Lead, Is.EqualTo(ColonistNames.Of(snapshot, new PawnId(2)) + " is starving"));
+            Assert.That(alerts.Rows[1].Pawn, Is.EqualTo(new PawnId(2)));
+            Assert.That(alerts.Rows[2].Lead, Is.EqualTo(ColonistNames.Of(snapshot, new PawnId(3)) + " is starving"));
+            Assert.That(alerts.Rows[2].Pawn, Is.EqualTo(new PawnId(3)));
+        }
+
+        [Test]
+        public void DismissingAnAlertSuppressesItUntilConditionClearsAndReoccurs()
+        {
+            var snapshot = Frame.Write();
+            snapshot.AddPawn(Colonist(1, food: 10));
+
+            var alerts = new AlertModel();
+            alerts.Refresh(snapshot, 0.0);
+            Assert.That(alerts.Rows.Count, Is.EqualTo(1));
+
+            int dismissKey = alerts.Rows[0].DismissKey;
+            alerts.Dismiss(dismissKey);
+            Assert.That(alerts.Rows, Is.Empty);
+
+            // Stays suppressed on next refresh while still starving
+            alerts.Refresh(snapshot, 1.0);
+            Assert.That(alerts.Rows, Is.Empty);
+
+            // Colonist is fed past threshold
+            var fed = Frame.Write();
+            fed.AddPawn(Colonist(1, food: AlertModel.StarveClearAt));
+            alerts.Refresh(fed, 2.0);
+            Assert.That(alerts.Rows, Is.Empty);
+
+            // Later starves again -> alert re-appears!
+            var starvingAgain = Frame.Write();
+            starvingAgain.AddPawn(Colonist(1, food: 10));
+            alerts.Refresh(starvingAgain, 3.0);
+            Assert.That(alerts.Rows.Count, Is.EqualTo(1));
+            Assert.That(alerts.Rows[0].Lead, Is.EqualTo(ColonistNames.Of(starvingAgain, new PawnId(1)) + " is starving"));
+        }
+
+        [Test]
+        public void DismissAllClearsEveryActiveAlert()
+        {
+            var snapshot = Frame.Write();
+            snapshot.AddPawn(Colonist(1, food: 10, mood: 100));
+
+            var alerts = new AlertModel();
+            alerts.Refresh(snapshot, 0.0);
+            Assert.That(alerts.Rows.Count, Is.EqualTo(2));
+
+            alerts.DismissAll();
+            Assert.That(alerts.Rows, Is.Empty);
+
+            // Stays empty on subsequent refresh
+            alerts.Refresh(snapshot, 1.0);
+            Assert.That(alerts.Rows, Is.Empty);
         }
 
         /// <summary>

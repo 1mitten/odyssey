@@ -43,8 +43,12 @@ namespace Odyssey.Tests.Sim
         /// factor of two, ignore the test rather than fail it or, worse, trust it. The measurement
         /// still runs everywhere the instrument works, which is where the figures in ADR 0005 came
         /// from.</para>
+        ///
+        /// <para>Internal, not private, because MoveRateTests measures the same thing — the
+        /// per-mille accumulators of the rate seam (WS1) — against the same instrument, and two
+        /// calibrations of one device is how they disagree.</para>
         /// </summary>
-        static bool AccountingIsFineGrained()
+        internal static bool AccountingIsFineGrained()
         {
             // The same shape and roughly the same total as what the tests below measure — a few
             // thousand short-lived arrays of a couple of hundred bytes, allocated and dropped.

@@ -1,5 +1,6 @@
 #nullable enable
 using NUnit.Framework;
+using Odyssey.Sim;
 using Odyssey.Sim.Construction;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Designations;
@@ -366,7 +367,7 @@ namespace Odyssey.Tests.Sim
             ulong bare = colony.World.ComputeStateHash().Value;
             Order(colony, cell);
             colony.Construction.Deliver(cell, 2);
-            colony.Construction.AddWork(cell, 40);
+            colony.Construction.AddWork(cell, 40 * Rates.Scale);
             ulong ordered = colony.World.ComputeStateHash().Value;
 
             Assert.That(ordered, Is.Not.EqualTo(bare), "a site the player ordered is state");
@@ -378,7 +379,8 @@ namespace Odyssey.Tests.Sim
             Assert.That(reloaded.Construction.At(cell), Is.EqualTo(BuildingHandle.Wall));
             Assert.That(reloaded.Construction.StuffAt(cell), Is.EqualTo(StuffHandle.Wood));
             Assert.That(reloaded.Construction.Delivered(cell), Is.EqualTo(2), "the wood already carried survives");
-            Assert.That(reloaded.Construction.WorkDone(cell), Is.EqualTo(40), "a half-built wall survives");
+            Assert.That(reloaded.Construction.WorkDone(cell), Is.EqualTo(40 * Rates.Scale),
+                "a half-built wall survives");
             Assert.That(reloaded.World.ComputeStateHash().Value, Is.EqualTo(ordered));
         }
 

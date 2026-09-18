@@ -517,15 +517,21 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         VisualElement CategoryTile(int index, string shape)
         {
-            var (key, _) = PaletteTools.Categories[index];
+            var (key, tools) = PaletteTools.Categories[index];
             string label = Registry.Label(key);
 
             var tile = new VisualElement { name = "cat-" + key };
             tile.AddToClassList("bp__tile");
             tile.AddToClassList(shape);
 
+            // A category with nothing live in it is dim, in the same vocabulary its own tools
+            // already use (owner, 2026-09-18). It still opens: opening arms nothing, and the four
+            // disabled tools inside are the palette saying what is coming. PaintBuild sets these
+            // colours again every repaint, so this is the resting state and that loop is the one
+            // that has to agree with it.
+            int live = PaletteTools.LiveToolsIn(index);
             HudTheme.BuildTier tier = HudTheme.BuildCategoryTiers[index];
-            Color ink = HudTokens.Convert(tier.Ink);
+            Color ink = HudTokens.Convert(live > 0 ? tier.Ink : HudTheme.SubTypeDisabledInk);
 
             tile.Add(new HudGlyph(PaletteGlyphs.For(key), shape == "bp__cat" ? 20f : 18f, ink));
 
@@ -536,7 +542,13 @@ namespace Odyssey.Presentation.Ui
                 tile.Add(name);
             }
 
-            tile.tooltip = label;
+            // The count is the whole of the answer to "what can I build here", and the disabled
+            // state states its reason for the same rule the tool tier follows: "not yet" and "you
+            // have done something wrong" must not look alike.
+            tile.tooltip = live == 0
+                ? label + " — nothing here is built yet"
+                : label + " — " + live + " of " + tools.Length + " built";
+
             tile.RegisterCallback<ClickEvent>(_ =>
             {
                 _palette?.SelectCategory(index);
@@ -761,12 +773,22 @@ namespace Odyssey.Presentation.Ui
                 HudTheme.BuildTier tier = HudTheme.BuildCategoryTiers[index];
                 bool on = index == _palette.Category;
 
-                tile.style.backgroundColor = HudTokens.Convert(on ? tier.SelectedFill : tier.Fill);
-                Color edge = HudTokens.Convert(on ? tier.Selected : tier.Border);
+                // An empty category loses its hue entirely rather than fading it: a faded hue at
+                // 20 px reads as a rendering fault, and the palette would then have two ways of
+                // saying "not yet". It keeps an open state, dim but visibly open, because a player
+                // who clicked into Power still has to be able to see which tile they opened.
+                bool empty = !PaletteTools.HasLiveTool(index);
+
+                tile.style.backgroundColor = HudTokens.Convert(
+                    empty ? HudTheme.SubTypeDisabledFill : on ? tier.SelectedFill : tier.Fill);
+                Color edge = HudTokens.Convert(
+                    empty ? (on ? HudTheme.SubTypeBorder : HudTheme.SubTypeDisabledBorder)
+                          : on ? tier.Selected : tier.Border);
                 tile.style.borderTopColor = tile.style.borderRightColor =
                     tile.style.borderBottomColor = tile.style.borderLeftColor = edge;
 
-                Color ink = HudTokens.Convert(on ? tier.Selected : tier.Ink);
+                Color ink = HudTokens.Convert(
+                    empty ? HudTheme.SubTypeDisabledInk : on ? tier.Selected : tier.Ink);
                 foreach (VisualElement child in tile.Children())
                 {
                     if (child is HudGlyph glyph) glyph.Tint = ink;

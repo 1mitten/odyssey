@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using Odyssey.Hud;
 using Odyssey.Presentation.CameraRig;
 using Odyssey.Presentation.Rendering;
+using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
+using Odyssey.Sim.Pawns;
 using UnityEngine;
 using UnityEngine.Animations;
 using UnityEngine.Playables;
@@ -154,6 +156,16 @@ namespace Odyssey.Presentation.World
         /// was settled when the lean landed, against a real shaft.</para>
         /// </summary>
         public Vector3? ForceClimbFace { get; set; }
+
+        /// <summary>
+        /// Whether a forced climb is posed as a ladder or as a rock face. **Harness only**, and
+        /// meaningless without <see cref="ForceClimbFace"/>.
+        ///
+        /// <para>Here because the two poses are now different shapes — hands on rungs above the
+        /// head against hands spread on holds — so a contact sheet that could only photograph one
+        /// of them would be photographing half the question.</para>
+        /// </summary>
+        public bool ForceClimbLadder { get; set; }
 
         /// <summary>
         /// Hold every climb at this point in its cycle rather than reading it off the step's own
@@ -1004,6 +1016,26 @@ namespace Odyssey.Presentation.World
         /// <summary>How much of a frame's measured speed the figure's smoothed speed takes.</summary>
         public const float SpeedSmoothing = 0.35f;
 
+        /// <summary>
+        /// How far the stroke clock moves in a frame, at the pawn's published rate: a thousandth
+        /// of the rate per mille of the frame's time. The whole of the WS2 stroke-clock change —
+        /// a fast worker visibly swings faster, a novice labours — and the reason it is a
+        /// multiplication by a published number, not a second mechanism, is design 17 §3d.
+        /// </summary>
+        public static float SwingAdvance(float deltaTime, int ratePerMille) =>
+            deltaTime * ratePerMille / Rates.Scale;
+
+        /// <summary>
+        /// The work rate the frame publishes for this colonist, or the standard rate when
+        /// nothing did — the frame may predate the aspect or the pawn may have gone missing
+        /// between frames, and a figure that cannot be told otherwise works at today's speed.
+        /// A scan, like every <c>TryGetPawnAspect</c> read; the figures on screen are tens.
+        /// </summary>
+        int WorkRateOf(PawnId id) =>
+            _frame != null && _frame.TryGetPawnAspect(id, RateAspects.Work, out int rate)
+                ? rate
+                : Rates.Scale;
+
         void Pose(Figure figure, in PawnView pawn, Vector3 position, Vector3 heading,
             float frameTime, bool running)
         {
@@ -1028,7 +1060,14 @@ namespace Odyssey.Presentation.World
             // The swing's own clock, which runs only while there is work. Freezing it between
             // jobs rather than letting it free-run means a colonist's first blow at a new tree
             // is a first blow, not whatever part of a stroke the wall clock happened to be in.
-            if (pawn.Working && running) figure.SwingClock += deltaTime;
+            //
+            // Scaled by the rate the simulation says the pawn is paying at (design 17 §3d): a
+            // master visibly swings faster and a novice labours, and because BlowLanded fires
+            // off the stroke phase, the chips and the impact audio follow for free. Work stays
+            // continuous per tick in the simulation and the swing is scaled to match it — the
+            // two agree in aggregate without either owning the other.
+            if (pawn.Working && running)
+                figure.SwingClock += SwingAdvance(deltaTime, WorkRateOf(pawn.Id));
             else if (!pawn.Working && figure.WorkWeight <= 0f) figure.SwingClock = 0f;
 
             // The one-shot gestures, started by a serial that has moved rather than by a state
@@ -1120,10 +1159,22 @@ namespace Odyssey.Presentation.World
 
             // And WHAT it is climbing. A colonist goes up the edge of the block beside the hole,
             // not up the middle of the hole: drawn at the cell centre it is a person levitating
-            // through clear air, which is what the owner saw. The simulation now refuses to lay a
-            // connector where there is no block (MineWorkGiver's HasWallBeside), so this should
-            // always find one — and where it does not, the figure simply stays where it was, which
-            // is the behaviour before any of this existed.
+            // through clear air, which is what the owner saw.
+            //
+            // **A built ladder was the case this missed, and it was the case the owner reported
+            // again on 2026-09-18** ("when a colonist goes up a ladder they seem to levitate").
+            // The comment that stood here said the simulation refuses to lay a connector where
+            // there is no block, so a wall would always be found. That is true of a MINED SHAFT and
+            // was never true of a BUILT LADDER: ConstructionGrid.RefreshLadder asks for no wall at
+            // all, so a ladder run up through an open storey, or standing against slabs rather than
+            // rock, found nothing solid beside it. The face came back zero, the weight decayed to
+            // nought, every joint the climb pose moves is multiplied by that weight — and the
+            // figure rode the idle straight up through the air.
+            //
+            // So the ladder is asked first, and it is asked of the thing itself rather than of its
+            // surroundings: a ladder is what you climb, and where it is fixed is the model's to say
+            // (WorldRenderModel.LadderFacing). The solid-neighbour scan stays underneath it,
+            // unchanged, as the rule for a shaft cut out of rock.
             // Forced first, and completely: a harness that set only the direction would still be
             // waiting for a real vertical step to give it a phase, and there is never going to be
             // one on a board with no shaft in it.
@@ -1133,15 +1184,24 @@ namespace Odyssey.Presentation.World
                 figure.ClimbPhase = HeldClimbPhase ?? 0f;
                 figure.ClimbFace = ForceClimbFace.Value;
                 figure.LastClimbFace = figure.ClimbFace;
+                figure.OnLadder = ForceClimbLadder;
                 heading = figure.ClimbFace;
             }
             else if (figure.ClimbPhase >= 0f)
             {
                 CellRef lower = pawn.NextCell.Y < pawn.Cell.Y ? pawn.NextCell : pawn.Cell;
-                if (TryWallBeside(lower, out Vector3 toWall))
+                if (TryLadderBeside(lower, out Vector3 toLadder))
+                {
+                    figure.ClimbFace = toLadder;
+                    figure.LastClimbFace = toLadder;
+                    figure.OnLadder = true;
+                    heading = toLadder;
+                }
+                else if (TryWallBeside(lower, out Vector3 toWall))
                 {
                     figure.ClimbFace = toWall;
                     figure.LastClimbFace = toWall;
+                    figure.OnLadder = false;
 
                     // Face what you are climbing. This is also the only thing that gives a purely
                     // vertical step a bearing at all: PawnPose hands back none, deliberately, and
@@ -1158,9 +1218,29 @@ namespace Odyssey.Presentation.World
             //    read as several metres a second and throw the figure into a sprint;
             //  * snapped on, a colonist would jump to the wall the instant its step began, which
             //    is exactly the class of jolt this whole round is about.
+            // **And let go of the wall before arriving, not after** (owner, 2026-09-18: the climb
+            // "jolts" at the top, the arms are "still way up when they should come down level with
+            // the ledge", and it "seems to stall for a moment").
+            //
+            // All three were one fault. The weight's target was a flat yes-or-no on whether a face
+            // was found, so it stayed at 1 for the whole step and only began easing out on the
+            // frame the step ENDED — by which time the colonist was standing on the ledge. What
+            // followed was 0.15 s of a figure on solid floor with its arms overhead, sliding the
+            // lean's most-of-a-metre back to the middle of its cell: the raised arms, the jolt, and
+            // the apparent stall, in that order, all after the climbing was over.
+            //
+            // So the taper is part of the climb. Over the last quarter of the step the weight runs
+            // down to nought, which brings the arms down, unwinds the lean, and puts the figure in
+            // the middle of its cell exactly as it arrives — which is what topping out is. The ease
+            // below still governs, so nothing snaps; this only moves the target.
+            float holdingOn =
+                figure.ClimbFace == Vector3.zero ? 0f
+                // A forced climb is a photograph of the pose and has no step to be near the end
+                // of; tapering it would photograph a figure letting go.
+                : ForceClimbFace.HasValue ? 1f
+                : ToppingOut(figure.ClimbPhase, up: pawn.NextCell.Y > pawn.Cell.Y);
             float leanStep = deltaTime / ClimbEaseSeconds;
-            figure.ClimbWeight = Mathf.MoveTowards(
-                figure.ClimbWeight, figure.ClimbFace != Vector3.zero ? 1f : 0f, leanStep);
+            figure.ClimbWeight = Mathf.MoveTowards(figure.ClimbWeight, holdingOn, leanStep);
 
             // Swimming: is this colonist in water, and how far into looking like it.
             //

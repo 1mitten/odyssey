@@ -4921,6 +4921,855 @@ interesting one was not a conflict in the text sense at all.
   "a bed that botched every roll was raised anyway" fires. A test that has not been seen to fail is
   not evidence, and a test that can silently skip has already proved it can lie.
 
+### CLAUDE.md had eaten itself, and four unit numbers meant two things (2026-09-18)
+
+Two tidying jobs that turned out to be the same fault: the project's own record-keeping rules were
+being followed everywhere except in the file that states them.
+
+- **`CLAUDE.md` was 1,097 lines and 95,738 characters, and 982 of those lines were one section.**
+  Its own opening paragraph says to update *Current status* and **append the reasoning to this
+  file** rather than growing it. Every session since has instead written the reasoning into the
+  status section, which is read into every session's context — so the cost of the narrative was
+  being paid on every single turn, for ever, by every agent. It is 326 lines and 27,480 characters
+  now, a 71% cut, with *Current status* at 206.
+
+- **Nothing was thrown away without checking where else it lived**, because "it is surely in the
+  journal" is exactly the assumption that loses things. Measured rather than assumed: of the 257
+  distinct code identifiers the old section named, **243 appear in the journal, a design document
+  or a plan**, and the remaining 14 are all live symbols in the C# — where the code is the
+  authority and a prose mention is a copy. Of 38 measurements, 37 survive; the one that did not,
+  the shoreline jitter's 31 mm, is in `20-swimming-and-water.md` and in this file, and its *open
+  question* was put back into the owner list by hand. An exact-phrase comparison had said 206
+  claims were unique to `CLAUDE.md`, which is what a phrase comparison always says when the same
+  fact is written twice in different words; it was the wrong instrument and nearly the wrong
+  conclusion.
+
+- **What replaced the narrative is a table of where to read.** The single most useful thing the old
+  section did was warn a session off breaking something — "read this before touching that line",
+  "do not undo this by tidying". Those pointers survive as an index from each live line to its
+  design document, which is where the warnings already are in full. The status section's job is
+  what is true *now*; the journal's is why.
+
+- **`U42`–`U45` each named two different units.** Paving, the ladder, stairs and beds hold those
+  numbers in M3, three of them built; the four rates units in §WS were written with the same four
+  numbers. "U42 is done" was true and false at once depending on which table you had open, and the
+  rates seam is the one unit whose whole done criterion is *that nothing changes* — the worst
+  possible thing to believe is already built. The rates units are now `WS1`–`WS4`. **The built ones
+  kept their numbers** because this file records them that way and this file is not rewritten;
+  entries above dated on or before 2026-09-17 still say `U42`–`U45` and mean paving and ladders.
+
+- **The collision was found by counting references, not by reading.** It surfaced while sizing
+  which of the two senses was cheaper to move — 12 journal references against a contained set of
+  three planning documents — which is also what proved the built sense had to be the one that
+  stayed.
+
+### The rates landed, and the golden gate held three different ways (2026-09-18)
+
+WS1–WS3 of design 17 went in on `claude/rates-and-stats` as three commits: the seam (`f6beb56`),
+work speed from the skill curve plus the stroke clock (`9ae7682`), and innate pace, condition and
+collapse (`a4413df`). WS4 running stays held — the plan's standing rule, *do not invent an urgency
+model*, is still the right answer and needs no code to honour. What the unit taught:
+
+- **The design's "two saved integers" turned out to be four accumulators.** §2b closed with *"two
+  saved integers change scale, `_work[cell]` and `MoveProgress`, and nothing else does"* — and the
+  implementation deliberately broke that sentence: `Job.ToilProgress` counts milliwork too, and
+  `_work[cell]` lives in two grids (designations *and* construction). A rate must reach a surface
+  to be visible, and the toil accumulator is the one the driver's own pacing reads; leaving it in
+  ticks would have given the stroke clock a rate it could not apply. §2bb's rule — the scale is
+  internal, everything crossing the sim→UI contract stays in ticks — held exactly as audited:
+  `WorkToClear`'s ushort, `SiteView`'s seconds and `Fraction()`'s denominator all keep their units.
+
+- **WS1's done criterion was nothing, and the gate for nothing is everything else.** The suite
+  passed unedited — goldens, path checksums, HUD readouts, the one-day run — because
+  `cost × 1,000 / 1,000` reads back exact. The one test the unit added for itself is the control
+  the plan asked for: a rate of 500 provably takes twice as long, at both accumulators.
+
+- **WS2's goldens were a no-op, and the reason was written down instead of a re-bake faked.** The
+  regolden run printed the same three hashes it was fed. That is not luck: all three golden cases
+  are `ScenarioDef.Bare`, which runs no job the curve moves — haul prices flat by the design's own
+  rule that a skill drives either rate or quality, and nothing is mined, cut or built there. The
+  same reasoning made WS2's soak byte-for-byte the WS1 baseline's. The discipline is: a no-op
+  golden is only trustworthy when somebody can say *why* it was one.
+
+- **WS3's re-bake was the first real one, and it had the right shape.** All three `Simulated`
+  hashes moved and no `Generated` one did — the signature of a simulation change with the
+  generator untouched. That shape exists because the pace roll is keyed like passions and starting
+  skills but *drawn lazily on first read*: placement's dice never re-roll, so the generator's hash
+  cannot move. For the first time in the unit it is the colonists and not the hash that changed —
+  idle colonists crossing their boards at 850 to 1,150 instead of in step.
+
+- **Two facts about the skill system were found the slow way by test fixtures, and are now
+  written here so the next session finds them the fast way.** First, experience exactly 0 means
+  "not rolled yet": `RollStartingSkills` skips any skill whose experience is zero and would
+  overwrite a pin on the first tick — a level-0 pin must use experience 1. Second,
+  `DecayExperience` drops a level-20 pawn to level 19 on any loss, so a rate pinned "at level 20"
+  quietly became a rate at 19 halfway through a 2,556-tick walk — long fixtures must freeze decay.
+  Both look like flaky rates and are neither.
+
+- **"What is she working at" moved from the giver to the driver.** The rate publisher asks every
+  publish, and the answer had lived on `WorkGiver`; the driver now carries a virtual `WorkType`
+  defaulting to hauling — chosen so a driver that never swings (eating, sleeping) and is somehow
+  asked anyway reads as the one work type that prices flat.
+
+- **The work aspect's gate is Working, not merely "has a driver".** An adopted pawn takes a wander
+  job on tick one, and the first version published 777 for an "idle" colonist. Only
+  `workFocus >= 0 && Driver != null` gates `odyssey.pawn.rate.work`, because only the stroke clock
+  reads it. The move aspect is the opposite: a fact about the pawn wherever she stands, so it
+  publishes for everyone.
+
+- **Format 6 appends last and saves nothing it can recompute.** `StarvationSeverity` sits at the
+  very end of the pawn section so a v5 file reads positionally unchanged; the innate pace is
+  deliberately *not* saved — a pure function of seed and id is correct by construction on load,
+  and a saved copy would be a second thing to keep honest. The version-number test did its job:
+  the bump is a deliberate line in a diff, again.
+
+- **A fresh-eyes review of the branch found five things, and each fix is its own small commit.**
+  The mid-walk collapse went down without the ground's thought — a giver-side collapse remembered
+  it and a road collapse did not — so the walk toil's guard now adds it, once, and the bed stays
+  reserved until the job ends rather than gaining a second exit. The pace band and the work
+  curve's integers said nothing about being invented; they do now. WS2's soak had cited a baseline
+  run the record never held, and the review could not verify it from the file: the run has been
+  made at `f6beb56` at last and matches the table that cited it byte for byte, which is the
+  difference between a claim checked and a claim trusted. The seam's "costs no allocation" claim
+  is now a Long test on a working colony — 10.4 bytes a tick, with the dozen completed cells'
+  ~25 KB apiece of nav and support rebuilds measured, attributed to editing the world rather than
+  ticking it, and written into the test's comment. And the hash comment no longer promises exact
+  division: the toils that count plain ticks — eat, sleep, wait — divide to near nothing and reach
+  the hash through what their endings change.
+
+### The inspect pane resized under the pointer (2026-09-18)
+
+The owner, on the colonist card: *"When I click on tabs like skills/needs — it resizes every time —
+it needs to be at least a fixed size (IE the size of the skills tab) — so that it doesn't resize to
+the content of needs."*
+
+**The pane grows upward from a docked bottom edge, which is what turned a height into a jump.**
+`.inspect` sits at `bottom: 64px`, derived from the command bar, and `HudLayout.InspectHeight` added
+up the *active* tab's rows: Needs is 59 px (two rows of 25, one 9 px gap), Skills is 157 (seven rows
+of 19, six 4 px gaps). Because the bottom is pinned, all 98 px of the difference came off the top —
+the portrait, the name, the tab strip and the first row all moved, and the tab strip is precisely
+where the pointer is at the moment of the click. A pane docked to its *top* would have had the same
+arithmetic and not been worth a complaint.
+
+**Three questions were asked before any code was written, and the owner took the plainest option of
+each**: the height is the tallest tab that exists today rather than a guess at the seven disabled
+ones; a short tab's rows keep the position they already have, with the slack below them rather than
+spread through them; and the tile readout is left content-sized, because with no tab strip it cannot
+resize under the hand.
+
+**The number is derived, not typed.** `HudLayout.InspectTabBody` is `max` of the needs body and the
+skills body, computed from `SkillCatalogue.Rows` and a new `InspectNeeds`. A hand-set 160 would have
+read the same today and clipped the day a fourteenth skill was added — and the skills grid is
+already a computed seven rows precisely because it is the kind of list that grows.
+
+**`InspectHeight`'s row arguments now say only whether there is a body.** They still size a tile's
+readout. That is a deliberate asymmetry rather than an oversight, and the doc comment says so, since
+the next tidy-up would otherwise "unify" the three branches straight back into the bug.
+
+**The stylesheet is the second copy and it is held, not trusted.** `.inspect__tabbody` carries the
+same 157, and the row added to `HudStyleSheetTests`'s table pairs it with `HudLayout.InspectTabBody`
+— the same mechanism that already holds the pane's width, its bottom and its header. The fast tier
+parses the USS, so the two cannot drift without a red test in twenty seconds.
+
+**The test asserts the top edge, not the height.** Equal heights was the obvious assertion and it is
+the weaker one: the complaint is about a thing moving, so `TheColonistPaneIsTheSameHeightOnEveryTab`
+solves both tabs and compares `Y` first.
+
+Nobody has pressed Play on it. The open question a picture cannot answer is whether ninety-eight
+pixels of empty pane under three need bars reads as stable or as broken — and if it reads as broken,
+the answer is more needs, not a shorter box.
+
+### Four of the seven build categories held nothing, and looked no different (2026-09-18)
+
+The owner: *"On the build menu could to disable when top groups that have nothing to build — just
+gray them out for now … gray anything that cannot be built for the time being — so we understand
+what we can build."*
+
+**Half the ask was already done, and finding that out first changed what got built.** "Gray anything
+that cannot be built" is the sub-type tier's behaviour since it existed: a tool with nothing behind
+its key is drawn `bp__tile--off`, dim, unclickable, with a tooltip saying "not built yet; the tool
+arrives with its content". What had never been done was the tier *above* it. Production, Power,
+Security and Recreation hold nothing at all — 0 of 4, 0 of 4, 0 of 3, 0 of 3 — and were painted in
+full category hue beside Structure's 4 of 7. So the answer was one tier, not two, and the existing
+disabled vocabulary was already there to reuse rather than invent.
+
+**The hue goes entirely rather than fading.** Fading was the obvious move and is the worse one: a
+faded hue on a 20 px glyph reads as a rendering fault rather than a state, and it would have given
+the panel a second way of saying what `SubTypeDisabledInk` already says one tier down. The category
+tier is the one place in this HUD allowed a hue per row (design 17 §3) and this is a deliberate
+exception to that rule — the hue is what makes a category identifiable, and a category holding
+nothing is not one the player needs to identify yet.
+
+**It still opens, and the test is on the second half of that claim.** Three treatments were offered;
+the owner took "grey but still openable". Dimming is the information, and blocking the click would
+only hide the plan — the reason to draw seven categories while four are empty is that a player can
+look inside Power and see what is coming. That is only safe because opening an empty category cannot
+arm anything: `SelectCategory` finds no live tool, and `ApplySubType` returns at its `TryGet`. So
+`AnEmptyCategoryOpensAndArmsNothing` asserts the cursor is still empty afterwards, not merely that
+the category opened. It also fails loudly if there is no empty category left to check, which is the
+day to delete the dimming.
+
+**The count is written as an invariant, not as seven numbers.** `ACategorysLiveCountIsWhatItsToolsSay`
+compares `LiveToolsIn` against a walk of the same table rather than against "4, 0, 1, 0, 0, 1, 0".
+`U44` puts a stair into Structure and the first workbench lights Production, and a test that has to
+be edited on each of those is a test that gets edited without being read.
+
+**The repaint loop was the trap.** Categories paint inline from code — `Hud.uss` says so at the
+neutral tier — and `PaintBuild` rewrites their fill, border and ink every repaint. A class on the
+tile alone would have looked right in the editor and been painted back over on the first refresh,
+which is the same silent class of fault as a chip that arms a tool and never lights.
+
+**What was deliberately not done: a tool you cannot afford.** A wall stays lit with no wood and no
+stone. A blueprint can be placed and hauled to later, which is the genre's norm and the reason
+`ReadStockFrom`'s null means "in stock"; the material tier already drops its tint to say what is
+short. "Cannot build right now" is a second state and wants a second treatment.
+
+### One panel in the corner, written in only one direction (2026-09-18)
+
+The owner: *"If I have the build menu open and I haven't selected anything to build — I go to click
+on any tile for info — that panel appears but underneath the build menu. What should happen is the
+build menu closes and then the tile info can be seen — otherwise windows overlap."*
+
+**This was not a new rule; it was the missing half of one the owner gave the day before.** On
+2026-09-17: *"if the tile info dialog is showing, that is closed down and the build mode is open"*,
+and both panels were docked into the same bottom-left corner on the same day. So `SetBuildPalette`
+clears the selection as it opens. Selecting something *while* the palette was up was never wired,
+and the pane opened underneath it.
+
+**The palette's own comment had been asserting the invariant that was broken.** `PlaceBuildPalette`
+says the bottom *"used to lift over the inspect pane when something was selected; the pane is closed
+when the palette opens now, so there is nothing to lift over and the panel sits on the bar in every
+case"*. Every word of that is true of one direction and was quietly assumed of both — the panel
+stopped lifting, and the case where the pane arrives second stopped being handled at the same
+moment. A comment that states an invariant is worth more when it names which direction it was
+proved in.
+
+**Asked of the reason, not of the input device.** What collides is the pane, so whatever raises the
+pane closes the palette. That covers the roster card and the alert jump, which are the same overlap
+reached another way and would have been left broken by a rule written about world clicks.
+
+**`Cleared` had to be excluded, and the exclusion is the interesting part.** Opening the palette
+clears the selection, so a close rule that fired on a cleared selection would have shut the palette
+on the frame it opened — a Build button that does nothing, and a self-inflicted one. The test is
+named for the trap rather than for the behaviour. `Died` and `LayerChanged` are out for the milder
+version of the same reason: they take a selection away and draw nothing new.
+
+**Nothing here can interfere with building, and that was checked rather than assumed.**
+`SliceCameraRig.WorldToolArmed` routes a click to the designate path whenever a tool is held, so a
+world click can only *select* when the player's hands are empty — which is exactly the case the
+owner described. The only way to reach the new rule holding a tool is a roster click, and the owner
+chose to keep the tool in hand there: closing a panel is not the same as putting a tool down.
+
+Nobody has pressed Play on it.
+
+### The order you gave from inside a menu left the menu standing (2026-09-18)
+
+The owner, an hour after the pane-under-the-palette one: *"if I'm in the build menu (or any other
+menu) and I click on an order — I expect that menu to be closed down and the dialog appear/order
+would happen"*.
+
+**The parenthesis was the whole requirement, and it is the reason this is one method rather than one
+line.** The obvious fix — close the Build palette in the order button's handler — would have been
+right about the panel that happened to be open when the owner noticed, and wrong about the Menu
+popover and the bed picker on the same afternoon. `CloseMenusOverTheBoard` shuts all three, and the
+next non-modal popover joins it in one place rather than in every call site that has learned to
+close things.
+
+**The modals turned out to need nothing, and that was worth checking rather than assuming.**
+Settings and the debug windows are built through `HudModal`, which puts a pickable scrim over the
+whole screen — so the orders strip cannot be clicked while one is up at all. Excluded by
+construction. Written into the method's own comment, because a list of three in a HUD with eight
+panels looks like an oversight until somebody says why it is not.
+
+**Why the orders strip is the control this happens to.** It was taken out of the palette's header on
+2026-09-17 exactly so that giving an order would not cost opening a panel first — *"this enables us
+to quickly give orders without having to click the build button"*. That makes it the one control a
+player reaches for from inside something else, which is precisely the case where leaving that
+something else standing reads as the click not having landed. The same fix, one screw further on.
+
+**It hands a job over rather than retiring one.** §7's mode colour — the palette wearing the held
+order's hue — exists for "order held while the palette is open", and the floating armed banner is
+suppressed for as long as that holds. Closing the palette on the click means the banner appears
+instead, 3 px of the same hue against the panel's 2 px hairline, which is the louder of the two and
+the one the owner asked to be *"much thicker"*. The palette's hairline keeps the cases it was really
+for: an order armed by hotkey, or armed before the palette was opened.
+
+**The test asserts the order still happens.** That is the half worth having. A close that also
+swallowed the order would photograph perfectly and be a worse fault than the overlap it replaced —
+the menu goes and nothing the player asked for does — so the tool is read back out of the director,
+not just the panel's display. It has to be a PlayMode test: what is being proved is that a shell
+built by the composition root wires the two together, and the fast tier compiles no shell. That is
+the known gap in `CLAUDE.md` about clicks, met where it can be met.
+
+Nobody has pressed Play on it.
+
+### Three reports, one play session: the dead layer, the levitating climber, and the ladder that had to go through the floor (2026-09-18)
+
+`docs/design/21-ladders-and-climbing.md` holds the rules. This is why they are those rules.
+
+**The cancel bug was not in the cancel tool, and the clarifying question is what found it.** The
+report was that a slab being built could not be cancelled. The follow-up — *did anything else on
+that layer respond?* — came back "only blueprints were dead", and the slab was over open air. That
+turns a tool bug into a picking bug in one sentence: the cancel path submits two intents per cell and
+had never been reached, because `SliceCameraRig` raises no event at all when the pick misses.
+`SlicePicker.Owner` knew an edifice, a floor, water and the block below; a site was none of them, and
+sites are drawn straight into the renderer outside the mirror the picker walks. Over open air that is
+fatal — nothing in the column — and over ground it merely answers with the cell one layer *down*,
+which is why cancelling from the layer below sometimes worked and made the whole thing look
+intermittent.
+
+**The levitation was one missing case in a comment that had aged badly.** The climb pose was already
+reached by a ladder step; every joint it moves is multiplied by `ClimbWeight`, which only rises while
+a face is found, and the face came from a scan for a *solid* neighbour. The comment beside it said
+the simulation refuses to lay a connector where there is no block, so a wall would always be found.
+True of a mined shaft. Never true of a built ladder — `RefreshLadder` asks for no wall at all. A
+ladder against slabs found nothing solid, the weight decayed to nought, and the figure rode the idle
+up through the air.
+
+**Two systems owned one plane, which is the fault this project has now had twice.** The mesher picked
+the ladder's face from the first occluding neighbour and fell back to north; the director scanned for
+solid in a different order and fell back to nothing. Where nothing occluded they disagreed
+completely: a ladder drawn on the north face and a colonist standing up straight beside it. It is
+`HopPriceHasOneOwnerTests` again, in presentation, and the answer is the same shape — one function on
+the mirror both read, and a test that measures the drawn yaw rather than reading the source.
+
+**The third report and the existing rule were the same arrangement seen from opposite sides.** A
+ladder registered a connector only when both ends were walkable, and walkable needs a floor — so the
+only ladder that had ever worked was one with a slab directly above it, which is precisely the
+"colonists go through the floor" the owner was reporting. Refusing the placement on its own would not
+have tightened ladders, it would have deleted them. So the shaft cell is open now, the ladder makes
+its own top standable, and you step off sideways on to the slab beside it. `NavGrid.RefreshFrom`
+already had the clause that makes it work — *a connector is its own floor* — written for shafts and
+waiting.
+
+**One deviation from the owner's answer, and it is not a softening.** They asked for no landing
+anywhere to be refused at placement. Only the topmost ladder of a chain needs a landing and a player
+builds a chain bottom-up, so demanding it at the order would refuse every ladder in a shaft except
+the last, in the only order they can be built. It is asked at the connector instead, where
+`RefreshLadder` already answers it again each time either end changes. The ladder is buildable and
+opens nothing until the landing arrives.
+
+**And the migration the plan worried about turned out not to exist.** The plan proposed stamping
+holes in worldgen and accepting a save break, and flagged it as the one irreversible decision. It was
+not needed: keeping "a real floor still counts" as one of the three ways a ladder may arrive makes
+the new rule a superset of the old one, so every stamped city ladder and every ladder in an old save
+keeps working. What the placement rule stops is any more being made. The cheapest fix and the
+conservative one turned out to be the same fix.
+
+**The golden master moved and named its own cause.** `Golden.City.Simulated` re-baked; `Generated`
+untouched, which is the evidence that no generator pass changed. City ladders standing under an open
+cell used to register nothing and now work, so the colony reaches places it could not. The meadow and
+the played board did not move, because neither has a ladder on it.
+
+**The photographs were the specification for the pose.** Five climbers from behind and one from the
+side: both hands on rungs *above the head*, the trailing one at chin height, the stepped knee drawn
+right up while the pushing leg stays nearly straight. The rock numbers say the lower hand hangs near
+the hip and the step is modest, which is right for stone and reads as a shrug on a ladder. Four
+numbers now branch on `Figure.OnLadder`; the pushing end of the cycle deliberately does not, because
+full stretch is full stretch either way and lifting both feet reads as hanging.
+
+Flushness needed no new number at all. `ClimbLean` already puts the body 0.30 m off the cell face,
+about a body's depth from the rungs — it had simply never been applied to a ladder, because the face
+was zero. Fixing the face fixed the lean with it.
+
+Nobody has pressed Play on any of it.
+
+### The second playtest: a blank roster, a ladder facing nowhere, and letting go after you have arrived (2026-09-18)
+
+Four reports. `docs/design/21-ladders-and-climbing.md` §7 holds the rules; this is the reasoning.
+
+**The first thing to establish was which build had been played.** The owner's checkout was on
+`claude/rates-and-stats`, eight commits behind `origin/main`, with the ladder work still an open pull
+request — so none of the morning's fixes were in what they were looking at. That is the
+confirm-delivery lesson paying for itself: two of the four reports are about code they had not run,
+and diagnosing them as regressions would have been a wasted afternoon.
+
+**The roster's blank avatars were diagnosed by what still worked.** The pictures were gone from the
+bar and present on the colonist card, and that asymmetry is the whole answer: a card is a slot that
+re-reads itself only when the colonist in it changes, whereas the inspect pane asks afresh every time
+it is opened. `PortraitStudio.Clear` destroys every texture when a colony is built or loaded, and a
+new colony's pawn ids start at the same small numbers — so nothing about any slot had changed while
+everything under it had been destroyed. An id cannot answer "does this picture still exist". A
+generation counter can, and it costs one integer.
+
+**The ladder's wrong side was an arbitrary answer the player could see was arbitrary.** `LadderFacing`
+fell back to north wherever nothing occluded, which is fine as a tie-break nobody can observe and not
+fine at all when the ladder is standing in the open. The owner picked exactly that case out of the
+options offered. So the ladder rotates now — and the wall still wins wherever there is one, which is
+not an exception but the rule: which side of a wall a ladder is bolted to is physics, not preference.
+
+Two things had to follow it, and both would have failed silently. `RaiseEdifice` kept a facing only
+for two-cell things, which was a perfectly good rule while a bed was the only rotatable thing and
+would have dropped the player's rotation between the order and the built ladder. And a one-cell ghost
+was drawn with no facing at all, so R would have turned nothing the player could see — the rotation
+would have "worked" and looked broken.
+
+**The jolt, the stall and the raised arms at the top were one fault.** The climb weight's target was a
+flat yes-or-no on whether a face had been found, so it held at 1 for the whole step and only began
+easing out on the frame the step *ended* — at which point the colonist was standing on the ledge.
+Everything the owner described happened after the climbing was over: 0.15 s of a figure on solid floor
+with its arms overhead, sliding most of a metre of lean back to the middle of its cell. Making letting
+go part of the climb — the last quarter of the rise — fixes all three at once, because all three were
+the same unwinding happening in the wrong place.
+
+The direction matters and is the one thing a phase-only rule gets wrong: going down, the top of the
+ladder is the *start* of the step, so reading the phase alone would have a colonist let go at the
+bottom of every descent.
+
+**The bed did not reproduce, and the test that failed to reproduce it is kept.** The far cell of a
+two-cell thing is derived from the facing and validated at the order, for all four facings, before
+the head cell's own check — and `BedTests.ABedIsRefusedWhenItsFarCellIsAWall` passes. The guard the
+owner asked to be general already is: `Place` applies it to any `footprint > 1` def rather than to the
+bed. So either what they saw is drawn rather than built, or it needs a sequence nobody has written
+down. Keeping the test regardless: a guard nothing tests is a guard that gets tidied away, and this
+one runs before a check that looks arbitrary until you need it.
+
+### The bed still has not been reproduced, and the hunt for it found two other things (2026-09-18)
+
+The owner reported the bed unchanged, which it would be — nothing had been changed about it. So the
+placement path was walked end to end rather than reasoned about a third time: the intent seam
+(`A`/`B`/`C` and `HandlePlace` passing them in that order), the gesture (`Commit` returns the anchor
+for a single placement and `TryPreview` builds that same cell's footprint, so ghost and order agree
+for every facing), the rotate key's shared binding (the rig skips slice-up exactly when
+`RotatableArmed`, so R cannot quietly raise the slice under a bed), the mesher's yaw, and the drawn
+bed's own extent — 4.6 m inside a 5 m footprint with 0.2 m clear at each end. Every one of them is
+right. **It is still not reproduced**, and saying so is better than shipping a change that treats a
+symptom nobody has pinned.
+
+**One of the two things the hunt did find was an hour old and mine.** `Building_Ladder` gained
+`rotates` in the Defs, and the HUD keeps a *parallel* table of footprints and rotatability because it
+cannot see `Odyssey.Sim.Construction` (ADR 0003). `DesignateDirector.RotatableArmed` reads that
+table — so the def alone would have left R raising the slice instead of turning the ghost, and the
+player's rotation discarded, with every simulation test green, because the consequence is not in the
+simulation at all. The fixture that was supposed to hold the two tables together checked their
+*lengths* and spot-checked the wall and the bed: exactly the shape of test that passes while the row
+that matters is wrong. It walks every handle against the Defs now.
+
+That is the second time in two days that a rule with two owners has failed silently, after the
+ladder's face. The pattern is worth naming: a parallel table is allowed here — ADR 0003 makes it
+necessary — but a parallel table that nothing *compares* is a bug with a delay on it.
+
+**The other was the guard the owner asked to be general, which already was, on the side they could
+not see.** `Place` derives a two-cell thing's far cell from the facing and refuses the order when
+anything stands in it. Correct, tested, and invisible: the ghost asked only about the cell under the
+pointer, so a bed with its far half in a wall drew in its own material like any legal order and then
+the click did nothing. A click that silently does nothing is indistinguishable from a click that
+missed — which is one way "it doesn't respect where I placed it" gets reported, and it is worth
+fixing whether or not it is the fault being chased. The ghost derives the footprint with
+`EdificeFootprint` rather than restating it, because a cursor that disagrees with the order about
+which cells a thing claims is the fault this line of work has already hit three times.
+
+### The bed, found: two correct lines with a Clear between them (2026-09-18)
+
+`Raise` derived the bed's far cell from `_facing[cell]`, called `Clear(cell)` — which zeroes the
+site, facing included — and then read the facing **again**, out of the slot it had just wiped, on its
+way to the record. Every rotatable thing was built facing north whatever the player chose.
+
+**It hid because only the drawing was wrong.** The cells were derived before the clear and were
+always right, so the footprint guard still refused a bed whose far half was in a wall, nothing was
+ever built anywhere illegal, and the simulation was consistent with itself throughout. The record
+said north, so the mesher drew the bed extending north from its head cell — into whatever was north,
+walls included — while the cells it occupied were the ones the player asked for. A bed lying through
+a wall it does not occupy. And `AimSleep` lays a sleeper out along the bed's facing, so the same
+line put colonists across their beds: the "half way up the bed … hanging off" from the same report.
+
+**Three tests had a clear shot and all three missed.** `ABedsFacingIsInTheStateHash` passes on the
+difference between the two beds' *cells* rather than their facings — written to pin the facing,
+pinning something that happened to move with it. `ABedIsRefusedWhenItsFarCellIsAWall`, written the
+previous day expressly to reproduce this report, passes because the guard it tests was never the
+broken part. And every other bed test places facing 0, which is also what a lost facing looks like.
+The new test walks every facing the board allows and refuses to pass on fewer than two.
+
+**The method is the lesson, not the line.** Three sessions of reading the placement path end to end
+— the intent seam, the gesture, the shared rotate key, the mesher's yaw, the bed's drawn extent —
+each concluded correctly that the part in front of it was right, and every one of those conclusions
+was true. The fault was in the gap between two of them. Ten lines of throwaway test printing
+*asked → got* found it on the first run. Reading tells you whether a line is correct; it does not
+tell you what the value actually is at the moment it is used.
+
+The screenshots were what made the probe possible. "It doesn't respect the rotation" is ambiguous
+between the cell, the facing and the drawing; two pictures of the same three beds before and after
+building said *a quarter turn*, which is one hypothesis and is testable in a single assertion.
+
+## 2026-09-18 — "Sometimes" meant a race between two blueprints
+
+Three ladder reports from the same playtest. The value of the day was in what did *not* get built.
+
+**Report 2 was already done.** R, the turning ghost and the red refusal all landed in PR #110, which
+is the build the owner was playing when they asked for them. Fifteen minutes of checking
+`BuildShapes.Rotates`, the def and `OdysseyBootstrap.Refused` against the merge saved a unit of work
+on a feature that already existed. Verify before building is not a slogan here; it is the second time
+this week it has paid.
+
+**Report 1 was two complaints and one cause.** "Can't place a ladder under a slab" is the rule the
+owner asked for the day before and it stands — they chose refuse-and-say-nothing-more over
+auto-deconstructing the slab or allowing an inert ladder, when all three were put to them. "And has
+to be against the wall" sounded like a second bug and nothing in the code has ever asked for a
+neighbouring wall. It is the same rule seen from inside a roofed room: every cell there is under a
+slab, so the only cells that take a ladder are the ones past the slab's edge, which are the ones
+beside the wall. Confirmed by the owner rather than assumed.
+
+**Report 3's prime suspect was wrong, and the probe took one run to say so.** The standing theory —
+written into the design document the day before as the deferred migration — was `LadderArrivesAt`'s
+compatibility clause. It cannot be the cause on the board the owner played: **the wooded meadow
+generates no ladders and no connectors at all**, measured on three seeds. That single number
+redirected the whole hunt.
+
+What it actually was: **the shaft rule asked the built world, and a blueprint is not built.** Order a
+ladder, order a floor above it; each is legal on its own because neither exists yet. Both get built.
+That is the whole of "sometimes" — it depended on which job a colonist picked up. The fix is that the
+rule sees sites, and is asked again at `Raise`, because the rule spans two cells that are ordered
+separately and the other order can legitimately arrive later. Only that rule is re-asked, not the
+whole of `Allows`: a site with its own material hauled to it fails `needsClearCell`, and re-asking
+everything would have refused every bed whose wood had been delivered. A general fix would have
+introduced a worse bug than the one it closed.
+
+**The clause went anyway and cost nothing, which is worth recording because the plan said otherwise.**
+The owner accepted the save break; the plan said it meant stamping holes in worldgen and re-baking
+`Golden.City`. All three golden masters came back byte-identical — worldgen's ladders reach the nav as
+`StampedConnector`s and never consult `LadderArrivesAt` at all. The migration that had been deferred
+as expensive turned out not to exist. Measuring the consequence beat reasoning about it, again.
+
+**Two defects fell out that nobody had reported.** A shaft could only ever be one storey: a ladder is
+`blocking false` so a colonist can stand in it, and `SomethingUnderfoot` wants a *blocking* edifice,
+so the second ladder of a chain was refused and `LadderArrivesAt`'s own chain clause — written
+expressly for that case — was unreachable for anything a player built. Every test in `LadderTests`
+builds one ladder, so nothing had ever asked the question. And the first fix did not work: the
+connector was gated on `CellGrid.IsWalkable`, which cannot see that a connector is its own floor, so
+the chain built and the upper ladder silently had no connector. The pattern is the one this project
+keeps meeting — two correct rules that disagree about the same question — and the answer was the same
+as ever: one named owner for each half, `StandsOnSomething` for placement and `StandsOnAFooting` for
+the connector, with the difference between them written down.
+
+Both fixes were the owner's call, asked mid-unit rather than assumed, and both were told to go in.
+### The candidate card lost its skills to a face, and nobody could see it (2026-09-18)
+
+The owner, playing the setup page: *"I'm not seeing the skills rolled randomly on the character
+generation screen — is that supposed to happen?"*
+
+**The roll was never the problem, and measuring it first is what kept this from becoming a hunt
+through `ColonistDraw`.** Three thousand draws off the same method the colony calls: only **2.6% of
+candidates have every live skill at zero**, the best skill is 3 or better on **70%** of them, and a
+sample deal reads `Hauling 5 · Cutting 8 · Mining 6 · Construction 2` beside `Hauling 1 · Mining 1`.
+Every card also takes a fresh `SeedEntry.Draw()` off machine entropy, so Reroll genuinely redeals.
+The simulation half was right all along.
+
+**The card was showing a name and an occupation.** An occupation is drawn from its own salt —
+deliberately, so that two facts about one person are not correlated — which means it tells a player
+**nothing about what that person can do**. So the page whose entire job is telling three people
+apart showed three names and three trades, and the skills were in the detail pane, for the one card
+you had clicked. Comparing candidates meant clicking each in turn and remembering.
+
+**Three dead artefacts said so, which is what made it attributable rather than merely visible.**
+`HudLayout.ColonistCardSkills = 2`, read by nothing, carrying a comment about keeping the card's
+height and its contents in step. `.colonist__skills` in the sheet, applied to no element.
+`HudLayout.ColonistScreenHeight`, modelling a caption and a standalone colonist screen that
+`BuildSetupPage` stopped drawing when the candidates joined the seed and the board size on one
+full-viewport page — and the fast tier was asserting that model fits `StartListMax`, a box this
+screen does not sit in.
+
+**The cause was the avatar doubling, and it left a second mark that was in plain sight.**
+`20-avatars.md` §10.6 took `Avatar` 30 → 60 and re-derived every card that carries one: the roster
+card 106 × 63 → 126 × 89, the inspect header 38 → 60, the strip share, the top scrim, the coverage
+ceiling. **The candidate card is not on that table.** It kept 47 and drew a 60 px face in it, at a
+53 px pitch — so on `Logs/setup-page.png` the three faces run into each other and over the selection
+outline, and the skills line had been squeezed out to make room for the trade.
+
+**Nothing failed, and the reason is worth keeping.** `HudStyleSheetTests` pins `.colonist`'s height
+to `HudLayout.ColonistCard`, so the sheet and the model agreed — because neither had moved. A
+consistency test between two copies of a number cannot notice that the number is wrong. The check
+that was missing is one line of arithmetic nobody thought to write: **a card is at least as tall as
+the face it carries.** It is `EveryCardIsAtLeastAsTallAsTheFaceItCarries` now, asked of all three
+cards at once, and `StartScreenTests.TheCandidateCardsDoNotRunIntoEachOther` asks the same of the
+laid-out elements, where a player would ask it.
+
+**What reading the code could not settle, and the picture did in one look.** Most of an hour went
+into the fixed box's arithmetic — three lines come to 296 against a body of 284, so a third line
+does not fit — and every bit of that was a correct answer to a question that had stopped applying.
+The screenshot showed the setup page occupying the top third of a 1080p canvas with some seven
+hundred empty pixels under the cards. The layout constants had modelled a screen that no longer
+existed, and *reading them more carefully would only have made the wrong model more convincing.*
+Run the shot first: `scripts/unity.sh test playmode -testFilter …PhotographTheSetupPage`.
+
+**The card is re-derived from its own rows**, the way §10.6 did the roster card: 29 name + 18 trade
++ 18 skills = 65, clear of the 60 px face. The column went 260 → 300, because a 60 px face and a
+third line left 176 px of text where §3 sized 206 and the page is the full viewport rather than the
+fixed box. The trade drops from `TextMeta` to `TextDim` so the three lines read as a hierarchy on
+the theme's four existing tokens rather than a fifth being invented — name, then what they can do,
+then what they used to be. `SkillSummary` in `Odyssey.Hud` owns the line's rules, so live-only,
+no-zeroes, ties-in-reading-order and the em dash for the one candidate in forty with nothing to show
+are fast-tier tests rather than things discovered on screen.
+
+**The general lesson, and it is the rates review's from the day before, arrived at from the other
+end: a constant nothing reads is not harmless.** Three of them here described the screen as designed
+while the screen had quietly become something else, and each of them would have been believed by the
+next session to read it. One of them was being asserted by a passing test.
+
+### The setup page, played twice in a day (2026-09-18)
+
+Five corrections after the owner played §6b's card, and the first of them takes §6b's own feature
+off again: *"from the left hand panels, no need to display any skills there — Name, Age, Occupation,
+and resize occupation accordingly to a bigger size."*
+
+**That is worth reading carefully, because it looks like a reversal and is not.** The original
+report was that nothing on the page varied by ability, so the roll looked broken. §6b answered it in
+two places at once: it put a skills line back on the card *and* it made the detail pane legible —
+two columns, real spacing, a bigger type step. Having played that, the owner kept the second and
+dropped the first. The report is still answered; the card is identity alone and the pane carries the
+numbers. **The card's skills line should not be restored as a fix for the original report**, and
+`18-colonist-select.md` §6c says so in place.
+
+**`SkillSummary` and its seven tests are deleted rather than left unused.** That is §6b's own lesson
+turned on §6b: three dead constants describing a line nothing drew are what made the first loss
+invisible, and leaving a ninth-tenths-finished formatter behind "in case" would have been the same
+mistake with fresher paint.
+
+**Two headings wanted two different answers to one request.** "Bigger bolder headings" arrived for
+section titles and for field captions in the same message. A section over a block on a full screen
+read at leisure is `HudTextRole.Name`, 19/600 — the one step of the scale that is both bigger and
+bolder than the body under it. A caption over a text field is `PanelLabel`, 11/600 upper and
+tracked, which is what the stores panel, the rail and the alerts list are already introduced by and
+reads unmistakably as a label rather than a value. Neither adds a rung to `HudType`.
+
+**A specificity trap, found by reading and not on screen.** Outlining every pressable row on the
+page needed `.setup .settings__row` — scoped, because that row is also the settings panel's and the
+Menu popover's, and a grid of outlines over a running world is noise. That selector is 0,2,0 and the
+green Start row's `.setup__commit` was 0,1,0, so **the grey border would have won and Start would
+have quietly stopped being green** — a change that undoes a change made an hour earlier, with
+nothing failing. Specificity beats order in USS as in CSS. The green rule is a descendant now too.
+
+**And the owner's sharpest note of the day was three words long:** *"not to reinvent"*. The page
+wanted a translucent backdrop; the first instinct was to pick a colour. It wears `.panel` and
+`.window` instead — the classes the settings panel, the Menu popover and the start screen's own
+panel are built from — so the fill, the border and the radius are tokens the sheet already pins and
+nothing about the colour is restated. `.setup` overrides only where it sits and how much air it
+keeps. **The general form: when a screen needs to look like the rest of the interface, wear the
+interface's classes rather than copy its values.** A copied value is a value that drifts.
+
+### A name pool that is one file, generated, and costs nothing to read (2026-09-18)
+
+The owner supplied about 240 given names in three lists — ordinary ones, invented ones, and a run of
+British nicknames (*Spudgun*, *Treacle*, *The Dude*) — and then, mid-change, the two constraints
+that decided the shape: *"make it performant then and centralise it if need be."*
+
+**The pool was eight names in a C# array**, with a comment promising it would reach "about forty at
+M2, when pawn generation needs a pool that does not repeat in a colony of fifty". That promise was
+three milestones old. It is 244 now, which is six times what it asked for, and
+`ThePoolOutlastsAnyColonyThisGameBuilds` walks a colony of fifty and asserts no two share a name —
+so the `"Wrenn 2"` suffix a ninth colonist used to get is unreachable by any colony this game
+builds. The branch is kept because it is what makes the method total, and it is the only line in the
+namer that allocates: on every path anybody actually walks, naming a colonist allocates nothing.
+
+**Centralised the way the icon keys already were.** `docs/design/colonist-names.csv` is the one
+place a name is decided; `emit_labels.py` — the generator that already turns `icon-keys.csv` into
+`Registry.g.cs` — gained a second output rather than a script of its own, so it is still **one
+generator and one `--check`**, and CI covers the new file without a workflow change. The wiki gained
+a page listing all 244 with their register and gender, because the whole reason names are content is
+that the owner can read them and strike the ones they do not want.
+
+**Performance was the easy half and worth stating anyway.** The generator writes string literals, so
+the pool lives in the assembly's constant pool and naming a colonist is an index and a modulo — no
+parse, no file read, no dictionary, no allocation. That matters because the roster strip and the
+inspect header ask per figure per frame.
+
+**Two names were dropped as duplicates and the generator now refuses them.** *Nova* appeared in both
+of the first two lists and *John* in the first and third; a pool with a repeat in it would name two
+colonists in one colony the same thing, which is precisely the fault the whole seed-and-id scheme
+exists to prevent. `load_names` raises on a repeat rather than silently deduping, because a name
+quietly vanishing from a 244-row CSV is not something anybody would notice.
+
+**The order of the CSV is load-bearing, and that is the trap to write down.** A name is arithmetic
+on a saved seed and a slot, so **sorting the file renames every colonist in every existing save**.
+Add to the end; never sort. Growing the pool from 8 to 244 already did this once — every colonist in
+every save made before today now goes by a different name — which is harmless exactly once and the
+reason the rule is stated in the CSV's own wiki page, in the generated header and in the namer.
+
+**Gender is recorded and nothing reads it, deliberately.** The owner asked "if can apply to gender".
+It cannot yet, and the reason is not the names: **no pawn in the simulation has a gender at all**,
+and the drawn colonist is one of sixty-one Synty models in a single undifferentiated family, so a
+gendered name would be contradicted by the figure beside it about half the time. Adding gendered
+names without a gendered figure would make the game look *more* wrong, not less — there is currently
+no expectation for a face to fail. The column is in the CSV because it cannot be re-derived cheaply
+later and because the wiki is where the owner corrects it; it is **not** generated into C#, since a
+constant nothing reads is the artefact this project keeps being bitten by.
+
+**And the pool cost ten pixels a card, after two rounds of getting it wrong.** The Unity tier
+failed on `TheCardIsWideEnoughForItsRowsAndNoWider`'s **lower** bound — the roster card budgets
+50 px for a name and *Christopher* draws 60 — which is the bound that exists for exactly this and
+which `CardWidth`'s own comment had predicted in words a month earlier.
+
+The first answer was to shorten that one name, on the reasoning that it was the only entry over ten
+characters. **The next run named *Alexander*: nine characters, 52 px, where *Christopher* is eleven
+and 60.** Character count does not predict width, which is a sentence I had written into a test
+comment on the previous commit and then immediately acted against. "Trim the long ones" is not a
+rule anybody can apply — it is guessing until CI stops complaining, one round at a time, against a
+list that is the owner's content rather than ours.
+
+So the card is sized once to the widest name the pool can produce, which terminates, and the
+coverage ceiling goes 20% → 21% (the forced two-row strip at 1280 × 720, 19.80% → 20.19%). **The
+fourth raise of a number that is the owner's**, and it is recorded beside the other three with what
+it buys: no colonist's name is cut short on the roster. The reversal is cheaper than the avatar's —
+ten of the 136 pixels are the name budget, so putting the ceiling back is a content decision about
+accepting an ellipsis on the longest few names, which is the one thing on a card this interface
+already permits to be cut short.
+
+**The reusable half is about proxies.** A fast-tier test cannot measure text, so it guarded the pool
+by character count — and passed an eleven-character name that then failed the pixel measurement.
+A proxy that does not fail where the real thing fails is not a cheap version of the gate; it is a
+second opinion nobody asked for, and it is worse than nothing when it is believed. That test now
+says out loud that it only catches the absurd and that `HudGeometryTests` is the gate.
+### The rates line, reviewed: one field carrying two units (2026-09-18)
+
+Five fixes off a fresh-eyes review of `WS1`–`WS3`, on a worktree built from the pull request head.
+Four of the five are one fault wearing different clothes, and the fifth is a comment that had been
+doing arithmetic on the wrong cadence.
+
+**`ToilProgress` was counting ticks in three drivers and thousandths in four.** `WS1` scaled the
+work toils so a rate could change how fast a colonist pays without changing what anything costs,
+and left the three toils no rate can speed up — eating, sleeping, standing down — on a bare `++`.
+Internally each was consistent, which is why nothing failed. Across the field they were not, and
+the field is saved and hashed. Two things followed. `Rates.FromSave` is told a format version and
+nothing else, so on a pre-format-5 file it multiplied *every* value by a thousand: right for a
+half-mined rock, wrong for a half-eaten meal, which then finished on the next tick. And
+`Pawn.ContributeTo` divided the field back, so eat, sleep and wait read zero for the whole of their
+length and reached the hash not at all. A toil with no rate now pays at exactly `Rates.Scale` a
+tick — the standard rate, said in the unit everybody else is speaking — and
+`ToilProgressHasOneUnitTests` fails the fast tier on any `ToilProgress++` left in the simulation.
+
+**The same division was costing the hash three decimal places everywhere else.** All four
+accumulators were hashed divided back to whole ticks. That was WS1's price for landing with no
+golden moving, and it was the right trade for one commit; WS3 then re-baked every `Simulated` value
+anyway and the division outlived its reason, leaving a blind spot a thousand milliwork wide — two
+runs could differ on a cell and agree until the difference happened to cross a tick boundary. A
+hash that is late to notice a divergence is the thing this hash exists not to be. Hashed whole now.
+
+**All three goldens moved, and that the run did not change was measured rather than argued.** With
+the other three fixes in place and only these two lines reverted, the table comes back to the
+values the branch committed, to the digit. So the colonists walked the same walks and swung the
+same swings; what moved is what the hash can notice about them. No `Generated` value moved, as none
+could — nothing here runs before the first tick.
+
+**`starvationPerInterval` was four times faster than every sentence describing it.** The comment
+read the needs cadence as 200 intervals a day. It is 400 — a 60,000-tick day over the 150-tick
+cadence — so at 2 per interval the bar filled in a day and a quarter where the Def, the field and
+the design all promised two and a half, and severe malnutrition arrived in the fourth day of not
+eating rather than the fifth. **Nothing had ever measured it:** every band test set
+`StarvationSeverity` by hand, so the only new Def integer with no test was the one that decides how
+long starvation takes to bite. It is 1 now, the arithmetic is written out beside it rather than
+summarised, and `TheBarFillsAtTheCadenceItsCommentClaims` holds the sum and the tick path together.
+No golden moved — no golden window lets a need reach zero — which is also why the WS3 soak's
+condition comparison was honestly vacuous.
+
+**A pace cached off a seed that arrives later.** `InnatePacePerMille` caches on first read, which is
+right; the seed it reads is restored by `PawnSeedSection`, which runs *after* the pawn section that
+made the pawn, and is rewritten again whenever a candidate is rerolled on the select screen.
+Nothing reads a pace that early today, so nothing was wrong — but this project has already rolled
+an entire colony from seed zero by exactly that route, when `PawnContext.Seed` was unset until the
+first tick. `RollSeed` is a property now and its setter drops the cache, which turns a live trap
+into a closed one for the cost of four lines.
+
+**And a colonist could collapse onto her own bed.** `SleepJobDriver` tested zero rest before it
+tested arrival, so a colonist whose rest ran out on the tick she stepped onto her bed took the
+collapse branch — and rest effectiveness is read off the cell while the thought was not, so she got
+the bed's rate and the mud's memory. Arrival wins: there is no walk left to cut short.
+
+**What the five have in common is that none of them could fail a test that existed.** Three were
+invisible because the thing they corrupted was only ever read back by the same code that wrote it;
+one was a comment; one needs a window a few ticks wide. The tests added here are the cheap general
+forms — a source scan for the unit, one arithmetic assertion beside one tick-driven one for the
+cadence, and a control apiece for the cache and the bed.
+
+### The rates branch catches up, and the goldens did not move (2026-09-18)
+
+`main` had gone twenty-two commits ahead, so `WS1`–`WS3` was merged up: the review fixes first, then
+`main`. Two conflicts, both the same append-collision in `CLAUDE.md` and `docs/journal.md`.
+
+**`Golden.cs` merged clean, which is the outcome to be suspicious of.** The last time these two
+lines of work met, the city hash conflicted and *neither side's value was right for the merged
+code*; a silent auto-merge is that same danger with nothing to flag it. So the three were run rather
+than trusted — with the two controls beside them, `TheHashActuallyDependsOnTheWorld` and
+`TheHashDependsOnHowLongItRan`, because a golden that passes because the hash has stopped depending
+on anything is worse than one that fails.
+
+All five pass, and the reason holds up to inspection. `main` touched `Golden.cs` not at all since the
+branch diverged, and its only change under `Assets/Odyssey/Sim` is `ConstructionGrid`: the new
+`RunLandsOn` for drag preview, and a rewrite of the ladder-under-slab placement rules. **Those are
+order-time rules, and no golden issues an order** — every case builds on `Scenario_Bare`, which has
+never given a standing order in its life. The first read of that diff was "purely additive", which
+was wrong: twenty lines were removed. The claim that survives is narrower and is the one that
+actually explains the result.
+
+**The counts were resolved by running them, not by adding them up.** 721 Sim + 409 Hud, Long 21 —
+the merge of a branch at 712 + 406 with a main at 694 + 409, which is not an arithmetic anybody
+should attempt in their head.
+
+### Chopping gets a skill of its own, found by a player feeling it work (2026-09-18)
+
+The owner, playing WS2: *"I noticed the chopping varied in speed — could we possibly add that to
+the skills in all the places it needs to be and assign one there?"*
+
+**Chopping had no skill on screen, and the axe work was levelling up Growing.** `SkillCatalogue`
+mapped the simulation's `Skill_Cutting` onto `ui.skill.growing`, on reasoning that was perfectly
+defensible when it was written: felling is plant work, the canon work type is "cut plants and clear
+growth", and growing was the only plant skill in the list. The consequence was that a colonist who
+spent a day with an axe got better at *Growing*, and a player looking for the number behind the
+speed they had just watched change found nothing called Chopping anywhere.
+
+**It was found from the far end, which is the interesting part.** Nothing was broken — the sim had a
+`cutting` skill all along, it was saved, hashed, and driving the rate correctly. What was missing
+was only the name, and a missing name is invisible until somebody has a reason to go looking. WS2
+gave them one: **a skill that does something is a skill people try to find.** For three milestones
+the mapping was harmless because no rate read a level; the day one did, it stopped being harmless.
+
+**The word is the owner's and the family now agrees.** The order says Chop, `ui.status.felling` says
+Chopping, and `ui.work.cutting` said *Cutting* until this change brought it along. Four surfaces,
+one word. **The key stays `cutting`** — `ui.skill.cutting` — because it matches the simulation's
+`SkillIndex.Cutting` and a key is a stable identifier rather than a label; three rows of that
+catalogue already do not spell their own labels.
+
+**Growing goes back to being unsimulated**, with the reason every disabled row must carry: nothing
+is planted yet. **The new row has no art** and says so in `icon-map.csv` rather than borrowing the
+seed-sack picture — a wrong icon is worse than an outlined square, because the square admits it.
+
+**Two tests changed and one got stronger.** The pair that pinned "felling is plant work and trains
+growing" now pin chopping's own row; the assertion that a borrowed row explains itself was replaced
+by one naming the live set outright — `ui.skill.mining` and `ui.skill.cutting`, each under its own
+name — because asserting a borrow that no longer exists would pin the very thing this removed. The
+grid is unmoved at seven rows: `(13+1)/2` and `(14+1)/2` are both 7, so nothing in the pane or the
+setup page had to be re-derived.
+
+**And the art gate caught the missing icon within one CI round.** Adding Chopping without a picture
+failed `TheSkillsTabSwitchesAndDrawsTheOwnersArt`, which asserts `drawn == All.Length - 1` — *every
+skill but social is cut from the owner's sheet*. Expected 13, drew 12. That is a self-maintaining
+rule rather than a count somebody has to remember to bump: **add a skill and you have added an
+obligation to draw it**, and the alternative was an outlined placeholder square sitting in the
+Skills tab indefinitely with nothing to report it.
+
+The owner supplied the tile the same afternoon, a 32 px framed action tile in sheet 06's own format.
+**It went in as a sheet of its own rather than into sheet 06**, and the reason is worth keeping: the
+icon map records which cells are *used by keys*, not which cells hold art, so an unmapped cell of
+somebody's sheet is not a free cell — pasting into one risks painting over art nobody has mapped
+yet. `09-supplied-tiles.png` is one cell wide and says in `sheets.csv` that it grows a column at a
+time, so the next one-off has somewhere to go that costs nothing to find.
+
+The pipeline then did the rest on its own terms: `detect` agreed with the registry, `export` wrote
+64 x 64 RGBA8 at nearest-neighbour scale 2, and **no other icon changed by a byte** — which is the
+check worth making after any export, because the tool rewrites all of them and a silently re-encoded
+sheet would be invisible in a diff of thirteen files.
+
+### Interactive Alerts: subject selection, dismissals, and vertical alignment (2026-09-18)
+
+Settled through Ground → Interview → Plan → Execute on branch `claude/interactive-alerts`.
+
+- **Alerts were verbose sentences with trailing details.** "A colonist is close to breaking — mood has fallen into the strained band" was passive and took two lines in a 242 px column, pushing the depth rail and panel stack down. It now takes the direct form "Theodore is close to breaking" or "Theodore is starving", with the subject highlighted in bold severity ink (Red for Danger, Amber/Yellow for Warning, Accent Gold for Notice).
+- **Clicking the entire alert row selects and jumps.** It calls `HudDirectors.ChooseColonist(pawnId, snapshot)`, which sets the slice layer, selects the colonist in `SelectionDirector`, and focuses the camera directly on them — identical to clicking their card in the top roster bar. Hovering anywhere on the row highlights the row (`rgba(255, 255, 255, 0.05)`) and shows a link cursor.
+- **Alert rows carry aligned dismiss 'X' buttons in a column.** Each row has an 18×18 px dismiss element with `HudGlyphKind.Close` aligned to the right edge. Dismissing suppresses the alert until the underlying need condition clears and later re-occurs (e.g. food climbing back above `StarveClearAt` removes the dismissed latch). `PointerDownEvent` and `ClickEvent` on dismiss call `StopPropagation()` so dismissing never triggers row selection.
+- **A panel-level Clear All button sits in the header.** An 'X' in the top right-hand corner of the Alerts panel header (using the standard `CloseButton` styling opposite the "Alerts" label) clears all currently visible alerts at once.
+- **Symbol vertical alignment and compact single-line height.** The alert symbol is vertically centered with the text (`align-items: center`). Single-line alert row height is updated to 26 px (`HudLayout.AlertHeight = 26`), matching UI Toolkit's 13 px text box, reducing HUD screen coverage and avoiding unnecessary multi-line row clamping.
+- **Reconciled with `origin/main` to resolve name disconnection.** Merged PR #114, PR #115, and PR #111 into the branch. The old branch was generating names from the retired 8-name mockup array ("Wrenn", "Odile"...) while `origin/main` had moved to the generated 240-name pool (`ColonistNamePool.Names` in `ColonistNames.g.cs` from `docs/design/colonist-names.csv`). Reconciling ensures alerts, roster cards, inspect panels, and the start screen draw identical names from `ColonistNames.Of(snapshot, pawn.Id)`.
+- **The fast tier caught the style rule; Unity caught the nullable contract.** `HudStyleSheetTests.TheSheetSetsNoTypeAtAll` prevented `-unity-font-style` in USS (font weight belongs strictly to `HudType`/`HudText` in C#). And Unity batch compile caught `CellRef` as a non-nullable value type, enforcing `CellRef?` across `AlertRow` and `AlertRowView`.
+- **Gates verified:** Fast tier 721 Sim + 411 Hud passed; EditMode 1675 total, 1662 passed, 0 failed; PlayMode 80 total, 75 passed, 0 failed; both wiki checks clean (`build_wiki.py --check`, `emit_labels.py --check`).
+
 ### The dissolve that only a field could find (2026-09-18)
 
 The U50 gate asked for a two-thousand-cell field in the frame test, and painting one is what found

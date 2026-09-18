@@ -272,6 +272,8 @@ namespace Odyssey.Sim.Pawns
     /// </summary>
     public class MineJobDriver : JobDriver
     {
+        public override int WorkType => WorkTypeIndex.Mining;
+
         /// <summary>
         /// The rock face, once the walk is over and the swings have started. Presentation turns
         /// this into a tool in the hands and an arm that comes down on it; before the walk ends it
@@ -338,8 +340,12 @@ namespace Odyssey.Sim.Pawns
             // meal, a sleep or a mental break used to take the whole morning's work with it, and
             // the next colonist started the face from nothing — hours quietly thrown away, and
             // the reason a half-cut face could never be drawn as half cut.
-            ToilProgress++;
-            if (designations.AddWork(cell, 1) < NaturalContent.TerrainAt(terrain).workToClear)
+            //
+            // The cell's ledger is in milliwork (see Rates); the price it is read against is in
+            // ticks. The pawn pays at its own speed and the cell charges at the standard one.
+            int rate = Pawn.WorkRatePerMille(WorkTypeIndex.Mining);
+            ToilProgress += rate;
+            if (designations.AddWork(cell, rate) < NaturalContent.TerrainAt(terrain).workToClear * Rates.Scale)
                 return JobStatus.Ongoing;
 
             designations.Clear(cell);

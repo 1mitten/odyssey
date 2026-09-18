@@ -410,7 +410,7 @@ namespace Odyssey.Sim.Construction
                 new BuildingDef
                 {
                     defName = "Building_Ladder", label = "ladder", edifice = CoreContent.EdificeLadder,
-                    blocking = false, costCount = 4, workToBuild = 90, minSkill = 0,
+                    blocking = false, rotates = true, costCount = 4, workToBuild = 90, minSkill = 0,
                     iconKey = "ui.arch.tool.ladder",
                 },
 

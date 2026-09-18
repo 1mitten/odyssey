@@ -205,6 +205,19 @@ namespace Odyssey.Sim.Saving
         /// behaviour unchanged. Section readers learn the version from
         /// <see cref="SaveReader.FormatVersion"/>, the one place it is threaded down to them.
         ///
+        /// <para>5 (U42): the four work accumulators — <c>DesignationGrid._work</c>,
+        /// <c>ConstructionGrid._work</c>, <c>Job.ToilProgress</c> and <c>Pawn.MoveProgress</c> —
+        /// count milliwork (thousandths of a tick) instead of ticks, so a rate can change how fast
+        /// a pawn pays without changing what anything costs. <see cref="Rates.FromSave"/> reads an
+        /// old value at the old scale.</para>
+        ///
+        /// <para>6 (WS3): the pawn grew <c>StarvationSeverity</c>, the bar that fills while the
+        /// food need sits at zero and steps condition down in three bands. Older files read back
+        /// zero — nobody in an older world had ever been starving by this definition, so nobody
+        /// loses a condition they had earned. A colonist's innate pace, rolled in the same unit,
+        /// is deliberately <i>not</i> saved: it is a pure function of her seed and her id, both of
+        /// which are already in the file, and a recomputed value is correct by construction.</para>
+        ///
         /// <para>3 (U38): the recipe grew the two natural-board flags, <c>Barren</c> and
         /// <c>Wooded</c>. See <see cref="SaveRecipe.Barren"/> for what was wrong without them —
         /// in short, three different boards all called <c>Natural</c>, so a header could not
@@ -214,10 +227,10 @@ namespace Odyssey.Sim.Saving
         /// <para>2 (U36): the header grew a <see cref="SaveRecipe"/> — map type, scenario, colony
         /// name and day — after the world scalars it always carried.</para>
         ///
-        /// <para>Version 1, 2 and 3 files all still load; <see cref="ReadHeader"/> is the one
+        /// <para>Version 1, 2, 3, 4 and 5 files all still load; <see cref="ReadHeader"/> is the one
         /// place that knows which versions wrote what.</para>
         /// </summary>
-        public const int CurrentFormatVersion = 4;
+        public const int CurrentFormatVersion = 6;
 
         public static void Save(SimWorld world, Stream stream, IReadOnlyList<ISaveable> components,
             SaveRecipe? recipe = null)

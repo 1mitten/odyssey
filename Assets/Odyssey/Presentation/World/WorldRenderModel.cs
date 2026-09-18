@@ -48,13 +48,18 @@ namespace Odyssey.Presentation.World
         readonly ushort[] _slot;
 
         /// <summary>
-        /// The bed's drawing state, mirrored per cell from the one record both cells point at:
-        /// the facing (on both halves) and which half is the head (on the head alone), so the
-        /// mesher can draw the whole bed once from the head without asking the world a question
-        /// on every cell.
+        /// How a built thing was turned, mirrored per cell from its record, and — for a bed — which
+        /// of its two cells is the head, so the mesher can draw the whole bed once from the head
+        /// without asking the world a question on every cell. A bed carries the facing on both
+        /// halves and the flag on one.
+        ///
+        /// <para>The facing is kept for <b>any</b> record rather than for beds alone: a ladder
+        /// rotates too since 2026-09-18, and anything that does not rotate stores nought anyway.
+        /// A second array for the second rotatable thing would have been two copies of one fact.</para>
         /// </summary>
-        readonly byte[] _bedFacing;
+        readonly byte[] _edificeFacing;
         readonly bool[] _bedHead;
+
 
         /// <summary>The crop standing in each cell as <c>plant handle + 1</c>, or 0 for fallow. A crop is not in the grid — it lives in zone state — so this mirror is fed from the published snapshot, not from a contributor.</summary>
         readonly byte[] _cropPlant;
@@ -72,6 +77,36 @@ namespace Odyssey.Presentation.World
         int[] _cropApplied = Array.Empty<int>();
         int _cropAppliedCount;
         int[] _cropScratch = Array.Empty<int>();
+
+
+
+        /// <summary>
+        /// The cells holding a building site, and what is going up in each.
+        ///
+        /// <para><b>Why a set beside the arrays rather than a column in them.</b> Everything else
+        /// here is geometry, mirrored per chunk off the <see cref="CellGrid"/> and driven by that
+        /// grid's dirty flags. A site is not geometry and does not dirty a chunk: it appears the
+        /// moment an order is given, carries progress that changes every tick, and vanishes when
+        /// the thing it describes becomes a real wall. Mirroring it through the chunk path would
+        /// mean dirtying chunks for something that changes nothing about the mesh.</para>
+        ///
+        /// <para><b>Why it is here at all, then.</b> Because "what is in this cell" must have one
+        /// answer. <see cref="CameraRig.SlicePicker"/> knew four things — an edifice, a built
+        /// floor, water, and the block below — and a site was none of them, so a waiting order was
+        /// never a pointer target: over open air the ray found nothing and the whole layer went
+        /// dead to every tool, and over ground it fell through to the block and handed back the
+        /// cell one layer down. The owner reported both halves on 2026-09-18 (<i>"I tried to use
+        /// the cancel tool to cancel a slab being built — but it didn't work"</i>). The alternative
+        /// was a second pass in the rig that tested the snapshot's site list around the pick, which
+        /// is a second implementation of this question and would have drifted from the first; the
+        /// forced-order context menu needs to right-click a site too (`15-building.md` §8), so it
+        /// would have been written twice.</para>
+        ///
+        /// <para>Small by nature — a colony's outstanding orders, tens to hundreds — so it is
+        /// cleared and refilled from the frame rather than diffed.</para>
+        /// </summary>
+        readonly Dictionary<int, byte> _sites = new Dictionary<int, byte>();
+
 
         ModuleGroup[] _groups;
         readonly int[] _terrainModule;
@@ -102,7 +137,7 @@ namespace Odyssey.Presentation.World
             _edificeStuff = new ushort[count];
             _flags = new byte[count];
             _slot = new ushort[count];
-            _bedFacing = new byte[count];
+            _edificeFacing = new byte[count];
             _bedHead = new bool[count];
             _cropPlant = new byte[count];
             _cropStage = new byte[count];
@@ -365,11 +400,85 @@ namespace Odyssey.Presentation.World
 
         public ushort EdificeStuff(int index) => _edificeStuff[index];
 
+        /// <summary>
+        /// Take this frame's building sites. Cleared and refilled, once a frame, from the snapshot.
+        ///
+        /// <para>Called before anything reads the mirror, so a site ordered on one frame is
+        /// clickable on the next. That one frame of lag is the same bargain the sight lines already
+        /// make and for the same reason: nothing observable happens in a sixtieth of a second, and
+        /// the alternative is the simulation reaching forward into presentation.</para>
+        /// </summary>
+        public void SetSites(ReadOnlySpan<SiteView> sites)
+        {
+            _sites.Clear();
+            for (int i = 0; i < sites.Length; i++)
+                _sites[sites[i].CellIndex] = sites[i].Building;
+        }
+
+        /// <summary>Whether an order is waiting to be built in this cell.</summary>
+        public bool HasSite(int index) => _sites.ContainsKey(index);
+
+        /// <summary>
+        /// What is going up in this cell, as a <c>BuildingHandle</c>, or 0 where nothing is.
+        /// </summary>
+        public byte SiteBuilding(int index) =>
+            _sites.TryGetValue(index, out byte building) ? building : (byte)0;
+
+        /// <summary>
+        /// Which way a ladder in this cell faces: the direction a climber on it looks *out*, away
+        /// from whatever the ladder is fixed to. Its back is <c>Directions.Opposite</c> of this.
+        ///
+        /// <para><b>One owner, because two systems have to agree about it and neither did.</b>
+        /// <c>ChunkMesher.EmitLadder</c> took the first occluding neighbour and fell back to north;
+        /// <c>PawnFigureDirector.TryWallBeside</c> scanned for the first solid neighbour in a
+        /// different order and fell back to nothing at all. Same piece of geometry, two rules, two
+        /// fallbacks — so where nothing occluded, the mesher drew a ladder on the north face and
+        /// the climber gave up, and a colonist rose through clear air beside a ladder that was
+        /// plainly there (owner, 2026-09-18: <i>"when a colonist goes up a ladder they seem to
+        /// levitate"</i>). This is the <c>NavGraph.HopCost</c> lesson in another place: when two
+        /// systems must agree about a number and neither owns it, they disagree silently.</para>
+        ///
+        /// <para><b>Always an answer.</b> A free-standing ladder — one built up through an open
+        /// storey, or against slabs rather than rock — has nothing occluding beside it, and the
+        /// fallback is north because that is what the mesher has always drawn. A climber can then
+        /// hug the face that is really there rather than finding no wall and standing up straight
+        /// in mid-air.</para>
+        /// </summary>
+        public int LadderFacing(int index) => LadderFacing(index, _edificeFacing[index] & 3);
+
+        /// <summary>
+        /// The same rule for a ladder that is not there yet: the wall still wins, and
+        /// <paramref name="chosen"/> stands in for the rotation a placed one would carry.
+        ///
+        /// <para>Here so the build cursor and the built ladder cannot disagree about which face it
+        /// ends up on — the ghost has no record to read a facing off, and working the rule out a
+        /// second time in the cursor is exactly how the mesher and the figure director came to
+        /// disagree in the first place.</para>
+        /// </summary>
+        public int LadderFacing(int index, int chosen)
+        {
+            CellRef cell = Size.FromIndex(index);
+            for (int dir = 0; dir < Directions.Count; dir++)
+            {
+                int nx = cell.X + Directions.DeltaX[dir], nz = cell.Z + Directions.DeltaZ[dir];
+                if (Size.Contains(nx, nz, cell.Y) && OccludesFace(Size.Index(nx, nz, cell.Y)))
+                    return Directions.Opposite(dir);
+            }
+
+            // **Nothing to be fixed to, so the player's own answer** (owner, 2026-09-18: a built
+            // ladder in the right cell and on the wrong side, standing in mid-air). This used to be
+            // a flat north, which is an arbitrary way for a free-standing ladder to face and the
+            // only case where the player could see it was arbitrary. A ladder rotates now, and the
+            // rotation is read here rather than everywhere, so the wall still wins wherever there
+            // is one: which side of a wall a ladder is bolted to is physics, not preference.
+            return chosen & 3;
+        }
+
         /// <summary>The module a bed's pillow is drawn from — rounded, and tinted as linen.</summary>
         public int BedPillowModule => _bedPillowModule;
 
         /// <summary>The facing of the bed in this cell, 0–3. Meaningful only while a bed stands here.</summary>
-        public byte BedFacing(int index) => _bedFacing[index];
+        public byte BedFacing(int index) => _edificeFacing[index];
 
         /// <summary>Whether this cell is the head of the bed that stands in it — the half that draws.</summary>
         public bool BedHead(int index) => _bedHead[index];
@@ -846,15 +955,19 @@ namespace Odyssey.Presentation.World
                 // head, turned the way it was placed. Both halves carry the facing so the drawing
                 // half never has to ask the world which end is which, and only the head carries
                 // the flag — the far cell draws nothing of the bed at all.
+                // The facing is mirrored for **any** record, not only a bed's: a ladder rotates now
+                // too, and the one that does not rotate stores nought anyway (ConstructionGrid's
+                // RaiseEdifice reads it off the def). A second array for the second rotatable thing
+                // would have been two copies of one fact.
                 bool bed = placed.Def == CoreContent.EdificeBed && !placed.Removed;
-                _bedFacing[index] = bed ? placed.Facing : (byte)0;
+                _edificeFacing[index] = placed.Removed ? (byte)0 : placed.Facing;
                 _bedHead[index] = bed && placed.CellIndex == index;
             }
             else
             {
                 _edifice[index] = CoreContent.EdificeNone;
                 _edificeStuff[index] = CoreContent.StuffNone;
-                _bedFacing[index] = 0;
+                _edificeFacing[index] = 0;
                 _bedHead[index] = false;
             }
 

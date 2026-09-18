@@ -50,8 +50,29 @@ namespace Odyssey.Sim.Pawns
         /// <para>Saved in a section of its own and in the state hash — see
         /// <c>docs/design/18-colonist-select.md</c> §3, which also says why it is not in the pawn
         /// record.</para>
+        ///
+        /// <para><b>A property rather than a field, and the setter is the point.</b> Anything
+        /// derived from this seed and cached must be thrown away when it changes, and the one
+        /// such thing is <see cref="InnatePacePerMille"/>. The seed arrives late twice over — a
+        /// load restores it in <c>PawnSeedSection</c>, which runs <i>after</i> the pawn section
+        /// that made the pawn, and a select screen rewrites it on a candidate — so a pace cached
+        /// before either would have been drawn from seed zero and kept for the colonist's life.
+        /// Nothing reads it that early today; this is what stops the day something does from
+        /// being a silent one. The project has had that exact bug once already, when
+        /// <c>PawnContext.Seed</c> was unset until the first tick and rolled every colony in the
+        /// game from zero.</para>
         /// </summary>
-        public uint RollSeed;
+        public uint RollSeed
+        {
+            get => _rollSeed;
+            set
+            {
+                _rollSeed = value;
+                _innatePacePerMille = 0;
+            }
+        }
+
+        uint _rollSeed;
 
         public Pawn(PawnId id, int cell, PawnContent content)
         {
@@ -79,6 +100,18 @@ namespace Odyssey.Sim.Pawns
         public int Cell { get; set; }
 
         public int[] Needs { get; }
+
+        /// <summary>
+        /// How long she has been starving, 0..1000 (WS3, design 17 §4c) — the severity bar the
+        /// design describes when it says food at zero stops being a need and becomes a condition
+        /// with a name. Grown by <see cref="NeedsSystem"/> while the food need is at zero and
+        /// drained by the same number while it is not, so one meal arrests the bar rather than
+        /// merely stopping it; the bands it steps through are <see cref="StarvationOffsetPerMille"/>'s.
+        ///
+        /// <para><b>Saved.</b> A colonist reloaded mid-starvation is still starving, and how far
+        /// gone is the whole of the answer to "how much time have I got".</para>
+        /// </summary>
+        public int StarvationSeverity { get; set; }
 
         /// <summary>Displayed mood, 0..1000. Drifts toward <see cref="MoodTarget"/>.</summary>
         public int Mood { get; set; }
@@ -196,11 +229,12 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Index of the next cell to step into. Always at least 1 on a live path.</summary>
         public int PathIndex { get; internal set; }
 
-        /// <summary>Cost units accumulated toward the next step.</summary>
+        /// <summary>Cost units accumulated toward the next step, in thousandths (Rates).</summary>
         public int MoveProgress { get; internal set; }
 
         /// <summary>
-        /// What the step now in progress costs, in the same units as <see cref="MoveProgress"/>.
+        /// What the step now in progress costs, in the same units as <see cref="MoveProgress"/> —
+        /// thousandths of the raw nav cost (Rates).
         ///
         /// <para><b>Derived, and deliberately outside the hash and the save.</b> The movement
         /// system recomputes it from the graph every tick it advances a pawn, so storing it would
@@ -211,9 +245,10 @@ namespace Odyssey.Sim.Pawns
         /// progress clamped to 100, which is exact for a flat cell at 100 units and wrong for
         /// everything dearer: a ladder down costs 400, so the drawn figure completed its whole
         /// descent in the first quarter of the step and then stood frozen at the bottom for the
-        /// other three — which is most of what "colonists float down slowly" was.</para>
+        /// other three — which is most of what "colonists float down slowly" was. Progress and
+        /// cost scale together, so the published ratio reads exactly what it always read.</para>
         /// </summary>
-        public int MoveStepCost { get; internal set; } = Pathing.MoveCost.Orthogonal;
+        public int MoveStepCost { get; internal set; } = Pathing.MoveCost.Orthogonal * Rates.Scale;
 
         /// <summary>Where the pawn is trying to get to, or -1.</summary>
         public int Destination { get; internal set; } = -1;
@@ -273,8 +308,107 @@ namespace Odyssey.Sim.Pawns
         /// <summary>Is the pawn eligible to break at all? A sleeping pawn never is.</summary>
         public virtual bool CanMentalBreak() => !Asleep && !IsBroken && Mood < Content.Mood.breakThreshold;
 
-        /// <summary>Cost units retired per tick. The place a movement-speed modifier belongs.</summary>
-        public virtual int MovePerTick() => Content.Movement.movePerTick;
+        /// <summary>
+        /// The rate this pawn pays work at, in thousandths of a tick-at-standard-rate: 1,000 is
+        /// the speed everything is tuned at today (design 17 §2). <b>The rate never changes what
+        /// a thing costs; it changes how fast this pawn pays for it.</b> The four drivers add
+        /// this to the accumulator their work banks in, and the comparison reads the cost ×
+        /// <see cref="Rates.Scale"/>, so a cell worked by two colonists of different speed
+        /// accumulates in a unit that means the same thing to both.
+        ///
+        /// <para>The value is the work type's def curve at her level of the skill that drives it,
+        /// times <see cref="ConditionPerMille"/>, floored at the def's floor. The composition
+        /// order is the reference's (design 17 §3e): curve first, then every multiplicative
+        /// factor, then the clamp — the floor is applied last so no future factor can price a
+        /// tick of work at nothing.</para>
+        /// </summary>
+        public virtual int WorkRatePerMille(int workType)
+        {
+            WorkTypeDef def = Content.WorkTypes[workType];
+            int curve = def.rateSkill < 0
+                ? Rates.Scale
+                : def.WorkRatePerMille(SkillLevel(def.rateSkill));
+            int rate = curve * ConditionPerMille() / 1_000;
+            return rate < def.workRateFloorPerMille ? def.workRateFloorPerMille : rate;
+        }
+
+        /// <summary>
+        /// Cost units this pawn retires per tick, in thousandths of the tuned speed — the place
+        /// a movement-speed modifier belongs. Composed in the design's fixed order (design 17
+        /// §4a): the pace she was rolled with, then condition, with load and health to arrive
+        /// later in the same product. The terrain's own price is not here and must never be —
+        /// the planner already charges the cell being entered, and a pawn factor in the step
+        /// cost would count it twice (§4g).
+        /// </summary>
+        public virtual int MoveRatePerMille() =>
+            Content.Movement.movePerTick * Rates.Scale
+                * InnatePacePerMille() / 1_000
+                * ConditionPerMille() / 1_000;
+
+        /// <summary>
+        /// The pace this colonist was dealt, per mille of the standard walk, rolled once from
+        /// her seed and her id on the <see cref="PawnPurpose.MovePace"/> stream — the same shape
+        /// as her passions and starting skills, so a seed deals the same people every load.
+        /// Movement's alone: a colonist who walks quickly is not thereby a quicker carpenter.
+        /// Cached on first read, both because the band needs no arithmetic twice and because a
+        /// per-tick roll would be an allocation on every step of every walk.
+        /// </summary>
+        public virtual int InnatePacePerMille()
+        {
+            if (_innatePacePerMille == 0)
+            {
+                var rng = DeterministicRandom.ForTick(RollSeed, Id.Value, PawnPurpose.MovePace);
+                var movement = Content.Movement;
+                _innatePacePerMille = movement.innatePaceMinPerMille
+                    + rng.NextInt(movement.innatePaceMaxPerMille - movement.innatePaceMinPerMille + 1);
+            }
+
+            return _innatePacePerMille;
+        }
+
+        int _innatePacePerMille;
+
+        /// <summary>
+        /// How the colonist is right now, as one scalar both rates read: 1,000 is well. One
+        /// computation, one floor, two consumers — a colonist in a bad way is slower at walking
+        /// and slower at working, and there is exactly one place to ask why. WS1 answered a
+        /// constant; WS3 lets starvation offset it, in the three bands of
+        /// <see cref="StarvationOffsetPerMille"/>.
+        ///
+        /// <para>The clamps are the point of writing the method this way. The ceiling is the
+        /// reference's asymmetry and is worth keeping for ever: <b>nothing may raise condition
+        /// above baseline</b> — being dulled slows you, being alert never speeds you up — and a
+        /// future factor that pushes up is clamped here rather than trusted not to exist. The
+        /// floor is ours and stands in for the downed state we do not have: the reference lets
+        /// consciousness fall until the colonist drops, and on the day health builds that
+        /// threshold, the floor gives way to it.</para>
+        /// </summary>
+        public virtual int ConditionPerMille()
+        {
+            int condition = Rates.Scale - StarvationOffsetPerMille();
+            if (condition > Rates.Scale) condition = Rates.Scale;
+            if (condition < ConditionFloorPerMille) condition = ConditionFloorPerMille;
+            return condition;
+        }
+
+        /// <summary>Condition cannot fall below this, in per mille — 0.7 of herself, however bad
+        /// it gets, until a health system replaces the floor with a threshold (design 17 §4c).</summary>
+        public const int ConditionFloorPerMille = 700;
+
+        /// <summary>
+        /// The offset starvation applies to <see cref="ConditionPerMille"/>, read off the
+        /// severity bar in thirds: −100 minor, −200 moderate, −300 severe. The offsets are the
+        /// design's table (§4c); the bar's thirds as the band edges are ours, chosen so a missed
+        /// meal is not immediately a penalty and the worst band is reached on the fifth day of
+        /// not eating — gentle, recoverable, and legible at a glance on the bar itself.
+        /// </summary>
+        public virtual int StarvationOffsetPerMille()
+        {
+            if (StarvationSeverity >= 750) return 300;
+            if (StarvationSeverity >= 500) return 200;
+            if (StarvationSeverity >= 250) return 100;
+            return 0;
+        }
 
         /// <summary>
         /// How this pawn traverses. Taken from the current job and fixed for its whole life: a
@@ -528,6 +662,12 @@ namespace Odyssey.Sim.Pawns
 
             // Destination and move progress are simulation state; the path itself is not, and
             // hashing it would make a save/load resume look like a divergence for no reason.
+            // Both accumulators count thousandths (Rates) and the hash reads them whole. They
+            // were briefly divided back, so that WS1 could land with no golden moving; WS3 then
+            // re-baked every Simulated hash anyway and the division outlived its reason, leaving
+            // a thousandfold blind spot — two runs could differ by up to 999 milliwork on a cell
+            // or a step and agree, until the difference happened to cross a tick boundary. A
+            // hash that is late to notice a divergence is the thing this hash exists not to be.
             hash.Add(Destination);
             hash.Add(MoveProgress);
 

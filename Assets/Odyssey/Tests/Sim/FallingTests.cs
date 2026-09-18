@@ -1,5 +1,6 @@
 #nullable enable
 using NUnit.Framework;
+using Odyssey.Sim;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Defs;
 using Odyssey.Sim.Designations;
@@ -370,7 +371,7 @@ namespace Odyssey.Tests.Sim
             // stood frozen in the shaft for the other three quarters, at six and a half seconds a
             // rung. That is most of what "colonists float down slowly" was.
             var pawn = new Pawn(new PawnId(1), 0, ContentPack.Pawns());
-            Assert.That(pawn.MoveStepCost, Is.EqualTo(Odyssey.Sim.Pathing.MoveCost.Orthogonal),
+            Assert.That(pawn.MoveStepCost, Is.EqualTo(Odyssey.Sim.Pathing.MoveCost.Orthogonal * Rates.Scale),
                 "a pawn that has never stepped would publish a nonsense fraction");
 
             // Stated against explicit costs rather than against the content constants: this is

@@ -109,13 +109,40 @@ namespace Odyssey.Tests.Hud
                 Is.LessThanOrEqualTo(HudLayout.StartListMax),
                 "the New game screen does not fit the region the load list already fits in");
 
-            // The colonist screen (U40) is much the fullest thing this box has had to hold — a
-            // caption, three cards and two rows — so this is where the fixed box is actually
-            // tested rather than merely respected.
-            Assert.That(HudLayout.ColonistScreenHeight,
-                Is.LessThanOrEqualTo(HudLayout.StartListMax),
-                "three colonist cards do not fit the fixed body, so the panel would have to grow " +
-                "and every row would move under the pointer on the way in");
+            // The candidate cards are deliberately NOT asserted here any more. They left the fixed
+            // box when U40's colonist screen became part of the full-viewport setup page, so
+            // measuring them against the load list's ceiling was asking whether a screen nobody
+            // draws fits a box it does not sit in. What they owe is the test below, and a measured
+            // one in StartScreenTests.
+        }
+
+        /// <summary>
+        /// A card is at least as tall as the face it carries.
+        ///
+        /// <para><b>The check whose absence cost the setup page a visible defect.</b> When the
+        /// avatar doubled on 2026-09-18 (<c>docs/design/20-avatars.md</c> §10.6) every card that
+        /// carries one was re-derived except the candidate card, which kept the 47 it was given
+        /// while <see cref="HudLayout.Avatar"/> was 30 and then drew a 60 px face in it. Nothing
+        /// failed: the sheet agreed with the model, the model agreed with itself, and the only
+        /// witness was three overlapping faces in `Logs/setup-page.png`. One line of arithmetic
+        /// that nobody thought to write down is the whole difference.</para>
+        /// </summary>
+        [Test]
+        public void EveryCardIsAtLeastAsTallAsTheFaceItCarries()
+        {
+            // Plus the pad on both sides, since the owner played it: a card sized to exactly its
+            // face draws the selection outline hard against the portrait, which reads as the
+            // portrait's frame rather than the card's.
+            Assert.That(HudLayout.ColonistCard,
+                Is.GreaterThanOrEqualTo(HudLayout.ColonistAvatar + 2 * HudLayout.ColonistCardPad),
+                "a candidate card does not clear its own avatar by the card's padding, so the " +
+                "faces overlap each other and the selection outline sits on the portrait");
+
+            Assert.That(HudLayout.CardHeight, Is.GreaterThanOrEqualTo(HudLayout.CardAvatar),
+                "a roster card is shorter than its own avatar");
+
+            Assert.That(HudLayout.InspectHeader, Is.GreaterThanOrEqualTo(HudLayout.Avatar),
+                "the inspect header is shorter than the avatar it holds");
         }
 
         [Test]
@@ -487,6 +514,59 @@ namespace Odyssey.Tests.Hud
             // A tile readout: five facts is the fullest the meadow offers (order, walk, floor,
             // support — one of order/minable), and the pane it stands in is the narrow one.
             yield return new HudContent(Colonists, AllStoreRows, 0, Layers, 0, cellRows: 5);
+        }
+
+        /// <summary>
+        /// The colonist pane is one size whatever tab is showing (owner, 2026-09-18: "it resizes
+        /// every time … it needs to be at least a fixed size").
+        ///
+        /// <para>The pane is docked to its bottom edge and grows upward, so a body sized to its
+        /// own tab moved the header, the tab strip and every row under the pointer on each change
+        /// of tab — Needs' two rows of 25 against Skills' seven of 19, ninety-eight pixels apart.
+        /// Both the height and the box the solver hands out are asserted, because the fix is only
+        /// worth anything if the pane's <i>top</i> edge is what stays put.</para>
+        /// </summary>
+        [Test]
+        public void TheColonistPaneIsTheSameHeightOnEveryTab()
+        {
+            float needs = HudLayout.InspectHeight(HudLayout.InspectNeedRows, 0);
+            float skills = HudLayout.InspectHeight(0, SkillCatalogue.Rows);
+
+            Assert.That(needs, Is.EqualTo(skills),
+                "switching tab must not resize the pane");
+
+            HudRect onNeeds = HudLayout.Solve(1920, 1080,
+                new HudContent(Colonists, AllStoreRows, 0, Layers,
+                               needRows: HudLayout.InspectNeedRows))[HudRegion.Inspect];
+            HudRect onSkills = HudLayout.Solve(1920, 1080,
+                new HudContent(Colonists, AllStoreRows, 0, Layers, needRows: 0,
+                               skillRows: SkillCatalogue.Rows))[HudRegion.Inspect];
+
+            Assert.That(onSkills.Y, Is.EqualTo(onNeeds.Y).Within(0.01f),
+                "the top edge is what the player watches jump");
+            Assert.That(onSkills.Height, Is.EqualTo(onNeeds.Height).Within(0.01f));
+            Assert.That(onSkills.Width, Is.EqualTo(onNeeds.Width));
+        }
+
+        /// <summary>
+        /// The fixed body is tall enough for every tab that has content, and is the taller of the
+        /// two rather than a number somebody typed. A fourteenth skill or a fourth need moves it;
+        /// clipping is what the acceptance criteria forbid.
+        /// </summary>
+        [Test]
+        public void TheFixedBodyIsTheTallestLiveTab()
+        {
+            int needs = HudLayout.InspectNeedRows * HudLayout.NeedRow +
+                        (HudLayout.InspectNeedRows - 1) * HudLayout.NeedRowGap;
+            int skills = SkillCatalogue.Rows * HudLayout.SkillRow +
+                         (SkillCatalogue.Rows - 1) * HudLayout.SkillRowGap;
+
+            Assert.That(HudLayout.InspectTabBody, Is.GreaterThanOrEqualTo(needs),
+                "the needs grid would clip");
+            Assert.That(HudLayout.InspectTabBody, Is.GreaterThanOrEqualTo(skills),
+                "the skills grid would clip");
+            Assert.That(HudLayout.InspectTabBody, Is.EqualTo(System.Math.Max(needs, skills)),
+                "no more slack than the tallest tab needs");
         }
 
         /// <summary>

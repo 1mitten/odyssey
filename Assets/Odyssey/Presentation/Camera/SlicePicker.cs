@@ -48,6 +48,12 @@ namespace Odyssey.Presentation.CameraRig
         /// water tile did not tell him it was water). A bridge slab still wins — it is checked
         /// first, and a bridge is walked on, not waded through.</para>
     ///
+    /// <para><b>A waiting order is one of the things in the world</b> (owner, 2026-09-18: a slab
+    /// being built could not be cancelled, and over open air the whole layer answered nothing). A
+    /// site has a cell and the player pointing at one means it; only the *cursor's* ghost is a cue,
+    /// and that is still untouchable. <see cref="World.WorldRenderModel.SetSites"/> puts them where
+    /// this can see them.</para>
+    ///
     /// <para><b>Nearest along the ray wins</b>, with a thing beating bare ground at the same
     /// distance and, failing that, the layer nearer the slice.</para>
     ///
@@ -303,10 +309,13 @@ namespace Odyssey.Presentation.CameraRig
         /// Which cell owns the floor of this one — the thing the player has actually clicked when
         /// the ray crosses it — and whether that thing is an object rather than bare ground.
         ///
-        /// <para>Four answers in order, and the order is the whole rule:</para>
+        /// <para>Five answers in order, and the order is the whole rule:</para>
         /// <list type="number">
         /// <item>an edifice standing here: the tree, the bed, whatever it is. It is drawn in this
         /// cell and it is what the player is looking at.</item>
+        /// <item>a building site waiting here: the order the player gave, drawn as the thing it
+        /// will be. Above the two below it, because a covering sits on a slab and a structural slab
+        /// sits on nothing at all.</item>
         /// <item>a built floor slab: also drawn in this cell, so this cell owns it.</item>
         /// <item>water filling the cell: it is drawn here, it is what the player clicked, and the
         /// bed beneath it is not.</item>
@@ -325,6 +334,28 @@ namespace Odyssey.Presentation.CameraRig
             cell = default;
 
             if (model.EdificeDef(index) != 0)
+            {
+                cell = size.FromIndex(index);
+                thing = true;
+                return true;
+            }
+
+            // A waiting order is a thing, and it stands in its own cell.
+            //
+            // **This is not the ghost rule being bent; it is the ghost rule being read properly.**
+            // ADR 0006's argument is that a translucent *hint* must not be a pointer target,
+            // because clicking a cue is the accident. A site is not a cue: it has a cell, a
+            // material, a progress and a save record, the colony is walking to it, and a player
+            // pointing at one is pointing at the order they gave. The build cursor's own ghost is
+            // still untouchable, which is the half that was load-bearing.
+            //
+            // **Above the floor rule and above the block below**, and both matter. A covering laid
+            // over an existing slab would otherwise answer with the slab it is going on top of, and
+            // a structural slab ordered into open air has no floor and nothing underneath it at all
+            // — which is the case that had the owner's whole layer answering nothing on 2026-09-18.
+            // The floor plane of this cell is the surface the ray meets either way; all that was
+            // missing was somebody to own it.
+            if (model.HasSite(index))
             {
                 cell = size.FromIndex(index);
                 thing = true;

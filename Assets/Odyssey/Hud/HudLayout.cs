@@ -245,8 +245,9 @@ namespace Odyssey.Hud
         /// rows — who this is, and what they are at — so the card is sized by the longer of them
         /// rather than by a number somebody liked.</para>
         ///
-        /// <para>Widest name row: the avatar (26) plus its gap (8) plus the longest name the pool
-        /// can produce. Widest activity row: the icon (17) plus its gap (6) plus the longest word
+        /// <para>Widest name row: the avatar plus its gap plus the longest name the pool
+        /// can produce — which is a fact about <c>docs/design/colonist-names.csv</c>, so adding a
+        /// long name to that file is a change to this number. Widest activity row: the icon (17) plus its gap (6) plus the longest word
         /// in <c>ui.status</c>. Both plus padding on each side. The figures are not taken on
         /// trust — <c>TheCardIsWideEnoughForItsRowsAndNoWider</c> asks the text engine what those
         /// strings really draw in the real face at the real size, and fails on either side with a
@@ -262,7 +263,30 @@ namespace Odyssey.Hud
         /// 16 + 52 + 8 + 50 = 126, which overtakes the activity row's 106 and becomes the width.
         /// The measured strings are the test's, not an estimate — 'Wrenn 10' draws 50 px and
         /// 'Deconstructing' 67.</para>
+        ///
+        /// <para><b>It stayed 126 when the name pool went from eight to 244</b> (owner,
+        /// 2026-09-18: *"remove any longer names for now"*). Sizing the card to the widest name
+        /// the owner's list can produce would have cost <see cref="CardWidth"/> ten pixels and the
+        /// coverage ceiling a fourth raise, 19.80% → 20.19% at the forced two-row strip; the
+        /// cheaper trade is to keep the card and let the pool fit it. <b>The budget is therefore a
+        /// constraint on content</b>, and <see cref="CardNameBudget"/> is what states it —
+        /// <c>NoNameInThePoolIsWiderThanTheCardBudgetsFor</c> measures every name in the real face
+        /// and names all of them at once, because the one thing this must not become is a name
+        /// removed per CI round.</para>
         public const int CardWidth = 126;
+
+        /// <summary>
+        /// The room a card leaves for a colonist's name: the card less its padding, the avatar and
+        /// the gap after it.
+        ///
+        /// <para>Derived rather than written down, and stated as a constant because it is a rule
+        /// about <c>docs/design/colonist-names.csv</c> rather than about the card: a name wider
+        /// than this does not fit, and the pool is what has to give. <b>Width is not length</b> —
+        /// <i>Christopher</i> is eleven characters and 60 px, <i>Alexander</i> nine and 52 — so
+        /// the check that enforces this has to ask the text engine, and a character-count proxy
+        /// in the fast tier passed both.</para>
+        /// </summary>
+        public const int CardNameBudget = CardWidth - 2 * CardPad - CardAvatar - CardAvatarGap;
 
         /// <summary>
         /// How tall a roster card is: padding, the avatar row, the activity line, padding. The
@@ -401,18 +425,15 @@ namespace Odyssey.Hud
         public const int ClockGap = 9;
 
         /// <summary>
-        /// Two lines of 13 px body text.
+        /// One line of 13 px body text.
         ///
-        /// <para>Fifty-two rather than the thirty-four the point size suggests, because UI
+        /// <para>Twenty-six rather than the seventeen the point size suggests, because UI
         /// Toolkit's line box for 13 px type measures about 26 px rather than 17 — measured on the
-        /// inspect pane's one-line empty state, which was the only text in the HUD left to size
-        /// itself, and which came out nine pixels taller than the model had allowed the whole
-        /// pane. Every other row in this layout declares its own height, so this is the only place
-        /// the renderer's metrics reach the arithmetic.</para>
+        /// inspect pane's one-line empty state.</para>
         /// </summary>
-        public const int AlertHeight = 52;
+        public const int AlertHeight = 26;
 
-        public const int AlertGap = 7;
+        public const int AlertGap = 4;
 
         /// <summary>The alerts panel's own label row and the gap under it.</summary>
         public const int AlertHeaderBlock = HeaderHeight + HeaderGap;
@@ -778,6 +799,107 @@ namespace Odyssey.Hud
 
         public const int SkillRowGap = 4;
 
+        /// <summary>One skill line's width in the inspect pane's grid, pinned here so the setup
+        /// page's own grid can be derived from it rather than from a second literal.</summary>
+        public const int SkillRowWidth = 256;
+
+        /// <summary>Between two columns of skills.</summary>
+        public const int SkillColumnGap = 18;
+
+        // ---------------------------------- the setup page's own skills grid (owner, 2026-09-18)
+
+        /// <summary>
+        /// How many columns of skills the setup page's detail pane shows.
+        ///
+        /// <para><b>Two, by the owner's instruction</b> — *"use the space to make 2 columns of
+        /// skills rather than 4 as we'll likely have to bring something in in the future"*. The
+        /// grid is a wrapping row in a pane that grows, so at 1920 it had been laying thirteen
+        /// skills out four across and filling the screen edge to edge; capping the container is
+        /// what holds it to two and leaves the right-hand half of the page for whatever comes.
+        /// The count is the owner's decision about the page, not an arithmetic consequence of
+        /// what fits, so it is a constant rather than a division.</para>
+        /// </summary>
+        public const int SetupSkillColumns = 2;
+
+        /// <summary>A skill line on the setup page: wider and taller than the inspect pane's,
+        /// because this is a screen read at leisure rather than glanced at over a running
+        /// world.</summary>
+        public const int SetupSkillRowWidth = 300;
+
+        /// <summary>The row's height at the setup page's larger type step.</summary>
+        public const int SetupSkillRow = 24;
+
+        /// <summary>
+        /// The grid's ceiling, derived rather than written down: the columns the owner asked for,
+        /// each a row wide plus the gap after it. The trailing gap is absorbed by the grid's own
+        /// negative right margin, exactly as the inspect pane's is.
+        /// </summary>
+        public const int SetupSkillsWidth =
+            SetupSkillColumns * (SetupSkillRowWidth + SkillColumnGap);
+
+        /// <summary>
+        /// A section heading on the setup page — "Skills", "Traits" — at
+        /// <see cref="HudTextRole.Name"/>, which is the one step of the scale that is both bigger
+        /// and bolder than the body under it (owner, 2026-09-18: *"a bigger bolder heading"*).
+        ///
+        /// <para>A step of the existing scale rather than a rung added for this page. The
+        /// interface's other heading idiom — <see cref="HudTextRole.PanelLabel"/>, 11/600 upper
+        /// and tracked — is bolder but smaller, which is right over a panel glanced at beside a
+        /// running world and wrong on a full screen read at leisure. Field captions on this page
+        /// keep that idiom; sections get this one, so the two do not compete.</para>
+        /// </summary>
+        public const int SetupHeading = 26;
+
+        /// <summary>Above a section heading, so a heading belongs to what is under it rather than
+        /// floating between two blocks.</summary>
+        public const int SetupHeadingGap = 22;
+
+        /// <summary>
+        /// The portrait and its record, down to the skills under them.
+        ///
+        /// <para>Owner, 2026-09-18: *"have more spacing on the main screen from the profile to the
+        /// skills below it as it looks too close and untidy"*. The record's three lines ended
+        /// flush against the first row of the grid, so the name, the trade, the traits and
+        /// thirteen skills read as one undifferentiated stack rather than as a heading over a
+        /// table.</para>
+        /// </summary>
+        public const int SetupSkillsGap = 24;
+
+        /// <summary>
+        /// How many needs the colonist body draws: Food, Rest and Mood, the three the model
+        /// carries and the three <c>HudShell.SetNeed</c> fills by index.
+        /// </summary>
+        public const int InspectNeeds = 3;
+
+        /// <summary>The needs grid's rows, two to a row like the skills.</summary>
+        public static int InspectNeedRows => (InspectNeeds + 1) / 2;
+
+        /// <summary>
+        /// The colonist pane's body: <b>one height, whatever tab is showing</b> (owner,
+        /// 2026-09-18 — "it resizes every time … it needs to be at least a fixed size").
+        ///
+        /// <para>The pane is docked to its bottom edge and grows upward, so a body sized to its
+        /// own tab moved the header, the tab strip and every row under the pointer each time the
+        /// player changed tab: Needs is two rows of 25 and Skills is seven of 19, ninety-eight
+        /// pixels apart. The tallest live tab wins and the shorter ones sit at the top of it with
+        /// the slack below (owner's choice of the three offered), so the only thing that changes
+        /// between tabs is which rows are drawn.</para>
+        ///
+        /// <para>Derived rather than written down, so that a fourteenth skill or a fourth need
+        /// moves it. It is deliberately <i>not</i> a maximum over the seven disabled tabs — Gear,
+        /// Thoughts, Social, Health and Log have no content to measure, and a guess at them would
+        /// be empty space today bought against a design nobody has written.</para>
+        /// </summary>
+        public static int InspectTabBody
+        {
+            get
+            {
+                int needs = InspectNeedRows * NeedRow + (InspectNeedRows - 1) * NeedRowGap;
+                int skills = SkillCatalogue.Rows * SkillRow + (SkillCatalogue.Rows - 1) * SkillRowGap;
+                return Math.Max(needs, skills);
+            }
+        }
+
         // ------------------------------------------------------------------ the start screen
 
         /// <summary>
@@ -913,42 +1035,136 @@ namespace Odyssey.Hud
         // ------------------------------------------------ the colonist screen (U40)
 
         /// <summary>
-        /// How many skills a candidate's card carries, best first.
-        ///
-        /// <para>Thirteen skills times three cards is a screen of numbers nobody reads, and the
-        /// question a player is answering is "what are these three good at". Two fits the card
-        /// below with the name, and the number lives here rather than in the presenter so that
-        /// <see cref="ColonistCard"/> and what is actually drawn cannot disagree.</para>
+        /// The face on a candidate card. The inspect header's size by specification
+        /// (<c>docs/design/20-avatars.md</c> §3), named here rather than reached for directly so
+        /// that <see cref="ColonistCard"/> and the presenter read one number and
+        /// <c>HudLayoutTests</c> can hold the card to it.
         /// </summary>
-        public const int ColonistCardSkills = 2;
+        public const int ColonistAvatar = Avatar;
 
         /// <summary>
-        /// A candidate's card: the name line, and <b>one</b> line under it carrying both skills.
+        /// A candidate's card: the name, the occupation, and what this person is good at.
         ///
-        /// <para><b>One line and not one per skill, and the arithmetic is what decided it.</b> A
-        /// line each came to 296 against the body's 284 — the first thing that has not fitted the
-        /// fixed box since the owner fixed it, and the possibility `17-start-flow.md` §11.4a named
-        /// when it said U40 might find the box the wrong size. It is not: "Mining 6 · Cutting 3"
-        /// reads as one fact about a person rather than two, which is also how the design's own
-        /// sketch drew it, and the screen comes to 242 with room to spare.</para>
+        /// <para><b>Re-derived from its own rows on 2026-09-18, the way the roster card was</b>
+        /// (<c>docs/design/20-avatars.md</c> §10.6) — 29 for the name, 18 for the trade and 18 for
+        /// the skills. Sixty-five, and it must not fall below <see cref="ColonistAvatar"/>, which
+        /// is the check whose absence caused this.</para>
+        ///
+        /// <para><b>§10.6 doubled the avatar and missed this card.</b> Its table re-derived the
+        /// roster card 106 × 63 → 126 × 89 and the inspect header 38 → 60, and moved the strip
+        /// share, the top scrim and the coverage ceiling with them. The candidate card was not on
+        /// it, so it kept the 47 it was given when <see cref="Avatar"/> was 30 — and then carried a
+        /// 60 px face in it, thirteen pixels taller than its own box at a 53 px pitch. On
+        /// `Logs/setup-page.png` the three faces visibly ran into one another and into the
+        /// selection outline. The skills line had gone the same way, squeezed out to make room for
+        /// the trade, and the constants describing that line were left behind reading by
+        /// nothing — which is how the loss was attributable rather than merely visible.</para>
+        ///
+        /// <para><b>The old comment's arithmetic was right and no longer applies.</b> Three lines
+        /// came to 296 against the fixed body's 284 — true while the candidates had a screen of
+        /// their own inside the start panel. They do not: they are part of the full-viewport setup
+        /// page, beside the seed and the board size, so the ceiling is the canvas and there are
+        /// some seven hundred spare pixels under the cards at 1080p.</para>
         /// </summary>
-        public const int ColonistCard = StartRow + StartSeedCaption;
+        /// <summary>
+        /// Breathing room inside a candidate card, all four sides.
+        ///
+        /// <para><b>The selection outline's, really</b> (owner, 2026-09-18: *"there needs to be
+        /// spacing with the selection cursor as it sits directly around the mini profile"*). A
+        /// card sized to exactly its contents draws <c>.colonist--on</c>'s border hard against the
+        /// face, which reads as the outline belonging to the portrait rather than to the card. The
+        /// pad is what puts daylight between them, and
+        /// <c>HudLayoutTests.EveryCardIsAtLeastAsTallAsTheFaceItCarries</c> holds the card to
+        /// <see cref="ColonistAvatar"/> <i>plus two of these</i> rather than merely to the face.</para>
+        /// </summary>
+        public const int ColonistCardPad = 8;
 
-        public const int ColonistCardGap = 6;
+        /// <summary>The name and age, at <see cref="HudTextRole.Name"/> — the detail pane's own
+        /// name line, so the card and the record it opens are set the same way.</summary>
+        public const int ColonistNameLine = 26;
 
         /// <summary>
-        /// The colonist screen's content: a caption, three cards, and the two rows under them —
-        /// Reroll, then Start.
+        /// The occupation, at <see cref="HudTextRole.Row"/>.
         ///
-        /// <para>Measured against <see cref="StartListMax"/> like the New game screen, because it
-        /// sits in the same region with the same row that goes back beneath it. <b>This is the
-        /// screen that tests whether the fixed box was the right call</b>, being much the fullest
-        /// thing it has had to hold, so the assertion is the point rather than a formality.</para>
+        /// <para>A step up and four pixels taller since the card stopped carrying skills (owner,
+        /// 2026-09-18: *"no need to display any skills there — Name, Age, Occupation, and resize
+        /// occupation accordingly to a bigger size"*). Two lines beside a 60 px face leave room
+        /// that a 13 px line does not use.</para>
         /// </summary>
-        public const float ColonistScreenHeight =
-            StartSeedCaption + StartRowGap                                      // Your colonists
-            + 3 * ColonistCard + 2 * ColonistCardGap + Gap                      // the three
-            + StartRow + StartRow;                                              // Reroll, Start
+        public const int ColonistTradeLine = 20;
+
+        /// <summary>
+        /// A candidate's card: the name, the occupation, and what this person is good at.
+        ///
+        /// <para><b>The face governs the height, and that is the point of writing it this
+        /// way.</b> Two lines of text come to 46 and the portrait to 60, so the card is the
+        /// portrait plus <see cref="ColonistCardPad"/> on both sides — 76 — and it cannot go back
+        /// to being shorter than the thing inside it however the text changes.</para>
+        ///
+        /// <para><b>It carried a third line for part of 2026-09-18</b>, the two best skills, put
+        /// back after the owner reported that the roll looked broken because nothing on a card
+        /// varied by ability. Playing that, they took it off again — *"from the left hand panels,
+        /// no need to display any skills there"* — because the detail pane beside the cards now
+        /// shows all thirteen in two columns with room to read them. **A later session should not
+        /// restore it as a fix for the original report**: the report was answered by the detail
+        /// pane, and the card is deliberately identity alone.</para>
+        ///
+        /// <para><b>§10.6 doubled the avatar and missed this card.</b> Its table re-derived the
+        /// roster card 106 × 63 → 126 × 89 and the inspect header 38 → 60, and moved the strip
+        /// share, the top scrim and the coverage ceiling with them. The candidate card was not on
+        /// it, so it kept the 47 it was given when <see cref="Avatar"/> was 30 — and then carried a
+        /// 60 px face in it, thirteen pixels taller than its own box at a 53 px pitch. On
+        /// `Logs/setup-page.png` the three faces visibly ran into one another and into the
+        /// selection outline. The skills line had gone the same way, squeezed out to make room for
+        /// the trade, and the constants describing that line were left behind reading by
+        /// nothing — which is how the loss was attributable rather than merely visible.</para>
+        ///
+        /// <para><b>The old comment's arithmetic was right and no longer applies.</b> Three lines
+        /// came to 296 against the fixed body's 284 — true while the candidates had a screen of
+        /// their own inside the start panel. They do not: they are part of the full-viewport setup
+        /// page, beside the seed and the board size, so the ceiling is the canvas and there are
+        /// some seven hundred spare pixels under the cards at 1080p.</para>
+        /// </summary>
+        public const int ColonistCard = ColonistAvatar + 2 * ColonistCardPad;
+
+        /// <summary>Between two candidate cards. Ten rather than six since the cards gained their
+        /// own padding: a card with air inside it wants air around it, or the two runs of
+        /// whitespace read as one and the cards stop being separate objects.</summary>
+        public const int ColonistCardGap = 10;
+
+        /// <summary>
+        /// The column the three candidates stand in, beside the detail pane.
+        ///
+        /// <para><b>260 until 2026-09-18, and widened for the skills line.</b> The text column is
+        /// this less the card's own padding, the face and the gap after it — 300 − 16 − 60 − 8 =
+        /// 216, where 260 left 176. §3 of the avatar design sized it when the face was 30 and the
+        /// card carried two lines; a 60 px face took 30 px off the text and a third line put a
+        /// longer string on it. The page is the full viewport, not the fixed box, so the column is
+        /// free to grow — which is what that design said the lever was.</para>
+        ///
+        /// <para>340 since the same day's type step: the text column is this less the card's own
+        /// padding on both sides, the face and the gap after it — 340 − 16 − 60 − 8 = 256, which
+        /// is where a name at <see cref="HudTextRole.Name"/> and a skills line at
+        /// <see cref="HudTextRole.Row"/> want to be rather than where a 12 px meta line was
+        /// comfortable.</para>
+        /// </summary>
+        public const int ColonistColumnWidth = 340;
+
+        /// <summary>
+        /// The three cards and the two rows under them — Keep, then Reroll.
+        ///
+        /// <para><b>No caption, because none is drawn.</b> This used to carry
+        /// <c>StartSeedCaption + StartRowGap</c> for a "Your colonists" line and be measured
+        /// against <see cref="StartListMax"/>, both of which described U40's standalone colonist
+        /// screen. That screen is gone — <c>BuildSetupPage</c> draws the title, the board, the
+        /// people and the footer as one full-viewport page — so the fast tier was asserting that a
+        /// model of a screen nobody draws fitted a box it does not sit in. Whether the column
+        /// really fits is a question for the layout engine, and <c>StartScreenTests</c> asks it of
+        /// the laid-out elements.</para>
+        /// </summary>
+        public const float ColonistColumnHeight =
+            3 * ColonistCard + 2 * ColonistCardGap + Gap                        // the three
+            + StartRow + StartRow;                                              // Keep, Reroll
 
         /// <summary>
         /// How tall the content of one screen <i>would</i> be, for a given number of rows — which
@@ -1182,24 +1398,26 @@ namespace Odyssey.Hud
         /// The pane's height with a given tab showing. Exactly one of the three counts is
         /// non-zero when something is selected: a colonist shows one tab's body at a time, and a
         /// tile shows the readout rows instead — no tab strip, so its chrome is the header alone.
+        ///
+        /// <para><b>The row counts no longer set a colonist pane's height</b> (2026-09-18). They
+        /// say <i>whether</i> there is a body, and the body is <see cref="InspectTabBody"/>
+        /// whichever tab is showing; see that member for why. They still size a tile's readout,
+        /// which has no tab strip and so cannot resize under the player's hand.</para>
         /// </summary>
         public static float InspectHeight(int needRows, int skillRows, int cellRows = 0)
         {
-            float body;
             if (cellRows > 0)
-                body = cellRows * CellRow + (cellRows - 1) * CellRowGap;
-            else if (skillRows > 0)
-                body = skillRows * SkillRow + (skillRows - 1) * SkillRowGap;
-            else if (needRows > 0)
-                body = needRows * NeedRow + (needRows - 1) * NeedRowGap;
-            else
-                return 0f;
+            {
+                float rows = cellRows * CellRow + (cellRows - 1) * CellRowGap;
 
-            // A tile keeps the shorter header: its slot holds an icon, not a portrait.
-            return cellRows > 0
-                ? Frame + Pad + InspectHeaderNarrow + InspectHeaderGap + body + Pad
-                : Frame + Pad + InspectHeader + InspectHeaderGap + InspectTabs + InspectTabGap +
-                  body + Pad;
+                // A tile keeps the shorter header: its slot holds an icon, not a portrait.
+                return Frame + Pad + InspectHeaderNarrow + InspectHeaderGap + rows + Pad;
+            }
+
+            if (skillRows <= 0 && needRows <= 0) return 0f;
+
+            return Frame + Pad + InspectHeader + InspectHeaderGap + InspectTabs + InspectTabGap +
+                   InspectTabBody + Pad;
         }
 
         // ---------------------------------------------------------------- fitting
@@ -1477,6 +1695,14 @@ namespace Odyssey.Hud
         /// <para><b>It is the owner's to reverse</b>, exactly as the orders strip's one per cent
         /// is. The cheapest reversal is the avatar: every pixel of it is four pixels of card area
         /// and the card is what the strip is made of.</para>
+        ///
+        /// <para><b>The name pool nearly took it to 0.21 and the owner declined</b>, 2026-09-18.
+        /// Sizing the card to the widest of 244 owner-supplied names would have put the forced
+        /// two-row strip at 20.19%; the answer was *"remove any longer names for now"*, so the
+        /// card kept its width and the pool lost the names that did not fit
+        /// (<see cref="CardNameBudget"/>). Worth keeping in view if the pool is ever the thing
+        /// that matters more than the ceiling: it is one line here and one in
+        /// <see cref="CardWidth"/>.</para>
         /// </summary>
         public const float CoverageCeiling = 0.20f;
     }

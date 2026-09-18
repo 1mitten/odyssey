@@ -241,6 +241,21 @@ namespace Odyssey.Presentation.World
             public float ClimbWeight;
 
             /// <summary>
+            /// Whether what is being climbed is a ladder rather than a rock face.
+            ///
+            /// <para><b>They are not the same pose and the owner's reference photographs are why.</b>
+            /// On rock the hands are spread on holds and the lower one hangs near the hip; on a
+            /// ladder both hands are on rungs <i>above the head</i> and the stepped knee comes up
+            /// sharply, because the rungs are a fixed ladder-width apart and the feet are on them
+            /// rather than edging on whatever the stone offers.</para>
+            ///
+            /// <para>Latched beside <see cref="LastClimbFace"/> and for the same reason: it has to
+            /// outlive the face while the weight eases back out, or the pose changes shape halfway
+            /// through stepping off the top.</para>
+            /// </summary>
+            public bool OnLadder;
+
+            /// <summary>
             /// How much of a swimmer this figure is, 0 on dry land and 1 afloat.
             ///
             /// <para>Eased rather than switched, like <see cref="ClimbWeight"/>: the drawn height

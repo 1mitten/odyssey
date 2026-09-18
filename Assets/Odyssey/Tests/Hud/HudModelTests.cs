@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 using Odyssey.Hud;
@@ -55,21 +56,78 @@ namespace Odyssey.Tests.Hud
         /// A seed and an id together name somebody, and the same pair always names the same
         /// somebody. Seed zero is the pool read from the top, which is the old id-only behaviour
         /// and is what a pawn with no published seed falls back to.
+        ///
+        /// <para><b>Written against the generated pool rather than against literals</b>, since the
+        /// pool went from eight hand-written names to 244 generated from
+        /// <c>docs/design/colonist-names.csv</c>. A test that pins "Wrenn" pins the CSV's first
+        /// row, which is content the owner is free to reorder; what is worth pinning is that the
+        /// arithmetic reads the pool from the top.</para>
         /// </summary>
         [Test]
-        public void NamesAreStableAndStartWithThePromotedPool()
+        public void NamesAreStableAndStartAtTheTopOfThePool()
         {
-            Assert.That(ColonistNames.Of(0u, new PawnId(1)), Is.EqualTo("Wrenn"));
-            Assert.That(ColonistNames.Of(0u, new PawnId(8)), Is.EqualTo("Nyx"));
+            Assert.That(ColonistNames.Of(0u, new PawnId(1)),
+                Is.EqualTo(ColonistNamePool.Names[0]));
+            Assert.That(ColonistNames.Of(0u, new PawnId(ColonistNamePool.Names.Length)),
+                Is.EqualTo(ColonistNamePool.Names[ColonistNamePool.Names.Length - 1]));
             Assert.That(ColonistNames.Of(7u, new PawnId(1)), Is.EqualTo(ColonistNames.Of(7u, new PawnId(1))),
                 "the same seed and id must always answer the same name");
+        }
+
+        /// <summary>
+        /// The pool is big enough that no colony this game builds can reach the end of it.
+        ///
+        /// <para>It was eight, with a comment promising "about forty at M2, when pawn generation
+        /// needs a pool that does not repeat in a colony of fifty". Fifty is the number that
+        /// mattered, so fifty is what is asserted — against the pool rather than against 244, so
+        /// the guarantee survives the owner cutting names as well as adding them.</para>
+        /// </summary>
+        [Test]
+        public void ThePoolOutlastsAnyColonyThisGameBuilds()
+        {
+            const int BiggestColony = 50;
+            Assert.That(ColonistNamePool.Names.Length, Is.GreaterThan(BiggestColony),
+                "a colony of fifty would wrap the pool and start appending cycle numbers");
+
+            var seen = new HashSet<string>();
+            for (int id = 1; id <= BiggestColony; id++)
+                Assert.That(seen.Add(ColonistNames.Of(4242u, new PawnId(id))), Is.True,
+                    $"colonist {id} took a name somebody in the same colony already has");
         }
 
         [Test]
         public void PastThePoolTheCycleNumberIsAppendedNotInvented()
         {
-            Assert.That(ColonistNames.Of(0u, new PawnId(9)), Is.EqualTo("Wrenn 2"));
+            // Past the end of a 244-name pool, which is past any colony — the branch is kept
+            // because it is what makes the method total, and this is what holds it honest.
+            int past = ColonistNamePool.Names.Length + 1;
+            Assert.That(ColonistNames.Of(0u, new PawnId(past)),
+                Is.EqualTo(ColonistNamePool.Names[0] + " 2"));
             Assert.That(ColonistNames.Of(0u, new PawnId(0)), Is.EqualTo("nobody"));
+        }
+
+        /// <summary>
+        /// Every name in the pool is well formed and none is absurdly long.
+        ///
+        /// <para><b>This is a coarse guard and says so, because characters are not pixels.</b> It
+        /// was written as "no name over twelve characters" and <i>Christopher</i> — eleven —
+        /// sailed through it and then failed
+        /// <c>HudGeometryTests.TheCardIsWideEnoughForItsRowsAndNoWider</c>, which asks the real
+        /// text engine what a string really draws. That test is the gate; this one only catches
+        /// the entries a 244-row CSV can gain without anybody noticing: a blank, a stray space, a
+        /// sentence pasted into the wrong column.</para>
+        /// </summary>
+        [Test]
+        public void NoNameInThePoolIsLongerThanACardBudgetsFor()
+        {
+            foreach (string name in ColonistNamePool.Names)
+            {
+                Assert.That(name, Is.Not.Empty);
+                Assert.That(name.Trim(), Is.EqualTo(name), $"'{name}' has stray whitespace");
+                Assert.That(name.Length, Is.LessThanOrEqualTo(12),
+                    $"'{name}' is far longer than any name the card was sized for — the pixel " +
+                    "measurement is HudGeometryTests', and this only catches the absurd");
+            }
         }
 
         /// <summary>
@@ -127,10 +185,10 @@ namespace Odyssey.Tests.Hud
             roster.Refresh(snapshot, selected: new PawnId(2));
 
             Assert.That(roster.Cards.Count, Is.EqualTo(2));
-            Assert.That(roster.Cards[0].Name, Is.EqualTo("Wrenn"));
+            Assert.That(roster.Cards[0].Name, Is.EqualTo(ColonistNamePool.Names[0]));
             Assert.That(roster.Cards[0].Layer, Is.EqualTo(2));
             Assert.That(roster.Cards[0].Selected, Is.False);
-            Assert.That(roster.Cards[1].Name, Is.EqualTo("Odile"));
+            Assert.That(roster.Cards[1].Name, Is.EqualTo(ColonistNamePool.Names[1]));
             Assert.That(roster.Cards[1].Selected, Is.True);
             Assert.That(MoodBands.Band(roster.Cards[1].Mood), Is.EqualTo("breaking"));
         }
@@ -177,7 +235,7 @@ namespace Odyssey.Tests.Hud
             pane.Refresh(snapshot);
 
             Assert.That(pane.Subject, Is.EqualTo(InspectSubject.Colonist));
-            Assert.That(pane.Title, Is.EqualTo("Kester"));
+            Assert.That(pane.Title, Is.EqualTo(ColonistNamePool.Names[2]));
             Assert.That(pane.Job, Is.EqualTo("Eating"), "the registry's word for ui.status.eating");
             Assert.That(pane.Layer, Is.EqualTo(1));
 
@@ -219,7 +277,7 @@ namespace Odyssey.Tests.Hud
 
             Assert.That(pane.Skills.Count, Is.EqualTo(SkillCatalogue.All.Length));
             Assert.That(pane.Skills.Count(s => s.Live), Is.EqualTo(2),
-                "mining and growing are the two the simulation backs; hauling is a work type " +
+                "mining and chopping are the two the simulation backs; hauling is a work type " +
                 "and not a skill in the design's list");
 
             SkillRow mining = pane.Skills.Single(s => s.IconKey == "ui.skill.mining");
@@ -228,9 +286,23 @@ namespace Odyssey.Tests.Hud
             Assert.That(mining.Passion, Is.EqualTo(2));
             Assert.That(mining.Experience, Is.EqualTo(9_500));
 
+            // Chopping has a row of its own since 2026-09-18. It used to wear Growing's, so a
+            // colonist who spent a day with an axe levelled up a skill called Growing and there
+            // was no Chopping anywhere on screen — which is how the owner found it, by watching
+            // WS2's curve work and going looking for the number behind it.
+            SkillRow chopping = pane.Skills.Single(s => s.IconKey == "ui.skill.cutting");
+            Assert.That(chopping.Name, Is.EqualTo("Chopping"), "the registry's word for ui.skill.cutting");
+            Assert.That(chopping.Level, Is.EqualTo(4), "felling trains chopping");
+
             SkillRow growing = pane.Skills.Single(s => s.IconKey == "ui.skill.growing");
-            Assert.That(growing.Level, Is.EqualTo(4), "felling is plant work and trains growing");
-            Assert.That(growing.Note, Is.Not.Empty, "a row that borrows another skill's work says so");
+            Assert.That(growing.Live, Is.False, "nothing is planted yet, so growing trains on nothing");
+            // No row borrows another skill's work any more. The Note field stays — it is what a
+            // row uses to explain itself when the mapping is not obvious — but nothing needs it,
+            // and asserting a borrow that no longer exists would pin the very thing this change
+            // removed.
+            Assert.That(pane.Skills.Where(s => s.Live).Select(s => s.IconKey),
+                Is.EquivalentTo(new[] { "ui.skill.mining", "ui.skill.cutting" }),
+                "the live rows are the simulation's own skills, each under its own name");
 
             foreach (SkillRow row in pane.Skills.Where(s => !s.Live))
             {

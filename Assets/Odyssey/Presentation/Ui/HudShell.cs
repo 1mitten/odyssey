@@ -279,14 +279,37 @@ namespace Odyssey.Presentation.Ui
             public PawnId LastId;
             public int LastJob = int.MinValue;
             public int LastLayer = int.MinValue;
+
+            /// <summary>
+            /// Which generation of pictures this card's portrait came from.
+            ///
+            /// <para><b>Because the id alone was not enough, and the owner saw it</b> (2026-09-18:
+            /// the roster bar's pictures gone on start and on load, while the colonist card still
+            /// had them). A card is a slot and re-reads itself only when the colonist in it
+            /// changes, so it asks for a portrait once. Building or loading a colony calls
+            /// <c>PortraitStudio.Clear</c>, which <em>destroys</em> every texture — and a new
+            /// colony's pawn ids start at the same small numbers, so the slot's id had not changed,
+            /// nothing re-read, and the card was left pointing at a texture that no longer exists.
+            /// The inspect pane asks afresh every time it is opened, which is exactly why it kept
+            /// working and made the fault look like a roster problem.</para>
+            /// </summary>
+            public int LastPortraits = int.MinValue;
         }
 
         class AlertRowView
         {
             public VisualElement Root = null!;
             public HudGlyph Icon = null!;
+            public VisualElement Text = null!;
+            public Label Prefix = null!;
+            public Label Target = null!;
+            public Label Message = null!;
             public Label Lead = null!;
             public Label Detail = null!;
+            public VisualElement Dismiss = null!;
+            public int DismissKey;
+            public PawnId TargetPawn;
+            public CellRef? TargetCell;
             public string? LastLead;
         }
 
@@ -321,6 +344,15 @@ namespace Odyssey.Presentation.Ui
 
             /// <summary>One or two lozenges, hidden at no passion.</summary>
             public VisualElement Passion = null!;
+
+            /// <summary>
+            /// The steps this line is set at, carried on the view because <c>SetSkillLine</c>
+            /// rewrites both strings and would otherwise reset them to the inspect pane's. The
+            /// setup page sits one step higher up the scale (owner, 2026-09-18).
+            /// </summary>
+            public HudTextRole NameRole = HudTextRole.Body;
+
+            public HudTextRole LevelRole = HudTextRole.Meta;
 
             public string LastKey = string.Empty;
             public int LastLevel = int.MinValue;
@@ -883,6 +915,16 @@ namespace Odyssey.Presentation.Ui
             if (world == null || _directors == null) return;
 
             SelectionDirector selection = _directors.Selection;
+
+            // The pane and the palette dock into the same bottom-left corner, so the corner holds
+            // one of them. Opening the palette has cleared the selection since 2026-09-17; this is
+            // the other direction, which was never wired — the pane opened underneath the palette
+            // (owner, 2026-09-18). Closed before the pane is refreshed, so there is no frame in
+            // which both are up. BuildPaletteModel.ClosedBy holds the rule, because which reasons
+            // close it is a decision worth testing without a Unity run.
+            if (BuildPaletteOpen && BuildPaletteModel.ClosedBy(reason, selection.IsEmpty))
+                SetBuildPalette(false);
+
             if (selection.HasPawn) _inspect.SetColonist(selection.Pawn);
             else if (selection.HasThing) _inspect.SetItem(selection.Thing);
             else if (selection.Cell is { } cell) _inspect.SetCell(cell);
