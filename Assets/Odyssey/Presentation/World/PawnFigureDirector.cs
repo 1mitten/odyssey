@@ -1172,7 +1172,7 @@ namespace Odyssey.Presentation.World
             // If lifts ever land this has to become a question about the connector's KIND rather
             // than its geometry, because a lift is vertical and you stand in it.
             bool straightUp = pawn.NextCell.X == pawn.Cell.X && pawn.NextCell.Z == pawn.Cell.Z;
-            figure.ClimbPhase = pawn.MovePercent > 0 && pawn.NextCell.Y != pawn.Cell.Y && straightUp
+            figure.ClimbPhase = pawn.Moving && pawn.NextCell.Y != pawn.Cell.Y && straightUp
                 ? HeldClimbPhase ?? Mathf.Clamp01(pawn.MovePercent * 0.01f)
                 : -1f;
 
@@ -1312,7 +1312,7 @@ namespace Odyssey.Presentation.World
             // worth differencing, hence Settled.
             bool settled = figure.Settled;
             figure.Speed = ObserveSpeed(figure.Speed, figure.SimPosition, position, deltaTime, settled,
-                hopping: pawn.MovePercent > 0 && PawnPose.IsDrawnAsAHop(World, in pawn));
+                hopping: pawn.Moving && PawnPose.IsDrawnAsAHop(World, in pawn));
             figure.Settled = true;
             figure.SimPosition = position;
 

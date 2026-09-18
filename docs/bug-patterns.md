@@ -182,6 +182,25 @@ sizes and the exact line, and it had been printing for as long as the feature ex
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-19 — Every dear step began with the figure standing still (P5)
+
+Found by a smoothness test, never reported, and in the game since any step cost more than 100.
+
+`MovePercent` is a whole percent of the step. A 240-tick hop therefore spends its **first 2.4 ticks
+at nought percent**, and every reader gated on `MovePercent > 0` — the pose, the climb phase, the
+gait hold — treated the pawn as standing still through them, then caught it up in one frame: **30 mm
+against the 10 mm a frame that climb moves**. On a flat cell, which costs exactly 100, it cannot
+happen at all, which is why five sessions of watching colonists walk never showed it.
+
+**A new shape worth naming: a threshold that is exact for the common case and wrong for every other
+one.** `MovePercent > 0` is not a test for "moving", it is a test for "moving *and* the step is cheap
+enough that a percent has ticked over". Ask of any threshold on a published number: *what does the
+number do on the case this was not written for?*
+
+**Stopped by** `PawnView.Moving`, which asks the per-mille progress, and by
+`HopArcTests.AClimbIsSmoothFrameToFrameAllTheWayUp` — which measures the **variation** between
+frames rather than a maximum, because a hitch and a rhythm both pass a maximum comfortably.
+
 ### 2026-09-19 — One ramp, two steps, two different prices (P1)
 
 *"The slowness needs to start happening much earlier when entering the beginning of the tile … you

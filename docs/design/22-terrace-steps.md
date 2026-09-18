@@ -148,19 +148,18 @@ difference this time is that the motion carries the duration.
 way, so the height is a function of *the ground under the walker*. Going down there is nothing
 underfoot past the edge, so it is a function of *time*.
 
-- **Up is four strides up the bank.** The first cut was a solved parabola that left the ground,
-  cleared the lip by 0.35 m and landed — and the owner's answer to it was immediate: *"when going up
-  hill it looks like they jump a bit and not flat with the terrain, which they should be … would it
-  be possible they take actual steps up the terrain in a few motions."* Quite right: the board shows
-  a **ramp** (`BankMesh.HeightAt` is a plane from the lower floor to the upper rim), so there is a
-  walkable surface the whole way and a body arcing over it is a body ignoring the ground it is on.
-  The figure now steps: the drawn height holds while the ramp catches up, then pushes on to the next
-  tread over a third of a stride. The stride count comes out of the height — `PreferredTread` is
-  0.4 m, so a terrace's 1.5 m is four strides of 0.375 m — rather than being fixed, so a small step
-  and a tall one are not drawn in the same number of motions.
-- **It leads the slope by up to two thirds of a tread, and that is the stride.** Your hips go up
-  when your foot does. It is never drawn below the ground, and — the assertion that separates this
-  from the arc — **never above the ground it is climbing on to**.
+- **Up is nothing at all: the figure is drawn on the ramp, sampled where it stands.** Two
+  inventions were tried and both were reported. A solved parabola that cleared the lip by 0.35 m —
+  *"when going up hill it looks like they jump a bit and not flat with the terrain, which they should
+  be"*. Then strides, a hold-and-push rhythm up the treads — *"it jolts and jitters the colonists at
+  certain points; smoother is preferred and predictable"* (2026-09-19). Both were answers to a
+  question the board had already answered: `BankMesh.HeightAt` is a plane from the lower floor to the
+  upper rim, so there is a walkable surface the whole way, and the right height for a climbing figure
+  is **that surface**. Nothing computes a climb any more.
+- **Reading the surface cannot disagree with the surface**, which a model of it can. The three
+  heights `StepPace` is built from are exact on a straight bank and wrong at a corner, where the
+  surface is two planes (`HeightAt` is a max or a min there). The clamp used to arbitrate between
+  the two; now there is only one.
 - **A sheer face gets a plain climb, and fixing it found a fault that predates all of this.** A
   bank is refused against rock, inside a working and under a roof. There the ground under the walker
   is flat for the first half of the step and then jumps a whole layer at the midpoint, because that
@@ -256,6 +255,8 @@ that had not finished climbing by the time it crossed would be inside the block.
 | Top half of the ramp | 0.62 m/s | **0.62 m/s** |
 | The flat top | 0.62 m/s | **1.5 m/s** |
 | Whole climb, flat ground to the step | 5.7 s | 8.0 s |
+| Frame-to-frame on the ramp | — | **9.9 – 12.3 mm**, the variation being per-mille rounding |
+| Worst single frame in the step | — | 30 mm, where the ramp's speed meets the flat top's |
 
 `HopArcTests.TheFlatsAreWalkedAndTheRampIsClimbed` asserts all four, including that the ramp's two
 halves agree with each other — which is the thing the owner was actually looking at.
@@ -263,6 +264,15 @@ halves agree with each other — which is the thing the owner was actually looki
 **Eight seconds is the number to argue with if this still reads wrong.** It is two steps of 240, and
 the lever is `MoveCost.JumpUp`: everything else — the slope cost, the pacing weight, the stride
 count — is derived from it and follows automatically.
+
+### The hitch at the start of every dear step
+
+Found by the smoothness test rather than by anybody looking, and it had been there since steps cost
+anything other than 100. `MovePercent` is a whole percent, so a 240-tick hop spends its **first 2.4
+ticks at nought percent** — and every reader gated on `MovePercent > 0` drew the figure standing
+still through them and then caught it up in one frame: 30 mm against the 10 mm a frame of that climb
+moves. `PawnView.Moving` asks the per-mille progress instead, and is what the pose, the climb phase
+and the gait hold now read.
 
 ### What is not paced
 

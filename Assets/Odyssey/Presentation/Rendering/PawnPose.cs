@@ -40,7 +40,7 @@ namespace Odyssey.Presentation.Rendering
             out Vector3 heading, WorldRenderModel? world = null)
         {
             Vector3 from = CellMetrics.FloorCentre(pawn.Cell);
-            if (pawn.MovePercent <= 0)
+            if (!pawn.Moving)
             {
                 heading = Vector3.zero;
                 return GroundRelief.Lift(from) +
@@ -270,22 +270,26 @@ namespace Odyssey.Presentation.Rendering
             }
             else
             {
-                // **Anything that climbs is drawn in strides**, whether the simulation calls it a
-                // hop or an ordinary step on to a bank. That is the whole of the owner's second
-                // report — "would it be possible they take actual steps up the terrain in a few
-                // motions" — and it has to cover both, because a terrace climb is one walk into the
-                // foot cell and one hop out of it and the ramp is split down the middle between
-                // them. Striding only the hop would have drawn half a climb.
-                // **Strides need something to stride on.** A bank is a ramp and a figure walks up
-                // it; a sheer face — rock, a working, under a roof — is hauled up, and there is no
-                // tread to plant a foot on. Measured: strides up a sheer face push 52 mm in a
-                // frame against the 50 a stride may, because a full layer in eight treads is a
-                // steeper thing than a terrace's half layer in four.
+                // **On the surface, sampled where the figure stands.** A bank is a plane and the
+                // figure walks on it; nothing computes a climb any more. This is the whole of
+                // "motions exactly just above the terrace surface" (owner, 2026-09-19), and every
+                // attempt to improve on it — a parabola over the lip, then strides up the treads —
+                // was an invention that jolted, because the ramp was already there to be walked on.
+                //
+                // The model of the step is not used here, only its pacing: three heights and a
+                // straight line between them are exact on a straight bank and wrong at a corner,
+                // where the surface is two planes (`BankMesh.HeightAt` is a max or a min). Reading
+                // the surface itself cannot disagree with the surface.
                 bool ramp = BankLayout.At(world, pawn.Cell).Exists ||
                             BankLayout.At(world, pawn.NextCell).Exists;
 
+                // With no ramp there is nothing to sample: the ground under the walker is flat for
+                // half the step and a whole layer higher for the other half, because that is when
+                // the cell it is over changes. A figure following it would stand still and then
+                // teleport 1.51 m, measured. The step's own model climbs instead, finishing by the
+                // boundary — which is what hauling yourself onto a ledge looks like anyway.
                 bare = ramp
-                    ? HopArc.Stepped(pace.GroundAt(s), pace.Landing, pace.Rise)
+                    ? CellMetrics.FloorCentre(over).y + BankLayout.RiseAt(world, over, along.x, along.z)
                     : pace.GroundAt(s);
             }
 

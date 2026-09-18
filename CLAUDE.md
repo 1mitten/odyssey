@@ -353,6 +353,11 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
 - **The coloured wood has had two playtests; the rounds since have not been played** — the cherry
   and flame canopies read as scarlet at the play camera and are the first to veto, and the measured
   tenth-of-a-stop the new shader costs was deliberately not papered over with a gain.
+- **The climb has been drawn three ways in two days and only the third is unseen.** A parabola over
+  the lip read as jumping; strides up the treads read as jolting; it is now the ramp surface itself,
+  sampled where the figure stands, at 9.9–12.3 mm a frame (`docs/design/22-terrace-steps.md` §4b).
+  If anything still jitters, the one junction left is where the ramp's 0.62 m/s meets the flat top's
+  1.5 m/s — one 30 mm frame — and the honest fix there is a slower flat, not a smoother curve.
 - **The whole terrace climb is now eight seconds and nobody has watched one.** Two steps of 240:
   flat ground at a walk, 3.9 m of ramp at 0.62 m/s in four strides, then the top at a walk again
   (`docs/design/22-terrace-steps.md` §4c). The lever is `MoveCost.JumpUp` — the slope cost, the

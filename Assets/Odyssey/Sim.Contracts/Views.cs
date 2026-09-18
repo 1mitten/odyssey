@@ -100,6 +100,18 @@ namespace Odyssey.Sim.Contracts
         public readonly int MovePerMille;
 
         /// <summary>
+        /// Is the pawn part way through a step at all?
+        ///
+        /// <para><b>Ask this rather than <c>MovePercent > 0</c>.</b> A percent rounds a step's first
+        /// ticks down to nothing: a 240-tick hop spends its first 2.4 ticks at nought percent, so a
+        /// reader gated on the percent drew the figure standing still and then caught it up in one
+        /// frame — measured at 30 mm against the 10 mm a frame of that climb moves, which is a hitch
+        /// at the start of every step dearer than a flat cell. Found by
+        /// <c>HopArcTests.AClimbIsSmoothFrameToFrameAllTheWayUp</c> and not by anybody looking.</para>
+        /// </summary>
+        public bool Moving => MovePerMille > 0 || MovePercent > 0;
+
+        /// <summary>
         /// True while the pawn is working a toil in place: swinging at a tree, and later mining
         /// or building. False while it walks, sleeps, eats or idles.
         ///

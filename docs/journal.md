@@ -6239,3 +6239,38 @@ design is `docs/design/22-terrace-steps.md` §4c.
 - **Verified:** fast tier **730 Sim + 438 Hud**, Long **21**; EditMode **1781 total, 1767 passed,
   0 failed**; PlayMode **82 total, 75 passed, 0 failed** (the scratch worktree has no Synty
   junction, so the two portrait tests skip there — see the previous entry).
+
+### Two inventions removed, and the hitch that was there all along (2026-09-19, branch `claude/terrace-foot-guard`)
+
+Owner: *"It still doesn't look quite right — can we keep it simple and it's a consistently slow speed
+from top to bottom and motions exactly just above the terrace surface as it jolts and jitters the
+colonists at certain points and smoother is preferred and predictable."*
+
+- **Both of the things that jolted were mine.** A hop up a terrace has been drawn three ways in two
+  days: a solved parabola over the lip (reported as jumping), strides up the treads (reported as
+  jolting), and now the ramp itself. The board had answered the question before either was written —
+  `BankMesh.HeightAt` is a plane, so there is a surface the whole way and the right height for a
+  climbing figure is that surface, sampled where it stands. **The lesson is the general one: when a
+  drawn thing already exists, read it; do not model it.** A model of a surface can disagree with the
+  surface, and the three-height model does exactly that at a corner, where the bank is two planes.
+- **The strides could not have been smooth, and the arithmetic says so.** A stride is a hold and a
+  push: it concentrates a climb's motion into part of its time, by construction. The only question
+  was how much, and the answer — capped by the 50 mm a frame may move — was a rhythm either way.
+  Something asked for as *a few motions* and something asked for as *smooth and predictable* are the
+  same request read two ways, and the second reading is the one that survives contact.
+- **The smoothness test then found a hitch that predates every bit of this.** `MovePercent` is a
+  whole percent, so a 240-tick step spends its first 2.4 ticks at nought percent — and every reader
+  gated on `MovePercent > 0` drew the figure standing still through them and caught it up in one
+  frame. Measured at **30 mm against the 10 mm a frame that climb moves**. It has been in the game
+  since any step cost more than 100 and nobody has ever reported it, because on a flat cell it does
+  not happen at all. `PawnView.Moving` is the fix, and the pose, the climb phase and the gait hold
+  all read it.
+- **A test that measures variation rather than a maximum is what caught both.** A hold-and-push
+  rhythm passes "no frame moves more than 50 mm" comfortably. `AClimbIsSmoothFrameToFrameAllTheWayUp`
+  requires the largest frame on the ramp to be under 1.5× the smallest, which is a statement about
+  *evenness*, and it is the assertion the owner's word "predictable" translates into.
+- **What is left, measured:** 9.9 to 12.3 mm a frame all the way up the ramp — the spread is per-mille
+  rounding and nothing else — and one 30 mm frame where the ramp's 0.62 m/s meets the flat top's
+  1.5 m/s. That junction is the terrain changing and is left alone.
+- **Verified:** fast tier **730 Sim + 438 Hud**, Long **21**; EditMode **1777 total, 1763 passed,
+  0 failed**.
