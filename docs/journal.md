@@ -5023,6 +5023,20 @@ model*, is still the right answer and needs no code to honour. What the unit tau
   and a saved copy would be a second thing to keep honest. The version-number test did its job:
   the bump is a deliberate line in a diff, again.
 
+- **A fresh-eyes review of the branch found five things, and each fix is its own small commit.**
+  The mid-walk collapse went down without the ground's thought — a giver-side collapse remembered
+  it and a road collapse did not — so the walk toil's guard now adds it, once, and the bed stays
+  reserved until the job ends rather than gaining a second exit. The pace band and the work
+  curve's integers said nothing about being invented; they do now. WS2's soak had cited a baseline
+  run the record never held, and the review could not verify it from the file: the run has been
+  made at `f6beb56` at last and matches the table that cited it byte for byte, which is the
+  difference between a claim checked and a claim trusted. The seam's "costs no allocation" claim
+  is now a Long test on a working colony — 10.4 bytes a tick, with the dozen completed cells'
+  ~25 KB apiece of nav and support rebuilds measured, attributed to editing the world rather than
+  ticking it, and written into the test's comment. And the hash comment no longer promises exact
+  division: the toils that count plain ticks — eat, sleep, wait — divide to near nothing and reach
+  the hash through what their endings change.
+
 ### The inspect pane resized under the pointer (2026-09-18)
 
 The owner, on the colonist card: *"When I click on tabs like skills/needs — it resizes every time —
