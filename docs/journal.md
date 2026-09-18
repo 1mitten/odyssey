@@ -6190,4 +6190,7 @@ turned up had been in the game far longer than it had.
   opposite of what the code suggested, which is the fourth time this project has recorded that
   sentence.
 - **Verified:** fast tier **726 Sim + 438 Hud**, Long **21**; EditMode **1776 total, 1762 passed,
-  0 failed**, run on a scratch worktree because the owner's editor held `odyssey-inspect`.
+  0 failed**; PlayMode **82 total, 75 passed, 0 failed**. Both Unity tiers ran on a scratch worktree
+  because the owner's editor held `odyssey-inspect`, and that is why PlayMode passed 75 where the
+  same suite passes 77 on the real checkout: a scratch worktree has no `Assets/Synty` junction, so
+  the two portrait tests skip for want of the packs. Nothing this branch touches goes near them.
