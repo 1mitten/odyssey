@@ -1719,16 +1719,26 @@ namespace Odyssey.Tests.PlayMode
         /// Every window carries an X, which is the owner's rule stated as a test rather than as a
         /// convention each call site has to remember.
         ///
-        /// <para><b>One window is exempt, and the exemption is named here rather than allowed
-        /// silently (U38).</b> The start screen's root has nothing behind it to close <i>to</i>:
-        /// it exists precisely when no session is built, so an X on it could only either do
-        /// nothing or quit the game while wearing the glyph that means "dismiss this". A control
-        /// that does nothing is worse than no control, and one that quits under a dismiss glyph is
-        /// worse still — so it has none, and the way out is the Quit row that says so in words and
-        /// asks twice.</para>
+        /// <para><b>Two windows are exempt, for two different reasons, and both reasons are
+        /// asserted rather than allowed silently.</b></para>
         ///
-        /// <para>Every <i>other</i> window still has to carry one, which is what the named
-        /// exception buys over loosening the rule: a second window without an X fails here.</para>
+        /// <para><c>start</c> (U38) has nothing behind it to close <i>to</i>: it exists precisely
+        /// when no session is built, so an X on it could only either do nothing or quit the game
+        /// while wearing the glyph that means "dismiss this". A control that does nothing is worse
+        /// than no control, and one that quits under a dismiss glyph is worse still — so it has
+        /// none, and the way out is the Quit row that says so in words and asks twice. The
+        /// assertion is that it really has no X, so the exemption cannot quietly cover one.</para>
+        ///
+        /// <para><c>setup</c> (2026-09-18) became a window when the page took the in-game menus'
+        /// own fill rather than inventing a colour, and it does have somewhere to go: the Back row
+        /// in its footer. That is a <i>better</i> way out than an X for this screen — it says in
+        /// words where it goes — and an X beside it would be two controls for one action. The
+        /// assertion here is on the alternative: the exemption holds only while a
+        /// <c>setup__back</c> row is actually on the page, so deleting Back fails this test rather
+        /// than leaving a window nobody can leave.</para>
+        ///
+        /// <para>Every <i>other</i> window still has to carry one, which is what naming the two
+        /// buys over loosening the rule: a third window without an X fails here.</para>
         /// </summary>
         [UnityTest]
         public IEnumerator EveryWindowHasAWayOutThatIsNotTheKeyboard()
@@ -1742,7 +1752,13 @@ namespace Odyssey.Tests.PlayMode
                 Assert.That(windows.Count, Is.GreaterThanOrEqualTo(3),
                     "the Build palette, the Menu popover and the settings panel are all windows");
 
-                var exempt = new[] { "start" };
+                // The window, and what it has instead of an X — null where there is nothing behind
+                // it to go back to at all.
+                var exempt = new (string Window, string? Instead)[]
+                {
+                    ("start", null),
+                    ("setup", "setup__back"),
+                };
                 int exemptSeen = 0;
 
                 foreach (VisualElement window in windows)
@@ -1750,12 +1766,25 @@ namespace Odyssey.Tests.PlayMode
                     Assert.That(window.ClassListContains("panel"), Is.True,
                         $"the '{window.name}' window is not a panel, so it does not carry the fill");
 
-                    if (System.Array.IndexOf(exempt, window.name) >= 0)
+                    int listed = -1;
+                    for (int i = 0; i < exempt.Length; i++)
+                        if (exempt[i].Window == window.name) listed = i;
+
+                    if (listed >= 0)
                     {
                         exemptSeen++;
                         Assert.That(window.Q(className: "panel__close"), Is.Null,
-                            $"the '{window.name}' window is listed as having nothing to close to, " +
-                            "yet it has an X — one of the two is wrong");
+                            $"the '{window.name}' window is listed as carrying no X, yet it has " +
+                            "one — one of the two is wrong");
+
+                        // An exemption is only honest while the thing it was granted for is there.
+                        string? instead = exempt[listed].Instead;
+                        if (instead != null)
+                            Assert.That(window.Q(className: instead), Is.Not.Null,
+                                $"the '{window.name}' window is exempt from the X because it has a " +
+                                $"'{instead}' row instead, and that row is not on the page — so it " +
+                                "is a window with no way out at all");
+
                         continue;
                     }
 
@@ -1763,7 +1792,7 @@ namespace Odyssey.Tests.PlayMode
                         $"the '{window.name}' window has no close button");
                 }
 
-                // The exemption has to still apply to something, or it is a hole left open for a
+                // Each exemption has to still apply to something, or it is a hole left open for a
                 // window that quietly stopped being built.
                 Assert.That(exemptSeen, Is.EqualTo(exempt.Length),
                     "a window named as exempt from the close-button rule was not on screen at all");

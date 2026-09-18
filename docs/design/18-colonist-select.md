@@ -292,6 +292,17 @@ transparency/translucent as the in game menus, not to reinvent."* The element we
 inset 24 px so the border reads as a box around the interface rather than as a screen border.
 Nothing about the colour is restated anywhere.
 
+**Wearing those classes made it a window, and the window rule caught it.**
+`HudGeometryTests.EveryWindowHasAWayOutThatIsNotTheKeyboard` requires every `.window` to carry an X,
+with the start screen's root the one named exemption — and the setup page had neither. It went red
+in CI on the push, which is the rule doing its job. **The page is exempt too, for a different reason
+and asserted differently:** the start root has nothing behind it to close *to*, while this page has
+a **Back** row, which is a better way out than an X because it says in words where it goes, and an X
+beside it would be two controls for one action. So the exemption table carries a reason per window,
+and where there is an alternative the test asserts **the alternative** — the exemption holds only
+while a `setup__back` row is on the page, so deleting Back fails the test rather than leaving a
+window nobody can leave.
+
 ---
 
 ## 7. Not in this unit

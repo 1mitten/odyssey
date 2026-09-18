@@ -321,8 +321,12 @@ namespace Odyssey.Presentation.Ui
             var footer = new VisualElement();
             footer.AddToClassList("setup__footer");
 
+            // Classed so the window rule can find it: this page carries no X, and the reason is
+            // that it has a way out which says in words where it goes. HudGeometryTests asserts
+            // the alternative exists rather than taking the exemption on trust.
             var back = SeedRow("ui.start.back", () => _menu.Back());
             back.AddToClassList("setup__inline");
+            back.AddToClassList("setup__back");
             footer.Add(back);
 
             // Green, and the only green row in the game (owner, 2026-09-18: "make the start button
