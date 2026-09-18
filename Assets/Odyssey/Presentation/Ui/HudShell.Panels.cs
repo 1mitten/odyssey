@@ -451,10 +451,16 @@ namespace Odyssey.Presentation.Ui
                 RosterCard model = _roster.Cards[i];
                 CardView view = _cards[i];
 
-                bool somebodyElse = view.LastId != model.Id;
+                // Who is in this slot is the id **and** the seed they were rolled from. The id on
+                // its own is not a person: every colony numbers its pawns from one, so loading
+                // another game leaves this slot holding the same id and a different colonist, and
+                // the name and face below — both read once, both derived from the seed — would
+                // keep showing the colony the player left. See RosterCard.Seed and CardView.LastSeed.
+                bool somebodyElse = view.LastId != model.Id || view.LastSeed != model.Seed;
                 if (somebodyElse)
                 {
                     view.LastId = model.Id;
+                    view.LastSeed = model.Seed;
                     HudText.Set(view.Name, model.Name, HudTextRole.Row);
 
                     // Keyed on the id like the name beside it, and for the same reason: a card is

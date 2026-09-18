@@ -202,8 +202,28 @@ namespace Odyssey.Tests.Presentation
 
             // Or the loop above passes by never running, which is how a rule quietly stops being
             // one: five buildable slabs and five street surfaces are in the committed catalogue.
-            Assert.That(checked_, Is.GreaterThanOrEqualTo(10),
-                "the catalogue should hold at least the five slab ids and the five street tiles");
+            // **Only where there is art to check.** The guard above is right that a loop which
+            // never runs is a rule that has quietly stopped being one — but asking for ten checked
+            // rows unconditionally asks for the licensed packs, and the project's standing rule is
+            // that a clone without them still builds and runs headless. It does not: this test was
+            // the one red on the self-hosted runner from the moment it was written, because the
+            // runner's checkout has no `Assets/Synty` and so every row is a primitive.
+            //
+            // The two cases are told apart by the library rather than by the environment: with no
+            // packs, *nothing* in the catalogue has art, so there is nothing here to be wrong. With
+            // packs, ten rows must be checkable, and fewer means the rule has lost its reach.
+            bool anyArtAtAll = false;
+            foreach (ModuleEntry row in catalogue.Entries)
+            {
+                if (library[library.Resolve(row.moduleId, row.shape)].UsesArt) { anyArtAtAll = true; break; }
+            }
+
+            if (anyArtAtAll)
+                Assert.That(checked_, Is.GreaterThanOrEqualTo(10),
+                    "the catalogue should hold at least the five slab ids and the five street tiles");
+            else
+                Assert.Pass("no licensed pack is present, so every module is a primitive and this " +
+                            "rule has nothing to measure. The clearance assertion above still ran.");
         }
 
         /// <summary>

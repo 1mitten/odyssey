@@ -5854,3 +5854,42 @@ certain angles — you see a slight issue with not being fully flush."*
   it is the piece's own edge and no amount of placement will move it.
 - **Verified:** fast tier 723 Sim + 411 Hud; EditMode **1712 total, 1698 passed, 0 failed**;
   PlayMode **80 total, 75 passed, 0 failed**; both content checks current.
+
+### The roster bar kept the last colony's names, and the guard for it had to be driven through the real shell (2026-09-18)
+
+The owner: *"the colonist info card and the roster top bar names don't match up? there has been a
+mix up?"*, and then the sentence that solved it — *"maybe to do with loading and saving another
+game?"*
+
+- **A pawn id is not a person.** Every colony numbers its pawns from one, so the first roster slot
+  holds `PawnId(1)` in every game there has ever been. A roster card is a slot that re-reads itself
+  only when the colonist in it changes, and it asked `view.LastId != model.Id`. Load another colony
+  and that is false, so the name and the face — both read once, both derived from the roll seed —
+  were never rewritten. The inspect pane reads afresh every frame, so it was right, and the two
+  disagreed on screen.
+- **This is the *third* time the same fault has been fixed, each time for one thing.** A few hours
+  earlier the same slot logic left the bar's portraits blank on start and on load;
+  `CardView.LastPortraits` fixed the picture with a generation counter and its comment spells the
+  cause out in full — *"a new colony's pawn ids start at the same small numbers, so the slot's id
+  had not changed"*. The name and the face were sitting two lines above it and were not looked at.
+  Answering *is this the same person* would have covered *do the pictures still exist*; answering
+  only the second did not.
+- **The fix is one `||` and a published seed.** `RosterCard.Seed` carries the roll seed the name was
+  made from, so the view compares a person rather than a number, and the model reads the seed once
+  and uses it twice instead of the frame being asked the same question in two places.
+- **The guard had to be a PlayMode test, and proving that was the point.** Every unit test of
+  `RosterModel` passed throughout — the model always had the right names. The fault was entirely in
+  the view, so `HudGeometryTests.TheRosterBarFollowsTheColonyIntoANewSession` builds the real shell,
+  reads the labels the bar is actually drawing, tears the session down and builds another (which is
+  `LoadSession`'s own first two lines), and reads them again. **Run against the bug it fails with
+  the owner's report in its message**: the bar saying `Spudgun` where the frame says `Ivy`. A guard
+  that has not been seen to fail is not a guard, and this project has shipped one of those before
+  (P7).
+- **And the Unity tier's only red was not this branch's work at all.**
+  `EveryFloorSlabPutsItsWalkingSurfaceOnTheCellFloor` skips catalogue rows whose art is missing and
+  then asserts ten rows were checked — two reasonable halves that together require `Assets/Synty`,
+  which the self-hosted runner has not got. It had failed every CI run on the branch since it was
+  written and looked like the branch's own doing. It now asks the library whether *anything* has art
+  before demanding the count. `docs/lessons.md` has it, under the rule it broke.
+- **Verified:** fast tier 723 Sim + 412 Hud; EditMode **1713 total, 1699 passed, 0 failed**;
+  PlayMode **81 total, 76 passed, 0 failed**; both content checks current.

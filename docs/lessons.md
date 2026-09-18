@@ -50,6 +50,18 @@ What to do: `scripts/unity.sh` treats the **results file, not the process exit c
 
 **A remote container can run the whole fast tier, and the SDK comes from the distribution, not from Microsoft.** The container images used by Claude Code on the web carry python3 but no dotnet, and the official installer is useless there: `dot.net/v1/dotnet-install.sh` redirects to `builds.dotnet.microsoft.com`, which the egress proxy refuses outright (`CONNECT tunnel failed, response 403` — a policy denial, so retrying it only spends the session's time). The Ubuntu archive *is* reachable, and 24.04 packages the SDK, so `apt-get install -y dotnet-sdk-8.0` puts 8.0.131 on the path in about a minute and `scripts/test-fast.sh` then restores from nuget.org and runs every Sim test — 227 passed, 4 s cold, on 2026-09-16. **So "no Unity" does not mean "no gate" for Sim work:** every row in `docs/plans/overnight-queue.md` tagged **C** can be proved in a container, and only the **W** rows genuinely need the Windows machine. Still, **check `dotnet --version` before promising "fast tier green"** rather than assuming it: if an image ever has neither the SDK nor a reachable archive, the only safe rows are the ones whose done-when needs no test run at all. What the container cannot do at all: Unity itself (assembly-definition boundaries, editor tooling, PlayMode, frame time), and web research — `rimworldwiki.com`, `dwarffortresswiki.org`, `steamcommunity.com` and even `en.wikipedia.org` are blocked for both `curl` and `WebFetch`, leaving only the `WebSearch` tool's own extracts, which is thinner than a research row's format asks for.
 
+**A test that skips what it cannot see must not then demand a count, or it demands the licensed
+packs.** `EveryFloorSlabPutsItsWalkingSurfaceOnTheCellFloor` skipped every catalogue row whose art
+was missing — right, and the comment said why — and then asserted that at least ten rows had been
+checked, to stop the loop passing by never running. Both halves are reasonable and together they
+require `Assets/Synty`, which the self-hosted runner's checkout does not have. **It was the Unity
+tier's only red for six consecutive runs on `claude/grey-floor-layer`**, looked exactly like the
+branch's own work, and was neither. Tell the two cases apart by asking the *library* rather than the
+environment: if nothing in the whole catalogue has art there are no packs here and the rule has
+nothing to measure; if something does, the count must hold. The standing rule it broke is in
+`CLAUDE.md` — *never let the simulation or its tests depend on the packs* — and the way it broke it
+is invisible on any machine that has them, which is every machine a person works on.
+
 **The two tiers do not run the same NUnit, and the fast tier's is the newer one.** Learnt on
 2026-09-17, twice in one unit, at a Unity run each. A test written and proved green in the fast
 tier can fail to *compile* or fail at *runtime* under Unity because its assertion vocabulary is
