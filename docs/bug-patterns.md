@@ -92,11 +92,65 @@ The cheap discriminators, in order:
 3. **Does the art resolve?** A per-cell fallback (`SlabModuleFor` → group slab) can draw one material
    two ways. Check the catalogue has real art for the material before blaming anything else.
 
+**And when all three come back clean, read what they proved.** They exclude the *drawing*; they say
+nothing about what the player actually ordered. Three sessions ran these, got three clean answers,
+and invented a renderer fault anyway (P6).
+
+### P6 — Excluding every way it could go wrong, without asking whether it went wrong
+
+A report is assumed and then defended. Every mechanism that could corrupt the thing is excluded, one
+by one, correctly — and the conclusion drawn is that the mechanism must be more exotic, rather than
+that **the thing was never what the report called it**.
+
+The tell is a clean exclusion that nobody turns around. "A wood floor cannot draw as stone" is also
+"a cell drawing as stone is not a wood floor", and the second reading ends the hunt in a minute. The
+grey tile cost three sessions to the first reading.
+
+**The fix is a habit, not a check: name the player's action, and go and read it.** The owner's save
+files hold the order, the material and the kind of every cell, and they were on the same disk for the
+whole of that hunt. `tools/dotnet/Odyssey.SaveProbe` loads one without Unity and prints them.
+
+**Reach for the file before the code** whenever a report says a thing "is" something — a wood floor,
+a stone tile, the top level. That is the player's name for what they see, not a reading of state.
+
 ---
 
 ## The register
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
+
+### 2026-09-18 — The grey tile was stone paving all along (P5, P6)
+
+*"The slab was placed on the top level but then the colonists tried to build the most outer slabs
+first which then landed a stone/steel looking tile 1 height below instead of where it was … you can
+see it thinks this stone slab is a wood floor as well."*
+
+**This is the third report of the same tile and it overturns the previous two rows**, which is the
+row worth reading. The screenshot the last one asked for arrived: grey plates **coplanar with an
+unbroken wood deck**, which the "surface one cell down" answer said was impossible.
+
+**Cause:** the grey plates are **stone paving**. Measured by loading the owner's own saves
+(`tools/dotnet/Odyssey.SaveProbe`): `timmy-test` holds 11 `Paved`/Stone beside 20 `Paved`/Wood and 31
+`Built`/Wood, with stone at (72–75, 57, L11) touching wood at the same z. Every mixed deck in the
+folder mixes *materials*, never layers, and the stone cells are always `SlabPaved` — the **Paving**
+tool — and never `SlabBuilt`.
+
+**Why three sessions missed it.** The three checks in the previous row are all *true*, and all three
+answer one question — *can a wood floor draw as stone?* Not one asks **was it ever wood?** The
+contrapositive was the whole answer and was sitting in the same paragraph.
+
+**Three separate faults, none of them the renderer** (`15-building.md`):
+
+- Two palette tiles both mean "floor" — `Paving` (filed under *Structure* **and** *Floors*) and
+  `Slab` — and `BuildPalette._lastMaterial` is keyed **per sub-type**, so they remember different
+  materials and nothing on either tile says which.
+- `InspectModel.DescribeCellAt` titles a floor by `FloorStuff` alone, so paving and a structural
+  floor are the same sentence and the word *paving* is never printed.
+- Both slab catalogue rows carry `baseAtY: 0`, so neither art is normalised to the cell's floor
+  plane. A thin street tile and a thick deck draw at different heights in level cells — **the whole
+  of "one height below"**, a fraction of a cell rather than a layer.
+
+**Caught next time by:** `Odyssey.SaveProbe`. Load the file before arguing about the picture.
 
 ### 2026-09-18 — A dragged floor built a ring and left a hole (P1, P4)
 
@@ -130,6 +184,10 @@ same refresh. Nothing goes stale.
 
 **So the grey was a different surface one cell down**, seen through the hole the bug above left — and
 still there after the floor above it was removed, because it was never the floor being removed.
+
+> **Superseded, 2026-09-18.** The conclusion was wrong: the grey was stone paving on the *same*
+> layer. See the row at the top of this register. The three exclusions above all still hold; what
+> was missing was the question *was it ever wood?*, and the answer was in the save file.
 
 **Worth keeping** because two separate reports and a deconstruction test all pointed at a renderer
 fault that did not exist. The probe is committed; next time this is one command.
