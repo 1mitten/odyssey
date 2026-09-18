@@ -175,6 +175,46 @@ This is the rule the bar and the popovers already follow, and the same words the
 the popovers a day earlier: *"directly above the build button … no spacing and padding to ensure
 tight space"*.
 
+#### The other direction, which was missing for a day (owner, 2026-09-18)
+
+> *"If I have the build menu open and I haven't selected anything to build — I go to click on any
+> tile for info — that panel appears but underneath the build menu. What should happen is the build
+> menu closes and then the tile info can be seen — otherwise windows overlap."*
+
+**Only half of "one panel in the corner" had been written.** Opening the palette cleared the
+selection; selecting something *while* the palette was up did nothing to the palette, so the pane
+opened into the corner the palette was already sitting in and lost. The palette's own placement
+comment had been asserting the invariant this broke — *"the pane is closed when the palette opens
+now, so there is nothing to lift over"* — which was true of one direction and quietly assumed of
+both.
+
+**A selection now closes the palette**, which is the exact inverse of the 2026-09-17 rule rather
+than a new idea. The alternatives are worse: drawing the pane *over* the palette leaves two panels
+stacked in one corner with the palette hidden anyway, and moving either one elsewhere unpicks the
+docking the owner asked for.
+
+**It is asked of the reason, not of the input device.** What collides is the inspect pane, so
+whatever raises the pane closes the palette — a world click, a roster card, an alert jump, a drag
+box, a shift-click that adds somebody. `BuildPaletteModel.ClosedBy` holds the rule, in the
+Unity-free assembly, because which reasons close it is a decision worth testing in seconds.
+
+**`Cleared` must not be one of them, and that is load-bearing rather than tidy.** Opening the
+palette calls `Selection.Clear()`, so a close rule that fired on a cleared selection would shut the
+palette on the frame it opened and the symptom would be a Build button that does nothing.
+`OpeningThePaletteCannotCloseIt` is that trap, written down. `Died` and `LayerChanged` are out for
+the same reason in gentler form: they take a selection away, and nothing new is drawn in the corner.
+An empty selection never closes it either, which covers a shift-click that removes the last
+colonist.
+
+**A tool in hand stays in hand.** This closes a panel; it does not put the player's tool down.
+A *world* selection cannot happen while a tool is armed at all — `SliceCameraRig.WorldToolArmed`
+routes that click to the designate path — so the only way to reach the rule holding something is a
+roster click, and disarming there would silently undo a choice nobody revoked. It also means this
+change cannot interfere with building, which is what makes it safe to apply to every selection
+reason at once.
+
+**The close happens before the pane refreshes**, so there is no frame in which both are up.
+
 ### 4a. Rows is a column, not a band (owner, second pass)
 
 Rows spanned the screen at first — which is what the mockup drew, and what *"the first group

@@ -5049,3 +5049,41 @@ which is the same silent class of fault as a chip that arms a tool and never lig
 stone. A blueprint can be placed and hauled to later, which is the genre's norm and the reason
 `ReadStockFrom`'s null means "in stock"; the material tier already drops its tint to say what is
 short. "Cannot build right now" is a second state and wants a second treatment.
+
+### One panel in the corner, written in only one direction (2026-09-18)
+
+The owner: *"If I have the build menu open and I haven't selected anything to build — I go to click
+on any tile for info — that panel appears but underneath the build menu. What should happen is the
+build menu closes and then the tile info can be seen — otherwise windows overlap."*
+
+**This was not a new rule; it was the missing half of one the owner gave the day before.** On
+2026-09-17: *"if the tile info dialog is showing, that is closed down and the build mode is open"*,
+and both panels were docked into the same bottom-left corner on the same day. So `SetBuildPalette`
+clears the selection as it opens. Selecting something *while* the palette was up was never wired,
+and the pane opened underneath it.
+
+**The palette's own comment had been asserting the invariant that was broken.** `PlaceBuildPalette`
+says the bottom *"used to lift over the inspect pane when something was selected; the pane is closed
+when the palette opens now, so there is nothing to lift over and the panel sits on the bar in every
+case"*. Every word of that is true of one direction and was quietly assumed of both — the panel
+stopped lifting, and the case where the pane arrives second stopped being handled at the same
+moment. A comment that states an invariant is worth more when it names which direction it was
+proved in.
+
+**Asked of the reason, not of the input device.** What collides is the pane, so whatever raises the
+pane closes the palette. That covers the roster card and the alert jump, which are the same overlap
+reached another way and would have been left broken by a rule written about world clicks.
+
+**`Cleared` had to be excluded, and the exclusion is the interesting part.** Opening the palette
+clears the selection, so a close rule that fired on a cleared selection would have shut the palette
+on the frame it opened — a Build button that does nothing, and a self-inflicted one. The test is
+named for the trap rather than for the behaviour. `Died` and `LayerChanged` are out for the milder
+version of the same reason: they take a selection away and draw nothing new.
+
+**Nothing here can interfere with building, and that was checked rather than assumed.**
+`SliceCameraRig.WorldToolArmed` routes a click to the designate path whenever a tool is held, so a
+world click can only *select* when the player's hands are empty — which is exactly the case the
+owner described. The only way to reach the new rule holding a tool is a roster click, and the owner
+chose to keep the tool in hand there: closing a panel is not the same as putting a tool down.
+
+Nobody has pressed Play on it.
