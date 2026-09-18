@@ -734,7 +734,24 @@ namespace Odyssey.Sim.Construction
 
             BuildingDef def = ConstructionContent.BuildingAt(building);
             ushort stuff = ConstructionContent.StuffAt(_stuff[cell]).stuff;
-            int second = EdificeFootprint.SecondCell(cell, def.edifice, _facing[cell], _grid.Size);
+
+            // **Read before the site is cleared, because clearing it takes the facing with it.**
+            //
+            // This line used to be two: the far cell was derived here and the facing was read again
+            // *after* `Clear(cell)` on its way to the record — out of a slot that had just been
+            // zeroed. So every rotatable thing was built facing north whatever the player chose,
+            // and the fault hid perfectly. The cells were right, because they were derived up here
+            // from the real facing; only the drawn thing was wrong, so no simulation test could see
+            // it, the footprint guard still refused a bed whose far half was in a wall, and
+            // `ABedsFacingIsInTheStateHash` passed on the difference between the two beds' *cells*
+            // rather than on the facings it was written to pin.
+            //
+            // What the owner saw: a bed ghost turned the way they wanted, and a built bed at a
+            // quarter turn to it, sometimes lying through a wall it was never allowed to occupy
+            // (2026-09-18, with a screenshot of each). And with it the sleeper, who is laid out
+            // from the bed's facing and was lying across a bed that had been placed along.
+            byte facing = _facing[cell];
+            int second = EdificeFootprint.SecondCell(cell, def.edifice, facing, _grid.Size);
 
             // A two-cell thing's cells were both validated at the order; the world can still have
             // moved under the far one while the wood was being fetched — the ground below it can
@@ -752,7 +769,7 @@ namespace Odyssey.Sim.Construction
             // 1. The thing itself — a slab at the cell's lower boundary, or an edifice standing in
             //    the cell. One `if`, because everything else about the two is identical.
             if (def.slab) RaiseSlab(cell, stuff, def.covering);
-            else RaiseEdifice(cell, def, stuff, second, _facing[cell], quality);
+            else RaiseEdifice(cell, def, stuff, second, facing, quality);
 
             // A finished bed's head cell joins the list the sleep chooser already scans — the
             // scenario's own start-of-world cells are already in it, and the chooser does not

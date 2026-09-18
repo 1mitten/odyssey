@@ -1,0 +1,52 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="d8e66048-9a84-4424-bbd9-eab6d025672f" name="timjo@GWAR 2026-09-18 11:26:58" runUser="GWAR\timjo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-18T11:26:58.7551601+01:00" queuing="2026-09-18T11:26:58.7551602+01:00" start="2026-09-18T11:26:58.2669873+01:00" finish="2026-09-18T11:26:58.7584481+01:00" />
+  <TestSettings name="default" id="ce9269d7-3b73-425a-b383-8a9b57b7e105">
+    <Deployment runDeploymentRoot="timjo_GWAR_2026-09-18_11_26_58" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="7af36ef1-ff7a-4e1b-8d35-db6d3df9b8f0" testId="cdd54ec8-a144-9d46-a24c-e39b0ea57df6" testName="ProbeTheFacingSurvivesOrderToRecord" computerName="GWAR" duration="00:00:00.0966420" startTime="2026-09-18T11:26:58.5742953+01:00" endTime="2026-09-18T11:26:58.6709073+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="7af36ef1-ff7a-4e1b-8d35-db6d3df9b8f0">
+      <Output>
+        <StdOut>asked 0 -&gt; record 0, head 41488 rec 41488 second 41548&#xD;
+asked 3 -&gt; record 0, head 41488 rec 41488 second 41487</StdOut>
+        <ErrorInfo>
+          <Message>  record lost facing 3&#xD;
+  Expected: 3&#xD;
+  But was:  0&#xD;
+</Message>
+          <StackTrace>   at Odyssey.Tests.Sim.BedTests.ProbeTheFacingSurvivesOrderToRecord() in D:\code\odyssey-inspect\Assets\Odyssey\Tests\Sim\BedTests.cs:line 906&#xD;
+
+1)    at Odyssey.Tests.Sim.BedTests.ProbeTheFacingSurvivesOrderToRecord() in D:\code\odyssey-inspect\Assets\Odyssey\Tests\Sim\BedTests.cs:line 906&#xD;
+
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="ProbeTheFacingSurvivesOrderToRecord" storage="d:\code\odyssey-inspect\tools\dotnet\odyssey.tests.sim\bin\debug\net8.0\odyssey.tests.sim.dll" id="cdd54ec8-a144-9d46-a24c-e39b0ea57df6">
+      <Execution id="7af36ef1-ff7a-4e1b-8d35-db6d3df9b8f0" />
+      <TestMethod codeBase="D:\code\odyssey-inspect\tools\dotnet\Odyssey.Tests.Sim\bin\Debug\net8.0\Odyssey.Tests.Sim.dll" adapterTypeName="executor://nunit3testexecutor/" className="Odyssey.Tests.Sim.BedTests" name="ProbeTheFacingSurvivesOrderToRecord" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="cdd54ec8-a144-9d46-a24c-e39b0ea57df6" executionId="7af36ef1-ff7a-4e1b-8d35-db6d3df9b8f0" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="1" executed="1" passed="0" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started&#xD;
+Running selected tests in D:\code\odyssey-inspect\tools\dotnet\Odyssey.Tests.Sim\bin\Debug\net8.0\Odyssey.Tests.Sim.dll&#xD;
+   NUnit3TestExecutor discovered 1 of 1 NUnit test cases using Current Discovery mode, Non-Explicit run&#xD;
+asked 0 -&gt; record 0, head 41488 rec 41488 second 41548&#xD;
+asked 3 -&gt; record 0, head 41488 rec 41488 second 41487&#xD;
+&#xD;
+NUnit Adapter 4.6.0.0: Test execution complete&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

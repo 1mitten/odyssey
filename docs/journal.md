@@ -5284,3 +5284,35 @@ missed — which is one way "it doesn't respect where I placed it" gets reported
 fixing whether or not it is the fault being chased. The ghost derives the footprint with
 `EdificeFootprint` rather than restating it, because a cursor that disagrees with the order about
 which cells a thing claims is the fault this line of work has already hit three times.
+
+### The bed, found: two correct lines with a Clear between them (2026-09-18)
+
+`Raise` derived the bed's far cell from `_facing[cell]`, called `Clear(cell)` — which zeroes the
+site, facing included — and then read the facing **again**, out of the slot it had just wiped, on its
+way to the record. Every rotatable thing was built facing north whatever the player chose.
+
+**It hid because only the drawing was wrong.** The cells were derived before the clear and were
+always right, so the footprint guard still refused a bed whose far half was in a wall, nothing was
+ever built anywhere illegal, and the simulation was consistent with itself throughout. The record
+said north, so the mesher drew the bed extending north from its head cell — into whatever was north,
+walls included — while the cells it occupied were the ones the player asked for. A bed lying through
+a wall it does not occupy. And `AimSleep` lays a sleeper out along the bed's facing, so the same
+line put colonists across their beds: the "half way up the bed … hanging off" from the same report.
+
+**Three tests had a clear shot and all three missed.** `ABedsFacingIsInTheStateHash` passes on the
+difference between the two beds' *cells* rather than their facings — written to pin the facing,
+pinning something that happened to move with it. `ABedIsRefusedWhenItsFarCellIsAWall`, written the
+previous day expressly to reproduce this report, passes because the guard it tests was never the
+broken part. And every other bed test places facing 0, which is also what a lost facing looks like.
+The new test walks every facing the board allows and refuses to pass on fewer than two.
+
+**The method is the lesson, not the line.** Three sessions of reading the placement path end to end
+— the intent seam, the gesture, the shared rotate key, the mesher's yaw, the bed's drawn extent —
+each concluded correctly that the part in front of it was right, and every one of those conclusions
+was true. The fault was in the gap between two of them. Ten lines of throwaway test printing
+*asked → got* found it on the first run. Reading tells you whether a line is correct; it does not
+tell you what the value actually is at the moment it is used.
+
+The screenshots were what made the probe possible. "It doesn't respect the rotation" is ambiguous
+between the cell, the facing and the drawing; two pictures of the same three beds before and after
+building said *a quarter turn*, which is one hypothesis and is testable in a single assertion.

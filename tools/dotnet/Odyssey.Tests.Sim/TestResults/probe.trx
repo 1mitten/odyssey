@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="29027b24-d1d5-408b-b3fc-16833c10e1f0" name="timjo@GWAR 2026-09-18 11:26:53" runUser="GWAR\timjo" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <Times creation="2026-09-18T11:26:53.0255417+01:00" queuing="2026-09-18T11:26:53.0255418+01:00" start="2026-09-18T11:26:52.6165021+01:00" finish="2026-09-18T11:26:53.0350591+01:00" />
+  <TestSettings name="default" id="5cc8f0f6-1c45-4e68-ba1f-b614bc84cc7c">
+    <Deployment runDeploymentRoot="timjo_GWAR_2026-09-18_11_26_53" />
+  </TestSettings>
+  <Results>
+    <UnitTestResult executionId="019b3a35-f8f2-4984-92e4-0d047de9ef0b" testId="cdd54ec8-a144-9d46-a24c-e39b0ea57df6" testName="ProbeTheFacingSurvivesOrderToRecord" computerName="GWAR" duration="00:00:00.0436650" startTime="2026-09-18T11:26:52.9080286+01:00" endTime="2026-09-18T11:26:52.9516653+01:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="019b3a35-f8f2-4984-92e4-0d047de9ef0b">
+      <Output>
+        <ErrorInfo>
+          <Message>System.IndexOutOfRangeException : Index was outside the bounds of the array.</Message>
+          <StackTrace>   at Odyssey.Tests.Sim.BedTests.ProbeTheFacingSurvivesOrderToRecord() in D:\code\odyssey-inspect\Assets\Odyssey\Tests\Sim\BedTests.cs:line 901&#xD;
+   at System.RuntimeMethodHandle.InvokeMethod(Object target, Void** arguments, Signature sig, Boolean isConstructor)&#xD;
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="ProbeTheFacingSurvivesOrderToRecord" storage="d:\code\odyssey-inspect\tools\dotnet\odyssey.tests.sim\bin\debug\net8.0\odyssey.tests.sim.dll" id="cdd54ec8-a144-9d46-a24c-e39b0ea57df6">
+      <Execution id="019b3a35-f8f2-4984-92e4-0d047de9ef0b" />
+      <TestMethod codeBase="D:\code\odyssey-inspect\tools\dotnet\Odyssey.Tests.Sim\bin\Debug\net8.0\Odyssey.Tests.Sim.dll" adapterTypeName="executor://nunit3testexecutor/" className="Odyssey.Tests.Sim.BedTests" name="ProbeTheFacingSurvivesOrderToRecord" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestEntries>
+    <TestEntry testId="cdd54ec8-a144-9d46-a24c-e39b0ea57df6" executionId="019b3a35-f8f2-4984-92e4-0d047de9ef0b" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <ResultSummary outcome="Failed">
+    <Counters total="1" executed="1" passed="0" failed="1" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <Output>
+      <StdOut>NUnit Adapter 4.6.0.0: Test execution started&#xD;
+Running selected tests in D:\code\odyssey-inspect\tools\dotnet\Odyssey.Tests.Sim\bin\Debug\net8.0\Odyssey.Tests.Sim.dll&#xD;
+   NUnit3TestExecutor discovered 1 of 1 NUnit test cases using Current Discovery mode, Non-Explicit run&#xD;
+NUnit Adapter 4.6.0.0: Test execution complete&#xD;
+</StdOut>
+    </Output>
+  </ResultSummary>
+</TestRun>

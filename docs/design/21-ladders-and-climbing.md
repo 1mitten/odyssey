@@ -229,16 +229,43 @@ cell exactly as it arrives. It reads the step's **direction**, because going dow
 ladder is the *start* of the step — a phase-only rule would have a colonist let go at the bottom of
 every descent, which is the one place it needs to hold on.
 
-### The bed built through a wall — not reproduced
+### The bed built through a wall — found, third time of asking
 
-`BedTests.ABedIsRefusedWhenItsFarCellIsAWall` was written to reproduce it and **passes**: the far
-cell is derived from the facing and validated at the order, for all four facings, and the check runs
-before the head cell's own. The guard the owner asked for is already there and already general —
-`Place` applies it to any `footprint > 1` def, not to the bed specifically.
+**`Raise` read the facing out of the site slot it had just wiped.** The far cell was derived from
+`_facing[cell]` at the top of the method; then `Clear(cell)` zeroed the site, facing included; then
+the facing was read *again*, out of the cleared slot, on its way to the record. Every rotatable
+thing was built facing **north**, whatever the player chose.
 
-So either the fault is in what is *drawn* rather than what is built, or it needs a sequence nobody
-has written down yet. The test is kept regardless: a guard nothing tests is a guard that gets tidied
-away. **Waiting on a screenshot and the order of actions.**
+**It hid because only the drawing was wrong.** The cells were derived before the clear and were
+always right — so the footprint guard still refused a bed whose far half was in a wall, nothing was
+ever built anywhere illegal, and no simulation test could see it. The bed's record said north, so
+the mesher drew it extending north from its head cell, **into whatever was north, walls included**,
+while the two cells it actually occupied were the ones the player asked for. That is exactly the
+pair of screenshots: ghosts laid along the room, built beds at a quarter turn to them, one of them
+lying through a wall it does not occupy.
+
+And the sleeper came with it. `AimSleep` lays a colonist out along `BedFacing`, so a bed placed
+along the room and recorded as north put its sleeper across the bed — the "half way up the bed …
+legs much further up and the colonist hanging off" from the same report. One line, all of it.
+
+**Three tests had a clear shot at this and all three missed**, which is the part worth keeping:
+
+- `ABedsFacingIsInTheStateHash` compares a bed placed north against one placed east and passes —
+  on the difference between the two beds' **cells**, not their facings. It was written to pin the
+  facing and pinned something else that happened to move with it.
+- `ABedIsRefusedWhenItsFarCellIsAWall` (written the day before, to reproduce this very report)
+  passes, because the guard it tests really does work: the refusal path was never the broken one.
+- Every other bed test places facing **0**, and a lost facing is also 0.
+
+`TheFacingItWasPlacedAtReachesTheRecord` now walks every facing the board can take and refuses to
+pass on fewer than two, because north alone proves nothing.
+
+**The method that found it was a probe, not a reading.** Three sessions of reading the placement
+path end to end — the intent seam, the gesture, the shared rotate key, the mesher's yaw, the drawn
+bed's extent — concluded correctly that each part was right, and the fault was in none of them: it
+was two correct lines with a `Clear` between them. Ten lines of throwaway test printing *asked → got*
+found it in one run. `docs/lessons.md` already says measure rather than read; this is the third time
+it has been the difference.
 
 ### What the second hunt did find
 
