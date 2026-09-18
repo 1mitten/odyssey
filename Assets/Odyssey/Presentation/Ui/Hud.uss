@@ -226,6 +226,12 @@
     left: 0; right: 0;
     top: 0;
     flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.strip__cards {
+    flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
     align-content: flex-start;
@@ -303,6 +309,67 @@
     width: 100%;
     margin-top: 2px;
     -unity-text-align: middle-center;
+}
+
+/* Drag and drop slot swapping feedback */
+.card--dragging {
+    opacity: 0.35;
+}
+
+.card--drag-target {
+    border-color: #6fd3e3;
+    scale: 1.04;
+}
+
+.card-drag-ghost {
+    position: absolute;
+    width: 96px;
+    height: 89px;
+    padding: 8px;
+    background-color: rgba(12, 16, 20, 0.94);
+    border-width: 1px;
+    border-color: #6fd3e3;
+    border-radius: 5px;
+    align-items: center;
+    opacity: 0.85;
+}
+
+/* Roster pagination toolbar docked alongside the cards */
+.roster-pager {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    margin: 0 0 7px 6px;
+    padding: 0 2px;
+    background-color: rgba(12, 16, 20, 0.86);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
+    border-radius: 4px;
+}
+
+.roster-pager__btn {
+    width: 18px;
+    height: 20px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 3px;
+    cursor: link;
+}
+
+.roster-pager__btn:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.roster-pager__btn:active {
+    background-color: rgba(111, 211, 227, 0.20);
+}
+
+.roster-pager__label {
+    min-width: 32px;
+    -unity-text-align: middle-center;
+    color: #a9b7c0;
+    padding: 0 2px;
 }
 
 /* ---------------------------------------------------------------- A3/A4 clock and speed,

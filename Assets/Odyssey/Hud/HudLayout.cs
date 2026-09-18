@@ -280,6 +280,15 @@ namespace Odyssey.Hud
         public const int CardGap = 7;
 
         /// <summary>
+        /// Width of the compact pagination control docked on the right side of the roster bar
+        /// (<c>[ &lt; ] 1 / 3 [ &gt; ]</c>).
+        /// </summary>
+        public const int PagerWidth = 72;
+        public const int PagerGap = 6;
+        public const int PagerBtnWidth = 18;
+        public const int PagerHeight = 24;
+
+        /// <summary>
         /// How far the colonist strip sits from the top of the screen, and the command bar from
         /// the bottom: **nothing at all** (owner, 2026-09-17, "directly at the bottom of the
         /// screen, no spacing, padding, to maximise viewing space — dock it to the bottom and
@@ -1248,7 +1257,9 @@ namespace Odyssey.Hud
                 int perRow = Math.Max(1, CardsPerRow(width));
                 int widest = Math.Min(cards, perRow);
                 int rows = StripRowsUsed(width, height, cards);
-                float stripWidth = widest * CardWidth + (widest - 1) * CardGap;
+                float cardsWidth = widest * CardWidth + (widest - 1) * CardGap;
+                bool hasPager = content.Colonists > perRow * StripRowsAllowed(height);
+                float stripWidth = cardsWidth + (hasPager ? PagerGap + PagerWidth : 0);
                 boxes[HudRegion.ColonistStrip] = new HudRect(
                     (width - stripWidth) * 0.5f, StripTop, stripWidth, StripHeight(rows));
             }
@@ -1448,7 +1459,14 @@ namespace Odyssey.Hud
         public static int CardsPerRow(float width)
         {
             float room = StripRoom(width);
-            return Math.Max(0, (int)Math.Floor((room + CardGap) / (CardWidth + CardGap)));
+            return Math.Max(0, (int)Math.Floor((room - PagerWidth - PagerGap + CardGap) / (CardWidth + CardGap)));
+        }
+
+        /// <summary>How many pages a given colony size requires at this resolution.</summary>
+        public static int PageCount(float width, float height, int colonists)
+        {
+            int capacity = VisibleCards(width, height, int.MaxValue / 2);
+            return capacity <= 0 || colonists <= 0 ? 1 : Math.Max(1, (colonists + capacity - 1) / capacity);
         }
 
         /// <summary>
