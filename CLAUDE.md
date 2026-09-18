@@ -196,11 +196,11 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **690 Sim + 406 Hud**; Long tier **20**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **694 Sim + 406 Hud**; Long tier **20**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
-- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the ladder
-  and site-picking work and the playtest fixes after it: EditMode **1659 total, 1646 passed, 0
+- **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the
+  blueprint-race shaft rule and the one-layer run rule: EditMode **1670 total, 1657 passed, 0
   failed**. The remainder are `[Explicit]` or ignored.
 - **PlayMode, the same day: 78 total, 73 passed, 0 failed**, including
   `AnOrderClosesWhateverMenuWasOpenAndStillHappens` on the real shell. PlayMode is the only place
