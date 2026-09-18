@@ -194,19 +194,21 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **681 Sim + 403 Hud**; Long tier **20**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **681 Sim + 406 Hud**; Long tier **20**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the fixed
-  inspect pane and the dimmed build categories: EditMode **1642 total, 1629 passed, 0 failed**.
-  PlayMode, the same day: **77 total, 72 passed, 0 failed**. In both, the remainder are
-  `[Explicit]` or ignored.
-  PlayMode is the only place frame time is measured — never an editor `camera.Render()` loop.
-  **PlayMode's previously recorded 74 was wrong, not superseded**: nothing under
+  inspect pane, the dimmed build categories and the palette that closes on a selection: EditMode
+  **1645 total, 1632 passed, 0 failed**. The remainder are `[Explicit]` or ignored.
+- **PlayMode, last run the same day: 77 total, 72 passed, 0 failed — but before the two palette
+  changes.** It could not be re-run: an editor was open on the worktree and `unity.sh` refuses to
+  batch against a locked project, which is the right refusal and not a failure. PlayMode is the
+  only place frame time is measured — never an editor `camera.Render()` loop.
+  **Its previously recorded 74 was wrong, not superseded**: nothing under
   `Assets/Odyssey/Tests/PlayMode` has changed since the commit it was recorded against, no
   PlayMode test is parameterised, and this branch adds none. Three cases were miscounted or
-  mis-transcribed into this file; the figure above is measured. EditMode's 1638 was right and rose
-  by exactly the four tests this branch adds.
+  mis-transcribed into this file; 77 is measured. EditMode's 1638 was right and rose by exactly the
+  seven tests this branch adds.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
   `python3 tools/wiki/emit_labels.py --check`. Both must pass before a content commit.
 - The two tiers **do not run the same NUnit**, and the fast tier's is newer; **a frame is not a
@@ -236,6 +238,13 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
   whether a 34 px button is the right size, whether the strip wants to sit lower, whether the
   six-pixel right-click threshold is right, and the **20% coverage ceiling**, which is the owner's
   to reverse.
+- **Nobody has pressed Play on the three HUD fixes of 2026-09-18.** The colonist pane is one height
+  on every tab now, so Needs sits in a box sized for Skills with about ninety-eight pixels of slack
+  below it — whether that reads as stable or as broken is the question, and if it is broken the
+  answer is more needs rather than a shorter box. The four empty Build categories are dimmed:
+  whether they read as "coming later" or as broken tiles. And the palette now closes the instant a
+  selection is made, which no still can tell you is decisive rather than startling — if it startles,
+  the cheapest alternative is closing it only when the pane would actually overlap.
 - **The coloured wood has had two playtests; the rounds since have not been played** — the cherry
   and flame canopies read as scarlet at the play camera and are the first to veto, and the measured
   tenth-of-a-stop the new shader costs was deliberately not papered over with a gain.
