@@ -43,11 +43,11 @@
     <movePerTick>1</movePerTick>
     <!--
       The band a colonist's innate pace rolls in (WS3, design 17 §4b): rolled once per colonist
-      from her seed and her id, so a seed deals the same walkers every load. +-15 per cent is
-      bounded by the drawing, not by taste — the walk cycle covers about 2 m/s and movePerTick 1
-      is 1.5 m/s, so anything past roughly 1,333 would visibly jog while ostensibly walking.
-      Everything faster is reserved for a run, which is held until the game has something worth
-      running from.
+      from her seed and her id, so a seed deals the same walkers every load. INVENTED: the two
+      integers are ours, and +-15 per cent is bounded by the drawing, not by taste — the walk
+      cycle covers about 2 m/s and movePerTick 1 is 1.5 m/s, so anything past roughly 1,333
+      would visibly jog while ostensibly walking. Everything faster is reserved for a run, which
+      is held until the game has something worth running from.
     -->
     <innatePaceMinPerMille>850</innatePaceMinPerMille>
     <innatePaceMaxPerMille>1150</innatePaceMaxPerMille>

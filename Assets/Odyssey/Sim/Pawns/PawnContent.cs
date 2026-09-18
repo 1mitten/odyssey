@@ -454,12 +454,12 @@ namespace Odyssey.Sim.Pawns
 
         /// <summary>
         /// The band a colonist's innate pace rolls in, per mille of the standard walk (WS3,
-        /// design 17 §4b). The bounds are not free taste: the top of the band is bounded by the
-        /// drawn walk cycle, which covers about 2 m/s where <see cref="movePerTick"/> 1 is
-        /// 1.5 m/s, so anything past about 1,333 would visibly jog while ostensibly walking.
-        /// ±15 per cent keeps every colonist inside a walk — roughly the true spread of human
-        /// walking pace — and everything faster is reserved for a deliberate run, which is held
-        /// (§4f) until the game has something worth running from.
+        /// design 17 §4b). The integers are INVENTED, but the top of the band is not free taste:
+        /// it is bounded by the drawn walk cycle, which covers about 2 m/s where
+        /// <see cref="movePerTick"/> 1 is 1.5 m/s, so anything past about 1,333 would visibly
+        /// jog while ostensibly walking. ±15 per cent keeps every colonist inside a walk —
+        /// roughly the true spread of human walking pace — and everything faster is reserved for
+        /// a deliberate run, which is held (§4f) until the game has something worth running from.
         /// </summary>
         public int innatePaceMinPerMille = 850;
 

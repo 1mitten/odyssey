@@ -6,10 +6,10 @@
   usually nearer.
 
   The rate numbers are the work-speed curve (design 17 §3b): rate = base + slope × level, in
-  thousandths of the speed everything is tuned at, anchored on OUR own starting roll (mean
-  level 1.16) rather than the reference's level 8, with the reference's relative character kept —
-  mining steepest, construction shallowest, hauling flat, because a skill drives either rate or
-  quality and hauling has neither.
+  thousandths of the speed everything is tuned at. The integers are INVENTED: anchored on OUR
+  own starting roll (mean level 1.16) rather than the reference's level 8, with the reference's
+  relative character kept — mining steepest, construction shallowest, hauling flat, because a
+  skill drives either rate or quality and hauling has neither.
 -->
 <Defs>
 
