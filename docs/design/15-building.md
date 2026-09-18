@@ -545,3 +545,60 @@ line, which is exactly where a panel never reaches and a core always does, and
   record.
 - **Floors and roofs (U29)** are the unit the project exists to prove and are not started. A slab is
   the same pipeline with a different `BuildingDef`, which is the point of having the tables.
+
+---
+
+## A dragged run lands on one layer (2026-09-18)
+
+**The owner's screenshot: a wooden deck with a 2×2 hole in it**, the storey below showing through,
+reported as *"I had specified wooden slabs to be built only on that floor but then it constructed
+stone/steel floor on the floor below"*.
+
+**The lift is per cell, and it is conditional.** `WhereItWouldLand` → `StandingOver` lifts a slab
+order on to whatever fills its cell, and leaves it where it was over open air. That is right for one
+click and wrong for a drag, because a box dragged over a walled room is not uniform: the perimeter
+cells sit over walls and lift, the interior cells sit over open air and do not. Measured by probe,
+one drag, one box:
+
+```
+[22,22] L11->L12 None   [23,22] L11->L12 None   [24,22] L11->L12 None   [25,22] L11->L12 None
+[22,23] L11->L12 None   [23,23] L11->L11 NotPermitted   [24,23] L11->L11 NotPermitted   ...
+[22,24] L11->L12 None   [23,24] L11->L11 NotPermitted   [24,24] L11->L11 NotPermitted   ...
+[22,25] L11->L12 None   [23,25] L11->L12 None   [24,25] L11->L12 None   [25,25] L11->L12 None
+```
+
+Twelve built a storey up; four were refused a storey down. **A ring, and a hole.**
+
+**`ConstructionGrid.RunLayerFor` is the one owner of a run's layer**, and both the order
+(`DesignatePresenter.Submit`) and the preview (`OdysseyBootstrap.DrawRunGhosts`) ask it. The preview
+needed it as much as the order did: those ghosts were stamped at the box's own `Y` with no lift at
+all, so the drawn run and the placed run were on different storeys *by construction* — the same
+two-owners fault as the hop price, the ladder's face and `BuildShapes`, for the fourth time in three
+days.
+
+**The highest cell wins, and the alternative was worse.** Taking the *anchor*'s lift is more
+predictable in principle, but a player who starts the drag in the middle of the room anchors on open
+air, which lifts nowhere and would refuse the whole run instead of a quarter of it. Over flat ground
+every cell agrees anyway, so the rule only bites where the box is mixed — which is the case it exists
+for. The lift is idempotent, which is what makes it safe to hand lifted cells back to `Place`: a cell
+already on the open layer holds neither terrain nor an edifice, so it lifts no further.
+`AskingTheRunRuleTwiceGivesTheSameLayer` pins that.
+
+Once the run is on one layer the interior is perfectly legal — the surrounding walls ground it — and
+all sixteen cells build. `AFloorDraggedOverARoomRoofsAllOfIt` asserts on the count, because twelve of
+sixteen is exactly what a ring looks like and any weaker assertion would pass on the bug.
+
+**Every existing construction test places one cell by hand**, which is precisely why none of them
+could see this. `FloorRunTests` is about a run, and `TheLiftOnItsOwnSendsOneBoxToTwoLayers` pins the
+fault itself so the fix can never be mistaken for a no-op.
+
+### What this does not explain
+
+**The material.** The four tiles in the screenshot look grey-plated rather than wooden, and the owner
+read them as stone or steel. Nothing found here changes a run's material: `Director.Stuff` is read
+once per `Submit` and every cell of the run carries it. Art is chosen by stuff alone
+(`WorldRenderModel.SlabModuleFor`), so a differently-drawn tile means a differently-*stuffed* tile —
+and the colony's ledger in that same screenshot holds Wood and Scrap and no steel or stone at all,
+which is not a material a colonist could have hauled and built with. **Unresolved, and deliberately
+not guessed at**; what settles it is clicking one of those tiles and reading its material and layer
+off the inspect pane.

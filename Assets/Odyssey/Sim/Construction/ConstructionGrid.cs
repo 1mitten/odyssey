@@ -257,6 +257,46 @@ namespace Odyssey.Sim.Construction
         /// <para>Changes nothing and reserves nothing: it is the arithmetic <see cref="Place"/> does
         /// on its first line, lifted out so that two callers cannot drift.</para>
         /// </summary>
+        /// <summary>
+        /// <b>The one layer a whole dragged run lands on.</b>
+        ///
+        /// <para><see cref="WhereItWouldLand"/> answers for one cell, and that is right for one
+        /// click and wrong for a drag: the lift is <i>conditional</i> — a slab is lifted over
+        /// whatever fills its cell and left where it was over open air — so a single box can resolve
+        /// to two different layers, cell by cell, with nothing in the preview to say so.</para>
+        ///
+        /// <para><b>The owner met it as a hole in a floor</b> (2026-09-18, with a screenshot): a
+        /// floor dragged over a walled room built the <i>ring</i> on the storey above, because those
+        /// cells sit over walls and lifted, and refused the <i>middle</i>, because those cells sit
+        /// over open air and did not. What is left is a deck with a hole in it and the storey below
+        /// showing through — read, reasonably, as "it built the floor on the layer below". Measured
+        /// by probe: twelve cells <c>None</c> at L12 and four <c>NotPermitted</c> at L11, from one
+        /// drag.</para>
+        ///
+        /// <para><b>The highest any cell reaches wins</b>, and the alternative was worse. Taking the
+        /// <i>anchor</i>'s lift is more predictable in principle, but a player who starts the drag
+        /// in the middle of the room anchors on open air, which lifts nowhere and would refuse the
+        /// whole run rather than a quarter of it. The highest cell is the storey the player is
+        /// plainly pointing at, and over flat ground every cell agrees anyway.</para>
+        ///
+        /// <para>The lift is idempotent, which is what makes this safe: the cells handed back are
+        /// asked again by <see cref="Place"/>, and a cell already on the open layer holds neither
+        /// terrain nor an edifice, so it lifts no further.</para>
+        /// </summary>
+        public int RunLayerFor(IReadOnlyList<CellRef> cells, int building)
+        {
+            int best = int.MinValue;
+            for (int i = 0; i < cells.Count; i++)
+            {
+                if (!_grid.Contains(cells[i].X, cells[i].Z, cells[i].Y)) continue;
+                int landed = WhereItWouldLand(_grid.Index(cells[i]), building);
+                int y = _grid.Size.FromIndex(landed).Y;
+                if (y > best) best = y;
+            }
+
+            return best == int.MinValue ? 0 : best;
+        }
+
         public int WhereItWouldLand(int index, int building)
         {
             if ((uint)index >= (uint)_grid.Size.CellCount) return index;
