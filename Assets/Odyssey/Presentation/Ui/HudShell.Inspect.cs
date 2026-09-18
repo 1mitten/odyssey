@@ -269,17 +269,31 @@ namespace Odyssey.Presentation.Ui
         /// because thirteen rows of "major"/"minor" is a column of text nobody reads and the
         /// thing the player wants is the shape of the list at a glance.
         /// </summary>
-        static SkillLineView SkillLine(VisualElement grid)
+        /// <summary>
+        /// One line of a skills grid.
+        ///
+        /// <para><paramref name="modifier"/> and the two roles are how the setup page gets a
+        /// bigger, wider line out of the same builder (owner, 2026-09-18: *"make the fonts a bit
+        /// bigger in general on the screen"*). Defaulted to what the inspect pane has always used,
+        /// so the pane over a running world is untouched — a screen read at leisure and a pane
+        /// glanced at over a colony are allowed to sit at different steps of one scale, and that is
+        /// not a reason for two builders.</para>
+        /// </summary>
+        static SkillLineView SkillLine(VisualElement grid, string? modifier = null,
+            HudTextRole nameRole = HudTextRole.Body, HudTextRole levelRole = HudTextRole.Meta)
         {
             var view = new SkillLineView();
 
             view.Root = new VisualElement();
             view.Root.AddToClassList("skill");
+            if (!string.IsNullOrEmpty(modifier)) view.Root.AddToClassList(modifier);
 
             view.Icon = new IconBadge(string.Empty, IconBadge.RowSize);
             view.Icon.Inherit(HudTokens.TextMeta);
-            view.Name = HudText.Make(string.Empty, HudTextRole.Body, ussClass: "skill__name");
-            view.Value = HudText.Make(string.Empty, HudTextRole.Meta, numeric: true, "skill__level");
+            view.NameRole = nameRole;
+            view.LevelRole = levelRole;
+            view.Name = HudText.Make(string.Empty, nameRole, ussClass: "skill__name");
+            view.Value = HudText.Make(string.Empty, levelRole, numeric: true, "skill__level");
 
             view.Passion = new VisualElement();
             view.Passion.AddToClassList("skill__passion");
@@ -319,7 +333,7 @@ namespace Odyssey.Presentation.Ui
             {
                 view.LastKey = row.IconKey;
                 view.Icon.SetKey(row.IconKey);
-                HudText.Set(view.Name, row.Name, HudTextRole.Body);
+                HudText.Set(view.Name, row.Name, view.NameRole);
                 view.Root.tooltip = row.Live
                     ? (row.Note.Length > 0 ? row.Name + " — " + row.Note : row.Name)
                     : row.Name + " — " + row.Reason;
@@ -337,7 +351,7 @@ namespace Odyssey.Presentation.Ui
             if (view.LastLevel != row.Level || !row.Live)
             {
                 view.LastLevel = row.Level;
-                HudText.Set(view.Value, row.Live ? row.Level.ToString("0") : "—", HudTextRole.Meta);
+                HudText.Set(view.Value, row.Live ? row.Level.ToString("0") : "—", view.LevelRole);
             }
 
             if (view.LastPassion == row.Passion) return;

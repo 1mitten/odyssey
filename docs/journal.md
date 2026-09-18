@@ -5391,6 +5391,233 @@ The screenshots were what made the probe possible. "It doesn't respect the rotat
 between the cell, the facing and the drawing; two pictures of the same three beds before and after
 building said *a quarter turn*, which is one hypothesis and is testable in a single assertion.
 
+## 2026-09-18 — "Sometimes" meant a race between two blueprints
+
+Three ladder reports from the same playtest. The value of the day was in what did *not* get built.
+
+**Report 2 was already done.** R, the turning ghost and the red refusal all landed in PR #110, which
+is the build the owner was playing when they asked for them. Fifteen minutes of checking
+`BuildShapes.Rotates`, the def and `OdysseyBootstrap.Refused` against the merge saved a unit of work
+on a feature that already existed. Verify before building is not a slogan here; it is the second time
+this week it has paid.
+
+**Report 1 was two complaints and one cause.** "Can't place a ladder under a slab" is the rule the
+owner asked for the day before and it stands — they chose refuse-and-say-nothing-more over
+auto-deconstructing the slab or allowing an inert ladder, when all three were put to them. "And has
+to be against the wall" sounded like a second bug and nothing in the code has ever asked for a
+neighbouring wall. It is the same rule seen from inside a roofed room: every cell there is under a
+slab, so the only cells that take a ladder are the ones past the slab's edge, which are the ones
+beside the wall. Confirmed by the owner rather than assumed.
+
+**Report 3's prime suspect was wrong, and the probe took one run to say so.** The standing theory —
+written into the design document the day before as the deferred migration — was `LadderArrivesAt`'s
+compatibility clause. It cannot be the cause on the board the owner played: **the wooded meadow
+generates no ladders and no connectors at all**, measured on three seeds. That single number
+redirected the whole hunt.
+
+What it actually was: **the shaft rule asked the built world, and a blueprint is not built.** Order a
+ladder, order a floor above it; each is legal on its own because neither exists yet. Both get built.
+That is the whole of "sometimes" — it depended on which job a colonist picked up. The fix is that the
+rule sees sites, and is asked again at `Raise`, because the rule spans two cells that are ordered
+separately and the other order can legitimately arrive later. Only that rule is re-asked, not the
+whole of `Allows`: a site with its own material hauled to it fails `needsClearCell`, and re-asking
+everything would have refused every bed whose wood had been delivered. A general fix would have
+introduced a worse bug than the one it closed.
+
+**The clause went anyway and cost nothing, which is worth recording because the plan said otherwise.**
+The owner accepted the save break; the plan said it meant stamping holes in worldgen and re-baking
+`Golden.City`. All three golden masters came back byte-identical — worldgen's ladders reach the nav as
+`StampedConnector`s and never consult `LadderArrivesAt` at all. The migration that had been deferred
+as expensive turned out not to exist. Measuring the consequence beat reasoning about it, again.
+
+**Two defects fell out that nobody had reported.** A shaft could only ever be one storey: a ladder is
+`blocking false` so a colonist can stand in it, and `SomethingUnderfoot` wants a *blocking* edifice,
+so the second ladder of a chain was refused and `LadderArrivesAt`'s own chain clause — written
+expressly for that case — was unreachable for anything a player built. Every test in `LadderTests`
+builds one ladder, so nothing had ever asked the question. And the first fix did not work: the
+connector was gated on `CellGrid.IsWalkable`, which cannot see that a connector is its own floor, so
+the chain built and the upper ladder silently had no connector. The pattern is the one this project
+keeps meeting — two correct rules that disagree about the same question — and the answer was the same
+as ever: one named owner for each half, `StandsOnSomething` for placement and `StandsOnAFooting` for
+the connector, with the difference between them written down.
+
+Both fixes were the owner's call, asked mid-unit rather than assumed, and both were told to go in.
+### The candidate card lost its skills to a face, and nobody could see it (2026-09-18)
+
+The owner, playing the setup page: *"I'm not seeing the skills rolled randomly on the character
+generation screen — is that supposed to happen?"*
+
+**The roll was never the problem, and measuring it first is what kept this from becoming a hunt
+through `ColonistDraw`.** Three thousand draws off the same method the colony calls: only **2.6% of
+candidates have every live skill at zero**, the best skill is 3 or better on **70%** of them, and a
+sample deal reads `Hauling 5 · Cutting 8 · Mining 6 · Construction 2` beside `Hauling 1 · Mining 1`.
+Every card also takes a fresh `SeedEntry.Draw()` off machine entropy, so Reroll genuinely redeals.
+The simulation half was right all along.
+
+**The card was showing a name and an occupation.** An occupation is drawn from its own salt —
+deliberately, so that two facts about one person are not correlated — which means it tells a player
+**nothing about what that person can do**. So the page whose entire job is telling three people
+apart showed three names and three trades, and the skills were in the detail pane, for the one card
+you had clicked. Comparing candidates meant clicking each in turn and remembering.
+
+**Three dead artefacts said so, which is what made it attributable rather than merely visible.**
+`HudLayout.ColonistCardSkills = 2`, read by nothing, carrying a comment about keeping the card's
+height and its contents in step. `.colonist__skills` in the sheet, applied to no element.
+`HudLayout.ColonistScreenHeight`, modelling a caption and a standalone colonist screen that
+`BuildSetupPage` stopped drawing when the candidates joined the seed and the board size on one
+full-viewport page — and the fast tier was asserting that model fits `StartListMax`, a box this
+screen does not sit in.
+
+**The cause was the avatar doubling, and it left a second mark that was in plain sight.**
+`20-avatars.md` §10.6 took `Avatar` 30 → 60 and re-derived every card that carries one: the roster
+card 106 × 63 → 126 × 89, the inspect header 38 → 60, the strip share, the top scrim, the coverage
+ceiling. **The candidate card is not on that table.** It kept 47 and drew a 60 px face in it, at a
+53 px pitch — so on `Logs/setup-page.png` the three faces run into each other and over the selection
+outline, and the skills line had been squeezed out to make room for the trade.
+
+**Nothing failed, and the reason is worth keeping.** `HudStyleSheetTests` pins `.colonist`'s height
+to `HudLayout.ColonistCard`, so the sheet and the model agreed — because neither had moved. A
+consistency test between two copies of a number cannot notice that the number is wrong. The check
+that was missing is one line of arithmetic nobody thought to write: **a card is at least as tall as
+the face it carries.** It is `EveryCardIsAtLeastAsTallAsTheFaceItCarries` now, asked of all three
+cards at once, and `StartScreenTests.TheCandidateCardsDoNotRunIntoEachOther` asks the same of the
+laid-out elements, where a player would ask it.
+
+**What reading the code could not settle, and the picture did in one look.** Most of an hour went
+into the fixed box's arithmetic — three lines come to 296 against a body of 284, so a third line
+does not fit — and every bit of that was a correct answer to a question that had stopped applying.
+The screenshot showed the setup page occupying the top third of a 1080p canvas with some seven
+hundred empty pixels under the cards. The layout constants had modelled a screen that no longer
+existed, and *reading them more carefully would only have made the wrong model more convincing.*
+Run the shot first: `scripts/unity.sh test playmode -testFilter …PhotographTheSetupPage`.
+
+**The card is re-derived from its own rows**, the way §10.6 did the roster card: 29 name + 18 trade
++ 18 skills = 65, clear of the 60 px face. The column went 260 → 300, because a 60 px face and a
+third line left 176 px of text where §3 sized 206 and the page is the full viewport rather than the
+fixed box. The trade drops from `TextMeta` to `TextDim` so the three lines read as a hierarchy on
+the theme's four existing tokens rather than a fifth being invented — name, then what they can do,
+then what they used to be. `SkillSummary` in `Odyssey.Hud` owns the line's rules, so live-only,
+no-zeroes, ties-in-reading-order and the em dash for the one candidate in forty with nothing to show
+are fast-tier tests rather than things discovered on screen.
+
+**The general lesson, and it is the rates review's from the day before, arrived at from the other
+end: a constant nothing reads is not harmless.** Three of them here described the screen as designed
+while the screen had quietly become something else, and each of them would have been believed by the
+next session to read it. One of them was being asserted by a passing test.
+
+### The setup page, played twice in a day (2026-09-18)
+
+Five corrections after the owner played §6b's card, and the first of them takes §6b's own feature
+off again: *"from the left hand panels, no need to display any skills there — Name, Age, Occupation,
+and resize occupation accordingly to a bigger size."*
+
+**That is worth reading carefully, because it looks like a reversal and is not.** The original
+report was that nothing on the page varied by ability, so the roll looked broken. §6b answered it in
+two places at once: it put a skills line back on the card *and* it made the detail pane legible —
+two columns, real spacing, a bigger type step. Having played that, the owner kept the second and
+dropped the first. The report is still answered; the card is identity alone and the pane carries the
+numbers. **The card's skills line should not be restored as a fix for the original report**, and
+`18-colonist-select.md` §6c says so in place.
+
+**`SkillSummary` and its seven tests are deleted rather than left unused.** That is §6b's own lesson
+turned on §6b: three dead constants describing a line nothing drew are what made the first loss
+invisible, and leaving a ninth-tenths-finished formatter behind "in case" would have been the same
+mistake with fresher paint.
+
+**Two headings wanted two different answers to one request.** "Bigger bolder headings" arrived for
+section titles and for field captions in the same message. A section over a block on a full screen
+read at leisure is `HudTextRole.Name`, 19/600 — the one step of the scale that is both bigger and
+bolder than the body under it. A caption over a text field is `PanelLabel`, 11/600 upper and
+tracked, which is what the stores panel, the rail and the alerts list are already introduced by and
+reads unmistakably as a label rather than a value. Neither adds a rung to `HudType`.
+
+**A specificity trap, found by reading and not on screen.** Outlining every pressable row on the
+page needed `.setup .settings__row` — scoped, because that row is also the settings panel's and the
+Menu popover's, and a grid of outlines over a running world is noise. That selector is 0,2,0 and the
+green Start row's `.setup__commit` was 0,1,0, so **the grey border would have won and Start would
+have quietly stopped being green** — a change that undoes a change made an hour earlier, with
+nothing failing. Specificity beats order in USS as in CSS. The green rule is a descendant now too.
+
+**And the owner's sharpest note of the day was three words long:** *"not to reinvent"*. The page
+wanted a translucent backdrop; the first instinct was to pick a colour. It wears `.panel` and
+`.window` instead — the classes the settings panel, the Menu popover and the start screen's own
+panel are built from — so the fill, the border and the radius are tokens the sheet already pins and
+nothing about the colour is restated. `.setup` overrides only where it sits and how much air it
+keeps. **The general form: when a screen needs to look like the rest of the interface, wear the
+interface's classes rather than copy its values.** A copied value is a value that drifts.
+
+### A name pool that is one file, generated, and costs nothing to read (2026-09-18)
+
+The owner supplied about 240 given names in three lists — ordinary ones, invented ones, and a run of
+British nicknames (*Spudgun*, *Treacle*, *The Dude*) — and then, mid-change, the two constraints
+that decided the shape: *"make it performant then and centralise it if need be."*
+
+**The pool was eight names in a C# array**, with a comment promising it would reach "about forty at
+M2, when pawn generation needs a pool that does not repeat in a colony of fifty". That promise was
+three milestones old. It is 244 now, which is six times what it asked for, and
+`ThePoolOutlastsAnyColonyThisGameBuilds` walks a colony of fifty and asserts no two share a name —
+so the `"Wrenn 2"` suffix a ninth colonist used to get is unreachable by any colony this game
+builds. The branch is kept because it is what makes the method total, and it is the only line in the
+namer that allocates: on every path anybody actually walks, naming a colonist allocates nothing.
+
+**Centralised the way the icon keys already were.** `docs/design/colonist-names.csv` is the one
+place a name is decided; `emit_labels.py` — the generator that already turns `icon-keys.csv` into
+`Registry.g.cs` — gained a second output rather than a script of its own, so it is still **one
+generator and one `--check`**, and CI covers the new file without a workflow change. The wiki gained
+a page listing all 244 with their register and gender, because the whole reason names are content is
+that the owner can read them and strike the ones they do not want.
+
+**Performance was the easy half and worth stating anyway.** The generator writes string literals, so
+the pool lives in the assembly's constant pool and naming a colonist is an index and a modulo — no
+parse, no file read, no dictionary, no allocation. That matters because the roster strip and the
+inspect header ask per figure per frame.
+
+**Two names were dropped as duplicates and the generator now refuses them.** *Nova* appeared in both
+of the first two lists and *John* in the first and third; a pool with a repeat in it would name two
+colonists in one colony the same thing, which is precisely the fault the whole seed-and-id scheme
+exists to prevent. `load_names` raises on a repeat rather than silently deduping, because a name
+quietly vanishing from a 244-row CSV is not something anybody would notice.
+
+**The order of the CSV is load-bearing, and that is the trap to write down.** A name is arithmetic
+on a saved seed and a slot, so **sorting the file renames every colonist in every existing save**.
+Add to the end; never sort. Growing the pool from 8 to 244 already did this once — every colonist in
+every save made before today now goes by a different name — which is harmless exactly once and the
+reason the rule is stated in the CSV's own wiki page, in the generated header and in the namer.
+
+**Gender is recorded and nothing reads it, deliberately.** The owner asked "if can apply to gender".
+It cannot yet, and the reason is not the names: **no pawn in the simulation has a gender at all**,
+and the drawn colonist is one of sixty-one Synty models in a single undifferentiated family, so a
+gendered name would be contradicted by the figure beside it about half the time. Adding gendered
+names without a gendered figure would make the game look *more* wrong, not less — there is currently
+no expectation for a face to fail. The column is in the CSV because it cannot be re-derived cheaply
+later and because the wiki is where the owner corrects it; it is **not** generated into C#, since a
+constant nothing reads is the artefact this project keeps being bitten by.
+
+**And the pool cost ten pixels a card, after two rounds of getting it wrong.** The Unity tier
+failed on `TheCardIsWideEnoughForItsRowsAndNoWider`'s **lower** bound — the roster card budgets
+50 px for a name and *Christopher* draws 60 — which is the bound that exists for exactly this and
+which `CardWidth`'s own comment had predicted in words a month earlier.
+
+The first answer was to shorten that one name, on the reasoning that it was the only entry over ten
+characters. **The next run named *Alexander*: nine characters, 52 px, where *Christopher* is eleven
+and 60.** Character count does not predict width, which is a sentence I had written into a test
+comment on the previous commit and then immediately acted against. "Trim the long ones" is not a
+rule anybody can apply — it is guessing until CI stops complaining, one round at a time, against a
+list that is the owner's content rather than ours.
+
+So the card is sized once to the widest name the pool can produce, which terminates, and the
+coverage ceiling goes 20% → 21% (the forced two-row strip at 1280 × 720, 19.80% → 20.19%). **The
+fourth raise of a number that is the owner's**, and it is recorded beside the other three with what
+it buys: no colonist's name is cut short on the roster. The reversal is cheaper than the avatar's —
+ten of the 136 pixels are the name budget, so putting the ceiling back is a content decision about
+accepting an ellipsis on the longest few names, which is the one thing on a card this interface
+already permits to be cut short.
+
+**The reusable half is about proxies.** A fast-tier test cannot measure text, so it guarded the pool
+by character count — and passed an eleven-character name that then failed the pixel measurement.
+A proxy that does not fail where the real thing fails is not a cheap version of the gate; it is a
+second opinion nobody asked for, and it is worse than nothing when it is believed. That test now
+says out loud that it only catches the absurd and that `HudGeometryTests` is the gate.
 ### The rates line, reviewed: one field carrying two units (2026-09-18)
 
 Five fixes off a fresh-eyes review of `WS1`–`WS3`, on a worktree built from the pull request head.
@@ -5451,3 +5678,27 @@ invisible because the thing they corrupted was only ever read back by the same c
 one was a comment; one needs a window a few ticks wide. The tests added here are the cheap general
 forms — a source scan for the unit, one arithmetic assertion beside one tick-driven one for the
 cadence, and a control apiece for the cache and the bed.
+
+### The rates branch catches up, and the goldens did not move (2026-09-18)
+
+`main` had gone twenty-two commits ahead, so `WS1`–`WS3` was merged up: the review fixes first, then
+`main`. Two conflicts, both the same append-collision in `CLAUDE.md` and `docs/journal.md`.
+
+**`Golden.cs` merged clean, which is the outcome to be suspicious of.** The last time these two
+lines of work met, the city hash conflicted and *neither side's value was right for the merged
+code*; a silent auto-merge is that same danger with nothing to flag it. So the three were run rather
+than trusted — with the two controls beside them, `TheHashActuallyDependsOnTheWorld` and
+`TheHashDependsOnHowLongItRan`, because a golden that passes because the hash has stopped depending
+on anything is worse than one that fails.
+
+All five pass, and the reason holds up to inspection. `main` touched `Golden.cs` not at all since the
+branch diverged, and its only change under `Assets/Odyssey/Sim` is `ConstructionGrid`: the new
+`RunLandsOn` for drag preview, and a rewrite of the ladder-under-slab placement rules. **Those are
+order-time rules, and no golden issues an order** — every case builds on `Scenario_Bare`, which has
+never given a standing order in its life. The first read of that diff was "purely additive", which
+was wrong: twenty lines were removed. The claim that survives is narrower and is the one that
+actually explains the result.
+
+**The counts were resolved by running them, not by adding them up.** 721 Sim + 409 Hud, Long 21 —
+the merge of a branch at 712 + 406 with a main at 694 + 409, which is not an arithmetic anybody
+should attempt in their head.

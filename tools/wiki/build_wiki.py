@@ -93,6 +93,7 @@ def gather():
     keys = load("icon-keys.csv")
     mapping = {r["key"]: r for r in load("icon-map.csv")}
     nouns = load("proper-nouns.csv")
+    names = load("colonist-names.csv")
     entries = []
     for k in keys:
         m = mapping.get(k["key"], {})
@@ -108,7 +109,7 @@ def gather():
     by_ns = {}
     for e in entries:
         by_ns.setdefault(e["ns"], []).append(e)
-    return entries, by_ns, nouns
+    return entries, by_ns, nouns, names
 
 
 def section_entries(sec, by_ns):
@@ -120,7 +121,7 @@ def section_entries(sec, by_ns):
 
 # ----------------------------------------------------------------- markdown
 
-def build_markdown(entries, by_ns, nouns):
+def build_markdown(entries, by_ns, nouns, names):
     files = {}
     total, gaps = len(entries), sum(1 for e in entries if e["art"] == "none")
     idx = ["# Odyssey content wiki", "",
@@ -133,7 +134,8 @@ def build_markdown(entries, by_ns, nouns):
         es = section_entries(sec, by_ns)
         g = sum(1 for e in es if e["art"] == "none")
         idx.append(f"| [{sec[1]}]({sec[0]}.md) | {len(es)} | {g} |")
-    idx += [f"| [Proper nouns](proper-nouns.md) | {len(nouns)} | — |", "",
+    idx += [f"| [Proper nouns](proper-nouns.md) | {len(nouns)} | — |",
+            f"| [Colonist names](colonist-names.md) | {len(names)} | — |", "",
             "The single-page searchable version is `index.html`. `README.md` explains how to host it."]
     files["index.md"] = "\n".join(idx) + "\n"
 
@@ -177,6 +179,54 @@ def build_markdown(entries, by_ns, nouns):
           "city the whole prototype is set in is currently called nothing.", "",
           "---", "", "Generated from `docs/design/proper-nouns.csv`."]
     files["proper-nouns.md"] = "\n".join(L) + "\n"
+
+    # ---- the colonist name pool -----------------------------------------------------------
+    #
+    # Its own page rather than a row of proper-nouns.csv: 244 given names would drown that
+    # table, and the reason this is in the wiki at all is so the owner can read every one and
+    # strike the ones they do not want.
+    registers = [
+        ("settled", "Settled", "Ordinary given names, the register most of a colony is drawn in."),
+        ("frontier", "Frontier", "Invented and uncommon names, including the eight promoted from "
+                                 "the original mockups."),
+        ("yard", "Yard", "Nicknames and what people actually get called. Informal, and the "
+                         "register that makes a colony sound like a place with a history."),
+    ]
+    genders = {"m": "m", "f": "f", "n": "any"}
+
+    L = ["# Colonist names", "",
+         "The pool every colonist's given name is drawn from. A name is chosen by arithmetic on "
+         "a colonist's saved seed and their slot, so the **order of this list is load-bearing**: "
+         "reordering it renames every colonist in every existing save. Add to the end; never "
+         "sort.", "",
+         f"{len(names)} names — " + ", ".join(
+             f"{title.lower()} {sum(1 for n in names if n['register'] == reg)}"
+             for reg, title, _ in registers) + ".", ""]
+
+    for reg, title, blurb in registers:
+        group = [n for n in names if n["register"] == reg]
+        if not group:
+            continue
+        L += [f"## {title}", "", blurb, "",
+              "| Name | Gender | Name | Gender | Name | Gender | Name | Gender |",
+              "|---|---|---|---|---|---|---|---|"]
+        for i in range(0, len(group), 4):
+            row = group[i:i + 4]
+            cells = []
+            for n in row:
+                cells += [f"**{n["name"]}**", genders.get(n["gender"], n["gender"])]
+            cells += ["", ""] * (4 - len(row))
+            L.append("| " + " | ".join(cells) + " |")
+        L.append("")
+
+    L += ["---", "",
+          "**Gender is recorded and nothing reads it.** No pawn in the simulation has a gender, "
+          "and the drawn colonist is one of sixty-one Synty models in a single undifferentiated "
+          "family — so a gendered name could not yet be made to agree with the figure beside "
+          "it. The column is here because it cannot be re-derived cheaply later, and because the "
+          "wiki is where the owner corrects it.", "",
+          "Generated from `docs/design/colonist-names.csv`."]
+    files["colonist-names.md"] = "\n".join(L) + "\n"
     return files
 
 
@@ -585,9 +635,9 @@ faces if those are blocked. Three ways to put it somewhere:
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     check = "--check" in argv
-    entries, by_ns, nouns = gather()
+    entries, by_ns, nouns, names = gather()
 
-    files = build_markdown(entries, by_ns, nouns)
+    files = build_markdown(entries, by_ns, nouns, names)
     files["index.html"] = build_html(entries, by_ns, nouns, standalone=True)
     files["artifact.html"] = build_html(entries, by_ns, nouns, standalone=False)
     files["README.md"] = README

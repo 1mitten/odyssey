@@ -1168,13 +1168,28 @@ namespace Odyssey.Presentation.Bootstrap
                 return;
             }
 
+            // **Drawn on the layer the run will actually land on**, which until 2026-09-18 it was
+            // not: these ghosts were stamped at the box's own Y with no lift at all, while the
+            // order lifted each cell separately on its way in. So the preview showed one storey,
+            // the sites appeared on another, and where the lift disagreed cell by cell the player
+            // got a hole. One owner for the answer — the same one the order asks.
+            int runY = box.Min.Y;
+            if (_colony?.Construction is { } sites && _grid != null)
+            {
+                _runCells.Clear();
+                for (int z = box.Min.Z; z <= box.Max.Z; z++)
+                for (int x = box.Min.X; x <= box.Max.X; x++)
+                    _runCells.Add(new CellRef(x, z, box.Min.Y));
+                runY = sites.RunLayerFor(_runCells, building);
+            }
+
             // The facing goes to a one-cell thing too, since 2026-09-18: a ladder rotates now, and
             // a ghost that would not turn is a player pressing R and seeing nothing happen — the
             // exact complaint the rotation was added to answer.
             for (int z = box.Min.Z; z <= box.Max.Z; z++)
             for (int x = box.Min.X; x <= box.Max.X; x++)
             {
-                var at = new CellRef(x, z, box.Min.Y);
+                var at = new CellRef(x, z, runY);
                 DrawSiteGhost(at, building, stuff, facing, Refused(at, building));
             }
         }
@@ -1184,6 +1199,9 @@ namespace Odyssey.Presentation.Bootstrap
         /// longer than this is being judged by its extent, not by its contents.
         /// </summary>
         const int MaxRunGhosts = 64;
+
+        /// <summary>Scratch for the run's cells, reused so a preview allocates nothing per frame.</summary>
+        readonly List<CellRef> _runCells = new List<CellRef>();
 
         /// <summary>
         /// Which module stands in for a thing that is not there yet.
