@@ -211,11 +211,13 @@ but it is not what the scene loads.
 **Movement is walk, stair, ladder and a one-block hop.** Climbing was removed as a mechanic (owner,
 2026-09-16). Every cell a pawn can be in has something under it. **A hop's price has one owner** —
 `NavGraph.HopCost`, enforced by `HopPriceHasOneOwnerTests`, because the cell search, the region
-graph and the mover must agree and a disagreement fails silently. **A hop is priced against the path
-it is drawn along, not against a flat cell** (2026-09-18): 2.5 m across and 3.0 m up is 3.91 m, so
-up at 240 is 0.98 m/s and down at 50 is a fall at gravity, and `MoveCost.JumpUp` is bounded below by
-"never drawn faster than a walk" and above by `StairUp`. The motion is `HopArc` —
-`docs/design/22-terrace-steps.md` §4b.
+graph and the mover must agree and a disagreement fails silently. **Every step is priced against the
+path it is drawn along, not against a flat cell** (2026-09-18/19). A terrace climb is one ramp
+charged as two steps — the walk into the foot cell and the hop out of it — so the foot cell carries
+a **slope** cost class worth `JumpUp − Orthogonal`, and both halves cost 240; `PawnPose.StepPace`
+then spends each step's time where its climbing is, so the flats are walked and the ramp is climbed
+at one speed. Walking *along* a terrace foot is slow too, and colonists prefer the flat line one
+cell out: that is a decision, not a side effect. `docs/design/22-terrace-steps.md` §4b–4c.
 
 **Presentation** — instanced chunk rendering (no GameObject per cell), a slice camera rig, the HUD,
 audio, a day/night cycle and golden-hour grading. No pack contains a work animation, so the axe,
@@ -351,6 +353,12 @@ tick, and 0.438 ms under D1's replan rate — half what ADR 0005 estimated. The 
 - **The coloured wood has had two playtests; the rounds since have not been played** — the cherry
   and flame canopies read as scarlet at the play camera and are the first to veto, and the measured
   tenth-of-a-stop the new shader costs was deliberately not papered over with a gain.
+- **The whole terrace climb is now eight seconds and nobody has watched one.** Two steps of 240:
+  flat ground at a walk, 3.9 m of ramp at 0.62 m/s in four strides, then the top at a walk again
+  (`docs/design/22-terrace-steps.md` §4c). The lever is `MoveCost.JumpUp` — the slope cost, the
+  pacing weight and the stride count are all derived from it. Also unwatched: colonists preferring
+  a flat detour to walking along the foot of a terrace, which is the deliberate consequence of
+  pricing that cell as a slope.
 - **The new hop wants the same look the old one just failed.** `MoveCost.JumpUp` went 135 → 240 and
   the motion became an arc (`docs/design/22-terrace-steps.md` §4b) because a colonist climbed a
   terrace at 1.74 m/s against a walk's 1.50. The open questions a still cannot answer: whether 4.0 s

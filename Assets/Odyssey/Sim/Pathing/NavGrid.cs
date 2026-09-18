@@ -195,6 +195,24 @@ namespace Odyssey.Sim.Pathing
         /// of wrong from the one being fixed. Say the word and it goes to 25.</para>
         /// </summary>
         public const int Drop = 50;
+        /// <summary>
+        /// What a cell of slope adds to walking into it — the addend behind
+        /// <c>NaturalContent.CostClassSlope</c>, so that entering the foot of a terrace costs
+        /// exactly <see cref="JumpUp"/>.
+        ///
+        /// <para><b>It is here, beside the hop, because the two must not drift apart.</b> A terrace
+        /// climb is drawn as one ramp and charged as two steps — the walk on to the foot cell and
+        /// the hop out of it — with the ramp split down the middle between them. If the two prices
+        /// differ, the figure changes speed half way up a slope that does not change, which is what
+        /// the owner reported on 2026-09-18 when the first half was priced as flat ground. Stating
+        /// it as a subtraction rather than as 140 is what keeps them equal when either moves.</para>
+        ///
+        /// <para>This file and <c>NavGraph.cs</c> are the two <c>HopPriceHasOneOwnerTests</c> allows
+        /// to name a hop's price, and that guard is why the arithmetic is here rather than next to
+        /// the cost table it feeds.</para>
+        /// </summary>
+        public const int SlopeExtra = JumpUp - Orthogonal;
+
         public const int LiftUp = 400;
         public const int LiftDown = 400;
 
@@ -343,7 +361,23 @@ namespace Odyssey.Sim.Pathing
             int below = index - Size.LayerStride;
             if (below < 0) return 0;
             ushort under = grid.Terrain[below];
-            return under < CostClassByTerrain.Length ? CostClassByTerrain[under] : (byte)0;
+            byte beneath = under < CostClassByTerrain.Length ? CostClassByTerrain[under] : (byte)0;
+            if (beneath != 0) return beneath;
+
+            // **A slope, which no terrain says and the shape of the ground does.**
+            //
+            // The cell at the foot of a terrace step is drawn as a ramp from the lower floor to
+            // the rim above (`TerraceFoot`, `BankLayout`), so crossing it is climbing, and it was
+            // being priced as the flat grass beneath it. See NaturalContent.CostClassSlope.
+            //
+            // Asked last, so that a wet or boggy cell keeps the class its terrain gives it: a bank
+            // may shelve into a stream, and water is the stronger claim about what it costs to
+            // cross. Asked at all only when both terrain tests came back clear, which is most of
+            // the board, so the cost of asking is the cheap half of TerraceFoot — see the note on
+            // the neighbour scan there.
+            return Worldgen.TerraceFoot.IsFoot(grid, index)
+                ? Worldgen.Natural.NaturalContent.CostClassSlope
+                : (byte)0;
         }
 
         public RegionKind KindOf(int index)

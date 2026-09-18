@@ -251,6 +251,26 @@ namespace Odyssey.Sim.Pathing
             for (int k = 1; k <= MaxFallLayers; k++)
                 if (y + k < Size.SizeY) MarkBlockDirty(BlockIndexOfCell(x, z, y + k));
 
+            // **The cells beside it, because a cost class now reads them.**
+            //
+            // A cell's cost used to depend on itself and the one below it, so dirtying its own
+            // block was enough. `NavGrid.ClassAt` now also asks whether the cell is the foot of a
+            // terrace step, which is a question about its eight neighbours — so mining a step away
+            // can change what the cell beside it costs. Inside a block that is already covered;
+            // across a block boundary it was not, and the symptom would have been a stale price on
+            // one line of cells, which is a wrong number that looks exactly like a right one.
+            //
+            // Nearly always the same block, so nearly always three writes to a bool that is
+            // already true. It is the block edges this is for.
+            for (int dz = -1; dz <= 1; dz++)
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                if (dx == 0 && dz == 0) continue;
+                int nx = x + dx, nz = z + dz;
+                if ((uint)nx >= (uint)Size.SizeX || (uint)nz >= (uint)Size.SizeZ) continue;
+                MarkBlockDirty(BlockIndexOfCell(nx, nz, y));
+            }
+
             // Nothing below is marked here, although hops out of y-1 land in y and must be
             // rebuilt. Marking it dirty would work and it would also re-flood a block whose cells
             // did not change; the hops are links, not regions, so CollectAffectedZones takes the

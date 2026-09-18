@@ -204,6 +204,76 @@ urgency — WS4 is still held. If a hauler should one day pay more to climb with
 back, that belongs on the pawn's **rate** and not on `HopCost`: design 17 §4g, cost prices the cell
 and rate scales the pawn, and the two must never swap jobs.
 
+## 4c. The ramp is one slope, and it is charged as two steps
+
+*Owner, 2026-09-18, third look:* "The slowness needs to start happening much earlier when entering
+the beginning of the tile while going up and then reaching the top back to normal — it seems to be
+doing it 75% up — you slow down and then you seem to still go slow on the flat so it's out of sync."
+
+Exactly right, and the cause is a seam rather than a curve. **The bank spans one cell; a step spans
+two half-cells.** So the drawn ramp is split down the middle of the foot cell between two steps that
+were priced for different things:
+
+| Part of the climb | Which step paid | Drawn speed before |
+|---|---|---|
+| Bottom half of the ramp | the walk **into** the foot cell, priced as flat grass, 100 | **1.9 m/s** — faster than walking |
+| Top half of the ramp | the hop **out** of it, 240 | 0.62 m/s |
+| The flat top | still the hop, because a step ends at the next cell's centre | 0.62 m/s — and it should be a walk |
+
+Two things were therefore wrong at once: the slowness began half way up (read as ~75%), and it ran
+a half-cell past the top.
+
+### What changed
+
+**The simulation now knows a slope is a slope.** A terrace foot carries
+`NaturalContent.CostClassSlope`, worth `MoveCost.SlopeExtra` — stated as `JumpUp − Orthogonal`, in
+`NavGrid.cs` beside the hop price, so that entering the cell costs exactly what hopping out of it
+does. If the two ever differ, a colonist changes speed half way up a slope that does not change.
+
+That cost is direction-blind, because a cell carries one cost: **walking along the foot of a terrace
+is slow too**, which is honest — the figure is drawn part way up a tilted surface the whole way — and
+colonists now prefer the flat line one cell out. That is the intended consequence and
+`TerraceSlopeCostTests` states it as one.
+
+**Presentation spends each step's time where the climbing is.** `PawnPose.StepPace` models a step as
+three heights — the leaving cell's surface, the boundary, the arriving cell's surface — and gives the
+two halves time in proportion to what they cost to cross, where a metre of rise counts
+`HopArc.ClimbWeight` metres of ground. That constant is derived from the prices (480 ticks for the
+pair, less 200 for the 5 m of ground, leaves 280 for 3 m of climb: 2.3), so it cannot drift from
+them. On flat ground both halves weigh the same and the pacing is the identity, so an ordinary walk
+is untouched.
+
+The boundary height takes **the higher of the two sides**, which is what makes a sheer face work: with
+no ramp the lower cell's surface is its floor and the upper cell's is a layer higher, and a figure
+that had not finished climbing by the time it crossed would be inside the block.
+
+### The result, measured
+
+| | Before | Now |
+|---|---|---|
+| Flat ground approaching the bank | 1.5 m/s | 1.5 m/s |
+| Bottom half of the ramp | 1.9 m/s | **0.62 m/s** |
+| Top half of the ramp | 0.62 m/s | **0.62 m/s** |
+| The flat top | 0.62 m/s | **1.5 m/s** |
+| Whole climb, flat ground to the step | 5.7 s | 8.0 s |
+
+`HopArcTests.TheFlatsAreWalkedAndTheRampIsClimbed` asserts all four, including that the ramp's two
+halves agree with each other — which is the thing the owner was actually looking at.
+
+**Eight seconds is the number to argue with if this still reads wrong.** It is two steps of 240, and
+the lever is `MoveCost.JumpUp`: everything else — the slope cost, the pacing weight, the stride
+count — is derived from it and follows automatically.
+
+### What is not paced
+
+- **A fall.** A body in the air does not spend longer over the steep part, so a descending hop keeps
+  the raw clock and `HopArc.Fall` owns its height.
+- **A water crossing.** Its vertical profile is a curve of its own that has been played twice; water
+  is level, so there is no slope in it to spread time over, and pacing it would only move a judged
+  shape.
+- **A ladder.** A vertical step has no ground distance to weigh against its rise; it climbs at the
+  rate its connector's price sets, which is what a ladder is.
+
 ## 5. Recorded hooks
 
 Things deliberately left for later, so the next session does not re-derive them:

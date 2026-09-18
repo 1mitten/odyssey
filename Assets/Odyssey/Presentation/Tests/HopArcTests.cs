@@ -246,8 +246,8 @@ namespace Odyssey.Tests.Presentation
             new PawnView(new PawnId(1), from, 100, 100, 50, -1, to, perMille / 10,
                 movePerMille: perMille);
 
-        static Vector3 DrawnAt(RenderTestWorld world, CellRef from, CellRef to, int percent) =>
-            PawnPose.Of(Walking(from, to, percent), 0f, 0, out _, world.Model);
+        static Vector3 DrawnAt(RenderTestWorld world, CellRef from, CellRef to, int perMille) =>
+            PawnPose.Of(WalkingPerMille(from, to, perMille), 0f, 0, out _, world.Model);
 
         /// <summary>The drawn position at a tick of a step that costs <paramref name="ticks"/>.</summary>
         static Vector3 DrawnAtTick(RenderTestWorld world, CellRef from, CellRef to, int tick, int ticks) =>
@@ -277,13 +277,13 @@ namespace Odyssey.Tests.Presentation
             Assert.That(DrawnAt(world, Foot, Top, 0).y,
                 Is.EqualTo(DrawnStanding(world, Foot).y).Within(0.01f),
                 "a climb does not start where the colonist was standing");
-            Assert.That(DrawnAt(world, Foot, Top, 100).y,
+            Assert.That(DrawnAt(world, Foot, Top, 1000).y,
                 Is.EqualTo(DrawnStanding(world, Top).y).Within(0.01f),
                 "a climb does not end on the ground it climbed to");
             Assert.That(DrawnAt(world, Top, Foot, 0).y,
                 Is.EqualTo(DrawnStanding(world, Top).y).Within(0.01f),
                 "a drop does not start where the colonist was standing");
-            Assert.That(DrawnAt(world, Top, Foot, 100).y,
+            Assert.That(DrawnAt(world, Top, Foot, 1000).y,
                 Is.EqualTo(DrawnStanding(world, Foot).y).Within(0.01f),
                 "a drop does not land on the ground below it");
         }
@@ -297,8 +297,8 @@ namespace Odyssey.Tests.Presentation
             float landing = DrawnStanding(world, Top).y;
 
             float highest = float.MinValue;
-            for (int percent = 0; percent <= 100; percent++)
-                highest = Mathf.Max(highest, DrawnAt(world, Foot, Top, percent).y);
+            for (int perMille = 0; perMille <= 1000; perMille++)
+                highest = Mathf.Max(highest, DrawnAt(world, Foot, Top, perMille).y);
 
             Assert.That(highest, Is.LessThanOrEqualTo(landing + 0.01f),
                 $"the figure is drawn {(highest - landing) * 100f:F0} cm above the step it is " +
@@ -344,16 +344,20 @@ namespace Odyssey.Tests.Presentation
             // drawn surface. Four hundred samples each way, the instrument BankFootingTests uses.
             RenderTestWorld world = Terrace();
 
-            for (int i = 0; i <= 400; i++)
+            // **Measured where the figure actually is**, which since `PawnPose.StepPace` is not
+            // where the clock says: the time is spent where the climbing is, so at a given fraction
+            // of the step the figure is further back along the path than it used to be. An
+            // instrument that samples the ground at the clock's position rather than the figure's
+            // reports the difference between the two as sinking — it did, by 11 mm.
+            for (int i = 0; i <= 1000; i++)
             {
-                int percent = Mathf.RoundToInt(i * 0.25f);
-                float up = DrawnAt(world, Foot, Top, percent).y;
-                float down = DrawnAt(world, Top, Foot, percent).y;
+                Vector3 up = DrawnAt(world, Foot, Top, i);
+                Vector3 down = DrawnAt(world, Top, Foot, i);
 
-                Assert.That(up, Is.GreaterThanOrEqualTo(FloorUnder(world, Foot, Top, percent) - 0.01f),
-                    $"the climb is inside the ground at {percent}%");
-                Assert.That(down, Is.GreaterThanOrEqualTo(FloorUnder(world, Top, Foot, percent) - 0.01f),
-                    $"the drop is inside the ground at {percent}%");
+                Assert.That(up.y, Is.GreaterThanOrEqualTo(FloorUnder(world, Foot, Top, up) - 0.01f),
+                    $"the climb is inside the ground at {i} per mille");
+                Assert.That(down.y, Is.GreaterThanOrEqualTo(FloorUnder(world, Top, Foot, down) - 0.01f),
+                    $"the drop is inside the ground at {i} per mille");
             }
         }
 
@@ -361,13 +365,15 @@ namespace Odyssey.Tests.Presentation
         /// The drawn surface under the figure at this point of the step: the same expression
         /// <c>PawnPose</c> clamps against, which is the cell it is over plus whatever bank is in it.
         /// </summary>
-        static float FloorUnder(RenderTestWorld world, CellRef from, CellRef to, int percent)
+        static float FloorUnder(RenderTestWorld world, CellRef from, CellRef to, Vector3 at)
         {
-            float t = percent * 0.01f;
-            CellRef over = t < 0.5f ? from : to;
+            // Which cell the figure is over, read off where it is drawn rather than off the clock.
             Vector3 a = CellMetrics.FloorCentre(from), b = CellMetrics.FloorCentre(to);
-            float x = Mathf.Lerp(a.x, b.x, t), z = Mathf.Lerp(a.z, b.z, t);
-            return CellMetrics.FloorCentre(over).y + BankLayout.RiseAt(world.Model, over, x, z);
+            float along = Mathf.Abs(b.x - a.x) > Mathf.Abs(b.z - a.z)
+                ? Mathf.InverseLerp(a.x, b.x, at.x)
+                : Mathf.InverseLerp(a.z, b.z, at.z);
+            CellRef over = along < 0.5f ? from : to;
+            return CellMetrics.FloorCentre(over).y + BankLayout.RiseAt(world.Model, over, at.x, at.z);
         }
 
         [Test]
@@ -379,7 +385,7 @@ namespace Odyssey.Tests.Presentation
             RenderTestWorld world = Terrace();
             float from = DrawnStanding(world, Top).y;
             float to = DrawnStanding(world, Foot).y;
-            float half = DrawnAt(world, Top, Foot, 50).y;
+            float half = DrawnAt(world, Top, Foot, 500).y;
 
             float covered = (from - half) / (from - to);
             Assert.That(covered, Is.LessThan(0.4f),
@@ -411,6 +417,84 @@ namespace Odyssey.Tests.Presentation
             // her before it stops being a stride and becomes a snap.
             Assert.That(largest, Is.LessThan(0.05f),
                 $"a single frame of the climb moves the figure {largest * 1000f:F0} mm, which is a snap");
+        }
+
+        [Test]
+        public void TheFlatsAreWalkedAndTheRampIsClimbed()
+        {
+            // **The owner's third report, turned into an assertion** (2026-09-18: "the slowness
+            // needs to start happening much earlier when entering the beginning of the tile … you
+            // slow down and then you seem to still go slow on the flat so it's out of sync").
+            //
+            // A terrace climb is one ramp charged as two steps, split down the middle of the foot
+            // cell. Both now cost a hop — the cell is a slope (`NaturalContent.CostClassSlope`) —
+            // and `PawnPose.StepPace` spends each step's time where its climbing is. What that
+            // has to produce is one speed on the ramp from bottom to top, and a walking pace on
+            // the flat ground either side of it.
+            RenderTestWorld world = Terrace();
+
+            var approach = new CellRef(4, 3, 2);         // flat ground, one cell out
+            var foot = Foot;                             // the bank cell
+            var top = Top;                               // on the step
+
+            // Walking on to the bank: flat for the first half, ramp for the second.
+            Measure(world, approach, foot, MoveCost.JumpUp, out float flatIn, out float rampIn);
+
+            // Hopping off it: ramp first, then the flat top.
+            Measure(world, foot, top, MoveCost.JumpUp, out float rampOut, out float flatOut);
+
+            const float walking = CellMetrics.SizeXZ / (MoveCost.Orthogonal / (float)TicksPerSecond);
+
+            Assert.That(flatIn, Is.EqualTo(walking).Within(walking * 0.15f),
+                $"the flat half of the walk on to the bank is drawn at {flatIn:F2} m/s, not a walk");
+            Assert.That(flatOut, Is.EqualTo(walking).Within(walking * 0.15f),
+                $"the flat top is drawn at {flatOut:F2} m/s, not a walk — this is the half the owner " +
+                "saw still crawling");
+
+            Assert.That(rampIn, Is.LessThan(walking * 0.6f),
+                $"the bottom of the ramp is drawn at {rampIn:F2} m/s, which is not climbing");
+            Assert.That(rampOut, Is.LessThan(walking * 0.6f),
+                $"the top of the ramp is drawn at {rampOut:F2} m/s, which is not climbing");
+
+            // And the whole point: one speed up the ramp, not two.
+            Assert.That(rampIn, Is.EqualTo(rampOut).Within(Mathf.Max(rampIn, rampOut) * 0.2f),
+                $"the ramp is climbed at {rampIn:F2} m/s in its bottom half and {rampOut:F2} m/s in " +
+                "its top half, so the climb changes speed half way up");
+        }
+
+        /// <summary>
+        /// The drawn speed over each half of a step, in metres a second along the path actually
+        /// drawn — which is the only speed anybody can see.
+        /// </summary>
+        static void Measure(RenderTestWorld world, CellRef from, CellRef to, int ticks,
+            out float firstHalf, out float secondHalf)
+        {
+            Vector3 boundary = (CellMetrics.FloorCentre(from) + CellMetrics.FloorCentre(to)) * 0.5f;
+            bool alongX = Mathf.Abs(boundary.x - CellMetrics.FloorCentre(from).x) > 1e-3f;
+
+            float firstDistance = 0f, secondDistance = 0f;
+            int firstTicks = 0, secondTicks = 0;
+            Vector3 previous = DrawnAtTick(world, from, to, 0, ticks);
+
+            for (int tick = 1; tick <= ticks; tick++)
+            {
+                Vector3 at = DrawnAtTick(world, from, to, tick, ticks);
+                float step = Vector3.Distance(at, previous);
+
+                // Which half of the step the figure is in, read off where it is drawn.
+                float here = alongX ? at.x : at.z;
+                float edge = alongX ? boundary.x : boundary.z;
+                float start = alongX ? CellMetrics.FloorCentre(from).x : CellMetrics.FloorCentre(from).z;
+                bool first = Mathf.Abs(here - start) < Mathf.Abs(edge - start);
+
+                if (first) { firstDistance += step; firstTicks++; }
+                else { secondDistance += step; secondTicks++; }
+
+                previous = at;
+            }
+
+            firstHalf = firstTicks > 0 ? firstDistance / (firstTicks / (float)TicksPerSecond) : 0f;
+            secondHalf = secondTicks > 0 ? secondDistance / (secondTicks / (float)TicksPerSecond) : 0f;
         }
 
         [Test]
@@ -460,7 +544,7 @@ namespace Odyssey.Tests.Presentation
 
             Assert.That(largest, Is.LessThan(0.05f),
                 $"climbing a sheer face moves the figure {largest * 100f:F0} cm in one frame");
-            Assert.That(DrawnAt(world, foot, top2, 100).y,
+            Assert.That(DrawnAt(world, foot, top2, 1000).y,
                 Is.EqualTo(DrawnStanding(world, top2).y).Within(0.01f),
                 "a sheer climb does not finish on the ground above it");
         }

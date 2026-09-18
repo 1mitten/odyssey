@@ -182,6 +182,33 @@ sizes and the exact line, and it had been printing for as long as the feature ex
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-19 — One ramp, two steps, two different prices (P1)
+
+*"The slowness needs to start happening much earlier when entering the beginning of the tile … you
+slow down and then you seem to still go slow on the flat so it's out of sync."*
+
+**A seam, not a curve.** The bank spans one cell; a step spans two half-cells. So the drawn ramp was
+split down the middle of the foot cell between two steps priced for different things — the walk in at
+flat-grass price (drawn at 1.9 m/s, faster than walking) and the hop out at 240 (0.62 m/s, and it
+kept charging that across the flat top). Both halves of the report are that one seam, seen from
+either side.
+
+**It is P1 wearing geometry.** One rule — what a slope costs — with two owners, and here the two
+owners are two *steps* rather than two files. The question to ask of any cost: **does the thing it
+prices line up with the thing that is drawn?** A step is charged between cell centres; art is drawn
+between cell edges; those are half a cell apart, and anything whose appearance spans a cell will be
+charged by two steps that know nothing of each other.
+
+**Stopped by** giving the cell its own cost (`NaturalContent.CostClassSlope`, worth
+`MoveCost.SlopeExtra` = `JumpUp − Orthogonal`, stated as a subtraction so the pair cannot drift) and
+by `PawnPose.StepPace`, which spends each step's time where its climbing is. `TerraceSlopeCostTests`
+asserts the two prices are equal; `HopArcTests.TheFlatsAreWalkedAndTheRampIsClimbed` asserts the ramp
+is one speed from bottom to top with a walk either side.
+
+**And a caution about goldens.** None of the three moved, which was luck rather than inertness: the
+golden windows are a flat meadow, a start clearing chosen for being flat, and a city of pavement.
+A cost change that moves no hash wants a direct test, not a shrug.
+
 ### 2026-09-18 — Every fixture had a bank in it, so nobody saw the 1.5 m teleport
 
 Found while measuring a new climb, not reported by anybody.

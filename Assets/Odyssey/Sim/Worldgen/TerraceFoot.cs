@@ -68,12 +68,17 @@ namespace Odyssey.Sim.Worldgen
             // behind, so a discovered floor is the mark of an excavation on this very cell.
             if (grid.IsDiscovered(floor)) return false;
 
-            if (!OpenToTheSky(grid, index, y)) return false;
+            // **The neighbours before the sky, and the order is a measurement rather than a
+            // preference.** This is asked of every cell the nav grid refreshes, which on a rebuild
+            // is a whole block and at the scale target is millions of cells. The sky test walks a
+            // column; the neighbour scan is eight array reads and fails on the first one almost
+            // everywhere, because almost nowhere has ground one layer higher beside it. So the
+            // walk only happens for cells that are already candidates.
+            bool step = false;
+            for (int i = 0; i < NeighbourX.Length && !step; i++)
+                step = IsStep(grid, x + NeighbourX[i], z + NeighbourZ[i], y);
 
-            for (int i = 0; i < NeighbourX.Length; i++)
-                if (IsStep(grid, x + NeighbourX[i], z + NeighbourZ[i], y)) return true;
-
-            return false;
+            return step && OpenToTheSky(grid, index, y);
         }
 
         /// <summary>

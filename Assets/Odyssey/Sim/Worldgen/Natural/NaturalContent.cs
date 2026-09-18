@@ -289,6 +289,30 @@ namespace Odyssey.Sim.Worldgen.Natural
         public const byte CostClassMarsh = 1;
         public const byte CostClassShallowWater = 2;
 
+        /// <summary>
+        /// The cell at the foot of a terrace step: not a terrain at all, but a **slope**.
+        ///
+        /// <para><b>Why a cell with grass under it is not clear ground.</b> Presentation fills that
+        /// cell with a bank — a ramp from the lower floor to the rim of the step above — and a
+        /// colonist crossing it is drawn climbing 1.5 m in the half cell before its centre and
+        /// another 1.5 m in the half after. The walk *into* it was priced as flat ground, so that
+        /// first half was drawn at <b>1.9 m/s against the 1.5 m/s of walking</b>, and the slowness
+        /// began only half way up. Owner, 2026-09-18: <i>"the slowness needs to start happening
+        /// much earlier when entering the beginning of the tile … you slow down and then you seem
+        /// to still go slow on the flat so it's out of sync."</i></para>
+        ///
+        /// <para><b>It costs the same in every direction, and that is a decision rather than a
+        /// limitation.</b> A cell can carry one cost, so walking *along* the foot of a terrace pays
+        /// it too — and should: the figure is drawn part way up a tilted surface the whole way. What
+        /// this cannot express is that entering from the high side is a drop rather than a climb,
+        /// and that does not matter, because a layer change is priced by
+        /// <c>NavGraph.HopCost</c> and never reaches a cell's entry cost.</para>
+        ///
+        /// <para>Colonists will prefer a flat route one cell away from a terrace edge over walking
+        /// along it. That is the intended consequence.</para>
+        /// </summary>
+        public const byte CostClassSlope = 3;
+
         /// <summary>The cost class of a terrain, or <see cref="CostClassClear"/> for most of them.</summary>
         public static byte CostClassOf(ushort terrain)
         {
@@ -308,6 +332,13 @@ namespace Odyssey.Sim.Worldgen.Natural
             costByClass[CostClassClear] = 0;
             costByClass[CostClassMarsh] = 40;            // 140 per cell: boggy, not slow
             costByClass[CostClassShallowWater] = 200;    // 300 per cell: exactly a third speed
+
+            // 240 per cell, and the number is the hop's own. A terrace climb is drawn in two
+            // steps — into the foot cell and out of it — and the ramp is split exactly down the
+            // middle between them, so the two have to cost the same or the climb changes speed
+            // half way up, which is what the owner saw. See MoveCost.JumpUp for where 240 comes
+            // from, and docs/design/22-terrace-steps.md §4c for the arithmetic of the pair.
+            costByClass[CostClassSlope] = Pathing.MoveCost.SlopeExtra;
         }
 
         /// <summary>

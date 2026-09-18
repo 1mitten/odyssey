@@ -1,5 +1,6 @@
 #nullable enable
 
+using Odyssey.Sim.Pathing;
 using UnityEngine;
 
 namespace Odyssey.Presentation.Rendering
@@ -80,6 +81,39 @@ namespace Odyssey.Presentation.Rendering
         public const float StepOff = 0.06f;
 
         /// <summary>
+        /// What a metre of climbing is worth in metres of walking, when a step's time is spread
+        /// over the path it is drawn along (<c>PawnPose.StepPace</c>).
+        ///
+        /// <para><b>Derived from the prices, so it cannot drift from them.</b> Climbing a terrace is
+        /// two steps — the walk on to the foot cell and the hop out of it — and since a terrace foot
+        /// is priced as a slope (<c>NaturalContent.CostClassSlope</c>) both cost
+        /// <c>MoveCost.JumpUp</c>. Between them they cover two cells of ground and one layer of
+        /// rise. Take the ground at walking pace, which is what <c>MoveCost.Orthogonal</c> buys, and
+        /// whatever is left over is what the rise costs: 480 ticks less 200 for the 5 m of ground
+        /// leaves 280 for 3 m of climb, or 93 ticks a metre against walking's 40. Hence about 2.3.
+        /// </para>
+        ///
+        /// <para>The consequence is the one the owner asked for: the flat halves of both steps are
+        /// drawn at a walking pace and the ramp between them at one steady 0.6 m/s, instead of the
+        /// climb changing speed half way up and the flat top crawling.</para>
+        /// </summary>
+        public static readonly float ClimbWeight = ClimbWeightFromPrices();
+
+        static float ClimbWeightFromPrices()
+        {
+            // Two steps make a terrace climb; both are priced at a hop, and between them they carry
+            // two cells of ground and one layer of rise.
+            float pair = 2f * MoveCost.JumpUp;
+            float ground = 2f * MoveCost.Orthogonal;
+            float perMetreWalking = MoveCost.Orthogonal / CellMetrics.SizeXZ;
+            float perMetreClimbing = (pair - ground) / CellMetrics.SizeY;
+
+            // A climb that costs nothing extra is not a climb; fall back to counting it as ground
+            // rather than dividing the step into nothing.
+            return perMetreClimbing > 0f ? perMetreClimbing / perMetreWalking : 1f;
+        }
+
+        /// <summary>
         /// Where the figure is drawn while climbing: the ground under it, taken in strides.
         ///
         /// <para><b>This is a function of height, not of time.</b> Give it the height of the drawn
@@ -107,11 +141,19 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public static float Stepped(float ground, float landing, float rise)
         {
-            // Nothing to climb: the caller's own ground is the answer. Also the guard against a
-            // division by zero and against a step whose ends have been handed over the wrong way
-            // round, either of which would draw a colonist at NaN — which is a colonist who
-            // disappears rather than one who looks wrong.
-            if (rise <= 0f || ground >= landing) return Mathf.Max(ground, landing);
+            // **Nothing to climb: the ground is the answer, and it must not be the landing.**
+            //
+            // This read `Mathf.Max(ground, landing)` for one day, which is right wherever a step
+            // climbs and catastrophic where it descends: walking *off* the foot of a terrace, the
+            // landing is the height you started at, so the figure was pinned at the top of the ramp
+            // for the whole step and dropped 1.5 m in the last frame. Caught by
+            // `BankFootingTests.WalkingOffTheFootOfATerraceIsSmooth`, which is the test that has
+            // been measuring exactly that crossing since before any of this existed.
+            //
+            // It is also the guard against a division by zero and against ends handed over the
+            // wrong way round, either of which would draw a colonist at NaN — which is a colonist
+            // who disappears rather than one who looks wrong.
+            if (rise <= 0f || ground >= landing) return ground;
 
             int strides = Mathf.Max(1, Mathf.RoundToInt(rise / PreferredTread));
             float tread = rise / strides;

@@ -6194,3 +6194,47 @@ turned up had been in the game far longer than it had.
   because the owner's editor held `odyssey-inspect`, and that is why PlayMode passed 75 where the
   same suite passes 77 on the real checkout: a scratch worktree has no `Assets/Synty` junction, so
   the two portrait tests skip for want of the packs. Nothing this branch touches goes near them.
+
+### The ramp is one slope and the game charged it as two steps (2026-09-19, branch `claude/terrace-foot-guard`)
+
+Owner, on the third look: *"The slowness needs to start happening much earlier when entering the
+beginning of the tile while going up and then reaching the top back to normal — it seems to be doing
+it 75% up — you slow down and then you seem to still go slow on the flat so it's out of sync."* The
+design is `docs/design/22-terrace-steps.md` §4c.
+
+- **A seam, not a curve.** The bank spans one cell; a step spans two half-cells. So the drawn ramp is
+  split down the middle of the foot cell between two steps priced for different things: the walk
+  *into* the cell at flat-grass price, drawn at **1.9 m/s**, and the hop *out* of it at 240, drawn at
+  0.62 — which also kept paying that price across the flat top. Both of the owner's complaints are
+  that one seam, from either side of it.
+- **The same fault as the first report, one step earlier.** A step priced for flat ground was being
+  drawn along 3.2 m of path. That is exactly what `MoveCost.JumpUp` was re-derived for two days ago;
+  nobody had asked the question of the step *before* the hop.
+- **So the simulation learned that a slope is a slope.** A terrace foot carries a cost class of its
+  own, worth `JumpUp − Orthogonal`, and that subtraction lives in `NavGrid.cs` beside the hop price
+  because the two must be equal: if they differ, a colonist changes speed half way up a slope that
+  does not change. `HopPriceHasOneOwnerTests` refused the first attempt, which named `MoveCost.JumpUp`
+  from the content table — rightly, and the fix was to put the arithmetic where the guard allows it
+  rather than to exempt the line.
+- **A cell carries one cost, so walking *along* a terrace foot is slow too.** That was the owner's
+  choice between three options, and it is the honest one: the figure is drawn part way up a tilted
+  surface whichever way it crosses. Colonists now prefer the flat line one cell out.
+- **Presentation spends each step's time where the climbing is.** `StepPace` models a step as three
+  heights and weights its two halves by what they cost to cross, a metre of rise counting 2.3 metres
+  of ground — derived from the prices rather than chosen, so it cannot drift from them. On flat
+  ground the two halves weigh the same and the pacing is the identity, which is what keeps an
+  ordinary walk untouched.
+- **The goldens did not move, and that needed explaining rather than accepting.** A cost change that
+  shifts no hash is either inert or lucky. It is lucky: the three golden windows are a flat meadow, a
+  start clearing chosen for being flat, and a city of pavement — not a bank between them. So
+  `TerraceSlopeCostTests` asserts the price directly, including that mining the step away takes the
+  slope with it, which is the case `NavGraph.MarkDirty` had to grow a neighbour scan for: a cost that
+  reads the cells *beside* a cell is the first one this grid has had.
+- **Four regressions, and three of them were instruments.** The one real bug was walking *off* a
+  bank: `HopArc.Stepped` returned `max(ground, landing)` where there was nothing to climb, which
+  pinned the figure at the top of the ramp for the whole step and dropped it 1.5 m in the last frame
+  — caught by a test that has been measuring that crossing since long before any of this. The other
+  three were tests sampling the ground at the clock's position rather than the figure's, which are
+  the same thing only while time is distance. They are not any more, and that is the change working.
+- **Verified:** fast tier **730 Sim + 438 Hud**, Long **21**; EditMode **1780 total, 1766 passed,
+  0 failed**.
