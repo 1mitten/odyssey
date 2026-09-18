@@ -4585,3 +4585,55 @@ reason rather than at it.
   code carried a value at bit 16: fifteen million overflowed into the part field. Nothing was
   observably wrong, because the only modules with a tint that large had exactly one part. **Wrong
   only by luck is not a property to leave in a key**; it has thirty-two bits now.
+
+### The last hammer blow is rolled, and a test wrote through the database (2026-09-18)
+
+U26's last outstanding line: a completed build now rolls against the finishing builder's
+construction skill and can **botch**. Design is `docs/design/15-building.md` §4a; what follows is
+why the numbers are what they are and the one thing that nearly went in wrong.
+
+- **The reference's curve could not be taken verbatim, and this is the third time that has been
+  true.** a-04 §4 has a novice at 75% rising to a certain 100% at skill **8**. Our colonists start
+  at an average of **1.16**, so shipping its anchor would have meant a colony botching most of its
+  early walls — the same trap the rates line found when it discovered every work-speed slope in the
+  reference reads 100% at level 8 because that is where its colonists live. Certainty sits at **3**
+  here for exactly the reason it sits at 8 there: just above where a starting colony actually is.
+  The integers — 850 base, 50 a level — are invented and the owner's to tune at the keyboard.
+
+- **The finisher rolls, not whoever did the work, and it is kept on purpose.** A building records
+  no author, so the level consulted is whoever landed the last tick. That is exploitable in exactly
+  the reference's way, and the exploit reads as a sensible thing for a colony to do: a master walks
+  over and finishes a novice's half-built wall. An "author" field would be new saved state bought
+  to remove a behaviour nobody would report as a bug.
+
+- **A botch had to cost material or it costs nothing.** The reference wastes "some resources" and
+  a-04 records the fraction under *could not be determined*, so half is Odyssey's own number: a
+  botch costs what a demolition refunds, which is at least an argument. The odd unit of an odd
+  delivery goes to a seeded flip rather than a rounding rule, keyed on **cell ^ tick** like the
+  deconstruct refund — keyed on the cell alone, every cell on the board would be permanently lucky
+  or unlucky, which is stable, discoverable and then worth farming.
+
+- **`Botch` marks nothing dirty, and that is a finding rather than an omission.** Every previous
+  "deliberately not marked dirty" in this line turned out to be a debt U29 had to pay. This one is
+  not: no wall appeared, so no chunk, no walkability and no support moved. The only state that
+  changed is the site's two numbers, which the hash and the save already carry — so a botch replays
+  from a seed and survives a reload, and the two givers simply ask their questions again on the next
+  scan. A botch costs the colony work and material and **never the order**.
+
+- **The expensive part was a test that wrote through the content database.** The first version of
+  the botch tests set `WorkTypes[Construction].successBasePerMille` directly to force certainty.
+  The Defs a content record's arrays point at are **shared by every record in the process** —
+  `ContentPack`'s own caching rule — so that write silently retuned construction for every test that
+  ran afterwards, and the new `ContentFingerprint` pinned in `PawnContentDefTests` was taken from the
+  polluted database rather than from a clean load. Both tests were green. The fix is that a test
+  **replaces the `WorkTypeDef` element** rather than assigning into it, and the fingerprint was
+  re-taken from a fresh pack and then confirmed by running `PawnContentDefTests` alone, away from
+  anything that could have tuned it. **A fingerprint is only worth what the database was worth when
+  it was taken.**
+
+- **And a dead branch hid the one claim the journey test existed to make.** `AFrameCanBeBotched`
+  watched a site through fed → botched → **fed again**, and the re-feed branch sat behind
+  `if (frame)` in the same else-chain, so `frame` was false by the time it was reached and
+  `fedAgain` could never be set. It failed loudly rather than passing vacuously, which is the only
+  reason it cost minutes: the assertion it could not satisfy is the one that proves a botched site
+  does not wedge.

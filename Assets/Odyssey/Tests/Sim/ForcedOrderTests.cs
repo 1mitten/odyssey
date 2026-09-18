@@ -33,7 +33,26 @@ namespace Odyssey.Tests.Sim
             scenario.colonists = colonists;
             scenario.beds = colonists;
             scenario.startingFellRadius = 0;
-            return ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: false);
+            ColonyWorld colony = ColonyWorld.Build(Size, seed, scenario, barren: true, wooded: false);
+            // A forced-order test times one build against another, and a botch would put a thumb
+            // on the scales: the nearer wall could fail for reasons nothing here is about. The
+            // builders in these tests never botch; the roll has its own tests in
+            // `ConstructionTests`.
+            //
+            // The element is replaced rather than written through, because the Defs a record's
+            // arrays point at are shared by every record in the process (ContentPack's rule) —
+            // writing `…WorkTypes[i].successBasePerMille = 1_000` would retune every other test
+            // that ran after this one.
+            WorkTypeDef shipped = colony.Pawns.Content.WorkTypes[WorkTypeIndex.Construction];
+            colony.Pawns.Content.WorkTypes[WorkTypeIndex.Construction] = new WorkTypeDef
+            {
+                defName = shipped.defName,
+                label = shipped.label,
+                order = shipped.order,
+                successBasePerMille = 1_000,
+                successSlopePerLevel = 0,
+            };
+            return colony;
         }
 
         static Pawn TheColonist(ColonyWorld colony) => colony.Pawns.Pawns.All[0];

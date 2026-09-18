@@ -470,6 +470,25 @@ namespace Odyssey.Sim.Construction
         }
 
         /// <summary>
+        /// A completed build that rolled and failed. The banked work is thrown away and the
+        /// delivery is cut to what the caller says it keeps — half, in practice, the odd unit by a
+        /// seeded flip — and <b>the site stands</b>, a blueprint again.
+        ///
+        /// <para><b>Nothing in the world changed, and that is why nothing here marks anything
+        /// dirty.</b> No wall appeared, so no chunk, no walkability and no support moved; the only
+        /// state that changed is the two numbers on the site, which the hash and the save already
+        /// carry. The two givers re-ask their questions of the row on the next scan — the
+        /// deliverer, because material is outstanding again, and then the builder — so a botch
+        /// costs the colony the work and the material, and never the order.</para>
+        /// </summary>
+        public void Botch(int index, int keepDelivered)
+        {
+            if (_building[index] == 0) return;
+            _work[index] = 0;
+            _delivered[index] = keepDelivered;
+        }
+
+        /// <summary>
         /// Give back what was carried to a site that is being cancelled or re-materialled.
         ///
         /// <para><b>Not on the site's own cell, which is the obvious answer and wrong.</b> A cell
