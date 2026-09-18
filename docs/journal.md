@@ -5087,3 +5087,44 @@ owner described. The only way to reach the new rule holding a tool is a roster c
 chose to keep the tool in hand there: closing a panel is not the same as putting a tool down.
 
 Nobody has pressed Play on it.
+
+### The order you gave from inside a menu left the menu standing (2026-09-18)
+
+The owner, an hour after the pane-under-the-palette one: *"if I'm in the build menu (or any other
+menu) and I click on an order — I expect that menu to be closed down and the dialog appear/order
+would happen"*.
+
+**The parenthesis was the whole requirement, and it is the reason this is one method rather than one
+line.** The obvious fix — close the Build palette in the order button's handler — would have been
+right about the panel that happened to be open when the owner noticed, and wrong about the Menu
+popover and the bed picker on the same afternoon. `CloseMenusOverTheBoard` shuts all three, and the
+next non-modal popover joins it in one place rather than in every call site that has learned to
+close things.
+
+**The modals turned out to need nothing, and that was worth checking rather than assuming.**
+Settings and the debug windows are built through `HudModal`, which puts a pickable scrim over the
+whole screen — so the orders strip cannot be clicked while one is up at all. Excluded by
+construction. Written into the method's own comment, because a list of three in a HUD with eight
+panels looks like an oversight until somebody says why it is not.
+
+**Why the orders strip is the control this happens to.** It was taken out of the palette's header on
+2026-09-17 exactly so that giving an order would not cost opening a panel first — *"this enables us
+to quickly give orders without having to click the build button"*. That makes it the one control a
+player reaches for from inside something else, which is precisely the case where leaving that
+something else standing reads as the click not having landed. The same fix, one screw further on.
+
+**It hands a job over rather than retiring one.** §7's mode colour — the palette wearing the held
+order's hue — exists for "order held while the palette is open", and the floating armed banner is
+suppressed for as long as that holds. Closing the palette on the click means the banner appears
+instead, 3 px of the same hue against the panel's 2 px hairline, which is the louder of the two and
+the one the owner asked to be *"much thicker"*. The palette's hairline keeps the cases it was really
+for: an order armed by hotkey, or armed before the palette was opened.
+
+**The test asserts the order still happens.** That is the half worth having. A close that also
+swallowed the order would photograph perfectly and be a worse fault than the overlap it replaced —
+the menu goes and nothing the player asked for does — so the tool is read back out of the director,
+not just the panel's display. It has to be a PlayMode test: what is being proved is that a shell
+built by the composition root wires the two together, and the fast tier compiles no shell. That is
+the known gap in `CLAUDE.md` about clicks, met where it can be met.
+
+Nobody has pressed Play on it.

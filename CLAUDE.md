@@ -199,16 +199,21 @@ invisible where the game is played.
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the fixed
   inspect pane, the dimmed build categories and the palette that closes on a selection: EditMode
-  **1645 total, 1632 passed, 0 failed**. The remainder are `[Explicit]` or ignored.
-- **PlayMode, last run the same day: 77 total, 72 passed, 0 failed — but before the two palette
-  changes.** It could not be re-run: an editor was open on the worktree and `unity.sh` refuses to
-  batch against a locked project, which is the right refusal and not a failure. PlayMode is the
-  only place frame time is measured — never an editor `camera.Render()` loop.
+  **1645 total, 1632 passed, 0 failed**. The remainder are `[Explicit]` or ignored. **It has not
+  seen the order-closes-a-menu change**, which adds no EditMode test and whose Presentation code the
+  PlayMode run below compiled.
+- **PlayMode, the same day: 78 total, 73 passed, 0 failed**, including
+  `AnOrderClosesWhateverMenuWasOpenAndStillHappens` on the real shell. PlayMode is the only place
+  frame time is measured — never an editor `camera.Render()` loop.
   **Its previously recorded 74 was wrong, not superseded**: nothing under
-  `Assets/Odyssey/Tests/PlayMode` has changed since the commit it was recorded against, no
-  PlayMode test is parameterised, and this branch adds none. Three cases were miscounted or
-  mis-transcribed into this file; 77 is measured. EditMode's 1638 was right and rose by exactly the
-  seven tests this branch adds.
+  `Assets/Odyssey/Tests/PlayMode` had changed since the commit it was recorded against, no PlayMode
+  test is parameterised, and this branch added none at the point it was re-measured at 77. Three
+  cases were miscounted or mis-transcribed into this file. EditMode's 1638 was right.
+- **An editor GUI appears on the project moments after a batch run finishes**, twice on 2026-09-18
+  (09:25:52 and 09:47:19, against runs ending 09:25:19 and 09:47:13), and it locks the project
+  against the next `unity.sh` command. The cause is unestablished — Hub, the licensing IPC, or a
+  person — so check `Get-CimInstance Win32_Process -Filter "Name='Unity.exe'"` before concluding a
+  batch run failed, and do not kill a process that might be somebody's open editor.
 - **Content gates:** `python3 tools/wiki/build_wiki.py --check` and
   `python3 tools/wiki/emit_labels.py --check`. Both must pass before a content commit.
 - The two tiers **do not run the same NUnit**, and the fast tier's is newer; **a frame is not a

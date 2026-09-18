@@ -198,6 +198,31 @@ namespace Odyssey.Presentation.Ui
         }
 
         /// <summary>
+        /// Shut every panel standing over the board that the player did not just ask for.
+        ///
+        /// <para><b>One method rather than a list at each call site</b> (owner, 2026-09-18: <i>"if
+        /// I'm in the build menu (or any other menu) and I click on an order"</i> — the parenthesis
+        /// is the requirement). A rule written about the Build palette alone would have been right
+        /// about the panel that happened to be open when the owner noticed, and wrong about Menu
+        /// and the bed picker on the same day.</para>
+        ///
+        /// <para><b>The modals are not in it, and do not need to be.</b> Settings, the debug
+        /// windows and the rest of <see cref="HudModal"/> put a pickable scrim over the whole
+        /// screen, so nothing behind one can be clicked at all — the orders strip included. They
+        /// are excluded by construction rather than by omission, which is worth writing down
+        /// because the list otherwise looks incomplete.</para>
+        ///
+        /// <para>Every call is safe when nothing is open: the two popovers check first and the bed
+        /// picker may not have been built at all.</para>
+        /// </summary>
+        void CloseMenusOverTheBoard()
+        {
+            if (BuildPaletteOpen) SetBuildPalette(false);
+            if (MenuOpen) ToggleMenu(false);
+            CloseBedPicker();
+        }
+
+        /// <summary>
         /// Put a popover over the button that raised it.
         ///
         /// <para>Written from code because where it sits is a fact about the bar, and only the

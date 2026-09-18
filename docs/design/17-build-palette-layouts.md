@@ -215,6 +215,39 @@ reason at once.
 
 **The close happens before the pane refreshes**, so there is no frame in which both are up.
 
+#### And giving an order closes any menu (owner, same day)
+
+> *"If I'm in the build menu (or any other menu) and I click on an order — I expect that menu to be
+> closed down and the dialog appear/order would happen."*
+
+**The parenthesis is the requirement.** A rule written about the Build palette alone would have been
+right about the panel that happened to be open when the owner noticed it, and wrong about Menu and
+the bed picker the same afternoon. `CloseMenusOverTheBoard` is one method, called from the order
+button, and it shuts all three.
+
+**The modals are excluded by construction, not by omission.** Settings, the debug windows and
+everything else built through `HudModal` put a pickable scrim over the whole screen, so nothing
+behind one can be clicked at all — the orders strip included. There is no case to handle, and it is
+written down here because the list otherwise looks short.
+
+**Why the strip in particular.** It was taken out of the palette's header on 2026-09-17 precisely so
+that giving an order would not cost opening a panel first (§2). That makes it the one control a
+player reaches for *from inside something else* — and leaving that something else standing is what
+made the click feel as though it had not landed.
+
+**This does not retire the palette's mode colour (§7); it hands the job to the banner.** The panel
+wears the held order's hue while it is open, and the floating armed banner is suppressed for exactly
+as long as that is true. Close the palette on the order click and the banner appears instead — 3 px
+of the same hue against the panel's 2 px hairline, which is the louder of the two and the one the
+owner asked to be *"much thicker"*. The palette's own mode colour still has its cases: an order
+armed by hotkey with the palette open, or armed first and the palette opened after.
+
+**The test asserts that the order still happens**, not only that the menu closed. A close that
+swallowed the order would photograph correctly and be a worse fault than the overlap it replaced —
+the menu goes and nothing the player asked for does. `AnOrderClosesWhateverMenuWasOpenAndStillHappens`
+checks the director afterwards. It is a PlayMode test because what is being proved is that a shell
+built by the composition root wires the two together; there is no fast-tier version of that.
+
 ### 4a. Rows is a column, not a band (owner, second pass)
 
 Rows spanned the screen at first — which is what the mockup drew, and what *"the first group
