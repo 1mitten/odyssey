@@ -5770,34 +5770,32 @@ Settled through Ground → Interview → Plan → Execute on branch `claude/inte
 - **The fast tier caught the style rule; Unity caught the nullable contract.** `HudStyleSheetTests.TheSheetSetsNoTypeAtAll` prevented `-unity-font-style` in USS (font weight belongs strictly to `HudType`/`HudText` in C#). And Unity batch compile caught `CellRef` as a non-nullable value type, enforcing `CellRef?` across `AlertRow` and `AlertRowView`.
 - **Gates verified:** Fast tier 721 Sim + 411 Hud passed; EditMode 1675 total, 1662 passed, 0 failed; PlayMode 80 total, 75 passed, 0 failed; both wiki checks clean (`build_wiki.py --check`, `emit_labels.py --check`).
 
-### The dissolve that only a field could find (2026-09-18)
+### Roster Top Bar: vertical layout, badged activity icon, and widened name budget (2026-09-18)
 
-The U50 gate asked for a two-thousand-cell field in the frame test, and painting one is what found
-the bug. `SeedField` walks the meadow's open ground because a fixed block came up 860 of 2,025 —
-water and trees refuse what stands on them — and a zone painted across water **fragments**: the
-gate breaks the stroke into several zone records around each refusal. Sixty-four PlayMode tests
-then failed alphabetically after `FrameTimeTests` in 3.6 seconds, which read as a rendering
-cascade and was nothing of the kind.
+Settled through Ground → Interview → Plan → Execute on branch `claude/roster-card-layout`.
 
-Two faults, one behind the other. `Dissolve` used `List.RemoveAt` — a **shift** — while its own
-comment described a **swap**: it re-pointed only the zone that fell into the vacated slot, so with
-four or more zones, folding a middle one left every later zone wearing a stale `Id` with its cells
-pointing at slots nothing held. The fast tier had never dissolved a zone that was not near the end,
-because its fixtures fold two fields at most — the regression test needs four zones to catch it,
-and four separated fields only happen when a board refuses the ground between them. Behind that,
-the throw aborted `IntentBus.Drain` before `_pending.Clear()`, so the same poisoned intent
-re-threw every tick — and the PlayMode bootstrap survives between tests, so one poisoned session
-failed everything that ran after it. The cascade was one bug wearing sixty-four faces.
+The owner: *"We need to rearrange the roster top bar - the name of the person should appear directly below the portrait, remove the word of their activity and leave the icon. This icon would be displayed maybe right of the name to indicate what activity is taken place - or whatever you suggest - this would allow longer names to be used with the width reclaimed back from this change. Interview and clarify for details"*
 
-Two methods earned their keep. Instrumentation before theory: a `Console.WriteLine` in
-`IntentBus.Submit` and `GrowingZones.Designate` separated "the field paint corrupts state" from
-"the corruption fires later", in one run. And the locality proof: after the swap fix, the three
-bare ten-day hashes printed **identically** to the pre-fix tree — the fix changes zone folding
-and nothing else, and the ledger entry records that check beside the hashes so the next reader
-does not have to trust it.
+**The old geometry constrained names to a 50 px box.** The previous card (126 × 89 px) placed the 52 × 52 px avatar on the left and the colonist's name on the right. With 8 px padding on each side, a 52 px face, and an 8 px gap, only `126 - 16 - 52 - 8 = 50 px` remained for the name (`CardNameBudget`). Longer names in `colonist-names.csv` had to be culled or truncated to fit. Beneath that row sat a full-width activity line with a 17 px icon and a text word (e.g. "Chopping", "Deconstructing").
 
-The gate's other half answered its question cleanly. `TenDaysOnAField` is the first run where
-nothing in the slice makes food and something grows: 192 sowings, 128 harvests, 533 carrots, and
+**The vertical arrangement reclaims both top-bar capacity and name width:**
+- **Vertical stacking:** Avatar sits at the top of the card inside `.card__avatar-box` (52 × 52 px). The colonist's name sits directly below the avatar, centered horizontally (`-unity-text-align: middle-center`).
+- **Activity icon badge on avatar corner:** Rather than competing with the name for horizontal space on the name row, the 17 × 17 px activity icon (`.card__badge`) is docked as an overlay badge in the bottom-right corner of the avatar box (`position: absolute; right: -2px; bottom: -2px`). This frees 100% of the row beneath the avatar exclusively for the colonist's name.
+- **Activity text word removed & clean presentation:** Per the interview decision, the visible text word for the activity is removed from the card, and verbose hover tooltips are suppressed. The colonist inspect card informs the player of all job, need, and layer details on click.
+- **Card narrowed from 126 px to 96 px (`HudLayout.CardWidth = 96`):**
+  - **Reclaimed screen width:** The top bar fits ~30% more colonists per row (12 cards vs 9 at 1080p; 5 vs 4 at 720p).
+  - **Expanded name budget:** `CardNameBudget` is now `CardWidth - 2 * CardPad = 96 - 16 = 80 px` — a **60% increase** over the previous 50 px budget. Names up to ~14 characters fit comfortably without truncation.
+  - **Height maintained at 89 px (`HudLayout.CardHeight = 89`):** 8 px top pad + 52 px avatar + 2 px gap + 19 px name + 8 px bottom pad = 89 px.
+- **`StripClearance` (32 px) added to `StripRoom`:** Narrowing cards to 96 px allowed 6 cards to squeeze into 1280 × 720, crowding within 26 px of the clock and pushing resting HUD coverage to 20.63% (over the 20.00% ceiling). Adding a 32 px clearance margin ensures breathing room between the centered strip and the corner columns, capping 720p to 5 cards (508 px wide, 4.90% coverage), which keeps total resting coverage at **19.63%**, strictly preserving `HudLayout.CoverageCeiling = 0.20f`.
+- **Tests updated:**
+  - `HudStyleSheetTests`: token checks updated for `.card`, `.card__avatar`, `.card__avatar-box`, and `.card__badge` against `HudLayout`.
+  - `HudGeometryTests`: `TheActivityLineLeadsWithAnIconAndStillHoldsItsWord` replaced by `TheRosterCardBadgesItsActivityIconOnTheAvatar`; `TheCardIsWideEnoughForItsRowsAndNoWider` updated to verify avatar row and 80 px name row on a 96 px card.
+- **Gates verified:**
+  - Fast tier: 742 Sim + 411 Hud passed.
+  - Unity EditMode: 1706 total, 1692 passed, 0 failed.
+  - Unity PlayMode: 80 total, 75 passed, 0 failed.
+  - Content gates: `build_wiki.py --check` and `emit_labels.py --check` both clean.
+
 80 meals left where the bare run ends on 52 — the crop carried roughly a third of the diet, and
 all 64 cells re-sowed themselves, the continuous loop costing no code beyond the harvest. On the
 render side the 2,041-cell field holds the frame budget at 2.92 ms mean with two caveats written
