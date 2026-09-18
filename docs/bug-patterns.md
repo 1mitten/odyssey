@@ -182,6 +182,50 @@ sizes and the exact line, and it had been printing for as long as the feature ex
 
 Newest first. Every row: what was reported, what it actually was, and what now stops it.
 
+### 2026-09-18 — Every fixture had a bank in it, so nobody saw the 1.5 m teleport
+
+Found while measuring a new climb, not reported by anybody.
+
+**A hop up a step with no bank — against rock, inside a working, under a roof — snapped the figure
+1.51 m in a single frame**, and had done since hops were first drawn. The cause is the ground clamp:
+the cell a walker is *over* switches at the midpoint of a step, so with no ramp the ground under it
+is flat for the first half and a whole layer higher for the second. Any height curve timed across
+the whole step reached half its height and was then clamped the rest of the way at once. The mirror
+of it, on a sheer drop, was 657 mm.
+
+**A new shape worth naming: the fixture chose the case.** `BankFootingTests` measures exactly this,
+five ways across a terrace, four hundred samples a step — and every one of its worlds is a *terrace*,
+which by construction has a bank in it. The bank's ramp made the ground continuous and the fault
+invisible. It is the same shape as `GroundRelief.Reset()` hiding the relief snap two days earlier:
+a thorough test suite whose fixtures all share one convenient property.
+
+**Ask of any fixture: what does it always have that the game does not?**
+
+**Stopped by** `HopArcTests.ASheerFaceIsClimbedSmoothlyRatherThanInStrides` and
+`ADropDownASheerFaceIsAsFastAsTheGeometryAllows`, which build a step of bare rock and assert the
+fixture has no bank before measuring anything. The climb now completes by the midpoint and the fall
+starts there.
+
+### 2026-09-18 — A stride could not be drawn because progress was published as a whole percent (P5)
+
+A climb drawn in strides stuttered: 134 mm in one frame where 50 is the budget.
+
+**The cause was a layer away from the motion.** `PawnView.MovePercent` is a whole percent, and the
+sub-tick term cannot smooth it — at 60 frames and 60 ticks a second there is about one frame to a
+tick. A flat cell costs 100, so a percent a tick is exact and the quantisation has never been
+visible; a 240-tick hop advances a whole point every 2.4 ticks, so the figure stands still for two
+frames and then jumps a hundredth of the step. On the flat that jump is 25 mm. Concentrated into a
+stride it was 134.
+
+**Two wrong probes before the right one**, both worth remembering. The first sampled only at
+`tickAlpha = 0`, so the two arms of the comparison were identical and the sub-tick term looked
+innocent. The second sampled per percent — the very granularity under suspicion — so it reported the
+quantisation as the motion.
+
+**Stopped by** `PawnView.MovePerMille`, ten times the resolution, published beside the percent rather
+than instead of it, and by `BankFootingTests.WorstJump` sampling per mille: an instrument coarser
+than what it measures reports quantisation as a teleport.
+
 ### 2026-09-18 — Trees grew inside the hillside at the top of every terrace step
 
 *"The flat side of the terrain where the height changes … things generate in those tiles … Trees

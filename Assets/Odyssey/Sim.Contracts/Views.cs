@@ -74,6 +74,32 @@ namespace Odyssey.Sim.Contracts
         public readonly int MovePercent;
 
         /// <summary>
+        /// The same journey at a thousand steps instead of a hundred, 0 to 1000. Zero means the
+        /// publisher did not say, and presentation falls back to <see cref="MovePercent"/>.
+        ///
+        /// <para><b>Why a second field for the same number.</b> A percent is the resolution the
+        /// drawn figure actually moves at, because the sub-tick term cannot help: at 60 frames and
+        /// 60 ticks a second there is about one frame to a tick and the leftover is nearly nought,
+        /// so the figure advances by whatever the published percent advanced. On a step costing 100
+        /// that is one percent a tick and exact. On a step costing 240 — a hop up a terrace — the
+        /// percent moves by a whole point every 2.4 ticks, so the figure stands still for two
+        /// frames and then jumps a hundredth of the step.</para>
+        ///
+        /// <para><b>Measured, not supposed</b> (2026-09-18): on the flat that jump is 25 mm and
+        /// nobody has ever noticed it. Up a terrace, once the climb was drawn in strides rather
+        /// than as an even glide, the same quantisation became <b>134 mm in one frame</b> — a
+        /// visible stutter, and it is what <c>BankFootingTests.HoppingUpTheStepIsSmooth</c> failed
+        /// on. Ten times the resolution puts it back to 13 mm, under the 25 mm an honest frame of
+        /// walking moves.</para>
+        ///
+        /// <para>Added rather than widening <see cref="MovePercent"/> because a percent is what
+        /// every reader of that field expects, and because the two disagree by rounding rather than
+        /// by meaning — anything that only wants to know roughly how far along a pawn is can go on
+        /// asking for the percent.</para>
+        /// </summary>
+        public readonly int MovePerMille;
+
+        /// <summary>
         /// True while the pawn is working a toil in place: swinging at a tree, and later mining
         /// or building. False while it walks, sleeps, eats or idles.
         ///
@@ -149,8 +175,9 @@ namespace Odyssey.Sim.Contracts
             int jobDef = -1, CellRef nextCell = default, int movePercent = 0,
             bool working = false, CellRef workCell = default,
             PawnGesture gesture = PawnGesture.None, byte gestureSerial = 0,
-            bool asleep = false)
+            bool asleep = false, int movePerMille = 0)
         {
+            MovePerMille = movePerMille;
             Asleep = asleep;
             Gesture = gesture;
             GestureSerial = gestureSerial;

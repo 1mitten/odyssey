@@ -3,6 +3,7 @@ using NUnit.Framework;
 using Odyssey.Presentation.Rendering;
 using Odyssey.Sim.Contracts;
 using Odyssey.Sim.Pathing;
+using Odyssey.Sim.Worldgen;
 using Odyssey.Sim.Worldgen.Natural;
 using UnityEngine;
 
@@ -206,16 +207,52 @@ namespace Odyssey.Tests.Presentation
         static RenderTestWorld Terrace() =>
             RenderTestWorld.Terrace(rise: 1, stepTerrain: NaturalContent.TerrainGrass);
 
+        /// <summary>
+        /// A step of bare rock: earth spills down a step and stone does not, so no bank is drawn
+        /// and there is nothing to tread on. The other half of every climb test.
+        /// </summary>
+        static RenderTestWorld SheerFace()
+        {
+            const int n = 6;
+            var world = new RenderTestWorld(n, n, 8);
+            for (int z = 0; z < n; z++)
+            for (int x = 0; x < n; x++)
+            {
+                int top = x < 3 ? 2 : 1;
+                for (int y = 0; y <= top; y++) world.Solid(x, z, y, CoreContent.TerrainRock);
+            }
+            world.Publish();
+
+            Assert.That(BankLayout.At(world.Model, new CellRef(3, 3, 2)).Exists, Is.False,
+                "the fixture grew a bank against rock, so it is not testing a sheer face");
+            return world;
+        }
+
         static readonly CellRef Foot = new CellRef(3, 3, 2);
         static readonly CellRef Top = new CellRef(2, 3, 3);
 
         static PawnView Standing(CellRef cell) => Walking(cell, cell, 0);
 
         static PawnView Walking(CellRef from, CellRef to, int percent) =>
-            new PawnView(new PawnId(1), from, 100, 100, 50, -1, to, percent);
+            new PawnView(new PawnId(1), from, 100, 100, 50, -1, to, percent,
+                movePerMille: percent * 10);
+
+        /// <summary>
+        /// The pawn as the snapshot publishes it part way through a step: per mille, which is the
+        /// resolution the figure is drawn at and roughly what one tick of a dear step advances.
+        /// See <see cref="PawnView.MovePerMille"/> for why a percent is not fine enough.
+        /// </summary>
+        static PawnView WalkingPerMille(CellRef from, CellRef to, int perMille) =>
+            new PawnView(new PawnId(1), from, 100, 100, 50, -1, to, perMille / 10,
+                movePerMille: perMille);
 
         static Vector3 DrawnAt(RenderTestWorld world, CellRef from, CellRef to, int percent) =>
             PawnPose.Of(Walking(from, to, percent), 0f, 0, out _, world.Model);
+
+        /// <summary>The drawn position at a tick of a step that costs <paramref name="ticks"/>.</summary>
+        static Vector3 DrawnAtTick(RenderTestWorld world, CellRef from, CellRef to, int tick, int ticks) =>
+            PawnPose.Of(WalkingPerMille(from, to, Mathf.RoundToInt(tick * 1000f / ticks)),
+                0f, 0, out _, world.Model);
 
         static Vector3 DrawnStanding(RenderTestWorld world, CellRef cell) =>
             PawnPose.Of(Standing(cell), 0f, 0, out _, world.Model);
@@ -277,12 +314,15 @@ namespace Odyssey.Tests.Presentation
 
             int pushes = 0, holds = 0;
             bool rising = false;
-            float previous = DrawnAt(world, Foot, Top, 0).y;
+            float previous = DrawnAtTick(world, Foot, Top, 0, MoveCost.JumpUp).y;
 
-            // One sample a frame, at the step's real duration.
-            for (int frame = 1; frame <= MoveCost.JumpUp; frame++)
+            // One sample a tick, which at 60 ticks and 60 frames a second is one sample a frame,
+            // and per mille rather than per percent because that is the resolution the figure is
+            // drawn at. Sampling by percent counted every quantisation edge as its own push and
+            // reported twenty strides where there are four.
+            for (int tick = 1; tick <= MoveCost.JumpUp; tick++)
             {
-                float y = DrawnAt(world, Foot, Top, Mathf.RoundToInt(frame * 100f / MoveCost.JumpUp)).y;
+                float y = DrawnAtTick(world, Foot, Top, tick, MoveCost.JumpUp).y;
                 bool climbing = y - previous > 1e-4f;
                 if (climbing && !rising) pushes++;
                 if (!climbing) holds++;
@@ -356,17 +396,20 @@ namespace Odyssey.Tests.Presentation
 
             // MoveCost.JumpUp ticks at 60 a second, one frame a tick.
             int frames = MoveCost.JumpUp;
-            float previous = DrawnAt(world, Foot, Top, 0).y;
+            float previous = DrawnAtTick(world, Foot, Top, 0, frames).y;
             float largest = 0f;
 
             for (int frame = 1; frame <= frames; frame++)
             {
-                float y = DrawnAt(world, Foot, Top, Mathf.RoundToInt(frame * 100f / frames)).y;
+                float y = DrawnAtTick(world, Foot, Top, frame, frames).y;
                 largest = Mathf.Max(largest, Mathf.Abs(y - previous));
                 previous = y;
             }
 
-            Assert.That(largest, Is.LessThan(0.1f),
+            // The same bound BankFootingTests calls Smooth, and it is not arbitrary: an honest
+            // frame of walking moves a colonist 25 mm, so twice that is the most a stride may move
+            // her before it stops being a stride and becomes a snap.
+            Assert.That(largest, Is.LessThan(0.05f),
                 $"a single frame of the climb moves the figure {largest * 1000f:F0} mm, which is a snap");
         }
 
@@ -402,35 +445,60 @@ namespace Odyssey.Tests.Presentation
             // then jumps a whole layer at the midpoint — strides taken off it would draw a colonist
             // standing still and then teleporting three metres. The chord underneath the strides is
             // what catches that, and this is the case that proves it.
-            const int n = 6;
-            var world = new RenderTestWorld(n, n, 8);
-            for (int z = 0; z < n; z++)
-            for (int x = 0; x < n; x++)
-            {
-                int top = x < 3 ? 2 : 1;
-                for (int y = 0; y <= top; y++) world.Solid(x, z, y, CoreContent.TerrainRock);
-            }
-            world.Publish();
-
+            RenderTestWorld world = SheerFace();
             var foot = new CellRef(3, 3, 2);
             var top2 = new CellRef(2, 3, 3);
-            Assert.That(BankLayout.At(world.Model, foot).Exists, Is.False,
-                "the fixture grew a bank against rock, so it is not testing a sheer face");
 
-            float previous = DrawnAt(world, foot, top2, 0).y;
+            float previous = DrawnAtTick(world, foot, top2, 0, MoveCost.JumpUp).y;
             float largest = 0f;
             for (int frame = 1; frame <= MoveCost.JumpUp; frame++)
             {
-                float y = DrawnAt(world, foot, top2, Mathf.RoundToInt(frame * 100f / MoveCost.JumpUp)).y;
+                float y = DrawnAtTick(world, foot, top2, frame, MoveCost.JumpUp).y;
                 largest = Mathf.Max(largest, Mathf.Abs(y - previous));
                 previous = y;
             }
 
-            Assert.That(largest, Is.LessThan(0.1f),
+            Assert.That(largest, Is.LessThan(0.05f),
                 $"climbing a sheer face moves the figure {largest * 100f:F0} cm in one frame");
             Assert.That(DrawnAt(world, foot, top2, 100).y,
                 Is.EqualTo(DrawnStanding(world, top2).y).Within(0.01f),
                 "a sheer climb does not finish on the ground above it");
+        }
+
+        [Test]
+        public void ADropDownASheerFaceIsAsFastAsTheGeometryAllows()
+        {
+            // The mirror of the climb above, and the one place a frame moves further than a stride
+            // may. The clamp holds the figure on the upper floor until the midpoint — which is
+            // right, since it is standing on the ledge until it crosses the edge — so the whole
+            // three metres has to happen in the second half of a step that costs 50 ticks. That is
+            // 0.42 s for a layer, and no curve makes it gentler; only a cheaper `MoveCost.Drop` or
+            // an earlier crossing would.
+            //
+            // What *was* worth fixing is that it used to be a discontinuity as well: the fall was
+            // timed across the whole step, so it was 66 cm below the ledge by the time the clamp
+            // let go and it snapped there in one frame — 657 mm, measured. It is now timed into the
+            // second half, so the release is continuous and what is left is honest falling.
+            //
+            // Measured and pinned rather than made gentler, so that if `MoveCost.Drop` or the
+            // crossing point changes, the number here moves and somebody reads this paragraph.
+            RenderTestWorld world = SheerFace();
+            var foot = new CellRef(3, 3, 2);
+            var top2 = new CellRef(2, 3, 3);
+
+            float previous = DrawnAtTick(world, top2, foot, 0, MoveCost.Drop).y;
+            float largest = 0f;
+            for (int tick = 1; tick <= MoveCost.Drop; tick++)
+            {
+                float y = DrawnAtTick(world, top2, foot, tick, MoveCost.Drop).y;
+                largest = Mathf.Max(largest, Mathf.Abs(y - previous));
+                previous = y;
+            }
+
+            Assert.That(largest, Is.LessThan(0.35f),
+                $"a frame of a sheer drop moves the figure {largest * 100f:F0} cm, which is past " +
+                "what the geometry alone accounts for");
+            TestContext.WriteLine($"sheer drop: worst frame {largest * 1000f:F0} mm");
         }
 
         [Test]

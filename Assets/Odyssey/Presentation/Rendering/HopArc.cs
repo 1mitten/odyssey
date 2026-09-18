@@ -54,13 +54,18 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>
         /// The part of one stride spent pushing up on to the next tread, the rest being the plant.
         ///
-        /// <para>A third: a quick push and a longer settle, which is the rhythm of climbing
-        /// something steep. It also keeps the push itself smooth — 0.375 m over a third of a second
-        /// is 21 mm in a frame, against the 25 mm an honest frame of walking moves — because a
-        /// hard step would be a snap, and <c>ObserveSpeed</c> differences position frame to frame,
-        /// so a snap throws the gait as well as the eye.</para>
+        /// <para><b>A half, and the number is a budget rather than a taste.</b> A frame may move
+        /// the figure about 50 mm before it stops reading as a stride and starts reading as a snap
+        /// — that is <c>BankFootingTests.Smooth</c>, and it is twice what an honest frame of
+        /// walking moves. A terrace climb is 1.5 m of rise inside half a 240-tick step, so an even
+        /// glide is 25 mm a frame and concentrating it into a fraction <c>P</c> of each stride
+        /// multiplies that by <c>1.5/P</c> — the 1.5 being the peak of the smoothstep against its
+        /// own average. At a third that is 57 mm and it failed; at a half it is 38 mm.</para>
+        ///
+        /// <para>So this is as concentrated as a stride can be while the motion stays smooth, and
+        /// making it snappier means slowing the climb down rather than steepening the push.</para>
         /// </summary>
-        public const float Push = 0.33f;
+        public const float Push = 0.5f;
 
         /// <summary>
         /// The part of a drop spent leaving the edge before the fall begins, as a fraction.
@@ -122,7 +127,12 @@ namespace Odyssey.Presentation.Rendering
             // window rather than switched, because a 37 cm jump in one frame is a snap.
             float pushed = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(1f - Push, 1f, through));
 
-            return landing - (whole + pushed) * tread;
+            // Never below the ground it is walking on. Smoothstep leaves its ends flat, so at the
+            // very start of a push the body rises more slowly than the ramp does for a fraction of
+            // a stride — half a millimetre, measured, and cleaned up by the clamp in PawnPose on
+            // the board. Cleaned up here as well, so the function is honest about it on its own
+            // rather than relying on its caller.
+            return Mathf.Max(ground, landing - (whole + pushed) * tread);
         }
 
         /// <summary>

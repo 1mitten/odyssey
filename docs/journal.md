@@ -6149,3 +6149,45 @@ possible they take actual steps up the terrain in a few motions."*
   `docs/lessons.md` is explicit that one must not be killed. The fast tier does not compile
   presentation, so this revision has its arithmetic reviewed and not run. Verified on a scratch
   worktree instead — see the commit that follows.
+
+### The stride that could not be drawn, and the two teleports it found (2026-09-18, branch `claude/terrace-foot-guard`)
+
+The stepping climb of the previous entry did not survive its first honest measurement, and what it
+turned up had been in the game far longer than it had.
+
+- **A percent was too coarse to draw a stride with.** `PawnView.MovePercent` is a whole percent of
+  the step, and the sub-tick term cannot rescue it: at 60 frames and 60 ticks a second there is about
+  one frame to a tick and the leftover is nearly nought, so the figure advances by whatever the
+  published number advanced. On a flat cell that is exactly one point a tick, because a flat cell
+  costs 100 — which is why nobody has ever seen it. On a 240-tick hop it is a whole point every 2.4
+  ticks: two frames still, then a jump. Measured at **25 mm on the flat and 134 mm up a terrace**
+  once the climb was drawn in strides, against the 50 mm `BankFootingTests` allows a frame.
+- **The probe that said so was wrong twice before it was right**, which is the lesson worth keeping.
+  The first version sampled only at `tickAlpha = 0`, so both arms of the comparison collapsed to the
+  same number and appeared to exonerate the sub-tick term; the second measured per percent, which is
+  a granularity the game no longer has. `PawnView.MovePerMille` is the fix — ten times the
+  resolution, published beside the percent rather than instead of it — and `BankFootingTests.WorstJump`
+  now samples per mille, because an instrument coarser than the thing it measures reports
+  quantisation as a teleport.
+- **Then the sheer face, which had been snapping 1.51 m since hops were first drawn.** With no bank
+  there is no ramp, so the ground under the walker is flat for half the step and jumps a whole layer
+  at the midpoint, when the cell it is over changes. Every climb curve timed across the whole step
+  therefore reached half its height and was then clamped the rest of the way in one frame. **No test
+  saw it because every fixture had a bank in it** — the same shape as the grass-tuft and bank faults
+  before it: the fixture chose the case. A sheer climb now hauls up over the first half and walks
+  forward over the second, peaking at 38 mm a frame.
+- **And its mirror, 657 mm, on a sheer drop.** The clamp holds the figure on the upper floor until
+  the boundary — rightly, it is standing on the ledge — so a fall timed across the whole step was
+  66 cm below the ledge by the time the clamp let go. Timed into the second half instead, the release
+  is continuous and what is left is 250 mm a frame: three metres inside the 25 ticks that half of
+  `MoveCost.Drop` buys. That one is geometry, not curve, and it is pinned rather than papered over.
+- **The stride is as concentrated as the frame budget allows.** 50 mm a frame is twice what an honest
+  frame of walking moves, and a terrace's 1.5 m of rise inside half a 240-tick step is 25 mm a frame
+  spread evenly. Concentrating it into a fraction *P* of each stride multiplies that by 1.5/*P*, so a
+  third failed at 57 mm and a half passes at 38. Making the push snappier means slowing the climb,
+  not steepening the curve.
+- **Every one of these was found by measuring rather than by reading.** Three of the four were the
+  opposite of what the code suggested, which is the fourth time this project has recorded that
+  sentence.
+- **Verified:** fast tier **726 Sim + 438 Hud**, Long **21**; EditMode **1776 total, 1762 passed,
+  0 failed**, run on a scratch worktree because the owner's editor held `odyssey-inspect`.

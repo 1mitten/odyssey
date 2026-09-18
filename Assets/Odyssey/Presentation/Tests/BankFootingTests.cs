@@ -45,7 +45,18 @@ namespace Odyssey.Tests.Presentation
         static PawnView Standing(CellRef cell) => Walking(cell, cell, 0);
 
         static PawnView Walking(CellRef from, CellRef to, int percent) =>
-            new PawnView(new PawnId(1), from, 100, 100, 50, -1, to, percent);
+            new PawnView(new PawnId(1), from, 100, 100, 50, -1, to, percent,
+                movePerMille: percent * 10);
+
+        /// <summary>
+        /// The same at the resolution the figure is actually drawn at: per mille of the step, which
+        /// is what the snapshot publishes and what one tick of a dear step advances. Sampling by
+        /// whole percent measures a quantisation the game no longer has — see
+        /// <see cref="PawnView.MovePerMille"/>.
+        /// </summary>
+        static PawnView WalkingPerMille(CellRef from, CellRef to, int perMille) =>
+            new PawnView(new PawnId(1), from, 100, 100, 50, -1, to, perMille / 10,
+                movePerMille: perMille);
 
         // ------------------------------------------------------------------ the surface
 
@@ -183,14 +194,19 @@ namespace Odyssey.Tests.Presentation
         /// </summary>
         static float WorstJump(RenderTestWorld world, CellRef from, CellRef to)
         {
-            const int samples = 400;
+            // **Per mille, not per percent**, since 2026-09-18. The figure is drawn from
+            // PawnView.MovePerMille and one tick of the dearest step there is advances a few of
+            // them, so a thousandth is the finest step the drawn position ever takes. Sampling by
+            // whole percent measured a quantisation the game had and has not any more, and it read
+            // a deliberate stride up a bank — 13 mm a frame — as a 134 mm teleport.
+            const int samples = 1000;
             float worst = 0f;
             float previous = PawnPose.Of(Standing(from), 0f, 0, out _, world.Model).y;
 
             for (int i = 0; i <= samples; i++)
             {
-                int percent = Mathf.RoundToInt(i * 100f / samples);
-                float y = PawnPose.Of(Walking(from, to, percent), 0f, 0, out _, world.Model).y;
+                int perMille = Mathf.RoundToInt(i * 1000f / samples);
+                float y = PawnPose.Of(WalkingPerMille(from, to, perMille), 0f, 0, out _, world.Model).y;
                 worst = Mathf.Max(worst, Mathf.Abs(y - previous));
                 previous = y;
             }

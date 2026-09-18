@@ -161,11 +161,23 @@ underfoot past the edge, so it is a function of *time*.
 - **It leads the slope by up to two thirds of a tread, and that is the stride.** Your hips go up
   when your foot does. It is never drawn below the ground, and — the assertion that separates this
   from the arc — **never above the ground it is climbing on to**.
-- **A sheer face gets a plain climb.** A bank is refused against rock, inside a working and under a
-  roof, and there the ground under the walker is flat for half the step and then jumps a whole layer
-  at the midpoint. Strides taken off that would draw a colonist standing still and then teleporting
-  three metres, so the straight chord sits underneath as a floor: where there is a ramp the strides
-  are always above it and the figure treads; where there is none the chord carries it.
+- **A sheer face gets a plain climb, and fixing it found a fault that predates all of this.** A
+  bank is refused against rock, inside a working and under a roof. There the ground under the walker
+  is flat for the first half of the step and then jumps a whole layer at the midpoint, because that
+  is when the cell it is over changes — so a climb timed across the whole step reached half its
+  height and was then **snapped 1.51 m in a single frame**. That has been true since hops were drawn
+  at all; no test saw it because every fixture had a bank in it. A sheer climb now hauls itself up
+  over the first half of the step and walks forward along the top over the second, which is what
+  climbing onto a ledge looks like anyway, and peaks at 38 mm a frame.
+- **The same fault, mirrored, on a sheer drop — 657 mm.** The clamp holds the figure on the upper
+  floor until the boundary, so a fall timed across the whole step was already 66 cm below the ledge
+  when the clamp let go. The fall is now timed into the second half, which makes the release
+  continuous. What is left is 250 mm a frame, and that is the geometry rather than the curve: three
+  metres inside the 25 ticks that half of `MoveCost.Drop` buys. Pinned by a test so that changing
+  the drop's price moves the number and somebody reads the paragraph.
+- **Nothing here is faster than a stride may be.** 50 mm a frame is the budget — twice what an
+  honest frame of walking moves — and it is why `Push` is a half rather than a third: concentrating
+  a climb's 1.5 m into a fraction *P* of each stride multiplies the 25 mm glide by 1.5/*P*.
 - **Down** is a square, because that is what falling is. `MoveCost.Drop` is 0.83 s and a 3.0 m free
   fall takes 0.78 s; the 0.05 s difference is the step off the edge. The implied acceleration is
   **9.78 m/s²**, and `HopArcTests.AFallIsAtTheSpeedOfGravity` pins it — retune the drop and that
@@ -221,3 +233,5 @@ Things deliberately left for later, so the next session does not re-derive them:
 | The shape of the climb and the fall | `Assets/Odyssey/Presentation/Rendering/HopArc.cs` |
 | Which steps are drawn as hops | `PawnPose.IsDrawnAsAHop` — geometry *and* a block top, so a stair is not one |
 | That the price and the drawn speed agree | `HopArcTests.AClimbIsNeverDrawnFasterThanAWalk` |
+| How fine the drawn progress is | `PawnView.MovePerMille`, published by `PawnRegistry` |
+| What a frame may move a figure | `BankFootingTests.Smooth`, 50 mm, sampled per mille |

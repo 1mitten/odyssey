@@ -65,7 +65,19 @@ namespace Odyssey.Presentation.Rendering
             // were", which is exactly right for a climb as well.
             heading = new Vector3(travel.x, 0f, travel.z);
 
-            float percent = pawn.MovePercent + movePerTick * tickAlpha;
+            // **How far through the step, in percent, at the finest resolution published.**
+            //
+            // A percent is too coarse to draw with on any step that does not cost 100, and the
+            // sub-tick term cannot rescue it: at 60 frames and 60 ticks a second there is about one
+            // frame to a tick and the leftover is nearly nought, so the figure advances by whatever
+            // the published number advanced. On a 240-tick hop that is a whole point every 2.4
+            // ticks — two frames still, then a jump. Measured at 25 mm on the flat, where nobody
+            // has ever noticed it, and at 134 mm up a terrace once the climb was drawn in strides.
+            // See PawnView.MovePerMille. Zero means the publisher did not say, which is every
+            // hand-built fixture, so the percent still answers for them.
+            float percent = pawn.MovePerMille > 0
+                ? pawn.MovePerMille * 0.1f + movePerTick * tickAlpha
+                : pawn.MovePercent + movePerTick * tickAlpha;
 
             // Along `travel` and not along `heading`: the bearing has had its vertical part taken
             // out on purpose, and a pawn that moved along it would climb a shaft without going
@@ -232,26 +244,55 @@ namespace Odyssey.Presentation.Rendering
                 float ground = CellMetrics.FloorCentre(over).y +
                                BankLayout.RiseAt(world, over, along.x, along.z);
 
-                // **The chord is the floor under the strides, and it is what a sheer face gets.**
+                // **You can only tread on something.**
                 //
-                // Treading works because a bank is a ramp: the ground rises continuously under the
-                // walker, so strides taken off it are continuous too. Not every step has one — a
-                // bank is refused against rock, inside a working and under a roof — and there the
-                // ground under the walker is flat for the first half of the step and then jumps a
-                // whole layer at the midpoint, because that is what `over` does. Strides alone
-                // would draw that as a colonist standing still and then teleporting three metres.
+                // Strides are taken off the ground under the walker, so they are only continuous
+                // where that ground is: a bank is a ramp and rises smoothly the whole way across
+                // the lower cell. Not every step has one — a bank is refused against rock, inside a
+                // working and under a roof — and there the ground under the walker is flat for the
+                // first half of the step and then jumps a whole layer at the midpoint, because that
+                // is what `over` does. Measured: strides taken off that drew a colonist standing
+                // still and then teleporting **1.51 m in one frame**, which is the fault this
+                // branch exists to prevent and is why `ASheerFaceIsClimbedSmoothlyRatherThanInStrides`
+                // measures a sheer face rather than assuming a bank.
                 //
-                // So the height is the higher of the two: where there is a ramp the strides are
-                // always above the straight line and the figure treads the hillside; where there is
-                // none the straight line carries it and the step is a plain climb up a wall, which
-                // is what it looks like from the outside as well. Both agree at both ends, so
-                // neither can put a jolt there.
-                height = Mathf.Max(HopArc.Stepped(ground, arriving, arriving - leaving),
-                                   Mathf.Lerp(leaving, arriving, t));
+                // **With no ramp, the climb is done by the midpoint** — and that is not a choice,
+                // it is the clamp below. The cell the figure is over switches at the midpoint, so
+                // from then on the ground under it is the upper floor and it will be lifted there
+                // whatever this returns. A straight line across the whole step therefore reached
+                // half the height and was then snapped the rest of the way: **1.51 m in one frame**,
+                // measured, and it has been in the game since hops were drawn at all. No test saw
+                // it because every fixture had a bank in it.
+                //
+                // So a sheer climb hauls itself up over the first half of the step and walks
+                // forward along the top over the second, which is also what climbing onto a ledge
+                // looks like. Smoothed at both ends so neither the start nor the arrival is a
+                // corner: 3 m over 120 ticks peaks at 38 mm a frame, inside the 50 mm a stride may
+                // move.
+                height = BankLayout.At(world, pawn.Cell).Exists
+                    ? HopArc.Stepped(ground, arriving, arriving - leaving)
+                    : Mathf.Lerp(leaving, arriving, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t * 2f)));
             }
             else
             {
-                height = Mathf.Lerp(leaving, arriving, HopArc.Fall(t));
+                // **A fall begins where the ground ends, and without a bank that is the boundary.**
+                //
+                // Dropping off a bank, the ramp in the arriving cell carries the figure down until
+                // it falls away faster than the body does, and the clamp below does that on its
+                // own. Dropping off a sheer edge there is no ramp, and the clamp holds the figure
+                // on the upper floor for the whole first half of the step — so a fall timed across
+                // the whole step was already 66 cm below the ledge when the clamp let go, and it
+                // snapped there in one frame. Measured at **657 mm**, which is a teleport.
+                //
+                // Timing the fall into the second half makes the release continuous: the figure
+                // walks to the edge and then drops. It is still fast — three metres inside the 25
+                // ticks that half of `MoveCost.Drop` buys — and that is the geometry rather than
+                // this curve. `ADropDownASheerFaceIsAsFastAsTheGeometryAllows` pins the number.
+                float fall = BankLayout.At(world, pawn.NextCell).Exists
+                    ? HopArc.Fall(t)
+                    : HopArc.Fall(Mathf.Clamp01((t - 0.5f) * 2f));
+
+                height = Mathf.Lerp(leaving, arriving, fall);
             }
 
             return height + GroundRelief.HeightAt(along.x, along.z);
