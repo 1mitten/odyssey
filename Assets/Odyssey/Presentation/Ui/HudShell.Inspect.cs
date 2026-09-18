@@ -189,7 +189,11 @@ namespace Odyssey.Presentation.Ui
             _inspectAvatar.style.display = colonist ? DisplayStyle.None : DisplayStyle.Flex;
             _inspectFace.style.display = colonist ? DisplayStyle.Flex : DisplayStyle.None;
             if (colonist && _boot?.World != null)
-                _inspectFace.SetFace(ColonistFace.Of(_boot.World.Views.Current, _inspect.Pawn));
+            {
+                WorldSnapshot frame = _boot.World.Views.Current;
+                _inspectFace.SetFace(ColonistFace.Of(frame, _inspect.Pawn));
+                _inspectFace.SetPortrait(_boot.Portraits.For(frame, _inspect.Pawn));
+            }
 
             // The two header lines are interpolated, and the pane refreshes fifteen times a
             // second, so they are rebuilt only when one of the values they quote has moved. The

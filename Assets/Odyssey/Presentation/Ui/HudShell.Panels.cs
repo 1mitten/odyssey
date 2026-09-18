@@ -411,6 +411,7 @@ namespace Odyssey.Presentation.Ui
                     // a slot rather than a person, so what changes here is which colonist this
                     // slot is showing. SetFace is a second guard on top of that one.
                     view.Avatar.SetFace(ColonistFace.Of(world.Views.Current, model.Id));
+                    view.Avatar.SetPortrait(_boot!.Portraits.For(world.Views.Current, model.Id));
                 }
                 if (view.LastJob != model.JobDef)
                 {

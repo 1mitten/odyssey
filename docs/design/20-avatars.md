@@ -281,6 +281,86 @@ useful record.
 
 ---
 
+## 10. Rendered portraits (owner, 2026-09-18, after playing it)
+
+**The owner's report: *"the colonists look nothing like their profile picture."*** They are right,
+and the fault is in §4 rather than in the drawing.
+
+### 10.1 What was actually wrong
+
+`ColonistFace.Of` calls `ColonistAppearance.Of(rollSeed, id, lookCount: 1)`, and that `1` throws
+away **`Look` — which of the sixty-one Synty characters this colonist is**. The code says so in a
+comment and defends it: *"an index into the catalogue's 3D colonist meshes means nothing to a
+drawing."* That was wrong. It is the single most identity-bearing fact about a colonist.
+
+So the card matched the **palette** and invented the **person**. The colours do land on the figure
+— of the 61 colonist rows, **55 classify `Full`**, 5 `NoSkin`, 1 `ClothOnly` — but:
+
+| | the figure | the card |
+|---|---|---|
+| Hair | a specific Synty cut, hood, hard hat or visor | one of eight generic crowns, from an unrelated salt |
+| Build | whatever the artist modelled | one of three trapeziums, from another unrelated salt |
+| Clothing | straps, plating and panels, recoloured | one flat trapezium in the primary cloth colour |
+
+A colonist in a helmet was being given a ponytail. Three colours in common and a disagreement about
+everything a person recognises.
+
+### 10.2 The answer, and why it is allowed
+
+**Render the real character once per appearance and cache it.** This is `09-ui-and-input.md` §4.5's
+own named graduation path, and — worth saying plainly — it is what the plan's original `U41
+Portraits` row asked for, which §9 argued out of existence. **§4.5 refused fifty portraits
+re-rendered at 15 Hz while the world draws.** It did not refuse one render, cached for the session.
+On the setup page that is three; on the roster it is at most the colony size, once each.
+
+**The cache key is the `ColonistAppearance`, not the pawn** — the look index plus four colours. Two
+colonists who genuinely look alike share one texture, a reload asks for what it already has, and a
+colony of twenty-six with a dozen distinct appearances renders twelve times. That is the whole
+performance story and it is why this is cheaper than it sounds.
+
+**One `RenderTexture` exists for the entire game**, reused for every portrait and read back into a
+small `Texture2D` per appearance. 128², so 64 kB each: a colony of twenty-six is under 1.7 MB. The
+leak test the plan asked for therefore has something to count after all, and the number it counts is
+one.
+
+### 10.3 The rig, and the two traps in it
+
+A hidden root far under the board (`HideFlags.HideAndDontSave`), a disabled camera and a light of
+its own. **Everything in it is switched off except during the render call**, which is synchronous:
+enable, `camera.Render()`, disable. That is what keeps a portrait light out of the world's own
+frame without needing a spare layer, a rendering-layer mask or any project setting — a directional
+light is global in URP, so the alternative was either a project change or a portrait lit by whatever
+time of day it happened to be rendered at, frozen there for the session.
+
+**No animator and no `PlayableGraph`.** `PawnFigureDirector.Create` builds both because a figure
+walks; a portrait does not, so it is the prefab in its bind pose with the head framed. That also
+means a portrait is available for a look whose *gaits* are missing, which `LooksFrom` drops — a row
+with a prefab and no animation can still be photographed.
+
+### 10.4 What the picture caught, again
+
+`Logs/portraits.png` is the studio photographing itself at full size, and it earned its keep for the
+second time on this unit. Two faults, neither visible at 30 px and neither findable by a test:
+
+- **The crop was anchored to the top of the silhouette** (`body.max.y`), which is the top of
+  whatever the character is *wearing*. Every bare head framed correctly and every hat-wearer was cut
+  off at the chin — which is the signature of exactly that fault, and is why it was diagnosable from
+  one image. It anchors on the **head bone** now: every pack character is a valid Mecanim humanoid
+  (`docs/research/e-02`), so the bone is there to be asked for, and the animator does not need to be
+  enabled to ask. Scale comes off the body's height rather than the head's, so a tall colonist is
+  not photographed from further away.
+- **The key light was pointing at the back of their heads.** `Euler(28, 200, 0)` against a camera
+  looking the other way; the whole cast came out dim and flat and it read as "the render is murky"
+  rather than as a light aimed backwards. `Euler(24, -22, 0)` at 1.6.
+
+### 10.5 What it does not change
+
+The drawn avatar stays, as the fallback with no licensed packs, and `AvatarGlyph` chooses between
+them by the idiom `IconBadge` already uses: a portrait present suppresses the paint, absent paints
+the figure. So a clone without `Assets/Synty` is still correct, and none of §4 is wasted.
+
+---
+
 ## 9. Deliberately not in this unit
 
 - **`09-ui-and-input.md` §4.5 is not amended**, and that is the cheap outcome the plan did not

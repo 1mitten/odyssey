@@ -5,6 +5,7 @@ using NUnit.Framework;
 using Odyssey.Hud;
 using Odyssey.Presentation.Bootstrap;
 using Odyssey.Presentation.CameraRig;
+using Odyssey.Presentation.Rendering;
 using Odyssey.Presentation.Ui;
 using Odyssey.Sim.Contracts;
 using UnityEngine;
@@ -31,6 +32,26 @@ namespace Odyssey.Tests.PlayMode
     public class AvatarSheetTests
     {
         const string PanelPath = "Assets/Odyssey/Presentation/Ui/HudPanelSettings.asset";
+        const string CataloguePath = "Assets/Odyssey/Presentation/ModuleCatalogue.asset";
+
+        /// <summary>
+        /// Hand the rig the committed module catalogue, which it otherwise has none of.
+        ///
+        /// <para><b>This is what makes a portrait possible in a test at all</b>, and it is also why
+        /// a portrait test can only ever be conditional: the catalogue's prefab references point
+        /// into <c>Assets/Synty</c>, which is gitignored. On this machine they resolve through the
+        /// junction; on the fast tier's Linux runner they resolve to nothing, and the test ignores
+        /// itself with that reason rather than passing on an empty grid. U35's figure-leak check
+        /// made the same bargain for the same reason.</para>
+        /// </summary>
+        static void GiveItACatalogue(OdysseyBootstrap boot)
+        {
+#if UNITY_EDITOR
+            if (boot.moduleCatalogue == null)
+                boot.moduleCatalogue =
+                    UnityEditor.AssetDatabase.LoadAssetAtPath<ModuleCatalogue>(CataloguePath);
+#endif
+        }
 
         const int Width = 1280;
         const int Height = 720;
@@ -122,6 +143,10 @@ namespace Odyssey.Tests.PlayMode
             {
                 for (int i = 0; i < 8; i++) yield return null;
 
+                // So the page is photographed with the portraits it will really carry, rather than
+                // with the no-packs fallback the rig would otherwise give it.
+                GiveItACatalogue(boot);
+
                 shell.Menu.Choose(SessionCommands.NewGameKey);
                 for (int i = 0; i < 8; i++) yield return null;
 
@@ -159,6 +184,100 @@ namespace Odyssey.Tests.PlayMode
             finally { Object.Destroy(root); }
         }
 
+        /// <summary>
+        /// The rendered portraits at full size, so the framing and the light can be judged
+        /// (<c>docs/design/20-avatars.md</c> §10). `Logs/portraits.png`.
+        ///
+        /// <para>Ignored where the packs are absent: with no catalogue every look resolves to
+        /// nothing and the sheet would be an empty grid reported as a pass.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator PhotographThePortraits()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell _, buildOnPlay: false);
+            try
+            {
+                for (int i = 0; i < 8; i++) yield return null;
+
+                GiveItACatalogue(boot);
+
+                PortraitStudio studio = boot.Portraits;
+                if (!studio.Available)
+                {
+                    Assert.Ignore("no module catalogue, so there is nobody to photograph");
+                    yield break;
+                }
+
+                var doc = boot.GetComponent<UIDocument>();
+                PanelSettings settings = Object.Instantiate(doc!.panelSettings);
+                var target = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32,
+                    RenderTextureReadWrite.sRGB)
+                {
+                    antiAliasing = 2,
+                };
+                settings.clearColor = true;
+                settings.colorClearValue = HudTokens.PanelFill;
+                settings.targetTexture = target;
+                doc.panelSettings = settings;
+
+                for (int i = 0; i < 5; i++) yield return null;
+
+                VisualElement page = doc.rootVisualElement;
+                page.Clear();
+                page.style.paddingLeft = 24;
+                page.style.paddingTop = 20;
+
+                var strip = new VisualElement();
+                strip.style.flexDirection = FlexDirection.Row;
+                strip.style.flexWrap = Wrap.Wrap;
+                page.Add(HudText.Make(
+                    $"{PortraitStudio.Size} px — the render, twenty-four colonists", HudTextRole.Meta));
+                page.Add(strip);
+
+                int taken = 0;
+                for (int slot = 0; slot < 24; slot++)
+                {
+                    Texture2D? shot = studio.For(20260918u, new PawnId(slot + 1));
+                    if (shot == null) continue;
+
+                    taken++;
+                    var tile = new VisualElement();
+                    tile.style.width = PortraitStudio.Size;
+                    tile.style.height = PortraitStudio.Size;
+                    tile.style.marginRight = 6;
+                    tile.style.marginBottom = 6;
+                    tile.style.backgroundColor = new Color(0.16f, 0.18f, 0.20f);
+                    tile.style.backgroundImage = new StyleBackground(shot);
+                    tile.style.backgroundSize =
+                        new StyleBackgroundSize(new BackgroundSize(BackgroundSizeType.Contain));
+                    strip.Add(tile);
+                }
+
+                Debug.Log($"[Portraits] {taken} taken, {studio.Portraits} cached, " +
+                          $"{studio.LiveRenderTextures} render texture(s) alive");
+
+                for (int i = 0; i < 10; i++) yield return null;
+
+                RenderTexture previous = RenderTexture.active;
+                RenderTexture.active = target;
+                var image = new Texture2D(target.width, target.height, TextureFormat.RGB24, false);
+                image.ReadPixels(new Rect(0, 0, target.width, target.height), 0, 0);
+                image.Apply();
+                RenderTexture.active = previous;
+
+                Directory.CreateDirectory(Path.GetFullPath("Logs"));
+                File.WriteAllBytes(Path.GetFullPath("Logs/portraits.png"), image.EncodeToPNG());
+
+                RenderTexture.active = null;
+                target.Release();
+                Object.DestroyImmediate(target);
+
+                Assert.That(taken, Is.GreaterThan(0), "the catalogue resolved but nobody was photographed");
+            }
+            finally { Object.Destroy(root); }
+        }
+
         /// <summary>One crown on one build, all in the same three colours.</summary>
         static ColonistFace Silhouette(int index) =>
             new ColonistFace(
@@ -189,6 +308,55 @@ namespace Odyssey.Tests.PlayMode
 
             block.Add(strip);
             return block;
+        }
+
+        /// <summary>
+        /// The leak test the plan's own `U41 Portraits` row asked for — *"a test that fails if
+        /// more than a fixed number of render textures are alive at once"* — which §9 said had
+        /// nothing to count, because flat avatars have no render textures. Rendered portraits do,
+        /// and the fixed number is **one**.
+        ///
+        /// <para>That is the design's performance claim stated as an assertion: one target,
+        /// reused, read back into a small texture per *appearance* rather than per colonist. A
+        /// studio that kept a render texture per portrait would pass every other test in this file
+        /// and quietly cost twenty-four render targets on a colony of twenty-four.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheStudioKeepsOneRenderTextureHoweverManyPortraits()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell _, buildOnPlay: false);
+            try
+            {
+                for (int i = 0; i < 8; i++) yield return null;
+                GiveItACatalogue(boot);
+
+                PortraitStudio studio = boot.Portraits;
+                if (!studio.Available)
+                {
+                    Assert.Ignore("no module catalogue, so there is nobody to photograph");
+                    yield break;
+                }
+
+                for (int slot = 0; slot < 24; slot++) studio.For(20260918u, new PawnId(slot + 1));
+
+                Assert.That(studio.Portraits, Is.GreaterThan(1), "nobody was photographed at all");
+                Assert.That(studio.LiveRenderTextures, Is.EqualTo(1),
+                    "the studio is keeping a render target per portrait rather than reusing one");
+
+                // Asking again is free: the same appearance is the same picture, object for
+                // object, which is what makes the roster bar's fifteen refreshes a second cost
+                // nothing after the first.
+                int after = studio.Portraits;
+                Texture2D? first = studio.For(20260918u, new PawnId(1));
+                Texture2D? again = studio.For(20260918u, new PawnId(1));
+                Assert.That(again, Is.SameAs(first));
+                Assert.That(studio.Portraits, Is.EqualTo(after), "asking twice photographed twice");
+
+                studio.Clear();
+                Assert.That(studio.Portraits, Is.Zero);
+            }
+            finally { Object.Destroy(root); }
         }
 
         [Test]

@@ -73,6 +73,7 @@ namespace Odyssey.Presentation.Ui
 
         ColonistFace _face;
         bool _drawn;
+        Texture2D? _portrait;
 
         public AvatarGlyph(float size)
         {
@@ -109,6 +110,46 @@ namespace Odyssey.Presentation.Ui
             MarkDirtyRepaint();
         }
 
+        /// <summary>
+        /// A photograph of the actual character, where one could be taken
+        /// (<c>docs/design/20-avatars.md</c> §10).
+        ///
+        /// <para><b>The drawing is the fallback, not the other way round.</b> A portrait needs the
+        /// licensed packs, so a clone without <c>Assets/Synty</c> gets the drawn figure and is
+        /// still correct — the same bargain <see cref="IconBadge"/> strikes between a sheet and an
+        /// outlined square, and the reason none of the drawing is wasted.</para>
+        ///
+        /// <para>The tile stays the colonist's garment colour underneath, because a portrait is
+        /// rendered on a transparent background and sits in the same box.</para>
+        /// </summary>
+        public void SetPortrait(Texture2D? portrait)
+        {
+            if (ReferenceEquals(_portrait, portrait)) return;
+
+            _portrait = portrait;
+            if (portrait != null)
+            {
+                style.backgroundImage = new StyleBackground(portrait);
+                style.backgroundRepeat = new StyleBackgroundRepeat(
+                    new BackgroundRepeat(Repeat.NoRepeat, Repeat.NoRepeat));
+                style.backgroundSize = new StyleBackgroundSize(new BackgroundSize(BackgroundSizeType.Contain));
+                style.backgroundPositionX = new StyleBackgroundPosition(
+                    new BackgroundPosition(BackgroundPositionKeyword.Center));
+                style.backgroundPositionY = new StyleBackgroundPosition(
+                    new BackgroundPosition(BackgroundPositionKeyword.Center));
+                style.unityBackgroundImageTintColor = Color.white;
+            }
+            else
+            {
+                style.backgroundImage = StyleKeyword.Null;
+            }
+
+            MarkDirtyRepaint();
+        }
+
+        /// <summary>Whether this slot is showing a photograph rather than the drawing.</summary>
+        public bool HasPortrait => _portrait != null;
+
         /// <summary>The face on screen, for a test that wants to ask.</summary>
         public ColonistFace Face => _face;
 
@@ -127,7 +168,9 @@ namespace Odyssey.Presentation.Ui
 
         void Paint(MeshGenerationContext context)
         {
-            if (!_drawn) return;
+            // A drawn figure stroked over a photograph is a mask nobody asked for — the same rule
+            // IconBadge.PaintSuppressed keeps between a sheet and the placeholder square.
+            if (!_drawn || _portrait != null) return;
 
             Rect box = contentRect;
             if (box.width <= 1f || box.height <= 1f) return;

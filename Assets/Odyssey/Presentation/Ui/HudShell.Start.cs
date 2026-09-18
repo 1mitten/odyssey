@@ -467,8 +467,9 @@ namespace Odyssey.Presentation.Ui
                 // this is the face the colony goes on to give them — ColonistDraw.IdForSlot is
                 // called rather than slot + 1 written out, which is the rule that file exists to
                 // state once.
-                _colonistFaces[slot].SetFace(
-                    ColonistFace.Of(who.Seed, ColonistDraw.IdForSlot(slot)));
+                PawnId willBe = ColonistDraw.IdForSlot(slot);
+                _colonistFaces[slot].SetFace(ColonistFace.Of(who.Seed, willBe));
+                _colonistFaces[slot].SetPortrait(_boot!.Portraits.For(who.Seed, willBe));
                 card.EnableInClassList("row--armed", select.IsLocked(slot));
                 card.EnableInClassList("colonist--on", select.Selected == slot);
                 card.tooltip = select.IsLocked(slot)
@@ -479,7 +480,9 @@ namespace Odyssey.Presentation.Ui
             Candidate current = select.Current;
             HudText.Set(_detailName, current.NameAndAge, HudTextRole.Name);
             HudText.Set(_detailTrade, current.Occupation, HudTextRole.Meta);
-            _detailFace.SetFace(ColonistFace.Of(current.Seed, ColonistDraw.IdForSlot(select.Selected)));
+            PawnId shown = ColonistDraw.IdForSlot(select.Selected);
+            _detailFace.SetFace(ColonistFace.Of(current.Seed, shown));
+            _detailFace.SetPortrait(_boot!.Portraits.For(current.Seed, shown));
 
             // Drawn now and empty until M7, by the owner's decision. It says "—" rather than
             // nothing, because a row that is absent and a row that is empty look identical and
