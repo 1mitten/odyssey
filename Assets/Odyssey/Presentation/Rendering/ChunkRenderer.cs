@@ -359,15 +359,12 @@ namespace Odyssey.Presentation.Rendering
                     shadowCastingMode = casts ? ShadowCastingMode.On : ShadowCastingMode.Off,
                 };
 
-                // Grass is never in the way, and it is nearly every instance on the board. Leaving
-                // foliage out of the partition is what keeps the cost of this feature confined to
-                // the things that can actually hide a person.
                 // The per-instance colours of a tree, which is what lets every colour in a chunk
                 // share one draw. Built once per meshing rather than once a frame, and only when
                 // the material that reads them is the one actually drawing.
                 bool coloured = painted != null && bucket.IsColoured;
 
-                int faded = sight && !foliage ? Partition(bucket) : 0;
+                int faded = sight && !NeverFades(bucket.Tint) ? Partition(bucket) : 0;
                 if (faded == 0)
                 {
                     if (coloured)
@@ -406,6 +403,35 @@ namespace Odyssey.Presentation.Rendering
                 InstancesFaded += faded;
             }
         }
+
+        /// <summary>
+        /// What the sight fade never touches, however squarely it stands in the beam.
+        ///
+        /// <para>The fade exists to stop something <em>hiding a person</em>, and three kinds of
+        /// thing on the board cannot do that however much of the screen they cover.</para>
+        ///
+        /// <para><b>Foliage</b>, because grass is ankle-high and is also nearly every instance on
+        /// the board — leaving it out is what keeps the cost of the feature confined to the things
+        /// that can actually hide somebody.</para>
+        ///
+        /// <para><b>Water, banks and marsh</b> (owner, 2026-09-18, in two reports), because all
+        /// three are <em>surfaces</em> rather than objects, and half a surface is not a view through
+        /// it — it is a hole. A pond is drawn as a body of faces, so fading the instances the beam
+        /// crosses opens a window into the bed of the stream and leaves a ragged edge where the beam
+        /// stops; a bank is a sheet leaning on a terrace step that no cell in the simulation even
+        /// contains, so fading it cuts a gap in a hillside that has no gap in it; and marsh is the
+        /// wet fringe of the same pond, so fading it punched a hole in the shore right beside water
+        /// that stayed whole. None of them ever stands between the camera and a colonist the way a
+        /// wall or an outcrop does: a colonist in the water or the bog is standing <em>in</em> it,
+        /// and one at the top of a step is above the bank, not behind it. The ground either side of
+        /// them still fades, which is what the feature is for.</para>
+        ///
+        /// <para>Water keeps its own marker because it already had one; the bank and the bog share
+        /// <c>TintCode.WholeBase</c>, which is named for this rule rather than for either of them,
+        /// so the next surface that wants it needs nothing here.</para>
+        /// </summary>
+        public static bool NeverFades(int tint) =>
+            TintCode.IsFoliage(tint) || TintCode.IsWater(tint) || TintCode.IsWhole(tint);
 
         /// <summary>
         /// Split one bucket's instances into the ones standing in a line of sight and the rest,
