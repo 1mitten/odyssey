@@ -5368,3 +5368,50 @@ as ever: one named owner for each half, `StandsOnSomething` for placement and `S
 the connector, with the difference between them written down.
 
 Both fixes were the owner's call, asked mid-unit rather than assumed, and both were told to go in.
+
+### A name pool that is one file, generated, and costs nothing to read (2026-09-18)
+
+The owner supplied about 240 given names in three lists — ordinary ones, invented ones, and a run of
+British nicknames (*Spudgun*, *Treacle*, *The Dude*) — and then, mid-change, the two constraints
+that decided the shape: *"make it performant then and centralise it if need be."*
+
+**The pool was eight names in a C# array**, with a comment promising it would reach "about forty at
+M2, when pawn generation needs a pool that does not repeat in a colony of fifty". That promise was
+three milestones old. It is 244 now, which is six times what it asked for, and
+`ThePoolOutlastsAnyColonyThisGameBuilds` walks a colony of fifty and asserts no two share a name —
+so the `"Wrenn 2"` suffix a ninth colonist used to get is unreachable by any colony this game
+builds. The branch is kept because it is what makes the method total, and it is the only line in the
+namer that allocates: on every path anybody actually walks, naming a colonist allocates nothing.
+
+**Centralised the way the icon keys already were.** `docs/design/colonist-names.csv` is the one
+place a name is decided; `emit_labels.py` — the generator that already turns `icon-keys.csv` into
+`Registry.g.cs` — gained a second output rather than a script of its own, so it is still **one
+generator and one `--check`**, and CI covers the new file without a workflow change. The wiki gained
+a page listing all 244 with their register and gender, because the whole reason names are content is
+that the owner can read them and strike the ones they do not want.
+
+**Performance was the easy half and worth stating anyway.** The generator writes string literals, so
+the pool lives in the assembly's constant pool and naming a colonist is an index and a modulo — no
+parse, no file read, no dictionary, no allocation. That matters because the roster strip and the
+inspect header ask per figure per frame.
+
+**Two names were dropped as duplicates and the generator now refuses them.** *Nova* appeared in both
+of the first two lists and *John* in the first and third; a pool with a repeat in it would name two
+colonists in one colony the same thing, which is precisely the fault the whole seed-and-id scheme
+exists to prevent. `load_names` raises on a repeat rather than silently deduping, because a name
+quietly vanishing from a 244-row CSV is not something anybody would notice.
+
+**The order of the CSV is load-bearing, and that is the trap to write down.** A name is arithmetic
+on a saved seed and a slot, so **sorting the file renames every colonist in every existing save**.
+Add to the end; never sort. Growing the pool from 8 to 244 already did this once — every colonist in
+every save made before today now goes by a different name — which is harmless exactly once and the
+reason the rule is stated in the CSV's own wiki page, in the generated header and in the namer.
+
+**Gender is recorded and nothing reads it, deliberately.** The owner asked "if can apply to gender".
+It cannot yet, and the reason is not the names: **no pawn in the simulation has a gender at all**,
+and the drawn colonist is one of sixty-one Synty models in a single undifferentiated family, so a
+gendered name would be contradicted by the figure beside it about half the time. Adding gendered
+names without a gendered figure would make the game look *more* wrong, not less — there is currently
+no expectation for a face to fail. The column is in the CSV because it cannot be re-derived cheaply
+later and because the wiki is where the owner corrects it; it is **not** generated into C#, since a
+constant nothing reads is the artefact this project keeps being bitten by.

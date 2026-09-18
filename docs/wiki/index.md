@@ -16,5 +16,6 @@ Every named thing in the game, generated from the design data. **Do not edit the
 | [Events](events.md) | 37 | 13 |
 | [World and interface](world.md) | 81 | 56 |
 | [Proper nouns](proper-nouns.md) | 29 | — |
+| [Colonist names](colonist-names.md) | 244 | — |
 
 The single-page searchable version is `index.html`. `README.md` explains how to host it.
