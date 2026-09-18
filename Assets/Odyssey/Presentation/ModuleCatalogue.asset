@@ -1927,6 +1927,122 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
+  - moduleId: odyssey.module.carrot.s
+    shape: 13
+    prefab: {fileID: 1712200964176758, guid: a74d9e41a3e780f47b3278a49fe842da, type: 3}
+    prefabName: SM_Prop_Carrot_01_S
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.carrot.m
+    shape: 13
+    prefab: {fileID: 1290591311347902, guid: d87f295218b7b4245906cd9610c542da, type: 3}
+    prefabName: SM_Prop_Carrot_01_M
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.carrot.l
+    shape: 13
+    prefab: {fileID: 1879033853735152, guid: 6d30e14ec4d9bf240be449faa7956c55, type: 3}
+    prefabName: SM_Prop_Carrot_01_L
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
+  - moduleId: odyssey.module.zone.dirtrows
+    shape: 13
+    prefab: {fileID: 1645245720062498, guid: c738b62174ab09f4eb2d7b486398a6ed, type: 3}
+    prefabName: SM_Env_Dirt_Rows_01
+    centreXZ: 1
+    baseAtY: 1
+    offset: {x: 0, y: 0, z: 0}
+    yaw: 0
+    scale: {x: 1, y: 1, z: 1}
+    materialOnly: 0
+    material: {fileID: 0}
+    materialName: 
+    materialTilesPerCell: 0
+    flattenNormalMap: 0
+    poseClip: {fileID: 0}
+    poseClipName: 
+    poseClipTime: 0
+    locomotion: []
+    appearance:
+      skin: []
+      hair: []
+      cloth: []
+      cloth2: []
+      skinVerts: 0
+      hairVerts: 0
+      clothVerts: 0
+      cloth2Verts: 0
+      totalVerts: 0
+      quality: 0
   - moduleId: odyssey.module.tree.conifer
     shape: 4
     prefab: {fileID: 6131553767378768855, guid: ae12f1ba847c6f74281e7a9a7b0ac7fd, type: 3}
@@ -6302,96 +6418,9 @@ MonoBehaviour:
       cloth2Verts: 0
       totalVerts: 0
       quality: 0
-  - moduleId: odyssey.module.carrot.s
-    shape: 13
-    prefab: {fileID: 0}
-    prefabName: SM_Prop_Carrot_01_S
-    centreXZ: 1
-    baseAtY: 1
-    offset: {x: 0, y: 0, z: 0}
-    yaw: 0
-    scale: {x: 0.5, y: 0.5, z: 0.5}
-    materialOnly: 0
-    material: {fileID: 0}
-    materialName:
-    materialTilesPerCell: 0
-    flattenNormalMap: 0
-    poseClip: {fileID: 0}
-    poseClipName:
-    poseClipTime: 0
-    locomotion: []
-    appearance:
-      skin: []
-      hair: []
-      cloth: []
-      cloth2: []
-      skinVerts: 0
-      hairVerts: 0
-      clothVerts: 0
-      cloth2Verts: 0
-      totalVerts: 0
-      quality: 0
-  - moduleId: odyssey.module.carrot.m
-    shape: 13
-    prefab: {fileID: 0}
-    prefabName: SM_Prop_Carrot_01_M
-    centreXZ: 1
-    baseAtY: 1
-    offset: {x: 0, y: 0, z: 0}
-    yaw: 0
-    scale: {x: 0.75, y: 0.75, z: 0.75}
-    materialOnly: 0
-    material: {fileID: 0}
-    materialName:
-    materialTilesPerCell: 0
-    flattenNormalMap: 0
-    poseClip: {fileID: 0}
-    poseClipName:
-    poseClipTime: 0
-    locomotion: []
-    appearance:
-      skin: []
-      hair: []
-      cloth: []
-      cloth2: []
-      skinVerts: 0
-      hairVerts: 0
-      clothVerts: 0
-      cloth2Verts: 0
-      totalVerts: 0
-      quality: 0
-  - moduleId: odyssey.module.carrot.l
-    shape: 13
-    prefab: {fileID: 0}
-    prefabName: SM_Prop_Carrot_01_L
-    centreXZ: 1
-    baseAtY: 1
-    offset: {x: 0, y: 0, z: 0}
-    yaw: 0
-    scale: {x: 1, y: 1, z: 1}
-    materialOnly: 0
-    material: {fileID: 0}
-    materialName:
-    materialTilesPerCell: 0
-    flattenNormalMap: 0
-    poseClip: {fileID: 0}
-    poseClipName:
-    poseClipTime: 0
-    locomotion: []
-    appearance:
-      skin: []
-      hair: []
-      cloth: []
-      cloth2: []
-      skinVerts: 0
-      hairVerts: 0
-      clothVerts: 0
-      cloth2Verts: 0
-      totalVerts: 0
-      quality: 0
   - moduleId: odyssey.module.item.carrots
     shape: 13
-    prefab: {fileID: 0}
+    prefab: {fileID: 1879033853735152, guid: 6d30e14ec4d9bf240be449faa7956c55, type: 3}
     prefabName: SM_Prop_Carrot_01_L
     centreXZ: 1
     baseAtY: 1
@@ -6400,11 +6429,11 @@ MonoBehaviour:
     scale: {x: 0.6, y: 0.6, z: 0.6}
     materialOnly: 0
     material: {fileID: 0}
-    materialName:
+    materialName: 
     materialTilesPerCell: 0
     flattenNormalMap: 0
     poseClip: {fileID: 0}
-    poseClipName:
+    poseClipName: 
     poseClipTime: 0
     locomotion: []
     appearance:

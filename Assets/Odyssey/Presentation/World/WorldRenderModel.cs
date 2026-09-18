@@ -344,6 +344,12 @@ namespace Odyssey.Presentation.World
         /// </summary>
         public int CropModule(int index)
         {
+            byte plant = _cropPlant[index];
+            if (plant == 0) return 0;
+            int slot = (plant - 1) * 3 + _cropStage[index] - 1;
+            return slot < _cropModules.Length ? _cropModules[slot] : 0;
+        }
+
 
         /// <summary>
         /// The tilled-ground module for this cell, or 0 where it is in no zone. Asked by the
@@ -351,12 +357,6 @@ namespace Odyssey.Presentation.World
         /// simulated — nothing of them is in a cell, a save or the hash.
         /// </summary>
         public int ZoneGroundModule(int index) => _zoned[index] ? _zoneGroundModule : 0;
-            byte plant = _cropPlant[index];
-            if (plant == 0) return 0;
-            int slot = (plant - 1) * 3 + _cropStage[index] - 1;
-            return slot < _cropModules.Length ? _cropModules[slot] : 0;
-        }
-
         /// <summary>
         /// Restamp the crop mirror from the published snapshot's crop channel.
         ///

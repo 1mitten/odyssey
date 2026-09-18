@@ -5873,3 +5873,13 @@ And the click: `CellDetail` carries `ZonePlant` and `CropGrowth` now, the contri
 for zones beside beds, and the pane's row reads "growing — carrot, 43% grown" or "awaiting its
 seed". Changing the crop from the pane is recorded as the species-chooser hook it always was:
 one crop exists, and a chooser with one choice is a label wearing a button.
+
+### The carrot's own stages, at their own sizes (2026-09-18)
+
+The owner pointed at the carrot prop's own grow stages — planting, growing, sprouting, popping
+out — and the trio was already wired but twice-shrunk: the S/M/L prefabs are the stages, staged
+by the artist, and the 0.5/0.75/1.0 the rows carried was authored for the Pillow fallbacks but
+scales the real art too (`SafeScale` dresses both paths). One scale throughout now; a pack-less
+checkout loses the fallback's size ladder, the cheaper half of the trade. The catalogue rebuild
+bound all of it — 126 of 143 rows with art, the carrot trio and the dirt rows among them — and
+the worktree's Synty junction is what let it run without touching the licensed files.

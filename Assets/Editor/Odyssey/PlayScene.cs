@@ -1330,8 +1330,15 @@ namespace Odyssey.EditorTools
                 scale = new Vector3(size, size, size),
             });
 
-            Crop("odyssey.module.carrot.s", "SM_Prop_Carrot_01_S", 0.5f);
-            Crop("odyssey.module.carrot.m", "SM_Prop_Carrot_01_M", 0.75f);
+            // Scale one throughout (owner, 2026-09-18: "there is a carrot in multiple grow stages
+            // from planting, growing, to sprouting and popping out - use this through the
+            // different stages"): the S/M/L prefabs are the stages, staged by the artist, and a
+            // second scaling on top shrinks a sprout to a speck. The size ladder these rows used
+            // to carry (0.5/0.75/1.0) was authored for the Pillow fallbacks, which it still
+            // serves by shape alone - a mound grows only by being drawn at three stages' heights,
+            // and losing that on a pack-less checkout is the cheaper half of the trade.
+            Crop("odyssey.module.carrot.s", "SM_Prop_Carrot_01_S", 1.0f);
+            Crop("odyssey.module.carrot.m", "SM_Prop_Carrot_01_M", 1.0f);
             Crop("odyssey.module.carrot.l", "SM_Prop_Carrot_01_L", 1.0f);
 
             // The field under the crop: the farm pack's dirt rows, one patch per zoned cell,
