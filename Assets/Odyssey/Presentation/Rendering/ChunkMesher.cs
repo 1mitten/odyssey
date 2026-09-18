@@ -410,7 +410,7 @@ namespace Odyssey.Presentation.Rendering
 
             // Draped, so a bank lies along the same rolling field the ground either side of it
             // does. Always daylit: BankLayout required the cell to be open to the sky.
-            AddBody(batch, module, TintCode.Daylit(TintCode.Terrain(bank.Terrain), open: true),
+            AddBody(batch, module, TintCode.Daylit(TintCode.Bank(bank.Terrain), open: true),
                 GroundRelief.Drape(CellMetrics.FloorCentre(x, z, y)) *
                 Matrix4x4.Rotate(Quaternion.Euler(0f, Directions.Yaw[bank.Rotation], 0f)));
         }

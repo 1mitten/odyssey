@@ -878,6 +878,26 @@ its bounds.
 swapping materials on its renderers rather than partitioning an instance array, and a person
 standing in front of a person is a much rarer complaint than a wood is.
 
+**Nor grass, water or banks** (`ChunkRenderer.NeverFades`). Grass was exempt from the first day on
+cost grounds — a tuft hides nobody and tufts are most of the instances on the board — and water and
+banks joined it on 2026-09-18, on the owner's report: *"it shouldn't do it on the artificial façade
+terrain on the height edges and in water/around water."* The argument is the same one in both
+cases, and it is not cost. **Both are surfaces rather than objects, so half of one is not a view
+through it — it is a hole.** A pond is drawn as a body of faces, and fading the faces a beam crosses
+opens a window into the bed of the stream with a ragged edge where the beam stops; a bank is a sheet
+leaning on a terrace step that *no cell in the simulation contains at all*, so fading it cuts a gap
+in a hillside that has no gap in it. Neither ever hides anybody in the way a wall or an outcrop
+does: a colonist in the water is standing in it, and one at the top of a step is above the bank
+rather than behind it. The ground either side of them still fades, which is the feature.
+
+A bank says what it is with a bit of its own in the tint code (`TintCode.BankBase`), the way foliage
+and water already do. It costs no extra bucket — a bank is its own module and so was already its own
+bucket — and it changes no colour: a bank is still terrain and still tinted as terrain.
+`SightFadeExemptionTests` pins all of it, and each of its two render tests carries a **control**,
+because an exemption is the easiest thing in the world to assert vacuously: the water test shows the
+same beam through the same cell still ghosts rock, and the bank test draws the same board with banks
+switched off and shows the count does not move.
+
 **On by default** (owner, 2026-09-16), which has three separate homes and needs saying in all
 three: the field initialiser, `SettingsDirector`'s own starting state, and the serialised scene. A
 field absent from the scene YAML falls back to the initialiser, so the scene was quietly right

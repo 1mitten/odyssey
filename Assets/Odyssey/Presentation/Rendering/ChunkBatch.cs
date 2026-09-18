@@ -110,6 +110,23 @@ namespace Odyssey.Presentation.Rendering
         /// </summary>
         public const int LinenBase = 8192;
 
+        /// <summary>
+        /// Bit 14 marks a code as a <b>bank</b> — the stepped earth ramp presentation draws against
+        /// a one-layer terrace step, which no cell in the simulation contains.
+        ///
+        /// <para>A bank is tinted exactly as the terrain it is made of, so this bit says nothing
+        /// about its colour and <see cref="ChunkRenderer.ResolveColour"/> never reads it. It is here so the
+        /// <em>drawing</em> can tell a bank from the ground it leans against, which matters because
+        /// a bank is scenery: it is not a thing anybody hides behind, and ghosting half of one for
+        /// a sight line cuts a hole in a hillside that has no hole in it.</para>
+        ///
+        /// <para>It costs no extra bucket. A bank is already its own module, and a bucket is keyed
+        /// on the module before the tint, so every bank instance was in a bucket of its own before
+        /// this bit existed — which is exactly why the marker can be free here and could not be on,
+        /// say, a tree's colour.</para>
+        /// </summary>
+        public const int BankBase = 16384;
+
         public static int Stuff(int stuff) => stuff;
 
         /// <summary>Bedding: one fixed colour, ignoring whatever material is passed beside it.</summary>
@@ -136,11 +153,20 @@ namespace Odyssey.Presentation.Rendering
         /// <summary>Water is terrain as well, so it keeps the terrain bit and its palette entry.</summary>
         public static int Water(int terrain) => WaterBase + TerrainBase + terrain;
 
+        /// <summary>
+        /// A bank of this terrain. Terrain as well, and tinted as terrain — the marker only says
+        /// what the thing <em>is</em>.
+        /// </summary>
+        public static int Bank(int terrain) => BankBase + TerrainBase + terrain;
+
         public static bool IsTerrain(int code) => (code & TerrainBase) != 0;
 
         public static bool IsFoliage(int code) => (code & FoliageBase) != 0;
 
         public static bool IsWater(int code) => (code & WaterBase) != 0;
+
+        /// <summary>Is this bucket a bank — scenery leaning on a terrace step, not a thing in the way?</summary>
+        public static bool IsBank(int code) => (code & BankBase) != 0;
 
         /// <summary>Is this bucket a tree, and so coloured from <see cref="TreePalette"/>?</summary>
         public static bool IsTree(int code) => (code & TreeBase) != 0;
