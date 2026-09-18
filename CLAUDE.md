@@ -16,6 +16,66 @@ A prototype colony sim in the RimWorld mould, in true 3D with discrete vertical 
 - **Files outlive context.** Every phase produces files under `docs/`. Assume the next session knows nothing except what is written down.
 - British English in documentation. No multiplayer, ever. *Ramble* (Godot) is reference only, no code reuse.
 
+## Every finished piece of work ends with a handover
+
+**Owner rule, 2026-09-18:** *"could you put into each prompt — create a table of things to test
+after completing work, stipulate a distinct table to explain changes made and how to test as I keep
+losing track, and remind of the full folder."*
+
+The owner is the only person who can press Play, and they are usually holding several branches at
+once. A reply that ends in prose leaves them to work out where to go and what to look at. **So the
+last thing in any reply that finishes a piece of work is a handover: the folder, then two tables.**
+Not a summary of the conversation — the smallest thing somebody can act on cold.
+
+### 1. Where
+
+One line, before the tables: the **full path**, the branch, the PR, and whether the art is there.
+
+> **`D:\code\odyssey-review-111`** — branch `claude/colonist-card-skills`, PR #114. Synty
+> junctioned, packs imported. Press Play → New game.
+
+Always the absolute path. There are a dozen worktrees on that machine (`git worktree list`) and
+"the worktree" names none of them. Say if `Assets/Synty` is **not** junctioned, because without it
+everything draws as untextured primitives and the first report back will be about the art.
+
+### 2. What changed
+
+One row per change a player could notice. **What it was, what it is, and where the decision lives**
+— not the implementation.
+
+| Change | Was | Is | Where |
+|---|---|---|---|
+| Selection outline stands clear of the face | border drawn hard against the portrait | 8 px pad, card 65 → 80 | `18-colonist-select.md` §6b |
+
+Leave out anything invisible. A refactor with no player-facing effect belongs in the commit message,
+not in this table — it is one of the things that makes the list too long to read.
+
+### 3. What to test
+
+One row per question **only a person at the keyboard can answer**, with what a wrong answer would
+look like. This is the table that earns its keep: a test already says whether the geometry is right,
+so do not ask for that again.
+
+| Test | Look for | A wrong answer looks like |
+|---|---|---|
+| Pick a colonist without clicking each card | the three cards readable side by side | you still open each one to decide, so two skills is not enough |
+| Reroll | name, face and skills all change together on an unkept card | one of the three lags, or a kept card moves |
+
+Two rules for this table:
+
+- **Never ask for something a test proves.** If the fast tier or the Unity tier can answer it, it is
+  not a playtest item, and putting it there teaches the owner the list is padding.
+- **State what failure looks like.** *"Check the cards read well"* is not actionable; *"if you still
+  click each one to decide, two skills is not enough"* tells them what they are deciding and what to
+  say back.
+
+### The rest of the reply
+
+Say what is **still owed** and what is **blocked on them** — an unshot screenshot, a Unity run that
+cannot start because the editor is open, a merge waiting on review. And where more than one branch
+is in flight, give the **merge order and the reason**, because that is the thing most easily lost
+between sessions.
+
 ## The content wiki is a standing obligation
 
 `docs/wiki/` is the naming reference for the whole game: every commodity, item, building, command,
@@ -37,6 +97,7 @@ overwritten. Edit the source, then rebuild:
 | `docs/design/icon-keys.csv` | the name, namespace, milestone and description of every named thing |
 | `docs/design/icon-map.csv` | whether the owner's pixel-art sheets can draw it |
 | `docs/design/proper-nouns.csv` | people, places, factions, creatures, the calendar |
+| `docs/design/colonist-names.csv` | the 244 colonist given names, with register and gender |
 
 ```
 python3 tools/wiki/build_wiki.py            # rebuild docs/wiki
@@ -44,6 +105,10 @@ python3 tools/wiki/build_wiki.py --check    # exit 1 if stale; run before commit
 python3 tools/wiki/emit_labels.py           # rebuild Assets/Odyssey/Hud/Registry.g.cs
 python3 tools/wiki/emit_labels.py --check   # exit 1 if stale; run before committing
 ```
+
+`emit_labels.py` generates **two** files from two CSVs — `Registry.g.cs` from the icon keys and
+`ColonistNames.g.cs` from the name pool — so one script and one `--check` cover both. Adding a
+third generated file goes in there rather than in a script of its own.
 
 The HUD reads its labels from the same file: `emit_labels.py` generates `Registry.g.cs`
 (`Registry.Label(key)`), `JobLabels` and `LedgerModel` name nothing themselves, and
@@ -88,7 +153,7 @@ Phases 0–3 (ground, interview, research, design) are complete. **Phase 4, exec
 | **M0** foundations | **Closed.** CI runs two tiers per push and PR: a *fast tier* on GitHub-hosted Linux (Sim, Hud, Long, both content checks) and a *Unity tier* on the owner's Windows machine as a self-hosted runner, switched on by the repository variable `UNITY_RUNNER=1`. |
 | **M1** world, **M2** pawns | **Done and reported** — `docs/milestones/M1-report.md`, `M2-report.md`. Both went further than the plan asked. |
 | **M3** build and dig | **Under way.** Designations, felling, stockpiles, mining, walls, deconstruction, floors and collapse, paving, ladders and beds are all in. Remaining: stairs (`U44`). The gate is a ten-day headless run. |
-| **MS** the start flow | **Done**, `U34`–`U41`: a main screen, seed entry and reroll, three-candidate colonist select, save/load with a named binding, and flat avatars. Ran beside M3 because it is session lifecycle rather than colony mechanics. |
+| **MS** the start flow | **Done**, `U34`–`U41`: a main screen, seed entry and reroll, three-candidate colonist select, save/load with a named binding, and flat avatars. Ran beside M3 because it is session lifecycle rather than colony mechanics. **The candidate card was re-derived 2026-09-18** (`18-colonist-select.md` §6b): it kept 47 px when the avatar doubled to 60, so the three faces overlapped, and its skills line had been squeezed out by the occupation — so the one screen whose job is telling three people apart showed nothing that varied by ability. 300 × 65, three lines, and **a card is now asserted to be at least as tall as the face it carries**. |
 | **WS** rates | **Designed and planned; nothing is built.** `WS1`–`WS4` (renumbered from `U42`–`U45`, which were taken). A skill level currently buys nothing a player can feel. |
 
 **Work reaches `main` only through a pull request** with both tiers green, one approving review and
@@ -196,7 +261,7 @@ invisible where the game is played.
 
 ### Tests and gates
 
-- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **694 Sim + 406 Hud**; Long tier **20**.
+- **Fast tier** (`scripts/test-fast.sh`, ~20 s, no Unity): **694 Sim + 409 Hud**; Long tier **20**.
   **It compiles neither Presentation nor Editor**, so a unit touching the composition root or the
   HUD shell is unproven until Unity has compiled it, however green the seconds look.
 - **Unity tier** (`scripts/unity.sh test editmode`, authoritative), last run 2026-09-18 on the

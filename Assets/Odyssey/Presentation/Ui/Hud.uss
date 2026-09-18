@@ -402,7 +402,14 @@
     justify-content: space-between;
     margin-bottom: 4px;
     min-height: 26px;
+    padding-left: 4px;
     padding-right: 2px;
+    border-radius: 2px;
+    cursor: link;
+}
+
+.alert:hover {
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .alert__icon {
@@ -421,10 +428,6 @@
 
 .alert__target {
     cursor: link;
-}
-
-.alert__target:hover {
-    text-decoration: underline;
 }
 
 .alert__prefix,
@@ -1815,10 +1818,32 @@
    is not something a 420x384 box can hold. New game leaves the box rather than stretching it, and
    the box is left exactly as it is for Load and Settings. docs/design/19-world-setup.md. */
 
+/* A panel, not a new box: the element wears .panel and .window, so the fill (rgba(12,16,20,0.96)),
+   the border and the radius are the in-game menus' own tokens and nothing here restates them
+   (owner, 2026-09-18: "use the same transparency/translucent as the in game menus, not to
+   reinvent"). What .setup overrides is only where it sits and how much air it keeps: inset from
+   every edge so the border reads as a box around the interface rather than as a screen border. */
 .setup {
     position: absolute;
-    left: 0; top: 0; right: 0; bottom: 0;
-    padding: 40px 56px;
+    left: 24px; top: 24px; right: 24px; bottom: 24px;
+    padding: 32px 40px;
+}
+
+/* A section heading: "Skills", "Traits". Bigger and bolder than the block under it, and set off
+   above so it belongs to what follows rather than floating between two blocks. */
+.setup__heading {
+    color: #eef3f6;
+    height: 26px;
+    margin-top: 22px;
+}
+
+/* Every clickable row on this page carries an outline, so what can be pressed is visible without
+   hovering it (owner, 2026-09-18). Scoped to the page: .settings__row is also the settings panel's
+   and the Menu popover's row, and those are read over a running world where a grid of outlines
+   would be noise. */
+.setup .settings__row {
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.13);
 }
 
 .setup__title {
@@ -1866,6 +1891,39 @@
     flex-grow: 1;
 }
 
+/* Two columns rather than however many fit the viewport (owner, 2026-09-18), and set clear of the
+   record above it. The grid is a wrapping row in a pane that grows, so at 1920 it had laid thirteen
+   skills out four across and filled the page edge to edge; the cap is what holds it to two and
+   leaves the right-hand half for whatever comes. Derived in HudLayout.SetupSkillsWidth. */
+.skills--setup {
+    max-width: 636px;
+    margin-top: 24px;
+}
+
+/* Wider and taller than the inspect pane's line, at a step up the type scale: this screen is read
+   at leisure with no world behind it. */
+.skill--setup {
+    width: 300px;
+    height: 24px;
+}
+
+/* The way in, and the only green row in the game. Back and Start sit side by side and read
+   identically otherwise, so the colour is what says which is which.
+
+   Written as a descendant so it out-specifies `.setup .settings__row` above, which outlines every
+   pressable row on this page: that selector is 0,2,0 and a bare `.setup__commit` is 0,1,0, so the
+   grey would have won and the green border would never have drawn. Specificity beats order. */
+.setup .setup__commit {
+    background-color: rgba(127, 201, 140, 0.15);
+    border-width: 1px;
+    border-color: rgba(127, 201, 140, 0.45);
+    border-radius: 3px;
+}
+
+.setup .setup__commit .settings__label { color: #7fc98c; }
+
+.setup .setup__commit:hover { background-color: rgba(127, 201, 140, 0.24); }
+
 /* The one being read, beside the three. */
 .setup__detail {
     flex-grow: 1;
@@ -1885,7 +1943,9 @@
 
 .detail__name { color: #eef3f6; height: 26px; }
 .detail__trade { color: rgba(255, 255, 255, 0.66); height: 18px; }
-.detail__traits { color: rgba(255, 255, 255, 0.50); height: 18px; margin-top: 4px; }
+/* A section under the skills now rather than a third line of the record, so it reads as the block
+   M7 will fill rather than as another fact about the person (owner, 2026-09-18). */
+.detail__traits { color: rgba(255, 255, 255, 0.50); height: 18px; }
 
 .setup__footer {
     flex-direction: row;
@@ -1902,17 +1962,21 @@
 
 .colonists {
     flex-shrink: 0;
-    width: 260px;
+    width: 340px;
 }
 
 /* A row wrapping a column since avatars landed (docs/design/20-avatars.md §3): the face, then the
-   two lines about the person whose face it is. The same shape a roster card's identity row is. */
+   three lines about the person whose face it is — name, trade, and what they are good at. The same
+   shape a roster card's identity row is.
+
+   Sixty-five is the three lines, and it must not fall under the 60 px face: at 47 the faces ran
+   into one another and into the selection outline (HudLayout.ColonistCard). */
 .colonist {
     flex-direction: row;
     align-items: center;
-    height: 47px;
-    margin-bottom: 6px;
-    padding: 0 8px;
+    height: 76px;
+    margin-bottom: 10px;
+    padding: 8px;
     border-radius: 3px;
     border-width: 1px;
     border-color: rgba(0, 0, 0, 0);
@@ -1932,8 +1996,11 @@
     overflow: hidden;
 }
 
+/* Dim rather than meta since the skills line arrived under it: three lines at two weights read as
+   a hierarchy, and an occupation is flavour where the line below it is the decision. */
 .colonist__trade {
     color: rgba(255, 255, 255, 0.66);
+    height: 20px;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
@@ -1941,16 +2008,10 @@
 
 .colonist__name {
     color: #eef3f6;
+    height: 26px;
     white-space: nowrap;
     text-overflow: ellipsis;
     overflow: hidden;
-}
-
-/* What they are good at, on one line: three cards of two lines each came to 296 against the fixed
-   body's 284. Measured by HudLayoutTests rather than found on screen. */
-.colonist__skills {
-    color: rgba(255, 255, 255, 0.66);
-    white-space: nowrap;
 }
 
 /* The row that goes back, set apart from the list above it the way the settings panel's exit row

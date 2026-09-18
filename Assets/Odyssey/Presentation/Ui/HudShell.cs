@@ -345,6 +345,15 @@ namespace Odyssey.Presentation.Ui
             /// <summary>One or two lozenges, hidden at no passion.</summary>
             public VisualElement Passion = null!;
 
+            /// <summary>
+            /// The steps this line is set at, carried on the view because <c>SetSkillLine</c>
+            /// rewrites both strings and would otherwise reset them to the inspect pane's. The
+            /// setup page sits one step higher up the scale (owner, 2026-09-18).
+            /// </summary>
+            public HudTextRole NameRole = HudTextRole.Body;
+
+            public HudTextRole LevelRole = HudTextRole.Meta;
+
             public string LastKey = string.Empty;
             public int LastLevel = int.MinValue;
             public int LastPassion = int.MinValue;

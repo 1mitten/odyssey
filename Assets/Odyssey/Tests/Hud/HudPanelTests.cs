@@ -43,8 +43,8 @@ namespace Odyssey.Tests.Hud
             Assert.That(alerts.Rows.Count, Is.EqualTo(1));
             Assert.That(alerts.Rows[0].Key, Is.EqualTo(AlertModel.StarveKey));
             Assert.That(alerts.Rows[0].Severity, Is.EqualTo(AlertSeverity.Danger));
-            Assert.That(alerts.Rows[0].TargetName, Is.EqualTo("Wrenn"));
-            Assert.That(alerts.Rows[0].Lead, Is.EqualTo("Wrenn is starving"));
+            Assert.That(alerts.Rows[0].TargetName, Is.EqualTo(ColonistNames.Of(snapshot, new PawnId(1))));
+            Assert.That(alerts.Rows[0].Lead, Is.EqualTo(ColonistNames.Of(snapshot, new PawnId(1)) + " is starving"));
             Assert.That(alerts.Rows[0].Pawn, Is.EqualTo(new PawnId(1)));
             Assert.That(alerts.Rows[0].Count, Is.EqualTo(1));
         }
@@ -61,11 +61,11 @@ namespace Odyssey.Tests.Hud
             alerts.Refresh(snapshot, 0.0);
 
             Assert.That(alerts.Rows.Count, Is.EqualTo(3), "three starving colonists become three alert rows");
-            Assert.That(alerts.Rows[0].Lead, Is.EqualTo("Wrenn is starving"));
+            Assert.That(alerts.Rows[0].Lead, Is.EqualTo(ColonistNames.Of(snapshot, new PawnId(1)) + " is starving"));
             Assert.That(alerts.Rows[0].Pawn, Is.EqualTo(new PawnId(1)));
-            Assert.That(alerts.Rows[1].Lead, Is.EqualTo("Odile is starving"));
+            Assert.That(alerts.Rows[1].Lead, Is.EqualTo(ColonistNames.Of(snapshot, new PawnId(2)) + " is starving"));
             Assert.That(alerts.Rows[1].Pawn, Is.EqualTo(new PawnId(2)));
-            Assert.That(alerts.Rows[2].Lead, Is.EqualTo("Kester is starving"));
+            Assert.That(alerts.Rows[2].Lead, Is.EqualTo(ColonistNames.Of(snapshot, new PawnId(3)) + " is starving"));
             Assert.That(alerts.Rows[2].Pawn, Is.EqualTo(new PawnId(3)));
         }
 
@@ -98,7 +98,7 @@ namespace Odyssey.Tests.Hud
             starvingAgain.AddPawn(Colonist(1, food: 10));
             alerts.Refresh(starvingAgain, 3.0);
             Assert.That(alerts.Rows.Count, Is.EqualTo(1));
-            Assert.That(alerts.Rows[0].Lead, Is.EqualTo("Wrenn is starving"));
+            Assert.That(alerts.Rows[0].Lead, Is.EqualTo(ColonistNames.Of(starvingAgain, new PawnId(1)) + " is starving"));
         }
 
         [Test]

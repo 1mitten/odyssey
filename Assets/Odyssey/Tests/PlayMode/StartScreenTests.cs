@@ -703,5 +703,81 @@ namespace Odyssey.Tests.PlayMode
                 Object.Destroy(root);
             }
         }
+
+        /// <summary>
+        /// The three candidate cards stand clear of one another, and each holds its own face.
+        ///
+        /// <para><b>Written because nothing could see the defect it catches.</b> When the avatar
+        /// doubled 30 → 60 on 2026-09-18 every card carrying one was re-derived except this one,
+        /// which kept the 47 px it was given when the face was 30. The sheet agreed with the model
+        /// and the model agreed with itself, so the fast tier was green and the only witness was
+        /// three faces visibly running into one another on `Logs/setup-page.png`. Arithmetic in
+        /// <c>HudLayoutTests</c> now holds the card to its avatar; this holds the laid-out
+        /// elements to each other, which is the question a player actually asks.</para>
+        /// </summary>
+        [UnityTest]
+        public IEnumerator TheCandidateCardsDoNotRunIntoEachOther()
+        {
+            GameObject root = RigWorld.BuildWithHud(out OdysseyBootstrap boot, out SliceCameraRig _,
+                out HudShell shell, buildOnPlay: false);
+            try
+            {
+                yield return Settle();
+                var doc = boot.GetComponent<UIDocument>();
+
+                shell.Menu.Choose(SessionCommands.NewGameKey);
+                yield return Settle();
+
+                var cards = doc.rootVisualElement.Query(className: "colonist").ToList();
+                Assert.That(cards.Count, Is.EqualTo(ColonistSelect.Slots),
+                    "the page did not draw three candidates");
+
+                for (int i = 0; i < cards.Count; i++)
+                {
+                    Rect box = cards[i].worldBound;
+                    Assert.That(box.height, Is.GreaterThan(1f), "the card has not been laid out");
+
+                    // The face is inside the card it belongs to, top and bottom. This is the one
+                    // that failed at 47 px against a 60 px avatar.
+                    var face = cards[i].Q(className: "colonist__face");
+                    Assert.That(face, Is.Not.Null, $"candidate {i} has no face");
+                    Rect head = face!.worldBound;
+                    Assert.That(head.height, Is.LessThanOrEqualTo(box.height + 0.5f),
+                        $"candidate {i}'s face is {head.height:0.#} px in a {box.height:0.#} px " +
+                        "card, so it overflows onto its neighbours and over the selection outline");
+
+                    // And no card overlaps the next one down.
+                    if (i + 1 >= cards.Count) continue;
+                    Rect next = cards[i + 1].worldBound;
+                    Assert.That(box.yMax, Is.LessThanOrEqualTo(next.yMin + 0.5f),
+                        $"candidate {i} ends at {box.yMax:0.#} and candidate {i + 1} starts at " +
+                        $"{next.yMin:0.#}");
+                }
+
+                // The card is identity alone by the owner's decision (2026-09-18): a name and age
+                // over an occupation, with the skills in the detail pane beside it. Both lines are
+                // asserted present and filled, because an empty one looks exactly like a refresh
+                // that never ran.
+                var name = cards[0].Q<Label>(className: "colonist__name");
+                var trade = cards[0].Q<Label>(className: "colonist__trade");
+                Assert.That(name, Is.Not.Null, "the candidate card has no name line");
+                Assert.That(trade, Is.Not.Null, "the candidate card has no occupation line");
+                Assert.That(name!.text, Is.Not.Empty, "the name was never filled in");
+                Assert.That(trade!.text, Is.Not.Empty, "the occupation was never filled in");
+
+                // And the skills are in the pane beside them, under a heading of their own.
+                var headings = doc.rootVisualElement.Query<Label>(className: "setup__heading").ToList();
+                Assert.That(headings.Count, Is.EqualTo(2),
+                    "the detail pane should carry two section headings, Skills and Traits");
+
+                Debug.Log($"[StartScreen] card '{name.text}' / '{trade.text}' in a " +
+                          $"{cards[0].worldBound.height:0.#} px card, " +
+                          $"headings: {string.Join(", ", headings.ConvertAll(h => h.text))}");
+            }
+            finally
+            {
+                Object.Destroy(root);
+            }
+        }
     }
 }

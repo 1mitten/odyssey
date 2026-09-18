@@ -775,8 +775,9 @@ namespace Odyssey.Presentation.Ui
                 Dismiss = dismiss,
             };
 
-            text.RegisterCallback<PointerDownEvent>(_ =>
+            row.RegisterCallback<PointerDownEvent>(evt =>
             {
+                if (evt.button != 0) return;
                 var world = _boot?.World;
                 if (world == null) return;
                 if (view.TargetPawn.IsValid)
@@ -791,6 +792,7 @@ namespace Odyssey.Presentation.Ui
                 }
             });
 
+            dismiss.RegisterCallback<PointerDownEvent>(evt => evt.StopPropagation());
             dismiss.RegisterCallback<ClickEvent>(evt =>
             {
                 evt.StopPropagation();

@@ -197,6 +197,114 @@ useful record.
 
 ---
 
+## 6b. The card lost its skills to the avatar, and got them back (2026-09-18)
+
+**Reported by the owner as "I'm not seeing the skills rolled randomly on the character generation
+screen".** They are rolled, and rolled well — measured over 3,000 draws off `ColonistDraw.Roll`,
+only **2.6% of candidates have every live skill at zero** and the best skill is 3 or better on
+**70%** of them. Nothing was wrong with the roll. The card was not showing it.
+
+**What the card had become.** §5's sketch above is a name over `Mining 6 · Cutting 3`, and that is
+what `U40` built. `U41` put a face on the card (`20-avatars.md` §3) and the skills line was squeezed
+out to make room for the occupation — which is drawn from its own salt and therefore says **nothing
+about what anybody can do**. So the page whose whole job is telling three people apart showed three
+names and three trades, and the skills lived only in the detail pane, only for the card you had
+clicked. Comparing three candidates meant clicking each in turn and remembering.
+
+**Three artefacts survived, all describing a line nothing drew**, which is how the loss is
+attributable rather than merely visible: `HudLayout.ColonistCardSkills = 2`, read by nothing, whose
+own comment says it lives there "so that `ColonistCard` and what is actually drawn cannot
+disagree"; `.colonist__skills` in the sheet, applied to no element; and
+`HudLayout.ColonistScreenHeight`, modelling a caption and a standalone screen that `BuildSetupPage`
+has not drawn since the candidates joined the seed and the board size on one full-viewport page.
+The fast tier was asserting that last one fits `StartListMax` — a question about a box this screen
+does not sit in.
+
+**And the same omission had a second half that was plainly visible.** `20-avatars.md` §10.6 doubled
+`Avatar` 30 → 60 and re-derived every card carrying one: the roster card to 126 × 89, the inspect
+header to 60, with the strip share, the top scrim and the coverage ceiling moved to match. **The
+candidate card is not on that table.** It kept the 47 px it was given when the face was 30, and then
+drew a 60 px face in it — thirteen pixels taller than its own box, at a 53 px pitch. On
+`Logs/setup-page.png` the three faces run into one another and over the selection outline. Nothing
+failed: the sheet agreed with the model and the model agreed with itself.
+
+**The card is re-derived from its own rows**, the way §10.6 did it: 29 for the name, 18 for the
+trade, 18 for the skills — **65**, which is also clear of the 60 px face. The column went 260 → 300
+because a 60 px face and a third line left 176 px of text where §3 had sized 206; the page is the
+full viewport, so the column is free to grow, which is the lever that design named. The trade drops
+from `TextMeta` to `TextDim`, so the three lines read as a hierarchy on the theme's existing tokens
+rather than a fifth being invented: **name, then what they can do, then what they used to be.**
+
+**What holds it now.** `SkillSummary` in `Odyssey.Hud` owns the line's rules — live skills only,
+nothing at zero, ties in reading order, an em dash for the one candidate in forty with nothing to
+show — so they are fast-tier questions rather than things found on screen.
+`HudLayoutTests.EveryCardIsAtLeastAsTallAsTheFaceItCarries` is the arithmetic that was missing, and
+it asks the same of the roster card and the inspect header.
+`StartScreenTests.TheCandidateCardsDoNotRunIntoEachOther` asks it of the laid-out elements, which is
+the question a player actually asks, and asserts the skills line exists and is filled.
+
+**The lesson, and it is the same one as the rates review the day before:** a constant that nothing
+reads is not harmless. Three of them here described the screen as it was designed while the screen
+had quietly become something else, and each would have been trusted by the next session to read it.
+
+---
+
+## 6c. The setup page, played (2026-09-18)
+
+Five corrections after the owner played §6b, and one of them reverses it.
+
+**The card is identity alone: name, age, occupation.** *"From the left hand panels, no need to
+display any skills there — Name, Age, Occupation, and resize occupation accordingly to a bigger
+size."* The skills line §6b put back came off again. **That is not §6b being undone, it is the
+report being answered somewhere better:** the complaint was that nothing on the page varied by
+ability, and the detail pane now shows all thirteen skills in two columns with room to read them.
+The occupation goes up a step to `Row` and the card is `ColonistAvatar + 2 × ColonistCardPad` — the
+face governs the height, so the card cannot go back to being shorter than the thing inside it.
+**`SkillSummary` and its tests are deleted rather than left unused**, which is §6b's own lesson
+applied to §6b: a constant nothing reads is the artefact that misleads the next session.
+**A later session should not restore the card's skills line as a fix for the original report.**
+
+**Traits are a section, not a line of the record.** They sat inside the name/trade/traits stack,
+where an empty traits row read as a third fact about the person rather than as the block M7 will
+fill. It is below the skills now, under a heading, and the word "Traits" moved from a C# literal
+(`"Traits  —"`) into the registry as `ui.newgame.traits`, with `ui.newgame.skills` beside it.
+
+**Sections get `Name`; field captions get `PanelLabel`.** The owner asked for bigger, bolder
+headings in two places at once and they want different answers. A section heading over a block on a
+full screen read at leisure is `HudTextRole.Name` — 19/600, the one step of the scale that is both
+bigger *and* bolder than the body under it. A caption over a text field is `PanelLabel` — 11/600,
+upper and tracked, the idiom the stores panel, the rail and the alerts list are already introduced
+by. Neither is a new rung: §6b's rule was that this page sits higher up the existing ladder rather
+than adding to it.
+
+**Every pressable row on the page is outlined**, in `PanelBorder`, so what can be clicked is visible
+without hovering it. **Scoped to `.setup`**, because `.settings__row` is also the settings panel's
+and the Menu popover's row and those are read over a running world where a grid of outlines is
+noise. **The trap it set, found by reading rather than on screen:** `.setup .settings__row` is
+specificity 0,2,0 and the green Start row's `.setup__commit` was 0,1,0, so the grey border would
+have won and Start would have quietly stopped being green. Specificity beats order; the green rule
+is a descendant now too.
+
+**The page is a panel, and it is the panel the game already has.** Owner: *"use the same
+transparency/translucent as the in game menus, not to reinvent."* The element wears `.panel` and
+`.window`, so the fill is `rgba(12, 16, 20, 0.96)` and the border and radius are the tokens
+`HudStyleSheetTests` already pins; `.setup` overrides only where it sits and how much air it keeps,
+inset 24 px so the border reads as a box around the interface rather than as a screen border.
+Nothing about the colour is restated anywhere.
+
+**Wearing those classes made it a window, and the window rule caught it.**
+`HudGeometryTests.EveryWindowHasAWayOutThatIsNotTheKeyboard` requires every `.window` to carry an X,
+with the start screen's root the one named exemption — and the setup page had neither. It went red
+in CI on the push, which is the rule doing its job. **The page is exempt too, for a different reason
+and asserted differently:** the start root has nothing behind it to close *to*, while this page has
+a **Back** row, which is a better way out than an X because it says in words where it goes, and an X
+beside it would be two controls for one action. So the exemption table carries a reason per window,
+and where there is an alternative the test asserts **the alternative** — the exemption holds only
+while a `setup__back` row is on the page, so deleting Back fails the test rather than leaving a
+window nobody can leave.
+
+---
+
 ## 7. Not in this unit
 
 - **Portraits** (`U41`), and the §4.5 carve-out that comes with them.

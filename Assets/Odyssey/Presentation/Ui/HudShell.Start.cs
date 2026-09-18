@@ -270,7 +270,15 @@ namespace Odyssey.Presentation.Ui
         /// </summary>
         VisualElement BuildSetupPage()
         {
+            // The same box the in-game menus are, not a new one (owner, 2026-09-18: "use the
+            // same transparency/translucent as the in game menus, not to reinvent"). `.panel` and
+            // `.window` are what the settings panel, the Menu popover and the start screen's own
+            // panel are built from, so the fill, the border and the radius all come from the
+            // tokens HudStyleSheetTests already pins; `.setup` only overrides where it sits and
+            // how much air it keeps inside.
             var page = new VisualElement { name = "setup" };
+            page.AddToClassList("panel");
+            page.AddToClassList("window");
             page.AddToClassList("setup");
             page.style.display = DisplayStyle.None;
 
@@ -294,7 +302,7 @@ namespace Odyssey.Presentation.Ui
             // picking one is cycling, not navigating.
             var size = new VisualElement();
             size.AddToClassList("setup__size");
-            size.Add(HudText.Make(Registry.Label(SeedField.SizeKey), HudTextRole.Meta,
+            size.Add(HudText.Make(Registry.Label(SeedField.SizeKey), HudTextRole.PanelLabel,
                 ussClass: "startscreen__seedcap"));
             _sizeLabel = HudText.Make(string.Empty, HudTextRole.Row, ussClass: "setup__sizevalue");
             size.Add(_sizeLabel);
@@ -313,12 +321,21 @@ namespace Odyssey.Presentation.Ui
             var footer = new VisualElement();
             footer.AddToClassList("setup__footer");
 
+            // Classed so the window rule can find it: this page carries no X, and the reason is
+            // that it has a way out which says in words where it goes. HudGeometryTests asserts
+            // the alternative exists rather than taking the exemption on trust.
             var back = SeedRow("ui.start.back", () => _menu.Back());
             back.AddToClassList("setup__inline");
+            back.AddToClassList("setup__back");
             footer.Add(back);
 
+            // Green, and the only green row in the game (owner, 2026-09-18: "make the start button
+            // green at the button so it's easy to know what to click"). Back and Start sit side by
+            // side and read identically otherwise, so the colour is what says which of the two is
+            // the way in. HudTheme.Good, the token the interface already means "this is fine" by.
             _startCommit = SeedRow(SeedField.StartKey, () => _menu.Start());
             _startCommit.AddToClassList("setup__inline");
+            _startCommit.AddToClassList("setup__commit");
             footer.Add(_startCommit);
 
             page.Add(footer);
@@ -337,11 +354,27 @@ namespace Odyssey.Presentation.Ui
 
         /// <summary>A control with the quiet caption every figure in this interface is introduced
         /// by.</summary>
+        /// <summary>
+        /// A section heading on the setup page: bigger and bolder than the block under it, at a
+        /// step of the existing scale rather than a rung added for this screen. Named from the
+        /// registry, like every other word on this page.
+        /// </summary>
+        static Label SectionHeading(string key) =>
+            HudText.Make(Registry.Label(key), HudTextRole.Name, ussClass: "setup__heading");
+
+        /// <summary>What an empty section reads as. The traits block until M7 fills it.</summary>
+        const string EmptySection = "—";
+
         static VisualElement Captioned(string key, VisualElement control)
         {
             var wrap = new VisualElement();
             wrap.AddToClassList("setup__field");
-            wrap.Add(HudText.Make(Registry.Label(key), HudTextRole.Meta,
+            // PanelLabel: 11/600, upper and tracked — the caption the stores panel, the rail and
+            // the alerts list are all introduced by (owner, 2026-09-18: "make all the headers
+            // bolder for Colony name, seed, Board size"). Bolder than the meta line it replaces
+            // and unmistakably a label rather than a value, which is what a caption over a text
+            // field has to be.
+            wrap.Add(HudText.Make(Registry.Label(key), HudTextRole.PanelLabel,
                 ussClass: "startscreen__seedcap"));
             wrap.Add(control);
             return wrap;
@@ -370,19 +403,28 @@ namespace Odyssey.Presentation.Ui
             {
                 int index = slot;
 
-                // The face, then the two lines about the person whose face it is. A row wrapping a
-                // column, which is the shape a roster card already is — the candidate row was a
+                // The face, then the three lines about the person whose face it is. A row wrapping
+                // a column, which is the shape a roster card already is — the candidate row was a
                 // plain column until avatars landed (docs/design/20-avatars.md §3).
+                //
+                // The third line is what the page is for: who these three are is a name and an
+                // occupation, but which of them you want is the skills, and until 2026-09-18 they
+                // were only in the detail pane and only for the card you had clicked.
                 var card = new VisualElement();
                 card.AddToClassList("colonist");
 
-                var face = new AvatarGlyph(HudLayout.Avatar);
+                var face = new AvatarGlyph(HudLayout.ColonistAvatar);
                 face.AddToClassList("colonist__face");
 
+                // Identity alone: who this is and what they used to be. The skills line this
+                // carried for part of 2026-09-18 came off after the owner played it — the detail
+                // pane beside the cards shows all thirteen now, so the card does not have to.
+                // Both lines sit a step up the scale, because the page is read at leisure with no
+                // world behind it.
                 var lines = new VisualElement();
                 lines.AddToClassList("colonist__lines");
-                lines.Add(HudText.Make(string.Empty, HudTextRole.Row, ussClass: "colonist__name"));
-                lines.Add(HudText.Make(string.Empty, HudTextRole.Meta, ussClass: "colonist__trade"));
+                lines.Add(HudText.Make(string.Empty, HudTextRole.Name, ussClass: "colonist__name"));
+                lines.Add(HudText.Make(string.Empty, HudTextRole.Row, ussClass: "colonist__trade"));
 
                 card.Add(face);
                 card.Add(lines);
@@ -423,7 +465,6 @@ namespace Odyssey.Presentation.Ui
             record.AddToClassList("detail__lines");
             record.Add(_detailName);
             record.Add(_detailTrade);
-            record.Add(_detailTraits);
 
             var portrait = new VisualElement();
             portrait.AddToClassList("detail__record");
@@ -431,11 +472,27 @@ namespace Odyssey.Presentation.Ui
             portrait.Add(record);
             _colonistDetail.Add(portrait);
 
+            // Sections, each under a heading of its own (owner, 2026-09-18). Traits used to sit
+            // inside the record above, as a third line beside the name and the trade, where it
+            // read as another fact about the person rather than as the block it will be once M7
+            // fills it. It is a section now, under the skills, with a heading the same weight.
+            _colonistDetail.Add(SectionHeading(SeedField.SkillsKey));
+
+            // The same grid the inspect pane's Skills tab is, wearing a modifier: two columns
+            // rather than however many fit the viewport, a taller and wider line, and a step up
+            // the type scale (owner, 2026-09-18). Capping the container is what holds it to two —
+            // it is a wrapping row in a pane that grows, so at 1920 it had been laying thirteen
+            // skills out four across and filling the page edge to edge.
             _detailSkills = new VisualElement();
             _detailSkills.AddToClassList("skills");
+            _detailSkills.AddToClassList("skills--setup");
             _colonistDetail.Add(_detailSkills);
             for (int i = 0; i < SkillCatalogue.ReadingOrder.Count; i++)
-                _detailSkillViews.Add(SkillLine(_detailSkills));
+                _detailSkillViews.Add(SkillLine(_detailSkills, "skill--setup",
+                    HudTextRole.Row, HudTextRole.Body));
+
+            _colonistDetail.Add(SectionHeading(SeedField.TraitsKey));
+            _colonistDetail.Add(_detailTraits);
 
             screen.Add(_colonistDetail);
             return screen;
@@ -460,8 +517,8 @@ namespace Odyssey.Presentation.Ui
                 Candidate who = select.Cards[slot];
                 VisualElement lines = card[1];
 
-                HudText.Set((Label)lines[0], who.NameAndAge, HudTextRole.Row);
-                HudText.Set((Label)lines[1], who.Occupation, HudTextRole.Meta);
+                HudText.Set((Label)lines[0], who.NameAndAge, HudTextRole.Name);
+                HudText.Set((Label)lines[1], who.Occupation, HudTextRole.Row);
 
                 // The seed is the candidate's own and the id is the one this slot will occupy, so
                 // this is the face the colony goes on to give them — ColonistDraw.IdForSlot is
@@ -479,15 +536,15 @@ namespace Odyssey.Presentation.Ui
 
             Candidate current = select.Current;
             HudText.Set(_detailName, current.NameAndAge, HudTextRole.Name);
-            HudText.Set(_detailTrade, current.Occupation, HudTextRole.Meta);
+            HudText.Set(_detailTrade, current.Occupation, HudTextRole.Body);
             PawnId shown = ColonistDraw.IdForSlot(select.Selected);
             _detailFace.SetFace(ColonistFace.Of(current.Seed, shown));
             _detailFace.SetPortrait(_boot!.Portraits.For(current.Seed, shown));
 
-            // Drawn now and empty until M7, by the owner's decision. It says "—" rather than
-            // nothing, because a row that is absent and a row that is empty look identical and
-            // only one of them is a promise.
-            HudText.Set(_detailTraits, "Traits  —", HudTextRole.Meta);
+            // Empty until M7, by the owner's decision. It says "—" rather than nothing, because a
+            // section that is absent and one that is empty look identical and only one of them is
+            // a promise. The word "Traits" is the heading's now, not this line's.
+            HudText.Set(_detailTraits, EmptySection, HudTextRole.Body);
 
             for (int i = 0; i < current.Skills.Count && i < _detailSkillViews.Count; i++)
                 SetSkillLine(_detailSkillViews, i, current.Skills[i]);

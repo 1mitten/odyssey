@@ -5368,16 +5368,191 @@ as ever: one named owner for each half, `StandsOnSomething` for placement and `S
 the connector, with the difference between them written down.
 
 Both fixes were the owner's call, asked mid-unit rather than assumed, and both were told to go in.
+### The candidate card lost its skills to a face, and nobody could see it (2026-09-18)
+
+The owner, playing the setup page: *"I'm not seeing the skills rolled randomly on the character
+generation screen — is that supposed to happen?"*
+
+**The roll was never the problem, and measuring it first is what kept this from becoming a hunt
+through `ColonistDraw`.** Three thousand draws off the same method the colony calls: only **2.6% of
+candidates have every live skill at zero**, the best skill is 3 or better on **70%** of them, and a
+sample deal reads `Hauling 5 · Cutting 8 · Mining 6 · Construction 2` beside `Hauling 1 · Mining 1`.
+Every card also takes a fresh `SeedEntry.Draw()` off machine entropy, so Reroll genuinely redeals.
+The simulation half was right all along.
+
+**The card was showing a name and an occupation.** An occupation is drawn from its own salt —
+deliberately, so that two facts about one person are not correlated — which means it tells a player
+**nothing about what that person can do**. So the page whose entire job is telling three people
+apart showed three names and three trades, and the skills were in the detail pane, for the one card
+you had clicked. Comparing candidates meant clicking each in turn and remembering.
+
+**Three dead artefacts said so, which is what made it attributable rather than merely visible.**
+`HudLayout.ColonistCardSkills = 2`, read by nothing, carrying a comment about keeping the card's
+height and its contents in step. `.colonist__skills` in the sheet, applied to no element.
+`HudLayout.ColonistScreenHeight`, modelling a caption and a standalone colonist screen that
+`BuildSetupPage` stopped drawing when the candidates joined the seed and the board size on one
+full-viewport page — and the fast tier was asserting that model fits `StartListMax`, a box this
+screen does not sit in.
+
+**The cause was the avatar doubling, and it left a second mark that was in plain sight.**
+`20-avatars.md` §10.6 took `Avatar` 30 → 60 and re-derived every card that carries one: the roster
+card 106 × 63 → 126 × 89, the inspect header 38 → 60, the strip share, the top scrim, the coverage
+ceiling. **The candidate card is not on that table.** It kept 47 and drew a 60 px face in it, at a
+53 px pitch — so on `Logs/setup-page.png` the three faces run into each other and over the selection
+outline, and the skills line had been squeezed out to make room for the trade.
+
+**Nothing failed, and the reason is worth keeping.** `HudStyleSheetTests` pins `.colonist`'s height
+to `HudLayout.ColonistCard`, so the sheet and the model agreed — because neither had moved. A
+consistency test between two copies of a number cannot notice that the number is wrong. The check
+that was missing is one line of arithmetic nobody thought to write: **a card is at least as tall as
+the face it carries.** It is `EveryCardIsAtLeastAsTallAsTheFaceItCarries` now, asked of all three
+cards at once, and `StartScreenTests.TheCandidateCardsDoNotRunIntoEachOther` asks the same of the
+laid-out elements, where a player would ask it.
+
+**What reading the code could not settle, and the picture did in one look.** Most of an hour went
+into the fixed box's arithmetic — three lines come to 296 against a body of 284, so a third line
+does not fit — and every bit of that was a correct answer to a question that had stopped applying.
+The screenshot showed the setup page occupying the top third of a 1080p canvas with some seven
+hundred empty pixels under the cards. The layout constants had modelled a screen that no longer
+existed, and *reading them more carefully would only have made the wrong model more convincing.*
+Run the shot first: `scripts/unity.sh test playmode -testFilter …PhotographTheSetupPage`.
+
+**The card is re-derived from its own rows**, the way §10.6 did the roster card: 29 name + 18 trade
++ 18 skills = 65, clear of the 60 px face. The column went 260 → 300, because a 60 px face and a
+third line left 176 px of text where §3 sized 206 and the page is the full viewport rather than the
+fixed box. The trade drops from `TextMeta` to `TextDim` so the three lines read as a hierarchy on
+the theme's four existing tokens rather than a fifth being invented — name, then what they can do,
+then what they used to be. `SkillSummary` in `Odyssey.Hud` owns the line's rules, so live-only,
+no-zeroes, ties-in-reading-order and the em dash for the one candidate in forty with nothing to show
+are fast-tier tests rather than things discovered on screen.
+
+**The general lesson, and it is the rates review's from the day before, arrived at from the other
+end: a constant nothing reads is not harmless.** Three of them here described the screen as designed
+while the screen had quietly become something else, and each of them would have been believed by the
+next session to read it. One of them was being asserted by a passing test.
+
+### The setup page, played twice in a day (2026-09-18)
+
+Five corrections after the owner played §6b's card, and the first of them takes §6b's own feature
+off again: *"from the left hand panels, no need to display any skills there — Name, Age, Occupation,
+and resize occupation accordingly to a bigger size."*
+
+**That is worth reading carefully, because it looks like a reversal and is not.** The original
+report was that nothing on the page varied by ability, so the roll looked broken. §6b answered it in
+two places at once: it put a skills line back on the card *and* it made the detail pane legible —
+two columns, real spacing, a bigger type step. Having played that, the owner kept the second and
+dropped the first. The report is still answered; the card is identity alone and the pane carries the
+numbers. **The card's skills line should not be restored as a fix for the original report**, and
+`18-colonist-select.md` §6c says so in place.
+
+**`SkillSummary` and its seven tests are deleted rather than left unused.** That is §6b's own lesson
+turned on §6b: three dead constants describing a line nothing drew are what made the first loss
+invisible, and leaving a ninth-tenths-finished formatter behind "in case" would have been the same
+mistake with fresher paint.
+
+**Two headings wanted two different answers to one request.** "Bigger bolder headings" arrived for
+section titles and for field captions in the same message. A section over a block on a full screen
+read at leisure is `HudTextRole.Name`, 19/600 — the one step of the scale that is both bigger and
+bolder than the body under it. A caption over a text field is `PanelLabel`, 11/600 upper and
+tracked, which is what the stores panel, the rail and the alerts list are already introduced by and
+reads unmistakably as a label rather than a value. Neither adds a rung to `HudType`.
+
+**A specificity trap, found by reading and not on screen.** Outlining every pressable row on the
+page needed `.setup .settings__row` — scoped, because that row is also the settings panel's and the
+Menu popover's, and a grid of outlines over a running world is noise. That selector is 0,2,0 and the
+green Start row's `.setup__commit` was 0,1,0, so **the grey border would have won and Start would
+have quietly stopped being green** — a change that undoes a change made an hour earlier, with
+nothing failing. Specificity beats order in USS as in CSS. The green rule is a descendant now too.
+
+**And the owner's sharpest note of the day was three words long:** *"not to reinvent"*. The page
+wanted a translucent backdrop; the first instinct was to pick a colour. It wears `.panel` and
+`.window` instead — the classes the settings panel, the Menu popover and the start screen's own
+panel are built from — so the fill, the border and the radius are tokens the sheet already pins and
+nothing about the colour is restated. `.setup` overrides only where it sits and how much air it
+keeps. **The general form: when a screen needs to look like the rest of the interface, wear the
+interface's classes rather than copy its values.** A copied value is a value that drifts.
+
+### A name pool that is one file, generated, and costs nothing to read (2026-09-18)
+
+The owner supplied about 240 given names in three lists — ordinary ones, invented ones, and a run of
+British nicknames (*Spudgun*, *Treacle*, *The Dude*) — and then, mid-change, the two constraints
+that decided the shape: *"make it performant then and centralise it if need be."*
+
+**The pool was eight names in a C# array**, with a comment promising it would reach "about forty at
+M2, when pawn generation needs a pool that does not repeat in a colony of fifty". That promise was
+three milestones old. It is 244 now, which is six times what it asked for, and
+`ThePoolOutlastsAnyColonyThisGameBuilds` walks a colony of fifty and asserts no two share a name —
+so the `"Wrenn 2"` suffix a ninth colonist used to get is unreachable by any colony this game
+builds. The branch is kept because it is what makes the method total, and it is the only line in the
+namer that allocates: on every path anybody actually walks, naming a colonist allocates nothing.
+
+**Centralised the way the icon keys already were.** `docs/design/colonist-names.csv` is the one
+place a name is decided; `emit_labels.py` — the generator that already turns `icon-keys.csv` into
+`Registry.g.cs` — gained a second output rather than a script of its own, so it is still **one
+generator and one `--check`**, and CI covers the new file without a workflow change. The wiki gained
+a page listing all 244 with their register and gender, because the whole reason names are content is
+that the owner can read them and strike the ones they do not want.
+
+**Performance was the easy half and worth stating anyway.** The generator writes string literals, so
+the pool lives in the assembly's constant pool and naming a colonist is an index and a modulo — no
+parse, no file read, no dictionary, no allocation. That matters because the roster strip and the
+inspect header ask per figure per frame.
+
+**Two names were dropped as duplicates and the generator now refuses them.** *Nova* appeared in both
+of the first two lists and *John* in the first and third; a pool with a repeat in it would name two
+colonists in one colony the same thing, which is precisely the fault the whole seed-and-id scheme
+exists to prevent. `load_names` raises on a repeat rather than silently deduping, because a name
+quietly vanishing from a 244-row CSV is not something anybody would notice.
+
+**The order of the CSV is load-bearing, and that is the trap to write down.** A name is arithmetic
+on a saved seed and a slot, so **sorting the file renames every colonist in every existing save**.
+Add to the end; never sort. Growing the pool from 8 to 244 already did this once — every colonist in
+every save made before today now goes by a different name — which is harmless exactly once and the
+reason the rule is stated in the CSV's own wiki page, in the generated header and in the namer.
+
+**Gender is recorded and nothing reads it, deliberately.** The owner asked "if can apply to gender".
+It cannot yet, and the reason is not the names: **no pawn in the simulation has a gender at all**,
+and the drawn colonist is one of sixty-one Synty models in a single undifferentiated family, so a
+gendered name would be contradicted by the figure beside it about half the time. Adding gendered
+names without a gendered figure would make the game look *more* wrong, not less — there is currently
+no expectation for a face to fail. The column is in the CSV because it cannot be re-derived cheaply
+later and because the wiki is where the owner corrects it; it is **not** generated into C#, since a
+constant nothing reads is the artefact this project keeps being bitten by.
+
+**And the pool cost ten pixels a card, after two rounds of getting it wrong.** The Unity tier
+failed on `TheCardIsWideEnoughForItsRowsAndNoWider`'s **lower** bound — the roster card budgets
+50 px for a name and *Christopher* draws 60 — which is the bound that exists for exactly this and
+which `CardWidth`'s own comment had predicted in words a month earlier.
+
+The first answer was to shorten that one name, on the reasoning that it was the only entry over ten
+characters. **The next run named *Alexander*: nine characters, 52 px, where *Christopher* is eleven
+and 60.** Character count does not predict width, which is a sentence I had written into a test
+comment on the previous commit and then immediately acted against. "Trim the long ones" is not a
+rule anybody can apply — it is guessing until CI stops complaining, one round at a time, against a
+list that is the owner's content rather than ours.
+
+So the card is sized once to the widest name the pool can produce, which terminates, and the
+coverage ceiling goes 20% → 21% (the forced two-row strip at 1280 × 720, 19.80% → 20.19%). **The
+fourth raise of a number that is the owner's**, and it is recorded beside the other three with what
+it buys: no colonist's name is cut short on the roster. The reversal is cheaper than the avatar's —
+ten of the 136 pixels are the name budget, so putting the ceiling back is a content decision about
+accepting an ellipsis on the longest few names, which is the one thing on a card this interface
+already permits to be cut short.
+
+**The reusable half is about proxies.** A fast-tier test cannot measure text, so it guarded the pool
+by character count — and passed an eleven-character name that then failed the pixel measurement.
+A proxy that does not fail where the real thing fails is not a cheap version of the gate; it is a
+second opinion nobody asked for, and it is worse than nothing when it is believed. That test now
+says out loud that it only catches the absurd and that `HudGeometryTests` is the gate.
 
 ### Interactive Alerts: subject selection, dismissals, and vertical alignment (2026-09-18)
 
 Settled through Ground → Interview → Plan → Execute on branch `claude/interactive-alerts`.
 
-- **Alerts were verbose sentences with trailing details.** "A colonist is close to breaking — mood has fallen into the strained band" was passive and took two lines in a 242 px column, pushing the depth rail and panel stack down. It now takes the direct form "Wrenn is close to breaking" or "Wrenn is starving", with the subject highlighted in bold severity ink (Red for Danger, Amber/Yellow for Warning, Accent Gold for Notice).
-- **Clicking the highlighted subject or alert text selects and jumps.** It calls `HudDirectors.ChooseColonist(pawnId, snapshot)`, which sets the slice layer, selects the colonist in `SelectionDirector`, and focuses the camera directly on them — identical to clicking their card in the top roster bar.
+- **Alerts were verbose sentences with trailing details.** "A colonist is close to breaking — mood has fallen into the strained band" was passive and took two lines in a 242 px column, pushing the depth rail and panel stack down. It now takes the direct form "Theodore is close to breaking" or "Theodore is starving", with the subject highlighted in bold severity ink (Red for Danger, Amber/Yellow for Warning, Accent Gold for Notice).
+- **Clicking the entire alert row selects and jumps.** It calls `HudDirectors.ChooseColonist(pawnId, snapshot)`, which sets the slice layer, selects the colonist in `SelectionDirector`, and focuses the camera directly on them — identical to clicking their card in the top roster bar.
 - **Alert rows carry aligned dismiss 'X' buttons in a column.** Each row has an 18×18 px dismiss element with `HudGlyphKind.Close` aligned to the right edge. Dismissing suppresses the alert until the underlying need condition clears and later re-occurs (e.g. food climbing back above `StarveClearAt` removes the dismissed latch).
 - **A panel-level Clear All button sits in the header.** An 'X' in the top right-hand corner of the Alerts panel header (using the standard `CloseButton` styling opposite the "Alerts" label) clears all currently visible alerts at once.
 - **Symbol vertical alignment and compact single-line height.** The alert symbol is vertically centered with the text (`align-items: center`). Single-line alert row height is updated to 26 px (`HudLayout.AlertHeight = 26`), matching UI Toolkit's 13 px text box, reducing HUD screen coverage and avoiding unnecessary multi-line row clamping.
 - **The fast tier caught the style rule; Unity caught the nullable contract.** `HudStyleSheetTests.TheSheetSetsNoTypeAtAll` prevented `-unity-font-style` in USS (font weight belongs strictly to `HudType`/`HudText` in C#). And Unity batch compile caught `CellRef` as a non-nullable value type, enforcing `CellRef?` across `AlertRow` and `AlertRowView`.
 - **Gates verified:** Fast tier 694 Sim + 408 Hud passed; EditMode 1672 total, 1659 passed, 0 failed; PlayMode 78 total, 73 passed, 0 failed; both wiki checks clean.
-
